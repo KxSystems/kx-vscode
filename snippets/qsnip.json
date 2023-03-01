@@ -1,0 +1,17 @@
+{
+  "addition": {
+    "prefix": ["+"],
+    "body": "${1:number} + ${2:number}",
+    "description": "Addition of numbers"
+  },
+  "sqrt": {
+    "prefix": ["sqrt"],
+    "body": "sqrt ${1:number}",
+    "description": "Perform square root of a number"
+  },
+  "table": {
+    "prefix": ["table"],
+    "body": "${1:tableName}:([]${2:columnName}:`record1`record2`record3;{3:columnName}:`record1`record2`record3",
+    "description": "Create a new table"
+  }
+}
