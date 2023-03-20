@@ -2,8 +2,16 @@ import { copy, ensureDir, existsSync } from 'fs-extra';
 import { writeFile } from 'fs/promises';
 import fetch from 'node-fetch';
 import { env } from 'node:process';
+import { tmpdir } from 'os';
 import { join } from 'path';
-import { ProgressLocation, QuickPickItem, QuickPickOptions, window } from 'vscode';
+import {
+  InputBoxOptions,
+  ProgressLocation,
+  QuickPickItem,
+  QuickPickOptions,
+  Uri,
+  window,
+} from 'vscode';
 import { ext } from '../extensionVariables';
 import { delay } from '../utils/core';
 import { executeCommand } from '../utils/cpUtils';
@@ -12,29 +20,70 @@ import { findPid, killPort } from '../utils/shell';
 import extract = require('extract-zip');
 
 export async function installTools(): Promise<void> {
+  let file: Uri[] | undefined;
   const picks: QuickPickItem[] = [
     {
-      label: 'Select license file',
-      detail: 'Select if you have already registered and have a license key file.',
+      label: 'Select / Enter a license',
+      detail: 'Select if you have already registered and have a license key.',
     },
     {
-      label: 'Acquire license file',
-      detail: 'Select if you are new or need to register for a new license key file.',
+      label: 'Acquire license',
+      detail: 'Select if you are new or need to register for a new license key.',
     },
   ];
 
   const options: QuickPickOptions = { placeHolder: 'Provide a license key.' };
 
   const result: QuickPickItem | undefined = await window.showQuickPick(picks, options);
-  if (result === undefined || result.label == 'Retrieve a new license file') {
-    await openUrl(ext.kbdLearn);
+  if (result === undefined || result.label == 'Acquire license') {
+    await openUrl(ext.kdbDownload);
+    await window
+      .showInformationMessage(
+        'After receiving the email with license, please restart vscode.',
+        'More info'
+      )
+      .then(async (result: string) => {
+        if (result === 'More info') {
+          await openUrl('https://www.bing.com'); // update to real url?
+        }
+      });
   } else {
-    const file = await window.showOpenDialog({
-      canSelectFiles: true,
-      canSelectFolders: false,
-      canSelectMany: false,
-      openLabel: 'Select a license file',
-    });
+    const licensePicks: QuickPickItem[] = [
+      {
+        label: 'Paste license string (base64 string from email)',
+        detail: 'Paste in the base64 encoded license string from the email ',
+      },
+      {
+        label: 'Select license file',
+        detail: 'Select a file saved with the license',
+      },
+    ];
+    const licenseOptions: QuickPickOptions = { placeHolder: 'Select an option for license' };
+    const licenseResult: QuickPickItem | undefined = await window.showQuickPick(
+      licensePicks,
+      licenseOptions
+    );
+    if (licenseResult === undefined) {
+      return;
+    } else if (licenseResult.label == 'Paste license string (base64 string from email)') {
+      const licenseInput: InputBoxOptions = {
+        prompt: 'Paste the base64 encoded license string',
+        placeHolder: 'encoded license',
+      };
+      await window.showInputBox(licenseInput).then(async (encodedLicense: string) => {
+        if (encodedLicense !== undefined) {
+          const decodedLicense = Buffer.from(encodedLicense, 'base64');
+          await writeFile(join(tmpdir(), 'kc.lic'), decodedLicense);
+          file = [Uri.parse(join(tmpdir(), 'kc.lic'))];
+      }});
+    } else {
+      file = await window.showOpenDialog({
+        canSelectFiles: true,
+        canSelectFolders: false,
+        canSelectMany: false,
+        openLabel: 'Select a license file',
+      });
+    }
 
     if (!file) {
       throw new Error();
@@ -62,7 +111,7 @@ export async function installTools(): Promise<void> {
             progress.report({ increment: 30, message: 'Moving license file...' });
             await delay(1000);
             await ensureDir(ext.context.globalStorageUri.fsPath);
-            await copy(file[0].fsPath, join(ext.context.globalStorageUri.fsPath, ext.kdbLicName));
+            await copy(file![0].fsPath, join(ext.context.globalStorageUri.fsPath, ext.kdbLicName));
 
             // get the bits for Q
             progress.report({ increment: 50, message: 'Getting the binaries...' });

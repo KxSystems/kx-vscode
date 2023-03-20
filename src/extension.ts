@@ -9,8 +9,6 @@ import {
   extensions,
   languages,
   Position,
-  ProviderResult,
-  TerminalProfile,
   TextDocument,
   TextDocumentContentProvider,
   Uri,
@@ -23,7 +21,6 @@ import { ext } from './extensionVariables';
 import { QueryResult } from './models/queryResult';
 import { Server } from './models/server';
 import { KdbNode, KdbTreeProvider } from './services/kdbTreeProvider';
-import { getPty } from './services/terminalProvider';
 import { checkLocalInstall, formatTable, isTable } from './utils/core';
 import AuthSettings from './utils/secretStorage';
 import { Telemetry } from './utils/telemetryClient';
@@ -72,16 +69,6 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand('kxdb.hideWalkthrough', async () => {
       hideWalkthrough();
     }),
-    window.registerTerminalProfileProvider('kdb.q-terminal', {
-      provideTerminalProfile(): ProviderResult<TerminalProfile> {
-        return {
-          options: {
-            name: 'Q',
-            pty: getPty(),
-          },
-        };
-      },
-    })
   );
 
   const lastResult: QueryResult | undefined = undefined;

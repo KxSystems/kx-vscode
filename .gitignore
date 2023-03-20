@@ -3,6 +3,7 @@ dist
 node_modules
 .vscode-test/
 *.vsix
+.yarn
 
 /vscode.proposed.d.ts
 /vscode.d.ts

@@ -2,6 +2,20 @@
 
 All notable changes to the kxdb extension will be documented in this file.
 
+# 0.1.9
+
+### Enhancements
+
+- Updated onboarding flow to direct the user to the external KX website for new licenses.
+
+- Updated onboarding flow to allow users to use both the base64 encoded string or downloaded file for license.
+
+### Fixes
+
+### Internal Improvements
+
+- Removed Q terminal from the extension with the decision to use the editor and output window in favor of the confusion with the terminal.
+
 # 0.1.8
 
 ### Enhancements
