@@ -35,7 +35,7 @@ export async function installTools(): Promise<void> {
   const options: QuickPickOptions = { placeHolder: 'Provide a license key.' };
 
   const result: QuickPickItem | undefined = await window.showQuickPick(picks, options);
-  if (result === undefined || result.label == 'Acquire license') {
+  if (result === undefined || result.label === 'Acquire license') {
     await openUrl(ext.kdbDownload);
     await window
       .showInformationMessage(
@@ -44,7 +44,7 @@ export async function installTools(): Promise<void> {
       )
       .then(async (result: string) => {
         if (result === 'More info') {
-          await openUrl('https://www.bing.com'); // update to real url?
+          await openUrl('https://www.bing.com'); // TODO: update to real url
         }
       });
   } else {
@@ -75,7 +75,8 @@ export async function installTools(): Promise<void> {
           const decodedLicense = Buffer.from(encodedLicense, 'base64');
           await writeFile(join(tmpdir(), 'kc.lic'), decodedLicense);
           file = [Uri.parse(join(tmpdir(), 'kc.lic'))];
-      }});
+        }
+      });
     } else {
       file = await window.showOpenDialog({
         canSelectFiles: true,
