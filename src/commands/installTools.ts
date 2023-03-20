@@ -2,18 +2,10 @@ import { copy, ensureDir, existsSync } from 'fs-extra';
 import { writeFile } from 'fs/promises';
 import fetch from 'node-fetch';
 import { env } from 'node:process';
-import { tmpdir } from 'os';
 import { join } from 'path';
-import {
-  InputBoxOptions,
-  ProgressLocation,
-  QuickPickItem,
-  QuickPickOptions,
-  Uri,
-  window,
-} from 'vscode';
+import { InputBoxOptions, ProgressLocation, QuickPickItem, Uri, window } from 'vscode';
 import { ext } from '../extensionVariables';
-import { delay } from '../utils/core';
+import { convertBase64License, delay } from '../utils/core';
 import { executeCommand } from '../utils/cpUtils';
 import { openUrl } from '../utils/openUrl';
 import { findPid, killPort } from '../utils/shell';
@@ -21,6 +13,7 @@ import extract = require('extract-zip');
 
 export async function installTools(): Promise<void> {
   let file: Uri[] | undefined;
+
   const picks: QuickPickItem[] = [
     {
       label: 'Select / Enter a license',
@@ -32,21 +25,23 @@ export async function installTools(): Promise<void> {
     },
   ];
 
-  const options: QuickPickOptions = { placeHolder: 'Provide a license key.' };
+  const licenseTypeResult: QuickPickItem | undefined = await window.showQuickPick(picks, {
+    placeHolder: 'Provie a license key.',
+  });
 
-  const result: QuickPickItem | undefined = await window.showQuickPick(picks, options);
-  if (result === undefined || result.label === 'Acquire license') {
+  if (licenseTypeResult?.label === 'Acquire license') {
     await openUrl(ext.kdbDownload);
     await window
       .showInformationMessage(
         'After receiving the email with license, please restart vscode.',
         'More info'
       )
-      .then(async (result: string) => {
-        if (result === 'More info') {
+      .then(async res => {
+        if (res === 'More info') {
           await openUrl('https://www.bing.com'); // TODO: update to real url
         }
       });
+    return;
   } else {
     const licensePicks: QuickPickItem[] = [
       {
@@ -58,23 +53,23 @@ export async function installTools(): Promise<void> {
         detail: 'Select a file saved with the license',
       },
     ];
-    const licenseOptions: QuickPickOptions = { placeHolder: 'Select an option for license' };
-    const licenseResult: QuickPickItem | undefined = await window.showQuickPick(
-      licensePicks,
-      licenseOptions
-    );
+
+    const licenseResult: QuickPickItem | undefined = await window.showQuickPick(licensePicks, {
+      placeHolder: 'Select an option for license',
+    });
+
     if (licenseResult === undefined) {
       return;
     } else if (licenseResult.label == 'Paste license string (base64 string from email)') {
       const licenseInput: InputBoxOptions = {
         prompt: 'Paste the base64 encoded license string',
         placeHolder: 'encoded license',
+        ignoreFocusOut: true,
       };
-      await window.showInputBox(licenseInput).then(async (encodedLicense: string) => {
+
+      await window.showInputBox(licenseInput).then(async encodedLicense => {
         if (encodedLicense !== undefined) {
-          const decodedLicense = Buffer.from(encodedLicense, 'base64');
-          await writeFile(join(tmpdir(), 'kc.lic'), decodedLicense);
-          file = [Uri.parse(join(tmpdir(), 'kc.lic'))];
+          file = [await convertBase64License(encodedLicense)];
         }
       });
     } else {
@@ -134,13 +129,6 @@ export async function installTools(): Promise<void> {
             } else {
               throw new Error('OS not supports, only Windows and Mac are supported.');
             }
-
-            // install the KX developer tools to use the lint for language server
-            // await ensureDir(ext.context.globalStorageUri.fsPath);
-            // const response = await fetch(ext.kxdevUrl);
-            // const gpath = join(ext.context.globalStorageUri.fsPath, 'wdev.zip');
-            // await writeFile(gpath, await response.buffer());
-            // await extract(gpath, { dir: ext.context.globalStorageUri.fsPath });
 
             // add the env var for the process
             progress.report({ increment: 70, message: 'Setting up environment...' });
