@@ -26,7 +26,7 @@ export async function installTools(): Promise<void> {
   ];
 
   const licenseTypeResult: QuickPickItem | undefined = await window.showQuickPick(picks, {
-    placeHolder: 'Provie a license key.',
+    placeHolder: 'Provide a license key.',
   });
 
   if (licenseTypeResult?.label === 'Acquire license') {
