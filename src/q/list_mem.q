@@ -19,7 +19,7 @@
 {[blacklist]
     blacklist: raze blacklist;
     isNs: {[ns]
-        chk: {[ns] $[` in key ns; $[(::)~ns `; 11 = type key ns; 0b]; 0b] };
+        chk: {[ns] $[` in key ns; $[(::)~ns `; 11h ~ type key ns; 0b]; 0b] };
         @[chk; ns; 0b]
         };
 
@@ -48,7 +48,7 @@
     nids:`int$til count n: `.,exclude getNs[];
 
     // Build the namespace table
-    n: buildRows[nids; num#0ni; n; n; num#99h; num#`.; num#`] #[;1b] num:count[nids];
+    n: buildRows[nids; num#0ni; n; n; num#99h; num#`.; num#`] #[;1b] num:count nids;
 
     enumerate: {[buildRows; getContext; getNs; prefix; exclude; x]
         // x[0] is the table of renaming namespaces to enumerate
