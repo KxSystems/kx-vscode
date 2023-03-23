@@ -55,12 +55,12 @@
         // x[1] is the table of results
         // both are in the table format returned by buildRows
         f: {[buildRows; getContext; getNs; prefix; exclude; x]
-            ns: first x[0];
-            lastId: last exec id from x[1];
+            ns: first x 0;
+            lastId: last exec id from x 1;
             // Get all items in the namespace
             fnames: prefix[ns`fname] n: except[;`] key ns`fname;
             // Isolate namespaces specifically and build their entries
-            nmsnum: count nms: $[`. ~ ns`fname; (::); exclude] allnms: getNs ns`fname;
+            nmsnum: count nms: $[`. ~ ns`fname; ::; exclude] allnms: getNs ns`fname;
             context: getContext ns`fname;
             nrow: buildRows[`int$1+ lastId + til nmsnum; nmsnum#ns`id; n where fnames in nms; nms; nmsnum#99h; nmsnum#ns`fname; nmsnum#context] nmsnum#1b;
             // Update the lastId to account for any new namespaces
@@ -72,9 +72,9 @@
             (1_x[0],nrow; x[1],nrow,row)
             }[buildRows; getContext; getNs; prefix; exclude];
 
-        @[f; x; (1_x[0]; x[1])]
+        @[f; x; (1_x 0; x 1)]
 
         }[buildRows; getContext; getNs; prefix; exclude];
 
-    `namespace xasc @[;1] {count[x[0]]>0}enumerate/(n; n)
+    `namespace xasc @[;1] {count[x 0]>0}enumerate/(n; n)
     }
