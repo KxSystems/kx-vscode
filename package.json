@@ -3,7 +3,7 @@
   "displayName": "KXDB vscode",
   "description": "Extension to help with Q and KXDB",
   "publisher": "kx",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "engines": {
     "vscode": "^1.66.0"
   },
