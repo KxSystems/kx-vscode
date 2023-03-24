@@ -1,7 +1,9 @@
 import { createHash } from 'crypto';
+import { writeFile } from 'fs/promises';
 import { env } from 'node:process';
+import { tmpdir } from 'os';
 import { join } from 'path';
-import { window } from 'vscode';
+import { Uri, window } from 'vscode';
 import { installTools } from '../commands/installTools';
 import { ext } from '../extensionVariables';
 import { QueryResult } from '../models/queryResult';
@@ -65,6 +67,15 @@ export async function checkLocalInstallRunning(): Promise<void> {
         }
       });
   }
+}
+
+export async function convertBase64License(
+  encodedLicense: string,
+  tempDir: string = tmpdir()
+): Promise<Uri> {
+  const decodedLicense = Buffer.from(encodedLicense, 'base64');
+  await writeFile(join(tempDir, 'kc.lic'), decodedLicense);
+  return Uri.parse(join(tmpdir(), 'kc.lic'));
 }
 
 export function isTable(result: QueryResult): boolean {

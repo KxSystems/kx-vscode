@@ -3,7 +3,7 @@
   "displayName": "KXDB vscode",
   "description": "Extension to help with Q and KXDB",
   "publisher": "kx",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "engines": {
     "vscode": "^1.66.0"
   },
@@ -54,14 +54,6 @@
         ]
       }
     ],
-    "terminal": {
-      "profiles": [
-        {
-          "id": "kdb.q-terminal",
-          "title": "Q"
-        }
-      ]
-    },
     "configuration": {
       "title": "kdb",
       "properties": {
@@ -198,6 +190,7 @@
     "@types/fs-extra": "^9.0.13",
     "@types/glob": "^8.0.1",
     "@types/mocha": "^10.0.1",
+    "@types/node": "^18.15.3",
     "@types/node-fetch": "^2.6.2",
     "@types/sinon": "^10.0.13",
     "@types/vscode": "^1.66.0",
