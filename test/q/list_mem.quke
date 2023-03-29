@@ -1,0 +1,80 @@
+feature list_mem
+    before
+        .ignore.fnStr: "\n" sv read0 `:src/q/list_mem.q;
+        // Ignore q namespaces and our temporary setup namespace
+        .ignore.blacklist: " `.q`.Q`.h`.z`.o`.j`.m`.ignore";
+        // Also ignore all of the ax-libraries namespaces
+        .ignore.blacklist,: "`", "`" sv string distinct ` sv/: 2#/: ` vs/: .axenv.modules[];
+
+        .test: enlist[`]!enlist(::);
+
+
+    after
+        delete test from `.;
+        delete ignore from `.;
+
+    should enumerate namespaces
+        expect it to list all namespaces in memory
+            .test.namespace: enlist[`]!enlist(::);
+            .test.otherNs.var: 1 2 3;
+            .ignore.r: value .ignore.fnStr, .ignore.blacklist;
+            .qu.compare[exec fname from .ignore.r where isNs] `.`.test`.test.namespace`.test.otherNs
+
+        expect it to skip root namespaces specified in the blacklist
+            not `.ignore in exec fname from .ignore.r
+
+        expect the contexts to be set to the base namespace
+            .qu.compare[exec context from .ignore.r where isNs] ```.test`.test
+
+        expect it to skip sub-namespaces specified in the blacklist
+            .ignore.r: value .ignore.fnStr, .ignore.blacklist, "`.test.otherNs";
+            not any { x like ".test.otherNs*" } each exec fname from .ignore.r
+
+    should enumerate all items and item types in each namespace
+        expect it to enumerate all items with types, contexts, etc.
+            value "a:: 1";
+            value "b:: 2";
+            value "testview:: a + b";
+            .ignore.r: value .ignore.fnStr, .ignore.blacklist;
+            .ignore.e: ([]
+                id: `int$til 8;
+                pid: (2#0Ni), (3#0i), 1 1 6i;
+                name: `.`.test`a`b`testview`namespace`otherNs`var;
+                fname: `.`.test`a`b`testview`.test.namespace`.test.otherNs`.test.otherNs.var;
+                typeNum: 99 99 -7 -7 -7 99 99 7h;
+                namespace: `.`.`.`.`.`.test`.test`.test.otherNs;
+                context: (5#`),3#`.test;
+                isNs: 11000110b
+                );
+            .qu.compare[.ignore.r] .ignore.e
+
+    should build a tree of items
+        expect all root level items to have a null parent
+            .qu.compare[exec fname from .ignore.r where pid = 0Ni] `.`.test
+
+        expect items in the global namespace to be the child of `.
+            .qu.compare[exec fname from .ignore.r where pid = 0i] `a`b`testview
+
+        expect each item to have a valid pid (parent id)
+            .ignore.ids: 0Ni, exec id from .ignore.r;
+            0 = count select from .ignore.r where not pid in .ignore.ids
+
+    should handle errors
+        expect it to continue enumerating other namespaces when it errors in a different one
+            // This will cause an error when enumerating the namespace
+            .test.badns: enlist[`]!enlist(::);
+            .test.badns[`.something]: 123;
+
+            .ignore.r: value .ignore.fnStr, .ignore.blacklist;
+            .ignore.e: ([]
+                id: `int$til 9;
+                pid: (2#0Ni), (3#0i), 1 1 1 6i;
+                name: `.`.test`a`b`testview`namespace`otherNs`badns`var;
+                fname: `.`.test`a`b`testview`.test.namespace`.test.otherNs`.test.badns`.test.otherNs.var;
+                typeNum: 99 99 -7 -7 -7 99 99 99 7h;
+                namespace: `.`.`.`.`.`.test`.test`.test`.test.otherNs;
+                context: (5#`),4#`.test;
+                isNs: 110001110b
+                );
+            .qu.compare[.ignore.r] .ignore.e
+
