@@ -42,7 +42,7 @@
           {
             "id": "install",
             "title": "Register, acquire license and download the runtime",
-            "description": " \n[Install runtime](https://code.kx.com/q/learn/install/)\n[Ignore/hide this help](command:kxdb.hideWalkthrough)",
+            "description": " \n[Install runtime](https://kx.com/kdb-personal-edition-download/)\n[Ignore/hide this help](command:kxdb.hideWalkthrough)",
             "media": {
               "image": "resources/kx_install.png",
               "altText": "register"
