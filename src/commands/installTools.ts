@@ -7,6 +7,7 @@ import { convertBase64License, delay } from '../utils/core';
 import { executeCommand } from '../utils/cpUtils';
 import { openUrl } from '../utils/openUrl';
 import { findPid, killPort } from '../utils/shell';
+import { validateServerPort } from '../validators/kdbValidator';
 import extract = require('extract-zip');
 
 export async function installTools(): Promise<void> {
@@ -155,11 +156,21 @@ export async function installTools(): Promise<void> {
         )
         .then(async startResult => {
           if (startResult === 'Start Q') {
-            const workingDirectory = join(
-              ext.context.globalStorageUri.fsPath,
-              process.platform == 'win32' ? 'w64' : 'm64'
-            );
-            await executeCommand(workingDirectory, 'q', '-p', '5001');
+            const portInput: InputBoxOptions = {
+              prompt: 'Enter the desired port number for Q',
+              placeHolder: '5001',
+              ignoreFocusOut: true,
+              validateInput: (value: string | undefined) => validateServerPort(value),
+            };
+            window.showInputBox(portInput).then(async port => {
+              if (port) {
+                const workingDirectory = join(
+                  ext.context.globalStorageUri.fsPath,
+                  process.platform == 'win32' ? 'w64' : 'm64'
+                );
+                await executeCommand(workingDirectory, 'q', '-p', port);
+              }
+            });
           }
         });
     });
