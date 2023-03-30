@@ -1,6 +1,4 @@
-import { copy, ensureDir, existsSync } from 'fs-extra';
-import { writeFile } from 'fs/promises';
-import fetch from 'node-fetch';
+import { copy, ensureDir } from 'fs-extra';
 import { env } from 'node:process';
 import { join } from 'path';
 import { InputBoxOptions, ProgressLocation, QuickPickItem, Uri, window } from 'vscode';
@@ -115,6 +113,7 @@ export async function installTools(): Promise<void> {
           await copy(file![0].fsPath, join(ext.context.globalStorageUri.fsPath, ext.kdbLicName));
 
           // get the bits for Q
+          /*
           progress.report({ increment: 50, message: 'Getting the binaries...' });
           await delay(1000);
           if (process.platform == 'win32') {
@@ -134,14 +133,12 @@ export async function installTools(): Promise<void> {
           } else {
             throw new Error('OS not supports, only Windows and Mac are supported.');
           }
+          */
 
           // add the env var for the process
           progress.report({ increment: 70, message: 'Setting up environment...' });
           await delay(1000);
           env.QHOME = ext.context.globalStorageUri.fsPath;
-
-          progress.report({ increment: 100, message: 'Starting Q...' });
-          await delay(1000);
         }
 
         return new Promise<void>(resolve => {
@@ -150,12 +147,21 @@ export async function installTools(): Promise<void> {
       }
     )
     .then(async () => {
-      window.showInformationMessage('Installation of Q runtime completed successfully!');
-      const workingDirectory = join(
-        ext.context.globalStorageUri.fsPath,
-        process.platform == 'win32' ? 'w64' : 'm64'
-      );
-      await executeCommand(workingDirectory, 'q', '-p', '5001');
+      window
+        .showInformationMessage(
+          `Installation of Q runtime completed successfully to ${ext.context.globalStorageUri.fsPath}`,
+          'Start Q',
+          'Cancel'
+        )
+        .then(async startResult => {
+          if (startResult === 'Start Q') {
+            const workingDirectory = join(
+              ext.context.globalStorageUri.fsPath,
+              process.platform == 'win32' ? 'w64' : 'm64'
+            );
+            await executeCommand(workingDirectory, 'q', '-p', '5001');
+          }
+        });
     });
 }
 
