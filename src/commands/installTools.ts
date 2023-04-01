@@ -1,10 +1,18 @@
 import { copy, ensureDir } from 'fs-extra';
 import { env } from 'node:process';
 import { join } from 'path';
-import { InputBoxOptions, ProgressLocation, QuickPickItem, Uri, window } from 'vscode';
+import {
+  ConfigurationTarget,
+  InputBoxOptions,
+  ProgressLocation,
+  QuickPickItem,
+  Uri,
+  window,
+  workspace,
+} from 'vscode';
 import { ext } from '../extensionVariables';
-import { convertBase64License, delay } from '../utils/core';
-import { executeCommand } from '../utils/cpUtils';
+import { Server } from '../models/server';
+import { convertBase64License, delay, getHash } from '../utils/core';
 import { openUrl } from '../utils/openUrl';
 import { findPid, killPort } from '../utils/shell';
 import { validateServerPort } from '../validators/kdbValidator';
@@ -164,11 +172,46 @@ export async function installTools(): Promise<void> {
             };
             window.showInputBox(portInput).then(async port => {
               if (port) {
+                /*
                 const workingDirectory = join(
                   ext.context.globalStorageUri.fsPath,
                   process.platform == 'win32' ? 'w64' : 'm64'
                 );
                 await executeCommand(workingDirectory, 'q', '-p', port);
+                */
+
+                let servers: Server | undefined = workspace.getConfiguration().get('kdb.servers');
+                if (servers != undefined && servers[getHash(`localhost:${port}`)]) {
+                  await window.showErrorMessage(`Server localhost:${port} already exists.`);
+                } else {
+                  const key = getHash(`localhost${port}local`);
+                  if (servers === undefined) {
+                    servers = {
+                      key: {
+                        auth: false,
+                        serverName: 'localhost',
+                        serverPort: port,
+                        serverAlias: 'local',
+                      },
+                    };
+                  } else {
+                    servers[key] = {
+                      auth: false,
+                      serverName: 'localhost',
+                      serverPort: port,
+                      serverAlias: 'local',
+                    };
+                  }
+                  await workspace
+                    .getConfiguration()
+                    .update('kdb.servers', servers, ConfigurationTarget.Global);
+                  const newServers: Server | undefined = workspace
+                    .getConfiguration()
+                    .get('kdb.servers');
+                  if (newServers != undefined) {
+                    ext.serverProvider.refresh(newServers);
+                  }
+                }
               }
             });
           }
