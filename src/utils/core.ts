@@ -3,7 +3,7 @@ import { writeFile } from 'fs/promises';
 import { env } from 'node:process';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { Uri, window } from 'vscode';
+import { Uri, window, workspace } from 'vscode';
 import { installTools } from '../commands/installTools';
 import { ext } from '../extensionVariables';
 import { QueryResult } from '../models/queryResult';
@@ -26,6 +26,10 @@ export function delay(ms: number) {
 }
 
 export async function checkLocalInstall(): Promise<void> {
+  const QHOME = await workspace.getConfiguration().get<string>('kdb.qHomeDirectory');
+  if (QHOME) {
+    env.QHOME = QHOME || undefined;
+  }
   if (env.QHOME === undefined || env.QHOME.length === 0) {
     window
       .showInformationMessage('Local Q installation not found!', 'Install new instance', 'Cancel')

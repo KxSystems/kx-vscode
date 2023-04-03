@@ -64,6 +64,10 @@
         "kdb.hideWalkthrough": {
           "type": "boolean",
           "description": "Hide visibility of the walkthrough at startup of extension"
+        },
+        "kdb.qHomeDirectory": {
+          "type": "string",
+          "description": "QHOME directory for Q runtime"
         }
       }
     },

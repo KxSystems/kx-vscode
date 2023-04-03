@@ -148,6 +148,11 @@ export async function installTools(): Promise<void> {
           progress.report({ increment: 70, message: 'Setting up environment...' });
           await delay(1000);
           env.QHOME = ext.context.globalStorageUri.fsPath;
+
+          // persist the QHOME to global settings
+          await workspace
+            .getConfiguration()
+            .update('kdb.qHomeDirectory', env.QHOME, ConfigurationTarget.Global);
         }
 
         return new Promise<void>(resolve => {
