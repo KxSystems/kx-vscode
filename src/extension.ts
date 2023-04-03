@@ -13,10 +13,15 @@ import {
   TextDocumentContentProvider,
   Uri,
   window,
-  workspace
+  workspace,
 } from 'vscode';
 import { addNewConnection, connect, removeConnection } from './commands/serverCommand';
-import { checkWalkthrough, hideWalkthrough } from './commands/walkthroughCommand';
+import {
+  checkWalkthrough,
+  hideWalkthrough,
+  showInstallationDetails,
+  updateInstallationDetails,
+} from './commands/walkthroughCommand';
 import { ext } from './extensionVariables';
 import { QueryResult } from './models/queryResult';
 import { Server } from './models/server';
@@ -40,6 +45,14 @@ export async function activate(context: ExtensionContext) {
   ext.secretSettings = AuthSettings.instance;
 
   await checkLocalInstall();
+
+  const QHOME = await workspace.getConfiguration().get<string>('kdb.qHomeDirectory');
+  if (!QHOME) {
+    commands.executeCommand('setContext', 'kdb.showInstallWalkthrough', true);
+  } else {
+    // update md for walkthrough
+    await updateInstallationDetails();
+  }
 
   const result = await checkWalkthrough();
   if (result != undefined && result != true) {
@@ -69,6 +82,9 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand('kxdb.hideWalkthrough', async () => {
       hideWalkthrough();
     }),
+    commands.registerCommand('kxdb.showInstallationDetails', async () => {
+      await showInstallationDetails();
+    })
   );
 
   const lastResult: QueryResult | undefined = undefined;

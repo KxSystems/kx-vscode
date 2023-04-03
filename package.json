@@ -49,7 +49,20 @@
             },
             "completionEvents": [
               "onLink:https://code.kx.com/q/learn/install/"
-            ]
+            ],
+            "when": "kdb.showInstallWalkthrough"
+          },
+          {
+            "id": "view",
+            "title": "Q runtime installed",
+            "description": " \n[Ignore/hide this help](command:kxdb.hideWalkthrough)",
+            "media": {
+              "markdown": "out/test.md"
+            },
+            "completionEvents": [
+              "onLink:https://code.kx.com/q/learn/install/"
+            ],
+            "when": "!kdb.showInstallWalkthrough"
           }
         ]
       }
@@ -72,6 +85,10 @@
       }
     },
     "commands": [
+      {
+        "command": "kxdb.showInstallationDetails",
+        "title": "Show Q installation details"
+      },
       {
         "command": "kxdb.hideWalkthrough",
         "title": "Hide walkthrough"
