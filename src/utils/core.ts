@@ -1,18 +1,27 @@
 import { createHash } from 'crypto';
+import { pathExists } from 'fs-extra';
 import { writeFile } from 'fs/promises';
 import { env } from 'node:process';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { Uri, window, workspace } from 'vscode';
+import { ConfigurationTarget, Uri, commands, window, workspace } from 'vscode';
 import { installTools } from '../commands/installTools';
 import { ext } from '../extensionVariables';
 import { QueryResult } from '../models/queryResult';
-import { ServerDetails } from '../models/server';
+import { Server, ServerDetails } from '../models/server';
 import { executeCommand } from './cpUtils';
 import { findPid } from './shell';
 
 export function getHash(input: string): string {
   return createHash('sha256').update(input).digest('base64');
+}
+
+export function getServers(): Server | undefined {
+  return workspace.getConfiguration().get('kdb.servers');
+}
+
+export async function updateServers(servers: Server): Promise<void> {
+  await workspace.getConfiguration().update('kdb.servers', servers, ConfigurationTarget.Global);
 }
 
 export function getServerName(server: ServerDetails): string {
@@ -28,19 +37,28 @@ export function delay(ms: number) {
 export async function checkLocalInstall(): Promise<void> {
   const QHOME = await workspace.getConfiguration().get<string>('kdb.qHomeDirectory');
   if (QHOME) {
-    env.QHOME = QHOME || undefined;
+    env.QHOME = QHOME;
+    if (!pathExists(env.QHOME)) {
+      ext.outputChannel.appendLine('QHOME path stored is empty');
+    }
+    await writeFile(
+      join(__dirname, 'qinstall.md'),
+      `# Q runtime installed location: \n### ${QHOME}`
+    );
+    ext.outputChannel.appendLine(`Installation of Q found here: ${QHOME}`);
+    return;
   }
-  if (env.QHOME === undefined || env.QHOME.length === 0) {
-    window
-      .showInformationMessage('Local Q installation not found!', 'Install new instance', 'Cancel')
-      .then(async result => {
-        if (result === 'Install new instance') {
-          await installTools();
-        }
-      });
-  } else {
-    ext.outputChannel.appendLine(`Installation of Q found here: ${env.QHOME}`);
-  }
+
+  // set custom context that QHOME is not setup to control walkthrough visibility
+  commands.executeCommand('setContext', 'kdb.showInstallWalkthrough', true);
+
+  window
+    .showInformationMessage('Local Q installation not found!', 'Install new instance', 'Cancel')
+    .then(async installResult => {
+      if (installResult === 'Install new instance') {
+        await installTools();
+      }
+    });
 }
 
 export async function checkLocalInstallRunning(): Promise<void> {

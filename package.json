@@ -3,7 +3,7 @@
   "displayName": "KXDB vscode",
   "description": "Extension to help with Q and KXDB",
   "publisher": "kx",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "engines": {
     "vscode": "^1.66.0"
   },
@@ -57,7 +57,7 @@
             "title": "Q runtime installed",
             "description": " \n[Ignore/hide this help](command:kxdb.hideWalkthrough)",
             "media": {
-              "markdown": "out/test.md"
+              "markdown": "out/qinstall.md"
             },
             "completionEvents": [
               "onLink:https://code.kx.com/q/learn/install/"
@@ -85,10 +85,6 @@
       }
     },
     "commands": [
-      {
-        "command": "kxdb.showInstallationDetails",
-        "title": "Show Q installation details"
-      },
       {
         "command": "kxdb.hideWalkthrough",
         "title": "Hide walkthrough"

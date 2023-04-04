@@ -15,47 +15,41 @@ import {
   window,
   workspace,
 } from 'vscode';
-import { addNewConnection, connect, removeConnection } from './commands/serverCommand';
+import { addNewConnection, connect, disconnect, removeConnection } from './commands/serverCommand';
 import {
-  checkWalkthrough,
   hideWalkthrough,
   showInstallationDetails,
-  updateInstallationDetails,
+  showWalkthrough,
 } from './commands/walkthroughCommand';
 import { ext } from './extensionVariables';
 import { QueryResult } from './models/queryResult';
-import { Server } from './models/server';
 import { KdbNode, KdbTreeProvider } from './services/kdbTreeProvider';
-import { checkLocalInstall, formatTable, isTable } from './utils/core';
+import { checkLocalInstall, formatTable, getServers, isTable } from './utils/core';
 import AuthSettings from './utils/secretStorage';
 import { Telemetry } from './utils/telemetryClient';
 
 export async function activate(context: ExtensionContext) {
   ext.context = context;
   ext.outputChannel = window.createOutputChannel('kxdb');
+
+  // integration wtih Azure Account extension (https://marketplace.visualstudio.com/items?itemName=ms-vscode.azure-account)
   ext.azureAccount = (<AzureExtensionApiProvider>(
     extensions.getExtension('ms-vscode.azure-account')!.exports
   )).getApi('1.0.0');
 
-  const server: Server | undefined = workspace.getConfiguration().get<Server>('kdb.servers');
-  ext.serverProvider = new KdbTreeProvider(server!);
+  // const server: Server | undefined = getServers();
+  ext.serverProvider = new KdbTreeProvider(getServers()!);
   window.registerTreeDataProvider('kdb-servers', ext.serverProvider);
 
+  // initialize the secret store
   AuthSettings.init(context);
   ext.secretSettings = AuthSettings.instance;
 
+  // check for installed Q runtime
   await checkLocalInstall();
 
-  const QHOME = await workspace.getConfiguration().get<string>('kdb.qHomeDirectory');
-  if (!QHOME) {
-    commands.executeCommand('setContext', 'kdb.showInstallWalkthrough', true);
-  } else {
-    // update md for walkthrough
-    await updateInstallationDetails();
-  }
-
-  const result = await checkWalkthrough();
-  if (result != undefined && result != true) {
+  // hide walkthrough if requested
+  if (await showWalkthrough()) {
     commands.executeCommand(
       'workbench.action.openWalkthrough',
       'kx.kxdb-vscode#qinstallation',
@@ -63,15 +57,13 @@ export async function activate(context: ExtensionContext) {
     );
   }
 
+  // command registration
   context.subscriptions.push(
     commands.registerCommand('kxdb.connect', async (viewItem: KdbNode) => {
       await connect(viewItem);
     }),
     commands.registerCommand('kxdb.disconnect', async () => {
-      ext.connection?.disconnect();
-      commands.executeCommand('setContext', 'kdb.connected', false);
-      ext.connectionNode = undefined;
-      ext.serverProvider.reload();
+      await disconnect();
     }),
     commands.registerCommand('kxdb.addConnection', async () => {
       await addNewConnection();
@@ -80,7 +72,7 @@ export async function activate(context: ExtensionContext) {
       await removeConnection(viewItem);
     }),
     commands.registerCommand('kxdb.hideWalkthrough', async () => {
-      hideWalkthrough();
+      await hideWalkthrough();
     }),
     commands.registerCommand('kxdb.showInstallationDetails', async () => {
       await showInstallationDetails();

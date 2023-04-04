@@ -11,71 +11,58 @@ import {
   workspace,
 } from 'vscode';
 import { ext } from '../extensionVariables';
+import {
+  licenseAquire,
+  licenseFileInput,
+  licenseItems,
+  licensePlaceholder,
+  licenseString,
+  licenseStringInput,
+  licenseTypePlaceholder,
+  licenseTypes,
+  licenseWorkflow,
+} from '../models/items/license';
+import { onboardingInput, onboardingWorkflow } from '../models/items/onboarding';
 import { Server } from '../models/server';
-import { convertBase64License, delay, getHash } from '../utils/core';
+import { convertBase64License, delay, getHash, getServers, updateServers } from '../utils/core';
 import { openUrl } from '../utils/openUrl';
-import { findPid, killPort } from '../utils/shell';
+import { Telemetry } from '../utils/telemetryClient';
 import { validateServerPort } from '../validators/kdbValidator';
-import extract = require('extract-zip');
 
 export async function installTools(): Promise<void> {
   let file: Uri[] | undefined;
 
-  const picks: QuickPickItem[] = [
-    {
-      label: 'Select / Enter a license',
-      detail: 'Select if you have already registered and have a license key.',
-    },
-    {
-      label: 'Acquire license',
-      detail: 'Select if you are new or need to register for a new license key.',
-    },
-  ];
-
-  const licenseTypeResult: QuickPickItem | undefined = await window.showQuickPick(picks, {
-    placeHolder: 'Provide a license key.',
+  const licenseTypeResult: QuickPickItem | undefined = await window.showQuickPick(licenseItems, {
+    placeHolder: licensePlaceholder,
   });
 
-  if (licenseTypeResult?.label === 'Acquire license') {
+  if (licenseTypeResult?.label === licenseAquire) {
     let licenseCancel;
     await openUrl(ext.kdbDownload);
     await window
       .showInformationMessage(
-        'After receiving the email with license, click continue to proceed.',
-        'Continue',
-        'Cancel'
+        licenseWorkflow.prompt,
+        licenseWorkflow.option1,
+        licenseWorkflow.option2
       )
       .then(async res => {
-        if (res === 'Cancel') {
+        if (res === licenseWorkflow.option2) {
           licenseCancel = true;
         }
       });
-    if (licenseCancel) {
-      return;
-    }
+    if (licenseCancel) return;
   }
 
-  const licensePicks: QuickPickItem[] = [
-    {
-      label: 'Paste license string (base64 string from email)',
-      detail: 'Paste in the base64 encoded license string from the email ',
-    },
-    {
-      label: 'Select license file',
-      detail: 'Select a file saved with the license',
-    },
-  ];
-
-  const licenseResult: QuickPickItem | undefined = await window.showQuickPick(licensePicks, {
-    placeHolder: 'Select an option for license',
+  const licenseResult: QuickPickItem | undefined = await window.showQuickPick(licenseTypes, {
+    placeHolder: licenseTypePlaceholder,
   });
 
   if (licenseResult === undefined) {
     return;
-  } else if (licenseResult.label == 'Paste license string (base64 string from email)') {
+  } else if (licenseResult.label == licenseString) {
     const licenseInput: InputBoxOptions = {
-      prompt: 'Paste the base64 encoded license string',
-      placeHolder: 'encoded license',
+      prompt: licenseStringInput.prompt,
+      placeHolder: licenseStringInput.placeholder,
       ignoreFocusOut: true,
     };
 
@@ -86,10 +73,10 @@ export async function installTools(): Promise<void> {
     });
   } else {
     file = await window.showOpenDialog({
-      canSelectFiles: true,
-      canSelectFolders: false,
-      canSelectMany: false,
-      openLabel: 'Select a license file',
+      canSelectFiles: licenseFileInput.canSelectFiles,
+      canSelectFolders: licenseFileInput.canSelectFolders,
+      canSelectMany: licenseFileInput.canSelectMany,
+      openLabel: licenseFileInput.openLabel,
     });
   }
 
@@ -106,87 +93,50 @@ export async function installTools(): Promise<void> {
       },
       async (progress, token) => {
         token.onCancellationRequested(() => {
-          console.log('User cancelled the installation.');
+          ext.outputChannel.appendLine('User cancelled the installation.');
         });
 
         progress.report({ increment: 0 });
 
-        progress.report({ increment: 10, message: 'Checking for running process...' });
-        await delay(1000);
-        const result = await findPid(5001);
-        if (Number.isNaN(result)) {
-          // move the license file
-          progress.report({ increment: 30, message: 'Moving license file...' });
-          await delay(1000);
-          await ensureDir(ext.context.globalStorageUri.fsPath);
-          await copy(file![0].fsPath, join(ext.context.globalStorageUri.fsPath, ext.kdbLicName));
+        // move the license file
+        progress.report({ increment: 30, message: 'Moving license file...' });
+        await delay(500);
+        await ensureDir(ext.context.globalStorageUri.fsPath);
+        await copy(file![0].fsPath, join(ext.context.globalStorageUri.fsPath, ext.kdbLicName));
 
-          // get the bits for Q
-          /*
-          progress.report({ increment: 50, message: 'Getting the binaries...' });
-          await delay(1000);
-          if (process.platform == 'win32') {
-            const gpath = join(ext.context.globalStorageUri.fsPath, 'w64.zip');
-            if (!(await existsSync(gpath))) {
-              const response = await fetch(ext.kdbUrl);
-              await writeFile(gpath, await response.buffer());
-            }
-            await extract(gpath, { dir: ext.context.globalStorageUri.fsPath });
-          } else if (process.platform == 'darwin') {
-            const gpath = join(ext.context.globalStorageUri.fsPath, 'm64.zip');
-            if (!(await existsSync(gpath))) {
-              const response = await fetch(ext.kdbUrl);
-              await writeFile(gpath, await response.buffer());
-            }
-            await extract(gpath, { dir: ext.context.globalStorageUri.fsPath });
-          } else {
-            throw new Error('OS not supports, only Windows and Mac are supported.');
-          }
-          */
+        // add the env var for the process
+        progress.report({ increment: 60, message: 'Setting up environment...' });
+        await delay(500);
+        env.QHOME = ext.context.globalStorageUri.fsPath;
 
-          // add the env var for the process
-          progress.report({ increment: 70, message: 'Setting up environment...' });
-          await delay(1000);
-          env.QHOME = ext.context.globalStorageUri.fsPath;
-
-          // persist the QHOME to global settings
-          await workspace
-            .getConfiguration()
-            .update('kdb.qHomeDirectory', env.QHOME, ConfigurationTarget.Global);
-        }
-
-        return new Promise<void>(resolve => {
-          resolve();
-        });
+        // persist the QHOME to global settings
+        await workspace
+          .getConfiguration()
+          .update('kdb.qHomeDirectory', env.QHOME, ConfigurationTarget.Global);
       }
     )
     .then(async () => {
       window
         .showInformationMessage(
-          `Installation of Q runtime completed successfully to ${ext.context.globalStorageUri.fsPath}`,
-          'Start Q',
-          'Cancel'
+          onboardingWorkflow.prompt(ext.context.globalStorageUri.fsPath),
+          onboardingWorkflow.option1,
+          onboardingWorkflow.option2
         )
         .then(async startResult => {
-          if (startResult === 'Start Q') {
+          if (startResult === onboardingWorkflow.option1) {
             const portInput: InputBoxOptions = {
-              prompt: 'Enter the desired port number for Q',
-              placeHolder: '5001',
+              prompt: onboardingInput.prompt,
+              placeHolder: onboardingInput.placeholder,
               ignoreFocusOut: true,
               validateInput: (value: string | undefined) => validateServerPort(value),
             };
             window.showInputBox(portInput).then(async port => {
               if (port) {
-                /*
-                const workingDirectory = join(
-                  ext.context.globalStorageUri.fsPath,
-                  process.platform == 'win32' ? 'w64' : 'm64'
-                );
-                await executeCommand(workingDirectory, 'q', '-p', port);
-                */
-
-                let servers: Server | undefined = workspace.getConfiguration().get('kdb.servers');
+                let servers: Server | undefined = getServers();
                 if (servers != undefined && servers[getHash(`localhost:${port}`)]) {
+                  Telemetry.sendEvent(
+                    `Server localhost:${port} already exists in configuration store.`
+                  );
                   await window.showErrorMessage(`Server localhost:${port} already exists.`);
                 } else {
                   const key = getHash(`localhost${port}local`);
@@ -207,12 +157,8 @@ export async function installTools(): Promise<void> {
                       serverAlias: 'local',
                     };
                   }
-                  await workspace
-                    .getConfiguration()
-                    .update('kdb.servers', servers, ConfigurationTarget.Global);
-                  const newServers: Server | undefined = workspace
-                    .getConfiguration()
-                    .get('kdb.servers');
+                  await updateServers(servers);
+                  const newServers = getServers();
                   if (newServers != undefined) {
                     ext.serverProvider.refresh(newServers);
                   }
@@ -222,8 +168,4 @@ export async function installTools(): Promise<void> {
           }
         });
     });
-}
-
-export async function stopQ(): Promise<void> {
-  await killPort(5001);
 }
