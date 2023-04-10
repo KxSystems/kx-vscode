@@ -1,3 +1,4 @@
+import { ChildProcess } from 'node:child_process';
 import { ExtensionContext, extensions, OutputChannel } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
 import { AzureAccountExtensionApi } from './azure-account.api';
@@ -23,6 +24,8 @@ export namespace ext {
   export function getRuntimePath(): string {
     return 'C:\\Users\\caleteet\\Downloads\\w64\\w64\\q.exe';
   }
+
+  export let localProcessObj: ChildProcess;
 
   export const kdbUrl = 'https://l.kx.com/d/kdb%2b/4.0/w64.zip?lnum=5009358';
   export const kdbLicName = 'kc.lic';

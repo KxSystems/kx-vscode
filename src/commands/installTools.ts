@@ -1,4 +1,7 @@
-import { copy, ensureDir } from 'fs-extra';
+import extract from 'extract-zip';
+import { copy, ensureDir, existsSync, pathExists } from 'fs-extra';
+import fetch from 'node-fetch';
+import { writeFile } from 'node:fs/promises';
 import { env } from 'node:process';
 import { join } from 'path';
 import {
@@ -7,6 +10,7 @@ import {
   ProgressLocation,
   QuickPickItem,
   Uri,
+  commands,
   window,
   workspace,
 } from 'vscode';
@@ -23,14 +27,31 @@ import {
   licenseWorkflow,
 } from '../models/items/license';
 import { onboardingInput, onboardingWorkflow } from '../models/items/onboarding';
+import { runtimeUrlInput } from '../models/items/runtime';
 import { Server } from '../models/server';
-import { convertBase64License, delay, getHash, getServers, updateServers } from '../utils/core';
+import {
+  convertBase64License,
+  delay,
+  getHash,
+  getOsFile,
+  getServers,
+  saveLocalProcessObj,
+  updateServers,
+} from '../utils/core';
+import { executeCommand } from '../utils/cpUtils';
 import { openUrl } from '../utils/openUrl';
+import { killPid } from '../utils/shell';
 import { Telemetry } from '../utils/telemetryClient';
 import { validateServerPort } from '../validators/kdbValidator';
+import { showWalkthrough } from './walkthroughCommand';
 
 export async function installTools(): Promise<void> {
   let file: Uri[] | undefined;
+  let runtimeUrl: string;
+
+  await commands.executeCommand('notifications.clearAll');
+  await commands.executeCommand('welcome.goBack');
+  commands.executeCommand('setContext', 'kdb.showInstallWalkthrough', false);
 
   const licenseTypeResult: QuickPickItem | undefined = await window.showQuickPick(licenseItems, {
     placeHolder: licensePlaceholder,
@@ -84,6 +105,17 @@ export async function installTools(): Promise<void> {
     throw new Error();
   }
 
+  const runtimeInput: InputBoxOptions = {
+    prompt: runtimeUrlInput.prompt,
+    placeHolder: runtimeUrlInput.placeholder,
+    ignoreFocusOut: true,
+  };
+  await window.showInputBox(runtimeInput).then(async url => {
+    if (url !== undefined) {
+      runtimeUrl = url;
+    }
+  });
+
   window
     .withProgress(
       {
@@ -97,6 +129,26 @@ export async function installTools(): Promise<void> {
         });
 
         progress.report({ increment: 0 });
+
+        // download the binaries
+        progress.report({ increment: 20, message: 'Getting the binaries...' });
+        const osFile = getOsFile();
+        if (osFile === undefined) {
+          ext.outputChannel.appendLine(
+            'Unsupported operating system, unable to download binaries for this.'
+          );
+          Telemetry.sendException(
+            new Error('Unsupported operating system, unable to download binaries')
+          );
+        } else {
+          const gpath = join(ext.context.globalStorageUri.fsPath, osFile);
+          if (!existsSync(gpath)) {
+            const response = await fetch(runtimeUrl);
+            await ensureDir(ext.context.globalStorageUri.fsPath);
+            await writeFile(gpath, Buffer.from(await response.arrayBuffer()));
+          }
+          await extract(gpath, { dir: ext.context.globalStorageUri.fsPath });
+        }
 
         // move the license file
         progress.report({ increment: 30, message: 'Moving license file...' });
@@ -113,6 +165,29 @@ export async function installTools(): Promise<void> {
         await workspace
           .getConfiguration()
           .update('kdb.qHomeDirectory', env.QHOME, ConfigurationTarget.Global);
+
+        // update walkthrough
+        const QHOME = workspace.getConfiguration().get<string>('kdb.qHomeDirectory');
+        if (QHOME) {
+          env.QHOME = QHOME;
+          if (!pathExists(env.QHOME)) {
+            ext.outputChannel.appendLine('QHOME path stored is empty');
+          }
+          await writeFile(
+            join(__dirname, 'qinstall.md'),
+            `# Q runtime installed location: \n### ${QHOME}`
+          );
+          ext.outputChannel.appendLine(`Installation of Q found here: ${QHOME}`);
+        }
+
+        // hide walkthrough if requested
+        if (await showWalkthrough()) {
+          commands.executeCommand(
+            'workbench.action.openWalkthrough',
+            'kx.kxdb-vscode#qinstallation',
+            false
+          );
+        }
       }
     )
     .then(async () => {
@@ -164,8 +239,23 @@ export async function installTools(): Promise<void> {
                   }
                 }
               }
+              const workingDirectory = join(
+                ext.context.globalStorageUri.fsPath,
+                process.platform == 'win32' ? 'w64' : 'm64'
+              );
+              await executeCommand(
+                workingDirectory,
+                'q',
+                saveLocalProcessObj,
+                '-p',
+                port!.toString()
+              );
             });
           }
         });
     });
+}
+
+export async function stopLocalProcess(): Promise<void> {
+  await killPid(ext.localProcessObj.pid!);
 }

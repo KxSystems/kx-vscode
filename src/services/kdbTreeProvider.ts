@@ -1,12 +1,5 @@
 import * as path from 'path';
-import {
-  Command,
-  Event,
-  EventEmitter,
-  TreeDataProvider,
-  TreeItem,
-  TreeItemCollapsibleState
-} from 'vscode';
+import { Event, EventEmitter, TreeDataProvider, TreeItem, TreeItemCollapsibleState } from 'vscode';
 import { ext } from '../extensionVariables';
 import { Server, ServerDetails } from '../models/server';
 
@@ -51,12 +44,7 @@ export class KdbTreeProvider implements TreeDataProvider<KdbNode> {
           x.split(':'),
           `${servers[x].serverName}:${servers[x].serverPort}`,
           servers[x],
-          TreeItemCollapsibleState.None,
-          {
-            command: 'kdb.connect',
-            title: '',
-            arguments: [x],
-          }
+          TreeItemCollapsibleState.None
         )
     );
   }
@@ -84,8 +72,7 @@ export class KdbNode extends TreeItem {
     public readonly children: string[],
     public readonly label: string,
     public readonly details: ServerDetails,
-    public readonly collapsibleState: TreeItemCollapsibleState,
-    public readonly command?: Command
+    public readonly collapsibleState: TreeItemCollapsibleState
   ) {
     if (details.serverAlias != '') {
       label = label + ` [${details.serverAlias}]`;

@@ -15,6 +15,7 @@ import {
   window,
   workspace,
 } from 'vscode';
+import { installTools, stopLocalProcess } from './commands/installTools';
 import { addNewConnection, connect, disconnect, removeConnection } from './commands/serverCommand';
 import {
   hideWalkthrough,
@@ -76,6 +77,12 @@ export async function activate(context: ExtensionContext) {
     }),
     commands.registerCommand('kxdb.showInstallationDetails', async () => {
       await showInstallationDetails();
+    }),
+    commands.registerCommand('kxdb.installTools', async () => {
+      await installTools();
+    }),
+    commands.registerCommand('kxdb.stopLocalProcess', async () => {
+      await stopLocalProcess();
     })
   );
 
@@ -132,9 +139,10 @@ export async function activate(context: ExtensionContext) {
   // Telemetry.sendEvent('Extension.Activated');
 }
 
-export async function deactivate() {
-  Telemetry.dispose();
-  // await stopQ();
+export async function deactivate(): Promise<void> {
+  await Telemetry.dispose();
+  await stopLocalProcess();
+
   if (!ext.client) {
     return undefined;
   }

@@ -1,3 +1,4 @@
+import { ChildProcess } from 'child_process';
 import { createHash } from 'crypto';
 import { pathExists } from 'fs-extra';
 import { writeFile } from 'fs/promises';
@@ -9,11 +10,26 @@ import { installTools } from '../commands/installTools';
 import { ext } from '../extensionVariables';
 import { QueryResult } from '../models/queryResult';
 import { Server, ServerDetails } from '../models/server';
-import { executeCommand } from './cpUtils';
-import { findPid } from './shell';
 
 export function getHash(input: string): string {
   return createHash('sha256').update(input).digest('base64');
+}
+
+export function saveLocalProcessObj(childProcess: ChildProcess): void {
+  window.showInformationMessage('Q runtime started successfully!');
+  ext.localProcessObj = childProcess;
+}
+
+export function getOsFile(): string | undefined {
+  if (process.platform === 'win32') {
+    return 'w64.zip';
+  } else if (process.platform === 'darwin') {
+    return 'm64.zip';
+  } else if (process.platform === 'linux') {
+    return 'l64.zip';
+  } else {
+    return undefined;
+  }
 }
 
 export function getServers(): Server | undefined {
@@ -35,7 +51,7 @@ export function delay(ms: number) {
 }
 
 export async function checkLocalInstall(): Promise<void> {
-  const QHOME = await workspace.getConfiguration().get<string>('kdb.qHomeDirectory');
+  const QHOME = workspace.getConfiguration().get<string>('kdb.qHomeDirectory');
   if (QHOME) {
     env.QHOME = QHOME;
     if (!pathExists(env.QHOME)) {
@@ -59,36 +75,6 @@ export async function checkLocalInstall(): Promise<void> {
         await installTools();
       }
     });
-}
-
-export async function checkLocalInstallRunning(): Promise<void> {
-  const result = await findPid(5001);
-  if (isNaN(result)) {
-    window
-      .showInformationMessage('Local Q instance is not running', 'Locate Q install', 'Cancel')
-      .then(async result => {
-        if (result === 'Locate Q install') {
-          const directory = await window.showOpenDialog({
-            canSelectFolders: true,
-            canSelectFiles: false,
-            openLabel: 'Select the Q installation directory (QHOME)',
-          });
-
-          if (!directory) {
-            throw new Error();
-          }
-
-          env.QHOME = directory[0].fsPath;
-          const workingDirectory = join(
-            directory[0].fsPath,
-            process.platform == 'win32' ? 'w64' : 'm64'
-          );
-          await executeCommand(workingDirectory, 'q', '-p', '5001');
-        } else {
-          return;
-        }
-      });
-  }
 }
 
 export async function convertBase64License(
