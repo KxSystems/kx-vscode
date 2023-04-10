@@ -15,7 +15,7 @@ import {
   window,
   workspace,
 } from 'vscode';
-import { installTools, stopLocalProcess } from './commands/installTools';
+import { installTools, startLocalProcess, stopLocalProcess } from './commands/installTools';
 import { addNewConnection, connect, disconnect, removeConnection } from './commands/serverCommand';
 import {
   hideWalkthrough,
@@ -80,6 +80,9 @@ export async function activate(context: ExtensionContext) {
     }),
     commands.registerCommand('kxdb.installTools', async () => {
       await installTools();
+    }),
+    commands.registerCommand('kxdb.startLocalProcess', async () => {
+      await startLocalProcess();
     }),
     commands.registerCommand('kxdb.stopLocalProcess', async () => {
       await stopLocalProcess();

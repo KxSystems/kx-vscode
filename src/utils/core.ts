@@ -16,7 +16,8 @@ export function getHash(input: string): string {
 }
 
 export function saveLocalProcessObj(childProcess: ChildProcess): void {
-  window.showInformationMessage('Q runtime started successfully!');
+  window.showInformationMessage('Q process started successfully!');
+  ext.outputChannel.appendLine(`Child process id ${childProcess.pid!} saved in cache.`);
   ext.localProcessObj = childProcess;
 }
 

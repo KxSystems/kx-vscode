@@ -256,6 +256,14 @@ export async function installTools(): Promise<void> {
     });
 }
 
+export async function startLocalProcess(): Promise<void> {
+  const workingDirectory = join(
+    ext.context.globalStorageUri.fsPath,
+    process.platform == 'win32' ? 'w64' : 'm64'
+  );
+  await executeCommand(workingDirectory, 'q', saveLocalProcessObj, '-p', '5001');
+}
+
 export async function stopLocalProcess(): Promise<void> {
   await killPid(ext.localProcessObj.pid!);
 }

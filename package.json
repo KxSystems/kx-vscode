@@ -86,6 +86,10 @@
     },
     "commands": [
       {
+        "command": "kxdb.startLocalProcess",
+        "title": "Start Q process"
+      },
+      {
         "command": "kxdb.stopLocalProcess",
         "title": "Stop Q process"
       },

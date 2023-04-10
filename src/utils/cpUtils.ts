@@ -39,7 +39,7 @@ export async function tryExecuteCommand(
       workingDirectory = workingDirectory || os.tmpdir();
       const options: cp.SpawnOptions = {
         cwd: workingDirectory,
-        shell: true, //process.platform === 'win32' ? false : true,
+        shell: true,
       };
       let childProc: cp.ChildProcess;
       if (process.platform === 'darwin') {
