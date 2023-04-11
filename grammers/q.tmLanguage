@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- TODO: This is placeholder borrowed liberally from https://github.com/alexanderl20/vscode-kdb-q-forked, need to 
 develop one or attribute this -->
+<!-- TODO: this file will be removed in future interactions -->
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>

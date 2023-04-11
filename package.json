@@ -111,14 +111,14 @@
           "dark": "./images/kx.png",
           "light": "./images/kx.png"
         },
-        "configuration": "./grammers/language-configuration.json"
+        "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
       {
         "language": "q",
         "scopeName": "source.q",
-        "path": "./grammers/q.tmLanguage"
+        "path": "./syntaxes/q.tmLanguage.json"
       }
     ],
     "views": {
