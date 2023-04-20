@@ -27,9 +27,9 @@ export namespace ext {
 
   export let localProcessObj: ChildProcess;
 
-  export const kdbUrl = 'https://l.kx.com/d/kdb%2b/4.0/w64.zip?lnum=5009358';
   export const kdbLicName = 'kc.lic';
-  export const kdbDownload = 'https://kx.com/kdb-personal-edition-download/';
+  export const kdbInstallUrl = 'https://kx.com/kdb-personal-edition-download/';
+  export const kdbDownloadPrefixUrl = 'https://nexus.dl.kx.com/repository/kdb/4.0/';
 
   export const kxdevUrl =
     'https://downloads.kx.com/dl/index.php/9OeP-W7XAT7WtsH-I9lzPDKWiHw_oA8fK90mHgvuprPYhwcapsU1LNfQSoHOFinKpsgQ3VM5PWf7KjCpNgP9EqL_HvnorJxm0-ihvNzk2_rREPf8R1S1-Dt_Lz5uwxOhEWEcEO3PlFgY0dqsqt0Yd1cLLKhbKykjxKTR82XF1W6_ODzkJ0k3SNW4vt6xUkpdetckxbLdD1sUVYz1M0cMsAWsUWodLUpXcEi7ssuWfvvO-p8O2M-c-rAy9e8kz1ylEmh7OsWmX5-Zz8N1cvUyMQF54x3LEEFTpaJi96ZvmnjRMOSfkREHYVYsfzHM6XBALxVxxljdcmk6ttxqPEDuZUXQf6gdpjEeN5XPqrcv-zqKZhJ6A-PO6A1beCh5qlfJ3EyJFpdPBm0xnh8vCCENZ9BMGjAXUs8HQ7fukxWVRKX_sKLFeFFFKVsUJUJrgqop518iojQnKlx7QZnvArd0KA';

@@ -2,7 +2,7 @@ import extract from 'extract-zip';
 import { copy, ensureDir, existsSync, pathExists } from 'fs-extra';
 import fetch from 'node-fetch';
 import { writeFile } from 'node:fs/promises';
-import { env } from 'node:process';
+import { env, exit } from 'node:process';
 import { join } from 'path';
 import {
   ConfigurationTarget,
@@ -27,7 +27,6 @@ import {
   licenseWorkflow,
 } from '../models/items/license';
 import { onboardingInput, onboardingWorkflow } from '../models/items/onboarding';
-import { runtimeUrlInput } from '../models/items/runtime';
 import { Server } from '../models/server';
 import {
   convertBase64License,
@@ -59,7 +58,7 @@ export async function installTools(): Promise<void> {
 
   if (licenseTypeResult?.label === licenseAquire) {
     let licenseCancel;
-    await openUrl(ext.kdbDownload);
+    await openUrl(ext.kdbInstallUrl);
     await window
       .showInformationMessage(
         licenseWorkflow.prompt,
@@ -105,17 +104,6 @@ export async function installTools(): Promise<void> {
     throw new Error();
   }
 
-  const runtimeInput: InputBoxOptions = {
-    prompt: runtimeUrlInput.prompt,
-    placeHolder: runtimeUrlInput.placeholder,
-    ignoreFocusOut: true,
-  };
-  await window.showInputBox(runtimeInput).then(async url => {
-    if (url !== undefined) {
-      runtimeUrl = url;
-    }
-  });
-
   window
     .withProgress(
       {
@@ -143,7 +131,13 @@ export async function installTools(): Promise<void> {
         } else {
           const gpath = join(ext.context.globalStorageUri.fsPath, osFile);
           if (!existsSync(gpath)) {
-            const response = await fetch(runtimeUrl);
+            const response = await fetch(`${ext.kdbDownloadPrefixUrl}${osFile}`);
+            if (response.status > 200) {
+              Telemetry.sendException(new Error('Invalid or unavailable download url.'));
+              ext.outputChannel.appendLine(`Invalid or unavailable download url: ${runtimeUrl}`);
+              window.showErrorMessage(`Invalid or unavailable download url: ${runtimeUrl}`);
+              exit(1);
+            }
             await ensureDir(ext.context.globalStorageUri.fsPath);
             await writeFile(gpath, Buffer.from(await response.arrayBuffer()));
           }
