@@ -20,6 +20,7 @@ import { checkWalkthrough, hideWalkthrough } from './commands/walkthroughCommand
 import { ext } from './extensionVariables';
 import { QueryResult } from './models/queryResult';
 import { Server } from './models/server';
+import { runQFileTerminal } from './utils/execution';
 import { KdbNode, KdbTreeProvider } from './services/kdbTreeProvider';
 import { checkLocalInstall, formatTable, isTable } from './utils/core';
 import AuthSettings from './utils/secretStorage';
@@ -69,6 +70,11 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand('kxdb.hideWalkthrough', async () => {
       hideWalkthrough();
     }),
+    commands.registerCommand('kxbd.terminal.run', () => {
+      const filename = window.activeTextEditor?.document.fileName;
+      if (filename)
+        runQFileTerminal(filename);
+    })
   );
 
   const lastResult: QueryResult | undefined = undefined;
