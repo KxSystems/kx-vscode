@@ -6,7 +6,7 @@ import { ext } from '../extensionVariables';
 export async function executeCommand(
   workingDirectory: string | undefined,
   command: string,
-  spawnCallback: (cp: cp.ChildProcess) => void,
+  spawnCallback: (cp: cp.ChildProcess, args: string[]) => void,
   ...args: string[]
 ): Promise<string> {
   const result: ICommandResult = await tryExecuteCommand(
@@ -27,7 +27,7 @@ export async function executeCommand(
 export async function tryExecuteCommand(
   workingDirectory: string | undefined,
   command: string,
-  spawnCallback: (cp: cp.ChildProcess) => void,
+  spawnCallback: (cp: cp.ChildProcess, args: string[]) => void,
   ...args: string[]
 ): Promise<ICommandResult> {
   return await new Promise(
@@ -39,7 +39,7 @@ export async function tryExecuteCommand(
       workingDirectory = workingDirectory || os.tmpdir();
       const options: cp.SpawnOptions = {
         cwd: workingDirectory,
-        shell: true,
+        shell: process.platform === 'darwin' ? true : false,
       };
       let childProc: cp.ChildProcess;
       if (process.platform === 'darwin') {
@@ -51,7 +51,7 @@ export async function tryExecuteCommand(
       }
 
       childProc.on('spawn', () => {
-        spawnCallback(childProc);
+        spawnCallback(childProc, args);
       });
 
       childProc.stdout?.on('data', (data: string | Buffer) => {
@@ -67,7 +67,10 @@ export async function tryExecuteCommand(
         ext.outputChannel.append(data);
       });
 
-      childProc.on('error', reject);
+      childProc.on('error', error => {
+        console.log(error);
+        reject(error);
+      });
 
       childProc.on('close', (code: number) => {
         resolve({ code, cmdOutput, cmdOutputIncludingStderr, formattedArgs });

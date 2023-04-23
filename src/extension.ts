@@ -15,7 +15,12 @@ import {
   window,
   workspace,
 } from 'vscode';
-import { installTools, startLocalProcess, stopLocalProcess } from './commands/installTools';
+import {
+  installTools,
+  startLocalProcess,
+  stopLocalProcess,
+  stopLocalProcessByServerName,
+} from './commands/installTools';
 import { addNewConnection, connect, disconnect, removeConnection } from './commands/serverCommand';
 import {
   hideWalkthrough,
@@ -24,8 +29,15 @@ import {
 } from './commands/walkthroughCommand';
 import { ext } from './extensionVariables';
 import { QueryResult } from './models/queryResult';
+import { Server } from './models/server';
 import { KdbNode, KdbTreeProvider } from './services/kdbTreeProvider';
-import { checkLocalInstall, formatTable, getServers, isTable } from './utils/core';
+import {
+  checkLocalInstall,
+  formatTable,
+  getServers,
+  initializeLocalServers,
+  isTable,
+} from './utils/core';
 import AuthSettings from './utils/secretStorage';
 import { Telemetry } from './utils/telemetryClient';
 
@@ -38,9 +50,15 @@ export async function activate(context: ExtensionContext) {
     extensions.getExtension('ms-vscode.azure-account')!.exports
   )).getApi('1.0.0');
 
-  // const server: Server | undefined = getServers();
-  ext.serverProvider = new KdbTreeProvider(getServers()!);
+  const servers: Server | undefined = getServers();
+  ext.serverProvider = new KdbTreeProvider(servers!);
   window.registerTreeDataProvider('kdb-servers', ext.serverProvider);
+
+  // initialize local servers
+  if (servers !== undefined) {
+    initializeLocalServers(servers);
+    ext.serverProvider.refresh(servers);
+  }
 
   // initialize the secret store
   AuthSettings.init(context);
@@ -81,11 +99,11 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand('kxdb.installTools', async () => {
       await installTools();
     }),
-    commands.registerCommand('kxdb.startLocalProcess', async () => {
-      await startLocalProcess();
+    commands.registerCommand('kxdb.startLocalProcess', async (viewItem: KdbNode) => {
+      await startLocalProcess(viewItem);
     }),
-    commands.registerCommand('kxdb.stopLocalProcess', async () => {
-      await stopLocalProcess();
+    commands.registerCommand('kxdb.stopLocalProcess', async (viewItem: KdbNode) => {
+      await stopLocalProcess(viewItem);
     })
   );
 
@@ -144,7 +162,11 @@ export async function activate(context: ExtensionContext) {
 
 export async function deactivate(): Promise<void> {
   await Telemetry.dispose();
-  await stopLocalProcess();
+
+  // cleanup of local Q instance processes
+  Object.keys(ext.localProcessObjects).forEach(index => {
+    stopLocalProcessByServerName(index);
+  });
 
   if (!ext.client) {
     return undefined;

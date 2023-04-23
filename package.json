@@ -186,6 +186,14 @@
         {
           "command": "kxdb.removeConnection",
           "when": "view == kdb-servers"
+        },
+        {
+          "command": "kxdb.startLocalProcess",
+          "when": "view == kdb-servers && viewItem in kdb.local && viewItem not in kdb.running"
+        },
+        {
+          "command": "kxdb.stopLocalProcess",
+          "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running"
         }
       ]
     }

@@ -23,5 +23,6 @@ export async function killPid(pid = NaN): Promise<void> {
 }
 
 function killPidCommand(pid: number): string {
-  return isWin ? `taskkill /PID ${pid} /T /F` : `kill -9 ${pid}`;
+  return `kill ${pid}`;
+  // return process.platform === 'win32' ? `taskkill /PID ${pid} /T /F` : `kill -9 ${pid}`;
 }

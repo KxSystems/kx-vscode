@@ -1,8 +1,8 @@
-import { ChildProcess } from 'node:child_process';
 import { ExtensionContext, extensions, OutputChannel } from 'vscode';
 import { LanguageClient } from 'vscode-languageclient/node';
 import { AzureAccountExtensionApi } from './azure-account.api';
 import { Connection } from './models/connection';
+import { LocalProcess } from './models/localProcess';
 import { KdbNode, KdbTreeProvider } from './services/kdbTreeProvider';
 import AuthSettings from './utils/secretStorage';
 
@@ -25,7 +25,11 @@ export namespace ext {
     return 'C:\\Users\\caleteet\\Downloads\\w64\\w64\\q.exe';
   }
 
-  export let localProcessObj: ChildProcess;
+  export const localProcessObjects: LocalProcess = {};
+  // eslint-disable-next-line prefer-const
+  export let localConnectionContexts: Array<string> = [];
+  // eslint-disable-next-line prefer-const
+  export let localConnectionStatus: Array<string> = [];
 
   export const kdbLicName = 'kc.lic';
   export const kdbInstallUrl = 'https://kx.com/kdb-personal-edition-download/';

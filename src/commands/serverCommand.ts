@@ -28,7 +28,14 @@ import {
   showSubscriptions,
 } from '../services/azureProvider';
 import { KdbNode } from '../services/kdbTreeProvider';
-import { getHash, getServerName, getServers, updateServers } from '../utils/core';
+import {
+  addLocalConnectionContexts,
+  getHash,
+  getServerName,
+  getServers,
+  removeLocalConnectionContext,
+  updateServers,
+} from '../utils/core';
 import {
   validateServerAlias,
   validateServerName,
@@ -184,15 +191,23 @@ export function addKdbConnection(): void {
                         serverName: hostname,
                         serverPort: port,
                         serverAlias: alias,
+                        managed: alias === 'local' ? true : false,
                       },
                     };
+                    if (servers[0].managed) {
+                      await addLocalConnectionContexts(getServerName(servers[0]));
+                    }
                   } else {
                     servers[key] = {
                       auth: authUsed,
                       serverName: hostname,
                       serverPort: port,
                       serverAlias: alias,
+                      managed: alias === 'local' ? true : false,
                     };
+                    if (servers[key].managed) {
+                      await addLocalConnectionContexts(getServerName(servers[key]));
+                    }
                   }
 
                   await updateServers(servers);
@@ -228,6 +243,8 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
     uServers.forEach(server => {
       updatedServers[server] = servers[server];
     });
+
+    removeLocalConnectionContext(getServerName(viewItem.details));
 
     await updateServers(updatedServers);
     ext.serverProvider.refresh(updatedServers);

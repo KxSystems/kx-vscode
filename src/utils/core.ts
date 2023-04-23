@@ -15,10 +15,40 @@ export function getHash(input: string): string {
   return createHash('sha256').update(input).digest('base64');
 }
 
-export function saveLocalProcessObj(childProcess: ChildProcess): void {
+export function initializeLocalServers(servers: Server): void {
+  Object.keys(servers!).forEach(server => {
+    if (servers![server].managed === true) {
+      addLocalConnectionContexts(getServerName(servers![server]));
+    }
+  });
+}
+
+export async function addLocalConnectionStatus(serverName: string): Promise<void> {
+  ext.localConnectionStatus.push(serverName);
+  await commands.executeCommand('setContext', 'kdb.running', ext.localConnectionStatus);
+}
+
+export async function removeLocalConnectionStatus(serverName: string): Promise<void> {
+  const result = ext.localConnectionStatus.filter(connection => connection !== serverName);
+  ext.localConnectionStatus = result;
+  await commands.executeCommand('setContext', 'kdb.running', ext.localConnectionStatus);
+}
+
+export async function addLocalConnectionContexts(serverName: string): Promise<void> {
+  ext.localConnectionContexts.push(serverName);
+  await commands.executeCommand('setContext', 'kdb.local', ext.localConnectionContexts);
+}
+
+export async function removeLocalConnectionContext(serverName: string): Promise<void> {
+  const result = ext.localConnectionContexts.filter(connection => connection !== serverName);
+  ext.localConnectionContexts = result;
+  await commands.executeCommand('setContext', 'kdb.local', ext.localConnectionContexts);
+}
+
+export function saveLocalProcessObj(childProcess: ChildProcess, args: string[]): void {
   window.showInformationMessage('Q process started successfully!');
   ext.outputChannel.appendLine(`Child process id ${childProcess.pid!} saved in cache.`);
-  ext.localProcessObj = childProcess;
+  ext.localProcessObjects[args[2]] = childProcess;
 }
 
 export function getOsFile(): string | undefined {
