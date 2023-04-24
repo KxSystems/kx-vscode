@@ -87,6 +87,15 @@
             {
                 "command": "kxbd.terminal.run",
                 "title": "Run Q file"
+            },
+            {
+                "command": "kxbd.execute.query",
+                "title": "Query Current Line",
+                "category": "kdb+/q",
+                "icon": {
+                    "light": "assets/svg/light/query-current-line.svg",
+                    "dark": "assets/svg/dark/query-current-line.svg"
+                }
             }
         ],
         "snippets": [{
@@ -164,9 +173,18 @@
                 "command": "kxbd.terminal.run",
                 "when": "resourceLangId == q",
                 "group": "q"
+            }, {
+                "command": "kxbd.execute.query",
+                "group": "q",
+                "when": "editorLangId == q"
             }]
         }
     },
+    "keybindings": [{
+        "command": "kxbd.execute.query",
+        "key": "ctrl+q",
+        "when": "editorLangId == q"
+    }],
     "license": "MIT",
     "bugs": {
         "url": "https://github.com/KxSystems/kx-vscode/issues"
