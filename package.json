@@ -3,7 +3,7 @@
   "displayName": "KXDB vscode",
   "description": "Extension to help with Q and KXDB",
   "publisher": "kx",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "engines": {
     "vscode": "^1.66.0"
   },
@@ -42,14 +42,27 @@
           {
             "id": "install",
             "title": "Register, acquire license and download the runtime",
-            "description": " \n[Install runtime](https://code.kx.com/q/learn/install/)\n[Ignore/hide this help](command:kxdb.hideWalkthrough)",
+            "description": " \n[Install runtime](command:kxdb.installTools)\n[Ignore/hide this help](command:kxdb.hideWalkthrough)",
             "media": {
               "image": "resources/kx_install.png",
               "altText": "register"
             },
             "completionEvents": [
+              "onCommand:kxdb.installTools"
+            ],
+            "when": "kdb.showInstallWalkthrough"
+          },
+          {
+            "id": "view",
+            "title": "Q runtime installed",
+            "description": " \n[Ignore/hide this help](command:kxdb.hideWalkthrough)",
+            "media": {
+              "markdown": "out/qinstall.md"
+            },
+            "completionEvents": [
               "onLink:https://code.kx.com/q/learn/install/"
-            ]
+            ],
+            "when": "!kdb.showInstallWalkthrough"
           }
         ]
       }
@@ -64,10 +77,22 @@
         "kdb.hideWalkthrough": {
           "type": "boolean",
           "description": "Hide visibility of the walkthrough at startup of extension"
+        },
+        "kdb.qHomeDirectory": {
+          "type": "string",
+          "description": "QHOME directory for Q runtime"
         }
       }
     },
     "commands": [
+      {
+        "command": "kxdb.startLocalProcess",
+        "title": "Start Q process"
+      },
+      {
+        "command": "kxdb.stopLocalProcess",
+        "title": "Stop Q process"
+      },
       {
         "command": "kxdb.hideWalkthrough",
         "title": "Hide walkthrough"
@@ -161,6 +186,14 @@
         {
           "command": "kxdb.removeConnection",
           "when": "view == kdb-servers"
+        },
+        {
+          "command": "kxdb.startLocalProcess",
+          "when": "view == kdb-servers && viewItem in kdb.local && viewItem not in kdb.running"
+        },
+        {
+          "command": "kxdb.stopLocalProcess",
+          "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running"
         }
       ]
     }

@@ -1,35 +1,28 @@
-import { tryExecuteCommand } from './cpUtils';
+import { ChildProcess } from 'node:child_process';
+import { ext } from '../extensionVariables';
+import { ICommandResult, tryExecuteCommand } from './cpUtils';
 
 const isWin = process.platform === 'win32';
 
-export async function killPort(port: string | number): Promise<void> {
-  const pid = await findPid(port);
-  return killPid(pid);
+export function log(childProcess: ChildProcess): void {
+  ext.outputChannel.appendLine(`Process ${childProcess.pid!} killed`);
 }
 
 export async function killPid(pid = NaN): Promise<void> {
   if (isNaN(pid)) {
     return;
   }
-  return tryExecuteCommand(undefined, killPidCommand(pid)).then(() => undefined);
-}
 
-export async function findPid(port: string | number): Promise<number> {
-  const result = await tryExecuteCommand(undefined, findPidCommand(port));
-  return parsePid(result.cmdOutput);
-}
-
-function findPidCommand(port: string | number): string {
-  return isWin
-    ? `netstat -ano -p tcp | find "LISTENING" | findstr /r /c:":${port} *[^ ]*:[^ ]*"`
-    : `lsof -i tcp:${port} | grep LISTEN | awk '{print $2}'`;
+  let result: ICommandResult | undefined;
+  if (isWin) {
+    result = await tryExecuteCommand(undefined, killPidCommand(pid), log);
+  } else if (process.platform === 'darwin') {
+    result = await tryExecuteCommand('/bin', killPidCommand(pid), log);
+  }
+  ext.outputChannel.appendLine(`Destroying Q process result: ${result}`);
 }
 
 function killPidCommand(pid: number): string {
-  return isWin ? `taskkill /PID ${pid} /F` : `kill -TERM ${pid}`;
-}
-
-function parsePid(stdout: string): number {
-  const pid = stdout.match(/\s*\d+\s+$/);
-  return pid ? parseInt(pid[0].trim(), 10) : Number.NaN;
+  return `kill ${pid}`;
+  // return process.platform === 'win32' ? `taskkill /PID ${pid} /T /F` : `kill -9 ${pid}`;
 }

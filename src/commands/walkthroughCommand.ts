@@ -1,4 +1,4 @@
-import { commands, ConfigurationTarget, workspace } from 'vscode';
+import { ConfigurationTarget, commands, window, workspace } from 'vscode';
 
 export async function hideWalkthrough(): Promise<void> {
   await workspace
@@ -8,6 +8,15 @@ export async function hideWalkthrough(): Promise<void> {
   await commands.executeCommand('workbench.action.openWalkthrough');
 }
 
-export async function checkWalkthrough(): Promise<boolean | undefined> {
-  return await workspace.getConfiguration().get('kdb.hideWalkthrough');
+export async function showWalkthrough(): Promise<boolean> {
+  const walkthroughResult = await !workspace.getConfiguration().get('kdb.hideWalkthrough');
+  if (walkthroughResult === undefined || walkthroughResult === false) {
+    return false;
+  }
+  return true;
+}
+
+export async function showInstallationDetails(): Promise<void> {
+  const QHOME = await workspace.getConfiguration().get<string>('kdb.qHomeDirectory');
+  window.showInformationMessage(`Q runtime installed path: ${QHOME}`);
 }

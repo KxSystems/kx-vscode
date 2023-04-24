@@ -1,20 +1,20 @@
 import * as cp from 'child_process';
 import * as os from 'os';
+import { join } from 'path';
 import { ext } from '../extensionVariables';
-
-export function processExists(): boolean {
-  if (ext.qProc) {
-    return true;
-  }
-  return false;
-}
 
 export async function executeCommand(
   workingDirectory: string | undefined,
   command: string,
+  spawnCallback: (cp: cp.ChildProcess, args: string[]) => void,
   ...args: string[]
 ): Promise<string> {
-  const result: ICommandResult = await tryExecuteCommand(workingDirectory, command, ...args);
+  const result: ICommandResult = await tryExecuteCommand(
+    workingDirectory,
+    command,
+    spawnCallback,
+    ...args
+  );
   if (result.code !== 0) {
     ext.outputChannel.show();
     throw new Error(`Failed to run ${command} command.  Check output window for more details.`);
@@ -27,6 +27,7 @@ export async function executeCommand(
 export async function tryExecuteCommand(
   workingDirectory: string | undefined,
   command: string,
+  spawnCallback: (cp: cp.ChildProcess, args: string[]) => void,
   ...args: string[]
 ): Promise<ICommandResult> {
   return await new Promise(
@@ -38,9 +39,20 @@ export async function tryExecuteCommand(
       workingDirectory = workingDirectory || os.tmpdir();
       const options: cp.SpawnOptions = {
         cwd: workingDirectory,
-        shell: true,
+        shell: process.platform === 'darwin' ? true : false,
       };
-      const childProc: cp.ChildProcess = cp.spawn(command, args, options);
+      let childProc: cp.ChildProcess;
+      if (process.platform === 'darwin') {
+        // need to send the escaped working directory and command together for MacOS
+        workingDirectory = workingDirectory.replace(/(\s+)/g, '\\ ');
+        childProc = cp.spawn(join(workingDirectory, command), args, options);
+      } else {
+        childProc = cp.spawn(command, args, options);
+      }
+
+      childProc.on('spawn', () => {
+        spawnCallback(childProc, args);
+      });
 
       childProc.stdout?.on('data', (data: string | Buffer) => {
         data = data.toString();
@@ -55,7 +67,10 @@ export async function tryExecuteCommand(
         ext.outputChannel.append(data);
       });
 
-      childProc.on('error', reject);
+      childProc.on('error', error => {
+        console.log(error);
+        reject(error);
+      });
 
       childProc.on('close', (code: number) => {
         resolve({ code, cmdOutput, cmdOutputIncludingStderr, formattedArgs });

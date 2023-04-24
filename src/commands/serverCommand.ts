@@ -1,51 +1,58 @@
 import {
   commands,
-  ConfigurationTarget,
   InputBoxOptions,
   ProgressLocation,
   QuickPickItem,
   QuickPickOptions,
   window,
-  workspace
 } from 'vscode';
 import { ext } from '../extensionVariables';
 import { Connection } from '../models/connection';
+import {
+  connectionAliasInput,
+  connectionHostnameInput,
+  connectionPasswordInput,
+  connectionPortInput,
+  connectionUsernameInput,
+  kdbEndpoint,
+  kxInsightsEndpoint,
+  serverEndpointPlaceHolder,
+  serverEndpoints,
+} from '../models/items/server';
 import { ResourceGroupItem } from '../models/resourceGroupItem';
 import { Server } from '../models/server';
 import { SubscriptionItem } from '../models/subscriptionItem';
 import {
   createResourceGroup,
   showResourceGroups,
-  showSubscriptions
+  showSubscriptions,
 } from '../services/azureProvider';
 import { KdbNode } from '../services/kdbTreeProvider';
-import { getHash, getServerName } from '../utils/core';
+import {
+  addLocalConnectionContexts,
+  getHash,
+  getServerName,
+  getServers,
+  removeLocalConnectionContext,
+  updateServers,
+} from '../utils/core';
 import {
   validateServerAlias,
   validateServerName,
   validateServerPort,
-  validateServerUsername
+  validateServerUsername,
 } from '../validators/kdbValidator';
 
 export async function addNewConnection(): Promise<void> {
-  const picks: QuickPickItem[] = [
-    {
-      label: 'Enter a KDB endpoint',
-      detail: 'Enter the url, ip address, and port to connect to a KDB instance',
-    },
-    {
-      label: 'Create or Connect to KX Insights on Azure',
-      detail: 'Either provide an existing Azure instance or create a new one',
-    },
-  ];
+  const options: QuickPickOptions = { placeHolder: serverEndpointPlaceHolder };
 
-  const options: QuickPickOptions = { placeHolder: 'Select the KDB type' };
-
-  const resultType: QuickPickItem | undefined = await window.showQuickPick(picks, options);
-  if (resultType === undefined) {
-  } else if (resultType.label === 'Enter a KDB endpoint') {
+  const resultType: QuickPickItem | undefined = await window.showQuickPick(
+    serverEndpoints,
+    options
+  );
+  if (resultType!.label === kdbEndpoint) {
     addKdbConnection();
-  } else {
+  } else if (resultType!.label === kxInsightsEndpoint) {
     await addAzureConnection();
   }
 }
@@ -123,28 +130,28 @@ export async function addAzureConnection() {
 
 export function addKdbConnection(): void {
   const connectionAlias: InputBoxOptions = {
-    prompt: 'Enter a name/alias for the connection',
-    placeHolder: 'server name / alias',
+    prompt: connectionAliasInput.prompt,
+    placeHolder: connectionAliasInput.placeholder,
     validateInput: (value: string | undefined) => validateServerAlias(value),
   };
   const connectionHostname: InputBoxOptions = {
-    prompt: 'Enter the hostname or ip address of the KDB server',
-    placeHolder: '0.0.0.0',
+    prompt: connectionHostnameInput.prompt,
+    placeHolder: connectionHostnameInput.placeholder,
     validateInput: (value: string | undefined) => validateServerName(value),
   };
   const connectionPort: InputBoxOptions = {
-    prompt: 'Enter the port number of the KDB server',
-    placeHolder: '5001',
+    prompt: connectionPortInput.prompt,
+    placeHolder: connectionPortInput.placeholder,
     validateInput: (value: string | undefined) => validateServerPort(value),
   };
   const connectionUsername: InputBoxOptions = {
-    prompt: 'Enter username to authenticate with (optional)',
-    placeHolder: 'username',
+    prompt: connectionUsernameInput.prompt,
+    placeHolder: connectionUsernameInput.placeholder,
     validateInput: (value: string | undefined) => validateServerUsername(value),
   };
   const connectionPassword: InputBoxOptions = {
-    prompt: 'Enter password to authenticate with (optional)',
-    placeHolder: 'password',
+    prompt: connectionPasswordInput.prompt,
+    placeHolder: connectionPasswordInput.placeholder,
     password: true,
   };
 
@@ -168,7 +175,7 @@ export function addKdbConnection(): void {
                   );
                 }
 
-                let servers: Server | undefined = workspace.getConfiguration().get('kdb.servers');
+                let servers: Server | undefined = getServers();
 
                 if (servers != undefined && servers[getHash(`${hostname}:${port}`)]) {
                   await window.showErrorMessage(`Server ${hostname}:${port} already exists.`);
@@ -184,23 +191,27 @@ export function addKdbConnection(): void {
                         serverName: hostname,
                         serverPort: port,
                         serverAlias: alias,
+                        managed: alias === 'local' ? true : false,
                       },
                     };
+                    if (servers[0].managed) {
+                      await addLocalConnectionContexts(getServerName(servers[0]));
+                    }
                   } else {
                     servers[key] = {
                       auth: authUsed,
                       serverName: hostname,
                       serverPort: port,
                       serverAlias: alias,
+                      managed: alias === 'local' ? true : false,
                     };
+                    if (servers[key].managed) {
+                      await addLocalConnectionContexts(getServerName(servers[key]));
+                    }
                   }
 
-                  await workspace
-                    .getConfiguration()
-                    .update('kdb.servers', servers, ConfigurationTarget.Global);
-                  const newServers: Server | undefined = workspace
-                    .getConfiguration()
-                    .get('kdb.servers');
+                  await updateServers(servers);
+                  const newServers = getServers();
                   if (newServers != undefined) {
                     ext.serverProvider.refresh(newServers);
                   }
@@ -215,7 +226,7 @@ export function addKdbConnection(): void {
 }
 
 export async function removeConnection(viewItem: KdbNode): Promise<void> {
-  const servers: Server | undefined = workspace.getConfiguration().get('kdb.servers');
+  const servers: Server | undefined = getServers();
 
   const key =
     viewItem.details.serverAlias != ''
@@ -233,9 +244,9 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
       updatedServers[server] = servers[server];
     });
 
-    await workspace
-      .getConfiguration()
-      .update('kdb.servers', updatedServers, ConfigurationTarget.Global);
+    removeLocalConnectionContext(getServerName(viewItem.details));
+
+    await updateServers(updatedServers);
     ext.serverProvider.refresh(updatedServers);
   }
 }
@@ -252,7 +263,7 @@ export async function connect(viewItem: KdbNode): Promise<void> {
 
   // check for auth
   const authCredentials = await ext.secretSettings.getAuthData(viewItem.label);
-  const servers: Server | undefined = workspace.getConfiguration().get('kdb.servers');
+  const servers: Server | undefined = getServers();
   if (servers === undefined) {
     window.showErrorMessage('Server not found.');
     return;
@@ -292,4 +303,11 @@ export async function connect(viewItem: KdbNode): Promise<void> {
       ext.serverProvider.reload();
     }
   });
+}
+
+export async function disconnect(): Promise<void> {
+  ext.connection?.disconnect();
+  await commands.executeCommand('setContext', 'kdb.connected', false);
+  ext.connectionNode = undefined;
+  ext.serverProvider.reload();
 }
