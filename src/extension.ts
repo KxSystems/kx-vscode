@@ -17,44 +17,66 @@ import {
   workspace,
 } from "vscode";
 import {
+  installTools,
+  startLocalProcess,
+  stopLocalProcess,
+  stopLocalProcessByServerName,
+} from "./commands/installTools";
+import {
   addNewConnection,
   connect,
+  disconnect,
   executeQuery,
   removeConnection,
 } from "./commands/serverCommand";
 import {
-  checkWalkthrough,
   hideWalkthrough,
+  showInstallationDetails,
+  showWalkthrough,
 } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
 import { QueryResult } from "./models/queryResult";
 import { Server } from "./models/server";
 import { runQFileTerminal } from "./utils/execution";
 import { KdbNode, KdbTreeProvider } from "./services/kdbTreeProvider";
-import { checkLocalInstall, formatTable, isTable } from "./utils/core";
+import {
+  checkLocalInstall,
+  formatTable,
+  getServers,
+  initializeLocalServers,
+  isTable,
+} from "./utils/core";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
 
 export async function activate(context: ExtensionContext) {
   ext.context = context;
   ext.outputChannel = window.createOutputChannel("kxdb");
+
+  // integration wtih Azure Account extension (https://marketplace.visualstudio.com/items?itemName=ms-vscode.azure-account)
   ext.azureAccount = (<AzureExtensionApiProvider>(
     extensions.getExtension("ms-vscode.azure-account")!.exports
   )).getApi("1.0.0");
 
-  const server: Server | undefined = workspace
-    .getConfiguration()
-    .get<Server>("kdb.servers");
-  ext.serverProvider = new KdbTreeProvider(server!);
+  const servers: Server | undefined = getServers();
+  ext.serverProvider = new KdbTreeProvider(servers!);
   window.registerTreeDataProvider("kdb-servers", ext.serverProvider);
 
+  // initialize local servers
+  if (servers !== undefined) {
+    initializeLocalServers(servers);
+    ext.serverProvider.refresh(servers);
+  }
+
+  // initialize the secret store
   AuthSettings.init(context);
   ext.secretSettings = AuthSettings.instance;
 
+  // check for installed Q runtime
   await checkLocalInstall();
 
-  const result = await checkWalkthrough();
-  if (result != undefined && result != true) {
+  // hide walkthrough if requested
+  if (await showWalkthrough()) {
     commands.executeCommand(
       "workbench.action.openWalkthrough",
       "kx.kxdb-vscode#qinstallation",
@@ -77,10 +99,7 @@ export async function activate(context: ExtensionContext) {
       await connect(viewItem);
     }),
     commands.registerCommand("kxdb.disconnect", async () => {
-      ext.connection?.disconnect();
-      commands.executeCommand("setContext", "kdb.connected", false);
-      ext.connectionNode = undefined;
-      ext.serverProvider.reload();
+      await disconnect();
     }),
     commands.registerCommand("kxdb.addConnection", async () => {
       await addNewConnection();
@@ -92,8 +111,27 @@ export async function activate(context: ExtensionContext) {
       }
     ),
     commands.registerCommand("kxdb.hideWalkthrough", async () => {
-      hideWalkthrough();
+      await hideWalkthrough();
     }),
+    commands.registerCommand("kxdb.showInstallationDetails", async () => {
+      await showInstallationDetails();
+    }),
+    commands.registerCommand("kxdb.installTools", async () => {
+      await installTools();
+    }),
+    commands.registerCommand(
+      "kxdb.startLocalProcess",
+      async (viewItem: KdbNode) => {
+        await startLocalProcess(viewItem);
+      }
+    ),
+    commands.registerCommand(
+      "kxdb.stopLocalProcess",
+      async (viewItem: KdbNode) => {
+        await stopLocalProcess(viewItem);
+      }
+    ),
+
     commands.registerCommand("kxbd.terminal.run", () => {
       const filename = window.activeTextEditor?.document.fileName;
       if (filename) runQFileTerminal(filename);
@@ -179,9 +217,14 @@ export async function activate(context: ExtensionContext) {
   // Telemetry.sendEvent('Extension.Activated');
 }
 
-export async function deactivate() {
-  Telemetry.dispose();
-  // await stopQ();
+export async function deactivate(): Promise<void> {
+  await Telemetry.dispose();
+
+  // cleanup of local Q instance processes
+  Object.keys(ext.localProcessObjects).forEach((index) => {
+    stopLocalProcessByServerName(index);
+  });
+
   if (!ext.client) {
     return undefined;
   }

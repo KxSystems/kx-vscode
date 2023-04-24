@@ -3,6 +3,7 @@ export interface ServerDetails {
   serverPort: string;
   auth: boolean;
   serverAlias: string | undefined;
+  managed: boolean;
 }
 
 export interface Server {

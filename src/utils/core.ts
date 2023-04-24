@@ -1,18 +1,74 @@
+import { ChildProcess } from 'child_process';
 import { createHash } from 'crypto';
+import { pathExists } from 'fs-extra';
 import { writeFile } from 'fs/promises';
 import { env } from 'node:process';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import { Uri, window } from 'vscode';
+import { ConfigurationTarget, Uri, commands, window, workspace } from 'vscode';
 import { installTools } from '../commands/installTools';
 import { ext } from '../extensionVariables';
 import { QueryResult } from '../models/queryResult';
-import { ServerDetails } from '../models/server';
-import { executeCommand } from './cpUtils';
-import { findPid } from './shell';
+import { Server, ServerDetails } from '../models/server';
 
 export function getHash(input: string): string {
   return createHash('sha256').update(input).digest('base64');
+}
+
+export function initializeLocalServers(servers: Server): void {
+  Object.keys(servers!).forEach(server => {
+    if (servers![server].managed === true) {
+      addLocalConnectionContexts(getServerName(servers![server]));
+    }
+  });
+}
+
+export async function addLocalConnectionStatus(serverName: string): Promise<void> {
+  ext.localConnectionStatus.push(serverName);
+  await commands.executeCommand('setContext', 'kdb.running', ext.localConnectionStatus);
+}
+
+export async function removeLocalConnectionStatus(serverName: string): Promise<void> {
+  const result = ext.localConnectionStatus.filter(connection => connection !== serverName);
+  ext.localConnectionStatus = result;
+  await commands.executeCommand('setContext', 'kdb.running', ext.localConnectionStatus);
+}
+
+export async function addLocalConnectionContexts(serverName: string): Promise<void> {
+  ext.localConnectionContexts.push(serverName);
+  await commands.executeCommand('setContext', 'kdb.local', ext.localConnectionContexts);
+}
+
+export async function removeLocalConnectionContext(serverName: string): Promise<void> {
+  const result = ext.localConnectionContexts.filter(connection => connection !== serverName);
+  ext.localConnectionContexts = result;
+  await commands.executeCommand('setContext', 'kdb.local', ext.localConnectionContexts);
+}
+
+export function saveLocalProcessObj(childProcess: ChildProcess, args: string[]): void {
+  window.showInformationMessage('Q process started successfully!');
+  ext.outputChannel.appendLine(`Child process id ${childProcess.pid!} saved in cache.`);
+  ext.localProcessObjects[args[2]] = childProcess;
+}
+
+export function getOsFile(): string | undefined {
+  if (process.platform === 'win32') {
+    return 'w64.zip';
+  } else if (process.platform === 'darwin') {
+    return 'm64.zip';
+  } else if (process.platform === 'linux') {
+    return 'l64.zip';
+  } else {
+    return undefined;
+  }
+}
+
+export function getServers(): Server | undefined {
+  return workspace.getConfiguration().get('kdb.servers');
+}
+
+export async function updateServers(servers: Server): Promise<void> {
+  await workspace.getConfiguration().update('kdb.servers', servers, ConfigurationTarget.Global);
 }
 
 export function getServerName(server: ServerDetails): string {
@@ -26,47 +82,30 @@ export function delay(ms: number) {
 }
 
 export async function checkLocalInstall(): Promise<void> {
-  if (env.QHOME === undefined || env.QHOME.length === 0) {
-    window
-      .showInformationMessage('Local Q installation not found!', 'Install new instance', 'Cancel')
-      .then(async result => {
-        if (result === 'Install new instance') {
-          await installTools();
-        }
-      });
-  } else {
-    ext.outputChannel.appendLine(`Installation of Q found here: ${env.QHOME}`);
+  const QHOME = workspace.getConfiguration().get<string>('kdb.qHomeDirectory');
+  if (QHOME) {
+    env.QHOME = QHOME;
+    if (!pathExists(env.QHOME)) {
+      ext.outputChannel.appendLine('QHOME path stored is empty');
+    }
+    await writeFile(
+      join(__dirname, 'qinstall.md'),
+      `# Q runtime installed location: \n### ${QHOME}`
+    );
+    ext.outputChannel.appendLine(`Installation of Q found here: ${QHOME}`);
+    return;
   }
-}
 
-export async function checkLocalInstallRunning(): Promise<void> {
-  const result = await findPid(5001);
-  if (isNaN(result)) {
-    window
-      .showInformationMessage('Local Q instance is not running', 'Locate Q install', 'Cancel')
-      .then(async result => {
-        if (result === 'Locate Q install') {
-          const directory = await window.showOpenDialog({
-            canSelectFolders: true,
-            canSelectFiles: false,
-            openLabel: 'Select the Q installation directory (QHOME)',
-          });
+  // set custom context that QHOME is not setup to control walkthrough visibility
+  commands.executeCommand('setContext', 'kdb.showInstallWalkthrough', true);
 
-          if (!directory) {
-            throw new Error();
-          }
-
-          env.QHOME = directory[0].fsPath;
-          const workingDirectory = join(
-            directory[0].fsPath,
-            process.platform == 'win32' ? 'w64' : 'm64'
-          );
-          await executeCommand(workingDirectory, 'q', '-p', '5001');
-        } else {
-          return;
-        }
-      });
-  }
+  window
+    .showInformationMessage('Local Q installation not found!', 'Install new instance', 'Cancel')
+    .then(async installResult => {
+      if (installResult === 'Install new instance') {
+        await installTools();
+      }
+    });
 }
 
 export async function convertBase64License(
