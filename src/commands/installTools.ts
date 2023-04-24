@@ -58,6 +58,7 @@ export async function installTools(): Promise<void> {
 
   const licenseTypeResult: QuickPickItem | undefined = await window.showQuickPick(licenseItems, {
     placeHolder: licensePlaceholder,
+    ignoreFocusOut: true,
   });
 
   if (licenseTypeResult?.label === licenseAquire) {
@@ -79,6 +80,7 @@ export async function installTools(): Promise<void> {
 
   const licenseResult: QuickPickItem | undefined = await window.showQuickPick(licenseTypes, {
     placeHolder: licenseTypePlaceholder,
+    ignoreFocusOut: true,
   });
 
   if (licenseResult === undefined) {
