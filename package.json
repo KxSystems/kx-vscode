@@ -97,7 +97,7 @@
             },
             {
                 "command": "kxbd.execute.selectedQuery",
-                "title": "Execute Query of Current Selection"
+                "title": "Execute Current Selection"
             },
             {
                 "command": "kxbd.execute.fileQuery",
