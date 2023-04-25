@@ -63,7 +63,7 @@ export class ExecutionConsole {
     if (isConnected) {
       this._console.appendLine(`ERROR (Q): ${query}`);
     } else {
-      this._console.appendLine(`Please connect to an kbd+ server`);
+      this._console.appendLine(`Please connect to a kbd+ server`);
     }
     this._console.appendLine(`<<< >>>`);
   }
