@@ -101,7 +101,7 @@
             },
             {
                 "command": "kxbd.execute.fileQuery",
-                "title": "Execute Query of Entire File"
+                "title": "Execute File"
             }
         ],
         "snippets": [{
