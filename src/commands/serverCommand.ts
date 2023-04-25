@@ -325,13 +325,12 @@ export async function disconnect(): Promise<void> {
   ext.connection?.disconnect();
   await commands.executeCommand("setContext", "kdb.connected", false);
   ext.connectionNode = undefined;
+  const queryConsole = ExecutionConsole.start();
+  queryConsole.dispose();
   ext.serverProvider.reload();
 }
 
-export async function executeQuery(
-  query: string,
-  serverName: string
-): Promise<void> {
+export async function executeQuery(query: string): Promise<void> {
   const queryConsole = ExecutionConsole.start();
   if (ext.connection !== undefined && query.length > 0) {
     if (query.slice(-1) === ";") {
@@ -339,29 +338,31 @@ export async function executeQuery(
     } else if (query[0] === "`") {
       query = query + " ";
     }
-    const queryRes = await ext.connection.execute(query);
-    writeQueryResult(queryRes, query, serverName);
+    const queryRes = await ext.connection.executeQuery(query);
+    writeQueryResult(queryRes, query);
   } else {
     queryConsole.appendQueryError(
-      "There is no kbd connection or the query is empty",
-      serverName
+      query,
+      !!ext.connection,
+      ext.connectionNode?.label ? ext.connectionNode.label : ""
     );
     return undefined;
   }
 }
 
-function writeQueryResult(
-  result: string | Error,
-  query: string,
-  serverName: string
-): void {
+function writeQueryResult(result: string, query: string): void {
   const queryConsole = ExecutionConsole.start();
-  if (ext.connection && !(result instanceof Error)) {
-    queryConsole.append(result, serverName, query);
+  if (ext.connection && result !== "!@#ERROR^&*%") {
+    queryConsole.append(
+      result,
+      query,
+      ext.connectionNode?.label ? ext.connectionNode.label : ""
+    );
   } else {
     queryConsole.appendQueryError(
-      `The query: /n${query} /nReturned without any results`,
-      serverName
+      query,
+      !!ext.connection,
+      ext.connectionNode?.label ? ext.connectionNode.label : ""
     );
   }
 }

@@ -2,6 +2,7 @@ import * as nodeq from "node-q";
 import { commands, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { delay } from "../utils/core";
+import { QueryResultType, handleQueryResults } from "../utils/execution";
 
 export class Connection {
   private options: nodeq.ConnectionParameters;
@@ -56,15 +57,43 @@ export class Connection {
     }
 
     this.connection.k(command, function (err: Error, res: string) {
-      // if (err) return err;
-      if (err) {
-        result = err;
-      } else {
-        result = res;
-      }
+      if (err) throw err;
+      result = res;
     });
 
     // wait for result (lack of await using callbacks)
+    while (result === undefined || result === null) {
+      await delay(500);
+    }
+
+    return result;
+  }
+
+  public async executeQuery(command: string): Promise<string> {
+    let result;
+
+    let retryCount = 0;
+    while (this.connection === undefined) {
+      if (retryCount > ext.maxRetryCount) {
+        return "timeout";
+      }
+      await delay(500);
+      retryCount++;
+    }
+    this.connection.k(command, async function (err: Error, res: any) {
+      if (err) {
+        result = handleQueryResults(res, QueryResultType.Error);
+      }
+      if (res) {
+        const auxRes = JSON.stringify(res);
+        if (auxRes.slice(0, 2) === "[{") {
+          result = handleQueryResults(auxRes, QueryResultType.JSON);
+        } else {
+          result = handleQueryResults(auxRes, QueryResultType.Text);
+        }
+      }
+    });
+
     while (result === undefined || result === null) {
       await delay(500);
     }

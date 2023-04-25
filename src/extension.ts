@@ -84,13 +84,30 @@ export async function activate(context: ExtensionContext) {
     );
   }
 
-  function runQuery(serverName: string) {
+  enum ExecutionTypes {
+    QuerySelection,
+    QueryFile,
+  }
+
+  function runQuery(type: ExecutionTypes) {
     const editor = window.activeTextEditor;
     if (editor) {
-      const query = editor?.document.getText(
-        new Range(editor.selection.start, editor.selection.end)
-      );
-      executeQuery(query, serverName);
+      let query;
+      switch (type) {
+        case ExecutionTypes.QuerySelection:
+          query = editor?.document.getText(
+            new Range(editor.selection.start, editor.selection.end)
+          );
+          break;
+        case ExecutionTypes.QueryFile:
+        default:
+          const firstLine = editor.document.lineAt(0);
+          const lastLine = editor.document.lineAt(
+            editor.document.lineCount - 1
+          );
+          query = editor.document.getText();
+      }
+      executeQuery(query);
     }
   }
 
@@ -136,12 +153,12 @@ export async function activate(context: ExtensionContext) {
       const filename = window.activeTextEditor?.document.fileName;
       if (filename) runQFileTerminal(filename);
     }),
-    commands.registerCommand(
-      "kxbd.execute.query",
-      async (viewItem: KdbNode) => {
-        runQuery(viewItem.label);
-      }
-    )
+    commands.registerCommand("kxbd.execute.selectedQuery", async () => {
+      runQuery(ExecutionTypes.QuerySelection);
+    }),
+    commands.registerCommand("kxbd.execute.fileQuery", async () => {
+      runQuery(ExecutionTypes.QueryFile);
+    })
   );
 
   const lastResult: QueryResult | undefined = undefined;

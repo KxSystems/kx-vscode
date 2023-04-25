@@ -38,31 +38,17 @@
             "title": "Installation",
             "description": "Install the Q runtime to work with databases in KX locally.  This extension is in part an editor for Q.  The runtime will need to be installed either locally or done for you in the extension.",
             "steps": [{
-                    "id": "install",
-                    "title": "Register, acquire license and download the runtime",
-                    "description": " \n[Install runtime](command:kxdb.installTools)\n[Ignore/hide this help](command:kxdb.hideWalkthrough)",
-                    "media": {
-                        "image": "resources/kx_install.png",
-                        "altText": "register"
-                    },
-                    "completionEvents": [
-                        "onCommand:kxdb.installTools"
-                    ],
-                    "when": "kdb.showInstallWalkthrough"
+                "id": "install",
+                "title": "Register, acquire license and download the runtime",
+                "description": " \n[Install runtime](https://code.kx.com/q/learn/install/)\n[Ignore/hide this help](command:kxdb.hideWalkthrough)",
+                "media": {
+                    "image": "resources/kx_install.png",
+                    "altText": "register"
                 },
-                {
-                    "id": "view",
-                    "title": "Q runtime installed",
-                    "description": " \n[Ignore/hide this help](command:kxdb.hideWalkthrough)",
-                    "media": {
-                        "markdown": "out/qinstall.md"
-                    },
-                    "completionEvents": [
-                        "onLink:https://code.kx.com/q/learn/install/"
-                    ],
-                    "when": "!kdb.showInstallWalkthrough"
-                }
-            ]
+                "completionEvents": [
+                    "onLink:https://code.kx.com/q/learn/install/"
+                ]
+            }]
         }],
         "configuration": {
             "title": "kdb",
@@ -74,248 +60,215 @@
                 "kdb.hideWalkthrough": {
                     "type": "boolean",
                     "description": "Hide visibility of the walkthrough at startup of extension"
-                },
-                "kdb.qHomeDirectory": {
-                    "type": "string",
-                    "description": "QHOME directory for Q runtime"
                 }
+            }
+        },
+        "commands": [{
+                "command": "kxdb.startLocalProcess",
+                "title": "Start Q process"
             },
-
-            "main": "./out/extension.js",
-            "contributes": {
-                "walkthroughs": [{
-                    "id": "qinstallation",
-                    "title": "Installation",
-                    "description": "Install the Q runtime to work with databases in KX locally.  This extension is in part an editor for Q.  The runtime will need to be installed either locally or done for you in the extension.",
-                    "steps": [{
-                        "id": "install",
-                        "title": "Register, acquire license and download the runtime",
-                        "description": " \n[Install runtime](https://code.kx.com/q/learn/install/)\n[Ignore/hide this help](command:kxdb.hideWalkthrough)",
-                        "media": {
-                            "image": "resources/kx_install.png",
-                            "altText": "register"
-                        },
-                        "completionEvents": [
-                            "onLink:https://code.kx.com/q/learn/install/"
-                        ]
-                    }]
-                }],
-                "configuration": {
-                    "title": "kdb",
-                    "properties": {
-                        "kdb.servers": {
-                            "type": "object",
-                            "description": "KDB servers for explorer"
-                        },
-                        "kdb.hideWalkthrough": {
-                            "type": "boolean",
-                            "description": "Hide visibility of the walkthrough at startup of extension"
-                        }
-                    }
-                },
-                "commands": [{
-                        "command": "kxdb.startLocalProcess",
-                        "title": "Start Q process"
-                    },
-                    {
-                        "command": "kxdb.stopLocalProcess",
-                        "title": "Stop Q process"
-                    },
-                    {
-                        "command": "kxdb.hideWalkthrough",
-                        "title": "Hide walkthrough"
-                    },
-                    {
-                        "command": "kxdb.addConnection",
-                        "title": "Add new connection"
-                    },
-                    {
-                        "command": "kxdb.removeConnection",
-                        "title": "Remove connection"
-                    },
-                    {
-                        "command": "kxdb.connect",
-                        "title": "Connect KDB server"
-                    },
-                    {
-                        "command": "kxdb.disconnect",
-                        "title": "Disconnect KDB server"
-                    },
-                    {
-                        "command": "kxbd.terminal.run",
-                        "title": "Run Q file"
-                    },
-                    {
-                        "command": "kxbd.execute.query",
-                        "title": "Query Current Line",
-                        "category": "kdb+/q",
-                        "icon": {
-                            "light": "assets/svg/light/query-current-line.svg",
-                            "dark": "assets/svg/dark/query-current-line.svg"
-                        }
-                    }
-                ],
-                "snippets": [{
-                    "language": "q",
-                    "path": "snippets/qsnip.json"
-                }],
-                "languages": [{
-                    "id": "q",
-                    "aliases": [
-                        "q",
-                        "k"
-                    ],
-                    "extensions": [
-                        ".q",
-                        ".k",
-                        ".quke"
-                    ],
-                    "icon": {
-                        "dark": "./images/kx.png",
-                        "light": "./images/kx.png"
-                    },
-                    "configuration": "./language-configuration.json"
-                }],
-                "grammars": [{
-                    "language": "q",
-                    "scopeName": "source.q",
-                    "path": "./syntaxes/q.tmLanguage.json"
-                }],
-                "viewsContainers": {
-                    "activitybar": [{
-                        "id": "kxdb-explorer",
-                        "title": "KX",
-                        "icon": "resources/kx_logo.svg"
-                    }]
-                },
-                "views": {
-                    "kxdb-explorer": [{
-                        "id": "kdb-servers",
-                        "name": "kdb servers",
-                        "icon": "resources/server.svg"
-                    }]
-                },
-                "viewsWelcome": [{
-                    "view": "kdb-servers",
-                    "contents": "No KDB servers registered [learn more](https://www.bing.com).\n[Connect to kdb server](command:kxdb.addConnection)"
-                }],
-                "menus": {
-                    "commandPalette": [{
-                        "when": "false",
-                        "command": "kxdb.hideWalkthrough"
-                    }],
-                    "view/title": [{
-                        "command": "kxdb.addConnection",
-                        "when": "view == kdb-servers"
-                    }],
-                    "view/item/context": [{
-                            "command": "kxdb.connect",
-                            "when": "view == kdb-servers && viewItem not in kdb.connected"
-                        },
-                        {
-                            "command": "kxdb.disconnect",
-                            "when": "view == kdb-servers && viewItem in kdb.connected"
-                        },
-                        {
-                            "command": "kxdb.removeConnection",
-                            "when": "view == kdb-servers"
-                        },
-                        {
-                            "command": "kxdb.startLocalProcess",
-                            "when": "view == kdb-servers && viewItem in kdb.local && viewItem not in kdb.running"
-                        },
-                        {
-                            "command": "kxdb.stopLocalProcess",
-                            "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running"
-                        }
-                    ],
-                    "editor/title": [{
-                        "command": "kxbd.terminal.run",
-                        "when": "resourceLangId ==  q",
-                        "group": "navigation"
-                    }],
-                    "editor/context": [{
-                        "command": "kxbd.terminal.run",
-                        "when": "resourceLangId == q",
-                        "group": "q"
-                    }, {
-                        "command": "kxbd.execute.query",
-                        "group": "q",
-                        "when": "editorLangId == q"
-                    }]
-                }
+            {
+                "command": "kxdb.stopLocalProcess",
+                "title": "Stop Q process"
             },
-            "keybindings": [{
-                "command": "kxbd.execute.query",
-                "key": "ctrl+q",
-                "when": "editorLangId == q"
+            {
+                "command": "kxdb.hideWalkthrough",
+                "title": "Hide walkthrough"
+            },
+            {
+                "command": "kxdb.addConnection",
+                "title": "Add new connection"
+            },
+            {
+                "command": "kxdb.removeConnection",
+                "title": "Remove connection"
+            },
+            {
+                "command": "kxdb.connect",
+                "title": "Connect KDB server"
+            },
+            {
+                "command": "kxdb.disconnect",
+                "title": "Disconnect KDB server"
+            },
+            {
+                "command": "kxbd.terminal.run",
+                "title": "Run Q file"
+            },
+            {
+                "command": "kxbd.execute.selectedQuery",
+                "title": "Execute Query of Current Selection"
+            },
+            {
+                "command": "kxbd.execute.fileQuery",
+                "title": "Execute Query of Entire File"
+            }
+        ],
+        "snippets": [{
+            "language": "q",
+            "path": "snippets/qsnip.json"
+        }],
+        "languages": [{
+            "id": "q",
+            "aliases": [
+                "q",
+                "k"
+            ],
+            "extensions": [
+                ".q",
+                ".k",
+                ".quke"
+            ],
+            "icon": {
+                "dark": "./images/kx.png",
+                "light": "./images/kx.png"
+            },
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "q",
+            "scopeName": "source.q",
+            "path": "./syntaxes/q.tmLanguage.json"
+        }],
+        "viewsContainers": {
+            "activitybar": [{
+                "id": "kxdb-explorer",
+                "title": "KX",
+                "icon": "resources/kx_logo.svg"
+            }]
+        },
+        "views": {
+            "kxdb-explorer": [{
+                "id": "kdb-servers",
+                "name": "kdb servers",
+                "icon": "resources/server.svg"
+            }]
+        },
+        "viewsWelcome": [{
+            "view": "kdb-servers",
+            "contents": "No KDB servers registered [learn more](https://www.bing.com).\n[Connect to kdb server](command:kxdb.addConnection)"
+        }],
+        "menus": {
+            "commandPalette": [{
+                "when": "false",
+                "command": "kxdb.hideWalkthrough"
             }],
-            "license": "MIT",
-            "bugs": {
-                "url": "https://github.com/KxSystems/kx-vscode/issues"
+            "view/title": [{
+                "command": "kxdb.addConnection",
+                "when": "view == kdb-servers"
+            }],
+            "view/item/context": [{
+                    "command": "kxdb.connect",
+                    "when": "view == kdb-servers && viewItem not in kdb.connected"
+                },
+                {
+                    "command": "kxdb.disconnect",
+                    "when": "view == kdb-servers && viewItem in kdb.connected"
+                },
+                {
+                    "command": "kxdb.removeConnection",
+                    "when": "view == kdb-servers"
+                },
+                {
+                    "command": "kxdb.startLocalProcess",
+                    "when": "view == kdb-servers && viewItem in kdb.local && viewItem not in kdb.running"
+                },
+                {
+                    "command": "kxdb.stopLocalProcess",
+                    "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running"
+                }
+            ],
+            "editor/title": [{
+                "command": "kxbd.terminal.run",
+                "when": "resourceLangId ==  q",
+                "group": "navigation"
             },
-            "homepage": "https://github.com/KxSystems/kx-vscode#readme",
-            "scripts": {
-                "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
-                "esbuild-base": "rimraf out && tsc -p server/ && esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
-                "build": "tsc -p server/ && npm run -S esbuild-base -- --sourcemap",
-                "watch": "tsc -p server/ && npm run -S esbuild-base -- --sourcemap --watch",
-                "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
-                "test": "npm run -S esbuild-base -- --sourcemap && tsc -p ./test && node ./out/test/runTest.js",
-                "package": "npx vsce package"
+            {
+                "command": "kxbd.execute.fileQuery",
+                "when": "resourceLangId ==  q",
+                "group": "navigation"
+            }
+        ],
+            "editor/context": [{
+                "command": "kxbd.terminal.run",
+                "when": "resourceLangId == q",
+                "group": "q"
+            }, {
+                "command": "kxbd.execute.selectedQuery",
+                "group": "q",
+                "when": "editorLangId == q"
             },
-            "prettier": {
-                "printWidth": 100,
-                "singleQuote": true,
-                "tabWidth": 2,
-                "arrowParens": "avoid"
-            },
-            "devDependencies": {
-                "@types/extract-zip": "^2.0.1",
-                "@types/fs-extra": "^9.0.13",
-                "@types/glob": "^8.0.1",
-                "@types/mocha": "^10.0.1",
-                "@types/node": "^18.15.11",
-                "@types/node-fetch": "^2.6.2",
-                "@types/sinon": "^10.0.13",
-                "@types/vscode": "^1.66.0",
-                "@typescript-eslint/eslint-plugin": "^5.36.2",
-                "@typescript-eslint/parser": "^5.36.2",
-                "@vscode/test-electron": "^2.2.3",
-                "esbuild": "^0.15.7",
-                "eslint": "^8.23.0",
-                "eslint-plugin-header": "^3.1.1",
-                "glob": "^8.1.0",
-                "mocha": "^10.2.0",
-                "mocha-junit-reporter": "^2.2.0",
-                "mocha-multi-reporters": "^1.5.1",
-                "prettier": "^2.7.1",
-                "rimraf": "^3.0.2",
-                "sinon": "^15.0.1",
-                "typescript": "^4.8.2",
-                "vscode-dts": "^0.3.3",
-                "vscode-test": "^1.6.1"
-            },
-            "dependencies": {
-                "@azure/arm-resources": "4.2.2",
-                "@azure/arm-subscriptions": "3.1.2",
-                "@azure/core-auth": "^1.4.0",
-                "@azure/ms-rest-azure-env": "^2.0.0",
-                "@azure/ms-rest-nodeauth": "^3.1.1",
-                "@microsoft/vscode-azext-utils": "0.3.7",
-                "azure-arm-resource": "^7.4.0",
-                "extract-zip": "^2.0.1",
-                "fs-extra": "^10.1.0",
-                "node-fetch": "^2.6.6",
-                "node-q": "^2.6.0",
-                "vscode-extension-telemetry": "^0.4.5",
-                "vscode-languageclient": "^8.0.2",
-                "vscode-languageserver": "^8.0.2",
-                "vscode-languageserver-textdocument": "^1.0.7"
-            },
-            "extensionDependencies": [
-                "ms-vscode.azure-account"
-            ]
+         {
+                "command": "kxbd.execute.fileQuery",
+                "group": "q",
+                "when": "editorLangId == q"
+            }]
         }
-    }
+    },
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/KxSystems/kx-vscode/issues"
+    },
+    "homepage": "https://github.com/KxSystems/kx-vscode#readme",
+    "scripts": {
+        "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
+        "esbuild-base": "rimraf out && tsc -p server/ && esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
+        "build": "tsc -p server/ && npm run -S esbuild-base -- --sourcemap",
+        "watch": "tsc -p server/ && npm run -S esbuild-base -- --sourcemap --watch",
+        "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
+        "test": "npm run -S esbuild-base -- --sourcemap && tsc -p ./test && node ./out/test/runTest.js",
+        "package": "npx vsce package"
+    },
+    "prettier": {
+        "printWidth": 100,
+        "singleQuote": true,
+        "tabWidth": 2,
+        "arrowParens": "avoid"
+    },
+    "devDependencies": {
+        "@types/extract-zip": "^2.0.1",
+        "@types/fs-extra": "^9.0.13",
+        "@types/glob": "^8.0.1",
+        "@types/mocha": "^10.0.1",
+        "@types/node": "^18.15.11",
+        "@types/node-fetch": "^2.6.2",
+        "@types/sinon": "^10.0.13",
+        "@types/vscode": "^1.66.0",
+        "@typescript-eslint/eslint-plugin": "^5.36.2",
+        "@typescript-eslint/parser": "^5.36.2",
+        "@vscode/test-electron": "^2.2.3",
+        "esbuild": "^0.15.7",
+        "eslint": "^8.23.0",
+        "eslint-plugin-header": "^3.1.1",
+        "glob": "^8.1.0",
+        "mocha": "^10.2.0",
+        "mocha-junit-reporter": "^2.2.0",
+        "mocha-multi-reporters": "^1.5.1",
+        "prettier": "^2.7.1",
+        "rimraf": "^3.0.2",
+        "sinon": "^15.0.1",
+        "typescript": "^4.8.2",
+        "vscode-dts": "^0.3.3",
+        "vscode-test": "^1.6.1"
+    },
+    "dependencies": {
+        "@azure/arm-resources": "4.2.2",
+        "@azure/arm-subscriptions": "3.1.2",
+        "@azure/core-auth": "^1.4.0",
+        "@azure/ms-rest-azure-env": "^2.0.0",
+        "@azure/ms-rest-nodeauth": "^3.1.1",
+        "@microsoft/vscode-azext-utils": "0.3.7",
+        "azure-arm-resource": "^7.4.0",
+        "extract-zip": "^2.0.1",
+        "fs-extra": "^10.1.0",
+        "node-fetch": "^2.6.6",
+        "node-q": "^2.6.0",
+        "vscode-extension-telemetry": "^0.4.5",
+        "vscode-languageclient": "^8.0.2",
+        "vscode-languageserver": "^8.0.2",
+        "vscode-languageserver-textdocument": "^1.0.7"
+    },
+    "extensionDependencies": [
+        "ms-vscode.azure-account"
+    ]
 }

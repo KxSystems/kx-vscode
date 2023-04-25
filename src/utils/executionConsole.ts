@@ -23,27 +23,25 @@ export class ExecutionConsole {
 
   public appendQuery(query: string): void {
     if (query.length > 0) {
-      this._console.appendLine(`<<< Query  >>>`);
       this._console.appendLine(query);
       this._console.appendLine("");
-      this._console.appendLine(`<<< Results >>>`);
     }
   }
 
   public append(
     output: string | string[],
-    uniqLabel: string,
     query = "",
-    time = 0
+    serverName: string
   ): void {
     this._console.show(true);
-    this._console.clear();
+    //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
     this._console.appendLine(
-      `>>> ${uniqLabel} @ ${date.toLocaleTimeString()} ---- ${time}(ms) elapsed <<<`
+      `>>> ${serverName}  @ ${date.toLocaleTimeString()} <<<`
     );
     this.appendQuery(query);
     if (Array.isArray(output)) {
+      this._console.appendLine(output[0]);
       output.forEach((o) => this._console.appendLine(o));
     } else {
       this._console.appendLine(output);
@@ -51,14 +49,27 @@ export class ExecutionConsole {
     this._console.appendLine(`<<<\n`);
   }
 
-  public appendQueryError(error: string, serverName: string): void {
+  public appendQueryError(
+    query: string,
+    isConnected: boolean,
+    serverName: string
+  ): void {
     this._console.show(true);
-    if (error.length > 0) {
-      this._console.appendLine(
-        `<<< ERROR WITH QUERY EXECUTED AT SERVER: ${serverName}  >>>`
-      );
-      this._console.appendLine(error);
-      this._console.appendLine(`<<< >>>`);
+    //TODO: this._console.clear(); Add an option in the future to clear or not the console
+    const date = new Date();
+    this._console.appendLine(
+      `<<< ERROR -  ${serverName}  @ ${date.toLocaleTimeString()} >>>`
+    );
+    if (isConnected) {
+      this._console.appendLine(`ERROR (Q): ${query}`);
+    } else {
+      this._console.appendLine(`Please connect to an kbd+ server`);
     }
+    this._console.appendLine(`<<< >>>`);
+  }
+
+  // this to debug in case debug of extension doesn't work
+  public appendQueryDebug(msg: string) {
+    this._console.appendLine(msg);
   }
 }
