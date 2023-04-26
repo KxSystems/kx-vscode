@@ -122,14 +122,14 @@ export async function activate(context: ExtensionContext) {
       }
     ),
 
-    commands.registerCommand("kxbd.terminal.run", () => {
+    commands.registerCommand("kxdb.terminal.run", () => {
       const filename = window.activeTextEditor?.document.fileName;
       if (filename) runQFileTerminal(filename);
     }),
-    commands.registerCommand("kxbd.execute.selectedQuery", async () => {
+    commands.registerCommand("kxdb.execute.selectedQuery", async () => {
       runQuery(ExecutionTypes.QuerySelection);
     }),
-    commands.registerCommand("kxbd.execute.fileQuery", async () => {
+    commands.registerCommand("kxdb.execute.fileQuery", async () => {
       runQuery(ExecutionTypes.QueryFile);
     })
   );

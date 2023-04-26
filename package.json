@@ -126,6 +126,23 @@
         "title": "Execute File"
       }
     ],
+    "keybindings": [
+        {
+            "command": "kxdb.execute.selectedQuery",
+            "key": "ctrl+q",
+            "when": "editorLangId == q"
+        },
+        {
+            "command": "kxdb.execute.fileQuery",
+            "key": "ctrl+r",
+            "when": "editorLangId == q"
+        },
+        {
+            "command": "kxdb.terminal.run",
+            "key": "ctrl+shift+r",
+            "when": "editorLangId == q"
+        }
+    ],
     "snippets": [
       {
         "language": "q",
