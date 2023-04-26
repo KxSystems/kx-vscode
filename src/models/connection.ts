@@ -2,7 +2,8 @@ import * as nodeq from "node-q";
 import { commands, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { delay } from "../utils/core";
-import { QueryResultType, handleQueryResults } from "../utils/execution";
+import { handleQueryResults } from "../utils/execution";
+import { QueryResultType } from "./queryResult";
 
 export class Connection {
   private options: nodeq.ConnectionParameters;

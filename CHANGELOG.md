@@ -2,6 +2,22 @@
 
 All notable changes to the kxdb extension will be documented in this file.
 
+# 0.1.10
+
+### Enhancements
+
+- Updated onboarding flow design, also improved q process management after onboarding
+
+- Added ability to execute a file or the current selection and display results in the Output pane
+
+- Added activity bar
+
+### Fixes
+
+- Fix for Mac that showed a message when single clicking the connection in connection manager
+
+### Internal Improvements
+
 # 0.1.9
 
 ### Enhancements
