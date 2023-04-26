@@ -68,21 +68,21 @@
       }
     ],
     "configuration": {
-        "title": "kdb",
-        "properties": {
-          "kdb.servers": {
-            "type": "object",
-            "description": "KDB servers for explorer"
-          },
-          "kdb.hideWalkthrough": {
-            "type": "boolean",
-            "description": "Hide visibility of the walkthrough at startup of extension"
-          },
-          "kdb.qHomeDirectory": {
-            "type": "string",
-            "description": "QHOME directory for Q runtime"
-          }
+      "title": "kdb",
+      "properties": {
+        "kdb.servers": {
+          "type": "object",
+          "description": "KDB servers for explorer"
+        },
+        "kdb.hideWalkthrough": {
+          "type": "boolean",
+          "description": "Hide visibility of the walkthrough at startup of extension"
+        },
+        "kdb.qHomeDirectory": {
+          "type": "string",
+          "description": "QHOME directory for Q runtime"
         }
+      }
     },
     "commands": [
       {
@@ -114,15 +114,15 @@
         "title": "Disconnect KDB server"
       },
       {
-        "command": "kxbd.terminal.run",
+        "command": "kxdb.terminal.run",
         "title": "Run Q file"
       },
       {
-        "command": "kxbd.execute.selectedQuery",
+        "command": "kxdb.execute.selectedQuery",
         "title": "Execute Current Selection"
       },
       {
-        "command": "kxbd.execute.fileQuery",
+        "command": "kxdb.execute.fileQuery",
         "title": "Execute File"
       }
     ],
@@ -219,29 +219,29 @@
       ],
       "editor/title": [
         {
-          "command": "kxbd.terminal.run",
+          "command": "kxdb.terminal.run",
           "when": "resourceLangId ==  q",
           "group": "navigation"
         },
         {
-          "command": "kxbd.execute.fileQuery",
+          "command": "kxdb.execute.fileQuery",
           "when": "resourceLangId ==  q",
           "group": "navigation"
         }
       ],
       "editor/context": [
         {
-          "command": "kxbd.terminal.run",
+          "command": "kxdb.terminal.run",
           "when": "resourceLangId == q",
           "group": "q"
         },
         {
-          "command": "kxbd.execute.selectedQuery",
+          "command": "kxdb.execute.selectedQuery",
           "group": "q",
           "when": "editorLangId == q"
         },
         {
-          "command": "kxbd.execute.fileQuery",
+          "command": "kxdb.execute.fileQuery",
           "group": "q",
           "when": "editorLangId == q"
         }

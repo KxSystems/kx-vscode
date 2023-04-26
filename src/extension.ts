@@ -9,7 +9,6 @@ import {
   extensions,
   languages,
   Position,
-  Range,
   TextDocument,
   TextDocumentContentProvider,
   Uri,
@@ -26,8 +25,8 @@ import {
   addNewConnection,
   connect,
   disconnect,
-  executeQuery,
   removeConnection,
+  runQuery,
 } from "./commands/serverCommand";
 import {
   hideWalkthrough,
@@ -35,9 +34,9 @@ import {
   showWalkthrough,
 } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
+import { ExecutionTypes } from "./models/execution";
 import { QueryResult } from "./models/queryResult";
 import { Server } from "./models/server";
-import { runQFileTerminal } from "./utils/execution";
 import { KdbNode, KdbTreeProvider } from "./services/kdbTreeProvider";
 import {
   checkLocalInstall,
@@ -46,6 +45,7 @@ import {
   initializeLocalServers,
   isTable,
 } from "./utils/core";
+import { runQFileTerminal } from "./utils/execution";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
 
@@ -82,33 +82,6 @@ export async function activate(context: ExtensionContext) {
       "kx.kxdb-vscode#qinstallation",
       false
     );
-  }
-
-  enum ExecutionTypes {
-    QuerySelection,
-    QueryFile,
-  }
-
-  function runQuery(type: ExecutionTypes) {
-    const editor = window.activeTextEditor;
-    if (editor) {
-      let query;
-      switch (type) {
-        case ExecutionTypes.QuerySelection:
-          query = editor?.document.getText(
-            new Range(editor.selection.start, editor.selection.end)
-          );
-          break;
-        case ExecutionTypes.QueryFile:
-        default:
-          const firstLine = editor.document.lineAt(0);
-          const lastLine = editor.document.lineAt(
-            editor.document.lineCount - 1
-          );
-          query = editor.document.getText();
-      }
-      executeQuery(query);
-    }
   }
 
   context.subscriptions.push(

@@ -4,10 +4,12 @@ import {
   ProgressLocation,
   QuickPickItem,
   QuickPickOptions,
+  Range,
   window,
 } from "vscode";
 import { ext } from "../extensionVariables";
 import { Connection } from "../models/connection";
+import { ExecutionTypes } from "../models/execution";
 import {
   connectionAliasInput,
   connectionHostnameInput,
@@ -36,13 +38,13 @@ import {
   removeLocalConnectionContext,
   updateServers,
 } from "../utils/core";
+import { ExecutionConsole } from "../utils/executionConsole";
 import {
   validateServerAlias,
   validateServerName,
   validateServerPort,
   validateServerUsername,
 } from "../validators/kdbValidator";
-import { ExecutionConsole } from "../utils/executionConsole";
 
 export async function addNewConnection(): Promise<void> {
   const options: QuickPickOptions = { placeHolder: serverEndpointPlaceHolder };
@@ -347,6 +349,24 @@ export async function executeQuery(query: string): Promise<void> {
       ext.connectionNode?.label ? ext.connectionNode.label : ""
     );
     return undefined;
+  }
+}
+
+export function runQuery(type: ExecutionTypes) {
+  const editor = window.activeTextEditor;
+  if (editor) {
+    let query;
+    switch (type) {
+      case ExecutionTypes.QuerySelection:
+        query = editor?.document.getText(
+          new Range(editor.selection.start, editor.selection.end)
+        );
+        break;
+      case ExecutionTypes.QueryFile:
+      default:
+        query = editor.document.getText();
+    }
+    executeQuery(query);
   }
 }
 
