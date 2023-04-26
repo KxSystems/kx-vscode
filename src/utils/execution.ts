@@ -1,6 +1,7 @@
+import { env } from "node:process";
 import path from "path";
 import { window } from "vscode";
-import { env } from "node:process";
+import { QueryResultType } from "../models/queryResult";
 import { TableGenerator } from "./tableGenerator";
 
 export function runQFileTerminal(filename: string) {
@@ -15,13 +16,6 @@ export function runQFileTerminal(filename: string) {
     terminal.show();
     terminal.sendText(command);
   }
-}
-
-export enum QueryResultType {
-  Text,
-  JSON,
-  Bytes,
-  Error,
 }
 
 export function handleQueryResults(
