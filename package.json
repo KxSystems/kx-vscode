@@ -134,7 +134,7 @@
         },
         {
             "command": "kxdb.execute.fileQuery",
-            "key": "ctrl+r",
+            "key": "ctrl+shift+q",
             "when": "editorLangId == q"
         },
         {
