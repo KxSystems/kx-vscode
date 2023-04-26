@@ -1,4 +1,4 @@
-import { AzureExtensionApiProvider } from '@microsoft/vscode-azext-utils/api';
+import { AzureExtensionApiProvider } from "@microsoft/vscode-azext-utils/api";
 import {
   CancellationToken,
   commands,
@@ -14,45 +14,53 @@ import {
   Uri,
   window,
   workspace,
-} from 'vscode';
+} from "vscode";
 import {
   installTools,
   startLocalProcess,
   stopLocalProcess,
   stopLocalProcessByServerName,
-} from './commands/installTools';
-import { addNewConnection, connect, disconnect, removeConnection } from './commands/serverCommand';
+} from "./commands/installTools";
+import {
+  addNewConnection,
+  connect,
+  disconnect,
+  removeConnection,
+  runQuery,
+} from "./commands/serverCommand";
 import {
   hideWalkthrough,
   showInstallationDetails,
   showWalkthrough,
-} from './commands/walkthroughCommand';
-import { ext } from './extensionVariables';
-import { QueryResult } from './models/queryResult';
-import { Server } from './models/server';
-import { KdbNode, KdbTreeProvider } from './services/kdbTreeProvider';
+} from "./commands/walkthroughCommand";
+import { ext } from "./extensionVariables";
+import { ExecutionTypes } from "./models/execution";
+import { QueryResult } from "./models/queryResult";
+import { Server } from "./models/server";
+import { KdbNode, KdbTreeProvider } from "./services/kdbTreeProvider";
 import {
   checkLocalInstall,
   formatTable,
   getServers,
   initializeLocalServers,
   isTable,
-} from './utils/core';
-import AuthSettings from './utils/secretStorage';
-import { Telemetry } from './utils/telemetryClient';
+} from "./utils/core";
+import { runQFileTerminal } from "./utils/execution";
+import AuthSettings from "./utils/secretStorage";
+import { Telemetry } from "./utils/telemetryClient";
 
 export async function activate(context: ExtensionContext) {
   ext.context = context;
-  ext.outputChannel = window.createOutputChannel('kxdb');
+  ext.outputChannel = window.createOutputChannel("kxdb");
 
   // integration wtih Azure Account extension (https://marketplace.visualstudio.com/items?itemName=ms-vscode.azure-account)
   ext.azureAccount = (<AzureExtensionApiProvider>(
-    extensions.getExtension('ms-vscode.azure-account')!.exports
-  )).getApi('1.0.0');
+    extensions.getExtension("ms-vscode.azure-account")!.exports
+  )).getApi("1.0.0");
 
   const servers: Server | undefined = getServers();
   ext.serverProvider = new KdbTreeProvider(servers!);
-  window.registerTreeDataProvider('kdb-servers', ext.serverProvider);
+  window.registerTreeDataProvider("kdb-servers", ext.serverProvider);
 
   // initialize local servers
   if (servers !== undefined) {
@@ -70,45 +78,64 @@ export async function activate(context: ExtensionContext) {
   // hide walkthrough if requested
   if (await showWalkthrough()) {
     commands.executeCommand(
-      'workbench.action.openWalkthrough',
-      'kx.kxdb-vscode#qinstallation',
+      "workbench.action.openWalkthrough",
+      "kx.kxdb-vscode#qinstallation",
       false
     );
   }
 
-  // command registration
   context.subscriptions.push(
-    commands.registerCommand('kxdb.connect', async (viewItem: KdbNode) => {
+    commands.registerCommand("kxdb.connect", async (viewItem: KdbNode) => {
       await connect(viewItem);
     }),
-    commands.registerCommand('kxdb.disconnect', async () => {
+    commands.registerCommand("kxdb.disconnect", async () => {
       await disconnect();
     }),
-    commands.registerCommand('kxdb.addConnection', async () => {
+    commands.registerCommand("kxdb.addConnection", async () => {
       await addNewConnection();
     }),
-    commands.registerCommand('kxdb.removeConnection', async (viewItem: KdbNode) => {
-      await removeConnection(viewItem);
-    }),
-    commands.registerCommand('kxdb.hideWalkthrough', async () => {
+    commands.registerCommand(
+      "kxdb.removeConnection",
+      async (viewItem: KdbNode) => {
+        await removeConnection(viewItem);
+      }
+    ),
+    commands.registerCommand("kxdb.hideWalkthrough", async () => {
       await hideWalkthrough();
     }),
-    commands.registerCommand('kxdb.showInstallationDetails', async () => {
+    commands.registerCommand("kxdb.showInstallationDetails", async () => {
       await showInstallationDetails();
     }),
-    commands.registerCommand('kxdb.installTools', async () => {
+    commands.registerCommand("kxdb.installTools", async () => {
       await installTools();
     }),
-    commands.registerCommand('kxdb.startLocalProcess', async (viewItem: KdbNode) => {
-      await startLocalProcess(viewItem);
+    commands.registerCommand(
+      "kxdb.startLocalProcess",
+      async (viewItem: KdbNode) => {
+        await startLocalProcess(viewItem);
+      }
+    ),
+    commands.registerCommand(
+      "kxdb.stopLocalProcess",
+      async (viewItem: KdbNode) => {
+        await stopLocalProcess(viewItem);
+      }
+    ),
+
+    commands.registerCommand("kxdb.terminal.run", () => {
+      const filename = window.activeTextEditor?.document.fileName;
+      if (filename) runQFileTerminal(filename);
     }),
-    commands.registerCommand('kxdb.stopLocalProcess', async (viewItem: KdbNode) => {
-      await stopLocalProcess(viewItem);
+    commands.registerCommand("kxdb.execute.selectedQuery", async () => {
+      runQuery(ExecutionTypes.QuerySelection);
+    }),
+    commands.registerCommand("kxdb.execute.fileQuery", async () => {
+      runQuery(ExecutionTypes.QueryFile);
     })
   );
 
   const lastResult: QueryResult | undefined = undefined;
-  const resultSchema = 'vscode-kdb-q';
+  const resultSchema = "vscode-kdb-q";
   const resultProvider = new (class implements TextDocumentContentProvider {
     onDidChangeEmitter = new EventEmitter<Uri>();
     onDidChange = this.onDidChangeEmitter.event;
@@ -116,12 +143,14 @@ export async function activate(context: ExtensionContext) {
     provideTextDocumentContent(uri: Uri): string {
       const result = lastResult!;
 
-      const headers = result.meta.map(m => m.c);
-      const aligns = result.meta.map(m => (m.t === 'f' ? '.' : '1'));
+      const headers = result.meta.map((m) => m.c);
+      const aligns = result.meta.map((m) => (m.t === "f" ? "." : "1"));
       const opts = { align: aligns, keys: result.keys };
       const data = result.data;
 
-      const text: string = isTable(result) ? formatTable(headers, data, opts) : data;
+      const text: string = isTable(result)
+        ? formatTable(headers, data, opts)
+        : data;
       return text;
     }
   })();
@@ -131,8 +160,12 @@ export async function activate(context: ExtensionContext) {
   );
 
   context.subscriptions.push(
-    languages.registerCompletionItemProvider('q', {
-      provideCompletionItems(document: TextDocument, position: Position, token: CancellationToken) {
+    languages.registerCompletionItemProvider("q", {
+      provideCompletionItems(
+        document: TextDocument,
+        position: Position,
+        token: CancellationToken
+      ) {
         const items: CompletionItem[] = [];
         const getInsertText = (x: string) => {
           if ((x.match(/\./g) || []).length > 1) {
@@ -141,15 +174,29 @@ export async function activate(context: ExtensionContext) {
           return x;
         };
 
-        ext.keywords.forEach(x => items.push({ label: x, kind: CompletionItemKind.Keyword }));
-        ext.functions.forEach(x =>
-          items.push({ label: x, insertText: getInsertText(x), kind: CompletionItemKind.Function })
+        ext.keywords.forEach((x) =>
+          items.push({ label: x, kind: CompletionItemKind.Keyword })
         );
-        ext.tables.forEach(x =>
-          items.push({ label: x, insertText: getInsertText(x), kind: CompletionItemKind.Value })
+        ext.functions.forEach((x) =>
+          items.push({
+            label: x,
+            insertText: getInsertText(x),
+            kind: CompletionItemKind.Function,
+          })
         );
-        ext.variables.forEach(x =>
-          items.push({ label: x, insertText: getInsertText(x), kind: CompletionItemKind.Variable })
+        ext.tables.forEach((x) =>
+          items.push({
+            label: x,
+            insertText: getInsertText(x),
+            kind: CompletionItemKind.Value,
+          })
+        );
+        ext.variables.forEach((x) =>
+          items.push({
+            label: x,
+            insertText: getInsertText(x),
+            kind: CompletionItemKind.Variable,
+          })
         );
 
         return items;
@@ -164,7 +211,7 @@ export async function deactivate(): Promise<void> {
   await Telemetry.dispose();
 
   // cleanup of local Q instance processes
-  Object.keys(ext.localProcessObjects).forEach(index => {
+  Object.keys(ext.localProcessObjects).forEach((index) => {
     stopLocalProcessByServerName(index);
   });
 

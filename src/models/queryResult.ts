@@ -1,4 +1,4 @@
-import { MetaResult } from './metaResult';
+import { MetaResult } from "./metaResult";
 
 export type QueryResult = {
   result: boolean;
@@ -8,3 +8,10 @@ export type QueryResult = {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   data: any;
 };
+
+export enum QueryResultType {
+  Text,
+  JSON,
+  Bytes,
+  Error,
+}
