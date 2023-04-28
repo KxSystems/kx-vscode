@@ -3,7 +3,7 @@
   "displayName": "KXDB vscode",
   "description": "Extension to help with Q and KXDB",
   "publisher": "kx",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "engines": {
     "vscode": "^1.66.0"
   },
@@ -78,6 +78,10 @@
           "type": "boolean",
           "description": "Hide visibility of the walkthrough at startup of extension"
         },
+        "kdb.hideInstallationNotification": {
+          "type": "boolean",
+          "description": "Hide notification for installation path, after first install"
+        },
         "kdb.qHomeDirectory": {
           "type": "string",
           "description": "QHOME directory for Q runtime"
@@ -127,21 +131,21 @@
       }
     ],
     "keybindings": [
-        {
-            "command": "kxdb.execute.selectedQuery",
-            "key": "ctrl+q",
-            "when": "editorLangId == q"
-        },
-        {
-            "command": "kxdb.execute.fileQuery",
-            "key": "ctrl+shift+q",
-            "when": "editorLangId == q"
-        },
-        {
-            "command": "kxdb.terminal.run",
-            "key": "ctrl+shift+r",
-            "when": "editorLangId == q"
-        }
+      {
+        "command": "kxdb.execute.selectedQuery",
+        "key": "ctrl+q",
+        "when": "editorLangId == q"
+      },
+      {
+        "command": "kxdb.execute.fileQuery",
+        "key": "ctrl+shift+q",
+        "when": "editorLangId == q"
+      },
+      {
+        "command": "kxdb.terminal.run",
+        "key": "ctrl+shift+r",
+        "when": "editorLangId == q"
+      }
     ],
     "snippets": [
       {

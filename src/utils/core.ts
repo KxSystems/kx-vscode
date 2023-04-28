@@ -1,108 +1,196 @@
-import { ChildProcess } from 'child_process';
-import { createHash } from 'crypto';
-import { pathExists } from 'fs-extra';
-import { writeFile } from 'fs/promises';
-import { env } from 'node:process';
-import { tmpdir } from 'os';
-import { join } from 'path';
-import { ConfigurationTarget, Uri, commands, window, workspace } from 'vscode';
-import { installTools } from '../commands/installTools';
-import { ext } from '../extensionVariables';
-import { QueryResult } from '../models/queryResult';
-import { Server, ServerDetails } from '../models/server';
+import { ChildProcess } from "child_process";
+import { createHash } from "crypto";
+import { pathExists } from "fs-extra";
+import { writeFile } from "fs/promises";
+import { env } from "node:process";
+import { tmpdir } from "os";
+import { join } from "path";
+import { ConfigurationTarget, Uri, commands, window, workspace } from "vscode";
+import { installTools } from "../commands/installTools";
+import { ext } from "../extensionVariables";
+import { QueryResult } from "../models/queryResult";
+import { Server, ServerDetails } from "../models/server";
 
 export function getHash(input: string): string {
-  return createHash('sha256').update(input).digest('base64');
+  return createHash("sha256").update(input).digest("base64");
 }
 
 export function initializeLocalServers(servers: Server): void {
-  Object.keys(servers!).forEach(server => {
+  Object.keys(servers!).forEach((server) => {
     if (servers![server].managed === true) {
       addLocalConnectionContexts(getServerName(servers![server]));
     }
   });
 }
 
-export async function addLocalConnectionStatus(serverName: string): Promise<void> {
+export async function addLocalConnectionStatus(
+  serverName: string
+): Promise<void> {
   ext.localConnectionStatus.push(serverName);
-  await commands.executeCommand('setContext', 'kdb.running', ext.localConnectionStatus);
+  await commands.executeCommand(
+    "setContext",
+    "kdb.running",
+    ext.localConnectionStatus
+  );
 }
 
-export async function removeLocalConnectionStatus(serverName: string): Promise<void> {
-  const result = ext.localConnectionStatus.filter(connection => connection !== serverName);
+export async function removeLocalConnectionStatus(
+  serverName: string
+): Promise<void> {
+  const result = ext.localConnectionStatus.filter(
+    (connection) => connection !== serverName
+  );
   ext.localConnectionStatus = result;
-  await commands.executeCommand('setContext', 'kdb.running', ext.localConnectionStatus);
+  await commands.executeCommand(
+    "setContext",
+    "kdb.running",
+    ext.localConnectionStatus
+  );
 }
 
-export async function addLocalConnectionContexts(serverName: string): Promise<void> {
+export async function addLocalConnectionContexts(
+  serverName: string
+): Promise<void> {
   ext.localConnectionContexts.push(serverName);
-  await commands.executeCommand('setContext', 'kdb.local', ext.localConnectionContexts);
+  await commands.executeCommand(
+    "setContext",
+    "kdb.local",
+    ext.localConnectionContexts
+  );
 }
 
-export async function removeLocalConnectionContext(serverName: string): Promise<void> {
-  const result = ext.localConnectionContexts.filter(connection => connection !== serverName);
+export async function removeLocalConnectionContext(
+  serverName: string
+): Promise<void> {
+  const result = ext.localConnectionContexts.filter(
+    (connection) => connection !== serverName
+  );
   ext.localConnectionContexts = result;
-  await commands.executeCommand('setContext', 'kdb.local', ext.localConnectionContexts);
+  await commands.executeCommand(
+    "setContext",
+    "kdb.local",
+    ext.localConnectionContexts
+  );
 }
 
-export function saveLocalProcessObj(childProcess: ChildProcess, args: string[]): void {
-  window.showInformationMessage('Q process started successfully!');
-  ext.outputChannel.appendLine(`Child process id ${childProcess.pid!} saved in cache.`);
+export function saveLocalProcessObj(
+  childProcess: ChildProcess,
+  args: string[]
+): void {
+  window.showInformationMessage("Q process started successfully!");
+  ext.outputChannel.appendLine(
+    `Child process id ${childProcess.pid!} saved in cache.`
+  );
   ext.localProcessObjects[args[2]] = childProcess;
 }
 
 export function getOsFile(): string | undefined {
-  if (process.platform === 'win32') {
-    return 'w64.zip';
-  } else if (process.platform === 'darwin') {
-    return 'm64.zip';
-  } else if (process.platform === 'linux') {
-    return 'l64.zip';
+  if (process.platform === "win32") {
+    return "w64.zip";
+  } else if (process.platform === "darwin") {
+    return "m64.zip";
+  } else if (process.platform === "linux") {
+    return "l64.zip";
   } else {
     return undefined;
   }
 }
 
+export function getPlatformFolder(platform: string): string | undefined {
+  if (platform === "win32") {
+    return "w64";
+  } else if (platform === "darwin") {
+    return "m64";
+  } else if (platform === "linux") {
+    return "l64";
+  }
+  return undefined;
+}
+
+export async function getWorkspaceFolder(
+  corePath: string
+): Promise<string | undefined> {
+  if (await pathExists(join(corePath, "q"))) {
+    return corePath;
+  } else if (
+    await pathExists(join(corePath, getPlatformFolder(process.platform)!))
+  ) {
+    return join(corePath, getPlatformFolder(process.platform)!);
+  }
+  return undefined;
+}
+
 export function getServers(): Server | undefined {
-  return workspace.getConfiguration().get('kdb.servers');
+  return workspace.getConfiguration().get("kdb.servers");
 }
 
 export async function updateServers(servers: Server): Promise<void> {
-  await workspace.getConfiguration().update('kdb.servers', servers, ConfigurationTarget.Global);
+  await workspace
+    .getConfiguration()
+    .update("kdb.servers", servers, ConfigurationTarget.Global);
 }
 
 export function getServerName(server: ServerDetails): string {
-  return server.serverAlias != ''
+  return server.serverAlias != ""
     ? `${server.serverName}:${server.serverPort} [${server.serverAlias}]`
     : `${server.serverName}:${server.serverPort}`;
 }
 
 export function delay(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function checkLocalInstall(): Promise<void> {
-  const QHOME = workspace.getConfiguration().get<string>('kdb.qHomeDirectory');
-  if (QHOME) {
-    env.QHOME = QHOME;
-    if (!pathExists(env.QHOME)) {
-      ext.outputChannel.appendLine('QHOME path stored is empty');
+  const QHOME = workspace.getConfiguration().get<string>("kdb.qHomeDirectory");
+  if (QHOME || env.QHOME) {
+    env.QHOME = QHOME || env.QHOME;
+    if (!pathExists(env.QHOME!)) {
+      ext.outputChannel.appendLine("QHOME path stored is empty");
     }
     await writeFile(
-      join(__dirname, 'qinstall.md'),
-      `# Q runtime installed location: \n### ${QHOME}`
+      join(__dirname, "qinstall.md"),
+      `# Q runtime installed location: \n### ${env.QHOME}`
     );
-    ext.outputChannel.appendLine(`Installation of Q found here: ${QHOME}`);
+
+    // persist the QHOME to global settings
+    await workspace
+      .getConfiguration()
+      .update("kdb.qHomeDirectory", env.QHOME, ConfigurationTarget.Global);
+
+    ext.outputChannel.appendLine(`Installation of Q found here: ${env.QHOME}`);
+
+    const hideNotification = await workspace
+      .getConfiguration()
+      .get<boolean>("kdb.hideInstallationNotification");
+    if (!hideNotification) {
+      window.showInformationMessage(
+        `Installation of Q found here: ${env.QHOME}`
+      );
+    }
+
+    // persist the notification seen option
+    await workspace
+      .getConfiguration()
+      .update(
+        "kdb.hideInstallationNotification",
+        true,
+        ConfigurationTarget.Global
+      );
+
     return;
   }
 
   // set custom context that QHOME is not setup to control walkthrough visibility
-  commands.executeCommand('setContext', 'kdb.showInstallWalkthrough', true);
+  commands.executeCommand("setContext", "kdb.showInstallWalkthrough", true);
 
   window
-    .showInformationMessage('Local Q installation not found!', 'Install new instance', 'Cancel')
-    .then(async installResult => {
-      if (installResult === 'Install new instance') {
+    .showInformationMessage(
+      "Local Q installation not found!",
+      "Install new instance",
+      "Cancel"
+    )
+    .then(async (installResult) => {
+      if (installResult === "Install new instance") {
         await installTools();
       }
     });
@@ -112,9 +200,9 @@ export async function convertBase64License(
   encodedLicense: string,
   tempDir: string = tmpdir()
 ): Promise<Uri> {
-  const decodedLicense = Buffer.from(encodedLicense, 'base64');
-  await writeFile(join(tempDir, 'kc.lic'), decodedLicense);
-  return Uri.parse(join(tmpdir(), 'kc.lic'));
+  const decodedLicense = Buffer.from(encodedLicense, "base64");
+  await writeFile(join(tempDir, "kc.lic"), decodedLicense);
+  return Uri.parse(join(tmpdir(), "kc.lic"));
 }
 
 export function isTable(result: QueryResult): boolean {
@@ -132,10 +220,10 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
 
   const data = new Array(rows_.length);
   for (let i = 0; i < rows_.lenth; ++i) {
-    data[i] = typeof rows_[i] === 'object' ? Object.values(rows_[i]) : rows_[i];
+    data[i] = typeof rows_[i] === "object" ? Object.values(rows_[i]) : rows_[i];
   }
 
-  const hsep = opts.hsep === undefined ? ' ' : opts.hsep;
+  const hsep = opts.hsep === undefined ? " " : opts.hsep;
   const align = opts.align || [];
   const keys = opts.keys || [];
   const stringLength =
@@ -175,13 +263,13 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return map(row, function (c_: any, ix: any) {
       const c = String(c_);
-      if (align[ix] === '.') {
+      if (align[ix] === ".") {
         const [left, right] = dotoffsets(c);
         const test = /\./.test(c);
         const [maxLeft, maxRight] = dotsizes[ix];
         const leftSize = maxLeft - left;
         const rightSize = (maxRight === 0 || test ? 0 : 1) + maxRight - right;
-        return ' '.repeat(leftSize) + c + ' '.repeat(rightSize);
+        return " ".repeat(leftSize) + c + " ".repeat(rightSize);
       } else {
         return c;
       }
@@ -211,13 +299,17 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return map(row, function (c: any, ix: any) {
       const n = sizes[ix] - stringLength(c) || 0;
-      const s = Array(Math.max(n + 1, 1)).join(' ');
-      if (align[ix] === 'r' /* || align[ix] === '.'*/) {
+      const s = Array(Math.max(n + 1, 1)).join(" ");
+      if (align[ix] === "r" /* || align[ix] === '.'*/) {
         return s + c;
       }
 
-      if (align[ix] === 'c') {
-        return Array(Math.ceil(n / 2 + 1)).join(' ') + c + Array(Math.floor(n / 2 + 1)).join(' ');
+      if (align[ix] === "c") {
+        return (
+          Array(Math.ceil(n / 2 + 1)).join(" ") +
+          c +
+          Array(Math.floor(n / 2 + 1)).join(" ")
+        );
       }
 
       return c + s;
@@ -226,7 +318,7 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const headers = map(headers_, function (c: any, ix: any) {
-    return c + ' '.repeat(Math.max(0, sizes[ix] - c.length));
+    return c + " ".repeat(Math.max(0, sizes[ix] - c.length));
   });
 
   let columnSeparatorIndex = 0;
@@ -235,7 +327,7 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
   }
 
   const header = headers.join(hsep);
-  const separator = '-'.repeat(header.length);
+  const separator = "-".repeat(header.length);
 
   result.unshift(separator);
   result.unshift(header);
@@ -245,10 +337,10 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
     const insertAt = (str: any, sub: any, pos: any) =>
       `${str.slice(0, pos)}${sub}${str.slice(pos)}`;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    result = result.map((x: any) => insertAt(x, '|', columnSeparatorIndex + 1));
+    result = result.map((x: any) => insertAt(x, "|", columnSeparatorIndex + 1));
   }
 
-  return result.join('\n');
+  return result.join("\n");
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
