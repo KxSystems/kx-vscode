@@ -361,6 +361,10 @@ export function runQuery(type: ExecutionTypes) {
         query = editor?.document.getText(
           new Range(editor.selection.start, editor.selection.end)
         );
+        if (query === "") {
+          const docLine = editor.selection.active.line;
+          query = editor.document.lineAt(docLine).text;
+        }
         break;
       case ExecutionTypes.QueryFile:
       default:
