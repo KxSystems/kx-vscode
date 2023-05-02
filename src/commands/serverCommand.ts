@@ -177,7 +177,9 @@ export function addKdbConnection(): void {
                 ) {
                   authUsed = true;
                   ext.secretSettings.storeAuthData(
-                    `${hostname}:${port}`,
+                    alias !== undefined
+                      ? getHash(`${hostname}${port}${alias}`)
+                      : getHash(`${hostname}${port}`),
                     `${username}:${password}`
                   );
                 }
@@ -281,7 +283,7 @@ export async function connect(viewItem: KdbNode): Promise<void> {
   }
 
   // check for auth
-  const authCredentials = await ext.secretSettings.getAuthData(viewItem.label);
+  const authCredentials = await ext.secretSettings.getAuthData(viewItem.children[0]);
   const servers: Server | undefined = getServers();
   if (servers === undefined) {
     window.showErrorMessage("Server not found.");
