@@ -39,6 +39,7 @@ import {
   updateServers,
 } from "../utils/core";
 import { ExecutionConsole } from "../utils/executionConsole";
+import { sanitizeQuery } from "../utils/queryUtils";
 import {
   validateServerAlias,
   validateServerName,
@@ -335,11 +336,7 @@ export async function disconnect(): Promise<void> {
 export async function executeQuery(query: string): Promise<void> {
   const queryConsole = ExecutionConsole.start();
   if (ext.connection !== undefined && query.length > 0) {
-    if (query.slice(-1) === ";") {
-      query = query.slice(0, -1);
-    } else if (query[0] === "`") {
-      query = query + " ";
-    }
+    query = sanitizeQuery(query);
     const queryRes = await ext.connection.executeQuery(query);
     writeQueryResult(queryRes, query);
   } else {

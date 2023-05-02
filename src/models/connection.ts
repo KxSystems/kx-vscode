@@ -3,6 +3,7 @@ import { commands, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { delay } from "../utils/core";
 import { handleQueryResults } from "../utils/execution";
+import { queryWrapper } from "../utils/queryUtils";
 import { QueryResultType } from "./queryResult";
 
 export class Connection {
@@ -72,7 +73,7 @@ export class Connection {
 
   public async executeQuery(command: string): Promise<string> {
     let result;
-
+    const wrapper = queryWrapper();
     let retryCount = 0;
     while (this.connection === undefined) {
       if (retryCount > ext.maxRetryCount) {
@@ -81,7 +82,7 @@ export class Connection {
       await delay(500);
       retryCount++;
     }
-    this.connection.k(command, async function (err: Error, res: any) {
+    this.connection.k(wrapper, command, (err, res) => {
       if (err) {
         result = handleQueryResults(res, QueryResultType.Error);
       }
