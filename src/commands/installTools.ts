@@ -41,6 +41,7 @@ import {
   getOsFile,
   getServerName,
   getServers,
+  getWorkspaceFolder,
   removeLocalConnectionStatus,
   saveLocalProcessObj,
   updateServers,
@@ -294,9 +295,8 @@ export async function startLocalProcessByServerName(
   index: string,
   port: number
 ): Promise<void> {
-  const workingDirectory = join(
-    ext.context.globalStorageUri.fsPath,
-    process.platform == "win32" ? "w64" : "m64"
+  const workingDirectory = await getWorkspaceFolder(
+    workspace.getConfiguration().get<string>("kdb.qHomeDirectory")!
   );
 
   await addLocalConnectionStatus(serverName);
@@ -311,9 +311,8 @@ export async function startLocalProcessByServerName(
 }
 
 export async function startLocalProcess(viewItem: KdbNode): Promise<void> {
-  const workingDirectory = join(
-    ext.context.globalStorageUri.fsPath,
-    process.platform == "win32" ? "w64" : "m64"
+  const workingDirectory = await getWorkspaceFolder(
+    workspace.getConfiguration().get<string>("kdb.qHomeDirectory")!
   );
 
   await addLocalConnectionStatus(`${getServerName(viewItem.details)}`);

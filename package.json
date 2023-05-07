@@ -3,7 +3,7 @@
   "displayName": "kdb vscode",
   "description": "Extension to help with q and kdb",
   "publisher": "KX",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "engines": {
     "vscode": "^1.66.0"
   },
@@ -77,6 +77,10 @@
         "kdb.hideWalkthrough": {
           "type": "boolean",
           "description": "Hide visibility of the walkthrough at startup of extension"
+        },
+        "kdb.hideInstallationNotification": {
+          "type": "boolean",
+          "description": "Hide notification for installation path, after first install"
         },
         "kdb.qHomeDirectory": {
           "type": "string",

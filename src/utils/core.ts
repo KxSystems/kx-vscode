@@ -96,6 +96,30 @@ export function getOsFile(): string | undefined {
   }
 }
 
+export function getPlatformFolder(platform: string): string | undefined {
+  if (platform === "win32") {
+    return "w64";
+  } else if (platform === "darwin") {
+    return "m64";
+  } else if (platform === "linux") {
+    return "l64";
+  }
+  return undefined;
+}
+
+export async function getWorkspaceFolder(
+  corePath: string
+): Promise<string | undefined> {
+  if (await pathExists(join(corePath, "q"))) {
+    return corePath;
+  } else if (
+    await pathExists(join(corePath, getPlatformFolder(process.platform)!))
+  ) {
+    return join(corePath, getPlatformFolder(process.platform)!);
+  }
+  return undefined;
+}
+
 export function getServers(): Server | undefined {
   return workspace.getConfiguration().get("kdb.servers");
 }
@@ -118,16 +142,41 @@ export function delay(ms: number) {
 
 export async function checkLocalInstall(): Promise<void> {
   const QHOME = workspace.getConfiguration().get<string>("kdb.qHomeDirectory");
-  if (QHOME) {
-    env.QHOME = QHOME;
-    if (!pathExists(env.QHOME)) {
+  if (QHOME || env.QHOME) {
+    env.QHOME = QHOME || env.QHOME;
+    if (!pathExists(env.QHOME!)) {
       ext.outputChannel.appendLine("QHOME path stored is empty");
     }
     await writeFile(
       join(__dirname, "qinstall.md"),
-      `# q runtime installed location: \n### ${QHOME}`
+      `# q runtime installed location: \n### ${env.QHOME}`
     );
-    ext.outputChannel.appendLine(`Installation of q found here: ${QHOME}`);
+
+    // persist the QHOME to global settings
+    await workspace
+      .getConfiguration()
+      .update("kdb.qHomeDirectory", env.QHOME, ConfigurationTarget.Global);
+
+    ext.outputChannel.appendLine(`Installation of q found here: ${env.QHOME}`);
+
+    const hideNotification = await workspace
+      .getConfiguration()
+      .get<boolean>("kdb.hideInstallationNotification");
+    if (!hideNotification) {
+      window.showInformationMessage(
+        `Installation of q found here: ${env.QHOME}`
+      );
+    }
+
+    // persist the notification seen option
+    await workspace
+      .getConfiguration()
+      .update(
+        "kdb.hideInstallationNotification",
+        true,
+        ConfigurationTarget.Global
+      );
+
     return;
   }
 
