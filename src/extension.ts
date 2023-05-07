@@ -51,7 +51,7 @@ import { Telemetry } from "./utils/telemetryClient";
 
 export async function activate(context: ExtensionContext) {
   ext.context = context;
-  ext.outputChannel = window.createOutputChannel("kxdb");
+  ext.outputChannel = window.createOutputChannel("kdb");
 
   // integration wtih Azure Account extension (https://marketplace.visualstudio.com/items?itemName=ms-vscode.azure-account)
   ext.azureAccount = (<AzureExtensionApiProvider>(
@@ -72,64 +72,64 @@ export async function activate(context: ExtensionContext) {
   AuthSettings.init(context);
   ext.secretSettings = AuthSettings.instance;
 
-  // check for installed Q runtime
+  // check for installed q runtime
   await checkLocalInstall();
 
   // hide walkthrough if requested
   if (await showWalkthrough()) {
     commands.executeCommand(
       "workbench.action.openWalkthrough",
-      "kx.kxdb-vscode#qinstallation",
+      "kx.kdb-vscode#qinstallation",
       false
     );
   }
 
   context.subscriptions.push(
-    commands.registerCommand("kxdb.connect", async (viewItem: KdbNode) => {
+    commands.registerCommand("kdb.connect", async (viewItem: KdbNode) => {
       await connect(viewItem);
     }),
-    commands.registerCommand("kxdb.disconnect", async () => {
+    commands.registerCommand("kdb.disconnect", async () => {
       await disconnect();
     }),
-    commands.registerCommand("kxdb.addConnection", async () => {
+    commands.registerCommand("kdb.addConnection", async () => {
       await addNewConnection();
     }),
     commands.registerCommand(
-      "kxdb.removeConnection",
+      "kdb.removeConnection",
       async (viewItem: KdbNode) => {
         await removeConnection(viewItem);
       }
     ),
-    commands.registerCommand("kxdb.hideWalkthrough", async () => {
+    commands.registerCommand("kdb.hideWalkthrough", async () => {
       await hideWalkthrough();
     }),
-    commands.registerCommand("kxdb.showInstallationDetails", async () => {
+    commands.registerCommand("kdb.showInstallationDetails", async () => {
       await showInstallationDetails();
     }),
-    commands.registerCommand("kxdb.installTools", async () => {
+    commands.registerCommand("kdb.installTools", async () => {
       await installTools();
     }),
     commands.registerCommand(
-      "kxdb.startLocalProcess",
+      "kdb.startLocalProcess",
       async (viewItem: KdbNode) => {
         await startLocalProcess(viewItem);
       }
     ),
     commands.registerCommand(
-      "kxdb.stopLocalProcess",
+      "kdb.stopLocalProcess",
       async (viewItem: KdbNode) => {
         await stopLocalProcess(viewItem);
       }
     ),
 
-    commands.registerCommand("kxdb.terminal.run", () => {
+    commands.registerCommand("kdb.terminal.run", () => {
       const filename = window.activeTextEditor?.document.fileName;
       if (filename) runQFileTerminal(filename);
     }),
-    commands.registerCommand("kxdb.execute.selectedQuery", async () => {
+    commands.registerCommand("kdb.execute.selectedQuery", async () => {
       runQuery(ExecutionTypes.QuerySelection);
     }),
-    commands.registerCommand("kxdb.execute.fileQuery", async () => {
+    commands.registerCommand("kdb.execute.fileQuery", async () => {
       runQuery(ExecutionTypes.QueryFile);
     })
   );
@@ -210,7 +210,7 @@ export async function activate(context: ExtensionContext) {
 export async function deactivate(): Promise<void> {
   await Telemetry.dispose();
 
-  // cleanup of local Q instance processes
+  // cleanup of local q instance processes
   Object.keys(ext.localProcessObjects).forEach((index) => {
     stopLocalProcessByServerName(index);
   });

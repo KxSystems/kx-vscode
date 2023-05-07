@@ -1,4 +1,4 @@
-import { OutputChannel, window } from 'vscode';
+import { OutputChannel, window } from "vscode";
 
 export class Output {
   public static output(label: string, message: string): void {
@@ -21,10 +21,11 @@ export class Output {
     this._outputChannel.dispose();
   }
 
-  public static _outputChannel: OutputChannel = window.createOutputChannel('kxdb-telemetry');
+  public static _outputChannel: OutputChannel =
+    window.createOutputChannel("kdb-telemetry");
 
   // eslint-disable-next-line @typescript-eslint/no-inferrable-types
-  private static formatMessage(label: string = '', message: string = ''): string {
-    return `${label ? `[${label}] ` : ''}${message}`;
+  private static formatMessage(label = "", message = ""): string {
+    return `${label ? `[${label}] ` : ""}${message}`;
   }
 }
