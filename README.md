@@ -1,4 +1,4 @@
-# KX VS Code extension
+# kdb VS Code extension
 
 This is a companion extension that will help KX developers.
 
