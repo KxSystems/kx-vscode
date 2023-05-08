@@ -58,7 +58,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 ### Fixes
 
-- Fixed issue when after establishing a connection via connection manager, and the KDB instance going down, the UI still showed connected. This update will provide the user a toast style notification about the connection failure as well as updating the connection status in the connection manager UI (tree).
+- Fixed issue when after establishing a connection via connection manager, and the kdb instance going down, the UI still showed connected. This update will provide the user a toast style notification about the connection failure as well as updating the connection status in the connection manager UI (tree).
 
 ### Internal Improvements
 
@@ -92,7 +92,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 - Updated the connection manager to use aliases for connections
 
-- Updated the connection manager to allow auth for KDB endpoints, using the secret storage in VS Code for protection of secrets
+- Updated the connection manager to allow auth for kdb endpoints, using the secret storage in VS Code for protection of secrets
 
 ### Fixes
 
@@ -124,7 +124,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 ### Enhancements
 
-- Add visual indicator to registered connections in the KDB servers panel. This is used to inform the user of the currently connected (active connections) kdb server.
+- Add visual indicator to registered connections in the kdb servers panel. This is used to inform the user of the currently connected (active connections) kdb server.
 
 - Add logic to ensure only one connection can be activated at a specific time.
 
