@@ -119,7 +119,7 @@
       },
       {
         "command": "kdb.terminal.run",
-        "title": "Run q file"
+        "title": "Run q file in a new q instance"
       },
       {
         "command": "kdb.execute.selectedQuery",
@@ -127,7 +127,7 @@
       },
       {
         "command": "kdb.execute.fileQuery",
-        "title": "Execute File"
+        "title": "Execute Entire File"
       }
     ],
     "keybindings": [
