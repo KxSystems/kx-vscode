@@ -51,6 +51,7 @@ export class ExecutionConsole {
 
   public appendQueryError(
     query: string,
+    result: string,
     isConnected: boolean,
     serverName: string
   ): void {
@@ -61,7 +62,8 @@ export class ExecutionConsole {
       `<<< ERROR -  ${serverName}  @ ${date.toLocaleTimeString()} >>>`
     );
     if (isConnected) {
-      this._console.appendLine(`ERROR (Q): ${query}`);
+      this._console.appendLine(`ERROR Query executed: ${query}`);
+      this._console.appendLine(result);
     } else {
       this._console.appendLine(`Please connect to a kbd+ server`);
     }

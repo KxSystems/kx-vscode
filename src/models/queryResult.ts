@@ -15,3 +15,7 @@ export enum QueryResultType {
   Bytes,
   Error,
 }
+
+export const queryConstants = {
+  error: "!@#ERROR^&*%-",
+};

@@ -21,6 +21,7 @@ import {
   serverEndpointPlaceHolder,
   serverEndpoints,
 } from "../models/items/server";
+import { queryConstants } from "../models/queryResult";
 import { ResourceGroupItem } from "../models/resourceGroupItem";
 import { Server } from "../models/server";
 import { SubscriptionItem } from "../models/subscriptionItem";
@@ -283,7 +284,9 @@ export async function connect(viewItem: KdbNode): Promise<void> {
   }
 
   // check for auth
-  const authCredentials = await ext.secretSettings.getAuthData(viewItem.children[0]);
+  const authCredentials = await ext.secretSettings.getAuthData(
+    viewItem.children[0]
+  );
   const servers: Server | undefined = getServers();
   if (servers === undefined) {
     window.showErrorMessage("Server not found.");
@@ -344,6 +347,7 @@ export async function executeQuery(query: string): Promise<void> {
   } else {
     queryConsole.appendQueryError(
       query,
+      "Query is empty",
       !!ext.connection,
       ext.connectionNode?.label ? ext.connectionNode.label : ""
     );
@@ -375,7 +379,7 @@ export function runQuery(type: ExecutionTypes) {
 
 function writeQueryResult(result: string, query: string): void {
   const queryConsole = ExecutionConsole.start();
-  if (ext.connection && result !== "!@#ERROR^&*%") {
+  if (ext.connection && !result.startsWith(queryConstants.error)) {
     queryConsole.append(
       result,
       query,
@@ -384,6 +388,7 @@ function writeQueryResult(result: string, query: string): void {
   } else {
     queryConsole.appendQueryError(
       query,
+      result.substring(queryConstants.error.length),
       !!ext.connection,
       ext.connectionNode?.label ? ext.connectionNode.label : ""
     );

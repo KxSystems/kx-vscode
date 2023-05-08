@@ -1,8 +1,7 @@
 import { env } from "node:process";
 import path from "path";
 import { window } from "vscode";
-import { QueryResultType } from "../models/queryResult";
-import { TableGenerator } from "./tableGenerator";
+import { queryConstants, QueryResultType } from "../models/queryResult";
 
 export function runQFileTerminal(filename: string) {
   filename = filename.replace(/\\/g, "/");
@@ -24,21 +23,22 @@ export function handleQueryResults(
 ): string {
   let handledResult: string;
   switch (type) {
-    case QueryResultType.Text:
-      if (Array.isArray(JSON.parse(results))) {
-        handledResult = JSON.parse(results).join(" ");
-      } else {
-        handledResult = results;
-      }
-      break;
-    case QueryResultType.JSON:
-      handledResult = new TableGenerator({ spacer: " " })
-        .fromJson(JSON.parse(results))
-        .toString();
-      break;
+    // TODO: Refactor this for queries when receive console/table views
+    // case QueryResultType.Text:
+    //   if (Array.isArray(JSON.parse(results))) {
+    //     handledResult = JSON.parse(results).join(" ");
+    //   } else {
+    //     handledResult = results;
+    //   }
+    //   break;
+    // case QueryResultType.JSON:
+    //   handledResult = new TableGenerator({ spacer: " " })
+    //     .fromJson(JSON.parse(results))
+    //     .toString();
+    //   break;
     case QueryResultType.Error:
     default:
-      handledResult = "!@#ERROR^&*%";
+      handledResult = queryConstants.error + results;
       break;
   }
   return handledResult;
