@@ -286,8 +286,7 @@
   },
   "prettier": {
     "printWidth": 80,
-    "tabWidth": 2,
-    "semi": true
+    "bracketSameLine": true
   },
   "devDependencies": {
     "@types/extract-zip": "^2.0.1",
