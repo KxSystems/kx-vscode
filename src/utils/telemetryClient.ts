@@ -1,8 +1,8 @@
-import * as crypto from 'crypto';
-import * as os from 'os';
-import { OutputChannel, window, workspace } from 'vscode';
-import TelemetryReporter from 'vscode-extension-telemetry';
-import { ext } from '../extensionVariables';
+import * as crypto from "crypto";
+import * as os from "os";
+import { OutputChannel, window, workspace } from "vscode";
+import TelemetryReporter from "vscode-extension-telemetry";
+import { ext } from "../extensionVariables";
 
 class ExtensionTelemetry {
   private readonly output?: OutputChannel;
@@ -12,12 +12,12 @@ class ExtensionTelemetry {
 
   constructor() {
     const isEnableTelemetry =
-      workspace.getConfiguration('telemetry').get('enableTelemetry') || true;
+      workspace.getConfiguration("telemetry").get("enableTelemetry") || true;
     const isTestRun = process.env.CODE_TEST || false;
 
     if (isEnableTelemetry) {
       if (isTestRun) {
-        this.output = window.createOutputChannel('telemetry-client-test');
+        this.output = window.createOutputChannel("telemetry-client-test");
       } else {
         try {
           this.reporter = new TelemetryReporter(
@@ -25,8 +25,10 @@ class ExtensionTelemetry {
             ext.extensionVersion,
             ext.extensionKey
           );
-          this.defaultProperties['common.vscodemachineid'] = generateMachineId();
-          this.defaultProperties['common.vscodesessionid'] = generateSessionId();
+          this.defaultProperties["common.vscodemachineid"] =
+            generateMachineId();
+          this.defaultProperties["common.vscodesessionid"] =
+            generateSessionId();
         } catch (error) {
           console.log(error);
         }
@@ -44,7 +46,9 @@ class ExtensionTelemetry {
       this.reporter.sendTelemetryEvent(eventName, props, measurements);
     }
     if (this.output) {
-      this.output.appendLine(`telemetry/${eventName} ${JSON.stringify({ props, measurements })}`);
+      this.output.appendLine(
+        `telemetry/${eventName} ${JSON.stringify({ props, measurements })}`
+      );
     }
   }
 
@@ -55,19 +59,21 @@ class ExtensionTelemetry {
   ): void {
     const props = Object.assign({}, this.defaultProperties, properties);
     const error = new Error(exception.message);
-    error.stack = '';
+    error.stack = "";
 
     if (this.reporter) {
       this.reporter.sendTelemetryException(error, props, measurements);
     }
 
     if (this.output) {
-      this.output.appendLine(`telemetry/${error}${JSON.stringify({ props, measurements })}`);
+      this.output.appendLine(
+        `telemetry/${error}${JSON.stringify({ props, measurements })}`
+      );
     }
   }
 
   public obfuscate(data: string): string {
-    return crypto.createHash('sha256').update(data).digest('base64');
+    return crypto.createHash("sha256").update(data).digest("base64");
   }
 
   public async dispose(): Promise<void> {
@@ -82,11 +88,11 @@ class ExtensionTelemetry {
 }
 
 function generateMachineId(): string {
-  return crypto.createHash('sha256').update(os.hostname()).digest('base64');
+  return crypto.createHash("sha256").update(os.hostname()).digest("base64");
 }
 
 function generateSessionId(): string {
-  return crypto.randomBytes(16).toString('hex');
+  return crypto.randomBytes(16).toString("hex");
 }
 
 export const Telemetry = new ExtensionTelemetry();

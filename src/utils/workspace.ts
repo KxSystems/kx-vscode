@@ -1,10 +1,13 @@
-import { workspace } from 'vscode';
+import { workspace } from "vscode";
 
-export function getWorkspaceRoot(ignoreException: boolean = false): string | undefined {
-  const workspaceRoot = workspace.workspaceFolders && workspace.workspaceFolders[0].uri.fsPath;
+export function getWorkspaceRoot(
+  ignoreException: boolean = false
+): string | undefined {
+  const workspaceRoot =
+    workspace.workspaceFolders && workspace.workspaceFolders[0].uri.fsPath;
 
   if (workspaceRoot === undefined && !ignoreException) {
-    const error = new Error('Workspace root should be defined');
+    const error = new Error("Workspace root should be defined");
     throw error;
   }
 
@@ -12,5 +15,7 @@ export function getWorkspaceRoot(ignoreException: boolean = false): string | und
 }
 
 export function isWorkspaceOpen(): boolean {
-  return !!(workspace.workspaceFolders && workspace.workspaceFolders[0].uri.fsPath);
+  return !!(
+    workspace.workspaceFolders && workspace.workspaceFolders[0].uri.fsPath
+  );
 }

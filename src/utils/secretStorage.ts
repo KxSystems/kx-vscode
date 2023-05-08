@@ -1,4 +1,4 @@
-import { ExtensionContext, SecretStorage } from 'vscode';
+import { ExtensionContext, SecretStorage } from "vscode";
 
 export default class AuthSettings {
   private static _instance: AuthSettings;

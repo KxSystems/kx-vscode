@@ -1,5 +1,10 @@
-import { InputBoxOptions, QuickPickItem, QuickPickOptions, window } from 'vscode';
-import { CancellationEvent } from '../models/cancellationEvent';
+import {
+  InputBoxOptions,
+  QuickPickItem,
+  QuickPickOptions,
+  window,
+} from "vscode";
+import { CancellationEvent } from "../models/cancellationEvent";
 
 export async function showInputBox(options: InputBoxOptions): Promise<string> {
   const result = await window.showInputBox(options);

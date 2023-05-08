@@ -1,4 +1,4 @@
-import { TextDocument } from 'vscode-languageserver-textdocument';
+import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   CompletionItem,
   CompletionItemKind,
@@ -11,8 +11,8 @@ import {
   ProposedFeatures,
   TextDocumentPositionParams,
   TextDocuments,
-  TextDocumentSyncKind
-} from 'vscode-languageserver/node';
+  TextDocumentSyncKind,
+} from "vscode-languageserver/node";
 
 const connection = createConnection(ProposedFeatures.all);
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
@@ -31,7 +31,9 @@ const documentSettings: Map<string, Thenable<QSettings>> = new Map();
 connection.onInitialize((params: InitializeParams) => {
   const capabilities = params.capabilities;
 
-  hasConfigurationCapability = !!(capabilities.workspace && !!capabilities.workspace.configuration);
+  hasConfigurationCapability = !!(
+    capabilities.workspace && !!capabilities.workspace.configuration
+  );
   hasWorkspaceFolderCapability = !!(
     capabilities.workspace && !!capabilities.workspace.workspaceFolders
   );
@@ -62,21 +64,26 @@ connection.onInitialize((params: InitializeParams) => {
 
 connection.onInitialized(() => {
   if (hasConfigurationCapability) {
-    connection.client.register(DidChangeConfigurationNotification.type, undefined);
+    connection.client.register(
+      DidChangeConfigurationNotification.type,
+      undefined
+    );
   }
   if (hasWorkspaceFolderCapability) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    connection.workspace.onDidChangeWorkspaceFolders(_event => {
-      connection.console.log('Workspace folder change event received.');
+    connection.workspace.onDidChangeWorkspaceFolders((_event) => {
+      connection.console.log("Workspace folder change event received.");
     });
   }
 });
 
-connection.onDidChangeConfiguration(change => {
+connection.onDidChangeConfiguration((change) => {
   if (hasConfigurationCapability) {
     documentSettings.clear();
   } else {
-    globalSettings = <QSettings>(change.settings.languageServer || defaultSettings);
+    globalSettings = <QSettings>(
+      (change.settings.languageServer || defaultSettings)
+    );
   }
 
   documents.all().forEach(validateTextDocument);
@@ -91,18 +98,18 @@ function getDocumentSettings(resource: string): Thenable<QSettings> {
   if (!result) {
     result = connection.workspace.getConfiguration({
       scopeUri: resource,
-      section: 'languageServer',
+      section: "languageServer",
     });
     documentSettings.set(resource, result);
   }
   return result;
 }
 
-documents.onDidClose(e => {
+documents.onDidClose((e) => {
   documentSettings.delete(e.document.uri);
 });
 
-documents.onDidChangeContent(change => {
+documents.onDidChangeContent((change) => {
   validateTextDocument(change.document);
 });
 
@@ -123,7 +130,7 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
         end: textDocument.positionAt(m.index + m[0].length),
       },
       message: `${m[0]} is all uppercase.`,
-      source: 'ex',
+      source: "ex",
     };
     if (hasDiagnosticRelatedInformationCapability) {
       diagnostic.relatedInformation = [
@@ -132,14 +139,14 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
             uri: textDocument.uri,
             range: Object.assign({}, diagnostic.range),
           },
-          message: 'Spelling matters',
+          message: "Spelling matters",
         },
         {
           location: {
             uri: textDocument.uri,
             range: Object.assign({}, diagnostic.range),
           },
-          message: 'Particularly for names',
+          message: "Particularly for names",
         },
       ];
     }
@@ -149,33 +156,35 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-connection.onDidChangeWatchedFiles(_change => {
-  connection.console.log('We received a file change event');
+connection.onDidChangeWatchedFiles((_change) => {
+  connection.console.log("We received a file change event");
 });
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-connection.onCompletion((_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
-  return [
-    {
-      label: 'TypeScript',
-      kind: CompletionItemKind.Text,
-      data: 1,
-    },
-    {
-      label: 'JavaScript',
-      kind: CompletionItemKind.Text,
-      data: 2,
-    },
-  ];
-});
+connection.onCompletion(
+  (_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
+    return [
+      {
+        label: "TypeScript",
+        kind: CompletionItemKind.Text,
+        data: 1,
+      },
+      {
+        label: "JavaScript",
+        kind: CompletionItemKind.Text,
+        data: 2,
+      },
+    ];
+  }
+);
 
 connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
   if (item.data === 1) {
-    item.detail = 'TypeScript details';
-    item.documentation = 'TypeScript documentation';
+    item.detail = "TypeScript details";
+    item.documentation = "TypeScript documentation";
   } else if (item.data === 2) {
-    item.detail = 'JavaScript details';
-    item.documentation = 'JavaScript documentation';
+    item.detail = "JavaScript details";
+    item.documentation = "JavaScript documentation";
   }
   return item;
 });
