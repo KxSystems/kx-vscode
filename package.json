@@ -72,7 +72,7 @@
       "properties": {
         "kdb.servers": {
           "type": "object",
-          "description": "KDB servers for explorer"
+          "description": "kdb servers for explorer"
         },
         "kdb.hideWalkthrough": {
           "type": "boolean",
@@ -111,11 +111,11 @@
       },
       {
         "command": "kdb.connect",
-        "title": "Connect KDB server"
+        "title": "Connect kdb server"
       },
       {
         "command": "kdb.disconnect",
-        "title": "Disconnect KDB server"
+        "title": "Disconnect kdb server"
       },
       {
         "command": "kdb.terminal.run",

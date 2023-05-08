@@ -121,7 +121,6 @@ export async function activate(context: ExtensionContext) {
         await stopLocalProcess(viewItem);
       }
     ),
-
     commands.registerCommand("kdb.terminal.run", () => {
       const filename = window.activeTextEditor?.document.fileName;
       if (filename) runQFileTerminal(filename);
