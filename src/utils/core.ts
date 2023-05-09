@@ -5,7 +5,7 @@ import { writeFile } from "fs/promises";
 import { env } from "node:process";
 import { tmpdir } from "os";
 import { join } from "path";
-import { ConfigurationTarget, Uri, commands, window, workspace } from "vscode";
+import { commands, ConfigurationTarget, Uri, window, workspace } from "vscode";
 import { installTools } from "../commands/installTools";
 import { ext } from "../extensionVariables";
 import { QueryResult } from "../models/queryResult";
@@ -77,7 +77,7 @@ export function saveLocalProcessObj(
   childProcess: ChildProcess,
   args: string[]
 ): void {
-  window.showInformationMessage("Q process started successfully!");
+  window.showInformationMessage("q process started successfully!");
   ext.outputChannel.appendLine(
     `Child process id ${childProcess.pid!} saved in cache.`
   );
@@ -149,7 +149,7 @@ export async function checkLocalInstall(): Promise<void> {
     }
     await writeFile(
       join(__dirname, "qinstall.md"),
-      `# Q runtime installed location: \n### ${env.QHOME}`
+      `# q runtime installed location: \n### ${env.QHOME}`
     );
 
     // persist the QHOME to global settings
@@ -157,14 +157,14 @@ export async function checkLocalInstall(): Promise<void> {
       .getConfiguration()
       .update("kdb.qHomeDirectory", env.QHOME, ConfigurationTarget.Global);
 
-    ext.outputChannel.appendLine(`Installation of Q found here: ${env.QHOME}`);
+    ext.outputChannel.appendLine(`Installation of q found here: ${env.QHOME}`);
 
     const hideNotification = await workspace
       .getConfiguration()
       .get<boolean>("kdb.hideInstallationNotification");
     if (!hideNotification) {
       window.showInformationMessage(
-        `Installation of Q found here: ${env.QHOME}`
+        `Installation of q found here: ${env.QHOME}`
       );
     }
 
@@ -185,7 +185,7 @@ export async function checkLocalInstall(): Promise<void> {
 
   window
     .showInformationMessage(
-      "Local Q installation not found!",
+      "Local q installation not found!",
       "Install new instance",
       "Cancel"
     )

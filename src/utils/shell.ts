@@ -1,8 +1,8 @@
-import { ChildProcess } from 'node:child_process';
-import { ext } from '../extensionVariables';
-import { ICommandResult, tryExecuteCommand } from './cpUtils';
+import { ChildProcess } from "node:child_process";
+import { ext } from "../extensionVariables";
+import { ICommandResult, tryExecuteCommand } from "./cpUtils";
 
-const isWin = process.platform === 'win32';
+const isWin = process.platform === "win32";
 
 export function log(childProcess: ChildProcess): void {
   ext.outputChannel.appendLine(`Process ${childProcess.pid!} killed`);
@@ -16,10 +16,10 @@ export async function killPid(pid = NaN): Promise<void> {
   let result: ICommandResult | undefined;
   if (isWin) {
     result = await tryExecuteCommand(undefined, killPidCommand(pid), log);
-  } else if (process.platform === 'darwin') {
-    result = await tryExecuteCommand('/bin', killPidCommand(pid), log);
+  } else if (process.platform === "darwin") {
+    result = await tryExecuteCommand("/bin", killPidCommand(pid), log);
   }
-  ext.outputChannel.appendLine(`Destroying Q process result: ${result}`);
+  ext.outputChannel.appendLine(`Destroying q process result: ${result}`);
 }
 
 function killPidCommand(pid: number): string {

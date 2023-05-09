@@ -5,12 +5,12 @@ import { writeFile } from "node:fs/promises";
 import { env, exit } from "node:process";
 import { join } from "path";
 import {
+  commands,
   ConfigurationTarget,
   InputBoxOptions,
   ProgressLocation,
   QuickPickItem,
   Uri,
-  commands,
   window,
   workspace,
 } from "vscode";
@@ -122,7 +122,7 @@ export async function installTools(): Promise<void> {
     .withProgress(
       {
         location: ProgressLocation.Notification,
-        title: "Installation of Q",
+        title: "Installation of q",
         cancellable: true,
       },
       async (progress, token) => {
@@ -201,10 +201,10 @@ export async function installTools(): Promise<void> {
           }
           await writeFile(
             join(__dirname, "qinstall.md"),
-            `# Q runtime installed location: \n### ${QHOME}`
+            `# q runtime installed location: \n### ${QHOME}`
           );
           ext.outputChannel.appendLine(
-            `Installation of Q found here: ${QHOME}`
+            `Installation of q found here: ${QHOME}`
           );
         }
 
@@ -212,7 +212,7 @@ export async function installTools(): Promise<void> {
         if (await showWalkthrough()) {
           commands.executeCommand(
             "workbench.action.openWalkthrough",
-            "kx.kxdb-vscode#qinstallation",
+            "kx.kdb-vscode#qinstallation",
             false
           );
         }
@@ -328,7 +328,7 @@ export async function startLocalProcess(viewItem: KdbNode): Promise<void> {
 
 export async function stopLocalProcess(viewItem: KdbNode): Promise<void> {
   ext.localProcessObjects[viewItem.children[0]].kill();
-  window.showInformationMessage("Q process stopped successfully!");
+  window.showInformationMessage("q process stopped successfully!");
   ext.outputChannel.appendLine(
     `Child process id ${ext.localProcessObjects[viewItem.children[0]]
       .pid!} removed in cache.`
@@ -340,7 +340,7 @@ export async function stopLocalProcessByServerName(
   serverName: string
 ): Promise<void> {
   ext.localProcessObjects[serverName].kill();
-  window.showInformationMessage("Q process stopped successfully!");
+  window.showInformationMessage("q process stopped successfully!");
   ext.outputChannel.appendLine(
     `Child process id ${ext.localProcessObjects[serverName]
       .pid!} removed in cache.`

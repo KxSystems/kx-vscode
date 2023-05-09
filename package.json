@@ -1,8 +1,8 @@
 {
-  "name": "kxdb-vscode",
-  "displayName": "KXDB vscode",
-  "description": "Extension to help with Q and KXDB",
-  "publisher": "kx",
+  "name": "kdb-vscode",
+  "displayName": "kdb vscode",
+  "description": "Extension to help with q and kdb",
+  "publisher": "KX",
   "version": "0.1.11",
   "engines": {
     "vscode": "^1.66.0"
@@ -22,12 +22,12 @@
     "Other"
   ],
   "activationEvents": [
-    "onCommand:kxdb.installTools",
-    "onCommand:kxdb.addConnection",
-    "onCommand:kxdb.removeConnection",
-    "onCommand:kxdb.connect",
-    "onCommand:kxdb.disconnect",
-    "onWalkthrough:kxdb.hideWalkthrough",
+    "onCommand:kdb.installTools",
+    "onCommand:kdb.addConnection",
+    "onCommand:kdb.removeConnection",
+    "onCommand:kdb.connect",
+    "onCommand:kdb.disconnect",
+    "onWalkthrough:kdb.hideWalkthrough",
     "onView:kdb-servers",
     "onTerminalProfile:kdb.q-terminal"
   ],
@@ -37,25 +37,25 @@
       {
         "id": "qinstallation",
         "title": "Installation",
-        "description": "Install the Q runtime to work with databases in KX locally.  This extension is in part an editor for Q.  The runtime will need to be installed either locally or done for you in the extension.",
+        "description": "Install the q runtime to work with databases in KX locally.  This extension is in part an editor for q.  The runtime will need to be installed either locally or done for you in the extension.",
         "steps": [
           {
             "id": "install",
             "title": "Register, acquire license and download the runtime",
-            "description": " \n[Install runtime](command:kxdb.installTools)\n[Ignore/hide this help](command:kxdb.hideWalkthrough)",
+            "description": " \n[Install runtime](command:kdb.installTools)\n[Ignore/hide this help](command:kdb.hideWalkthrough)",
             "media": {
               "image": "resources/kx_install.png",
               "altText": "register"
             },
             "completionEvents": [
-              "onCommand:kxdb.installTools"
+              "onCommand:kdb.installTools"
             ],
             "when": "kdb.showInstallWalkthrough"
           },
           {
             "id": "view",
-            "title": "Q runtime installed",
-            "description": " \n[Ignore/hide this help](command:kxdb.hideWalkthrough)",
+            "title": "q runtime installed",
+            "description": " \n[Ignore/hide this help](command:kdb.hideWalkthrough)",
             "media": {
               "markdown": "out/qinstall.md"
             },
@@ -72,7 +72,7 @@
       "properties": {
         "kdb.servers": {
           "type": "object",
-          "description": "KDB servers for explorer"
+          "description": "kdb servers for explorer"
         },
         "kdb.hideWalkthrough": {
           "type": "boolean",
@@ -84,65 +84,65 @@
         },
         "kdb.qHomeDirectory": {
           "type": "string",
-          "description": "QHOME directory for Q runtime"
+          "description": "QHOME directory for q runtime"
         }
       }
     },
     "commands": [
       {
-        "command": "kxdb.startLocalProcess",
-        "title": "Start Q process"
+        "command": "kdb.startLocalProcess",
+        "title": "Start q process"
       },
       {
-        "command": "kxdb.stopLocalProcess",
-        "title": "Stop Q process"
+        "command": "kdb.stopLocalProcess",
+        "title": "Stop q process"
       },
       {
-        "command": "kxdb.hideWalkthrough",
+        "command": "kdb.hideWalkthrough",
         "title": "Hide walkthrough"
       },
       {
-        "command": "kxdb.addConnection",
+        "command": "kdb.addConnection",
         "title": "Add new connection"
       },
       {
-        "command": "kxdb.removeConnection",
+        "command": "kdb.removeConnection",
         "title": "Remove connection"
       },
       {
-        "command": "kxdb.connect",
-        "title": "Connect KDB server"
+        "command": "kdb.connect",
+        "title": "Connect kdb server"
       },
       {
-        "command": "kxdb.disconnect",
-        "title": "Disconnect KDB server"
+        "command": "kdb.disconnect",
+        "title": "Disconnect kdb server"
       },
       {
-        "command": "kxdb.terminal.run",
-        "title": "Run Q file"
+        "command": "kdb.terminal.run",
+        "title": "Run q file in a new q instance"
       },
       {
-        "command": "kxdb.execute.selectedQuery",
+        "command": "kdb.execute.selectedQuery",
         "title": "Execute Current Selection"
       },
       {
-        "command": "kxdb.execute.fileQuery",
-        "title": "Execute File"
+        "command": "kdb.execute.fileQuery",
+        "title": "Execute Entire File"
       }
     ],
     "keybindings": [
       {
-        "command": "kxdb.execute.selectedQuery",
+        "command": "kdb.execute.selectedQuery",
         "key": "ctrl+q",
         "when": "editorLangId == q"
       },
       {
-        "command": "kxdb.execute.fileQuery",
+        "command": "kdb.execute.fileQuery",
         "key": "ctrl+shift+q",
         "when": "editorLangId == q"
       },
       {
-        "command": "kxdb.terminal.run",
+        "command": "kdb.terminal.run",
         "key": "ctrl+shift+r",
         "when": "editorLangId == q"
       }
@@ -182,14 +182,14 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "kxdb-explorer",
+          "id": "kdb-explorer",
           "title": "KX",
           "icon": "resources/kx_logo.svg"
         }
       ]
     },
     "views": {
-      "kxdb-explorer": [
+      "kdb-explorer": [
         {
           "id": "kdb-servers",
           "name": "kdb servers",
@@ -200,69 +200,69 @@
     "viewsWelcome": [
       {
         "view": "kdb-servers",
-        "contents": "No KDB servers registered [learn more](https://www.bing.com).\n[Connect to kdb server](command:kxdb.addConnection)"
+        "contents": "No kdb servers registered [learn more](https://www.bing.com).\n[Connect to kdb server](command:kdb.addConnection)"
       }
     ],
     "menus": {
       "commandPalette": [
         {
           "when": "false",
-          "command": "kxdb.hideWalkthrough"
+          "command": "kdb.hideWalkthrough"
         }
       ],
       "view/title": [
         {
-          "command": "kxdb.addConnection",
+          "command": "kdb.addConnection",
           "when": "view == kdb-servers"
         }
       ],
       "view/item/context": [
         {
-          "command": "kxdb.connect",
+          "command": "kdb.connect",
           "when": "view == kdb-servers && viewItem not in kdb.connected"
         },
         {
-          "command": "kxdb.disconnect",
+          "command": "kdb.disconnect",
           "when": "view == kdb-servers && viewItem in kdb.connected"
         },
         {
-          "command": "kxdb.removeConnection",
+          "command": "kdb.removeConnection",
           "when": "view == kdb-servers"
         },
         {
-          "command": "kxdb.startLocalProcess",
+          "command": "kdb.startLocalProcess",
           "when": "view == kdb-servers && viewItem in kdb.local && viewItem not in kdb.running"
         },
         {
-          "command": "kxdb.stopLocalProcess",
+          "command": "kdb.stopLocalProcess",
           "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running"
         }
       ],
       "editor/title": [
         {
-          "command": "kxdb.terminal.run",
+          "command": "kdb.terminal.run",
           "when": "resourceLangId ==  q",
           "group": "navigation"
         },
         {
-          "command": "kxdb.execute.fileQuery",
+          "command": "kdb.execute.fileQuery",
           "when": "resourceLangId ==  q",
           "group": "navigation"
         }
       ],
       "editor/context": [
         {
-          "command": "kxdb.terminal.run",
+          "command": "kdb.terminal.run",
           "when": "resourceLangId == q",
           "group": "q"
         },
         {
-          "command": "kxdb.execute.selectedQuery",
+          "command": "kdb.execute.selectedQuery",
           "group": "q",
           "when": "editorLangId == q"
         },
         {
-          "command": "kxdb.execute.fileQuery",
+          "command": "kdb.execute.fileQuery",
           "group": "q",
           "when": "editorLangId == q"
         }

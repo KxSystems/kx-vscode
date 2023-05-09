@@ -1,6 +1,6 @@
 # Change log
 
-All notable changes to the kxdb extension will be documented in this file.
+All notable changes to the kdb extension will be documented in this file.
 
 # 0.1.10
 
@@ -30,7 +30,7 @@ All notable changes to the kxdb extension will be documented in this file.
 
 ### Internal Improvements
 
-- Removed Q terminal from the extension with the decision to use the editor and output window in favor of the confusion with the terminal.
+- Removed q terminal from the extension with the decision to use the editor and output window in favor of the confusion with the terminal.
 
 # 0.1.8
 
@@ -58,7 +58,7 @@ All notable changes to the kxdb extension will be documented in this file.
 
 ### Fixes
 
-- Fixed issue when after establishing a connection via connection manager, and the KDB instance going down, the UI still showed connected. This update will provide the user a toast style notification about the connection failure as well as updating the connection status in the connection manager UI (tree).
+- Fixed issue when after establishing a connection via connection manager, and the kdb instance going down, the UI still showed connected. This update will provide the user a toast style notification about the connection failure as well as updating the connection status in the connection manager UI (tree).
 
 ### Internal Improvements
 
@@ -92,7 +92,7 @@ All notable changes to the kxdb extension will be documented in this file.
 
 - Updated the connection manager to use aliases for connections
 
-- Updated the connection manager to allow auth for KDB endpoints, using the secret storage in VS Code for protection of secrets
+- Updated the connection manager to allow auth for kdb endpoints, using the secret storage in VS Code for protection of secrets
 
 ### Fixes
 
@@ -106,25 +106,25 @@ All notable changes to the kxdb extension will be documented in this file.
 
 ### Enhancements
 
-- Updated the Q terminal to not be started by the Command Pallette and instead be started / stopped from the normal terminal controls.
+- Updated the q terminal to not be started by the Command Pallette and instead be started / stopped from the normal terminal controls.
 
-- Updated the Q terminal to use the shared connection manager for kdb connections.
+- Updated the q terminal to use the shared connection manager for kdb connections.
 
 - Added the walkthrough for new users.
 
 ### Fixes
 
-- Updated installation logic. The extension will now check to see if QHOME is defined and if so, it will assume that the user has already installed the runtime. If there is no QHOME defined, the extension will prompt the user to install. These will use generic uris which we are still figuring out. There are really 3 profiles for users. The first would be a "managed" install, which would install the bits inside VS Code for the user. The second would be where the user wants to install Q runtime outside of VS Code and use it in there, and be guided by the extension and the last is the advanced user who already has the Q runtime installed.
+- Updated installation logic. The extension will now check to see if QHOME is defined and if so, it will assume that the user has already installed the runtime. If there is no QHOME defined, the extension will prompt the user to install. These will use generic uris which we are still figuring out. There are really 3 profiles for users. The first would be a "managed" install, which would install the bits inside VS Code for the user. The second would be where the user wants to install q runtime outside of VS Code and use it in there, and be guided by the extension and the last is the advanced user who already has the q runtime installed.
 
 ### Internal Improvements
 
-- Updated the internal connection manager caching for better response and less connections required when using multiple inputs such as Q terminal and the editor pane.
+- Updated the internal connection manager caching for better response and less connections required when using multiple inputs such as q terminal and the editor pane.
 
 # 0.1.1
 
 ### Enhancements
 
-- Add visual indicator to registered connections in the KDB servers panel. This is used to inform the user of the currently connected (active connections) kdb server.
+- Add visual indicator to registered connections in the kdb servers panel. This is used to inform the user of the currently connected (active connections) kdb server.
 
 - Add logic to ensure only one connection can be activated at a specific time.
 
@@ -132,6 +132,6 @@ All notable changes to the kxdb extension will be documented in this file.
 
 ### Fixes
 
-- Removed the check for Q install, this is being reworked to no annoy users with local installs.
+- Removed the check for q install, this is being reworked to no annoy users with local installs.
 
 ### Internal Improvements
