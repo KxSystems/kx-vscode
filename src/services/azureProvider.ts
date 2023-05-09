@@ -1,24 +1,24 @@
-import { ResourceManagementClient } from '@azure/arm-resources';
-import { SubscriptionClient } from '@azure/arm-subscriptions';
-import { window } from 'vscode';
-import { ext } from '../extensionVariables';
-import { SubscriptionItem } from '../models/subscriptionItem';
-import { validateResourceGroupName } from '../validators/azureValidator';
+import { ResourceManagementClient } from "@azure/arm-resources";
+import { SubscriptionClient } from "@azure/arm-subscriptions";
+import { window } from "vscode";
+import { ext } from "../extensionVariables";
+import { SubscriptionItem } from "../models/subscriptionItem";
+import { validateResourceGroupName } from "../validators/azureValidator";
 
 export async function showSubscriptions() {
   await ext.azureAccount.waitForFilters();
   const subscriptionItems: SubscriptionItem[] = ext.azureAccount.filters
-    .filter(element => {
+    .filter((element) => {
       return (
         element != undefined &&
         element.subscription != undefined &&
         element.subscription.subscriptionId
       );
     })
-    .map(element => {
+    .map((element) => {
       return {
-        label: element.subscription.displayName || '',
-        description: element.subscription.subscriptionId || '',
+        label: element.subscription.displayName || "",
+        description: element.subscription.subscriptionId || "",
         session: element.session,
         subscription: element.subscription,
       };
@@ -27,14 +27,16 @@ export async function showSubscriptions() {
 }
 
 export async function showLocations(subscriptionItem: SubscriptionItem) {
-  const subscriptionClient = new SubscriptionClient(subscriptionItem.session.credentials2);
+  const subscriptionClient = new SubscriptionClient(
+    subscriptionItem.session.credentials2
+  );
   const locations = await subscriptionClient.subscriptions.listLocations(
     subscriptionItem.subscription.subscriptionId!
   );
-  locations.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  return locations.map(location => ({
-    label: location.displayName || '',
-    description: location.name || '',
+  locations.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  return locations.map((location) => ({
+    label: location.displayName || "",
+    description: location.name || "",
   }));
 }
 
@@ -45,10 +47,13 @@ export async function showResourceGroups(subscriptionItem: SubscriptionItem) {
     subscription.subscriptionId!
   );
 
-  const resourceGroups = await listAll(resources.resourceGroups, resources.resourceGroups.list());
-  resourceGroups.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
-  return resourceGroups.map(resourceGroup => ({
-    label: resourceGroup.name || '',
+  const resourceGroups = await listAll(
+    resources.resourceGroups,
+    resources.resourceGroups.list()
+  );
+  resourceGroups.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  return resourceGroups.map((resourceGroup) => ({
+    label: resourceGroup.name || "",
     description: resourceGroup.location,
     resourceGroup,
   }));
@@ -63,13 +68,16 @@ export async function createResourceGroup(subscriptionItem: SubscriptionItem) {
 
   const resourceGroupName = await window.showInputBox({
     ignoreFocusOut: true,
-    placeHolder: 'Resource group name',
-    prompt: 'Provide a resource group name',
-    validateInput: name => validateResourceGroupName(name, resources.resourceGroups),
+    placeHolder: "Resource group name",
+    prompt: "Provide a resource group name",
+    validateInput: (name) =>
+      validateResourceGroupName(name, resources.resourceGroups),
   });
 
   const locations = await showLocations(subscriptionItem);
-  const locationItem = await window.showQuickPick(locations, { title: 'Pick a location' });
+  const locationItem = await window.showQuickPick(locations, {
+    title: "Pick a location",
+  });
 }
 
 export interface PartialList<T> extends Array<T> {

@@ -1,4 +1,4 @@
-import { IRule } from '../rule';
+import { IRule } from "../rule";
 
 export class IsAvailable implements IRule {
   constructor(
@@ -20,7 +20,11 @@ export class IsAvailable implements IRule {
         nameAvailable: boolean;
         reason: string;
       };
-      if (response && !response.nameAvailable && response.reason === 'AlreadyExists') {
+      if (
+        response &&
+        !response.nameAvailable &&
+        response.reason === "AlreadyExists"
+      ) {
         return this.errorMessage || response.message;
       }
     }

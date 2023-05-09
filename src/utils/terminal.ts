@@ -1,10 +1,13 @@
-import * as nodeq from 'node-q';
-import { EventEmitter, Pseudoterminal } from 'vscode';
-import { ext } from '../extensionVariables';
-import { delay } from '../utils/core';
-import { Telemetry } from './telemetryClient';
+import * as nodeq from "node-q";
+import { EventEmitter, Pseudoterminal } from "vscode";
+import { ext } from "../extensionVariables";
+import { delay } from "../utils/core";
+import { Telemetry } from "./telemetryClient";
 
-function storeConnection(err: Error | undefined, con: nodeq.Connection | undefined) {
+function storeConnection(
+  err: Error | undefined,
+  con: nodeq.Connection | undefined
+) {
   if (err) {
     throw err;
   }
@@ -15,8 +18,8 @@ function storeConnection(err: Error | undefined, con: nodeq.Connection | undefin
 }
 
 export async function qConnect(): Promise<void> {
-  Telemetry.sendEvent('QTerminal.Connect');
-  nodeq.connect({ host: 'localhost', port: 5001 }, storeConnection);
+  Telemetry.sendEvent("QTerminal.Connect");
+  nodeq.connect({ host: "localhost", port: 5001 }, storeConnection);
 }
 
 export async function execute(command: string): Promise<string | undefined> {
@@ -42,28 +45,28 @@ export async function execute(command: string): Promise<string | undefined> {
 export async function createTerminalInstance(): Promise<Pseudoterminal> {
   const emitter = new EventEmitter<string>();
 
-  let line = '';
+  let line = "";
   return {
     onDidWrite: emitter.event,
-    open: () => emitter.fire('q)'),
+    open: () => emitter.fire("q)"),
     close: () => {
       /* noop */
     },
     handleInput: async (data: string) => {
-      if (data === '\r') {
+      if (data === "\r") {
         await qConnect();
         const result = await execute(line);
         emitter.fire(`\r\n${result}\r\n\r\nq)`);
-        line = '';
+        line = "";
         return;
       }
-      if (data === '\x7f') {
+      if (data === "\x7f") {
         if (line.length === 0) {
           return;
         }
         line = line.substr(0, line.length - 1);
-        emitter.fire('\x1b[D');
-        emitter.fire('\x1b[P');
+        emitter.fire("\x1b[D");
+        emitter.fire("\x1b[P");
         return;
       }
       line += data;

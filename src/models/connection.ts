@@ -3,7 +3,8 @@ import { commands, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { delay } from "../utils/core";
 import { handleQueryResults } from "../utils/execution";
-import { QueryResultType } from "./queryResult";
+import { queryWrapper } from "../utils/queryUtils";
+import { QueryResult, QueryResultType } from "./queryResult";
 
 export class Connection {
   private options: nodeq.ConnectionParameters;
@@ -80,17 +81,13 @@ export class Connection {
       await delay(500);
       retryCount++;
     }
-    this.connection.k(command, (err, res) => {
+    const wrapper = queryWrapper();
+    this.connection.k(wrapper, command, (err: Error, res: QueryResult) => {
       if (err) {
-        result = handleQueryResults(res, QueryResultType.Error);
+        result = handleQueryResults(err.toString(), QueryResultType.Error);
       }
       if (res) {
-        const auxRes = JSON.stringify(res);
-        if (auxRes.slice(0, 2) === "[{") {
-          result = handleQueryResults(auxRes, QueryResultType.JSON);
-        } else {
-          result = handleQueryResults(auxRes, QueryResultType.Text);
-        }
+        result = res.data;
       }
     });
 

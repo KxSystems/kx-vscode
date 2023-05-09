@@ -281,13 +281,12 @@
     "watch": "tsc -p server/ && npm run -S esbuild-base -- --sourcemap --watch",
     "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
     "test": "npm run -S esbuild-base -- --sourcemap && tsc -p ./test && node ./out/test/runTest.js",
-    "package": "npx vsce package"
+    "package": "npx vsce package",
+    "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\""
   },
   "prettier": {
-    "printWidth": 100,
-    "singleQuote": true,
-    "tabWidth": 2,
-    "arrowParens": "avoid"
+    "printWidth": 80,
+    "bracketSameLine": true
   },
   "devDependencies": {
     "@types/extract-zip": "^2.0.1",

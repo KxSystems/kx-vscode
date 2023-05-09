@@ -1,4 +1,4 @@
-import { ResourceGroup } from '@azure/arm-resources/esm/models';
+import { ResourceGroup } from "@azure/arm-resources/esm/models";
 
 export interface ResourceGroupItem {
   label: string;

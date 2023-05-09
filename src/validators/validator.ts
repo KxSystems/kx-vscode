@@ -1,10 +1,10 @@
-import { IRule } from './rule';
-import { HasLowerCase } from './validationFunctions/hasLowerCase';
-import { HasNoForbiddenChar } from './validationFunctions/hasNoForbiddenChar';
-import { HasSpecialChar } from './validationFunctions/hasSpecialChar';
-import { IsAvailable } from './validationFunctions/isAvailable';
-import { IsNotEmpty } from './validationFunctions/isNotEmpty';
-import { LengthRange } from './validationFunctions/lengthRange';
+import { IRule } from "./rule";
+import { HasLowerCase } from "./validationFunctions/hasLowerCase";
+import { HasNoForbiddenChar } from "./validationFunctions/hasNoForbiddenChar";
+import { HasSpecialChar } from "./validationFunctions/hasSpecialChar";
+import { IsAvailable } from "./validationFunctions/isAvailable";
+import { IsNotEmpty } from "./validationFunctions/isNotEmpty";
+import { LengthRange } from "./validationFunctions/lengthRange";
 
 export class Validator {
   private errors: Set<string> = new Set();
@@ -12,7 +12,7 @@ export class Validator {
   constructor(private readonly value: string) {}
 
   public getErrors(): string | null {
-    return Array.from(this.errors).join('\r\n') || null;
+    return Array.from(this.errors).join("\r\n") || null;
   }
 
   public isNotEmpty(): Validator {
@@ -25,7 +25,10 @@ export class Validator {
     return this;
   }
 
-  public hasNoForbiddenChar(forbiddenChars: RegExp, errorMessage: string): Validator {
+  public hasNoForbiddenChar(
+    forbiddenChars: RegExp,
+    errorMessage: string
+  ): Validator {
     this.validateSync(new HasNoForbiddenChar(forbiddenChars, errorMessage));
     return this;
   }
@@ -43,7 +46,10 @@ export class Validator {
   public async isAvailable(
     checkAvailable: (
       name: string
-    ) => Promise<{ message: string | null; nameAvailable: boolean; reason: string } | boolean>,
+    ) => Promise<
+      | { message: string | null; nameAvailable: boolean; reason: string }
+      | boolean
+    >,
     errorMessage: string
   ): Promise<Validator> {
     await this.validate(new IsAvailable(checkAvailable, errorMessage));

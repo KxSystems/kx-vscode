@@ -3,14 +3,18 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { SubscriptionModels } from '@azure/arm-subscriptions';
-import { TokenCredential } from '@azure/core-auth';
-import { Environment } from '@azure/ms-rest-azure-env';
-import type { TokenCredentialsBase } from '@azure/ms-rest-nodeauth';
-import { ReadStream } from 'fs';
-import { CancellationToken, Event, Progress, Terminal } from 'vscode';
+import { SubscriptionModels } from "@azure/arm-subscriptions";
+import { TokenCredential } from "@azure/core-auth";
+import { Environment } from "@azure/ms-rest-azure-env";
+import type { TokenCredentialsBase } from "@azure/ms-rest-nodeauth";
+import { ReadStream } from "fs";
+import { CancellationToken, Event, Progress, Terminal } from "vscode";
 
-export type AzureLoginStatus = 'Initializing' | 'LoggingIn' | 'LoggedIn' | 'LoggedOut';
+export type AzureLoginStatus =
+  | "Initializing"
+  | "LoggingIn"
+  | "LoggedIn"
+  | "LoggedOut";
 
 export interface AzureAccountExtensionApi {
   readonly apiVersion: string;
@@ -25,7 +29,7 @@ export interface AzureAccountExtensionApi {
   readonly waitForFilters: () => Promise<boolean>;
   readonly waitForLogin: () => Promise<boolean>;
   readonly waitForSubscriptions: () => Promise<boolean>;
-  createCloudShell(os: 'Linux' | 'Windows'): CloudShell;
+  createCloudShell(os: "Linux" | "Windows"): CloudShell;
 }
 
 export interface AzureSession {
@@ -46,7 +50,7 @@ export interface AzureSubscription {
 
 export type AzureResourceFilter = AzureSubscription;
 
-export type CloudShellStatus = 'Connecting' | 'Connected' | 'Disconnected';
+export type CloudShellStatus = "Connecting" | "Connected" | "Disconnected";
 
 export interface UploadOptions {
   contentLength?: number;

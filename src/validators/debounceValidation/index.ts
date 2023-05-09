@@ -10,7 +10,9 @@ export class Debounce {
     this.timeout = options.timeout;
   }
 
-  public debounced(timeOverFunction: () => Promise<string | null>): Promise<string | null> {
+  public debounced(
+    timeOverFunction: () => Promise<string | null>
+  ): Promise<string | null> {
     if (this.debounceEvent.timeout) {
       this.debounceEvent.resolve!(null);
       clearTimeout(this.debounceEvent.timeout);

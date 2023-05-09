@@ -174,7 +174,7 @@
           "name": "constant.language.null.q",
           "match": "\\b0(N[ghijepmdznuvt]?|n)\\b"
         },
-        
+
         {
           "name": "support.function.internal.q",
           "match": "\\-([1-9]|1[0-689]|2[0-79]|3[01368]|120)!"
@@ -182,7 +182,8 @@
         {
           "name": "constant.language.boolean.q",
           "match": "\\b[01]+b\\b"
-        },{
+        },
+        {
           "name": "support.function.file.q",
           "match": "\\b(0:|1:|2:)"
         },
@@ -280,11 +281,11 @@
         {
           "name": "keyword.operator.q",
           "match": "[\\@\\.\\$!?+\\-\\*%|&#^,_]"
-        }
+        },
         {
           "name": "keyword.assign.q",
           "match": "::?"
-        },
+        }
       ]
     },
     "variables": {
@@ -324,7 +325,7 @@
             {
               "include": "#constants"
             },
-          {
+            {
               "include": "#keywords"
             },
             {

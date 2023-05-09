@@ -1,7 +1,10 @@
-
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace validateUtils {
-  export function isValidLength(value: string, lower?: number, upper?: number): boolean {
+  export function isValidLength(
+    value: string,
+    lower?: number,
+    upper?: number
+  ): boolean {
     const maxInteger = 2147483647;
 
     lower ??= 1;
