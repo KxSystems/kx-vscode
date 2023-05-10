@@ -37,11 +37,11 @@
       {
         "id": "qinstallation",
         "title": "Installation",
-        "description": "Install the q runtime to work with databases in KX locally.  This extension is in part an editor for q.  The runtime will need to be installed either locally or done for you in the extension.",
+        "description": "Get started by installing q to work with local kdb processes - q will need to be installed either locally or via this extension.",
         "steps": [
           {
             "id": "install",
-            "title": "Register, acquire license and download the runtime",
+            "title": "Register, acquire license and download the q runtime",
             "description": " \n[Install runtime](command:kdb.installTools)\n[Ignore/hide this help](command:kdb.hideWalkthrough)",
             "media": {
               "image": "resources/kx_install.png",
