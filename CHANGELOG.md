@@ -2,6 +2,26 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
+# 0.1.11
+
+### Enhancements
+
+- If no text is selected, Ctrl+Q will execute the current line
+
+- Results now scroll into view on execution
+
+- Clearer error message if empty query is executed
+
+### Fixes
+
+- QHOME path now respected for existing q installations, and local connections can be created for them
+
+### Internal Improvements
+
+- Queries are now wrapped with .Q.s to support displaying all possible types in results
+
+- Branding updates
+
 # 0.1.10
 
 ### Enhancements
