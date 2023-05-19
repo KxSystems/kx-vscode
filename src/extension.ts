@@ -1,4 +1,5 @@
 import { AzureExtensionApiProvider } from "@microsoft/vscode-azext-utils/api";
+import path from "path";
 import {
   CancellationToken,
   commands,
@@ -15,6 +16,12 @@ import {
   window,
   workspace,
 } from "vscode";
+import {
+  LanguageClient,
+  LanguageClientOptions,
+  ServerOptions,
+  TransportKind,
+} from "vscode-languageclient/node";
 import {
   installTools,
   startLocalProcess,
@@ -48,6 +55,8 @@ import {
 import { runQFileTerminal } from "./utils/execution";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
+
+let client: LanguageClient;
 
 export async function activate(context: ExtensionContext) {
   ext.context = context;
@@ -202,6 +211,50 @@ export async function activate(context: ExtensionContext) {
       },
     })
   );
+
+  //q language server
+  const serverModule = path.join(context.extensionPath, "out", "server.js");
+  const debugOptions = { execArgv: ["--nolazy", "--inspect=6009"] };
+  const serverOptions: ServerOptions = {
+    run: { module: serverModule, transport: TransportKind.ipc },
+    debug: {
+      module: serverModule,
+      transport: TransportKind.ipc,
+      options: debugOptions,
+    },
+  };
+  const clientOptions: LanguageClientOptions = {
+    documentSelector: [{ scheme: "file", language: "q" }],
+    synchronize: {
+      fileEvents: workspace.createFileSystemWatcher("**/*.q"),
+    },
+  };
+
+  client = new LanguageClient(
+    "kdb LangServer",
+    "kdb Language Server",
+    serverOptions,
+    clientOptions
+  );
+  context.subscriptions.push(
+    commands.registerCommand("kdb.sendServerCache", (code) => {
+      client.sendNotification("analyzeServerCache", code);
+    })
+  );
+
+  context.subscriptions.push(
+    commands.registerCommand("kdb.sendOnHover", (hoverItems) => {
+      client.sendNotification("prepareOnHover", hoverItems);
+    })
+  );
+
+  client.start().then(() => {
+    const configuration = workspace.getConfiguration("kdb.sourceFiles");
+    client.sendNotification("analyzeSourceCode", {
+      globsPattern: configuration.get("globsPattern"),
+      ignorePattern: configuration.get("ignorePattern"),
+    });
+  });
 
   // Telemetry.sendEvent('Extension.Activated');
 }
