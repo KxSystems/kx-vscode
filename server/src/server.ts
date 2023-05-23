@@ -1,11 +1,11 @@
 import {
   Connection,
-  createConnection,
   InitializeParams,
   InitializeResult,
   ProposedFeatures,
-} from "vscode-languageserver/node";
-import QLangServer from "./langServer";
+} from "vscode-languageserver";
+import { createConnection } from "vscode-languageserver/node";
+import QLangServer from "./qLangServer";
 
 const connection: Connection = createConnection(ProposedFeatures.all);
 

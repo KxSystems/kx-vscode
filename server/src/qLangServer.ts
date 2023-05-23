@@ -1,4 +1,5 @@
 import fs from "fs";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   CompletionItem,
   CompletionItemKind,
@@ -29,8 +30,7 @@ import {
   TextEdit,
   WorkspaceEdit,
   WorkspaceSymbolParams,
-} from "vscode-languageserver";
-import { TextDocument } from "vscode-languageserver-textdocument";
+} from "vscode-languageserver/node";
 import { URI } from "vscode-uri";
 import AnalyzerUtil, { Keyword } from "./utils/analyzerUtil";
 import CallHierarchyHandler from "./utils/handlersUtils";
