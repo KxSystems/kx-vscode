@@ -3,6 +3,7 @@ import { LanguageClient } from "vscode-languageclient/node";
 import { AzureAccountExtensionApi } from "./azure-account.api";
 import { Connection } from "./models/connection";
 import { LocalProcess } from "./models/localProcess";
+import { ServerObject } from "./models/serverObject";
 import { KdbNode, KdbTreeProvider } from "./services/kdbTreeProvider";
 import AuthSettings from "./utils/secretStorage";
 
@@ -12,6 +13,7 @@ export namespace ext {
   export let outputChannel: OutputChannel;
   export let consolePanel: OutputChannel;
   export let serverProvider: KdbTreeProvider;
+  export let serverObjects: ServerObject;
 
   export let connection: Connection | undefined;
   export let connectionNode: KdbNode | undefined;
@@ -52,6 +54,14 @@ export namespace ext {
   export const tables: Array<string> = [];
   // eslint-disable-next-line prefer-const
   export let keywords: Array<string> = [];
+
+  export const qObjectCategories = [
+    "Dictionaries",
+    "Functions",
+    "Tables",
+    "Variables",
+    "Views",
+  ];
 
   export const constants = {
     names: [

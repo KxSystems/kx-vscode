@@ -219,23 +219,23 @@
       "view/item/context": [
         {
           "command": "kdb.connect",
-          "when": "view == kdb-servers && viewItem not in kdb.connected"
+          "when": "view == kdb-servers && viewItem not in kdb.connected && viewItem == 'root'"
         },
         {
           "command": "kdb.disconnect",
-          "when": "view == kdb-servers && viewItem in kdb.connected"
+          "when": "view == kdb-servers && viewItem in kdb.connected && viewItem == 'root'"
         },
         {
           "command": "kdb.removeConnection",
-          "when": "view == kdb-servers"
+          "when": "view == kdb-servers && viewItem == 'root'"
         },
         {
           "command": "kdb.startLocalProcess",
-          "when": "view == kdb-servers && viewItem in kdb.local && viewItem not in kdb.running"
+          "when": "view == kdb-servers && viewItem in kdb.local && viewItem not in kdb.running && viewItem == 'root'"
         },
         {
           "command": "kdb.stopLocalProcess",
-          "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running"
+          "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running && viewItem == 'root'"
         }
       ],
       "editor/title": [

@@ -98,6 +98,28 @@ export class Connection {
     return result;
   }
 
+  public async executeQueryRaw(command: string): Promise<string> {
+    let result;
+    let retryCount = 0;
+    while (this.connection === undefined) {
+      if (retryCount > ext.maxRetryCount) {
+        return "timeout";
+      }
+      await delay(500);
+      retryCount++;
+    }
+    this.connection.k(command, (err: Error, res: string) => {
+      if (err) throw err;
+      result = res;
+    });
+
+    while (result === undefined || result === null) {
+      await delay(500);
+    }
+
+    return result;
+  }
+
   public connect(callback: nodeq.AsyncValueCallback<Connection>): void {
     nodeq.connect(this.options, (err, conn) => {
       if (err || !conn) {
