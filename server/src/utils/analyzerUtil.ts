@@ -665,7 +665,20 @@ export default class AnalyzerUtil {
         )
       );
 
-    problems.push(...this.findMissingNodes(tree.rootNode));
+    function findMissingNodes(node: Parser.SyntaxNode) {
+      if (node.isMissing()) {
+        problems.push(
+          Diagnostic.create(
+            TreeSitterUtil.range(node),
+            `Syntax error: expected "${node.type}" somewhere in the file`,
+            DiagnosticSeverity.Warning
+          )
+        );
+      } else if (node.hasError()) {
+        node.children.forEach(findMissingNodes);
+      }
+    }
+    findMissingNodes(tree.rootNode);
     return problems;
   }
 
@@ -773,21 +786,5 @@ export default class AnalyzerUtil {
       this.fuseInstance = new Fuse(symbols, { keys: ["name"] });
     }
     return this.fuseInstance;
-  }
-
-  private findMissingNodes(node: Parser.SyntaxNode) {
-    const problems: Diagnostic[] = [];
-    if (node.isMissing()) {
-      problems.push(
-        Diagnostic.create(
-          TreeSitterUtil.range(node),
-          `Syntax error: expected "${node.type}" somewhere in the file`,
-          DiagnosticSeverity.Warning
-        )
-      );
-    } else if (node.hasError()) {
-      node.children.forEach(this.findMissingNodes);
-    }
-    return problems;
   }
 }

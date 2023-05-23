@@ -12,7 +12,7 @@ export async function initializeParser(): Promise<Parser> {
    *
    */
   const lang = await Parser.Language.load(
-    `${__dirname}/../../grammars/parser-q.wasm`
+    `${__dirname}/../grammars/parser-q.wasm`
   );
 
   parser.setLanguage(lang);
@@ -21,7 +21,7 @@ export async function initializeParser(): Promise<Parser> {
 
 export function getQLangParserRef(): CompletionItem[] {
   const qLangParser: CompletionItem[] = [];
-  fs.createReadStream(`${__dirname}/../../grammars/qLang.csv`)
+  fs.createReadStream(`${__dirname}/../grammars/qLang.csv`)
     .pipe(csvParser())
     .on("res", (res: CompletionItem) => {
       res.kind = Number(res.kind) as CompletionItemKind;
@@ -32,6 +32,6 @@ export function getQLangParserRef(): CompletionItem[] {
 
 export const qLangParser = getQLangParserRef();
 export const qLangSampleParser = fs.readFileSync(
-  `${__dirname}/../../grammars/qLang.csv`,
+  `${__dirname}/../grammars/qLangSamples.q`,
   "utf8"
 );

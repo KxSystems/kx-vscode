@@ -276,9 +276,9 @@
   "homepage": "https://github.com/KxSystems/kx-vscode#readme",
   "scripts": {
     "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
-    "esbuild-base": "rimraf out && tsc -p server/ && esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
-    "build": "tsc -p server/ && npm run -S esbuild-base -- --sourcemap",
-    "watch": "tsc -p server/ && npm run -S esbuild-base -- --sourcemap --watch",
+    "esbuild-base": "rimraf out && esbuild ./server/src/server.ts --bundle --outfile=out/server.js --external:vscode --format=cjs --platform=node && cp node_modules/web-tree-sitter/tree-sitter.wasm out/ && esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
+    "build": "npm run -S esbuild-base -- --sourcemap",
+    "watch": "npm run -S esbuild-base -- --sourcemap --watch",
     "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
     "test": "npm run -S esbuild-base -- --sourcemap && tsc -p ./test && node ./out/test/runTest.js",
     "package": "npx vsce package",

@@ -1,130 +1,4 @@
 label,detail,documentation,kind
-.j.j,serialize,.j.j[any],2
-.j.k,deserialize,.j.k[string],2
-.j.jd,serialize infinity,".j.jd[any;()!()|(!). 1#'`null0w,1b]",2
-.h.br,linebreak,.h.br,6
-.h.c0,web color,.h.c0,6
-.h.c1,web color,.h.c1,6
-.h.cd,CSV from data,.h.cd[table|list],2
-.h.code,code after Tab,.h.code[string],2
-.h.d,delimiter,.h.d,6
-.h.ed,Excel from data,.h.ed[table],2
-.h.edsn,Excel from tables,.h.edsn[sheet syms!tables],2
-.h.fram,frame,.h.fram[title string;strings;(left frame strings;right frame strings)],2
-.h.ha,anchor,.h.ha[url;string],2
-.h.hb,anchor target,.h.hb[url;string],2
-.h.hc,escape lt,.h.hc[string],2
-.h.he,HTTP 400,.h.he[string],2
-.h.hn,HTTP response,.h.hn[status code string;content type sym;content string],2
-.h.HOME,webserver root,.h.HOME,6
-.h.hp,HTTP response pre,.h.hp[string],2
-.h.hr,horizontal rule,.h.hr[string],2
-.h.ht,Marqdown to HTML,.h.ht[file],2
-.h.hta,start tag,.h.hta[HTML tag sym;attributes!values],2
-.h.htac,element,.h.htac[HTML tag sym;attributes!values;content],2
-.h.htc,element,.h.htc[HTML tag sym;content],2
-.h.html,document,.h.html[html body string],2
-.h.http,hyperlinks,.h.http[string],2
-.h.hu,URI escape,.h.hu[string],2
-.h.hug,URI map,.h.hug[string],2
-.h.hy,HTTP response content,.h.hy[http content type sym;string],2
-.h.iso8601,ISO timestamp,.h.iso8601[nanoseconds],2
-.h.jx,table,.h.jx[offset;table sym],2
-.h.logo,Kx logo,.h.logo,6
-.h.nbr,no break,.h.nbr[string],2
-.h.pre,pre,.h.pre[strings],2
-.h.sa,anchor style,.h.sa,6
-.h.sb,body style,.h.sb,6
-.h.sc,URI-safe,.h.sc,6
-.h.td,TSV from data,.h.td[table],2
-.h.text,paragraphs,.h.text[strings],2
-.h.tx,filetypes,.h.tx,6
-.h.ty,MIME types,.h.ty,6
-.h.uh,URI unescape,.h.uh[string],2
-.h.val,value,.h.val:{[expression]},2
-.h.xd,XML,.h.xd[table],2
-.h.xmp,XMP,.h.xmp[strings],2
-.h.xs,XML escape,.h.xs[string],2
-.h.xt,JSON,.h.xt[`json;json string],2
-.Q.a,lowercase alphabet,.Q.a,6
-.Q.A,uppercase alphabet,.Q.A,6
-.Q.addmonths,add months to date,.Q.addmonths[dates;ints],2
-.Q.addr,IP address,.Q.addr[sym],2
-.Q.b6,bicameral-alphanums,.Q.b6,6
-.Q.bt,backtrace(error or debug),.Q.bt[],2
-.Q.btoa,b64 encode,.Q.btoa[string],2
-.Q.bv,build schema for tables missing from partitions,.Q.bv[<`>],2
-.Q.Cf,create empty nested char file,.Q.Cf[file],2
-.Q.chk,fill HDB,.Q.chk[dir],2
-.Q.cn,count partitioned table,.Q.cn[partitioned table],2
-.Q.D,partitions,.Q.D,2
-.Q.dd,join symbols,.Q.dd[sym|dir;sym],2
-.Q.def,provide defaults for .Q.opt,.Q.def[default dict;params dict],2
-.Q.dpft,save table,.Q.dpft[dir;partition date;column sym;table sym],2
-.Q.dpfts,save table with sym,.Q.dpfts[dir;part;column sym;table sym;sym],2
-.Q.dsftg,load process save,.Q.dsftg[(dir;part;sym);(dir;offset;length);column syms;(types;widths);v1],2
-.Q.en,enumerate varchar cols,.Q.en[dir;table],2
-.Q.ens,enumerate against domain,.Q.ens[dir;table;sym],2
-.Q.f,format,.Q.f[int;number],2
-.Q.fc,parallel on cut(apply parallel),.Q.fc[v1;list],2
-.Q.ff,append columns,.Q.ff[table;table],2
-.Q.fk,foreign key,.Q.fk[column sym],2
-.Q.fmt,format,.Q.fmt[length;decimal;number],2
-.Q.fps,streaming algorithm,.Q.fps[v1;file],2
-.Q.fqk,if system and built-in functions,.Q.fqk[string],2
-.Q.fs,streaming algorithm,.Q.fs[v1;file],2
-.Q.fsn,streaming algorithm,.Q.fsn[v1;file;chunk size],2
-.Q.ft,apply simple,.Q.ft[v1;keyed table],2
-.Q.fu,apply unique,.Q.fu[v1;list],2
-.Q.gc,garbage collect,.Q.gc[],2
-.Q.gz,GZip,.Q.gz[chars|bytes|(level;chars)|(level;bytes)],2
-.Q.hdpf,save tables,.Q.hdpf[hdb handle;dir;part;column sym],2
-.Q.hg,HTTP get,.Q.hg[url|string],2
-.Q.host,hostname,.Q.host[ip int],2
-.Q.hp,HTTP post,.Q.hp[url|string;MIME string;query string],2
-.Q.id,sanitize,.Q.id[sym|table],2
-.Q.ind,partitioned index,.Q.ind[partitioned table;indices],2
-.Q.j10,encode binhex,.Q.j10[string],2
-.Q.j12,encode base64,.Q.j12[string],2
-.Q.k,version,.Q.k,6
-.Q.l,load,.Q.l[file|dir],2
-.Q.M,long infinity,.Q.M,6
-.Q.MAP,maps partitions,.Q.MAP[],2
-.Q.nA,alphanums,.Q.nA,6
-.Q.opt,command parameters,.Q.opt[strings|.z.x],2
-.Q.P,segments,.Q.P,6
-.Q.par,locate partition,.Q.par[dir;part;table sym],2
-.Q.pd,modified partition locations,.Q.pd,6
-.Q.PD,partition locations,.Q.PD,6
-.Q.pf,partition field,.Q.pf,6
-.Q.pn,partition counts,.Q.pn,6
-.Q.prf0,code profiler,.Q.prf0[pid],2
-.Q.pt,partitioned tables,.Q.pt,6
-.Q.pv,modified partition values,.Q.pv,2
-.Q.PV,partition values,.Q.PV,2
-.Q.qp,is partitioned,.Q.qp[table],2
-.Q.qt,is table,.Q.qt[table],2
-.Q.res,keywords,.Q.res,6
-.Q.s,plain text,.Q.s[any],2
-.Q.s1,string representation,.Q.s1[any],2
-.Q.sbt,string backtrace,.Q.sbt[backtrace object],2
-.Q.sha1,SHA-1 encode,.Q.sha1[string],2
-.Q.trp,extend trap,.Q.trp[v1;any;v2],2
-.Q.ts,time and space,.Q.ts[v;args],2
-.Q.ty,type,.Q.ty[list],2
-.Q.u,is date based,.Q.u,6
-.Q.V,table to dict,.Q.V[table],2
-.Q.v,value,.Q.v[file|sym],2
-.Q.view,subview,.Q.view[parts],2
-.Q.vp,missing partitions,.Q.vp,6
-.Q.w,memory stats,.Q.w[],2
-.Q.x,non-command parameters,.Q.x,6
-.Q.x10,decode binhex,.Q.x10[long],2
-.Q.x12,decode base64,.Q.x12[long],2
-.Q.Xf,create file,.Q.Xf[upper case char|type sym],2
-.z.Z,local datetime,.z.Z,6
-.z.z,UTC datetime,.z.z,6
-.z.zd,zip defaults,.z.zd,6
 abs,absolute value,abs[numbers],2
 acos,arccosine,acos[numbers],2
 aj,as-of join(boundary time from LHS),aj[syms;table;table],2
@@ -150,7 +24,6 @@ cos,cosine,cos[numbers],2
 count,count items,count[any],2
 cov,covariance,cov[numbers;numbers],2
 cross,cross product,cross[list;list],2
-csv,csv delimiter comma,csv,6
 cut,cut into lists,cut[ints;list],2
 delete,delete rows or columns from a table,"delete [col1,col2] from t [where cond]",2
 deltas,difference between list items,deltas[<default;>numbers or temporals],2
@@ -301,3 +174,129 @@ xbar,round down to multiples,xbar[base;numbers|termporals],2
 xgroup,group by values in selected columns,xgroup[syms;table],2
 xkey,set key columns,xkey[syms;table],2
 xrank,group by value,xrank[int;list],2
+.h.br,linebreak,.h.br,6
+.h.c0,web color,.h.c0,6
+.h.c1,web color,.h.c1,6
+.h.cd,CSV from data,.h.cd[table|list],2
+.h.code,code after Tab,.h.code[string],2
+.h.d,delimiter,.h.d,6
+.h.ed,Excel from data,.h.ed[table],2
+.h.edsn,Excel from tables,.h.edsn[sheet syms!tables],2
+.h.fram,frame,.h.fram[title string;strings;(left frame strings;right frame strings)],2
+.h.ha,anchor,.h.ha[url;string],2
+.h.hb,anchor target,.h.hb[url;string],2
+.h.hc,escape lt,.h.hc[string],2
+.h.he,HTTP 400,.h.he[string],2
+.h.hn,HTTP response,.h.hn[status code string;content type sym;content string],2
+.h.HOME,webserver root,.h.HOME,6
+.h.hp,HTTP response pre,.h.hp[string],2
+.h.hr,horizontal rule,.h.hr[string],2
+.h.ht,Marqdown to HTML,.h.ht[file],2
+.h.hta,start tag,.h.hta[HTML tag sym;attributes!values],2
+.h.htac,element,.h.htac[HTML tag sym;attributes!values;content],2
+.h.htc,element,.h.htc[HTML tag sym;content],2
+.h.html,document,.h.html[html body string],2
+.h.http,hyperlinks,.h.http[string],2
+.h.hu,URI escape,.h.hu[string],2
+.h.hug,URI map,.h.hug[string],2
+.h.hy,HTTP response content,.h.hy[http content type sym;string],2
+.h.iso8601,ISO timestamp,.h.iso8601[nanoseconds],2
+.h.jx,table,.h.jx[offset;table sym],2
+.h.logo,Kx logo,.h.logo,6
+.h.nbr,no break,.h.nbr[string],2
+.h.pre,pre,.h.pre[strings],2
+.h.sa,anchor style,.h.sa,6
+.h.sb,body style,.h.sb,6
+.h.sc,URI-safe,.h.sc,6
+.h.td,TSV from data,.h.td[table],2
+.h.text,paragraphs,.h.text[strings],2
+.h.tx,filetypes,.h.tx,6
+.h.ty,MIME types,.h.ty,6
+.h.uh,URI unescape,.h.uh[string],2
+.h.val,value,.h.val:{[expression]},2
+.h.xd,XML,.h.xd[table],2
+.h.xmp,XMP,.h.xmp[strings],2
+.h.xs,XML escape,.h.xs[string],2
+.h.xt,JSON,.h.xt[`json;json string],2
+.j.j,serialize,.j.j[any],2
+.j.k,deserialize,.j.k[string],2
+.j.jd,serialize infinity,".j.jd[any;()!()|(!). 1#'`null0w,1b]",2
+.Q.a,lowercase alphabet,.Q.a,6
+.Q.A,uppercase alphabet,.Q.A,6
+.Q.addmonths,add months to date,.Q.addmonths[dates;ints],2
+.Q.addr,IP address,.Q.addr[sym],2
+.Q.b6,bicameral-alphanums,.Q.b6,6
+.Q.bt,backtrace(error or debug),.Q.bt[],2
+.Q.btoa,b64 encode,.Q.btoa[string],2
+.Q.bv,build schema for tables missing from partitions,.Q.bv[<`>],2
+.Q.Cf,create empty nested char file,.Q.Cf[file],2
+.Q.chk,fill HDB,.Q.chk[dir],2
+.Q.cn,count partitioned table,.Q.cn[partitioned table],2
+.Q.D,partitions,.Q.D,2
+.Q.dd,join symbols,.Q.dd[sym|dir;sym],2
+.Q.def,provide defaults for .Q.opt,.Q.def[default dict;params dict],2
+.Q.dpft,save table,.Q.dpft[dir;partition date;column sym;table sym],2
+.Q.dpfts,save table with sym,.Q.dpfts[dir;part;column sym;table sym;sym],2
+.Q.dsftg,load process save,.Q.dsftg[(dir;part;sym);(dir;offset;length);column syms;(types;widths);v1],2
+.Q.en,enumerate varchar cols,.Q.en[dir;table],2
+.Q.ens,enumerate against domain,.Q.ens[dir;table;sym],2
+.Q.f,format,.Q.f[int;number],2
+.Q.fc,parallel on cut(apply parallel),.Q.fc[v1;list],2
+.Q.ff,append columns,.Q.ff[table;table],2
+.Q.fk,foreign key,.Q.fk[column sym],2
+.Q.fmt,format,.Q.fmt[length;decimal;number],2
+.Q.fps,streaming algorithm,.Q.fps[v1;file],2
+.Q.fqk,if system and built-in functions,.Q.fqk[string],2
+.Q.fs,streaming algorithm,.Q.fs[v1;file],2
+.Q.fsn,streaming algorithm,.Q.fsn[v1;file;chunk size],2
+.Q.ft,apply simple,.Q.ft[v1;keyed table],2
+.Q.fu,apply unique,.Q.fu[v1;list],2
+.Q.gc,garbage collect,.Q.gc[],2
+.Q.gz,GZip,.Q.gz[chars|bytes|(level;chars)|(level;bytes)],2
+.Q.hdpf,save tables,.Q.hdpf[hdb handle;dir;part;column sym],2
+.Q.hg,HTTP get,.Q.hg[url|string],2
+.Q.host,hostname,.Q.host[ip int],2
+.Q.hp,HTTP post,.Q.hp[url|string;MIME string;query string],2
+.Q.id,sanitize,.Q.id[sym|table],2
+.Q.ind,partitioned index,.Q.ind[partitioned table;indices],2
+.Q.j10,encode binhex,.Q.j10[string],2
+.Q.j12,encode base64,.Q.j12[string],2
+.Q.k,version,.Q.k,6
+.Q.l,load,.Q.l[file|dir],2
+.Q.M,long infinity,.Q.M,6
+.Q.MAP,maps partitions,.Q.MAP[],2
+.Q.nA,alphanums,.Q.nA,6
+.Q.opt,command parameters,.Q.opt[strings|.z.x],2
+.Q.P,segments,.Q.P,6
+.Q.par,locate partition,.Q.par[dir;part;table sym],2
+.Q.pd,modified partition locations,.Q.pd,6
+.Q.PD,partition locations,.Q.PD,6
+.Q.pf,partition field,.Q.pf,6
+.Q.pn,partition counts,.Q.pn,6
+.Q.prf0,code profiler,.Q.prf0[pid],2
+.Q.pt,partitioned tables,.Q.pt,6
+.Q.pv,modified partition values,.Q.pv,2
+.Q.PV,partition values,.Q.PV,2
+.Q.qp,is partitioned,.Q.qp[table],2
+.Q.qt,is table,.Q.qt[table],2
+.Q.res,keywords,.Q.res,6
+.Q.s,plain text,.Q.s[any],2
+.Q.s1,string representation,.Q.s1[any],2
+.Q.sbt,string backtrace,.Q.sbt[backtrace object],2
+.Q.sha1,SHA-1 encode,.Q.sha1[string],2
+.Q.trp,extend trap,.Q.trp[v1;any;v2],2
+.Q.ts,time and space,.Q.ts[v;args],2
+.Q.ty,type,.Q.ty[list],2
+.Q.u,is date based,.Q.u,6
+.Q.V,table to dict,.Q.V[table],2
+.Q.v,value,.Q.v[file|sym],2
+.Q.view,subview,.Q.view[parts],2
+.Q.vp,missing partitions,.Q.vp,6
+.Q.w,memory stats,.Q.w[],2
+.Q.x,non-command parameters,.Q.x,6
+.Q.x10,decode binhex,.Q.x10[long],2
+.Q.x12,decode base64,.Q.x12[long],2
+.Q.Xf,create file,.Q.Xf[upper case char|type sym],2
+.z.Z,local datetime,.z.Z,6
+.z.z,UTC datetime,.z.z,6
+.z.zd,zip defaults,.z.zd,6
