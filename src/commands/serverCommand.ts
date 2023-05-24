@@ -24,6 +24,7 @@ import {
 import { queryConstants } from "../models/queryResult";
 import { ResourceGroupItem } from "../models/resourceGroupItem";
 import { Server } from "../models/server";
+import { ServerObject } from "../models/serverObject";
 import { SubscriptionItem } from "../models/subscriptionItem";
 import {
   createResourceGroup,
@@ -374,6 +375,16 @@ export function runQuery(type: ExecutionTypes) {
         query = editor.document.getText();
     }
     executeQuery(query);
+  }
+}
+
+export async function loadServerObjects(): Promise<ServerObject[]> {
+  const result = await ext.connection?.executeQueryRaw("value fn, blacklist");
+  if (result !== undefined) {
+    const result2: ServerObject[] = eval(result);
+    return result2;
+  } else {
+    return new Array<ServerObject>();
   }
 }
 
