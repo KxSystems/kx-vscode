@@ -188,6 +188,7 @@ export default class QLangServer {
     let localId: CompletionItem[] = [];
     let globalId: CompletionItem[] = [];
     let completionItem: CompletionItem[] = [];
+    this.debug(JSON.stringify(this.qLangParserRef));
 
     if (keyword?.text.startsWith(".")) {
       completionItem = this.qLangParserRef.filter((item) =>
@@ -244,7 +245,9 @@ export default class QLangServer {
             })
         );
       const flags = new Map<string, boolean>();
-      completionItem.forEach((item) => flags.set(item.label, true));
+      completionItem.forEach((item) => {
+        flags.set(item.label, true);
+      });
       localId.forEach((item) => {
         if (!flags.get(item.label)) {
           completionItem.push(item);
@@ -468,5 +471,9 @@ export default class QLangServer {
       diagnostics.push(diagnostic);
     }
     return diagnostics;
+  }
+
+  debug(msg: string) {
+    this.connection.console.warn(`${msg}`);
   }
 }
