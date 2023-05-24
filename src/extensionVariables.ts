@@ -63,6 +63,8 @@ export namespace ext {
     "Views",
   ];
 
+  export const qNamespaceFilters = [".q", ".Q", ".h", ".z", ".o", ".j", ".m"];
+
   export const constants = {
     names: [
       "",
