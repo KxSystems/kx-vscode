@@ -1,8 +1,7 @@
-import csvParser from "csv-parser";
 import fs from "fs";
-import path from "path";
 import { CompletionItem, CompletionItemKind } from "vscode-languageserver/node";
 import Parser from "web-tree-sitter";
+import { qLangParserItems } from "./qLangParser";
 
 export async function initializeParser(): Promise<Parser> {
   await Parser.init();
@@ -21,14 +20,12 @@ export async function initializeParser(): Promise<Parser> {
 }
 
 export function getQLangParserRef(): CompletionItem[] {
-  const qLangParser: CompletionItem[] = [];
-  const csvPath = path.join(__filename, "/../../grammars/qLang.csv");
-  fs.createReadStream(csvPath)
-    .pipe(csvParser())
-    .on("res", (res: CompletionItem) => {
-      res.kind = Number(res.kind) as CompletionItemKind;
-      qLangParser.push(res);
-    });
+  const qLangParser: CompletionItem[] = qLangParserItems.map(
+    (item: CompletionItem) => {
+      item.kind = Number(item.kind) as CompletionItemKind;
+      return item;
+    }
+  );
   return qLangParser;
 }
 

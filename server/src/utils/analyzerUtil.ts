@@ -695,6 +695,7 @@ export default class AnalyzerUtil {
         }
         const name = named.text.trim();
         const defNode = n.children[2]?.firstChild;
+        const detail = named.text.trim() + ":" + defNode?.text;
         let completionItemKind: CompletionItemKind =
           CompletionItemKind.Variable;
         if (
@@ -747,7 +748,7 @@ export default class AnalyzerUtil {
             });
           }
         }
-        this.serverIds.push({ label: name, kind: completionItemKind });
+        this.serverIds.push({ label: name, kind: completionItemKind, detail });
       } else if (TreeSitterUtil.isSymbol(n)) {
         if (this.getContainerName(n) === "") {
           this.serverSymbols.push(n.text.trim());

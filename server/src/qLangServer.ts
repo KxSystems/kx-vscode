@@ -188,26 +188,26 @@ export default class QLangServer {
     let localId: CompletionItem[] = [];
     let globalId: CompletionItem[] = [];
     let completionItem: CompletionItem[] = [];
-    this.debug(JSON.stringify(this.qLangParserRef));
 
     if (keyword?.text.startsWith(".")) {
       completionItem = this.qLangParserRef.filter((item) =>
-        item.label.startsWith(".")
+        String(item.label).startsWith(".")
       );
       globalId = this.analyzer
         .getServerIds()
-        .filter((item) => item.label.startsWith("."))
+        .filter((item) => String(item.label).startsWith("."))
         .concat(
           this.analyzer
             .getAllSymbols()
-            .filter((sym) => sym.name.startsWith("."))
-            .map((sym) => {
+            .filter((symbol) => String(symbol.name).startsWith("."))
+            .map((symbol) => {
               return {
-                label: sym.name,
+                label: symbol.name,
                 kind:
-                  sym.kind === SymbolKind.Function
+                  symbol.kind === SymbolKind.Function
                     ? CompletionItemKind.Method
                     : CompletionItemKind.Variable,
+                detail: symbol.containerName,
               };
             })
         );
@@ -225,8 +225,8 @@ export default class QLangServer {
         completionItem.push({ label: symbol, kind: CompletionItemKind.Enum });
       });
     } else {
-      completionItem = this.qLangParserRef.filter(
-        (item) => !item.label.startsWith(".")
+      completionItem = this.qLangParserRef.filter((item) =>
+        String(item.label).startsWith(keyword?.text ? keyword.text : "")
       );
       localId = this.analyzer
         .getServerIds()
@@ -420,7 +420,8 @@ export default class QLangServer {
   }
 
   private onSemanticsTokens(params: SemanticTokensParams): SemanticTokens {
-    return this.analyzer.getSemanticTokens(params.textDocument.uri);
+    const document = params.textDocument;
+    return this.analyzer.getSemanticTokens(document.uri);
   }
 
   private onSignatureHelp(
@@ -473,7 +474,16 @@ export default class QLangServer {
     return diagnostics;
   }
 
-  debug(msg: string) {
-    this.connection.console.warn(`${msg}`);
+  public debugWithLogs(
+    request: string,
+    msg: string,
+    place?: string | null,
+    keyword?: Keyword | null
+  ) {
+    const where = place ? place : " not specified ";
+    const isKeyword = keyword ? `keyword=${JSON.stringify(keyword)}` : "";
+    this.connection.console.info(
+      `${request} ${isKeyword} msg=${msg} where?: ${where}`
+    );
   }
 }
