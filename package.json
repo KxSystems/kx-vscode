@@ -3,7 +3,7 @@
   "displayName": "kdb vscode",
   "description": "Extension to help with q and kdb",
   "publisher": "KX",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "engines": {
     "vscode": "^1.66.0"
   },
@@ -276,9 +276,9 @@
   "homepage": "https://github.com/KxSystems/kx-vscode#readme",
   "scripts": {
     "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
-    "esbuild-base": "rimraf out && tsc -p server/ && esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
-    "build": "tsc -p server/ && npm run -S esbuild-base -- --sourcemap",
-    "watch": "tsc -p server/ && npm run -S esbuild-base -- --sourcemap --watch",
+    "esbuild-base": "rimraf out && esbuild ./server/src/server.ts --bundle --outfile=out/server.js --external:vscode --format=cjs --platform=node && cp node_modules/web-tree-sitter/tree-sitter.wasm out/ && esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
+    "build": "npm run -S esbuild-base -- --sourcemap",
+    "watch": "npm run -S esbuild-base -- --sourcemap --watch",
     "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
     "test": "npm run -S esbuild-base -- --sourcemap && tsc -p ./test && node ./out/test/runTest.js",
     "package": "npx vsce package",
@@ -292,9 +292,12 @@
     "@types/extract-zip": "^2.0.1",
     "@types/fs-extra": "^9.0.13",
     "@types/glob": "^8.0.1",
+    "@types/graceful-fs": "^4.1.6",
+    "@types/klaw": "^3.0.3",
     "@types/mocha": "^10.0.1",
     "@types/node": "^18.15.11",
     "@types/node-fetch": "^2.6.2",
+    "@types/picomatch": "^2.3.0",
     "@types/sinon": "^10.0.13",
     "@types/vscode": "^1.66.0",
     "@typescript-eslint/eslint-plugin": "^5.36.2",
@@ -312,7 +315,10 @@
     "sinon": "^15.0.1",
     "typescript": "^4.8.2",
     "vscode-dts": "^0.3.3",
-    "vscode-test": "^1.6.1"
+    "vscode-test": "^1.6.1",
+    "vscode-languageclient": "^8.0.2",
+    "vscode-languageserver": "^8.1.0",
+    "vscode-languageserver-textdocument": "^1.0.7"
   },
   "dependencies": {
     "@azure/arm-resources": "4.2.2",
@@ -321,15 +327,24 @@
     "@azure/ms-rest-azure-env": "^2.0.0",
     "@azure/ms-rest-nodeauth": "^3.1.1",
     "@microsoft/vscode-azext-utils": "0.3.7",
+    "@types/graceful-fs": "^4.1.6",
+    "@types/klaw": "^3.0.3",
+    "@types/picomatch": "^2.3.0",
     "azure-arm-resource": "^7.4.0",
+    "csv-parser": "^3.0.0",
     "extract-zip": "^2.0.1",
     "fs-extra": "^10.1.0",
+    "fuse.js": "^6.6.2",
+    "klaw": "^4.1.0",
     "node-fetch": "^2.6.6",
     "node-q": "^2.6.0",
+    "picomatch": "^2.3.1",
     "vscode-extension-telemetry": "^0.4.5",
     "vscode-languageclient": "^8.0.2",
-    "vscode-languageserver": "^8.0.2",
-    "vscode-languageserver-textdocument": "^1.0.7"
+    "vscode-languageserver": "^8.1.0",
+    "vscode-languageserver-textdocument": "^1.0.7",
+    "vscode-uri": "^3.0.7",
+    "web-tree-sitter": "^0.20.8"
   },
   "extensionDependencies": [
     "ms-vscode.azure-account"
