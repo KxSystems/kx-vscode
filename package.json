@@ -268,27 +268,33 @@
       "view/item/context": [
         {
           "command": "kdb.connect",
-          "when": "view == kdb-servers && viewItem not in kdb.connected && viewItem == 'root'"
+          "when": "view == kdb-servers && viewItem not in kdb.connected && viewItem == 'root'",
+          "group": "connection"
         },
         {
           "command": "kdb.disconnect",
-          "when": "view == kdb-servers && viewItem in kdb.connected && viewItem == 'root'"
+          "when": "view == kdb-servers && viewItem in kdb.connected && viewItem == 'root'",
+          "group": "connection"
         },
         {
           "command": "kdb.removeConnection",
-          "when": "view == kdb-servers && viewItem == 'root'"
+          "when": "view == kdb-servers && viewItem == 'root'",
+          "group": "connection"
         },
         {
           "command": "kdb.startLocalProcess",
-          "when": "view == kdb-servers && viewItem in kdb.local && viewItem not in kdb.running && viewItem == 'root'"
+          "when": "view == kdb-servers && viewItem in kdb.local && viewItem not in kdb.running && viewItem == 'root'",
+          "group": "connection"
         },
         {
           "command": "kdb.stopLocalProcess",
-          "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running && viewItem == 'root'"
+          "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running && viewItem == 'root'",
+          "group": "connection"
         },
         {
           "command": "kdb.refreshServerObjects",
-          "when": "view == kdb-servers && viewItem == 'root'"
+          "when": "view == kdb-servers && viewItem == 'root'",
+          "group": "serverObject"
         }
       ],
       "editor/title": [

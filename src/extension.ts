@@ -110,7 +110,7 @@ export async function activate(context: ExtensionContext) {
       }
     ),
     commands.registerCommand("kdb.refreshServerObjects", () => {
-      ext.serverProvider.refresh(getServers()!);
+      ext.serverProvider.reload();
     }),
     commands.registerCommand("kdb.hideWalkthrough", async () => {
       await hideWalkthrough();
