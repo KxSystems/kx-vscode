@@ -79,7 +79,16 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     ns: string | undefined,
     objectCategories: string[]
   ): Promise<QCategoryNode[]> {
-    const result = objectCategories.map(
+    // filter out views for non-default namespaces
+    let filteredCategories;
+    if (ns !== ".") {
+      filteredCategories = objectCategories.filter((item) => {
+        return item !== "Views";
+      });
+    } else {
+      filteredCategories = objectCategories;
+    }
+    const result = filteredCategories.map(
       (x) =>
         new QCategoryNode(
           [],
