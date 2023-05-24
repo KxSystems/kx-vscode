@@ -2,6 +2,22 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
+# 0.1.12
+
+### Enhancements
+
+- Added explorer tree for viewing q server objects
+
+- Added autocomplete and code navigation
+
+### Fixes
+
+- Fixed colors for syntax highlighting
+
+### Internal Improvements
+
+- Added language server to support code completion and navigation
+
 # 0.1.11
 
 ### Enhancements

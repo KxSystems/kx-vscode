@@ -36,7 +36,7 @@
     "walkthroughs": [
       {
         "id": "qinstallation",
-        "title": "Installation",
+        "title": "Get Started with kdb vscode",
         "description": "Get started by installing q to work with local kdb processes - q will need to be installed either locally or via this extension.",
         "steps": [
           {
@@ -62,6 +62,51 @@
             "completionEvents": [
               "onLink:https://code.kx.com/q/learn/install/"
             ],
+            "when": "!kdb.showInstallWalkthrough"
+          },
+          {
+            "id": "addConnection",
+            "title": "Add a connection",
+            "description": "You can configure connections for multiple kdb servers \n[Add connection](command:kdb.addConnection)",
+            "media": {
+              "markdown": "resources/walkthrough/add_connection.md"
+            },
+            "completionEvents": [
+              "command:kdb.addConnection"
+            ],
+            "when": "!kdb.showInstallWalkthrough"
+          },
+          {
+            "id": "connect",
+            "title": "Connect to a server",
+            "description": "Connect to one of your defined servers \n[Connect to server](command:kdb.connect)",
+            "media": {
+              "markdown": "resources/walkthrough/connect.md"
+            },
+            "completionEvents": [
+              "command:kdb.connect"
+            ],
+            "when": "!kdb.showInstallWalkthrough"
+          },
+          {
+            "id": "execute",
+            "title": "Execute code",
+            "description": "Execute a q file on your connected server \n[Connect to server](command:kdb.connect)",
+            "media": {
+              "markdown": "resources/walkthrough/execute.md"
+            },
+            "completionEvents": [
+              "command:kdb.execute.fileQuery"
+            ],
+            "when": "!kdb.showInstallWalkthrough"
+          },
+          {
+            "id": "more",
+            "title": "More",
+            "description": "This extension also adds syntax highlighting, code completion and code navigation for q files",
+            "media": {
+              "markdown": "resources/walkthrough/more.md"
+            },
             "when": "!kdb.showInstallWalkthrough"
           }
         ]
