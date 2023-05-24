@@ -261,6 +261,9 @@ export default class QLangServer {
   private async onCompletionResolve(
     item: CompletionItem
   ): Promise<CompletionItem> {
+    if (item.label.startsWith(".")) {
+      item.label = item.label.slice(1);
+    }
     return item;
   }
 
