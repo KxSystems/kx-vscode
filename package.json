@@ -135,6 +135,10 @@
     },
     "commands": [
       {
+        "command": "kdb.refreshServerObjects",
+        "title": "Refresh server objects"
+      },
+      {
         "command": "kdb.startLocalProcess",
         "title": "Start q process"
       },
@@ -281,6 +285,10 @@
         {
           "command": "kdb.stopLocalProcess",
           "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running && viewItem == 'root'"
+        },
+        {
+          "command": "kdb.refreshServerObjects",
+          "when": "view == kdb-servers && viewItem == 'root'"
         }
       ],
       "editor/title": [

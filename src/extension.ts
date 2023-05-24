@@ -109,6 +109,9 @@ export async function activate(context: ExtensionContext) {
         await removeConnection(viewItem);
       }
     ),
+    commands.registerCommand("kdb.refreshServerObjects", () => {
+      ext.serverProvider.refresh(getServers()!);
+    }),
     commands.registerCommand("kdb.hideWalkthrough", async () => {
       await hideWalkthrough();
     }),
