@@ -255,6 +255,7 @@ export default class QLangServer {
         }
       });
     }
+    completionItem = this.removeDuplicateEntries(completionItem);
     return completionItem;
   }
 
@@ -440,6 +441,30 @@ export default class QLangServer {
   }
 
   // misc funcs
+
+  public debugWithLogs(
+    request: string,
+    msg: string,
+    place?: string | null,
+    keyword?: Keyword | null
+  ) {
+    const where = place ? place : " not specified ";
+    const isKeyword = keyword ? `keyword=${JSON.stringify(keyword)}` : "";
+    this.connection.console.info(
+      `${request} ${isKeyword} msg=${msg} where?: ${where}`
+    );
+  }
+
+  private removeDuplicateEntries(
+    completionItem: CompletionItem[]
+  ): CompletionItem[] {
+    completionItem = completionItem.filter(
+      (value, index, self) =>
+        index === self.findIndex((t) => t.label === value.label)
+    );
+    return completionItem;
+  }
+
   private generateHoverMap(hoverItems: string[][]): void {
     this.hoverMap = new Map<string, string>();
     for (const item of hoverItems) {
@@ -475,18 +500,5 @@ export default class QLangServer {
       diagnostics.push(diagnostic);
     }
     return diagnostics;
-  }
-
-  public debugWithLogs(
-    request: string,
-    msg: string,
-    place?: string | null,
-    keyword?: Keyword | null
-  ) {
-    const where = place ? place : " not specified ";
-    const isKeyword = keyword ? `keyword=${JSON.stringify(keyword)}` : "";
-    this.connection.console.info(
-      `${request} ${isKeyword} msg=${msg} where?: ${where}`
-    );
   }
 }
