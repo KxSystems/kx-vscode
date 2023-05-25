@@ -1,3 +1,5 @@
+import { readFileSync } from "fs-extra";
+import { join } from "path";
 import {
   commands,
   InputBoxOptions,
@@ -379,10 +381,17 @@ export function runQuery(type: ExecutionTypes) {
 }
 
 export async function loadServerObjects(): Promise<ServerObject[]> {
-  const result = await ext.connection?.executeQueryRaw("value fn, blacklist");
+  const script = readFileSync(
+    ext.context.asAbsolutePath(join("resources", "list_mem.q"))
+  ).toString();
+  const cc = "\n" + script + "(::)";
+  const result = await ext.connection?.executeQueryRaw(cc);
   if (result !== undefined) {
     const result2: ServerObject[] = eval(result);
-    return result2;
+    const result3: ServerObject[] = result2.filter((item) => {
+      return ext.qNamespaceFilters.indexOf(item.name) === -1;
+    });
+    return result3;
   } else {
     return new Array<ServerObject>();
   }
