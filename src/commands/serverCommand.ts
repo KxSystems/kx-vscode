@@ -381,13 +381,21 @@ export function runQuery(type: ExecutionTypes) {
 }
 
 export async function loadServerObjects(): Promise<ServerObject[]> {
+  // check for valid connection
+  if (ext.connection === undefined || ext.connection.connected === false) {
+    window.showInformationMessage(
+      "Please connect to a KDB instance to view the objects"
+    );
+    return new Array<ServerObject>();
+  }
+
   const script = readFileSync(
     ext.context.asAbsolutePath(join("resources", "list_mem.q"))
   ).toString();
   const cc = "\n" + script + "(::)";
   const result = await ext.connection?.executeQueryRaw(cc);
   if (result !== undefined) {
-    const result2: ServerObject[] = eval(result);
+    const result2: ServerObject[] = (0, eval)(result); // eval(result);
     const result3: ServerObject[] = result2.filter((item) => {
       return ext.qNamespaceFilters.indexOf(item.name) === -1;
     });
