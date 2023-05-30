@@ -3,7 +3,7 @@
   "displayName": "kdb vscode",
   "description": "Extension to help with q and kdb",
   "publisher": "KX",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "engines": {
     "vscode": "^1.66.0"
   },
@@ -73,6 +73,18 @@
             },
             "completionEvents": [
               "command:kdb.addConnection"
+            ],
+            "when": "!kdb.showInstallWalkthrough"
+          },
+          {
+            "id": "startProcess",
+            "title": "Start a q process",
+            "description": "If q is not already running on your chosen server, right-click and choose 'Start q process' \n[Start Local Process](command:kdb.startLocalProcess)",
+            "media": {
+              "markdown": "resources/walkthrough/startProcess.md"
+            },
+            "completionEvents": [
+              "command:kdb.startLocalProcess"
             ],
             "when": "!kdb.showInstallWalkthrough"
           },

@@ -2,6 +2,28 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
+# 0.1.13
+
+### Enhancements
+
+- Added command to refresh server objects
+
+### Fixes
+
+- Server objects can now be enumerated without a pre-script
+
+- Tree for non-default namespaces and variables are now filtered to ensure views are not present
+
+- Views tree now shows views correctly
+
+- Language server no longer makes duplicate suggestions
+
+- Fix for context menu after new server object items are added, all options now shown
+
+### Internal Improvements
+
+- Logo improved to work with both light and dark themes
+
 # 0.1.12
 
 ### Enhancements
