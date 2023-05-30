@@ -78,3 +78,18 @@ feature list_mem
                 );
             .qu.compare[.ignore.r] .ignore.e
 
+    should handle edge cases
+        expect namespaces that aren't prefixed with `.` to be handled correctly
+            value "noDot.table: ([] til 100)";
+            .ignore.r: value .ignore.fnStr, .ignore.blacklist;
+            .ignore.e: ([]
+                id: 0 1 2 4 5 6 7 3i;
+                pid: (3#0Ni), (3#2i), 5 1i;
+                name: `.`noDot`.test`namespace`otherNs`badns`var`table;
+                fname: `.`noDot`.test`.test.namespace`.test.otherNs`.test.badns`.test.otherNs.var`noDot.table;
+                typeNum: (6# 99h), 7 98h;
+                namespace: `.`.`.`.test`.test`.test`.test.otherNs`noDot;
+                context: (3#`),(4#`.test),`noDot;
+                isNs: 11111100b
+                );
+            .qu.compare[.ignore.r] .ignore.e
