@@ -48,7 +48,7 @@ q files can be executed by right-clicking the editor and choosing 'Execute Entir
 <details>
   <summary>Code navigation</summary>
 
-![Code navigation](.https://code.kx.com/img/walkthrough/navigation.png "Code navigation")
+![Code navigation](https://code.kx.com/img/walkthrough/navigation.png "Code navigation")
 
 </details>
 
