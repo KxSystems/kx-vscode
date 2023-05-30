@@ -174,12 +174,12 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
       }
     } else if (serverType.label === ext.qObjectCategories[4]) {
       // views
-      const views = await loadViews(serverType.contextValue ?? "");
+      const views = await loadViews();
       const result = views.map(
         (x) =>
           new QServerNode(
             [],
-            `${ns}${ns === "." ? "" : "."}${x.name}`,
+            `${ns}${ns === "." ? "" : "."}${x}`,
             "",
             TreeItemCollapsibleState.None
           )
