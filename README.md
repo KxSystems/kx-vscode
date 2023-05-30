@@ -14,7 +14,7 @@ Follow the extension walkthrough to install q, if required
   <summary>Add a connection</summary>
   Add a new server connection by opening the extension side panel and choosing 'Add new connection' from the context menu
 
-![Extension panel](./resources/walkthrough/add-new-connection.png "Add a connection")
+![Extension panel](https://code.kx.com/img/walkthrough/add-new-connection.png "Add a connection")
 
   </details>
 
@@ -23,7 +23,7 @@ Follow the extension walkthrough to install q, if required
 
 Connect to an existing server by right-clicking and choosing 'Connect kdb server'
 
-![Extension panel](./resources/walkthrough/connect.png "Connect kdb server")
+![Extension panel](https://code.kx.com/img/walkthrough/connect.png "Connect kdb server")
 
 </details>
 
@@ -32,7 +32,7 @@ Connect to an existing server by right-clicking and choosing 'Connect kdb server
 
 q files can be executed by right-clicking the editor and choosing 'Execute Entire File', results will be shown in the Output pane
 
-![Extension panel](./resources/walkthrough/output.png "q Console Output")
+![Extension panel](https://code.kx.com/img/walkthrough/output.png "q Console Output")
 
 </details>
 
@@ -41,23 +41,27 @@ q files can be executed by right-clicking the editor and choosing 'Execute Entir
 <details>
   <summary>Syntax highlighting</summary>
 
-![Syntax highlighting](./resources/walkthrough/highlighting.png "Syntax highlighting")
+![Syntax highlighting](https://code.kx.com/img/walkthrough/highlighting.png "Syntax highlighting")
 
 </details>
 
 <details>
   <summary>Code navigation</summary>
 
-![Code navigation](./resources/walkthrough/navigation.png "Code navigation")
+![Code navigation](.https://code.kx.com/img/walkthrough/navigation.png "Code navigation")
 
 </details>
 
 <details>
   <summary>Code completion</summary>
 
-![Code completion](./resources/walkthrough/autocomplete.png "Code completion")
+![Code completion](https://code.kx.com/img/walkthrough/autocomplete.png "Code completion")
 
 </details>
+
+## Known Issues
+
+- Code hierarchy functionality may experience performance issues
 
 ## Support/Feedback
 
