@@ -5,6 +5,7 @@ import {
   TreeDataProvider,
   TreeItem,
   TreeItemCollapsibleState,
+  commands,
 } from "vscode";
 import { ext } from "../extensionVariables";
 import { Server, ServerDetails } from "../models/server";
@@ -46,7 +47,10 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     }
     if (!element) {
       return Promise.resolve(this.getChildElements(element));
-    } else if (element.contextValue === "root") {
+    } else if (
+      element.contextValue !== undefined &&
+      ext.kdbrootNodes.indexOf(element.contextValue) !== -1
+    ) {
       return Promise.resolve(await this.getNamespaces());
     } else if (element.contextValue === "ns") {
       return Promise.resolve(
@@ -222,6 +226,12 @@ export class KdbNode extends TreeItem {
       label = label + " (connected)";
     }
 
+    // set context for root nodes
+    if (ext.kdbrootNodes.indexOf(label) === -1) {
+      ext.kdbrootNodes.push(label);
+      commands.executeCommand("setContext", "kdb.rootNodes", ext.kdbrootNodes);
+    }
+
     super(label, collapsibleState);
     this.description = this.getDescription();
   }
@@ -258,7 +268,7 @@ export class KdbNode extends TreeItem {
     ),
   };
 
-  contextValue = "root"; // this.label;
+  contextValue = this.label; // "root";
 }
 
 export class QNamespaceNode extends TreeItem {

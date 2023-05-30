@@ -17,6 +17,7 @@ export namespace ext {
 
   export let connection: Connection | undefined;
   export let connectionNode: KdbNode | undefined;
+  export const kdbrootNodes: string[] = [];
   export const maxRetryCount = 5;
 
   export let secretSettings: AuthSettings;
