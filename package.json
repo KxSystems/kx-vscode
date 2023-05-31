@@ -12,7 +12,7 @@
     "type": "git",
     "url": "https://github.com/KxSystems/kx-vscode.git"
   },
-  "aiKey": "ADDCODE",
+  "aiKey": "93119af7-5d98-45d0-abf8-5074976a1472",
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": true
