@@ -81,15 +81,17 @@ feature list_mem
     should handle edge cases
         expect namespaces that aren't prefixed with `.` to be handled correctly
             value "noDot.table: ([] til 100)";
+            value "var1: 1";
             .ignore.r: value .ignore.fnStr, .ignore.blacklist;
+            show .ignore.r;
             .ignore.e: ([]
-                id: 0 1 2 4 5 6 7 3i;
-                pid: (3#0Ni), (3#2i), 5 1i;
-                name: `.`noDot`.test`namespace`otherNs`badns`var`table;
-                fname: `.`noDot`.test`.test.namespace`.test.otherNs`.test.badns`.test.otherNs.var`noDot.table;
-                typeNum: (6# 99h), 7 98h;
-                namespace: `.`.`.`.test`.test`.test`.test.otherNs`noDot;
-                context: (3#`),(4#`.test),`noDot;
-                isNs: 11111100b
+                id: 0 1 2 3 4 5 6 8 9 10 11 7i;
+                pid: (3#0Ni), (4#0i), (3#2i), 9 1i;
+                name: `.`noDot`.test`a`b`testview`var1`namespace`otherNs`badns`var`table;
+                fname: `.`noDot`.test`a`b`testview`var1`.test.namespace`.test.otherNs`.test.badns`.test.otherNs.var`noDot.table;
+                typeNum: (3# 99h), (4#-7h), 99 99 99 7 98h;
+                namespace: `.`.`.`.`.`.`.`.test`.test`.test`.test.otherNs`noDot;
+                context: (7#`),(4#`.test),`noDot;
+                isNs: 111000011100b
                 );
             .qu.compare[.ignore.r] .ignore.e
