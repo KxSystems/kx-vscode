@@ -63,6 +63,8 @@ q files can be executed by right-clicking the editor and choosing 'Execute Entir
 
 - Code hierarchy functionality may experience performance issues
 
+- Smart scroll may cause issues with query output, if experiencing issues please disable the Output > Smart Scroll setting and enable Auto Scrolling in the Output pane by clicking the lock icon at the top right
+
 ## Support/Feedback
 
 Any feedback is welcome via the KX [#vscode-extension-help](https://kxsys.slack.com/archives/C057T0J659N) Slack channel
