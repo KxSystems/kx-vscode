@@ -60,9 +60,9 @@
             ns: first x 0;
             lastId: last exec id from x 1;
             // Get all items in the namespace, excluding namespaces that we are already going to enumerate
-            fnames: fns where not (fns: prefix[ns`fname] n: except[;`] key ns`fname) in x[0]`fname;
-            // Isolate namespaces specifically and build their entries
-            nmsnum: count nms: $[`. ~ ns`fname; ::; exclude] allnms: getNs ns`fname;
+            fnames: prefix[ns`fname] n: n where not (n:except[;`] key ns`fname) in x[0] `fname;
+            // Isolate namespaces that we don't already have listed specifically and build their entries
+            nmsnum: count nms: nms where not (nms: $[`. ~ ns`fname; ::; exclude] allnms: getNs ns`fname) in x[0]`fname;
             context: getContext ns`fname;
             nrow: buildRows[`int$1+ lastId + til nmsnum; nmsnum#ns`id; n where fnames in nms; nms; nmsnum#99h; nmsnum#ns`fname; nmsnum#context] nmsnum#1b;
             // Update the lastId to account for any new namespaces
