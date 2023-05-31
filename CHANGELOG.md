@@ -2,6 +2,18 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
+# 0.1.14
+
+### Fixes
+
+- Fix where namespaces without a prefix would have duplicate items and incorrect contexts
+
+- Fix to display objects in the default namespace with no prepended "."
+
+- Fix to only allow expanding the instance/node if a connection is active
+
+- Fix to filter "," namespace from views retrieval
+
 # 0.1.13
 
 ### Enhancements
