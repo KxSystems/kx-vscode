@@ -40,7 +40,9 @@
         ([] id: ids; pid: pids; name: names; fname: fnames; typeNum: typs; namespace: ns; context: contexts; isNs: isNs)
         };
 
-    getContext: {[ns] $[ns in ``.; `; ` sv 2#` vs ns] };
+    getContext: {[ns]
+        $[ns in ``.; `; $[1 < count p:` vs ns; ` sv 2#` vs ns; ns]]
+        };
 
     prefix: {$[`. = x; y; ` sv/: x ,/: y]};
 
@@ -57,8 +59,8 @@
         f: {[buildRows; getContext; getNs; prefix; exclude; x]
             ns: first x 0;
             lastId: last exec id from x 1;
-            // Get all items in the namespace
-            fnames: prefix[ns`fname] n: except[;`] key ns`fname;
+            // Get all items in the namespace, excluding namespaces that we are already going to enumerate
+            fnames: fns where not (fns: prefix[ns`fname] n: except[;`] key ns`fname) in x[0]`fname;
             // Isolate namespaces specifically and build their entries
             nmsnum: count nms: $[`. ~ ns`fname; ::; exclude] allnms: getNs ns`fname;
             context: getContext ns`fname;

@@ -84,7 +84,7 @@ export async function loadViews(): Promise<string[]> {
   const rawViews = await ext.connection?.executeQuery("views`");
   const rawViewArray = rawViews?.replace("\r\n", "").split("`");
   const views = rawViewArray?.filter((item) => {
-    return item !== "s#" && item !== "";
+    return item !== "s#" && item !== "" && item !== ",";
   });
   return views ?? new Array<string>();
 }

@@ -17,6 +17,7 @@ import {
   loadVariables,
   loadViews,
 } from "../models/serverObject";
+import { getServerName } from "../utils/core";
 
 export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: EventEmitter<KdbNode | undefined | void> =
@@ -115,7 +116,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
         (x) =>
           new QServerNode(
             [],
-            `${ns}${ns === "." ? "" : "."}${x.name}`,
+            `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
             TreeItemCollapsibleState.None
           )
@@ -132,7 +133,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
         (x) =>
           new QServerNode(
             [],
-            `${ns}${ns === "." ? "" : "."}${x.name}`,
+            `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
             TreeItemCollapsibleState.None
           )
@@ -149,7 +150,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
         (x) =>
           new QServerNode(
             [],
-            `${ns}${ns === "." ? "" : "."}${x.name}`,
+            `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
             TreeItemCollapsibleState.None
           )
@@ -166,7 +167,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
         (x) =>
           new QServerNode(
             [],
-            `${ns}${ns === "." ? "" : "."}${x.name}`,
+            `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
             TreeItemCollapsibleState.None
           )
@@ -183,7 +184,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
         (x) =>
           new QServerNode(
             [],
-            `${ns}${ns === "." ? "" : "."}${x}`,
+            `${ns === "." ? "" : "."}${x}`,
             "",
             TreeItemCollapsibleState.None
           )
@@ -205,7 +206,9 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
           x.split(":"),
           `${servers[x].serverName}:${servers[x].serverPort}`,
           servers[x],
-          TreeItemCollapsibleState.Collapsed
+          ext.connectionNode?.label === getServerName(servers[x])
+            ? TreeItemCollapsibleState.Collapsed
+            : TreeItemCollapsibleState.None
         )
     );
   }
