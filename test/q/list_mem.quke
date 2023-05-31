@@ -83,7 +83,6 @@ feature list_mem
             value "noDot.table: ([] til 100)";
             value "var1: 1";
             .ignore.r: value .ignore.fnStr, .ignore.blacklist;
-            show .ignore.r;
             .ignore.e: ([]
                 id: 0 1 2 3 4 5 6 8 9 10 11 7i;
                 pid: (3#0Ni), (4#0i), (3#2i), 9 1i;
