@@ -148,7 +148,11 @@
     "commands": [
       {
         "command": "kdb.refreshServerObjects",
-        "title": "Refresh server objects"
+        "title": "Refresh server objects",
+        "icon": {
+          "light": "resources/light/refresh.svg",
+          "dark": "resources/dark/refresh.svg"
+        }
       },
       {
         "command": "kdb.startLocalProcess",
@@ -275,6 +279,11 @@
         {
           "command": "kdb.addConnection",
           "when": "view == kdb-servers"
+        },
+        {
+          "command": "kdb.refreshServerObjects",
+          "when": "view == kdb-servers",
+          "group": "navigation"
         }
       ],
       "view/item/context": [
@@ -302,11 +311,6 @@
           "command": "kdb.stopLocalProcess",
           "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running && viewItem in kdb.rootNodes",
           "group": "connection"
-        },
-        {
-          "command": "kdb.refreshServerObjects",
-          "when": "view == kdb-servers && viewItem in kdb.rootNodes",
-          "group": "serverObject"
         }
       ],
       "editor/title": [
