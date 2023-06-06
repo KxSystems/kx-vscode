@@ -2,6 +2,14 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
+# 0.1.15
+
+### Enhancements
+
+- New context sensitive icons for tree view
+
+- Refresh functionality moved from context menu to icon in view title bar
+
 # 0.1.14
 
 ### Fixes

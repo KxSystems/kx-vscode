@@ -260,7 +260,7 @@ export async function activate(context: ExtensionContext) {
     });
   });
 
-  // Telemetry.sendEvent('Extension.Activated');
+  Telemetry.sendEvent('Extension.Activated');
 }
 
 export async function deactivate(): Promise<void> {
