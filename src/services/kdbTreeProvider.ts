@@ -118,13 +118,14 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             [],
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
-            TreeItemCollapsibleState.None
+            TreeItemCollapsibleState.None,
+            "p-dictionary"
           )
       );
       if (result !== undefined) {
         return result;
       } else {
-        return new Array<QCategoryNode>();
+        return new Array<QServerNode>();
       }
     } else if (serverType.label === ext.qObjectCategories[1]) {
       // functions
@@ -135,13 +136,14 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             [],
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
-            TreeItemCollapsibleState.None
+            TreeItemCollapsibleState.None,
+            "p-function"
           )
       );
       if (result !== undefined) {
         return result;
       } else {
-        return new Array<QCategoryNode>();
+        return new Array<QServerNode>();
       }
     } else if (serverType.label === ext.qObjectCategories[2]) {
       // tables
@@ -152,13 +154,14 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             [],
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
-            TreeItemCollapsibleState.None
+            TreeItemCollapsibleState.None,
+            "p-table"
           )
       );
       if (result !== undefined) {
         return result;
       } else {
-        return new Array<QCategoryNode>();
+        return new Array<QServerNode>();
       }
     } else if (serverType.label === ext.qObjectCategories[3]) {
       // variables
@@ -169,13 +172,14 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             [],
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
-            TreeItemCollapsibleState.None
+            TreeItemCollapsibleState.None,
+            "p-var"
           )
       );
       if (result !== undefined) {
         return result;
       } else {
-        return new Array<QCategoryNode>();
+        return new Array<QServerNode>();
       }
     } else if (serverType.label === ext.qObjectCategories[4]) {
       // views
@@ -186,13 +190,14 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             [],
             `${ns === "." ? "" : "."}${x}`,
             "",
-            TreeItemCollapsibleState.None
+            TreeItemCollapsibleState.None,
+            "p-view"
           )
       );
       if (result !== undefined) {
         return result;
       } else {
-        return new Array<QCategoryNode>();
+        return new Array<QServerNode>();
       }
     }
     return new Array<QServerNode>();
@@ -255,8 +260,8 @@ export class KdbNode extends TreeItem {
       "light",
       ext.connectionNode != undefined &&
         this.label === ext.connectionNode.label + " (connected)"
-        ? "db-connected.svg"
-        : "db-disconnected.svg"
+        ? "p-data.svg"
+        : "p-data.svg"
     ),
     dark: path.join(
       __filename,
@@ -266,8 +271,8 @@ export class KdbNode extends TreeItem {
       "dark",
       ext.connectionNode != undefined &&
         this.label === ext.connectionNode.label + " (connected)"
-        ? "db-connected.svg"
-        : "db-disconnected.svg"
+        ? "p-data.svg"
+        : "p-data.svg"
     ),
   };
 
@@ -297,16 +302,9 @@ export class QNamespaceNode extends TreeItem {
       "..",
       "resources",
       "light",
-      "dependency.svg"
+      "p-file.svg"
     ),
-    dark: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "dark",
-      "dependency.svg"
-    ),
+    dark: path.join(__filename, "..", "..", "resources", "dark", "p-file.svg"),
   };
   contextValue = "ns";
 }
@@ -335,7 +333,7 @@ export class QCategoryNode extends TreeItem {
       "..",
       "resources",
       "light",
-      "dependency.svg"
+      "p-folder.svg"
     ),
     dark: path.join(
       __filename,
@@ -343,7 +341,7 @@ export class QCategoryNode extends TreeItem {
       "..",
       "resources",
       "dark",
-      "dependency.svg"
+      "p-folder.svg"
     ),
   };
   contextValue = this.ns; // "category";
@@ -354,7 +352,8 @@ export class QServerNode extends TreeItem {
     public readonly children: string[],
     public readonly label: string,
     public readonly details: string,
-    public readonly collapsibleState: TreeItemCollapsibleState
+    public readonly collapsibleState: TreeItemCollapsibleState,
+    public readonly coreIcon: string
   ) {
     details = "";
     super(label, collapsibleState);
@@ -372,7 +371,7 @@ export class QServerNode extends TreeItem {
       "..",
       "resources",
       "light",
-      "dependency.svg"
+      `${this.coreIcon}.svg`
     ),
     dark: path.join(
       __filename,
@@ -380,7 +379,7 @@ export class QServerNode extends TreeItem {
       "..",
       "resources",
       "dark",
-      "dependency.svg"
+      `${this.coreIcon}.svg`
     ),
   };
   contextValue = this.label;
