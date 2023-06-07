@@ -1,8 +1,35 @@
-import * as glob from "glob";
+import { glob } from "glob";
 import * as Mocha from "mocha";
+import * as NYC from "nyc";
 import * as path from "path";
 
-export function run(): Promise<void> {
+async function setupCoverage() {
+  console.log("===NF dir", path.join(__dirname, "..", "..", ".."));
+
+  const nyc = new NYC({
+    cwd: path.join(__dirname, "..", "..", ".."),
+    exclude: ["**/test/**", ".vscode-test/**"],
+    reporter: ["text", "html"],
+    all: true,
+    instrument: true,
+    hookRequire: true,
+    hookRunInContext: true,
+    hookRunInThisContext: true,
+  });
+
+  console.log("===NF nyc 1", nyc);
+
+  nyc.reset();
+  nyc.wrap();
+
+  console.log("===NF nyc 2", nyc);
+
+  return nyc;
+}
+
+export async function run(): Promise<void> {
+  const nyc = process.env.COVERAGE ? setupCoverage() : null;
+  // const nyc = await setupCoverage();
   const options: Mocha.MochaOptions = {
     ui: "bdd",
     color: true,
@@ -15,29 +42,32 @@ export function run(): Promise<void> {
     },
   };
 
+  console.log(
+    "===NF mochaDir",
+    path.resolve(__dirname, "..", "..", "test-results.xml")
+  );
+
   const mocha = new Mocha(options);
   const testsRoot = path.resolve(__dirname, "..");
 
-  return new Promise((c, e) => {
-    glob("**/**.test.js", { cwd: testsRoot }, (err, files) => {
-      if (err) {
-        return e(err);
-      }
+  const files = await glob("**/**.test.js", { cwd: testsRoot });
 
-      files.forEach((f) => mocha.addFile(path.resolve(testsRoot, f)));
+  files.forEach((f) => mocha.addFile(path.resolve(testsRoot, f)));
 
-      try {
-        mocha.run((failures) => {
-          if (failures > 0) {
-            e(new Error(`${failures} tests failed.`));
-          } else {
-            c();
-          }
-        });
-      } catch (err) {
-        console.error(err);
-        e(err);
-      }
-    });
-  });
+  try {
+    await new Promise((resolve, reject) =>
+      mocha.run((failures) =>
+        failures
+          ? reject(new Error(`${failures} tests failed`))
+          : resolve(undefined)
+      )
+    );
+  } catch (err) {
+    console.error(err);
+  } finally {
+    // if (nyc) {
+    //   nyc.writeCoverageFile();
+    //   await nyc.report();
+    // }
+  }
 }
