@@ -35,6 +35,7 @@ import { URI } from "vscode-uri";
 import AnalyzerUtil, { Keyword } from "./utils/analyzerUtil";
 import CallHierarchyHandler from "./utils/handlersUtils";
 import { initializeParser, qLangParser } from "./utils/parserUtils";
+import { getTypeKeywordAtPosition } from "./utils/qParserUtils";
 
 export default class QLangServer {
   public connection: Connection;
@@ -83,7 +84,8 @@ export default class QLangServer {
     // languages
     this.onCallHierarchy = new CallHierarchyHandler(analyzer);
     this.connection.languages.callHierarchy.onPrepare(
-      this.onCallHierarchy.onPrepare.bind(this)
+      this.teste()
+      // this.onCallHierarchy.onPrepare.bind(this)
     );
     this.connection.languages.callHierarchy.onIncomingCalls(
       this.onCallHierarchy.onIncomingCalls.bind(this)
@@ -94,6 +96,20 @@ export default class QLangServer {
     this.connection.languages.semanticTokens.on(
       this.onSemanticsTokens.bind(this)
     );
+  }
+
+  public teste(): any {
+    return (params: PrepareRenameParams) => {
+      const doc = this.documents.get(params.textDocument.uri);
+      this.connection.console.warn("doc");
+      this.connection.console.warn(JSON.stringify(doc));
+      if (doc) {
+        this.connection.console.warn(
+          JSON.stringify(getTypeKeywordAtPosition(doc, params.position))
+        );
+      }
+      return this.onCallHierarchy.onPrepare.bind(this)(params);
+    };
   }
 
   public static async initialize(

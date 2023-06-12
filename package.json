@@ -391,10 +391,10 @@
     "sinon": "^15.0.1",
     "typescript": "^4.8.2",
     "vscode-dts": "^0.3.3",
-    "vscode-test": "^1.6.1",
     "vscode-languageclient": "^8.0.2",
     "vscode-languageserver": "^8.1.0",
-    "vscode-languageserver-textdocument": "^1.0.7"
+    "vscode-languageserver-textdocument": "^1.0.7",
+    "vscode-test": "^1.6.1"
   },
   "dependencies": {
     "@azure/arm-resources": "4.2.2",
@@ -415,6 +415,7 @@
     "node-fetch": "^2.6.6",
     "node-q": "^2.6.0",
     "picomatch": "^2.3.1",
+    "tree-sitter": "^0.20.1",
     "vscode-extension-telemetry": "^0.4.5",
     "vscode-languageclient": "^8.0.2",
     "vscode-languageserver": "^8.1.0",
