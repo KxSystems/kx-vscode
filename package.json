@@ -8,7 +8,7 @@
   "engines": {
     "vscode": "^1.66.0"
   },
-  "icon": "images/kx-logo-vs.png",
+  "icon": "resources/images/kx-logo-vs.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/KxSystems/kx-vscode.git"
@@ -232,8 +232,8 @@
           ".quke"
         ],
         "icon": {
-          "dark": "./images/kx.png",
-          "light": "./images/kx.png"
+          "dark": "./resources/dark/kx_logo.png",
+          "light": "./resources/light/kx_logo.png"
         },
         "configuration": "./language-configuration.json"
       }
@@ -415,7 +415,6 @@
     "node-fetch": "^2.6.6",
     "node-q": "^2.6.0",
     "picomatch": "^2.3.1",
-    "tree-sitter": "^0.20.1",
     "vscode-extension-telemetry": "^0.4.5",
     "vscode-languageclient": "^8.0.2",
     "vscode-languageserver": "^8.1.0",

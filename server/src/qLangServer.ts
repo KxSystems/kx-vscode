@@ -1,6 +1,12 @@
 import fs from "fs";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
+  CallHierarchyIncomingCall,
+  CallHierarchyIncomingCallsParams,
+  CallHierarchyItem,
+  CallHierarchyOutgoingCall,
+  CallHierarchyOutgoingCallsParams,
+  CallHierarchyPrepareParams,
   CompletionItem,
   CompletionItemKind,
   Connection,
@@ -35,7 +41,6 @@ import { URI } from "vscode-uri";
 import AnalyzerUtil, { Keyword } from "./utils/analyzerUtil";
 import CallHierarchyHandler from "./utils/handlersUtils";
 import { initializeParser, qLangParser } from "./utils/parserUtils";
-import { getTypeKeywordAtPosition } from "./utils/qParserUtils";
 
 export default class QLangServer {
   public connection: Connection;
@@ -44,12 +49,12 @@ export default class QLangServer {
   );
   public qLangParserRef: CompletionItem[] = [];
   public hoverMap = new Map<string, string>();
-  private analyzer: AnalyzerUtil;
-  private onCallHierarchy: CallHierarchyHandler;
+  private AnalyzerUtil: AnalyzerUtil;
+  private callHierarchy: CallHierarchyHandler;
 
-  private constructor(connection: Connection, analyzer: AnalyzerUtil) {
+  private constructor(connection: Connection, AnalyzerUtil: AnalyzerUtil) {
     this.connection = connection;
-    this.analyzer = analyzer;
+    this.AnalyzerUtil = AnalyzerUtil;
     this.qLangParserRef = qLangParser;
     this.documents.listen(this.connection);
     // on actions
@@ -70,10 +75,10 @@ export default class QLangServer {
     this.connection.onSignatureHelp(this.onSignatureHelp.bind(this));
     // analyzer
     this.connection.onNotification("analyzeServerCache", (code) =>
-      this.analyzer.analyzeServerCache(code)
+      this.AnalyzerUtil.analyzeServerCache(code)
     );
     this.connection.onNotification("analyzeSourceCode", (cfg) =>
-      this.analyzer.analyzeWorkspace(cfg)
+      this.AnalyzerUtil.analyzeWorkspace(cfg)
     );
     this.connection.onNotification("prepareOnHover", (hoverItems) =>
       this.generateHoverMap(hoverItems)
@@ -81,35 +86,21 @@ export default class QLangServer {
     this.connection.onRequest("onQueryBlock", (params) =>
       this.onQueryBlock(params)
     );
-    // languages
-    this.onCallHierarchy = new CallHierarchyHandler(analyzer);
+    // Call Hierarchy
+    this.callHierarchy = new CallHierarchyHandler(AnalyzerUtil);
     this.connection.languages.callHierarchy.onPrepare(
-      this.teste()
-      // this.onCallHierarchy.onPrepare.bind(this)
+      this.onPrepareCallHierarchy.bind(this)
     );
     this.connection.languages.callHierarchy.onIncomingCalls(
-      this.onCallHierarchy.onIncomingCalls.bind(this)
+      this.onIncomingCallsCallHierarchy.bind(this)
     );
     this.connection.languages.callHierarchy.onOutgoingCalls(
-      this.onCallHierarchy.onOutgoingCalls.bind(this)
+      this.onOutgoingCallsCallHierarchy.bind(this)
     );
+    // Semantic Tokens
     this.connection.languages.semanticTokens.on(
       this.onSemanticsTokens.bind(this)
     );
-  }
-
-  public teste(): any {
-    return (params: PrepareRenameParams) => {
-      const doc = this.documents.get(params.textDocument.uri);
-      this.connection.console.warn("doc");
-      this.connection.console.warn(JSON.stringify(doc));
-      if (doc) {
-        this.connection.console.warn(
-          JSON.stringify(getTypeKeywordAtPosition(doc, params.position))
-        );
-      }
-      return this.onCallHierarchy.onPrepare.bind(this)(params);
-    };
   }
 
   public static async initialize(
@@ -117,6 +108,9 @@ export default class QLangServer {
     { workspaceFolders }: InitializeParams
   ): Promise<QLangServer> {
     const workspaceFolder = workspaceFolders ? workspaceFolders[0].uri : "";
+    connection.console.info(
+      `Initializing kdb+ Language Server at ${workspaceFolder}`
+    );
     const parser = await initializeParser();
     return AnalyzerUtil.fromRoot(connection, workspaceFolder, parser).then(
       (analyzer) => {
@@ -159,7 +153,7 @@ export default class QLangServer {
   private getKeywordAtPosition(
     params: ReferenceParams | TextDocumentPositionParams
   ): Keyword | null {
-    return this.analyzer.getKeywordAtPosition(
+    return this.AnalyzerUtil.getKeywordAtPosition(
       params.textDocument.uri,
       params.position
     );
@@ -168,13 +162,13 @@ export default class QLangServer {
   private getSignatureHelpAtPosition(
     params: ReferenceParams | TextDocumentPositionParams
   ): SignatureHelp | undefined {
-    const node = this.analyzer.getNonNullNodeAtPosition(
+    const node = this.AnalyzerUtil.getNonNullNodeAtPosition(
       params.textDocument.uri,
       params.position
     );
     if (node) {
-      const callNode = this.analyzer.getCallNode(node);
-      const signatureHelp = this.analyzer.getSignatureHelp(
+      const callNode = this.AnalyzerUtil.getCallNode(node);
+      const signatureHelp = this.AnalyzerUtil.getSignatureHelp(
         callNode?.firstNamedChild?.text ?? ""
       );
       if (callNode && signatureHelp) {
@@ -209,12 +203,10 @@ export default class QLangServer {
       completionItem = this.qLangParserRef.filter((item) =>
         String(item.label).startsWith(".")
       );
-      globalId = this.analyzer
-        .getServerIds()
+      globalId = this.AnalyzerUtil.getServerIds()
         .filter((item) => String(item.label).startsWith("."))
         .concat(
-          this.analyzer
-            .getAllSymbols()
+          this.AnalyzerUtil.getAllSymbols()
             .filter((symbol) => String(symbol.name).startsWith("."))
             .map((symbol) => {
               return {
@@ -236,7 +228,7 @@ export default class QLangServer {
         }
       });
     } else if (keyword?.text.startsWith("`")) {
-      symbols = this.analyzer.getSymbolsForUri(params.textDocument.uri);
+      symbols = this.AnalyzerUtil.getSymbolsForUri(params.textDocument.uri);
       new Set(symbols).forEach((symbol) => {
         completionItem.push({ label: symbol, kind: CompletionItemKind.Enum });
       });
@@ -244,21 +236,21 @@ export default class QLangServer {
       completionItem = this.qLangParserRef.filter((item) =>
         String(item.label).startsWith(keyword?.text ? keyword.text : "")
       );
-      localId = this.analyzer
-        .getServerIds()
+      localId = this.AnalyzerUtil.getServerIds()
         .filter((id) => !id.label.startsWith("."))
         .concat(
-          this.analyzer
-            .getLocalIds(params.textDocument.uri, keyword?.containerName ?? "")
-            .map((symbol) => {
-              return {
-                label: symbol.name,
-                kind:
-                  symbol.kind === SymbolKind.Function
-                    ? CompletionItemKind.Method
-                    : CompletionItemKind.Variable,
-              };
-            })
+          this.AnalyzerUtil.getLocalIds(
+            params.textDocument.uri,
+            keyword?.containerName ?? ""
+          ).map((symbol) => {
+            return {
+              label: symbol.name,
+              kind:
+                symbol.kind === SymbolKind.Function
+                  ? CompletionItemKind.Method
+                  : CompletionItemKind.Variable,
+            };
+          })
         );
       const flags = new Map<string, boolean>();
       completionItem.forEach((item) => {
@@ -291,15 +283,15 @@ export default class QLangServer {
     } else if (keyword.text.startsWith("`.")) {
       keyword.text = keyword.text.substring(1);
     }
-    return this.analyzer.getDefinitionByUriKeyword(
+    return this.AnalyzerUtil.getDefinitionByUriKeyword(
       params.textDocument.uri,
       keyword
     );
   }
 
   private onDidChangeContent(_change: any): void {
-    this.analyzer.analyzeDocument(_change.document.uri, _change.document);
-    this.analyzer.analyzeLoadFiles(_change.document.uri);
+    this.AnalyzerUtil.analyzeDocument(_change.document.uri, _change.document);
+    this.AnalyzerUtil.analyzeLoadFiles(_change.document.uri);
     const diagnostics = this.validateTextDocument(_change.document);
     this.connection.sendDiagnostics({ uri: _change.document.uri, diagnostics });
   }
@@ -308,7 +300,7 @@ export default class QLangServer {
     const changedFiles: string[] = [];
     change.changes.forEach((event) => {
       if (event.type === FileChangeType.Deleted) {
-        this.analyzer.remove(event.uri);
+        this.AnalyzerUtil.remove(event.uri);
       } else {
         changedFiles.push(event.uri);
       }
@@ -317,11 +309,11 @@ export default class QLangServer {
       const filepath = URI.parse(file).fsPath;
       if (!AnalyzerUtil.matchFile(filepath)) return;
       try {
-        this.analyzer.analyzeDocument(
+        this.AnalyzerUtil.analyzeDocument(
           file,
           TextDocument.create(file, "q", 1, fs.readFileSync(filepath, "utf8"))
         );
-        this.analyzer.analyzeLoadFiles(file);
+        this.AnalyzerUtil.analyzeLoadFiles(file);
       } catch (error) {
         this.connection.console.warn(`Cannot analyze ${file}`);
       }
@@ -335,15 +327,16 @@ export default class QLangServer {
     if (!keyword) {
       return [];
     }
-    return this.analyzer
-      .getSyntaxNodeLocationsByUriKeyword(params.textDocument.uri, keyword)
-      .map((syn) => {
-        return { range: syn.range };
-      });
+    return this.AnalyzerUtil.getSyntaxNodeLocationsByUriKeyword(
+      params.textDocument.uri,
+      keyword
+    ).map((syn) => {
+      return { range: syn.range };
+    });
   }
 
   private onDocumentSymbol(params: DocumentSymbolParams): SymbolInformation[] {
-    return this.analyzer.getSymbolsByUri(params.textDocument.uri);
+    return this.AnalyzerUtil.getSymbolsByUri(params.textDocument.uri);
   }
 
   private async onHover(
@@ -388,12 +381,12 @@ export default class QLangServer {
     query: string;
     number: number;
   } {
-    const node = this.analyzer.getNodeAtPosition(
+    const node = this.AnalyzerUtil.getNodeAtPosition(
       params.textDocument.uri,
       params.position
     );
     if (node) {
-      const blockNode = this.analyzer.getLv1Node(node);
+      const blockNode = this.AnalyzerUtil.getLv1Node(node);
       return { query: blockNode.text, number: blockNode.endPosition.row + 1 };
     } else {
       return { query: "", number: 0 };
@@ -408,7 +401,7 @@ export default class QLangServer {
       keyword.type = "global_identifier";
       keyword.text = keyword.text.substring(1);
     }
-    return this.analyzer.findReferences(keyword, params.textDocument.uri);
+    return this.AnalyzerUtil.findReferences(keyword, params.textDocument.uri);
   }
 
   private onRenameRequest(
@@ -417,7 +410,7 @@ export default class QLangServer {
     const keyword = this.getKeywordAtPosition(params);
     const changes: { [uri: string]: TextEdit[] } = {};
     if (keyword) {
-      const locations = this.analyzer.findReferences(
+      const locations = this.AnalyzerUtil.findReferences(
         keyword,
         params.textDocument.uri
       );
@@ -441,7 +434,7 @@ export default class QLangServer {
 
   private onSemanticsTokens(params: SemanticTokensParams): SemanticTokens {
     const document = params.textDocument;
-    return this.analyzer.getSemanticTokens(document.uri);
+    return this.AnalyzerUtil.getSemanticTokens(document.uri);
   }
 
   private onSignatureHelp(
@@ -453,7 +446,25 @@ export default class QLangServer {
   private onWorkspaceSymbol(
     params: WorkspaceSymbolParams
   ): SymbolInformation[] {
-    return this.analyzer.search(params.query);
+    return this.AnalyzerUtil.search(params.query);
+  }
+
+  public onPrepareCallHierarchy(
+    params: CallHierarchyPrepareParams
+  ): CallHierarchyItem[] {
+    return this.callHierarchy.onPrepare(params);
+  }
+
+  public onIncomingCallsCallHierarchy(
+    params: CallHierarchyIncomingCallsParams
+  ): CallHierarchyIncomingCall[] {
+    return this.callHierarchy.onIncomingCalls(params);
+  }
+
+  public onOutgoingCallsCallHierarchy(
+    params: CallHierarchyOutgoingCallsParams
+  ): CallHierarchyOutgoingCall[] {
+    return this.callHierarchy.onOutgoingCalls(params);
   }
 
   // misc funcs
