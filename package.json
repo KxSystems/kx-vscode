@@ -260,6 +260,11 @@
           "id": "kdb-servers",
           "name": "kdb servers",
           "icon": "resources/server.svg"
+        },
+        {
+          "id": "kdb-datasources-explorer",
+          "name": "Data Sources",
+          "contextualTitle": "Data Sources"
         }
       ]
     },

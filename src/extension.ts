@@ -70,6 +70,10 @@ export async function activate(context: ExtensionContext) {
   const servers: Server | undefined = getServers();
   ext.serverProvider = new KdbTreeProvider(servers!);
   window.registerTreeDataProvider("kdb-servers", ext.serverProvider);
+  window.registerTreeDataProvider(
+    "kdb-datasources-explorer",
+    ext.dataSourceProvider
+  );
 
   // initialize local servers
   if (servers !== undefined) {
@@ -260,7 +264,7 @@ export async function activate(context: ExtensionContext) {
     });
   });
 
-  Telemetry.sendEvent('Extension.Activated');
+  Telemetry.sendEvent("Extension.Activated");
 }
 
 export async function deactivate(): Promise<void> {
