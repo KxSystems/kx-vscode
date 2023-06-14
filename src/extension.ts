@@ -23,6 +23,11 @@ import {
   TransportKind,
 } from "vscode-languageclient/node";
 import {
+  addDataSource,
+  deleteDataSource,
+  renameDataSource,
+} from "./commands/dataSourceCommand";
+import {
   installTools,
   startLocalProcess,
   stopLocalProcess,
@@ -44,6 +49,10 @@ import { ext } from "./extensionVariables";
 import { ExecutionTypes } from "./models/execution";
 import { QueryResult } from "./models/queryResult";
 import { Server } from "./models/server";
+import {
+  KdbDataSourceProvider,
+  KdbDataSourceTreeItem,
+} from "./services/dataSourceTreeProvider";
 import { KdbNode, KdbTreeProvider } from "./services/kdbTreeProvider";
 import {
   checkLocalInstall,
@@ -69,6 +78,7 @@ export async function activate(context: ExtensionContext) {
 
   const servers: Server | undefined = getServers();
   ext.serverProvider = new KdbTreeProvider(servers!);
+  ext.dataSourceProvider = new KdbDataSourceProvider();
   window.registerTreeDataProvider("kdb-servers", ext.serverProvider);
   window.registerTreeDataProvider(
     "kdb-datasources-explorer",
@@ -116,6 +126,27 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.refreshServerObjects", () => {
       ext.serverProvider.reload();
     }),
+    commands.registerCommand("kdb.dataSource.addDataSource", async () => {
+      await addDataSource();
+    }),
+    commands.registerCommand(
+      "kdv.dataSource.renameDataSource",
+      async (viewItem: KdbDataSourceTreeItem) => {
+        window
+          .showInputBox({ prompt: "Enter new name for the DataSource" })
+          .then(async (newName) => {
+            if (newName) {
+              await renameDataSource(viewItem.label, newName);
+            }
+          });
+      }
+    ),
+    commands.registerCommand(
+      "kdv.dataSource.deleteDataSource",
+      async (viewItem: KdbDataSourceTreeItem) => {
+        await deleteDataSource(viewItem);
+      }
+    ),
     commands.registerCommand("kdb.hideWalkthrough", async () => {
       await hideWalkthrough();
     }),
@@ -269,6 +300,9 @@ export async function activate(context: ExtensionContext) {
 
 export async function deactivate(): Promise<void> {
   await Telemetry.dispose();
+  if (ext.dataSourceProvider) {
+    ext.dataSourceProvider.dispose();
+  }
 
   // cleanup of local q instance processes
   Object.keys(ext.localProcessObjects).forEach((index) => {

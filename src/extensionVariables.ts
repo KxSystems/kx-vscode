@@ -4,7 +4,7 @@ import { AzureAccountExtensionApi } from "./azure-account.api";
 import { Connection } from "./models/connection";
 import { LocalProcess } from "./models/localProcess";
 import { ServerObject } from "./models/serverObject";
-import { KdbDataSourceProvider } from "./services/dataSourceExplorerProvider";
+import { KdbDataSourceProvider } from "./services/dataSourceTreeProvider";
 import { KdbNode, KdbTreeProvider } from "./services/kdbTreeProvider";
 import AuthSettings from "./utils/secretStorage";
 
@@ -19,6 +19,10 @@ export namespace ext {
 
   export let connection: Connection | undefined;
   export let connectionNode: KdbNode | undefined;
+  export const kdbDataSourceFolder = ".kdb-datasources";
+  export const kdbDataSourceFileExtension = ".ds";
+  export const kdbDataSourceFileGlob = "*.ds";
+  export const kdbDataSourceRootNodes: string[] = [];
   export const kdbrootNodes: string[] = [];
   export const maxRetryCount = 5;
 
