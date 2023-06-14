@@ -405,6 +405,10 @@ export default class AnalyzerUtil {
       const globsPattern = cfg.globsPattern ?? ["**/src/**/*.q"];
       const ignorePattern = cfg.ignorePattern ?? ["**/tmp"];
 
+      this.connection.console.info(
+        `Analyzing files matching glob "${globsPattern}" inside ${this.rootPath}`
+      );
+
       const lookupStartTime = Date.now();
       const getTimePassed = (): string =>
         `${(Date.now() - lookupStartTime) / 1000} seconds`;
@@ -439,6 +443,10 @@ export default class AnalyzerUtil {
         });
       this.analyzeServerCache("");
     }
+  }
+
+  public debugAnalyzeWorkspace(msg: string): void {
+    this.connection.console.warn(msg);
   }
 
   public analyzeLoadFiles(uri: DocumentUri): void {
