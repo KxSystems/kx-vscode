@@ -50,7 +50,7 @@ export namespace ext {
 
   export let client: LanguageClient;
 
-  const extensionId = "kx.kdb-vscode";
+  export const extensionId = "kx.kdb-vscode";
   const packageJSON = extensions.getExtension(extensionId)!.packageJSON;
   export const extensionName = packageJSON.name;
   export const extensionVersion = packageJSON.version;

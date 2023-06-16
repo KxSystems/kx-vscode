@@ -1,16 +1,13 @@
 import * as fs from "fs";
 import path from "path";
-import { workspace } from "vscode";
+import { ext } from "../extensionVariables";
 
-export function createKdbDataSourcesFolder(): string | undefined {
-  const workspaceFolders = workspace.workspaceFolders;
-  if (!workspaceFolders) {
-    return undefined;
+export function createKdbDataSourcesFolder(): string {
+  const rootPath = ext.context.globalStorageUri.fsPath;
+  const kdbDataSourcesFolderPath = path.join(rootPath, ext.kdbDataSourceFolder);
+  if (!fs.existsSync(rootPath)) {
+    fs.mkdirSync(rootPath);
   }
-
-  const rootPath = workspaceFolders[0].uri.fsPath;
-  const kdbDataSourcesFolderPath = path.join(rootPath, ".kdb-datasources");
-
   if (!fs.existsSync(kdbDataSourcesFolderPath)) {
     fs.mkdirSync(kdbDataSourcesFolderPath);
   }

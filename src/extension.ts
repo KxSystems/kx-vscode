@@ -95,6 +95,8 @@ export async function activate(context: ExtensionContext) {
   AuthSettings.init(context);
   ext.secretSettings = AuthSettings.instance;
 
+  ext.outputChannel.appendLine("kdb extension is now active!");
+
   // check for installed q runtime
   await checkLocalInstall();
 
@@ -130,7 +132,7 @@ export async function activate(context: ExtensionContext) {
       await addDataSource();
     }),
     commands.registerCommand(
-      "kdv.dataSource.renameDataSource",
+      "kdb.dataSource.renameDataSource",
       async (viewItem: KdbDataSourceTreeItem) => {
         window
           .showInputBox({ prompt: "Enter new name for the DataSource" })
@@ -142,7 +144,7 @@ export async function activate(context: ExtensionContext) {
       }
     ),
     commands.registerCommand(
-      "kdv.dataSource.deleteDataSource",
+      "kdb.dataSource.deleteDataSource",
       async (viewItem: KdbDataSourceTreeItem) => {
         await deleteDataSource(viewItem);
       }

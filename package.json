@@ -308,7 +308,8 @@
         },
         {
           "command": "kdb.dataSource.addDataSource",
-          "when": "view == kdb-datasources-explorer"
+          "when": "view == kdb-datasources-explorer",
+          "group": "dataSourceFiles"
         }
       ],
       "view/item/context": [

@@ -4,6 +4,7 @@ import {
   Event,
   EventEmitter,
   FileSystemWatcher,
+  RelativePattern,
   ThemeIcon,
   TreeDataProvider,
   TreeItem,
@@ -16,38 +17,34 @@ import { ext } from "../extensionVariables";
 import { createKdbDataSourcesFolder } from "../utils/dataSource";
 
 export class KdbDataSourceProvider implements TreeDataProvider<TreeItem> {
-  private _onDidChangeTreeData: EventEmitter<TreeItem | undefined> =
-    new EventEmitter<TreeItem | undefined>();
-  readonly onDidChangeTreeData: Event<TreeItem | undefined> =
-    this._onDidChangeTreeData.event;
+  private _onDidChangeTreeData: EventEmitter<
+    KdbDataSourceTreeItem | undefined | void
+  > = new EventEmitter<KdbDataSourceTreeItem | undefined | void>();
+  readonly onDidChangeTreeData: Event<
+    KdbDataSourceTreeItem | undefined | void
+  > = this._onDidChangeTreeData.event;
 
   private watcher: FileSystemWatcher | undefined;
 
   constructor() {
     this.refresh();
-    const workspaceFolders = workspace.workspaceFolders;
-    if (workspaceFolders) {
-      const rootPath = workspaceFolders[0].uri.fsPath;
-      const kdbDataSourcesFolderPath = path.join(
-        rootPath,
-        ext.kdbDataSourceFolder
-      );
-
-      this.watcher = workspace.createFileSystemWatcher(
-        path.join(kdbDataSourcesFolderPath, ext.kdbDataSourceFileGlob)
-      );
-      // watch updates in the folder
-      this.watcher.onDidChange(() => this.refresh());
-      this.watcher.onDidCreate(() => this.refresh());
-      this.watcher.onDidDelete(() => this.refresh());
-    }
+    const datasourceFolder = createKdbDataSourcesFolder();
+    this.watcher = workspace.createFileSystemWatcher(
+      new RelativePattern(datasourceFolder, ext.kdbDataSourceFileGlob)
+    );
+    // watch updates in the folder
+    this.watcher.onDidChange(() => this.refresh());
+    this.watcher.onDidCreate(() => this.refresh());
+    this.watcher.onDidDelete(() => this.refresh());
   }
 
-  getTreeItem(element: TreeItem): TreeItem {
+  getTreeItem(element: KdbDataSourceTreeItem): KdbDataSourceTreeItem {
     return element;
   }
 
-  getChildren(element?: TreeItem): Thenable<TreeItem[]> {
+  getChildren(
+    element?: KdbDataSourceTreeItem
+  ): Promise<KdbDataSourceTreeItem[]> {
     if (!element) {
       return this.getDsFiles();
     } else {
@@ -56,7 +53,7 @@ export class KdbDataSourceProvider implements TreeDataProvider<TreeItem> {
   }
 
   refresh(): void {
-    this._onDidChangeTreeData.fire(undefined);
+    this._onDidChangeTreeData.fire();
   }
 
   dispose(): void {
@@ -65,14 +62,22 @@ export class KdbDataSourceProvider implements TreeDataProvider<TreeItem> {
     }
   }
 
-  private getDsFiles(): Thenable<TreeItem[]> {
+  private getDsFiles(): Promise<KdbDataSourceTreeItem[]> {
     const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
     if (kdbDataSourcesFolderPath) {
       const files = fs.readdirSync(kdbDataSourcesFolderPath);
-      const dsFiles = files.filter((file) => path.extname(file) === ".ds");
+      const dsFiles = files.filter(
+        (file) => path.extname(file) === ext.kdbDataSourceFileExtension
+      );
 
       return Promise.resolve(
-        dsFiles.map((file) => new TreeItem(file, TreeItemCollapsibleState.None))
+        dsFiles.map((file) => {
+          return new KdbDataSourceTreeItem(
+            file,
+            TreeItemCollapsibleState.None,
+            [Uri.file(path.join(kdbDataSourcesFolderPath, file))]
+          );
+        })
       );
     } else {
       return Promise.resolve([]);
@@ -87,7 +92,7 @@ export class KdbDataSourceTreeItem extends TreeItem {
     public readonly files: Uri[]
   ) {
     super(label, collapsibleState);
-    this.iconPath = new ThemeIcon("file-code");
+    this.iconPath = new ThemeIcon("file");
 
     // set context for root nodes
     if (ext.kdbDataSourceRootNodes.indexOf(label) === -1) {
@@ -100,15 +105,17 @@ export class KdbDataSourceTreeItem extends TreeItem {
     }
   }
 
-  getChildren(): Thenable<kdbDataSource[]> {
+  getChildren(): Promise<kdbDataSource[]> {
     return Promise.resolve(this.files.map((file) => new kdbDataSource(file)));
   }
+
+  contextValue = this.label;
 }
 
 export class kdbDataSource extends TreeItem {
   constructor(public readonly resourceUri: Uri) {
     super(path.basename(resourceUri.fsPath));
-    this.iconPath = new ThemeIcon("file-code");
+    this.iconPath = new ThemeIcon("file");
     this.command = {
       command: "vscode.open",
       title: "Open",
