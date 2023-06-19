@@ -19,7 +19,7 @@ import {
   connectionPortInput,
   connectionUsernameInput,
   kdbEndpoint,
-  kxInsightsEndpoint,
+  kdbInsightsEndpoint,
   serverEndpointPlaceHolder,
   serverEndpoints,
 } from "../models/items/server";
@@ -60,7 +60,7 @@ export async function addNewConnection(): Promise<void> {
   );
   if (resultType!.label === kdbEndpoint) {
     addKdbConnection();
-  } else if (resultType!.label === kxInsightsEndpoint) {
+  } else if (resultType!.label === kdbInsightsEndpoint) {
     await addAzureConnection();
   }
 }

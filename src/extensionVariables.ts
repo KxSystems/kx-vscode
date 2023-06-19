@@ -50,6 +50,36 @@ export namespace ext {
   export const extensionVersion = packageJSON.version;
   export const extensionKey = packageJSON.aiKey;
 
+  export const localhost = "127.0.0.1";
+  export const networkProtocols = {
+    http: "http://",
+    https: "https://",
+  };
+
+  export const insightsFileResponse = {
+    css: "",
+    path: "",
+  };
+
+  export const insightsAuthUrls = {
+    authURL: "oauth2/auth",
+    baseURL: "https://oauth.<test>.io",
+    callbackURL: "http://127.0.0.1:9010/callback",
+    revoke: "oauth2/revoke",
+    tokenURL: "oauth2/token",
+  };
+
+  export const insightsGrantType = {
+    authorizationCode: "authorization_code",
+    refreshToken: "refresh_token",
+  };
+
+  export const insightsSigningIn = "Signing in";
+
+  export const globalStateKeys = {
+    insightsCredentialsCacheKey: "InsightsCache",
+  };
+
   export const functions: Array<string> = [];
   export const variables: Array<string> = [];
   export const tables: Array<string> = [];

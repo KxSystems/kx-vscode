@@ -2,7 +2,7 @@ import { QuickPickItem } from "vscode";
 
 export const serverEndpointPlaceHolder = "Select the kdb type";
 export const kdbEndpoint = "Enter a kdb endpoint";
-export const kxInsightsEndpoint = "Create or Connect to KX Insights on Azure";
+export const kdbInsightsEndpoint = "Connect to kdb insights";
 
 export const serverEndpoints: QuickPickItem[] = [
   {
@@ -10,8 +10,8 @@ export const serverEndpoints: QuickPickItem[] = [
     detail: "Enter the url, ip address, and port to connect to a kdb instance",
   },
   {
-    label: kxInsightsEndpoint,
-    detail: "Either provide an existing Azure instance or create a new one",
+    label: kdbInsightsEndpoint,
+    detail: "Either the url for the kdb insights instance",
   },
 ];
 
