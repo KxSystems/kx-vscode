@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
+import { DataSourceFiles } from "../models/dataSource";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
 
@@ -7,16 +7,34 @@ export class DataSourcesPanel {
   public static currentPanel: DataSourcesPanel | undefined;
   private readonly _panel: vscode.WebviewPanel;
   private _disposables: vscode.Disposable[] = [];
-  private type: DataSourceTypes = DataSourceTypes.API;
+  public static dataSourceFile: DataSourceFiles;
 
-  private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+  private constructor(
+    panel: vscode.WebviewPanel,
+    extensionUri: vscode.Uri,
+    datasourceFile: DataSourceFiles
+  ) {
     this._panel = panel;
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
-    // this._panel.webview.html = this._getWebviewContent();
     this._panel.webview.html = this._getWebviewContent(
       this._panel.webview,
-      extensionUri
+      extensionUri,
+      datasourceFile
     );
+    this._panel.webview.onDidReceiveMessage((message) => {
+      if (message.command === "kdb.dataSource.saveDataSource") {
+        this._panel.title = message.data.name;
+        vscode.commands.executeCommand(
+          "kdb.dataSource.saveDataSource",
+          message.data
+        );
+      } else if (message.command === "kdb.dataSource.runDataSource") {
+        vscode.commands.executeCommand(
+          "kdb.dataSource.runDataSource",
+          message.data
+        );
+      }
+    });
   }
 
   public static render(
@@ -24,12 +42,13 @@ export class DataSourcesPanel {
     datasourceFile: DataSourceFiles
   ) {
     console.log(datasourceFile);
+    this.dataSourceFile = datasourceFile;
     if (DataSourcesPanel.currentPanel) {
       DataSourcesPanel.currentPanel._panel.reveal(vscode.ViewColumn.One);
     } else {
       const panel = vscode.window.createWebviewPanel(
         "dataSource",
-        "DataSource",
+        datasourceFile.name,
         vscode.ViewColumn.One,
         {
           // Enable javascript in the webview
@@ -39,7 +58,11 @@ export class DataSourcesPanel {
         }
       );
 
-      DataSourcesPanel.currentPanel = new DataSourcesPanel(panel, extensionUri);
+      DataSourcesPanel.currentPanel = new DataSourcesPanel(
+        panel,
+        extensionUri,
+        datasourceFile
+      );
     }
   }
 
@@ -58,7 +81,8 @@ export class DataSourcesPanel {
 
   private _getWebviewContent(
     webview: vscode.Webview,
-    extensionUri: vscode.Uri
+    extensionUri: vscode.Uri,
+    datasourceFile: DataSourceFiles
   ) {
     const webviewUri = getUri(webview, extensionUri, ["out", "webview.js"]);
     const nonce = getNonce();
@@ -68,7 +92,44 @@ export class DataSourcesPanel {
     ]);
     const resetStyleUri = getUri(webview, extensionUri, ["out", "reset.css"]);
     const vscodeStyleUri = getUri(webview, extensionUri, ["out", "vscode.css"]);
-    // Tip: Install the es6-string-html VS Code extension to enable code highlighting below
+
+    const tabSelected =
+      datasourceFile.dataSource.selectedType.toString() === "API"
+        ? "tab-1"
+        : datasourceFile.dataSource.selectedType.toString() === "QSQL"
+        ? "tab-2"
+        : "tab-3";
+    const loadedSelectedType =
+      datasourceFile.dataSource.selectedType.toString() === "API"
+        ? "API"
+        : datasourceFile.dataSource.selectedType.toString() === "QSQL"
+        ? "QSQL"
+        : "SQL";
+
+    let params = "";
+    if (datasourceFile.dataSource.api.params.length > 0) {
+      for (let i = 0; i < datasourceFile.dataSource.api.params.length; i++) {
+        params += `<div class="field-row  param-row">
+                    <vscode-text-field size="100" id="param${
+                      i + 1
+                    }" name="param${i + 1}" placeholder="Param ${
+          i + 1
+        }" value="${
+          datasourceFile.dataSource.api.params[i]
+        }" class="text-input param-input" value></vscode-text-field>
+                  </div>`;
+      }
+    } else {
+      params = `<div class="field-row  param-row">
+                  <vscode-text-field size="100" id="param1" name="param1" placeholder="Param 1" class="text-input param-input"></vscode-text-field>
+                </div>`;
+    }
+    const apiSelected = datasourceFile.dataSource.api.selectedApi;
+    const qsql = datasourceFile.dataSource.qsql.query;
+    const qsqlTarget = datasourceFile.dataSource.qsql.selectedTarget;
+    const sql = datasourceFile.dataSource.sql.query;
+    const name = datasourceFile.name;
+
     return /*html*/ `
     <!DOCTYPE html>
     <html lang="en">
@@ -84,21 +145,26 @@ export class DataSourcesPanel {
         <title>DataSource</title>
       </head>
       <body>
+      <form id="dataSourceForm">
         <div class="datasource-view-container">
           <div class="content-wrapper">
-            <form id="dataSourceForm">
+            <div class="field-row name-row">
+              <label for="name">DataSource Name</label>
+              <vscode-text-field size="100" id="name" name="name" placeholder="DataSource Name" value="${name}" class="text-input name-input"></vscode-text-field>
+              <input type="hidden" name="originalName" value="${name}" />
+            </div>
               <div  class="form-wrapper">
-                <vscode-panels activeid="tab-1">
-                  <vscode-panel-tab id="tab-1">API</vscode-panel-tab>
-                  <vscode-panel-tab id="tab-2">QSQL</vscode-panel-tab>
-                  <vscode-panel-tab id="tab-3">SQL</vscode-panel-tab>
-                  <input type="hidden" name="selectedType" value="API" />
+                <vscode-panels activeid="${tabSelected}">
+                  <vscode-panel-tab id="tab-1" class="type-tab">API</vscode-panel-tab>
+                  <vscode-panel-tab id="tab-2" class="type-tab">QSQL</vscode-panel-tab>
+                  <vscode-panel-tab id="tab-3" class="type-tab">SQL</vscode-panel-tab>
+                  <input type="hidden" name="selectedType" value="${loadedSelectedType}" />
                   <vscode-panel-view id="view-1">
                     <div class="editor-panel">
                       <div class="field-row">
                         <div class="dropdown-container">
-                          <label for="select-api">Select API</label>
-                          <vscode-dropdown id="select-api" name="select-api" class="dropdown">
+                          <label for="selectedApi">Select API</label>
+                          <vscode-dropdown id="selectedApi" name="selectedApi" value="${apiSelected}" class="dropdown">
                             <vscode-option>Option Label #1</vscode-option>
                             <vscode-option>Option Label #2</vscode-option>
                             <vscode-option>Option Label #3</vscode-option>
@@ -107,9 +173,7 @@ export class DataSourcesPanel {
                       </div>
                       <div id="params-wrapper">
                       <label>Params</label>
-                        <div class="field-row  param-row">
-                          <vscode-text-field size="100" id="param-1" name="param-1" placeholder="Param 1" class="text-input param-input"></vscode-text-field>
-                        </div>
+                        ${params}
                       </div>
                       <div class="field-row">
                         <vscode-button id="addParam" appearance="secondary" class="btn-add-param">ADD PARAM</vscode-button>
@@ -119,23 +183,25 @@ export class DataSourcesPanel {
                   </vscode-panel-view>
                   <vscode-panel-view id="view-2">
                     <div class="editor-panel">
-                      <div class="field-row">
-                        <vscode-text-area
-                          class="text-area"
-                          id="qsql"
-                          name="qsql"
-                          rows="20">Query</vscode-text-area>
-                      </div>
-                      <div class="field-row">
+                    <div class="field-row">
                         <div class="dropdown-container">
-                          <label for="select-target">Target</label>
-                          <vscode-dropdown id="select-target" name="select-target" class="dropdown">
+                          <label for="selectedTarget">Target</label>
+                          <vscode-dropdown id="selectedTarget" name="selectedTarget" value="${qsqlTarget}" class="dropdown">
                             <vscode-option>Option Label #1</vscode-option>
                             <vscode-option>Option Label #2</vscode-option>
                             <vscode-option>Option Label #3</vscode-option>
                           </vscode-dropdown>
                         </div>
                       </div>
+                      <div class="field-row">
+                        <vscode-text-area
+                          class="text-area"
+                          id="qsql"
+                          name="qsql"
+                          value="${qsql}"
+                          rows="20">Query</vscode-text-area>
+                      </div>
+                      
                     </div>
                   </vscode-panel-view>
                   <vscode-panel-view id="view-3">
@@ -144,6 +210,7 @@ export class DataSourcesPanel {
                         <vscode-text-area
                           class="text-area"
                           id="sql"
+                          value="${sql}"
                           name="sql"
                           rows="20">Query</vscode-text-area>
                       </div>
@@ -161,22 +228,59 @@ export class DataSourcesPanel {
                   </div>
                 </div>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
+        </form>
         <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
         <script nonce="${nonce}">
           const vscode = acquireVsCodeApi();
           const saveButton = document.getElementById('save');
+          const runButton = document.getElementById('run');
           const addButton = document.getElementById('addParam');
           const removeButton = document.getElementById('removeParam');
+          const tabs = document.querySelectorAll('.type-tab');
+
+          tabs.forEach((tab) => {
+            tab.addEventListener('click', (event) => {
+              const tabId = event.target.id;
+              const form = document.getElementById('dataSourceForm');
+              let type = '';
+              switch (tabId) {
+                case 'tab-1':
+                  type = 'API';
+                  break;
+                case 'tab-2':
+                  type = 'QSQL';
+                  break;
+                case 'tab-3':
+                default:
+                  type = 'SQL';
+                  break;
+              };
+              form.elements['selectedType'].value = type;
+            });
+          });
 
           saveButton.addEventListener('click', (event) => {
             event.preventDefault();
             const form = document.getElementById('dataSourceForm');
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
-            console.log(data);
+            vscode.postMessage({
+              command: 'kdb.dataSource.saveDataSource',
+              data
+            });
+          });
+
+          runButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            const form = document.getElementById('dataSourceForm');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            vscode.postMessage({
+              command: 'kdb.dataSource.runDataSource',
+              data
+            });
           });
 
           addButton.addEventListener('click', () => {

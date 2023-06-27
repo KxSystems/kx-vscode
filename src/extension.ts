@@ -27,6 +27,8 @@ import {
   deleteDataSource,
   openDataSource,
   renameDataSource,
+  runDataSource,
+  saveDataSource,
 } from "./commands/dataSourceCommand";
 import {
   installTools,
@@ -50,7 +52,6 @@ import { ext } from "./extensionVariables";
 import { ExecutionTypes } from "./models/execution";
 import { QueryResult } from "./models/queryResult";
 import { Server } from "./models/server";
-import { DataSourcesPanel } from "./panels/datasource";
 import {
   KdbDataSourceProvider,
   KdbDataSourceTreeItem,
@@ -134,6 +135,18 @@ export async function activate(context: ExtensionContext) {
       await addDataSource();
     }),
     commands.registerCommand(
+      "kdb.dataSource.saveDataSource",
+      async (dataSourceForm: any) => {
+        await saveDataSource(dataSourceForm);
+      }
+    ),
+    commands.registerCommand(
+      "kdb.dataSource.runDataSource",
+      async (dataSourceForm: any) => {
+        await runDataSource(dataSourceForm);
+      }
+    ),
+    commands.registerCommand(
       "kdb.dataSource.renameDataSource",
       async (viewItem: KdbDataSourceTreeItem) => {
         window
@@ -151,11 +164,12 @@ export async function activate(context: ExtensionContext) {
         await deleteDataSource(viewItem);
       }
     ),
-    commands.registerCommand("kdb.dataSource.openDataSource", () => {
+    commands.registerCommand(
+      "kdb.dataSource.openDataSource",
       async (viewItem: KdbDataSourceTreeItem) => {
         await openDataSource(viewItem, context.extensionUri);
-      };
-    }),
+      }
+    ),
     commands.registerCommand("kdb.hideWalkthrough", async () => {
       await hideWalkthrough();
     }),
@@ -186,11 +200,6 @@ export async function activate(context: ExtensionContext) {
     }),
     commands.registerCommand("kdb.execute.fileQuery", async () => {
       runQuery(ExecutionTypes.QueryFile);
-    }),
-    commands.registerCommand("kdb.dataSource.doRefactor", () => {
-      if (DataSourcesPanel.currentPanel) {
-        // DataSourcesPanel.currentPanel.render();
-      }
     })
   );
 

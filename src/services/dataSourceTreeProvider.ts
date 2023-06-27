@@ -72,9 +72,9 @@ export class KdbDataSourceProvider implements TreeDataProvider<TreeItem> {
 
       return Promise.resolve(
         dsFiles.map((file) => {
-          const label = file.slice(0, -3);
+          const newLabel = file.replace(ext.kdbDataSourceFileExtension, "");
           return new KdbDataSourceTreeItem(
-            label,
+            newLabel,
             TreeItemCollapsibleState.None,
             [Uri.file(path.join(kdbDataSourcesFolderPath, file))]
           );
@@ -94,9 +94,8 @@ export class KdbDataSourceTreeItem extends TreeItem {
   ) {
     super(label, collapsibleState);
     this.iconPath = new ThemeIcon("file");
-
-    // set context for root nodes
     if (ext.kdbDataSourceRootNodes.indexOf(label) === -1) {
+      ext.kdbDataSourceRootNodes.push(label);
       commands.executeCommand(
         "setContext",
         "kdb.dataSourceTreeNodes",

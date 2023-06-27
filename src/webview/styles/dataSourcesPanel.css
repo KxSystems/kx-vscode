@@ -48,6 +48,7 @@
   display: grid;
   width: 150px;
   min-width: 120px;
+  margin-top: 130px;
 }
 
 .btn-action {
@@ -127,4 +128,8 @@
 label {
   min-width: 65px;
   margin-bottom: 5px;
+}
+
+.name-row {
+  display: grid;
 }

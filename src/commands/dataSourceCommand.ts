@@ -5,7 +5,10 @@ import { ext } from "../extensionVariables";
 import { DataSourceFiles, defaultDataSourceFile } from "../models/dataSource";
 import { DataSourcesPanel } from "../panels/datasource";
 import { KdbDataSourceTreeItem } from "../services/dataSourceTreeProvider";
-import { createKdbDataSourcesFolder } from "../utils/dataSource";
+import {
+  convertDataSourceFormToDataSourceFile,
+  createKdbDataSourcesFolder,
+} from "../utils/dataSource";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -22,8 +25,10 @@ export async function addDataSource(): Promise<void> {
     fileName = `datasource-${length}${ext.kdbDataSourceFileExtension}`;
     filePath = path.join(kdbDataSourcesFolderPath, fileName);
   }
-
-  const defaultFileContent = JSON.stringify(defaultDataSourceFile);
+  const dataSourceName = fileName.replace(ext.kdbDataSourceFileExtension, "");
+  const defaultDataSourceContent = defaultDataSourceFile;
+  defaultDataSourceContent.name = dataSourceName;
+  const defaultFileContent = JSON.stringify(defaultDataSourceContent);
 
   fs.writeFileSync(filePath, defaultFileContent);
   window.showInformationMessage(
@@ -48,6 +53,12 @@ export async function renameDataSource(
     kdbDataSourcesFolderPath,
     `${newName}${ext.kdbDataSourceFileExtension}`
   );
+
+  const dataSourceContent = fs.readFileSync(oldFilePath, "utf8");
+  const data = JSON.parse(dataSourceContent) as DataSourceFiles;
+  data.name = newName;
+  const newFileContent = JSON.stringify(data);
+  fs.writeFileSync(oldFilePath, newFileContent);
 
   fs.renameSync(oldFilePath, newFilePath);
   window.showInformationMessage(`Renamed ${oldFilePath} to ${newFilePath}.`);
@@ -97,4 +108,36 @@ export async function openDataSource(
       }
     }
   );
+}
+
+export async function saveDataSource(dataSourceForm: any): Promise<void> {
+  const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
+  if (!kdbDataSourcesFolderPath) {
+    return;
+  }
+
+  if (dataSourceForm.name === "") {
+    window.showErrorMessage("Name is required");
+    return;
+  }
+  if (dataSourceForm.name !== dataSourceForm.originalName) {
+    await renameDataSource(dataSourceForm.originalName, dataSourceForm.name);
+  }
+
+  const fileContent = convertDataSourceFormToDataSourceFile(dataSourceForm);
+
+  const dataSourceFilePath = path.join(
+    kdbDataSourcesFolderPath,
+    `${dataSourceForm.name}${ext.kdbDataSourceFileExtension}`
+  );
+
+  if (fs.existsSync(dataSourceFilePath)) {
+    fs.writeFileSync(dataSourceFilePath, JSON.stringify(fileContent));
+  }
+  window.showInformationMessage(`DataSource ${dataSourceForm.name} saved.`);
+}
+
+export async function runDataSource(dataSourceForm: any): Promise<void> {
+  const fileContent = convertDataSourceFormToDataSourceFile(dataSourceForm);
+  console.log(fileContent);
 }

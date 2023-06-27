@@ -29,6 +29,8 @@
     "onCommand:kdb.connect",
     "onCommand:kdb.disconnect",
     "onCommand:kdb.dataSource.addDataSource",
+    "onCommand:kdb.dataSource.saveDataSource",
+    "onCommand:kdb.dataSource.runDataSource",
     "onCommand:kdb.dataSource.renameDataSource",
     "onCommand:kdb.dataSource.deleteDataSource",
     "onCommand:kdb.dataSource.openDataSource",
@@ -193,6 +195,14 @@
         "title": "Add new DataSource"
       },
       {
+        "command": "kdb.dataSource.saveDataSource",
+        "title": "Save changes in the DataSource"
+      },
+      {
+        "command": "kdb.dataSource.runDataSource",
+        "title": "Execute DataSource at Inisghts Instance"
+      },
+      {
         "command": "kdb.dataSource.renameDataSource",
         "title": "Rename DataSource"
       },
@@ -345,17 +355,17 @@
           "group": "connection"
         },
         {
+          "command": "kdb.dataSource.openDataSource",
+          "when": "view == kdb-datasources-explorer && viewItem in kdb.dataSourceTreeNodes",
+          "group": "dataSourceFiles"
+        },
+        {
           "command": "kdb.dataSource.renameDataSource",
           "when": "view == kdb-datasources-explorer && viewItem in kdb.dataSourceTreeNodes",
           "group": "dataSourceFiles"
         },
         {
           "command": "kdb.dataSource.deleteDataSource",
-          "when": "view == kdb-datasources-explorer && viewItem in kdb.dataSourceTreeNodes",
-          "group": "dataSourceFiles"
-        },
-        {
-          "command": "kdb.dataSource.openDataSource",
           "when": "view == kdb-datasources-explorer && viewItem in kdb.dataSourceTreeNodes",
           "group": "dataSourceFiles"
         }

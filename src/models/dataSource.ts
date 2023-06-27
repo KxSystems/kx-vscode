@@ -5,31 +5,37 @@ export enum DataSourceTypes {
 }
 
 export interface DataSourceFiles {
-  selectedType: DataSourceTypes;
-  api: {
-    params: string[];
-    selectedApi: string;
-  };
-  qsql: {
-    query: string;
-    selectedTarget: string;
-  };
-  sql: {
-    query: string;
+  name: string;
+  dataSource: {
+    selectedType: DataSourceTypes;
+    api: {
+      params: string[];
+      selectedApi: string;
+    };
+    qsql: {
+      query: string;
+      selectedTarget: string;
+    };
+    sql: {
+      query: string;
+    };
   };
 }
 
 export const defaultDataSourceFile: DataSourceFiles = {
-  selectedType: DataSourceTypes.API,
-  api: {
-    params: [],
-    selectedApi: "",
-  },
-  qsql: {
-    query: "",
-    selectedTarget: "",
-  },
-  sql: {
-    query: "",
+  name: "DataSource",
+  dataSource: {
+    selectedType: DataSourceTypes.API,
+    api: {
+      params: [],
+      selectedApi: "",
+    },
+    qsql: {
+      query: "",
+      selectedTarget: "",
+    },
+    sql: {
+      query: "",
+    },
   },
 };
