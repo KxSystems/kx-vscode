@@ -71,7 +71,10 @@ export class Connection {
     return result;
   }
 
-  public async executeQuery(command: string): Promise<string> {
+  public async executeQuery(
+    command: string,
+    context?: string
+  ): Promise<string> {
     let result;
     let retryCount = 0;
     while (this.connection === undefined) {
@@ -81,15 +84,24 @@ export class Connection {
       await delay(500);
       retryCount++;
     }
+
     const wrapper = queryWrapper();
-    this.connection.k(wrapper, command, (err: Error, res: QueryResult) => {
-      if (err) {
-        result = handleQueryResults(err.toString(), QueryResultType.Error);
+    this.connection.k(
+      wrapper,
+      context ?? ".",
+      command,
+      (err: Error, res: QueryResult) => {
+        if (err) {
+          result = handleQueryResults(err.toString(), QueryResultType.Error);
+        } else if (res) {
+          if (res.errored) {
+            result = handleQueryResults(res.error, QueryResultType.Error);
+          } else {
+            result = res.result;
+          }
+        }
       }
-      if (res) {
-        result = res.data;
-      }
-    });
+    );
 
     while (result === undefined || result === null) {
       await delay(500);
