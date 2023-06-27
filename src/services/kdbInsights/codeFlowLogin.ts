@@ -2,6 +2,7 @@ import * as crypto from "crypto";
 import * as fs from "fs-extra";
 import * as http from "http";
 import open from "open";
+import { join } from "path";
 import * as querystring from "querystring";
 import * as requestPromise from "request-promise";
 import * as url from "url";
@@ -20,16 +21,14 @@ export interface IToken {
 }
 
 const defaultTimeout = 5 * 60 * 1000; // 5 min
-const closeTimeout = 5 * 1000; // 5 sec
+const closeTimeout = 10 * 1000; // 10 sec
 
 const commonRequestParams = {
-  client_id: "",
-  client_secret: "",
-  redirect_uri: "",
-  scope: "",
+  client_id: "insights-app",
+  redirect_uri: ext.insightsAuthUrls.callbackURL,
 };
 
-export async function signIn() {
+export async function signIn(insightsUrl: string) {
   const { server, codePromise } = createServer();
 
   try {
@@ -37,11 +36,13 @@ export async function signIn() {
 
     const authParams = {
       response_type: "code",
+      scope: "profile",
       state: crypto.randomBytes(20).toString("hex"),
     };
+
     const authorizationUrl = new url.URL(
       ext.insightsAuthUrls.authURL,
-      ext.insightsAuthUrls.baseURL
+      insightsUrl
     );
 
     authorizationUrl.search = queryString(authParams);
@@ -50,7 +51,7 @@ export async function signIn() {
 
     const code = await codePromise;
 
-    return await getToken(code);
+    return await getToken(insightsUrl, code);
   } catch (error) {
     throw error;
   } finally {
@@ -58,7 +59,10 @@ export async function signIn() {
   }
 }
 
-export async function signOut(token: string): Promise<void> {
+export async function signOut(
+  insightsUrl: string,
+  token: string
+): Promise<void> {
   const queryParams = queryString({
     grant_type: ext.insightsGrantType.authorizationCode,
     token,
@@ -67,39 +71,36 @@ export async function signOut(token: string): Promise<void> {
     body: queryParams,
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
   };
-  const requestUrl = new url.URL(
-    ext.insightsAuthUrls.revoke,
-    ext.insightsAuthUrls.baseURL
-  );
+  const requestUrl = new url.URL(ext.insightsAuthUrls.revoke, insightsUrl);
 
-  requestPromise.post(requestUrl.toString(), options);
+  await requestPromise.post(requestUrl.toString(), options);
 }
 
-export async function refreshToken(token: string): Promise<IToken> {
-  return await tokenRequest({
+async function refreshToken(
+  insightsUrl: string,
+  token: string
+): Promise<IToken> {
+  return await tokenRequest(insightsUrl, {
     grant_type: ext.insightsGrantType.refreshToken,
     refresh_token: token,
   });
 }
 
-async function getToken(code: string): Promise<IToken> {
-  return await tokenRequest({
+async function getToken(insightsUrl: string, code: string): Promise<IToken> {
+  return await tokenRequest(insightsUrl, {
     code,
     grant_type: ext.insightsGrantType.authorizationCode,
   });
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function tokenRequest(params: any): Promise<IToken> {
+async function tokenRequest(insightsUrl: string, params: any): Promise<IToken> {
   const queryParams = queryString(params);
   const options = {
     body: queryParams,
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
   };
-  const requestUrl = new url.URL(
-    ext.insightsAuthUrls.tokenURL,
-    ext.insightsAuthUrls.baseURL
-  );
+
+  const requestUrl = new url.URL(ext.insightsAuthUrls.tokenURL, insightsUrl);
   const response = await requestPromise.post(requestUrl.toString(), options);
   const result = JSON.parse(response);
   const expirationDate = new Date();
@@ -128,7 +129,7 @@ function createServer() {
     (resolve, reject) => (deferredCode = { resolve, reject })
   );
   const codeTimer = setTimeout(
-    () => deferredCode.reject(new Error("Timeout waiting for code")),
+    () => deferredCode.reject(new Error("Timeout waiting for code.")),
     defaultTimeout
   );
   const cancelCodeTimer = () => clearTimeout(codeTimer);
@@ -139,7 +140,18 @@ function createServer() {
       `${ext.networkProtocols.http}${ext.localhost}`
     );
     switch (reqUrl.pathname) {
-      case "/callback":
+      case "/":
+        sendFile(
+          res,
+          join(
+            ext.context.asAbsolutePath("resources"),
+            "codeFlowResult",
+            "index.html"
+          ),
+          "text/html; charset=utf-8"
+        );
+        break;
+      case "/redirect":
         const error =
           reqUrl.searchParams.get("error_description") ||
           reqUrl.searchParams.get("error");
@@ -147,7 +159,7 @@ function createServer() {
 
         if (!error && code) {
           deferredCode.resolve(code);
-          req.writeHead(302, { Location: "/" });
+          res.writeHead(302, { Location: "/" });
         } else {
           const err = new Error(error || "No code received.");
           deferredCode.reject(err);
@@ -155,17 +167,19 @@ function createServer() {
             Location: `/?error=${querystring.escape(err.message)}`,
           });
         }
+
         res.end();
         break;
-      case "/":
+      case "/main.css":
         sendFile(
           res,
-          ext.insightsFileResponse.path,
-          "text/html; charset=utf-8"
+          join(
+            ext.context.asAbsolutePath("resources"),
+            "codeFlowResult",
+            "main.css"
+          ),
+          "text/css; charset=utf-8"
         );
-        break;
-      case "/main.css":
-        sendFile(res, ext.insightsFileResponse.css, "text/css; charset=utf-8");
         break;
       default:
         res.writeHead(404);
@@ -208,14 +222,13 @@ function sendFile(
   filePath: string,
   contentType: string
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   fs.readFile(filePath, (_err: any, _body: any) => {
     if (!_err) {
       res.writeHead(200, {
-        "Content-Length": Body.length,
+        "Content-Length": _body.length,
         "Content-Type": contentType,
       });
-      res.end(body);
+      res.end(_body);
     }
   });
 }

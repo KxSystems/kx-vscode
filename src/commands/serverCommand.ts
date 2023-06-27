@@ -1,5 +1,6 @@
 import { readFileSync } from "fs-extra";
 import { join } from "path";
+import * as url from "url";
 import {
   commands,
   InputBoxOptions,
@@ -12,12 +13,15 @@ import {
 import { ext } from "../extensionVariables";
 import { Connection } from "../models/connection";
 import { ExecutionTypes } from "../models/execution";
+import { Insights } from "../models/insights";
 import {
   connectionAliasInput,
   connectionHostnameInput,
   connectionPasswordInput,
   connectionPortInput,
   connectionUsernameInput,
+  insightsAliasInput,
+  insightsUrlInput,
   kdbEndpoint,
   kdbInsightsEndpoint,
   serverEndpointPlaceHolder,
@@ -33,13 +37,16 @@ import {
   showResourceGroups,
   showSubscriptions,
 } from "../services/azureProvider";
-import { KdbNode } from "../services/kdbTreeProvider";
+import { signIn } from "../services/kdbInsights/codeFlowLogin";
+import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import {
   addLocalConnectionContexts,
   getHash,
+  getInsights,
   getServerName,
   getServers,
   removeLocalConnectionContext,
+  updateInsights,
   updateServers,
 } from "../utils/core";
 import { ExecutionConsole } from "../utils/executionConsole";
@@ -61,8 +68,68 @@ export async function addNewConnection(): Promise<void> {
   if (resultType!.label === kdbEndpoint) {
     addKdbConnection();
   } else if (resultType!.label === kdbInsightsEndpoint) {
-    await addAzureConnection();
+    await addInsightsConnection();
   }
+}
+
+export async function addInsightsConnection() {
+  const insightsAlias: InputBoxOptions = {
+    prompt: insightsAliasInput.prompt,
+    placeHolder: insightsAliasInput.placeholder,
+    validateInput: (value: string | undefined) => validateServerAlias(value),
+  };
+  const insightsUrl: InputBoxOptions = {
+    prompt: insightsUrlInput.prompt,
+    placeHolder: insightsUrlInput.placeholder,
+  };
+  window.showInputBox(insightsAlias).then(async (insights_alias) => {
+    window.showInputBox(insightsUrl).then(async (insights_url) => {
+      if (insights_alias === undefined || insights_alias === "") {
+        const host = new url.URL(insights_url!);
+        insights_alias = host.host.split(".")[0];
+      }
+
+      /*
+      const token = await signIn(insights_url!);
+
+      // store token
+      ext.secretSettings.storeAuthData(
+        getHash(insights_alias),
+        JSON.stringify(token)
+      );
+      */
+
+      let insights: Insights | undefined = getInsights();
+      if (insights != undefined && insights[getHash(insights_url!)]) {
+        await window.showErrorMessage(
+          `Insights instance named ${insights_url} already exists.`
+        );
+      } else {
+        const key = getHash(insights_url!);
+        if (insights === undefined) {
+          insights = {
+            key: {
+              auth: true,
+              alias: insights_alias,
+              server: insights_url!,
+            },
+          };
+        } else {
+          insights[key] = {
+            auth: true,
+            alias: insights_alias,
+            server: insights_url!,
+          };
+        }
+
+        await updateInsights(insights);
+        const newInsights = getInsights();
+        if (newInsights != undefined) {
+          // ext.serverProvider.refresh(newServers);
+        }
+      }
+    });
+  });
 }
 
 export async function addAzureConnection() {
@@ -175,10 +242,7 @@ export function addKdbConnection(): void {
               window.showInputBox(connectionPassword).then(async (password) => {
                 // store secrets
                 let authUsed = false;
-                if (
-                  (username != undefined || username != "") &&
-                  (password != undefined || password != "")
-                ) {
+                if (username && password) {
                   authUsed = true;
                   ext.secretSettings.storeAuthData(
                     alias !== undefined
@@ -273,6 +337,12 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
   }
 }
 
+export async function connectInsights(viewItem: InsightsNode): Promise<void> {
+  const tokens = await signIn(viewItem.details.server);
+  window.showInformationMessage(JSON.stringify(tokens));
+  ext.outputChannel.appendLine(JSON.stringify(tokens));
+}
+
 export async function connect(viewItem: KdbNode): Promise<void> {
   // handle cleaning up existing connection
   if (
@@ -287,9 +357,10 @@ export async function connect(viewItem: KdbNode): Promise<void> {
   }
 
   // check for auth
-  const authCredentials = await ext.secretSettings.getAuthData(
-    viewItem.children[0]
-  );
+  const authCredentials = viewItem.details.auth
+    ? await ext.secretSettings.getAuthData(viewItem.children[0])
+    : undefined;
+
   const servers: Server | undefined = getServers();
   if (servers === undefined) {
     window.showErrorMessage("Server not found.");

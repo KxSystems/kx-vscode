@@ -31,6 +31,7 @@ import {
 import {
   addNewConnection,
   connect,
+  connectInsights,
   disconnect,
   removeConnection,
   runQuery,
@@ -42,12 +43,18 @@ import {
 } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
 import { ExecutionTypes } from "./models/execution";
+import { Insights } from "./models/insights";
 import { QueryResult } from "./models/queryResult";
 import { Server } from "./models/server";
-import { KdbNode, KdbTreeProvider } from "./services/kdbTreeProvider";
+import {
+  InsightsNode,
+  KdbNode,
+  KdbTreeProvider,
+} from "./services/kdbTreeProvider";
 import {
   checkLocalInstall,
   formatTable,
+  getInsights,
   getServers,
   initializeLocalServers,
   isTable,
@@ -68,7 +75,9 @@ export async function activate(context: ExtensionContext) {
   )).getApi("1.0.0");
 
   const servers: Server | undefined = getServers();
-  ext.serverProvider = new KdbTreeProvider(servers!);
+  const insights: Insights | undefined = getInsights();
+
+  ext.serverProvider = new KdbTreeProvider(servers!, insights!);
   window.registerTreeDataProvider("kdb-servers", ext.serverProvider);
 
   // initialize local servers
@@ -97,6 +106,12 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.connect", async (viewItem: KdbNode) => {
       await connect(viewItem);
     }),
+    commands.registerCommand(
+      "kdb.insightsConnect",
+      async (viewItem: InsightsNode) => {
+        await connectInsights(viewItem);
+      }
+    ),
     commands.registerCommand("kdb.disconnect", async () => {
       await disconnect();
     }),
@@ -260,7 +275,7 @@ export async function activate(context: ExtensionContext) {
     });
   });
 
-  Telemetry.sendEvent('Extension.Activated');
+  Telemetry.sendEvent("Extension.Activated");
 }
 
 export async function deactivate(): Promise<void> {

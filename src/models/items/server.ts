@@ -15,6 +15,17 @@ export const serverEndpoints: QuickPickItem[] = [
   },
 ];
 
+export const insightsAliasInput = {
+  prompt:
+    "Enter a name/alias for the connection (default will be the instance name)",
+  placeholder: "server name / alias",
+};
+
+export const insightsUrlInput = {
+  prompt: "Enter the insights endpoint url",
+  placeholder: "http://<insights endpoint>",
+};
+
 export const connectionAliasInput = {
   prompt: "Enter a name/alias for the connection",
   placeholder: "server name / alias",

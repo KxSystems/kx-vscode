@@ -132,6 +132,10 @@
           "type": "object",
           "description": "kdb servers for explorer"
         },
+        "kdb.insights": {
+          "type": "object",
+          "description": "kdb insights for explorer"
+        },
         "kdb.hideWalkthrough": {
           "type": "boolean",
           "description": "Hide visibility of the walkthrough at startup of extension"
@@ -178,6 +182,10 @@
       {
         "command": "kdb.connect",
         "title": "Connect kdb server"
+      },
+      {
+        "command": "kdb.insightsConnect",
+        "title": "Connect to Insights"
       },
       {
         "command": "kdb.disconnect",
@@ -291,6 +299,11 @@
         {
           "command": "kdb.connect",
           "when": "view == kdb-servers && viewItem not in kdb.connected && viewItem in kdb.rootNodes",
+          "group": "connection"
+        },
+        {
+          "command": "kdb.insightsConnect",
+          "when": "view == kdb-servers && viewItem not in kdb.connected && viewItem in kdb.insightsNodes",
           "group": "connection"
         },
         {

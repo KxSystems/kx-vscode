@@ -4,7 +4,11 @@ import { AzureAccountExtensionApi } from "./azure-account.api";
 import { Connection } from "./models/connection";
 import { LocalProcess } from "./models/localProcess";
 import { ServerObject } from "./models/serverObject";
-import { KdbNode, KdbTreeProvider } from "./services/kdbTreeProvider";
+import {
+  InsightsNode,
+  KdbNode,
+  KdbTreeProvider,
+} from "./services/kdbTreeProvider";
 import AuthSettings from "./utils/secretStorage";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -16,8 +20,9 @@ export namespace ext {
   export let serverObjects: ServerObject;
 
   export let connection: Connection | undefined;
-  export let connectionNode: KdbNode | undefined;
+  export let connectionNode: KdbNode | InsightsNode | undefined;
   export const kdbrootNodes: string[] = [];
+  export const kdbinsightsNodes: string[] = [];
   export const maxRetryCount = 5;
 
   export let secretSettings: AuthSettings;
@@ -62,11 +67,10 @@ export namespace ext {
   };
 
   export const insightsAuthUrls = {
-    authURL: "oauth2/auth",
-    baseURL: "https://oauth.<test>.io",
-    callbackURL: "http://127.0.0.1:9010/callback",
-    revoke: "oauth2/revoke",
-    tokenURL: "oauth2/token",
+    authURL: "auth/realms/insights/protocol/openid-connect/auth ",
+    callbackURL: "http://localhost:9010/redirect",
+    revoke: "auth/realms/insights/protocol/openid-connect/revoke",
+    tokenURL: "auth/realms/insights/protocol/openid-connect/token",
   };
 
   export const insightsGrantType = {
