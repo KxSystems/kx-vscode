@@ -45,26 +45,10 @@ const webviewConfig = {
 (async () => {
   const args = process.argv.slice(2);
   try {
-    // if (args.includes("--watch")) {
-    //   // Build and watch extension and webview code
-    //   console.log("[watch] build started");
-    //   await build({
-    //     ...serverConfig,
-    //     ...watchConfig,
-    //   });
-    //   console.log("[server watch] build started");
-    //   await build({
-    //     ...webviewConfig,
-    //     ...watchConfig,
-    //   });
-    //   console.log("[webview watch] build finished");
-    // } else {
-    // Build extension and webview code
     await build(serverConfig);
     console.log("server build complete");
     await build(webviewConfig);
     console.log("build complete");
-    // }
   } catch (err) {
     process.stderr.write(err.stderr);
     process.exit(1);
