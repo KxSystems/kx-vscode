@@ -41,29 +41,28 @@ export class DataSourcesPanel {
     extensionUri: vscode.Uri,
     datasourceFile: DataSourceFiles
   ) {
-    console.log(datasourceFile);
     this.dataSourceFile = datasourceFile;
     if (DataSourcesPanel.currentPanel) {
-      DataSourcesPanel.currentPanel._panel.reveal(vscode.ViewColumn.One);
-    } else {
-      const panel = vscode.window.createWebviewPanel(
-        "dataSource",
-        datasourceFile.name,
-        vscode.ViewColumn.One,
-        {
-          // Enable javascript in the webview
-          enableScripts: true,
-          // Restrict the webview to only load resources from the `out` directory
-          localResourceRoots: [vscode.Uri.joinPath(extensionUri, "out")],
-        }
-      );
-
-      DataSourcesPanel.currentPanel = new DataSourcesPanel(
-        panel,
-        extensionUri,
-        datasourceFile
-      );
+      DataSourcesPanel.currentPanel.dispose();
+      // DataSourcesPanel.currentPanel._panel.reveal(vscode.ViewColumn.One);
     }
+    const panel = vscode.window.createWebviewPanel(
+      "dataSource",
+      datasourceFile.name,
+      vscode.ViewColumn.One,
+      {
+        // Enable javascript in the webview
+        enableScripts: true,
+        // Restrict the webview to only load resources from the `out` directory
+        localResourceRoots: [vscode.Uri.joinPath(extensionUri, "out")],
+      }
+    );
+
+    DataSourcesPanel.currentPanel = new DataSourcesPanel(
+      panel,
+      extensionUri,
+      datasourceFile
+    );
   }
 
   public dispose() {
