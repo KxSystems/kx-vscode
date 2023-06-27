@@ -203,14 +203,6 @@ export async function activate(context: ExtensionContext) {
     })
   );
 
-  // if (window.registerWebviewPanelSerializer) {
-  //   window.registerWebviewPanelSerializer(DataSourcesPanel.viewType, {
-  //     async deserializeWebviewPanel(webviewPanel: WebviewPanel, state: any) {
-  //       DataSourcesPanel.revive(webviewPanel, context.extensionUri);
-  //     },
-  //   });
-  // }
-
   const lastResult: QueryResult | undefined = undefined;
   const resultSchema = "vscode-kdb-q";
   const resultProvider = new (class implements TextDocumentContentProvider {
@@ -345,13 +337,3 @@ export async function deactivate(): Promise<void> {
   }
   return ext.client.stop();
 }
-
-// function getWebviewOptions(extensionUri: Uri): WebviewOptions {
-// 	return {
-// 		// Enable javascript in the webview
-// 		enableScripts: true,
-
-// 		// And restrict the webview to only loading content from our extension's `media` directory.
-// 		localResourceRoots: [Uri.joinPath(extensionUri, 'media')]
-// 	};
-// }
