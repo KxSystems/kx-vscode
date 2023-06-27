@@ -34,6 +34,7 @@ import {
   connectInsights,
   disconnect,
   removeConnection,
+  removeInsightsConnection,
   runQuery,
 } from "./commands/serverCommand";
 import {
@@ -110,6 +111,12 @@ export async function activate(context: ExtensionContext) {
       "kdb.insightsConnect",
       async (viewItem: InsightsNode) => {
         await connectInsights(viewItem);
+      }
+    ),
+    commands.registerCommand(
+      "kdb.insightsRemove",
+      async (viewItem: InsightsNode) => {
+        await removeInsightsConnection(viewItem);
       }
     ),
     commands.registerCommand("kdb.disconnect", async () => {

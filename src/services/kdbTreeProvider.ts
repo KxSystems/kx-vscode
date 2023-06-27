@@ -39,6 +39,11 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     this._onDidChangeTreeData.fire();
   }
 
+  refreshInsights(insightsList: Insights): void {
+    this.insightList = insightsList;
+    this._onDidChangeTreeData.fire();
+  }
+
   getTreeItem(element: KdbNode | InsightsNode): TreeItem {
     return element;
   }

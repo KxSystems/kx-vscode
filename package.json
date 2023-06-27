@@ -188,6 +188,10 @@
         "title": "Connect to Insights"
       },
       {
+        "command": "kdb.insightsRemove",
+        "title": "Remove connection"
+      },
+      {
         "command": "kdb.disconnect",
         "title": "Disconnect kdb server"
       },
@@ -304,6 +308,11 @@
         {
           "command": "kdb.insightsConnect",
           "when": "view == kdb-servers && viewItem not in kdb.connected && viewItem in kdb.insightsNodes",
+          "group": "connection"
+        },
+        {
+          "command": "kdb.insightsRemove",
+          "when": "view == kdb-servers && viewItem in kdb.insightsNodes",
           "group": "connection"
         },
         {

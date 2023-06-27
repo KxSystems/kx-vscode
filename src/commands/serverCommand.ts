@@ -125,7 +125,7 @@ export async function addInsightsConnection() {
         await updateInsights(insights);
         const newInsights = getInsights();
         if (newInsights != undefined) {
-          // ext.serverProvider.refresh(newServers);
+          ext.serverProvider.refreshInsights(newInsights);
         }
       }
     });
@@ -339,8 +339,32 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
 
 export async function connectInsights(viewItem: InsightsNode): Promise<void> {
   const tokens = await signIn(viewItem.details.server);
-  window.showInformationMessage(JSON.stringify(tokens));
-  ext.outputChannel.appendLine(JSON.stringify(tokens));
+  ext.outputChannel.appendLine(
+    `Connection established successfully to: ${viewItem.details.server}`
+  );
+  ext.connectionNode = viewItem;
+  ext.serverProvider.reload();
+}
+
+export async function removeInsightsConnection(
+  viewItem: InsightsNode
+): Promise<void> {
+  const insights: Insights | undefined = getInsights();
+
+  const key = getHash(viewItem.details.server);
+  if (insights != undefined && insights[key]) {
+    const uInsights = Object.keys(insights).filter((insight) => {
+      return insight !== key;
+    });
+
+    const updatedInsights: Insights = {};
+    uInsights.forEach((insight) => {
+      updatedInsights[insight] = insights[insight];
+    });
+
+    await updateInsights(updatedInsights);
+    ext.serverProvider.refreshInsights(updatedInsights);
+  }
 }
 
 export async function connect(viewItem: KdbNode): Promise<void> {
