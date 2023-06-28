@@ -23,7 +23,7 @@ export const insightsAliasInput = {
 
 export const insightsUrlInput = {
   prompt: "Enter the insights endpoint url",
-  placeholder: "http://<insights endpoint>",
+  placeholder: "https://<insights endpoint>",
 };
 
 export const connectionAliasInput = {

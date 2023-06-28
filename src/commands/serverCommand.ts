@@ -89,16 +89,6 @@ export async function addInsightsConnection() {
         insights_alias = host.host.split(".")[0];
       }
 
-      /*
-      const token = await signIn(insights_url!);
-
-      // store token
-      ext.secretSettings.storeAuthData(
-        getHash(insights_alias),
-        JSON.stringify(token)
-      );
-      */
-
       let insights: Insights | undefined = getInsights();
       if (insights != undefined && insights[getHash(insights_url!)]) {
         await window.showErrorMessage(
