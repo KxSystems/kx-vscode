@@ -270,7 +270,7 @@
       "kdb-explorer": [
         {
           "id": "kdb-servers",
-          "name": "kdb servers",
+          "name": "Connections",
           "icon": "resources/server.svg"
         }
       ]
