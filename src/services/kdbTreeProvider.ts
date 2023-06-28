@@ -355,8 +355,8 @@ export class InsightsNode extends TreeItem {
       "light",
       ext.connectionNode != undefined &&
         this.label === ext.connectionNode.label + " (connected)"
-        ? "p-data.svg"
-        : "p-data.svg"
+        ? "p-insights.svg"
+        : "p-insights.svg"
     ),
     dark: path.join(
       __filename,
@@ -366,8 +366,8 @@ export class InsightsNode extends TreeItem {
       "dark",
       ext.connectionNode != undefined &&
         this.label === ext.connectionNode.label + " (connected)"
-        ? "p-data.svg"
-        : "p-data.svg"
+        ? "p-insights.svg"
+        : "p-insights.svg"
     ),
   };
 
