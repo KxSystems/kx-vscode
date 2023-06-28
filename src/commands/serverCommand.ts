@@ -65,9 +65,12 @@ export async function addNewConnection(): Promise<void> {
     serverEndpoints,
     options
   );
-  if (resultType!.label === kdbEndpoint) {
+  if (resultType !== undefined && resultType!.label === kdbEndpoint) {
     addKdbConnection();
-  } else if (resultType!.label === kdbInsightsEndpoint) {
+  } else if (
+    resultType !== undefined &&
+    resultType!.label === kdbInsightsEndpoint
+  ) {
     await addInsightsConnection();
   }
 }
