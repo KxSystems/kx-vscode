@@ -1,4 +1,3 @@
-import { AzureExtensionApiProvider } from "@microsoft/vscode-azext-utils/api";
 import path from "path";
 import {
   CancellationToken,
@@ -7,7 +6,6 @@ import {
   CompletionItemKind,
   EventEmitter,
   ExtensionContext,
-  extensions,
   languages,
   Position,
   TextDocument,
@@ -69,11 +67,6 @@ let client: LanguageClient;
 export async function activate(context: ExtensionContext) {
   ext.context = context;
   ext.outputChannel = window.createOutputChannel("kdb");
-
-  // integration wtih Azure Account extension (https://marketplace.visualstudio.com/items?itemName=ms-vscode.azure-account)
-  ext.azureAccount = (<AzureExtensionApiProvider>(
-    extensions.getExtension("ms-vscode.azure-account")!.exports
-  )).getApi("1.0.0");
 
   const servers: Server | undefined = getServers();
   const insights: Insights | undefined = getInsights();

@@ -4,7 +4,6 @@ import * as url from "url";
 import {
   commands,
   InputBoxOptions,
-  ProgressLocation,
   QuickPickItem,
   QuickPickOptions,
   Range,
@@ -28,15 +27,8 @@ import {
   serverEndpoints,
 } from "../models/items/server";
 import { queryConstants } from "../models/queryResult";
-import { ResourceGroupItem } from "../models/resourceGroupItem";
 import { Server } from "../models/server";
 import { ServerObject } from "../models/serverObject";
-import { SubscriptionItem } from "../models/subscriptionItem";
-import {
-  createResourceGroup,
-  showResourceGroups,
-  showSubscriptions,
-} from "../services/azureProvider";
 import { signIn } from "../services/kdbInsights/codeFlowLogin";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import {
@@ -123,80 +115,6 @@ export async function addInsightsConnection() {
       }
     });
   });
-}
-
-export async function addAzureConnection() {
-  if (!(await ext.azureAccount.waitForLogin())) {
-    await commands.executeCommand("azure-account.askForLogin");
-  }
-
-  let subscriptions: SubscriptionItem[] = [];
-
-  window
-    .withProgress(
-      {
-        location: ProgressLocation.Notification,
-        title: "Retrieving Azure subscriptions, please wait...",
-        cancellable: true,
-      },
-      async (progress, token) => {
-        token.onCancellationRequested(() => {
-          ext.outputChannel.appendLine(
-            "User cancelled the connection to Azure for subscriptions."
-          );
-        });
-
-        progress.report({ increment: 50 });
-        subscriptions = await showSubscriptions();
-        progress.report({ increment: 100 });
-
-        return new Promise<void>((resolve) => {
-          resolve();
-        });
-      }
-    )
-    .then(async () => {
-      const result = await window.showQuickPick(subscriptions);
-      if (result != undefined) {
-        const resourceGroups: ResourceGroupItem[] = [];
-        window
-          .withProgress(
-            {
-              location: ProgressLocation.Notification,
-              title:
-                "Retrieving resource groups for the subscription, please wait...",
-              cancellable: true,
-            },
-            async (progress, token) => {
-              token.onCancellationRequested(() => {
-                ext.outputChannel.appendLine(
-                  "User cancelled the connection to Azure for resource groups."
-                );
-              });
-
-              progress.report({ increment: 50 });
-              const resourceGroupsResult = await showResourceGroups(result);
-              resourceGroups.push({ label: "$(plus) Create Resource Group" });
-              resourceGroups.push(...resourceGroupsResult);
-              progress.report({ increment: 100 });
-
-              return new Promise<void>((resolve) => {
-                resolve();
-              });
-            }
-          )
-          .then(async () => {
-            const resourceGroup = await window.showQuickPick(resourceGroups);
-            if (resourceGroup != undefined) {
-              if (resourceGroup.label === "$(plus) Create Resource Group") {
-                await createResourceGroup(result);
-                return;
-              }
-              window.showInformationMessage(resourceGroup.label);
-            }
-          });
-      }
-    });
 }
 
 export function addKdbConnection(): void {
