@@ -284,8 +284,40 @@
     "menus": {
       "commandPalette": [
         {
-          "when": "false",
-          "command": "kdb.hideWalkthrough"
+          "command": "kdb.hideWalkthrough",
+          "when": "false"
+        },
+        {
+          "command": "kdb.insightsConnect",
+          "when": "false"
+        },
+        {
+          "command": "kdb.insightsRemove",
+          "when": "false"
+        },
+        {
+          "command": "kdb.startLocalProcess",
+          "when": "false"
+        },
+        {
+          "command": "kdb.stopLocalProcess",
+          "when": "false"
+        },
+        {
+          "command": "kdb.addConnection",
+          "when": "false"
+        },
+        {
+          "command": "kdb.removeConnection",
+          "when": "false"
+        },
+        {
+          "command": "kdb.connect",
+          "when": "false"
+        },
+        {
+          "command": "kdb.disconnect",
+          "when": "false"
         }
       ],
       "view/title": [

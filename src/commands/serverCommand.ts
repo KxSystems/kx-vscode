@@ -89,7 +89,7 @@ export async function addInsightsConnection() {
     window.showInputBox(insightsUrl).then(async (insights_url) => {
       if (insights_alias === undefined || insights_alias === "") {
         const host = new url.URL(insights_url!);
-        insights_alias = host.host.split(".")[0];
+        insights_alias = host.host;
       }
 
       let insights: Insights | undefined = getInsights();
