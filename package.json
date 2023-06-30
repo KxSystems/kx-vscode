@@ -408,7 +408,7 @@
   "homepage": "https://github.com/KxSystems/kx-vscode#readme",
   "scripts": {
     "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
-    "esbuild-base": "rimraf out && node ./esbuild.js  && node ./esbuildOthers.js",
+    "esbuild-base": "rimraf out && node ./esbuild.js",
     "build": "npm run -S esbuild-base -- --sourcemap",
     "watch": "npm run -S esbuild-base -- --sourcemap --watch",
     "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
