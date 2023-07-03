@@ -9,6 +9,8 @@ import {
   KdbNode,
   KdbTreeProvider,
 } from "./services/kdbTreeProvider";
+import { KdbDataSourceProvider } from "./services/dataSourceTreeProvider";
+import { KdbNode, KdbTreeProvider } from "./services/kdbTreeProvider";
 import AuthSettings from "./utils/secretStorage";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -17,10 +19,15 @@ export namespace ext {
   export let outputChannel: OutputChannel;
   export let consolePanel: OutputChannel;
   export let serverProvider: KdbTreeProvider;
+  export let dataSourceProvider: KdbDataSourceProvider;
   export let serverObjects: ServerObject;
 
   export let connection: Connection | undefined;
   export let connectionNode: KdbNode | InsightsNode | undefined;
+  export const kdbDataSourceFolder = ".kdb-datasources";
+  export const kdbDataSourceFileExtension = ".ds";
+  export const kdbDataSourceFileGlob = "*.ds";
+  export const kdbDataSourceRootNodes: string[] = [];
   export const kdbrootNodes: string[] = [];
   export const kdbinsightsNodes: string[] = [];
   export const maxRetryCount = 5;
@@ -49,7 +56,7 @@ export namespace ext {
 
   export let client: LanguageClient;
 
-  const extensionId = "kx.kdb-vscode";
+  export const extensionId = "kx.kdb-vscode";
   const packageJSON = extensions.getExtension(extensionId)!.packageJSON;
   export const extensionName = packageJSON.name;
   export const extensionVersion = packageJSON.version;

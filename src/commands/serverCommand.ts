@@ -4,6 +4,8 @@ import * as url from "url";
 import {
   commands,
   InputBoxOptions,
+  Position,
+  ProgressLocation,
   QuickPickItem,
   QuickPickOptions,
   Range,
@@ -347,11 +349,14 @@ export async function disconnect(): Promise<void> {
   ext.serverProvider.reload();
 }
 
-export async function executeQuery(query: string): Promise<void> {
+export async function executeQuery(
+  query: string,
+  context?: string
+): Promise<void> {
   const queryConsole = ExecutionConsole.start();
   if (ext.connection !== undefined && query.length > 0) {
     query = sanitizeQuery(query);
-    const queryRes = await ext.connection.executeQuery(query);
+    const queryRes = await ext.connection.executeQuery(query, context);
     writeQueryResult(queryRes, query);
   } else {
     queryConsole.appendQueryError(
@@ -364,25 +369,66 @@ export async function executeQuery(query: string): Promise<void> {
   }
 }
 
+export function getQueryContext(lineNum?: number): string {
+  let context = ".";
+  const editor = window.activeTextEditor;
+  const fullText = typeof lineNum !== "number";
+
+  if (editor) {
+    const document = editor.document;
+    let text;
+
+    if (fullText) {
+      text = editor.document.getText();
+    } else {
+      const line = document.lineAt(lineNum);
+      text = editor.document.getText(
+        new Range(
+          new Position(0, 0),
+          new Position(lineNum, line.range.end.character)
+        )
+      );
+    }
+
+    // matches '\d .foo' or 'system "d .foo"'
+    const pattern = /^(system\s*"d|\\d)\s+([^\s"]+)/gm;
+
+    const matches = [...text.matchAll(pattern)];
+    if (matches.length) {
+      // fullText should use first defined context
+      // a selection should use the last defined context
+      context = fullText ? matches[0][2] : matches[matches.length - 1][2];
+    }
+  }
+
+  return context;
+}
+
 export function runQuery(type: ExecutionTypes) {
   const editor = window.activeTextEditor;
   if (editor) {
+    let context;
     let query;
     switch (type) {
       case ExecutionTypes.QuerySelection:
         query = editor?.document.getText(
           new Range(editor.selection.start, editor.selection.end)
         );
+
         if (query === "") {
           const docLine = editor.selection.active.line;
           query = editor.document.lineAt(docLine).text;
+          context = getQueryContext(docLine);
+        } else {
+          context = getQueryContext(editor.selection.end.line);
         }
         break;
       case ExecutionTypes.QueryFile:
       default:
         query = editor.document.getText();
+        context = getQueryContext();
     }
-    executeQuery(query);
+    executeQuery(query, context);
   }
 }
 

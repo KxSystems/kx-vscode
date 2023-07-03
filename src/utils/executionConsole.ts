@@ -65,7 +65,7 @@ export class ExecutionConsole {
       this._console.appendLine(`ERROR Query executed: ${query}`);
       this._console.appendLine(result);
     } else {
-      this._console.appendLine(`Please connect to a kbd+ server`);
+      this._console.appendLine(`Please connect to a kdb+ server`);
     }
     this._console.appendLine(`<<< >>>`);
   }

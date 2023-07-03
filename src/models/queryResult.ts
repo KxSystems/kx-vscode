@@ -1,12 +1,12 @@
-import { MetaResult } from "./metaResult";
-
 export type QueryResult = {
-  result: boolean;
-  type: number;
-  keys: string[];
-  meta: MetaResult[];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  data: any;
+  result: string;
+  errored: boolean;
+  error: string;
+  backtrace: {
+    name: string;
+    text: string;
+    index: number;
+  }[];
 };
 
 export enum QueryResultType {

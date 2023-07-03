@@ -8,7 +8,7 @@
   "engines": {
     "vscode": "^1.66.0"
   },
-  "icon": "images/kx-logo-vs.png",
+  "icon": "resources/images/kx-logo-vs.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/KxSystems/kx-vscode.git"
@@ -28,6 +28,9 @@
     "onCommand:kdb.removeConnection",
     "onCommand:kdb.connect",
     "onCommand:kdb.disconnect",
+    "onCommand:kdb.dataSource.addDataSource",
+    "onCommand:kdb.dataSource.renameDataSource",
+    "onCommand:kdb.dataSource.deleteDataSource",
     "onWalkthrough:kdb.hideWalkthrough",
     "onView:kdb-servers",
     "onTerminalProfile:kdb.q-terminal"
@@ -196,6 +199,18 @@
         "title": "Disconnect kdb server"
       },
       {
+        "command": "kdb.dataSource.addDataSource",
+        "title": "Add new DataSource"
+      },
+      {
+        "command": "kdb.dataSource.renameDataSource",
+        "title": "Rename DataSource"
+      },
+      {
+        "command": "kdb.dataSource.deleteDataSource",
+        "title": "Delete DataSource"
+      },
+      {
         "command": "kdb.terminal.run",
         "title": "Run q file in a new q instance"
       },
@@ -244,8 +259,8 @@
           ".quke"
         ],
         "icon": {
-          "dark": "./images/kx.png",
-          "light": "./images/kx.png"
+          "dark": "./resources/dark/kx_logo.png",
+          "light": "./resources/light/kx_logo.png"
         },
         "configuration": "./language-configuration.json"
       }
@@ -272,6 +287,11 @@
           "id": "kdb-servers",
           "name": "Connections",
           "icon": "resources/server.svg"
+        },
+        {
+          "id": "kdb-datasources-explorer",
+          "name": "Data Sources",
+          "contextualTitle": "Data Sources"
         }
       ]
     },
@@ -329,6 +349,11 @@
           "command": "kdb.refreshServerObjects",
           "when": "view == kdb-servers",
           "group": "navigation"
+        },
+        {
+          "command": "kdb.dataSource.addDataSource",
+          "when": "view == kdb-datasources-explorer",
+          "group": "dataSourceFiles"
         }
       ],
       "view/item/context": [
@@ -366,6 +391,16 @@
           "command": "kdb.stopLocalProcess",
           "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running && viewItem in kdb.rootNodes",
           "group": "connection"
+        },
+        {
+          "command": "kdb.dataSource.renameDataSource",
+          "when": "view == kdb-datasources-explorer && viewItem in kdb.dataSourceTreeNodes",
+          "group": "dataSourceFiles"
+        },
+        {
+          "command": "kdb.dataSource.deleteDataSource",
+          "when": "view == kdb-datasources-explorer && viewItem in kdb.dataSourceTreeNodes",
+          "group": "dataSourceFiles"
         }
       ],
       "editor/title": [

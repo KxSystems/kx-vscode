@@ -297,50 +297,50 @@ xrank,group by value,xrank[int;list],2
 .Q.x10,decode binhex,.Q.x10[long],2
 .Q.x12,decode base64,.Q.x12[long],2
 .Q.Xf,create file,.Q.Xf[upper case char|type sym],2
-.z.a,Returns the IP address as a 32-bit integer.,Returns the IP address as a 32-bit integer.,2
-.z.ac,"Http authenticate from cookie. Allows users to define custom code to extract Single Sign On (SSO) token cookies from the http header and verify it, decoding and returning the username, or instructing what action to take.","Http authenticate from cookie. Allows users to define custom code to extract Single Sign On (SSO) token cookies from the http header and verify it, decoding and returning the username, or instructing what action to take.",3
-.z.b,Returns the dependency dictionary.,Returns the dependency dictionary.,2
-.z.bm,"KDB+ validates incoming ipc messages to check that data structures are well formed, reporting 'badMsg and disconnecting senders of malformed data structures. The raw message is captured for analysis via the callback .z.bm.","KDB+ validates incoming ipc messages to check that data structures are well formed, reporting 'badMsg and disconnecting senders of malformed data structures. The raw message is captured for analysis via the callback .z.bm.",6
-.z.c,Physical core count.,Physical core count.,6
-.z.e,TLS connection status.,TLS connection status.,6
-.z.exit,Exit behavior callback. Default: NOOP.,Exit behavior callback. Default: NOOP.,3
-.z.f,Returns the name of the q script as a symbol.,Returns the name of the q script as a symbol.,2
-.z.h,Returns the host name as a symbol.,Returns the host name as a symbol.,2
-.z.i,Returns the process id as an integer.,Returns the process id as an integer.,2
-.z.k,Returns the date on which the version of kdb+ being used was released.,Returns the date on which the version of kdb+ being used was released.,2
-.z.K,Return the major version number of the version of kdb+ being used as a float.,Return the major version number of the version of kdb+ being used as a float.,2
-.z.l,Returns the license information as a list of strings.,Returns the license information as a list of strings.,2
-.z.n,System GMT time (as timespan) in nanoseconds.,System GMT time (as timespan) in nanoseconds.,6
-.z.N,System local time (as timespan) in nanoseconds.,System local time (as timespan) in nanoseconds.,6
-.z.o,Return the kdb+ operating system version as a symbol.,Return the kdb+ operating system version as a symbol.,6
-.z.p,System gmt timestamp in nanoseconds.,System gmt timestamp in nanoseconds.,6
-.z.P,System localtime timestamp in nanoseconds.,System localtime timestamp in nanoseconds.,6
-.z.pc,Port close - Called AFTER a connection has been closed.,Port close - Called AFTER a connection has been closed.,3
-.z.pg,"Port get - When .z.pg is set, it is called with the object that is passed to this kdb+ session via a synchronous request. The return value, if any, is returned to the calling task.","Port get - When .z.pg is set, it is called with the object that is passed to this kdb+ session via a synchronous request. The return value, if any, is returned to the calling task.",2
-.z.pd,"Peach handles - Indicating that N worker processes should be used for executing the function supplied to peach, kdb+ gets the handles to those worker processes by calling .z.pd[]. Syntax: .z.pd:`u#hopen each 20000+til 4","Peach handles - Indicating that N worker processes should be used for executing the function supplied to peach, kdb+ gets the handles to those worker processes by calling .z.pd[]. Syntax: .z.pd:`u#hopen each 20000+til 4",2
-.z.ph,Port HttpGet - Called when a synchronous http request comes into the kdb+ session.,Port HttpGet - Called when a synchronous http request comes into the kdb+ session.,3
-.z.pi,The default handler for input.,The default handler for input.,6
-.z.pm,Pass http OPTIONS method through to .z.pm as (`OPTIONS;requestText;requestHeaderDict).,Pass http OPTIONS method through to .z.pm as (`OPTIONS;requestText;requestHeaderDict).,3
-.z.po,Port open - Called when a connection to a kdb+ session has been initialized.,Port open - Called when a connection to a kdb+ session has been initialized.,3
-.z.pp,Port post - Called when an http postrequest comes into the kdb+ session.,Port post - Called when an http postrequest comes into the kdb+ session.,3
-.z.ps,"Port set - When .z.ps is set, it is called with the object that is passed to this kdb+ session via an asynchronous request. The return value is discarded.","Port set - When .z.ps is set, it is called with the object that is passed to this kdb+ session via an asynchronous request. The return value is discarded.",3
-.z.pw,"Validate user - Called AFTER the -u/-U checks, and BEFORE .z.po when opening a new connection to a kdb+ session.","Validate user - Called AFTER the -u/-U checks, and BEFORE .z.po when opening a new connection to a kdb+ session.",3
-.z.q,Quiet mode,Quiet mode,6
-.z.s,Self - Returns the current function. Can be used to generate recursive function calls.,Self - Returns the current function. Can be used to generate recursive function calls.,6
-.z.ts,"Function which is invoked on intervals of the timer variable (	).","Function which is invoked on intervals of the timer variable (	).",3
-.z.u,User ID - Returns user's name as a symbol.,User ID - Returns user's name as a symbol.,6
-.z.vs,"Value set - Once .z.vs is defined, it is called with two arguments. The first argument is the symbol of the variable that is being modified and the second is the index.","Value set - Once .z.vs is defined, it is called with two arguments. The first argument is the symbol of the variable that is being modified and the second is the index.",6
-.z.w,"Connection handle, 0 for current session console.","Connection handle, 0 for current session console.",6
-.z.wc,Websocket close - Called after a websocket connection has been closed.,Websocket close - Called after a websocket connection has been closed.,3
-.z.wo,Websocket open - Called when a websocket connection to a kdb+ session has been initialized.,Websocket open - Called when a websocket connection to a kdb+ session has been initialized.,3
-.z.W,Handles - Returns a dictionary of ipc handles with the number of bytes waiting in their output queues.,Handles - Returns a dictionary of ipc handles with the number of bytes waiting in their output queues.,2
-.z.ws,Websockets - Called when a message on a websocket arrives.,Websockets - Called when a message on a websocket arrives.,3
-.z.x,Returns the command line arguments as a list of strings.,Returns the command line arguments as a list of strings.,2
-.z.X,"Returns a list of char vectors of the raw, unfiltered cmd line with which kdb+ was invoked, including the name under which q was invoked as well as single-letter arguments.","Returns a list of char vectors of the raw, unfiltered cmd line with which kdb+ was invoked, including the name under which q was invoked as well as single-letter arguments.",2
-.z.z,Returns UTC time as a datetime scalar.,Returns UTC time as a datetime scalar.,2
-.z.Z,Returns local time as a datetime scalar.,Returns local time as a datetime scalar.,2
-.z.t,Returns UTC time as `time. Shorthand for `time$.z.z,Returns UTC time as `time. Shorthand for `time$.z.z,2
-.z.T,Returns local time as `time. Shorthand for `time$.z.Z,Returns local time as `time. Shorthand for `time$.z.Z,2
-.z.d,Returns UTC time as `date. Shorthand for `date$.z.z,Returns UTC time as `date. Shorthand for `date$.z.z,2
-.z.D,Returns local time as `date. Shorthand for `date$.z.Z,Returns local time as `date. Shorthand for `date$.z.Z,2
-.z.zd,"Zip defaults - If defined, is an integer list of default parameters for logical block size, compression algorithm and compression level that apply when saving to files with no file extension.","Zip defaults - If defined, is an integer list of default parameters for logical block size, compression algorithm and compression level that apply when saving to files with no file extension.",6
+.z.a,Returns the IP address as a 32-bit integer.,.z.a[{x;y}],2
+.z.ac,"Http authenticate from cookie. Allows users to define custom code to extract Single Sign On (SSO) token cookies from the http header and verify it, decoding and returning the username, or instructing what action to take.",.z.ac[],3
+.z.b,Returns the dependency dictionary.,.z.b[],2
+.z.bm,"KDB+ validates incoming ipc messages to check that data structures are well formed, reporting 'badMsg and disconnecting senders of malformed data structures. The raw message is captured for analysis via the callback .z.bm.",.z.bm[],6
+.z.c,Physical core count.,.z.c[],6
+.z.e,TLS connection status.,.z.e[],6
+.z.exit,Exit behavior callback. Default: NOOP.,.z.exit[],3
+.z.f,Returns the name of the q script as a symbol.,.z.f[],2
+.z.h,Returns the host name as a symbol.,.z.h[filename],2
+.z.i,Returns the process id as an integer.,.z.i[],2
+.z.k,Returns the date on which the version of kdb+ being used was released.,.z.k[x],2
+.z.K,Return the major version number of the version of kdb+ being used as a float.,.z.K[table],2
+.z.l,Returns the license information as a list of strings.,.z.l[],2
+.z.n,System GMT time (as timespan) in nanoseconds.,.z.n[],6
+.z.N,System local time (as timespan) in nanoseconds.,.z.N[],6
+.z.o,Return the kdb+ operating system version as a symbol.,".z.o[""Hello, world!""]",6
+.z.p,System gmt timestamp in nanoseconds.,".z.p[""Hello, world!""]",6
+.z.P,System localtime timestamp in nanoseconds.,.z.P[],6
+.z.pc,Port close - Called AFTER a connection has been closed.,.z.pc[],3
+.z.pg,"Port get - When .z.pg is set, it is called with the object that is passed to this kdb+ session via a synchronous request. The return value, if any, is returned to the calling task.",.z.pg[],2
+.z.pd,"Peach handles - Indicating that N worker processes should be used for executing the function supplied to peach, kdb+ gets the handles to those worker processes by calling .z.pd[]. Syntax: .z.pd:`u#hopen each 20000+til 4",.z.pd:5,2
+.z.ph,Port HttpGet - Called when a synchronous http request comes into the kdb+ session.,.z.ph:10,3
+.z.pi,The default handler for input.,.z.pi:2,6
+.z.pm,Pass http OPTIONS method through to .z.pm as (`OPTIONS;requestText;requestHeaderDict).,.z.pm:80,3
+.z.po,Port open - Called when a connection to a kdb+ session has been initialized.,.z.po:4,3
+.z.pp,Port post - Called when an http postrequest comes into the kdb+ session.,.z.pp:3,3
+.z.ps,"Port set - When .z.ps is set, it is called with the object that is passed to this kdb+ session via an asynchronous request. The return value is discarded.",.z.ps:10,3
+.z.pw,"Validate user - Called AFTER the -u/-U checks, and BEFORE .z.po when opening a new connection to a kdb+ session.",.z.pw:80,3
+.z.q,Quiet mode,.z.q[],6
+.z.s,Self - Returns the current function. Can be used to generate recursive function calls.,.z.s[],6
+.z.ts,"Function which is invoked on intervals of the timer variable (	).",.z.ts[],3
+.z.u,User ID - Returns user's name as a symbol.,.z.u[],6
+.z.vs,"Value set - Once .z.vs is defined, it is called with two arguments. The first argument is the symbol of the variable that is being modified and the second is the index.",".z.vs:{[sym;idx;val] .Q.s[sym,""["",string idx,""]="",string val]}",6
+.z.w,"Connection handle, 0 for current session console.",.z.w[],6
+.z.wc,Websocket close - Called after a websocket connection has been closed.,".z.wc:{[handle;code;reason] .Q.s[""Websocket closed: "",string code,"" "",reason]}",3
+.z.wo,Websocket open - Called when a websocket connection to a kdb+ session has been initialized.,".z.wo:{[handle;headers] .Q.s[""Websocket opened: "",string handle]}",3
+.z.W,Handles - Returns a dictionary of ipc handles with the number of bytes waiting in their output queues.,.z.W[],2
+.z.ws,Websockets - Called when a message on a websocket arrives.,".z.ws:{[handle;msg] .Q.s[""Websocket message: "",msg]}",3
+.z.x,Returns the command line arguments as a list of strings.,.z.x[],2
+.z.X,"Returns a list of char vectors of the raw, unfiltered cmd line with which kdb+ was invoked, including the name under which q was invoked as well as single-letter arguments.",.z.X[],2
+.z.z,Returns UTC time as a datetime scalar.,.z.z[],2
+.z.Z,Returns local time as a datetime scalar.,.z.Z[],2
+.z.t,Returns UTC time as `time. Shorthand for `time$.z.z,.z.t[],2
+.z.T,Returns local time as `time. Shorthand for `time$.z.Z,".z.T:{[ex] .Q.s[""Exception: "",string ex]}",2
+.z.d,Returns UTC time as `date. Shorthand for `date$.z.z,.z.d[],2
+.z.D,Returns local time as `date. Shorthand for `date$.z.Z,.z.D[],2
+.z.zd,"Zip defaults - If defined, is an integer list of default parameters for logical block size, compression algorithm and compression level that apply when saving to files with no file extension.",.z.zd:100 1 9,6

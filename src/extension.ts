@@ -21,6 +21,11 @@ import {
   TransportKind,
 } from "vscode-languageclient/node";
 import {
+  addDataSource,
+  deleteDataSource,
+  renameDataSource,
+} from "./commands/dataSourceCommand";
+import {
   installTools,
   startLocalProcess,
   stopLocalProcess,
@@ -50,6 +55,10 @@ import {
   KdbNode,
   KdbTreeProvider,
 } from "./services/kdbTreeProvider";
+  KdbDataSourceProvider,
+  KdbDataSourceTreeItem,
+} from "./services/dataSourceTreeProvider";
+import { KdbNode, KdbTreeProvider } from "./services/kdbTreeProvider";
 import {
   checkLocalInstall,
   formatTable,
@@ -72,7 +81,12 @@ export async function activate(context: ExtensionContext) {
   const insights: Insights | undefined = getInsights();
 
   ext.serverProvider = new KdbTreeProvider(servers!, insights!);
+  ext.dataSourceProvider = new KdbDataSourceProvider();
   window.registerTreeDataProvider("kdb-servers", ext.serverProvider);
+  window.registerTreeDataProvider(
+    "kdb-datasources-explorer",
+    ext.dataSourceProvider
+  );
 
   // initialize local servers
   if (servers !== undefined) {
@@ -83,6 +97,8 @@ export async function activate(context: ExtensionContext) {
   // initialize the secret store
   AuthSettings.init(context);
   ext.secretSettings = AuthSettings.instance;
+
+  ext.outputChannel.appendLine("kdb extension is now active!");
 
   // check for installed q runtime
   await checkLocalInstall();
@@ -127,6 +143,27 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.refreshServerObjects", () => {
       ext.serverProvider.reload();
     }),
+    commands.registerCommand("kdb.dataSource.addDataSource", async () => {
+      await addDataSource();
+    }),
+    commands.registerCommand(
+      "kdb.dataSource.renameDataSource",
+      async (viewItem: KdbDataSourceTreeItem) => {
+        window
+          .showInputBox({ prompt: "Enter new name for the DataSource" })
+          .then(async (newName) => {
+            if (newName) {
+              await renameDataSource(viewItem.label, newName);
+            }
+          });
+      }
+    ),
+    commands.registerCommand(
+      "kdb.dataSource.deleteDataSource",
+      async (viewItem: KdbDataSourceTreeItem) => {
+        await deleteDataSource(viewItem);
+      }
+    ),
     commands.registerCommand("kdb.hideWalkthrough", async () => {
       await hideWalkthrough();
     }),
@@ -280,6 +317,9 @@ export async function activate(context: ExtensionContext) {
 
 export async function deactivate(): Promise<void> {
   await Telemetry.dispose();
+  if (ext.dataSourceProvider) {
+    ext.dataSourceProvider.dispose();
+  }
 
   // cleanup of local q instance processes
   Object.keys(ext.localProcessObjects).forEach((index) => {
