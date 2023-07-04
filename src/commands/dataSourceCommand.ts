@@ -12,9 +12,6 @@ import {
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
-  if (!kdbDataSourcesFolderPath) {
-    return;
-  }
 
   let length = 0;
   let fileName = `datasource-${length}${ext.kdbDataSourceFileExtension}`;
@@ -28,9 +25,8 @@ export async function addDataSource(): Promise<void> {
   const dataSourceName = fileName.replace(ext.kdbDataSourceFileExtension, "");
   const defaultDataSourceContent = defaultDataSourceFile;
   defaultDataSourceContent.name = dataSourceName;
-  const defaultFileContent = JSON.stringify(defaultDataSourceContent);
 
-  fs.writeFileSync(filePath, defaultFileContent);
+  fs.writeFileSync(filePath, JSON.stringify(defaultDataSourceContent));
   window.showInformationMessage(
     `Created ${fileName} in ${kdbDataSourcesFolderPath}.`
   );
@@ -98,13 +94,16 @@ export async function openDataSource(
       `${dataSource.label}${ext.kdbDataSourceFileExtension}`
     ),
     (err, data) => {
+      if (err) {
+        ext.outputChannel.appendLine(
+          `Error reading the file ${dataSource.label}${ext.kdbDataSourceFileExtension}, this file maybe doesn't exist`
+        );
+        window.showErrorMessage("Error reading file");
+        return;
+      }
       if (data) {
         const datasourceContent: DataSourceFiles = JSON.parse(data.toString());
         DataSourcesPanel.render(uri, datasourceContent);
-      }
-      if (err) {
-        window.showErrorMessage("Error reading file");
-        return;
       }
     }
   );
