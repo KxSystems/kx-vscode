@@ -11,9 +11,15 @@ export function createKdbDataSourcesFolder(): string {
   const rootPath = ext.context.globalStorageUri.fsPath;
   const kdbDataSourcesFolderPath = path.join(rootPath, ext.kdbDataSourceFolder);
   if (!fs.existsSync(rootPath)) {
+    ext.outputChannel.appendLine(
+      `Directory created to the extension folder: ${rootPath}`
+    );
     fs.mkdirSync(rootPath);
   }
   if (!fs.existsSync(kdbDataSourcesFolderPath)) {
+    ext.outputChannel.appendLine(
+      `Directory created to the extension folder: ${kdbDataSourcesFolderPath}`
+    );
     fs.mkdirSync(kdbDataSourcesFolderPath);
   }
   return kdbDataSourcesFolderPath;

@@ -44,7 +44,6 @@ export class DataSourcesPanel {
     this.dataSourceFile = datasourceFile;
     if (DataSourcesPanel.currentPanel) {
       DataSourcesPanel.currentPanel.dispose();
-      // DataSourcesPanel.currentPanel._panel.reveal(vscode.ViewColumn.One);
     }
     const panel = vscode.window.createWebviewPanel(
       "dataSource",
