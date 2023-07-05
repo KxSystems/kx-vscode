@@ -25,7 +25,10 @@ import {
 import {
   addDataSource,
   deleteDataSource,
+  openDataSource,
   renameDataSource,
+  runDataSource,
+  saveDataSource,
 } from "./commands/dataSourceCommand";
 import {
   installTools,
@@ -132,6 +135,18 @@ export async function activate(context: ExtensionContext) {
       await addDataSource();
     }),
     commands.registerCommand(
+      "kdb.dataSource.saveDataSource",
+      async (dataSourceForm: any) => {
+        await saveDataSource(dataSourceForm);
+      }
+    ),
+    commands.registerCommand(
+      "kdb.dataSource.runDataSource",
+      async (dataSourceForm: any) => {
+        await runDataSource(dataSourceForm);
+      }
+    ),
+    commands.registerCommand(
       "kdb.dataSource.renameDataSource",
       async (viewItem: KdbDataSourceTreeItem) => {
         window
@@ -147,6 +162,12 @@ export async function activate(context: ExtensionContext) {
       "kdb.dataSource.deleteDataSource",
       async (viewItem: KdbDataSourceTreeItem) => {
         await deleteDataSource(viewItem);
+      }
+    ),
+    commands.registerCommand(
+      "kdb.dataSource.openDataSource",
+      async (viewItem: KdbDataSourceTreeItem) => {
+        await openDataSource(viewItem, context.extensionUri);
       }
     ),
     commands.registerCommand("kdb.hideWalkthrough", async () => {
