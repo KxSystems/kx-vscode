@@ -19,6 +19,7 @@ import {
   connectionPasswordInput,
   connectionPortInput,
   connectionUsernameInput,
+  connnectionTls,
   kdbEndpoint,
   kxInsightsEndpoint,
   serverEndpointPlaceHolder,
@@ -165,6 +166,11 @@ export function addKdbConnection(): void {
     prompt: connectionPasswordInput.prompt,
     placeHolder: connectionPasswordInput.placeholder,
     password: true,
+  };
+
+  const connectionTls: InputBoxOptions = {
+    prompt: connnectionTls.prompt,
+    placeHolder: connnectionTls.placeholder,
   };
 
   window.showInputBox(connectionAlias).then(async (alias) => {
