@@ -55,6 +55,7 @@ import {
   KdbNode,
   KdbTreeProvider,
 } from "./services/kdbTreeProvider";
+import {
   KdbDataSourceProvider,
   KdbDataSourceTreeItem,
 } from "./services/dataSourceTreeProvider";
