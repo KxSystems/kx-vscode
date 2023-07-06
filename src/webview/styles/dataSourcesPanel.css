@@ -1,0 +1,135 @@
+.datasource-view-container {
+  width: 100%;
+  height: 100%;
+}
+
+.header-wrapper {
+  display: block;
+  width: 100%;
+  float: left;
+}
+
+.btn-types-group {
+  display: block;
+  float: left;
+}
+
+.btn-api,
+.btn-qsql,
+.btn-sql {
+  width: 100px;
+  margin: 0 5px;
+}
+
+.btn-api {
+  margin-right: 5px;
+  margin-left: 0px;
+}
+
+.btn-actions-group {
+  display: block;
+  float: right;
+}
+
+.content-wrapper {
+  display: block;
+  width: 100%;
+  float: left;
+  margin-top: 25px;
+}
+
+.form-wrapper {
+  display: block;
+  width: calc(100vw - 190px);
+  float: left;
+  overflow: scroll;
+}
+.actions-wrapper {
+  display: grid;
+  width: 150px;
+  min-width: 120px;
+  margin-top: 130px;
+}
+
+.btn-action {
+  width: 100%;
+  margin: 0 10px 10px 10px;
+}
+
+.btn-save,
+.btn-run {
+  width: 100px;
+}
+
+.api-editor,
+.qsql-editor,
+.sql-editor {
+  width: 100%;
+  height: 100%;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 5px;
+  font-family: monospace;
+}
+.editor-panel {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.field-row {
+  width: 100%;
+  float: left;
+  margin-bottom: 10px;
+}
+
+.dropdown-container {
+  width: 100%;
+  align-items: center;
+  align-content: center;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.dropdown {
+  width: 100%;
+  min-width: 530px;
+}
+
+.text-input {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  align-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.text-input > .root {
+  width: 100%;
+}
+
+.text-area {
+  width: 100%;
+}
+
+#params-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: space-between;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+label {
+  min-width: 65px;
+  margin-bottom: 5px;
+}
+
+.name-row {
+  display: grid;
+}

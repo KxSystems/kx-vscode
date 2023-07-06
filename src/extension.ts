@@ -1,4 +1,3 @@
-import { AzureExtensionApiProvider } from "@microsoft/vscode-azext-utils/api";
 import path from "path";
 import {
   CancellationToken,
@@ -7,7 +6,6 @@ import {
   CompletionItemKind,
   EventEmitter,
   ExtensionContext,
-  extensions,
   languages,
   Position,
   TextDocument,
@@ -25,7 +23,10 @@ import {
 import {
   addDataSource,
   deleteDataSource,
+  openDataSource,
   renameDataSource,
+  runDataSource,
+  saveDataSource,
 } from "./commands/dataSourceCommand";
 import {
   installTools,
@@ -36,8 +37,10 @@ import {
 import {
   addNewConnection,
   connect,
+  connectInsights,
   disconnect,
   removeConnection,
+  removeInsightsConnection,
   runQuery,
 } from "./commands/serverCommand";
 import {
@@ -47,8 +50,14 @@ import {
 } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
 import { ExecutionTypes } from "./models/execution";
+import { Insights } from "./models/insights";
 import { QueryResult } from "./models/queryResult";
 import { Server } from "./models/server";
+import {
+  InsightsNode,
+  KdbNode,
+  KdbTreeProvider,
+} from "./services/kdbTreeProvider";
 import {
   KdbDataSourceProvider,
   KdbDataSourceTreeItem,
@@ -58,6 +67,7 @@ import {
   checkLocalInstall,
   checkOpenSslInstalled,
   formatTable,
+  getInsights,
   getServers,
   initializeLocalServers,
   isTable,
@@ -73,13 +83,10 @@ export async function activate(context: ExtensionContext) {
   ext.outputChannel = window.createOutputChannel("kdb");
   ext.openSslVersion = await checkOpenSslInstalled();
 
-  // integration wtih Azure Account extension (https://marketplace.visualstudio.com/items?itemName=ms-vscode.azure-account)
-  ext.azureAccount = (<AzureExtensionApiProvider>(
-    extensions.getExtension("ms-vscode.azure-account")!.exports
-  )).getApi("1.0.0");
-
   const servers: Server | undefined = getServers();
-  ext.serverProvider = new KdbTreeProvider(servers!);
+  const insights: Insights | undefined = getInsights();
+
+  ext.serverProvider = new KdbTreeProvider(servers!, insights!);
   ext.dataSourceProvider = new KdbDataSourceProvider();
   window.registerTreeDataProvider("kdb-servers", ext.serverProvider);
   window.registerTreeDataProvider(
@@ -115,6 +122,18 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.connect", async (viewItem: KdbNode) => {
       await connect(viewItem);
     }),
+    commands.registerCommand(
+      "kdb.insightsConnect",
+      async (viewItem: InsightsNode) => {
+        await connectInsights(viewItem);
+      }
+    ),
+    commands.registerCommand(
+      "kdb.insightsRemove",
+      async (viewItem: InsightsNode) => {
+        await removeInsightsConnection(viewItem);
+      }
+    ),
     commands.registerCommand("kdb.disconnect", async () => {
       await disconnect();
     }),
@@ -134,6 +153,18 @@ export async function activate(context: ExtensionContext) {
       await addDataSource();
     }),
     commands.registerCommand(
+      "kdb.dataSource.saveDataSource",
+      async (dataSourceForm: any) => {
+        await saveDataSource(dataSourceForm);
+      }
+    ),
+    commands.registerCommand(
+      "kdb.dataSource.runDataSource",
+      async (dataSourceForm: any) => {
+        await runDataSource(dataSourceForm);
+      }
+    ),
+    commands.registerCommand(
       "kdb.dataSource.renameDataSource",
       async (viewItem: KdbDataSourceTreeItem) => {
         window
@@ -149,6 +180,12 @@ export async function activate(context: ExtensionContext) {
       "kdb.dataSource.deleteDataSource",
       async (viewItem: KdbDataSourceTreeItem) => {
         await deleteDataSource(viewItem);
+      }
+    ),
+    commands.registerCommand(
+      "kdb.dataSource.openDataSource",
+      async (viewItem: KdbDataSourceTreeItem) => {
+        await openDataSource(viewItem, context.extensionUri);
       }
     ),
     commands.registerCommand("kdb.hideWalkthrough", async () => {

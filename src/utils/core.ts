@@ -9,6 +9,7 @@ import * as semver from "semver";
 import { commands, ConfigurationTarget, Uri, window, workspace } from "vscode";
 import { installTools } from "../commands/installTools";
 import { ext } from "../extensionVariables";
+import { Insight, Insights } from "../models/insights";
 import { QueryResult } from "../models/queryResult";
 import { Server, ServerDetails } from "../models/server";
 import { tryExecuteCommand } from "./cpUtils";
@@ -162,10 +163,20 @@ export function getServers(): Server | undefined {
   return workspace.getConfiguration().get("kdb.servers");
 }
 
+export function getInsights(): Insight | undefined {
+  return workspace.getConfiguration().get("kdb.insights");
+}
+
 export async function updateServers(servers: Server): Promise<void> {
   await workspace
     .getConfiguration()
     .update("kdb.servers", servers, ConfigurationTarget.Global);
+}
+
+export async function updateInsights(insights: Insights): Promise<void> {
+  await workspace
+    .getConfiguration()
+    .update("kdb.insights", insights, ConfigurationTarget.Global);
 }
 
 export function getServerName(server: ServerDetails): string {

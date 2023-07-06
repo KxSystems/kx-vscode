@@ -14,6 +14,10 @@ export function validateServerAlias(
     if (!validateUtils.isAlphanumericWithHypens(input)) {
       return "Input value must contain only alphanumeric characters and hypens only";
     }
+
+    if (input === "InsightsEnterprise") {
+      return "Input value using restricted keywords of Insights Enterprise";
+    }
   }
   return undefined;
 }
