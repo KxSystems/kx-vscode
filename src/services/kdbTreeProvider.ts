@@ -8,6 +8,7 @@ import {
   commands,
 } from "vscode";
 import { ext } from "../extensionVariables";
+import { InsightDetails, Insights } from "../models/insights";
 import { Server, ServerDetails } from "../models/server";
 import {
   loadDictionaries,
@@ -20,12 +21,14 @@ import {
 import { getServerName } from "../utils/core";
 
 export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
-  private _onDidChangeTreeData: EventEmitter<KdbNode | undefined | void> =
-    new EventEmitter<KdbNode | undefined | void>();
-  readonly onDidChangeTreeData: Event<KdbNode | undefined | void> =
-    this._onDidChangeTreeData.event;
+  private _onDidChangeTreeData: EventEmitter<
+    KdbNode | InsightsNode | undefined | void
+  > = new EventEmitter<KdbNode | InsightsNode | undefined | void>();
+  readonly onDidChangeTreeData: Event<
+    KdbNode | InsightsNode | undefined | void
+  > = this._onDidChangeTreeData.event;
 
-  constructor(private serverList: Server) {}
+  constructor(private serverList: Server, private insightList: Insights) {}
 
   reload(): void {
     this._onDidChangeTreeData.fire();
@@ -36,18 +39,25 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     this._onDidChangeTreeData.fire();
   }
 
-  getTreeItem(element: KdbNode): TreeItem {
+  refreshInsights(insightsList: Insights): void {
+    this.insightList = insightsList;
+    this._onDidChangeTreeData.fire();
+  }
+
+  getTreeItem(element: KdbNode | InsightsNode): TreeItem {
     return element;
   }
 
-  async getChildren(
-    element?: TreeItem
-  ): Promise<KdbNode[] | QCategoryNode[] | QNamespaceNode[] | QServerNode[]> {
+  async getChildren(element?: TreeItem): Promise<TreeItem[]> {
     if (!this.serverList) {
       return Promise.resolve([]);
     }
+    if (!this.insightList) {
+      return Promise.resolve([]);
+    }
+
     if (!element) {
-      return Promise.resolve(this.getChildElements(element));
+      return Promise.resolve(this.getMergedElements(element));
     } else if (
       element.contextValue !== undefined &&
       ext.kdbrootNodes.indexOf(element.contextValue) !== -1
@@ -62,9 +72,20 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     }
   }
 
+  private getMergedElements(_element?: KdbNode): TreeItem[] {
+    const servers = this.getChildElements(_element);
+    const insights = this.getInsightsChildElements();
+    return [...servers, ...insights];
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private getChildElements(_element?: KdbNode): KdbNode[] {
     return this.createLeafItems(this.serverList);
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private getInsightsChildElements(_element?: InsightsNode): InsightsNode[] {
+    return this.createInsightLeafItems(this.insightList);
   }
 
   private async getNamespaces(): Promise<QNamespaceNode[]> {
@@ -217,6 +238,19 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
         )
     );
   }
+
+  private createInsightLeafItems(insights: Insights): InsightsNode[] {
+    const keys: string[] = Object.keys(insights);
+    return keys.map(
+      (x) =>
+        new InsightsNode(
+          [],
+          insights[x].alias,
+          insights[x],
+          TreeItemCollapsibleState.None
+        )
+    );
+  }
 }
 
 export class KdbNode extends TreeItem {
@@ -273,6 +307,67 @@ export class KdbNode extends TreeItem {
         this.label === ext.connectionNode.label + " (connected)"
         ? "p-data.svg"
         : "p-data.svg"
+    ),
+  };
+
+  contextValue = this.label; // "root";
+}
+
+export class InsightsNode extends TreeItem {
+  constructor(
+    public readonly children: string[],
+    public readonly label: string,
+    public readonly details: InsightDetails,
+    public readonly collapsibleState: TreeItemCollapsibleState
+  ) {
+    if (ext.connectionNode != undefined && label === ext.connectionNode.label) {
+      label = label + " (connected)";
+    }
+
+    // set context for root nodes
+    if (ext.kdbinsightsNodes.indexOf(label) === -1) {
+      ext.kdbinsightsNodes.push(label);
+      commands.executeCommand(
+        "setContext",
+        "kdb.insightsNodes",
+        ext.kdbinsightsNodes
+      );
+    }
+
+    super(label, collapsibleState);
+    this.tooltip = details.server;
+    this.description = this.getDescription();
+  }
+
+  getDescription(): string {
+    return this.collapsibleState === TreeItemCollapsibleState.None &&
+      this.children.length > 2
+      ? `${this.children[2]}:${"*".repeat(this.children[3].length)}`
+      : "";
+  }
+
+  iconPath = {
+    light: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "light",
+      ext.connectionNode != undefined &&
+        this.label === ext.connectionNode.label + " (connected)"
+        ? "p-insights.svg"
+        : "p-insights.svg"
+    ),
+    dark: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "dark",
+      ext.connectionNode != undefined &&
+        this.label === ext.connectionNode.label + " (connected)"
+        ? "p-insights.svg"
+        : "p-insights.svg"
     ),
   };
 

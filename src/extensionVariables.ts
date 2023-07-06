@@ -4,6 +4,11 @@ import { AzureAccountExtensionApi } from "./azure-account.api";
 import { Connection } from "./models/connection";
 import { LocalProcess } from "./models/localProcess";
 import { ServerObject } from "./models/serverObject";
+import {
+  InsightsNode,
+  KdbNode,
+  KdbTreeProvider,
+} from "./services/kdbTreeProvider";
 import { KdbDataSourceProvider } from "./services/dataSourceTreeProvider";
 import { KdbNode, KdbTreeProvider } from "./services/kdbTreeProvider";
 import AuthSettings from "./utils/secretStorage";
@@ -18,12 +23,13 @@ export namespace ext {
   export let serverObjects: ServerObject;
 
   export let connection: Connection | undefined;
-  export let connectionNode: KdbNode | undefined;
+  export let connectionNode: KdbNode | InsightsNode | undefined;
   export const kdbDataSourceFolder = ".kdb-datasources";
   export const kdbDataSourceFileExtension = ".ds";
   export const kdbDataSourceFileGlob = "*.ds";
   export const kdbDataSourceRootNodes: string[] = [];
   export const kdbrootNodes: string[] = [];
+  export const kdbinsightsNodes: string[] = [];
   export const maxRetryCount = 5;
 
   export let secretSettings: AuthSettings;
@@ -55,6 +61,35 @@ export namespace ext {
   export const extensionName = packageJSON.name;
   export const extensionVersion = packageJSON.version;
   export const extensionKey = packageJSON.aiKey;
+
+  export const localhost = "127.0.0.1";
+  export const networkProtocols = {
+    http: "http://",
+    https: "https://",
+  };
+
+  export const insightsFileResponse = {
+    css: "",
+    path: "",
+  };
+
+  export const insightsAuthUrls = {
+    authURL: "auth/realms/insights/protocol/openid-connect/auth ",
+    callbackURL: "http://localhost:9010/redirect",
+    revoke: "auth/realms/insights/protocol/openid-connect/revoke",
+    tokenURL: "auth/realms/insights/protocol/openid-connect/token",
+  };
+
+  export const insightsGrantType = {
+    authorizationCode: "authorization_code",
+    refreshToken: "refresh_token",
+  };
+
+  export const insightsSigningIn = "Signing in";
+
+  export const globalStateKeys = {
+    insightsCredentialsCacheKey: "InsightsCache",
+  };
 
   export const functions: Array<string> = [];
   export const variables: Array<string> = [];

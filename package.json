@@ -139,6 +139,10 @@
           "type": "object",
           "description": "kdb servers for explorer"
         },
+        "kdb.insights": {
+          "type": "object",
+          "description": "kdb insights for explorer"
+        },
         "kdb.hideWalkthrough": {
           "type": "boolean",
           "description": "Hide visibility of the walkthrough at startup of extension"
@@ -185,6 +189,14 @@
       {
         "command": "kdb.connect",
         "title": "Connect kdb server"
+      },
+      {
+        "command": "kdb.insightsConnect",
+        "title": "Connect to Insights"
+      },
+      {
+        "command": "kdb.insightsRemove",
+        "title": "Remove connection"
       },
       {
         "command": "kdb.disconnect",
@@ -289,7 +301,7 @@
       "kdb-explorer": [
         {
           "id": "kdb-servers",
-          "name": "kdb servers",
+          "name": "Connections",
           "icon": "resources/server.svg"
         },
         {
@@ -308,8 +320,40 @@
     "menus": {
       "commandPalette": [
         {
-          "when": "false",
-          "command": "kdb.hideWalkthrough"
+          "command": "kdb.hideWalkthrough",
+          "when": "false"
+        },
+        {
+          "command": "kdb.insightsConnect",
+          "when": "false"
+        },
+        {
+          "command": "kdb.insightsRemove",
+          "when": "false"
+        },
+        {
+          "command": "kdb.startLocalProcess",
+          "when": "false"
+        },
+        {
+          "command": "kdb.stopLocalProcess",
+          "when": "false"
+        },
+        {
+          "command": "kdb.addConnection",
+          "when": "false"
+        },
+        {
+          "command": "kdb.removeConnection",
+          "when": "false"
+        },
+        {
+          "command": "kdb.connect",
+          "when": "false"
+        },
+        {
+          "command": "kdb.disconnect",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -332,6 +376,16 @@
         {
           "command": "kdb.connect",
           "when": "view == kdb-servers && viewItem not in kdb.connected && viewItem in kdb.rootNodes",
+          "group": "connection"
+        },
+        {
+          "command": "kdb.insightsConnect",
+          "when": "view == kdb-servers && viewItem not in kdb.connected && viewItem in kdb.insightsNodes",
+          "group": "connection"
+        },
+        {
+          "command": "kdb.insightsRemove",
+          "when": "view == kdb-servers && viewItem in kdb.insightsNodes",
           "group": "connection"
         },
         {
@@ -430,6 +484,7 @@
     "@types/node": "^18.15.11",
     "@types/node-fetch": "^2.6.2",
     "@types/picomatch": "^2.3.0",
+    "@types/request-promise": "^4.1.48",
     "@types/sinon": "^10.0.13",
     "@types/vscode": "^1.66.0",
     "@typescript-eslint/eslint-plugin": "^5.36.2",
@@ -472,7 +527,9 @@
     "klaw": "^4.1.0",
     "node-fetch": "^2.6.6",
     "node-q": "^2.6.0",
+    "open": "^6.4.0",
     "picomatch": "^2.3.1",
+    "request-promise": "^4.2.6",
     "vscode-extension-telemetry": "^0.4.5",
     "vscode-languageclient": "^8.0.2",
     "vscode-languageserver": "^8.1.0",
