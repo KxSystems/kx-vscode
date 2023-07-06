@@ -148,7 +148,7 @@ export const qLangParserItems: CompletionItem[] = [
   {
     label: "cross",
     detail: "cross product",
-    documentation: "cross[list;list]TEST",
+    documentation: "cross[list;list]",
     kind: 2,
   },
   {
@@ -590,7 +590,7 @@ export const qLangParserItems: CompletionItem[] = [
     kind: 2,
   },
   {
-    label: null,
+    label: "null",
     detail: "is null",
     documentation: "null[x]",
     kind: 2,
@@ -1794,221 +1794,207 @@ export const qLangParserItems: CompletionItem[] = [
   {
     label: ".z.a",
     detail: "Returns the IP address as a 32-bit integer.",
-    documentation: "Returns the IP address as a 32-bit integer.",
+    documentation: ".z.a[{x;y}]",
     kind: 2,
   },
   {
     label: ".z.ac",
     detail:
       "Http authenticate from cookie. Allows users to define custom code to extract Single Sign On (SSO) token cookies from the http header and verify it, decoding and returning the username, or instructing what action to take.",
-    documentation:
-      "Http authenticate from cookie. Allows users to define custom code to extract Single Sign On (SSO) token cookies from the http header and verify it, decoding and returning the username, or instructing what action to take.",
+    documentation: ".z.ac[]",
     kind: 3,
   },
   {
     label: ".z.b",
     detail: "Returns the dependency dictionary.",
-    documentation: "Returns the dependency dictionary.",
+    documentation: ".z.b[]",
     kind: 2,
   },
   {
     label: ".z.bm",
     detail:
       "KDB+ validates incoming ipc messages to check that data structures are well formed, reporting 'badMsg and disconnecting senders of malformed data structures. The raw message is captured for analysis via the callback .z.bm.",
-    documentation:
-      "KDB+ validates incoming ipc messages to check that data structures are well formed, reporting 'badMsg and disconnecting senders of malformed data structures. The raw message is captured for analysis via the callback .z.bm.",
+    documentation: ".z.bm[]",
     kind: 6,
   },
   {
     label: ".z.c",
     detail: "Physical core count.",
-    documentation: "Physical core count.",
+    documentation: ".z.c[]",
     kind: 6,
   },
   {
     label: ".z.e",
     detail: "TLS connection status.",
-    documentation: "TLS connection status.",
+    documentation: ".z.e[]",
     kind: 6,
   },
   {
     label: ".z.exit",
     detail: "Exit behavior callback. Default: NOOP.",
-    documentation: "Exit behavior callback. Default: NOOP.",
+    documentation: ".z.exit[]",
     kind: 3,
   },
   {
     label: ".z.f",
     detail: "Returns the name of the q script as a symbol.",
-    documentation: "Returns the name of the q script as a symbol.",
+    documentation: ".z.f[]",
     kind: 2,
   },
   {
     label: ".z.h",
     detail: "Returns the host name as a symbol.",
-    documentation: "Returns the host name as a symbol.",
+    documentation: ".z.h[filename]",
     kind: 2,
   },
   {
     label: ".z.i",
     detail: "Returns the process id as an integer.",
-    documentation: "Returns the process id as an integer.",
+    documentation: ".z.i[]",
     kind: 2,
   },
   {
     label: ".z.k",
     detail:
       "Returns the date on which the version of kdb+ being used was released.",
-    documentation:
-      "Returns the date on which the version of kdb+ being used was released.",
+    documentation: ".z.k[x]",
     kind: 2,
   },
   {
     label: ".z.K",
     detail:
       "Return the major version number of the version of kdb+ being used as a float.",
-    documentation:
-      "Return the major version number of the version of kdb+ being used as a float.",
+    documentation: ".z.K[table]",
     kind: 2,
   },
   {
     label: ".z.l",
     detail: "Returns the license information as a list of strings.",
-    documentation: "Returns the license information as a list of strings.",
+    documentation: ".z.l[]",
     kind: 2,
   },
   {
     label: ".z.n",
     detail: "System GMT time (as timespan) in nanoseconds.",
-    documentation: "System GMT time (as timespan) in nanoseconds.",
+    documentation: ".z.n[]",
     kind: 6,
   },
   {
     label: ".z.N",
     detail: "System local time (as timespan) in nanoseconds.",
-    documentation: "System local time (as timespan) in nanoseconds.",
+    documentation: ".z.N[]",
     kind: 6,
   },
   {
     label: ".z.o",
     detail: "Return the kdb+ operating system version as a symbol.",
-    documentation: "Return the kdb+ operating system version as a symbol.",
+    documentation: '.z.o["Hello, world!"]',
     kind: 6,
   },
   {
     label: ".z.p",
     detail: "System gmt timestamp in nanoseconds.",
-    documentation: "System gmt timestamp in nanoseconds.",
+    documentation: '.z.p["Hello, world!"]',
     kind: 6,
   },
   {
     label: ".z.P",
     detail: "System localtime timestamp in nanoseconds.",
-    documentation: "System localtime timestamp in nanoseconds.",
+    documentation: ".z.P[]",
     kind: 6,
   },
   {
     label: ".z.pc",
     detail: "Port close - Called AFTER a connection has been closed.",
-    documentation: "Port close - Called AFTER a connection has been closed.",
+    documentation: ".z.pc[]",
     kind: 3,
   },
   {
     label: ".z.pg",
     detail:
       "Port get - When .z.pg is set, it is called with the object that is passed to this kdb+ session via a synchronous request. The return value, if any, is returned to the calling task.",
-    documentation:
-      "Port get - When .z.pg is set, it is called with the object that is passed to this kdb+ session via a synchronous request. The return value, if any, is returned to the calling task.",
+    documentation: ".z.pg[]",
     kind: 2,
   },
   {
     label: ".z.pd",
     detail:
       "Peach handles - Indicating that N worker processes should be used for executing the function supplied to peach, kdb+ gets the handles to those worker processes by calling .z.pd[]. Syntax: .z.pd:`u#hopen each 20000+til 4",
-    documentation:
-      "Peach handles - Indicating that N worker processes should be used for executing the function supplied to peach, kdb+ gets the handles to those worker processes by calling .z.pd[]. Syntax: .z.pd:`u#hopen each 20000+til 4",
+    documentation: ".z.pd:5",
     kind: 2,
   },
   {
     label: ".z.ph",
     detail:
       "Port HttpGet - Called when a synchronous http request comes into the kdb+ session.",
-    documentation:
-      "Port HttpGet - Called when a synchronous http request comes into the kdb+ session.",
+    documentation: ".z.ph:10",
     kind: 3,
   },
   {
     label: ".z.pi",
     detail: "The default handler for input.",
-    documentation: "The default handler for input.",
+    documentation: ".z.pi:2",
     kind: 6,
   },
   {
     label: ".z.pm",
     detail:
       "Pass http OPTIONS method through to .z.pm as (`OPTIONS;requestText;requestHeaderDict).",
-    documentation:
-      "Pass http OPTIONS method through to .z.pm as (`OPTIONS;requestText;requestHeaderDict).",
+    documentation: ".z.pm:80",
     kind: 3,
   },
   {
     label: ".z.po",
     detail:
       "Port open - Called when a connection to a kdb+ session has been initialized.",
-    documentation:
-      "Port open - Called when a connection to a kdb+ session has been initialized.",
+    documentation: ".z.po:4",
     kind: 3,
   },
   {
     label: ".z.pp",
     detail:
       "Port post - Called when an http postrequest comes into the kdb+ session.",
-    documentation:
-      "Port post - Called when an http postrequest comes into the kdb+ session.",
+    documentation: ".z.pp:3",
     kind: 3,
   },
   {
     label: ".z.ps",
     detail:
       "Port set - When .z.ps is set, it is called with the object that is passed to this kdb+ session via an asynchronous request. The return value is discarded.",
-    documentation:
-      "Port set - When .z.ps is set, it is called with the object that is passed to this kdb+ session via an asynchronous request. The return value is discarded.",
+    documentation: ".z.ps:10",
     kind: 3,
   },
   {
     label: ".z.pw",
     detail:
       "Validate user - Called AFTER the -u/-U checks, and BEFORE .z.po when opening a new connection to a kdb+ session.",
-    documentation:
-      "Validate user - Called AFTER the -u/-U checks, and BEFORE .z.po when opening a new connection to a kdb+ session.",
+    documentation: ".z.pw:80",
     kind: 3,
   },
   {
     label: ".z.q",
     detail: "Quiet mode",
-    documentation: "Quiet mode",
+    documentation: ".z.q[]",
     kind: 6,
   },
   {
     label: ".z.s",
     detail:
       "Self - Returns the current function. Can be used to generate recursive function calls.",
-    documentation:
-      "Self - Returns the current function. Can be used to generate recursive function calls.",
+    documentation: ".z.s[]",
     kind: 6,
   },
   {
     label: ".z.ts",
     detail:
       "Function which is invoked on intervals of the timer variable (\t).",
-    documentation:
-      "Function which is invoked on intervals of the timer variable (\t).",
+    documentation: ".z.ts[]",
     kind: 3,
   },
   {
     label: ".z.u",
     detail: "User ID - Returns user's name as a symbol.",
-    documentation: "User ID - Returns user's name as a symbol.",
+    documentation: ".z.u[]",
     kind: 6,
   },
   {
@@ -2016,13 +2002,13 @@ export const qLangParserItems: CompletionItem[] = [
     detail:
       "Value set - Once .z.vs is defined, it is called with two arguments. The first argument is the symbol of the variable that is being modified and the second is the index.",
     documentation:
-      "Value set - Once .z.vs is defined, it is called with two arguments. The first argument is the symbol of the variable that is being modified and the second is the index.",
+      '.z.vs:{[sym;idx;val] .Q.s[sym,"[",string idx,"]=",string val]}',
     kind: 6,
   },
   {
     label: ".z.w",
     detail: "Connection handle, 0 for current session console.",
-    documentation: "Connection handle, 0 for current session console.",
+    documentation: ".z.w[]",
     kind: 6,
   },
   {
@@ -2030,7 +2016,7 @@ export const qLangParserItems: CompletionItem[] = [
     detail:
       "Websocket close - Called after a websocket connection has been closed.",
     documentation:
-      "Websocket close - Called after a websocket connection has been closed.",
+      '.z.wc:{[handle;code;reason] .Q.s["Websocket closed: ",string code," ",reason]}',
     kind: 3,
   },
   {
@@ -2038,79 +2024,76 @@ export const qLangParserItems: CompletionItem[] = [
     detail:
       "Websocket open - Called when a websocket connection to a kdb+ session has been initialized.",
     documentation:
-      "Websocket open - Called when a websocket connection to a kdb+ session has been initialized.",
+      '.z.wo:{[handle;headers] .Q.s["Websocket opened: ",string handle]}',
     kind: 3,
   },
   {
     label: ".z.W",
     detail:
       "Handles - Returns a dictionary of ipc handles with the number of bytes waiting in their output queues.",
-    documentation:
-      "Handles - Returns a dictionary of ipc handles with the number of bytes waiting in their output queues.",
+    documentation: ".z.W[]",
     kind: 2,
   },
   {
     label: ".z.ws",
     detail: "Websockets - Called when a message on a websocket arrives.",
-    documentation: "Websockets - Called when a message on a websocket arrives.",
+    documentation: '.z.ws:{[handle;msg] .Q.s["Websocket message: ",msg]}',
     kind: 3,
   },
   {
     label: ".z.x",
     detail: "Returns the command line arguments as a list of strings.",
-    documentation: "Returns the command line arguments as a list of strings.",
+    documentation: ".z.x[]",
     kind: 2,
   },
   {
     label: ".z.X",
     detail:
       "Returns a list of char vectors of the raw, unfiltered cmd line with which kdb+ was invoked, including the name under which q was invoked as well as single-letter arguments.",
-    documentation:
-      "Returns a list of char vectors of the raw, unfiltered cmd line with which kdb+ was invoked, including the name under which q was invoked as well as single-letter arguments.",
+    documentation: ".z.X[]",
     kind: 2,
   },
   {
     label: ".z.z",
     detail: "Returns UTC time as a datetime scalar.",
-    documentation: "Returns UTC time as a datetime scalar.",
+    documentation: ".z.z[]",
     kind: 2,
   },
   {
     label: ".z.Z",
     detail: "Returns local time as a datetime scalar.",
-    documentation: "Returns local time as a datetime scalar.",
+    documentation: ".z.Z[]",
     kind: 2,
   },
   {
     label: ".z.t",
     detail: "Returns UTC time as `time. Shorthand for `time$.z.z",
-    documentation: "Returns UTC time as `time. Shorthand for `time$.z.z",
+    documentation: ".z.t[]",
     kind: 2,
   },
   {
     label: ".z.T",
     detail: "Returns local time as `time. Shorthand for `time$.z.Z",
-    documentation: "Returns local time as `time. Shorthand for `time$.z.Z",
+    documentation: '.z.T:{[ex] .Q.s["Exception: ",string ex]}',
     kind: 2,
   },
   {
     label: ".z.d",
     detail: "Returns UTC time as `date. Shorthand for `date$.z.z",
-    documentation: "Returns UTC time as `date. Shorthand for `date$.z.z",
+    documentation: ".z.d[]",
     kind: 2,
   },
   {
     label: ".z.D",
     detail: "Returns local time as `date. Shorthand for `date$.z.Z",
-    documentation: "Returns local time as `date. Shorthand for `date$.z.Z",
+    documentation: ".z.D[]",
     kind: 2,
   },
   {
     label: ".z.zd",
     detail:
       "Zip defaults - If defined, is an integer list of default parameters for logical block size, compression algorithm and compression level that apply when saving to files with no file extension.",
-    documentation:
-      "Zip defaults - If defined, is an integer list of default parameters for logical block size, compression algorithm and compression level that apply when saving to files with no file extension.",
+    documentation: ".z.zd:100 1 9",
     kind: 6,
   },
 ];

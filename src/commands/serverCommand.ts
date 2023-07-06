@@ -1,8 +1,10 @@
 import { readFileSync } from "fs-extra";
 import { join } from "path";
+import * as url from "url";
 import {
   commands,
   InputBoxOptions,
+  Position,
   ProgressLocation,
   QuickPickItem,
   QuickPickOptions,
@@ -12,34 +14,33 @@ import {
 import { ext } from "../extensionVariables";
 import { Connection } from "../models/connection";
 import { ExecutionTypes } from "../models/execution";
+import { Insights } from "../models/insights";
 import {
   connectionAliasInput,
   connectionHostnameInput,
   connectionPasswordInput,
   connectionPortInput,
   connectionUsernameInput,
+  insightsAliasInput,
+  insightsUrlInput,
   kdbEndpoint,
-  kxInsightsEndpoint,
+  kdbInsightsEndpoint,
   serverEndpointPlaceHolder,
   serverEndpoints,
 } from "../models/items/server";
 import { queryConstants } from "../models/queryResult";
-import { ResourceGroupItem } from "../models/resourceGroupItem";
 import { Server } from "../models/server";
 import { ServerObject } from "../models/serverObject";
-import { SubscriptionItem } from "../models/subscriptionItem";
-import {
-  createResourceGroup,
-  showResourceGroups,
-  showSubscriptions,
-} from "../services/azureProvider";
-import { KdbNode } from "../services/kdbTreeProvider";
+import { signIn } from "../services/kdbInsights/codeFlowLogin";
+import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import {
   addLocalConnectionContexts,
   getHash,
+  getInsights,
   getServerName,
   getServers,
   removeLocalConnectionContext,
+  updateInsights,
   updateServers,
 } from "../utils/core";
 import { ExecutionConsole } from "../utils/executionConsole";
@@ -58,85 +59,64 @@ export async function addNewConnection(): Promise<void> {
     serverEndpoints,
     options
   );
-  if (resultType!.label === kdbEndpoint) {
+  if (resultType !== undefined && resultType!.label === kdbEndpoint) {
     addKdbConnection();
-  } else if (resultType!.label === kxInsightsEndpoint) {
-    await addAzureConnection();
+  } else if (
+    resultType !== undefined &&
+    resultType!.label === kdbInsightsEndpoint
+  ) {
+    await addInsightsConnection();
   }
 }
 
-export async function addAzureConnection() {
-  if (!(await ext.azureAccount.waitForLogin())) {
-    await commands.executeCommand("azure-account.askForLogin");
-  }
-
-  let subscriptions: SubscriptionItem[] = [];
-
-  window
-    .withProgress(
-      {
-        location: ProgressLocation.Notification,
-        title: "Retrieving Azure subscriptions, please wait...",
-        cancellable: true,
-      },
-      async (progress, token) => {
-        token.onCancellationRequested(() => {
-          ext.outputChannel.appendLine(
-            "User cancelled the connection to Azure for subscriptions."
-          );
-        });
-
-        progress.report({ increment: 50 });
-        subscriptions = await showSubscriptions();
-        progress.report({ increment: 100 });
-
-        return new Promise<void>((resolve) => {
-          resolve();
-        });
+export async function addInsightsConnection() {
+  const insightsAlias: InputBoxOptions = {
+    prompt: insightsAliasInput.prompt,
+    placeHolder: insightsAliasInput.placeholder,
+    validateInput: (value: string | undefined) => validateServerAlias(value),
+  };
+  const insightsUrl: InputBoxOptions = {
+    prompt: insightsUrlInput.prompt,
+    placeHolder: insightsUrlInput.placeholder,
+  };
+  window.showInputBox(insightsAlias).then(async (insights_alias) => {
+    window.showInputBox(insightsUrl).then(async (insights_url) => {
+      if (insights_alias === undefined || insights_alias === "") {
+        const host = new url.URL(insights_url!);
+        insights_alias = host.host;
       }
-    )
-    .then(async () => {
-      const result = await window.showQuickPick(subscriptions);
-      if (result != undefined) {
-        const resourceGroups: ResourceGroupItem[] = [];
-        window
-          .withProgress(
-            {
-              location: ProgressLocation.Notification,
-              title:
-                "Retrieving resource groups for the subscription, please wait...",
-              cancellable: true,
+
+      let insights: Insights | undefined = getInsights();
+      if (insights != undefined && insights[getHash(insights_url!)]) {
+        await window.showErrorMessage(
+          `Insights instance named ${insights_url} already exists.`
+        );
+      } else {
+        const key = getHash(insights_url!);
+        if (insights === undefined) {
+          insights = {
+            key: {
+              auth: true,
+              alias: insights_alias,
+              server: insights_url!,
             },
-            async (progress, token) => {
-              token.onCancellationRequested(() => {
-                ext.outputChannel.appendLine(
-                  "User cancelled the connection to Azure for resource groups."
-                );
-              });
+          };
+        } else {
+          insights[key] = {
+            auth: true,
+            alias: insights_alias,
+            server: insights_url!,
+          };
+        }
 
-              progress.report({ increment: 50 });
-              const resourceGroupsResult = await showResourceGroups(result);
-              resourceGroups.push({ label: "$(plus) Create Resource Group" });
-              resourceGroups.push(...resourceGroupsResult);
-              progress.report({ increment: 100 });
-
-              return new Promise<void>((resolve) => {
-                resolve();
-              });
-            }
-          )
-          .then(async () => {
-            const resourceGroup = await window.showQuickPick(resourceGroups);
-            if (resourceGroup != undefined) {
-              if (resourceGroup.label === "$(plus) Create Resource Group") {
-                await createResourceGroup(result);
-                return;
-              }
-              window.showInformationMessage(resourceGroup.label);
-            }
-          });
+        await updateInsights(insights);
+        const newInsights = getInsights();
+        if (newInsights != undefined) {
+          ext.serverProvider.refreshInsights(newInsights);
+        }
       }
     });
+  });
 }
 
 export function addKdbConnection(): void {
@@ -175,10 +155,7 @@ export function addKdbConnection(): void {
               window.showInputBox(connectionPassword).then(async (password) => {
                 // store secrets
                 let authUsed = false;
-                if (
-                  (username != undefined || username != "") &&
-                  (password != undefined || password != "")
-                ) {
+                if (username && password) {
                   authUsed = true;
                   ext.secretSettings.storeAuthData(
                     alias !== undefined
@@ -273,6 +250,36 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
   }
 }
 
+export async function connectInsights(viewItem: InsightsNode): Promise<void> {
+  const tokens = await signIn(viewItem.details.server);
+  ext.outputChannel.appendLine(
+    `Connection established successfully to: ${viewItem.details.server}`
+  );
+  ext.connectionNode = viewItem;
+  ext.serverProvider.reload();
+}
+
+export async function removeInsightsConnection(
+  viewItem: InsightsNode
+): Promise<void> {
+  const insights: Insights | undefined = getInsights();
+
+  const key = getHash(viewItem.details.server);
+  if (insights != undefined && insights[key]) {
+    const uInsights = Object.keys(insights).filter((insight) => {
+      return insight !== key;
+    });
+
+    const updatedInsights: Insights = {};
+    uInsights.forEach((insight) => {
+      updatedInsights[insight] = insights[insight];
+    });
+
+    await updateInsights(updatedInsights);
+    ext.serverProvider.refreshInsights(updatedInsights);
+  }
+}
+
 export async function connect(viewItem: KdbNode): Promise<void> {
   // handle cleaning up existing connection
   if (
@@ -287,9 +294,10 @@ export async function connect(viewItem: KdbNode): Promise<void> {
   }
 
   // check for auth
-  const authCredentials = await ext.secretSettings.getAuthData(
-    viewItem.children[0]
-  );
+  const authCredentials = viewItem.details.auth
+    ? await ext.secretSettings.getAuthData(viewItem.children[0])
+    : undefined;
+
   const servers: Server | undefined = getServers();
   if (servers === undefined) {
     window.showErrorMessage("Server not found.");
@@ -341,11 +349,14 @@ export async function disconnect(): Promise<void> {
   ext.serverProvider.reload();
 }
 
-export async function executeQuery(query: string): Promise<void> {
+export async function executeQuery(
+  query: string,
+  context?: string
+): Promise<void> {
   const queryConsole = ExecutionConsole.start();
   if (ext.connection !== undefined && query.length > 0) {
     query = sanitizeQuery(query);
-    const queryRes = await ext.connection.executeQuery(query);
+    const queryRes = await ext.connection.executeQuery(query, context);
     writeQueryResult(queryRes, query);
   } else {
     queryConsole.appendQueryError(
@@ -358,25 +369,66 @@ export async function executeQuery(query: string): Promise<void> {
   }
 }
 
+export function getQueryContext(lineNum?: number): string {
+  let context = ".";
+  const editor = window.activeTextEditor;
+  const fullText = typeof lineNum !== "number";
+
+  if (editor) {
+    const document = editor.document;
+    let text;
+
+    if (fullText) {
+      text = editor.document.getText();
+    } else {
+      const line = document.lineAt(lineNum);
+      text = editor.document.getText(
+        new Range(
+          new Position(0, 0),
+          new Position(lineNum, line.range.end.character)
+        )
+      );
+    }
+
+    // matches '\d .foo' or 'system "d .foo"'
+    const pattern = /^(system\s*"d|\\d)\s+([^\s"]+)/gm;
+
+    const matches = [...text.matchAll(pattern)];
+    if (matches.length) {
+      // fullText should use first defined context
+      // a selection should use the last defined context
+      context = fullText ? matches[0][2] : matches[matches.length - 1][2];
+    }
+  }
+
+  return context;
+}
+
 export function runQuery(type: ExecutionTypes) {
   const editor = window.activeTextEditor;
   if (editor) {
+    let context;
     let query;
     switch (type) {
       case ExecutionTypes.QuerySelection:
         query = editor?.document.getText(
           new Range(editor.selection.start, editor.selection.end)
         );
+
         if (query === "") {
           const docLine = editor.selection.active.line;
           query = editor.document.lineAt(docLine).text;
+          context = getQueryContext(docLine);
+        } else {
+          context = getQueryContext(editor.selection.end.line);
         }
         break;
       case ExecutionTypes.QueryFile:
       default:
         query = editor.document.getText();
+        context = getQueryContext();
     }
-    executeQuery(query);
+    executeQuery(query, context);
   }
 }
 
