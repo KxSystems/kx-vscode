@@ -56,6 +56,7 @@ import {
 import { KdbNode, KdbTreeProvider } from "./services/kdbTreeProvider";
 import {
   checkLocalInstall,
+  checkOpenSslInstalled,
   formatTable,
   getServers,
   initializeLocalServers,
@@ -70,6 +71,7 @@ let client: LanguageClient;
 export async function activate(context: ExtensionContext) {
   ext.context = context;
   ext.outputChannel = window.createOutputChannel("kdb");
+  ext.openSslVersion = await checkOpenSslInstalled();
 
   // integration wtih Azure Account extension (https://marketplace.visualstudio.com/items?itemName=ms-vscode.azure-account)
   ext.azureAccount = (<AzureExtensionApiProvider>(

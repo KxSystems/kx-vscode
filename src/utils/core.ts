@@ -5,11 +5,49 @@ import { writeFile } from "fs/promises";
 import { env } from "node:process";
 import { tmpdir } from "os";
 import { join } from "path";
+import * as semver from "semver";
 import { commands, ConfigurationTarget, Uri, window, workspace } from "vscode";
 import { installTools } from "../commands/installTools";
 import { ext } from "../extensionVariables";
 import { QueryResult } from "../models/queryResult";
 import { Server, ServerDetails } from "../models/server";
+import { tryExecuteCommand } from "./cpUtils";
+import { Telemetry } from "./telemetryClient";
+
+export async function checkOpenSslKdbInstalled(): Promise<boolean | undefined> {
+  if (ext.connection) {
+  }
+  return undefined;
+}
+
+export function log(childProcess: ChildProcess): void {
+  ext.outputChannel.appendLine(`Process ${childProcess.pid!} killed`);
+}
+
+export async function checkOpenSslInstalled(): Promise<string | null> {
+  try {
+    const result = await tryExecuteCommand(
+      undefined,
+      "openSsl",
+      log,
+      "version"
+    );
+    if (result.code === 0) {
+      const matcher = /(\d+.\d+.\d+)/;
+      const installedVersion = result.cmdOutput.match(matcher);
+
+      window.showInformationMessage(
+        `Detected version ${installedVersion} of OpenSSL installed.`
+      );
+
+      return semver.clean(installedVersion ? installedVersion[1] : "");
+    }
+  } catch (err) {
+    ext.outputChannel.appendLine(`Error in checking OpenSSL version: ${err}`);
+    Telemetry.sendException(err as Error);
+  }
+  return null;
+}
 
 export function getHash(input: string): string {
   return createHash("sha256").update(input).digest("base64");
