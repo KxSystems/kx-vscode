@@ -2,7 +2,7 @@
 
 This is a companion extension for kdb developers including editor features for working with q files along with the ability to connect to kdb processes and run queries
 
-![CI](https://github.com/KxSystems/kx-vscode/actions/workflows/ci.yml/badge.svg)
+[![KX VS Code CI](https://github.com/KxSystems/kx-vscode/actions/workflows/ci.yml/badge.svg)](https://github.com/KxSystems/kx-vscode/actions/workflows/ci.yml)
 
 ## Install
 
