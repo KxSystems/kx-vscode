@@ -10,6 +10,9 @@
 }
 
 .results-datagrid {
-  border: 1px solid;
-  background: #00000040;
+  background: #00000010;
+}
+
+.results-header-datagrid {
+  background: #00000050;
 }

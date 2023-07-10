@@ -83,12 +83,12 @@ export class ResultsPanel {
     let results = ``;
     if (vectorRes.length > 1) {
       results = `<vscode-data-grid class="results-datagrid" aria-label="Basic">`;
-      let headers = `<vscode-data-grid-row row-type="header">`;
+      let headers = `<vscode-data-grid-row class="results-header-datagrid" row-type="header">`;
       let rows = ``;
       vectorRes[0].forEach((header: string, index: number) => {
         headers += `<vscode-data-grid-cell  cell-type="columnheader" grid-column="${
           index + 1
-        }">${header}</vscode-data-grid-cell>`;
+        }"><b>${header.toUpperCase()}</b></vscode-data-grid-cell>`;
       });
       headers += `</vscode-data-grid-row>`;
       vectorRes.slice(1).forEach((row: string[]) => {
