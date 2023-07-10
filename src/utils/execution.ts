@@ -43,3 +43,26 @@ export function handleQueryResults(
   }
   return handledResult;
 }
+
+export function convertResultStringToVector(result: string): any[] {
+  const resultRows = result.split("\n").filter((row) => row.length > 0);
+  if (resultRows.length === 1) return resultRows;
+  const resultVector = resultRows
+    .map((row) => row.split(" ").filter((row) => row.length > 0))
+    .filter((row) => !row[0].includes("---"));
+  return resultVector;
+}
+
+export function convertToArrayOfObjects(resultString: string): any[] {
+  const result = convertResultStringToVector(resultString);
+  const keys = result[0];
+  const values = result.slice(1);
+
+  const res = values.map((row) =>
+    row.reduce((obj: { [key: string]: any }, value: any, index: any) => {
+      obj[keys[index]] = value;
+      return obj;
+    }, {})
+  );
+  return res;
+}

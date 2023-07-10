@@ -1,4 +1,6 @@
 import { OutputChannel, window } from "vscode";
+import { ext } from "../extensionVariables";
+import { ResultsPanel } from "../panels/results";
 
 export class ExecutionConsole {
   public static current: ExecutionConsole | undefined;
@@ -45,6 +47,7 @@ export class ExecutionConsole {
       output.forEach((o) => this._console.appendLine(o));
     } else {
       this._console.appendLine(output);
+      this.rendResults(output);
     }
     this._console.appendLine(`<<<\n`);
   }
@@ -73,5 +76,11 @@ export class ExecutionConsole {
   // this to debug in case debug of extension doesn't work
   public appendQueryDebug(msg: string) {
     this._console.appendLine(msg);
+  }
+
+  public rendResults(query: string | string[]) {
+    console.log("entrou rendering results");
+    ResultsPanel.render(ext.context.extensionUri, query);
+    console.log("rendering results");
   }
 }
