@@ -39,7 +39,7 @@ export class ResultsPanel {
     const panel = vscode.window.createWebviewPanel(
       "results",
       "Q Results",
-      vscode.ViewColumn.Beside,
+      vscode.ViewColumn.One,
       {
         enableScripts: true,
         localResourceRoots: [vscode.Uri.joinPath(extensionUri, "out")],

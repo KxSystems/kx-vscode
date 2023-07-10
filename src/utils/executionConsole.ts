@@ -78,9 +78,7 @@ export class ExecutionConsole {
     this._console.appendLine(msg);
   }
 
-  public rendResults(query: string | string[]) {
-    console.log("entrou rendering results");
+  public rendResults(query: string) {
     ResultsPanel.render(ext.context.extensionUri, query);
-    console.log("rendering results");
   }
 }
