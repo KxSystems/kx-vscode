@@ -54,15 +54,14 @@ import { Insights } from "./models/insights";
 import { QueryResult } from "./models/queryResult";
 import { Server } from "./models/server";
 import {
+  KdbDataSourceProvider,
+  KdbDataSourceTreeItem,
+} from "./services/dataSourceTreeProvider";
+import {
   InsightsNode,
   KdbNode,
   KdbTreeProvider,
 } from "./services/kdbTreeProvider";
-import {
-  KdbDataSourceProvider,
-  KdbDataSourceTreeItem,
-} from "./services/dataSourceTreeProvider";
-import { KdbNode, KdbTreeProvider } from "./services/kdbTreeProvider";
 import {
   checkLocalInstall,
   formatTable,
@@ -308,8 +307,8 @@ export async function activate(context: ExtensionContext) {
   };
 
   client = new LanguageClient(
-    "kdb+ LangServer",
-    "kdb+ Language Server",
+    "kdb LangServer",
+    "kdb Language Server",
     serverOptions,
     clientOptions
   );
