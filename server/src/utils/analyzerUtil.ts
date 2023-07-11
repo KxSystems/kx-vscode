@@ -65,6 +65,7 @@ export default class AnalyzerUtil {
   ): Promise<AnalyzerUtil> {
     return new AnalyzerUtil(parser, connection, workspaceFolder);
   }
+
   public constructor(
     parser: Parser,
     connection: Connection,
@@ -83,19 +84,6 @@ export default class AnalyzerUtil {
     return Array.from(this.uriToDefinition.values())
       .flatMap((nameToSymInfo) => Array.from(nameToSymInfo.values()))
       .flat();
-  }
-
-  public getAllVariableSymbols(): SymbolInformation[] {
-    return this.getAllSymbols().filter(
-      (symbol) => symbol.kind === SymbolKind.Variable
-    );
-  }
-
-  public getCallHierarchyItemByUriKeyword(
-    uri: DocumentUri,
-    keyword: string
-  ): CallHierarchyItem[] {
-    return this.uriToCallHierarchy.get(uri)?.get(keyword) ?? [];
   }
 
   public getCallHierarchyItemByKeyword(keyword: string): CallHierarchyItem[] {
@@ -144,6 +132,26 @@ export default class AnalyzerUtil {
     return symbols.map((s) => s.location);
   }
 
+  public getErrors(uri: DocumentUri): Diagnostic[] {
+    const tree = this.uriToTree.get(uri);
+    const content = this.uriToFileContent.get(uri);
+    const problems: Diagnostic[] = [];
+    if (tree && content) {
+      TreeSitterUtil.forEach(tree.rootNode, (node) => {
+        if (node.type === "ERROR") {
+          problems.push(
+            Diagnostic.create(
+              TreeSitterUtil.range(node),
+              "Failed to parse expression",
+              DiagnosticSeverity.Error
+            )
+          );
+        }
+      });
+    }
+    return problems;
+  }
+
   public getGlobalIdByUriContainerName(
     uri: DocumentUri,
     containerName: string
@@ -170,10 +178,6 @@ export default class AnalyzerUtil {
     }
 
     return ids;
-  }
-
-  public getLv1Node(node: Parser.SyntaxNode): Parser.SyntaxNode {
-    return TreeSitterUtil.findParentInRoot(node);
   }
 
   public getKeywordAtPosition(uri: string, position: Position): Keyword | null {
@@ -219,6 +223,10 @@ export default class AnalyzerUtil {
       return null;
     }
     return node;
+  }
+
+  public getRootNode(node: Parser.SyntaxNode): Parser.SyntaxNode {
+    return TreeSitterUtil.findParentInRoot(node);
   }
 
   public getSemanticTokens(uri: DocumentUri): SemanticTokens {
@@ -281,22 +289,6 @@ export default class AnalyzerUtil {
     );
   }
 
-  public getSyntaxNodeByType(
-    uri: DocumentUri,
-    type: string
-  ): Parser.SyntaxNode[] {
-    const tree = this.uriToTree.get(uri);
-    const synNodes: Parser.SyntaxNode[] = [];
-    if (tree) {
-      TreeSitterUtil.forEach(tree.rootNode, (node) => {
-        if (node.type === type) {
-          synNodes.push(node);
-        }
-      });
-    }
-    return synNodes;
-  }
-
   //finders / searchers
   public search(query: string): SymbolInformation[] {
     const fuse = this.getFuseInstance();
@@ -314,47 +306,6 @@ export default class AnalyzerUtil {
       locations = this.getSyntaxNodeLocationsByUriKeyword(uri, keyword);
     }
     return locations;
-  }
-
-  public findOccurrences(uri: string, query: string): Location[] {
-    const tree = this.uriToTree.get(uri);
-    const content = this.uriToFileContent.get(uri);
-    const locations: Location[] = [];
-    if (tree && content) {
-      TreeSitterUtil.forEach(tree.rootNode, (node) => {
-        if (TreeSitterUtil.isReference(node) && node.text.trim() === query) {
-          locations.push(Location.create(uri, TreeSitterUtil.range(node)));
-        }
-      });
-    }
-    return locations;
-  }
-
-  public findSymbolDefinitions(uri: string): SymbolInformation[] {
-    const definitions: SymbolInformation[] = [];
-    const nameToSymbolInformation = this.uriToDefinition.get(uri)?.values();
-    if (nameToSymbolInformation) {
-      for (const symbolInformation of nameToSymbolInformation) {
-        definitions.push(...symbolInformation);
-      }
-    }
-    return definitions;
-  }
-
-  public findSymbolsMatchingKeyword(
-    exactMatch: boolean,
-    keyword: string
-  ): SymbolInformation[] {
-    const symbols: SymbolInformation[] = [];
-    this.uriToDefinition.forEach((nameToSymInfo) => {
-      nameToSymInfo.forEach((symbol, name) => {
-        const match = exactMatch ? name === keyword : name.startsWith(keyword);
-        if (match) {
-          symbols.push(...symbol);
-        }
-      });
-    });
-    return symbols;
   }
 
   //other funcs
@@ -402,51 +353,38 @@ export default class AnalyzerUtil {
       this.uriToSymbol = new Map<DocumentUri, string[]>();
       this.nameToSignatureHelp = new Map<string, SignatureHelp>();
 
-      const globsPattern = cfg.globsPattern ?? ["**/src/**/*.q"];
+      const globalsPattern = cfg.globsPattern ?? ["**/src/**/*.q"];
       const ignorePattern = cfg.ignorePattern ?? ["**/tmp"];
 
-      this.connection.console.info(
-        `Analyzing files matching glob "${globsPattern}" inside ${this.rootPath}`
-      );
-
-      const lookupStartTime = Date.now();
-      const getTimePassed = (): string =>
-        `${(Date.now() - lookupStartTime) / 1000} seconds`;
+      this.writeConsoleMsg(`Checking into the opened workspace`, "info");
 
       const ignoreMatch = picomatch(ignorePattern);
-      const includeMatch = picomatch(globsPattern);
+      const includeMatch = picomatch(globalsPattern);
       AnalyzerUtil.matchFile = (test) =>
         !ignoreMatch(test) && includeMatch(test);
-      const qSrcFiles: string[] = [];
+      const qFiles: string[] = [];
       klaw(this.rootPath, { filter: (item) => !ignoreMatch(item) })
         .on("error", (err: Error) => {
-          this.connection.console.warn(err.message);
+          this.writeConsoleMsg(
+            `Error when we tried to analyze the workspace`,
+            "error"
+          );
+          this.writeConsoleMsg(err.message, "error");
         })
         .on("data", (item) => {
-          if (includeMatch(item.path)) qSrcFiles.push(item.path);
+          if (includeMatch(item.path)) qFiles.push(item.path);
         })
         .on("end", () => {
-          if (qSrcFiles.length == 0) {
-            this.connection.console.warn(
-              `Failed to find any source files using the glob "${globsPattern}". Some feature will not be available.`
-            );
+          if (qFiles.length == 0) {
+            this.writeConsoleMsg("No q files found", "warn");
           } else {
-            this.connection.console.info(
-              `Glob found ${qSrcFiles.length} files after ${getTimePassed()}`
-            );
-
-            qSrcFiles.forEach((filepath: string) => this.analyzeFile(filepath));
+            this.writeConsoleMsg(`${qFiles.length} q files founded.`, "info");
+            qFiles.forEach((filepath: string) => this.analyzeFile(filepath));
             this.uriToLoadFile.forEach((_, uri) => this.analyzeLoadFiles(uri));
-
-            this.connection.console.info(`Analyzing took ${getTimePassed()}`);
           }
         });
       this.analyzeServerCache("");
     }
-  }
-
-  public debugAnalyzeWorkspace(msg: string): void {
-    this.connection.console.warn(msg);
   }
 
   public analyzeLoadFiles(uri: DocumentUri): void {
@@ -459,12 +397,15 @@ export default class AnalyzerUtil {
     const uri = URI.file(filepath).toString();
     try {
       const fileContent = fs.readFileSync(filepath, "utf8");
-      this.connection.console.info(`Analyzing ${uri}`);
+      this.writeConsoleMsg(`Analyzing file: ${uri}`, "info");
       this.analyzeDocument(uri, TextDocument.create(uri, "q", 1, fileContent));
     } catch (error) {
       const { message } = error as Error;
-      this.connection.console.warn(`Failed analyzing ${uri}.`);
-      this.connection.console.warn(`Error: ${message}`);
+      this.writeConsoleMsg(
+        `There is an error when we tried to analyzing ${uri}.`,
+        "error"
+      );
+      this.writeConsoleMsg(`Error message: ${message}`, "error");
     }
   }
 
@@ -493,7 +434,7 @@ export default class AnalyzerUtil {
         problems.push(
           Diagnostic.create(
             TreeSitterUtil.range(node),
-            "Failed to parse expression",
+            "Failed to parse an expression",
             DiagnosticSeverity.Error
           )
         );
@@ -763,6 +704,27 @@ export default class AnalyzerUtil {
         }
       }
     });
+  }
+
+  // misc functions
+  public debugWithLogs(request: string, msg: string, place?: string | null) {
+    const where = place ? place : " not specified ";
+    this.writeConsoleMsg(`${request} msg=${msg} where?: ${where}`, "warn");
+  }
+
+  public writeConsoleMsg(msg: string, type: string): void {
+    switch (type) {
+      case "error":
+        this.connection.console.error(msg);
+        break;
+      case "warn":
+        this.connection.console.warn(msg);
+        break;
+      case "info":
+      default:
+        this.connection.console.info(msg);
+        break;
+    }
   }
 
   // Private Getters

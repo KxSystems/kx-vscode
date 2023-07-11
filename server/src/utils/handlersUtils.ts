@@ -58,7 +58,6 @@ export default class CallHierarchyHandler {
   public onOutgoingCalls(
     params: CallHierarchyOutgoingCallsParams
   ): CallHierarchyOutgoingCall[] {
-    //test this later
     const globalId = this.analyzerUtil.getGlobalIdByUriContainerName(
       params.item.uri,
       params.item.name

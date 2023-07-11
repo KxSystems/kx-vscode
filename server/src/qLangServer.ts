@@ -81,7 +81,7 @@ export default class QLangServer {
       this.AnalyzerUtil.analyzeWorkspace(cfg)
     );
     this.connection.onNotification("prepareOnHover", (hoverItems) =>
-      this.generateHoverMap(hoverItems)
+      this.prepareOnHover(hoverItems)
     );
     this.connection.onRequest("onQueryBlock", (params) =>
       this.onQueryBlock(params)
@@ -108,17 +108,20 @@ export default class QLangServer {
     { workspaceFolders }: InitializeParams
   ): Promise<QLangServer> {
     const workspaceFolder = workspaceFolders ? workspaceFolders[0].uri : "";
-    connection.console.info(
-      `Initializing kdb+ Language Server at ${workspaceFolder}`
-    );
     const parser = await initializeParser();
     return AnalyzerUtil.fromRoot(connection, workspaceFolder, parser).then(
       (analyzer) => {
-        return new QLangServer(connection, analyzer);
+        const server = new QLangServer(connection, analyzer);
+        server.writeConsoleMsg(
+          "Initializing kdb Language Server for kdb vscode extension",
+          "info"
+        );
+        return server;
       }
     );
   }
 
+  // Capabilities following https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/
   public capabilities(): ServerCapabilities {
     return {
       textDocumentSync: TextDocumentSyncKind.Full,
@@ -184,7 +187,6 @@ export default class QLangServer {
   }
 
   // on actions funcs
-
   private onCompletion(params: TextDocumentPositionParams): CompletionItem[] {
     const keyword = this.getKeywordAtPosition({
       ...params,
@@ -292,7 +294,7 @@ export default class QLangServer {
   private onDidChangeContent(_change: any): void {
     this.AnalyzerUtil.analyzeDocument(_change.document.uri, _change.document);
     this.AnalyzerUtil.analyzeLoadFiles(_change.document.uri);
-    const diagnostics = this.validateTextDocument(_change.document);
+    const diagnostics = this.generateDiagnostics(_change.document);
     this.connection.sendDiagnostics({ uri: _change.document.uri, diagnostics });
   }
 
@@ -315,7 +317,7 @@ export default class QLangServer {
         );
         this.AnalyzerUtil.analyzeLoadFiles(file);
       } catch (error) {
-        this.connection.console.warn(`Cannot analyze ${file}`);
+        this.writeConsoleMsg(`Error trying to analyze ${file}`, "error");
       }
     });
   }
@@ -386,7 +388,7 @@ export default class QLangServer {
       params.position
     );
     if (node) {
-      const blockNode = this.AnalyzerUtil.getLv1Node(node);
+      const blockNode = this.AnalyzerUtil.getRootNode(node);
       return { query: blockNode.text, number: blockNode.endPosition.row + 1 };
     } else {
       return { query: "", number: 0 };
@@ -477,9 +479,25 @@ export default class QLangServer {
   ) {
     const where = place ? place : " not specified ";
     const isKeyword = keyword ? `keyword=${JSON.stringify(keyword)}` : "";
-    this.connection.console.info(
-      `${request} ${isKeyword} msg=${msg} where?: ${where}`
+    this.writeConsoleMsg(
+      `${request} ${isKeyword} msg=${msg} where?: ${where}`,
+      "warn"
     );
+  }
+
+  public writeConsoleMsg(msg: string, type: string): void {
+    switch (type) {
+      case "error":
+        this.connection.console.error(msg);
+        break;
+      case "warn":
+        this.connection.console.warn(msg);
+        break;
+      case "info":
+      default:
+        this.connection.console.info(msg);
+        break;
+    }
   }
 
   private removeDuplicateEntries(
@@ -492,40 +510,26 @@ export default class QLangServer {
     return completionItem;
   }
 
-  private generateHoverMap(hoverItems: string[][]): void {
-    this.hoverMap = new Map<string, string>();
-    for (const item of hoverItems) {
+  private prepareOnHover(hoverItems: string[][]): void {
+    hoverItems.forEach((item) => {
       this.hoverMap.set(item[0], item[1]);
-    }
+    });
   }
 
-  private validateTextDocument(textDocument: TextDocument): Diagnostic[] {
-    const text = textDocument.getText();
-    const pattern = /^[}\])]/gm;
-    let m: RegExpExecArray | null;
-
+  private generateDiagnostics(textDocument: TextDocument): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
-    while ((m = pattern.exec(text)) !== null) {
+    const errors = this.AnalyzerUtil.getErrors(textDocument.uri);
+    errors.forEach((error: any) => {
       const diagnostic: Diagnostic = {
         severity: DiagnosticSeverity.Error,
         range: {
-          start: textDocument.positionAt(m.index),
-          end: textDocument.positionAt(m.index + m[0].length),
+          start: textDocument.positionAt(error.startIndex),
+          end: textDocument.positionAt(error.endIndex),
         },
-        message: `require a space before ${m[0]}`,
-        source: "q-lang-server",
+        message: error.message,
       };
-      diagnostic.relatedInformation = [
-        {
-          location: {
-            uri: textDocument.uri,
-            range: Object.assign({}, diagnostic.range),
-          },
-          message: "Multiline expressions",
-        },
-      ];
       diagnostics.push(diagnostic);
-    }
+    });
     return diagnostics;
   }
 }
