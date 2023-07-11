@@ -5,7 +5,6 @@ import {
   commands,
   InputBoxOptions,
   Position,
-  ProgressLocation,
   QuickPickItem,
   QuickPickOptions,
   Range,

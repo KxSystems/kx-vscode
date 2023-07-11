@@ -22,7 +22,7 @@ import {
   SymbolKind,
 } from "vscode-languageserver/node";
 import { URI } from "vscode-uri";
-import Parser from "web-tree-sitter";
+import Parser, { Tree } from "web-tree-sitter";
 import { qLangParser, qLangSampleParser } from "./parserUtils";
 import * as TreeSitterUtil from "./treeSitterUtil";
 
@@ -65,6 +65,7 @@ export default class AnalyzerUtil {
   ): Promise<AnalyzerUtil> {
     return new AnalyzerUtil(parser, connection, workspaceFolder);
   }
+
   public constructor(
     parser: Parser,
     connection: Connection,
@@ -79,23 +80,10 @@ export default class AnalyzerUtil {
   }
 
   // Public Getters
-  public getAllSymbols(): SymbolInformation[] {
+  public getAllSymbolsFlattened(): SymbolInformation[] {
     return Array.from(this.uriToDefinition.values())
       .flatMap((nameToSymInfo) => Array.from(nameToSymInfo.values()))
       .flat();
-  }
-
-  public getAllVariableSymbols(): SymbolInformation[] {
-    return this.getAllSymbols().filter(
-      (symbol) => symbol.kind === SymbolKind.Variable
-    );
-  }
-
-  public getCallHierarchyItemByUriKeyword(
-    uri: DocumentUri,
-    keyword: string
-  ): CallHierarchyItem[] {
-    return this.uriToCallHierarchy.get(uri)?.get(keyword) ?? [];
   }
 
   public getCallHierarchyItemByKeyword(keyword: string): CallHierarchyItem[] {
@@ -108,8 +96,8 @@ export default class AnalyzerUtil {
     return items;
   }
 
-  public getCallNode(node: Parser.SyntaxNode): Parser.SyntaxNode | null {
-    const call = TreeSitterUtil.findParentNotInTypes(
+  public getNodeCallParser(node: Parser.SyntaxNode): Parser.SyntaxNode | null {
+    const nodeCall = TreeSitterUtil.findParentNotInTypes(
       node,
       [
         "table",
@@ -121,7 +109,7 @@ export default class AnalyzerUtil {
       ],
       (parser) => parser.type === "call"
     );
-    return call;
+    return nodeCall;
   }
 
   public getDefinitionByUriKeyword(uri: string, keyword: Keyword): Location[] {
@@ -132,7 +120,9 @@ export default class AnalyzerUtil {
         ...(this.uriToDefinition
           .get(uri)
           ?.get(keyword.text)
-          ?.filter((sym) => sym.containerName === keyword.containerName) || [])
+          ?.filter(
+            (symbol) => symbol.containerName === keyword.containerName
+          ) || [])
       );
     }
 
@@ -144,11 +134,32 @@ export default class AnalyzerUtil {
     return symbols.map((s) => s.location);
   }
 
+  public getErrors(uri: DocumentUri): Diagnostic[] {
+    const tree = this.uriToTree.get(uri);
+    const content = this.uriToFileContent.get(uri);
+    const problems: Diagnostic[] = [];
+    if (tree && content) {
+      TreeSitterUtil.forEach(tree.rootNode, (node) => {
+        if (node.type === "ERROR") {
+          problems.push(
+            Diagnostic.create(
+              TreeSitterUtil.range(node),
+              "Failed to parse expression",
+              DiagnosticSeverity.Error
+            )
+          );
+        }
+      });
+    }
+    return problems;
+  }
+
   public getGlobalIdByUriContainerName(
     uri: DocumentUri,
     containerName: string
   ): string[] {
-    return this.uriToGlobalId.get(uri)?.get(containerName) ?? [];
+    const containerMap = this.uriToGlobalId.get(uri);
+    return containerMap?.get(containerName) ?? [];
   }
 
   public getLocalIds(
@@ -157,7 +168,7 @@ export default class AnalyzerUtil {
   ): SymbolInformation[] {
     const ids: SymbolInformation[] = [];
     ids.push(
-      ...this.getAllSymbols().filter(
+      ...this.getAllSymbolsFlattened().filter(
         (s) => !s.containerName && !s.name.startsWith(".")
       )
     );
@@ -172,16 +183,9 @@ export default class AnalyzerUtil {
     return ids;
   }
 
-  public getLv1Node(node: Parser.SyntaxNode): Parser.SyntaxNode {
-    return TreeSitterUtil.findParentInRoot(node);
-  }
-
   public getKeywordAtPosition(uri: string, position: Position): Keyword | null {
-    const document = this.uriToTree.get(uri);
-    if (!document?.rootNode) {
-      return null;
-    }
-    const node = document.rootNode.descendantForPosition({
+    const { rootNode } = this.uriToTree.get(uri) || {};
+    const node = rootNode?.descendantForPosition({
       row: position.line,
       column: position.character,
     });
@@ -200,14 +204,13 @@ export default class AnalyzerUtil {
     uri: DocumentUri,
     position: Position
   ): Parser.SyntaxNode | null {
-    const document = this.uriToTree.get(uri);
-    if (!document?.rootNode) {
-      return null;
-    }
-    return document.rootNode.descendantForPosition({
-      row: position.line,
-      column: position.character,
-    });
+    const { rootNode } = this.uriToTree.get(uri) || {};
+    return (
+      rootNode?.descendantForPosition({
+        row: position.line,
+        column: position.character,
+      }) || null
+    );
   }
 
   public getNonNullNodeAtPosition(
@@ -215,14 +218,17 @@ export default class AnalyzerUtil {
     position: Position
   ): Parser.SyntaxNode | null {
     const node = this.getNodeAtPosition(uri, position);
-    if (!node || node.childCount > 0 || node.text.trim() === "") {
-      return null;
-    }
-    return node;
+    return node?.childCount === 0 && node.text.trim() !== "" ? node : null;
+  }
+
+  public getRootNode(node: Parser.SyntaxNode): Parser.SyntaxNode {
+    return TreeSitterUtil.findParentInRoot(node);
   }
 
   public getSemanticTokens(uri: DocumentUri): SemanticTokens {
-    return this.uriToSemanticTokens.get(uri)?.build() ?? { data: [] };
+    const semanticTokensBuilder: SemanticTokensBuilder | undefined =
+      this.uriToSemanticTokens.get(uri);
+    return semanticTokensBuilder?.build() ?? { data: [] };
   }
 
   public getServerIds(): CompletionItem[] {
@@ -239,16 +245,18 @@ export default class AnalyzerUtil {
   }
 
   public getSymbolsForUri(uri: DocumentUri): string[] {
-    const srcSymbols = this.uriToSymbol.get(uri) ?? [];
-    return [...this.serverSymbols, ...srcSymbols];
+    const { uriToSymbol, serverSymbols } = this;
+    const srcSymbols: string[] = uriToSymbol.get(uri) ?? [];
+    return [...serverSymbols, ...srcSymbols];
   }
 
   public getSyntaxNodesByUriKeyword(
     uri: DocumentUri,
     keyword: Keyword
   ): Parser.SyntaxNode[] {
-    const tree = this.uriToTree.get(uri);
-    const content = this.uriToFileContent.get(uri);
+    const { uriToTree, uriToFileContent } = this;
+    const tree: Tree | undefined = uriToTree.get(uri);
+    const content: string | undefined = uriToFileContent.get(uri);
     const synNodes: Parser.SyntaxNode[] = [];
     if (tree && content) {
       TreeSitterUtil.forEach(tree.rootNode, (node) => {
@@ -266,7 +274,8 @@ export default class AnalyzerUtil {
       return synNodes;
     } else {
       return synNodes.filter(
-        (syn) => this.getContainerName(syn) === keyword.containerName
+        (syn: Parser.SyntaxNode) =>
+          this.getContainerName(syn) === keyword.containerName
       );
     }
   }
@@ -275,97 +284,50 @@ export default class AnalyzerUtil {
     uri: DocumentUri,
     keyword: Keyword
   ): Location[] {
-    const syntaxNodes = this.getSyntaxNodesByUriKeyword(uri, keyword);
-    return syntaxNodes.map((syntaxNode) =>
+    const { getSyntaxNodesByUriKeyword } = this;
+    const syntaxNodes: Parser.SyntaxNode[] = getSyntaxNodesByUriKeyword(
+      uri,
+      keyword
+    );
+    return syntaxNodes.map((syntaxNode: Parser.SyntaxNode) =>
       Location.create(uri, TreeSitterUtil.range(syntaxNode))
     );
   }
 
-  public getSyntaxNodeByType(
-    uri: DocumentUri,
-    type: string
-  ): Parser.SyntaxNode[] {
-    const tree = this.uriToTree.get(uri);
-    const synNodes: Parser.SyntaxNode[] = [];
-    if (tree) {
-      TreeSitterUtil.forEach(tree.rootNode, (node) => {
-        if (node.type === type) {
-          synNodes.push(node);
-        }
-      });
-    }
-    return synNodes;
-  }
-
-  //finders / searchers
-  public search(query: string): SymbolInformation[] {
-    const fuse = this.getFuseInstance();
-    const searchResults = fuse.search(query);
-    return searchResults.map((result) => result.item);
+  //finders
+  public find(query: string): SymbolInformation[] {
+    const { getFuseInstance } = this;
+    const fuse: Fuse<SymbolInformation> = getFuseInstance();
+    const searchResults: Fuse.FuseResult<SymbolInformation>[] =
+      fuse.search(query);
+    return searchResults.map(
+      ({ item }: Fuse.FuseResult<SymbolInformation>) => item
+    );
   }
 
   public findReferences(keyword: Keyword, uri: DocumentUri): Location[] {
+    const { uriToTree, getSyntaxNodeLocationsByUriKeyword } = this;
     let locations: Location[] = [];
     if (keyword.type === "global_identifier" || keyword.containerName === "") {
-      this.uriToTree.forEach((_, u) =>
-        locations.push(...this.getSyntaxNodeLocationsByUriKeyword(u, keyword))
+      uriToTree.forEach((_, u: DocumentUri) =>
+        locations.push(...getSyntaxNodeLocationsByUriKeyword(u, keyword))
       );
     } else {
-      locations = this.getSyntaxNodeLocationsByUriKeyword(uri, keyword);
+      locations = getSyntaxNodeLocationsByUriKeyword(uri, keyword);
     }
     return locations;
-  }
-
-  public findOccurrences(uri: string, query: string): Location[] {
-    const tree = this.uriToTree.get(uri);
-    const content = this.uriToFileContent.get(uri);
-    const locations: Location[] = [];
-    if (tree && content) {
-      TreeSitterUtil.forEach(tree.rootNode, (node) => {
-        if (TreeSitterUtil.isReference(node) && node.text.trim() === query) {
-          locations.push(Location.create(uri, TreeSitterUtil.range(node)));
-        }
-      });
-    }
-    return locations;
-  }
-
-  public findSymbolDefinitions(uri: string): SymbolInformation[] {
-    const definitions: SymbolInformation[] = [];
-    const nameToSymbolInformation = this.uriToDefinition.get(uri)?.values();
-    if (nameToSymbolInformation) {
-      for (const symbolInformation of nameToSymbolInformation) {
-        definitions.push(...symbolInformation);
-      }
-    }
-    return definitions;
-  }
-
-  public findSymbolsMatchingKeyword(
-    exactMatch: boolean,
-    keyword: string
-  ): SymbolInformation[] {
-    const symbols: SymbolInformation[] = [];
-    this.uriToDefinition.forEach((nameToSymInfo) => {
-      nameToSymInfo.forEach((symbol, name) => {
-        const match = exactMatch ? name === keyword : name.startsWith(keyword);
-        if (match) {
-          symbols.push(...symbol);
-        }
-      });
-    });
-    return symbols;
   }
 
   //other funcs
   public pushSymbolInformation(
     name: string,
-    uri: string,
+    uri: DocumentUri,
     node: Parser.SyntaxNode,
     containerName: string,
     kind: SymbolKind
   ): void {
-    let def = this.uriToDefinition.get(uri)?.get(name);
+    const { uriToDefinition } = this;
+    let def = uriToDefinition.get(uri)?.get(name);
     const symInfo = SymbolInformation.create(
       name,
       kind,
@@ -377,94 +339,90 @@ export default class AnalyzerUtil {
       def.push(symInfo);
     } else {
       def = [symInfo];
-      this.uriToDefinition.get(uri)?.set(name, def);
+      uriToDefinition.get(uri)?.set(name, def);
     }
   }
 
-  public remove(uri: string): void {
-    this.uriToDefinition.delete(uri);
-    this.uriToFileContent.delete(uri);
-    this.uriToTextDocument.delete(uri);
-    this.uriToTree.delete(uri);
+  public remove(uri: DocumentUri): void {
+    const { uriToDefinition, uriToFileContent, uriToTextDocument, uriToTree } =
+      this;
+    uriToDefinition.delete(uri);
+    uriToFileContent.delete(uri);
+    uriToTextDocument.delete(uri);
+    uriToTree.delete(uri);
   }
 
   // analyze
 
-  public analyzeWorkspace(cfg: {
-    globsPattern: string[];
-    ignorePattern: string[];
-  }): void {
+  public analyzeSourceCode({
+    globsPattern = ["**/src/**/*.q"],
+    ignorePattern = ["**/tmp"],
+  }: { globsPattern?: string[]; ignorePattern?: string[] } = {}): void {
     if (this.rootPath && fs.existsSync(this.rootPath)) {
-      this.uriToTextDocument = new Map<string, TextDocument>();
+      this.uriToTextDocument = new Map<DocumentUri, TextDocument>();
       this.uriToTree = new Map<DocumentUri, Parser.Tree>();
       this.uriToFileContent = new Map<DocumentUri, string>();
       this.uriToDefinition = new Map<DocumentUri, nameToSymbolInformation>();
       this.uriToSymbol = new Map<DocumentUri, string[]>();
       this.nameToSignatureHelp = new Map<string, SignatureHelp>();
 
-      const globsPattern = cfg.globsPattern ?? ["**/src/**/*.q"];
-      const ignorePattern = cfg.ignorePattern ?? ["**/tmp"];
-
-      this.connection.console.info(
-        `Analyzing files matching glob "${globsPattern}" inside ${this.rootPath}`
-      );
-
-      const lookupStartTime = Date.now();
-      const getTimePassed = (): string =>
-        `${(Date.now() - lookupStartTime) / 1000} seconds`;
+      this.writeConsoleMsg(`Checking into the opened Source Code`, "info");
 
       const ignoreMatch = picomatch(ignorePattern);
       const includeMatch = picomatch(globsPattern);
-      AnalyzerUtil.matchFile = (test) =>
+      AnalyzerUtil.matchFile = (test: string) =>
         !ignoreMatch(test) && includeMatch(test);
-      const qSrcFiles: string[] = [];
+      const qFiles: string[] = [];
       klaw(this.rootPath, { filter: (item) => !ignoreMatch(item) })
         .on("error", (err: Error) => {
-          this.connection.console.warn(err.message);
+          this.writeConsoleMsg(
+            `Error when we tried to analyze the Source Code`,
+            "error"
+          );
+          this.writeConsoleMsg(err.message, "error");
         })
         .on("data", (item) => {
-          if (includeMatch(item.path)) qSrcFiles.push(item.path);
+          if (includeMatch(item.path)) qFiles.push(item.path);
         })
         .on("end", () => {
-          if (qSrcFiles.length == 0) {
-            this.connection.console.warn(
-              `Failed to find any source files using the glob "${globsPattern}". Some feature will not be available.`
-            );
+          if (qFiles.length == 0) {
+            this.writeConsoleMsg("No q files found", "warn");
           } else {
-            this.connection.console.info(
-              `Glob found ${qSrcFiles.length} files after ${getTimePassed()}`
-            );
-
-            qSrcFiles.forEach((filepath: string) => this.analyzeFile(filepath));
-            this.uriToLoadFile.forEach((_, uri) => this.analyzeLoadFiles(uri));
-
-            this.connection.console.info(`Analyzing took ${getTimePassed()}`);
+            this.writeConsoleMsg(`${qFiles.length} q files founded.`, "info");
+            qFiles.forEach((filepath: string) => this.analyzeFile(filepath));
+            this.uriToLoadFile?.forEach((_, uri) => this.analyzeLoadFiles(uri));
           }
         });
       this.analyzeServerCache("");
     }
   }
 
-  public debugAnalyzeWorkspace(msg: string): void {
-    this.connection.console.warn(msg);
-  }
-
   public analyzeLoadFiles(uri: DocumentUri): void {
-    this.uriToLoadFile.get(uri)?.forEach((f) => {
-      if (!this.uriToTree.get(URI.file(f).toString())) this.analyzeFile(f);
-    });
+    const { uriToLoadFile, uriToTree } = this;
+    const filesToLoad = uriToLoadFile.get(uri);
+    if (filesToLoad) {
+      filesToLoad.forEach((f: string) => {
+        const fileUri = URI.file(f).toString();
+        if (!uriToTree.get(fileUri)) {
+          this.analyzeFile(f);
+        }
+      });
+    }
   }
 
   public analyzeFile(filepath: string): void {
-    const uri = URI.file(filepath).toString();
+    const uri: DocumentUri = URI.file(filepath).toString();
     try {
-      const fileContent = fs.readFileSync(filepath, "utf8");
-      this.connection.console.info(`Analyzing ${uri}`);
+      const fileContent: string = fs.readFileSync(filepath, "utf8");
+      this.writeConsoleMsg(`Analyzing file: ${uri}`, "info");
       this.analyzeDocument(uri, TextDocument.create(uri, "q", 1, fileContent));
-    } catch (error) {
+    } catch (error: unknown) {
       const { message } = error as Error;
-      this.connection.console.warn(`Failed analyzing ${uri}.`);
-      this.connection.console.warn(`Error: ${message}`);
+      this.writeConsoleMsg(
+        `There is an error when we tried to analyzing ${uri}.`,
+        "error"
+      );
+      this.writeConsoleMsg(`Error message: ${message}`, "error");
     }
   }
 
@@ -472,19 +430,30 @@ export default class AnalyzerUtil {
     uri: DocumentUri,
     document: TextDocument
   ): Diagnostic[] {
+    const {
+      uriToTextDocument,
+      uriToTree,
+      uriToDefinition,
+      uriToFileContent,
+      uriToSymbol,
+      uriToSemanticTokens,
+      uriToCallHierarchy,
+      uriToGlobalId,
+      uriToLoadFile,
+    } = this;
     const content = document.getText();
     const tree = this.parser.parse(content);
-    this.uriToTextDocument.set(uri, document);
-    this.uriToTree.set(uri, tree);
-    this.uriToDefinition.set(uri, new Map<string, SymbolInformation[]>());
-    this.uriToFileContent.set(uri, content);
-    this.uriToSymbol.set(uri, []);
-    this.uriToSemanticTokens.set(uri, new SemanticTokensBuilder());
+    uriToTextDocument.set(uri, document);
+    uriToTree.set(uri, tree);
+    uriToDefinition.set(uri, new Map<string, SymbolInformation[]>());
+    uriToFileContent.set(uri, content);
+    uriToSymbol.set(uri, []);
+    uriToSemanticTokens.set(uri, new SemanticTokensBuilder());
     const callHierarchyMap = new Map<string, CallHierarchyItem[]>();
-    this.uriToCallHierarchy.set(uri, callHierarchyMap);
+    uriToCallHierarchy.set(uri, callHierarchyMap);
     const globalIdMap = new Map<string, string[]>();
-    this.uriToGlobalId.set(uri, globalIdMap);
-    this.uriToLoadFile.set(uri, []);
+    uriToGlobalId.set(uri, globalIdMap);
+    uriToLoadFile.set(uri, []);
     const problems: Diagnostic[] = [];
     let namespace = "";
     const tokens: number[][] = [];
@@ -493,117 +462,12 @@ export default class AnalyzerUtil {
         problems.push(
           Diagnostic.create(
             TreeSitterUtil.range(node),
-            "Failed to parse expression",
+            "Failed to parse an expression",
             DiagnosticSeverity.Error
           )
         );
       } else if (TreeSitterUtil.isDefinition(node)) {
-        const named = node.firstChild;
-        if (named === null) {
-          return;
-        }
-        const containerName = this.getContainerName(node) ?? "";
-        const name =
-          namespace === "" || named.type === "global_identifier"
-            ? named.text.trim()
-            : `${namespace}.${named.text.trim()}`;
-        let symbolKind = SymbolKind.Variable as SymbolKind;
-        const defNode = node.children[2]?.firstChild;
-        if (defNode?.type === "function_body") {
-          symbolKind = SymbolKind.Function;
-        }
-        if (
-          containerName !== "" &&
-          namespace === "" &&
-          named.type === "local_identifier"
-        ) {
-          this.pushSymbolInformation(
-            name,
-            uri,
-            node,
-            containerName,
-            symbolKind
-          );
-          return;
-        }
-        if (
-          defNode?.type === "function_body" &&
-          defNode?.firstNamedChild?.type === "formal_parameters"
-        ) {
-          symbolKind = SymbolKind.Function;
-          const paramNodes = defNode.firstNamedChild.namedChildren;
-          const params = TreeSitterUtil.extractParams(defNode).map((param) =>
-            ParameterInformation.create(param)
-          );
-          if (params.length > 0) {
-            const sigInfo = SignatureInformation.create(
-              `${name}[${params
-                .map((parameterInformation) => parameterInformation.label)
-                .join(";")}]`,
-              undefined,
-              ...params
-            );
-            this.nameToSignatureHelp.set(name, {
-              signatures: [sigInfo],
-              activeParameter: 0,
-              activeSignature: 0,
-            });
-            paramNodes.forEach((node) => {
-              this.pushSymbolInformation(
-                node.text,
-                uri,
-                node,
-                name,
-                SymbolKind.Variable
-              );
-            });
-          }
-        } else if (defNode?.type === "call" && defNode.firstNamedChild) {
-          let params: ParameterInformation[] = [];
-          if (defNode.firstNamedChild.type === "function_body") {
-            const paramNodes =
-              defNode.firstNamedChild.firstNamedChild?.namedChildren;
-            params = TreeSitterUtil.extractParams(defNode.firstNamedChild).map(
-              (param) => ParameterInformation.create(param)
-            );
-            if (params.length > 0 && paramNodes) {
-              paramNodes.forEach((node) => {
-                this.pushSymbolInformation(
-                  node.text,
-                  uri,
-                  node,
-                  this.getContainerName(node),
-                  SymbolKind.Variable
-                );
-              });
-            }
-          } else if (TreeSitterUtil.isReference(defNode.firstNamedChild)) {
-            params =
-              this.getSignatureHelp(defNode.firstNamedChild.text)?.signatures[0]
-                .parameters ?? [];
-          }
-          const projections = defNode.namedChildren.map(
-            (node) => node.type !== "null_statement"
-          );
-          projections.shift();
-          params = params.filter((_, i) => !projections[i]);
-          if (params.length > 0) {
-            symbolKind = SymbolKind.Function;
-            const sigInfo = SignatureInformation.create(
-              `${name}[${params
-                .map((parameterInformation) => parameterInformation.label)
-                .join(";")}]`,
-              undefined,
-              ...params
-            );
-            this.nameToSignatureHelp.set(name, {
-              signatures: [sigInfo],
-              activeParameter: 0,
-              activeSignature: 0,
-            });
-          }
-        }
-        this.pushSymbolInformation(name, uri, node, containerName, symbolKind);
+        this.analyzeNodeDefinition(node, uri, namespace);
       } else if (TreeSitterUtil.isSeparator(node)) {
         if (node.text[0] !== ";") {
           problems.push(
@@ -619,7 +483,7 @@ export default class AnalyzerUtil {
       } else if (TreeSitterUtil.isNamespaceEnd(node)) {
         namespace = "";
       } else if (TreeSitterUtil.isSymbol(node)) {
-        this.uriToSymbol.get(uri)?.push(node.text.trim());
+        uriToSymbol.get(uri)?.push(node.text.trim());
       } else if (TreeSitterUtil.isFunctionBody(node)) {
         const params = TreeSitterUtil.hasParams(node)
           ? TreeSitterUtil.extractParams(node).filter(
@@ -655,12 +519,12 @@ export default class AnalyzerUtil {
       } else if (TreeSitterUtil.isLoadingFile(node)) {
         const matches = node.text.match(/(\/[^/ ]*)+\.q/);
         if (matches) {
-          this.uriToLoadFile.get(uri)?.push(matches[0]);
+          uriToLoadFile.get(uri)?.push(matches[0]);
         }
       }
     });
     const semanticTokensBuilder =
-      this.uriToSemanticTokens.get(uri) ?? new SemanticTokensBuilder();
+      uriToSemanticTokens.get(uri) ?? new SemanticTokensBuilder();
     tokens
       .sort((t1, t2) => (t1[0] == t2[0] ? t1[1] - t2[1] : t1[0] - t2[0]))
       .forEach((token) =>
@@ -673,7 +537,7 @@ export default class AnalyzerUtil {
         )
       );
 
-    function findMissingNodes(node: Parser.SyntaxNode) {
+    function searchMissingNodes(node: Parser.SyntaxNode) {
       if (node.isMissing()) {
         problems.push(
           Diagnostic.create(
@@ -683,10 +547,10 @@ export default class AnalyzerUtil {
           )
         );
       } else if (node.hasError()) {
-        node.children.forEach(findMissingNodes);
+        node.children.forEach(searchMissingNodes);
       }
     }
-    findMissingNodes(tree.rootNode);
+    searchMissingNodes(tree.rootNode);
     return problems;
   }
 
@@ -695,105 +559,242 @@ export default class AnalyzerUtil {
     const tree = this.parser.parse(source);
     this.serverIds = [];
     this.serverSymbols = [];
-    TreeSitterUtil.forEach(tree.rootNode, (n: Parser.SyntaxNode) => {
-      if (TreeSitterUtil.isDefinition(n)) {
-        const named = n.firstChild;
-        if (!named) {
-          return;
+    TreeSitterUtil.forEach(tree.rootNode, (node: Parser.SyntaxNode) => {
+      if (!TreeSitterUtil.isDefinition(node)) {
+        return;
+      }
+      const namedNode = node.firstChild;
+      if (!namedNode) {
+        return;
+      }
+      const name = namedNode.text.trim();
+      const defNode = node.children[2]?.firstChild;
+      const detail = `${name}:${defNode?.text?.trim() ?? ""}`;
+      let completionItemKind: CompletionItemKind = CompletionItemKind.Variable;
+      if (
+        defNode?.type === "function_body" &&
+        defNode?.firstNamedChild?.type === "formal_parameters"
+      ) {
+        completionItemKind = CompletionItemKind.Function;
+        const params = TreeSitterUtil.extractParams(defNode).map((param) =>
+          ParameterInformation.create(param)
+        );
+        if (params.length > 0) {
+          const sigInfo = SignatureInformation.create(
+            `${name}[${params.map((p) => p.label).join(";")}]`,
+            undefined,
+            ...params
+          );
+          this.nameToSignatureHelp.set(name, {
+            signatures: [sigInfo],
+            activeParameter: 0,
+            activeSignature: 0,
+          });
         }
-        const name = named.text.trim();
-        const defNode = n.children[2]?.firstChild;
-        const detail = named.text.trim() + ":" + defNode?.text;
-        let completionItemKind: CompletionItemKind =
-          CompletionItemKind.Variable;
-        if (
-          defNode?.type === "function_body" &&
-          defNode?.firstNamedChild?.type === "formal_parameters"
-        ) {
+      } else if (defNode?.type === "call" && defNode.firstNamedChild) {
+        let params: ParameterInformation[] = [];
+        if (defNode.firstNamedChild.type === "function_body") {
+          params = TreeSitterUtil.extractParams(defNode.firstNamedChild).map(
+            (param) => ParameterInformation.create(param)
+          );
+        } else if (TreeSitterUtil.isReference(defNode.firstNamedChild)) {
+          params =
+            this.getSignatureHelp(defNode.firstNamedChild.text)?.signatures[0]
+              .parameters ?? [];
+        }
+        const projections = defNode.namedChildren.map(
+          (n) => n.type !== "null_statement"
+        );
+        projections.shift();
+        params = params.filter((_, i) => !projections[i]);
+        if (params.length > 0) {
           completionItemKind = CompletionItemKind.Function;
-          const params = TreeSitterUtil.extractParams(defNode).map((param) =>
-            ParameterInformation.create(param)
+          const sigInfo = SignatureInformation.create(
+            `${name}[${params.map((p) => p.label).join(";")}]`,
+            undefined,
+            ...params
           );
-          if (params.length > 0) {
-            const sigInfo = SignatureInformation.create(
-              `${name}[${params.map((p) => p.label).join(";")}]`,
-              undefined,
-              ...params
-            );
-            this.nameToSignatureHelp.set(name, {
-              signatures: [sigInfo],
-              activeParameter: 0,
-              activeSignature: 0,
-            });
-          }
-        } else if (defNode?.type === "call" && defNode.firstNamedChild) {
-          let params: ParameterInformation[] = [];
-          if (defNode.firstNamedChild.type === "function_body") {
-            params = TreeSitterUtil.extractParams(defNode.firstNamedChild).map(
-              (param) => ParameterInformation.create(param)
-            );
-          } else if (TreeSitterUtil.isReference(defNode.firstNamedChild)) {
-            params =
-              this.getSignatureHelp(defNode.firstNamedChild.text)?.signatures[0]
-                .parameters ?? [];
-          }
-          const projections = defNode.namedChildren.map(
-            (n) => n.type !== "null_statement"
-          );
-          projections.shift();
-          params = params.filter((_, i) => !projections[i]);
-          if (params.length > 0) {
-            completionItemKind = CompletionItemKind.Function;
-            const sigInfo = SignatureInformation.create(
-              `${name}[${params.map((p) => p.label).join(";")}]`,
-              undefined,
-              ...params
-            );
-            this.nameToSignatureHelp.set(name, {
-              signatures: [sigInfo],
-              activeParameter: 0,
-              activeSignature: 0,
-            });
-          }
-        }
-        this.serverIds.push({ label: name, kind: completionItemKind, detail });
-      } else if (TreeSitterUtil.isSymbol(n)) {
-        if (this.getContainerName(n) === "") {
-          this.serverSymbols.push(n.text.trim());
+          this.nameToSignatureHelp.set(name, {
+            signatures: [sigInfo],
+            activeParameter: 0,
+            activeSignature: 0,
+          });
         }
       }
+      this.serverIds.push({
+        label: name,
+        kind: completionItemKind,
+        detail: detail,
+      });
     });
+    this.serverSymbols = TreeSitterUtil.getSymbols(tree.rootNode)
+      .filter((symbol) => this.getContainerName(symbol) === "")
+      .map((symbol) => symbol.text.trim());
   }
 
-  // Private Getters
+  // misc functions
+  public debugWithLogs(request: string, msg: string, place?: string | null) {
+    const where = place ? place : " not specified ";
+    this.writeConsoleMsg(`${request} msg=${msg} where?: ${where}`, "warn");
+  }
+
+  public writeConsoleMsg(msg: string, type: string): void {
+    switch (type) {
+      case "error":
+        this.connection.console.error(msg);
+        break;
+      case "warn":
+        this.connection.console.warn(msg);
+        break;
+      case "info":
+      default:
+        this.connection.console.info(msg);
+        break;
+    }
+  }
+
+  // Private
   private getContainerName(node: Parser.SyntaxNode): string {
-    const body = TreeSitterUtil.findParent(
+    const functionBody = TreeSitterUtil.findParent(
       node,
       (node) => node.type === "function_body"
     );
-    if (body?.parent?.type === "expression_statement") {
-      if (body?.parent?.parent?.type === "assignment") {
-        const assignment = body.parent.parent;
-        if (
-          assignment?.namedChild(1)?.firstNamedChild?.type === "function_body"
-        ) {
-          const functionNamed = assignment.firstNamedChild;
-          return functionNamed?.text.trim() ?? "";
-        }
+    if (functionBody?.parent?.type === "expression_statement") {
+      const assignmentStatement = functionBody.parent.parent;
+      if (
+        assignmentStatement?.namedChild(1)?.firstNamedChild?.type ===
+        "function_body"
+      ) {
+        const functionNamed = assignmentStatement.firstNamedChild;
+        return functionNamed?.text.trim() || "";
       } else {
-        return `LAMBDA-${body.parent.startPosition.row}-${body.parent.startPosition.column}`;
+        return `LAMBDA-${functionBody.parent.startPosition.row}-${functionBody.parent.startPosition.column}`;
       }
-    } else if (body?.parent?.type === "call") {
-      return `LAMBDA-${body.parent.startPosition.row}-${body.parent.startPosition.column}`;
+    } else if (functionBody?.parent?.type === "call") {
+      return `LAMBDA-${functionBody.parent.startPosition.row}-${functionBody.parent.startPosition.column}`;
     }
     return "";
   }
 
   private getFuseInstance(): Fuse<SymbolInformation> {
-    if (!this.fuseInstance) {
-      const symbols = this.getAllSymbols();
-      this.fuseInstance = new Fuse(symbols, { keys: ["name"] });
+    // If a `Fuse` instance has already been created, return the existing instance.
+    if (this.fuseInstance) {
+      return this.fuseInstance;
     }
+
+    // Otherwise, create a new `Fuse` instance for the list of flattened symbols.
+    const flattenedSymbols = this.getAllSymbolsFlattened();
+    this.fuseInstance = new Fuse(flattenedSymbols, { keys: ["name"] });
     return this.fuseInstance;
+  }
+
+  private analyzeNodeDefinition(
+    node: Parser.SyntaxNode,
+    uri: DocumentUri,
+    namespace: string
+  ): void {
+    const named: Parser.SyntaxNode | null = node.firstChild;
+    if (named === null) {
+      return;
+    }
+    const containerName: string = this.getContainerName(node) ?? "";
+    const { text, type } = named;
+    const name: string =
+      namespace === "" || type === "global_identifier"
+        ? text.trim()
+        : `${namespace}.${text.trim()}`;
+    let symbolKind: SymbolKind = SymbolKind.Variable;
+    const defNode: Parser.SyntaxNode | null | undefined =
+      node.children[2]?.firstChild;
+    if (defNode?.type === "function_body") {
+      symbolKind = SymbolKind.Function;
+    }
+    if (
+      containerName !== "" &&
+      namespace === "" &&
+      type === "local_identifier"
+    ) {
+      this.pushSymbolInformation(name, uri, node, containerName, symbolKind);
+      return;
+    }
+    if (
+      defNode?.type === "function_body" &&
+      defNode?.firstNamedChild?.type === "formal_parameters"
+    ) {
+      symbolKind = SymbolKind.Function;
+      const paramNodes: Parser.SyntaxNode[] =
+        defNode.firstNamedChild.namedChildren;
+      const params: ParameterInformation[] = TreeSitterUtil.extractParams(
+        defNode
+      ).map((param: string) => ParameterInformation.create(param));
+      if (params.length > 0) {
+        const sigInfo: SignatureInformation = SignatureInformation.create(
+          `${name}[${params
+            .map((parameterInformation) => parameterInformation.label)
+            .join(";")}]`,
+          undefined,
+          ...params
+        );
+        this.nameToSignatureHelp.set(name, {
+          signatures: [sigInfo],
+          activeParameter: 0,
+          activeSignature: 0,
+        });
+        paramNodes.forEach((node) => {
+          this.pushSymbolInformation(
+            node.text,
+            uri,
+            node,
+            name,
+            SymbolKind.Variable
+          );
+        });
+      }
+    } else if (defNode?.type === "call" && defNode.firstNamedChild) {
+      let params: ParameterInformation[] = [];
+      if (defNode.firstNamedChild.type === "function_body") {
+        const paramNodes: Parser.SyntaxNode[] | undefined =
+          defNode.firstNamedChild.firstNamedChild?.namedChildren;
+        params = TreeSitterUtil.extractParams(defNode.firstNamedChild).map(
+          (param: string) => ParameterInformation.create(param)
+        );
+        if (params.length > 0 && paramNodes) {
+          paramNodes.forEach((node) => {
+            this.pushSymbolInformation(
+              node.text,
+              uri,
+              node,
+              this.getContainerName(node),
+              SymbolKind.Variable
+            );
+          });
+        }
+      } else if (TreeSitterUtil.isReference(defNode.firstNamedChild)) {
+        params =
+          this.getSignatureHelp(defNode.firstNamedChild.text)?.signatures[0]
+            .parameters ?? [];
+      }
+      const projections: boolean[] = defNode.namedChildren.map(
+        (node: Parser.SyntaxNode) => node.type !== "null_statement"
+      );
+      projections.shift();
+      params = params.filter((_, i) => !projections[i]);
+      if (params.length > 0) {
+        symbolKind = SymbolKind.Function;
+        const sigInfo: SignatureInformation = SignatureInformation.create(
+          `${name}[${params
+            .map((parameterInformation) => parameterInformation.label)
+            .join(";")}]`,
+          undefined,
+          ...params
+        );
+        this.nameToSignatureHelp.set(name, {
+          signatures: [sigInfo],
+          activeParameter: 0,
+          activeSignature: 0,
+        });
+      }
+    }
+    this.pushSymbolInformation(name, uri, node, containerName, symbolKind);
   }
 }

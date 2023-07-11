@@ -20,13 +20,14 @@ export async function initializeParser(): Promise<Parser> {
 }
 
 export function getQLangParserRef(): CompletionItem[] {
-  const qLangParser: CompletionItem[] = qLangParserItems.map(
+  const qLangParserItemsWithKind: CompletionItem[] = qLangParserItems.map(
     (item: CompletionItem) => {
-      item.kind = Number(item.kind) as CompletionItemKind;
+      item.kind = item.kind as CompletionItemKind;
       return item;
     }
   );
-  return qLangParser;
+
+  return qLangParserItemsWithKind;
 }
 
 export const qLangParser = getQLangParserRef();
