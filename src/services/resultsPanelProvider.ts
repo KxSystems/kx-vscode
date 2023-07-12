@@ -22,7 +22,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     webviewView.webview.html = this._getWebviewContent("");
 
     webviewView.webview.onDidReceiveMessage((data) => {
-      this._getWebviewContent(data);
+      webviewView.webview.html = this._getWebviewContent(data);
     });
   }
 
@@ -30,6 +30,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     if (this._view) {
       this._view.show?.(true);
       this._view.webview.postMessage(queryResults);
+      this._view.webview.html = this._getWebviewContent(queryResults);
     }
   }
 
