@@ -310,8 +310,8 @@ export async function activate(context: ExtensionContext) {
   };
 
   client = new LanguageClient(
-    "kdb+ LangServer",
-    "kdb+ Language Server",
+    "kdb LangServer",
+    "kdb Language Server",
     serverOptions,
     clientOptions
   );

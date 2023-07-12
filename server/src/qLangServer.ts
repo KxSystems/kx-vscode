@@ -77,11 +77,11 @@ export default class QLangServer {
     this.connection.onNotification("analyzeServerCache", (code) =>
       this.AnalyzerUtil.analyzeServerCache(code)
     );
-    this.connection.onNotification("analyzeSourceCode", (cfg) =>
-      this.AnalyzerUtil.analyzeWorkspace(cfg)
+    this.connection.onNotification("analyzeSourceCode", (config) =>
+      this.AnalyzerUtil.analyzeSourceCode(config)
     );
     this.connection.onNotification("prepareOnHover", (hoverItems) =>
-      this.generateHoverMap(hoverItems)
+      this.prepareOnHover(hoverItems)
     );
     this.connection.onRequest("onQueryBlock", (params) =>
       this.onQueryBlock(params)
@@ -107,36 +107,46 @@ export default class QLangServer {
     connection: Connection,
     { workspaceFolders }: InitializeParams
   ): Promise<QLangServer> {
-    const workspaceFolder = workspaceFolders ? workspaceFolders[0].uri : "";
-    connection.console.info(
-      `Initializing kdb+ Language Server at ${workspaceFolder}`
-    );
+    // Get the URI of the root folder, if it exists.
+    const rootUri = workspaceFolders ? workspaceFolders[0].uri : "";
+    // Initialize the parser.
     const parser = await initializeParser();
-    return AnalyzerUtil.fromRoot(connection, workspaceFolder, parser).then(
-      (analyzer) => {
-        return new QLangServer(connection, analyzer);
-      }
+    // Create a new `QLangServer` instance with the given connection and analyzer.
+    const analyzer = await AnalyzerUtil.fromRoot(connection, rootUri, parser);
+    const server = new QLangServer(connection, analyzer);
+    // Write a console message to indicate that the server is being initialized.
+    server.writeConsoleMsg(
+      "Initializing QLang Language Server for QLang VSCode extension",
+      "info"
     );
+
+    return server;
   }
 
+  // Capabilities following https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/
   public capabilities(): ServerCapabilities {
     return {
+      // The kind of text document synchronization that the server supports.
       textDocumentSync: TextDocumentSyncKind.Full,
-      completionProvider: {
-        resolveProvider: true,
-      },
+      // Whether the server supports resolving additional information for a completion item.
+      completionProvider: { resolveProvider: true },
+      // Whether the server supports providing hover information for a symbol.
       hoverProvider: true,
+      // Whether the server supports providing document highlights for a symbol.
       documentHighlightProvider: true,
+      // Whether the server supports providing definitions for a symbol.
       definitionProvider: true,
+      // Whether the server supports providing symbols for a document.
       documentSymbolProvider: true,
+      // Whether the server supports providing symbols for the workspace.
       workspaceSymbolProvider: true,
+      // Whether the server supports finding references to a symbol.
       referencesProvider: true,
-      renameProvider: {
-        prepareProvider: true,
-      },
-      signatureHelpProvider: {
-        triggerCharacters: ["[", ";"],
-      },
+      // Whether the server supports renaming a symbol.
+      renameProvider: { prepareProvider: true },
+      // Whether the server supports providing signature help for a symbol.
+      signatureHelpProvider: { triggerCharacters: ["[", ";"] },
+      // Whether the server supports providing semantic tokens for a document.
       semanticTokensProvider: {
         documentSelector: null,
         legend: {
@@ -145,47 +155,65 @@ export default class QLangServer {
         },
         full: true,
       },
+      // Whether the server supports providing call hierarchy information for a symbol.
       callHierarchyProvider: true,
     };
   }
 
   // Getters
   private getKeywordAtPosition(
-    params: ReferenceParams | TextDocumentPositionParams
+    referenceOrPositionParams: ReferenceParams | TextDocumentPositionParams
   ): Keyword | null {
-    return this.AnalyzerUtil.getKeywordAtPosition(
-      params.textDocument.uri,
-      params.position
-    );
+    // Get the URI and position from the `referenceOrPositionParams` object.
+    const uri = referenceOrPositionParams.textDocument?.uri;
+    const position = referenceOrPositionParams.position;
+    // If either `uri` or `position` is `undefined`, return `null`.
+    if (!uri || !position) {
+      return null;
+    }
+    // Get the `Keyword` object at the given position in the document.
+    return this.AnalyzerUtil.getKeywordAtPosition(uri, position);
   }
 
+  /**
+   * Returns the signature help for the symbol at the given position in the document, or `undefined` if no signature help is available.
+   */
   private getSignatureHelpAtPosition(
-    params: ReferenceParams | TextDocumentPositionParams
+    referenceOrPositionParams: ReferenceParams | TextDocumentPositionParams
   ): SignatureHelp | undefined {
-    const node = this.AnalyzerUtil.getNonNullNodeAtPosition(
-      params.textDocument.uri,
-      params.position
+    // Get the symbol node at the given position in the document.
+    const symbolNode = this.AnalyzerUtil.getNonNullNodeAtPosition(
+      referenceOrPositionParams.textDocument.uri,
+      referenceOrPositionParams.position
     );
-    if (node) {
-      const callNode = this.AnalyzerUtil.getCallNode(node);
-      const signatureHelp = this.AnalyzerUtil.getSignatureHelp(
-        callNode?.firstNamedChild?.text ?? ""
-      );
-      if (callNode && signatureHelp) {
-        let index = -1;
-        for (const child of callNode.namedChildren) {
-          if (node.startIndex > child.endIndex) index += 1;
-        }
-        signatureHelp.activeParameter = index;
-        return signatureHelp;
-      }
+    // If no symbol node is found, return `undefined`.
+    if (!symbolNode) {
+      return undefined;
     }
+    // Get the call node for the symbol node.
+    const callNode = this.AnalyzerUtil.getNodeCallParser(symbolNode);
+    // Get the signature help for the call node.
+    const signatureHelp = this.AnalyzerUtil.getSignatureHelp(
+      callNode?.firstNamedChild?.text ?? ""
+    );
+    // If both the call node and signature help are available, set the active parameter index and return the signature help.
+    if (callNode && signatureHelp) {
+      let activeParameterIndex = -1;
+      for (const child of callNode.namedChildren) {
+        if (symbolNode.startIndex > child.endIndex) {
+          activeParameterIndex += 1;
+        }
+      }
+      signatureHelp.activeParameter = activeParameterIndex;
+      return signatureHelp;
+    }
+    // Otherwise, return `undefined`.
     return undefined;
   }
 
   // on actions funcs
-
   private onCompletion(params: TextDocumentPositionParams): CompletionItem[] {
+    // Get the keyword at the given position in the document.
     const keyword = this.getKeywordAtPosition({
       ...params,
       position: {
@@ -193,169 +221,217 @@ export default class QLangServer {
         character: Math.max(params.position.character - 1, 0),
       },
     });
-
-    let symbols: string[] = [];
-    let localId: CompletionItem[] = [];
-    let globalId: CompletionItem[] = [];
-    let completionItem: CompletionItem[] = [];
-
+    // Initialize the arrays of completion items.
+    const completionItems: CompletionItem[] = [];
+    const localIds: CompletionItem[] = [];
+    const globalIds: CompletionItem[] = [];
+    // If the keyword starts with a dot, add global symbols to the completion items.
     if (keyword?.text.startsWith(".")) {
-      completionItem = this.qLangParserRef.filter((item) =>
-        String(item.label).startsWith(".")
+      completionItems.push(
+        ...this.qLangParserRef.filter((item) =>
+          String(item.label).startsWith(".")
+        )
       );
-      globalId = this.AnalyzerUtil.getServerIds()
-        .filter((item) => String(item.label).startsWith("."))
-        .concat(
-          this.AnalyzerUtil.getAllSymbols()
-            .filter((symbol) => String(symbol.name).startsWith("."))
-            .map((symbol) => {
-              return {
+      globalIds.push(
+        ...this.AnalyzerUtil.getServerIds()
+          .filter((item) => String(item.label).startsWith("."))
+          .flatMap((_item) =>
+            this.AnalyzerUtil.getAllSymbolsFlattened()
+              .filter((symbol) => String(symbol.name).startsWith("."))
+              .map((symbol) => ({
                 label: symbol.name,
                 kind:
                   symbol.kind === SymbolKind.Function
                     ? CompletionItemKind.Method
                     : CompletionItemKind.Variable,
                 detail: symbol.containerName,
-              };
-            })
-        );
-      const flags = new Map<string, boolean>();
-      completionItem.forEach((item) => flags.set(item.label, true));
-      globalId.forEach((item) => {
-        if (!flags.get(item.label)) {
-          completionItem.push(item);
-          flags.set(item.label, true);
+              }))
+          )
+      );
+      const flags = new Set<string>(completionItems.map((item) => item.label));
+      globalIds.forEach((item) => {
+        if (!flags.has(item.label)) {
+          completionItems.push(item);
+          flags.add(item.label);
         }
       });
-    } else if (keyword?.text.startsWith("`")) {
-      symbols = this.AnalyzerUtil.getSymbolsForUri(params.textDocument.uri);
-      new Set(symbols).forEach((symbol) => {
-        completionItem.push({ label: symbol, kind: CompletionItemKind.Enum });
-      });
-    } else {
-      completionItem = this.qLangParserRef.filter((item) =>
-        String(item.label).startsWith(keyword?.text ? keyword.text : "")
+    }
+    // If the keyword starts with a backtick, add enum symbols to the completion items.
+    else if (keyword?.text.startsWith("`")) {
+      const symbolNames = this.AnalyzerUtil.getSymbolsForUri(
+        params.textDocument.uri
       );
-      localId = this.AnalyzerUtil.getServerIds()
-        .filter((id) => !id.label.startsWith("."))
-        .concat(
-          this.AnalyzerUtil.getLocalIds(
-            params.textDocument.uri,
-            keyword?.containerName ?? ""
-          ).map((symbol) => {
-            return {
+      symbolNames.forEach((symbolName) => {
+        completionItems.push({
+          label: symbolName,
+          kind: CompletionItemKind.Enum,
+        });
+      });
+    }
+    // Otherwise, add local and server symbols to the completion items.
+    else {
+      completionItems.push(
+        ...this.qLangParserRef.filter((item) =>
+          String(item.label).startsWith(keyword?.text ?? "")
+        )
+      );
+      localIds.push(
+        ...this.AnalyzerUtil.getServerIds()
+          .filter((id) => !id.label.startsWith("."))
+          .flatMap((_id) =>
+            this.AnalyzerUtil.getLocalIds(
+              params.textDocument.uri,
+              keyword?.containerName ?? ""
+            ).map((symbol) => ({
               label: symbol.name,
               kind:
                 symbol.kind === SymbolKind.Function
                   ? CompletionItemKind.Method
                   : CompletionItemKind.Variable,
-            };
-          })
-        );
-      const flags = new Map<string, boolean>();
-      completionItem.forEach((item) => {
-        flags.set(item.label, true);
-      });
-      localId.forEach((item) => {
-        if (!flags.get(item.label)) {
-          completionItem.push(item);
-          flags.set(item.label, true);
+            }))
+          )
+      );
+      const flags = new Set<string>(completionItems.map((item) => item.label));
+      localIds.forEach((item) => {
+        if (!flags.has(item.label)) {
+          completionItems.push(item);
+          flags.add(item.label);
         }
       });
     }
-    completionItem = this.removeDuplicateEntries(completionItem);
-    return completionItem;
+    // Remove duplicate entries from the completion items and return the result.
+    return this.removeDuplicateEntries(completionItems);
   }
 
   private async onCompletionResolve(
     item: CompletionItem
   ): Promise<CompletionItem> {
-    if (item.label.startsWith(".")) {
-      item.label = item.label.slice(1);
+    // If the label starts with a dot followed by a space, remove the dot from the label.
+    if (item.label.startsWith(". ")) {
+      item.label = item.label.substring(2);
     }
+    // Otherwise, if the label starts with a dot, remove the dot from the label.
+    else if (item.label.startsWith(".")) {
+      item.label = item.label.substring(1);
+    }
+    // Return the resolved completion item.
     return item;
   }
 
   private onDefinition(params: TextDocumentPositionParams): Location[] {
+    // Get the keyword at the given position in the document.
     const keyword = this.getKeywordAtPosition(params);
+    // If there is no keyword, return an empty array.
     if (!keyword) {
       return [];
-    } else if (keyword.text.startsWith("`.")) {
+    }
+    // If the keyword starts with a dot followed by a space, remove the dot from the keyword text.
+    if (keyword.text.startsWith(". ")) {
+      keyword.text = keyword.text.substring(2);
+    }
+    // Otherwise, if the keyword starts with a dot, remove the dot from the keyword text.
+    else if (keyword.text.startsWith(".")) {
       keyword.text = keyword.text.substring(1);
     }
+    // Return the definition location for the keyword.
     return this.AnalyzerUtil.getDefinitionByUriKeyword(
       params.textDocument.uri,
       keyword
     );
   }
 
-  private onDidChangeContent(_change: any): void {
-    this.AnalyzerUtil.analyzeDocument(_change.document.uri, _change.document);
-    this.AnalyzerUtil.analyzeLoadFiles(_change.document.uri);
-    const diagnostics = this.validateTextDocument(_change.document);
-    this.connection.sendDiagnostics({ uri: _change.document.uri, diagnostics });
+  private onDidChangeContent({ document }: { document?: TextDocument }): void {
+    // If there is no document, return.
+    if (!document) {
+      return;
+    }
+    // Analyze the document and load files.
+    this.AnalyzerUtil.analyzeDocument(document.uri, document);
+    this.AnalyzerUtil.analyzeLoadFiles(document.uri);
+    // Generate diagnostics and send them to the client.
+    const diagnostics = this.generateDiagnostics(document);
+    this.connection.sendDiagnostics({ uri: document.uri, diagnostics });
   }
 
   private onDidChangeWatchedFiles(change: DidChangeWatchedFilesParams): void {
+    // Initialize an array of changed files.
     const changedFiles: string[] = [];
-    change.changes.forEach((event) => {
-      if (event.type === FileChangeType.Deleted) {
-        this.AnalyzerUtil.remove(event.uri);
+    // Iterate over the changes and add the URIs of the changed files to the array.
+    change.changes.forEach(({ type, uri }) => {
+      if (type === FileChangeType.Deleted) {
+        this.AnalyzerUtil.remove(uri);
       } else {
-        changedFiles.push(event.uri);
+        changedFiles.push(uri);
       }
     });
+    // Iterate over the changed files and analyze them.
     changedFiles.forEach((file) => {
       const filepath = URI.parse(file).fsPath;
-      if (!AnalyzerUtil.matchFile(filepath)) return;
+      // If the file does not match the file pattern, skip it.
+      if (!AnalyzerUtil.matchFile(filepath)) {
+        return;
+      }
+      // Analyze the document and load files.
       try {
-        this.AnalyzerUtil.analyzeDocument(
-          file,
-          TextDocument.create(file, "q", 1, fs.readFileSync(filepath, "utf8"))
-        );
+        const content = fs.readFileSync(filepath, { encoding: "utf8" });
+        const document = TextDocument.create(file, "q", 1, content);
+        this.AnalyzerUtil.analyzeDocument(file, document);
         this.AnalyzerUtil.analyzeLoadFiles(file);
       } catch (error) {
-        this.connection.console.warn(`Cannot analyze ${file}`);
+        this.writeConsoleMsg(`Error trying to analyze ${file}`, "error");
       }
     });
   }
 
-  private onDocumentHighlight(
-    params: TextDocumentPositionParams
-  ): DocumentHighlight[] | null {
-    const keyword = this.getKeywordAtPosition(params);
+  private onDocumentHighlight({
+    textDocument,
+    position,
+  }: TextDocumentPositionParams): DocumentHighlight[] | null {
+    // Get the keyword at the given position in the document.
+    const keyword = this.getKeywordAtPosition({ textDocument, position });
+    // If there is no keyword, return an empty array.
     if (!keyword) {
       return [];
     }
-    return this.AnalyzerUtil.getSyntaxNodeLocationsByUriKeyword(
-      params.textDocument.uri,
-      keyword
-    ).map((syn) => {
-      return { range: syn.range };
-    });
+    // Return the document highlights for the keyword.
+    return (
+      this.AnalyzerUtil.getSyntaxNodeLocationsByUriKeyword(
+        textDocument?.uri,
+        keyword
+      )?.map(({ range }) => ({ range })) ?? []
+    );
   }
 
-  private onDocumentSymbol(params: DocumentSymbolParams): SymbolInformation[] {
-    return this.AnalyzerUtil.getSymbolsByUri(params.textDocument.uri);
+  private onDocumentSymbol({
+    textDocument,
+  }: DocumentSymbolParams): SymbolInformation[] {
+    // Return the symbol information for the symbols in the document.
+    return this.AnalyzerUtil.getSymbolsByUri(textDocument?.uri) ?? [];
   }
 
-  private async onHover(
-    params: TextDocumentPositionParams
-  ): Promise<Hover | null> {
-    const keyword = this.getKeywordAtPosition(params);
+  /**
+   * Returns the hover information for the symbol at the given position in the document.
+   */
+  private async onHover({
+    textDocument,
+    position,
+  }: TextDocumentPositionParams): Promise<Hover | null> {
+    // Get the keyword at the given position in the document.
+    const keyword = this.getKeywordAtPosition({ textDocument, position });
+    // If there is no keyword, return null.
     if (!keyword) {
       return null;
     }
-    const ref = this.qLangParserRef.filter(
-      (item) => item.label === keyword.text
-    )[0];
+    // If the keyword is a reference to a QLangParser symbol, return the symbol information.
+    const ref = this.qLangParserRef.find((item) => item.label === keyword.text);
     if (ref) {
       const content = {
         language: "q",
-        value: ("/ " + ref.detail + "\n" + ref.documentation) as string,
+        value: `/ ${ref.detail}\n${ref.documentation}` ?? "",
       };
       return { contents: content };
     }
+    // If the keyword is in the hover map, return the hover information.
     if (this.hoverMap.has(keyword.text)) {
       const content = {
         language: "q",
@@ -363,108 +439,155 @@ export default class QLangServer {
       };
       return { contents: content };
     }
+    // Otherwise, return null.
     return null;
   }
 
-  private onPrepareRename(params: PrepareRenameParams): Range | null {
-    const keyword = this.getKeywordAtPosition(params);
+  private onPrepareRename({
+    textDocument,
+    position,
+  }: PrepareRenameParams): Range | null {
+    // Get the keyword at the given position in the document.
+    const keyword = this.getKeywordAtPosition({ textDocument, position });
+    // If the keyword is a local or global identifier, return its range.
     if (
       keyword?.type === "local_identifier" ||
       keyword?.type === "global_identifier"
     ) {
-      return keyword.range;
+      return keyword.range ?? null;
     }
+    // Otherwise, return null.
     return null;
   }
 
-  private onQueryBlock(params: TextDocumentPositionParams): {
-    query: string;
-    number: number;
-  } {
+  private onQueryBlock({
+    textDocument,
+    position,
+  }: TextDocumentPositionParams): { query: string; number: number } {
+    // Get the syntax node at the given position in the document.
     const node = this.AnalyzerUtil.getNodeAtPosition(
-      params.textDocument.uri,
-      params.position
+      textDocument?.uri,
+      position
     );
+    // If there is a syntax node at the given position, get the root node of its block and return its text and line number.
     if (node) {
-      const blockNode = this.AnalyzerUtil.getLv1Node(node);
-      return { query: blockNode.text, number: blockNode.endPosition.row + 1 };
-    } else {
-      return { query: "", number: 0 };
+      const blockNode = this.AnalyzerUtil.getRootNode(node);
+      return {
+        query: blockNode.text ?? "",
+        number: blockNode.endPosition.row + 1 ?? 0,
+      };
     }
+    // Otherwise, return an empty query and line number 0.
+    return { query: "", number: 0 };
   }
 
-  private onReferences(params: ReferenceParams): Location[] | null {
-    const keyword = this.getKeywordAtPosition(params);
+  /**
+   * Returns the locations of references to the symbol at the given position in the document.
+   */
+  private onReferences({
+    textDocument,
+    position,
+  }: ReferenceParams): Location[] | null {
+    // Get the keyword at the given position in the document.
+    const keyword = this.getKeywordAtPosition({ textDocument, position });
+    // If there is no keyword, return null.
     if (!keyword) {
       return null;
-    } else if (keyword.text.startsWith("`.")) {
-      keyword.type = "global_identifier";
-      keyword.text = keyword.text.substring(1);
     }
-    return this.AnalyzerUtil.findReferences(keyword, params.textDocument.uri);
+    // If the keyword starts with "`.", treat it as a global identifier.
+    switch (true) {
+      case keyword.text.startsWith("`."):
+        keyword.type = "global_identifier";
+        keyword.text = keyword.text.substring(1);
+        break;
+      default:
+        break;
+    }
+    // Return the locations of references to the symbol in the document.
+    return this.AnalyzerUtil.findReferences(keyword, textDocument?.uri) ?? [];
   }
 
-  private onRenameRequest(
-    params: RenameParams
-  ): WorkspaceEdit | null | undefined {
+  private onRenameRequest({
+    textDocument,
+    position,
+    newName,
+  }: RenameParams): WorkspaceEdit | null | undefined {
+    // Create a new TextDocumentPositionParams object with the textDocument and position properties.
+    const params: TextDocumentPositionParams = { textDocument, position };
+    // Get the keyword at the given position in the document.
     const keyword = this.getKeywordAtPosition(params);
-    const changes: { [uri: string]: TextEdit[] } = {};
-    if (keyword) {
-      const locations = this.AnalyzerUtil.findReferences(
-        keyword,
-        params.textDocument.uri
-      );
-      locations.forEach((location) => {
-        const uri = location.uri;
-        const range = location.range;
-        const textEdit = TextEdit.replace(range, params.newName);
-
-        if (!changes[uri]) {
-          changes[uri] = [textEdit];
-        } else {
-          changes[uri].push(textEdit);
-        }
-      });
+    // If there is no keyword, return null.
+    if (!keyword) {
+      return null;
     }
+    // Find all references to the symbol in the document and create a workspace edit to rename them.
+    const locations = this.AnalyzerUtil.findReferences(
+      keyword,
+      textDocument?.uri
+    );
+    const changes = locations.reduce((acc, location) => {
+      const uri = location.uri;
+      const range = location.range;
+      const textEdit = TextEdit.replace(range, newName);
+      if (!acc[uri]) {
+        acc[uri] = [textEdit];
+      } else {
+        acc[uri].push(textEdit);
+      }
+      return acc;
+    }, {} as { [uri: string]: TextEdit[] });
+    // If there are changes, return a workspace edit with the changes.
     if (Object.keys(changes).length > 0) {
       return { changes };
     }
+    // Otherwise, return null.
     return null;
   }
 
-  private onSemanticsTokens(params: SemanticTokensParams): SemanticTokens {
-    const document = params.textDocument;
-    return this.AnalyzerUtil.getSemanticTokens(document.uri);
+  private onSemanticsTokens({
+    textDocument,
+  }: SemanticTokensParams): SemanticTokens {
+    // Get the semantic tokens for the given document.
+    const tokens = this.AnalyzerUtil.getSemanticTokens(textDocument?.uri);
+    // If there are tokens, return them.
+    return tokens ?? { data: [] };
   }
 
-  private onSignatureHelp(
-    params: SignatureHelpParams
-  ): SignatureHelp | undefined {
-    return this.getSignatureHelpAtPosition(params);
+  private onSignatureHelp({
+    textDocument,
+    position,
+  }: SignatureHelpParams): SignatureHelp | undefined {
+    // Get the signature help for the function at the given position in the document.
+    return this.getSignatureHelpAtPosition({ textDocument, position });
   }
 
-  private onWorkspaceSymbol(
-    params: WorkspaceSymbolParams
-  ): SymbolInformation[] {
-    return this.AnalyzerUtil.search(params.query);
+  private onWorkspaceSymbol({
+    query,
+  }: WorkspaceSymbolParams): SymbolInformation[] {
+    // Get the symbol information for the symbols that match the given query.
+    return this.AnalyzerUtil.find(query) ?? [];
   }
 
-  public onPrepareCallHierarchy(
-    params: CallHierarchyPrepareParams
-  ): CallHierarchyItem[] {
-    return this.callHierarchy.onPrepare(params);
+  public onPrepareCallHierarchy({
+    textDocument,
+    position,
+  }: CallHierarchyPrepareParams): CallHierarchyItem[] {
+    // Get the call hierarchy items for the given document position.
+    return this.callHierarchy.onPrepare({ textDocument, position }) ?? [];
   }
 
-  public onIncomingCallsCallHierarchy(
-    params: CallHierarchyIncomingCallsParams
-  ): CallHierarchyIncomingCall[] {
-    return this.callHierarchy.onIncomingCalls(params);
+  public onIncomingCallsCallHierarchy({
+    item,
+  }: CallHierarchyIncomingCallsParams): CallHierarchyIncomingCall[] {
+    // Get the incoming call hierarchy items for the given call hierarchy item.
+    return this.callHierarchy.onIncomingCalls({ item }) ?? [];
   }
 
-  public onOutgoingCallsCallHierarchy(
-    params: CallHierarchyOutgoingCallsParams
-  ): CallHierarchyOutgoingCall[] {
-    return this.callHierarchy.onOutgoingCalls(params);
+  public onOutgoingCallsCallHierarchy({
+    item,
+  }: CallHierarchyOutgoingCallsParams): CallHierarchyOutgoingCall[] {
+    // Get the outgoing call hierarchy items for the given call hierarchy item.
+    return this.callHierarchy.onOutgoingCalls({ item }) ?? [];
   }
 
   // misc funcs
@@ -477,9 +600,25 @@ export default class QLangServer {
   ) {
     const where = place ? place : " not specified ";
     const isKeyword = keyword ? `keyword=${JSON.stringify(keyword)}` : "";
-    this.connection.console.info(
-      `${request} ${isKeyword} msg=${msg} where?: ${where}`
+    this.writeConsoleMsg(
+      `${request} ${isKeyword} msg=${msg} where?: ${where}`,
+      "warn"
     );
+  }
+
+  public writeConsoleMsg(msg: string, type: string): void {
+    switch (type) {
+      case "error":
+        this.connection.console.error(msg);
+        break;
+      case "warn":
+        this.connection.console.warn(msg);
+        break;
+      case "info":
+      default:
+        this.connection.console.info(msg);
+        break;
+    }
   }
 
   private removeDuplicateEntries(
@@ -492,40 +631,30 @@ export default class QLangServer {
     return completionItem;
   }
 
-  private generateHoverMap(hoverItems: string[][]): void {
-    this.hoverMap = new Map<string, string>();
-    for (const item of hoverItems) {
-      this.hoverMap.set(item[0], item[1]);
-    }
+  private prepareOnHover(hoverItems: string[][]): void {
+    // For each hover item, add it to the hover map.
+    hoverItems.forEach((item) => {
+      const [key, value] = item;
+      if (key && value) {
+        this.hoverMap.set(key, value);
+      }
+    });
   }
 
-  private validateTextDocument(textDocument: TextDocument): Diagnostic[] {
-    const text = textDocument.getText();
-    const pattern = /^[}\])]/gm;
-    let m: RegExpExecArray | null;
-
+  private generateDiagnostics(textDocument: TextDocument): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
-    while ((m = pattern.exec(text)) !== null) {
+    const errors = this.AnalyzerUtil.getErrors(textDocument.uri);
+    errors.forEach((error: any) => {
       const diagnostic: Diagnostic = {
         severity: DiagnosticSeverity.Error,
         range: {
-          start: textDocument.positionAt(m.index),
-          end: textDocument.positionAt(m.index + m[0].length),
+          start: textDocument.positionAt(error.startIndex),
+          end: textDocument.positionAt(error.endIndex),
         },
-        message: `require a space before ${m[0]}`,
-        source: "q-lang-server",
+        message: error.message,
       };
-      diagnostic.relatedInformation = [
-        {
-          location: {
-            uri: textDocument.uri,
-            range: Object.assign({}, diagnostic.range),
-          },
-          message: "Multiline expressions",
-        },
-      ];
       diagnostics.push(diagnostic);
-    }
+    });
     return diagnostics;
   }
 }
