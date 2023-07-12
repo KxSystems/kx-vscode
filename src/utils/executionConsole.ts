@@ -1,6 +1,4 @@
-import { OutputChannel, window } from "vscode";
-import { ext } from "../extensionVariables";
-import { ResultsPanel } from "../panels/results";
+import { OutputChannel, commands, window } from "vscode";
 
 export class ExecutionConsole {
   public static current: ExecutionConsole | undefined;
@@ -79,6 +77,6 @@ export class ExecutionConsole {
   }
 
   public rendResults(query: string) {
-    ResultsPanel.render(ext.context.extensionUri, query);
+    commands.executeCommand("kdb.resultsPanel.update", query);
   }
 }

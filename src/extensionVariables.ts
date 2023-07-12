@@ -4,13 +4,13 @@ import { AzureAccountExtensionApi } from "./azure-account.api";
 import { Connection } from "./models/connection";
 import { LocalProcess } from "./models/localProcess";
 import { ServerObject } from "./models/serverObject";
+import { KdbDataSourceProvider } from "./services/dataSourceTreeProvider";
 import {
   InsightsNode,
   KdbNode,
   KdbTreeProvider,
 } from "./services/kdbTreeProvider";
-import { KdbDataSourceProvider } from "./services/dataSourceTreeProvider";
-import { KdbNode, KdbTreeProvider } from "./services/kdbTreeProvider";
+import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import AuthSettings from "./utils/secretStorage";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -20,6 +20,7 @@ export namespace ext {
   export let consolePanel: OutputChannel;
   export let serverProvider: KdbTreeProvider;
   export let dataSourceProvider: KdbDataSourceProvider;
+  export let resultsViewProvider: KdbResultsViewProvider;
   export let serverObjects: ServerObject;
 
   export let connection: Connection | undefined;
