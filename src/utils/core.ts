@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 1998-2023 Kx Systems Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
 import { ChildProcess } from "child_process";
 import { createHash } from "crypto";
 import { pathExists } from "fs-extra";
@@ -9,17 +22,11 @@ import * as semver from "semver";
 import { commands, ConfigurationTarget, Uri, window, workspace } from "vscode";
 import { installTools } from "../commands/installTools";
 import { ext } from "../extensionVariables";
-import { Insight, Insights } from "../models/insights";
+import { Insights } from "../models/insights";
 import { QueryResult } from "../models/queryResult";
 import { Server, ServerDetails } from "../models/server";
 import { tryExecuteCommand } from "./cpUtils";
 import { Telemetry } from "./telemetryClient";
-
-export async function checkOpenSslKdbInstalled(): Promise<boolean | undefined> {
-  if (ext.connection) {
-  }
-  return undefined;
-}
 
 export function log(childProcess: ChildProcess): void {
   ext.outputChannel.appendLine(`Process ${childProcess.pid!} killed`);
@@ -37,7 +44,7 @@ export async function checkOpenSslInstalled(): Promise<string | null> {
       const matcher = /(\d+.\d+.\d+)/;
       const installedVersion = result.cmdOutput.match(matcher);
 
-      window.showInformationMessage(
+      ext.outputChannel.appendLine(
         `Detected version ${installedVersion} of OpenSSL installed.`
       );
 
@@ -163,7 +170,7 @@ export function getServers(): Server | undefined {
   return workspace.getConfiguration().get("kdb.servers");
 }
 
-export function getInsights(): Insight | undefined {
+export function getInsights(): Insights | undefined {
   return workspace.getConfiguration().get("kdb.insights");
 }
 

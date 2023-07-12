@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 1998-2023 Kx Systems Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
 import { readFileSync } from "fs-extra";
 import { join } from "path";
 import * as url from "url";
@@ -8,7 +21,7 @@ import {
   QuickPickItem,
   QuickPickOptions,
   Range,
-  window
+  window,
 } from "vscode";
 import { ext } from "../extensionVariables";
 import { Connection } from "../models/connection";
@@ -21,6 +34,8 @@ import {
   connectionPortInput,
   connectionUsernameInput,
   connnectionTls,
+  insightsAliasInput,
+  insightsUrlInput,
   kdbEndpoint,
   kdbInsightsEndpoint,
   serverEndpointPlaceHolder,
@@ -172,7 +187,7 @@ export function addKdbConnection(): void {
                   if (tlsEnabled && ext.openSslVersion === null) {
                     window
                       .showErrorMessage(
-                        "OpenSSL installed not found, please ensure this is installed",
+                        "OpenSSL not found, please ensure this is installed",
                         "More Info",
                         "Cancel"
                       )
@@ -368,9 +383,21 @@ export async function connect(viewItem: KdbNode): Promise<void> {
 
   if (authCredentials != undefined) {
     const creds = authCredentials.split(":");
-    ext.connection = new Connection(connection, creds);
+    ext.connection = new Connection(
+      connection,
+      creds,
+      viewItem.details.tls ?? false
+    );
   } else {
-    ext.connection = new Connection(connection);
+    ext.connection = new Connection(
+      connection,
+      undefined,
+      viewItem.details.tls ?? false
+    );
+  }
+
+  if (viewItem.details.tls) {
+    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
   }
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
