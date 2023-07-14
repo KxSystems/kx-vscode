@@ -14,30 +14,8 @@
 import { ResourceManagementClient } from "@azure/arm-resources";
 import { SubscriptionClient } from "@azure/arm-subscriptions";
 import { window } from "vscode";
-import { ext } from "../extensionVariables";
 import { SubscriptionItem } from "../models/subscriptionItem";
 import { validateResourceGroupName } from "../validators/azureValidator";
-
-export async function showSubscriptions() {
-  await ext.azureAccount.waitForFilters();
-  const subscriptionItems: SubscriptionItem[] = ext.azureAccount.filters
-    .filter((element) => {
-      return (
-        element != undefined &&
-        element.subscription != undefined &&
-        element.subscription.subscriptionId
-      );
-    })
-    .map((element) => {
-      return {
-        label: element.subscription.displayName || "",
-        description: element.subscription.subscriptionId || "",
-        session: element.session,
-        subscription: element.subscription,
-      };
-    });
-  return subscriptionItems;
-}
 
 export async function showLocations(subscriptionItem: SubscriptionItem) {
   const subscriptionClient = new SubscriptionClient(

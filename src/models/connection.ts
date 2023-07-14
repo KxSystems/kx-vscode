@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import * as nodeq from "node-q";
+import * as nodeq from "@windozer/node-q";
 import { commands, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { delay } from "../utils/core";

@@ -13,7 +13,6 @@
 
 import { ExtensionContext, extensions, OutputChannel } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
-import { AzureAccountExtensionApi } from "./azure-account.api";
 import { Connection } from "./models/connection";
 import { LocalProcess } from "./models/localProcess";
 import { ServerObject } from "./models/serverObject";
@@ -46,8 +45,6 @@ export namespace ext {
   export const maxRetryCount = 5;
 
   export let secretSettings: AuthSettings;
-
-  export let azureAccount: AzureAccountExtensionApi;
 
   export function getRuntimePath(): string {
     return "C:\\Users\\caleteet\\Downloads\\w64\\w64\\q.exe";
