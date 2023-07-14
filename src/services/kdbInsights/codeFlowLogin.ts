@@ -31,6 +31,7 @@ export interface IToken {
   accessToken: string;
   accessTokenExpirationDate: Date;
   refreshToken: string;
+  session: string;
 }
 
 const defaultTimeout = 5 * 60 * 1000; // 5 min
@@ -126,6 +127,7 @@ async function tokenRequest(insightsUrl: string, params: any): Promise<IToken> {
     accessToken: result.access_token,
     accessTokenExpirationDate: expirationDate,
     refreshToken: result.refresh_token,
+    session: result.session_state,
   };
 }
 
