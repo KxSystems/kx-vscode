@@ -21,6 +21,7 @@ export namespace ext {
   export let serverProvider: KdbTreeProvider;
   export let dataSourceProvider: KdbDataSourceProvider;
   export let serverObjects: ServerObject;
+  export let openSslVersion: string | null;
 
   export let connection: Connection | undefined;
   export let connectionNode: KdbNode | InsightsNode | undefined;

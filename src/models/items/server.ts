@@ -50,3 +50,8 @@ export const connectionPasswordInput = {
   prompt: "Enter password to authenticate with (optional)",
   placeholder: "password",
 };
+
+export const connnectionTls = {
+  prompt: "Enable TLS encryption on KDB connection (optional)",
+  placeholder: "false",
+};

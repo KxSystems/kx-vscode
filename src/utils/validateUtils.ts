@@ -31,4 +31,13 @@ export namespace validateUtils {
     }
     return false;
   }
+
+  export function isBoolean(value: string): boolean {
+    if (value !== undefined && value.toLowerCase() === "true") {
+      return true;
+    } else if (value !== undefined && value.toLowerCase() === "false") {
+      return true;
+    }
+    return false;
+  }
 }
