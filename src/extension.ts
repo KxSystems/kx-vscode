@@ -77,6 +77,7 @@ import {
 } from "./services/kdbTreeProvider";
 import {
   checkLocalInstall,
+  checkOpenSslInstalled,
   formatTable,
   getInsights,
   getServers,
@@ -92,6 +93,7 @@ let client: LanguageClient;
 export async function activate(context: ExtensionContext) {
   ext.context = context;
   ext.outputChannel = window.createOutputChannel("kdb");
+  ext.openSslVersion = await checkOpenSslInstalled();
 
   const servers: Server | undefined = getServers();
   const insights: Insights | undefined = getInsights();

@@ -24,7 +24,7 @@ export class Connection {
   private connection?: nodeq.Connection;
   public connected: boolean;
 
-  constructor(connectionString: string, creds?: string[]) {
+  constructor(connectionString: string, creds?: string[], tls?: boolean) {
     const params = connectionString.split(":");
     if (!params) {
       throw new Error("Missing or invalid connection string");
@@ -34,6 +34,12 @@ export class Connection {
       nanos2date: false,
       socketNoDelay: true,
     };
+
+    if (tls != undefined) {
+      options.useTLS = tls;
+    } else {
+      options.useTLS = false;
+    }
 
     if (params.length > 0) {
       options.host = params[0];
