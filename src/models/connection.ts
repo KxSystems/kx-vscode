@@ -1,4 +1,17 @@
-import * as nodeq from "node-q";
+/*
+ * Copyright (c) 1998-2023 Kx Systems Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
+import * as nodeq from "@windozer/node-q";
 import { commands, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { delay } from "../utils/core";
@@ -11,7 +24,7 @@ export class Connection {
   private connection?: nodeq.Connection;
   public connected: boolean;
 
-  constructor(connectionString: string, creds?: string[]) {
+  constructor(connectionString: string, creds?: string[], tls?: boolean) {
     const params = connectionString.split(":");
     if (!params) {
       throw new Error("Missing or invalid connection string");
@@ -21,6 +34,12 @@ export class Connection {
       nanos2date: false,
       socketNoDelay: true,
     };
+
+    if (tls != undefined) {
+      options.useTLS = tls;
+    } else {
+      options.useTLS = false;
+    }
 
     if (params.length > 0) {
       options.host = params[0];

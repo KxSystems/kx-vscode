@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 1998-2023 Kx Systems Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
 import { readFileSync } from "fs-extra";
 import { join } from "path";
 import * as url from "url";
@@ -20,6 +33,7 @@ import {
   connectionPasswordInput,
   connectionPortInput,
   connectionUsernameInput,
+  connnectionTls,
   insightsAliasInput,
   insightsUrlInput,
   kdbEndpoint,
@@ -34,6 +48,7 @@ import { signIn } from "../services/kdbInsights/codeFlowLogin";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import {
   addLocalConnectionContexts,
+  checkOpenSslInstalled,
   getHash,
   getInsights,
   getServerName,
@@ -43,12 +58,14 @@ import {
   updateServers,
 } from "../utils/core";
 import { ExecutionConsole } from "../utils/executionConsole";
+import { openUrl } from "../utils/openUrl";
 import { sanitizeQuery } from "../utils/queryUtils";
 import {
   validateServerAlias,
   validateServerName,
   validateServerPort,
   validateServerUsername,
+  validateTls,
 } from "../validators/kdbValidator";
 
 export async function addNewConnection(): Promise<void> {
@@ -145,6 +162,12 @@ export function addKdbConnection(): void {
     password: true,
   };
 
+  const connectionTls: InputBoxOptions = {
+    prompt: connnectionTls.prompt,
+    placeHolder: connnectionTls.placeholder,
+    validateInput: (value: string | undefined) => validateTls(value),
+  };
+
   window.showInputBox(connectionAlias).then(async (alias) => {
     window.showInputBox(connectionHostname).then(async (hostname) => {
       if (hostname) {
@@ -152,68 +175,98 @@ export function addKdbConnection(): void {
           if (port) {
             window.showInputBox(connectionUsername).then(async (username) => {
               window.showInputBox(connectionPassword).then(async (password) => {
-                // store secrets
-                let authUsed = false;
-                if (username && password) {
-                  authUsed = true;
-                  ext.secretSettings.storeAuthData(
-                    alias !== undefined
-                      ? getHash(`${hostname}${port}${alias}`)
-                      : getHash(`${hostname}${port}`),
-                    `${username}:${password}`
-                  );
-                }
+                window.showInputBox(connectionTls).then(async (tls) => {
+                  let tlsEnabled;
+                  if (tls !== undefined && tls === "true") {
+                    tlsEnabled = true;
+                  } else {
+                    tlsEnabled = false;
+                  }
 
-                let servers: Server | undefined = getServers();
+                  // validate if TLS is possible
+                  if (tlsEnabled && ext.openSslVersion === null) {
+                    window
+                      .showErrorMessage(
+                        "OpenSSL not found, please ensure this is installed",
+                        "More Info",
+                        "Cancel"
+                      )
+                      .then(async (result) => {
+                        if (result === "More Info") {
+                          await openUrl("https://code.kx.com/q/kb/ssl/");
+                        }
+                      });
+                    return;
+                  }
 
-                if (
-                  servers != undefined &&
-                  servers[getHash(`${hostname}:${port}`)]
-                ) {
-                  await window.showErrorMessage(
-                    `Server ${hostname}:${port} already exists.`
-                  );
-                } else {
-                  const key =
-                    alias != undefined
-                      ? getHash(`${hostname}${port}${alias}`)
-                      : getHash(`${hostname}${port}`);
-                  if (servers === undefined) {
-                    servers = {
-                      key: {
+                  // store secrets
+                  let authUsed = false;
+                  if (
+                    (username != undefined || username != "") &&
+                    (password != undefined || password != "")
+                  ) {
+                    authUsed = true;
+                    ext.secretSettings.storeAuthData(
+                      alias !== undefined
+                        ? getHash(`${hostname}${port}${alias}`)
+                        : getHash(`${hostname}${port}`),
+                      `${username}:${password}`
+                    );
+                  }
+
+                  let servers: Server | undefined = getServers();
+
+                  if (
+                    servers != undefined &&
+                    servers[getHash(`${hostname}:${port}`)]
+                  ) {
+                    await window.showErrorMessage(
+                      `Server ${hostname}:${port} already exists.`
+                    );
+                  } else {
+                    const key =
+                      alias != undefined
+                        ? getHash(`${hostname}${port}${alias}`)
+                        : getHash(`${hostname}${port}`);
+                    if (servers === undefined) {
+                      servers = {
+                        key: {
+                          auth: authUsed,
+                          serverName: hostname,
+                          serverPort: port,
+                          serverAlias: alias,
+                          managed: alias === "local" ? true : false,
+                          tls: tlsEnabled,
+                        },
+                      };
+                      if (servers[0].managed) {
+                        await addLocalConnectionContexts(
+                          getServerName(servers[0])
+                        );
+                      }
+                    } else {
+                      servers[key] = {
                         auth: authUsed,
                         serverName: hostname,
                         serverPort: port,
                         serverAlias: alias,
                         managed: alias === "local" ? true : false,
-                      },
-                    };
-                    if (servers[0].managed) {
-                      await addLocalConnectionContexts(
-                        getServerName(servers[0])
-                      );
+                        tls: tlsEnabled,
+                      };
+                      if (servers[key].managed) {
+                        await addLocalConnectionContexts(
+                          getServerName(servers[key])
+                        );
+                      }
                     }
-                  } else {
-                    servers[key] = {
-                      auth: authUsed,
-                      serverName: hostname,
-                      serverPort: port,
-                      serverAlias: alias,
-                      managed: alias === "local" ? true : false,
-                    };
-                    if (servers[key].managed) {
-                      await addLocalConnectionContexts(
-                        getServerName(servers[key])
-                      );
-                    }
-                  }
 
-                  await updateServers(servers);
-                  const newServers = getServers();
-                  if (newServers != undefined) {
-                    ext.serverProvider.refresh(newServers);
+                    await updateServers(servers);
+                    const newServers = getServers();
+                    if (newServers != undefined) {
+                      ext.serverProvider.refresh(newServers);
+                    }
                   }
-                }
+                });
               });
             });
           }
@@ -292,6 +345,23 @@ export async function connect(viewItem: KdbNode): Promise<void> {
     }
   }
 
+  // check for TLS support
+  if (viewItem.details.tls) {
+    if (!(await checkOpenSslInstalled())) {
+      window
+        .showInformationMessage(
+          "TLS support requires OpenSSL to be installed.",
+          "More Info",
+          "Cancel"
+        )
+        .then(async (result) => {
+          if (result === "More Info") {
+            await openUrl("https://code.kx.com/q/kb/ssl/");
+          }
+        });
+    }
+  }
+
   // check for auth
   const authCredentials = viewItem.details.auth
     ? await ext.secretSettings.getAuthData(viewItem.children[0])
@@ -313,9 +383,21 @@ export async function connect(viewItem: KdbNode): Promise<void> {
 
   if (authCredentials != undefined) {
     const creds = authCredentials.split(":");
-    ext.connection = new Connection(connection, creds);
+    ext.connection = new Connection(
+      connection,
+      creds,
+      viewItem.details.tls ?? false
+    );
   } else {
-    ext.connection = new Connection(connection);
+    ext.connection = new Connection(
+      connection,
+      undefined,
+      viewItem.details.tls ?? false
+    );
+  }
+
+  if (viewItem.details.tls) {
+    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
   }
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
