@@ -26,7 +26,6 @@ import {
 } from "vscode";
 import { ext } from "../extensionVariables";
 import { Connection } from "../models/connection";
-import { GetDataObjectPayload } from "../models/data";
 import { ExecutionTypes } from "../models/execution";
 import { Insights } from "../models/insights";
 import {
@@ -340,9 +339,7 @@ export async function getMeta(): Promise<MetaObjectPayload | undefined> {
   return undefined;
 }
 
-export async function getData(
-  query: string
-): Promise<GetDataObjectPayload | undefined> {
+export async function getData(query: string): Promise<any | undefined> {
   if (ext.connectionNode instanceof InsightsNode) {
     const dataUrl = new url.URL(
       ext.insightsAuthUrls.dataURL,
@@ -364,8 +361,7 @@ export async function getData(
     };
 
     const dataResponse = await requestPromise.post(dataUrl.toString(), options);
-    const data: GetDataObjectPayload = JSON.parse(dataResponse);
-    return data;
+    return JSON.parse(dataResponse);
   }
   return undefined;
 }
