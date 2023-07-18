@@ -13,6 +13,7 @@
 
 import { readFileSync } from "fs-extra";
 import { join } from "path";
+import requestPromise from "request-promise";
 import * as url from "url";
 import {
   commands,
@@ -303,12 +304,36 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
 }
 
 export async function connectInsights(viewItem: InsightsNode): Promise<void> {
-  const tokens = await signIn(viewItem.details.server);
+  const token = await signIn(viewItem.details.server);
+  ext.context.secrets.store(viewItem.details.alias, JSON.stringify(token));
+
   ext.outputChannel.appendLine(
     `Connection established successfully to: ${viewItem.details.server}`
   );
   ext.connectionNode = viewItem;
   ext.serverProvider.reload();
+}
+
+export async function getMeta() {
+  if (ext.connectionNode instanceof InsightsNode) {
+    const metaUrl = new url.URL(
+      ext.insightsAuthUrls.metaURL,
+      ext.connectionNode.details.server
+    );
+
+    // get the access token from the secure store
+    const rawToken = await ext.context.secrets.get(
+      ext.connectionNode.details.alias
+    );
+    const token = JSON.parse(rawToken!);
+
+    const options = {
+      headers: { Authorization: `Bearer ${token.accessToken}` },
+    };
+
+    const metaResponse = await requestPromise.post(metaUrl.toString(), options);
+    return JSON.parse(metaResponse);
+  }
 }
 
 export async function removeInsightsConnection(
