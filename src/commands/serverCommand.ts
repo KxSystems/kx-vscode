@@ -303,6 +303,7 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
 }
 
 export async function connectInsights(viewItem: InsightsNode): Promise<void> {
+  commands.executeCommand("kdb-results.focus");
   const tokens = await signIn(viewItem.details.server);
   ext.outputChannel.appendLine(
     `Connection established successfully to: ${viewItem.details.server}`
@@ -333,6 +334,7 @@ export async function removeInsightsConnection(
 }
 
 export async function connect(viewItem: KdbNode): Promise<void> {
+  commands.executeCommand("kdb-results.focus");
   // handle cleaning up existing connection
   if (
     ext.connectionNode !== undefined &&
