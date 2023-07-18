@@ -315,7 +315,7 @@ export async function connectInsights(viewItem: InsightsNode): Promise<void> {
   ext.serverProvider.reload();
 }
 
-export async function getMeta() {
+export async function getMeta(): Promise<MetaObjectPayload | undefined> {
   if (ext.connectionNode instanceof InsightsNode) {
     const metaUrl = new url.URL(
       ext.insightsAuthUrls.metaURL,
@@ -336,6 +336,7 @@ export async function getMeta() {
     const meta: MetaObjectPayload = JSON.parse(metaResponse);
     return meta;
   }
+  return undefined;
 }
 
 export async function removeInsightsConnection(
