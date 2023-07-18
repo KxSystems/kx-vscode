@@ -26,6 +26,7 @@ import {
 } from "vscode";
 import { ext } from "../extensionVariables";
 import { Connection } from "../models/connection";
+import { GetDataObjectPayload } from "../models/data";
 import { ExecutionTypes } from "../models/execution";
 import { Insights } from "../models/insights";
 import {
@@ -335,6 +336,36 @@ export async function getMeta(): Promise<MetaObjectPayload | undefined> {
     const metaResponse = await requestPromise.post(metaUrl.toString(), options);
     const meta: MetaObjectPayload = JSON.parse(metaResponse);
     return meta;
+  }
+  return undefined;
+}
+
+export async function getData(
+  query: string
+): Promise<GetDataObjectPayload | undefined> {
+  if (ext.connectionNode instanceof InsightsNode) {
+    const dataUrl = new url.URL(
+      ext.insightsAuthUrls.dataURL,
+      ext.connectionNode.details.server
+    );
+
+    // get the access token from the secure store
+    const rawToken = await ext.context.secrets.get(
+      ext.connectionNode.details.alias
+    );
+    const token = JSON.parse(rawToken!);
+
+    const options = {
+      headers: {
+        Authorization: `Bearer ${token.accessToken}`,
+      },
+      body: JSON.parse(query),
+      json: true,
+    };
+
+    const dataResponse = await requestPromise.post(dataUrl.toString(), options);
+    const data: GetDataObjectPayload = JSON.parse(dataResponse);
+    return data;
   }
   return undefined;
 }
