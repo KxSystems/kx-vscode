@@ -91,6 +91,8 @@ export namespace ext {
     tokenURL: "auth/realms/insights/protocol/openid-connect/token",
     metaURL: "servicegateway/qe/meta",
     dataURL: "servicegateway/kxi/getData",
+    sqlURL: "servicegateway/qe/sql",
+    qsqlURL: "servicegateway/qe/qsql",
   };
 
   export const insightsGrantType = {

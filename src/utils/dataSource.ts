@@ -19,6 +19,7 @@ import {
   DataSourceTypes,
   defaultDataSourceFile,
 } from "../models/dataSource";
+import { DataSourcesPanel } from "../panels/datasource";
 
 export function createKdbDataSourcesFolder(): string {
   const rootPath = ext.context.globalStorageUri.fsPath;
@@ -61,4 +62,10 @@ export function convertDataSourceFormToDataSourceFile(
   fileContent.dataSource.api.params = params;
 
   return fileContent;
+}
+
+export function refreshDataSourcesPanel(): void {
+  if (DataSourcesPanel.currentPanel) {
+    DataSourcesPanel.currentPanel.refresh();
+  }
 }

@@ -20,6 +20,7 @@ import { getUri } from "../utils/getUri";
 
 export class DataSourcesPanel {
   public static currentPanel: DataSourcesPanel | undefined;
+  private uri;
   private readonly _panel: vscode.WebviewPanel;
   private _disposables: vscode.Disposable[] = [];
   public static dataSourceFile: DataSourceFiles;
@@ -29,6 +30,7 @@ export class DataSourcesPanel {
     extensionUri: vscode.Uri,
     datasourceFile: DataSourceFiles
   ) {
+    this.uri = extensionUri;
     this._panel = panel;
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
     this._panel.webview.html = this._getWebviewContent(
@@ -80,12 +82,7 @@ export class DataSourcesPanel {
   }
 
   public refresh() {
-    this._panel.webview.html = this._getWebviewContent(
-      this._panel.webview,
-      vscode.extensions.getExtension("kx.vscode-kdb")
-        ?.extensionUri as vscode.Uri,
-      DataSourcesPanel.dataSourceFile
-    );
+    DataSourcesPanel.render(this.uri, DataSourcesPanel.dataSourceFile);
   }
 
   public dispose() {
