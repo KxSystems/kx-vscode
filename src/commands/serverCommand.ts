@@ -13,6 +13,7 @@
 
 import { readFileSync } from "fs-extra";
 import { join } from "path";
+import requestPromise from "request-promise";
 import * as url from "url";
 import {
   commands,
@@ -41,6 +42,7 @@ import {
   serverEndpointPlaceHolder,
   serverEndpoints,
 } from "../models/items/server";
+import { MetaObjectPayload } from "../models/meta";
 import { queryConstants } from "../models/queryResult";
 import { Server } from "../models/server";
 import { ServerObject } from "../models/serverObject";
@@ -303,13 +305,66 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
 }
 
 export async function connectInsights(viewItem: InsightsNode): Promise<void> {
+
   commands.executeCommand("kdb-results.focus");
-  const tokens = await signIn(viewItem.details.server);
+  const token = await signIn(viewItem.details.server);
+  ext.context.secrets.store(viewItem.details.alias, JSON.stringify(token));
   ext.outputChannel.appendLine(
     `Connection established successfully to: ${viewItem.details.server}`
   );
   ext.connectionNode = viewItem;
   ext.serverProvider.reload();
+}
+
+export async function getMeta(): Promise<MetaObjectPayload | undefined> {
+  if (ext.connectionNode instanceof InsightsNode) {
+    const metaUrl = new url.URL(
+      ext.insightsAuthUrls.metaURL,
+      ext.connectionNode.details.server
+    );
+
+    // get the access token from the secure store
+    const rawToken = await ext.context.secrets.get(
+      ext.connectionNode.details.alias
+    );
+    const token = JSON.parse(rawToken!);
+
+    const options = {
+      headers: { Authorization: `Bearer ${token.accessToken}` },
+    };
+
+    const metaResponse = await requestPromise.post(metaUrl.toString(), options);
+    const meta: MetaObjectPayload = JSON.parse(metaResponse);
+    return meta;
+  }
+  return undefined;
+}
+
+export async function getData(query: string): Promise<any | undefined> {
+  if (ext.connectionNode instanceof InsightsNode) {
+    const dataUrl = new url.URL(
+      ext.insightsAuthUrls.dataURL,
+      ext.connectionNode.details.server
+    );
+
+    // get the access token from the secure store
+    const rawToken = await ext.context.secrets.get(
+      ext.connectionNode.details.alias
+    );
+    const token = JSON.parse(rawToken!);
+
+    const options = {
+      headers: {
+        Authorization: `Bearer ${token.accessToken}`,
+      },
+      body: JSON.parse(query),
+      json: true,
+    };
+
+    const dataResponse = await requestPromise.post(dataUrl.toString(), options);
+    return JSON.parse(dataResponse);
+  }
+  return undefined;
 }
 
 export async function removeInsightsConnection(
