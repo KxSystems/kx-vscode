@@ -44,6 +44,7 @@ import {
 } from "../models/items/server";
 import { MetaObjectPayload } from "../models/meta";
 import { queryConstants } from "../models/queryResult";
+import { ScratchpadResult } from "../models/scratchpadResult";
 import { Server } from "../models/server";
 import { ServerObject } from "../models/serverObject";
 import { signIn } from "../services/kdbInsights/codeFlowLogin";
@@ -311,6 +312,7 @@ export async function connectInsights(viewItem: InsightsNode): Promise<void> {
   ext.outputChannel.appendLine(
     `Connection established successfully to: ${viewItem.details.server}`
   );
+
   ext.connectionNode = viewItem;
   ext.serverProvider.reload();
 }
@@ -362,6 +364,41 @@ export async function getData(query: string): Promise<any | undefined> {
 
     const dataResponse = await requestPromise.post(dataUrl.toString(), options);
     return JSON.parse(dataResponse);
+  }
+  return undefined;
+}
+
+export async function getScratchpadQuery(
+  query: string,
+  context?: string
+): Promise<any | undefined> {
+  if (ext.connectionNode instanceof InsightsNode) {
+    const scratchpadURL = new url.URL(
+      ext.insightsAuthUrls.scratchpadURL,
+      ext.connectionNode.details.server
+    );
+
+    // get the access token from the secure store
+    const rawToken = await ext.context.secrets.get(
+      ext.connectionNode.details.alias
+    );
+    const token = JSON.parse(rawToken!);
+
+    const options = {
+      headers: {
+        Authorization: `Bearer ${token.accessToken}`,
+        Username: "test",
+      },
+      body: { expression: query, language: "q", context: context || "." },
+      json: true,
+    };
+
+    const scratchpadResponse = await requestPromise.post(
+      scratchpadURL.toString(),
+      options
+    );
+
+    return scratchpadResponse;
   }
   return undefined;
 }
@@ -490,7 +527,21 @@ export async function executeQuery(
   context?: string
 ): Promise<void> {
   const queryConsole = ExecutionConsole.start();
-  if (ext.connection !== undefined && query.length > 0) {
+
+  if (query.length === 0) {
+    return undefined;
+  }
+
+  const insightsNode = ext.kdbinsightsNodes.find(
+    (n) => n === ext.connectionNode?.details.alias + " (connected)"
+  );
+
+  // set context for root nodes
+  if (insightsNode) {
+    query = sanitizeQuery(query);
+    const queryRes = await getScratchpadQuery(query, context);
+    writeScratchpadResult(queryRes, query);
+  } else if (ext.connection !== undefined) {
     query = sanitizeQuery(query);
     const queryRes = await ext.connection.executeQuery(query, context);
     writeQueryResult(queryRes, query);
@@ -595,6 +646,7 @@ export async function loadServerObjects(): Promise<ServerObject[]> {
 
 function writeQueryResult(result: string, query: string): void {
   const queryConsole = ExecutionConsole.start();
+
   if (ext.connection && !result.startsWith(queryConstants.error)) {
     queryConsole.append(
       result,
@@ -606,6 +658,25 @@ function writeQueryResult(result: string, query: string): void {
       query,
       result.substring(queryConstants.error.length),
       !!ext.connection,
+      ext.connectionNode?.label ? ext.connectionNode.label : ""
+    );
+  }
+}
+
+function writeScratchpadResult(result: ScratchpadResult, query: string): void {
+  const queryConsole = ExecutionConsole.start();
+
+  if (result.error) {
+    queryConsole.appendQueryError(
+      query,
+      result.errorMsg,
+      true,
+      ext.connectionNode?.label ? ext.connectionNode.label : ""
+    );
+  } else {
+    queryConsole.append(
+      result.data,
+      query,
       ext.connectionNode?.label ? ext.connectionNode.label : ""
     );
   }

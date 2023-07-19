@@ -90,6 +90,7 @@ export namespace ext {
     tokenURL: "auth/realms/insights/protocol/openid-connect/token",
     metaURL: "servicegateway/kxi/getMeta",
     dataURL: "servicegateway/kxi/getData",
+    scratchpadURL: "servicebroker/scratchpad/display",
   };
 
   export const insightsGrantType = {
