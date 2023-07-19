@@ -40,7 +40,7 @@
 
 .form-wrapper {
   display: block;
-  width: calc(100vw - 190px);
+  width: calc(100vw - 240px);
   float: left;
   overflow: scroll;
 }

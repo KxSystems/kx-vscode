@@ -42,7 +42,7 @@ import {
   serverEndpointPlaceHolder,
   serverEndpoints,
 } from "../models/items/server";
-import { MetaObjectPayload } from "../models/meta";
+import { MetaObject, MetaObjectPayload } from "../models/meta";
 import { queryConstants } from "../models/queryResult";
 import { Server } from "../models/server";
 import { ServerObject } from "../models/serverObject";
@@ -333,8 +333,8 @@ export async function getMeta(): Promise<MetaObjectPayload | undefined> {
     };
 
     const metaResponse = await requestPromise.post(metaUrl.toString(), options);
-    const meta: MetaObjectPayload = JSON.parse(metaResponse);
-    return meta;
+    const meta: MetaObject = JSON.parse(metaResponse);
+    return meta.payload;
   }
   return undefined;
 }

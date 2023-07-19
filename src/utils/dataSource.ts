@@ -46,6 +46,7 @@ export function convertDataSourceFormToDataSourceFile(
   fileContent.name = form.name;
   fileContent.dataSource.selectedType = form.selectedType as DataSourceTypes;
   fileContent.dataSource.api.selectedApi = form.selectedApi;
+  fileContent.dataSource.api.selectedTable = form.selectedTable;
   fileContent.dataSource.qsql.query = form.qsql;
   fileContent.dataSource.qsql.selectedTarget = form.selectedTarget;
   fileContent.dataSource.sql.query = form.sql;

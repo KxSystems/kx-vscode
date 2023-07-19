@@ -22,6 +22,7 @@ import {
   convertDataSourceFormToDataSourceFile,
   createKdbDataSourcesFolder,
 } from "../utils/dataSource";
+import { getMeta } from "./serverCommand";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -98,6 +99,15 @@ export async function openDataSource(
   uri: Uri
 ): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
+  Object.assign(ext.insightsMeta, await getMeta());
+  if (!ext.insightsMeta.assembly) {
+    ext.outputChannel.appendLine(
+      `To edit or run a datasource you need to be connected to an Insights server`
+    );
+    window.showErrorMessage(
+      "To edit or run a datasource you need to be connected to an Insights server"
+    );
+  }
   if (!kdbDataSourcesFolderPath) {
     return;
   }

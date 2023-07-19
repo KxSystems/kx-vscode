@@ -12,7 +12,9 @@
  */
 
 import * as vscode from "vscode";
+import { ext } from "../extensionVariables";
 import { DataSourceFiles } from "../models/dataSource";
+import { InsightsNode } from "../services/kdbTreeProvider";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
 
@@ -77,6 +79,15 @@ export class DataSourcesPanel {
     );
   }
 
+  public refresh() {
+    this._panel.webview.html = this._getWebviewContent(
+      this._panel.webview,
+      vscode.extensions.getExtension("kx.vscode-kdb")
+        ?.extensionUri as vscode.Uri,
+      DataSourcesPanel.dataSourceFile
+    );
+  }
+
   public dispose() {
     DataSourcesPanel.currentPanel = undefined;
 
@@ -90,11 +101,106 @@ export class DataSourcesPanel {
     }
   }
 
+  private generateTarget(
+    isInsights: boolean,
+    isMetaLoaded: boolean,
+    targetApi: string
+  ) {
+    if (isInsights) {
+      if (isMetaLoaded) {
+        const auxArray = ext.insightsMeta.dap;
+        const auxOptions = auxArray
+          .map((dap) => {
+            const generatedValue = dap.assembly + " " + dap.instance;
+            const option =
+              generatedValue === targetApi
+                ? /* html*/ `<vscode-option value="${generatedValue}" selected>${generatedValue}</vscode-option>`
+                : /* html*/ `<vscode-option value="${generatedValue}">${generatedValue}</vscode-option>`;
+            return option;
+          })
+          .join("");
+        return /* html*/ `<vscode-dropdown id="selectedTarget" name="selectedTarget" value="${targetApi}" class="dropdown">
+        ${auxOptions}
+      </vscode-dropdown>`;
+      }
+    }
+    return /* html*/ `<vscode-dropdown id="selectedTarget" name="selectedTarget" class="dropdown">
+        <vscode-option>Not connected to Insights</vscode-option>
+      </vscode-dropdown>`;
+  }
+
+  private generateTables(
+    isInsights: boolean,
+    isMetaLoaded: boolean,
+    targetTable: string
+  ) {
+    if (isInsights) {
+      if (isMetaLoaded) {
+        const auxArray = ext.insightsMeta.assembly;
+        const auxOptions = auxArray
+          .map((assembly) => {
+            const options: string[] = [];
+            assembly.tbls.forEach((tbl) => {
+              const generatedValue = tbl;
+              const option =
+                generatedValue === targetTable
+                  ? /* html*/ `<vscode-option value="${generatedValue}" selected>${generatedValue}</vscode-option>`
+                  : /* html*/ `<vscode-option value="${generatedValue}">${generatedValue}</vscode-option>`;
+              options.push(option);
+            });
+            return options.join("");
+          })
+          .join("");
+        return /* html*/ `<vscode-dropdown id="selectedTable" name="selectedTable" value="${targetTable}" class="dropdown">
+        ${auxOptions}
+      </vscode-dropdown>`;
+      }
+    }
+    return /* html*/ `<vscode-dropdown id="selectedTarget" name="selectedTarget" class="dropdown">
+        <vscode-option>Not connected to Insights</vscode-option>
+      </vscode-dropdown>`;
+  }
+
+  private generateApiTarget(
+    isInsights: boolean,
+    isMetaLoaded: boolean,
+    target: string
+  ) {
+    if (isInsights) {
+      if (isMetaLoaded) {
+        const auxArray = ext.insightsMeta.api.filter(
+          (api) => api.api === ".kxi.getData" || !api.api.startsWith(".kxi.")
+        );
+        const auxOptions = auxArray
+          .map((api) => {
+            const generatedValue =
+              api.api === ".kxi.getData"
+                ? api.api.replace(".kxi.", "")
+                : api.api;
+            const option =
+              generatedValue === target
+                ? /* html*/ `<vscode-option value="${generatedValue}" selected>${generatedValue}</vscode-option>`
+                : /* html*/ `<vscode-option value="${generatedValue}">${generatedValue}</vscode-option>`;
+            return option;
+          })
+          .join("");
+        return /* html*/ `<vscode-dropdown  id="selectedApi" name="selectedApi" value="${target}" class="dropdown">
+        ${auxOptions}
+      </vscode-dropdown>`;
+      }
+    }
+    return /* html*/ `<vscode-dropdown id="selectedTarget" name="selectedTarget" class="dropdown">
+        <vscode-option>Not connected to Insights</vscode-option>
+      </vscode-dropdown>`;
+  }
+
   private _getWebviewContent(
     webview: vscode.Webview,
     extensionUri: vscode.Uri,
     datasourceFile: DataSourceFiles
   ) {
+    const isMetaLoaded = ext.insightsMeta.dap ? true : false;
+    const isInsights = ext.connectionNode instanceof InsightsNode;
     const webviewUri = getUri(webview, extensionUri, ["out", "webview.js"]);
     const nonce = getNonce();
     const styleUri = getUri(webview, extensionUri, [
@@ -136,10 +242,29 @@ export class DataSourcesPanel {
                 </div>`;
     }
     const apiSelected = datasourceFile.dataSource.api.selectedApi;
+    const tableSelected = datasourceFile.dataSource.api.selectedTable;
     const qsql = datasourceFile.dataSource.qsql.query;
     const qsqlTarget = datasourceFile.dataSource.qsql.selectedTarget;
     const sql = datasourceFile.dataSource.sql.query;
     const name = datasourceFile.name;
+
+    const targetHtml = this.generateTarget(
+      isInsights,
+      isMetaLoaded,
+      qsqlTarget
+    );
+
+    const apiHtml = this.generateApiTarget(
+      isInsights,
+      isMetaLoaded,
+      apiSelected
+    );
+
+    const tableHtml = this.generateTables(
+      isInsights,
+      isMetaLoaded,
+      tableSelected
+    );
 
     return /*html*/ `
     <!DOCTYPE html>
@@ -175,11 +300,13 @@ export class DataSourcesPanel {
                       <div class="field-row">
                         <div class="dropdown-container">
                           <label for="selectedApi">Select API</label>
-                          <vscode-dropdown id="selectedApi" name="selectedApi" value="${apiSelected}" class="dropdown">
-                            <vscode-option>Option Label #1</vscode-option>
-                            <vscode-option>Option Label #2</vscode-option>
-                            <vscode-option>Option Label #3</vscode-option>
-                          </vscode-dropdown>
+                          ${apiHtml}
+                        </div>
+                      </div>
+                      <div class="field-row">
+                        <div class="dropdown-container">
+                          <label for="selectedTable">Table</label>
+                          ${tableHtml}
                         </div>
                       </div>
                       <div id="params-wrapper">
@@ -197,11 +324,7 @@ export class DataSourcesPanel {
                     <div class="field-row">
                         <div class="dropdown-container">
                           <label for="selectedTarget">Target</label>
-                          <vscode-dropdown id="selectedTarget" name="selectedTarget" value="${qsqlTarget}" class="dropdown">
-                            <vscode-option>Option Label #1</vscode-option>
-                            <vscode-option>Option Label #2</vscode-option>
-                            <vscode-option>Option Label #3</vscode-option>
-                          </vscode-dropdown>
+                          ${targetHtml}
                         </div>
                       </div>
                       <div class="field-row">
