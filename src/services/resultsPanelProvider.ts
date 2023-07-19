@@ -39,11 +39,14 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     });
   }
 
-  public updateResults(queryResults: string) {
+  public updateResults(queryResults: string, dataSourceType?: string) {
     if (this._view) {
       this._view.show?.(true);
       this._view.webview.postMessage(queryResults);
-      this._view.webview.html = this._getWebviewContent(queryResults);
+      this._view.webview.html = this._getWebviewContent(
+        queryResults,
+        dataSourceType
+      );
     }
   }
 
@@ -80,7 +83,38 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     return results;
   }
 
-  private _getWebviewContent(queryResult: string | string[]) {
+  handleQueryResultsArray(queryResult: any[]): string {
+    if (queryResult.length === 0) {
+      return `<p>No results to show</p>`;
+    }
+    let results = "";
+    results = `<vscode-data-grid class="results-datagrid" aria-label="Basic">`;
+    let headers = `<vscode-data-grid-row class="results-header-datagrid" row-type="header">`;
+    let rows = ``;
+    let countHeader = 1;
+    let indexColumn = 1;
+    for (const key in queryResult[0]) {
+      headers += `<vscode-data-grid-cell  cell-type="columnheader" grid-column="${countHeader}"><b>${key.toUpperCase()}</b></vscode-data-grid-cell>`;
+      countHeader++;
+    }
+    headers += `</vscode-data-grid-row>`;
+    queryResult.forEach((row: string[]) => {
+      rows += `<vscode-data-grid-row>`;
+      for (const value in row) {
+        rows += `<vscode-data-grid-cell grid-column="${indexColumn}">${row[value]}</vscode-data-grid-cell>`;
+        indexColumn++;
+      }
+      rows += `</vscode-data-grid-row>`;
+      indexColumn = 1;
+    });
+    results += headers + rows + `</vscode-data-grid>`;
+    return results;
+  }
+
+  private _getWebviewContent(
+    queryResult: string | string[],
+    dataSourceType?: string
+  ) {
     if (this._view) {
       const webviewUri = getUri(this._view.webview, this._extensionUri, [
         "out",
@@ -100,8 +134,19 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         "vscode.css",
       ]);
       let result = "";
+      if (dataSourceType) {
+        queryResult = JSON.parse(queryResult as string);
+      }
+      const wtf = typeof queryResult;
       if (typeof queryResult === "string") {
         result = this.handleQueryResultsString(queryResult);
+      } else if (Array.isArray(queryResult)) {
+        result = this.handleQueryResultsArray(queryResult);
+      } else if (typeof queryResult === "object") {
+        result =
+          queryResult === null
+            ? `<p>No results to show</p>`
+            : this.handleQueryResultsString(JSON.stringify(queryResult));
       }
 
       return /*html*/ `

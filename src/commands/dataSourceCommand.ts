@@ -22,6 +22,13 @@ import {
   convertDataSourceFormToDataSourceFile,
   createKdbDataSourcesFolder,
 } from "../utils/dataSource";
+import {
+  getData,
+  getMeta,
+  getQsqlData,
+  getSqlData,
+  writeQueryResult,
+} from "./serverCommand";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -98,6 +105,15 @@ export async function openDataSource(
   uri: Uri
 ): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
+  Object.assign(ext.insightsMeta, await getMeta());
+  if (!ext.insightsMeta.assembly) {
+    ext.outputChannel.appendLine(
+      `To edit or run a datasource you need to be connected to an Insights server`
+    );
+    window.showErrorMessage(
+      "To edit or run a datasource you need to be connected to an Insights server"
+    );
+  }
   if (!kdbDataSourcesFolderPath) {
     return;
   }
@@ -150,6 +166,63 @@ export async function saveDataSource(dataSourceForm: any): Promise<void> {
 }
 
 export async function runDataSource(dataSourceForm: any): Promise<void> {
+  Object.assign(ext.insightsMeta, await getMeta());
+  if (!ext.insightsMeta.assembly) {
+    ext.outputChannel.appendLine(
+      `To run a datasource you need to be connected to an Insights server`
+    );
+    window.showErrorMessage(
+      "To run a datasource you need to be connected to an Insights server"
+    );
+    return;
+  }
   const fileContent = convertDataSourceFormToDataSourceFile(dataSourceForm);
   console.log(fileContent);
+  const selectedType =
+    fileContent.dataSource.selectedType.toString() === "API"
+      ? "API"
+      : fileContent.dataSource.selectedType.toString() === "QSQL"
+      ? "QSQL"
+      : "SQL";
+
+  switch (selectedType) {
+    case "API":
+      const apiBody = {
+        table: fileContent.dataSource.api.selectedTable,
+      };
+      const apiCall = await getData(JSON.stringify(apiBody));
+      writeQueryResult(
+        JSON.stringify(apiCall),
+        "GetData - table: " + apiBody.table,
+        selectedType
+      );
+      break;
+    case "QSQL":
+      const assembly = fileContent.dataSource.qsql.selectedTarget.slice(0, -4);
+      const target = fileContent.dataSource.qsql.selectedTarget.slice(-3);
+      const qsqlBody = {
+        assembly: assembly,
+        target: target,
+        query: fileContent.dataSource.qsql.query,
+      };
+      const qsqlCall = await getQsqlData(JSON.stringify(qsqlBody));
+      writeQueryResult(
+        JSON.stringify(qsqlCall),
+        fileContent.dataSource.qsql.query,
+        selectedType
+      );
+      break;
+    case "SQL":
+    default:
+      const sqlBody = {
+        query: fileContent.dataSource.sql.query,
+      };
+      const sqlCall = await getSqlData(JSON.stringify(sqlBody));
+      writeQueryResult(
+        JSON.stringify(sqlCall),
+        fileContent.dataSource.sql.query,
+        selectedType
+      );
+      break;
+  }
 }

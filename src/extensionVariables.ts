@@ -15,6 +15,7 @@ import { ExtensionContext, extensions, OutputChannel } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { Connection } from "./models/connection";
 import { LocalProcess } from "./models/localProcess";
+import { MetaObjectPayload } from "./models/meta";
 import { ServerObject } from "./models/serverObject";
 import { KdbDataSourceProvider } from "./services/dataSourceTreeProvider";
 import {
@@ -90,14 +91,18 @@ export namespace ext {
     callbackURL: "http://localhost:9010/redirect",
     revoke: "auth/realms/insights/protocol/openid-connect/revoke",
     tokenURL: "auth/realms/insights/protocol/openid-connect/token",
-    metaURL: "servicegateway/kxi/getMeta",
+    metaURL: "servicegateway/qe/meta",
     dataURL: "servicegateway/kxi/getData",
+    sqlURL: "servicegateway/qe/sql",
+    qsqlURL: "servicegateway/qe/qsql",
   };
 
   export const insightsGrantType = {
     authorizationCode: "authorization_code",
     refreshToken: "refresh_token",
   };
+
+  export const insightsMeta = <MetaObjectPayload>{};
 
   export const insightsSigningIn = "Signing in";
 

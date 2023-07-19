@@ -139,9 +139,12 @@ export async function activate(context: ExtensionContext) {
       ext.resultsViewProvider,
       { webviewOptions: { retainContextWhenHidden: true } }
     ),
-    commands.registerCommand("kdb.resultsPanel.update", (results: string) => {
-      ext.resultsViewProvider.updateResults(results);
-    }),
+    commands.registerCommand(
+      "kdb.resultsPanel.update",
+      (results: string, dataSourceType?: string) => {
+        ext.resultsViewProvider.updateResults(results, dataSourceType);
+      }
+    ),
     commands.registerCommand("kdb.connect", async (viewItem: KdbNode) => {
       await connect(viewItem);
     }),
