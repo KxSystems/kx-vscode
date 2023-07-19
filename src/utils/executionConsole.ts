@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { OutputChannel, window } from "vscode";
+import { OutputChannel, commands, window } from "vscode";
 
 export class ExecutionConsole {
   public static current: ExecutionConsole | undefined;
@@ -58,6 +58,7 @@ export class ExecutionConsole {
       output.forEach((o) => this._console.appendLine(o));
     } else {
       this._console.appendLine(output);
+      this.rendResults(output);
     }
     this._console.appendLine(`<<<\n`);
   }
@@ -86,5 +87,9 @@ export class ExecutionConsole {
   // this to debug in case debug of extension doesn't work
   public appendQueryDebug(msg: string) {
     this._console.appendLine(msg);
+  }
+
+  public rendResults(query: string) {
+    commands.executeCommand("kdb.resultsPanel.update", query);
   }
 }
