@@ -193,7 +193,8 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
       const apiCall = await getData(JSON.stringify(apiBody));
       writeQueryResult(
         JSON.stringify(apiCall),
-        "GetData - table: " + apiBody.table
+        "GetData - table: " + apiBody.table,
+        selectedType
       );
       break;
     case "QSQL":
@@ -207,7 +208,8 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
       const qsqlCall = await getQsqlData(JSON.stringify(qsqlBody));
       writeQueryResult(
         JSON.stringify(qsqlCall),
-        fileContent.dataSource.qsql.query
+        fileContent.dataSource.qsql.query,
+        selectedType
       );
       break;
     case "SQL":
@@ -218,7 +220,8 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
       const sqlCall = await getSqlData(JSON.stringify(sqlBody));
       writeQueryResult(
         JSON.stringify(sqlCall),
-        fileContent.dataSource.sql.query
+        fileContent.dataSource.sql.query,
+        selectedType
       );
       break;
   }

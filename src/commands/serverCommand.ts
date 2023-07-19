@@ -651,7 +651,11 @@ export async function loadServerObjects(): Promise<ServerObject[]> {
   }
 }
 
-export function writeQueryResult(result: string, query: string): void {
+export function writeQueryResult(
+  result: string,
+  query: string,
+  dataSourceType?: string
+): void {
   const queryConsole = ExecutionConsole.start();
   if (
     (ext.connection || ext.connectionNode) &&
@@ -660,7 +664,8 @@ export function writeQueryResult(result: string, query: string): void {
     queryConsole.append(
       result,
       query,
-      ext.connectionNode?.label ? ext.connectionNode.label : ""
+      ext.connectionNode?.label ? ext.connectionNode.label : "",
+      dataSourceType
     );
   } else {
     queryConsole.appendQueryError(
