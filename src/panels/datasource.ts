@@ -341,50 +341,50 @@ export class DataSourcesPanel {
                       <div class="params-wrapper" id="filter-wrapper">
                         <label>filter</label>
                           ${filterParams}
-                        <div class="field-row">
-                          <vscode-button id="addFilter" appearance="secondary" class="btn-add-param">ADD FILTER</vscode-button>
-                          <vscode-button id="removeFilter" appearance="secondary" class="btn-remove-param">REMOVE FILTER</vscode-button>
-                        </div>
+                      </div>
+                      <div class="field-row">
+                        <vscode-button id="addFilter" appearance="secondary" class="btn-add-param">ADD FILTER</vscode-button>
+                        <vscode-button id="removeFilter" appearance="secondary" class="btn-remove-param">REMOVE FILTER</vscode-button>
                       </div>
                       <div class="params-wrapper" id="groupBy-wrapper">
                         <label>groupBy</label>
                           ${groupByParams}
-                        <div class="field-row">
-                          <vscode-button id="addGroupBy" appearance="secondary" class="btn-add-param">ADD GROUP BY</vscode-button>
-                          <vscode-button id="removeGroupBy" appearance="secondary" class="btn-remove-param">REMOVE GROUP BY</vscode-button>
-                        </div>
+                      </div>
+                      <div class="field-row">
+                        <vscode-button id="addGroupBy" appearance="secondary" class="btn-add-param">ADD GROUP BY</vscode-button>
+                        <vscode-button id="removeGroupBy" appearance="secondary" class="btn-remove-param">REMOVE GROUP BY</vscode-button>
                       </div>
                       <div class="params-wrapper" id="agg-wrapper">
                         <label>agg</label>
                           ${aggParams}
-                        <div class="field-row">
-                          <vscode-button id="addAgg" appearance="secondary" class="btn-add-param">ADD AGG</vscode-button>
-                          <vscode-button id="removeAgg" appearance="secondary" class="btn-remove-param">REMOVE AGG</vscode-button>
-                        </div>
+                      </div>
+                      <div class="field-row">
+                        <vscode-button id="addAgg" appearance="secondary" class="btn-add-param">ADD AGG</vscode-button>
+                        <vscode-button id="removeAgg" appearance="secondary" class="btn-remove-param">REMOVE AGG</vscode-button>
                       </div>
                       <div class="params-wrapper" id="sortCols-wrapper">
                         <label>sortCols</label>
                           ${sortColsParams}
-                        <div class="field-row">
-                          <vscode-button id="addSortCols" appearance="secondary" class="btn-add-param">ADD SORT COLS</vscode-button>
-                          <vscode-button id="removeSortCols" appearance="secondary" class="btn-remove-param">REMOVE SORT COLS</vscode-button>
-                        </div>
+                      </div>
+                      <div class="field-row">
+                        <vscode-button id="addSortCols" appearance="secondary" class="btn-add-param">ADD SORT COLS</vscode-button>
+                        <vscode-button id="removeSortCols" appearance="secondary" class="btn-remove-param">REMOVE SORT COLS</vscode-button>
                       </div>
                       <div class="params-wrapper" id="slice-wrapper">
                         <label>slice</label>
                           ${sliceParams}
-                        <div class="field-row">
-                          <vscode-button id="addSlice" appearance="secondary" class="btn-add-param">ADD SLICE</vscode-button>
-                          <vscode-button id="removeSlice" appearance="secondary" class="btn-remove-param">REMOVE SLICE</vscode-button>
-                        </div>
+                      </div>
+                      <div class="field-row">
+                        <vscode-button id="addSlice" appearance="secondary" class="btn-add-param">ADD SLICE</vscode-button>
+                        <vscode-button id="removeSlice" appearance="secondary" class="btn-remove-param">REMOVE SLICE</vscode-button>
                       </div>
                       <div class="params-wrapper" id="labels-wrapper">
                         <label>labels</label>
                           ${labelsParams}
-                        <div class="field-row">
-                          <vscode-button id="addLabels" appearance="secondary" class="btn-add-param">ADD LABEL</vscode-button>
-                          <vscode-button id="removeLabels" appearance="secondary" class="btn-remove-param">REMOVE LABEL</vscode-button>
-                        </div>
+                      </div>
+                      <div class="field-row">
+                        <vscode-button id="addLabels" appearance="secondary" class="btn-add-param">ADD LABEL</vscode-button>
+                        <vscode-button id="removeLabels" appearance="secondary" class="btn-remove-param">REMOVE LABEL</vscode-button>
                       </div>
                     </div>
                   </vscode-panel-view>
