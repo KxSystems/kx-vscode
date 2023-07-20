@@ -34,9 +34,11 @@
     "onCommand:kdb.dataSource.renameDataSource",
     "onCommand:kdb.dataSource.deleteDataSource",
     "onCommand:kdb.dataSource.openDataSource",
-    "onCommand:kdb.dataSource.doRefactor",
+    "onCommand:kdb.resultsPanel.update",
     "onWalkthrough:kdb.hideWalkthrough",
     "onView:kdb-servers",
+    "onView:kdb-datasources-explorer",
+    "onView:kdb-results",
     "onTerminalProfile:kdb.q-terminal"
   ],
   "main": "./out/extension.js",
@@ -227,6 +229,10 @@
         "title": "Open DataSource"
       },
       {
+        "command": "kdb.resultsPanel.update",
+        "title": "Update Results View"
+      },
+      {
         "command": "kdb.terminal.run",
         "title": "Run q file in a new q instance"
       },
@@ -295,6 +301,13 @@
           "title": "KX",
           "icon": "resources/kx_logo.svg"
         }
+      ],
+      "panel": [
+        {
+          "id": "kdb-results",
+          "title": "KDB Results",
+          "icon": "resources/kx_logo.svg"
+        }
       ]
     },
     "views": {
@@ -308,6 +321,13 @@
           "id": "kdb-datasources-explorer",
           "name": "Data Sources",
           "contextualTitle": "Data Sources"
+        }
+      ],
+      "kdb-results": [
+        {
+          "id": "kdb-results",
+          "name": "KDB Results",
+          "type": "webview"
         }
       ]
     },

@@ -15,6 +15,7 @@ import { ExtensionContext, extensions, OutputChannel } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { Connection } from "./models/connection";
 import { LocalProcess } from "./models/localProcess";
+import { MetaObjectPayload } from "./models/meta";
 import { ServerObject } from "./models/serverObject";
 import { KdbDataSourceProvider } from "./services/dataSourceTreeProvider";
 import {
@@ -22,6 +23,7 @@ import {
   KdbNode,
   KdbTreeProvider,
 } from "./services/kdbTreeProvider";
+import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import AuthSettings from "./utils/secretStorage";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -31,6 +33,7 @@ export namespace ext {
   export let consolePanel: OutputChannel;
   export let serverProvider: KdbTreeProvider;
   export let dataSourceProvider: KdbDataSourceProvider;
+  export let resultsViewProvider: KdbResultsViewProvider;
   export let serverObjects: ServerObject;
   export let openSslVersion: string | null;
 
@@ -88,15 +91,20 @@ export namespace ext {
     callbackURL: "http://localhost:9010/redirect",
     revoke: "auth/realms/insights/protocol/openid-connect/revoke",
     tokenURL: "auth/realms/insights/protocol/openid-connect/token",
-    metaURL: "servicegateway/kxi/getMeta",
+    metaURL: "servicegateway/qe/meta",
     dataURL: "servicegateway/kxi/getData",
     scratchpadURL: "servicebroker/scratchpad/display",
+    sqlURL: "servicegateway/qe/sql",
+    qsqlURL: "servicegateway/qe/qsql",
+
   };
 
   export const insightsGrantType = {
     authorizationCode: "authorization_code",
     refreshToken: "refresh_token",
   };
+
+  export const insightsMeta = <MetaObjectPayload>{};
 
   export const insightsSigningIn = "Signing in";
 

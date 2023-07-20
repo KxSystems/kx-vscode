@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { OutputChannel, window } from "vscode";
+import { OutputChannel, commands, window } from "vscode";
 
 export class ExecutionConsole {
   public static current: ExecutionConsole | undefined;
@@ -44,7 +44,8 @@ export class ExecutionConsole {
   public append(
     output: string | string[],
     query = "",
-    serverName: string
+    serverName: string,
+    dataSourceType?: string
   ): void {
     this._console.show(true);
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
@@ -58,6 +59,7 @@ export class ExecutionConsole {
       output.forEach((o) => this._console.appendLine(o));
     } else {
       this._console.appendLine(output);
+      this.rendResults(output, dataSourceType);
     }
     this._console.appendLine(`<<<\n`);
   }
@@ -86,5 +88,9 @@ export class ExecutionConsole {
   // this to debug in case debug of extension doesn't work
   public appendQueryDebug(msg: string) {
     this._console.appendLine(msg);
+  }
+
+  public rendResults(query: string, dataSourceType?: string) {
+    commands.executeCommand("kdb.resultsPanel.update", query, dataSourceType);
   }
 }

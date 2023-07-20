@@ -24,6 +24,7 @@ export interface DataSourceFiles {
     api: {
       params: string[];
       selectedApi: string;
+      selectedTable: string;
     };
     qsql: {
       query: string;
@@ -42,6 +43,7 @@ export const defaultDataSourceFile: DataSourceFiles = {
     api: {
       params: [],
       selectedApi: "",
+      selectedTable: "",
     },
     qsql: {
       query: "",

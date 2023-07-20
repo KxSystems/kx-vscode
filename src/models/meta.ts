@@ -90,4 +90,3 @@ export type MetaObject = {
   };
   payload: MetaObjectPayload;
 };
-0;

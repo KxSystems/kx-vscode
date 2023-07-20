@@ -1,0 +1,18 @@
+.results-view-container {
+  width: 100%;
+  height: 100%;
+}
+
+.header-wrapper {
+  display: block;
+  width: 100%;
+  float: left;
+}
+
+.results-datagrid {
+  background: #00000010;
+}
+
+.results-header-datagrid {
+  background: #00000050;
+}

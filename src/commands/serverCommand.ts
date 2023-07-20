@@ -42,7 +42,7 @@ import {
   serverEndpointPlaceHolder,
   serverEndpoints,
 } from "../models/items/server";
-import { MetaObjectPayload } from "../models/meta";
+import { MetaObject, MetaObjectPayload } from "../models/meta";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
 import { Server } from "../models/server";
@@ -60,6 +60,7 @@ import {
   updateInsights,
   updateServers,
 } from "../utils/core";
+import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { ExecutionConsole } from "../utils/executionConsole";
 import { openUrl } from "../utils/openUrl";
 import { sanitizeQuery } from "../utils/queryUtils";
@@ -306,6 +307,7 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
 }
 
 export async function connectInsights(viewItem: InsightsNode): Promise<void> {
+  commands.executeCommand("kdb-results.focus");
   const token = await signIn(viewItem.details.server);
   ext.context.secrets.store(viewItem.details.alias, JSON.stringify(token));
 
@@ -315,6 +317,7 @@ export async function connectInsights(viewItem: InsightsNode): Promise<void> {
 
   ext.connectionNode = viewItem;
   ext.serverProvider.reload();
+  refreshDataSourcesPanel();
 }
 
 export async function getMeta(): Promise<MetaObjectPayload | undefined> {
@@ -335,16 +338,69 @@ export async function getMeta(): Promise<MetaObjectPayload | undefined> {
     };
 
     const metaResponse = await requestPromise.post(metaUrl.toString(), options);
-    const meta: MetaObjectPayload = JSON.parse(metaResponse);
-    return meta;
+    const meta: MetaObject = JSON.parse(metaResponse);
+    return meta.payload;
   }
   return undefined;
 }
 
-export async function getData(query: string): Promise<any | undefined> {
+export async function getData(body: string): Promise<any | undefined> {
   if (ext.connectionNode instanceof InsightsNode) {
     const dataUrl = new url.URL(
       ext.insightsAuthUrls.dataURL,
+      ext.connectionNode.details.server
+    );
+
+    // get the access token from the secure store
+    const rawToken = await ext.context.secrets.get(
+      ext.connectionNode.details.alias
+    );
+    const token = JSON.parse(rawToken!);
+
+    const options = {
+      headers: {
+        Authorization: `Bearer ${token.accessToken}`,
+      },
+      body: JSON.parse(body),
+      json: true,
+    };
+
+    const dataResponse = await requestPromise.post(dataUrl.toString(), options);
+    return dataResponse?.payload ? dataResponse.payload : "No Results";
+  }
+  return undefined;
+}
+
+export async function getSqlData(query: string): Promise<any | undefined> {
+  if (ext.connectionNode instanceof InsightsNode) {
+    const sqlUrl = new url.URL(
+      ext.insightsAuthUrls.sqlURL,
+      ext.connectionNode.details.server
+    );
+
+    // get the access token from the secure store
+    const rawToken = await ext.context.secrets.get(
+      ext.connectionNode.details.alias
+    );
+    const token = JSON.parse(rawToken!);
+
+    const options = {
+      headers: {
+        Authorization: `Bearer ${token.accessToken}`,
+      },
+      body: JSON.parse(query),
+      json: true,
+    };
+    const sqlResponse = await requestPromise.post(sqlUrl.toString(), options);
+    return sqlResponse?.payload ? sqlResponse.payload : "No Results";
+  }
+  return undefined;
+}
+
+export async function getQsqlData(query: string): Promise<any | undefined> {
+  if (ext.connectionNode instanceof InsightsNode) {
+    const qsqlUrl = new url.URL(
+      ext.insightsAuthUrls.qsqlURL,
       ext.connectionNode.details.server
     );
 
@@ -362,8 +418,8 @@ export async function getData(query: string): Promise<any | undefined> {
       json: true,
     };
 
-    const dataResponse = await requestPromise.post(dataUrl.toString(), options);
-    return JSON.parse(dataResponse);
+    const qsqlResponse = await requestPromise.post(qsqlUrl.toString(), options);
+    return qsqlResponse !== "" ? qsqlResponse : "No Results";
   }
   return undefined;
 }
@@ -425,6 +481,7 @@ export async function removeInsightsConnection(
 }
 
 export async function connect(viewItem: KdbNode): Promise<void> {
+  commands.executeCommand("kdb-results.focus");
   // handle cleaning up existing connection
   if (
     ext.connectionNode !== undefined &&
@@ -511,6 +568,7 @@ export async function connect(viewItem: KdbNode): Promise<void> {
       ext.serverProvider.reload();
     }
   });
+  refreshDataSourcesPanel();
 }
 
 export async function disconnect(): Promise<void> {
@@ -644,14 +702,21 @@ export async function loadServerObjects(): Promise<ServerObject[]> {
   }
 }
 
-function writeQueryResult(result: string, query: string): void {
+export function writeQueryResult(
+  result: string,
+  query: string,
+  dataSourceType?: string
+): void {
   const queryConsole = ExecutionConsole.start();
-
-  if (ext.connection && !result.startsWith(queryConstants.error)) {
+  if (
+    (ext.connection || ext.connectionNode) &&
+    !result.startsWith(queryConstants.error)
+  ) {
     queryConsole.append(
       result,
       query,
-      ext.connectionNode?.label ? ext.connectionNode.label : ""
+      ext.connectionNode?.label ? ext.connectionNode.label : "",
+      dataSourceType
     );
   } else {
     queryConsole.appendQueryError(

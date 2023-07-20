@@ -75,14 +75,13 @@ import {
   KdbNode,
   KdbTreeProvider,
 } from "./services/kdbTreeProvider";
+import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import {
   checkLocalInstall,
   checkOpenSslInstalled,
-  formatTable,
   getInsights,
   getServers,
   initializeLocalServers,
-  isTable,
 } from "./utils/core";
 import { runQFileTerminal } from "./utils/execution";
 import AuthSettings from "./utils/secretStorage";
@@ -100,6 +99,10 @@ export async function activate(context: ExtensionContext) {
 
   ext.serverProvider = new KdbTreeProvider(servers!, insights!);
   ext.dataSourceProvider = new KdbDataSourceProvider();
+  ext.resultsViewProvider = new KdbResultsViewProvider(
+    ext.context.extensionUri
+  );
+
   window.registerTreeDataProvider("kdb-servers", ext.serverProvider);
   window.registerTreeDataProvider(
     "kdb-datasources-explorer",
@@ -131,6 +134,17 @@ export async function activate(context: ExtensionContext) {
   }
 
   context.subscriptions.push(
+    window.registerWebviewViewProvider(
+      KdbResultsViewProvider.viewType,
+      ext.resultsViewProvider,
+      { webviewOptions: { retainContextWhenHidden: true } }
+    ),
+    commands.registerCommand(
+      "kdb.resultsPanel.update",
+      (results: string, dataSourceType?: string) => {
+        ext.resultsViewProvider.updateResults(results, dataSourceType);
+      }
+    ),
     commands.registerCommand("kdb.connect", async (viewItem: KdbNode) => {
       await connect(viewItem);
     }),
@@ -242,15 +256,7 @@ export async function activate(context: ExtensionContext) {
     provideTextDocumentContent(uri: Uri): string {
       const result = lastResult!;
 
-      const headers = result.meta.map((m) => m.c);
-      const aligns = result.meta.map((m) => (m.t === "f" ? "." : "1"));
-      const opts = { align: aligns, keys: result.keys };
-      const data = result.data;
-
-      const text: string = isTable(result)
-        ? formatTable(headers, data, opts)
-        : data;
-      return text;
+      return result.result;
     }
   })();
 
