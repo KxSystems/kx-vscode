@@ -93,6 +93,7 @@ export namespace ext {
     tokenURL: "auth/realms/insights/protocol/openid-connect/token",
     metaURL: "servicegateway/qe/meta",
     dataURL: "servicegateway/kxi/getData",
+    scratchpadURL: "servicebroker/scratchpad/display",
     sqlURL: "servicegateway/qe/sql",
     qsqlURL: "servicegateway/qe/qsql",
   };
