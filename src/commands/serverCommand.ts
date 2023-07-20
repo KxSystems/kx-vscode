@@ -590,8 +590,10 @@ export async function executeQuery(
     return undefined;
   }
 
-  const insightsNode = ext.kdbinsightsNodes.find(
-    (n) => n === ext.connectionNode?.details.alias + " (connected)"
+  const insightsNode = ext.kdbinsightsNodes.find((n) =>
+    ext.connectionNode instanceof InsightsNode
+      ? n === ext.connectionNode?.details.alias + " (connected)"
+      : false
   );
 
   // set context for root nodes

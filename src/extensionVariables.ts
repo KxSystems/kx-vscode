@@ -96,7 +96,6 @@ export namespace ext {
     scratchpadURL: "servicebroker/scratchpad/display",
     sqlURL: "servicegateway/qe/sql",
     qsqlURL: "servicegateway/qe/qsql",
-
   };
 
   export const insightsGrantType = {
