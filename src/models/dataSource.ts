@@ -22,9 +22,18 @@ export interface DataSourceFiles {
   dataSource: {
     selectedType: DataSourceTypes;
     api: {
-      params: string[];
       selectedApi: string;
-      selectedTable: string;
+      table: string;
+      startTS: string;
+      endTS: string;
+      fill: string;
+      temporary: string;
+      filter: string[];
+      groupBy: string[];
+      agg: string[];
+      sortCols: string[];
+      slice: string[];
+      labels: string[];
     };
     qsql: {
       query: string;
@@ -41,9 +50,18 @@ export const defaultDataSourceFile: DataSourceFiles = {
   dataSource: {
     selectedType: DataSourceTypes.API,
     api: {
-      params: [],
       selectedApi: "",
-      selectedTable: "",
+      table: "",
+      startTS: "",
+      endTS: "",
+      fill: "",
+      temporary: "",
+      filter: [],
+      groupBy: [],
+      agg: [],
+      sortCols: [],
+      slice: [],
+      labels: [],
     },
     qsql: {
       query: "",
