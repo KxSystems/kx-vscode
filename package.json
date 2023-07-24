@@ -202,7 +202,7 @@
       },
       {
         "command": "kdb.disconnect",
-        "title": "Disconnect kdb server"
+        "title": "Disconnect"
       },
       {
         "command": "kdb.dataSource.addDataSource",
@@ -410,7 +410,7 @@
         },
         {
           "command": "kdb.disconnect",
-          "when": "view == kdb-servers && viewItem in kdb.connected && viewItem in kdb.rootNodes",
+          "when": "view == kdb-servers && viewItem in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection"
         },
         {
