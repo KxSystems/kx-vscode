@@ -91,7 +91,7 @@ export namespace ext {
     callbackURL: "http://localhost:9010/redirect",
     revoke: "auth/realms/insights/protocol/openid-connect/revoke",
     tokenURL: "auth/realms/insights/protocol/openid-connect/token",
-    metaURL: "servicegateway/qe/meta",
+    metaURL: "servicegateway/kxi/getMeta",
     dataURL: "servicegateway/kxi/getData",
     scratchpadURL: "servicebroker/scratchpad/display",
     sqlURL: "servicegateway/qe/sql",
