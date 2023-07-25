@@ -328,6 +328,11 @@ export async function connectInsights(viewItem: InsightsNode): Promise<void> {
           viewItem.details.alias,
           JSON.stringify(token)
         );
+      } else {
+        ext.context.secrets.store(
+          viewItem.details.alias,
+          JSON.stringify(token)
+        );
       }
     } else {
       token = storedToken;
