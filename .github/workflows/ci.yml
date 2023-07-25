@@ -37,6 +37,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 16.x
+      - run: npm ci
       - name: Package
         run: npx vsce package
       - name: Upload Artifact
