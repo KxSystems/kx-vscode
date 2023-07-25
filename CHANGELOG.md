@@ -2,6 +2,30 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
+# 0.1.16
+
+### Enhancements
+
+- Added ability to view results in a table view
+
+- Added Insights authentication integration
+
+- Added datasources with support for querying Insights
+
+- Added ability to execute q against Insights Scratchpad
+
+### Fixes
+
+- Fixes for Language Server, improving functionality and performance
+
+### Internal Improvements
+
+- Updated refresh icon
+
+- Updated license and CI
+
+- Language Server refactor
+
 # 0.1.15
 
 ### Enhancements

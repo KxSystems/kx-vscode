@@ -225,7 +225,7 @@ export async function installTools(): Promise<void> {
         if (await showWalkthrough()) {
           commands.executeCommand(
             "workbench.action.openWalkthrough",
-            "kx.kdb-vscode#qinstallation",
+            "kx.kdb#qinstallation",
             false
           );
         }
