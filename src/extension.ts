@@ -56,11 +56,7 @@ import {
   removeInsightsConnection,
   runQuery,
 } from "./commands/serverCommand";
-import {
-  hideWalkthrough,
-  showInstallationDetails,
-  showWalkthrough,
-} from "./commands/walkthroughCommand";
+import { showInstallationDetails } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
 import { ExecutionTypes } from "./models/execution";
 import { Insights } from "./models/insights";
@@ -123,15 +119,6 @@ export async function activate(context: ExtensionContext) {
 
   // check for installed q runtime
   await checkLocalInstall();
-
-  // hide walkthrough if requested
-  if (await showWalkthrough()) {
-    commands.executeCommand(
-      "workbench.action.openWalkthrough",
-      "kx.kdb#qinstallation",
-      false
-    );
-  }
 
   context.subscriptions.push(
     window.registerWebviewViewProvider(
@@ -214,9 +201,6 @@ export async function activate(context: ExtensionContext) {
         await openDataSource(viewItem, context.extensionUri);
       }
     ),
-    commands.registerCommand("kdb.hideWalkthrough", async () => {
-      await hideWalkthrough();
-    }),
     commands.registerCommand("kdb.showInstallationDetails", async () => {
       await showInstallationDetails();
     }),
