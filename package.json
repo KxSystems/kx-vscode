@@ -44,7 +44,6 @@
     "onCommand:kdb.dataSource.deleteDataSource",
     "onCommand:kdb.dataSource.openDataSource",
     "onCommand:kdb.resultsPanel.update",
-    "onWalkthrough:kdb.hideWalkthrough",
     "onView:kdb-servers",
     "onView:kdb-datasources-explorer",
     "onView:kdb-results",
@@ -154,10 +153,6 @@
           "type": "object",
           "description": "kdb insights for explorer"
         },
-        "kdb.hideWalkthrough": {
-          "type": "boolean",
-          "description": "Hide visibility of the walkthrough at startup of extension"
-        },
         "kdb.hideInstallationNotification": {
           "type": "boolean",
           "description": "Hide notification for installation path, after first install"
@@ -184,10 +179,6 @@
       {
         "command": "kdb.stopLocalProcess",
         "title": "Stop q process"
-      },
-      {
-        "command": "kdb.hideWalkthrough",
-        "title": "Hide walkthrough"
       },
       {
         "command": "kdb.addConnection",
@@ -348,10 +339,6 @@
     ],
     "menus": {
       "commandPalette": [
-        {
-          "command": "kdb.hideWalkthrough",
-          "when": "false"
-        },
         {
           "command": "kdb.insightsConnect",
           "when": "false"
