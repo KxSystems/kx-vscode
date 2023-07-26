@@ -11,10 +11,10 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import TelemetryReporter from "@vscode/extension-telemetry";
 import * as crypto from "crypto";
 import * as os from "os";
 import { OutputChannel, window, workspace } from "vscode";
-import TelemetryReporter from "vscode-extension-telemetry";
 import { ext } from "../extensionVariables";
 
 class ExtensionTelemetry {
