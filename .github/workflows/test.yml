@@ -1,6 +1,6 @@
 # This workflow runs the tests across Linux, Mac, Windows
 
-name: CI
+name: test
 
 on:
   push:
@@ -27,25 +27,3 @@ jobs:
         if: runner.os == 'Linux'
       - run: npm test
         if: runner.os != 'Linux'
-
-  package:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Install Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16.x
-      - run: npm ci
-      - name: Package
-        run: npx vsce package
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: kdb
-          path: ./kdb-*.vsix
-      # - name: Publish
-      #   if: github.ref == 'refs/heads/main'
-      #   run: |
-      #     vsce publish -p ${{ secrets.VSCE_PAT }}

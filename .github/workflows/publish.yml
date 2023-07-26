@@ -1,0 +1,34 @@
+# This workflow runs the tests across Linux, Mac, Windows
+
+name: Publish
+
+env:
+  NODE_ENV: production
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+      - run: npm ci
+      - name: Package
+        run: npx vsce package
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: kdb
+          path: ./kdb-*.vsix
+      # - name: Publish
+      #   if: github.ref == 'refs/heads/main'
+      #   run: |
+      #     vsce publish -p ${{ secrets.VSCE_PAT }}
