@@ -1,9 +1,9 @@
 {
-  "name": "kdb-vscode",
-  "displayName": "kdb vscode",
-  "description": "Extension to help with q and kdb",
+  "name": "kdb",
+  "displayName": "kdb",
+  "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "preview": true,
   "engines": {
     "vscode": "^1.66.0"
@@ -20,7 +20,16 @@
     }
   },
   "categories": [
-    "Other"
+    "Programming Languages",
+    "Data Science",
+    "Formatters",
+    "Snippets"
+  ],
+  "keywords": [
+    "kdb",
+    "kdb+",
+    "q",
+    "kdb Insights"
   ],
   "activationEvents": [
     "onCommand:kdb.installTools",
@@ -35,7 +44,6 @@
     "onCommand:kdb.dataSource.deleteDataSource",
     "onCommand:kdb.dataSource.openDataSource",
     "onCommand:kdb.resultsPanel.update",
-    "onWalkthrough:kdb.hideWalkthrough",
     "onView:kdb-servers",
     "onView:kdb-datasources-explorer",
     "onView:kdb-results",
@@ -46,7 +54,7 @@
     "walkthroughs": [
       {
         "id": "qinstallation",
-        "title": "Get Started with kdb vscode",
+        "title": "Get Started with kdb",
         "description": "Get started by installing q to work with local kdb processes - q will need to be installed either locally or via this extension.",
         "steps": [
           {
@@ -145,10 +153,6 @@
           "type": "object",
           "description": "kdb insights for explorer"
         },
-        "kdb.hideWalkthrough": {
-          "type": "boolean",
-          "description": "Hide visibility of the walkthrough at startup of extension"
-        },
         "kdb.hideInstallationNotification": {
           "type": "boolean",
           "description": "Hide notification for installation path, after first install"
@@ -177,10 +181,6 @@
         "title": "Stop q process"
       },
       {
-        "command": "kdb.hideWalkthrough",
-        "title": "Hide walkthrough"
-      },
-      {
         "command": "kdb.addConnection",
         "title": "Add new connection"
       },
@@ -202,7 +202,7 @@
       },
       {
         "command": "kdb.disconnect",
-        "title": "Disconnect kdb server"
+        "title": "Disconnect"
       },
       {
         "command": "kdb.dataSource.addDataSource",
@@ -340,10 +340,6 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "kdb.hideWalkthrough",
-          "when": "false"
-        },
-        {
           "command": "kdb.insightsConnect",
           "when": "false"
         },
@@ -410,7 +406,7 @@
         },
         {
           "command": "kdb.disconnect",
-          "when": "view == kdb-servers && viewItem in kdb.connected && viewItem in kdb.rootNodes",
+          "when": "view == kdb-servers && viewItem in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection"
         },
         {
