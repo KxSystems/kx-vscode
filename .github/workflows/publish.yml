@@ -2,9 +2,6 @@
 
 name: Publish
 
-env:
-  NODE_ENV: production
-
 on:
   push:
     tags:
