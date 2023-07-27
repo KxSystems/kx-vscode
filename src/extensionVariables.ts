@@ -98,6 +98,10 @@ export namespace ext {
     qsqlURL: "servicegateway/qe/qsql",
   };
 
+  export const insightsScratchpadUrls = {
+    import: "servicebroker/scratchpad/import/data",
+  };
+
   export const insightsGrantType = {
     authorizationCode: "authorization_code",
     refreshToken: "refresh_token",

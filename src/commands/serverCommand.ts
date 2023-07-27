@@ -459,6 +459,45 @@ export async function getQsqlData(query: string): Promise<any | undefined> {
   return undefined;
 }
 
+export async function importScratchpad(variableName: string): Promise<void> {
+  if (ext.connectionNode instanceof InsightsNode) {
+    const scratchpadURL = new url.URL(
+      ext.insightsScratchpadUrls.import,
+      ext.connectionNode.details.server
+    );
+
+    // get the access token from the secure store
+    const rawToken = await ext.context.secrets.get(
+      ext.connectionNode.details.alias
+    );
+    const token = JSON.parse(rawToken!);
+
+    const options = {
+      headers: {
+        Authorization: `Bearer ${token.accessToken}`,
+      },
+      body: {
+        output: variableName,
+        isTableView: false,
+        params: {
+          labels: {},
+          table: "close",
+          startTS: "2021-07-26T13:58:00.000000000",
+          endTS: "2023-07-26T14:03:00.000000000",
+        },
+      },
+      json: true,
+    };
+
+    const scratchpadResponse = await requestPromise.post(
+      scratchpadURL.toString(),
+      options
+    );
+
+    console.log(scratchpadResponse);
+  }
+}
+
 export async function getScratchpadQuery(
   query: string,
   context?: string

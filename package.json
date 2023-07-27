@@ -209,6 +209,10 @@
         "title": "Add new DataSource"
       },
       {
+        "command": "kdb.dataSource.populateScratchpad",
+        "title": "Populate a new scratchpad"
+      },
+      {
         "command": "kdb.dataSource.saveDataSource",
         "title": "Save changes in the DataSource"
       },

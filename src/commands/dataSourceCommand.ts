@@ -13,20 +13,23 @@
 
 import * as fs from "fs";
 import path from "path";
-import { Uri, window } from "vscode";
+import { InputBoxOptions, Uri, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { DataSourceFiles, defaultDataSourceFile } from "../models/dataSource";
+import { scratchpadVariableInput } from "../models/items/server";
 import { DataSourcesPanel } from "../panels/datasource";
 import { KdbDataSourceTreeItem } from "../services/dataSourceTreeProvider";
 import {
   convertDataSourceFormToDataSourceFile,
   createKdbDataSourcesFolder,
 } from "../utils/dataSource";
+import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
 import {
   getData,
   getMeta,
   getQsqlData,
   getSqlData,
+  importScratchpad,
   writeQueryResult,
 } from "./serverCommand";
 
@@ -163,6 +166,25 @@ export async function saveDataSource(dataSourceForm: any): Promise<void> {
     fs.writeFileSync(dataSourceFilePath, JSON.stringify(fileContent));
   }
   window.showInformationMessage(`DataSource ${dataSourceForm.name} saved.`);
+}
+
+export async function populateScratchpad(): Promise<void> {
+  const scratchpadVariable: InputBoxOptions = {
+    prompt: scratchpadVariableInput.prompt,
+    placeHolder: scratchpadVariableInput.placeholder,
+    validateInput: (value: string | undefined) =>
+      validateScratchpadOutputVariableName(value),
+  };
+
+  window.showInputBox(scratchpadVariable).then(async (outputVariable) => {
+    if (outputVariable !== undefined && outputVariable !== "") {
+      await importScratchpad(outputVariable!);
+    } else {
+      ext.outputChannel.appendLine(
+        `Invalid scratchpad output variable name: ${outputVariable}`
+      );
+    }
+  });
 }
 
 export async function runDataSource(dataSourceForm: any): Promise<void> {
