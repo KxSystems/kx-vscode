@@ -47,7 +47,9 @@ export class ExecutionConsole {
     serverName: string,
     dataSourceType?: string
   ): void {
-    this._console.show(true);
+    if (dataSourceType === undefined) {
+      this._console.show(true);
+    }
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
     this._console.appendLine(
@@ -91,6 +93,9 @@ export class ExecutionConsole {
   }
 
   public rendResults(query: string, dataSourceType?: string) {
+    if (dataSourceType !== undefined) {
+      commands.executeCommand("kdb-results.focus");
+    }
     commands.executeCommand("kdb.resultsPanel.update", query, dataSourceType);
   }
 }

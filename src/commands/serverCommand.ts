@@ -63,7 +63,7 @@ import {
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { ExecutionConsole } from "../utils/executionConsole";
 import { openUrl } from "../utils/openUrl";
-import { sanitizeQuery } from "../utils/queryUtils";
+import { isCompressed, sanitizeQuery, uncompress } from "../utils/queryUtils";
 import {
   validateServerAlias,
   validateServerName,
@@ -360,9 +360,11 @@ export async function getData(body: string): Promise<any | undefined> {
     const options = {
       headers: {
         Authorization: `Bearer ${token.accessToken}`,
+        "content-type": "application/json",
+        accepted: "application/octet-stream",
       },
       body: JSON.parse(body),
-      json: true,
+      responseType: "arraybuffer",
     };
 
     const dataResponse = await requestPromise.post(dataUrl.toString(), options);
@@ -387,12 +389,28 @@ export async function getSqlData(query: string): Promise<any | undefined> {
     const options = {
       headers: {
         Authorization: `Bearer ${token.accessToken}`,
+        accepted: "application/octet-stream",
       },
       body: JSON.parse(query),
       json: true,
+      responseType: "arraybuffer",
     };
+    const testurl = sqlUrl.toString();
     const sqlResponse = await requestPromise.post(sqlUrl.toString(), options);
-    return sqlResponse?.payload ? sqlResponse.payload : "No Results";
+
+    let response;
+    if (sqlResponse instanceof ArrayBuffer) {
+      if (isCompressed(sqlResponse)) {
+        response = uncompress(sqlResponse);
+      }
+      response = {
+        error: "",
+        arrayBuffer: response,
+      };
+    } else {
+      response = sqlResponse.error;
+    }
+    return response;
   }
   return undefined;
 }
@@ -413,9 +431,11 @@ export async function getQsqlData(query: string): Promise<any | undefined> {
     const options = {
       headers: {
         Authorization: `Bearer ${token.accessToken}`,
+        "content-type": "application/json",
+        accepted: "application/octet-stream",
       },
       body: JSON.parse(query),
-      json: true,
+      responseType: "arraybuffer",
     };
 
     const qsqlResponse = await requestPromise.post(qsqlUrl.toString(), options);
