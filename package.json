@@ -484,7 +484,8 @@
     "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
     "test": "npm run -S esbuild-base -- --sourcemap && tsc -p ./test && node ./out/test/runTest.js",
     "package": "npx vsce package",
-    "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\""
+    "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
+    "generate-parser": "antlr4-tool -o q-parser grammars/q.g4"
   },
   "prettier": {
     "printWidth": 80,
@@ -507,6 +508,8 @@
     "@typescript-eslint/eslint-plugin": "^5.36.2",
     "@typescript-eslint/parser": "^5.36.2",
     "@vscode/test-electron": "^2.2.3",
+    "antlr4": "^4.13.0",
+    "antlr4-tool": "^1.1.1",
     "esbuild": "^0.15.7",
     "eslint": "^8.23.0",
     "eslint-plugin-header": "^3.1.1",
@@ -532,12 +535,13 @@
     "@azure/ms-rest-azure-env": "^2.0.0",
     "@azure/ms-rest-nodeauth": "^3.1.1",
     "@microsoft/vscode-azext-utils": "0.3.7",
+    "@types/antlr4": "^4.11.2",
     "@types/graceful-fs": "^4.1.6",
     "@types/klaw": "^3.0.3",
     "@types/picomatch": "^2.3.0",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "@windozer/node-q": "^2.6.0",
-    "antlr4": "^4.13.0",
+    "antlr4-runtime": "^4.13.0",
     "antlr4ts": "^0.5.0-alpha.4",
     "azure-arm-resource": "^7.4.0",
     "csv-parser": "^3.0.0",
