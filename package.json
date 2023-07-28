@@ -551,6 +551,7 @@
     "fuse.js": "^6.6.2",
     "klaw": "^4.1.0",
     "node-fetch": "^2.6.6",
+    "node-q": "^2.6.1",
     "open": "^6.4.0",
     "picomatch": "^2.3.1",
     "request-promise": "^4.2.6",
