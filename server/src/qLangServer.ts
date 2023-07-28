@@ -13,6 +13,12 @@
 
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
+  CallHierarchyIncomingCall,
+  CallHierarchyIncomingCallsParams,
+  CallHierarchyItem,
+  CallHierarchyOutgoingCall,
+  CallHierarchyOutgoingCallsParams,
+  CallHierarchyPrepareParams,
   CompletionItem,
   Connection,
   Diagnostic,
@@ -23,6 +29,8 @@ import {
   Hover,
   InitializeParams,
   Location,
+  Position,
+  Range,
   ReferenceParams,
   RenameParams,
   SemanticTokens,
@@ -31,6 +39,7 @@ import {
   SignatureHelp,
   SignatureHelpParams,
   SymbolInformation,
+  SymbolKind,
   TextDocumentPositionParams,
   TextDocumentSyncKind,
   TextDocuments,
@@ -71,6 +80,16 @@ export default class QLangServer {
     // Semantic Tokens
     this.connection.languages.semanticTokens.on(
       this.onSemanticsTokens.bind(this)
+    );
+    // Call Hierarchy
+    this.connection.languages.callHierarchy.onPrepare(
+      this.onPrepareCallHierarchy.bind(this)
+    );
+    this.connection.languages.callHierarchy.onIncomingCalls(
+      this.onIncomingCallsCallHierarchy.bind(this)
+    );
+    this.connection.languages.callHierarchy.onOutgoingCalls(
+      this.onOutgoingCallsCallHierarchy.bind(this)
     );
   }
 
@@ -119,7 +138,7 @@ export default class QLangServer {
         full: true,
       },
       // Whether the server supports providing call hierarchy information for a symbol.
-      // callHierarchyProvider: true,
+      callHierarchyProvider: true,
     };
   }
 
@@ -169,7 +188,7 @@ export default class QLangServer {
   private async onHover(
     params: TextDocumentPositionParams
   ): Promise<Hover | null> {
-    const keyword = this.getKeyword(params);
+    const keyword = this.getEntireKeyword(params);
     if (!keyword) {
       return null;
     }
@@ -219,6 +238,65 @@ export default class QLangServer {
       return this.analyzer.getSymbols(document);
     }
     return [];
+  }
+
+  public onPrepareCallHierarchy({
+    textDocument,
+    position,
+  }: CallHierarchyPrepareParams): CallHierarchyItem[] {
+    const document = this.documents.get(textDocument.uri);
+    if (!document) {
+      return [];
+    }
+    const range = this.getCurrentWordRange(position, document);
+    if (!range) {
+      return [];
+    }
+    const keyword = document.getText(range);
+    const symbolInformation = this.analyzer
+      .getSymbolsByUri(textDocument.uri)
+      .filter((symbol) => symbol.name === keyword);
+    if (
+      symbolInformation.length > 0 &&
+      symbolInformation[0].kind === SymbolKind.Function
+    ) {
+      return [
+        {
+          name: keyword,
+          kind: SymbolKind.Function,
+          uri: textDocument.uri,
+          range: range,
+          selectionRange: range,
+        },
+      ];
+    }
+    return [];
+  }
+
+  public onIncomingCallsCallHierarchy({
+    item,
+  }: CallHierarchyIncomingCallsParams): CallHierarchyIncomingCall[] {
+    const containerName = item.name;
+    if (!containerName) {
+      return [];
+    }
+    const items = this.analyzer.getCallHierarchyItemByKeyword(containerName);
+    return items.map((item) => ({ from: item, fromRanges: [item.range] }));
+  }
+
+  public onOutgoingCallsCallHierarchy({
+    item,
+  }: CallHierarchyOutgoingCallsParams): CallHierarchyOutgoingCall[] {
+    const globalId = this.analyzer.getGlobalIdByUriContainerName(
+      item.uri,
+      item.name
+    );
+    return globalId
+      .map((keyword: string) =>
+        this.analyzer.getCallHierarchyItemByKeyword(keyword)
+      )
+      .flat(1)
+      .map((el) => ({ to: el, fromRanges: [el.range] }));
   }
 
   private onReferences(params: ReferenceParams): Location[] | null {
@@ -347,5 +425,35 @@ export default class QLangServer {
     if (document) {
       return this.analyzer.getCurrentWord(params, document);
     } else return undefined;
+  }
+
+  private getEntireKeyword(
+    params: TextDocumentPositionParams
+  ): string | undefined {
+    const document = this.documents.get(params.textDocument.uri);
+    if (document) {
+      return this.analyzer.getCurrentEntireWord(params, document);
+    } else return undefined;
+  }
+
+  private getCurrentWordRange(
+    position: Position,
+    document: TextDocument
+  ): Range | undefined {
+    const text = document.getText();
+    const wordRegex = /[\w]+(?:[^\w\s\.][\w]+)*/g;
+    let match;
+    while ((match = wordRegex.exec(text))) {
+      const start = match.index;
+      const end = start + match[0].length;
+      const range = Range.create(
+        document.positionAt(start),
+        document.positionAt(end)
+      );
+      if (range) {
+        return range;
+      }
+    }
+    return undefined;
   }
 }

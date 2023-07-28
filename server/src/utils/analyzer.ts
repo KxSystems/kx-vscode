@@ -93,6 +93,14 @@ export class AnalyzerContent {
     return items;
   }
 
+  public getGlobalIdByUriContainerName(
+    uri: DocumentUri,
+    containerName: string
+  ): string[] {
+    const containerMap = this.uriToGlobalId.get(uri);
+    return containerMap?.get(containerName) ?? [];
+  }
+
   public async getHoverInfo(keyword: string): Promise<Hover | null> {
     const ref = qLangParserItems.find(
       (item: CompletionItem) => item.label === keyword
@@ -155,6 +163,11 @@ export class AnalyzerContent {
     return symbols;
   }
 
+  public getSymbolsByUri(uri: DocumentUri): SymbolInformation[] {
+    const nameToSymInfos = this.uriToDefinition.get(uri)?.values();
+    return nameToSymInfos ? Array.from(nameToSymInfos).flat() : [];
+  }
+
   public getSemanticTokens(uri: DocumentUri): SemanticTokens {
     const semanticTokensBuilder: SemanticTokensBuilder | undefined =
       this.uriToSemanticTokens.get(uri);
@@ -164,7 +177,7 @@ export class AnalyzerContent {
   public getCurrentWord(
     textDocumentPosition: TextDocumentPositionParams,
     document: TextDocument
-  ): string {
+  ): string | undefined {
     if (document) {
       const textBeforeCursor = document.getText({
         start: { line: textDocumentPosition.position.line, character: 0 },
@@ -173,6 +186,28 @@ export class AnalyzerContent {
       const currentWordMatch = textBeforeCursor.match(/([a-zA-Z0-9.]+)$/);
       const currentWord = currentWordMatch ? currentWordMatch[1] : "";
       return currentWord;
+    }
+    return undefined;
+  }
+
+  public getCurrentEntireWord(
+    textDocumentPosition: TextDocumentPositionParams,
+    document: TextDocument
+  ): string {
+    if (document) {
+      const text = document.getText();
+      const wordRegex = /[\w]+(?:[^\w\s\.][\w]+)*/g;
+      let match;
+      while ((match = wordRegex.exec(text))) {
+        const start = match.index;
+        const end = start + match[0].length;
+        if (
+          start <= document.offsetAt(textDocumentPosition.position) &&
+          end >= document.offsetAt(textDocumentPosition.position)
+        ) {
+          return match[0];
+        }
+      }
     }
     return "";
   }
