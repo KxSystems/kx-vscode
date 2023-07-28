@@ -11,6 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
+// THIS FILE WILL BE REMOVED, THIS STILL HERE UNTIL THE END OF THE TRANSITION OF LSP
+
 import fs from "fs";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
