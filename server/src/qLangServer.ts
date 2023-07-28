@@ -17,6 +17,8 @@ import {
   Connection,
   Diagnostic,
   DiagnosticSeverity,
+  DocumentHighlight,
+  DocumentHighlightKind,
   DocumentSymbolParams,
   Hover,
   InitializeParams,
@@ -43,10 +45,12 @@ export default class QLangServer {
   public defaultSettings: GlobalSettings = { maxNumberOfProblems: 1000 };
   public globalSettings: GlobalSettings = this.defaultSettings;
   public documentSettings: Map<string, Thenable<GlobalSettings>> = new Map();
+  public analyzer: AnalyzerContent;
   // private callHierarchy: CallHierarchyHandler;
 
-  private constructor(connection: Connection) {
+  private constructor(connection: Connection, analyzer: AnalyzerContent) {
     this.connection = connection;
+    this.analyzer = analyzer;
     this.documents.listen(this.connection);
     this.documents.onDidClose((e) => {
       this.documentSettings.delete(e.document.uri);
@@ -57,8 +61,8 @@ export default class QLangServer {
     this.connection.onCompletion(this.onCompletion.bind(this));
     this.connection.onCompletionResolve(this.onCompletionResolve.bind(this));
     this.connection.onHover(this.onHover.bind(this));
-    //TODO: this.connection.onDocumentHighlight(this.onDocumentHighlight.bind(this));
-    // this.connection.onDefinition(this.onDefinition.bind(this));
+    this.connection.onDocumentHighlight(this.onDocumentHighlight.bind(this));
+    this.connection.onDefinition(this.onDefinition.bind(this));
     // this.connection.onDocumentSymbol(this.onDocumentSymbol.bind(this));
     this.connection.onReferences(this.onReferences.bind(this));
     this.connection.onRenameRequest(this.onRenameRequest.bind(this));
@@ -70,7 +74,8 @@ export default class QLangServer {
   ): Promise<QLangServer> {
     // Get the URI of the root folder, if it exists.
     const rootUri = workspaceFolders ? workspaceFolders[0].uri : "";
-    const server = new QLangServer(connection);
+    const analyzer = await AnalyzerContent.fromRoot(connection, rootUri);
+    const server = new QLangServer(connection, analyzer);
     // Write a console message to indicate that the server is being initialized.
     server.writeConsoleMsg(
       "Initializing QLang Language Server for QLang VSCode extension",
@@ -85,13 +90,13 @@ export default class QLangServer {
       // The kind of text document synchronization that the server supports.
       textDocumentSync: TextDocumentSyncKind.Full,
       // Whether the server supports resolving additional information for a completion item.
-      completionProvider: { resolveProvider: true }, //done
+      completionProvider: { resolveProvider: true },
       // Whether the server supports providing hover information for a symbol.
-      hoverProvider: true, //done
+      hoverProvider: true,
       // Whether the server supports providing document highlights for a symbol.
-      // documentHighlightProvider: true, //TODO
+      documentHighlightProvider: true,
       // Whether the server supports providing definitions for a symbol.
-      // definitionProvider: true, // TODO
+      definitionProvider: true,
       // Whether the server supports providing symbols for a document.
       // documentSymbolProvider: true, // TODO
       // Whether the server supports providing symbols for the workspace.
@@ -148,7 +153,7 @@ export default class QLangServer {
     if (!keyword) {
       return [];
     }
-    return AnalyzerContent.getCompletionItems(keyword);
+    return this.analyzer.getCompletionItems(keyword);
   }
 
   private async onCompletionResolve(
@@ -164,32 +169,28 @@ export default class QLangServer {
     if (!keyword) {
       return null;
     }
-    return AnalyzerContent.getHoverInfo(keyword);
-
-    return null;
+    return this.analyzer.getHoverInfo(keyword);
   }
 
   // TODO: Document highlight
-  // private onDocumentHighlight(
-  //   params: TextDocumentPositionParams
-  // ): DocumentHighlight[] | null {
-  //   const position = textPosition.position;
-  // return [
-  //   DocumentHighlight.create(
-  //     {
-  //       start: { line: position.line + 1, character: position.character },
-  //       end: { line: position.line + 1, character: position.character + 5 },
-  //     },
-  //     DocumentHighlightKind.Write
-  //   ),
-  // ];
-
-  // }
+  private onDocumentHighlight(
+    params: TextDocumentPositionParams
+  ): DocumentHighlight[] | null {
+    const position = params.position;
+    return [
+      DocumentHighlight.create(
+        {
+          start: { line: position.line + 1, character: position.character },
+          end: { line: position.line + 1, character: position.character + 5 },
+        },
+        DocumentHighlightKind.Write
+      ),
+    ];
+  }
 
   private onDefinition(params: TextDocumentPositionParams): Location[] {
     let keyword = this.getKeyword(params);
-    const document = this.documents.get(params.textDocument.uri);
-    if (!keyword || !document) {
+    if (!keyword) {
       return [];
     }
 
@@ -202,7 +203,10 @@ export default class QLangServer {
       keyword = keyword.substring(1);
     }
     // Return the definition location for the keyword.
-    return AnalyzerContent.getDefinitionByDocKeyword(document, keyword);
+    return this.analyzer.getDefinitionByUriKeyword(
+      params.textDocument.uri,
+      keyword
+    );
   }
 
   private onDocumentSymbol(params: DocumentSymbolParams): SymbolInformation[] {
@@ -219,7 +223,7 @@ export default class QLangServer {
       return [];
     }
 
-    return AnalyzerContent.getReferences(keyword, document) ?? [];
+    return this.analyzer.getReferences(keyword, document) ?? [];
   }
 
   private onRenameRequest({
@@ -237,7 +241,7 @@ export default class QLangServer {
       return null;
     }
     // Find all references to the symbol in the document and create a workspace edit to rename them.
-    const locations = AnalyzerContent.getReferences(keyword, document);
+    const locations = this.analyzer.getReferences(keyword, document);
     const changes = locations.reduce((acc, location) => {
       const uri = location.uri;
       const range = location.range;
@@ -327,7 +331,7 @@ export default class QLangServer {
   private getKeyword(params: TextDocumentPositionParams): string | undefined {
     const document = this.documents.get(params.textDocument.uri);
     if (document) {
-      return AnalyzerContent.getCurrentWord(params, document);
+      return this.analyzer.getCurrentWord(params, document);
     } else return undefined;
   }
 }

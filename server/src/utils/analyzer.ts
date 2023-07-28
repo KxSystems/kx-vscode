@@ -11,17 +11,23 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { DocumentUri, TextDocument } from "vscode-languageserver-textdocument";
 import {
+  CallHierarchyItem,
   CompletionItem,
   CompletionItemKind,
+  Connection,
   Hover,
   Location,
   Range,
+  SemanticTokensBuilder,
+  SignatureHelp,
   SymbolInformation,
   SymbolKind,
   TextDocumentPositionParams,
-} from "vscode-languageserver";
-import { TextDocument } from "vscode-languageserver-textdocument";
+} from "vscode-languageserver/node";
+import { URI } from "vscode-uri";
+import { qLangSampleParser } from "./parserUtils";
 import { qLangParserItems } from "./qLangParser";
 
 export type Keyword = {
@@ -34,9 +40,59 @@ export type Keyword = {
 export interface GlobalSettings {
   maxNumberOfProblems: number;
 }
+type nameToGlobalId = Map<string, string[]>;
+type nameToSymbolInformation = Map<string, SymbolInformation[]>;
+type nameToCallHierarchyItem = Map<string, CallHierarchyItem[]>;
 
 export class AnalyzerContent {
-  public static async getHoverInfo(keyword: string): Promise<Hover | null> {
+  private uriToTextDocument = new Map<string, TextDocument>();
+  private uriToGlobalId = new Map<string, nameToGlobalId>();
+  private uriToDefinition = new Map<DocumentUri, nameToSymbolInformation>();
+  private uriToCallHierarchy = new Map<string, nameToCallHierarchyItem>();
+  private uriToSemanticTokens = new Map<DocumentUri, SemanticTokensBuilder>();
+  private uriToSymbol = new Map<DocumentUri, string[]>();
+  private nameToSignatureHelp = new Map<string, SignatureHelp>();
+  private uriToFileContent = new Map<DocumentUri, string>();
+  private uriToLoadFile = new Map<DocumentUri, string[]>();
+  private connection: Connection;
+  private workspaceFolder: URI;
+  private rootPath: string | undefined | null;
+  private reservedWord: string[];
+  private qLangSampleParserSrc: string;
+
+  public static async fromRoot(
+    connection: Connection,
+    workspaceFolder: string
+  ): Promise<AnalyzerContent> {
+    return new AnalyzerContent(connection, workspaceFolder);
+  }
+
+  public constructor(connection: Connection, workspaceFolder: string) {
+    this.connection = connection;
+    this.workspaceFolder = URI.parse(workspaceFolder);
+    this.rootPath = this.workspaceFolder.fsPath;
+    this.reservedWord = qLangParserItems.map((item) => item.label);
+    this.qLangSampleParserSrc = qLangSampleParser;
+  }
+
+  // Public Getters
+  public getAllSymbolsFlattened(): SymbolInformation[] {
+    return Array.from(this.uriToDefinition.values())
+      .flatMap((nameToSymInfo) => Array.from(nameToSymInfo.values()))
+      .flat();
+  }
+
+  public getCallHierarchyItemByKeyword(keyword: string): CallHierarchyItem[] {
+    const items: CallHierarchyItem[] = [];
+    for (const callHierarchyMap of this.uriToCallHierarchy.values()) {
+      for (const item of callHierarchyMap.get(keyword) ?? []) {
+        items.push(item);
+      }
+    }
+    return items;
+  }
+
+  public async getHoverInfo(keyword: string): Promise<Hover | null> {
     const ref = qLangParserItems.find(
       (item: CompletionItem) => item.label === keyword
     );
@@ -50,7 +106,7 @@ export class AnalyzerContent {
     return null;
   }
 
-  public static getQLangParserRef(): CompletionItem[] {
+  public getQLangParserRef(): CompletionItem[] {
     const qLangParserItemsWithKind: CompletionItem[] = qLangParserItems.map(
       (item: CompletionItem) => {
         item.kind = item.kind as CompletionItemKind;
@@ -61,7 +117,7 @@ export class AnalyzerContent {
     return qLangParserItemsWithKind;
   }
 
-  public static getCurrentWord(
+  public getCurrentWord(
     textDocumentPosition: TextDocumentPositionParams,
     document: TextDocument
   ): string {
@@ -77,7 +133,7 @@ export class AnalyzerContent {
     return "";
   }
 
-  public static getCompletionItems(keyword: string): CompletionItem[] {
+  public getCompletionItems(keyword: string): CompletionItem[] {
     if (keyword) {
       const qLangParserItemsWithKind: CompletionItem[] = qLangParserItems.map(
         (item: CompletionItem) => {
@@ -95,19 +151,17 @@ export class AnalyzerContent {
     return [];
   }
 
-  public static getDefinitionByDocKeyword(
-    document: TextDocument,
-    keyword: string
-  ): Location[] {
+  public getDefinitionByUriKeyword(uri: string, keyword: string): Location[] {
     const symbols: SymbolInformation[] = [];
-    //TODO: add logic here
+    if (symbols.length === 0) {
+      this.uriToDefinition.forEach((nameToSymInfo) => {
+        symbols.push(...(nameToSymInfo.get(keyword) || []));
+      });
+    }
     return symbols.map((s) => s.location);
   }
 
-  public static getReferences(
-    keyword: string,
-    document: TextDocument
-  ): Location[] {
+  public getReferences(keyword: string, document: TextDocument): Location[] {
     const symbols: SymbolInformation[] = [];
     const lines = document.getText().split("\n");
     for (let i = 0; i < lines.length; i++) {
