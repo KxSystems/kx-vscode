@@ -25,6 +25,8 @@ import {
   Location,
   ReferenceParams,
   RenameParams,
+  SemanticTokens,
+  SemanticTokensParams,
   ServerCapabilities,
   SignatureHelp,
   SignatureHelpParams,
@@ -66,6 +68,10 @@ export default class QLangServer {
     this.connection.onDocumentSymbol(this.onDocumentSymbol.bind(this));
     this.connection.onReferences(this.onReferences.bind(this));
     this.connection.onRenameRequest(this.onRenameRequest.bind(this));
+    // Semantic Tokens
+    this.connection.languages.semanticTokens.on(
+      this.onSemanticsTokens.bind(this)
+    );
   }
 
   public static async initialize(
@@ -99,21 +105,19 @@ export default class QLangServer {
       definitionProvider: true,
       // Whether the server supports providing symbols for a document.
       documentSymbolProvider: true,
-      // Whether the server supports providing symbols for the workspace.
-      // workspaceSymbolProvider: true, //TODO
       // Whether the server supports finding references to a symbol.
       referencesProvider: true, //done
       // Whether the server supports renaming a symbol.
       renameProvider: { prepareProvider: true }, //done
       // Whether the server supports providing semantic tokens for a document.
-      // semanticTokensProvider: {
-      //   documentSelector: null,
-      //   legend: {
-      //     tokenTypes: ["variable", "parameter", "type", "class"],
-      //     tokenModifiers: [],
-      //   },
-      //   full: true,
-      // },
+      semanticTokensProvider: {
+        documentSelector: null,
+        legend: {
+          tokenTypes: ["variable", "parameter", "type", "class"],
+          tokenModifiers: [],
+        },
+        full: true,
+      },
       // Whether the server supports providing call hierarchy information for a symbol.
       // callHierarchyProvider: true,
     };
@@ -280,6 +284,15 @@ export default class QLangServer {
       this.documentSettings.set(resource, result);
     }
     return result;
+  }
+
+  private onSemanticsTokens({
+    textDocument,
+  }: SemanticTokensParams): SemanticTokens {
+    // Get the semantic tokens for the given document.
+    const tokens = this.analyzer.getSemanticTokens(textDocument?.uri);
+    // If there are tokens, return them.
+    return tokens ?? { data: [] };
   }
 
   private async validateTextDocument(

@@ -20,6 +20,7 @@ import {
   Hover,
   Location,
   Range,
+  SemanticTokens,
   SemanticTokensBuilder,
   SignatureHelp,
   SymbolInformation,
@@ -152,6 +153,12 @@ export class AnalyzerContent {
     }
 
     return symbols;
+  }
+
+  public getSemanticTokens(uri: DocumentUri): SemanticTokens {
+    const semanticTokensBuilder: SemanticTokensBuilder | undefined =
+      this.uriToSemanticTokens.get(uri);
+    return semanticTokensBuilder?.build() ?? { data: [] };
   }
 
   public getCurrentWord(
