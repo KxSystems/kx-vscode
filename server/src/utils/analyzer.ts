@@ -117,6 +117,43 @@ export class AnalyzerContent {
     return qLangParserItemsWithKind;
   }
 
+  public getSymbols(document: TextDocument): SymbolInformation[] {
+    const text = document.getText();
+    const symbols: SymbolInformation[] = [];
+
+    // Use a regular expression to find function and variable declarations
+    const declarationRegex = /(function|var|let|const)\s+([a-zA-Z0-9_]+)\s*\(/g;
+    let match;
+    while ((match = declarationRegex.exec(text))) {
+      const start = match.index;
+      const end = start + match[0].length;
+      const name = match[2];
+      const kind =
+        match[1] === "function" ? SymbolKind.Function : SymbolKind.Variable;
+      const range = Range.create(
+        document.positionAt(start),
+        document.positionAt(end)
+      );
+      symbols.push(SymbolInformation.create(name, kind, range, document.uri));
+    }
+
+    // Use a regular expression to find class declarations
+    const classRegex = /class\s+([a-zA-Z0-9_]+)/g;
+    while ((match = classRegex.exec(text))) {
+      const start = match.index;
+      const end = start + match[0].length;
+      const name = match[1];
+      const kind = SymbolKind.Class;
+      const range = Range.create(
+        document.positionAt(start),
+        document.positionAt(end)
+      );
+      symbols.push(SymbolInformation.create(name, kind, range, document.uri));
+    }
+
+    return symbols;
+  }
+
   public getCurrentWord(
     textDocumentPosition: TextDocumentPositionParams,
     document: TextDocument

@@ -63,7 +63,7 @@ export default class QLangServer {
     this.connection.onHover(this.onHover.bind(this));
     this.connection.onDocumentHighlight(this.onDocumentHighlight.bind(this));
     this.connection.onDefinition(this.onDefinition.bind(this));
-    // this.connection.onDocumentSymbol(this.onDocumentSymbol.bind(this));
+    this.connection.onDocumentSymbol(this.onDocumentSymbol.bind(this));
     this.connection.onReferences(this.onReferences.bind(this));
     this.connection.onRenameRequest(this.onRenameRequest.bind(this));
   }
@@ -98,7 +98,7 @@ export default class QLangServer {
       // Whether the server supports providing definitions for a symbol.
       definitionProvider: true,
       // Whether the server supports providing symbols for a document.
-      // documentSymbolProvider: true, // TODO
+      documentSymbolProvider: true,
       // Whether the server supports providing symbols for the workspace.
       // workspaceSymbolProvider: true, //TODO
       // Whether the server supports finding references to a symbol.
@@ -211,8 +211,9 @@ export default class QLangServer {
 
   private onDocumentSymbol(params: DocumentSymbolParams): SymbolInformation[] {
     const document = this.documents.get(params.textDocument.uri);
-    // Return the symbol information for the symbols in the document.
-    // return AnalyzerContent.getSymbolsByDoc(document) ?? [];
+    if (document) {
+      return this.analyzer.getSymbols(document);
+    }
     return [];
   }
 
