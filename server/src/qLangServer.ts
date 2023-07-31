@@ -57,7 +57,6 @@ export default class QLangServer {
   public globalSettings: GlobalSettings = this.defaultSettings;
   public documentSettings: Map<string, Thenable<GlobalSettings>> = new Map();
   public analyzer: AnalyzerContent;
-  // private callHierarchy: CallHierarchyHandler;
 
   private constructor(connection: Connection, analyzer: AnalyzerContent) {
     this.connection = connection;
