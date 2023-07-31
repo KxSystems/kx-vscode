@@ -23,15 +23,6 @@ const serverConfig = {
   format: "cjs",
   external: ["vscode"],
   platform: "node",
-  plugins: [
-    copy({
-      resolveFrom: "cwd",
-      assets: {
-        from: ["node_modules/web-tree-sitter/tree-sitter.wasm"],
-        to: ["./out"],
-      },
-    }),
-  ],
 };
 
 const webviewConfig = {

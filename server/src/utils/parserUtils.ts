@@ -11,24 +11,20 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { CharStreams, CommonTokenStream } from "antlr4";
 import fs from "fs";
 import { CompletionItem, CompletionItemKind } from "vscode-languageserver/node";
-import Parser from "web-tree-sitter";
+import qLexer from "./antlrGrammars/qLexer";
+import qParser from "./antlrGrammars/qParser";
 import { qLangParserItems } from "./qLangParser";
 
-export async function initializeParser(): Promise<Parser> {
-  await Parser.init();
-  const parser = new Parser();
-
-  /**
-   * See https://github.com/tree-sitter/tree-sitter/tree/master/lib/binding_web#generate-wasm-language-files
-   *
-   */
-  const lang = await Parser.Language.load(
-    `${__dirname}/../grammars/parser-q.wasm`
-  );
-
-  parser.setLanguage(lang);
+export async function initializeParser(): Promise<qParser> {
+  const input = "";
+  const chars = CharStreams.fromString(input);
+  const lexer = new qLexer(chars);
+  const tokens = new CommonTokenStream(lexer);
+  const parser = new qParser(tokens);
+  parser.buildParseTrees = true;
   return parser;
 }
 
