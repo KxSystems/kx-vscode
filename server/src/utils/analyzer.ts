@@ -28,7 +28,6 @@ import {
   TextDocumentPositionParams,
 } from "vscode-languageserver/node";
 import { URI } from "vscode-uri";
-import { qLangSampleParser } from "./parserUtils";
 import { qLangParserItems } from "./qLangParser";
 
 export type Keyword = {
@@ -56,10 +55,10 @@ export class AnalyzerContent {
   private uriToFileContent = new Map<DocumentUri, string>();
   private uriToLoadFile = new Map<DocumentUri, string[]>();
   private connection: Connection;
-  private workspaceFolder: URI;
+  private workspaceFolder?: URI;
   private rootPath: string | undefined | null;
-  private reservedWord: string[];
-  private qLangSampleParserSrc: string;
+  private reservedWord?: string[];
+  private qLangSampleParserSrc?: string;
 
   public static async fromRoot(
     connection: Connection,
@@ -73,7 +72,7 @@ export class AnalyzerContent {
     this.workspaceFolder = URI.parse(workspaceFolder);
     this.rootPath = this.workspaceFolder.fsPath;
     this.reservedWord = qLangParserItems.map((item) => item.label);
-    this.qLangSampleParserSrc = qLangSampleParser;
+    // this.qLangSampleParserSrc = qLangSampleParser;
   }
 
   // Public Getters

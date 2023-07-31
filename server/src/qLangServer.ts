@@ -125,9 +125,9 @@ export default class QLangServer {
       // Whether the server supports providing symbols for a document.
       documentSymbolProvider: true,
       // Whether the server supports finding references to a symbol.
-      referencesProvider: true, //done
+      referencesProvider: true,
       // Whether the server supports renaming a symbol.
-      renameProvider: { prepareProvider: true }, //done
+      renameProvider: { prepareProvider: true },
       // Whether the server supports providing semantic tokens for a document.
       semanticTokensProvider: {
         documentSelector: null,
