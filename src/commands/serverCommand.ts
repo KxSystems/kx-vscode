@@ -47,7 +47,11 @@ import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
 import { Server } from "../models/server";
 import { ServerObject } from "../models/serverObject";
-import { signIn } from "../services/kdbInsights/codeFlowLogin";
+import {
+  IToken,
+  refreshToken,
+  signIn,
+} from "../services/kdbInsights/codeFlowLogin";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import {
   addLocalConnectionContexts,
@@ -308,12 +312,43 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
 
 export async function connectInsights(viewItem: InsightsNode): Promise<void> {
   commands.executeCommand("kdb-results.focus");
-  const token = await signIn(viewItem.details.server);
-  ext.context.secrets.store(viewItem.details.alias, JSON.stringify(token));
+
+  let token: IToken | undefined;
+  const existingToken = await ext.context.secrets.get(viewItem.details.alias);
+  if (existingToken !== undefined) {
+    const storedToken: IToken = JSON.parse(existingToken);
+    if (new Date(storedToken.accessTokenExpirationDate) < new Date()) {
+      token = await refreshToken(
+        viewItem.details.server,
+        storedToken.refreshToken
+      );
+      if (token === undefined) {
+        token = await signIn(viewItem.details.server);
+        ext.context.secrets.store(
+          viewItem.details.alias,
+          JSON.stringify(token)
+        );
+      } else {
+        ext.context.secrets.store(
+          viewItem.details.alias,
+          JSON.stringify(token)
+        );
+      }
+    } else {
+      token = storedToken;
+    }
+  } else {
+    token = await signIn(viewItem.details.server);
+    ext.context.secrets.store(viewItem.details.alias, JSON.stringify(token));
+  }
 
   ext.outputChannel.appendLine(
     `Connection established successfully to: ${viewItem.details.server}`
   );
+
+  commands.executeCommand("setContext", "kdb.connected", [
+    viewItem.label + " (connected)",
+  ]);
 
   ext.connectionNode = viewItem;
   ext.serverProvider.reload();
