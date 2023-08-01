@@ -26,6 +26,7 @@ import {
 } from "vscode";
 import { ext } from "../extensionVariables";
 import { Connection } from "../models/connection";
+import { GetDataObjectPayload } from "../models/data";
 import { ExecutionTypes } from "../models/execution";
 import { Insights } from "../models/insights";
 import {
@@ -475,6 +476,44 @@ export async function getQsqlData(query: string): Promise<any | undefined> {
 
     const qsqlResponse = await requestPromise.post(qsqlUrl.toString(), options);
     return qsqlResponse !== "" ? qsqlResponse : "No Results";
+  }
+  return undefined;
+}
+
+export async function getDataInsights(
+  targetUrl: string,
+  body: string
+): Promise<GetDataObjectPayload | undefined> {
+  if (ext.connectionNode instanceof InsightsNode) {
+    const requestUrl = new url.URL(
+      targetUrl,
+      ext.connectionNode.details.server
+    ).toString();
+
+    // get the access token from the secure store
+    const rawToken = await ext.context.secrets.get(
+      ext.connectionNode.details.alias
+    );
+    const token = JSON.parse(rawToken!);
+
+    const headers = {
+      kxui: "true",
+      Authorization: `Bearer ${token.accessToken}`,
+      Accept: "application/octet-stream",
+      "Content-Type": "application/json",
+      responseType: "arraybuffer",
+    };
+
+    const options = {
+      headers,
+      body: JSON.parse(body),
+      json: true,
+      responseType: "arraybuffer",
+    };
+
+    const dataResponse = await requestPromise.post(requestUrl, options);
+
+    return dataResponse;
   }
   return undefined;
 }
