@@ -11,14 +11,11 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export type GetDataObjectPayload = {
-  error: string;
-  table?: {
-    meta: {
-      [column: string]: string;
-    };
-    columns: string[];
-    rows: any;
-  };
-  arrayBuffer?: ArrayBuffer;
-};
+export default class Constants {
+  public static readonly msDay = 86400000;
+  public static readonly qEpoch = Constants.msDay * 10957;
+  public static readonly jsDateMin = -8640000000000000;
+  public static readonly timePartsRx =
+    /(-?\d{1,7}:\d\d:\d\d.\d\d\d)(\d\d\d\d\d\d)/;
+  public static readonly bnEpoch = BigInt(1e6 * Constants.qEpoch);
+}
