@@ -12,6 +12,7 @@
  */
 
 import { readFileSync } from "fs-extra";
+import jwt_decode from "jwt-decode";
 import { join } from "path";
 import requestPromise from "request-promise";
 import * as url from "url";
@@ -42,6 +43,7 @@ import {
   serverEndpointPlaceHolder,
   serverEndpoints,
 } from "../models/items/server";
+import { JwtUser } from "../models/jwt_user";
 import { MetaObject, MetaObjectPayload } from "../models/meta";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
@@ -472,9 +474,17 @@ export async function importScratchpad(variableName: string): Promise<void> {
     );
     const token = JSON.parse(rawToken!);
 
+    const username = jwt_decode<JwtUser>(token.accessToken);
+    if (username === undefined || username.preferred_username === "") {
+      ext.outputChannel.appendLine(
+        "JWT did not contain a valid preferred username"
+      );
+    }
+
     const options = {
       headers: {
         Authorization: `Bearer ${token.accessToken}`,
+        username: username.preferred_username!,
       },
       body: {
         output: variableName,
