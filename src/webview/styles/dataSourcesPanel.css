@@ -116,7 +116,7 @@
   width: 100%;
 }
 
-#params-wrapper {
+.params-wrapper {
   display: flex;
   flex-wrap: wrap;
   align-content: space-between;
