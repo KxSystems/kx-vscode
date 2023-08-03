@@ -23,7 +23,9 @@ export function showRegistrationNotification(): void {
       .showInformationMessage("Subscribe to updates", "Opt-In", "Ignore")
       .then((result) => {
         if (result === "Opt-In") {
-          openUrl("https://www.bing.com");
+          openUrl(
+            "https://kx.com/kdb-personal-edition-download?source=kx-vscode"
+          );
         }
       });
   }
