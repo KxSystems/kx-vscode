@@ -80,6 +80,7 @@ import {
   initializeLocalServers,
 } from "./utils/core";
 import { runQFileTerminal } from "./utils/execution";
+import { showNewsletterNotification } from "./utils/newsletter";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
 
@@ -89,6 +90,8 @@ export async function activate(context: ExtensionContext) {
   ext.context = context;
   ext.outputChannel = window.createOutputChannel("kdb");
   ext.openSslVersion = await checkOpenSslInstalled();
+
+  showNewsletterNotification();
 
   const servers: Server | undefined = getServers();
   const insights: Insights | undefined = getInsights();
