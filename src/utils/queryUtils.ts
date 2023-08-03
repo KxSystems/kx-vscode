@@ -14,6 +14,8 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import { ext } from "../extensionVariables";
+import { deserialize, isCompressed, uncompress } from "../ipc/c";
+import { Parse } from "../ipc/parse.qlist";
 
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {
@@ -30,54 +32,71 @@ export function queryWrapper(): string {
   ).toString();
 }
 
-// export function isCompressed(x: ArrayBuffer): boolean {
-//   return new Uint8Array(x)[2] === 1;
-// }
+export function handleWSResults(ab: ArrayBuffer): any {
+  let res: any;
+  try {
+    if (isCompressed(ab)) {
+      ab = uncompress(ab);
+    }
+    let des = deserialize(ab);
+    if (des.qtype === 0 && des.values.length === 2) {
+      des = des.values[1];
+    }
+    res = Parse.reshape(des, ab).toLegacy();
 
-// export function uncompress(ab: ArrayBuffer): ArrayBuffer {
-//   const b = new Uint8Array(ab); // copy array not sure why?
-//   if (b.length < 12 + 1) {
-//     return b;
-//   }
-//   const i32u8 = (u8: ArrayBuffer) => new Uint32Array(u8)[0];
+    return convertRows(res.rows);
+  } catch (error) {
+    console.log(error);
+    throw error;
+  }
+}
 
-//   let n = 0,
-//     r = 0,
-//     f = 0,
-//     s = 8,
-//     p = s,
-//     i = 0,
-//     d = 12;
-//   const usize = i32u8(b.buffer.slice(8, 12));
-//   const dst = new Uint8Array(usize);
-//   const aa = new Int32Array(256);
-//   for (; s < dst.length; ) {
-//     if (i == 0) {
-//       f = 0xff & b[d++];
-//       i = 1;
-//     }
-//     if ((f & i) != 0) {
-//       r = aa[0xff & b[d++]];
-//       dst[s++] = dst[r++];
-//       dst[s++] = dst[r++];
-//       n = 0xff & b[d++];
-//       for (let m = 0; m < n; m++) {
-//         dst[s + m] = dst[r + m];
-//       }
-//     } else {
-//       dst[s++] = b[d++];
-//     }
-//     for (; p < s - 1; ) {
-//       aa[(0xff & dst[p]) ^ (0xff & dst[p + 1])] = p++;
-//     }
-//     if ((f & i) != 0) {
-//       s += n;
-//       p = s;
-//     }
-//     i *= 2;
-//     if (i == 256) {
-//       i = 0;
-//     }
-//   }
-//   return dst.buffer;
-// }
+export function convertRows(rows: any[]): any[] {
+  if (rows.length === 0) {
+    return [];
+  }
+  const keys = Object.keys(rows[0]);
+  const result = [keys.join(",")];
+  for (const row of rows) {
+    const values = keys.map((key) => row[key]);
+    result.push(values.join(","));
+  }
+  return result;
+}
+
+export function convertRowsToConsole(rows: string[]): string[] {
+  if (rows.length === 0) {
+    return [];
+  }
+
+  // Transforma a array de strings em um vetor de strings
+  const vector = rows.map((row) => row.split(","));
+
+  // Conta o maior número de caracteres em cada coluna
+  const columnCounters = vector[0].map((_, j) => {
+    const maxLength = Math.max(...vector.map((row) => row[j].length));
+    return maxLength + 2;
+  });
+
+  vector.forEach((row) => {
+    row.forEach((value: string, j: number) => {
+      const counter = columnCounters[j];
+      const diff = counter - value.length;
+      if (diff > 0) {
+        row[j] = value + " ".repeat(diff);
+      }
+    });
+  });
+
+  // Junta cada linha do vetor em uma string
+  const result = vector.map((row) => row.join(""));
+
+  // Cria uma string com o contador geral
+  const totalCount = columnCounters.reduce((sum, count) => sum + count, 0);
+  const totalCounter = "-".repeat(totalCount);
+
+  // Adiciona a string do contador geral como o segundo item da array
+  result.splice(1, 0, totalCounter);
+
+  return result;
+}

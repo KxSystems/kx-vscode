@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import axios from "axios";
 import { readFileSync } from "fs-extra";
 import { join } from "path";
 import requestPromise from "request-promise";
@@ -25,6 +26,7 @@ import {
   window,
 } from "vscode";
 import { ext } from "../extensionVariables";
+import { isCompressed, uncompress } from "../ipc/c";
 import { Connection } from "../models/connection";
 import { GetDataObjectPayload } from "../models/data";
 import { ExecutionTypes } from "../models/execution";
@@ -68,7 +70,7 @@ import {
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { ExecutionConsole } from "../utils/executionConsole";
 import { openUrl } from "../utils/openUrl";
-import { isCompressed, sanitizeQuery, uncompress } from "../utils/queryUtils";
+import { sanitizeQuery } from "../utils/queryUtils";
 import {
   validateServerAlias,
   validateServerName,
@@ -497,23 +499,31 @@ export async function getDataInsights(
     const token = JSON.parse(rawToken!);
 
     const headers = {
-      kxui: "true",
       Authorization: `Bearer ${token.accessToken}`,
       Accept: "application/octet-stream",
       "Content-Type": "application/json",
-      responseType: "arraybuffer",
     };
 
-    const options = {
-      headers,
-      body: JSON.parse(body),
-      json: true,
+    const data =
+      requestUrl.substring(requestUrl.length - 3) === "sql"
+        ? body
+        : JSON.parse(body);
+
+    return await axios({
+      method: "post",
+      url: requestUrl,
+      data,
+      headers: headers,
       responseType: "arraybuffer",
-    };
-
-    const dataResponse = await requestPromise.post(requestUrl, options);
-
-    return dataResponse;
+    }).then((response: any) => {
+      if (isCompressed(response.data)) {
+        response.data = uncompress(response.data);
+      }
+      return {
+        error: "",
+        arrayBuffer: response.data.buffer,
+      };
+    });
   }
   return undefined;
 }
@@ -799,14 +809,15 @@ export async function loadServerObjects(): Promise<ServerObject[]> {
 }
 
 export function writeQueryResult(
-  result: string,
+  result: string | string[],
   query: string,
   dataSourceType?: string
 ): void {
   const queryConsole = ExecutionConsole.start();
+  const res = Array.isArray(result) ? result[0] : result;
   if (
     (ext.connection || ext.connectionNode) &&
-    !result.startsWith(queryConstants.error)
+    !res.startsWith(queryConstants.error)
   ) {
     queryConsole.append(
       result,
@@ -817,7 +828,7 @@ export function writeQueryResult(
   } else {
     queryConsole.appendQueryError(
       query,
-      result.substring(queryConstants.error.length),
+      res.substring(queryConstants.error.length),
       !!ext.connection,
       ext.connectionNode?.label ? ext.connectionNode.label : ""
     );
