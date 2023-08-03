@@ -461,7 +461,10 @@ export async function getQsqlData(query: string): Promise<any | undefined> {
   return undefined;
 }
 
-export async function importScratchpad(variableName: string): Promise<void> {
+export async function importScratchpad(
+  variableName: string,
+  params: any
+): Promise<void> {
   if (ext.connectionNode instanceof InsightsNode) {
     const scratchpadURL = new url.URL(
       ext.insightsScratchpadUrls.import,
@@ -490,7 +493,6 @@ export async function importScratchpad(variableName: string): Promise<void> {
         output: variableName,
         isTableView: false,
         params: {
-          labels: {},
           table: "close",
           startTS: "2021-07-26T13:58:00.000000000",
           endTS: "2023-07-26T14:03:00.000000000",
@@ -504,7 +506,7 @@ export async function importScratchpad(variableName: string): Promise<void> {
       options
     );
 
-    console.log(scratchpadResponse);
+    ext.outputChannel.append(scratchpadResponse);
   }
 }
 

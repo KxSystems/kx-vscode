@@ -170,7 +170,7 @@ export async function saveDataSource(dataSourceForm: any): Promise<void> {
   window.showInformationMessage(`DataSource ${dataSourceForm.name} saved.`);
 }
 
-export async function populateScratchpad(): Promise<void> {
+export async function populateScratchpad(dataSourceForm: any): Promise<void> {
   const scratchpadVariable: InputBoxOptions = {
     prompt: scratchpadVariableInput.prompt,
     placeHolder: scratchpadVariableInput.placeholder,
@@ -180,7 +180,7 @@ export async function populateScratchpad(): Promise<void> {
 
   window.showInputBox(scratchpadVariable).then(async (outputVariable) => {
     if (outputVariable !== undefined && outputVariable !== "") {
-      await importScratchpad(outputVariable!);
+      await importScratchpad(outputVariable!, dataSourceForm!);
     } else {
       ext.outputChannel.appendLine(
         `Invalid scratchpad output variable name: ${outputVariable}`
