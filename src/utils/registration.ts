@@ -11,20 +11,29 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { window, workspace } from "vscode";
+import { ConfigurationTarget, window, workspace } from "vscode";
 import { openUrl } from "./openUrl";
 
-export function showNewsletterNotification(): void {
+export function showRegistrationNotification(): void {
   const setting = workspace
     .getConfiguration()
-    .get<boolean | undefined>("kdb.hideSubscribeNewsletterNotification");
+    .get<boolean | undefined>("kdb.hideSubscribeRegistrationNotification");
   if (setting !== undefined && setting === false) {
     window
-      .showInformationMessage("Subscribe to newsletter", "Opt-In", "Ignore")
+      .showInformationMessage("Subscribe to updates", "Opt-In", "Ignore")
       .then((result) => {
         if (result === "Opt-In") {
           openUrl("https://www.bing.com");
         }
       });
   }
+
+  // hide notification for future extension use
+  workspace
+    .getConfiguration()
+    .update(
+      "kdb.hideSubscribeRegistrationNotification",
+      true,
+      ConfigurationTarget.Global
+    );
 }

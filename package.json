@@ -161,9 +161,9 @@
           "type": "string",
           "description": "QHOME directory for q runtime"
         },
-        "kdb.hideSubscribeNewsletterNotification": {
+        "kdb.hideSubscribeRegistrationNotification": {
           "type": "boolean",
-          "description": "Hide subscribe to newsletter notification",
+          "description": "Hide subscribe for registration notification",
           "default": false
         }
       }
