@@ -58,32 +58,36 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       return `<p>No results to show</p>`;
     }
     const vectorRes = utils.convertResultStringToVector(queryResult);
-    let results = ``;
-    if (vectorRes.length > 1) {
-      results = `<vscode-data-grid class="results-datagrid" aria-label="Basic">`;
-      let headers = `<vscode-data-grid-row class="results-header-datagrid" row-type="header">`;
-      let rows = ``;
-      vectorRes[0].forEach((header: string, index: number) => {
-        headers += `<vscode-data-grid-cell  cell-type="columnheader" grid-column="${
+    if (vectorRes.length === 1) {
+      return `<p>${vectorRes[0]}</p>`;
+    }
+    const headers = vectorRes[0]
+      .map((header: string, index: number) => {
+        return `<vscode-data-grid-cell cell-type="columnheader" grid-column="${
           index + 1
         }"><b>${header.toUpperCase()}</b></vscode-data-grid-cell>`;
-      });
-      headers += `</vscode-data-grid-row>`;
-      vectorRes.slice(1).forEach((row: string[]) => {
-        rows += `<vscode-data-grid-row>`;
-        row.forEach((cell: string, index: number) => {
-          rows += `<vscode-data-grid-cell grid-column="${
-            index + 1
-          }">${cell}</vscode-data-grid-cell>`;
-        });
-        rows += `</vscode-data-grid-row>`;
-      });
+      })
+      .join("");
 
-      results += headers + rows + `</vscode-data-grid>`;
-    } else {
-      results = `<p>${vectorRes[0]}</p>`;
-    }
-    return results;
+    const rows = vectorRes
+      .slice(1)
+      .map((row) => {
+        return `<vscode-data-grid-row>${row
+          .map((cell: string, index: number) => {
+            return `<vscode-data-grid-cell grid-column="${
+              index + 1
+            }">${cell}</vscode-data-grid-cell>`;
+          })
+          .join("")}</vscode-data-grid-row>`;
+      })
+      .join("");
+
+    return /*html*/ `<vscode-data-grid class="results-datagrid" aria-label="Basic">
+              <vscode-data-grid-row class="results-header-datagrid" row-type="header">
+                ${headers}
+              </vscode-data-grid-row>
+              ${rows}
+            </vscode-data-grid>`;
   }
 
   handleQueryResultsArray(queryResult: any[]): string {
@@ -167,8 +171,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         <link rel="stylesheet" href="${styleUri}" />
         <title>Q Results</title>
       </head>
-      <body>
-      
+      <body>      
         <div class="results-view-container">
           <div class="content-wrapper">
               ${result}

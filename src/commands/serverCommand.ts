@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import axios from "axios";
+import axios, { AxiosRequestConfig } from "axios";
 import { readFileSync } from "fs-extra";
 import { join } from "path";
 import requestPromise from "request-promise";
@@ -382,106 +382,6 @@ export async function getMeta(): Promise<MetaObjectPayload | undefined> {
   return undefined;
 }
 
-export async function getData(body: string): Promise<any | undefined> {
-  if (ext.connectionNode instanceof InsightsNode) {
-    const dataUrl = new url.URL(
-      ext.insightsAuthUrls.dataURL,
-      ext.connectionNode.details.server
-    );
-
-    // get the access token from the secure store
-    const rawToken = await ext.context.secrets.get(
-      ext.connectionNode.details.alias
-    );
-    const token = JSON.parse(rawToken!);
-
-    const options = {
-      headers: {
-        Authorization: `Bearer ${token.accessToken}`,
-        "content-type": "application/json",
-        accepted: "application/octet-stream",
-      },
-      body: JSON.parse(body),
-      responseType: "arraybuffer",
-    };
-
-    const dataResponse = await requestPromise.post(dataUrl.toString(), options);
-    return dataResponse?.payload ? dataResponse.payload : "No Results";
-  }
-  return undefined;
-}
-
-export async function getSqlData(query: string): Promise<any | undefined> {
-  if (ext.connectionNode instanceof InsightsNode) {
-    const sqlUrl = new url.URL(
-      ext.insightsAuthUrls.sqlURL,
-      ext.connectionNode.details.server
-    );
-
-    // get the access token from the secure store
-    const rawToken = await ext.context.secrets.get(
-      ext.connectionNode.details.alias
-    );
-    const token = JSON.parse(rawToken!);
-
-    const options = {
-      headers: {
-        Authorization: `Bearer ${token.accessToken}`,
-        accepted: "application/octet-stream",
-      },
-      body: JSON.parse(query),
-      json: true,
-      responseType: "arraybuffer",
-    };
-    const testurl = sqlUrl.toString();
-    const sqlResponse = await requestPromise.post(sqlUrl.toString(), options);
-
-    let response;
-    if (sqlResponse instanceof ArrayBuffer) {
-      if (isCompressed(sqlResponse)) {
-        response = uncompress(sqlResponse);
-      }
-      response = {
-        error: "",
-        arrayBuffer: response,
-      };
-    } else {
-      response = sqlResponse.error;
-    }
-    return response;
-  }
-  return undefined;
-}
-
-export async function getQsqlData(query: string): Promise<any | undefined> {
-  if (ext.connectionNode instanceof InsightsNode) {
-    const qsqlUrl = new url.URL(
-      ext.insightsAuthUrls.qsqlURL,
-      ext.connectionNode.details.server
-    );
-
-    // get the access token from the secure store
-    const rawToken = await ext.context.secrets.get(
-      ext.connectionNode.details.alias
-    );
-    const token = JSON.parse(rawToken!);
-
-    const options = {
-      headers: {
-        Authorization: `Bearer ${token.accessToken}`,
-        "content-type": "application/json",
-        accepted: "application/octet-stream",
-      },
-      body: JSON.parse(query),
-      responseType: "arraybuffer",
-    };
-
-    const qsqlResponse = await requestPromise.post(qsqlUrl.toString(), options);
-    return qsqlResponse !== "" ? qsqlResponse : "No Results";
-  }
-  return undefined;
-}
-
 export async function getDataInsights(
   targetUrl: string,
   body: string
@@ -504,26 +404,30 @@ export async function getDataInsights(
       "Content-Type": "application/json",
     };
 
-    const data =
-      requestUrl.substring(requestUrl.length - 3) === "sql"
-        ? body
-        : JSON.parse(body);
-
-    return await axios({
+    const options: AxiosRequestConfig = {
       method: "post",
       url: requestUrl,
-      data,
+      data: body,
       headers: headers,
       responseType: "arraybuffer",
-    }).then((response: any) => {
-      if (isCompressed(response.data)) {
-        response.data = uncompress(response.data);
-      }
-      return {
-        error: "",
-        arrayBuffer: response.data.buffer,
-      };
-    });
+    };
+
+    return await axios(options)
+      .then((response: any) => {
+        if (isCompressed(response.data)) {
+          response.data = uncompress(response.data);
+        }
+        return {
+          error: "",
+          arrayBuffer: response.data.buffer,
+        };
+      })
+      .catch((error: any) => {
+        return {
+          error: error.response.data,
+          arrayBuffer: undefined,
+        };
+      });
   }
   return undefined;
 }

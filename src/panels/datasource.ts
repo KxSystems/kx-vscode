@@ -103,27 +103,23 @@ export class DataSourcesPanel {
     isMetaLoaded: boolean,
     targetApi: string
   ) {
-    if (isInsights) {
-      if (isMetaLoaded) {
-        const auxArray = ext.insightsMeta.dap;
-        const auxOptions = auxArray
-          .map((dap) => {
-            const generatedValue = dap.assembly + " " + dap.instance;
-            const option =
-              generatedValue === targetApi
-                ? /* html*/ `<vscode-option value="${generatedValue}" selected>${generatedValue}</vscode-option>`
-                : /* html*/ `<vscode-option value="${generatedValue}">${generatedValue}</vscode-option>`;
-            return option;
-          })
-          .join("");
-        return /* html*/ `<vscode-dropdown id="selectedTarget" name="selectedTarget" value="${targetApi}" class="dropdown">
-        ${auxOptions}
-      </vscode-dropdown>`;
-      }
+    if (isInsights && isMetaLoaded) {
+      const auxOptions = ext.insightsMeta.dap
+        .map((dap) => {
+          const generatedValue = `${dap.assembly}-qe ${dap.instance}`;
+          const option = `<vscode-option value="${generatedValue}" ${
+            generatedValue === targetApi ? "selected" : ""
+          }>${generatedValue}</vscode-option>`;
+          return option;
+        })
+        .join("");
+      return /* html*/ `<vscode-dropdown id="selectedTarget" name="selectedTarget" value="${targetApi}" class="dropdown">
+          ${auxOptions}
+        </vscode-dropdown>`;
     }
     return /* html*/ `<vscode-dropdown id="selectedTarget" name="selectedTarget" class="dropdown">
-        <vscode-option>Not connected to Insights</vscode-option>
-      </vscode-dropdown>`;
+          <vscode-option>Not connected to Insights</vscode-option>
+        </vscode-dropdown>`;
   }
 
   private generateTables(
@@ -131,31 +127,25 @@ export class DataSourcesPanel {
     isMetaLoaded: boolean,
     targetTable: string
   ) {
-    if (isInsights) {
-      if (isMetaLoaded) {
-        const auxArray = ext.insightsMeta.assembly;
-        const auxOptions = auxArray
-          .map((assembly) => {
-            const options: string[] = [];
-            assembly.tbls.forEach((tbl) => {
-              const generatedValue = tbl;
-              const option =
-                generatedValue === targetTable
-                  ? /* html*/ `<vscode-option value="${generatedValue}" selected>${generatedValue}</vscode-option>`
-                  : /* html*/ `<vscode-option value="${generatedValue}">${generatedValue}</vscode-option>`;
-              options.push(option);
-            });
-            return options.join("");
-          })
-          .join("");
-        return /* html*/ `<vscode-dropdown id="selectedTable" name="selectedTable" value="${targetTable}" class="dropdown">
-        ${auxOptions}
-      </vscode-dropdown>`;
-      }
+    if (isInsights && isMetaLoaded) {
+      const auxOptions = ext.insightsMeta.assembly
+        .flatMap((assembly) => {
+          return assembly.tbls.map((tbl) => {
+            const generatedValue = tbl;
+            const option = `<vscode-option value="${generatedValue}" ${
+              generatedValue === targetTable ? "selected" : ""
+            }>${generatedValue}</vscode-option>`;
+            return option;
+          });
+        })
+        .join("");
+      return /* html*/ `<vscode-dropdown id="selectedTable" name="selectedTable" value="${targetTable}" class="dropdown">
+          ${auxOptions}
+        </vscode-dropdown>`;
     }
-    return /* html*/ `<vscode-dropdown id="selectedTarget" name="selectedTarget" class="dropdown">
-        <vscode-option>Not connected to Insights</vscode-option>
-      </vscode-dropdown>`;
+    return /* html*/ `<vscode-dropdown id="selectedTable" name="selectedTable" class="dropdown">
+          <vscode-option>Not connected to Insights</vscode-option>
+        </vscode-dropdown>`;
   }
 
   private generateApiTarget(
@@ -163,32 +153,52 @@ export class DataSourcesPanel {
     isMetaLoaded: boolean,
     target: string
   ) {
-    if (isInsights) {
-      if (isMetaLoaded) {
-        const auxArray = ext.insightsMeta.api.filter(
-          (api) => api.api === ".kxi.getData" || !api.api.startsWith(".kxi.")
-        );
-        const auxOptions = auxArray
-          .map((api) => {
-            const generatedValue =
-              api.api === ".kxi.getData"
-                ? api.api.replace(".kxi.", "")
-                : api.api;
-            const option =
-              generatedValue === target
-                ? /* html*/ `<vscode-option value="${generatedValue}" selected>${generatedValue}</vscode-option>`
-                : /* html*/ `<vscode-option value="${generatedValue}">${generatedValue}</vscode-option>`;
-            return option;
-          })
-          .join("");
-        return /* html*/ `<vscode-dropdown  id="selectedApi" name="selectedApi" value="${target}" class="dropdown">
-        ${auxOptions}
-      </vscode-dropdown>`;
-      }
+    return isInsights && isMetaLoaded
+      ? /* html*/ `<vscode-dropdown id="selectedApi" name="selectedApi" value="${target}" class="dropdown">
+          ${ext.insightsMeta.api
+            .filter(
+              (api) =>
+                api.api === ".kxi.getData" || !api.api.startsWith(".kxi.")
+            )
+            .map((api) => {
+              const generatedValue =
+                api.api === ".kxi.getData"
+                  ? api.api.replace(".kxi.", "")
+                  : api.api;
+              return `<vscode-option value="${generatedValue}" ${
+                generatedValue === target ? "selected" : ""
+              }>${generatedValue}</vscode-option>`;
+            })
+            .join("")}
+        </vscode-dropdown>`
+      : /* html*/ `<vscode-dropdown id="selectedApi" name="selectedApi" class="dropdown">
+          <vscode-option>Not connected to Insights</vscode-option>
+        </vscode-dropdown>`;
+  }
+
+  private generateAPIListParams(
+    listParamType: string,
+    actualParamArray: string[]
+  ): string {
+    let params = "";
+    if (actualParamArray.length > 0) {
+      params = actualParamArray
+        .map((param, i) => {
+          return /* html */ `<div class="field-row ${listParamType}-row">
+            <vscode-text-field size="100" id="${listParamType}-${
+            i + 1
+          }" name="${listParamType}-${i + 1}" placeholder="${listParamType} ${
+            i + 1
+          }" value="${param}" class="text-input ${listParamType}-input"></vscode-text-field>
+          </div>`;
+        })
+        .join("");
+    } else {
+      params = /* html */ `<div class="field-row ${listParamType}-row">
+        <vscode-text-field size="100" id="${listParamType}-1" name="${listParamType}-1" placeholder="${listParamType} 1" class="text-input ${listParamType}-input"></vscode-text-field>
+      </div>`;
     }
-    return /* html*/ `<vscode-dropdown id="selectedTarget" name="selectedTarget" class="dropdown">
-        <vscode-option>Not connected to Insights</vscode-option>
-      </vscode-dropdown>`;
+    return params;
   }
 
   private _getWebviewContent(
@@ -219,27 +229,37 @@ export class DataSourcesPanel {
         : datasourceFile.dataSource.selectedType.toString() === "QSQL"
         ? "QSQL"
         : "SQL";
+    const filterParams = this.generateAPIListParams(
+      "filter",
+      datasourceFile.dataSource.api.filter
+    );
+    const groupByParams = this.generateAPIListParams(
+      "groupBy",
+      datasourceFile.dataSource.api.groupBy
+    );
+    const aggParams = this.generateAPIListParams(
+      "agg",
+      datasourceFile.dataSource.api.agg
+    );
+    const sortColsParams = this.generateAPIListParams(
+      "sortCols",
+      datasourceFile.dataSource.api.sortCols
+    );
+    const sliceParams = this.generateAPIListParams(
+      "slice",
+      datasourceFile.dataSource.api.slice
+    );
+    const labelsParams = this.generateAPIListParams(
+      "labels",
+      datasourceFile.dataSource.api.labels
+    );
 
-    let params = "";
-    if (datasourceFile.dataSource.api.params.length > 0) {
-      for (let i = 0; i < datasourceFile.dataSource.api.params.length; i++) {
-        params += `<div class="field-row  param-row">
-                    <vscode-text-field size="100" id="param${
-                      i + 1
-                    }" name="param${i + 1}" placeholder="Param ${
-          i + 1
-        }" value="${
-          datasourceFile.dataSource.api.params[i]
-        }" class="text-input param-input" value></vscode-text-field>
-                  </div>`;
-      }
-    } else {
-      params = `<div class="field-row  param-row">
-                  <vscode-text-field size="100" id="param1" name="param1" placeholder="Param 1" class="text-input param-input"></vscode-text-field>
-                </div>`;
-    }
     const apiSelected = datasourceFile.dataSource.api.selectedApi;
-    const tableSelected = datasourceFile.dataSource.api.selectedTable;
+    const tableSelected = datasourceFile.dataSource.api.table;
+    const startTS = datasourceFile.dataSource.api.startTS;
+    const endTS = datasourceFile.dataSource.api.endTS;
+    const fill = datasourceFile.dataSource.api.fill;
+    const temporary = datasourceFile.dataSource.api.temporary;
     const qsql = datasourceFile.dataSource.qsql.query;
     const qsqlTarget = datasourceFile.dataSource.qsql.selectedTarget;
     const sql = datasourceFile.dataSource.sql.query;
@@ -306,13 +326,65 @@ export class DataSourcesPanel {
                           ${tableHtml}
                         </div>
                       </div>
-                      <div id="params-wrapper">
-                      <label>Params</label>
-                        ${params}
+                      <div class="field-row">
+                        <vscode-text-field type="datetime-local" size="100" id="startTS" name="startTS" placeholder="startTS" value="${startTS}">startTS</vscode-text-field>
                       </div>
                       <div class="field-row">
-                        <vscode-button id="addParam" appearance="secondary" class="btn-add-param">ADD PARAM</vscode-button>
-                        <vscode-button id="removeParam" appearance="secondary" class="btn-remove-param">REMOVE PARAM</vscode-button>
+                        <vscode-text-field type="datetime-local" size="100" id="endTS" name="endTS" placeholder="endTS" value="${endTS}">endTS</vscode-text-field>
+                      </div>
+                      <div class="field-row">
+                        <vscode-text-field size="100" id="fill" name="fill" placeholder="fill" value="${fill}">fill</vscode-text-field>
+                      </div>
+                      <div class="field-row">
+                        <vscode-text-field size="100" id="temporary" name="temporary" placeholder="temporary" value="${temporary}">temporary</vscode-text-field>
+                      </div>
+                      <div class="params-wrapper" id="filter-wrapper">
+                        <label>filter</label>
+                          ${filterParams}
+                      </div>
+                      <div class="field-row">
+                        <vscode-button id="addFilter" appearance="secondary" class="btn-add-param">ADD FILTER</vscode-button>
+                        <vscode-button id="removeFilter" appearance="secondary" class="btn-remove-param">REMOVE FILTER</vscode-button>
+                      </div>
+                      <div class="params-wrapper" id="groupBy-wrapper">
+                        <label>groupBy</label>
+                          ${groupByParams}
+                      </div>
+                      <div class="field-row">
+                        <vscode-button id="addGroupBy" appearance="secondary" class="btn-add-param">ADD GROUP BY</vscode-button>
+                        <vscode-button id="removeGroupBy" appearance="secondary" class="btn-remove-param">REMOVE GROUP BY</vscode-button>
+                      </div>
+                      <div class="params-wrapper" id="agg-wrapper">
+                        <label>agg</label>
+                          ${aggParams}
+                      </div>
+                      <div class="field-row">
+                        <vscode-button id="addAgg" appearance="secondary" class="btn-add-param">ADD AGG</vscode-button>
+                        <vscode-button id="removeAgg" appearance="secondary" class="btn-remove-param">REMOVE AGG</vscode-button>
+                      </div>
+                      <div class="params-wrapper" id="sortCols-wrapper">
+                        <label>sortCols</label>
+                          ${sortColsParams}
+                      </div>
+                      <div class="field-row">
+                        <vscode-button id="addSortCols" appearance="secondary" class="btn-add-param">ADD SORT COLS</vscode-button>
+                        <vscode-button id="removeSortCols" appearance="secondary" class="btn-remove-param">REMOVE SORT COLS</vscode-button>
+                      </div>
+                      <div class="params-wrapper" id="slice-wrapper">
+                        <label>slice</label>
+                          ${sliceParams}
+                      </div>
+                      <div class="field-row">
+                        <vscode-button id="addSlice" appearance="secondary" class="btn-add-param">ADD SLICE</vscode-button>
+                        <vscode-button id="removeSlice" appearance="secondary" class="btn-remove-param">REMOVE SLICE</vscode-button>
+                      </div>
+                      <div class="params-wrapper" id="labels-wrapper">
+                        <label>labels</label>
+                          ${labelsParams}
+                      </div>
+                      <div class="field-row">
+                        <vscode-button id="addLabels" appearance="secondary" class="btn-add-param">ADD LABEL</vscode-button>
+                        <vscode-button id="removeLabels" appearance="secondary" class="btn-remove-param">REMOVE LABEL</vscode-button>
                       </div>
                     </div>
                   </vscode-panel-view>
@@ -367,8 +439,18 @@ export class DataSourcesPanel {
           const vscode = acquireVsCodeApi();
           const saveButton = document.getElementById('save');
           const runButton = document.getElementById('run');
-          const addButton = document.getElementById('addParam');
-          const removeButton = document.getElementById('removeParam');
+          const addFilterButton = document.getElementById('addFilter');
+          const removeFilterButton = document.getElementById('removeFilter');
+          const addGroupByButton = document.getElementById('addGroupBy');
+          const removeGroupByButton = document.getElementById('removeGroupBy');
+          const addAggButton = document.getElementById('addAgg');
+          const removeAggButton = document.getElementById('removeAgg');
+          const addSortColsButton = document.getElementById('addSortCols');
+          const removeSortColsButton = document.getElementById('removeSortCols');
+          const addSliceButton = document.getElementById('addSlice');
+          const removeSliceButton = document.getElementById('removeSlice');
+          const addLabelsButton = document.getElementById('addLabels');
+          const removeLabelsButton = document.getElementById('removeLabels');
           const tabs = document.querySelectorAll('.type-tab');
 
           tabs.forEach((tab) => {
@@ -414,24 +496,151 @@ export class DataSourcesPanel {
             });
           });
 
-          addButton.addEventListener('click', () => {
-            const paramWrapper = document.getElementById('params-wrapper');
-            const paramsFields = document.querySelectorAll('.param-input');
+          // add params
+          addFilterButton.addEventListener('click', () => {
+            const paramWrapper = document.getElementById('filter-wrapper');
+            const paramsFields = document.querySelectorAll('.filter-input');
             const count = paramsFields.length;
             const newParam = document.createElement('vscode-text-field');
             newParam.setAttribute('size', '100');
-            newParam.setAttribute('id', 'param-' + (count + 1));
-            newParam.setAttribute('class', 'text-input param-input');
-            newParam.setAttribute('name', 'param-' + (count + 1));
-            newParam.setAttribute('placeholder', 'Param ' + (count + 1));
+            newParam.setAttribute('id', 'filter-' + (count + 1));
+            newParam.setAttribute('class', 'text-input filter-input');
+            newParam.setAttribute('name', 'filter-' + (count + 1));
+            newParam.setAttribute('placeholder', 'filter ' + (count + 1));
             const newParamRow = document.createElement('div');
-            newParamRow.setAttribute('class', 'field-row param-row');
+            newParamRow.setAttribute('class', 'field-row filter-row');
             newParamRow.appendChild(newParam);
             paramWrapper.appendChild(newParamRow);
           });
 
-          removeButton.addEventListener('click', () => {
-            const paramsFields = document.querySelectorAll('.param-row');
+          addGroupByButton.addEventListener('click', () => {
+            const paramWrapper = document.getElementById('groupBy-wrapper');
+            const paramsFields = document.querySelectorAll('.groupBy-input');
+            const count = paramsFields.length;
+            const newParam = document.createElement('vscode-text-field');
+            newParam.setAttribute('size', '100');
+            newParam.setAttribute('id', 'groupBy-' + (count + 1));
+            newParam.setAttribute('class', 'text-input groupBy-input');
+            newParam.setAttribute('name', 'groupBy-' + (count + 1));
+            newParam.setAttribute('placeholder', 'groupBy ' + (count + 1));
+            const newParamRow = document.createElement('div');
+            newParamRow.setAttribute('class', 'field-row groupBy-row');
+            newParamRow.appendChild(newParam);
+            paramWrapper.appendChild(newParamRow);
+          });
+
+          addAggButton.addEventListener('click', () => {
+            const paramWrapper = document.getElementById('agg-wrapper');
+            const paramsFields = document.querySelectorAll('.agg-input');
+            const count = paramsFields.length;
+            const newParam = document.createElement('vscode-text-field');
+            newParam.setAttribute('size', '100');
+            newParam.setAttribute('id', 'agg-' + (count + 1));
+            newParam.setAttribute('class', 'text-input agg-input');
+            newParam.setAttribute('name', 'agg-' + (count + 1));
+            newParam.setAttribute('placeholder', 'agg ' + (count + 1));
+            const newParamRow = document.createElement('div');
+            newParamRow.setAttribute('class', 'field-row agg-row');
+            newParamRow.appendChild(newParam);
+            paramWrapper.appendChild(newParamRow);
+          });
+
+          addSortColsButton.addEventListener('click', () => {
+            const paramWrapper = document.getElementById('sortCols-wrapper');
+            const paramsFields = document.querySelectorAll('.sortCols-input');
+            const count = paramsFields.length;
+            const newParam = document.createElement('vscode-text-field');
+            newParam.setAttribute('size', '100');
+            newParam.setAttribute('id', 'sortCols-' + (count + 1));
+            newParam.setAttribute('class', 'text-input sortCols-input');
+            newParam.setAttribute('name', 'sortCols-' + (count + 1));
+            newParam.setAttribute('placeholder', 'sortCols ' + (count + 1));
+            const newParamRow = document.createElement('div');
+            newParamRow.setAttribute('class', 'field-row sortCols-row');
+            newParamRow.appendChild(newParam);
+            paramWrapper.appendChild(newParamRow);
+          });
+
+          addSliceButton.addEventListener('click', () => {
+            const paramWrapper = document.getElementById('slice-wrapper');
+            const paramsFields = document.querySelectorAll('.slice-input');
+            const count = paramsFields.length;
+            const newParam = document.createElement('vscode-text-field');
+            newParam.setAttribute('size', '100');
+            newParam.setAttribute('id', 'slice-' + (count + 1));
+            newParam.setAttribute('class', 'text-input slice-input');
+            newParam.setAttribute('name', 'slice-' + (count + 1));
+            newParam.setAttribute('placeholder', 'slice ' + (count + 1));
+            const newParamRow = document.createElement('div');
+            newParamRow.setAttribute('class', 'field-row slice-row');
+            newParamRow.appendChild(newParam);
+            paramWrapper.appendChild(newParamRow);
+          });
+
+          addLabelsButton.addEventListener('click', () => {
+            const paramWrapper = document.getElementById('labels-wrapper');
+            const paramsFields = document.querySelectorAll('.labels-input');
+            const count = paramsFields.length;
+            const newParam = document.createElement('vscode-text-field');
+            newParam.setAttribute('size', '100');
+            newParam.setAttribute('id', 'labels-' + (count + 1));
+            newParam.setAttribute('class', 'text-input labels-input');
+            newParam.setAttribute('name', 'labels-' + (count + 1));
+            newParam.setAttribute('placeholder', 'labels ' + (count + 1));
+            const newParamRow = document.createElement('div');
+            newParamRow.setAttribute('class', 'field-row labels-row');
+            newParamRow.appendChild(newParam);
+            paramWrapper.appendChild(newParamRow);
+          });
+
+          //remove params
+          removeFilterButton.addEventListener('click', () => {
+            const paramsFields = document.querySelectorAll('.filter-row');
+            const count = paramsFields.length;
+            if (count > 1) {
+              const lastParam = paramsFields[count - 1];
+              lastParam.remove();
+            }            
+          });
+
+          removeGroupByButton.addEventListener('click', () => {
+            const paramsFields = document.querySelectorAll('.groupBy-row');
+            const count = paramsFields.length;
+            if (count > 1) {
+              const lastParam = paramsFields[count - 1];
+              lastParam.remove();
+            }            
+          });
+
+          removeAggButton.addEventListener('click', () => {
+            const paramsFields = document.querySelectorAll('.agg-row');
+            const count = paramsFields.length;
+            if (count > 1) {
+              const lastParam = paramsFields[count - 1];
+              lastParam.remove();
+            }            
+          });
+
+          removeSortColsButton.addEventListener('click', () => {
+            const paramsFields = document.querySelectorAll('.sorCols-row');
+            const count = paramsFields.length;
+            if (count > 1) {
+              const lastParam = paramsFields[count - 1];
+              lastParam.remove();
+            }            
+          });
+
+          removeSliceButton.addEventListener('click', () => {
+            const paramsFields = document.querySelectorAll('.slice-row');
+            const count = paramsFields.length;
+            if (count > 1) {
+              const lastParam = paramsFields[count - 1];
+              lastParam.remove();
+            }            
+          });
+
+          removeLabelsButton.addEventListener('click', () => {
+            const paramsFields = document.querySelectorAll('.labels-row');
             const count = paramsFields.length;
             if (count > 1) {
               const lastParam = paramsFields[count - 1];

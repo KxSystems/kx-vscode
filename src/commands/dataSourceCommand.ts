@@ -15,11 +15,14 @@ import * as fs from "fs";
 import path from "path";
 import { Uri, window } from "vscode";
 import { ext } from "../extensionVariables";
+import { getDataBodyPayload } from "../models/data";
 import { DataSourceFiles, defaultDataSourceFile } from "../models/dataSource";
 import { DataSourcesPanel } from "../panels/datasource";
 import { KdbDataSourceTreeItem } from "../services/dataSourceTreeProvider";
 import {
+  checkIfTimeParamIsCorrect,
   convertDataSourceFormToDataSourceFile,
+  convertTimeToTimestamp,
   createKdbDataSourcesFolder,
 } from "../utils/dataSource";
 import { handleWSResults } from "../utils/queryUtils";
@@ -183,9 +186,98 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
 
   switch (selectedType) {
     case "API":
-      const apiBody = {
-        table: fileContent.dataSource.api.selectedTable,
+      const isTimeCorrect = checkIfTimeParamIsCorrect(
+        fileContent.dataSource.api.startTS,
+        fileContent.dataSource.api.endTS
+      );
+      if (!isTimeCorrect) {
+        window.showErrorMessage(
+          "The time parameters(startTS and endTS) are not correct, please check the format or if the startTS is before the endTS"
+        );
+        break;
+      }
+      const startTS =
+        fileContent.dataSource.api.startTS !== ""
+          ? convertTimeToTimestamp(fileContent.dataSource.api.startTS)
+          : undefined;
+      const endTS =
+        fileContent.dataSource.api.endTS !== ""
+          ? convertTimeToTimestamp(fileContent.dataSource.api.endTS)
+          : undefined;
+      const fill =
+        fileContent.dataSource.api.fill !== ""
+          ? fileContent.dataSource.api.fill
+          : undefined;
+      const temporary =
+        fileContent.dataSource.api.temporary !== ""
+          ? fileContent.dataSource.api.temporary
+          : undefined;
+      const filter =
+        fileContent.dataSource.api.filter.length > 0
+          ? fileContent.dataSource.api.filter
+          : undefined;
+      const groupBy =
+        fileContent.dataSource.api.groupBy.length > 0
+          ? fileContent.dataSource.api.groupBy
+          : undefined;
+      const agg =
+        fileContent.dataSource.api.agg.length > 0
+          ? fileContent.dataSource.api.agg
+          : undefined;
+      const sortCols =
+        fileContent.dataSource.api.sortCols.length > 0
+          ? fileContent.dataSource.api.sortCols
+          : undefined;
+      const slice =
+        fileContent.dataSource.api.slice.length > 0
+          ? fileContent.dataSource.api.slice
+          : undefined;
+      const labels =
+        fileContent.dataSource.api.labels.length > 0
+          ? fileContent.dataSource.api.labels
+          : undefined;
+      const apiBody: getDataBodyPayload = {
+        table: fileContent.dataSource.api.table,
       };
+      if (startTS !== undefined) {
+        apiBody.startTS = startTS;
+      }
+
+      if (endTS !== undefined) {
+        apiBody.endTS = endTS;
+      }
+
+      if (fill !== undefined) {
+        apiBody.fill = fill;
+      }
+
+      if (temporary !== undefined) {
+        apiBody.temporary = temporary;
+      }
+
+      if (filter !== undefined) {
+        apiBody.filter = filter;
+      }
+
+      if (groupBy !== undefined) {
+        apiBody.groupBy = groupBy;
+      }
+
+      if (agg !== undefined) {
+        apiBody.agg = agg;
+      }
+
+      if (sortCols !== undefined) {
+        apiBody.sortCols = sortCols;
+      }
+
+      if (slice !== undefined) {
+        apiBody.slice = slice;
+      }
+
+      if (labels !== undefined) {
+        apiBody.labels = labels;
+      }
       const apiCall = await getDataInsights(
         ext.insightsAuthUrls.dataURL,
         JSON.stringify(apiBody)

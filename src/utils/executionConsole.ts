@@ -48,13 +48,12 @@ export class ExecutionConsole {
     serverName: string,
     dataSourceType?: string
   ): void {
-    const dataSourceRes: string[] = [];
+    let dataSourceRes: string[] = [];
     if (dataSourceType === undefined) {
       this._console.show(true);
     } else {
       if (Array.isArray(output)) {
-        const consoleRes = convertRowsToConsole(output);
-        dataSourceRes.push(...consoleRes);
+        dataSourceRes = convertRowsToConsole(output);
       }
     }
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
@@ -70,7 +69,8 @@ export class ExecutionConsole {
       dataSourceRes.forEach((o) => this._console.appendLine(o));
       this.rendResults(output, dataSourceType);
     } else {
-      this._console.appendLine(JSON.stringify(output));
+      output = Array.isArray(output) ? output.join("\n") : output;
+      this._console.appendLine(output);
       this.rendResults(output, dataSourceType);
     }
     this._console.appendLine(`<<<\n`);

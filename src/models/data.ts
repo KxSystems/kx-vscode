@@ -22,3 +22,17 @@ export type GetDataObjectPayload = {
   };
   arrayBuffer?: ArrayBuffer;
 };
+
+export type getDataBodyPayload = {
+  table: string;
+  startTS?: string;
+  endTS?: string;
+  fill?: string;
+  temporary?: string;
+  filter?: string[];
+  groupBy?: string[];
+  agg?: string[];
+  sortCols?: string[];
+  slice?: string[];
+  labels?: string[];
+};
