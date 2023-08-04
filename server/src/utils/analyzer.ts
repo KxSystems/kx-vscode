@@ -11,6 +11,9 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import fs from "graceful-fs";
+import klaw from "klaw";
+import picomatch from "picomatch";
 import { DocumentUri, TextDocument } from "vscode-languageserver-textdocument";
 import {
   CallHierarchyItem,
@@ -19,6 +22,7 @@ import {
   Connection,
   Hover,
   Location,
+  Position,
   Range,
   SemanticTokens,
   SemanticTokensBuilder,
@@ -40,11 +44,17 @@ export type Keyword = {
 export interface GlobalSettings {
   maxNumberOfProblems: number;
 }
+
+interface Definition {
+  uri: string;
+  range: Range;
+}
 type nameToGlobalId = Map<string, string[]>;
 type nameToSymbolInformation = Map<string, SymbolInformation[]>;
 type nameToCallHierarchyItem = Map<string, CallHierarchyItem[]>;
 
 export class AnalyzerContent {
+  static matchFile: (test: string) => boolean;
   private uriToTextDocument = new Map<string, TextDocument>();
   private uriToGlobalId = new Map<string, nameToGlobalId>();
   private uriToDefinition = new Map<DocumentUri, nameToSymbolInformation>();
@@ -240,35 +250,175 @@ export class AnalyzerContent {
   }
 
   public getReferences(keyword: string, document: TextDocument): Location[] {
-    const symbols: SymbolInformation[] = [];
-    const lines = document.getText().split("\n");
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const match = line.match(new RegExp(`\\b${keyword}\\b`));
-      if (match) {
-        const position = {
-          line: i,
-          character: match.index,
-        };
-        if (position.character) {
-          symbols.push({
-            name: keyword,
-            kind: SymbolKind.Variable,
-            location: Location.create(document.uri, {
-              start: { line: position.line, character: position.character },
-              end: {
-                line: position.line,
-                character: position.character + keyword.length,
-              },
-            }),
-          });
+    const locations = [];
+    for (const doc of this.uriToTextDocument.values()) {
+      const text = doc.getText();
+      let offset = 0;
+      let index = text.indexOf(keyword, offset);
+
+      while (index !== -1) {
+        const position = doc.positionAt(index);
+        const range = this.getWordRangeAtPosition(doc, position, keyword);
+        if (
+          range &&
+          range.start.line === position.line &&
+          range.start.character === position.character
+        ) {
+          locations.push({ uri: doc.uri, range });
         }
+        offset = index + keyword.length;
+        index = text.indexOf(keyword, offset);
       }
     }
-    const qLangParserLabels = qLangParserItems.map((item) => item.label);
-    const filteredSymbols = symbols.filter(
-      (symbol) => !qLangParserLabels.includes(symbol.name)
-    );
-    return filteredSymbols.map((symbol) => symbol.location);
+    return locations;
+  }
+
+  public getDefinitions(keyword: string): Definition[] | undefined {
+    const definitions: Definition[] = [];
+
+    for (const document of this.uriToTextDocument.values()) {
+      const text = document.getText();
+
+      let offset = 0;
+      while (true) {
+        const index = text.indexOf(keyword, offset);
+        if (index === -1) {
+          break;
+        }
+
+        const range = this.getWordRangeAtPosition(
+          document,
+          document.positionAt(index),
+          keyword
+        );
+        if (range) {
+          definitions.push({
+            uri: document.uri,
+            range: range,
+          });
+        }
+
+        offset = index + keyword.length;
+      }
+    }
+
+    return definitions.length > 0 ? definitions : undefined;
+  }
+
+  public writeConsoleMsg(msg: string, type: string): void {
+    switch (type) {
+      case "error":
+        this.connection.console.error(msg);
+        break;
+      case "warn":
+        this.connection.console.warn(msg);
+        break;
+      case "info":
+      default:
+        this.connection.console.info(msg);
+        break;
+    }
+  }
+
+  public getWordRangeAtPosition(
+    document: TextDocument,
+    position: Position,
+    keyword?: string
+  ): Range | undefined {
+    const offset = document.offsetAt(position);
+    const text = document.getText();
+
+    let start = offset;
+    while (start > 0 && this.isWordCharacter(text.charAt(start - 1))) {
+      start--;
+    }
+
+    let end = 0;
+    if (keyword) {
+      end = start + keyword.length;
+      while (end < text.length && this.isWordCharacter(text.charAt(end))) {
+        end++;
+      }
+      if (end - start !== keyword.length) {
+        return undefined;
+      }
+
+      const word = text.substring(start, end);
+      if (word !== keyword) {
+        return undefined;
+      }
+      if (start > 0 && text.charAt(start - 1) === ".") {
+        return undefined;
+      }
+    } else {
+      end = offset;
+      while (end < text.length && this.isWordCharacter(text.charAt(end))) {
+        end++;
+      }
+    }
+
+    if (start === end) {
+      return undefined;
+    }
+
+    return Range.create(document.positionAt(start), document.positionAt(end));
+  }
+
+  public isWordCharacter(ch: string): boolean {
+    return /\w/.test(ch);
+  }
+
+  public analyzeWorkspace({
+    globsPattern = ["**/*.q"],
+    ignorePattern = ["**/tmp"],
+  }: { globsPattern?: string[]; ignorePattern?: string[] } = {}): void {
+    if (
+      this.rootPath &&
+      fs.existsSync(this.rootPath) &&
+      this.rootPath !== "/"
+    ) {
+      this.uriToTextDocument = new Map<DocumentUri, TextDocument>();
+      this.uriToFileContent = new Map<DocumentUri, string>();
+      this.uriToDefinition = new Map<DocumentUri, nameToSymbolInformation>();
+      this.uriToSymbol = new Map<DocumentUri, string[]>();
+      this.nameToSignatureHelp = new Map<string, SignatureHelp>();
+
+      this.writeConsoleMsg(`Checking into the opened Workspace`, "info");
+
+      const ignoreMatch = picomatch(ignorePattern);
+      const includeMatch = picomatch(globsPattern);
+      AnalyzerContent.matchFile = (test: string) =>
+        !ignoreMatch(test) && includeMatch(test);
+      const qFiles: string[] = [];
+      klaw(this.rootPath, { filter: (item) => !ignoreMatch(item) })
+        .on("error", (err: Error) => {
+          this.writeConsoleMsg(
+            `Error when we tried to analyze the Workspace`,
+            "error"
+          );
+          this.writeConsoleMsg(err.message, "error");
+        })
+        .on("data", (item) => {
+          if (includeMatch(item.path)) qFiles.push(item.path);
+        })
+        .on("end", () => {
+          if (qFiles.length == 0) {
+            this.writeConsoleMsg("No q files found", "warn");
+          } else {
+            this.writeConsoleMsg(`${qFiles.length} q files founded.`, "info");
+            qFiles.forEach((filepath: string) =>
+              this.analyzeDocument(filepath)
+            );
+          }
+        });
+    }
+  }
+
+  public analyzeDocument(filepath: string): void {
+    const uri = URI.file(filepath).toString();
+    const text = fs.readFileSync(filepath, "utf8");
+    const document = TextDocument.create(uri, "q", 0, text);
+    this.uriToTextDocument.set(uri, document);
+    this.uriToFileContent.set(uri, text);
   }
 }
