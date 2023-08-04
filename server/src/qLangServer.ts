@@ -68,6 +68,9 @@ export default class QLangServer {
     this.documents.onDidChangeContent((change) => {
       this.validateTextDocument(change.document);
     });
+    this.connection.onNotification("analyzeSourceCode", (config) =>
+      this.analyzer.analyzeWorkspace(config)
+    );
     this.connection.onCompletion(this.onCompletion.bind(this));
     this.connection.onCompletionResolve(this.onCompletionResolve.bind(this));
     this.connection.onHover(this.onHover.bind(this));
@@ -224,11 +227,27 @@ export default class QLangServer {
     else if (keyword.startsWith(".")) {
       keyword = keyword.substring(1);
     }
-    // Return the definition location for the keyword.
-    return this.analyzer.getDefinitionByUriKeyword(
-      params.textDocument.uri,
-      keyword
-    );
+    keyword = keyword + ":";
+    const definitions = this.analyzer.getDefinitions(keyword);
+    if (!definitions) {
+      return [];
+    }
+
+    return definitions.map((definition) => {
+      return Location.create(
+        definition.uri,
+        Range.create(
+          Position.create(
+            definition.range.start.line,
+            definition.range.start.character
+          ),
+          Position.create(
+            definition.range.end.line,
+            definition.range.end.character
+          )
+        )
+      );
+    });
   }
 
   private onDocumentSymbol(params: DocumentSymbolParams): SymbolInformation[] {
@@ -299,13 +318,20 @@ export default class QLangServer {
   }
 
   private onReferences(params: ReferenceParams): Location[] | null {
-    const keyword = this.getKeyword(params);
     const document = this.documents.get(params.textDocument.uri);
-    if (!keyword || !document) {
+    if (!document) {
       return [];
     }
 
-    return this.analyzer.getReferences(keyword, document) ?? [];
+    const position = params.position;
+    const wordRange = this.analyzer.getWordRangeAtPosition(document, position);
+    if (!wordRange) {
+      return [];
+    }
+
+    const word = document.getText(wordRange);
+    this.writeConsoleMsg(`onReferences: word=${word}`, "info");
+    return this.analyzer.getReferences(word, document);
   }
 
   private onRenameRequest({
@@ -382,10 +408,7 @@ export default class QLangServer {
 
     let problems = 0;
     const diagnostics: Diagnostic[] = [];
-    while (
-      (m = pattern.exec(text)) &&
-      problems < settings.maxNumberOfProblems
-    ) {
+    while ((m = pattern.exec(text)) && problems < 1000) {
       problems++;
       const diagnostic: Diagnostic = {
         severity: DiagnosticSeverity.Warning,
