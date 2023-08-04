@@ -24,7 +24,7 @@ export function showRegistrationNotification(): void {
       .then((result) => {
         if (result === "Opt-In") {
           openUrl(
-            "https://kx.com/kdb-personal-edition-download?source=kx-vscode"
+            "https://kx.com/landing_pages/subscribe-to-our-kdb-vs-code-extension-newsletter"
           );
         }
       });
