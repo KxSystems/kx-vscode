@@ -70,7 +70,8 @@ export class ExecutionConsole {
       dataSourceRes.forEach((o) => this._console.appendLine(o));
       this.rendResults(output, dataSourceType);
     } else {
-      this._console.appendLine(JSON.stringify(output));
+      output = Array.isArray(output) ? output.join("\n") : output;
+      this._console.appendLine(output);
       this.rendResults(output, dataSourceType);
     }
     this._console.appendLine(`<<<\n`);
