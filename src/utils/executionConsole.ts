@@ -12,6 +12,7 @@
  */
 
 import { OutputChannel, commands, window } from "vscode";
+import { convertRowsToConsole } from "./queryUtils";
 
 export class ExecutionConsole {
   public static current: ExecutionConsole | undefined;
@@ -47,18 +48,29 @@ export class ExecutionConsole {
     serverName: string,
     dataSourceType?: string
   ): void {
-    this._console.show(true);
+    const dataSourceRes: string[] = [];
+    if (dataSourceType === undefined) {
+      this._console.show(true);
+    } else {
+      if (Array.isArray(output)) {
+        const consoleRes = convertRowsToConsole(output);
+        dataSourceRes.push(...consoleRes);
+      }
+    }
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
     this._console.appendLine(
       `>>> ${serverName}  @ ${date.toLocaleTimeString()} <<<`
     );
     this.appendQuery(query);
-    if (Array.isArray(output)) {
+    if (Array.isArray(output) && dataSourceType === undefined) {
       this._console.appendLine(output[0]);
       output.forEach((o) => this._console.appendLine(o));
+    } else if (dataSourceRes.length > 0) {
+      dataSourceRes.forEach((o) => this._console.appendLine(o));
+      this.rendResults(output, dataSourceType);
     } else {
-      this._console.appendLine(output);
+      this._console.appendLine(JSON.stringify(output));
       this.rendResults(output, dataSourceType);
     }
     this._console.appendLine(`<<<\n`);
@@ -90,7 +102,10 @@ export class ExecutionConsole {
     this._console.appendLine(msg);
   }
 
-  public rendResults(query: string, dataSourceType?: string) {
+  public rendResults(query: string | string[], dataSourceType?: string) {
+    if (dataSourceType !== undefined) {
+      commands.executeCommand("kdb-results.focus");
+    }
     commands.executeCommand("kdb.resultsPanel.update", query, dataSourceType);
   }
 }

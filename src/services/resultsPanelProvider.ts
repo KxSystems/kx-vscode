@@ -39,7 +39,10 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     });
   }
 
-  public updateResults(queryResults: string, dataSourceType?: string) {
+  public updateResults(
+    queryResults: string | string[],
+    dataSourceType?: string
+  ) {
     if (this._view) {
       this._view.show?.(true);
       this._view.webview.postMessage(queryResults);
@@ -93,12 +96,17 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     let rows = ``;
     let countHeader = 1;
     let indexColumn = 1;
-    for (const key in queryResult[0]) {
-      headers += `<vscode-data-grid-cell  cell-type="columnheader" grid-column="${countHeader}"><b>${key.toUpperCase()}</b></vscode-data-grid-cell>`;
+    const headersArray = queryResult[0].split(",");
+    for (const column in headersArray) {
+      headers += `<vscode-data-grid-cell  cell-type="columnheader" grid-column="${countHeader}"><b>${headersArray[
+        column
+      ].toUpperCase()}</b></vscode-data-grid-cell>`;
       countHeader++;
     }
+    const resRows = queryResult.slice(1).map((str) => str.split(","));
+
     headers += `</vscode-data-grid-row>`;
-    queryResult.forEach((row: string[]) => {
+    resRows.forEach((row: string[]) => {
       rows += `<vscode-data-grid-row>`;
       for (const value in row) {
         rows += `<vscode-data-grid-cell grid-column="${indexColumn}">${row[value]}</vscode-data-grid-cell>`;
@@ -134,10 +142,6 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         "vscode.css",
       ]);
       let result = "";
-      if (dataSourceType) {
-        queryResult = JSON.parse(queryResult as string);
-      }
-      const wtf = typeof queryResult;
       if (typeof queryResult === "string") {
         result = this.handleQueryResultsString(queryResult);
       } else if (Array.isArray(queryResult)) {

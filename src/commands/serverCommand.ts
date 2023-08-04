@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import axios from "axios";
 import { readFileSync } from "fs-extra";
 import { join } from "path";
 import requestPromise from "request-promise";
@@ -25,7 +26,9 @@ import {
   window,
 } from "vscode";
 import { ext } from "../extensionVariables";
+import { isCompressed, uncompress } from "../ipc/c";
 import { Connection } from "../models/connection";
+import { GetDataObjectPayload } from "../models/data";
 import { ExecutionTypes } from "../models/execution";
 import { Insights } from "../models/insights";
 import {
@@ -395,9 +398,11 @@ export async function getData(body: string): Promise<any | undefined> {
     const options = {
       headers: {
         Authorization: `Bearer ${token.accessToken}`,
+        "content-type": "application/json",
+        accepted: "application/octet-stream",
       },
       body: JSON.parse(body),
-      json: true,
+      responseType: "arraybuffer",
     };
 
     const dataResponse = await requestPromise.post(dataUrl.toString(), options);
@@ -422,12 +427,28 @@ export async function getSqlData(query: string): Promise<any | undefined> {
     const options = {
       headers: {
         Authorization: `Bearer ${token.accessToken}`,
+        accepted: "application/octet-stream",
       },
       body: JSON.parse(query),
       json: true,
+      responseType: "arraybuffer",
     };
+    const testurl = sqlUrl.toString();
     const sqlResponse = await requestPromise.post(sqlUrl.toString(), options);
-    return sqlResponse?.payload ? sqlResponse.payload : "No Results";
+
+    let response;
+    if (sqlResponse instanceof ArrayBuffer) {
+      if (isCompressed(sqlResponse)) {
+        response = uncompress(sqlResponse);
+      }
+      response = {
+        error: "",
+        arrayBuffer: response,
+      };
+    } else {
+      response = sqlResponse.error;
+    }
+    return response;
   }
   return undefined;
 }
@@ -448,13 +469,61 @@ export async function getQsqlData(query: string): Promise<any | undefined> {
     const options = {
       headers: {
         Authorization: `Bearer ${token.accessToken}`,
+        "content-type": "application/json",
+        accepted: "application/octet-stream",
       },
       body: JSON.parse(query),
-      json: true,
+      responseType: "arraybuffer",
     };
 
     const qsqlResponse = await requestPromise.post(qsqlUrl.toString(), options);
     return qsqlResponse !== "" ? qsqlResponse : "No Results";
+  }
+  return undefined;
+}
+
+export async function getDataInsights(
+  targetUrl: string,
+  body: string
+): Promise<GetDataObjectPayload | undefined> {
+  if (ext.connectionNode instanceof InsightsNode) {
+    const requestUrl = new url.URL(
+      targetUrl,
+      ext.connectionNode.details.server
+    ).toString();
+
+    // get the access token from the secure store
+    const rawToken = await ext.context.secrets.get(
+      ext.connectionNode.details.alias
+    );
+    const token = JSON.parse(rawToken!);
+
+    const headers = {
+      Authorization: `Bearer ${token.accessToken}`,
+      Accept: "application/octet-stream",
+      "Content-Type": "application/json",
+    };
+
+    const data =
+      requestUrl.substring(requestUrl.length - 3) === "sql"
+        ? body
+        : JSON.parse(body);
+
+    return await axios({
+      method: "post",
+      url: requestUrl,
+      data,
+      headers: headers,
+      responseType: "arraybuffer",
+    }).then((response: any) => {
+      if (isCompressed(response.data)) {
+        response.data = uncompress(response.data);
+      }
+      return {
+        error: "",
+        arrayBuffer: response.data.buffer,
+      };
+    });
   }
   return undefined;
 }
@@ -740,14 +809,15 @@ export async function loadServerObjects(): Promise<ServerObject[]> {
 }
 
 export function writeQueryResult(
-  result: string,
+  result: string | string[],
   query: string,
   dataSourceType?: string
 ): void {
   const queryConsole = ExecutionConsole.start();
+  const res = Array.isArray(result) ? result[0] : result;
   if (
     (ext.connection || ext.connectionNode) &&
-    !result.startsWith(queryConstants.error)
+    !res.startsWith(queryConstants.error)
   ) {
     queryConsole.append(
       result,
@@ -758,7 +828,7 @@ export function writeQueryResult(
   } else {
     queryConsole.appendQueryError(
       query,
-      result.substring(queryConstants.error.length),
+      res.substring(queryConstants.error.length),
       !!ext.connection,
       ext.connectionNode?.label ? ext.connectionNode.label : ""
     );
