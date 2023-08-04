@@ -104,9 +104,35 @@ export function convertDataSourceFormToDataSourceFile(
 }
 
 export function convertTimeToTimestamp(time: string): string {
-  const date = new Date(time);
-  const timestamp = date.toISOString();
-  return timestamp;
+  try {
+    const date = new Date(time);
+    const isoString = date.toISOString();
+    const parts = isoString.split(".");
+    const datePart = parts[0];
+    const timePart = parts[1].replace("Z", "0").padEnd(9, "0");
+    return `${datePart}.${timePart}`;
+  } catch (error) {
+    console.error(
+      `The string param is in an incorrect format. Param: ${time} Error: ${error}`
+    );
+    return "";
+  }
+}
+
+export function checkIfTimeParamIsCorrect(
+  startTS: string,
+  endTS: string
+): boolean {
+  try {
+    const startDate = new Date(startTS);
+    const endDate = new Date(endTS);
+    return startDate < endDate;
+  } catch (error) {
+    console.error(
+      `The string params are in an incorrect format. startTS: ${startTS}, endTS: ${endTS}, Error: ${error}`
+    );
+    return false;
+  }
 }
 
 export function refreshDataSourcesPanel(): void {

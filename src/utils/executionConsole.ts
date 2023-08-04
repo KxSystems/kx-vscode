@@ -48,13 +48,12 @@ export class ExecutionConsole {
     serverName: string,
     dataSourceType?: string
   ): void {
-    const dataSourceRes: string[] = [];
+    let dataSourceRes: string[] = [];
     if (dataSourceType === undefined) {
       this._console.show(true);
     } else {
       if (Array.isArray(output)) {
-        const consoleRes = convertRowsToConsole(output);
-        dataSourceRes.push(...consoleRes);
+        dataSourceRes = convertRowsToConsole(output);
       }
     }
     //TODO: this._console.clear(); Add an option in the future to clear or not the console

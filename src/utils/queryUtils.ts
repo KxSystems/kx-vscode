@@ -43,7 +43,9 @@ export function handleWSResults(ab: ArrayBuffer): any {
       des = des.values[1];
     }
     res = Parse.reshape(des, ab).toLegacy();
-
+    if (res.rows.length === 0) {
+      return "No results found.";
+    }
     return convertRows(res.rows);
   } catch (error) {
     console.log(error);
@@ -69,33 +71,39 @@ export function convertRowsToConsole(rows: string[]): string[] {
     return [];
   }
 
-  // Transforma a array de strings em um vetor de strings
-  const vector = rows.map((row) => row.split(","));
+  const vector = [];
+  for (let i = 0; i < rows.length; i++) {
+    vector.push(rows[i].split(","));
+  }
 
-  // Conta o maior número de caracteres em cada coluna
-  const columnCounters = vector[0].map((_, j) => {
-    const maxLength = Math.max(...vector.map((row) => row[j].length));
-    return maxLength + 2;
-  });
+  const columnCounters = [];
+  for (let j = 0; j < vector[0].length; j++) {
+    let maxLength = 0;
+    for (let i = 0; i < vector.length; i++) {
+      maxLength = Math.max(maxLength, vector[i][j].length);
+    }
+    columnCounters.push(maxLength + 2);
+  }
 
-  vector.forEach((row) => {
-    row.forEach((value: string, j: number) => {
+  for (let i = 0; i < vector.length; i++) {
+    const row = vector[i];
+    for (let j = 0; j < row.length; j++) {
+      const value = row[j];
       const counter = columnCounters[j];
       const diff = counter - value.length;
       if (diff > 0) {
         row[j] = value + " ".repeat(diff);
       }
-    });
-  });
+    }
+  }
 
-  // Junta cada linha do vetor em uma string
-  const result = vector.map((row) => row.join(""));
+  const result = [];
+  for (let i = 0; i < vector.length; i++) {
+    result.push(vector[i].join(""));
+  }
 
-  // Cria uma string com o contador geral
   const totalCount = columnCounters.reduce((sum, count) => sum + count, 0);
   const totalCounter = "-".repeat(totalCount);
-
-  // Adiciona a string do contador geral como o segundo item da array
   result.splice(1, 0, totalCounter);
 
   return result;

@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import axios from "axios";
+import axios, { AxiosRequestConfig } from "axios";
 import { readFileSync } from "fs-extra";
 import { join } from "path";
 import requestPromise from "request-promise";
@@ -504,26 +504,30 @@ export async function getDataInsights(
       "Content-Type": "application/json",
     };
 
-    const data =
-      requestUrl.substring(requestUrl.length - 3) === "sql"
-        ? body
-        : JSON.parse(body);
-
-    return await axios({
+    const options: AxiosRequestConfig = {
       method: "post",
       url: requestUrl,
-      data,
+      data: body,
       headers: headers,
       responseType: "arraybuffer",
-    }).then((response: any) => {
-      if (isCompressed(response.data)) {
-        response.data = uncompress(response.data);
-      }
-      return {
-        error: "",
-        arrayBuffer: response.data.buffer,
-      };
-    });
+    };
+
+    return await axios(options)
+      .then((response: any) => {
+        if (isCompressed(response.data)) {
+          response.data = uncompress(response.data);
+        }
+        return {
+          error: "",
+          arrayBuffer: response.data.buffer,
+        };
+      })
+      .catch((error: any) => {
+        return {
+          error: error.response.data,
+          arrayBuffer: undefined,
+        };
+      });
   }
   return undefined;
 }

@@ -20,6 +20,7 @@ import { DataSourceFiles, defaultDataSourceFile } from "../models/dataSource";
 import { DataSourcesPanel } from "../panels/datasource";
 import { KdbDataSourceTreeItem } from "../services/dataSourceTreeProvider";
 import {
+  checkIfTimeParamIsCorrect,
   convertDataSourceFormToDataSourceFile,
   convertTimeToTimestamp,
   createKdbDataSourcesFolder,
@@ -185,6 +186,16 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
 
   switch (selectedType) {
     case "API":
+      const isTimeCorrect = checkIfTimeParamIsCorrect(
+        fileContent.dataSource.api.startTS,
+        fileContent.dataSource.api.endTS
+      );
+      if (!isTimeCorrect) {
+        window.showErrorMessage(
+          "The time parameters(startTS and endTS) are not correct, please check the format or if the startTS is before the endTS"
+        );
+        break;
+      }
       const startTS =
         fileContent.dataSource.api.startTS !== ""
           ? convertTimeToTimestamp(fileContent.dataSource.api.startTS)
