@@ -50,7 +50,22 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-      - name: Synk Scan for Vulnerabilities
+      - name: Synk scan for all vulnerabilities
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
+        with:
+          args: --sarif-file-output=snyk.sarif
+
+      - name: Synk scan for high or critical vulnerabilities
         uses: snyk/actions/node@master
         env:
           SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
+        with:
+          args: --severity-threshold=high
+
+      - name: Upload result to Github Code Scanning
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_files: snyk.sarif
