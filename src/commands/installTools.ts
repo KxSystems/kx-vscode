@@ -63,7 +63,6 @@ import { executeCommand } from "../utils/cpUtils";
 import { openUrl } from "../utils/openUrl";
 import { Telemetry } from "../utils/telemetryClient";
 import { validateServerPort } from "../validators/kdbValidator";
-import { showWalkthrough } from "./walkthroughCommand";
 
 export async function installTools(): Promise<void> {
   let file: Uri[] | undefined;
@@ -71,7 +70,6 @@ export async function installTools(): Promise<void> {
 
   await commands.executeCommand("notifications.clearAll");
   await commands.executeCommand("welcome.goBack");
-  commands.executeCommand("setContext", "kdb.showInstallWalkthrough", false);
 
   const licenseTypeResult: QuickPickItem | undefined =
     await window.showQuickPick(licenseItems, {
@@ -218,15 +216,6 @@ export async function installTools(): Promise<void> {
           );
           ext.outputChannel.appendLine(
             `Installation of q found here: ${QHOME}`
-          );
-        }
-
-        // hide walkthrough if requested
-        if (await showWalkthrough()) {
-          commands.executeCommand(
-            "workbench.action.openWalkthrough",
-            "kx.kdb-vscode#qinstallation",
-            false
           );
         }
       }

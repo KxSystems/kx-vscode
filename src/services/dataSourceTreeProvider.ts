@@ -107,6 +107,11 @@ export class KdbDataSourceTreeItem extends TreeItem {
   ) {
     super(label, collapsibleState);
     this.iconPath = new ThemeIcon("file");
+    this.command = {
+      title: "Open DataSource",
+      command: "kdb.dataSource.openDataSource",
+      arguments: [this, ext.context.extensionUri],
+    };
     if (ext.kdbDataSourceRootNodes.indexOf(label) === -1) {
       ext.kdbDataSourceRootNodes.push(label);
       commands.executeCommand(

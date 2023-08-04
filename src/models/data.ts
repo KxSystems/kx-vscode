@@ -20,6 +20,7 @@ export type GetDataObjectPayload = {
     columns: string[];
     rows: any;
   };
+  arrayBuffer?: ArrayBuffer;
 };
 
 export type getDataBodyPayload = {
