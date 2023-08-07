@@ -371,7 +371,24 @@ export async function getMeta(): Promise<MetaObjectPayload | undefined> {
     const rawToken = await ext.context.secrets.get(
       ext.connectionNode.details.alias
     );
-    const token = JSON.parse(rawToken!);
+
+    let token;
+    if (rawToken !== undefined) {
+      token = JSON.parse(rawToken!);
+      if (new Date(token.accessTokenExpirationDate) < new Date()) {
+        token = await signIn(ext.connectionNode.details.server);
+        ext.context.secrets.store(
+          ext.connectionNode.details.alias,
+          JSON.stringify(token)
+        );
+      }
+    } else {
+      token = await signIn(ext.connectionNode.details.server);
+      ext.context.secrets.store(
+        ext.connectionNode.details.alias,
+        JSON.stringify(token)
+      );
+    }
 
     const options = {
       headers: { Authorization: `Bearer ${token.accessToken}` },
