@@ -111,7 +111,7 @@ export class DataSourcesPanel {
     if (isInsights && isMetaLoaded) {
       const auxOptions = ext.insightsMeta.dap
         .map((dap) => {
-          const generatedValue = `${dap.assembly} ${dap.instance}`;
+          const generatedValue = `${dap.assembly}-qe ${dap.instance}`;
           const option = `<vscode-option value="${generatedValue}" ${
             generatedValue === targetApi ? "selected" : ""
           }>${generatedValue}</vscode-option>`;

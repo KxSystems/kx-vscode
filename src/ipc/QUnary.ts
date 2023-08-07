@@ -11,28 +11,15 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export type GetDataObjectPayload = {
-  error: string;
-  table?: {
-    meta: {
-      [column: string]: string;
-    };
-    columns: string[];
-    rows: any;
-  };
-  arrayBuffer?: ArrayBuffer;
-};
+import U8 from "./U8";
+import { TypeNum } from "./typeBase";
 
-export type getDataBodyPayload = {
-  table: string;
-  startTS?: string;
-  endTS?: string;
-  fill?: string;
-  temporary?: string;
-  filter?: string[];
-  groupBy?: string[];
-  agg?: string[];
-  sortCols?: string[];
-  slice?: string[];
-  labels?: string[];
-};
+export default class QUnary extends U8 {
+  constructor(length: number, offset: number, dataView: DataView) {
+    super(length, offset, TypeNum.unary, dataView);
+  }
+
+  getValue(i: number): number {
+    return this.getScalar(i);
+  }
+}

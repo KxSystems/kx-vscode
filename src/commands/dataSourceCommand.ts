@@ -21,16 +21,16 @@ import { scratchpadVariableInput } from "../models/items/server";
 import { DataSourcesPanel } from "../panels/datasource";
 import { KdbDataSourceTreeItem } from "../services/dataSourceTreeProvider";
 import {
+  checkIfTimeParamIsCorrect,
   convertDataSourceFormToDataSourceFile,
   convertTimeToTimestamp,
   createKdbDataSourcesFolder,
 } from "../utils/dataSource";
+import { handleWSResults } from "../utils/queryUtils";
 import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
 import {
-  getData,
+  getDataInsights,
   getMeta,
-  getQsqlData,
-  getSqlData,
   importScratchpad,
   writeQueryResult,
 } from "./serverCommand";
@@ -201,7 +201,8 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
     return;
   }
   const fileContent = convertDataSourceFormToDataSourceFile(dataSourceForm);
-  console.log(fileContent);
+
+  let res: any;
   const selectedType =
     fileContent.dataSource.selectedType.toString() === "API"
       ? "API"
@@ -211,6 +212,16 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
 
   switch (selectedType) {
     case "API":
+      const isTimeCorrect = checkIfTimeParamIsCorrect(
+        fileContent.dataSource.api.startTS,
+        fileContent.dataSource.api.endTS
+      );
+      if (!isTimeCorrect) {
+        window.showErrorMessage(
+          "The time parameters(startTS and endTS) are not correct, please check the format or if the startTS is before the endTS"
+        );
+        break;
+      }
       const startTS =
         fileContent.dataSource.api.startTS !== ""
           ? convertTimeToTimestamp(fileContent.dataSource.api.startTS)
@@ -293,12 +304,14 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
       if (labels !== undefined) {
         apiBody.labels = labels;
       }
-      const apiCall = await getData(JSON.stringify(apiBody));
-      writeQueryResult(
-        JSON.stringify(apiCall),
-        "GetData - table: " + apiBody.table,
-        selectedType
+      const apiCall = await getDataInsights(
+        ext.insightsAuthUrls.dataURL,
+        JSON.stringify(apiBody)
       );
+      if (apiCall?.arrayBuffer) {
+        res = handleWSResults(apiCall.arrayBuffer);
+      }
+      writeQueryResult(res, "GetData - table: " + apiBody.table, selectedType);
       break;
     case "QSQL":
       const assembly = fileContent.dataSource.qsql.selectedTarget.slice(0, -4);
@@ -308,24 +321,28 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
         target: target,
         query: fileContent.dataSource.qsql.query,
       };
-      const qsqlCall = await getQsqlData(JSON.stringify(qsqlBody));
-      writeQueryResult(
-        JSON.stringify(qsqlCall),
-        fileContent.dataSource.qsql.query,
-        selectedType
+      const qsqlCall = await getDataInsights(
+        ext.insightsAuthUrls.qsqlURL,
+        JSON.stringify(qsqlBody)
       );
+      if (qsqlCall?.arrayBuffer) {
+        res = handleWSResults(qsqlCall.arrayBuffer);
+      }
+      writeQueryResult(res, fileContent.dataSource.qsql.query, selectedType);
       break;
     case "SQL":
     default:
       const sqlBody = {
         query: fileContent.dataSource.sql.query,
       };
-      const sqlCall = await getSqlData(JSON.stringify(sqlBody));
-      writeQueryResult(
-        JSON.stringify(sqlCall),
-        fileContent.dataSource.sql.query,
-        selectedType
+      const sqlCall = await getDataInsights(
+        ext.insightsAuthUrls.sqlURL,
+        JSON.stringify(sqlBody)
       );
+      if (sqlCall?.arrayBuffer) {
+        res = handleWSResults(sqlCall.arrayBuffer);
+      }
+      writeQueryResult(res, fileContent.dataSource.sql.query, selectedType);
       break;
   }
 }

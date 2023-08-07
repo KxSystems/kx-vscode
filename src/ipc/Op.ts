@@ -11,28 +11,12 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export type GetDataObjectPayload = {
-  error: string;
-  table?: {
-    meta: {
-      [column: string]: string;
-    };
-    columns: string[];
-    rows: any;
-  };
-  arrayBuffer?: ArrayBuffer;
-};
-
-export type getDataBodyPayload = {
-  table: string;
-  startTS?: string;
-  endTS?: string;
-  fill?: string;
-  temporary?: string;
-  filter?: string[];
-  groupBy?: string[];
-  agg?: string[];
-  sortCols?: string[];
-  slice?: string[];
-  labels?: string[];
-};
+export const enum Op {
+  heartbeat = 0,
+  api = 1,
+  query = 2,
+  subscribe = 3,
+  unsubscribe = 4,
+  error = 5,
+  state = 6,
+}

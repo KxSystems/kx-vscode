@@ -39,7 +39,10 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     });
   }
 
-  public updateResults(queryResults: string, dataSourceType?: string) {
+  public updateResults(
+    queryResults: string | string[],
+    dataSourceType?: string
+  ) {
     if (this._view) {
       this._view.show?.(true);
       this._view.webview.postMessage(queryResults);
@@ -91,28 +94,33 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     if (queryResult.length === 0) {
       return `<p>No results to show</p>`;
     }
-    const headers = Object.keys(queryResult[0])
-      .map((key) => {
-        return `<vscode-data-grid-cell cell-type="columnheader" grid-column="${key}"><b>${key.toUpperCase()}</b></vscode-data-grid-cell>`;
-      })
-      .join("");
+    let results = "";
+    results = `<vscode-data-grid class="results-datagrid" aria-label="Basic">`;
+    let headers = `<vscode-data-grid-row class="results-header-datagrid" row-type="header">`;
+    let rows = ``;
+    let countHeader = 1;
+    let indexColumn = 1;
+    const headersArray = queryResult[0].split(",");
+    for (const column in headersArray) {
+      headers += `<vscode-data-grid-cell  cell-type="columnheader" grid-column="${countHeader}"><b>${headersArray[
+        column
+      ].toUpperCase()}</b></vscode-data-grid-cell>`;
+      countHeader++;
+    }
+    const resRows = queryResult.slice(1).map((str) => str.split(","));
 
-    const rows = queryResult
-      .map((row) => {
-        return `<vscode-data-grid-row>${Object.values(row)
-          .map((value) => {
-            return `<vscode-data-grid-cell grid-column="${value}">${value}</vscode-data-grid-cell>`;
-          })
-          .join("")}</vscode-data-grid-row>`;
-      })
-      .join("");
-
-    return /*html*/ `<vscode-data-grid class="results-datagrid" aria-label="Basic">
-              <vscode-data-grid-row class="results-header-datagrid" row-type="header">
-                ${headers}
-              </vscode-data-grid-row>
-              ${rows}
-            </vscode-data-grid>`;
+    headers += `</vscode-data-grid-row>`;
+    resRows.forEach((row: string[]) => {
+      rows += `<vscode-data-grid-row>`;
+      for (const value in row) {
+        rows += `<vscode-data-grid-cell grid-column="${indexColumn}">${row[value]}</vscode-data-grid-cell>`;
+        indexColumn++;
+      }
+      rows += `</vscode-data-grid-row>`;
+      indexColumn = 1;
+    });
+    results += headers + rows + `</vscode-data-grid>`;
+    return results;
   }
 
   private _getWebviewContent(
@@ -138,9 +146,6 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         "vscode.css",
       ]);
       let result = "";
-      if (dataSourceType) {
-        queryResult = JSON.parse(queryResult as string);
-      }
       if (typeof queryResult === "string") {
         result = this.handleQueryResultsString(queryResult);
       } else if (Array.isArray(queryResult)) {
