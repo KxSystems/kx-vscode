@@ -62,3 +62,15 @@ jobs:
           SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
         with:
           args: --severity-threshold=high
+
+      - name: Synk Monitor
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
+        with:
+          command: monitor
+        on:
+          push:
+            branches:
+              - main
+              - dev
