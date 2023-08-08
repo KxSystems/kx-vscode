@@ -1,8 +1,47 @@
 # kdb VS Code extension
 
-This is a companion extension for kdb developers including editor features for working with q files along with the ability to connect to kdb processes and run queries
+This is a companion extension for kdb developers. Some words about brilliant features provided.
+
+
+
+
+Its main features are editing capabilities for working with q files, and the ability to connect to kdb processes and run queries.
 
 [![KX VS Code CI](https://github.com/KxSystems/kx-vscode/actions/workflows/ci.yml/badge.svg)](https://github.com/KxSystems/kx-vscode/actions/workflows/ci.yml)
+
+## Contents
+
+[Get started](#get-started)
+Language server
+Connections
+Execute code
+View results
+
+## Get started
+
+**If you already have q installed**
+
+    When you install the extension, the message **q runtime installed** is displayed. You are ready to begin.
+
+    <FIXME image of message>
+
+**If you do not have q installed**
+
+    When you install the extension, 
+
+
+
+
+
+
+
+
+
+
+
+
+
+**OLD STUFF**
 
 ## Install
 
