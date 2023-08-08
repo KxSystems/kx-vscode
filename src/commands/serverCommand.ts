@@ -1,18 +1,34 @@
+/*
+ * Copyright (c) 1998-2023 Kx Systems Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
+import axios, { AxiosRequestConfig } from "axios";
 import { readFileSync } from "fs-extra";
 import { join } from "path";
+import requestPromise from "request-promise";
 import * as url from "url";
 import {
   commands,
   InputBoxOptions,
   Position,
-  ProgressLocation,
   QuickPickItem,
   QuickPickOptions,
   Range,
   window,
 } from "vscode";
 import { ext } from "../extensionVariables";
+import { isCompressed, uncompress } from "../ipc/c";
 import { Connection } from "../models/connection";
+import { GetDataObjectPayload } from "../models/data";
 import { ExecutionTypes } from "../models/execution";
 import { Insights } from "../models/insights";
 import {
@@ -21,6 +37,7 @@ import {
   connectionPasswordInput,
   connectionPortInput,
   connectionUsernameInput,
+  connnectionTls,
   insightsAliasInput,
   insightsUrlInput,
   kdbEndpoint,
@@ -28,13 +45,20 @@ import {
   serverEndpointPlaceHolder,
   serverEndpoints,
 } from "../models/items/server";
+import { MetaObject, MetaObjectPayload } from "../models/meta";
 import { queryConstants } from "../models/queryResult";
+import { ScratchpadResult } from "../models/scratchpadResult";
 import { Server } from "../models/server";
 import { ServerObject } from "../models/serverObject";
-import { signIn } from "../services/kdbInsights/codeFlowLogin";
+import {
+  IToken,
+  refreshToken,
+  signIn,
+} from "../services/kdbInsights/codeFlowLogin";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import {
   addLocalConnectionContexts,
+  checkOpenSslInstalled,
   getHash,
   getInsights,
   getServerName,
@@ -43,13 +67,16 @@ import {
   updateInsights,
   updateServers,
 } from "../utils/core";
+import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { ExecutionConsole } from "../utils/executionConsole";
+import { openUrl } from "../utils/openUrl";
 import { sanitizeQuery } from "../utils/queryUtils";
 import {
   validateServerAlias,
   validateServerName,
   validateServerPort,
   validateServerUsername,
+  validateTls,
 } from "../validators/kdbValidator";
 
 export async function addNewConnection(): Promise<void> {
@@ -146,6 +173,12 @@ export function addKdbConnection(): void {
     password: true,
   };
 
+  const connectionTls: InputBoxOptions = {
+    prompt: connnectionTls.prompt,
+    placeHolder: connnectionTls.placeholder,
+    validateInput: (value: string | undefined) => validateTls(value),
+  };
+
   window.showInputBox(connectionAlias).then(async (alias) => {
     window.showInputBox(connectionHostname).then(async (hostname) => {
       if (hostname) {
@@ -153,68 +186,98 @@ export function addKdbConnection(): void {
           if (port) {
             window.showInputBox(connectionUsername).then(async (username) => {
               window.showInputBox(connectionPassword).then(async (password) => {
-                // store secrets
-                let authUsed = false;
-                if (username && password) {
-                  authUsed = true;
-                  ext.secretSettings.storeAuthData(
-                    alias !== undefined
-                      ? getHash(`${hostname}${port}${alias}`)
-                      : getHash(`${hostname}${port}`),
-                    `${username}:${password}`
-                  );
-                }
+                window.showInputBox(connectionTls).then(async (tls) => {
+                  let tlsEnabled;
+                  if (tls !== undefined && tls === "true") {
+                    tlsEnabled = true;
+                  } else {
+                    tlsEnabled = false;
+                  }
 
-                let servers: Server | undefined = getServers();
+                  // validate if TLS is possible
+                  if (tlsEnabled && ext.openSslVersion === null) {
+                    window
+                      .showErrorMessage(
+                        "OpenSSL not found, please ensure this is installed",
+                        "More Info",
+                        "Cancel"
+                      )
+                      .then(async (result) => {
+                        if (result === "More Info") {
+                          await openUrl("https://code.kx.com/q/kb/ssl/");
+                        }
+                      });
+                    return;
+                  }
 
-                if (
-                  servers != undefined &&
-                  servers[getHash(`${hostname}:${port}`)]
-                ) {
-                  await window.showErrorMessage(
-                    `Server ${hostname}:${port} already exists.`
-                  );
-                } else {
-                  const key =
-                    alias != undefined
-                      ? getHash(`${hostname}${port}${alias}`)
-                      : getHash(`${hostname}${port}`);
-                  if (servers === undefined) {
-                    servers = {
-                      key: {
+                  // store secrets
+                  let authUsed = false;
+                  if (
+                    (username != undefined || username != "") &&
+                    (password != undefined || password != "")
+                  ) {
+                    authUsed = true;
+                    ext.secretSettings.storeAuthData(
+                      alias !== undefined
+                        ? getHash(`${hostname}${port}${alias}`)
+                        : getHash(`${hostname}${port}`),
+                      `${username}:${password}`
+                    );
+                  }
+
+                  let servers: Server | undefined = getServers();
+
+                  if (
+                    servers != undefined &&
+                    servers[getHash(`${hostname}:${port}`)]
+                  ) {
+                    await window.showErrorMessage(
+                      `Server ${hostname}:${port} already exists.`
+                    );
+                  } else {
+                    const key =
+                      alias != undefined
+                        ? getHash(`${hostname}${port}${alias}`)
+                        : getHash(`${hostname}${port}`);
+                    if (servers === undefined) {
+                      servers = {
+                        key: {
+                          auth: authUsed,
+                          serverName: hostname,
+                          serverPort: port,
+                          serverAlias: alias,
+                          managed: alias === "local" ? true : false,
+                          tls: tlsEnabled,
+                        },
+                      };
+                      if (servers[0].managed) {
+                        await addLocalConnectionContexts(
+                          getServerName(servers[0])
+                        );
+                      }
+                    } else {
+                      servers[key] = {
                         auth: authUsed,
                         serverName: hostname,
                         serverPort: port,
                         serverAlias: alias,
                         managed: alias === "local" ? true : false,
-                      },
-                    };
-                    if (servers[0].managed) {
-                      await addLocalConnectionContexts(
-                        getServerName(servers[0])
-                      );
+                        tls: tlsEnabled,
+                      };
+                      if (servers[key].managed) {
+                        await addLocalConnectionContexts(
+                          getServerName(servers[key])
+                        );
+                      }
                     }
-                  } else {
-                    servers[key] = {
-                      auth: authUsed,
-                      serverName: hostname,
-                      serverPort: port,
-                      serverAlias: alias,
-                      managed: alias === "local" ? true : false,
-                    };
-                    if (servers[key].managed) {
-                      await addLocalConnectionContexts(
-                        getServerName(servers[key])
-                      );
-                    }
-                  }
 
-                  await updateServers(servers);
-                  const newServers = getServers();
-                  if (newServers != undefined) {
-                    ext.serverProvider.refresh(newServers);
+                    await updateServers(servers);
+                    const newServers = getServers();
+                    if (newServers != undefined) {
+                      ext.serverProvider.refresh(newServers);
+                    }
                   }
-                }
+                });
               });
             });
           }
@@ -251,12 +314,174 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
 }
 
 export async function connectInsights(viewItem: InsightsNode): Promise<void> {
-  const tokens = await signIn(viewItem.details.server);
+  commands.executeCommand("kdb-results.focus");
+
+  let token: IToken | undefined;
+  const existingToken = await ext.context.secrets.get(viewItem.details.alias);
+  if (existingToken !== undefined) {
+    const storedToken: IToken = JSON.parse(existingToken);
+    if (new Date(storedToken.accessTokenExpirationDate) < new Date()) {
+      token = await refreshToken(
+        viewItem.details.server,
+        storedToken.refreshToken
+      );
+      if (token === undefined) {
+        token = await signIn(viewItem.details.server);
+        ext.context.secrets.store(
+          viewItem.details.alias,
+          JSON.stringify(token)
+        );
+      } else {
+        ext.context.secrets.store(
+          viewItem.details.alias,
+          JSON.stringify(token)
+        );
+      }
+    } else {
+      token = storedToken;
+    }
+  } else {
+    token = await signIn(viewItem.details.server);
+    ext.context.secrets.store(viewItem.details.alias, JSON.stringify(token));
+  }
+
   ext.outputChannel.appendLine(
     `Connection established successfully to: ${viewItem.details.server}`
   );
+
+  commands.executeCommand("setContext", "kdb.connected", [
+    viewItem.label + " (connected)",
+  ]);
+
   ext.connectionNode = viewItem;
   ext.serverProvider.reload();
+  refreshDataSourcesPanel();
+}
+
+export async function getMeta(): Promise<MetaObjectPayload | undefined> {
+  if (ext.connectionNode instanceof InsightsNode) {
+    const metaUrl = new url.URL(
+      ext.insightsAuthUrls.metaURL,
+      ext.connectionNode.details.server
+    );
+
+    // get the access token from the secure store
+    const rawToken = await ext.context.secrets.get(
+      ext.connectionNode.details.alias
+    );
+
+    let token;
+    if (rawToken !== undefined) {
+      token = JSON.parse(rawToken!);
+      if (new Date(token.accessTokenExpirationDate) < new Date()) {
+        token = await signIn(ext.connectionNode.details.server);
+        ext.context.secrets.store(
+          ext.connectionNode.details.alias,
+          JSON.stringify(token)
+        );
+      }
+    } else {
+      token = await signIn(ext.connectionNode.details.server);
+      ext.context.secrets.store(
+        ext.connectionNode.details.alias,
+        JSON.stringify(token)
+      );
+    }
+
+    const options = {
+      headers: { Authorization: `Bearer ${token.accessToken}` },
+    };
+
+    const metaResponse = await requestPromise.post(metaUrl.toString(), options);
+    const meta: MetaObject = JSON.parse(metaResponse);
+    return meta.payload;
+  }
+  return undefined;
+}
+
+export async function getDataInsights(
+  targetUrl: string,
+  body: string
+): Promise<GetDataObjectPayload | undefined> {
+  if (ext.connectionNode instanceof InsightsNode) {
+    const requestUrl = new url.URL(
+      targetUrl,
+      ext.connectionNode.details.server
+    ).toString();
+
+    // get the access token from the secure store
+    const rawToken = await ext.context.secrets.get(
+      ext.connectionNode.details.alias
+    );
+    const token = JSON.parse(rawToken!);
+
+    const headers = {
+      Authorization: `Bearer ${token.accessToken}`,
+      Accept: "application/octet-stream",
+      "Content-Type": "application/json",
+    };
+
+    const options: AxiosRequestConfig = {
+      method: "post",
+      url: requestUrl,
+      data: body,
+      headers: headers,
+      responseType: "arraybuffer",
+    };
+
+    return await axios(options)
+      .then((response: any) => {
+        if (isCompressed(response.data)) {
+          response.data = uncompress(response.data);
+        }
+        return {
+          error: "",
+          arrayBuffer: response.data.buffer,
+        };
+      })
+      .catch((error: any) => {
+        return {
+          error: error.response.data,
+          arrayBuffer: undefined,
+        };
+      });
+  }
+  return undefined;
+}
+
+export async function getScratchpadQuery(
+  query: string,
+  context?: string
+): Promise<any | undefined> {
+  if (ext.connectionNode instanceof InsightsNode) {
+    const scratchpadURL = new url.URL(
+      ext.insightsAuthUrls.scratchpadURL,
+      ext.connectionNode.details.server
+    );
+
+    // get the access token from the secure store
+    const rawToken = await ext.context.secrets.get(
+      ext.connectionNode.details.alias
+    );
+    const token = JSON.parse(rawToken!);
+
+    const options = {
+      headers: {
+        Authorization: `Bearer ${token.accessToken}`,
+        Username: "test",
+      },
+      body: { expression: query, language: "q", context: context || "." },
+      json: true,
+    };
+
+    const scratchpadResponse = await requestPromise.post(
+      scratchpadURL.toString(),
+      options
+    );
+
+    return scratchpadResponse;
+  }
+  return undefined;
 }
 
 export async function removeInsightsConnection(
@@ -281,6 +506,7 @@ export async function removeInsightsConnection(
 }
 
 export async function connect(viewItem: KdbNode): Promise<void> {
+  commands.executeCommand("kdb-results.focus");
   // handle cleaning up existing connection
   if (
     ext.connectionNode !== undefined &&
@@ -290,6 +516,23 @@ export async function connect(viewItem: KdbNode): Promise<void> {
     if (ext.connection !== undefined) {
       ext.connection.disconnect();
       ext.connection = undefined;
+    }
+  }
+
+  // check for TLS support
+  if (viewItem.details.tls) {
+    if (!(await checkOpenSslInstalled())) {
+      window
+        .showInformationMessage(
+          "TLS support requires OpenSSL to be installed.",
+          "More Info",
+          "Cancel"
+        )
+        .then(async (result) => {
+          if (result === "More Info") {
+            await openUrl("https://code.kx.com/q/kb/ssl/");
+          }
+        });
     }
   }
 
@@ -314,9 +557,21 @@ export async function connect(viewItem: KdbNode): Promise<void> {
 
   if (authCredentials != undefined) {
     const creds = authCredentials.split(":");
-    ext.connection = new Connection(connection, creds);
+    ext.connection = new Connection(
+      connection,
+      creds,
+      viewItem.details.tls ?? false
+    );
   } else {
-    ext.connection = new Connection(connection);
+    ext.connection = new Connection(
+      connection,
+      undefined,
+      viewItem.details.tls ?? false
+    );
+  }
+
+  if (viewItem.details.tls) {
+    process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
   }
 
   // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -338,6 +593,7 @@ export async function connect(viewItem: KdbNode): Promise<void> {
       ext.serverProvider.reload();
     }
   });
+  refreshDataSourcesPanel();
 }
 
 export async function disconnect(): Promise<void> {
@@ -354,7 +610,23 @@ export async function executeQuery(
   context?: string
 ): Promise<void> {
   const queryConsole = ExecutionConsole.start();
-  if (ext.connection !== undefined && query.length > 0) {
+
+  if (query.length === 0) {
+    return undefined;
+  }
+
+  const insightsNode = ext.kdbinsightsNodes.find((n) =>
+    ext.connectionNode instanceof InsightsNode
+      ? n === ext.connectionNode?.details.alias + " (connected)"
+      : false
+  );
+
+  // set context for root nodes
+  if (insightsNode) {
+    query = sanitizeQuery(query);
+    const queryRes = await getScratchpadQuery(query, context);
+    writeScratchpadResult(queryRes, query);
+  } else if (ext.connection !== undefined) {
     query = sanitizeQuery(query);
     const queryRes = await ext.connection.executeQuery(query, context);
     writeQueryResult(queryRes, query);
@@ -457,19 +729,47 @@ export async function loadServerObjects(): Promise<ServerObject[]> {
   }
 }
 
-function writeQueryResult(result: string, query: string): void {
+export function writeQueryResult(
+  result: string | string[],
+  query: string,
+  dataSourceType?: string
+): void {
   const queryConsole = ExecutionConsole.start();
-  if (ext.connection && !result.startsWith(queryConstants.error)) {
+  const res = Array.isArray(result) ? result[0] : result;
+  if (
+    (ext.connection || ext.connectionNode) &&
+    !res.startsWith(queryConstants.error)
+  ) {
     queryConsole.append(
       result,
       query,
-      ext.connectionNode?.label ? ext.connectionNode.label : ""
+      ext.connectionNode?.label ? ext.connectionNode.label : "",
+      dataSourceType
     );
   } else {
     queryConsole.appendQueryError(
       query,
-      result.substring(queryConstants.error.length),
+      res.substring(queryConstants.error.length),
       !!ext.connection,
+      ext.connectionNode?.label ? ext.connectionNode.label : ""
+    );
+  }
+}
+
+function writeScratchpadResult(result: ScratchpadResult, query: string): void {
+  const queryConsole = ExecutionConsole.start();
+
+  if (result.error) {
+    queryConsole.appendQueryError(
+      query,
+      result.errorMsg,
+      true,
+      ext.connectionNode?.label ? ext.connectionNode.label : ""
+    );
+  } else {
+    queryConsole.append(
+      result.data,
+      query,
       ext.connectionNode?.label ? ext.connectionNode.label : ""
     );
   }

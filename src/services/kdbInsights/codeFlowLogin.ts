@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 1998-2023 Kx Systems Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
 import * as crypto from "crypto";
 import * as fs from "fs-extra";
 import * as http from "http";
@@ -76,24 +89,30 @@ export async function signOut(
   await requestPromise.post(requestUrl.toString(), options);
 }
 
-async function refreshToken(
+export async function refreshToken(
   insightsUrl: string,
   token: string
-): Promise<IToken> {
+): Promise<IToken | undefined> {
   return await tokenRequest(insightsUrl, {
     grant_type: ext.insightsGrantType.refreshToken,
     refresh_token: token,
   });
 }
 
-async function getToken(insightsUrl: string, code: string): Promise<IToken> {
+async function getToken(
+  insightsUrl: string,
+  code: string
+): Promise<IToken | undefined> {
   return await tokenRequest(insightsUrl, {
     code,
     grant_type: ext.insightsGrantType.authorizationCode,
   });
 }
 
-async function tokenRequest(insightsUrl: string, params: any): Promise<IToken> {
+async function tokenRequest(
+  insightsUrl: string,
+  params: any
+): Promise<IToken | undefined> {
   const queryParams = queryString(params);
   const options = {
     body: queryParams,
@@ -101,7 +120,18 @@ async function tokenRequest(insightsUrl: string, params: any): Promise<IToken> {
   };
 
   const requestUrl = new url.URL(ext.insightsAuthUrls.tokenURL, insightsUrl);
-  const response = await requestPromise.post(requestUrl.toString(), options);
+
+  let response;
+  if (params.grant_type === "refresh_token") {
+    try {
+      response = await requestPromise.post(requestUrl.toString(), options);
+    } catch (err) {
+      return undefined;
+    }
+  } else {
+    response = await requestPromise.post(requestUrl.toString(), options);
+  }
+
   const result = JSON.parse(response);
   const expirationDate = new Date();
 

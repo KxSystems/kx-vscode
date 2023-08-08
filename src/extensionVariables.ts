@@ -1,16 +1,29 @@
+/*
+ * Copyright (c) 1998-2023 Kx Systems Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
 import { ExtensionContext, extensions, OutputChannel } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
-import { AzureAccountExtensionApi } from "./azure-account.api";
 import { Connection } from "./models/connection";
 import { LocalProcess } from "./models/localProcess";
+import { MetaObjectPayload } from "./models/meta";
 import { ServerObject } from "./models/serverObject";
+import { KdbDataSourceProvider } from "./services/dataSourceTreeProvider";
 import {
   InsightsNode,
   KdbNode,
   KdbTreeProvider,
 } from "./services/kdbTreeProvider";
-import { KdbDataSourceProvider } from "./services/dataSourceTreeProvider";
-import { KdbNode, KdbTreeProvider } from "./services/kdbTreeProvider";
+import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import AuthSettings from "./utils/secretStorage";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -20,7 +33,9 @@ export namespace ext {
   export let consolePanel: OutputChannel;
   export let serverProvider: KdbTreeProvider;
   export let dataSourceProvider: KdbDataSourceProvider;
+  export let resultsViewProvider: KdbResultsViewProvider;
   export let serverObjects: ServerObject;
+  export let openSslVersion: string | null;
 
   export let connection: Connection | undefined;
   export let connectionNode: KdbNode | InsightsNode | undefined;
@@ -33,8 +48,6 @@ export namespace ext {
   export const maxRetryCount = 5;
 
   export let secretSettings: AuthSettings;
-
-  export let azureAccount: AzureAccountExtensionApi;
 
   export function getRuntimePath(): string {
     return "C:\\Users\\caleteet\\Downloads\\w64\\w64\\q.exe";
@@ -56,7 +69,7 @@ export namespace ext {
 
   export let client: LanguageClient;
 
-  export const extensionId = "kx.kdb-vscode";
+  export const extensionId = "kx.kdb";
   const packageJSON = extensions.getExtension(extensionId)!.packageJSON;
   export const extensionName = packageJSON.name;
   export const extensionVersion = packageJSON.version;
@@ -78,12 +91,19 @@ export namespace ext {
     callbackURL: "http://localhost:9010/redirect",
     revoke: "auth/realms/insights/protocol/openid-connect/revoke",
     tokenURL: "auth/realms/insights/protocol/openid-connect/token",
+    metaURL: "servicegateway/meta",
+    dataURL: "servicegateway/data",
+    scratchpadURL: "servicebroker/scratchpad/display",
+    sqlURL: "servicegateway/qe/sql",
+    qsqlURL: "servicegateway/qe/qsql",
   };
 
   export const insightsGrantType = {
     authorizationCode: "authorization_code",
     refreshToken: "refresh_token",
   };
+
+  export const insightsMeta = <MetaObjectPayload>{};
 
   export const insightsSigningIn = "Signing in";
 

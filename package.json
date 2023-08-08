@@ -1,9 +1,9 @@
 {
-  "name": "kdb-vscode",
-  "displayName": "kdb vscode",
-  "description": "Extension to help with q and kdb",
+  "name": "kdb",
+  "displayName": "kdb",
+  "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "preview": true,
   "engines": {
     "vscode": "^1.66.0"
@@ -20,7 +20,16 @@
     }
   },
   "categories": [
-    "Other"
+    "Programming Languages",
+    "Data Science",
+    "Formatters",
+    "Snippets"
+  ],
+  "keywords": [
+    "kdb",
+    "kdb+",
+    "q",
+    "kdb Insights"
   ],
   "activationEvents": [
     "onCommand:kdb.installTools",
@@ -34,9 +43,10 @@
     "onCommand:kdb.dataSource.renameDataSource",
     "onCommand:kdb.dataSource.deleteDataSource",
     "onCommand:kdb.dataSource.openDataSource",
-    "onCommand:kdb.dataSource.doRefactor",
-    "onWalkthrough:kdb.hideWalkthrough",
+    "onCommand:kdb.resultsPanel.update",
     "onView:kdb-servers",
+    "onView:kdb-datasources-explorer",
+    "onView:kdb-results",
     "onTerminalProfile:kdb.q-terminal"
   ],
   "main": "./out/extension.js",
@@ -44,7 +54,7 @@
     "walkthroughs": [
       {
         "id": "qinstallation",
-        "title": "Get Started with kdb vscode",
+        "title": "Get Started with kdb",
         "description": "Get started by installing q to work with local kdb processes - q will need to be installed either locally or via this extension.",
         "steps": [
           {
@@ -143,10 +153,6 @@
           "type": "object",
           "description": "kdb insights for explorer"
         },
-        "kdb.hideWalkthrough": {
-          "type": "boolean",
-          "description": "Hide visibility of the walkthrough at startup of extension"
-        },
         "kdb.hideInstallationNotification": {
           "type": "boolean",
           "description": "Hide notification for installation path, after first install"
@@ -175,10 +181,6 @@
         "title": "Stop q process"
       },
       {
-        "command": "kdb.hideWalkthrough",
-        "title": "Hide walkthrough"
-      },
-      {
         "command": "kdb.addConnection",
         "title": "Add new connection"
       },
@@ -200,7 +202,7 @@
       },
       {
         "command": "kdb.disconnect",
-        "title": "Disconnect kdb server"
+        "title": "Disconnect"
       },
       {
         "command": "kdb.dataSource.addDataSource",
@@ -225,6 +227,10 @@
       {
         "command": "kdb.dataSource.openDataSource",
         "title": "Open DataSource"
+      },
+      {
+        "command": "kdb.resultsPanel.update",
+        "title": "Update Results View"
       },
       {
         "command": "kdb.terminal.run",
@@ -295,6 +301,13 @@
           "title": "KX",
           "icon": "resources/kx_logo.svg"
         }
+      ],
+      "panel": [
+        {
+          "id": "kdb-results",
+          "title": "KDB Results",
+          "icon": "resources/kx_logo.svg"
+        }
       ]
     },
     "views": {
@@ -309,6 +322,13 @@
           "name": "Data Sources",
           "contextualTitle": "Data Sources"
         }
+      ],
+      "kdb-results": [
+        {
+          "id": "kdb-results",
+          "name": "KDB Results",
+          "type": "webview"
+        }
       ]
     },
     "viewsWelcome": [
@@ -319,10 +339,6 @@
     ],
     "menus": {
       "commandPalette": [
-        {
-          "command": "kdb.hideWalkthrough",
-          "when": "false"
-        },
         {
           "command": "kdb.insightsConnect",
           "when": "false"
@@ -390,7 +406,7 @@
         },
         {
           "command": "kdb.disconnect",
-          "when": "view == kdb-servers && viewItem in kdb.connected && viewItem in kdb.rootNodes",
+          "when": "view == kdb-servers && viewItem in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection"
         },
         {
@@ -468,7 +484,8 @@
     "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
     "test": "npm run -S esbuild-base -- --sourcemap && tsc -p ./test && node ./out/test/runTest.js",
     "package": "npx vsce package",
-    "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\""
+    "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
+    "generate-parser": "antlr4-tool -o q-parser grammars/q.g4"
   },
   "prettier": {
     "printWidth": 80,
@@ -480,20 +497,25 @@
     "@types/fs-extra": "^9.0.13",
     "@types/glob": "^8.0.1",
     "@types/graceful-fs": "^4.1.6",
+    "@types/jwt-decode": "^3.1.0",
     "@types/klaw": "^3.0.3",
     "@types/mocha": "^10.0.1",
     "@types/node": "^18.15.11",
     "@types/node-fetch": "^2.6.2",
     "@types/picomatch": "^2.3.0",
     "@types/request-promise": "^4.1.48",
+    "@types/semver": "^7.5.0",
     "@types/sinon": "^10.0.13",
     "@types/vscode": "^1.66.0",
     "@typescript-eslint/eslint-plugin": "^5.36.2",
     "@typescript-eslint/parser": "^5.36.2",
     "@vscode/test-electron": "^2.2.3",
+    "antlr4": "^4.13.0",
+    "antlr4-tool": "^1.1.1",
     "esbuild": "^0.15.7",
     "eslint": "^8.23.0",
     "eslint-plugin-header": "^3.1.1",
+    "eslint-plugin-license-header": "^0.6.0",
     "glob": "^10.2.0",
     "mocha": "^10.2.0",
     "mocha-junit-reporter": "^2.2.0",
@@ -518,22 +540,32 @@
     "@azure/ms-rest-azure-env": "^2.0.0",
     "@azure/ms-rest-nodeauth": "^3.1.1",
     "@microsoft/vscode-azext-utils": "0.3.7",
+    "@types/antlr4": "^4.11.2",
     "@types/graceful-fs": "^4.1.6",
     "@types/klaw": "^3.0.3",
     "@types/picomatch": "^2.3.0",
     "@vscode/webview-ui-toolkit": "^1.2.2",
+    "@windozer/node-q": "^2.6.0",
+    "antlr4-runtime": "^4.13.0",
+    "antlr4ts": "^0.5.0-alpha.4",
+    "axios": "^1.4.0",
     "azure-arm-resource": "^7.4.0",
     "csv-parser": "^3.0.0",
     "esbuild-plugin-copy": "^2.1.1",
     "extract-zip": "^2.0.1",
     "fs-extra": "^10.1.0",
     "fuse.js": "^6.6.2",
+    "jwt-decode": "^3.1.2",
     "klaw": "^4.1.0",
+    "moment": "^2.29.4",
+    "moment-duration-format": "^2.3.2",
+    "moment-timezone": "^0.5.43",
     "node-fetch": "^2.6.6",
-    "node-q": "^2.6.0",
+    "node-q": "^2.6.1",
     "open": "^6.4.0",
     "picomatch": "^2.3.1",
     "request-promise": "^4.2.6",
+    "semver": "^7.5.3",
     "vscode-extension-telemetry": "^0.4.5",
     "vscode-languageclient": "^8.0.2",
     "vscode-languageserver": "^8.1.0",

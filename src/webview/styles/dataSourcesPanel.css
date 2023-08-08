@@ -40,7 +40,7 @@
 
 .form-wrapper {
   display: block;
-  width: calc(100vw - 190px);
+  width: calc(100vw - 240px);
   float: left;
   overflow: scroll;
 }
@@ -116,7 +116,7 @@
   width: 100%;
 }
 
-#params-wrapper {
+.params-wrapper {
   display: flex;
   flex-wrap: wrap;
   align-content: space-between;

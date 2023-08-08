@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 1998-2023 Kx Systems Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
 import { env } from "node:process";
 import path from "path";
 import { window } from "vscode";
@@ -42,4 +55,27 @@ export function handleQueryResults(
       break;
   }
   return handledResult;
+}
+
+export function convertResultStringToVector(result: string): any[] {
+  const resultRows = result.split("\n").filter((row) => row.length > 0);
+  if (resultRows.length === 1) return resultRows;
+  const resultVector = resultRows
+    .map((row) => row.split(" ").filter((row) => row.length > 0))
+    .filter((row) => !row[0].includes("---"));
+  return resultVector;
+}
+
+export function convertToArrayOfObjects(resultString: string): any[] {
+  const result = convertResultStringToVector(resultString);
+  const keys = result[0];
+  const values = result.slice(1);
+
+  const res = values.map((row) =>
+    row.reduce((obj: { [key: string]: any }, value: any, index: any) => {
+      obj[keys[index]] = value;
+      return obj;
+    }, {})
+  );
+  return res;
 }

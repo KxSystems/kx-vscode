@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 1998-2023 Kx Systems Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
 import path from "path";
 import {
   CancellationToken,
@@ -43,33 +56,28 @@ import {
   removeInsightsConnection,
   runQuery,
 } from "./commands/serverCommand";
-import {
-  hideWalkthrough,
-  showInstallationDetails,
-  showWalkthrough,
-} from "./commands/walkthroughCommand";
+import { showInstallationDetails } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
 import { ExecutionTypes } from "./models/execution";
 import { Insights } from "./models/insights";
 import { QueryResult } from "./models/queryResult";
 import { Server } from "./models/server";
 import {
+  KdbDataSourceProvider,
+  KdbDataSourceTreeItem,
+} from "./services/dataSourceTreeProvider";
+import {
   InsightsNode,
   KdbNode,
   KdbTreeProvider,
 } from "./services/kdbTreeProvider";
-import {
-  KdbDataSourceProvider,
-  KdbDataSourceTreeItem,
-} from "./services/dataSourceTreeProvider";
-import { KdbNode, KdbTreeProvider } from "./services/kdbTreeProvider";
+import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import {
   checkLocalInstall,
-  formatTable,
+  checkOpenSslInstalled,
   getInsights,
   getServers,
   initializeLocalServers,
-  isTable,
 } from "./utils/core";
 import { runQFileTerminal } from "./utils/execution";
 import AuthSettings from "./utils/secretStorage";
@@ -80,12 +88,17 @@ let client: LanguageClient;
 export async function activate(context: ExtensionContext) {
   ext.context = context;
   ext.outputChannel = window.createOutputChannel("kdb");
+  ext.openSslVersion = await checkOpenSslInstalled();
 
   const servers: Server | undefined = getServers();
   const insights: Insights | undefined = getInsights();
 
   ext.serverProvider = new KdbTreeProvider(servers!, insights!);
   ext.dataSourceProvider = new KdbDataSourceProvider();
+  ext.resultsViewProvider = new KdbResultsViewProvider(
+    ext.context.extensionUri
+  );
+
   window.registerTreeDataProvider("kdb-servers", ext.serverProvider);
   window.registerTreeDataProvider(
     "kdb-datasources-explorer",
@@ -107,16 +120,18 @@ export async function activate(context: ExtensionContext) {
   // check for installed q runtime
   await checkLocalInstall();
 
-  // hide walkthrough if requested
-  if (await showWalkthrough()) {
-    commands.executeCommand(
-      "workbench.action.openWalkthrough",
-      "kx.kdb-vscode#qinstallation",
-      false
-    );
-  }
-
   context.subscriptions.push(
+    window.registerWebviewViewProvider(
+      KdbResultsViewProvider.viewType,
+      ext.resultsViewProvider,
+      { webviewOptions: { retainContextWhenHidden: true } }
+    ),
+    commands.registerCommand(
+      "kdb.resultsPanel.update",
+      (results: string, dataSourceType?: string) => {
+        ext.resultsViewProvider.updateResults(results, dataSourceType);
+      }
+    ),
     commands.registerCommand("kdb.connect", async (viewItem: KdbNode) => {
       await connect(viewItem);
     }),
@@ -186,9 +201,6 @@ export async function activate(context: ExtensionContext) {
         await openDataSource(viewItem, context.extensionUri);
       }
     ),
-    commands.registerCommand("kdb.hideWalkthrough", async () => {
-      await hideWalkthrough();
-    }),
     commands.registerCommand("kdb.showInstallationDetails", async () => {
       await showInstallationDetails();
     }),
@@ -228,15 +240,7 @@ export async function activate(context: ExtensionContext) {
     provideTextDocumentContent(uri: Uri): string {
       const result = lastResult!;
 
-      const headers = result.meta.map((m) => m.c);
-      const aligns = result.meta.map((m) => (m.t === "f" ? "." : "1"));
-      const opts = { align: aligns, keys: result.keys };
-      const data = result.data;
-
-      const text: string = isTable(result)
-        ? formatTable(headers, data, opts)
-        : data;
-      return text;
+      return result.result;
     }
   })();
 
@@ -308,8 +312,8 @@ export async function activate(context: ExtensionContext) {
   };
 
   client = new LanguageClient(
-    "kdb+ LangServer",
-    "kdb+ Language Server",
+    "kdb LangServer",
+    "kdb Language Server",
     serverOptions,
     clientOptions
   );
