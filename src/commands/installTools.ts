@@ -5,12 +5,12 @@ import { writeFile } from "node:fs/promises";
 import { env, exit } from "node:process";
 import { join } from "path";
 import {
-  commands,
   ConfigurationTarget,
   InputBoxOptions,
   ProgressLocation,
   QuickPickItem,
   Uri,
+  commands,
   window,
   workspace,
 } from "vscode";
@@ -212,7 +212,7 @@ export async function installTools(): Promise<void> {
         if (await showWalkthrough()) {
           commands.executeCommand(
             "workbench.action.openWalkthrough",
-            "kx.kdb-vscode#qinstallation",
+            "kx.kdb#qinstallation",
             false
           );
         }

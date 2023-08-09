@@ -1,9 +1,9 @@
 {
-  "name": "kdb-vscode",
-  "displayName": "kdb vscode",
-  "description": "Extension to help with q and kdb",
+  "name": "kdb",
+  "displayName": "kdb",
+  "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "preview": true,
   "engines": {
     "vscode": "^1.66.0"
@@ -20,7 +20,16 @@
     }
   },
   "categories": [
-    "Other"
+    "Programming Languages",
+    "Data Science",
+    "Formatters",
+    "Snippets"
+  ],
+  "keywords": [
+    "kdb",
+    "kdb+",
+    "q",
+    "kdb Insights"
   ],
   "activationEvents": [
     "onCommand:kdb.installTools",
@@ -37,7 +46,7 @@
     "walkthroughs": [
       {
         "id": "qinstallation",
-        "title": "Get Started with kdb vscode",
+        "title": "Get Started with kdb",
         "description": "Get started by installing q to work with local kdb processes - q will need to be installed either locally or via this extension.",
         "steps": [
           {
