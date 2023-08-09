@@ -53,6 +53,7 @@ import { ScratchpadResult } from "../models/scratchpadResult";
 import { Server } from "../models/server";
 import { ServerObject } from "../models/serverObject";
 import {
+  getCurrentToken,
   IToken,
   refreshToken,
   signIn,
@@ -367,27 +368,17 @@ export async function getMeta(): Promise<MetaObjectPayload | undefined> {
       ext.connectionNode.details.server
     );
 
-    // get the access token from the secure store
-    const rawToken = await ext.context.secrets.get(
+    const token = await getCurrentToken(
+      ext.connectionNode.details.server,
       ext.connectionNode.details.alias
     );
 
-    let token;
-    if (rawToken !== undefined) {
-      token = JSON.parse(rawToken!);
-      if (new Date(token.accessTokenExpirationDate) < new Date()) {
-        token = await signIn(ext.connectionNode.details.server);
-        ext.context.secrets.store(
-          ext.connectionNode.details.alias,
-          JSON.stringify(token)
-        );
-      }
-    } else {
-      token = await signIn(ext.connectionNode.details.server);
-      ext.context.secrets.store(
-        ext.connectionNode.details.alias,
-        JSON.stringify(token)
+    if (token === undefined) {
+      ext.outputChannel.appendLine(
+        "Error retrieving access token for insights."
       );
+      window.showErrorMessage("Failed to retrieve access token for insights");
+      return undefined;
     }
 
     const options = {
@@ -411,11 +402,18 @@ export async function getDataInsights(
       ext.connectionNode.details.server
     ).toString();
 
-    // get the access token from the secure store
-    const rawToken = await ext.context.secrets.get(
+    const token = await getCurrentToken(
+      ext.connectionNode.details.server,
       ext.connectionNode.details.alias
     );
-    const token = JSON.parse(rawToken!);
+
+    if (token === undefined) {
+      ext.outputChannel.appendLine(
+        "Error retrieving access token for insights."
+      );
+      window.showErrorMessage("Failed to retrieve access token for insights");
+      return undefined;
+    }
 
     const headers = {
       Authorization: `Bearer ${token.accessToken}`,
@@ -461,17 +459,40 @@ export async function importScratchpad(
       ext.connectionNode.details.server
     );
 
-    // get the access token from the secure store
-    const rawToken = await ext.context.secrets.get(
+    const token = await getCurrentToken(
+      ext.connectionNode.details.server,
       ext.connectionNode.details.alias
     );
-    const token = JSON.parse(rawToken!);
+
+    if (token === undefined) {
+      ext.outputChannel.appendLine(
+        "Error retrieving access token for insights."
+      );
+      window.showErrorMessage("Failed to retrieve access token for insights");
+      return undefined;
+    }
 
     const username = jwt_decode<JwtUser>(token.accessToken);
     if (username === undefined || username.preferred_username === "") {
       ext.outputChannel.appendLine(
         "JWT did not contain a valid preferred username"
       );
+    }
+
+    let queryParams;
+    switch (params.selectedType) {
+      case "API":
+        queryParams = {
+          table: params.selectedTable,
+          startTS: params.startTs,
+          endTS: params.endTS,
+        };
+        break;
+      case "SQL":
+        queryParams = { query: params.sql };
+        break;
+      default:
+        break;
     }
 
     const options = {
@@ -482,11 +503,7 @@ export async function importScratchpad(
       body: {
         output: variableName,
         isTableView: false,
-        params: {
-          table: "close",
-          startTS: "2021-07-26T13:58:00.000000000",
-          endTS: "2023-07-26T14:03:00.000000000",
-        },
+        params: queryParams,
       },
       json: true,
     };
@@ -497,6 +514,9 @@ export async function importScratchpad(
     );
 
     ext.outputChannel.append(scratchpadResponse);
+    window.showInformationMessage(
+      `Scratchpad created successfully stored in ${variableName}`
+    );
   }
 }
 
@@ -510,16 +530,30 @@ export async function getScratchpadQuery(
       ext.connectionNode.details.server
     );
 
-    // get the access token from the secure store
-    const rawToken = await ext.context.secrets.get(
+    const token = await getCurrentToken(
+      ext.connectionNode.details.server,
       ext.connectionNode.details.alias
     );
-    const token = JSON.parse(rawToken!);
+
+    if (token === undefined) {
+      ext.outputChannel.appendLine(
+        "Error retrieving access token for insights."
+      );
+      window.showErrorMessage("Failed to retrieve access token for insights");
+      return undefined;
+    }
+
+    const username = jwt_decode<JwtUser>(token.accessToken);
+    if (username === undefined || username.preferred_username === "") {
+      ext.outputChannel.appendLine(
+        "JWT did not contain a valid preferred username"
+      );
+    }
 
     const options = {
       headers: {
         Authorization: `Bearer ${token.accessToken}`,
-        Username: "test",
+        Username: username.preferred_username,
       },
       body: { expression: query, language: "q", context: context || "." },
       json: true,
