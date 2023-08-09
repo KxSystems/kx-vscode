@@ -69,8 +69,8 @@ jobs:
           SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
         with:
           command: monitor
-        on:
-          push:
-            branches:
-              - main
-              - dev
+        if:
+          contains('
+          [refs/heads/main]
+          [refs/heads/dev]
+          ', [github.ref]) 
