@@ -12,27 +12,35 @@ Its main features are editing capabilities for working with q files, and the abi
 ## Contents
 
 [Get started](#get-started)
-Language server
-Connections
-Execute code
-View results
+[Language server](#language-server)
+[Connections](#connections)
+[Execute code](#execute-code)
+[View results](#view-results)
 
 ## Get started
 
-**If you already have q installed**
+**If you already have q installed locally**
 
-    When you install the extension, the message **q runtime installed** is displayed. You are ready to begin.
-
-    <FIXME image of message>
+When you install the extension, the message **q runtime installed** is displayed. You are ready to begin.
 
 **If you do not have q installed**
 
-    When you install the extension, 
+When you install the extension, 
+prompted to install q using the extension
+before you begin, you need to register, get license, install.
+two options
+free trial for a year, personal use only
+ https://kx.com/kdb-personal-edition-download/
+
+ contact our licencing dept to 
+ licadmin@kx.com
 
 
 
-
-
+## Language server
+## Connections
+## Execute code
+## View results
 
 
 
