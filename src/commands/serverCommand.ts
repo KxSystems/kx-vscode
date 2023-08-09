@@ -454,8 +454,35 @@ export async function importScratchpad(
   params: any
 ): Promise<void> {
   if (ext.connectionNode instanceof InsightsNode) {
+    let queryParams, coreUrl;
+    switch (params.selectedType) {
+      case "API":
+        queryParams = {
+          table: params.selectedTable,
+          startTS: params.startTS,
+          endTS: params.endTS,
+        };
+        coreUrl = ext.insightsScratchpadUrls.import;
+        break;
+      case "SQL":
+        queryParams = { query: params.sql };
+        coreUrl = ext.insightsScratchpadUrls.importSql;
+        break;
+      case "QSQL":
+        const assemblyParts = params.selectedTarget.split(" ");
+        queryParams = {
+          assembly: assemblyParts[0],
+          target: assemblyParts[1],
+          query: params.qsql,
+        };
+        coreUrl = ext.insightsScratchpadUrls.importQsql;
+        break;
+      default:
+        break;
+    }
+
     const scratchpadURL = new url.URL(
-      ext.insightsScratchpadUrls.import,
+      coreUrl!,
       ext.connectionNode.details.server
     );
 
@@ -477,22 +504,6 @@ export async function importScratchpad(
       ext.outputChannel.appendLine(
         "JWT did not contain a valid preferred username"
       );
-    }
-
-    let queryParams;
-    switch (params.selectedType) {
-      case "API":
-        queryParams = {
-          table: params.selectedTable,
-          startTS: params.startTs,
-          endTS: params.endTS,
-        };
-        break;
-      case "SQL":
-        queryParams = { query: params.sql };
-        break;
-      default:
-        break;
     }
 
     const options = {

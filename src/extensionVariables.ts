@@ -100,6 +100,8 @@ export namespace ext {
 
   export const insightsScratchpadUrls = {
     import: "servicebroker/scratchpad/import/data",
+    importSql: "servicebroker/scratchpad/import/sql",
+    importQsql: "servicebroker/scratchpad/import/qsql",
   };
 
   export const insightsGrantType = {
