@@ -2,6 +2,14 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
+# 0.1.16
+
+### Internal Improvements
+
+- Renamed to 'kdb'
+
+- Language Server rewrite
+
 # 0.1.15
 
 ### Enhancements

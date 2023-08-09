@@ -88,7 +88,7 @@ export async function activate(context: ExtensionContext) {
   if (await showWalkthrough()) {
     commands.executeCommand(
       "workbench.action.openWalkthrough",
-      "kx.kdb-vscode#qinstallation",
+      "kx.kdb#qinstallation",
       false
     );
   }
@@ -260,7 +260,7 @@ export async function activate(context: ExtensionContext) {
     });
   });
 
-  Telemetry.sendEvent('Extension.Activated');
+  Telemetry.sendEvent("Extension.Activated");
 }
 
 export async function deactivate(): Promise<void> {

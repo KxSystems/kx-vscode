@@ -1,19 +1,35 @@
-import fs from "fs";
+/*
+ * Copyright (c) 1998-2023 Kx Systems Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
+  CallHierarchyIncomingCall,
+  CallHierarchyIncomingCallsParams,
+  CallHierarchyItem,
+  CallHierarchyOutgoingCall,
+  CallHierarchyOutgoingCallsParams,
+  CallHierarchyPrepareParams,
   CompletionItem,
-  CompletionItemKind,
   Connection,
   Diagnostic,
   DiagnosticSeverity,
-  DidChangeWatchedFilesParams,
   DocumentHighlight,
+  DocumentHighlightKind,
   DocumentSymbolParams,
-  FileChangeType,
   Hover,
   InitializeParams,
   Location,
-  PrepareRenameParams,
+  Position,
   Range,
   ReferenceParams,
   RenameParams,
@@ -25,74 +41,57 @@ import {
   SymbolInformation,
   SymbolKind,
   TextDocumentPositionParams,
-  TextDocuments,
   TextDocumentSyncKind,
+  TextDocuments,
   TextEdit,
   WorkspaceEdit,
-  WorkspaceSymbolParams,
 } from "vscode-languageserver/node";
-import { URI } from "vscode-uri";
-import AnalyzerUtil, { Keyword } from "./utils/analyzerUtil";
-import CallHierarchyHandler from "./utils/handlersUtils";
-import { initializeParser, qLangParser } from "./utils/parserUtils";
+import { AnalyzerContent, GlobalSettings, Keyword } from "./utils/analyzer";
 
 export default class QLangServer {
   public connection: Connection;
   public documents: TextDocuments<TextDocument> = new TextDocuments(
     TextDocument
   );
-  public qLangParserRef: CompletionItem[] = [];
-  public hoverMap = new Map<string, string>();
-  private analyzer: AnalyzerUtil;
-  private onCallHierarchy: CallHierarchyHandler;
+  public defaultSettings: GlobalSettings = { maxNumberOfProblems: 1000 };
+  public globalSettings: GlobalSettings = this.defaultSettings;
+  public documentSettings: Map<string, Thenable<GlobalSettings>> = new Map();
+  public analyzer: AnalyzerContent;
 
-  private constructor(connection: Connection, analyzer: AnalyzerUtil) {
+  private constructor(connection: Connection, analyzer: AnalyzerContent) {
     this.connection = connection;
     this.analyzer = analyzer;
-    this.qLangParserRef = qLangParser;
     this.documents.listen(this.connection);
-    // on actions
-    this.documents.onDidChangeContent(this.onDidChangeContent.bind(this));
-    this.connection.onHover(this.onHover.bind(this));
-    this.connection.onDefinition(this.onDefinition.bind(this));
-    this.connection.onWorkspaceSymbol(this.onWorkspaceSymbol.bind(this));
-    this.connection.onDidChangeWatchedFiles(
-      this.onDidChangeWatchedFiles.bind(this)
+    this.documents.onDidClose((e) => {
+      this.documentSettings.delete(e.document.uri);
+    });
+    this.documents.onDidChangeContent((change) => {
+      this.validateTextDocument(change.document);
+    });
+    this.connection.onNotification("analyzeSourceCode", (config) =>
+      this.analyzer.analyzeWorkspace(config)
     );
-    this.connection.onDocumentHighlight(this.onDocumentHighlight.bind(this));
-    this.connection.onReferences(this.onReferences.bind(this));
-    this.connection.onDocumentSymbol(this.onDocumentSymbol.bind(this));
     this.connection.onCompletion(this.onCompletion.bind(this));
     this.connection.onCompletionResolve(this.onCompletionResolve.bind(this));
-    this.connection.onPrepareRename(this.onPrepareRename.bind(this));
+    this.connection.onHover(this.onHover.bind(this));
+    this.connection.onDocumentHighlight(this.onDocumentHighlight.bind(this));
+    this.connection.onDefinition(this.onDefinition.bind(this));
+    this.connection.onDocumentSymbol(this.onDocumentSymbol.bind(this));
+    this.connection.onReferences(this.onReferences.bind(this));
     this.connection.onRenameRequest(this.onRenameRequest.bind(this));
-    this.connection.onSignatureHelp(this.onSignatureHelp.bind(this));
-    // analyzer
-    this.connection.onNotification("analyzeServerCache", (code) =>
-      this.analyzer.analyzeServerCache(code)
-    );
-    this.connection.onNotification("analyzeSourceCode", (cfg) =>
-      this.analyzer.analyzeWorkspace(cfg)
-    );
-    this.connection.onNotification("prepareOnHover", (hoverItems) =>
-      this.generateHoverMap(hoverItems)
-    );
-    this.connection.onRequest("onQueryBlock", (params) =>
-      this.onQueryBlock(params)
-    );
-    // languages
-    this.onCallHierarchy = new CallHierarchyHandler(analyzer);
-    this.connection.languages.callHierarchy.onPrepare(
-      this.onCallHierarchy.onPrepare.bind(this)
-    );
-    this.connection.languages.callHierarchy.onIncomingCalls(
-      this.onCallHierarchy.onIncomingCalls.bind(this)
-    );
-    this.connection.languages.callHierarchy.onOutgoingCalls(
-      this.onCallHierarchy.onOutgoingCalls.bind(this)
-    );
+    // Semantic Tokens
     this.connection.languages.semanticTokens.on(
       this.onSemanticsTokens.bind(this)
+    );
+    // Call Hierarchy
+    this.connection.languages.callHierarchy.onPrepare(
+      this.onPrepareCallHierarchy.bind(this)
+    );
+    this.connection.languages.callHierarchy.onIncomingCalls(
+      this.onIncomingCallsCallHierarchy.bind(this)
+    );
+    this.connection.languages.callHierarchy.onOutgoingCalls(
+      this.onOutgoingCallsCallHierarchy.bind(this)
     );
   }
 
@@ -100,33 +99,38 @@ export default class QLangServer {
     connection: Connection,
     { workspaceFolders }: InitializeParams
   ): Promise<QLangServer> {
-    const workspaceFolder = workspaceFolders ? workspaceFolders[0].uri : "";
-    const parser = await initializeParser();
-    return AnalyzerUtil.fromRoot(connection, workspaceFolder, parser).then(
-      (analyzer) => {
-        return new QLangServer(connection, analyzer);
-      }
+    // Get the URI of the root folder, if it exists.
+    const rootUri = workspaceFolders ? workspaceFolders[0].uri : "";
+    const analyzer = await AnalyzerContent.fromRoot(connection, rootUri);
+    const server = new QLangServer(connection, analyzer);
+    // Write a console message to indicate that the server is being initialized.
+    server.writeConsoleMsg(
+      "Initializing QLang Language Server for QLang VSCode extension",
+      "info"
     );
+
+    return server;
   }
 
   public capabilities(): ServerCapabilities {
     return {
+      // The kind of text document synchronization that the server supports.
       textDocumentSync: TextDocumentSyncKind.Full,
-      completionProvider: {
-        resolveProvider: true,
-      },
+      // Whether the server supports resolving additional information for a completion item.
+      completionProvider: { resolveProvider: true },
+      // Whether the server supports providing hover information for a symbol.
       hoverProvider: true,
+      // Whether the server supports providing document highlights for a symbol.
       documentHighlightProvider: true,
+      // Whether the server supports providing definitions for a symbol.
       definitionProvider: true,
+      // Whether the server supports providing symbols for a document.
       documentSymbolProvider: true,
-      workspaceSymbolProvider: true,
+      // Whether the server supports finding references to a symbol.
       referencesProvider: true,
-      renameProvider: {
-        prepareProvider: true,
-      },
-      signatureHelpProvider: {
-        triggerCharacters: ["[", ";"],
-      },
+      // Whether the server supports renaming a symbol.
+      renameProvider: { prepareProvider: true },
+      // Whether the server supports providing semantic tokens for a document.
       semanticTokensProvider: {
         documentSelector: null,
         legend: {
@@ -135,312 +139,10 @@ export default class QLangServer {
         },
         full: true,
       },
+      // Whether the server supports providing call hierarchy information for a symbol.
       callHierarchyProvider: true,
     };
   }
-
-  // Getters
-  private getKeywordAtPosition(
-    params: ReferenceParams | TextDocumentPositionParams
-  ): Keyword | null {
-    return this.analyzer.getKeywordAtPosition(
-      params.textDocument.uri,
-      params.position
-    );
-  }
-
-  private getSignatureHelpAtPosition(
-    params: ReferenceParams | TextDocumentPositionParams
-  ): SignatureHelp | undefined {
-    const node = this.analyzer.getNonNullNodeAtPosition(
-      params.textDocument.uri,
-      params.position
-    );
-    if (node) {
-      const callNode = this.analyzer.getCallNode(node);
-      const signatureHelp = this.analyzer.getSignatureHelp(
-        callNode?.firstNamedChild?.text ?? ""
-      );
-      if (callNode && signatureHelp) {
-        let index = -1;
-        for (const child of callNode.namedChildren) {
-          if (node.startIndex > child.endIndex) index += 1;
-        }
-        signatureHelp.activeParameter = index;
-        return signatureHelp;
-      }
-    }
-    return undefined;
-  }
-
-  // on actions funcs
-
-  private onCompletion(params: TextDocumentPositionParams): CompletionItem[] {
-    const keyword = this.getKeywordAtPosition({
-      ...params,
-      position: {
-        line: params.position.line,
-        character: Math.max(params.position.character - 1, 0),
-      },
-    });
-
-    let symbols: string[] = [];
-    let localId: CompletionItem[] = [];
-    let globalId: CompletionItem[] = [];
-    let completionItem: CompletionItem[] = [];
-
-    if (keyword?.text.startsWith(".")) {
-      completionItem = this.qLangParserRef.filter((item) =>
-        String(item.label).startsWith(".")
-      );
-      globalId = this.analyzer
-        .getServerIds()
-        .filter((item) => String(item.label).startsWith("."))
-        .concat(
-          this.analyzer
-            .getAllSymbols()
-            .filter((symbol) => String(symbol.name).startsWith("."))
-            .map((symbol) => {
-              return {
-                label: symbol.name,
-                kind:
-                  symbol.kind === SymbolKind.Function
-                    ? CompletionItemKind.Method
-                    : CompletionItemKind.Variable,
-                detail: symbol.containerName,
-              };
-            })
-        );
-      const flags = new Map<string, boolean>();
-      completionItem.forEach((item) => flags.set(item.label, true));
-      globalId.forEach((item) => {
-        if (!flags.get(item.label)) {
-          completionItem.push(item);
-          flags.set(item.label, true);
-        }
-      });
-    } else if (keyword?.text.startsWith("`")) {
-      symbols = this.analyzer.getSymbolsForUri(params.textDocument.uri);
-      new Set(symbols).forEach((symbol) => {
-        completionItem.push({ label: symbol, kind: CompletionItemKind.Enum });
-      });
-    } else {
-      completionItem = this.qLangParserRef.filter((item) =>
-        String(item.label).startsWith(keyword?.text ? keyword.text : "")
-      );
-      localId = this.analyzer
-        .getServerIds()
-        .filter((id) => !id.label.startsWith("."))
-        .concat(
-          this.analyzer
-            .getLocalIds(params.textDocument.uri, keyword?.containerName ?? "")
-            .map((symbol) => {
-              return {
-                label: symbol.name,
-                kind:
-                  symbol.kind === SymbolKind.Function
-                    ? CompletionItemKind.Method
-                    : CompletionItemKind.Variable,
-              };
-            })
-        );
-      const flags = new Map<string, boolean>();
-      completionItem.forEach((item) => {
-        flags.set(item.label, true);
-      });
-      localId.forEach((item) => {
-        if (!flags.get(item.label)) {
-          completionItem.push(item);
-          flags.set(item.label, true);
-        }
-      });
-    }
-    completionItem = this.removeDuplicateEntries(completionItem);
-    return completionItem;
-  }
-
-  private async onCompletionResolve(
-    item: CompletionItem
-  ): Promise<CompletionItem> {
-    if (item.label.startsWith(".")) {
-      item.label = item.label.slice(1);
-    }
-    return item;
-  }
-
-  private onDefinition(params: TextDocumentPositionParams): Location[] {
-    const keyword = this.getKeywordAtPosition(params);
-    if (!keyword) {
-      return [];
-    } else if (keyword.text.startsWith("`.")) {
-      keyword.text = keyword.text.substring(1);
-    }
-    return this.analyzer.getDefinitionByUriKeyword(
-      params.textDocument.uri,
-      keyword
-    );
-  }
-
-  private onDidChangeContent(_change: any): void {
-    this.analyzer.analyzeDocument(_change.document.uri, _change.document);
-    this.analyzer.analyzeLoadFiles(_change.document.uri);
-    const diagnostics = this.validateTextDocument(_change.document);
-    this.connection.sendDiagnostics({ uri: _change.document.uri, diagnostics });
-  }
-
-  private onDidChangeWatchedFiles(change: DidChangeWatchedFilesParams): void {
-    const changedFiles: string[] = [];
-    change.changes.forEach((event) => {
-      if (event.type === FileChangeType.Deleted) {
-        this.analyzer.remove(event.uri);
-      } else {
-        changedFiles.push(event.uri);
-      }
-    });
-    changedFiles.forEach((file) => {
-      const filepath = URI.parse(file).fsPath;
-      if (!AnalyzerUtil.matchFile(filepath)) return;
-      try {
-        this.analyzer.analyzeDocument(
-          file,
-          TextDocument.create(file, "q", 1, fs.readFileSync(filepath, "utf8"))
-        );
-        this.analyzer.analyzeLoadFiles(file);
-      } catch (error) {
-        this.connection.console.warn(`Cannot analyze ${file}`);
-      }
-    });
-  }
-
-  private onDocumentHighlight(
-    params: TextDocumentPositionParams
-  ): DocumentHighlight[] | null {
-    const keyword = this.getKeywordAtPosition(params);
-    if (!keyword) {
-      return [];
-    }
-    return this.analyzer
-      .getSyntaxNodeLocationsByUriKeyword(params.textDocument.uri, keyword)
-      .map((syn) => {
-        return { range: syn.range };
-      });
-  }
-
-  private onDocumentSymbol(params: DocumentSymbolParams): SymbolInformation[] {
-    return this.analyzer.getSymbolsByUri(params.textDocument.uri);
-  }
-
-  private async onHover(
-    params: TextDocumentPositionParams
-  ): Promise<Hover | null> {
-    const keyword = this.getKeywordAtPosition(params);
-    if (!keyword) {
-      return null;
-    }
-    const ref = this.qLangParserRef.filter(
-      (item) => item.label === keyword.text
-    )[0];
-    if (ref) {
-      const content = {
-        language: "q",
-        value: ("/ " + ref.detail + "\n" + ref.documentation) as string,
-      };
-      return { contents: content };
-    }
-    if (this.hoverMap.has(keyword.text)) {
-      const content = {
-        language: "q",
-        value: this.hoverMap.get(keyword.text) ?? "",
-      };
-      return { contents: content };
-    }
-    return null;
-  }
-
-  private onPrepareRename(params: PrepareRenameParams): Range | null {
-    const keyword = this.getKeywordAtPosition(params);
-    if (
-      keyword?.type === "local_identifier" ||
-      keyword?.type === "global_identifier"
-    ) {
-      return keyword.range;
-    }
-    return null;
-  }
-
-  private onQueryBlock(params: TextDocumentPositionParams): {
-    query: string;
-    number: number;
-  } {
-    const node = this.analyzer.getNodeAtPosition(
-      params.textDocument.uri,
-      params.position
-    );
-    if (node) {
-      const blockNode = this.analyzer.getLv1Node(node);
-      return { query: blockNode.text, number: blockNode.endPosition.row + 1 };
-    } else {
-      return { query: "", number: 0 };
-    }
-  }
-
-  private onReferences(params: ReferenceParams): Location[] | null {
-    const keyword = this.getKeywordAtPosition(params);
-    if (!keyword) {
-      return null;
-    } else if (keyword.text.startsWith("`.")) {
-      keyword.type = "global_identifier";
-      keyword.text = keyword.text.substring(1);
-    }
-    return this.analyzer.findReferences(keyword, params.textDocument.uri);
-  }
-
-  private onRenameRequest(
-    params: RenameParams
-  ): WorkspaceEdit | null | undefined {
-    const keyword = this.getKeywordAtPosition(params);
-    const changes: { [uri: string]: TextEdit[] } = {};
-    if (keyword) {
-      const locations = this.analyzer.findReferences(
-        keyword,
-        params.textDocument.uri
-      );
-      locations.forEach((location) => {
-        const uri = location.uri;
-        const range = location.range;
-        const textEdit = TextEdit.replace(range, params.newName);
-
-        if (!changes[uri]) {
-          changes[uri] = [textEdit];
-        } else {
-          changes[uri].push(textEdit);
-        }
-      });
-    }
-    if (Object.keys(changes).length > 0) {
-      return { changes };
-    }
-    return null;
-  }
-
-  private onSemanticsTokens(params: SemanticTokensParams): SemanticTokens {
-    const document = params.textDocument;
-    return this.analyzer.getSemanticTokens(document.uri);
-  }
-
-  private onSignatureHelp(
-    params: SignatureHelpParams
-  ): SignatureHelp | undefined {
-    return this.getSignatureHelpAtPosition(params);
-  }
-
-  private onWorkspaceSymbol(
-    params: WorkspaceSymbolParams
-  ): SymbolInformation[] {
-    return this.analyzer.search(params.query);
-  }
-
-  // misc funcs
 
   public debugWithLogs(
     request: string,
@@ -450,43 +152,272 @@ export default class QLangServer {
   ) {
     const where = place ? place : " not specified ";
     const isKeyword = keyword ? `keyword=${JSON.stringify(keyword)}` : "";
-    this.connection.console.info(
-      `${request} ${isKeyword} msg=${msg} where?: ${where}`
+    this.writeConsoleMsg(
+      `${request} ${isKeyword} msg=${msg} where?: ${where}`,
+      "warn"
     );
   }
 
-  private removeDuplicateEntries(
-    completionItem: CompletionItem[]
-  ): CompletionItem[] {
-    completionItem = completionItem.filter(
-      (value, index, self) =>
-        index === self.findIndex((t) => t.label === value.label)
-    );
-    return completionItem;
-  }
-
-  private generateHoverMap(hoverItems: string[][]): void {
-    this.hoverMap = new Map<string, string>();
-    for (const item of hoverItems) {
-      this.hoverMap.set(item[0], item[1]);
+  public writeConsoleMsg(msg: string, type: string): void {
+    switch (type) {
+      case "error":
+        this.connection.console.error(msg);
+        break;
+      case "warn":
+        this.connection.console.warn(msg);
+        break;
+      case "info":
+      default:
+        this.connection.console.info(msg);
+        break;
     }
   }
 
-  private validateTextDocument(textDocument: TextDocument): Diagnostic[] {
+  private onCompletion(params: TextDocumentPositionParams): CompletionItem[] {
+    const keyword = this.getKeyword(params);
+    if (!keyword) {
+      return [];
+    }
+    return this.analyzer.getCompletionItems(keyword);
+  }
+
+  private async onCompletionResolve(
+    item: CompletionItem
+  ): Promise<CompletionItem> {
+    return item;
+  }
+
+  private async onHover(
+    params: TextDocumentPositionParams
+  ): Promise<Hover | null> {
+    const keyword = this.getEntireKeyword(params);
+    if (!keyword) {
+      return null;
+    }
+    return this.analyzer.getHoverInfo(keyword);
+  }
+
+  // TODO: Document highlight
+  private onDocumentHighlight(
+    params: TextDocumentPositionParams
+  ): DocumentHighlight[] | null {
+    const position = params.position;
+    return [
+      DocumentHighlight.create(
+        {
+          start: { line: position.line + 1, character: position.character },
+          end: { line: position.line + 1, character: position.character + 5 },
+        },
+        DocumentHighlightKind.Write
+      ),
+    ];
+  }
+
+  private onDefinition(params: TextDocumentPositionParams): Location[] {
+    let keyword = this.getKeyword(params);
+    if (!keyword) {
+      return [];
+    }
+
+    // If the keyword starts with a dot followed by a space, remove the dot from the keyword text.
+    if (keyword.startsWith(". ")) {
+      keyword = keyword.substring(2);
+    }
+    // Otherwise, if the keyword starts with a dot, remove the dot from the keyword text.
+    else if (keyword.startsWith(".")) {
+      keyword = keyword.substring(1);
+    }
+    keyword = keyword + ":";
+    const definitions = this.analyzer.getDefinitions(keyword);
+    if (!definitions) {
+      return [];
+    }
+
+    return definitions.map((definition) => {
+      return Location.create(
+        definition.uri,
+        Range.create(
+          Position.create(
+            definition.range.start.line,
+            definition.range.start.character
+          ),
+          Position.create(
+            definition.range.end.line,
+            definition.range.end.character
+          )
+        )
+      );
+    });
+  }
+
+  private onDocumentSymbol(params: DocumentSymbolParams): SymbolInformation[] {
+    const document = this.documents.get(params.textDocument.uri);
+    if (document) {
+      return this.analyzer.getSymbols(document);
+    }
+    return [];
+  }
+
+  public onPrepareCallHierarchy({
+    textDocument,
+    position,
+  }: CallHierarchyPrepareParams): CallHierarchyItem[] {
+    const document = this.documents.get(textDocument.uri);
+    if (!document) {
+      return [];
+    }
+    const range = this.getCurrentWordRange(position, document);
+    if (!range) {
+      return [];
+    }
+    const keyword = document.getText(range);
+    const symbolInformation = this.analyzer
+      .getSymbolsByUri(textDocument.uri)
+      .filter((symbol) => symbol.name === keyword);
+    if (
+      symbolInformation.length > 0 &&
+      symbolInformation[0].kind === SymbolKind.Function
+    ) {
+      return [
+        {
+          name: keyword,
+          kind: SymbolKind.Function,
+          uri: textDocument.uri,
+          range: range,
+          selectionRange: range,
+        },
+      ];
+    }
+    return [];
+  }
+
+  public onIncomingCallsCallHierarchy({
+    item,
+  }: CallHierarchyIncomingCallsParams): CallHierarchyIncomingCall[] {
+    const containerName = item.name;
+    if (!containerName) {
+      return [];
+    }
+    const items = this.analyzer.getCallHierarchyItemByKeyword(containerName);
+    return items.map((item) => ({ from: item, fromRanges: [item.range] }));
+  }
+
+  public onOutgoingCallsCallHierarchy({
+    item,
+  }: CallHierarchyOutgoingCallsParams): CallHierarchyOutgoingCall[] {
+    const globalId = this.analyzer.getGlobalIdByUriContainerName(
+      item.uri,
+      item.name
+    );
+    return globalId
+      .map((keyword: string) =>
+        this.analyzer.getCallHierarchyItemByKeyword(keyword)
+      )
+      .flat(1)
+      .map((el) => ({ to: el, fromRanges: [el.range] }));
+  }
+
+  private onReferences(params: ReferenceParams): Location[] | null {
+    const document = this.documents.get(params.textDocument.uri);
+    if (!document) {
+      return [];
+    }
+
+    const position = params.position;
+    const wordRange = this.analyzer.getWordRangeAtPosition(document, position);
+    if (!wordRange) {
+      return [];
+    }
+
+    const word = document.getText(wordRange);
+    this.writeConsoleMsg(`onReferences: word=${word}`, "info");
+    return this.analyzer.getReferences(word, document);
+  }
+
+  private onRenameRequest({
+    textDocument,
+    position,
+    newName,
+  }: RenameParams): WorkspaceEdit | null | undefined {
+    // Create a new TextDocumentPositionParams object with the textDocument and position properties.
+    const params: TextDocumentPositionParams = { textDocument, position };
+    // Get the keyword at the given position in the document.
+    const keyword = this.getKeyword(params);
+    const document = this.documents.get(params.textDocument.uri);
+    // If there is no keyword, return null.
+    if (!keyword || !document) {
+      return null;
+    }
+    // Find all references to the symbol in the document and create a workspace edit to rename them.
+    const locations = this.analyzer.getReferences(keyword, document);
+    const changes = locations.reduce((acc, location) => {
+      const uri = location.uri;
+      const range = location.range;
+      const textEdit = TextEdit.replace(range, newName);
+      if (!acc[uri]) {
+        acc[uri] = [textEdit];
+      } else {
+        acc[uri].push(textEdit);
+      }
+      return acc;
+    }, {} as { [uri: string]: TextEdit[] });
+    // If there are changes, return a workspace edit with the changes.
+    if (Object.keys(changes).length > 0) {
+      return { changes };
+    }
+    // Otherwise, return null.
+    return null;
+  }
+
+  private onSignatureHelp({
+    textDocument,
+    position,
+  }: SignatureHelpParams): SignatureHelp | undefined {
+    const params: TextDocumentPositionParams = { textDocument, position };
+    return undefined;
+  }
+
+  private getDocumentSettings(resource: string): Thenable<GlobalSettings> {
+    let result = this.documentSettings.get(resource);
+    if (!result) {
+      result = this.connection.workspace.getConfiguration({
+        scopeUri: resource,
+        section: "qLanguageServer",
+      });
+      this.documentSettings.set(resource, result);
+    }
+    return result;
+  }
+
+  private onSemanticsTokens({
+    textDocument,
+  }: SemanticTokensParams): SemanticTokens {
+    // Get the semantic tokens for the given document.
+    const tokens = this.analyzer.getSemanticTokens(textDocument?.uri);
+    // If there are tokens, return them.
+    return tokens ?? { data: [] };
+  }
+
+  private async validateTextDocument(
+    textDocument: TextDocument
+  ): Promise<void> {
+    const settings = await this.getDocumentSettings(textDocument.uri);
     const text = textDocument.getText();
-    const pattern = /^[}\])]/gm;
+    const pattern = /\b[A-Z]{2,}\b/g;
     let m: RegExpExecArray | null;
 
+    let problems = 0;
     const diagnostics: Diagnostic[] = [];
-    while ((m = pattern.exec(text)) !== null) {
+    while ((m = pattern.exec(text)) && problems < 1000) {
+      problems++;
       const diagnostic: Diagnostic = {
-        severity: DiagnosticSeverity.Error,
+        severity: DiagnosticSeverity.Warning,
         range: {
           start: textDocument.positionAt(m.index),
           end: textDocument.positionAt(m.index + m[0].length),
         },
-        message: `require a space before ${m[0]}`,
-        source: "q-lang-server",
+        message: `${m[0]} is all uppercase.`,
+        source: "ex",
       };
       diagnostic.relatedInformation = [
         {
@@ -494,11 +425,57 @@ export default class QLangServer {
             uri: textDocument.uri,
             range: Object.assign({}, diagnostic.range),
           },
-          message: "Multiline expressions",
+          message: "Spelling matters",
+        },
+        {
+          location: {
+            uri: textDocument.uri,
+            range: Object.assign({}, diagnostic.range),
+          },
+          message: "Particularly for names",
         },
       ];
+
       diagnostics.push(diagnostic);
     }
-    return diagnostics;
+
+    this.connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
+  }
+
+  private getKeyword(params: TextDocumentPositionParams): string | undefined {
+    const document = this.documents.get(params.textDocument.uri);
+    if (document) {
+      return this.analyzer.getCurrentWord(params, document);
+    } else return undefined;
+  }
+
+  private getEntireKeyword(
+    params: TextDocumentPositionParams
+  ): string | undefined {
+    const document = this.documents.get(params.textDocument.uri);
+    if (document) {
+      return this.analyzer.getCurrentEntireWord(params, document);
+    } else return undefined;
+  }
+
+  private getCurrentWordRange(
+    position: Position,
+    document: TextDocument
+  ): Range | undefined {
+    const text = document.getText();
+    const wordRegex = /[\w]+(?:[^\w\s\.][\w]+)*/g;
+    let match;
+    while ((match = wordRegex.exec(text))) {
+      const start = match.index;
+      const end = start + match[0].length;
+      const range = Range.create(
+        document.positionAt(start),
+        document.positionAt(end)
+      );
+      if (range) {
+        return range;
+      }
+    }
+    return undefined;
   }
 }
