@@ -21,6 +21,7 @@ import {
   commands,
   InputBoxOptions,
   Position,
+  ProgressLocation,
   QuickPickItem,
   QuickPickOptions,
   Range,
@@ -519,14 +520,31 @@ export async function importScratchpad(
       json: true,
     };
 
-    const scratchpadResponse = await requestPromise.post(
-      scratchpadURL.toString(),
-      options
-    );
+    window.withProgress(
+      {
+        location: ProgressLocation.Notification,
+        cancellable: false,
+      },
+      async (progress, token) => {
+        token.onCancellationRequested(() => {
+          ext.outputChannel.appendLine("User cancelled the installation.");
+        });
 
-    ext.outputChannel.append(scratchpadResponse);
-    window.showInformationMessage(
-      `Scratchpad created successfully stored in ${variableName}`
+        progress.report({ message: "Scratchpad creating..." });
+
+        const scratchpadResponse = await requestPromise.post(
+          scratchpadURL.toString(),
+          options
+        );
+
+        ext.outputChannel.append(scratchpadResponse);
+        window.showInformationMessage(
+          `Scratchpad created successfully, stored in ${variableName}`
+        );
+
+        const p = new Promise<void>((resolve) => resolve());
+        return p;
+      }
     );
   }
 }
@@ -570,12 +588,30 @@ export async function getScratchpadQuery(
       json: true,
     };
 
-    const scratchpadResponse = await requestPromise.post(
-      scratchpadURL.toString(),
-      options
-    );
+    let spResponse;
+    window.withProgress(
+      {
+        location: ProgressLocation.Notification,
+        title: "Query executing...",
+        cancellable: false,
+      },
+      async (progress, token) => {
+        token.onCancellationRequested(() => {
+          ext.outputChannel.appendLine("User cancelled the installation.");
+        });
 
-    return scratchpadResponse;
+        progress.report({ message: "Query is executing..." });
+
+        spResponse = await requestPromise.post(
+          scratchpadURL.toString(),
+          options
+        );
+
+        const p = new Promise<void>((resolve) => resolve());
+        return p;
+      }
+    );
+    return spResponse;
   }
   return undefined;
 }
