@@ -9,9 +9,13 @@ Its main features are editing capabilities for working with q files, and the abi
 ## Contents
 
 [Get started](#get-started)
+
 [Editing features](#editing-features)
+
 [Connections](#connections)
+
 [Execute code](#execute-code)
+
 [View results](#view-results)
 
 ## Get started
