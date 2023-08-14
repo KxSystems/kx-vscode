@@ -33,7 +33,6 @@ When you install the extension, the message **q runtime installed** is displayed
 When you install the extension, you are instructed to do one of the following:
 
 - [Install q locally](https://code.kx.com/q/learn/install)
-- 
 - [Install q using the extension](#install-q-using-the-extension)
 
 **Install q using the extension**
