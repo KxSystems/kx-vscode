@@ -33,26 +33,39 @@ When you install the extension, the message **q runtime installed** is displayed
 When you install the extension, you are instructed to do one of the following:
 
 - [Install q locally](https://code.kx.com/q/learn/install)
+- 
 - [Install q using the extension](#install-q-using-the-extension)
 
 **Install q using the extension**
 
 Click **Install runtime**.
+
     You are prompted to provide a license key.
+    
     - If you have a license key, click **Select/Enter a license**
+    
         Choose one of the following options:
+	
 	- Paste license string
+ 
 		Paste your base64 encoded license string. This is provided by KX in an email.
+  
 	- Select license file
+ 
 		If KX provided a license file, which you downloaded, choose this option and specify the file.
+  
 	A success message is displayed and you can [start q](#start-q).
+ 
     - If you do not have a license key, click **Acquire license**.
+    
         At the prompt, click **Open** to go to https://kx.com/kdb-personal-edition-download, where you can sign up for our 12-month free trial of kdb+ Personal Edition. You can alternatively contact our licensing department at licadmin@kx.com if you want to buy a full commercial license.
 
 When you receive a license email from KX, return to Visual Studio Code and click **Continue** at the prompt in the bottom right-hand corner. From here, you are prompted to specify a license key string or file as above.
+
     A success notice is displayed and you can [start q](#start-q).
 
 Note
+
 Ensure that the system variable [QHOME](FIXME) is defined and that the location of your q folder is specified in the *Path* system variable.
 
 ### Start q
