@@ -37,7 +37,7 @@ When you install the extension, you are instructed to do one of the following:
 
 **Install q using the extension**
 
-1. Click **Install runtime**.
+Click **Install runtime**.
     You are prompted to provide a license key.
     - If you have a license key, click **Select/Enter a license**
         Choose one of the following options:
