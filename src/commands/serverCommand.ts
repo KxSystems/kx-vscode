@@ -353,6 +353,8 @@ export async function connectInsights(viewItem: InsightsNode): Promise<void> {
     viewItem.label + " (connected)",
   ]);
 
+  commands.executeCommand("setContext", "kdb.insightsConnected", true);
+
   ext.connectionNode = viewItem;
   ext.serverProvider.reload();
   refreshDataSourcesPanel();
@@ -507,6 +509,7 @@ export async function removeInsightsConnection(
 
 export async function connect(viewItem: KdbNode): Promise<void> {
   commands.executeCommand("kdb-results.focus");
+  await commands.executeCommand("setContext", "kdb.insightsConnected", false);
   // handle cleaning up existing connection
   if (
     ext.connectionNode !== undefined &&
@@ -599,6 +602,7 @@ export async function connect(viewItem: KdbNode): Promise<void> {
 export async function disconnect(): Promise<void> {
   ext.connection?.disconnect();
   await commands.executeCommand("setContext", "kdb.connected", false);
+  commands.executeCommand("setContext", "kdb.insightsConnected", false);
   ext.connectionNode = undefined;
   const queryConsole = ExecutionConsole.start();
   queryConsole.dispose();
