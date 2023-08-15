@@ -20,7 +20,7 @@ Its main features are editing capabilities for working with q files, and the abi
 
 ## Get started
 
-a few words about the process, so install q, start q and connect q to vscode
+a few words about the process, so install q, start q, configue connection, and connect q to vscode
 
 ### Install q
 
@@ -63,7 +63,7 @@ Ensure that the system variable [QHOME](FIXME) is defined and that the location 
 
 If you just installed q using the extension, the last prompt is to **Start q**.
 
-At any other time, type **q* at the command prompt.
+At any other time, type **q* at a command prompt.
 
 From the extension, you can now [connect directly to a q session](#connect-to-a-q-session), or to an [instance of kdb Insights Enterprise](connect-to-an-instance-of-kdb-insights-enterprise).
 
@@ -89,14 +89,20 @@ We provide these connection types:
 Use these steps:
 
 1. Enable the q process to communicate with Visual Studio Code.
+ 
     To do this, [set the q process to listen on a port](https://code.kx.com/q/basics/ipc). Make a note of the port number that you use; you need this in the next step to connect Visual Studio Code to the port.
 
-1. Specify details of the port in Visual Studio Code.
+1. Configure the connection in Visual Studio Code.
+
     To do this, click **Connect to kdb server** in the KX side bar.
+   
     FIXME image connecttokdbserver.jpg
+   
     If this button is not displayed, select **Add new connection** from the context menu.
+   
     FIXME image addnewconnection.jpg
-    At the prompt, select *Enter a kdb endpoint* and respond to the prompts:
+   
+    Select *Enter a kdb endpoint* and respond to the prompts:
     
     *Enter a name or alias for the connection*
 
@@ -113,12 +119,13 @@ Use these steps:
     
     *Enable TLS encryption on kdb connection (optional)*
     
-1. Tell the Visual Studio Code extension which port to connect to.
+1. Tell the Visual Studio Code extension which configuration to connect to.
 
-    To do this,
-
-
+    To do this, right-click the relevant connection configuration in the KX side bar and select **Connect kdb server**.
     
+    A success message is displayed in the bottom, right-hand corner of the screen.
+
+    FIXME You can now ???
 
 ### Connect to an instance of kdb Insights Enterprise
 
@@ -127,17 +134,19 @@ Use these steps:
 1. Specify details of the kdb Insights Enterprise endpoint in Visual Studio Code.
     To do this, click **Connect to kdb server** in the KX side bar.
     FIXME image connecttokdbserver.jpg
-    At the prompt, select *Connect to kdb Insights Enterprise* and respond to the prompts:
+    Select *Connect to kdb Insights Enterprise* and respond to the prompts:
 
     *Enter a name or alias for the connection*
 
     *Enter the Insights endpoint URL*
 
-1. Tell the Visual Studio Code extension which port to connect to.
+1. Tell the Visual Studio Code extension which instance of kdb Insights Enterprise to connect to.
 
-    To do this,
+    To do this, right-click the relevant connection configuration in the KX side bar and select **Connect to Insights**.
 
-   connecttoinsightscontext.jpg
+    FIXME image connecttoinsightscontext.jpg
+
+    The instance of kdb Insights Enterprise is displayed.
 
 
 ## Editing features
