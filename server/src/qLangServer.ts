@@ -62,11 +62,14 @@ export default class QLangServer {
     this.connection = connection;
     this.analyzer = analyzer;
     this.documents.listen(this.connection);
+    this.documents.onDidSave(() => {
+      this.analyzer.analyzeWorkspace();
+    });
     this.documents.onDidClose((e) => {
       this.documentSettings.delete(e.document.uri);
     });
-    this.documents.onDidChangeContent((change) => {
-      this.validateTextDocument(change.document);
+    this.documents.onDidChangeContent(async (change) => {
+      await this.validateTextDocument(change.document);
     });
     this.connection.onNotification("analyzeSourceCode", (config) =>
       this.analyzer.analyzeWorkspace(config)
@@ -214,20 +217,19 @@ export default class QLangServer {
   }
 
   private onDefinition(params: TextDocumentPositionParams): Location[] {
-    let keyword = this.getKeyword(params);
-    if (!keyword) {
+    const document = this.documents.get(params.textDocument.uri);
+    if (!document) {
       return [];
     }
 
-    // If the keyword starts with a dot followed by a space, remove the dot from the keyword text.
-    if (keyword.startsWith(". ")) {
-      keyword = keyword.substring(2);
+    const position = params.position;
+    const wordRange = this.analyzer.getWordRangeAtPosition(document, position);
+    if (!wordRange) {
+      return [];
     }
-    // Otherwise, if the keyword starts with a dot, remove the dot from the keyword text.
-    else if (keyword.startsWith(".")) {
-      keyword = keyword.substring(1);
-    }
-    keyword = keyword + ":";
+
+    const keyword = document.getText(wordRange) + ":";
+
     const definitions = this.analyzer.getDefinitions(keyword);
     if (!definitions) {
       return [];

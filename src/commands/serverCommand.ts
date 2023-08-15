@@ -588,8 +588,7 @@ export async function getScratchpadQuery(
       json: true,
     };
 
-    let spResponse;
-    window.withProgress(
+    const spReponse = await window.withProgress(
       {
         location: ProgressLocation.Notification,
         title: "Query executing...",
@@ -602,16 +601,15 @@ export async function getScratchpadQuery(
 
         progress.report({ message: "Query is executing..." });
 
-        spResponse = await requestPromise.post(
+        const spRes = await requestPromise.post(
           scratchpadURL.toString(),
           options
         );
 
-        const p = new Promise<void>((resolve) => resolve());
-        return p;
+        return spRes;
       }
     );
-    return spResponse;
+    return spReponse;
   }
   return undefined;
 }
