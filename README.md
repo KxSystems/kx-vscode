@@ -45,6 +45,7 @@ You are prompted to provide a license key.
     
 - If you have a license key, click **Select/Enter a license**
     Choose one of the following options:
+  
         - Paste license string
         Paste your base64 encoded license string. This is provided by KX in an email.
   	- Select license file
