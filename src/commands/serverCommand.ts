@@ -430,22 +430,37 @@ export async function getDataInsights(
       responseType: "arraybuffer",
     };
 
-    return await axios(options)
-      .then((response: any) => {
-        if (isCompressed(response.data)) {
-          response.data = uncompress(response.data);
-        }
-        return {
-          error: "",
-          arrayBuffer: response.data.buffer,
-        };
-      })
-      .catch((error: any) => {
-        return {
-          error: error.response.data,
-          arrayBuffer: undefined,
-        };
-      });
+    const results = await window.withProgress(
+      {
+        location: ProgressLocation.Notification,
+        cancellable: false,
+      },
+      async (progress, token) => {
+        token.onCancellationRequested(() => {
+          ext.outputChannel.appendLine("User cancelled the installation.");
+        });
+
+        progress.report({ message: "Query executing..." });
+
+        return await axios(options)
+          .then((response: any) => {
+            if (isCompressed(response.data)) {
+              response.data = uncompress(response.data);
+            }
+            return {
+              error: "",
+              arrayBuffer: response.data.buffer,
+            };
+          })
+          .catch((error: any) => {
+            return {
+              error: error.response.data,
+              arrayBuffer: undefined,
+            };
+          });
+      }
+    );
+    return results;
   }
   return undefined;
 }
@@ -591,7 +606,6 @@ export async function getScratchpadQuery(
     const spReponse = await window.withProgress(
       {
         location: ProgressLocation.Notification,
-        title: "Query executing...",
         cancellable: false,
       },
       async (progress, token) => {
