@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "0.1.16",
+  "version": "0.1.18",
   "preview": true,
   "engines": {
     "vscode": "^1.66.0"
@@ -566,8 +566,7 @@
     "vscode-languageclient": "^8.0.2",
     "vscode-languageserver": "^8.1.0",
     "vscode-languageserver-textdocument": "^1.0.7",
-    "vscode-uri": "^3.0.7",
-    "web-tree-sitter": "^0.20.8"
+    "vscode-uri": "^3.0.7"
   },
   "extensionDependencies": [
     "ms-vscode.azure-account"
