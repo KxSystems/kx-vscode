@@ -65,5 +65,5 @@ jobs:
           SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
         with:
           command: monitor
-          args: --target-reference=github.ref_name
+          args: --target-reference=${{ github.ref_name }}
         if: github.ref_name == 'main' || github.ref_name == 'dev'
