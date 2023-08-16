@@ -42,9 +42,7 @@ export function createKdbDataSourcesFolder(): string {
 export function convertDataSourceFormToDataSourceFile(
   form: any
 ): DataSourceFiles {
-  const insightsNode = ext.kdbinsightsNodes
-    .find((node) => node.endsWith(" (connected)"))
-    ?.replace(" (connected)", "");
+  const insightsNode = getConnectedInsightsNode();
   const fileContent = defaultDataSourceFile;
   const filter: string[] = [];
   const groupBy: string[] = [];
