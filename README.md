@@ -58,6 +58,7 @@ You are prompted to provide a license key.
         A success message is displayed and you can [start q](#start-q).
 
 - If you do not have a license key, click **Acquire license**.
+
     At the prompt, click **Open** to go to https://kx.com/kdb-personal-edition-download, where you can sign up for our 12-month free trial of kdb+ Personal Edition. You can, alternatively, contact our licensing department at licadmin@kx.com if you want to buy a full commercial license.
 
     When you receive a license email from KX, return to Visual Studio Code and click **Continue** at the prompt in the bottom right-hand corner. From here, you are prompted to specify a license key string or file as above.
