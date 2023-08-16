@@ -44,6 +44,7 @@ Click **Install runtime**.
 You are prompted to provide a license key.
     
 - If you have a license key, click **Select/Enter a license**
+
     Choose one of the following options:
   
     - Paste license string
