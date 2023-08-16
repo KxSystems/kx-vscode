@@ -1,28 +1,30 @@
 # kdb Visual Studio Code extension
 
-This is a companion extension for kdb developers. Some words about brilliant features provided.
-
-Its main features are editing capabilities for working with q files, and the ability to connect to kdb processes and run queries.
+This is a companion extension for kdb developers. It provides editing capabilities for working with q files, and the ability to connect to kdb processes and run queries.
 
 [![KX VS Code CI](https://github.com/KxSystems/kx-vscode/actions/workflows/ci.yml/badge.svg)](https://github.com/KxSystems/kx-vscode/actions/workflows/ci.yml)
 
 ## Contents
 
-[Get started](#get-started)
+FIXME put in table of contents with links
 
-[Editing features](#editing-features)
+## Overview
 
-[Connections](#connections)
+Use this extension to:
 
-[Execute code](#execute-code)
+- Predict and complete q syntax in a q session or within an instance of kdb Insights Enterprise
+- Execute a line of q code, a section of q code or a file of q code in a q session
+- Execute q code from within kdb Insights Enterprise FIXME more needed here
+- View results FIXME more needed here
 
-[View results](#view-results)
+Before you can use these features, you must:
 
-## Get started
+1. Install q
+1. Start q
+1. Configure connections between VS Code and q or kdb Insights Enterprise
+1. Connect VS Code to q or kdb Insights Enterprise
 
-a few words about the process, so install q, start q, configue connection, and connect q to vscode
-
-### Install q
+## Install q
 
 **If you already have q installed locally**
 
@@ -59,7 +61,7 @@ Note
 
 Ensure that the system variable [QHOME](FIXME) is defined and that the location of your q folder is specified in the *Path* system variable.
 
-### Start q
+## Start q
 
 If you just installed q using the extension, the last prompt is to **Start q**.
 
@@ -67,8 +69,8 @@ At any other time, type **q* at a command prompt.
 
 From the extension, you can now [connect directly to a q session](#connect-to-a-q-session), or to an [instance of kdb Insights Enterprise](connect-to-an-instance-of-kdb-insights-enterprise).
 
-Note
-Connection types
+## Connection types
+
 We provide these connection types:
 
 - Managed q session
@@ -83,8 +85,7 @@ We provide these connection types:
 
     You can connect to an instance of kdb Insights Enterprise.
 
-
-### Connect to a q session (managed or unmanaged)
+## Connect to a q session (managed or unmanaged)
 
 Use these steps:
 
@@ -127,7 +128,7 @@ Use these steps:
 
     FIXME You can now ???
 
-### Connect to an instance of kdb Insights Enterprise
+## Connect to an instance of kdb Insights Enterprise
 
 Use these steps:
 
@@ -165,21 +166,7 @@ Use these steps:
 - Code completion
 
 
-## Connections
 
-We provide these connection types:
-
-- Managed
-
-    You can use Visual Studio Code's controls to start and stop a managed connection. When you exit Visual Studio Code, the q process stops.
-    
-- Unmanaged
-
-    You manage the q process outside of Visual Studio Code. The q process runs irrespective of whether you have Visual Studio Code open or not.
-
-- Insights
-
-    You can connect to an instance of kdb Insights Enterprise.
 
 
 ## Execute code
