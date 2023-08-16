@@ -71,7 +71,7 @@ Note: ensure that the system variable [*QHOME*](FIXME) is defined and that the l
 
 If you just installed q using the extension, the last prompt is to **Start q**.
 
-At any other time, type **q* at a command prompt.
+At any other time, type **q** at a command prompt.
 
 From the extension, you can now [connect directly to a q session](#connect-to-a-q-session), or to an [instance of kdb Insights Enterprise](connect-to-an-instance-of-kdb-insights-enterprise).
 
@@ -91,7 +91,9 @@ We provide these connection types:
 
     You can connect to an instance of kdb Insights Enterprise.
 
-## Connect to a q session (managed or unmanaged)
+## Connect to a q session
+
+A q session may be [managed or unmanaged](#connection-types).
 
 Use these steps:
 
