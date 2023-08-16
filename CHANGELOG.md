@@ -8,7 +8,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 - Renamed to 'kdb'
 
-- Language Server rewrite
+- Preview KX Language Server implementation
 
 # 0.1.15
 
