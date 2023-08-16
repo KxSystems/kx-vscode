@@ -355,6 +355,15 @@ export async function connectInsights(viewItem: InsightsNode): Promise<void> {
 
   commands.executeCommand("setContext", "kdb.insightsConnected", true);
 
+  if (ext.kdbinsightsNodes.indexOf(viewItem.label + " (connected)") === -1) {
+    ext.kdbinsightsNodes.push(viewItem.label + " (connected)");
+    commands.executeCommand(
+      "setContext",
+      "kdb.insightsNodes",
+      ext.kdbinsightsNodes
+    );
+  }
+
   ext.connectionNode = viewItem;
   ext.serverProvider.reload();
   refreshDataSourcesPanel();

@@ -27,7 +27,10 @@ import {
   workspace,
 } from "vscode";
 import { ext } from "../extensionVariables";
-import { createKdbDataSourcesFolder } from "../utils/dataSource";
+import {
+  checkFileFromInsightsNode,
+  createKdbDataSourcesFolder,
+} from "../utils/dataSource";
 
 export class KdbDataSourceProvider implements TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: EventEmitter<
@@ -79,10 +82,15 @@ export class KdbDataSourceProvider implements TreeDataProvider<TreeItem> {
     const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
     if (kdbDataSourcesFolderPath) {
       const files = fs.readdirSync(kdbDataSourcesFolderPath);
-      const dsFiles = files.filter(
-        (file) => path.extname(file) === ext.kdbDataSourceFileExtension
-      );
-
+      const dsFiles = files.filter((file) => {
+        const isFromInsightsNode = checkFileFromInsightsNode(
+          path.join(kdbDataSourcesFolderPath, file)
+        );
+        return (
+          path.extname(file) === ext.kdbDataSourceFileExtension &&
+          isFromInsightsNode
+        );
+      });
       return Promise.resolve(
         dsFiles.map((file) => {
           const newLabel = file.replace(ext.kdbDataSourceFileExtension, "");
