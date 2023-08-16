@@ -114,6 +114,8 @@ Use these steps:
     FIXME image resources/images/addnewconnection.jpg
    
     Select *Enter a kdb endpoint* and respond to the prompts:
+
+    FIXME a table might be better for the prompts
     
     *Enter a name or alias for the connection*
 
