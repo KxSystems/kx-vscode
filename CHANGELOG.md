@@ -2,6 +2,12 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
+# 0.1.17
+
+### Internal Improvements
+
+- KX Language Server improvements
+
 # 0.1.16
 
 ### Internal Improvements
