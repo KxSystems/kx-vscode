@@ -34,7 +34,7 @@ When you install the extension, the message **q runtime installed** is displayed
 
 When you install the extension, you are instructed to do one of the following:
 
-- [Install q locally](https://code.kx.com/q/learn/install)
+- Install q locally using the [instructions on our documentation website](https://code.kx.com/q/learn/install)
 - [Install q using the extension](#install-q-using-the-extension)
 
 **Install q using the extension**
@@ -65,7 +65,7 @@ You are prompted to provide a license key.
 
     A success notice is displayed and you can [start q](#start-q).
 
-Note: ensure that the system variable [*QHOME*](FIXME) is defined and that the location of your q folder is specified in the *Path* system variable.
+Note: ensure that the system variable [*QHOME*](https://code.kx.com/q/learn/install)) is defined and that the location of your q folder is specified in the *Path* system variable.
 
 ## Start q
 
@@ -99,34 +99,49 @@ Use these steps:
 
 1. Enable the q process to communicate with Visual Studio Code.
  
-    To do this, [set the q process to listen on a port](https://code.kx.com/q/basics/ipc). Make a note of the port number that you use; you need this in the next step to connect Visual Studio Code to the port.
+    To do this, [set the q process to listen on a port](https://code.kx.com/q/basics/ipc).
+
+    Make a note of the port number that you use; you need this in the next step.
 
 1. Configure the connection in Visual Studio Code.
 
     To do this, click **Connect to kdb server** in the KX side bar.
    
-    FIXME image connecttokdbserver.jpg
+    FIXME image resources/images/connecttokdbserver.jpg
    
     If this button is not displayed, select **Add new connection** from the context menu.
    
-    FIXME image addnewconnection.jpg
+    FIXME image resources/images/addnewconnection.jpg
    
     Select *Enter a kdb endpoint* and respond to the prompts:
     
     *Enter a name or alias for the connection*
 
-    A note about the managed and unmanaged here.
+    This name determines whether the connection is managed or unmanaged.
+
+    To configure a managed connection, enter *local* here.
+
+    To configure an unmanaged connection, enter any name here.
     
     *Enter the host name or ip address of the kdb server*
-    
+
+    FIXME more description needed
+
     *Enter the port number of the kdb server*
-    the one you set up earlier
+
+    Type in the number of the port that you set up earlier.
     
     *Enter a username to authenticate with (optional)*
-    
+
+    FIXME more description needed
+
     *Enter a password to authenticate with (optional)*
-    
+
+    FIXME more description needed
+
     *Enable TLS encryption on kdb connection (optional)*
+
+    FIXME more description needed
     
 1. Tell the Visual Studio Code extension which configuration to connect to.
 
@@ -134,32 +149,42 @@ Use these steps:
     
     A success message is displayed in the bottom, right-hand corner of the screen.
 
-    FIXME You can now ???
+    FIXME link to a section about executing code
 
 ## Connect to an instance of kdb Insights Enterprise
 
 Use these steps:
 
 1. Specify details of the kdb Insights Enterprise endpoint in Visual Studio Code.
+
     To do this, click **Connect to kdb server** in the KX side bar.
-    FIXME image connecttokdbserver.jpg
+
+    FIXME image resources/images/connecttokdbserver.jpg
+
     Select *Connect to kdb Insights Enterprise* and respond to the prompts:
 
     *Enter a name or alias for the connection*
 
+    FIXME more description needed - is this also a managed vs unmanaged option?
+
     *Enter the Insights endpoint URL*
+
+    Type or paste in the URL of the kdb Insights Enterprise instance to which you want to connect.
 
 1. Tell the Visual Studio Code extension which instance of kdb Insights Enterprise to connect to.
 
     To do this, right-click the relevant connection configuration in the KX side bar and select **Connect to Insights**.
 
-    FIXME image connecttoinsightscontext.jpg
+    FIXME image resources/images/connecttoinsightscontext.jpg
 
     The instance of kdb Insights Enterprise is displayed.
+
+    FIXME link to a section about executing code
 
 
 ## Editing features
 
+FIXME copy in the existing docs from old stuff, way below.
 
 - Syntax highlighting
 
