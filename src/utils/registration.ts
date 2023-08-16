@@ -12,6 +12,7 @@
  */
 
 import { ConfigurationTarget, window, workspace } from "vscode";
+import { ext } from "../extensionVariables";
 import { openUrl } from "./openUrl";
 
 export function showRegistrationNotification(): void {
@@ -23,9 +24,7 @@ export function showRegistrationNotification(): void {
       .showInformationMessage("Subscribe to updates", "Opt-In", "Ignore")
       .then((result) => {
         if (result === "Opt-In") {
-          openUrl(
-            "https://kx.com/landing_pages/subscribe-to-our-kdb-vs-code-extension-newsletter"
-          );
+          openUrl(ext.kdbNewsletterUrl);
         }
       });
   }
