@@ -320,7 +320,8 @@
         {
           "id": "kdb-datasources-explorer",
           "name": "Data Sources",
-          "contextualTitle": "Data Sources"
+          "contextualTitle": "Data Sources",
+          "when": "kdb.insightsConnected"
         }
       ],
       "kdb-results": [

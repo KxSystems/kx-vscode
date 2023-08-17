@@ -333,12 +333,19 @@ export class InsightsNode extends TreeItem {
     public readonly details: InsightDetails,
     public readonly collapsibleState: TreeItemCollapsibleState
   ) {
+    let auxLabel = label;
     if (ext.connectionNode != undefined && label === ext.connectionNode.label) {
+      auxLabel = label;
       label = label + " (connected)";
+    } else {
+      auxLabel = label + " (connected)";
     }
-
     // set context for root nodes
     if (ext.kdbinsightsNodes.indexOf(label) === -1) {
+      const indexOriginalLabel = ext.kdbinsightsNodes.indexOf(auxLabel);
+      if (indexOriginalLabel !== -1) {
+        ext.kdbinsightsNodes.splice(indexOriginalLabel, 1);
+      }
       ext.kdbinsightsNodes.push(label);
       commands.executeCommand(
         "setContext",

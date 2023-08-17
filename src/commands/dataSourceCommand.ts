@@ -24,6 +24,7 @@ import {
   convertDataSourceFormToDataSourceFile,
   convertTimeToTimestamp,
   createKdbDataSourcesFolder,
+  getConnectedInsightsNode,
 } from "../utils/dataSource";
 import { handleWSResults } from "../utils/queryUtils";
 import { getDataInsights, getMeta, writeQueryResult } from "./serverCommand";
@@ -42,7 +43,9 @@ export async function addDataSource(): Promise<void> {
   }
   const dataSourceName = fileName.replace(ext.kdbDataSourceFileExtension, "");
   const defaultDataSourceContent = defaultDataSourceFile;
+  const insightsNode = getConnectedInsightsNode();
   defaultDataSourceContent.name = dataSourceName;
+  defaultDataSourceContent.insightsNode = insightsNode;
 
   fs.writeFileSync(filePath, JSON.stringify(defaultDataSourceContent));
   window.showInformationMessage(
