@@ -113,7 +113,7 @@ export async function getCurrentToken(
   if (rawToken !== undefined) {
     token = JSON.parse(rawToken!);
     if (new Date(token.accessTokenExpirationDate) < new Date()) {
-      token = await signIn(serverAlias);
+      token = await signIn(serverName);
       ext.context.secrets.store(serverAlias, JSON.stringify(token));
     }
   } else {
