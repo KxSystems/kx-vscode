@@ -3,8 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "0.1.16",
-  "preview": true,
+  "version": "1.0.0-rc1",
   "engines": {
     "vscode": "^1.66.0"
   },
@@ -207,6 +206,10 @@
       {
         "command": "kdb.dataSource.addDataSource",
         "title": "Add new DataSource"
+      },
+      {
+        "command": "kdb.dataSource.populateScratchpad",
+        "title": "Populate a new scratchpad"
       },
       {
         "command": "kdb.dataSource.saveDataSource",
@@ -542,7 +545,6 @@
     "@types/klaw": "^3.0.3",
     "@types/picomatch": "^2.3.0",
     "@vscode/webview-ui-toolkit": "^1.2.2",
-    "@windozer/node-q": "^2.6.0",
     "antlr4-runtime": "^4.13.0",
     "antlr4ts": "^0.5.0-alpha.4",
     "axios": "^1.4.0",

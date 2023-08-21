@@ -37,6 +37,7 @@ import {
   addDataSource,
   deleteDataSource,
   openDataSource,
+  populateScratchpad,
   renameDataSource,
   runDataSource,
   saveDataSource,
@@ -165,6 +166,12 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.dataSource.addDataSource", async () => {
       await addDataSource();
     }),
+    commands.registerCommand(
+      "kdb.dataSource.populateScratchpad",
+      async (dataSourceForm: any) => {
+        await populateScratchpad(dataSourceForm);
+      }
+    ),
     commands.registerCommand(
       "kdb.dataSource.saveDataSource",
       async (dataSourceForm: any) => {

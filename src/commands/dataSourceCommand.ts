@@ -13,10 +13,11 @@
 
 import * as fs from "fs";
 import path from "path";
-import { Uri, window } from "vscode";
+import { InputBoxOptions, Uri, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { getDataBodyPayload } from "../models/data";
 import { DataSourceFiles, defaultDataSourceFile } from "../models/dataSource";
+import { scratchpadVariableInput } from "../models/items/server";
 import { DataSourcesPanel } from "../panels/datasource";
 import { KdbDataSourceTreeItem } from "../services/dataSourceTreeProvider";
 import {
@@ -27,7 +28,13 @@ import {
   getConnectedInsightsNode,
 } from "../utils/dataSource";
 import { handleWSResults } from "../utils/queryUtils";
-import { getDataInsights, getMeta, writeQueryResult } from "./serverCommand";
+import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
+import {
+  getDataInsights,
+  getMeta,
+  importScratchpad,
+  writeQueryResult,
+} from "./serverCommand";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -164,6 +171,25 @@ export async function saveDataSource(dataSourceForm: any): Promise<void> {
     fs.writeFileSync(dataSourceFilePath, JSON.stringify(fileContent));
   }
   window.showInformationMessage(`DataSource ${dataSourceForm.name} saved.`);
+}
+
+export async function populateScratchpad(dataSourceForm: any): Promise<void> {
+  const scratchpadVariable: InputBoxOptions = {
+    prompt: scratchpadVariableInput.prompt,
+    placeHolder: scratchpadVariableInput.placeholder,
+    validateInput: (value: string | undefined) =>
+      validateScratchpadOutputVariableName(value),
+  };
+
+  window.showInputBox(scratchpadVariable).then(async (outputVariable) => {
+    if (outputVariable !== undefined && outputVariable !== "") {
+      await importScratchpad(outputVariable!, dataSourceForm!);
+    } else {
+      ext.outputChannel.appendLine(
+        `Invalid scratchpad output variable name: ${outputVariable}`
+      );
+    }
+  });
 }
 
 export async function runDataSource(dataSourceForm: any): Promise<void> {
