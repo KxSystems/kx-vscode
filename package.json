@@ -159,6 +159,11 @@
         "kdb.qHomeDirectory": {
           "type": "string",
           "description": "QHOME directory for q runtime"
+        },
+        "kdb.hideSubscribeRegistrationNotification": {
+          "type": "boolean",
+          "description": "Hide subscribe for registration notification",
+          "default": false
         }
       }
     },
