@@ -234,10 +234,11 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         <div id="grid" style="height: 300px; width:100%;" class="ag-theme-alpine-dark"></div>
         <script nonce="${nonce}" >          
           document.addEventListener('DOMContentLoaded', () => {
-          const gridOptions = JSON.parse('${gridOptionsString}');
-            if(gridOptions !== '<p>No results to show</p>') {
-            const gridDiv = document.getElementById('grid');
-            const gridApi = new agGrid.Grid(gridDiv, gridOptions);
+
+            if('${gridOptionsString}' !== '<p>No results to show</p>' && '${gridOptionsString}' !== ''){
+              const gridOptions = JSON.parse('${gridOptionsString}');
+              const gridDiv = document.getElementById('grid');
+              const gridApi = new agGrid.Grid(gridDiv, gridOptions);
             }
           });
         </script>
