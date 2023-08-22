@@ -77,7 +77,7 @@ export function convertResultStringToVector(result: string): any[] {
     resultHeader.push(headerCell);
   }
   resultRows.shift();
-  if (resultRows[1].startsWith("---")) {
+  if (resultRows[0].includes("---")) {
     resultRows.splice(0, 1);
   }
   const resultVector = resultRows.map((row) => {

@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { GridOptions } from "ag-grid-community";
 import { Uri, WebviewView, WebviewViewProvider } from "vscode";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
@@ -53,6 +54,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     }
   }
 
+  // this is deprecated and will be dropped in the next update
   handleQueryResultsString(queryResult: string) {
     if (queryResult === "") {
       return `<p>No results to show</p>`;
@@ -123,6 +125,39 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     return results;
   }
 
+  convertToGrid(queryResult: string): string | GridOptions {
+    if (queryResult === "") {
+      return `<p>No results to show</p>`;
+    }
+    const vectorRes = utils.convertResultStringToVector(queryResult);
+    if (vectorRes.length === 1) {
+      return `<p>${vectorRes[0]}</p>`;
+    }
+    const keys = vectorRes[0];
+    const value = vectorRes.slice(1);
+    const rowData = value.map((row) =>
+      keys.reduce((obj: any, key: any, index: number) => {
+        obj[key] = row[index];
+        return obj;
+      }, {})
+    );
+    const columnDefs = keys.map((str: string) => ({ field: str }));
+    return {
+      defaultColDef: {
+        enableRowGroup: true,
+        enablePivot: true,
+        enableValue: true,
+        sortable: true,
+        resizable: true,
+        filter: true,
+        flex: 1,
+        minWidth: 100,
+      },
+      rowData,
+      columnDefs,
+    };
+  }
+
   private _getWebviewContent(
     queryResult: string | string[],
     dataSourceType?: string
@@ -145,11 +180,23 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         "out",
         "vscode.css",
       ]);
+      const agGridJS = getUri(this._view.webview, this._extensionUri, [
+        "out",
+        "ag-grid-community.min.js",
+      ]);
+      const agGridStyle = getUri(this._view.webview, this._extensionUri, [
+        "out",
+        "ag-grid.min.css",
+      ]);
+      const agGridThemeStyle = getUri(this._view.webview, this._extensionUri, [
+        "out",
+        "ag-theme-alpine.min.css",
+      ]);
       let result = "";
-      if (typeof queryResult === "string") {
-        result = this.handleQueryResultsString(queryResult);
-      } else if (Array.isArray(queryResult)) {
-        result = this.handleQueryResultsArray(queryResult);
+      let gridOptionsString = "";
+      if (typeof queryResult === "string" && queryResult !== "") {
+        // result = this.handleQueryResultsString(queryResult);
+        gridOptionsString = JSON.stringify(this.convertToGrid(queryResult));
       } else if (typeof queryResult === "object") {
         result =
           queryResult === null
@@ -157,19 +204,25 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
             : this.handleQueryResultsString(JSON.stringify(queryResult));
       }
 
+      result =
+        gridOptionsString === ""
+          ? result !== ""
+            ? result
+            : "<p>No results to show</p>"
+          : "";
       return /*html*/ `
     <!DOCTYPE html>
     <html lang="en">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-        <meta
-          http-equiv="Content-Security-Policy"
-          content="default-src 'none'; style-src ${this._view.webview.cspSource}; font-src ${this._view.webview.cspSource}; img-src ${this._view.webview.cspSource} https:; script-src 'nonce-${nonce}';" />
         <link rel="stylesheet" href="${resetStyleUri}" />
         <link rel="stylesheet" href="${vscodeStyleUri}" />
         <link rel="stylesheet" href="${styleUri}" />
+        <link rel="stylesheet" href="${agGridStyle}" />
+        <link rel="stylesheet" href="${agGridThemeStyle}" />
         <title>Q Results</title>
+        <script nonce="${nonce}" src="${agGridJS}"></script>
       </head>
       <body>      
         <div class="results-view-container">
@@ -178,6 +231,16 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
             </div>
           </div>      
         <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
+        <div id="grid" style="height: 300px; width:100%;" class="ag-theme-alpine-dark"></div>
+        <script nonce="${nonce}" >          
+          document.addEventListener('DOMContentLoaded', () => {
+          const gridOptions = JSON.parse('${gridOptionsString}');
+            if(gridOptions !== '<p>No results to show</p>') {
+            const gridDiv = document.getElementById('grid');
+            const gridApi = new agGrid.Grid(gridDiv, gridOptions);
+            }
+          });
+        </script>
       </body>
     </html>
     `;

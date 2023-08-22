@@ -17,3 +17,8 @@ import {
 } from "@vscode/webview-ui-toolkit";
 
 provideVSCodeDesignSystem().register(allComponents);
+
+export function teste(testando: string): void {
+  console.log(testando);
+  debugger;
+}
