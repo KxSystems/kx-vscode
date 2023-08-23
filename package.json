@@ -261,17 +261,20 @@
     "keybindings": [
       {
         "command": "kdb.execute.selectedQuery",
-        "key": "ctrl+q",
+        "key": "ctrl+d",
+        "mac": "cmd+d",
         "when": "editorLangId == q"
       },
       {
         "command": "kdb.execute.fileQuery",
-        "key": "ctrl+shift+q",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d",
         "when": "editorLangId == q"
       },
       {
         "command": "kdb.terminal.run",
         "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
         "when": "editorLangId == q"
       }
     ],
