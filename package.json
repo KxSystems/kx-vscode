@@ -3,8 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "0.1.16",
-  "preview": true,
+  "version": "1.0.0-rc1",
   "engines": {
     "vscode": "^1.66.0"
   },
@@ -161,6 +160,11 @@
         "kdb.qHomeDirectory": {
           "type": "string",
           "description": "QHOME directory for q runtime"
+        },
+        "kdb.hideSubscribeRegistrationNotification": {
+          "type": "boolean",
+          "description": "Hide subscribe for registration notification",
+          "default": false
         }
       }
     },
@@ -208,6 +212,10 @@
       {
         "command": "kdb.dataSource.addDataSource",
         "title": "Add new DataSource"
+      },
+      {
+        "command": "kdb.dataSource.populateScratchpad",
+        "title": "Populate a new scratchpad"
       },
       {
         "command": "kdb.dataSource.saveDataSource",
