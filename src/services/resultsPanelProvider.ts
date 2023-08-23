@@ -12,7 +12,13 @@
  */
 
 import { GridOptions } from "ag-grid-community";
-import { Uri, WebviewView, WebviewViewProvider } from "vscode";
+import {
+  ColorThemeKind,
+  Uri,
+  WebviewView,
+  WebviewViewProvider,
+  window,
+} from "vscode";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
@@ -20,8 +26,15 @@ import { getUri } from "../utils/getUri";
 export class KdbResultsViewProvider implements WebviewViewProvider {
   public static readonly viewType = "kdb-results";
   private _view?: WebviewView;
+  private _colorTheme: any;
+  private _results: string | string[] = "";
 
   constructor(private readonly _extensionUri: Uri) {
+    this._colorTheme = window.activeColorTheme;
+    window.onDidChangeActiveColorTheme(() => {
+      this._colorTheme = window.activeColorTheme;
+      this.updateResults(this._results);
+    });
     // this.resolveWebviewView(webviewView);
   }
 
@@ -158,10 +171,19 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     };
   }
 
+  defineAgGridTheme(): string {
+    if (this._colorTheme.kind === ColorThemeKind.Dark) {
+      return "ag-theme-alpine-dark";
+    }
+    return "ag-theme-alpine";
+  }
+
   private _getWebviewContent(
     queryResult: string | string[],
-    dataSourceType?: string
+    _dataSourceType?: string
   ) {
+    this._results = queryResult;
+    const agGridTheme = this.defineAgGridTheme();
     if (this._view) {
       const webviewUri = getUri(this._view.webview, this._extensionUri, [
         "out",
@@ -235,7 +257,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
             </div>
           </div>      
         <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
-        <div id="grid" style="height: 300px; width:100%;" class="ag-theme-alpine-dark"></div>
+        <div id="grid" style="height: 300px; width:100%;" class="${agGridTheme}"></div>
         <script nonce="${nonce}" >          
           document.addEventListener('DOMContentLoaded', () => {
 
