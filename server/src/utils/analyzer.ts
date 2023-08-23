@@ -194,6 +194,7 @@ export class AnalyzerContent {
       });
       const currentWordMatch = textBeforeCursor.match(/([a-zA-Z0-9.]+)$/);
       const currentWord = currentWordMatch ? currentWordMatch[1] : "";
+
       return currentWord;
     }
     return undefined;
@@ -253,6 +254,7 @@ export class AnalyzerContent {
     const locations = [];
     for (const doc of this.uriToTextDocument.values()) {
       const text = doc.getText();
+
       let offset = 0;
       let index = text.indexOf(keyword, offset);
 

@@ -50,6 +50,11 @@ export class DataSourcesPanel {
           "kdb.dataSource.runDataSource",
           message.data
         );
+      } else if (message.command === "kdb.dataSource.populateScratchpad") {
+        vscode.commands.executeCommand(
+          "kdb.dataSource.populateScratchpad",
+          message.data
+        );
       }
     });
   }
@@ -429,6 +434,9 @@ export class DataSourcesPanel {
                   <div class="btn-action">
                     <vscode-button id="run" appearance="secondary" class="btn-run">RUN</vscode-button>
                   </div>
+                  <div class="btn-action">
+                    <vscode-button id="populateScratchpad" appearance="secondary" class="btn-run">POPULATE SCRATCHPAD</vscode-button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -437,6 +445,7 @@ export class DataSourcesPanel {
         <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
         <script nonce="${nonce}">
           const vscode = acquireVsCodeApi();
+          const populateScratchpadButton = document.getElementById('populateScratchpad');
           const saveButton = document.getElementById('save');
           const runButton = document.getElementById('run');
           const addFilterButton = document.getElementById('addFilter');
@@ -471,6 +480,17 @@ export class DataSourcesPanel {
                   break;
               };
               form.elements['selectedType'].value = type;
+            });
+          });
+
+          populateScratchpadButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            const form = document.getElementById('dataSourceForm');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            vscode.postMessage({
+              command: 'kdb.dataSource.populateScratchpad',
+              data
             });
           });
 

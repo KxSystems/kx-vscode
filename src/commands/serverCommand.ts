@@ -13,6 +13,7 @@
 
 import axios, { AxiosRequestConfig } from "axios";
 import { readFileSync } from "fs-extra";
+import jwt_decode from "jwt-decode";
 import { join } from "path";
 import requestPromise from "request-promise";
 import * as url from "url";
@@ -20,6 +21,7 @@ import {
   commands,
   InputBoxOptions,
   Position,
+  ProgressLocation,
   QuickPickItem,
   QuickPickOptions,
   Range,
@@ -45,12 +47,14 @@ import {
   serverEndpointPlaceHolder,
   serverEndpoints,
 } from "../models/items/server";
+import { JwtUser } from "../models/jwt_user";
 import { MetaObject, MetaObjectPayload } from "../models/meta";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
 import { Server } from "../models/server";
 import { ServerObject } from "../models/serverObject";
 import {
+  getCurrentToken,
   IToken,
   refreshToken,
   signIn,
@@ -353,6 +357,17 @@ export async function connectInsights(viewItem: InsightsNode): Promise<void> {
     viewItem.label + " (connected)",
   ]);
 
+  commands.executeCommand("setContext", "kdb.insightsConnected", true);
+
+  if (ext.kdbinsightsNodes.indexOf(viewItem.label + " (connected)") === -1) {
+    ext.kdbinsightsNodes.push(viewItem.label + " (connected)");
+    commands.executeCommand(
+      "setContext",
+      "kdb.insightsNodes",
+      ext.kdbinsightsNodes
+    );
+  }
+
   ext.connectionNode = viewItem;
   ext.serverProvider.reload();
   refreshDataSourcesPanel();
@@ -365,27 +380,17 @@ export async function getMeta(): Promise<MetaObjectPayload | undefined> {
       ext.connectionNode.details.server
     );
 
-    // get the access token from the secure store
-    const rawToken = await ext.context.secrets.get(
+    const token = await getCurrentToken(
+      ext.connectionNode.details.server,
       ext.connectionNode.details.alias
     );
 
-    let token;
-    if (rawToken !== undefined) {
-      token = JSON.parse(rawToken!);
-      if (new Date(token.accessTokenExpirationDate) < new Date()) {
-        token = await signIn(ext.connectionNode.details.server);
-        ext.context.secrets.store(
-          ext.connectionNode.details.alias,
-          JSON.stringify(token)
-        );
-      }
-    } else {
-      token = await signIn(ext.connectionNode.details.server);
-      ext.context.secrets.store(
-        ext.connectionNode.details.alias,
-        JSON.stringify(token)
+    if (token === undefined) {
+      ext.outputChannel.appendLine(
+        "Error retrieving access token for insights."
       );
+      window.showErrorMessage("Failed to retrieve access token for insights");
+      return undefined;
     }
 
     const options = {
@@ -409,11 +414,18 @@ export async function getDataInsights(
       ext.connectionNode.details.server
     ).toString();
 
-    // get the access token from the secure store
-    const rawToken = await ext.context.secrets.get(
+    const token = await getCurrentToken(
+      ext.connectionNode.details.server,
       ext.connectionNode.details.alias
     );
-    const token = JSON.parse(rawToken!);
+
+    if (token === undefined) {
+      ext.outputChannel.appendLine(
+        "Error retrieving access token for insights."
+      );
+      window.showErrorMessage("Failed to retrieve access token for insights");
+      return undefined;
+    }
 
     const headers = {
       Authorization: `Bearer ${token.accessToken}`,
@@ -429,24 +441,138 @@ export async function getDataInsights(
       responseType: "arraybuffer",
     };
 
-    return await axios(options)
-      .then((response: any) => {
-        if (isCompressed(response.data)) {
-          response.data = uncompress(response.data);
-        }
-        return {
-          error: "",
-          arrayBuffer: response.data.buffer,
-        };
-      })
-      .catch((error: any) => {
-        return {
-          error: error.response.data,
-          arrayBuffer: undefined,
-        };
-      });
+    const results = await window.withProgress(
+      {
+        location: ProgressLocation.Notification,
+        cancellable: false,
+      },
+      async (progress, token) => {
+        token.onCancellationRequested(() => {
+          ext.outputChannel.appendLine("User cancelled the installation.");
+        });
+
+        progress.report({ message: "Query executing..." });
+
+        return await axios(options)
+          .then((response: any) => {
+            if (isCompressed(response.data)) {
+              response.data = uncompress(response.data);
+            }
+            return {
+              error: "",
+              arrayBuffer: response.data.buffer,
+            };
+          })
+          .catch((error: any) => {
+            return {
+              error: error.response.data,
+              arrayBuffer: undefined,
+            };
+          });
+      }
+    );
+    return results;
   }
   return undefined;
+}
+
+export async function importScratchpad(
+  variableName: string,
+  params: any
+): Promise<void> {
+  if (ext.connectionNode instanceof InsightsNode) {
+    let queryParams, coreUrl;
+    switch (params.selectedType) {
+      case "API":
+        queryParams = {
+          table: params.selectedTable,
+          startTS: params.startTS,
+          endTS: params.endTS,
+        };
+        coreUrl = ext.insightsScratchpadUrls.import;
+        break;
+      case "SQL":
+        queryParams = { query: params.sql };
+        coreUrl = ext.insightsScratchpadUrls.importSql;
+        break;
+      case "QSQL":
+        const assemblyParts = params.selectedTarget.split(" ");
+        queryParams = {
+          assembly: assemblyParts[0],
+          target: assemblyParts[1],
+          query: params.qsql,
+        };
+        coreUrl = ext.insightsScratchpadUrls.importQsql;
+        break;
+      default:
+        break;
+    }
+
+    const scratchpadURL = new url.URL(
+      coreUrl!,
+      ext.connectionNode.details.server
+    );
+
+    const token = await getCurrentToken(
+      ext.connectionNode.details.server,
+      ext.connectionNode.details.alias
+    );
+
+    if (token === undefined) {
+      ext.outputChannel.appendLine(
+        "Error retrieving access token for insights."
+      );
+      window.showErrorMessage("Failed to retrieve access token for insights");
+      return undefined;
+    }
+
+    const username = jwt_decode<JwtUser>(token.accessToken);
+    if (username === undefined || username.preferred_username === "") {
+      ext.outputChannel.appendLine(
+        "JWT did not contain a valid preferred username"
+      );
+    }
+
+    const options = {
+      headers: {
+        Authorization: `Bearer ${token.accessToken}`,
+        username: username.preferred_username!,
+      },
+      body: {
+        output: variableName,
+        isTableView: false,
+        params: queryParams,
+      },
+      json: true,
+    };
+
+    window.withProgress(
+      {
+        location: ProgressLocation.Notification,
+        cancellable: false,
+      },
+      async (progress, token) => {
+        token.onCancellationRequested(() => {
+          ext.outputChannel.appendLine("User cancelled the installation.");
+        });
+
+        progress.report({ message: "Scratchpad creating..." });
+
+        const scratchpadResponse = await requestPromise.post(
+          scratchpadURL.toString(),
+          options
+        );
+
+        ext.outputChannel.append(scratchpadResponse);
+        window.showInformationMessage(
+          `Scratchpad created successfully, stored in ${variableName}`
+        );
+
+        const p = new Promise<void>((resolve) => resolve());
+        return p;
+      }
+    );
+  }
 }
 
 export async function getScratchpadQuery(
@@ -459,27 +585,56 @@ export async function getScratchpadQuery(
       ext.connectionNode.details.server
     );
 
-    // get the access token from the secure store
-    const rawToken = await ext.context.secrets.get(
+    const token = await getCurrentToken(
+      ext.connectionNode.details.server,
       ext.connectionNode.details.alias
     );
-    const token = JSON.parse(rawToken!);
+
+    if (token === undefined) {
+      ext.outputChannel.appendLine(
+        "Error retrieving access token for insights."
+      );
+      window.showErrorMessage("Failed to retrieve access token for insights");
+      return undefined;
+    }
+
+    const username = jwt_decode<JwtUser>(token.accessToken);
+    if (username === undefined || username.preferred_username === "") {
+      ext.outputChannel.appendLine(
+        "JWT did not contain a valid preferred username"
+      );
+    }
 
     const options = {
       headers: {
         Authorization: `Bearer ${token.accessToken}`,
-        Username: "test",
+        Username: username.preferred_username,
       },
       body: { expression: query, language: "q", context: context || "." },
       json: true,
     };
 
-    const scratchpadResponse = await requestPromise.post(
-      scratchpadURL.toString(),
-      options
-    );
+    const spReponse = await window.withProgress(
+      {
+        location: ProgressLocation.Notification,
+        cancellable: false,
+      },
+      async (progress, token) => {
+        token.onCancellationRequested(() => {
+          ext.outputChannel.appendLine("User cancelled the installation.");
+        });
 
-    return scratchpadResponse;
+        progress.report({ message: "Query is executing..." });
+
+        const spRes = await requestPromise.post(
+          scratchpadURL.toString(),
+          options
+        );
+
+        return spRes;
+      }
+    );
+    return spReponse;
   }
   return undefined;
 }
@@ -507,6 +662,7 @@ export async function removeInsightsConnection(
 
 export async function connect(viewItem: KdbNode): Promise<void> {
   commands.executeCommand("kdb-results.focus");
+  await commands.executeCommand("setContext", "kdb.insightsConnected", false);
   // handle cleaning up existing connection
   if (
     ext.connectionNode !== undefined &&
@@ -599,6 +755,7 @@ export async function connect(viewItem: KdbNode): Promise<void> {
 export async function disconnect(): Promise<void> {
   ext.connection?.disconnect();
   await commands.executeCommand("setContext", "kdb.connected", false);
+  commands.executeCommand("setContext", "kdb.insightsConnected", false);
   ext.connectionNode = undefined;
   const queryConsole = ExecutionConsole.start();
   queryConsole.dispose();
@@ -626,15 +783,18 @@ export async function executeQuery(
     query = sanitizeQuery(query);
     const queryRes = await getScratchpadQuery(query, context);
     writeScratchpadResult(queryRes, query);
-  } else if (ext.connection !== undefined) {
+  } else if (ext.connection !== undefined && ext.connection.connected) {
     query = sanitizeQuery(query);
     const queryRes = await ext.connection.executeQuery(query, context);
     writeQueryResult(queryRes, query);
   } else {
+    const isConnected = ext.connection
+      ? ext.connection.connected
+      : !!ext.connection;
     queryConsole.appendQueryError(
       query,
       "Query is empty",
-      !!ext.connection,
+      isConnected,
       ext.connectionNode?.label ? ext.connectionNode.label : ""
     );
     return undefined;

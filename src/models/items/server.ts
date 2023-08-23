@@ -68,3 +68,8 @@ export const connnectionTls = {
   prompt: "Enable TLS encryption on KDB connection (optional)",
   placeholder: "false",
 };
+
+export const scratchpadVariableInput = {
+  prompt: "Enter output variable name for scratchpad",
+  placeholder: "Output Variable *",
+};

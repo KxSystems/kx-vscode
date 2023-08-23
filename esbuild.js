@@ -30,14 +30,33 @@ const webviewConfig = {
   target: "es2020",
   format: "esm",
   entryPoints: ["./src/webview/main.ts"],
+  external: ["vscode"],
   outfile: "./out/webview.js",
   plugins: [
     copy({
       resolveFrom: "cwd",
-      assets: {
-        from: ["src/webview/styles/*.css"],
-        to: ["./out"],
-      },
+      assets: [
+        {
+          from: ["src/webview/styles/*.css"],
+          to: ["./out"],
+        },
+        {
+          from: ["node_modules/ag-grid-community/styles/ag-grid.min.css"],
+          to: ["./out"],
+        },
+        {
+          from: [
+            "node_modules/ag-grid-community/styles/ag-theme-alpine.min.css",
+          ],
+          to: ["./out"],
+        },
+        {
+          from: [
+            "node_modules/ag-grid-community/dist/ag-grid-community.min.js",
+          ],
+          to: ["./out"],
+        },
+      ],
     }),
   ],
 };

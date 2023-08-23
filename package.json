@@ -3,8 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "0.1.18",
-  "preview": true,
+  "version": "1.0.0-rc1",
   "engines": {
     "vscode": "^1.66.0"
   },
@@ -44,6 +43,7 @@
     "onCommand:kdb.dataSource.deleteDataSource",
     "onCommand:kdb.dataSource.openDataSource",
     "onCommand:kdb.resultsPanel.update",
+    "onCommand:kdb.resultsPanel.clear",
     "onView:kdb-servers",
     "onView:kdb-datasources-explorer",
     "onView:kdb-results",
@@ -160,6 +160,11 @@
         "kdb.qHomeDirectory": {
           "type": "string",
           "description": "QHOME directory for q runtime"
+        },
+        "kdb.hideSubscribeRegistrationNotification": {
+          "type": "boolean",
+          "description": "Hide subscribe for registration notification",
+          "default": false
         }
       }
     },
@@ -209,6 +214,10 @@
         "title": "Add new DataSource"
       },
       {
+        "command": "kdb.dataSource.populateScratchpad",
+        "title": "Populate a new scratchpad"
+      },
+      {
         "command": "kdb.dataSource.saveDataSource",
         "title": "Save changes in the DataSource"
       },
@@ -233,6 +242,10 @@
         "title": "Update Results View"
       },
       {
+        "command": "kdb.resultsPanel.clear",
+        "title": "Clear Results View"
+      },
+      {
         "command": "kdb.terminal.run",
         "title": "Run q file in a new q instance"
       },
@@ -248,17 +261,20 @@
     "keybindings": [
       {
         "command": "kdb.execute.selectedQuery",
-        "key": "ctrl+q",
+        "key": "ctrl+d",
+        "mac": "cmd+d",
         "when": "editorLangId == q"
       },
       {
         "command": "kdb.execute.fileQuery",
-        "key": "ctrl+shift+q",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d",
         "when": "editorLangId == q"
       },
       {
         "command": "kdb.terminal.run",
         "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
         "when": "editorLangId == q"
       }
     ],
@@ -320,7 +336,8 @@
         {
           "id": "kdb-datasources-explorer",
           "name": "Data Sources",
-          "contextualTitle": "Data Sources"
+          "contextualTitle": "Data Sources",
+          "when": "kdb.insightsConnected"
         }
       ],
       "kdb-results": [
@@ -372,6 +389,13 @@
           "when": "false"
         }
       ],
+      "webview/context": [
+        {
+          "command": "kdb.resultsPanel.clear",
+          "when": "view == kdb-results",
+          "group": "resultsPanel"
+        }
+      ],
       "view/title": [
         {
           "command": "kdb.addConnection",
@@ -386,6 +410,11 @@
           "command": "kdb.dataSource.addDataSource",
           "when": "view == kdb-datasources-explorer",
           "group": "dataSourceFiles"
+        },
+        {
+          "command": "kdb.resultsPanel.clear",
+          "when": "view == kdb-results",
+          "group": "resultsPanel"
         }
       ],
       "view/item/context": [
@@ -542,6 +571,7 @@
     "@types/picomatch": "^2.3.0",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "@windozer/node-q": "^2.6.0",
+    "ag-grid-community": "^30.1.0",
     "antlr4-runtime": "^4.13.0",
     "antlr4ts": "^0.5.0-alpha.4",
     "axios": "^1.4.0",

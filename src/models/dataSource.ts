@@ -19,6 +19,7 @@ export enum DataSourceTypes {
 
 export interface DataSourceFiles {
   name: string;
+  insightsNode?: string;
   dataSource: {
     selectedType: DataSourceTypes;
     api: {

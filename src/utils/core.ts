@@ -26,6 +26,7 @@ import { Insights } from "../models/insights";
 import { QueryResult } from "../models/queryResult";
 import { Server, ServerDetails } from "../models/server";
 import { tryExecuteCommand } from "./cpUtils";
+import { showRegistrationNotification } from "./registration";
 import { Telemetry } from "./telemetryClient";
 
 export function log(childProcess: ChildProcess): void {
@@ -215,6 +216,8 @@ export async function checkLocalInstall(): Promise<void> {
 
     ext.outputChannel.appendLine(`Installation of q found here: ${env.QHOME}`);
 
+    showRegistrationNotification();
+
     const hideNotification = await workspace
       .getConfiguration()
       .get<boolean>("kdb.hideInstallationNotification");
@@ -248,6 +251,8 @@ export async function checkLocalInstall(): Promise<void> {
     .then(async (installResult) => {
       if (installResult === "Install new instance") {
         await installTools();
+      } else if (installResult === "Cancel") {
+        showRegistrationNotification();
       }
     });
 }
