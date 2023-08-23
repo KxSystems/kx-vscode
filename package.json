@@ -43,6 +43,7 @@
     "onCommand:kdb.dataSource.deleteDataSource",
     "onCommand:kdb.dataSource.openDataSource",
     "onCommand:kdb.resultsPanel.update",
+    "onCommand:kdb.resultsPanel.clear",
     "onView:kdb-servers",
     "onView:kdb-datasources-explorer",
     "onView:kdb-results",
@@ -241,6 +242,10 @@
         "title": "Update Results View"
       },
       {
+        "command": "kdb.resultsPanel.clear",
+        "title": "Clear Results View"
+      },
+      {
         "command": "kdb.terminal.run",
         "title": "Run q file in a new q instance"
       },
@@ -384,6 +389,13 @@
           "when": "false"
         }
       ],
+      "webview/context": [
+        {
+          "command": "kdb.resultsPanel.clear",
+          "when": "view == kdb-results",
+          "group": "resultsPanel"
+        }
+      ],
       "view/title": [
         {
           "command": "kdb.addConnection",
@@ -398,6 +410,11 @@
           "command": "kdb.dataSource.addDataSource",
           "when": "view == kdb-datasources-explorer",
           "group": "dataSourceFiles"
+        },
+        {
+          "command": "kdb.resultsPanel.clear",
+          "when": "view == kdb-results",
+          "group": "resultsPanel"
         }
       ],
       "view/item/context": [
@@ -553,6 +570,8 @@
     "@types/klaw": "^3.0.3",
     "@types/picomatch": "^2.3.0",
     "@vscode/webview-ui-toolkit": "^1.2.2",
+    "@windozer/node-q": "^2.6.0",
+    "ag-grid-community": "^30.1.0",
     "antlr4-runtime": "^4.13.0",
     "antlr4ts": "^0.5.0-alpha.4",
     "axios": "^1.4.0",

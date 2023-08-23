@@ -57,12 +57,43 @@ export function handleQueryResults(
   return handledResult;
 }
 
+interface tblHeader {
+  label: string;
+  count: number;
+}
+
 export function convertResultStringToVector(result: string): any[] {
   const resultRows = result.split("\n").filter((row) => row.length > 0);
   if (resultRows.length === 1) return resultRows;
-  const resultVector = resultRows
-    .map((row) => row.split(" ").filter((row) => row.length > 0))
-    .filter((row) => !row[0].includes("---"));
+  const resultHeader: tblHeader[] = [];
+  let auxHeader = resultRows[0];
+  const headerLabels = resultRows[0].replace(/\s+/g, " ").trim().split(" ");
+  for (let i = 0; headerLabels.length > i; i++) {
+    const headerCell: tblHeader = { label: headerLabels[i], count: 0 };
+    const endIndex = auxHeader.indexOf(headerLabels[i + 1]);
+    const auxFullLbl = auxHeader.substring(0, endIndex);
+    auxHeader = auxHeader.replace(auxFullLbl, "");
+    headerCell.count = auxFullLbl.length;
+    resultHeader.push(headerCell);
+  }
+  resultRows.shift();
+  if (resultRows[0].includes("---")) {
+    resultRows.splice(0, 1);
+  }
+  const resultVector = resultRows.map((row) => {
+    const rowArray = [];
+    for (let i = 0; resultHeader.length > i; i++) {
+      if (resultHeader[i].count !== 0) {
+        const cell = row.substring(0, resultHeader[i].count);
+        rowArray.push(cell.trim());
+        row = row.replace(cell, "");
+      } else {
+        rowArray.push(row.trim());
+      }
+    }
+    return rowArray;
+  });
+  resultVector.unshift(headerLabels);
   return resultVector;
 }
 
