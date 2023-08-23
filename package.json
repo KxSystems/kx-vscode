@@ -44,6 +44,7 @@
     "onCommand:kdb.dataSource.openDataSource",
     "onCommand:kdb.resultsPanel.update",
     "onCommand:kdb.resultsPanel.clear",
+    "onCommand:kdb.resultsPanel.export.csv",
     "onView:kdb-servers",
     "onView:kdb-datasources-explorer",
     "onView:kdb-results",
@@ -246,6 +247,10 @@
         "title": "Clear Results View"
       },
       {
+        "command": "kdb.resultsPanel.export.csv",
+        "title": "Export to CSV"
+      },
+      {
         "command": "kdb.terminal.run",
         "title": "Run q file in a new q instance"
       },
@@ -394,6 +399,11 @@
           "command": "kdb.resultsPanel.clear",
           "when": "view == kdb-results",
           "group": "resultsPanel"
+        },
+        {
+          "command": "kdb.resultsPanel.export.csv",
+          "when": "view == kdb-results",
+          "group": "resultsPanel"
         }
       ],
       "view/title": [
@@ -413,6 +423,11 @@
         },
         {
           "command": "kdb.resultsPanel.clear",
+          "when": "view == kdb-results",
+          "group": "resultsPanel"
+        },
+        {
+          "command": "kdb.resultsPanel.export.csv",
           "when": "view == kdb-results",
           "group": "resultsPanel"
         }

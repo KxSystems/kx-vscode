@@ -136,6 +136,9 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.resultsPanel.clear", () => {
       ext.resultsViewProvider.updateResults("");
     }),
+    commands.registerCommand("kdb.resultsPanel.export.csv", () => {
+      ext.resultsViewProvider.exportToCsv();
+    }),
     commands.registerCommand("kdb.connect", async (viewItem: KdbNode) => {
       await connect(viewItem);
     }),

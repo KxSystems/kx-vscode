@@ -13,8 +13,9 @@
 
 import { env } from "node:process";
 import path from "path";
-import { window } from "vscode";
-import { queryConstants, QueryResultType } from "../models/queryResult";
+import { Uri, window, workspace } from "vscode";
+import { ext } from "../extensionVariables";
+import { QueryResultType, queryConstants } from "../models/queryResult";
 
 export function runQFileTerminal(filename: string) {
   filename = filename.replace(/\\/g, "/");
@@ -128,4 +129,12 @@ export function convertToArrayOfObjects(resultString: string): any[] {
     }, {})
   );
   return res;
+}
+
+export async function exportToCsv(workspaceUri: Uri) {
+  const timestamp = Date.now();
+  const fileName = `results-${timestamp}.csv`;
+  const filePath = Uri.parse(path.join(workspaceUri.fsPath, fileName));
+  await workspace.fs.writeFile(filePath, Buffer.from(ext.resultPanelCSV));
+  window.showTextDocument(filePath, { preview: false });
 }
