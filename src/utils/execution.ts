@@ -62,9 +62,7 @@ interface tblHeader {
   count: number;
 }
 
-export function convertResultStringToVector(result: string): any[] {
-  const resultRows = result.split("\n").filter((row) => row.length > 0);
-  if (resultRows.length === 1) return resultRows;
+export function convertArrayStringInVector(resultRows: any[]): any[] {
   const resultHeader: tblHeader[] = [];
   let auxHeader = resultRows[0];
   const headerLabels = resultRows[0].replace(/\s+/g, " ").trim().split(" ");
@@ -95,6 +93,27 @@ export function convertResultStringToVector(result: string): any[] {
   });
   resultVector.unshift(headerLabels);
   return resultVector;
+}
+
+export function convertArrayInVector(resultRows: any[]): any[] {
+  const resultVector = resultRows.map((row) => {
+    return row.split(",");
+  });
+  return resultVector;
+}
+
+export function convertResultStringToVector(result: any): any[] {
+  const resultRows =
+    typeof result === "string"
+      ? result.split("\n").filter((row) => row.length > 0)
+      : result;
+  if (resultRows.length === 1) return resultRows;
+  return convertArrayStringInVector(resultRows);
+}
+
+export function convertResultToVector(result: any): any[] {
+  if (result.length === 1) return result;
+  return convertArrayInVector(result);
 }
 
 export function convertToArrayOfObjects(resultString: string): any[] {

@@ -138,11 +138,15 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     return results;
   }
 
-  convertToGrid(queryResult: string): string | GridOptions {
+  convertToGrid(queryResult: any): string | GridOptions {
     if (queryResult === "") {
       return `<p>No results to show</p>`;
     }
-    const vectorRes = utils.convertResultStringToVector(queryResult);
+
+    const vectorRes =
+      typeof queryResult === "string"
+        ? utils.convertResultStringToVector(queryResult)
+        : utils.convertResultToVector(queryResult);
     if (vectorRes.length === 1) {
       return `<p>${vectorRes[0]}</p>`;
     }
@@ -214,20 +218,15 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         "out",
         "ag-theme-alpine.min.css",
       ]);
-      let result = "";
+      let result: any = "";
       let gridOptionsString = "";
-      if (typeof queryResult === "string" && queryResult !== "") {
+      if (queryResult !== "") {
         const convertedGrid = this.convertToGrid(queryResult);
         if (typeof convertedGrid === "string") {
           result = convertedGrid;
         } else {
           gridOptionsString = JSON.stringify(convertedGrid);
         }
-      } else if (typeof queryResult === "object") {
-        result =
-          queryResult === null
-            ? `<p>No results to show</p>`
-            : this.handleQueryResultsString(JSON.stringify(queryResult));
       }
 
       result =
