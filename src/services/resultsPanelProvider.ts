@@ -195,8 +195,12 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       let result = "";
       let gridOptionsString = "";
       if (typeof queryResult === "string" && queryResult !== "") {
-        // result = this.handleQueryResultsString(queryResult);
-        gridOptionsString = JSON.stringify(this.convertToGrid(queryResult));
+        const convertedGrid = this.convertToGrid(queryResult);
+        if (typeof convertedGrid === "string") {
+          result = convertedGrid;
+        } else {
+          gridOptionsString = JSON.stringify(convertedGrid);
+        }
       } else if (typeof queryResult === "object") {
         result =
           queryResult === null
