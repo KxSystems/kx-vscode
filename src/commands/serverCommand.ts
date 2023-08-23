@@ -783,15 +783,18 @@ export async function executeQuery(
     query = sanitizeQuery(query);
     const queryRes = await getScratchpadQuery(query, context);
     writeScratchpadResult(queryRes, query);
-  } else if (ext.connection !== undefined) {
+  } else if (ext.connection !== undefined && ext.connection.connected) {
     query = sanitizeQuery(query);
     const queryRes = await ext.connection.executeQuery(query, context);
     writeQueryResult(queryRes, query);
   } else {
+    const isConnected = ext.connection
+      ? ext.connection.connected
+      : !!ext.connection;
     queryConsole.appendQueryError(
       query,
       "Query is empty",
-      !!ext.connection,
+      isConnected,
       ext.connectionNode?.label ? ext.connectionNode.label : ""
     );
     return undefined;
