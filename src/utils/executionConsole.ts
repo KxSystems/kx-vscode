@@ -92,7 +92,9 @@ export class ExecutionConsole {
       this._console.appendLine(`ERROR Query executed: ${query}`);
       this._console.appendLine(result);
     } else {
+      window.showErrorMessage(`Please connect to a kdb+ server`);
       this._console.appendLine(`Please connect to a kdb+ server`);
+      commands.executeCommand("kdb.disconnect");
     }
     this._console.appendLine(`<<< >>>`);
   }
