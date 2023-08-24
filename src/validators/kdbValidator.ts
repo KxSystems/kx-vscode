@@ -84,7 +84,7 @@ export function validateServerPassword(
 }
 
 export function validateTls(input: string | undefined): string | undefined {
-  if (input !== undefined) {
+  if (input !== undefined && input !== "") {
     if (!validateUtils.isBoolean(input)) {
       return "Input value must be a boolean (true or false)";
     }
