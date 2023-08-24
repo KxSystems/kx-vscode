@@ -232,7 +232,7 @@ export class AnalyzerContent {
       );
       const completion = qLangParserItemsWithKind.filter(
         (item: CompletionItem) => {
-          return item.label.startsWith(keyword);
+          return item.label?.startsWith(keyword);
         }
       );
       return completion;
