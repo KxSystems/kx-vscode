@@ -79,8 +79,8 @@ export function convertArrayStringInVector(resultRows: any[]): any[] {
   if (resultRows[0].includes("---")) {
     resultRows.splice(0, 1);
   }
-  const resultVector = resultRows.map((row) => {
-    const rowArray = [];
+  const resultVector = resultRows.map((row: string) => {
+    const rowArray: string[] = [];
     for (let i = 0; resultHeader.length > i; i++) {
       if (resultHeader[i].count !== 0) {
         const cell = row.substring(0, resultHeader[i].count);
