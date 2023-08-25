@@ -432,7 +432,7 @@ export class DataSourcesPanel {
                     <vscode-button id="run" appearance="secondary" class="btn-run">RUN</vscode-button>
                   </div>
                   <div class="btn-action">
-                    <vscode-button id="populateScratchpad" appearance="secondary" class="btn-scracthpad">POPULATE SCRATCHPAD</vscode-button>
+                    <vscode-button id="populateScratchpad" appearance="secondary" class="btn-scratchpad">POPULATE SCRATCHPAD</vscode-button>
                   </div>
                 </div>
               </div>
