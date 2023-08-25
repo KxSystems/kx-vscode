@@ -294,9 +294,6 @@ export class DataSourcesPanel {
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-        <meta
-          http-equiv="Content-Security-Policy"
-          content="default-src 'none'; style-src ${webview.cspSource}; font-src ${webview.cspSource}; img-src ${webview.cspSource} https:; script-src 'nonce-${nonce}';" />
         <link rel="stylesheet" href="${resetStyleUri}" />
         <link rel="stylesheet" href="${vscodeStyleUri}" />
         <link rel="stylesheet" href="${styleUri}" />
@@ -435,7 +432,7 @@ export class DataSourcesPanel {
                     <vscode-button id="run" appearance="secondary" class="btn-run">RUN</vscode-button>
                   </div>
                   <div class="btn-action">
-                    <vscode-button id="populateScratchpad" appearance="secondary" class="btn-run">POPULATE SCRATCHPAD</vscode-button>
+                    <vscode-button id="populateScratchpad" appearance="secondary" class="btn-scratchpad">POPULATE SCRATCHPAD</vscode-button>
                   </div>
                 </div>
               </div>

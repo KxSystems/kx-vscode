@@ -13,8 +13,9 @@
 
 import { env } from "node:process";
 import path from "path";
-import { window } from "vscode";
-import { queryConstants, QueryResultType } from "../models/queryResult";
+import { Uri, window, workspace } from "vscode";
+import { ext } from "../extensionVariables";
+import { QueryResultType, queryConstants } from "../models/queryResult";
 
 export function runQFileTerminal(filename: string) {
   filename = filename.replace(/\\/g, "/");
@@ -62,9 +63,7 @@ interface tblHeader {
   count: number;
 }
 
-export function convertResultStringToVector(result: string): any[] {
-  const resultRows = result.split("\n").filter((row) => row.length > 0);
-  if (resultRows.length === 1) return resultRows;
+export function convertArrayStringInVector(resultRows: any[]): any[] {
   const resultHeader: tblHeader[] = [];
   let auxHeader = resultRows[0];
   const headerLabels = resultRows[0].replace(/\s+/g, " ").trim().split(" ");
@@ -80,8 +79,8 @@ export function convertResultStringToVector(result: string): any[] {
   if (resultRows[0].includes("---")) {
     resultRows.splice(0, 1);
   }
-  const resultVector = resultRows.map((row) => {
-    const rowArray = [];
+  const resultVector = resultRows.map((row: string) => {
+    const rowArray: string[] = [];
     for (let i = 0; resultHeader.length > i; i++) {
       if (resultHeader[i].count !== 0) {
         const cell = row.substring(0, resultHeader[i].count);
@@ -97,6 +96,27 @@ export function convertResultStringToVector(result: string): any[] {
   return resultVector;
 }
 
+export function convertArrayInVector(resultRows: any[]): any[] {
+  const resultVector = resultRows.map((row) => {
+    return row.split(",");
+  });
+  return resultVector;
+}
+
+export function convertResultStringToVector(result: any): any[] {
+  const resultRows =
+    typeof result === "string"
+      ? result.split("\n").filter((row) => row.length > 0)
+      : result;
+  if (resultRows.length === 1) return resultRows;
+  return convertArrayStringInVector(resultRows);
+}
+
+export function convertResultToVector(result: any): any[] {
+  if (result.length === 1) return result;
+  return convertArrayInVector(result);
+}
+
 export function convertToArrayOfObjects(resultString: string): any[] {
   const result = convertResultStringToVector(resultString);
   const keys = result[0];
@@ -109,4 +129,12 @@ export function convertToArrayOfObjects(resultString: string): any[] {
     }, {})
   );
   return res;
+}
+
+export async function exportToCsv(workspaceUri: Uri) {
+  const timestamp = Date.now();
+  const fileName = `results-${timestamp}.csv`;
+  const filePath = Uri.parse(path.join(workspaceUri.fsPath, fileName));
+  await workspace.fs.writeFile(filePath, Buffer.from(ext.resultPanelCSV));
+  window.showTextDocument(filePath, { preview: false });
 }

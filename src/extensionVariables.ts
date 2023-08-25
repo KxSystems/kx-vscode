@@ -36,6 +36,7 @@ export namespace ext {
   export let resultsViewProvider: KdbResultsViewProvider;
   export let serverObjects: ServerObject;
   export let openSslVersion: string | null;
+  export let resultPanelCSV: string;
 
   export let connection: Connection | undefined;
   export let connectionNode: KdbNode | InsightsNode | undefined;

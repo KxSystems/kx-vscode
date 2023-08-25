@@ -18,7 +18,9 @@ import {
   WebviewView,
   WebviewViewProvider,
   window,
+  workspace,
 } from "vscode";
+import { ext } from "../extensionVariables";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
@@ -67,85 +69,33 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     }
   }
 
-  // this is deprecated and will be dropped in the next update
-  handleQueryResultsString(queryResult: string) {
+  exportToCsv() {
+    if (ext.resultPanelCSV === "") {
+      window.showErrorMessage("No results to export");
+      return;
+    }
+    const workspaceFolders = workspace.workspaceFolders;
+    if (!workspaceFolders) {
+      window.showErrorMessage("Open a folder to export results");
+      return;
+    }
+    const workspaceUri = workspaceFolders[0].uri;
+    utils.exportToCsv(workspaceUri);
+  }
+
+  convertToGrid(queryResult: any): string | GridOptions {
     if (queryResult === "") {
       return `<p>No results to show</p>`;
     }
-    const vectorRes = utils.convertResultStringToVector(queryResult);
+
+    const vectorRes =
+      typeof queryResult === "string"
+        ? utils.convertResultStringToVector(queryResult)
+        : utils.convertResultToVector(queryResult);
     if (vectorRes.length === 1) {
       return `<p>${vectorRes[0]}</p>`;
     }
-    const headers = vectorRes[0]
-      .map((header: string, index: number) => {
-        return `<vscode-data-grid-cell cell-type="columnheader" grid-column="${
-          index + 1
-        }"><b>${header.toUpperCase()}</b></vscode-data-grid-cell>`;
-      })
-      .join("");
-
-    const rows = vectorRes
-      .slice(1)
-      .map((row) => {
-        return `<vscode-data-grid-row>${row
-          .map((cell: string, index: number) => {
-            return `<vscode-data-grid-cell grid-column="${
-              index + 1
-            }">${cell}</vscode-data-grid-cell>`;
-          })
-          .join("")}</vscode-data-grid-row>`;
-      })
-      .join("");
-
-    return /*html*/ `<vscode-data-grid class="results-datagrid" aria-label="Basic">
-              <vscode-data-grid-row class="results-header-datagrid" row-type="header">
-                ${headers}
-              </vscode-data-grid-row>
-              ${rows}
-            </vscode-data-grid>`;
-  }
-
-  handleQueryResultsArray(queryResult: any[]): string {
-    if (queryResult.length === 0) {
-      return `<p>No results to show</p>`;
-    }
-    let results = "";
-    results = `<vscode-data-grid class="results-datagrid" aria-label="Basic">`;
-    let headers = `<vscode-data-grid-row class="results-header-datagrid" row-type="header">`;
-    let rows = ``;
-    let countHeader = 1;
-    let indexColumn = 1;
-    const headersArray = queryResult[0].split(",");
-    for (const column in headersArray) {
-      headers += `<vscode-data-grid-cell  cell-type="columnheader" grid-column="${countHeader}"><b>${headersArray[
-        column
-      ].toUpperCase()}</b></vscode-data-grid-cell>`;
-      countHeader++;
-    }
-    const resRows = queryResult.slice(1).map((str) => str.split(","));
-
-    headers += `</vscode-data-grid-row>`;
-    resRows.forEach((row: string[]) => {
-      rows += `<vscode-data-grid-row>`;
-      for (const value in row) {
-        rows += `<vscode-data-grid-cell grid-column="${indexColumn}">${row[value]}</vscode-data-grid-cell>`;
-        indexColumn++;
-      }
-      rows += `</vscode-data-grid-row>`;
-      indexColumn = 1;
-    });
-    results += headers + rows + `</vscode-data-grid>`;
-    return results;
-  }
-
-  convertToGrid(queryResult: string): string | GridOptions {
-    if (queryResult === "") {
-      return `<p>No results to show</p>`;
-    }
-    const vectorRes = utils.convertResultStringToVector(queryResult);
-    if (vectorRes.length === 1) {
-      return `<p>${vectorRes[0]}</p>`;
-    }
+    ext.resultPanelCSV = vectorRes.map((row) => row.join(",")).join("\n");
     const keys = vectorRes[0];
     const value = vectorRes.slice(1);
     const rowData = value.map((row) =>
@@ -157,9 +107,6 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     const columnDefs = keys.map((str: string) => ({ field: str }));
     return {
       defaultColDef: {
-        enableRowGroup: true,
-        enablePivot: true,
-        enableValue: true,
         sortable: true,
         resizable: true,
         filter: true,
@@ -182,6 +129,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     queryResult: string | string[],
     _dataSourceType?: string
   ) {
+    ext.resultPanelCSV = "";
     this._results = queryResult;
     const agGridTheme = this.defineAgGridTheme();
     if (this._view) {
@@ -214,20 +162,15 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         "out",
         "ag-theme-alpine.min.css",
       ]);
-      let result = "";
+      let result: any = "";
       let gridOptionsString = "";
-      if (typeof queryResult === "string" && queryResult !== "") {
+      if (queryResult !== "") {
         const convertedGrid = this.convertToGrid(queryResult);
         if (typeof convertedGrid === "string") {
           result = convertedGrid;
         } else {
           gridOptionsString = JSON.stringify(convertedGrid);
         }
-      } else if (typeof queryResult === "object") {
-        result =
-          queryResult === null
-            ? `<p>No results to show</p>`
-            : this.handleQueryResultsString(JSON.stringify(queryResult));
       }
 
       result =
