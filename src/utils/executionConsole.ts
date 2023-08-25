@@ -42,12 +42,23 @@ export class ExecutionConsole {
     }
   }
 
+  public checkOutput(output: string | string[]): string | string[] {
+    if (Array.isArray(output)) {
+      return output;
+    }
+    if (output.trim().startsWith("{") && output.trim().endsWith("}")) {
+      return "No results found.";
+    }
+    return output;
+  }
+
   public append(
     output: string | string[],
     query = "",
     serverName: string,
     dataSourceType?: string
   ): void {
+    output = this.checkOutput(output);
     let dataSourceRes: string[] = [];
     if (dataSourceType === undefined) {
       this._console.show(true);
