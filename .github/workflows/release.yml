@@ -32,7 +32,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: KDB-VSCode-Extension
-          path: *.vsix
+          path: kdb-${{ env.PACKAGE_VERSION }}.vsix
 
   app-sec:
     runs-on: ubuntu-latest
