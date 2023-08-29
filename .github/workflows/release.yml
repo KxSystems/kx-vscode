@@ -89,6 +89,8 @@ jobs:
           name: KDB-VSCode-Extension
       - name: Release to Portal
         run: |
-          curl -L -s --fail-with-body -D /dev/stderr --oauth2-bearer ${{ secrets.kx_downloads_token_prod }} \
-          --upload-file kdb-${{ env.PACKAGE_VERSION }}.vsix \
-          https://portal.dl.kx.com/assets/raw/kdb-vscode/kdb-vscode-${{ github.ref_name }}.rc.${{ env.PACKAGE_VERSION }}.vsix
+          ls
+          ls /home/runner/work/kx-vscode/kx-vscode
+          # curl -L -s --fail-with-body -D /dev/stderr --oauth2-bearer ${{ secrets.kx_downloads_token_prod }} \
+          # --upload-file kdb-${{ env.PACKAGE_VERSION }}.vsix \
+          # https://portal.dl.kx.com/assets/raw/kdb-vscode/kdb-vscode-${{ github.ref_name }}.rc.${{ env.PACKAGE_VERSION }}.vsix
