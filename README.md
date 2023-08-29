@@ -6,7 +6,14 @@ This is a companion extension for kdb developers. It provides editing capabiliti
 
 ## Contents
 
-FIXME put in table of contents with links
+- [Overview](#overview)
+- [Getting Started](#getting-started)
+- [Connections](#connections)
+- [kdb language server](#kdb-language-server)
+- [Executing code](#executing-code)
+- [Viewing results](#viewing-results)
+- [Shortcuts](#shortcuts)
+
 
 ## Overview
 
@@ -39,7 +46,7 @@ When you install the extension, you are instructed to do one of the following:
 - Install q locally using the [instructions on our documentation website](https://code.kx.com/q/learn/install)
 - [Install q using the extension](#install-q-using-the-extension)
 
-### Install q using the extension**
+### Install q using the extension
 
 TODO - this section needs screenshots
 
@@ -82,19 +89,24 @@ From the extension, you can now [connect directly to a q session](#connect-to-a-
 
 We provide these connection types:
 
-- Managed q session - alias 'local'
+- **Managed q session** - alias 'local'
 
     You can use Visual Studio Code's controls to start and stop a managed connection. When you exit Visual Studio Code, the q process stops. To allow vscode to manage a q process, set the alias as 'local' when creating it
     
-- Unmanaged q session
+- **Unmanaged q session**
 
     You manage the q process outside of Visual Studio Code. The q process runs irrespective of whether you have Visual Studio Code open or not. When creating a connection in vscode set the alias to anything else other than 'local' or 'insights'
 
-- Insights
+- **kdb Insights**
 
     You can connect to an instance of kdb Insights Enterprise.
 
-### kdb connections
+
+![kdb connection](img/kdb-connection.png)
+
+
+### Managing kdb connections
+
 
 A q session may be [managed or unmanaged](#connection-types). 
 
@@ -207,40 +219,42 @@ A kdb language server is bundled with the vscode extension this offers various c
 
 Key word syntax highlighting, comments and linting help
 
-TODO - Add diagram for a sensible q function
+![Syntax Highlighting](img/syntax-highlighting.png)
 
-TODO - Add diagram showing linting at work
-
-TODO - Add diagram showing comments at work
+![Linting](img/linting.png)
 ### Code Navigation
 
 While developing q scripts, the kdb extension supports
 
-- Call Hierarchy
+- Go to Definition
+  Allowing the user to navigate to eh definition of a function
 
-TODO Diagram
+- Call Hierarchy
+  To view the call stack from the selected function
+
+  TODO Diagram
 
 - Find all References/Go to References
+  
+  To view references of a function both on the side view and inline with the editor
+  ![Find all references](img/find-all-references.jpg)
 
-TODO Diagram
+  ![Go to References](img/go-to-references.png)
 
-- Go to Definition
 
-TODO Diagram
 
 ### Code Completion
 
 - Keyword auto complete for the q language 
 
-TODO INSERT DIAGRAM
+  ![Autocomplete](img/autocomplete.png)
 
 - Autocomplete of local and remotely connected q process autocomplete
 
+  TODO INSERT DIAGRAM
 
-TODO INSERT DIAGRAM
 
-
-## Execute code
+## Executing code
 
 Leaning on vscode's extensive integrations with SCMs all code is typically stored and loaded into a vscode workspace.From there the kdb extension allows the user to execute that code in a number of ways against both kdb processes and Insights endpoints. TODO Insert link to creating connections
 
@@ -252,7 +266,7 @@ There are three options for executing code against a connected kdb process;avaia
 
 This will take the current selection (or current line if nothing selected) and execute it against the connected q process. The results will apepar in the OUPUT window (TOOD INSERT LINK) and/or the KDB RESULTS window (TODO INSERT LINK)
 
-TODO INSERT DIAGRAM
+![Execute selection](img/execute-selection.jpg)
 
 #### Execute entire file
 
@@ -262,13 +276,10 @@ tthis will take the current file and execute it against the connected q process.
 
 If q is installed and executabel from teh terminal, it is possible to execute and entire script on a newly launch q instance with this option. When executing a file on a new instance, it will launch in the terminal and allow the user to interrogate the active q process from the terminal window within vscode
 
-TODO INSERT DIAGRAM
 
 ### Insights query execution
 
 The kdb Insights Platform offers enhanced connectivity and Enterprise level API endpoints offering additional means to query data and interact with Insights which is not available with kdb processes. It is necessary to have an instance of Insight Enterprise running and have created a connection to it (TODO INSERT LINK) within the vscode extension
-
-TODO INSERT DIAGRAM OF AN ACTIVE KDB INSTANCE CONNECTION
 
 Similarly to above (TODO insert link), we can execute arbitary code against Insights. This will be executed on a user specific sandbox process within the Insights deploy. This sandbox will be instanciated upon the first request to execute code when connected to an Insights connection and will remain active until timed out; or the user is logged out. 
 
@@ -282,23 +293,20 @@ To create a Data Source
 - click on the created data source where the name, API and parameterization can be applied
 - 'Save' will persist the Data source to the vscode workspace
 
-TODO INSERT DIAGRAM of a data source
+![data Source](img/data-source.png)
 
 To run the data source, click on 'Run' and the results will populate the OUTPUT (TODO INSERT LINK) and KDB RESULTS (TODO INSERT LINK) windows
 
 In addition to API queries, if the Query Environment is enabled on the deployed instance of Insights; QSQL and SQL queries can be used within a Data Source with the appropriate parameterization
 
-TODO Insert diagram of QSQL query
-
-TODO Insert diagram of a SQL query
 #### Populate Scratchpad
 
-A common ask is to populate a user scratchpad with a dataset to allow the user to build complex APIs and pipelines within vscode and kdb Inisghts. This can be achieved with Data Source, which when created can be executed to populate the scratchpad with the 'Populate Scratchpad' button. Once executed, the user can return to their editor and execute q code against the data which has pushed to their scratchpad instance
+A common ask is to populate a user scratchpad with a dataset to allow the user to build complex APIs and pipelines within vscode and kdb Inisghts. This can be achieved with Data Source, which when created can be executed to populate the scratchpad with the 'Populate Scratchpad' button. The user will be asked for a variable to populate the data to on their scratchpad instance, then can return to their editor and execute q code against the data which has pushed to their scratchpad instance
 
-TODO Insert diagram
+![Populate Scratchpad](img/populate-scratchpad.png)
 
 
-## View results
+## Viewing results
 
 All query executions happen remotely to the kdb extension either against a running q process; or an instance of kdb Insights. The result, successful or otherwise are returned to vscode to be displayed in two different views
 
@@ -306,13 +314,26 @@ All query executions happen remotely to the kdb extension either against a runni
 
 The output view displays the results as they are received by the vscode extension. This will include the query executed; timestamp and the results
 
-TODO INSERT Diagram of results; including a non table
+![Output view](img/output-results.png)
 
+!!!note
+    Auto scrolling can be enabled/disabled within the vs code settings. This setting will set whether this view scrolls to the latest results
+
+    ![Output autoscrolling](img/auto-scrolling.jpg)
+
+### KDB Results view
 In addition to this the results are displayed under the KDB RESULTS view which offers a tabulised view of the returned data
 
-TODO Insert diagram of results from KDB RESULTS
+![kdb results view](img/kdbview-results.png)
 
 
-## Default shortcuts
+## Shortcuts
 
-TODO Insert table
+| Key | Action |
+| - | - |
+| F12 | Go to Definition |
+| Shift + F12 | Go to References |
+| Cmd/Ctrl + Shift + F12 | Find All References |
+| Ctrl + Q | Execute Current Selection |
+| Ctrl + Shift + Q | Execute Entire File |
+| Ctrl + Shift + R | Run q file in new q instance |
