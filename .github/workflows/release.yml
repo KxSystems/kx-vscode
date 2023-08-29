@@ -3,7 +3,7 @@ name: KX VS Code Release Workflow
 on: [push, pull_request]
 #limit to dev and main
 env:
-  package_version: "0.1.16"
+  PACKAGE_VERSION: "0.1.16"
 
 jobs:
   build:
@@ -25,14 +25,15 @@ jobs:
         run: xvfb-run -a yarn run test
       - name: Update package.json
         run: |
-          sed -i -e '/"version":/c\  "version": $package_version,' package.json
+          sed -i '/"version":/c\  "version": $PACKAGE_VERSION,' package.json
+          cat package.json
       - name: Packaging
         run: yarn run package
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: KDB-VSCode-Extension
-          path: kdb-${package_version}.vsix
+          path: kdb-${PACKAGE_VERSION}.vsix
 
   app-sec:
     runs-on: ubuntu-latest
@@ -90,5 +91,5 @@ jobs:
       # - name: Release to Portal
       #   run: |
       # curl -s --header "PRIVATE-TOKEN: ${{ secrets.download_portal_key }} \
-      # --upload-file kdb-${package_version}.vsix  \
-      # ${{ DOWNLOAD_PORTAL_URL }}/assets/raw/kdb-vscode/kdb-vscode-${{ github.ref_name }}.rc.${package_version}.vsix
+      # --upload-file kdb-${PACKAGE_VERSION}.vsix  \
+      # ${{ DOWNLOAD_PORTAL_URL }}/assets/raw/kdb-vscode/kdb-vscode-${{ github.ref_name }}.rc.${PACKAGE_VERSION}.vsix
