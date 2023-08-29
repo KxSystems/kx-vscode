@@ -32,7 +32,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: KDB-VSCode-Extension
-          path: kdb-$PACKAGE_VERSION.vsix
+          path: *.vsix
 
   app-sec:
     runs-on: ubuntu-latest
@@ -87,8 +87,8 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: KDB-VSCode-Extension
-      # - name: Release to Portal
-      #   run: |
-      # curl -s --header "PRIVATE-TOKEN: ${{ secrets.download_portal_key }} \
-      # --upload-file kdb-${PACKAGE_VERSION}.vsix  \
-      # ${{ DOWNLOAD_PORTAL_URL }}/assets/raw/kdb-vscode/kdb-vscode-${{ github.ref_name }}.rc.${PACKAGE_VERSION}.vsix
+      - name: Release to Portal
+        run: |
+          curl -L -s --fail-with-body -D /dev/stderr --oauth2-bearer ${{ secrets.kx_downloads_token_prod }} \
+          --upload-file kdb-$PACKAGE_VERSION.vsix \
+          https://portal.dl.kx.com/assets/raw/kdb-vscode/kdb-vscode-${{ github.ref_name }}.rc.${PACKAGE_VERSION}.vsix
