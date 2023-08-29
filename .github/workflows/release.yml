@@ -25,7 +25,7 @@ jobs:
         run: xvfb-run -a yarn run test
       - name: Update package.json
         run: |
-          sed -i "/\"version\":/c\  \"version\": $PACKAGE_VERSION," package.json
+          sed -i "/\"version\":/c\  \"version\": \"$PACKAGE_VERSION\"," package.json
       - name: Packaging
         run: yarn run package
       - name: Upload artifact
