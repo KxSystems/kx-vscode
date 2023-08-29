@@ -2,10 +2,15 @@
 
 name: KX VS Code CI
 
-on: [push, pull_request]
-  branches-ignore:
-    - dev
-    - main
+on:
+  push:
+    branches-ignore:
+      - dev
+      - main
+  pull_request:
+    branches-ignore:
+      - dev
+      - main
 
 jobs:
   test:

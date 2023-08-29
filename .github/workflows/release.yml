@@ -22,7 +22,7 @@ jobs:
       - name: Build VSIX file
         run: yarn run build
       - name: Run Tests
-        run: yarn run test
+        run: xvfb-run -a yarn run test
       - name: Update package.json
         run: |
           sed -i -e '/"version":/c\  "version": ${package_version},' package.json
