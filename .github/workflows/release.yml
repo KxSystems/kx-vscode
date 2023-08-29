@@ -1,5 +1,3 @@
-# This workflow runs the tests across Linux, Mac, Windows
-
 name: KX VS Code Release Workflow
 
 on: [push, pull_request]
@@ -27,14 +25,14 @@ jobs:
         run: yarn run test
       - name: Update package.json
         run: |
-          sed -i -e '/"version":/c\  "version": ${{ package_version }},' package.json
+          sed -i -e '/"version":/c\  "version": ${package_version},' package.json
       - name: Packaging
         run: yarn run package
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
           name: KDB-VSCode-Extension
-          path: kdb-${{ package_version }}.vsix
+          path: kdb-${package_version}.vsix
 
   app-sec:
     runs-on: ubuntu-latest
@@ -92,5 +90,5 @@ jobs:
       # - name: Release to Portal
       #   run: |
       # curl -s --header "PRIVATE-TOKEN: ${{ secrets.download_portal_key }} \
-      # --upload-file kdb-${{ package_version }}.vsix  \
-      # ${{ DOWNLOAD_PORTAL_URL }}/assets/raw/kdb-vscode/kdb-vscode-${{ github.ref_name }}.rc.${{ package_version }}.vsix
+      # --upload-file kdb-${package_version}.vsix  \
+      # ${{ DOWNLOAD_PORTAL_URL }}/assets/raw/kdb-vscode/kdb-vscode-${{ github.ref_name }}.rc.${package_version}.vsix
