@@ -7,10 +7,6 @@ on:
     branches-ignore:
       - dev
       - main
-  pull_request:
-    branches-ignore:
-      - dev
-      - main
 
 jobs:
   test:
