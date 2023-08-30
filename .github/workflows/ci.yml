@@ -1,6 +1,6 @@
 # This workflow runs the tests across Linux, Mac, Windows
 
-name: KX VS Code CI
+name: KX VS Code CI Testing
 
 on:
   push:
