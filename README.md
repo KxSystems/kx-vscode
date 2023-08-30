@@ -19,6 +19,7 @@ This is a companion extension for kdb developers. It provides editing capabiliti
 
 Use this extension to:
 
+- Install q
 - Predict and complete q syntax in a q session or within an instance of kdb Insights Enterprise
 - Execute a line of q code, a section of q code, or a file of q code in a q session
 - Execute q code from within kdb Insights Enterprise
@@ -168,8 +169,6 @@ To configure a connection to a q session and connect to it, use these steps:
     FIXME more description needed
 
    **Note:** To delete a connection configuration, right-click it and select **Remove Connection**.
-
-   FIXME insert diagram
     
 1. Tell the kdb VS Code extension which configuration to connect to.
 
@@ -202,7 +201,6 @@ To configure a connection to an instance of kdb Insights Enterprise and connect 
 
     **Note:** To delete a connection configuration, right-click it and select **Remove Connection**.
 
-   FIXME Insert diagram
 
 1. Tell the kdb VS Code extension which instance of kdb Insights Enterprise to connect to.
 
