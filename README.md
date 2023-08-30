@@ -20,20 +20,20 @@ This is a companion extension for kdb developers. It provides editing capabiliti
 Use this extension to:
 
 - Predict and complete q syntax in a q session or within an instance of kdb Insights Enterprise
-- Execute a line of q code, a section of q code or a file of q code in a q session
-- Execute q code from within kdb Insights Enterprise FIXME more needed here
-- View results FIXME more needed here
+- Execute a line of q code, a section of q code, or a file of q code in a q session
+- Execute q code from within kdb Insights Enterprise
+- View results
 
-## Getting Started
+## Getting started
 
-The kdb VS Code extension provides a workflow to install q and allow the runtime management of q processes from with Visual Studio Code
+The kdb VS Code extension provides a workflow to install q and to allow the runtime management of q processes from with VS Code.
 
-With the Visual Studio Code exension you can
+With the kdb VS Code extension you can:
 
 1. Install q
 1. Start q
-1. Configure connections between Visual Studio Code and q or kdb Insights Enterprise
-1. Connect Visual Studio Code to q or kdb Insights Enterprise
+1. Configure connections between VS Code and q or kdb Insights Enterprise
+1. Connect VS Code to q or kdb Insights Enterprise
 
 **If you already have q installed locally**
 
@@ -72,30 +72,36 @@ You are prompted to provide a license key.
 
     At the prompt, click **Open** to go to https://kx.com/kdb-personal-edition-download, where you can sign up for our 12-month free trial of kdb+ Personal Edition. You can, alternatively, contact our licensing department at licadmin@kx.com if you want to buy a full commercial license.
 
-    When you receive a license email from KX, return to Visual Studio Code and click **Continue** at the prompt in the bottom right-hand corner. From here, you are prompted to specify a license key string or file as above.
+    When you receive a license email from KX, return to VS Code and click **Continue** at the prompt in the bottom right-hand corner. From here, you are prompted to specify a license key string or file as above.
 
     A success notice is displayed and you can [start q](#start-q).
 
-Note: ensure that the system variable [*QHOME*](https://code.kx.com/q/learn/install)) is defined and that the location of your q folder is specified in the *Path* system variable.
+**Note:** ensure that the system variable [*QHOME*](https://code.kx.com/q/learn/install)) is defined and that the location of your q folder is specified in the *Path* system variable.
 
 ### Start q
 
 If you just installed q using the extension, the last prompt is to **Start q**.
 
-From the extension, you can now [connect directly to a q session](#connect-to-a-q-session), or to an [instance of kdb Insights Enterprise](connect-to-an-instance-of-kdb-insights-enterprise).
+If you already had q installed, launch it as usual (by typing '/q' at the command prompt).
+
+From the extension, you can now connect directly to a q session, or to an instance of kdb Insights Enterprise. Begin by reading about how the connections work.
 
 ## Connections
+
+
+
+
 ### Connection types
 
 We provide these connection types:
 
 - **Managed q session** - alias 'local'
 
-    You can use Visual Studio Code's controls to start and stop a managed connection. When you exit Visual Studio Code, the q process stops. To allow Visual Studio Code to manage a q process, set the alias as 'local' when creating it
+    You can use VS Code's controls to start and stop a managed connection. When you exit VS Code, the q process stops. To allow VS Code to manage a q process, set the alias as 'local' when creating it.
     
 - **Unmanaged q session**
 
-    You manage the q process outside of Visual Studio Code. The q process runs irrespective of whether you have Visual Studio Code open or not. When creating a connection in Visual Studio Code set the alias to anything else other than 'local' or 'insights'
+    You manage the q process outside of VS Code. The q process runs irrespective of whether you have VS Code open or not. When creating a connection in VS Code, set the alias to something other than 'local' or 'insights'.
 
 - **kdb Insights Enterprise**
 
@@ -112,13 +118,13 @@ A q session may be [managed or unmanaged](#connection-types).
 
 To add and connect to a q session use these steps:
 
-1. Enable the q process to communicate with Visual Studio Code.
+1. Enable the q process to communicate with VS Code.
  
     To do this, [set the q process to listen on a port](https://code.kx.com/q/basics/ipc).
 
     Make a note of the port number that you use; you need this in the next step.
 
-1. Configure the connection in Visual Studio Code.
+1. Configure the connection in VS Code.
 
     To do this, click **Connect to kdb server** in the KX side bar.
    
@@ -177,7 +183,7 @@ TODO Insert diagram
 
 To add and connect to a kdb Insights Enterprise connection use these steps:
 
-1. Specify details of the kdb Insights Enterprise endpoint in Visual Studio Code.
+1. Specify details of the kdb Insights Enterprise endpoint in VS Code.
 
     To do this, click **Connect to kdb server** in the KX side bar.
 
@@ -209,7 +215,7 @@ TODO Insert diagram
 
 ## kdb language server
 
-A kdb language server is bundled with the kdb VS Code extension this offers various common features to aid in the development of kdb code within Visual Studio Code including
+A kdb language server is bundled with the kdb VS Code extension this offers various common features to aid in the development of kdb code within VS Code including
 
 - Syntax highlighting and linting
 - Code Naivigation
@@ -256,7 +262,7 @@ While developing q scripts, the kdb VS Code extension supports
 
 ## Executing code
 
-Leaning on Visual Studio Code's extensive integrations with SCMs all code is typically stored and loaded into a Visual Studio Code workspace. From there the kdb VS Code extension allows the user to execute that code in a number of ways against both kdb processes and Insights endpoints. TODO Insert link to creating connections
+Leaning on VS Code's extensive integrations with SCMs all code is typically stored and loaded into a VS Code workspace. From there the kdb VS Code extension allows the user to execute that code in a number of ways against both kdb processes and Insights endpoints. TODO Insert link to creating connections
 
 ### kdb process executing code
 
@@ -274,7 +280,7 @@ tthis will take the current file and execute it against the connected q process.
 
 #### Run q file in new q instance
 
-If q is installed and executabel from teh terminal, it is possible to execute and entire script on a newly launch q instance with this option. When executing a file on a new instance, it will launch in the terminal and allow the user to interrogate the active q process from the terminal window within Visual Studio Code
+If q is installed and executabel from teh terminal, it is possible to execute and entire script on a newly launch q instance with this option. When executing a file on a new instance, it will launch in the terminal and allow the user to interrogate the active q process from the terminal window within VS Code
 
 
 ### Insights query execution
@@ -285,13 +291,13 @@ Similarly to above (TODO insert link), we can execute arbitary code against Insi
 
 #### Data Sources
 
-In addition to code execution against scratchpads, Insights also support Data Sources where users can build a query within Visual Studio Code which can be executed against the Insights API endpoints (TODO INSERT LINK TO API DOCS on code.kx.com). The UI helps users build a query based on the available API on their instance of Insights; parameterise it and return the data results to the OUTPUT or KDB Results window
+In addition to code execution against scratchpads, Insights also support Data Sources where users can build a query within VS Code which can be executed against the Insights API endpoints (TODO INSERT LINK TO API DOCS on code.kx.com). The UI helps users build a query based on the available API on their instance of Insights; parameterise it and return the data results to the OUTPUT or KDB Results window
 
 To create a Data Source
 
 - In the Data Sources view, click the options button and select 'Add Data Source'
 - click on the created data source where the name, API and parameterization can be applied
-- 'Save' will persist the Data source to the Visual Studio Code workspace
+- 'Save' will persist the Data source to the VS Code workspace
 
 ![data Source](img/data-source.png)
 
@@ -301,14 +307,14 @@ In addition to API queries, if the Query Environment is enabled on the deployed 
 
 #### Populate Scratchpad
 
-A common ask is to populate a user scratchpad with a dataset to allow the user to build complex APIs and pipelines within Visual Studio Code and kdb Inisghts. This can be achieved with Data Source, which when created can be executed to populate the scratchpad with the 'Populate Scratchpad' button. The user will be asked for a variable to populate the data to on their scratchpad instance, then can return to their editor and execute q code against the data which has pushed to their scratchpad instance
+A common ask is to populate a user scratchpad with a dataset to allow the user to build complex APIs and pipelines within VS Code and kdb Inisghts. This can be achieved with Data Source, which when created can be executed to populate the scratchpad with the 'Populate Scratchpad' button. The user will be asked for a variable to populate the data to on their scratchpad instance, then can return to their editor and execute q code against the data which has pushed to their scratchpad instance
 
 ![Populate Scratchpad](img/populate-scratchpad.png)
 
 
 ## Viewing results
 
-All query executions happen remotely to the kdb VS Code extension either against a running q process; or an instance of kdb Insights Enterprise. The result, successful or otherwise are returned to Visual Studio Code to be displayed in two different views
+All query executions happen remotely to the kdb VS Code extension either against a running q process; or an instance of kdb Insights Enterprise. The result, successful or otherwise are returned to VS Code to be displayed in two different views
 
 ### Output view
 
@@ -317,7 +323,7 @@ The output view displays the results as they are received by the kdb VS Code ext
 ![Output view](img/output-results.png)
 
 !!!note
-    Auto scrolling can be enabled/disabled within the Visual Studio Code settings. This setting will set whether this view scrolls to the latest results
+    Auto scrolling can be enabled/disabled within the VS Code settings. This setting will set whether this view scrolls to the latest results
 
     ![Output autoscrolling](img/auto-scrolling.jpg)
 
