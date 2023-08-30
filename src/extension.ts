@@ -168,6 +168,7 @@ export async function activate(context: ExtensionContext) {
     ),
     commands.registerCommand("kdb.refreshServerObjects", () => {
       ext.serverProvider.reload();
+      ext.connection?.update();
     }),
     commands.registerCommand("kdb.dataSource.addDataSource", async () => {
       await addDataSource();
@@ -238,9 +239,11 @@ export async function activate(context: ExtensionContext) {
     }),
     commands.registerCommand("kdb.execute.selectedQuery", async () => {
       runQuery(ExecutionTypes.QuerySelection);
+      ext.connection?.update();
     }),
     commands.registerCommand("kdb.execute.fileQuery", async () => {
       runQuery(ExecutionTypes.QueryFile);
+      ext.connection?.update();
     })
   );
 
