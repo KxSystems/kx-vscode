@@ -288,7 +288,7 @@ If q is installed and executable from the terminal, you can execute an entire sc
 
 ### Insights query execution
 
-The kdb Insights Platform offers enhanced connectivity and Enterprise level API endpoints offering additional means to query data and interact with Insights which is not available with kdb processes. It is necessary to have an instance of kdb Insights Enterprise running and have created a connection to it within the kdb VS Code extension
+kdb Insights Enterprise offers enhanced connectivity and enterprise level API endpoints, providing additional means to query data and interact with kdb Insights Enterprise which are not available with kdb processes. It is necessary to have an instance of kdb Insights Enterprise running and have created a connection to it within the kdb VS Code extension
 
 Similarly, you can execute arbitrary code against kdb Insights Enterprise. The code is executed on a user-specific sandbox process within the kdb Insights Enterprise deploy. The sandbox is instanciated upon the first request to execute code when connected to a kdb Insights Enterprise connection. It remains active until timed out or until the user logs out.
 
