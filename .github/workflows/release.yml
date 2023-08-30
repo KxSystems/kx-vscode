@@ -8,6 +8,7 @@ on:
 
 env:
   PACKAGE_VERSION: "0.1.17"
+  NODE_ENV: production
 
 jobs:
   build:
@@ -87,8 +88,7 @@ jobs:
     needs: app-sec
     steps:
       - name: Get current date
-        id: date
-        run: echo "::set-output name=date::$(date + '%Y-%m-%d')"
+        run: echo "Now=$(date + '%Y-%m-%d')" >> $GITHUB_ENV
       - name: Download VSIX file from build job
         uses: actions/download-artifact@v3
         with:
@@ -98,4 +98,4 @@ jobs:
           curl -L -s --fail-with-body -D /dev/stderr --oauth2-bearer ${{ secrets.kx_downloads_token_prod }} \
           -H 'content-type: application/octet-stream' \
           --upload-file kdb-${{ env.PACKAGE_VERSION }}.vsix \
-          https://portal.dl.kx.com/assets/raw/kdb-vscode/${{ github.ref_name }}/kdb-${{ env.PACKAGE_VERSION }}-${{ github.ref_name }}.rc.${{ steps.date.outputs.date }}.vsix
+          https://portal.dl.kx.com/assets/raw/kdb-vscode/${{ github.ref_name }}/kdb-${{ env.PACKAGE_VERSION }}-${{ github.ref_name }}.rc.${{ env.NOW }}.vsix
