@@ -213,52 +213,44 @@ To configure a connection to an instance of kdb Insights Enterprise and connect 
 
     FIXME link to a section about executing code
 
-TODO Insert diagram
-
-
-
-
-
-
-
-
-
+    FIXME Insert diagram
 
 ## kdb language server
 
-A kdb language server is bundled with the kdb VS Code extension this offers various common features to aid in the development of kdb code within VS Code including
+A kdb language server is bundled with the kdb VS Code extension. It offers various common features to aid in the development of kdb code within VS Code, including:
 
 - Syntax highlighting and linting
-- Code Naivigation
-- Code Completion
+- Code navigation
+- Code completion
 
 ### Syntax highlighting
 
-Key word syntax highlighting, comments and linting help
+Keyword syntax highlighting, comments and linting help
 
 ![Syntax Highlighting](img/syntax-highlighting.png)
 
 ![Linting](img/linting.png)
-### Code Navigation
 
-While developing q scripts, the kdb VS Code extension supports
 
-- Go to Definition
-  Allowing the user to navigate to eh definition of a function
+### Code navigation
 
-- Call Hierarchy
-  To view the call stack from the selected function
+While developing q scripts, the kdb VS Code extension supports:
+
+- Go to definition
+  Navigate to the definition of a function
+
+- Call hierarchy
+  View the call stack from the selected function
 
   TODO Diagram
 
-- Find all References/Go to References
+- Find/go to all references
   
-  To view references of a function both on the side view and inline with the editor
+  View references of a function both on the side view and inline with the editor
+  
   ![Find all references](img/find-all-references.jpg)
 
   ![Go to References](img/go-to-references.png)
-
-
 
 ### Code Completion
 
@@ -266,57 +258,57 @@ While developing q scripts, the kdb VS Code extension supports
 
   ![Autocomplete](img/autocomplete.png)
 
-- Autocomplete of local and remotely connected q process autocomplete
+- Autocomplete for local and remotely connected q processes
 
   TODO INSERT DIAGRAM
 
 
 ## Executing code
 
-Leaning on VS Code's extensive integrations with SCMs all code is typically stored and loaded into a VS Code workspace. From there the kdb VS Code extension allows the user to execute that code in a number of ways against both kdb processes and Insights endpoints. TODO Insert link to creating connections
+Leaning on VS Code's extensive integrations with SCMs, all code is typically stored and loaded into a VS Code workspace. From there, the kdb VS Code extension allows you to execute that code in a number of ways against both kdb processes and Insights Enterprise endpoints.
 
 ### kdb process executing code
 
-There are three options for executing code against a connected kdb process;avaialble via the right click menu
+There are three options, which are available from the right-click menu, for executing code against a connected kdb process:
 
-#### Execute Current Selection
+#### Execute current selection
 
-This will take the current selection (or current line if nothing selected) and execute it against the connected q process. The results will apepar in the OUPUT window (TOOD INSERT LINK) and/or the KDB RESULTS window (TODO INSERT LINK)
+Takes the current selection (or current line if nothing is selected) and executes it against the connected q process. Results are displayed in the output window (TOOD INSERT LINK) and/or the kdb results window (TODO INSERT LINK).
 
 ![Execute selection](img/execute-selection.jpg)
 
 #### Execute entire file
 
-tthis will take the current file and execute it against the connected q process. Link (TODO LINK TO ABOVE) the results will apepar in teh OUTPUT window  (TODO INSERT LINK). If it returns data the results will appear in the KDB RESULTS window  (TODO INSERT LINK)
+Takes the current file and executes it against the connected q process. Results are displayed in the output window (TODO INSERT LINK). Returned data are displayed in the kdb results window (TODO INSERT LINK).
 
 #### Run q file in new q instance
 
-If q is installed and executabel from teh terminal, it is possible to execute and entire script on a newly launch q instance with this option. When executing a file on a new instance, it will launch in the terminal and allow the user to interrogate the active q process from the terminal window within VS Code
+If q is installed and executable from the terminal, you can execute an entire script on a newly launched q instance using this option. When executing a file on a new instance, it will launch in the terminal and allow you to interrogate the active q process from the terminal window within VS Code.
 
 
 ### Insights query execution
 
-The kdb Insights Platform offers enhanced connectivity and Enterprise level API endpoints offering additional means to query data and interact with Insights which is not available with kdb processes. It is necessary to have an instance of Insight Enterprise running and have created a connection to it (TODO INSERT LINK) within the kdb VS Code extension
+The kdb Insights Platform offers enhanced connectivity and Enterprise level API endpoints offering additional means to query data and interact with Insights which is not available with kdb processes. It is necessary to have an instance of kdb Insights Enterprise running and have created a connection to it within the kdb VS Code extension
 
-Similarly to above (TODO insert link), we can execute arbitary code against Insights. This will be executed on a user specific sandbox process within the Insights deploy. This sandbox will be instanciated upon the first request to execute code when connected to an Insights connection and will remain active until timed out; or the user is logged out. 
+Similarly, you can execute arbitrary code against kdb Insights Enterprise. The code is executed on a user-specific sandbox process within the kdb Insights Enterprise deploy. The sandbox is instanciated upon the first request to execute code when connected to a kdb Insights Enterprise connection. It remains active until timed out or until the user logs out.
 
-#### Data Sources
+#### Data sources
 
-In addition to code execution against scratchpads, Insights also support Data Sources where users can build a query within VS Code which can be executed against the Insights API endpoints (TODO INSERT LINK TO API DOCS on code.kx.com). The UI helps users build a query based on the available API on their instance of Insights; parameterise it and return the data results to the OUTPUT or KDB Results window
+kdb Insights Enterprise supports the use of data sources, where you can build a query within VS Code and run it against the kdb Insights Enterprise API endpoints (TODO INSERT LINK TO API DOCS on code.kx.com). The UI helps you to build a query based on the available API on your instance of kdb Insights Enterprise, parameterize it and return the data results to the output or kdb results window.
 
-To create a Data Source
+To create a data source:
 
-- In the Data Sources view, click the options button and select 'Add Data Source'
-- click on the created data source where the name, API and parameterization can be applied
-- 'Save' will persist the Data source to the VS Code workspace
+1. In the Data Sources view, click the Options button and select 'Add Data Source'.
+2. Click on the created data source where the name, API and parameterization can be applied.
+3. Click Save to persist the data source to the VS Code workspace.
 
 ![data Source](img/data-source.png)
 
-To run the data source, click on 'Run' and the results will populate the OUTPUT (TODO INSERT LINK) and KDB RESULTS (TODO INSERT LINK) windows
+To run a data source, click 'Run' and the results populate the output and kdb results windows.
 
-In addition to API queries, if the Query Environment is enabled on the deployed instance of Insights; QSQL and SQL queries can be used within a Data Source with the appropriate parameterization
+In addition to API queries, if the query environment is enabled on the deployed instance of kdb Insights Enterprise, QSQL and SQL queries can be used within a data source with the appropriate parameterization.
 
-#### Populate Scratchpad
+#### Populate scratchpad
 
 A common ask is to populate a user scratchpad with a dataset to allow the user to build complex APIs and pipelines within VS Code and kdb Inisghts. This can be achieved with Data Source, which when created can be executed to populate the scratchpad with the 'Populate Scratchpad' button. The user will be asked for a variable to populate the data to on their scratchpad instance, then can return to their editor and execute q code against the data which has pushed to their scratchpad instance
 
