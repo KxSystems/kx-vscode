@@ -1,0 +1,96 @@
+name: KX VS Code Release Workflow
+
+on:
+  push:
+    branches:
+      - dev
+      - main
+
+env:
+  NODE_ENV: production
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+      - name: Install dependencies
+        run: npm ci --include=dev
+      - name: Build VSIX file
+        run: yarn run build
+      - name: Run Tests
+        run: xvfb-run -a yarn run test
+      - name: Packaging
+        run: yarn run package
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: KDB-VSCode-Extension
+          path: ./kdb-*vsix
+
+  app-sec:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: SonarCloud Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: Snyk scan for all vulnerabilities
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
+
+      - name: Snyk scan for high or critical vulnerabilities
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
+        with:
+          args: --severity-threshold=high
+
+      - name: Snyk Monitor
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
+        with:
+          command: monitor
+          args: --target-reference=${{ github.ref_name }}
+
+  release:
+    runs-on: ubuntu-latest
+    needs: app-sec
+    steps:
+      - name: Download VSIX file from build job
+        uses: actions/download-artifact@v3
+        with:
+          name: KDB-VSCode-Extension
+      - name: Release to Portal
+        run: |
+          NOW=$(date +'%Y%m%dT%H%M%S')
+          curl -L -s --fail-with-body -D /dev/stderr --oauth2-bearer ${{ secrets.kx_downloads_token_prod }} \
+          -H 'content-type: application/octet-stream' \
+          --upload-file ./kdb-*.vsix \
+          https://portal.dl.kx.com/assets/raw/kdb-vscode/${{ github.ref_name }}/kdb-${{ github.ref_name }}.$NOW.vsix

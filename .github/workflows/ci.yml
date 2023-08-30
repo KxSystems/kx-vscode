@@ -1,8 +1,12 @@
 # This workflow runs the tests across Linux, Mac, Windows
 
-name: KX VS Code CI
+name: KX VS Code CI Testing
 
-on: [push, pull_request]
+on:
+  push:
+    branches-ignore:
+      - dev
+      - main
 
 jobs:
   test:
@@ -46,24 +50,15 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-      - name: Synk scan for all vulnerabilities
+      - name: Snyk scan for all vulnerabilities
         uses: snyk/actions/node@master
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
 
-      - name: Synk scan for high or critical vulnerabilities
+      - name: Snyk scan for high or critical vulnerabilities
         uses: snyk/actions/node@master
         env:
           SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
         with:
           args: --severity-threshold=high
-
-      - name: Synk Monitor
-        uses: snyk/actions/node@master
-        env:
-          SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
-        with:
-          command: monitor
-          args: --target-reference=${{ github.ref_name }}
-        if: github.ref_name == 'main' || github.ref_name == 'dev'
