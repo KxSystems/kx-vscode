@@ -216,13 +216,13 @@ To configure a connection to an instance of kdb Insights Enterprise and connect 
 
 A kdb language server is bundled with the kdb VS Code extension. It offers various common features to aid in the development of kdb code within VS Code, including:
 
-- Syntax highlighting and linting
-- Code navigation
-- Code completion
+- [Syntax highlighting and linting](#syntax-highlighting)
+- [Code navigation](#code-navigation)
+- [Code completion](#code-completion)
 
 ### Syntax highlighting
 
-Keyword syntax highlighting, comments and linting help
+The extension provides keyword syntax highlighting, comments and linting help.
 
 ![Syntax Highlighting](img/syntax-highlighting.png)
 
