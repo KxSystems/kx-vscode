@@ -113,7 +113,7 @@ We provide these connection types:
 
     You can connect to an instance of kdb Insights Enterprise.
 
-![kdb connection](img/kdb-connection.png)
+    ![kdb connection](img/kdb-connection.png)
 
 
 ### Connect to a q session
