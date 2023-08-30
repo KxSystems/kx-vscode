@@ -310,39 +310,48 @@ In addition to API queries, if the query environment is enabled on the deployed 
 
 #### Populate scratchpad
 
-A common ask is to populate a user scratchpad with a dataset to allow the user to build complex APIs and pipelines within VS Code and kdb Inisghts. This can be achieved with Data Source, which when created can be executed to populate the scratchpad with the 'Populate Scratchpad' button. The user will be asked for a variable to populate the data to on their scratchpad instance, then can return to their editor and execute q code against the data which has pushed to their scratchpad instance
+You can use a data source to populate a scratchpad with a dataset, allowing you to build complex APIs and pipelines within VS Code and kdb Insights Enterprise. 
+
+To do this:
+
+1. Create a data source and execute it using the 'Populate Scratchpad' button.
+    The scratchpad is populated.
+   
+1. At the prompt, provide a variable to populate your own scratchpad instance with the data.
+
+1. Return to VS Code and execute q code against the data in your scratchpad.
 
 ![Populate Scratchpad](img/populate-scratchpad.png)
 
 
-## Viewing results
+## View results
 
-All query executions happen remotely to the kdb VS Code extension either against a running q process; or an instance of kdb Insights Enterprise. The result, successful or otherwise are returned to VS Code to be displayed in two different views
+All query executions happen remotely from the kdb VS Code extension either against a running q process or against an instance of kdb Insights Enterprise. The results, successful or otherwise are returned to VS Code to be displayed in two different views:
 
-### Output view
+- Output view
 
-The output view displays the results as they are received by the kdb VS Code extension. This will include the query executed; timestamp and the results
+    The output view displays results as they are received by the kdb VS Code extension. It includes the query executed, a timestamp and the results.
 
-![Output view](img/output-results.png)
+    ![Output view](img/output-results.png)
 
-!!!note
-    Auto scrolling can be enabled/disabled within the VS Code settings. This setting will set whether this view scrolls to the latest results
+    !!!note
+    You can enable/disable auto-scrolling in the VS Code settings. This setting determines whether the output view scrolls to the latest results.
 
     ![Output autoscrolling](img/auto-scrolling.jpg)
 
-### KDB Results view
-In addition to this the results are displayed under the KDB RESULTS view which offers a tabulised view of the returned data
+- kdb results view
+    Results are displayed under the kdb results view, which shows the returned data in a table.
 
-![kdb results view](img/kdbview-results.png)
+    ![kdb results view](img/kdbview-results.png)
 
 
 ## Shortcuts
 
 | Key | Action |
 | - | - |
-| F12 | Go to Definition |
-| Shift + F12 | Go to References |
-| Cmd/Ctrl + Shift + F12 | Find All References |
-| Ctrl + Q | Execute Current Selection |
-| Ctrl + Shift + Q | Execute Entire File |
+| F12 | Go to definition |
+| Shift + F12 | Go to references |
+| Cmd/Ctrl + Shift + F12 | Find all references |
+| Ctrl + Q | Execute current selection |
+| Ctrl + Shift + Q | Execute entire file |
 | Ctrl + Shift + R | Run q file in new q instance |
