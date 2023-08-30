@@ -83,15 +83,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: app-sec
     steps:
-      - name: Get current date
-        run: echo "Now=$(date + '%Y%m%d%H%M%S')" >> $GITHUB_ENV
       - name: Download VSIX file from build job
         uses: actions/download-artifact@v3
         with:
           name: KDB-VSCode-Extension
       - name: Release to Portal
         run: |
+          NOW=$(date + '%Y%m%d%H%M%S')
           curl -L -s --fail-with-body -D /dev/stderr --oauth2-bearer ${{ secrets.kx_downloads_token_prod }} \
           -H 'content-type: application/octet-stream' \
           --upload-file ./kdb-*.vsix \
-          https://portal.dl.kx.com/assets/raw/kdb-vscode/${{ github.ref_name }}/kdb-${{ github.ref_name }}.rc.${{ env.NOW }}.vsix
+          https://portal.dl.kx.com/assets/raw/kdb-vscode/${{ github.ref_name }}/kdb-${{ github.ref_name }}.rc.$NOW.vsix
