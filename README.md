@@ -334,8 +334,7 @@ All query executions happen remotely from the kdb VS Code extension either again
 
     ![Output view](img/output-results.png)
 
-    !!!note
-    You can enable/disable auto-scrolling in the VS Code settings. This setting determines whether the output view scrolls to the latest results.
+    **Note:** You can enable/disable auto-scrolling in the VS Code settings. This setting determines whether the output view scrolls to the latest results.
 
     ![Output autoscrolling](img/auto-scrolling.jpg)
 
