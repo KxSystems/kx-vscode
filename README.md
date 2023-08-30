@@ -7,11 +7,11 @@ This is a companion extension for kdb developers. It provides editing capabiliti
 ## Contents
 
 - [Overview](#overview)
-- [Getting Started](#getting-started)
+- [Get Started](#get-started)
 - [Connections](#connections)
 - [kdb language server](#kdb-language-server)
-- [Executing code](#executing-code)
-- [Viewing results](#viewing-results)
+- [Execute code](#execute-code)
+- [View results](#view-results)
 - [Shortcuts](#shortcuts)
 
 
@@ -48,7 +48,7 @@ When you install the extension, you are instructed to do one of the following:
 
 ### Install q using the extension
 
-TODO - this section needs screenshots
+FIXME - this section needs screenshots
 
 Click **Install runtime**.
 
@@ -132,15 +132,17 @@ To configure a connection to a q session and connect to it, use these steps:
     To do this, click **Connect to kdb server** in the KX side bar.
    
     FIXME image resources/images/connecttokdbserver.jpg
+
+    ![connecttokdbserver](img/connecttokdbserver.jpg)
    
     If this button is not displayed, select **Add new connection** from the context menu.
    
     FIXME image resources/images/addnewconnection.jpg
+
+    ![addnewconnection](img/addnewconnection.jpg)
    
     Select *Enter a kdb endpoint* and respond to the prompts:
 
-    FIXME a table might be better for the prompts
-    
     *Enter a name or alias for the connection*
 
     This name determines whether the connection is managed or unmanaged.
@@ -170,6 +172,8 @@ To configure a connection to a q session and connect to it, use these steps:
     FIXME more description needed
 
    **Note:** To delete a connection configuration, right-click it and select **Remove Connection**.
+
+   FIXME insert diagram
     
 1. Tell the kdb VS Code extension which configuration to connect to.
 
@@ -177,9 +181,8 @@ To configure a connection to a q session and connect to it, use these steps:
     
     A success message is displayed in the bottom, right-hand corner of the screen.
 
-    FIXME link to a section about executing code
+    You are ready to [execute code](execute-code).
 
-    FIXME insert diagram
 
 ### Connect to an instance of kdb Insights Enterprise
 
@@ -190,6 +193,8 @@ To configure a connection to an instance of kdb Insights Enterprise and connect 
     To do this, click **Connect to kdb server** in the KX side bar.
 
     FIXME image resources/images/connecttokdbserver.jpg
+
+    ![connecttokdbserver](img/connecttokdbserver.jpg)
 
     Select *Connect to kdb Insights Enterprise* and respond to the prompts:
 
@@ -203,6 +208,8 @@ To configure a connection to an instance of kdb Insights Enterprise and connect 
 
     **Note:** To delete a connection configuration, right-click it and select **Remove Connection**.
 
+   FIXME Insert diagram
+
 1. Tell the kdb VS Code extension which instance of kdb Insights Enterprise to connect to.
 
     To do this, right-click the relevant connection configuration in the KX side bar and select **Connect to Insights**.
@@ -211,9 +218,7 @@ To configure a connection to an instance of kdb Insights Enterprise and connect 
 
     The instance of kdb Insights Enterprise is displayed.
 
-    FIXME link to a section about executing code
-
-    FIXME Insert diagram
+    You are ready to [execute code](execute-code).
 
 ## kdb language server
 
@@ -242,7 +247,7 @@ While developing q scripts, the kdb VS Code extension supports:
 - Call hierarchy
   View the call stack from the selected function
 
-  TODO Diagram
+  FIXME Diagram
 
 - Find/go to all references
   
@@ -260,7 +265,7 @@ While developing q scripts, the kdb VS Code extension supports:
 
 - Autocomplete for local and remotely connected q processes
 
-  TODO INSERT DIAGRAM
+  FIXME INSERT DIAGRAM
 
 
 ## Execute code
@@ -273,13 +278,13 @@ There are three options, which are available from the right-click menu, for exec
 
 - Execute current selection
 
-    Takes the current selection (or current line if nothing is selected) and executes it against the connected q process. Results are displayed in the output window (TOOD INSERT LINK) and/or the kdb results window (TODO INSERT LINK).
+    Takes the current selection (or current line if nothing is selected) and executes it against the connected q process. Results are displayed in the [output window and/or the kdb results window](view-results).
 
     ![Execute selection](img/execute-selection.jpg)
 
 - Execute entire file
 
-    Takes the current file and executes it against the connected q process. Results are displayed in the output window (TODO INSERT LINK). Returned data are displayed in the kdb results window (TODO INSERT LINK).
+    Takes the current file and executes it against the connected q process. Results are displayed in the [output window](view-results). Returned data are displayed in the [kdb results window](view-results).
 
 - Run q file in new q instance
 
@@ -294,7 +299,7 @@ Similarly, you can execute arbitrary code against kdb Insights Enterprise. The c
 
 - Data sources
 
-    kdb Insights Enterprise supports the use of data sources, where you can build a query within VS Code and run it against the kdb Insights Enterprise API endpoints (TODO INSERT LINK TO API DOCS on code.kx.com). The UI helps you to build a query based on the available API on your instance of kdb Insights Enterprise, parameterize it and return the data results to the output or kdb results window.
+    kdb Insights Enterprise supports the use of data sources, where you can build a query within VS Code and run it against the [kdb Insights Enterprise API endpoints](https://code.kx.com/insights/api/index.html). The UI helps you to build a query based on the available API on your instance of kdb Insights Enterprise, parameterize it and return the data results to the output or kdb results window.
 
     To create a data source:
 
