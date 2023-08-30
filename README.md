@@ -88,8 +88,13 @@ From the extension, you can now connect directly to a q session, or to an instan
 
 ## Connections
 
+To connect VS Code to a q session or to an instance of kdb Insights Enterprise, you must:
 
+1. Configure the connection.
 
+    Several [connection types](connection-types) are available.
+
+2. Connect q/kdb to the configured connection.
 
 ### Connection types
 
@@ -97,26 +102,24 @@ We provide these connection types:
 
 - **Managed q session** - alias 'local'
 
-    You can use VS Code's controls to start and stop a managed connection. When you exit VS Code, the q process stops. To allow VS Code to manage a q process, set the alias as 'local' when creating it.
+    You can use VS Code's controls to start and stop a managed connection. When you exit VS Code, the q process stops. When you [create the connection configuration](connect-to-a-q-session), set the alias as 'local'.
     
 - **Unmanaged q session**
 
-    You manage the q process outside of VS Code. The q process runs irrespective of whether you have VS Code open or not. When creating a connection in VS Code, set the alias to something other than 'local' or 'insights'.
+    You manage the q process outside of VS Code. The q process runs irrespective of whether you have VS Code open or not. When you [create the connection configuration](connect-to-a-q-session), set the alias to something other than 'local' or 'insights'.
 
 - **kdb Insights Enterprise**
 
     You can connect to an instance of kdb Insights Enterprise.
 
-
 ![kdb connection](img/kdb-connection.png)
 
 
-### Managing kdb connections
-
+### Connect to a q session
 
 A q session may be [managed or unmanaged](#connection-types). 
 
-To add and connect to a q session use these steps:
+To configure a connection to a q session and connect to it, use these steps:
 
 1. Enable the q process to communicate with VS Code.
  
@@ -144,7 +147,7 @@ To add and connect to a q session use these steps:
 
     To configure a managed connection, enter *local* here.
 
-    To configure an unmanaged connection, enter any name here.
+    To configure an unmanaged connection, enter any name apart from *local* or *insights* here.
     
     *Enter the host name or ip address of the kdb server*
 
@@ -165,6 +168,8 @@ To add and connect to a q session use these steps:
     *Enable TLS encryption on kdb connection (optional)*
 
     FIXME more description needed
+
+   **Note:** To delete a connection configuration, right-click it and select **Remove Connection**.
     
 1. Tell the kdb VS Code extension which configuration to connect to.
 
@@ -174,14 +179,11 @@ To add and connect to a q session use these steps:
 
     FIXME link to a section about executing code
 
-
-A connection can be removed by right clicking the connection and selecting 'Remove Connection'
-
-TODO Insert diagram
+    FIXME insert diagram
 
 ### Connect to an instance of kdb Insights Enterprise
 
-To add and connect to a kdb Insights Enterprise connection use these steps:
+To configure a connection to an instance of kdb Insights Enterprise and connect to it, use these steps:
 
 1. Specify details of the kdb Insights Enterprise endpoint in VS Code.
 
@@ -199,6 +201,8 @@ To add and connect to a kdb Insights Enterprise connection use these steps:
 
     Type or paste in the URL of the kdb Insights Enterprise instance to which you want to connect.
 
+    **Note:** To delete a connection configuration, right-click it and select **Remove Connection**.
+
 1. Tell the kdb VS Code extension which instance of kdb Insights Enterprise to connect to.
 
     To do this, right-click the relevant connection configuration in the KX side bar and select **Connect to Insights**.
@@ -209,9 +213,16 @@ To add and connect to a kdb Insights Enterprise connection use these steps:
 
     FIXME link to a section about executing code
 
-A connection can be removed by right clicking the connection and selecting 'Remove Connection'
-
 TODO Insert diagram
+
+
+
+
+
+
+
+
+
 
 ## kdb language server
 
