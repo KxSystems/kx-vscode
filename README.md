@@ -26,14 +26,14 @@ Use this extension to:
 
 ## Getting Started
 
-The kdb vscode extension provides a workflow to install q and allow the runtime management of q processes from with vscode
+The kdb VS Code extension provides a workflow to install q and allow the runtime management of q processes from with Visual Studio Code
 
-With the vscode exension you can
+With the Visual Studio Code exension you can
 
 1. Install q
 1. Start q
-1. Configure connections between VS Code and q or kdb Insights Enterprise
-1. Connect VS Code to q or kdb Insights Enterprise
+1. Configure connections between Visual Studio Code and q or kdb Insights Enterprise
+1. Connect Visual Studio Code to q or kdb Insights Enterprise
 
 **If you already have q installed locally**
 
@@ -91,13 +91,13 @@ We provide these connection types:
 
 - **Managed q session** - alias 'local'
 
-    You can use Visual Studio Code's controls to start and stop a managed connection. When you exit Visual Studio Code, the q process stops. To allow vscode to manage a q process, set the alias as 'local' when creating it
+    You can use Visual Studio Code's controls to start and stop a managed connection. When you exit Visual Studio Code, the q process stops. To allow Visual Studio Code to manage a q process, set the alias as 'local' when creating it
     
 - **Unmanaged q session**
 
-    You manage the q process outside of Visual Studio Code. The q process runs irrespective of whether you have Visual Studio Code open or not. When creating a connection in vscode set the alias to anything else other than 'local' or 'insights'
+    You manage the q process outside of Visual Studio Code. The q process runs irrespective of whether you have Visual Studio Code open or not. When creating a connection in Visual Studio Code set the alias to anything else other than 'local' or 'insights'
 
-- **kdb Insights**
+- **kdb Insights Enterprise**
 
     You can connect to an instance of kdb Insights Enterprise.
 
@@ -160,7 +160,7 @@ To add and connect to a q session use these steps:
 
     FIXME more description needed
     
-1. Tell the Visual Studio Code extension which configuration to connect to.
+1. Tell the kdb VS Code extension which configuration to connect to.
 
     To do this, right-click the relevant connection configuration in the KX side bar and select **Connect kdb server**.
     
@@ -175,7 +175,7 @@ TODO Insert diagram
 
 ### Connect to an instance of kdb Insights Enterprise
 
-To add and connect to a kdb Insights connection se these steps:
+To add and connect to a kdb Insights Enterprise connection use these steps:
 
 1. Specify details of the kdb Insights Enterprise endpoint in Visual Studio Code.
 
@@ -193,7 +193,7 @@ To add and connect to a kdb Insights connection se these steps:
 
     Type or paste in the URL of the kdb Insights Enterprise instance to which you want to connect.
 
-1. Tell the Visual Studio Code extension which instance of kdb Insights Enterprise to connect to.
+1. Tell the kdb VS Code extension which instance of kdb Insights Enterprise to connect to.
 
     To do this, right-click the relevant connection configuration in the KX side bar and select **Connect to Insights**.
 
@@ -209,7 +209,7 @@ TODO Insert diagram
 
 ## kdb language server
 
-A kdb language server is bundled with the vscode extension this offers various common features to aid in the development of kdb code within vscode including
+A kdb language server is bundled with the kdb VS Code extension this offers various common features to aid in the development of kdb code within Visual Studio Code including
 
 - Syntax highlighting and linting
 - Code Naivigation
@@ -224,7 +224,7 @@ Key word syntax highlighting, comments and linting help
 ![Linting](img/linting.png)
 ### Code Navigation
 
-While developing q scripts, the kdb extension supports
+While developing q scripts, the kdb VS Code extension supports
 
 - Go to Definition
   Allowing the user to navigate to eh definition of a function
@@ -256,7 +256,7 @@ While developing q scripts, the kdb extension supports
 
 ## Executing code
 
-Leaning on vscode's extensive integrations with SCMs all code is typically stored and loaded into a vscode workspace.From there the kdb extension allows the user to execute that code in a number of ways against both kdb processes and Insights endpoints. TODO Insert link to creating connections
+Leaning on Visual Studio Code's extensive integrations with SCMs all code is typically stored and loaded into a Visual Studio Code workspace. From there the kdb VS Code extension allows the user to execute that code in a number of ways against both kdb processes and Insights endpoints. TODO Insert link to creating connections
 
 ### kdb process executing code
 
@@ -274,24 +274,24 @@ tthis will take the current file and execute it against the connected q process.
 
 #### Run q file in new q instance
 
-If q is installed and executabel from teh terminal, it is possible to execute and entire script on a newly launch q instance with this option. When executing a file on a new instance, it will launch in the terminal and allow the user to interrogate the active q process from the terminal window within vscode
+If q is installed and executabel from teh terminal, it is possible to execute and entire script on a newly launch q instance with this option. When executing a file on a new instance, it will launch in the terminal and allow the user to interrogate the active q process from the terminal window within Visual Studio Code
 
 
 ### Insights query execution
 
-The kdb Insights Platform offers enhanced connectivity and Enterprise level API endpoints offering additional means to query data and interact with Insights which is not available with kdb processes. It is necessary to have an instance of Insight Enterprise running and have created a connection to it (TODO INSERT LINK) within the vscode extension
+The kdb Insights Platform offers enhanced connectivity and Enterprise level API endpoints offering additional means to query data and interact with Insights which is not available with kdb processes. It is necessary to have an instance of Insight Enterprise running and have created a connection to it (TODO INSERT LINK) within the kdb VS Code extension
 
 Similarly to above (TODO insert link), we can execute arbitary code against Insights. This will be executed on a user specific sandbox process within the Insights deploy. This sandbox will be instanciated upon the first request to execute code when connected to an Insights connection and will remain active until timed out; or the user is logged out. 
 
 #### Data Sources
 
-In addition to code execution against scratchpads, Insights also support Data Sources where users can build a query within vscode which can be executed against the Insights API endpoints (TODO INSERT LINK TO API DOCS on code.kx.com). The UI helps users build a query based on the available API on their instance of Insights; parameterise it and return the data results to the OUTPUT or KDB Results window
+In addition to code execution against scratchpads, Insights also support Data Sources where users can build a query within Visual Studio Code which can be executed against the Insights API endpoints (TODO INSERT LINK TO API DOCS on code.kx.com). The UI helps users build a query based on the available API on their instance of Insights; parameterise it and return the data results to the OUTPUT or KDB Results window
 
 To create a Data Source
 
 - In the Data Sources view, click the options button and select 'Add Data Source'
 - click on the created data source where the name, API and parameterization can be applied
-- 'Save' will persist the Data source to the vscode workspace
+- 'Save' will persist the Data source to the Visual Studio Code workspace
 
 ![data Source](img/data-source.png)
 
@@ -301,23 +301,23 @@ In addition to API queries, if the Query Environment is enabled on the deployed 
 
 #### Populate Scratchpad
 
-A common ask is to populate a user scratchpad with a dataset to allow the user to build complex APIs and pipelines within vscode and kdb Inisghts. This can be achieved with Data Source, which when created can be executed to populate the scratchpad with the 'Populate Scratchpad' button. The user will be asked for a variable to populate the data to on their scratchpad instance, then can return to their editor and execute q code against the data which has pushed to their scratchpad instance
+A common ask is to populate a user scratchpad with a dataset to allow the user to build complex APIs and pipelines within Visual Studio Code and kdb Inisghts. This can be achieved with Data Source, which when created can be executed to populate the scratchpad with the 'Populate Scratchpad' button. The user will be asked for a variable to populate the data to on their scratchpad instance, then can return to their editor and execute q code against the data which has pushed to their scratchpad instance
 
 ![Populate Scratchpad](img/populate-scratchpad.png)
 
 
 ## Viewing results
 
-All query executions happen remotely to the kdb extension either against a running q process; or an instance of kdb Insights. The result, successful or otherwise are returned to vscode to be displayed in two different views
+All query executions happen remotely to the kdb VS Code extension either against a running q process; or an instance of kdb Insights Enterprise. The result, successful or otherwise are returned to Visual Studio Code to be displayed in two different views
 
 ### Output view
 
-The output view displays the results as they are received by the vscode extension. This will include the query executed; timestamp and the results
+The output view displays the results as they are received by the kdb VS Code extension. This will include the query executed; timestamp and the results
 
 ![Output view](img/output-results.png)
 
 !!!note
-    Auto scrolling can be enabled/disabled within the vs code settings. This setting will set whether this view scrolls to the latest results
+    Auto scrolling can be enabled/disabled within the Visual Studio Code settings. This setting will set whether this view scrolls to the latest results
 
     ![Output autoscrolling](img/auto-scrolling.jpg)
 
