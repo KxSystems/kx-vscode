@@ -2,9 +2,9 @@ name: KX VS Code Release Workflow
 
 on:
   push:
-    branches:
-      - dev
-      - main
+    # branches:
+    #   - dev
+    #   - main
 
 env:
   PACKAGE_VERSION: "0.1.17"
@@ -32,6 +32,10 @@ jobs:
           sed -i "/\"version\":/c\  \"version\": \"$PACKAGE_VERSION\"," package.json
       - name: Packaging
         run: yarn run package
+      - name: Remove map files
+        run: |
+          cd kdb-${{ env.PACKAGE_VERSION }}.vsix
+          rm *.map
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
