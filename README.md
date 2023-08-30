@@ -93,7 +93,7 @@ To connect VS Code to a q session or to an instance of kdb Insights Enterprise, 
 
 1. Configure the connection.
 
-    Several [connection types](connection-types) are available.
+    Several connection types are available (see below).
 
 2. Connect q/kdb to the configured connection.
 
