@@ -2,9 +2,9 @@ name: KX VS Code Release Workflow
 
 on:
   push:
-    # branches:
-    #   - dev
-    #   - main
+    branches:
+      - dev
+      - main
 
 env:
   NODE_ENV: production
