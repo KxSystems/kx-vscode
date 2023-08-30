@@ -101,19 +101,19 @@ To connect VS Code to a q session or to an instance of kdb Insights Enterprise, 
 
 We provide these connection types:
 
-- **Managed q session** - alias 'local'
+- **Managed q session**
 
-    You can use VS Code's controls to start and stop a managed connection. When you exit VS Code, the q process stops. When you [create the connection configuration](connect-to-a-q-session), set the alias as 'local'.
+    You can use VS Code's controls to start and stop a managed connection. When you exit VS Code, the q process stops. When you [create the connection configuration](#connect-to-a-q-session), set the alias as 'local'.
     
 - **Unmanaged q session**
 
-    You manage the q process outside of VS Code. The q process runs irrespective of whether you have VS Code open or not. When you [create the connection configuration](connect-to-a-q-session), set the alias to something other than 'local' or 'insights'.
+    You manage the q process outside of VS Code. The q process runs irrespective of whether you have VS Code open or not. When you [create the connection configuration](#connect-to-a-q-session), set the alias to something other than 'local' or 'insights'.
 
 - **kdb Insights Enterprise**
 
-    You can connect to an instance of kdb Insights Enterprise.
+    You can [connect to an instance of kdb Insights Enterprise](#connect-to-an-instance-of-kdb-insights-enterprise).
 
-    ![kdb connection](img/kdb-connection.png)
+<--! do we need this screen shot right here?    ![kdb connection](img/kdb-connection.png)  -->
 
 
 ### Connect to a q session
