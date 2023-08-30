@@ -24,7 +24,7 @@ Use this extension to:
 - Execute q code from within kdb Insights Enterprise
 - View results
 
-## Getting started
+## Get started
 
 The kdb VS Code extension provides a workflow to install q and to allow the runtime management of q processes from with VS Code.
 
@@ -263,7 +263,7 @@ While developing q scripts, the kdb VS Code extension supports:
   TODO INSERT DIAGRAM
 
 
-## Executing code
+## Execute code
 
 Leaning on VS Code's extensive integrations with SCMs, all code is typically stored and loaded into a VS Code workspace. From there, the kdb VS Code extension allows you to execute that code in a number of ways against both kdb processes and Insights Enterprise endpoints.
 
@@ -271,19 +271,19 @@ Leaning on VS Code's extensive integrations with SCMs, all code is typically sto
 
 There are three options, which are available from the right-click menu, for executing code against a connected kdb process:
 
-#### Execute current selection
+- Execute current selection
 
-Takes the current selection (or current line if nothing is selected) and executes it against the connected q process. Results are displayed in the output window (TOOD INSERT LINK) and/or the kdb results window (TODO INSERT LINK).
+    Takes the current selection (or current line if nothing is selected) and executes it against the connected q process. Results are displayed in the output window (TOOD INSERT LINK) and/or the kdb results window (TODO INSERT LINK).
 
-![Execute selection](img/execute-selection.jpg)
+    ![Execute selection](img/execute-selection.jpg)
 
-#### Execute entire file
+- Execute entire file
 
-Takes the current file and executes it against the connected q process. Results are displayed in the output window (TODO INSERT LINK). Returned data are displayed in the kdb results window (TODO INSERT LINK).
+    Takes the current file and executes it against the connected q process. Results are displayed in the output window (TODO INSERT LINK). Returned data are displayed in the kdb results window (TODO INSERT LINK).
 
-#### Run q file in new q instance
+- Run q file in new q instance
 
-If q is installed and executable from the terminal, you can execute an entire script on a newly launched q instance using this option. When executing a file on a new instance, it will launch in the terminal and allow you to interrogate the active q process from the terminal window within VS Code.
+    If q is installed and executable from the terminal, you can execute an entire script on a newly launched q instance using this option. When executing a file on a new instance, it will launch in the terminal and allow you to interrogate the active q process from the terminal window within VS Code.
 
 
 ### Insights query execution
@@ -292,36 +292,36 @@ kdb Insights Enterprise offers enhanced connectivity and enterprise level API en
 
 Similarly, you can execute arbitrary code against kdb Insights Enterprise. The code is executed on a user-specific sandbox process within the kdb Insights Enterprise deploy. The sandbox is instanciated upon the first request to execute code when connected to a kdb Insights Enterprise connection. It remains active until timed out or until the user logs out.
 
-#### Data sources
+- Data sources
 
-kdb Insights Enterprise supports the use of data sources, where you can build a query within VS Code and run it against the kdb Insights Enterprise API endpoints (TODO INSERT LINK TO API DOCS on code.kx.com). The UI helps you to build a query based on the available API on your instance of kdb Insights Enterprise, parameterize it and return the data results to the output or kdb results window.
+    kdb Insights Enterprise supports the use of data sources, where you can build a query within VS Code and run it against the kdb Insights Enterprise API endpoints (TODO INSERT LINK TO API DOCS on code.kx.com). The UI helps you to build a query based on the available API on your instance of kdb Insights Enterprise, parameterize it and return the data results to the output or kdb results window.
 
-To create a data source:
+    To create a data source:
 
-1. In the Data Sources view, click the Options button and select 'Add Data Source'.
-2. Click on the created data source where the name, API and parameterization can be applied.
-3. Click Save to persist the data source to the VS Code workspace.
+    1. In the Data Sources view, click the Options button and select 'Add Data Source'.
+    1. Click on the created data source where the name, API and parameterization can be applied.
+    1. Click Save to persist the data source to the VS Code workspace.
 
-![data Source](img/data-source.png)
+    ![data Source](img/data-source.png)
 
-To run a data source, click 'Run' and the results populate the output and kdb results windows.
+    To run a data source, click 'Run' and the results populate the output and kdb results windows.
 
-In addition to API queries, if the query environment is enabled on the deployed instance of kdb Insights Enterprise, QSQL and SQL queries can be used within a data source with the appropriate parameterization.
+    In addition to API queries, if the query environment is enabled on the deployed instance of kdb Insights Enterprise, QSQL and SQL queries can be used within a data source with the appropriate parameterization.
 
-#### Populate scratchpad
+- Populate scratchpad
 
-You can use a data source to populate a scratchpad with a dataset, allowing you to build complex APIs and pipelines within VS Code and kdb Insights Enterprise. 
+    You can use a data source to populate a scratchpad with a dataset, allowing you to build complex APIs and pipelines within VS Code and kdb Insights Enterprise. 
 
-To do this:
+    To do this:
 
-1. Create a data source and execute it using the 'Populate Scratchpad' button.
+    1. Create a data source and execute it using the 'Populate Scratchpad' button.
     The scratchpad is populated.
    
-1. At the prompt, provide a variable to populate your own scratchpad instance with the data.
+    1. At the prompt, provide a variable to populate your own scratchpad instance with the data.
 
-1. Return to VS Code and execute q code against the data in your scratchpad.
+    1. Return to VS Code and execute q code against the data in your scratchpad.
 
-![Populate Scratchpad](img/populate-scratchpad.png)
+    ![Populate Scratchpad](img/populate-scratchpad.png)
 
 
 ## View results
