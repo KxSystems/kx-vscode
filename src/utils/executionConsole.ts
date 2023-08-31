@@ -42,12 +42,33 @@ export class ExecutionConsole {
     }
   }
 
+  public checkOutput(
+    output: string | string[],
+    query: string
+  ): string | string[] {
+    if (!output) {
+      return "No results found.";
+    }
+    if (Array.isArray(output)) {
+      return output;
+    }
+    if (
+      output.trim().startsWith("{") &&
+      output.trim().endsWith("}") &&
+      query.trim().includes(":")
+    ) {
+      return "No results found.";
+    }
+    return output;
+  }
+
   public append(
     output: string | string[],
     query = "",
     serverName: string,
     dataSourceType?: string
   ): void {
+    output = this.checkOutput(output, query);
     let dataSourceRes: string[] = [];
     if (dataSourceType === undefined) {
       this._console.show(true);
