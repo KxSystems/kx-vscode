@@ -53,6 +53,7 @@ import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
 import { Server } from "../models/server";
 import { ServerObject } from "../models/serverObject";
+import { DataSourcesPanel } from "../panels/datasource";
 import {
   getCurrentToken,
   IToken,
@@ -674,6 +675,7 @@ export async function connect(viewItem: KdbNode): Promise<void> {
     if (ext.connection !== undefined) {
       ext.connection.disconnect();
       ext.connection = undefined;
+      DataSourcesPanel.close();
     }
   }
 
@@ -761,6 +763,7 @@ export async function disconnect(): Promise<void> {
   ext.connectionNode = undefined;
   const queryConsole = ExecutionConsole.start();
   queryConsole.dispose();
+  DataSourcesPanel.close();
   ext.serverProvider.reload();
 }
 
