@@ -85,7 +85,6 @@ export async function renameDataSource(
   fs.writeFileSync(oldFilePath, newFileContent);
 
   fs.renameSync(oldFilePath, newFilePath);
-  window.showInformationMessage(`Renamed ${oldFilePath} to ${newFilePath}.`);
 }
 
 export async function deleteDataSource(
