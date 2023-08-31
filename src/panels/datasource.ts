@@ -86,6 +86,12 @@ export class DataSourcesPanel {
     );
   }
 
+  public static close() {
+    if (DataSourcesPanel.currentPanel) {
+      DataSourcesPanel.currentPanel.dispose();
+    }
+  }
+
   public refresh() {
     DataSourcesPanel.render(this.uri, DataSourcesPanel.dataSourceFile);
   }
