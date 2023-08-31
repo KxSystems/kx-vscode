@@ -460,7 +460,9 @@ export async function getDataInsights(
             }
             return {
               error: "",
-              arrayBuffer: response.data.buffer,
+              arrayBuffer: response.data.buffer
+                ? response.data.buffer
+                : response.data,
             };
           })
           .catch((error: any) => {
