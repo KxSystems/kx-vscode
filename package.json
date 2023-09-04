@@ -356,7 +356,7 @@
     "viewsWelcome": [
       {
         "view": "kdb-servers",
-        "contents": "No kdb servers registered [learn more](https://www.bing.com).\n[Connect to kdb server](command:kdb.addConnection)"
+        "contents": "No kdb servers registered.\n[Connect to kdb server](command:kdb.addConnection)"
       }
     ],
     "menus": {
