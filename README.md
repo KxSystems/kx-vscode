@@ -291,36 +291,38 @@ kdb Insights Enterprise offers enhanced connectivity and enterprise level API en
 
 Similarly, you can execute arbitrary code against kdb Insights Enterprise. The code is executed on a user-specific sandbox process within the kdb Insights Enterprise deploy. The sandbox is instanciated upon the first request to execute code when connected to a kdb Insights Enterprise connection. It remains active until timed out or until you log out.
 
-- Data sources
+#### Data sources
 
-    kdb Insights Enterprise supports the use of data sources, where you can build a query within VS Code and run it against the [kdb Insights Enterprise API endpoints](https://code.kx.com/insights/api/index.html). The UI helps you to build a query based on the available API on your instance of kdb Insights Enterprise, parameterize it and return the data results to the output or kdb results window.
+kdb Insights Enterprise supports the use of data sources, where you can build a query within VS Code and run it against the [kdb Insights Enterprise API endpoints](https://code.kx.com/insights/api/index.html). The UI helps you to build a query based on the available API on your instance of kdb Insights Enterprise, parameterize it and return the data results to the output or kdb results window.
 
-    To create a data source:
+To create a data source:
 
-    1. In the Data Sources view, click the Options button and select 'Add Data Source'.
-    1. Click on the created data source where the name, API and parameterization can be applied.
-    1. Click Save to persist the data source to the VS Code workspace.
+1. In the Data Sources view, click the Options button and select 'Add Data Source'.
+    
+1. Click on the created data source where the name, API and parameterization can be applied.
+    
+1. Click Save to persist the data source to the VS Code workspace.
 
-    ![data Source](img/data-source.png)
+![data Source](img/data-source.png)
 
-    To run a data source, click 'Run' and the results populate the output and kdb results windows.
+To run a data source, click 'Run' and the results populate the output and kdb results windows.
 
-    In addition to API queries, if the query environment is enabled on the deployed instance of kdb Insights Enterprise, QSQL and SQL queries can be used within a data source with the appropriate parameterization.
+In addition to API queries, if the query environment is enabled on the deployed instance of kdb Insights Enterprise, QSQL and SQL queries can be used within a data source with the appropriate parameterization.
 
-- Populate scratchpad
+#### Populate scratchpad
 
-    You can use a data source to populate a scratchpad with a dataset, allowing you to build complex APIs and pipelines within VS Code and kdb Insights Enterprise. 
+You can use a data source to populate a scratchpad with a dataset, allowing you to build complex APIs and pipelines within VS Code and kdb Insights Enterprise. 
 
-    To do this:
+To do this:
 
-    1. Create a data source and execute it using the 'Populate Scratchpad' button.
+1. Create a data source and execute it using the 'Populate Scratchpad' button.
     The scratchpad is populated.
    
-    1. At the prompt, provide a variable to populate your own scratchpad instance with the data.
+1. At the prompt, provide a variable to populate your own scratchpad instance with the data.
 
-    1. Return to VS Code and execute q code against the data in your scratchpad.
+1. Return to VS Code and execute q code against the data in your scratchpad.
 
-    ![Populate Scratchpad](img/populate-scratchpad.png)
+![Populate Scratchpad](img/populate-scratchpad.png)
 
 
 ## View results
