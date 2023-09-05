@@ -77,7 +77,7 @@ You are prompted to provide a license key.
 
     A success notice is displayed and you can [start q](#start-q).
 
-**Note:** ensure that the system variable [*QHOME*](https://code.kx.com/q/learn/install)) is defined and that the location of your q folder is specified in the *Path* system variable.
+**Note:** ensure that the system variable [*QHOME*](https://code.kx.com/q/learn/install) is defined and that the location of your q folder is specified in the *Path* system variable.
 
 ### Start q
 
@@ -95,7 +95,7 @@ To connect VS Code to a q session or to an instance of kdb Insights Enterprise, 
 
     Several connection types are available (see below).
 
-2. Connect q/kdb to the configured connection.
+2. Connect VS Code to the configured connection.
 
 ### Connection types
 
@@ -150,7 +150,7 @@ To configure a connection to a q session and connect to it, use these steps:
     
     *Enter the host name or ip address of the kdb server*
 
-    FIXME more description needed
+    <!-- FIXME more description needed -->
 
     *Enter the port number of the kdb server*
 
@@ -158,15 +158,15 @@ To configure a connection to a q session and connect to it, use these steps:
     
     *Enter a username to authenticate with (optional)*
 
-    FIXME more description needed
+    <!-- FIXME more description needed -->
 
     *Enter a password to authenticate with (optional)*
 
-    FIXME more description needed
+    <!-- FIXME more description needed -->
 
     *Enable TLS encryption on kdb connection (optional)*
 
-    FIXME more description needed
+    <!-- FIXME more description needed -->
 
    **Note:** To delete a connection configuration, right-click it and select **Remove Connection**.
     
@@ -193,7 +193,7 @@ To configure a connection to an instance of kdb Insights Enterprise and connect 
 
     *Enter a name or alias for the connection*
 
-    FIXME more description needed - is this also a managed vs unmanaged option?
+    <!-- FIXME more description needed - is this also a managed vs unmanaged option? -->
 
     *Enter the Insights endpoint URL*
 
@@ -234,12 +234,14 @@ The extension provides keyword syntax highlighting, comments and linting help.
 While developing q scripts, the kdb VS Code extension supports:
 
 - Go to definition
+
   Navigate to the definition of a function
 
 - Call hierarchy
+
   View the call stack from the selected function
 
-  FIXME Diagram
+  <!-- FIXME Diagram -->
 
 - Find/go to all references
   
@@ -257,12 +259,12 @@ While developing q scripts, the kdb VS Code extension supports:
 
 - Autocomplete for local and remotely connected q processes
 
-  FIXME INSERT DIAGRAM
+  <!-- FIXME INSERT DIAGRAM -->
 
 
 ## Execute code
 
-Leaning on VS Code's extensive integrations with SCMs, all code is typically stored and loaded into a VS Code workspace. From there, the kdb VS Code extension allows you to execute that code in a number of ways against both kdb processes and Insights Enterprise endpoints.
+Leaning on VS Code's extensive integrations with SCMs, all code is typically stored and loaded into a VS Code workspace. From there, the kdb VS Code extension allows you to execute that code in a number of ways against both kdb processes and kdb Insights Enterprise endpoints.
 
 ### kdb process executing code
 
@@ -280,14 +282,14 @@ There are three options, which are available from the right-click menu, for exec
 
 - Run q file in new q instance
 
-    If q is installed and executable from the terminal, you can execute an entire script on a newly launched q instance using this option. When executing a file on a new instance, it will launch in the terminal and allow you to interrogate the active q process from the terminal window within VS Code.
+    If q is installed and executable from the terminal, you can execute an entire script on a newly launched q instance using this option. When executing a file on a new instance, it launches in the terminal and allows you to interrogate the active q process from the terminal window within VS Code.
 
 
 ### Insights query execution
 
-kdb Insights Enterprise offers enhanced connectivity and enterprise level API endpoints, providing additional means to query data and interact with kdb Insights Enterprise which are not available with kdb processes. It is necessary to have an instance of kdb Insights Enterprise running and have created a connection to it within the kdb VS Code extension
+kdb Insights Enterprise offers enhanced connectivity and enterprise level API endpoints, providing additional means to query data and interact with kdb Insights Enterprise that are not available with kdb processes. You must have an instance of kdb Insights Enterprise running and have created a connection to it within the kdb VS Code extension.
 
-Similarly, you can execute arbitrary code against kdb Insights Enterprise. The code is executed on a user-specific sandbox process within the kdb Insights Enterprise deploy. The sandbox is instanciated upon the first request to execute code when connected to a kdb Insights Enterprise connection. It remains active until timed out or until the user logs out.
+Similarly, you can execute arbitrary code against kdb Insights Enterprise. The code is executed on a user-specific sandbox process within the kdb Insights Enterprise deploy. The sandbox is instanciated upon the first request to execute code when connected to a kdb Insights Enterprise connection. It remains active until timed out or until you log out.
 
 - Data sources
 
