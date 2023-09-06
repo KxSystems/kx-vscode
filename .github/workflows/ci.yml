@@ -1,12 +1,12 @@
 # This workflow runs the tests across Linux, Mac, Windows
 
-name: KX VS Code CI
+name: KX VS Code CI Testing
 
 on:
   push:
-    branches: ['main']
-  pull_request:
-    branches: ['main']
+    branches-ignore:
+      - dev
+      - main
 
 jobs:
   test:
@@ -27,3 +27,38 @@ jobs:
         if: runner.os == 'Linux'
       - run: npm test
         if: runner.os != 'Linux'
+
+  app-sec:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: SonarCloud Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: Snyk scan for all vulnerabilities
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
+
+      - name: Snyk scan for high or critical vulnerabilities
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
+        with:
+          args: --severity-threshold=high

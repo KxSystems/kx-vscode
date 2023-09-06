@@ -194,6 +194,7 @@ export class AnalyzerContent {
       });
       const currentWordMatch = textBeforeCursor.match(/([a-zA-Z0-9.]+)$/);
       const currentWord = currentWordMatch ? currentWordMatch[1] : "";
+
       return currentWord;
     }
     return undefined;
@@ -231,7 +232,7 @@ export class AnalyzerContent {
       );
       const completion = qLangParserItemsWithKind.filter(
         (item: CompletionItem) => {
-          return item.label.startsWith(keyword);
+          return item.label?.startsWith(keyword);
         }
       );
       return completion;
@@ -253,6 +254,7 @@ export class AnalyzerContent {
     const locations = [];
     for (const doc of this.uriToTextDocument.values()) {
       const text = doc.getText();
+
       let offset = 0;
       let index = text.indexOf(keyword, offset);
 
@@ -365,7 +367,7 @@ export class AnalyzerContent {
   }
 
   public isWordCharacter(ch: string): boolean {
-    return /\w/.test(ch);
+    return /[.\w]/.test(ch);
   }
 
   public analyzeWorkspace({

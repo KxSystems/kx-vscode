@@ -11,7 +11,16 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Uri, WebviewView, WebviewViewProvider } from "vscode";
+import { GridOptions } from "ag-grid-community";
+import {
+  ColorThemeKind,
+  Uri,
+  WebviewView,
+  WebviewViewProvider,
+  window,
+  workspace,
+} from "vscode";
+import { ext } from "../extensionVariables";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
@@ -19,8 +28,15 @@ import { getUri } from "../utils/getUri";
 export class KdbResultsViewProvider implements WebviewViewProvider {
   public static readonly viewType = "kdb-results";
   private _view?: WebviewView;
+  private _colorTheme: any;
+  private _results: string | string[] = "";
 
   constructor(private readonly _extensionUri: Uri) {
+    this._colorTheme = window.activeColorTheme;
+    window.onDidChangeActiveColorTheme(() => {
+      this._colorTheme = window.activeColorTheme;
+      this.updateResults(this._results);
+    });
     // this.resolveWebviewView(webviewView);
   }
 
@@ -53,80 +69,69 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     }
   }
 
-  handleQueryResultsString(queryResult: string) {
+  exportToCsv() {
+    if (ext.resultPanelCSV === "") {
+      window.showErrorMessage("No results to export");
+      return;
+    }
+    const workspaceFolders = workspace.workspaceFolders;
+    if (!workspaceFolders) {
+      window.showErrorMessage("Open a folder to export results");
+      return;
+    }
+    const workspaceUri = workspaceFolders[0].uri;
+    utils.exportToCsv(workspaceUri);
+  }
+
+  convertToGrid(queryResult: any): string | GridOptions {
     if (queryResult === "") {
       return `<p>No results to show</p>`;
     }
-    const vectorRes = utils.convertResultStringToVector(queryResult);
+
+    const vectorRes =
+      typeof queryResult === "string"
+        ? utils.convertResultStringToVector(queryResult)
+        : utils.convertResultToVector(queryResult);
     if (vectorRes.length === 1) {
       return `<p>${vectorRes[0]}</p>`;
     }
-    const headers = vectorRes[0]
-      .map((header: string, index: number) => {
-        return `<vscode-data-grid-cell cell-type="columnheader" grid-column="${
-          index + 1
-        }"><b>${header.toUpperCase()}</b></vscode-data-grid-cell>`;
-      })
-      .join("");
-
-    const rows = vectorRes
-      .slice(1)
-      .map((row) => {
-        return `<vscode-data-grid-row>${row
-          .map((cell: string, index: number) => {
-            return `<vscode-data-grid-cell grid-column="${
-              index + 1
-            }">${cell}</vscode-data-grid-cell>`;
-          })
-          .join("")}</vscode-data-grid-row>`;
-      })
-      .join("");
-
-    return /*html*/ `<vscode-data-grid class="results-datagrid" aria-label="Basic">
-              <vscode-data-grid-row class="results-header-datagrid" row-type="header">
-                ${headers}
-              </vscode-data-grid-row>
-              ${rows}
-            </vscode-data-grid>`;
+    ext.resultPanelCSV = vectorRes.map((row) => row.join(",")).join("\n");
+    const keys = vectorRes[0];
+    const value = vectorRes.slice(1);
+    const rowData = value.map((row) =>
+      keys.reduce((obj: any, key: any, index: number) => {
+        obj[key] = row[index];
+        return obj;
+      }, {})
+    );
+    const columnDefs = keys.map((str: string) => ({ field: str }));
+    return {
+      defaultColDef: {
+        sortable: true,
+        resizable: true,
+        filter: true,
+        flex: 1,
+        minWidth: 100,
+      },
+      rowData,
+      columnDefs,
+    };
   }
 
-  handleQueryResultsArray(queryResult: any[]): string {
-    if (queryResult.length === 0) {
-      return `<p>No results to show</p>`;
+  defineAgGridTheme(): string {
+    if (this._colorTheme.kind === ColorThemeKind.Dark) {
+      return "ag-theme-alpine-dark";
     }
-    let results = "";
-    results = `<vscode-data-grid class="results-datagrid" aria-label="Basic">`;
-    let headers = `<vscode-data-grid-row class="results-header-datagrid" row-type="header">`;
-    let rows = ``;
-    let countHeader = 1;
-    let indexColumn = 1;
-    const headersArray = queryResult[0].split(",");
-    for (const column in headersArray) {
-      headers += `<vscode-data-grid-cell  cell-type="columnheader" grid-column="${countHeader}"><b>${headersArray[
-        column
-      ].toUpperCase()}</b></vscode-data-grid-cell>`;
-      countHeader++;
-    }
-    const resRows = queryResult.slice(1).map((str) => str.split(","));
-
-    headers += `</vscode-data-grid-row>`;
-    resRows.forEach((row: string[]) => {
-      rows += `<vscode-data-grid-row>`;
-      for (const value in row) {
-        rows += `<vscode-data-grid-cell grid-column="${indexColumn}">${row[value]}</vscode-data-grid-cell>`;
-        indexColumn++;
-      }
-      rows += `</vscode-data-grid-row>`;
-      indexColumn = 1;
-    });
-    results += headers + rows + `</vscode-data-grid>`;
-    return results;
+    return "ag-theme-alpine";
   }
 
   private _getWebviewContent(
     queryResult: string | string[],
-    dataSourceType?: string
+    _dataSourceType?: string
   ) {
+    ext.resultPanelCSV = "";
+    this._results = queryResult;
+    const agGridTheme = this.defineAgGridTheme();
     if (this._view) {
       const webviewUri = getUri(this._view.webview, this._extensionUri, [
         "out",
@@ -145,31 +150,48 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         "out",
         "vscode.css",
       ]);
-      let result = "";
-      if (typeof queryResult === "string") {
-        result = this.handleQueryResultsString(queryResult);
-      } else if (Array.isArray(queryResult)) {
-        result = this.handleQueryResultsArray(queryResult);
-      } else if (typeof queryResult === "object") {
-        result =
-          queryResult === null
-            ? `<p>No results to show</p>`
-            : this.handleQueryResultsString(JSON.stringify(queryResult));
+      const agGridJS = getUri(this._view.webview, this._extensionUri, [
+        "out",
+        "ag-grid-community.min.js",
+      ]);
+      const agGridStyle = getUri(this._view.webview, this._extensionUri, [
+        "out",
+        "ag-grid.min.css",
+      ]);
+      const agGridThemeStyle = getUri(this._view.webview, this._extensionUri, [
+        "out",
+        "ag-theme-alpine.min.css",
+      ]);
+      let result: any = "";
+      let gridOptionsString = "";
+      if (queryResult !== "") {
+        const convertedGrid = this.convertToGrid(queryResult);
+        if (typeof convertedGrid === "string") {
+          result = convertedGrid;
+        } else {
+          gridOptionsString = JSON.stringify(convertedGrid);
+        }
       }
 
+      result =
+        gridOptionsString === ""
+          ? result !== ""
+            ? result
+            : "<p>No results to show</p>"
+          : "";
       return /*html*/ `
     <!DOCTYPE html>
     <html lang="en">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-        <meta
-          http-equiv="Content-Security-Policy"
-          content="default-src 'none'; style-src ${this._view.webview.cspSource}; font-src ${this._view.webview.cspSource}; img-src ${this._view.webview.cspSource} https:; script-src 'nonce-${nonce}';" />
         <link rel="stylesheet" href="${resetStyleUri}" />
         <link rel="stylesheet" href="${vscodeStyleUri}" />
         <link rel="stylesheet" href="${styleUri}" />
+        <link rel="stylesheet" href="${agGridStyle}" />
+        <link rel="stylesheet" href="${agGridThemeStyle}" />
         <title>Q Results</title>
+        <script nonce="${nonce}" src="${agGridJS}"></script>
       </head>
       <body>      
         <div class="results-view-container">
@@ -178,6 +200,17 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
             </div>
           </div>      
         <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
+        <div id="grid" style="height: 300px; width:100%;" class="${agGridTheme}"></div>
+        <script nonce="${nonce}" >          
+          document.addEventListener('DOMContentLoaded', () => {
+
+            if('${gridOptionsString}' !== '<p>No results to show</p>' && '${gridOptionsString}' !== ''){
+              const gridOptions = JSON.parse('${gridOptionsString}');
+              const gridDiv = document.getElementById('grid');
+              const gridApi = new agGrid.Grid(gridDiv, gridOptions);
+            }
+          });
+        </script>
       </body>
     </html>
     `;

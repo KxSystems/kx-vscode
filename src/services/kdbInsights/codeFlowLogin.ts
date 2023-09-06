@@ -99,6 +99,30 @@ export async function refreshToken(
   });
 }
 
+export async function getCurrentToken(
+  serverName: string,
+  serverAlias: string
+): Promise<IToken | undefined> {
+  if (serverName === "" || serverAlias === "") {
+    return undefined;
+  }
+
+  const rawToken = await ext.context.secrets.get(serverAlias);
+
+  let token;
+  if (rawToken !== undefined) {
+    token = JSON.parse(rawToken!);
+    if (new Date(token.accessTokenExpirationDate) < new Date()) {
+      token = await signIn(serverName);
+      ext.context.secrets.store(serverAlias, JSON.stringify(token));
+    }
+  } else {
+    token = await signIn(serverName);
+    ext.context.secrets.store(serverName, JSON.stringify(token));
+  }
+  return token;
+}
+
 async function getToken(
   insightsUrl: string,
   code: string

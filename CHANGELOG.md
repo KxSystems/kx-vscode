@@ -2,7 +2,7 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
-# 0.1.16
+# 0.1.18
 
 ### Enhancements
 
@@ -14,17 +14,25 @@ All notable changes to the kdb extension will be documented in this file.
 
 - Added ability to execute q against Insights Scratchpad
 
-### Fixes
-
-- Fixes for Language Server, improving functionality and performance
-
 ### Internal Improvements
 
 - Updated refresh icon
 
 - Updated license and CI
 
-- Language Server refactor
+# 0.1.17
+
+### Internal Improvements
+
+- KX Language Server improvements
+
+# 0.1.16
+
+### Internal Improvements
+
+- Renamed to 'kdb'
+
+- Preview KX Language Server implementation
 
 # 0.1.15
 

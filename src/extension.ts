@@ -37,6 +37,7 @@ import {
   addDataSource,
   deleteDataSource,
   openDataSource,
+  populateScratchpad,
   renameDataSource,
   runDataSource,
   saveDataSource,
@@ -132,6 +133,12 @@ export async function activate(context: ExtensionContext) {
         ext.resultsViewProvider.updateResults(results, dataSourceType);
       }
     ),
+    commands.registerCommand("kdb.resultsPanel.clear", () => {
+      ext.resultsViewProvider.updateResults("");
+    }),
+    commands.registerCommand("kdb.resultsPanel.export.csv", () => {
+      ext.resultsViewProvider.exportToCsv();
+    }),
     commands.registerCommand("kdb.connect", async (viewItem: KdbNode) => {
       await connect(viewItem);
     }),
@@ -161,10 +168,17 @@ export async function activate(context: ExtensionContext) {
     ),
     commands.registerCommand("kdb.refreshServerObjects", () => {
       ext.serverProvider.reload();
+      ext.connection?.update();
     }),
     commands.registerCommand("kdb.dataSource.addDataSource", async () => {
       await addDataSource();
     }),
+    commands.registerCommand(
+      "kdb.dataSource.populateScratchpad",
+      async (dataSourceForm: any) => {
+        await populateScratchpad(dataSourceForm);
+      }
+    ),
     commands.registerCommand(
       "kdb.dataSource.saveDataSource",
       async (dataSourceForm: any) => {
@@ -225,9 +239,11 @@ export async function activate(context: ExtensionContext) {
     }),
     commands.registerCommand("kdb.execute.selectedQuery", async () => {
       runQuery(ExecutionTypes.QuerySelection);
+      ext.connection?.update();
     }),
     commands.registerCommand("kdb.execute.fileQuery", async () => {
       runQuery(ExecutionTypes.QueryFile);
+      ext.connection?.update();
     })
   );
 
