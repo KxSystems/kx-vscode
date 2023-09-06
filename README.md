@@ -340,6 +340,7 @@ All query executions happen remotely from the kdb VS Code extension either again
     ![Output autoscrolling](img/auto-scrolling.jpg)
 
 - kdb results view
+
     Results are displayed under the kdb results view, which shows the returned data in a table.
 
     ![kdb results view](img/kdbview-results.png)
