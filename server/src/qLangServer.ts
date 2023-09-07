@@ -142,8 +142,8 @@ export default class QLangServer {
         },
         full: true,
       },
-      // Whether the server supports providing call hierarchy information for a symbol.
-      callHierarchyProvider: true,
+      // Whether the server supports providing call hierarchy information for a symbol - disabled for the moment.
+      callHierarchyProvider: false,
     };
   }
 
