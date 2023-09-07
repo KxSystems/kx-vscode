@@ -134,11 +134,11 @@ To configure a connection to a q session and connect to it, use these steps:
 
     To do this, click **Connect to kdb server** in the KX side bar.
    
-    ![connecttokdbserver](resources/images/connecttokdbserver.jpg)
+    ![connecttokdbserver](img/connecttokdbserver.jpg)
    
     If this button is not displayed, select **Add new connection** from the context menu.
    
-    ![addnewconnection](resources/images/addnewconnection.jpg)
+    ![addnewconnection](img/addnewconnection.jpg)
    
     Select *Enter a kdb endpoint* and respond to the prompts:
 
@@ -189,7 +189,7 @@ To configure a connection to an instance of kdb Insights Enterprise and connect 
 
     To do this, click **Connect to kdb server** in the KX side bar.
 
-    ![connecttokdbserver](resources/images/connecttokdbserver.jpg)
+    ![connecttokdbserver](img/connecttokdbserver.jpg)
 
     Select *Connect to kdb Insights Enterprise* and respond to the prompts:
 
@@ -208,7 +208,7 @@ To configure a connection to an instance of kdb Insights Enterprise and connect 
 
     To do this, right-click the relevant connection configuration in the KX side bar and select **Connect to Insights**.
 
-    ![connecttoinsightscontext](resources/images/connecttoinsightscontext.jpg)
+    ![connecttoinsightscontext](img/connecttoinsightscontext.jpg)
 
     The instance of kdb Insights Enterprise is displayed.
 
