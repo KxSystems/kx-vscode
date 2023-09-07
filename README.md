@@ -23,9 +23,9 @@ Follow the extension walkthrough to install q, if required
 <details>
   <summary>Connect to a server</summary>
 
-Connect to an existing server by right-clicking and choosing 'Connect kdb server'
+Connect to an existing server by right-clicking and choosing 'Connect server'
 
-![Extension panel](https://code.kx.com/img/walkthrough/connect.png "Connect kdb server")
+![Extension panel](https://code.kx.com/img/walkthrough/connect.png "Connect server")
 
 </details>
 
