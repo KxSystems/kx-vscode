@@ -78,7 +78,10 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
       return Promise.resolve(await this.getNamespaces());
     } else if (element.contextValue === "ns") {
       return Promise.resolve(
-        this.getCategories(element.label?.toString(), ext.qObjectCategories)
+        this.getCategories(
+          (element as QNamespaceNode).details?.toString(),
+          ext.qObjectCategories
+        )
       );
     } else {
       return Promise.resolve(this.getServerObjects(element));
@@ -105,7 +108,13 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     const ns = await loadNamespaces();
     const result = ns.map(
       (x) =>
-        new QNamespaceNode([], x.name, "", TreeItemCollapsibleState.Collapsed)
+        new QNamespaceNode(
+          [],
+          x.name,
+          "",
+          TreeItemCollapsibleState.Collapsed,
+          x.fname
+        )
     );
     if (result !== undefined) {
       return result;
@@ -240,7 +249,13 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
       const namespaces = await loadNamespaces(ns);
       const result = namespaces.map(
         (x) =>
-          new QNamespaceNode([], x.name, "", TreeItemCollapsibleState.Collapsed)
+          new QNamespaceNode(
+            [],
+            x.fname,
+            "",
+            TreeItemCollapsibleState.Collapsed,
+            x.fname
+          )
       );
       if (result !== undefined) {
         return result;
@@ -413,9 +428,10 @@ export class QNamespaceNode extends TreeItem {
     public readonly children: string[],
     public readonly label: string,
     public readonly details: string,
-    public readonly collapsibleState: TreeItemCollapsibleState
+    public readonly collapsibleState: TreeItemCollapsibleState,
+    public readonly fullName: string
   ) {
-    details = "";
+    details = fullName;
     super(label, collapsibleState);
     this.description = this.getDescription();
   }
