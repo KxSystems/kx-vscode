@@ -140,7 +140,9 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     return result;
   }
 
-  private async getServerObjects(serverType: TreeItem): Promise<QServerNode[]> {
+  private async getServerObjects(
+    serverType: TreeItem
+  ): Promise<QServerNode[] | QNamespaceNode[]> {
     if (serverType === undefined) return new Array<QServerNode>();
     const ns = serverType.contextValue ?? "";
     if (serverType.label === ext.qObjectCategories[0]) {
@@ -204,7 +206,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
         (x) =>
           new QServerNode(
             [],
-            `${ns === "." ? "" : ns + "."}${x.name}`,
+            `${ns === "." ? "." : ""}${x.name}`,
             "",
             TreeItemCollapsibleState.None,
             "p-var"
@@ -232,6 +234,18 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
         return result;
       } else {
         return new Array<QServerNode>();
+      }
+    } else if (serverType.label === ext.qObjectCategories[5]) {
+      // nested namespaces
+      const namespaces = await loadNamespaces(ns);
+      const result = namespaces.map(
+        (x) =>
+          new QNamespaceNode([], x.name, "", TreeItemCollapsibleState.Collapsed)
+      );
+      if (result !== undefined) {
+        return result;
+      } else {
+        return Array<QNamespaceNode>();
       }
     }
     return new Array<QServerNode>();

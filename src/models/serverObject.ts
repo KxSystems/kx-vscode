@@ -25,13 +25,13 @@ export interface ServerObject {
   isNs: boolean;
 }
 
-export async function loadNamespaces(): Promise<ServerObject[]> {
+export async function loadNamespaces(root?: string): Promise<ServerObject[]> {
   const serverObjects = await loadServerObjects();
   if (serverObjects !== undefined) {
     const ns = serverObjects.filter((value) => {
       return value.isNs ? value : undefined;
     });
-    return ns;
+    return getNamespaces(ns, root);
   }
   return new Array<ServerObject>();
 }
@@ -100,4 +100,21 @@ export async function loadViews(): Promise<string[]> {
     return item !== "s#" && item !== "" && item !== ",";
   });
   return views ?? new Array<string>();
+}
+
+function getNamespaces(input: ServerObject[], root = "."): ServerObject[] {
+  const output: ServerObject[] = [];
+
+  input.forEach((v, i) => {
+    let index = -1;
+    if (root === v.namespace) {
+      index = i;
+    }
+
+    if (index != -1) {
+      output.push(v);
+    }
+  });
+
+  return output;
 }
