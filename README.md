@@ -1,6 +1,6 @@
 # kdb Visual Studio Code extension
 
-This is a companion extension for kdb developers. It provides editing capabilities for working with q files, and the ability to connect to kdb processes and run queries.
+The kdb VS Code extension is intended for q/kdb developers.  It provides a workflow to install q and to allow the runtime management of q processes from with VS Code. It includes editing capabilities for working with q files, and the ability to connect to kdb processes and run queries.
 
 [![KX VS Code CI Testing](https://github.com/KxSystems/kx-vscode/actions/workflows/ci.yml/badge.svg)](https://github.com/KxSystems/kx-vscode/actions/workflows/ci.yml)
 
@@ -9,7 +9,7 @@ This is a companion extension for kdb developers. It provides editing capabiliti
 ## Contents
 
 - [Overview](#overview)
-- [Get Started](#get-started)
+- [Install q](#install-q-using-the-extension)
 - [Connections](#connections)
 - [kdb language server](#kdb-language-server)
 - [Execute code](#execute-code)
@@ -27,11 +27,7 @@ Use this extension to:
 - Execute q code from within kdb Insights Enterprise
 - View results
 
-## Get started
-
-The kdb VS Code extension provides a workflow to install q and to allow the runtime management of q processes from with VS Code.
-
-### Install q using the extension
+Install q using the extension
 
 <!-- FIXME - this section needs screenshots -->
 
