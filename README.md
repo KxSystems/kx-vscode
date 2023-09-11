@@ -31,24 +31,6 @@ Use this extension to:
 
 The kdb VS Code extension provides a workflow to install q and to allow the runtime management of q processes from with VS Code.
 
-With the kdb VS Code extension you can:
-
-1. Install q
-1. Start q
-1. Configure connections between VS Code and q or kdb Insights Enterprise
-1. Connect VS Code to q or kdb Insights Enterprise
-
-**If you already have q installed locally**
-
-When you install the extension, the message **q runtime installed** is displayed. You can now [start q](#start-q).
-
-**If you do not have q installed**
-
-When you install the extension, you are instructed to do one of the following:
-
-- Install q locally using the [instructions on our documentation website](https://code.kx.com/q/learn/install)
-- [Install q using the extension](#install-q-using-the-extension) (see below)
-
 ### Install q using the extension
 
 <!-- FIXME - this section needs screenshots -->
@@ -69,7 +51,7 @@ You are prompted to provide a license key.
     
         If KX provided a license file, which you downloaded, choose this option and specify the file.
 
-        A success message is displayed and you can [start q](#start-q).
+        A success message is displayed.
 
 - If you do not have a license key, click **Acquire license**.
 
@@ -77,21 +59,15 @@ You are prompted to provide a license key.
 
     When you receive a license email from KX, return to VS Code and click **Continue** at the prompt in the bottom right-hand corner. From here, you are prompted to specify a license key string or file as above.
 
-    A success notice is displayed and you can [start q](#start-q).
+    A success notice is displayed.
 
 **Note:** ensure that the system variable [*QHOME*](https://code.kx.com/q/learn/install) is defined and that the location of your q folder is specified in the *Path* system variable.
 
-### Start q
-
-If you just installed q using the extension, the last prompt is to **Start q**.
-
-If you already had q installed, launch it as usual (by typing '/q' at the command prompt).
-
-From the extension, you can now connect directly to a q session, or to an instance of kdb Insights Enterprise. Begin by reading about how the connections work.
-
 ## Connections
 
-To connect VS Code to a q session or to an instance of kdb Insights Enterprise, you must:
+From the extension, you can connect directly to a q session, or to an instance of kdb Insights Enterprise. Begin by reading about how the connections work.
+
+To make a connection, you must:
 
 1. Configure the connection.
 
