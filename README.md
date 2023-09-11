@@ -27,7 +27,7 @@ Use this extension to:
 - Execute q code from within kdb Insights Enterprise
 - View results
 
-Install q using the extension
+## Install q using the extension
 
 <!-- FIXME - this section needs screenshots -->
 
