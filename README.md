@@ -178,7 +178,7 @@ To configure a connection to a q session and connect to it, use these steps:
     
     A success message is displayed in the bottom, right-hand corner of the screen.
 
-    You are ready to [execute code](execute-code).
+    You are ready to [execute code](#execute-code).
 
 
 ### Connect to an instance of kdb Insights Enterprise
@@ -212,7 +212,7 @@ To configure a connection to an instance of kdb Insights Enterprise and connect 
 
     The instance of kdb Insights Enterprise is displayed.
 
-    You are ready to [execute code](execute-code).
+    You are ready to [execute code](#execute-code).
 
 ## kdb language server
 
@@ -274,13 +274,13 @@ There are three options, which are available from the right-click menu, for exec
 
 - Execute current selection
 
-    Takes the current selection (or current line if nothing is selected) and executes it against the connected q process. Results are displayed in the [output window and/or the kdb results window](view-results).
+    Takes the current selection (or current line if nothing is selected) and executes it against the connected q process. Results are displayed in the [output window and/or the kdb results window](#view-results).
 
     ![Execute selection](img/execute-selection.jpg)
 
 - Execute entire file
 
-    Takes the current file and executes it against the connected q process. Results are displayed in the [output window](view-results). Returned data are displayed in the [kdb results window](view-results).
+    Takes the current file and executes it against the connected q process. Results are displayed in the [output window](#view-results). Returned data are displayed in the [kdb results window](#view-results).
 
 - Run q file in new q instance
 
