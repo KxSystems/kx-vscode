@@ -22,8 +22,8 @@ The kdb VS Code extension is intended for q/kdb developers.  It provides a workf
 Use this extension to:
 
 - Install q
-- Predict and complete q syntax in a q session or within an instance of kdb Insights Enterprise
-- Execute a line of q code, a section of q code, or a file of q code in a q session
+- Highlight and autocomplete syntax in a raw q process or within an instance of kdb Insights Enterprise
+- Execute code for single line, selection and full scripts
 - Execute q code from within kdb Insights Enterprise
 - View results
 
@@ -57,7 +57,8 @@ You are prompted to provide a license key.
 
     A success notice is displayed.
 
-**Note:** ensure that the system variable [*QHOME*](https://code.kx.com/q/learn/install) is defined and that the location of your q folder is specified in the *Path* system variable.
+**Note:** to use q outside of VS code, set the [*QHOME*] environment variable and update your [*PATH*](https://code.kx.com/q/learn/install). You can see the location of the q installation from the kdb extension settings..
+
 
 ## Connections
 
