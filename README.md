@@ -23,7 +23,7 @@ Use this extension to:
 
 - Install q
 - Highlight and autocomplete syntax in a raw q process or within an instance of kdb Insights Enterprise
-- Execute code for single line, selection and full scripts
+- Execute code for a single line, a selection and full scripts
 - Execute q code from within kdb Insights Enterprise
 - View results
 
@@ -82,7 +82,7 @@ We provide these connection types:
     
 - **Unmanaged q session**
 
-    You manage the q  outside of VS Code. The q  runs irrespective of whether you have VS Code open or not. When you [create the connection configuration](#connect-to-a-q-session), set the alias to something other than 'local' or 'insights'.
+    You manage the q  outside of VS Code. The q session runs irrespective of whether you have VS Code open or not. When you [create the connection configuration](#connect-to-a-q-session), set the alias to something other than 'local' or 'insights'.
 
 - **kdb Insights Enterprise**
 
@@ -97,9 +97,9 @@ A q session may be [managed or unmanaged](#connection-types).
 
 To add a connection to a q session and connect to it, use these steps:
 
-1. Enable the q  to communicate with VS Code.
+1. Enable the q session to communicate with VS Code.
  
-    To do this, [set the q  to listen on a port](https://code.kx.com/q/basics/ipc).
+    To do this, [set the q session to listen on a port](https://code.kx.com/q/basics/ipc).
 
     Make a note of the port number that you use; you need this in the next step.
 
@@ -232,7 +232,7 @@ While developing q scripts, the kdb VS Code extension supports:
 
   ![Autocomplete](img/autocomplete.png)
 
-- Autocomplete for local and remotely connected q es
+- Autocomplete for local and remotely connected q sessions
 
   <!-- FIXME INSERT DIAGRAM -->
 
