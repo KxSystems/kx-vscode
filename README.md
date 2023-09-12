@@ -31,7 +31,7 @@ With the kdb Visual Studio Code extension you can:
 
 ## Get started
 
-If you have an existing q installation, you will see the message `q runtime installed` and can go directly to [start q](#start-q).
+If you have an existing q installation, you will see the message `q runtime installed` and can go directly to creating [connections](#connections).
 
 If you are new to q, you will need a kdb license to use the kdb VS Code extension; see [install q](#install-q)
 
@@ -132,14 +132,14 @@ Upon completion, the localhost connection appears under *KX:CONNECTIONS* in the 
 
 ![localkdbconnection](img/localkdbconnection.jpg)
 
-**Step 9**: Right-click on the connection to *connect kdb server*.  Ensure the q process is running as instructed in [start q](#start-q).
+**Step 9**: Right-click on the connection to *connect kdb server*.  Ensure the q process is running.
 
 ![localkdbconnection](img/connectserver.jpg)
 
 
 ### Managed q session
 
-This runs a q session using the existing kdb installed as part of the kdb VS Code extension, so you don't need to [start q](#start-q).
+This runs a q session using the existing kdb installed as part of the kdb VS Code extension.
 
 **Step 1**: Click *connect to kdb server* or *Add new connection** from the *CONNECTIONS* context menu.
 
