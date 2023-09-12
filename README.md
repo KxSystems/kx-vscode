@@ -108,7 +108,7 @@ q -p 5001
 
 **Step 2**: Within the kdb VS Code extension, click *connect to kdb server*, or *Add new connection** from the *CONNECTIONS* context menu.
 
-![connecttoakdbserver](img/connecttoakdbserver.jpg)
+![connecttoakdbserver](img/connecttoakdbserver.png)
 
 **Step 3**: From select the kdb type input, choose **Enter a kdb endpoint**.
 
