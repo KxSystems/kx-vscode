@@ -139,29 +139,13 @@ export class AnalyzerContent {
     const text = document.getText();
     const symbols: SymbolInformation[] = [];
 
-    // Use a regular expression to find function and variable declarations
-    const declarationRegex = /(function|var|let|const)\s+([a-zA-Z0-9_]+)\s*\(/g;
+    const declarationRegex = /([.\w]+)[ \t]*:/gm;
     let match;
     while ((match = declarationRegex.exec(text))) {
       const start = match.index;
-      const end = start + match[0].length;
-      const name = match[2];
-      const kind =
-        match[1] === "function" ? SymbolKind.Function : SymbolKind.Variable;
-      const range = Range.create(
-        document.positionAt(start),
-        document.positionAt(end)
-      );
-      symbols.push(SymbolInformation.create(name, kind, range, document.uri));
-    }
-
-    // Use a regular expression to find class declarations
-    const classRegex = /class\s+([a-zA-Z0-9_]+)/g;
-    while ((match = classRegex.exec(text))) {
-      const start = match.index;
-      const end = start + match[0].length;
+      const end = start + match[1].length;
       const name = match[1];
-      const kind = SymbolKind.Class;
+      const kind = SymbolKind.Variable;
       const range = Range.create(
         document.positionAt(start),
         document.positionAt(end)
@@ -222,7 +206,10 @@ export class AnalyzerContent {
     return "";
   }
 
-  public getCompletionItems(keyword: string): CompletionItem[] {
+  public getCompletionItems(
+    keyword: string,
+    params: TextDocumentPositionParams
+  ): CompletionItem[] {
     if (keyword) {
       const qLangParserItemsWithKind: CompletionItem[] = qLangParserItems.map(
         (item: CompletionItem) => {
@@ -235,6 +222,14 @@ export class AnalyzerContent {
           return item.label?.startsWith(keyword);
         }
       );
+      const document = this.uriToTextDocument.get(params.textDocument.uri);
+      if (document) {
+        const symbols = this.getSymbols(document);
+        symbols.forEach((symbol) =>
+          completion.push(CompletionItem.create(symbol.name))
+        );
+      }
+
       return completion;
     }
     return [];
