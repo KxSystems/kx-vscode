@@ -8,7 +8,7 @@ This is a companion extension for kdb developers to edit q files, connect to kdb
 
 ## Contents
 
-- [Why q for VS Code?](#why-q-for-vsvode)
+- [Why q for VS Code?](#why-q-for-vs-code)
 - [Get Started](#get-started)
 - [Connections](#connections)
 - [kdb language server](#kdb-language-server)
