@@ -226,7 +226,10 @@ export class AnalyzerContent {
       if (document) {
         const symbols = this.getSymbols(document);
         symbols.forEach((symbol) =>
-          completion.push(CompletionItem.create(symbol.name))
+          completion.push({
+            label: symbol.name,
+            kind: CompletionItemKind.Variable,
+          })
         );
       }
 
@@ -362,7 +365,7 @@ export class AnalyzerContent {
   }
 
   public isWordCharacter(ch: string): boolean {
-    return /[.\w]/.test(ch);
+    return /\w/.test(ch);
   }
 
   public analyzeWorkspace({
