@@ -66,11 +66,11 @@ From the extension, you can connect directly to a q session, or to an instance o
 
 To make a connection, you must:
 
-1. Configure the connection.
+1. Add the connection.
 
     Several connection types are available (see below).
 
-2. Connect VS Code to the configured connection.
+2. Connect VS Code to the connection.
 
 ### Connection types
 
@@ -95,7 +95,7 @@ We provide these connection types:
 
 A q session may be [managed or unmanaged](#connection-types). 
 
-To configure a connection to a q session and connect to it, use these steps:
+To add a connection to a q session and connect to it, use these steps:
 
 1. Enable the q process to communicate with VS Code.
  
@@ -103,7 +103,7 @@ To configure a connection to a q session and connect to it, use these steps:
 
     Make a note of the port number that you use; you need this in the next step.
 
-1. Configure the connection in VS Code.
+1. Add the connection in VS Code.
 
     To do this, click **Connect to kdb server** in the KX side bar.
    
@@ -119,9 +119,9 @@ To configure a connection to a q session and connect to it, use these steps:
 
     This name determines whether the connection is managed or unmanaged.
 
-    To configure a managed connection, enter *local* here.
+    To add a managed connection, enter *local* here.
 
-    To configure an unmanaged connection, enter any name apart from *local* or *insights* here.
+    To add an unmanaged connection, enter any name apart from *local* or *insights* here.
     
     *Enter the host name or ip address of the kdb server*
 
@@ -156,7 +156,7 @@ To configure a connection to a q session and connect to it, use these steps:
 
 ### Connect to an instance of kdb Insights Enterprise
 
-To configure a connection to an instance of kdb Insights Enterprise and connect to it, use these steps:
+To add a connection to an instance of kdb Insights Enterprise and connect to it, use these steps:
 
 1. Specify details of the kdb Insights Enterprise endpoint in VS Code.
 
