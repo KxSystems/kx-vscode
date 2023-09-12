@@ -209,8 +209,6 @@ A kdb language server is bundled with the kdb VS Code extension. It offers vario
 
 The extension provides keyword syntax highlighting, comments and linting help.
 
-[//]: # (Use dark theme images for this; crop the image to the width of the code or pop-up - not the text box - if the text isn't legible in the image then the image has no use.)
-
 ![Syntax Highlighting](img/syntax-highlighting.png)
 
 ![Linting](img/linting.png)
