@@ -181,7 +181,7 @@ export default class QLangServer {
     if (!keyword) {
       return [];
     }
-    return this.analyzer.getCompletionItems(keyword, params);
+    return this.analyzer.getCompletionItems(keyword);
   }
 
   private async onCompletionResolve(

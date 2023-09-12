@@ -206,10 +206,7 @@ export class AnalyzerContent {
     return "";
   }
 
-  public getCompletionItems(
-    keyword: string,
-    params: TextDocumentPositionParams
-  ): CompletionItem[] {
+  public getCompletionItems(keyword: string): CompletionItem[] {
     if (keyword) {
       const qLangParserItemsWithKind: CompletionItem[] = qLangParserItems.map(
         (item: CompletionItem) => {
@@ -222,16 +219,6 @@ export class AnalyzerContent {
           return item.label?.startsWith(keyword);
         }
       );
-      const document = this.uriToTextDocument.get(params.textDocument.uri);
-      if (document) {
-        const symbols = this.getSymbols(document);
-        symbols.forEach((symbol) =>
-          completion.push({
-            label: symbol.name,
-            kind: CompletionItemKind.Variable,
-          })
-        );
-      }
 
       return completion;
     }
