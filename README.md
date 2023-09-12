@@ -1,339 +1,444 @@
 # kdb Visual Studio Code extension
 
-This is a companion extension for kdb developers. It provides editing capabilities for working with q files, and the ability to connect to kdb processes and run queries.
+This is a companion extension for kdb developers to edit q files, connect to kdb processes, and run queries.  This VS Code extension can be used alongside [kdb Insights Enterprise](https://code.kx.com/insights/enterprise/index.html) when using a shared kdb process. 
 
-[![KX VS Code CI](https://github.com/KxSystems/kx-vscode/actions/workflows/ci.yml/badge.svg)](https://github.com/KxSystems/kx-vscode/actions/workflows/ci.yml)
+[![KX VS Code CI Testing](https://github.com/KxSystems/kx-vscode/actions/workflows/ci.yml/badge.svg)](https://github.com/KxSystems/kx-vscode/actions/workflows/ci.yml)
+
+[![KX VS Code Release](https://github.com/KxSystems/kx-vscode/actions/workflows/release.yml/badge.svg)](https://github.com/KxSystems/kx-vscode/actions/workflows/release.yml)
 
 ## Contents
 
-- [Overview](#overview)
-- [Getting Started](#getting-started)
+- [Why q for VS Code?](#why-q-for-vs-code)
+- [Get Started](#get-started)
 - [Connections](#connections)
 - [kdb language server](#kdb-language-server)
-- [Executing code](#executing-code)
-- [Viewing results](#viewing-results)
+- [Execute code](#execute-code)
+- [View results](#view-results)
+- [Settings](#settings)
 - [Shortcuts](#shortcuts)
 
 
-## Overview
+## Why q for VS Code?
 
-Use this extension to:
+With the kdb Visual Studio Code extension you can:
 
-- Predict and complete q syntax in a q session or within an instance of kdb Insights Enterprise
-- Execute a line of q code, a section of q code or a file of q code in a q session
-- Execute q code from within kdb Insights Enterprise FIXME more needed here
-- View results FIXME more needed here
+- [Install q](#install-q).
+- Write q syntax with support for predict and autocomplete.
+- Execute q from a single line of code, code block or q file. 
+- Write and execute q code from [kdb Insights Enterprise](https://code.kx.com/insights/enterprise/index.html).
+- View results from your queries.
 
-## Getting Started
 
-The kdb vscode extension provides a workflow to install q and allow the runtime management of q processes from with vscode
+## Get started
 
-With the vscode exension you can
+If you have an existing q installation, you will see the message `q runtime installed` and can go directly to [start q](#start-q).
 
-1. Install q
-1. Start q
-1. Configure connections between VS Code and q or kdb Insights Enterprise
-1. Connect VS Code to q or kdb Insights Enterprise
+If you are new to q, you will need a kdb license to use the kdb VS Code extension; see [install q](#install-q)
 
-**If you already have q installed locally**
 
-When you install the extension, the message **q runtime installed** is displayed. You can now [start q](#start-q).
+### Install q
 
-**If you do not have q installed**
+**Step 1**: Download the latest version of kdb+.  There are different versions of kdb+ available, and the version you download will determine supported features in VS Code:
 
-When you install the extension, you are instructed to do one of the following:
+Item | write q | run q queries | explore results | shared kdb process with kdb Insights
+---- | ------- | ------------- | --------------- | ----------------------------------
+[kdb+ Personal Edition](https://kx.com/kdb-personal-edition-download/) | yes | yes | yes | no
+[kdb+ Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/)  | yes | yes | yes | yes
+[kdb+ Insights Enterprise Personal Edition](https://trykdb.kx.com/) | yes | yes | yes | yes            
 
-- Install q locally using the [instructions on our documentation website](https://code.kx.com/q/learn/install)
-- [Install q using the extension](#install-q-using-the-extension)
+Contact licadmin@kx.com for commercial kdb+ licensing.
 
-### Install q using the extension
+**Step 2**: After registering, you will receive an email with a link to download the installation file for the kdb+ edition you registered for.
 
-TODO - this section needs screenshots
+Extract the file to a directory; instructions are available for [Linux, macOS and Windows](https://code.kx.com/q/learn/install/#step-2-unzip-your-download).
 
-Click **Install runtime**.
+:fontawesome-solid-hand-point-right: [I want to learn more about kdb+ installation.](https://code.kx.com/q/learn/install/)
 
-You are prompted to provide a license key.
-    
-- If you have a license key, click **Select/Enter a license**
+**Step 3**: The welcome email will also have your kdb, `k4.lic` or `kc.lic` license as an attachment.  We recommend you add your kdb license to your q installation directory, or `QHOME`, and define this location in your environment variables.  It is essential you define an environment variable for VS Code to recognize a valid license.   
 
-    Choose one of the following options:
-  
-    - Paste license string
+!!! note "My kdb license is not part of my q installation"
+  If your kdb license is stored outside of your q  (`QHOME`) directory, create a `QLIC` environment variable instead.
 
-        Paste your base64 encoded license string. This is provided by KX in an email.
+:fontawesome-solid-hand-point-right: [How to define a QHOME environment variable](https://code.kx.com/q/learn/install/#step-5-edit-your-profile).
 
-    - Select license file
-    
-        If KX provided a license file, which you downloaded, choose this option and specify the file.
 
-        A success message is displayed and you can [start q](#start-q).
+### Install q with VS Code.
 
-- If you do not have a license key, click **Acquire license**.
+q can be installed from the VS Code extension. You still need to register for [kdb+ Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/) or [kdb+ Insights Enterprise Personal Edition](https://trykdb.kx.com/) to obtain your kdb+ license. 
 
-    At the prompt, click **Open** to go to https://kx.com/kdb-personal-edition-download, where you can sign up for our 12-month free trial of kdb+ Personal Edition. You can, alternatively, contact our licensing department at licadmin@kx.com if you want to buy a full commercial license.
+The kdb+ license will be added as part of the installation, although a `QHOME` environment variable is still required. 
 
-    When you receive a license email from KX, return to Visual Studio Code and click **Continue** at the prompt in the bottom right-hand corner. From here, you are prompted to specify a license key string or file as above.
 
-    A success notice is displayed and you can [start q](#start-q).
+**Step 1**: Click `Install new instance` from the prompt if no q installation is flagged. If this prompt is cancelled, then use the aforementioned [install q](#install-q). 
 
-Note: ensure that the system variable [*QHOME*](https://code.kx.com/q/learn/install)) is defined and that the location of your q folder is specified in the *Path* system variable.
+![installnewinstance](img/installnewinstance.jpg)
 
-### Start q
+**Step 2**: If you have already registered for kdb+, then choose `Select/Enter a license`.  If you haven't registered for kdb+, choose `Acquire license`, this will open a dialog with a redirect link to register for [kdb+ Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/). 
 
-If you just installed q using the extension, the last prompt is to **Start q**.
 
-From the extension, you can now [connect directly to a q session](#connect-to-a-q-session), or to an [instance of kdb Insights Enterprise](connect-to-an-instance-of-kdb-insights-enterprise).
+![findlicense](img/findlicense.jpg)
+
+**Step 3**: With the kdb+ license secured, you can then link this to VS Code by either `pasting license string` or `selecting license file` from your PC; the latter method is recommended for new users. 
+
+![findlicense](img/pastelicense.jpg)
+
+The base64 encoded license string can be found in the welcome email received after registration, under the download link for the license file. 
+
+![welcomeemaillicense](img/weclomeemail.jpg)
+
+The `kc.lic` license file can be downloaded to your PC. 
+
+**Step 4**: Set a [`QHOME` environment variable](https://code.kx.com/q/learn/install/#step-5-edit-your-profile) to the location used by the kdb VS Code install. A notification dialog displays the location of q, as do the extension [settings](#settings).
+
+![qfound](img/installationofqfound.jpg)
+
+If q is installed at `C:\q`, then `QHOME` is `C:\q`.
+
+To finish, a prompt is offered with an opt-in to receive a newsletter.  
 
 ## Connections
-### Connection types
 
-We provide these connection types:
+kdb VS Code connects to a q process; a q process can be initiated from the command shell as outlined in [start q](#start-q).  A q process running outside of the kdb VS Code extension is referred to as an [**unmanaged q session**](#unmanaged-q-session).  
 
-- **Managed q session** - alias 'local'
+A [**managed q session**](#managed-q-session) uses the q installed as part of the kdb VS Code extension installation. It runs a child q process from within the extension and is fully managed by the extension.  
 
-    You can use Visual Studio Code's controls to start and stop a managed connection. When you exit Visual Studio Code, the q process stops. To allow vscode to manage a q process, set the alias as 'local' when creating it
-    
-- **Unmanaged q session**
+Only one connection can be active at any given time. 
 
-    You manage the q process outside of Visual Studio Code. The q process runs irrespective of whether you have Visual Studio Code open or not. When creating a connection in vscode set the alias to anything else other than 'local' or 'insights'
+### Unmanaged q session
 
-- **kdb Insights**
+**Step 1**: In the command shell, from the location of your q installation, run a `q` connection to a port, e.g. 5001.
 
-    You can connect to an instance of kdb Insights Enterprise.
+```q
+q -p 5001
+```
 
+**Step 2**: Within the kdb VS Code extension, click *connect to kdb server*, or *Add new connection** from the *CONNECTIONS* context menu.
 
-![kdb connection](img/kdb-connection.png)
+![connecttoakdbserver](img/connecttoakdbserver.jpg)
 
+**Step 3**: From select the kdb type input, choose **Enter a kdb endpoint**.
 
-### Managing kdb connections
+![setendpoint](img/step1connecttoakdbserver.jpg)
 
+**Step 4**: Assign a *server name / alias*, the server name selected **cannot be `local` or `insights`, as these are reserved for use by [managed q session](#managed-q-session) and [kdb Insights Enterprise](#kdb-insights-enterprise).**
 
-A q session may be [managed or unmanaged](#connection-types). 
+**Step 5**: Set the *hostname* or ip address of the kdb server; e.g. *localhost*.
 
-To add and connect to a q session use these steps:
+**Step 6**: Set the *port* used by the kdb server; e.g. *5001*. 
 
-1. Enable the q process to communicate with Visual Studio Code.
- 
-    To do this, [set the q process to listen on a port](https://code.kx.com/q/basics/ipc).
+:fontawesome-solid-hand-point-right:[I want to learn more about setting a q port](https://code.kx.com/q/basics/ipc/)
 
-    Make a note of the port number that you use; you need this in the next step.
+**Step 7**: If authentication is required, define the *username*, then the *password*; clicking Enter with these inputs blank skips these steps.
 
-1. Configure the connection in Visual Studio Code.
+**Step 8**: An optional enabling of TLS encryption is offered; default is *false*.
 
-    To do this, click **Connect to kdb server** in the KX side bar.
-   
-    FIXME image resources/images/connecttokdbserver.jpg
-   
-    If this button is not displayed, select **Add new connection** from the context menu.
-   
-    FIXME image resources/images/addnewconnection.jpg
-   
-    Select *Enter a kdb endpoint* and respond to the prompts:
+[//]: # (Link below requires TLS link)
 
-    FIXME a table might be better for the prompts
-    
-    *Enter a name or alias for the connection*
+:fontawesome-solid-hand-point-right: [I want to learn more about TLS encryption](https://code.kx.com/q/kb/ssl/).
 
-    This name determines whether the connection is managed or unmanaged.
+Upon completion, the localhost connection appears under *KX:CONNECTIONS* in the left hand panel.
 
-    To configure a managed connection, enter *local* here.
+![localkdbconnection](img/localkdbconnection.jpg)
 
-    To configure an unmanaged connection, enter any name here.
-    
-    *Enter the host name or ip address of the kdb server*
+**Step 9**: Right-click on the connection to *connect kdb server*.  Ensure the q process is running as instructed in [start q](#start-q).
 
-    FIXME more description needed
-
-    *Enter the port number of the kdb server*
-
-    Type in the number of the port that you set up earlier.
-    
-    *Enter a username to authenticate with (optional)*
-
-    FIXME more description needed
-
-    *Enter a password to authenticate with (optional)*
-
-    FIXME more description needed
-
-    *Enable TLS encryption on kdb connection (optional)*
-
-    FIXME more description needed
-    
-1. Tell the Visual Studio Code extension which configuration to connect to.
-
-    To do this, right-click the relevant connection configuration in the KX side bar and select **Connect kdb server**.
-    
-    A success message is displayed in the bottom, right-hand corner of the screen.
-
-    FIXME link to a section about executing code
+![localkdbconnection](img/connectserver.jpg)
 
 
-A connection can be removed by right clicking the connection and selecting 'Remove Connection'
+### Managed q session
 
-TODO Insert diagram
+This runs a q session using the existing kdb installed as part of the kdb VS Code extension, so you don't need to [start q](#start-q). It also means when you exit VS Code, the running managed q processes will terminate. 
 
-### Connect to an instance of kdb Insights Enterprise
+**Step 1**: Click *connect to kdb server* or *Add new connection** from the *CONNECTIONS* context menu.
 
-To add and connect to a kdb Insights connection se these steps:
+![connecttoakdbserver](img/connecttoakdbserver.jpg)
 
-1. Specify details of the kdb Insights Enterprise endpoint in Visual Studio Code.
+**Step 2**: From select the kdb type input, choose **Enter a kdb endpoint**.
 
-    To do this, click **Connect to kdb server** in the KX side bar.
+![setendpoint](img/step1connecttoakdbserver.jpg)
 
-    FIXME image resources/images/connecttokdbserver.jpg
+**Step 3**: Set the *server name / alias* to `local`.
 
-    Select *Connect to kdb Insights Enterprise* and respond to the prompts:
+**Step 4**: Set the *hostname*; e.g. *localhost*
 
-    *Enter a name or alias for the connection*
+**Step 5**: Set the *port* for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. *5002*
 
-    FIXME more description needed - is this also a managed vs unmanaged option?
+:fontawesome-solid-hand-point-right:[I want to learn more about setting a q port](https://code.kx.com/q/basics/ipc/)
 
-    *Enter the Insights endpoint URL*
+**Step 6**: Right click the managed q process listed under *KX:CONNECTIONS*, and click *Start q process*.
 
-    Type or paste in the URL of the kdb Insights Enterprise instance to which you want to connect.
+![setendpoint](img/managedqprocess.jpg)
 
-1. Tell the Visual Studio Code extension which instance of kdb Insights Enterprise to connect to.
+**Step 7**: From the same right-click menu, click *Connect kdb server*.  This connects to the child q process running inside the kdb VS Code extension. 
 
-    To do this, right-click the relevant connection configuration in the KX side bar and select **Connect to Insights**.
+If you close the extension, the connection to the child q process also closes. 
 
-    FIXME image resources/images/connecttoinsightscontext.jpg
 
-    The instance of kdb Insights Enterprise is displayed.
+### kdb Insights Enterprise
 
-    FIXME link to a section about executing code
+For kdb Insights Enterprise, the kdb VS Code extension is using a kdb Enterprise deployment.  Unlike for a **managed q session**, you must have a running session of [kdb+ Insights Enterprise](https://trykdb.kx.com/) to use this feature. 
 
-A connection can be removed by right clicking the connection and selecting 'Remove Connection'
+**Step 1**: Click *connect to kdb server*.
 
-TODO Insert diagram
+![connecttoakdbserver](img/connecttoakdbserver.jpg)
+
+**Step 2**: For *select kdb type*, choose *Connect to kdb insights*
+
+![connecttoinsights](img/connecttoinsights.jpg)
+
+**Step 3**: Create a *server name / alias*, this can be any name.
+
+**Step 4**: Set the *hostname*, this is the remote address of your Insights deployment: e.g https://[]()mykdbinsights.cloudapp.azure.com
+
+**Step 5**: The insights connection is listed under *KX:Connections*, with its own icon.  Right-click the connection and *Connect to Insights*
+
+![connecttoinsights](img/kdbinsightsconnection.jpg)
+
+**Step 6**: The kdb VS Code extension runs an authentication step with the remote Insights process; sign-in to Insights. 
+
+![authenticateinsights](img/insightsauthenticate.jpg)
+
+After a successful connection to an Insights session, a new *DATA SOURCES* panel will become available in the kdb VS Code extension.
+
+![insightsdatasources](img/datasources.jpg)
+
+
+Once connected to an Insights session, go to [execute code](execute-code).
+
+[//]: # (In what context is the reserved alias name `insights` used? - BMA yes insights aliases are reserved for Insights connections; I think thats ok?)
+
 
 ## kdb language server
 
-A kdb language server is bundled with the vscode extension this offers various common features to aid in the development of kdb code within vscode including
+A kdb language server is bundled with the kdb VS Code extension. It offers various common features to aid in the development of kdb code within VS Code, including:
 
-- Syntax highlighting and linting
-- Code Naivigation
-- Code Completion
+- [Syntax highlighting and linting](#syntax-highlighting)
+- [Code navigation](#code-navigation)
+- [Code completion](#code-completion)
+
 
 ### Syntax highlighting
 
-Key word syntax highlighting, comments and linting help
+The extension provides keyword syntax highlighting, comments and linting help.
+
+[//]: # (Use dark theme images for this; crop the image to the width of the code or pop-up - not the text box - if the text isn't legible in the image then the image has no use.)
 
 ![Syntax Highlighting](img/syntax-highlighting.png)
 
 ![Linting](img/linting.png)
-### Code Navigation
 
-While developing q scripts, the kdb extension supports
 
-- Go to Definition
-  Allowing the user to navigate to eh definition of a function
+### Code navigation
 
-- Call Hierarchy
-  To view the call stack from the selected function
+While developing q scripts, the kdb VS Code extension supports:
 
-  TODO Diagram
+- Go to definition
 
-- Find all References/Go to References
+  Navigate to the definition of a function
+
+
+  <!-- FIXME Diagram -->
+
+- Find/go to all references
   
-  To view references of a function both on the side view and inline with the editor
+  View references of a function both on the side view and inline with the editor
+
+  [//]: # (Use dark theme images for this)
+  
   ![Find all references](img/find-all-references.jpg)
 
   ![Go to References](img/go-to-references.png)
-
-
 
 ### Code Completion
 
 - Keyword auto complete for the q language 
 
+    [//]: # (Use dark theme images for this)
+
   ![Autocomplete](img/autocomplete.png)
 
-- Autocomplete of local and remotely connected q process autocomplete
+- Autocomplete for local and remotely connected q processes
 
-  TODO INSERT DIAGRAM
+  <!-- FIXME INSERT DIAGRAM -->
 
 
-## Executing code
+## Execute code
 
-Leaning on vscode's extensive integrations with SCMs all code is typically stored and loaded into a vscode workspace.From there the kdb extension allows the user to execute that code in a number of ways against both kdb processes and Insights endpoints. TODO Insert link to creating connections
+Leaning on VS Code's extensive integrations with SCMs, all code is typically stored and loaded into a VS Code workspace. From there, the kdb VS Code extension allows you execute code against both kdb processes, and kdb Insights Enterprise endpoints.
 
 ### kdb process executing code
 
-There are three options for executing code against a connected kdb process;avaialble via the right click menu
+There are three options available from the right-click menu for executing code:
 
-#### Execute Current Selection
+- Execute current selection
 
-This will take the current selection (or current line if nothing selected) and execute it against the connected q process. The results will apepar in the OUPUT window (TOOD INSERT LINK) and/or the KDB RESULTS window (TODO INSERT LINK)
+    Takes the current selection (or current line if nothing is selected) and executes it against the connected q process. Results are displayed in the [output window and/or the kdb results window](#view-results).
 
-![Execute selection](img/execute-selection.jpg)
+    [//]: # (Use dark theme images for this)
 
-#### Execute entire file
+    ![Execute selection](img/execute-selection.jpg)
 
-tthis will take the current file and execute it against the connected q process. Link (TODO LINK TO ABOVE) the results will apepar in teh OUTPUT window  (TODO INSERT LINK). If it returns data the results will appear in the KDB RESULTS window  (TODO INSERT LINK)
+- Execute entire file
 
-#### Run q file in new q instance
+    Takes the current file and executes it against the connected q process. Results are displayed in the [output window](#view-results). Returned data are displayed in the [kdb results window](#view-results).
 
-If q is installed and executabel from teh terminal, it is possible to execute and entire script on a newly launch q instance with this option. When executing a file on a new instance, it will launch in the terminal and allow the user to interrogate the active q process from the terminal window within vscode
+- Run q file in new q instance
+
+    If q is installed and executable from the terminal, you can execute an entire script on a newly launched q instance. Executing a file on a new instance is done in the terminal, and allows interrogation of the active q process from the terminal window.
 
 
 ### Insights query execution
 
-The kdb Insights Platform offers enhanced connectivity and Enterprise level API endpoints offering additional means to query data and interact with Insights which is not available with kdb processes. It is necessary to have an instance of Insight Enterprise running and have created a connection to it (TODO INSERT LINK) within the vscode extension
+kdb Insights Enterprise offers enhanced connectivity and enterprise level API endpoints, providing additional means to query data and interact with kdb Insights Enterprise that are not available with standard kdb processes. You must have an instance of kdb Insights Enterprise running, and have created a [connection](#connections) within the kdb VS Code extension.
 
-Similarly to above (TODO insert link), we can execute arbitary code against Insights. This will be executed on a user specific sandbox process within the Insights deploy. This sandbox will be instanciated upon the first request to execute code when connected to an Insights connection and will remain active until timed out; or the user is logged out. 
+Similarly, you can execute arbitrary code against kdb Insights Enterprise. The code is executed on a user-specific sandbox process within the kdb Insights Enterprise deploy. The sandbox is instanciated upon the first request to execute code when connected to a kdb Insights Enterprise connection. It remains active until timed out or until you log out.
 
-#### Data Sources
+#### Data sources
 
-In addition to code execution against scratchpads, Insights also support Data Sources where users can build a query within vscode which can be executed against the Insights API endpoints (TODO INSERT LINK TO API DOCS on code.kx.com). The UI helps users build a query based on the available API on their instance of Insights; parameterise it and return the data results to the OUTPUT or KDB Results window
+kdb Insights Enterprise supports the use of data sources, where you can build a query within VS Code and run it against the [kdb Insights Enterprise API endpoints](https://code.kx.com/insights/api/index.html). The UI helps you to build a query based on the available API on your instance of kdb Insights Enterprise, parameterize it and return the data results to the output or kdb results window.
 
-To create a Data Source
+To create a data source:
 
-- In the Data Sources view, click the options button and select 'Add Data Source'
-- click on the created data source where the name, API and parameterization can be applied
-- 'Save' will persist the Data source to the vscode workspace
+1. In the Data Sources view, click the Options button and select 'Add Data Source'.
+    
+1. Click on the created data source where the name, API and parameterization can be applied.
+    
+1. Click Save to persist the data source to the VS Code workspace.
+
+[//]: # (Use dark theme images for this)
 
 ![data Source](img/data-source.png)
 
-To run the data source, click on 'Run' and the results will populate the OUTPUT (TODO INSERT LINK) and KDB RESULTS (TODO INSERT LINK) windows
+To run a data source, click 'Run' and the results populate the output and kdb results windows.
 
-In addition to API queries, if the Query Environment is enabled on the deployed instance of Insights; QSQL and SQL queries can be used within a Data Source with the appropriate parameterization
+In addition to API queries, if the query environment is enabled on the deployed instance of kdb Insights Enterprise, qSQL and SQL queries can be used within a data source with the appropriate parameterization.
 
-#### Populate Scratchpad
+#### Populate scratchpad
 
-A common ask is to populate a user scratchpad with a dataset to allow the user to build complex APIs and pipelines within vscode and kdb Inisghts. This can be achieved with Data Source, which when created can be executed to populate the scratchpad with the 'Populate Scratchpad' button. The user will be asked for a variable to populate the data to on their scratchpad instance, then can return to their editor and execute q code against the data which has pushed to their scratchpad instance
+You can use a data source to populate a scratchpad with a dataset, allowing you to build complex APIs and pipelines within VS Code and kdb Insights Enterprise. 
+
+To do this:
+
+1. Create a data source and execute it using the 'Populate Scratchpad' button.
+    The scratchpad is populated.
+   
+1. At the prompt, provide a variable to populate your own scratchpad instance with the data.
+
+1. Return to VS Code and execute q code against the data in your scratchpad.
+
+[//]: # (Use dark theme images for this)
 
 ![Populate Scratchpad](img/populate-scratchpad.png)
 
 
-## Viewing results
+## View results
 
-All query executions happen remotely to the kdb extension either against a running q process; or an instance of kdb Insights. The result, successful or otherwise are returned to vscode to be displayed in two different views
+All query executions happen remotely from the kdb VS Code extension either against a running q process or against an instance of kdb Insights Enterprise. The results, successful or otherwise, are returned to VS Code as:
 
-### Output view
+- An output view
 
-The output view displays the results as they are received by the vscode extension. This will include the query executed; timestamp and the results
+    The output view displays results as they are received by the kdb VS Code extension. It includes the query executed, a timestamp and the results.
 
-![Output view](img/output-results.png)
+    [//]: # (Use dark theme images for this)
 
-!!!note
-    Auto scrolling can be enabled/disabled within the vs code settings. This setting will set whether this view scrolls to the latest results
+    ![Output view](img/output-results.png)
+
+    **Note:** You can enable/disable auto-scrolling in the VS Code settings. This setting determines whether the output view scrolls to the latest results.
+
+    [//]: # (Use dark theme images for this)
 
     ![Output autoscrolling](img/auto-scrolling.jpg)
 
-### KDB Results view
-In addition to this the results are displayed under the KDB RESULTS view which offers a tabulised view of the returned data
+- A kdb results view
 
-![kdb results view](img/kdbview-results.png)
+    Results are displayed under the kdb results view, which shows the returned data in a table.
+
+    [//]: # (Use dark theme images for this)
+
+    ![kdb results view](img/kdbview-results.png)
+
+
+## Settings
+
+To update kdb VS Code settings, search for `kdb` from _Preferences_ > _Settings_, or access on right-click of the settings icon in kdb VS Code marketplace panel, _Extension Settings_. 
+
+Item                                                       | Action
+---------------------------------------------------------- | -------
+Hide notification of installation path after first install | yes/no; default `no`
+Hide subscription to newsletter after first install        | yes/no; default `no`
+Insights for Explorer                                      | [edit JSON settings](#insights-for-explorer)
+QHOME directory for q runtime                              | Display location path of q installation
+Servers                                                    | [edit JSON settings](#servers)
+
+### Insights for Explorer
+
+```JSON
+{
+    "security.workspace.trust.untrustedFiles": "open",
+    "editor.accessibilitySupport": "off",
+    "workbench.colorTheme": "Default Dark+",
+    "kdb.qHomeDirectory": "C:\\qhomedirectory",
+    "kdb.hideInstallationNotification": true,
+    "kdb.servers": {
+        "23XdJyFk7hXb35Z3yw2vP87HOHFIfy0PDoo5+/G1o7A=": {
+            "auth": true,
+            "serverName": "127.0.0.1",
+            "serverPort": "5001",
+            "serverAlias": "5001",
+            "managed": false
+        }
+    },
+    "kdb.hideSubscribeRegistrationNotification": true,
+    "kdb.insights": {
+        
+        "b61Z6R1TGF3vsudDAmo5WWDcGEmRQpmQKoWrluXJD9g=": {
+            "auth": true,
+            "alias": "servername.com",
+            "server": "https://servername.com/"
+        }
+    }
+}
+```
+
+### Servers
+
+```JSON
+{
+    "security.workspace.trust.untrustedFiles": "open",
+    "editor.accessibilitySupport": "off",
+    "workbench.colorTheme": "Default Dark+",
+    "kdb.qHomeDirectory": "C:\\qhomedirectory",
+    "kdb.hideInstallationNotification": true,
+    "kdb.servers": {
+    
+        "23XdJyFk7hXb35Z3yw2vP87HOHFIfy0PDoo5+/G1o7A=": {
+            "auth": true,
+            "serverName": "127.0.0.1",
+            "serverPort": "5001",
+            "serverAlias": "5001",
+            "managed": false
+        }
+    },
+    "kdb.hideSubscribeRegistrationNotification": true,
+    "kdb.insights": {
+        "b61Z6R1TGF3vsudDAmo5WWDcGEmRQpmQKoWrluXJD9g=": {
+            "auth": true,
+            "alias": "servername.com",
+            "server": "https://servername.com/"
+        }
+    }
+}
+```
 
 
 ## Shortcuts
 
 | Key | Action |
 | - | - |
-| F12 | Go to Definition |
-| Shift + F12 | Go to References |
-| Cmd/Ctrl + Shift + F12 | Find All References |
-| Ctrl + Q | Execute Current Selection |
-| Ctrl + Shift + Q | Execute Entire File |
+| F12 | Go to definition |
+| Shift + F12 | Go to references |
+| Cmd/Ctrl + Shift + F12 | Find all references |
+| Ctrl + Q | Execute current selection |
+| Ctrl + Shift + Q | Execute entire file |
 | Ctrl + Shift + R | Run q file in new q instance |
+
