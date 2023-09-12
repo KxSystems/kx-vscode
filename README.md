@@ -228,9 +228,7 @@ While developing q scripts, the kdb VS Code extension supports:
   
   View references of a function both on the side view and inline with the editor
 
-  [//]: # (Use dark theme images for this)
-  
-  ![Find all references](img/find-all-references.jpg)
+  ![Find all references](img/find-all-references.png)
 
   ![Go to References](img/go-to-references.png)
 
