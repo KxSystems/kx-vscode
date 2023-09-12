@@ -43,7 +43,7 @@ If you are new to q, you will need a kdb license to use the kdb VS Code extensio
 Item | write q | run q queries | explore results | shared kdb process with kdb Insights
 ---- | ------- | ------------- | --------------- | ----------------------------------
 [kdb+ Personal Edition](https://kx.com/kdb-personal-edition-download/) | yes | yes | yes | no
-[kdb+ Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/)  | yes | yes | yes | yes
+[kdb+ Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/)  | yes | yes | yes | no
 [kdb+ Insights Enterprise Personal Edition](https://trykdb.kx.com/) | yes | yes | yes | yes            
 
 Contact licadmin@kx.com for commercial kdb+ licensing.
@@ -86,7 +86,7 @@ The base64 encoded license string can be found in the welcome email received aft
 
 The `k4.lic` or `kc.lic` license file can be downloaded to your PC. 
 
-**Step 4**: Set a [`QHOME` environment variable](https://code.kx.com/q/learn/install/#step-5-edit-your-profile) to the location used by the kdb VS Code install. A notification dialog displays the location of q, as do the extension [settings](#settings). This will allow q to be used outside of
+**Step 4**: Set a [`QHOME` environment variable](https://code.kx.com/q/learn/install/#step-5-edit-your-profile) to the location used by the kdb VS Code install. A notification dialog displays the location of q, as do the extension [settings](#settings). This will allow q to be used outside of VSCode
 
 ![qfound](img/installationofqfound.jpg)
 
@@ -100,11 +100,7 @@ kdb VS Code connects to a q process; which can be remote, referred to as an [**u
 
 ### Unmanaged q session
 
-**Step 1**: In the command shell, from the location of your q installation, run a `q` connection to a port, e.g. 5001.
-
-```q
-q -p 5001
-```
+**Step 1**: Identify the remote location of a running process. The hostname and port will be required along with any authentication information
 
 **Step 2**: Within the kdb VS Code extension, click *connect to kdb server*, or *Add new connection** from the *CONNECTIONS* context menu.
 
@@ -143,7 +139,7 @@ This runs a q session using the existing kdb installed as part of the kdb VS Cod
 
 **Step 1**: Click *connect to kdb server* or *Add new connection** from the *CONNECTIONS* context menu.
 
-![connecttoakdbserver](img/connecttoakdbserver.jpg)
+![connecttoakdbserver](img/connecttoakdbserver.png)
 
 **Step 2**: From select the kdb type input, choose **Enter a kdb endpoint**.
 
@@ -168,11 +164,11 @@ If you close the extension, the connection to the child q process also closes.
 
 ### kdb Insights Enterprise
 
-For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb process.  Unlike for a **managed q session**, you must have a running session of [kdb+ Insights Enterprise Personal Edition](https://trykdb.kx.com/) to use this feature. 
+For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb process.  Unlike for a **managed q session**, you must have [kdb+ Insights Enterprise Personal Edition](https://trykdb.kx.com/) running before using these connections. 
 
 **Step 1**: Click *connect to kdb server*.
 
-![connecttoakdbserver](img/connecttoakdbserver.jpg)
+![connecttoakdbserver](img/connecttoakdbserver.png)
 
 **Step 2**: For *select kdb type*, choose *Connect to kdb insights*
 
