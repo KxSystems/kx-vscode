@@ -278,8 +278,6 @@ To create a data source:
     
 1. Click Save to persist the data source to the VS Code workspace.
 
-[//]: # (Use dark theme images for this)
-
 ![data Source](img/data-source.png)
 
 To run a data source, click 'Run' and the results populate the output and kdb results windows.
@@ -299,8 +297,6 @@ To do this:
 
 1. Return to VS Code and execute q code against the data in your scratchpad.
 
-[//]: # (Use dark theme images for this)
-
 ![Populate Scratchpad](img/populate-scratchpad.png)
 
 
@@ -312,21 +308,15 @@ All query executions happen remotely from the kdb VS Code extension either again
 
     The output view displays results as they are received by the kdb VS Code extension. It includes the query executed, a timestamp and the results.
 
-    [//]: # (Use dark theme images for this)
-
     ![Output view](img/output-results.png)
 
     **Note:** You can enable/disable auto-scrolling in the VS Code settings. This setting determines whether the output view scrolls to the latest results.
-
-    [//]: # (Use dark theme images for this)
 
     ![Output autoscrolling](img/auto-scrolling.jpg)
 
 - A kdb results view
 
     Results are displayed under the kdb results view, which shows the returned data in a table.
-
-    [//]: # (Use dark theme images for this)
 
     ![kdb results view](img/kdbview-results.png)
 
