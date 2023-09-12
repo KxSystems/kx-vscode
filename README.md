@@ -222,8 +222,6 @@ While developing q scripts, the kdb VS Code extension supports:
 
   Navigate to the definition of a function
 
-<FIXME DIAGRAM>
-
 - Find/go to all references
   
   View references of a function both on the side view and inline with the editor
@@ -236,13 +234,9 @@ While developing q scripts, the kdb VS Code extension supports:
 
 - Keyword auto complete for the q language 
 
-    [//]: # (Use dark theme images for this)
-
   ![Autocomplete](img/autocomplete.png)
 
 - Autocomplete for local and remotely connected q processes
-
-  <!-- FIXME INSERT DIAGRAM -->
 
 
 ## Execute code
