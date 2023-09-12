@@ -251,10 +251,6 @@ There are three options available from the right-click menu for executing code:
 
     Takes the current selection (or current line if nothing is selected) and executes it against the connected q process. Results are displayed in the [output window and/or the kdb results window](#view-results).
 
-    [//]: # (Use dark theme images for this)
-
-    ![Execute selection](img/execute-selection.jpg)
-
 - Execute entire file
 
     Takes the current file and executes it against the connected q process. Results are displayed in the [output window](#view-results). Returned data are displayed in the [kdb results window](#view-results).
