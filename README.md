@@ -64,17 +64,15 @@ Extract the file to a directory; instructions are available for [Linux, macOS an
 
 ### Install q with VS Code.
 
-q can be installed from the VS Code extension. You still need to register for [kdb+ Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/) or [kdb+ Insights Enterprise Personal Edition](https://trykdb.kx.com/) to obtain your kdb+ license. 
+q can be installed from the VS Code extension. You still need to register for [kdb+ Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/).
 
-The kdb+ license will be added as part of the installation, although a `QHOME` environment variable is still required. 
-
+The kdb+ license will be added as part of the installation, although a `QHOME` environment variable is still required if you wish to utilise the installation outside of VS Code.
 
 **Step 1**: Click `Install new instance` from the prompt if no q installation is flagged. If this prompt is cancelled, then use the aforementioned [install q](#install-q). 
 
 ![installnewinstance](img/installnewinstance.jpg)
 
 **Step 2**: If you have already registered for kdb+, then choose `Select/Enter a license`.  If you haven't registered for kdb+, choose `Acquire license`, this will open a dialog with a redirect link to register for [kdb+ Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/). 
-
 
 ![findlicense](img/findlicense.jpg)
 
@@ -86,9 +84,9 @@ The base64 encoded license string can be found in the welcome email received aft
 
 ![welcomeemaillicense](img/weclomeemail.jpg)
 
-The `kc.lic` license file can be downloaded to your PC. 
+The `k4.lic` or `kc.lic` license file can be downloaded to your PC. 
 
-**Step 4**: Set a [`QHOME` environment variable](https://code.kx.com/q/learn/install/#step-5-edit-your-profile) to the location used by the kdb VS Code install. A notification dialog displays the location of q, as do the extension [settings](#settings).
+**Step 4**: Set a [`QHOME` environment variable](https://code.kx.com/q/learn/install/#step-5-edit-your-profile) to the location used by the kdb VS Code install. A notification dialog displays the location of q, as do the extension [settings](#settings). This will allow q to be used outside of
 
 ![qfound](img/installationofqfound.jpg)
 
@@ -98,11 +96,7 @@ To finish, a prompt is offered with an opt-in to receive a newsletter.
 
 ## Connections
 
-kdb VS Code connects to a q process; a q process can be initiated from the command shell as outlined in [start q](#start-q).  A q process running outside of the kdb VS Code extension is referred to as an [**unmanaged q session**](#unmanaged-q-session).  
-
-A [**managed q session**](#managed-q-session) uses the q installed as part of the kdb VS Code extension installation. It runs a child q process from within the extension and is fully managed by the extension.  
-
-Only one connection can be active at any given time. 
+kdb VS Code connects to a q process; which can be remote, referred to as an [**unmanaged q session**](#unmanaged-q-session) or a [**managed q session**](#managed-q-session) which uses the q installed as part of the kdb VS Code extension installation. It runs a child q process from within the extension and is fully managed by the extension. Only one connection can be active at any given time.
 
 ### Unmanaged q session
 
@@ -132,8 +126,6 @@ q -p 5001
 
 **Step 8**: An optional enabling of TLS encryption is offered; default is *false*.
 
-[//]: # (Link below requires TLS link)
-
 :fontawesome-solid-hand-point-right: [I want to learn more about TLS encryption](https://code.kx.com/q/kb/ssl/).
 
 Upon completion, the localhost connection appears under *KX:CONNECTIONS* in the left hand panel.
@@ -147,7 +139,7 @@ Upon completion, the localhost connection appears under *KX:CONNECTIONS* in the 
 
 ### Managed q session
 
-This runs a q session using the existing kdb installed as part of the kdb VS Code extension, so you don't need to [start q](#start-q). It also means when you exit VS Code, the running managed q processes will terminate. 
+This runs a q session using the existing kdb installed as part of the kdb VS Code extension, so you don't need to [start q](#start-q).
 
 **Step 1**: Click *connect to kdb server* or *Add new connection** from the *CONNECTIONS* context menu.
 
@@ -176,7 +168,7 @@ If you close the extension, the connection to the child q process also closes.
 
 ### kdb Insights Enterprise
 
-For kdb Insights Enterprise, the kdb VS Code extension is using a kdb Enterprise deployment.  Unlike for a **managed q session**, you must have a running session of [kdb+ Insights Enterprise](https://trykdb.kx.com/) to use this feature. 
+For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb process.  Unlike for a **managed q session**, you must have a running session of [kdb+ Insights Enterprise Personal Edition](https://trykdb.kx.com/) to use this feature. 
 
 **Step 1**: Click *connect to kdb server*.
 
@@ -198,14 +190,14 @@ For kdb Insights Enterprise, the kdb VS Code extension is using a kdb Enterprise
 
 ![authenticateinsights](img/insightsauthenticate.jpg)
 
-After a successful connection to an Insights session, a new *DATA SOURCES* panel will become available in the kdb VS Code extension.
+After a successful connection to an Insights process, a new *DATA SOURCES* panel will become available in the kdb VS Code extension.
 
 ![insightsdatasources](img/datasources.jpg)
 
 
-Once connected to an Insights session, go to [execute code](execute-code).
+Once connected to a q process, go to [execute code](execute-code).
 
-[//]: # (In what context is the reserved alias name `insights` used? - BMA yes insights aliases are reserved for Insights connections; I think thats ok?)
+[//]: # (In what context is the reserved alias name `insights` used? - BMA - the context is used on build the connection tree; different icon; different connection process)
 
 
 ## kdb language server
@@ -236,8 +228,7 @@ While developing q scripts, the kdb VS Code extension supports:
 
   Navigate to the definition of a function
 
-
-  <!-- FIXME Diagram -->
+<FIXME DIAGRAM>
 
 - Find/go to all references
   

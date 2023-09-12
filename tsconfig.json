@@ -3,7 +3,7 @@
     "module": "commonjs",
     "target": "ES2019",
     "outDir": "out",
-    "lib": ["ES2019", "WebWorker"],
+    "lib": ["ES2019", "WebWorker", "DOM"],
     "sourceMap": true,
     "rootDir": "src",
     "strict": true,

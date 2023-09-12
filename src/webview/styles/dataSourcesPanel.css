@@ -57,8 +57,9 @@
 }
 
 .btn-save,
-.btn-run {
-  width: 100px;
+.btn-run,
+.btn-scratchpad {
+  width: 120px;
 }
 
 .api-editor,

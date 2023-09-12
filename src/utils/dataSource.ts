@@ -42,6 +42,7 @@ export function createKdbDataSourcesFolder(): string {
 export function convertDataSourceFormToDataSourceFile(
   form: any
 ): DataSourceFiles {
+  const insightsNode = getConnectedInsightsNode();
   const fileContent = defaultDataSourceFile;
   const filter: string[] = [];
   const groupBy: string[] = [];
@@ -50,6 +51,7 @@ export function convertDataSourceFormToDataSourceFile(
   const slice: string[] = [];
   const labels: string[] = [];
   fileContent.name = form.name;
+  fileContent.insightsNode = insightsNode;
   fileContent.dataSource.selectedType = form.selectedType as DataSourceTypes;
   fileContent.dataSource.api.selectedApi = form.selectedApi;
   fileContent.dataSource.api.table = form.selectedTable;
@@ -116,6 +118,31 @@ export function convertTimeToTimestamp(time: string): string {
       `The string param is in an incorrect format. Param: ${time} Error: ${error}`
     );
     return "";
+  }
+}
+
+export function getConnectedInsightsNode(): string {
+  const connectedNode = ext.kdbinsightsNodes.find((node) =>
+    node.endsWith(" (connected)")
+  );
+  if (connectedNode) {
+    return connectedNode.replace(" (connected)", "");
+  } else {
+    return "";
+  }
+}
+
+export function checkFileFromInsightsNode(filePath: string): boolean {
+  const insightsNode = getConnectedInsightsNode();
+  if (!insightsNode || insightsNode === "") {
+    return false;
+  }
+  try {
+    const fileData = fs.readFileSync(filePath);
+    const fileContent: DataSourceFiles = JSON.parse(fileData.toString());
+    return fileContent.insightsNode === insightsNode;
+  } catch {
+    return false;
   }
 }
 
