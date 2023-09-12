@@ -1,6 +1,6 @@
 # kdb Visual Studio Code extension
 
-The kdb VS Code extension is intended for q/kdb developers.  It provides a workflow to install q and to allow the runtime management of q processes from with VS Code. It includes editing capabilities for working with q files, and the ability to connect to kdb processes and run queries.
+The kdb VS Code extension is intended for q/kdb developers.  It provides a workflow to install q and to allow the runtime management of q processes from with VS Code. It includes editing capabilities for working with q files, and the ability to connect to q processes and run queries.
 
 [![KX VS Code CI Testing](https://github.com/KxSystems/kx-vscode/actions/workflows/ci.yml/badge.svg)](https://github.com/KxSystems/kx-vscode/actions/workflows/ci.yml)
 
@@ -78,11 +78,11 @@ We provide these connection types:
 
 - **Managed q session**
 
-    You can use VS Code's controls to start and stop a managed connection. When you exit VS Code, the q process stops. When you [create the connection configuration](#connect-to-a-q-session), set the alias as 'local'.
+    You can use VS Code's controls to start and stop a managed connection. When you exit VS Code, the q  stops. When you [create the connection configuration](#connect-to-a-q-session), set the alias as 'local'.
     
 - **Unmanaged q session**
 
-    You manage the q process outside of VS Code. The q process runs irrespective of whether you have VS Code open or not. When you [create the connection configuration](#connect-to-a-q-session), set the alias to something other than 'local' or 'insights'.
+    You manage the q  outside of VS Code. The q  runs irrespective of whether you have VS Code open or not. When you [create the connection configuration](#connect-to-a-q-session), set the alias to something other than 'local' or 'insights'.
 
 - **kdb Insights Enterprise**
 
@@ -97,9 +97,9 @@ A q session may be [managed or unmanaged](#connection-types).
 
 To add a connection to a q session and connect to it, use these steps:
 
-1. Enable the q process to communicate with VS Code.
+1. Enable the q  to communicate with VS Code.
  
-    To do this, [set the q process to listen on a port](https://code.kx.com/q/basics/ipc).
+    To do this, [set the q  to listen on a port](https://code.kx.com/q/basics/ipc).
 
     Make a note of the port number that you use; you need this in the next step.
 
@@ -232,18 +232,18 @@ While developing q scripts, the kdb VS Code extension supports:
 
   ![Autocomplete](img/autocomplete.png)
 
-- Autocomplete for local and remotely connected q processes
+- Autocomplete for local and remotely connected q es
 
   <!-- FIXME INSERT DIAGRAM -->
 
 
 ## Execute code
 
-Leaning on VS Code's extensive integrations with SCMs, all code is typically stored and loaded into a VS Code workspace. From there, the kdb VS Code extension allows you to execute that code in a number of ways against both kdb processes and kdb Insights Enterprise endpoints.
+Leaning on VS Code's extensive integrations with SCMs, all code is typically stored and loaded into a VS Code workspace. From there, the kdb VS Code extension allows you to execute that code in a number of ways against both q processes and kdb Insights Enterprise endpoints.
 
-### kdb process executing code
+### q process executing code
 
-There are three options, which are available from the right-click menu, for executing code against a connected kdb process:
+There are three options, which are available from the right-click menu, for executing code against a connected q process:
 
 - Execute current selection
 
@@ -262,7 +262,7 @@ There are three options, which are available from the right-click menu, for exec
 
 ### Insights query execution
 
-kdb Insights Enterprise offers enhanced connectivity and enterprise level API endpoints, providing additional means to query data and interact with kdb Insights Enterprise that are not available with kdb processes. You must have an instance of kdb Insights Enterprise running and have created a connection to it within the kdb VS Code extension.
+kdb Insights Enterprise offers enhanced connectivity and enterprise level API endpoints, providing additional means to query data and interact with kdb Insights Enterprise that are not available with q processes. You must have an instance of kdb Insights Enterprise running and have created a connection to it within the kdb VS Code extension.
 
 Similarly, you can execute arbitrary code against kdb Insights Enterprise. The code is executed on a user-specific sandbox process within the kdb Insights Enterprise deploy. The sandbox is instanciated upon the first request to execute code when connected to a kdb Insights Enterprise connection. It remains active until timed out or until you log out.
 
