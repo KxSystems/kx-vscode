@@ -321,7 +321,7 @@ All query executions happen remotely from the kdb VS Code extension either again
 
 ## Settings
 
-To update kdb VS Code settings, search for `kdb` from _Preferences_ > _Settings_, or access on right-click of the settings icon in kdb VS Code marketplace panel, _Extension Settings_. 
+To update kdb VS Code settings, search for `kdb` from _Preferences_ > _Settings_, or right-click the settings icon in kdb VS Code marketplace panel and choose _Extension Settings_. 
 
 Item                                                       | Action
 ---------------------------------------------------------- | -------
