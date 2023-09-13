@@ -176,7 +176,7 @@ For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb pro
 
 **Step 4**: Set the *hostname*. This is the remote address of your kdb Insights Enterprise deployment: e.g `https://mykdbinsights.cloudapp.azure.com`
 
-**Step 5**: The insights connection is listed under *KX:Connections*, with its own icon.  Right-click the connection and *Connect to Insights*
+**Step 5**: The kdb Insights Enterprise connection is listed under *KX:Connections*, with its own icon.  Right-click the connection and *Connect to Insights*
 
 ![connecttoinsights](img/kdbinsightsconnection.jpg)
 
