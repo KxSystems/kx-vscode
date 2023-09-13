@@ -62,7 +62,7 @@ Extract the file to a directory; instructions are available for [Linux, macOS an
 
 ### Install q with VS Code.
 
-You can isntall q  from the VS Code extension. You still need to register for [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/) to obtain a license and VS Code will guide you through steps to install. The license will be incorporated as part of the kdb VS Code extension, although a `QHOME` environment variable is still required if you wish to utilise the q installation outside of VS Code.
+You can install q from the VS Code extension. You still need to register for [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/) to obtain a license and VS Code will guide you through steps to install. The license will be incorporated as part of the kdb VS Code extension, although a `QHOME` environment variable is still required if you wish to utilise the q installation outside of VS Code.
 
 **Step 1**: Click `Install new instance` from the prompt if no q installation is flagged. If this prompt is cancelled, then use the aforementioned [install q](#install-q). 
 
