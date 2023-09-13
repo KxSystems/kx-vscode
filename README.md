@@ -20,12 +20,12 @@ This is a companion extension for kdb developers to edit q files, connect to kdb
 
 ## Why q for VS Code?
 
-With the kdb Visual Studio Code extension you can:
+With the kdb VS Code extension you can:
 
-- [Install q](#install-q).
+- Install q.
 - Write q syntax with support for predict and autocomplete.
 - Execute q from a single line of code, code block or q file. 
-- Write and execute q code from [kdb Insights Enterprise](https://code.kx.com/insights/enterprise/index.html).
+- Write and execute q code against kdb Insights Enterprise.
 - View results from your queries.
 
 
@@ -46,7 +46,7 @@ item | write q | run q queries | explore results | shared kdb process with kdb I
 [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/)  | yes | yes | yes | no
 [kdb Insights Enterprise Personal Edition](https://trykdb.kx.com/) | yes | yes | yes | yes            
 
-Contact licadmin@kx.com for commercial kdb+ licensing.
+Contact licadmin@kx.com for commercial kdb licensing.
 
 **Step 2**: After registering, you will receive an email with a link to download an installation file.
 
@@ -62,19 +62,17 @@ Extract the file to a directory; instructions are available for [Linux, macOS an
 
 ### Install q with VS Code.
 
-You can install q from the VS Code extension. You still need to register for [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/).
-
-The kdb+ license will be added as part of the installation, although a `QHOME` environment variable is still required if you wish to utilise the installation outside of VS Code.
+You can isntall q  from the VS Code extension. You still need to register for [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/) to obtain a license and VS Code will guide you through steps to install. The license will be incorporated as part of the kdb VS Code extension, although a `QHOME` environment variable is still required if you wish to utilise the q installation outside of VS Code.
 
 **Step 1**: Click `Install new instance` from the prompt if no q installation is flagged. If this prompt is cancelled, then use the aforementioned [install q](#install-q). 
 
 ![installnewinstance](img/installnewinstance.jpg)
 
-**Step 2**: If you have already registered for kdb+, then choose `Select/Enter a license`.  If you haven't registered for kdb+, choose `Acquire license`, this will open a dialog with a redirect link to register for [kdb+ Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/). 
+**Step 2**: If you have already registered for kdb+ or kdb Insights, then choose `Select/Enter a license`.  If you haven't registered, choose `Acquire license`, this will open a dialog with a redirect link to register for [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/). 
 
 ![findlicense](img/findlicense.jpg)
 
-**Step 3**: With the kdb+ license secured, you can then link this to VS Code by either `pasting license string` or `selecting license file` from your PC; the latter method is recommended for new users. 
+**Step 3**: With the license secured, you can then link this to VS Code by either `pasting license string` or `selecting license file` from your PC; the latter method is recommended for new users. 
 
 ![findlicense](img/pastelicense.jpg)
 
@@ -162,7 +160,7 @@ If you close the extension, the connection to the child q process also closes.
 
 ### kdb Insights Enterprise
 
-For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb process.  Unlike for a **managed q session**, you must have [kdb+ Insights Enterprise Personal Edition](https://trykdb.kx.com/) running before using these connections. 
+For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb process.  Unlike for a **managed q session**, you must have [kdb Insights Enterprise Personal Edition](https://trykdb.kx.com/) running before using these connections. 
 
 **Step 1**: Click *connect to kdb server*.
 
