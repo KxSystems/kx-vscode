@@ -118,7 +118,7 @@ The kdb VS Code extension allows you to connect VS Code to a q process; this can
 
 **Step 7**: If authentication is required, define the *username*, then the *password*; clicking Enter with these inputs blank skips these steps.
 
-**Step 8**: An optional enabling of TLS encryption is offered; default is *false*.
+**Step 8**: An option to enable TLS encryption is offered; the default is *false*.
 
 * I want to learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).
 
