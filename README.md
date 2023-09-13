@@ -168,7 +168,7 @@ For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb pro
 
 ![connecttoakdbserver](img/connecttoakdbserver.png)
 
-**Step 2**: For *select kdb type*, choose *Connect to kdb insights*
+**Step 2**: When prompted to select a kdb type, choose *Connect to kdb insights*
 
 ![connecttoinsights](img/connecttoinsights.jpg)
 
