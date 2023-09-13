@@ -298,6 +298,21 @@ export async function activate(context: ExtensionContext) {
           })
         );
 
+        const text = document.getText();
+        const regex = /([.\w]+)[ \t]*:/gm;
+        let match;
+        while ((match = regex.exec(text))) {
+          const name = match[1];
+          const found = items.find((item) => item.label === name);
+          if (!found) {
+            items.push({
+              label: name,
+              insertText: name,
+              kind: CompletionItemKind.Variable,
+            });
+          }
+        }
+
         return items;
       },
     })
