@@ -108,7 +108,7 @@ The kdb VS Code extension allows you to connect VS Code to a q process; this can
 
 ![setendpoint](img/step1connecttoakdbserver.jpg)
 
-**Step 4**: Assign a *server name / alias*, the server name selected **cannot be `local` or `insights`, as these are reserved for use by [managed q session](#managed-q-session) and [kdb Insights Enterprise](#kdb-insights-enterprise).**
+**Step 4**: Assign a *server name / alias*. The server name selected **cannot be `local` or `insights`**, as these are reserved for use by [managed q sessions](#managed-q-session) and [kdb Insights Enterprise connections](#kdb-insights-enterprise).**
 
 **Step 5**: Set the *hostname* or ip address of the kdb server; e.g. *localhost*.
 
