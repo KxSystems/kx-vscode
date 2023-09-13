@@ -40,7 +40,7 @@ If you are new to q, you will need a kdb license to use the kdb VS Code extensio
 
 **Step 1**: Download the latest version of kdb+.  Different versions of kdb+ are available, and the version you download will determine the supported features in VS Code:
 
-Item | write q | run q queries | explore results | shared kdb process with kdb Insights
+item | write q | run q queries | explore results | shared kdb process with kdb Insights
 ---- | ------- | ------------- | --------------- | ----------------------------------
 [kdb+ Personal Edition](https://kx.com/kdb-personal-edition-download/) | yes | yes | yes | no
 [kdb+ Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/)  | yes | yes | yes | no
