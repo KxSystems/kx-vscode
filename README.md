@@ -94,7 +94,7 @@ To finish, a prompt is offered with an opt-in to receive a newsletter.
 
 ## Connections
 
-kdb VS Code connects to a q process; which can be remote, referred to as an [**unmanaged q session**](#unmanaged-q-session) or a [**managed q session**](#managed-q-session) which uses the q installed as part of the kdb VS Code extension installation. It runs a child q process from within the extension and is fully managed by the extension. Only one connection can be active at any given time.
+The kdb VS Code extension allows you to connect VS Code to a q process; this can be remote, referred to as an [**unmanaged q session**](#unmanaged-q-session) or a [**managed q session**](#managed-q-session), which uses the q installed as part of the kdb VS Code extension installation. It runs a child q process from within the extension and is fully managed by the extension. Only one connection can be active at any given time.
 
 ### Unmanaged q session
 
