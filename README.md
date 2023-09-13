@@ -31,7 +31,7 @@ With the kdb Visual Studio Code extension you can:
 
 ## Get started
 
-If you have an existing q installation, you will see the message `q runtime installed` and can go directly to creating [connections](#connections).
+If you have an existing q installation, you will see the message `q runtime installed` and can go directly to adding [connections](#connections).
 
 If you are new to q, you will need a kdb license to use the kdb VS Code extension; see [install q](#install-q)
 
