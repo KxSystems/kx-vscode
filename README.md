@@ -38,7 +38,7 @@ If you are new to q, you will need a kdb license to use the kdb VS Code extensio
 
 ### Install q
 
-**Step 1**: Download the latest version of kdb+.  There are different versions of kdb+ available, and the version you download will determine supported features in VS Code:
+**Step 1**: Download the latest version of kdb+.  Different versions of kdb+ are available, and the version you download will determine the supported features in VS Code:
 
 Item | write q | run q queries | explore results | shared kdb process with kdb Insights
 ---- | ------- | ------------- | --------------- | ----------------------------------
