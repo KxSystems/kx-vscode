@@ -84,7 +84,7 @@ The base64 encoded license string can be found in the welcome email received aft
 
 The `k4.lic` or `kc.lic` license file can be downloaded to your PC. 
 
-**Step 4**: Set a [`QHOME` environment variable](https://code.kx.com/q/learn/install/#step-5-edit-your-profile) to the location used by the kdb VS Code install. A notification dialog displays the location of q, as do the extension [settings](#settings). This will allow q to be used outside of VSCode
+**Step 4**: Set a [`QHOME` environment variable](https://code.kx.com/q/learn/install/#step-5-edit-your-profile) to the location used by the kdb VS Code install. A notification dialog displays the location of q, as do the extension [settings](#settings). This will allows you to use q outside of VSCode.
 
 ![qfound](img/installationofqfound.jpg)
 
