@@ -184,7 +184,7 @@ For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb pro
 
 ![authenticateinsights](img/insightsauthenticate.jpg)
 
-After a successful connection to an Insights process, a new *DATA SOURCES* panel will become available in the kdb VS Code extension.
+After a successful connection to a kdb Insights Enterprise process, a new *DATA SOURCES* panel will become available in the kdb VS Code extension.
 
 ![insightsdatasources](img/datasources.jpg)
 
