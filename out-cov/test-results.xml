@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Mocha Tests" time="0.015" tests="4" failures="0">
+  <testsuite name="Root Suite" timestamp="2023-09-13T19:37:05" tests="0" time="0.000" failures="0">
+  </testsuite>
+  <testsuite name="Workspace tests" timestamp="2023-09-13T19:37:05" tests="4" file="c:\Users\caleteet\Source\Public\kx-vscode\out-cov\test\suite\workspace.test.js" time="0.011" failures="0">
+    <testcase name="Workspace tests getWorkspaceRoot should throw exception when no workspace opened" time="0.001" classname="getWorkspaceRoot should throw exception when no workspace opened">
+    </testcase>
+    <testcase name="Workspace tests getWorkspaceRoot should return workspace root path" time="0.001" classname="getWorkspaceRoot should return workspace root path">
+    </testcase>
+    <testcase name="Workspace tests isWorkspaceOpen should return false when no workspace is opened" time="0.001" classname="isWorkspaceOpen should return false when no workspace is opened">
+    </testcase>
+    <testcase name="Workspace tests isWorkspaceOpen should return true when workspace is opened" time="0.000" classname="isWorkspaceOpen should return true when workspace is opened">
+    </testcase>
+  </testsuite>
+</testsuites>
