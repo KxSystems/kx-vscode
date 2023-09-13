@@ -180,7 +180,7 @@ For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb pro
 
 ![connecttoinsights](img/kdbinsightsconnection.jpg)
 
-**Step 6**: The kdb VS Code extension runs an authentication step with the remote Insights process; sign-in to Insights. 
+**Step 6**: The kdb VS Code extension runs an authentication step with the remote kdb Insights Enterprise process; sign-in to kdb Insights Enterprise. 
 
 ![authenticateinsights](img/insightsauthenticate.jpg)
 
