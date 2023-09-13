@@ -54,12 +54,7 @@ import { ScratchpadResult } from "../models/scratchpadResult";
 import { Server } from "../models/server";
 import { ServerObject } from "../models/serverObject";
 import { DataSourcesPanel } from "../panels/datasource";
-import {
-  getCurrentToken,
-  IToken,
-  refreshToken,
-  signIn,
-} from "../services/kdbInsights/codeFlowLogin";
+import { getCurrentToken } from "../services/kdbInsights/codeFlowLogin";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import {
   addLocalConnectionContexts,
@@ -321,34 +316,7 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
 export async function connectInsights(viewItem: InsightsNode): Promise<void> {
   commands.executeCommand("kdb-results.focus");
 
-  let token: IToken | undefined;
-  const existingToken = await ext.context.secrets.get(viewItem.details.alias);
-  if (existingToken !== undefined) {
-    const storedToken: IToken = JSON.parse(existingToken);
-    if (new Date(storedToken.accessTokenExpirationDate) < new Date()) {
-      token = await refreshToken(
-        viewItem.details.server,
-        storedToken.refreshToken
-      );
-      if (token === undefined) {
-        token = await signIn(viewItem.details.server);
-        ext.context.secrets.store(
-          viewItem.details.alias,
-          JSON.stringify(token)
-        );
-      } else {
-        ext.context.secrets.store(
-          viewItem.details.alias,
-          JSON.stringify(token)
-        );
-      }
-    } else {
-      token = storedToken;
-    }
-  } else {
-    token = await signIn(viewItem.details.server);
-    ext.context.secrets.store(viewItem.details.alias, JSON.stringify(token));
-  }
+  await getCurrentToken(viewItem.details.server, viewItem.details.alias);
 
   ext.outputChannel.appendLine(
     `Connection established successfully to: ${viewItem.details.server}`

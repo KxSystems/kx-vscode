@@ -196,7 +196,7 @@
       },
       {
         "command": "kdb.connect",
-        "title": "Connect kdb server"
+        "title": "Connect server"
       },
       {
         "command": "kdb.insightsConnect",
@@ -356,7 +356,7 @@
     "viewsWelcome": [
       {
         "view": "kdb-servers",
-        "contents": "No kdb servers registered.\n[Connect to kdb server](command:kdb.addConnection)"
+        "contents": "No connections registered.\n[Add Connection](command:kdb.addConnection)"
       }
     ],
     "menus": {

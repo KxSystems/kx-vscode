@@ -15,7 +15,7 @@ import { QuickPickItem } from "vscode";
 
 export const serverEndpointPlaceHolder = "Select the kdb type";
 export const kdbEndpoint = "Enter a kdb endpoint";
-export const kdbInsightsEndpoint = "Connect to kdb insights";
+export const kdbInsightsEndpoint = "Connect to kdb Insights Enterprise";
 
 export const serverEndpoints: QuickPickItem[] = [
   {
@@ -24,7 +24,7 @@ export const serverEndpoints: QuickPickItem[] = [
   },
   {
     label: kdbInsightsEndpoint,
-    detail: "Either the url for the kdb insights instance",
+    detail: "Enter instance details",
   },
 ];
 

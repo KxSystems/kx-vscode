@@ -115,6 +115,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       },
       rowData,
       columnDefs,
+      domLayout: "autoHeight",
     };
   }
 
@@ -200,7 +201,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
             </div>
           </div>      
         <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
-        <div id="grid" style="height: 300px; width:100%;" class="${agGridTheme}"></div>
+        <div id="grid" style="height: 100%;  width:100%;" class="${agGridTheme}"></div>
         <script nonce="${nonce}" >          
           document.addEventListener('DOMContentLoaded', () => {
 
