@@ -43,8 +43,8 @@ If you are new to q, you will need a kdb license to use the kdb VS Code extensio
 item | write q | run q queries | explore results | shared kdb process with kdb Insights
 ---- | ------- | ------------- | --------------- | ----------------------------------
 [kdb+ Personal Edition](https://kx.com/kdb-personal-edition-download/) | yes | yes | yes | no
-[kdb+ Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/)  | yes | yes | yes | no
-[kdb+ Insights Enterprise Personal Edition](https://trykdb.kx.com/) | yes | yes | yes | yes            
+[kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/)  | yes | yes | yes | no
+[kdb Insights Enterprise Personal Edition](https://trykdb.kx.com/) | yes | yes | yes | yes            
 
 Contact licadmin@kx.com for commercial kdb+ licensing.
 
