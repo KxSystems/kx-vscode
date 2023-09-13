@@ -126,7 +126,7 @@ Upon completion, the localhost connection appears under *KX:CONNECTIONS* in the 
 
 ![localkdbconnection](img/localkdbconnection.jpg)
 
-**Step 9**: Right-click on the connection to *connect kdb server*.  Ensure the q process is running.
+**Step 9**: Right-click the connection to *connect kdb server*.  Ensure the q process is running.
 
 ![localkdbconnection](img/connectserver.jpg)
 
