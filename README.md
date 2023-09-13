@@ -151,7 +151,7 @@ This runs a q session using the existing kdb installed as part of the kdb VS Cod
 
 * I want to learn more about [setting a q port](https://code.kx.com/q/basics/ipc/)
 
-**Step 6**: Right click the managed q process listed under *KX:CONNECTIONS*, and click *Start q process*.
+**Step 6**: Right-click the managed q process listed under *KX:CONNECTIONS*, and click *Start q process*.
 
 ![setendpoint](img/managedqprocess.jpg)
 
