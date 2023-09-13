@@ -139,7 +139,7 @@ This runs a q session using the existing kdb installed as part of the kdb VS Cod
 
 ![connecttoakdbserver](img/connecttoakdbserver.png)
 
-**Step 2**: From select the kdb type input, choose **Enter a kdb endpoint**.
+**Step 2**: When prompted to select the kdb type, choose **Enter a kdb endpoint**.
 
 ![setendpoint](img/step1connecttoakdbserver.jpg)
 
