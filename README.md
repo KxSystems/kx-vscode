@@ -98,7 +98,7 @@ The kdb VS Code extension allows you to connect VS Code to a q process; this can
 
 ### Unmanaged q session
 
-**Step 1**: Identify the remote location of a running process. The hostname and port will be required along with any authentication information
+**Step 1**: Identify the remote location of a running process. The hostname and port will be required along with any authentication information.
 
 **Step 2**: Within the kdb VS Code extension, click *connect to kdb server*, or *Add new connection** from the *CONNECTIONS* context menu.
 
