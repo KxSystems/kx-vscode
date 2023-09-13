@@ -48,7 +48,7 @@ item | write q | run q queries | explore results | shared kdb process with kdb I
 
 Contact licadmin@kx.com for commercial kdb+ licensing.
 
-**Step 2**: After registering, you will receive an email with a link to download the installation file for the kdb+ edition you registered for.
+**Step 2**: After registering, you will receive an email with a link to download an installation file.
 
 Extract the file to a directory; instructions are available for [Linux, macOS and Windows](https://code.kx.com/q/learn/install/#step-2-unzip-your-download).
 
