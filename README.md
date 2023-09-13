@@ -104,7 +104,7 @@ The kdb VS Code extension allows you to connect VS Code to a q process; this can
 
 ![connecttoakdbserver](img/connecttoakdbserver.png)
 
-**Step 3**: From select the kdb type input, choose **Enter a kdb endpoint**.
+**Step 3**: When prompted to select the kdb type, choose **Enter a kdb endpoint**.
 
 ![setendpoint](img/step1connecttoakdbserver.jpg)
 
