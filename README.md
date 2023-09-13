@@ -52,15 +52,13 @@ Contact licadmin@kx.com for commercial kdb+ licensing.
 
 Extract the file to a directory; instructions are available for [Linux, macOS and Windows](https://code.kx.com/q/learn/install/#step-2-unzip-your-download).
 
-:fontawesome-solid-hand-point-right: [I want to learn more about kdb+ installation.](https://code.kx.com/q/learn/install/)
+* I want to learn more about [kdb+ installation](https://code.kx.com/q/learn/install/)
 
 **Step 3**: The welcome email will also have your kdb, `k4.lic` or `kc.lic` license as an attachment.  We recommend you add your kdb license to your q installation directory, or `QHOME`, and define this location in your environment variables.  It is essential you define an environment variable for VS Code to recognize a valid license.   
 
-!!! note "My kdb license is not part of my q installation"
-  If your kdb license is stored outside of your q  (`QHOME`) directory, create a `QLIC` environment variable instead.
+*Note*: If your kdb license is stored outside of your q  (`QHOME`) directory, create a `QLIC` environment variable instead.
 
-:fontawesome-solid-hand-point-right: [How to define a QHOME environment variable](https://code.kx.com/q/learn/install/#step-5-edit-your-profile).
-
+* I want to learn [how to define a QHOME environment variable](https://code.kx.com/q/learn/install/#step-5-edit-your-profile).
 
 ### Install q with VS Code.
 
@@ -116,13 +114,13 @@ kdb VS Code connects to a q process; which can be remote, referred to as an [**u
 
 **Step 6**: Set the *port* used by the kdb server; e.g. *5001*. 
 
-:fontawesome-solid-hand-point-right:[I want to learn more about setting a q port](https://code.kx.com/q/basics/ipc/)
+* I want to learn more about [setting a q port](https://code.kx.com/q/basics/ipc/)
 
 **Step 7**: If authentication is required, define the *username*, then the *password*; clicking Enter with these inputs blank skips these steps.
 
 **Step 8**: An optional enabling of TLS encryption is offered; default is *false*.
 
-:fontawesome-solid-hand-point-right: [I want to learn more about TLS encryption](https://code.kx.com/q/kb/ssl/).
+* I want to learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).
 
 Upon completion, the localhost connection appears under *KX:CONNECTIONS* in the left hand panel.
 
@@ -151,7 +149,7 @@ This runs a q session using the existing kdb installed as part of the kdb VS Cod
 
 **Step 5**: Set the *port* for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. *5002*
 
-:fontawesome-solid-hand-point-right:[I want to learn more about setting a q port](https://code.kx.com/q/basics/ipc/)
+* I want to learn more about [setting a q port](https://code.kx.com/q/basics/ipc/)
 
 **Step 6**: Right click the managed q process listed under *KX:CONNECTIONS*, and click *Start q process*.
 
@@ -193,7 +191,7 @@ After a successful connection to an Insights process, a new *DATA SOURCES* panel
 
 Once connected to a q process, go to [execute code](#execute-code).
 
-[//]: # (In what context is the reserved alias name `insights` used? - BMA - the context is used on build the connection tree; different icon; different connection process)
+[//]: # (In what context is the reserved alias name `insights` used? - BMA - the context is used on build the connection tree; different icon; different connection process. - DF - Is this connection process currently supported in kdb VS Code extension; if so, do we need to document it here?)
 
 
 ## kdb language server
