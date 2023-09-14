@@ -103,7 +103,10 @@ export default class QLangServer {
     { workspaceFolders }: InitializeParams
   ): Promise<QLangServer> {
     // Get the URI of the root folder, if it exists.
-    const rootUri = workspaceFolders ? workspaceFolders[0].uri : "";
+    const rootUri =
+      workspaceFolders && workspaceFolders.length > 0
+        ? workspaceFolders[0].uri
+        : "";
     const analyzer = await AnalyzerContent.fromRoot(connection, rootUri);
     const server = new QLangServer(connection, analyzer);
     // Write a console message to indicate that the server is being initialized.
