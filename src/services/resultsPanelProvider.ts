@@ -100,11 +100,14 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     const value = vectorRes.slice(1);
     const rowData = value.map((row) =>
       keys.reduce((obj: any, key: string, index: number) => {
-        obj[key] = row[index];
+        key = this.sanitizeString(key);
+        obj[key] = this.sanitizeString(row[index]);
         return obj;
       }, {})
     );
-    const columnDefs = keys.map((str: string) => ({ field: str }));
+    const columnDefs = keys.map((str: string) => ({
+      field: this.sanitizeString(str),
+    }));
     return {
       defaultColDef: {
         sortable: true,
@@ -119,6 +122,13 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       paginationAutoPageSize: true,
       pagination: true,
     };
+  }
+
+  sanitizeString(str: string): string {
+    str = str.trim();
+    str = str.replace(/['"`]/g, "");
+    str = str.replace(/\$\{/g, "");
+    return str;
   }
 
   defineAgGridTheme(): string {
@@ -182,7 +192,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         gridOptionsString !== "<p>No results to show</p>";
 
       const gridOptionsObj = isGrid ? JSON.parse(gridOptionsString) : "";
-      const gridRows = isGrid ? gridOptionsObj.rowData : "";
+      const gridRows = isGrid ? [...gridOptionsObj.rowData] : "";
       if (isGrid) {
         const totalRowsLenght = JSON.stringify(gridRows).length;
         if (totalRowsLenght > ext.rowLimit) {
