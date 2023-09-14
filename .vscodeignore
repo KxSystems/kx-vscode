@@ -8,3 +8,6 @@ tsconfig.json
 node_modules
 server
 test/
+img/
+esbuild.js
+sonar-project.properties
