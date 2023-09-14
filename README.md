@@ -106,7 +106,7 @@ The kdb VS Code extension allows you to connect VS Code to a q process; this can
 
 ![setendpoint](img/step1connecttoakdbserver.jpg)
 
-**Step 4**: Assign a *server name / alias*. The server name selected **cannot be `local` or `insights`**, as these are reserved for use by [managed q sessions](#managed-q-session) and [kdb Insights Enterprise connections](#kdb-insights-enterprise).**
+**Step 4**: Assign a *server name / alias*. The server name selected **cannot be `local` or `insights`**, as these are reserved for use by [managed q sessions](#managed-q-session) and [kdb Insights Enterprise connections](#kdb-insights-enterprise).
 
 **Step 5**: Set the *hostname* or ip address of the kdb server; e.g. *localhost*.
 
@@ -133,7 +133,7 @@ Upon completion, the localhost connection appears under *KX:CONNECTIONS* in the 
 
 This runs a q session using the existing kdb installed as part of the kdb VS Code extension.
 
-**Step 1**: Click *connect to kdb server* or *Add new connection** from the *CONNECTIONS* context menu.
+**Step 1**: Click *connect to kdb server* or *Add new connection* from the *CONNECTIONS* context menu.
 
 ![connecttoakdbserver](img/connecttoakdbserver.png)
 
@@ -170,7 +170,7 @@ For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb pro
 
 ![connecttoinsights](img/connecttoinsights.jpg)
 
-**Step 3**: Create a *server name / alias*; this can be any name.
+**Step 3**: Create a *server name / alias*; this can be any name, aside from `local`, which is used by the [managed q session](#managed-q-session).
 
 **Step 4**: Set the *hostname*. This is the remote address of your kdb Insights Enterprise deployment: e.g `https://mykdbinsights.cloudapp.azure.com`
 
