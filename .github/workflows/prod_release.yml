@@ -3,7 +3,7 @@ name: KX VS Code Release Workflow
 on:
   push:
     tags:
-      - "v[12].[0-9]+.[0-9]+"
+      - "v[129].[0-9]+.[0-9]+"
 
 env:
   NODE_ENV: production
@@ -20,10 +20,6 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 16.x
-      - name: Setup Pages
-        uses: actions/configure-pages@v3
-        with:
-          static_site_generator: next
       - name: Install dependencies
         run: npm ci --include=dev
       - name: Build VSIX file
@@ -104,17 +100,31 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_pth: ./kdb-*vsix
-          asset_name: kdb-v${{ github.ref_name }}.vsix
+          asset_name: kdb-${{ github.ref_name }}.vsix
           asset_content_type: application/octet-stream
 
-  manual-approve:
-    needs: release
-    environment:
-      name: approvers
-    runs-on: ubuntu-latest
-    steps:
-      - name: Manual Approve
-        run: echo "Manually approved"
+  # manual-approve:
+  #   needs: release
+  #   environment:
+  #     name: approvers
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Manual Approve
+  #       run: echo "Manually approved"
 
-  publish:
-    needs: manual-approve
+  # publish:
+  #   needs: manual-approve
+  #   - name: Checkout source code
+  #     uses: actions/checkout@v2
+  #     with:
+  #       fetch-depth: 0
+  #   - name: Install Node.js
+  #     uses: actions/setup-node@v3
+  #     with:
+  #       node-version: 16.x
+  #   - name: Install dependencies
+  #     run: npm ci --include=dev
+  #   - name: Publish to VSCode Marketplace
+  #     run: yarn run publish
+  #     env:
+  #       VSCE_PAT: ${{ secrets.VSCE_PAT }}
