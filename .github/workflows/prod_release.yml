@@ -82,6 +82,9 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: KDB-VSCode-Extension
+      - name: Get Body
+        run: |
+          sed -n "/# ${github.ref_name }}/,/# 0/{s/^# .*//;p;}" changelog.md > temp.md
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -90,8 +93,7 @@ jobs:
         with:
           tag_name: ${{ github.ref }}
           release_name: ${{ github.ref_name }}
-          body: |
-            $(sed -n "/# ${github.ref_name }}/,/# 0/{s/^# .*//;p;}" changelog.md)
+          body_path: ./temp.md
       - name: Upload Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1
