@@ -99,12 +99,15 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     const keys = vectorRes[0];
     const value = vectorRes.slice(1);
     const rowData = value.map((row) =>
-      keys.reduce((obj: any, key: any, index: number) => {
-        obj[key] = row[index];
+      keys.reduce((obj: any, key: string, index: number) => {
+        key = this.sanitizeString(key);
+        obj[key] = this.sanitizeString(row[index]);
         return obj;
       }, {})
     );
-    const columnDefs = keys.map((str: string) => ({ field: str }));
+    const columnDefs = keys.map((str: string) => ({
+      field: this.sanitizeString(str),
+    }));
     return {
       defaultColDef: {
         sortable: true,
@@ -116,7 +119,16 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       rowData,
       columnDefs,
       domLayout: "autoHeight",
+      paginationAutoPageSize: true,
+      pagination: true,
     };
+  }
+
+  sanitizeString(str: string): string {
+    str = str.trim();
+    str = str.replace(/['"`]/g, "");
+    str = str.replace(/\$\{/g, "");
+    return str;
   }
 
   defineAgGridTheme(): string {
@@ -131,6 +143,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     _dataSourceType?: string
   ) {
     ext.resultPanelCSV = "";
+    let rowsCount = 0;
     this._results = queryResult;
     const agGridTheme = this.defineAgGridTheme();
     if (this._view) {
@@ -163,8 +176,9 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         "out",
         "ag-theme-alpine.min.css",
       ]);
-      let result: any = "";
+      let result = "";
       let gridOptionsString = "";
+      let rowsLimited = "";
       if (queryResult !== "") {
         const convertedGrid = this.convertToGrid(queryResult);
         if (typeof convertedGrid === "string") {
@@ -173,7 +187,23 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
           gridOptionsString = JSON.stringify(convertedGrid);
         }
       }
+      const isGrid =
+        gridOptionsString !== "" &&
+        gridOptionsString !== "<p>No results to show</p>";
 
+      const gridOptionsObj = isGrid ? JSON.parse(gridOptionsString) : "";
+      const gridRows = isGrid ? [...gridOptionsObj.rowData] : "";
+      if (isGrid) {
+        const totalRowsLenght = JSON.stringify(gridRows).length;
+        if (totalRowsLenght > ext.rowLimit) {
+          const sampleRowLength = JSON.stringify(gridRows[0]).length;
+          rowsCount = Math.round(ext.rowLimit / sampleRowLength);
+          rowsLimited = `<p>Showing ${rowsCount} of ${gridRows.length} rows due high amount of data, to retrieve the entire data, export to CSV</p>`;
+          const expectedRows = gridRows.slice(0, rowsCount);
+          gridOptionsObj.rowData = expectedRows;
+          gridOptionsString = JSON.stringify(gridOptionsObj);
+        }
+      }
       result =
         gridOptionsString === ""
           ? result !== ""
@@ -198,17 +228,17 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         <div class="results-view-container">
           <div class="content-wrapper">
               ${result}
+              ${rowsLimited}
             </div>
           </div>      
         <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
         <div id="grid" style="height: 100%;  width:100%;" class="${agGridTheme}"></div>
         <script nonce="${nonce}" >          
           document.addEventListener('DOMContentLoaded', () => {
-
-            if('${gridOptionsString}' !== '<p>No results to show</p>' && '${gridOptionsString}' !== ''){
-              const gridOptions = JSON.parse('${gridOptionsString}');
+            if(${isGrid}){
               const gridDiv = document.getElementById('grid');
-              const gridApi = new agGrid.Grid(gridDiv, gridOptions);
+              const obj = JSON.parse('${gridOptionsString}');
+              const gridApi = new agGrid.Grid(gridDiv, obj);
             }
           });
         </script>
