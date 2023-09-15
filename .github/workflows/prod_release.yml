@@ -1,4 +1,4 @@
-name: KX VS Code Release Workflow
+name: KX VS Code Production Release Workflow
 
 on:
   push:
@@ -84,7 +84,7 @@ jobs:
           name: KDB-VSCode-Extension
       - name: Get Body
         run: |
-          sed -n "/# ${github.ref_name }}/,/# 0/{s/^# .*//;p;}" changelog.md > temp.md
+          sed -n "/# ${{ github.ref_name }}/,/# 0/{s/^# .*//;p;}" changelog.md > temp.md
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
