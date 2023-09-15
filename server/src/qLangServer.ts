@@ -24,7 +24,6 @@ import {
   Diagnostic,
   DiagnosticSeverity,
   DocumentHighlight,
-  DocumentHighlightKind,
   DocumentSymbolParams,
   Hover,
   InitializeParams,
@@ -208,15 +207,7 @@ export default class QLangServer {
     params: TextDocumentPositionParams
   ): DocumentHighlight[] | null {
     const position = params.position;
-    return [
-      DocumentHighlight.create(
-        {
-          start: { line: position.line + 1, character: position.character },
-          end: { line: position.line + 1, character: position.character + 5 },
-        },
-        DocumentHighlightKind.Write
-      ),
-    ];
+    return [];
   }
 
   private onDefinition(params: TextDocumentPositionParams): Location[] {
