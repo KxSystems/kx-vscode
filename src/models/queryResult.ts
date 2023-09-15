@@ -11,6 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { MetaResult } from "./metaResult";
+
 export type QueryResult = {
   result: string;
   errored: boolean;

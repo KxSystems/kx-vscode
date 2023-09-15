@@ -253,7 +253,7 @@ export async function activate(context: ExtensionContext) {
     onDidChangeEmitter = new EventEmitter<Uri>();
     onDidChange = this.onDidChangeEmitter.event;
 
-    provideTextDocumentContent(uri: Uri): string {
+    provideTextDocumentContent(_uri: Uri): string {
       const result = lastResult!;
 
       return result.result;
@@ -268,8 +268,8 @@ export async function activate(context: ExtensionContext) {
     languages.registerCompletionItemProvider("q", {
       provideCompletionItems(
         document: TextDocument,
-        position: Position,
-        token: CancellationToken
+        _position: Position,
+        _token: CancellationToken
       ) {
         const items: CompletionItem[] = [];
 
