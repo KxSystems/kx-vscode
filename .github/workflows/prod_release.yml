@@ -101,7 +101,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./kdb-*vsix
+          asset_path: ./KDB-VSCode-Extension
           asset_name: kdb-${{ github.ref_name }}.vsix
           asset_content_type: application/octet-stream
 
