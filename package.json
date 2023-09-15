@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "1.0.0-rc1",
+  "version": "v9.9.0",
   "engines": {
     "vscode": "^1.66.0"
   },

@@ -84,7 +84,7 @@ jobs:
           name: KDB-VSCode-Extension
       - name: Get Body
         run: |
-          sed -n "/# ${{ github.ref_name }}/,/# 0/{s/^# .*//;p;}" CHANGELOG.md > temp.md
+          sed -n "/# ${{ github.ref_name }}/,/# v/{s/^# .*//;p;}" CHANGELOG.md > temp.md
       - name: Create Release
         id: create_release
         uses: actions/create-release@v1
@@ -101,7 +101,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./KDB-VSCode-Extension
+          asset_path: kdb-${{ github.ref_name }}.vsix
           asset_name: kdb-${{ github.ref_name }}.vsix
           asset_content_type: application/octet-stream
 
