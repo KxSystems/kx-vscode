@@ -172,7 +172,13 @@ export function getServers(): Server | undefined {
 }
 
 export function getInsights(): Insights | undefined {
-  return workspace.getConfiguration().get("kdb.insightsEnterpriseConnections");
+  const configuration = workspace.getConfiguration();
+  const insights = 
+    configuration.get<Insights>("kdb.insightsEnterpriseConnections");
+
+  return insights && Object.keys(insights).length > 0 
+    ? insights 
+    : configuration.get("kdb.insights");
 }
 
 export async function updateServers(servers: Server): Promise<void> {
