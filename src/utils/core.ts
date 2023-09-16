@@ -172,7 +172,7 @@ export function getServers(): Server | undefined {
 }
 
 export function getInsights(): Insights | undefined {
-  return workspace.getConfiguration().get("kdb.insights");
+  return workspace.getConfiguration().get("kdb.insightsEnterpriseConnections");
 }
 
 export async function updateServers(servers: Server): Promise<void> {
@@ -184,7 +184,11 @@ export async function updateServers(servers: Server): Promise<void> {
 export async function updateInsights(insights: Insights): Promise<void> {
   await workspace
     .getConfiguration()
-    .update("kdb.insights", insights, ConfigurationTarget.Global);
+    .update(
+      "kdb.insightsEnterpriseConnections",
+      insights,
+      ConfigurationTarget.Global
+    );
 }
 
 export function getServerName(server: ServerDetails): string {
