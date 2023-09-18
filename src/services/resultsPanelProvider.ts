@@ -119,8 +119,9 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       rowData,
       columnDefs,
       domLayout: "autoHeight",
-      paginationAutoPageSize: true,
       pagination: true,
+      paginationPageSize: 100,
+      cacheBlockSize: 100,
     };
   }
 
@@ -179,6 +180,19 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       let result = "";
       let gridOptionsString = "";
       let rowsLimited = "";
+      if (typeof queryResult === "string" && queryResult.endsWith("\n..\n")) {
+        queryResult = queryResult.slice(0, -4);
+        rowsLimited =
+          "<p>Showing results returned from q instance, that is limited by your q settings";
+      } else if (
+        queryResult instanceof Array &&
+        queryResult.length > 0 &&
+        queryResult[queryResult.length - 1].endsWith("\n..\n")
+      ) {
+        queryResult[0] = queryResult[0].slice(0, -4);
+        rowsLimited =
+          "<p>Showing results returned from q instance, that is limited by your q settings";
+      }
       if (queryResult !== "") {
         const convertedGrid = this.convertToGrid(queryResult);
         if (typeof convertedGrid === "string") {
