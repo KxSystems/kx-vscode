@@ -449,10 +449,11 @@ export async function getDataInsights(
 
 export async function importScratchpad(
   variableName: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params: any
 ): Promise<void> {
   if (ext.connectionNode instanceof InsightsNode) {
-    let queryParams, coreUrl;
+    let queryParams, coreUrl: string;
     switch (params.selectedType) {
       case "API":
         queryParams = {

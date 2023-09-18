@@ -3,9 +3,13 @@
     "module": "commonjs",
     "target": "ES2019",
     "outDir": "../out",
-    "lib": ["ES2019"],
+    "lib": ["ES2019", "WebWorker", "DOM"],
     "sourceMap": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true
   },
+  "include": ["./**/*", "../src/**/*"],
   "exclude": ["node_modules", ".vscode-test"]
 }

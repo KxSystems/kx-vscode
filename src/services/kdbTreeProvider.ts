@@ -88,14 +88,14 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     }
   }
 
-  private getMergedElements(_element?: KdbNode): TreeItem[] {
+  private getMergedElements(_element?: TreeItem): TreeItem[] {
     const servers = this.getChildElements(_element);
     const insights = this.getInsightsChildElements();
     return [...servers, ...insights];
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private getChildElements(_element?: KdbNode): KdbNode[] {
+  private getChildElements(_element?: TreeItem): KdbNode[] {
     return this.createLeafItems(this.serverList);
   }
 
