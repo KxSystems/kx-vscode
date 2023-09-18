@@ -259,6 +259,7 @@ export async function installTools(): Promise<void> {
                         serverPort: port,
                         serverAlias: "local",
                         managed: true,
+                        tls: false,
                       },
                     };
                     await addLocalConnectionContexts(getServerName(servers[0]));
@@ -269,6 +270,7 @@ export async function installTools(): Promise<void> {
                       serverPort: port,
                       serverAlias: "local",
                       managed: true,
+                      tls: false,
                     };
                     await addLocalConnectionContexts(
                       getServerName(servers[key])
