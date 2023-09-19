@@ -284,7 +284,9 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
       }
 
       if (filter !== undefined) {
-        apiBody.filter = filter;
+        apiBody.filter = filter.map((filterEl: string) => {
+          return filterEl.split(";");
+        });
       }
 
       if (groupBy !== undefined) {
