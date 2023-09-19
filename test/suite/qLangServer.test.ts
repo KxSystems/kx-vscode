@@ -14,20 +14,20 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import {
-  EndOfLine,
-  Position,
-  Range,
-  TextDocument,
-  TextLine,
-  Uri,
-} from "vscode";
+  CallHierarchyIncomingCallsParams,
+  CompletionItem,
+  Connection,
+  InitializeParams,
+  ReferenceParams,
+  TextDocumentPositionParams,
+} from "vscode-languageserver";
 import QLangServer from "../../server/src/qLangServer";
 
 describe("qLangServer tests", () => {
   let server: QLangServer;
 
   beforeEach(async () => {
-    const connectionMock = {
+    const connection = <Connection>(<unknown>{
       listen() {},
       onDidOpenTextDocument() {},
       onDidChangeTextDocument() {},
@@ -59,17 +59,17 @@ describe("qLangServer tests", () => {
         warn() {},
         info() {},
       },
+    });
+
+    const params = <InitializeParams>{
+      workspaceFolders: null,
     };
 
-    const paramsMock = {
-      processId: 0,
-      rootUri: "",
-      capabilities: {},
-      workspaceFolders: [],
-    };
+    server = await QLangServer.initialize(connection, params);
+  });
 
-    // @ts-ignore
-    server = await QLangServer.initialize(connectionMock, paramsMock);
+  afterEach(() => {
+    sinon.restore();
   });
 
   it("capabilities should return a value", () => {
@@ -100,108 +100,94 @@ describe("qLangServer tests", () => {
     assert.ok(ok);
   });
 
-  it("onCompletionResolve should return a value", async () => {
-    const item = { label: "test" };
-    const result = await server.onCompletionResolve(item);
-    assert.strictEqual(result, item);
-  });
-
-  it("onDocumentHighlight should return empty array", async () => {
-    const result = server.onDocumentHighlight({
-      position: null,
-      textDocument: null,
-    });
-    assert.strictEqual(result.length, 0);
-  });
-
-  // TODO
-  it("onCompletion should return empty array for no keyword", () => {});
-
-  // TODO
-  it("onDefinition should return empty array for no document", async () => {
-    const getKeywordStub = sinon.stub(server.documents, "get");
+  it("onCompletion should return empty array for no keyword", () => {
+    const getKeywordStub = sinon.stub(server, <any>"getKeyword");
     getKeywordStub.value(() => undefined);
-    const result = server.onDefinition({
-      textDocument: { uri: "" },
+    const result = server.onCompletion(<TextDocumentPositionParams>{
+      textDocument: { uri: undefined },
       position: undefined,
     });
     assert.strictEqual(result.length, 0);
   });
 
-  // TODO
-  it("onHover should return null for no keyword", async () => {});
+  it("onCompletionResolve should return a value", async () => {
+    const item = <CompletionItem>{ label: "test" };
+    const result = await server.onCompletionResolve(item);
+    assert.strictEqual(result, item);
+  });
+
+  it("onHover should return null for no keyword", async () => {
+    const getKeywordStub = sinon.stub(server, <any>"getEntireKeyword");
+    getKeywordStub.value(() => undefined);
+    const result = await server.onHover(<TextDocumentPositionParams>{
+      textDocument: { uri: undefined },
+      position: undefined,
+    });
+    assert.strictEqual(result, null);
+  });
+
+  it("onDocumentHighlight should return empty array for no document", () => {
+    const result = server.onDocumentHighlight(<TextDocumentPositionParams>{
+      textDocument: { uri: undefined },
+      position: undefined,
+    });
+    assert.strictEqual(result.length, 0);
+  });
+
+  it("onDefinition should return empty array for no document", () => {
+    const getStub = sinon.stub(server.documents, "get");
+    getStub.value(() => undefined);
+    const result = server.onDefinition(<TextDocumentPositionParams>{
+      textDocument: { uri: undefined },
+      position: undefined,
+    });
+    assert.strictEqual(result.length, 0);
+  });
+
+  it("onDocumentSymbol should return empty array for no document", () => {
+    const getStub = sinon.stub(server.documents, "get");
+    getStub.value(() => undefined);
+    const result = server.onDocumentSymbol(<TextDocumentPositionParams>{
+      textDocument: { uri: undefined },
+      position: undefined,
+    });
+    assert.strictEqual(result.length, 0);
+  });
+
+  it("onPrepareCallHierarchy should return empty array for no document", () => {
+    const getStub = sinon.stub(server.documents, "get");
+    getStub.value(() => undefined);
+    const result = server.onPrepareCallHierarchy(<TextDocumentPositionParams>{
+      textDocument: { uri: undefined },
+      position: undefined,
+    });
+    assert.strictEqual(result.length, 0);
+  });
+
+  it("onIncomingCallsCallHierarchy should return empty array for no item", () => {
+    const result = server.onIncomingCallsCallHierarchy(<
+      CallHierarchyIncomingCallsParams
+    >{
+      item: { name: undefined },
+    });
+    assert.strictEqual(result.length, 0);
+  });
 
   // TODO
-  it("onDocumentSymbol should return empty array for no document", async () => {});
+  it("onOutgoingCallsCallHierarchy", () => {});
+
+  it("onReferences should return empty array for no document", () => {
+    const getStub = sinon.stub(server.documents, "get");
+    getStub.value(() => undefined);
+    const result = server.onReferences(<ReferenceParams>{
+      textDocument: { uri: undefined },
+    });
+    assert.strictEqual(result.length, 0);
+  });
 
   // TODO
-  it("onPrepareCallHierarchy", async () => {});
+  it("onRenameRequest", () => {});
 
   // TODO
-  it("onIncomingCallsCallHierarchy", async () => {});
-
-  // TODO
-  it("onOutgoingCallsCallHierarchy", async () => {});
-
-  // TODO
-  it("onReferences", async () => {});
-
-  // TODO
-  it("onRenameRequest", async () => {});
-
-  // TODO
-  it("onSignatureHelp", async () => {});
-
-  // TODO
-  it("onSemanticsTokens", async () => {});
-
-  // TODO
-  it("validateTextDocument", async () => {});
+  it("onSemanticsTokens", () => {});
 });
-
-class TextDocumentMock implements TextDocument {
-  fileName!: string;
-  isUntitled!: boolean;
-  languageId!: string;
-  version!: number;
-  isDirty!: boolean;
-  isClosed!: boolean;
-  eol!: EndOfLine;
-  lineCount!: number;
-  text: string;
-
-  uri = Uri.parse("/test/test.q");
-
-  constructor(text: string) {
-    this.text = text;
-  }
-
-  getText(range?: Range): string {
-    return this.text;
-  }
-
-  save(): Thenable<boolean> {
-    throw new Error("Method not implemented.");
-  }
-  lineAt(position: Position | number | any): TextLine {
-    throw new Error("Method not implemented.");
-  }
-  offsetAt(position: Position): number {
-    throw new Error("Method not implemented.");
-  }
-  positionAt(offset: number): Position {
-    throw new Error("Method not implemented.");
-  }
-  getWordRangeAtPosition(
-    position: Position,
-    regex?: RegExp
-  ): Range | undefined {
-    throw new Error("Method not implemented.");
-  }
-  validateRange(range: Range): Range {
-    throw new Error("Method not implemented.");
-  }
-  validatePosition(position: Position): Position {
-    throw new Error("Method not implemented.");
-  }
-}

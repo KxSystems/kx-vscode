@@ -365,7 +365,7 @@ export default class QLangServer {
     return null;
   }
 
-  public onSignatureHelp({
+  private onSignatureHelp({
     textDocument,
     position,
   }: SignatureHelpParams): SignatureHelp | undefined {
@@ -394,7 +394,9 @@ export default class QLangServer {
     return tokens ?? { data: [] };
   }
 
-  public async validateTextDocument(textDocument: TextDocument): Promise<void> {
+  private async validateTextDocument(
+    textDocument: TextDocument
+  ): Promise<void> {
     const settings = await this.getDocumentSettings(textDocument.uri);
     const text = textDocument.getText();
     const pattern = /\b[A-Z]{2,}\b/g;
