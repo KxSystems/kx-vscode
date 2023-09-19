@@ -15,12 +15,19 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import {
   CallHierarchyIncomingCallsParams,
+  CallHierarchyItem,
   CompletionItem,
   Connection,
   InitializeParams,
+  Position,
+  PublishDiagnosticsParams,
   ReferenceParams,
+  RenameParams,
+  SemanticTokensParams,
+  TextDocumentIdentifier,
   TextDocumentPositionParams,
 } from "vscode-languageserver";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import QLangServer from "../../server/src/qLangServer";
 
 describe("qLangServer tests", () => {
@@ -44,6 +51,7 @@ describe("qLangServer tests", () => {
       onDocumentSymbol() {},
       onReferences() {},
       onRenameRequest() {},
+      sendDiagnostics() {},
       languages: {
         semanticTokens: {
           on() {},
@@ -58,6 +66,9 @@ describe("qLangServer tests", () => {
         error() {},
         warn() {},
         info() {},
+      },
+      workspace: {
+        getConfiguration() {},
       },
     });
 
@@ -173,8 +184,12 @@ describe("qLangServer tests", () => {
     assert.strictEqual(result.length, 0);
   });
 
-  // TODO
-  it("onOutgoingCallsCallHierarchy", () => {});
+  it("onOutgoingCallsCallHierarchy should return a value", () => {
+    const result = server.onOutgoingCallsCallHierarchy({
+      item: <CallHierarchyItem>{ uri: "test", name: "test" },
+    });
+    assert.ok(result);
+  });
 
   it("onReferences should return empty array for no document", () => {
     const getStub = sinon.stub(server.documents, "get");
@@ -185,9 +200,44 @@ describe("qLangServer tests", () => {
     assert.strictEqual(result.length, 0);
   });
 
-  // TODO
-  it("onRenameRequest", () => {});
+  it("onRenameRequest should return a value", () => {
+    const doc = TextDocument.create("/test/test.q", "q", 1, "SOMEVAR:1");
+    const textDocument = TextDocumentIdentifier.create("/test/test.q");
+    const position = Position.create(0, 0);
+    const newName = "CHANGEDVAR";
+    const getStub = sinon.stub(server.documents, "get");
+    getStub.value(() => doc);
+    const result = server.onRenameRequest(<RenameParams>{
+      textDocument,
+      position,
+      newName,
+    });
+    // TODO
+    assert.strictEqual(result, null);
+  });
 
-  // TODO
-  it("onSemanticsTokens", () => {});
+  it("onSemanticsTokens should return a value", () => {
+    const doc = TextDocument.create("/test/test.q", "q", 1, "TOKEN:1");
+    const textDocument = TextDocumentIdentifier.create("/test/test.q");
+    const getStub = sinon.stub(server.documents, "get");
+    getStub.value(() => doc);
+    const result = server.onSemanticsTokens(<SemanticTokensParams>{
+      textDocument,
+    });
+    assert.strictEqual(result.data.length, 0);
+  });
+
+  it("validateTextDocument should report uppercase identifiers", async () => {
+    const sendDiagnosticsStub = sinon.stub(
+      server.connection,
+      "sendDiagnostics"
+    );
+    let result: PublishDiagnosticsParams;
+    sendDiagnosticsStub.value(
+      async (params: PublishDiagnosticsParams) => (result = params)
+    );
+    const doc = TextDocument.create("/test/test.q", "q", 1, "SOMEVAR:1");
+    await server.validateTextDocument(doc);
+    assert.strictEqual(result.diagnostics.length, 1);
+  });
 });

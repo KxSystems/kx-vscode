@@ -394,9 +394,7 @@ export default class QLangServer {
     return tokens ?? { data: [] };
   }
 
-  private async validateTextDocument(
-    textDocument: TextDocument
-  ): Promise<void> {
+  public async validateTextDocument(textDocument: TextDocument): Promise<void> {
     const settings = await this.getDocumentSettings(textDocument.uri);
     const text = textDocument.getText();
     const pattern = /\b[A-Z]{2,}\b/g;
