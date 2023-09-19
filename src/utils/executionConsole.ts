@@ -132,3 +132,7 @@ export class ExecutionConsole {
     commands.executeCommand("kdb.resultsPanel.update", query, dataSourceType);
   }
 }
+
+export function appendQuery(query: string) {
+  throw new Error("Function not implemented.");
+}
