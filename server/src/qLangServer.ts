@@ -178,7 +178,7 @@ export default class QLangServer {
     }
   }
 
-  public onCompletion(params: TextDocumentPositionParams): CompletionItem[] {
+  private onCompletion(params: TextDocumentPositionParams): CompletionItem[] {
     const keyword = this.getKeyword(params);
     if (!keyword) {
       return [];
@@ -186,13 +186,13 @@ export default class QLangServer {
     return this.analyzer.getCompletionItems(keyword);
   }
 
-  public async onCompletionResolve(
+  private async onCompletionResolve(
     item: CompletionItem
   ): Promise<CompletionItem> {
     return item;
   }
 
-  public async onHover(
+  private async onHover(
     params: TextDocumentPositionParams
   ): Promise<Hover | null> {
     const keyword = this.getEntireKeyword(params);
@@ -203,14 +203,14 @@ export default class QLangServer {
   }
 
   // TODO: Document highlight
-  public onDocumentHighlight(
+  private onDocumentHighlight(
     params: TextDocumentPositionParams
   ): DocumentHighlight[] | null {
     const position = params.position;
     return [];
   }
 
-  public onDefinition(params: TextDocumentPositionParams): Location[] {
+  private onDefinition(params: TextDocumentPositionParams): Location[] {
     const document = this.documents.get(params.textDocument.uri);
     if (!document) {
       return [];
@@ -246,7 +246,7 @@ export default class QLangServer {
     });
   }
 
-  public onDocumentSymbol(params: DocumentSymbolParams): SymbolInformation[] {
+  private onDocumentSymbol(params: DocumentSymbolParams): SymbolInformation[] {
     const document = this.documents.get(params.textDocument.uri);
     if (document) {
       return this.analyzer.getSymbols(document);
@@ -313,7 +313,7 @@ export default class QLangServer {
       .map((el) => ({ to: el, fromRanges: [el.range] }));
   }
 
-  public onReferences(params: ReferenceParams): Location[] | null {
+  private onReferences(params: ReferenceParams): Location[] | null {
     const document = this.documents.get(params.textDocument.uri);
     if (!document) {
       return [];
@@ -330,7 +330,7 @@ export default class QLangServer {
     return this.analyzer.getReferences(word, document);
   }
 
-  public onRenameRequest({
+  private onRenameRequest({
     textDocument,
     position,
     newName,
@@ -385,7 +385,7 @@ export default class QLangServer {
     return result;
   }
 
-  public onSemanticsTokens({
+  private onSemanticsTokens({
     textDocument,
   }: SemanticTokensParams): SemanticTokens {
     // Get the semantic tokens for the given document.
@@ -394,7 +394,9 @@ export default class QLangServer {
     return tokens ?? { data: [] };
   }
 
-  public async validateTextDocument(textDocument: TextDocument): Promise<void> {
+  private async validateTextDocument(
+    textDocument: TextDocument
+  ): Promise<void> {
     const settings = await this.getDocumentSettings(textDocument.uri);
     const text = textDocument.getText();
     const pattern = /\b[A-Z]{2,}\b/g;

@@ -114,7 +114,7 @@ describe("qLangServer tests", () => {
   it("onCompletion should return empty array for no keyword", () => {
     const getKeywordStub = sinon.stub(server, <any>"getKeyword");
     getKeywordStub.value(() => undefined);
-    const result = server.onCompletion(<TextDocumentPositionParams>{
+    const result = server["onCompletion"](<TextDocumentPositionParams>{
       textDocument: { uri: undefined },
       position: undefined,
     });
@@ -123,14 +123,14 @@ describe("qLangServer tests", () => {
 
   it("onCompletionResolve should return a value", async () => {
     const item = <CompletionItem>{ label: "test" };
-    const result = await server.onCompletionResolve(item);
+    const result = await server["onCompletionResolve"](item);
     assert.strictEqual(result, item);
   });
 
   it("onHover should return null for no keyword", async () => {
     const getKeywordStub = sinon.stub(server, <any>"getEntireKeyword");
     getKeywordStub.value(() => undefined);
-    const result = await server.onHover(<TextDocumentPositionParams>{
+    const result = await server["onHover"](<TextDocumentPositionParams>{
       textDocument: { uri: undefined },
       position: undefined,
     });
@@ -138,7 +138,7 @@ describe("qLangServer tests", () => {
   });
 
   it("onDocumentHighlight should return empty array for no document", () => {
-    const result = server.onDocumentHighlight(<TextDocumentPositionParams>{
+    const result = server["onDocumentHighlight"](<TextDocumentPositionParams>{
       textDocument: { uri: undefined },
       position: undefined,
     });
@@ -148,7 +148,7 @@ describe("qLangServer tests", () => {
   it("onDefinition should return empty array for no document", () => {
     const getStub = sinon.stub(server.documents, "get");
     getStub.value(() => undefined);
-    const result = server.onDefinition(<TextDocumentPositionParams>{
+    const result = server["onDefinition"](<TextDocumentPositionParams>{
       textDocument: { uri: undefined },
       position: undefined,
     });
@@ -158,7 +158,7 @@ describe("qLangServer tests", () => {
   it("onDocumentSymbol should return empty array for no document", () => {
     const getStub = sinon.stub(server.documents, "get");
     getStub.value(() => undefined);
-    const result = server.onDocumentSymbol(<TextDocumentPositionParams>{
+    const result = server["onDocumentSymbol"](<TextDocumentPositionParams>{
       textDocument: { uri: undefined },
       position: undefined,
     });
@@ -168,7 +168,9 @@ describe("qLangServer tests", () => {
   it("onPrepareCallHierarchy should return empty array for no document", () => {
     const getStub = sinon.stub(server.documents, "get");
     getStub.value(() => undefined);
-    const result = server.onPrepareCallHierarchy(<TextDocumentPositionParams>{
+    const result = server["onPrepareCallHierarchy"](<
+      TextDocumentPositionParams
+    >{
       textDocument: { uri: undefined },
       position: undefined,
     });
@@ -194,7 +196,7 @@ describe("qLangServer tests", () => {
   it("onReferences should return empty array for no document", () => {
     const getStub = sinon.stub(server.documents, "get");
     getStub.value(() => undefined);
-    const result = server.onReferences(<ReferenceParams>{
+    const result = server["onReferences"](<ReferenceParams>{
       textDocument: { uri: undefined },
     });
     assert.strictEqual(result.length, 0);
@@ -207,7 +209,7 @@ describe("qLangServer tests", () => {
     const newName = "CHANGEDVAR";
     const getStub = sinon.stub(server.documents, "get");
     getStub.value(() => doc);
-    const result = server.onRenameRequest(<RenameParams>{
+    const result = server["onRenameRequest"](<RenameParams>{
       textDocument,
       position,
       newName,
@@ -221,7 +223,7 @@ describe("qLangServer tests", () => {
     const textDocument = TextDocumentIdentifier.create("/test/test.q");
     const getStub = sinon.stub(server.documents, "get");
     getStub.value(() => doc);
-    const result = server.onSemanticsTokens(<SemanticTokensParams>{
+    const result = server["onSemanticsTokens"](<SemanticTokensParams>{
       textDocument,
     });
     assert.strictEqual(result.data.length, 0);
@@ -237,7 +239,7 @@ describe("qLangServer tests", () => {
       async (params: PublishDiagnosticsParams) => (result = params)
     );
     const doc = TextDocument.create("/test/test.q", "q", 1, "SOMEVAR:1");
-    await server.validateTextDocument(doc);
+    await server["validateTextDocument"](doc);
     assert.strictEqual(result.diagnostics.length, 1);
   });
 });
