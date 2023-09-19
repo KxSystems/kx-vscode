@@ -325,11 +325,11 @@ Item                                                       | Action
 ---------------------------------------------------------- | -------
 Hide notification of installation path after first install | yes/no; default `no`
 Hide subscription to newsletter after first install        | yes/no; default `no`
-Insights for Explorer                                      | [edit JSON settings](#insights-for-explorer)
+Insights Enterprise Connections for Explorer                                      | [edit JSON settings](#insights-enterprise-connections-for-explorer)
 QHOME directory for q runtime                              | Display location path of q installation
 Servers                                                    | [edit JSON settings](#servers)
 
-### Insights for Explorer
+### Insights Enterprise Connections for Explorer
 
 ```JSON
 {
@@ -348,8 +348,8 @@ Servers                                                    | [edit JSON settings
         }
     },
     "kdb.hideSubscribeRegistrationNotification": true,
-    "kdb.insights": {
-        
+    "kdb.insightsEnterpriseConnections": {
+
         "b61Z6R1TGF3vsudDAmo5WWDcGEmRQpmQKoWrluXJD9g=": {
             "auth": true,
             "alias": "servername.com",
@@ -379,7 +379,7 @@ Servers                                                    | [edit JSON settings
         }
     },
     "kdb.hideSubscribeRegistrationNotification": true,
-    "kdb.insights": {
+    "kdb.insightsEnterpriseConnections": {
         "b61Z6R1TGF3vsudDAmo5WWDcGEmRQpmQKoWrluXJD9g=": {
             "auth": true,
             "alias": "servername.com",
