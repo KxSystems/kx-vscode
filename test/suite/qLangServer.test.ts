@@ -115,10 +115,23 @@ describe("qLangServer tests", () => {
     const getKeywordStub = sinon.stub(server, <any>"getKeyword");
     getKeywordStub.value(() => undefined);
     const result = server["onCompletion"](<TextDocumentPositionParams>{
-      textDocument: { uri: undefined },
-      position: undefined,
+      textDocument: TextDocumentIdentifier.create("/test/test.q"),
+      position: Position.create(0, 0),
     });
     assert.strictEqual(result.length, 0);
+  });
+
+  it("onCompletion should return a list of completions for a keyword", () => {
+    const doc = TextDocument.create("/test/test.q", "q", 1, "aco");
+    const textDocument = TextDocumentIdentifier.create("/test/test.q");
+    const position = Position.create(0, 3);
+    const getStub = sinon.stub(server.documents, "get");
+    getStub.value(() => doc);
+    const result = server["onCompletion"](<TextDocumentPositionParams>{
+      textDocument,
+      position,
+    });
+    assert.strictEqual(result.length, 1);
   });
 
   it("onCompletionResolve should return a value", async () => {
@@ -128,19 +141,32 @@ describe("qLangServer tests", () => {
   });
 
   it("onHover should return null for no keyword", async () => {
+    const doc = TextDocument.create("/test/test.q", "q", 1, "acos");
+    const textDocument = TextDocumentIdentifier.create("/test/test.q");
+    const position = Position.create(0, 1);
+    const getStub = sinon.stub(server.documents, "get");
+    getStub.value(() => doc);
+    const result = await server["onHover"](<TextDocumentPositionParams>{
+      textDocument,
+      position,
+    });
+    assert.ok(result);
+  });
+
+  it("onHover should return a value for a keyword", async () => {
     const getKeywordStub = sinon.stub(server, <any>"getEntireKeyword");
     getKeywordStub.value(() => undefined);
     const result = await server["onHover"](<TextDocumentPositionParams>{
-      textDocument: { uri: undefined },
-      position: undefined,
+      textDocument: TextDocumentIdentifier.create("/test/test.q"),
+      position: Position.create(0, 0),
     });
     assert.strictEqual(result, null);
   });
 
   it("onDocumentHighlight should return empty array for no document", () => {
     const result = server["onDocumentHighlight"](<TextDocumentPositionParams>{
-      textDocument: { uri: undefined },
-      position: undefined,
+      textDocument: TextDocumentIdentifier.create("/test/test.q"),
+      position: Position.create(0, 0),
     });
     assert.strictEqual(result.length, 0);
   });
@@ -149,8 +175,8 @@ describe("qLangServer tests", () => {
     const getStub = sinon.stub(server.documents, "get");
     getStub.value(() => undefined);
     const result = server["onDefinition"](<TextDocumentPositionParams>{
-      textDocument: { uri: undefined },
-      position: undefined,
+      textDocument: TextDocumentIdentifier.create("/test/test.q"),
+      position: Position.create(0, 0),
     });
     assert.strictEqual(result.length, 0);
   });
@@ -159,8 +185,8 @@ describe("qLangServer tests", () => {
     const getStub = sinon.stub(server.documents, "get");
     getStub.value(() => undefined);
     const result = server["onDocumentSymbol"](<TextDocumentPositionParams>{
-      textDocument: { uri: undefined },
-      position: undefined,
+      textDocument: TextDocumentIdentifier.create("/test/test.q"),
+      position: Position.create(0, 0),
     });
     assert.strictEqual(result.length, 0);
   });
@@ -171,8 +197,8 @@ describe("qLangServer tests", () => {
     const result = server["onPrepareCallHierarchy"](<
       TextDocumentPositionParams
     >{
-      textDocument: { uri: undefined },
-      position: undefined,
+      textDocument: TextDocumentIdentifier.create("/test/test.q"),
+      position: Position.create(0, 0),
     });
     assert.strictEqual(result.length, 0);
   });
@@ -197,7 +223,8 @@ describe("qLangServer tests", () => {
     const getStub = sinon.stub(server.documents, "get");
     getStub.value(() => undefined);
     const result = server["onReferences"](<ReferenceParams>{
-      textDocument: { uri: undefined },
+      textDocument: TextDocumentIdentifier.create("/test/test.q"),
+      position: Position.create(0, 0),
     });
     assert.strictEqual(result.length, 0);
   });
