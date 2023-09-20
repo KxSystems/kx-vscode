@@ -50,7 +50,11 @@ jobs:
       - name: Add coverage to PR
         uses: irongut/CodeCoverageSummary@v1.3.0
         with:
-          lcov-file: ./coverage-reports/cobertura-coverage.xml
+          filename: ./coverage-reports/cobertura-coverage.xml
+          format: markdown
+          hide_branch_rate: true
+          hide_complexity: true
+          thresholds: "30 80"
 
       - name: SonarCloud Scan
         uses: sonarsource/sonarqube-scan-action@master
