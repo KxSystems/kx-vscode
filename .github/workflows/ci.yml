@@ -27,12 +27,32 @@ jobs:
         with:
           node-version: 16.x
       - run: npm ci
-      - run: xvfb-run -a npm test
+      - run: xvfb-run -a npm run coverage
         if: runner.os == 'Linux'
       - run: npm test
         if: runner.os != 'Linux'
 
+      - name: Code coverage summary
+        uses: irongut/CodeCoverageSummary@v1.3.0
+        with:
+          filename: ./coverage-reports/cobertura-coverage.xml
+          format: markdown
+          hide_branch_rate: true
+          hide_complexity: true
+          thresholds: "30 80"
+          output: "both"
+
+      - name: Write Coverage to Job Summary
+        run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload lcov result
+        uses: actions/upload-artifact@v3
+        with:
+          name: lcov
+          path: coverage-reports/lcov.info
+
   app-sec:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
@@ -45,31 +65,13 @@ jobs:
         with:
           node-version: 16.x
 
+      - name: Download lcov result
+        uses: actions/download-artifact@v3
+        with:
+          name: lcov
+
       - name: Install dependencies
         run: yarn install
-
-      - name: Generate code coverage reports
-        run: xvfb-run -a npm run coverage
-
-      - name: Code coverage summary
-        uses: irongut/CodeCoverageSummary@v1.3.0
-        with:
-          filename: ./coverage-reports/cobertura-coverage.xml
-          format: markdown
-          hide_branch_rate: true
-          hide_complexity: true
-          thresholds: "30 80"
-          output: "both"
-
-      - name: Add Coverage PR Comment
-        uses: marocchino/sticky-pull-request-comment@v2
-        if: github.event_name == 'pull_request'
-        with:
-          recreate: true
-          path: code-coverage-results.md
-
-      - name: Write Coverage to Job Summary
-        run: cat code-coverage-results.md >> $GITHUB_STEP_SUMMARY
 
       - name: SonarCloud Scan
         uses: sonarsource/sonarqube-scan-action@master
