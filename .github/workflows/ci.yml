@@ -48,9 +48,9 @@ jobs:
         run: xvfb-run -a npm run coverage
 
       - name: Add coverage to PR
-        uses: romeovs/lcov-reporter-action@v0.3.1
+        uses: irongut/CodeCoverageSummary@v1.3.0
         with:
-          lcov-file: ./coverage-reports/lcov.info
+          lcov-file: ./coverage-reports/cobertura-coverage.xml
 
       - name: SonarCloud Scan
         uses: sonarsource/sonarqube-scan-action@master
