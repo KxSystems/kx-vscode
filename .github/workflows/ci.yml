@@ -45,7 +45,7 @@ jobs:
         run: yarn install
 
       - name: Generate code coverage reports
-        run: npm run coverage
+        run: xvfb-run -a npm run coverage
 
       - name: SonarCloud Scan
         uses: sonarsource/sonarqube-scan-action@master
