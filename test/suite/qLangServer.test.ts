@@ -18,12 +18,14 @@ import {
   CallHierarchyItem,
   CompletionItem,
   Connection,
+  DocumentSymbolParams,
   InitializeParams,
   Position,
   PublishDiagnosticsParams,
   ReferenceParams,
   RenameParams,
   SemanticTokensParams,
+  SignatureHelpParams,
   TextDocumentIdentifier,
   TextDocumentPositionParams,
 } from "vscode-languageserver";
@@ -181,6 +183,25 @@ describe("qLangServer tests", () => {
     assert.strictEqual(result.length, 0);
   });
 
+  it("onDefinition should return a value", () => {
+    const doc = TextDocument.create(
+      "/test/test.q",
+      "q",
+      1,
+      "test_var:1\ntest_var"
+    );
+    const textDocument = TextDocumentIdentifier.create("/test/test.q");
+    const position = Position.create(2, 1);
+    const getStub = sinon.stub(server.documents, "get");
+    getStub.value(() => doc);
+    const result = server["onDefinition"](<TextDocumentPositionParams>{
+      textDocument,
+      position,
+    });
+    // TODO
+    assert.strictEqual(result.length, 0);
+  });
+
   it("onDocumentSymbol should return empty array for no document", () => {
     const getStub = sinon.stub(server.documents, "get");
     getStub.value(() => undefined);
@@ -188,6 +209,20 @@ describe("qLangServer tests", () => {
       textDocument: TextDocumentIdentifier.create("/test/test.q"),
       position: Position.create(0, 0),
     });
+    assert.strictEqual(result.length, 0);
+  });
+
+  it("onDocumentSymbol should return a value", () => {
+    const doc = TextDocument.create("/test/test.q", "q", 1, "a:1; b:2;");
+    const textDocument = TextDocumentIdentifier.create("/test/test.q");
+    const position = Position.create(0, 3);
+    const getStub = sinon.stub(server.documents, "get");
+    getStub.value(() => doc);
+    const result = server["onDocumentSymbol"](<DocumentSymbolParams>{
+      textDocument,
+      position,
+    });
+    // TODO PR-103
     assert.strictEqual(result.length, 0);
   });
 
@@ -200,6 +235,22 @@ describe("qLangServer tests", () => {
       textDocument: TextDocumentIdentifier.create("/test/test.q"),
       position: Position.create(0, 0),
     });
+    assert.strictEqual(result.length, 0);
+  });
+
+  it("onPrepareCallHierarchy should return a value", () => {
+    const doc = TextDocument.create("/test/test.q", "q", 1, "a:1; b:2;");
+    const textDocument = TextDocumentIdentifier.create("/test/test.q");
+    const position = Position.create(0, 3);
+    const getStub = sinon.stub(server.documents, "get");
+    getStub.value(() => doc);
+    const result = server["onPrepareCallHierarchy"](<
+      TextDocumentPositionParams
+    >{
+      textDocument,
+      position,
+    });
+    // TODO
     assert.strictEqual(result.length, 0);
   });
 
@@ -229,6 +280,19 @@ describe("qLangServer tests", () => {
     assert.strictEqual(result.length, 0);
   });
 
+  it("onReferences should return a value", () => {
+    const doc = TextDocument.create("/test/test.q", "q", 1, "a:1; b:2;");
+    const textDocument = TextDocumentIdentifier.create("/test/test.q");
+    const position = Position.create(0, 0);
+    const getStub = sinon.stub(server.documents, "get");
+    const result = server["onReferences"](<ReferenceParams>{
+      textDocument,
+      position,
+    });
+    // TODO
+    assert.strictEqual(result.length, 0);
+  });
+
   it("onRenameRequest should return a value", () => {
     const doc = TextDocument.create("/test/test.q", "q", 1, "SOMEVAR:1");
     const textDocument = TextDocumentIdentifier.create("/test/test.q");
@@ -245,6 +309,17 @@ describe("qLangServer tests", () => {
     assert.strictEqual(result, null);
   });
 
+  it("onSignatureHelp should return a value", () => {
+    const textDocument = TextDocumentIdentifier.create("/test/test.q");
+    const position = Position.create(0, 0);
+    const result = server["onSignatureHelp"](<SignatureHelpParams>{
+      textDocument,
+      position,
+    });
+    // TODO
+    assert.strictEqual(result, undefined);
+  });
+
   it("onSemanticsTokens should return a value", () => {
     const doc = TextDocument.create("/test/test.q", "q", 1, "TOKEN:1");
     const textDocument = TextDocumentIdentifier.create("/test/test.q");
@@ -256,7 +331,7 @@ describe("qLangServer tests", () => {
     assert.strictEqual(result.data.length, 0);
   });
 
-  it("validateTextDocument should report uppercase identifiers", async () => {
+  it("validateTextDocument should return a value", async () => {
     const sendDiagnosticsStub = sinon.stub(
       server.connection,
       "sendDiagnostics"
