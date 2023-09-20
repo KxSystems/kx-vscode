@@ -74,6 +74,7 @@ export function createReport(): void {
   const reports = [
     create("json"),
     create("lcov"),
+    create("cobertura"),
     create("html"),
     create("text"),
   ];
