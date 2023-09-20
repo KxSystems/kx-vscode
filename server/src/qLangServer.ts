@@ -124,18 +124,19 @@ export default class QLangServer {
       // Whether the server supports resolving additional information for a completion item.
       completionProvider: { resolveProvider: true },
       // Whether the server supports providing hover information for a symbol.
-      hoverProvider: true,
+      // hoverProvider: true,
       // Whether the server supports providing document highlights for a symbol.
-      documentHighlightProvider: true,
+      // documentHighlightProvider: true,
       // Whether the server supports providing definitions for a symbol.
       definitionProvider: true,
       // Whether the server supports providing symbols for a document.
-      documentSymbolProvider: true,
+      // documentSymbolProvider: true,
       // Whether the server supports finding references to a symbol.
       referencesProvider: true,
       // Whether the server supports renaming a symbol.
-      renameProvider: { prepareProvider: true },
+      // renameProvider: { prepareProvider: true },
       // Whether the server supports providing semantic tokens for a document.
+      /*
       semanticTokensProvider: {
         documentSelector: null,
         legend: {
@@ -144,6 +145,7 @@ export default class QLangServer {
         },
         full: true,
       },
+      */
       // Whether the server supports providing call hierarchy information for a symbol - disabled for the moment.
       callHierarchyProvider: false,
     };
