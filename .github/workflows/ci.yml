@@ -44,6 +44,9 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
+      - name: Generate code coverage reports
+        run: npm run coverage
+
       - name: SonarCloud Scan
         uses: sonarsource/sonarqube-scan-action@master
         env:
