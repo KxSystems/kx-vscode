@@ -11,28 +11,17 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export type GetDataObjectPayload = {
-  error: string;
-  table?: {
-    meta: {
-      [column: string]: string;
-    };
-    columns: string[];
-    rows: any;
-  };
-  arrayBuffer?: ArrayBuffer;
-};
+import * as datasourcePanel from "../../src/panels/datasource";
+import * as resultsPanel from "../../src/services/resultsPanelProvider";
 
-export type getDataBodyPayload = {
-  table: string;
-  startTS?: string;
-  endTS?: string;
-  fill?: string;
-  temporary?: string;
-  filter?: string[][];
-  groupBy?: string[];
-  agg?: string[];
-  sortCols?: string[];
-  slice?: string[];
-  labels?: string[];
-};
+describe("datasource", () => {
+  //write tests for src/panels/datasource.ts
+  //function to be deleted after write the tests
+  datasourcePanel;
+});
+
+describe("results panel", () => {
+  //write tests for src/services/resultsPanelProvider.ts
+  //function to be deleted after write the tests
+  resultsPanel;
+});

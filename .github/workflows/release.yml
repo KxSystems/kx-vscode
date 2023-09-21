@@ -26,7 +26,7 @@ jobs:
       - name: Build VSIX file
         run: yarn run build
       - name: Run Tests
-        run: xvfb-run -a yarn run test
+        run: xvfb-run -a yarn run coverage
       - name: Packaging
         run: yarn run package
       - name: Upload artifact
@@ -34,6 +34,12 @@ jobs:
         with:
           name: KDB-VSCode-Extension
           path: ./kdb-*vsix
+      - name: Upload lcov result for app-sec job
+        uses: actions/upload-artifact@v3
+        with:
+          name: lcov
+          path: coverage-reports/lcov.info
+          retention-days: 1
 
   app-sec:
     runs-on: ubuntu-latest
@@ -51,6 +57,11 @@ jobs:
 
       - name: Install dependencies
         run: yarn install
+
+      - name: Download lcov result from test job
+        uses: actions/download-artifact@v3
+        with:
+          name: lcov
 
       - name: SonarCloud Scan
         uses: sonarsource/sonarqube-scan-action@master

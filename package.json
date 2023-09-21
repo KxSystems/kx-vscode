@@ -151,8 +151,13 @@
           "description": "kdb servers for explorer"
         },
         "kdb.insights": {
+          "deprecationMessage": "This setting is deprecated, use kdb.insightsEnterpriseConnections instead",
           "type": "object",
           "description": "kdb insights for explorer"
+        },
+        "kdb.insightsEnterpriseConnections": {
+          "type": "object",
+          "description": "kdb insights enterprise connections for explorer"
         },
         "kdb.hideInstallationNotification": {
           "type": "boolean",
