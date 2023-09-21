@@ -113,7 +113,7 @@ describe("qLangServer tests", () => {
     assert.ok(ok);
   });
 
-  it("onCompletion should return empty array for no keyword", () => {
+  it("onCompletion should return an empty array", () => {
     const getKeywordStub = sinon.stub(server, <any>"getKeyword");
     getKeywordStub.value(() => undefined);
     const result = server["onCompletion"](<TextDocumentPositionParams>{
@@ -123,7 +123,7 @@ describe("qLangServer tests", () => {
     assert.strictEqual(result.length, 0);
   });
 
-  it("onCompletion should return a list of completions for a keyword", () => {
+  it("onCompletion should return a value", () => {
     const doc = TextDocument.create("/test/test.q", "q", 1, "aco");
     const textDocument = TextDocumentIdentifier.create("/test/test.q");
     const position = Position.create(0, 3);
@@ -133,7 +133,7 @@ describe("qLangServer tests", () => {
       textDocument,
       position,
     });
-    assert.strictEqual(result.length, 1);
+    assert.ok(result.length > 0);
   });
 
   it("onCompletionResolve should return a value", async () => {
@@ -142,20 +142,7 @@ describe("qLangServer tests", () => {
     assert.strictEqual(result, item);
   });
 
-  it("onHover should return null for no keyword", async () => {
-    const doc = TextDocument.create("/test/test.q", "q", 1, "acos");
-    const textDocument = TextDocumentIdentifier.create("/test/test.q");
-    const position = Position.create(0, 1);
-    const getStub = sinon.stub(server.documents, "get");
-    getStub.value(() => doc);
-    const result = await server["onHover"](<TextDocumentPositionParams>{
-      textDocument,
-      position,
-    });
-    assert.ok(result);
-  });
-
-  it("onHover should return a value for a keyword", async () => {
+  it("onHover should return null", async () => {
     const getKeywordStub = sinon.stub(server, <any>"getEntireKeyword");
     getKeywordStub.value(() => undefined);
     const result = await server["onHover"](<TextDocumentPositionParams>{
@@ -165,7 +152,21 @@ describe("qLangServer tests", () => {
     assert.strictEqual(result, null);
   });
 
-  it("onDocumentHighlight should return empty array for no document", () => {
+  it("onHover should return a value", async () => {
+    const doc = TextDocument.create("/test/test.q", "q", 1, "acos");
+    const textDocument = TextDocumentIdentifier.create("/test/test.q");
+    const position = Position.create(0, 1);
+    const getStub = sinon.stub(server.documents, "get");
+    getStub.value(() => doc);
+    const result = await server["onHover"](<TextDocumentPositionParams>{
+      textDocument,
+      position,
+    });
+    // TODO
+    assert.ok(result);
+  });
+
+  it("onDocumentHighlight should return an empty array", () => {
     const result = server["onDocumentHighlight"](<TextDocumentPositionParams>{
       textDocument: TextDocumentIdentifier.create("/test/test.q"),
       position: Position.create(0, 0),
@@ -173,7 +174,7 @@ describe("qLangServer tests", () => {
     assert.strictEqual(result.length, 0);
   });
 
-  it("onDefinition should return empty array for no document", () => {
+  it("onDefinition should return an empty array", () => {
     const getStub = sinon.stub(server.documents, "get");
     getStub.value(() => undefined);
     const result = server["onDefinition"](<TextDocumentPositionParams>{
@@ -188,21 +189,25 @@ describe("qLangServer tests", () => {
       "/test/test.q",
       "q",
       1,
-      "test_var:1\ntest_var"
+      "test_func: {[x] x*x};\ntest_func[2];"
     );
     const textDocument = TextDocumentIdentifier.create("/test/test.q");
-    const position = Position.create(2, 1);
+    const position = Position.create(1, 1);
     const getStub = sinon.stub(server.documents, "get");
     getStub.value(() => doc);
+    const valuesStub = sinon.stub(
+      server.analyzer["uriToTextDocument"],
+      "values"
+    );
+    valuesStub.value(() => [doc]);
     const result = server["onDefinition"](<TextDocumentPositionParams>{
       textDocument,
       position,
     });
-    // TODO
-    assert.strictEqual(result.length, 0);
+    assert.ok(result.length > 0);
   });
 
-  it("onDocumentSymbol should return empty array for no document", () => {
+  it("onDocumentSymbol should return an empty array", () => {
     const getStub = sinon.stub(server.documents, "get");
     getStub.value(() => undefined);
     const result = server["onDocumentSymbol"](<TextDocumentPositionParams>{
@@ -226,7 +231,7 @@ describe("qLangServer tests", () => {
     assert.strictEqual(result.length, 0);
   });
 
-  it("onPrepareCallHierarchy should return empty array for no document", () => {
+  it("onPrepareCallHierarchy should return an empty array", () => {
     const getStub = sinon.stub(server.documents, "get");
     getStub.value(() => undefined);
     const result = server["onPrepareCallHierarchy"](<
@@ -254,7 +259,7 @@ describe("qLangServer tests", () => {
     assert.strictEqual(result.length, 0);
   });
 
-  it("onIncomingCallsCallHierarchy should return empty array for no item", () => {
+  it("onIncomingCallsCallHierarchy should return an empty array", () => {
     const result = server.onIncomingCallsCallHierarchy(<
       CallHierarchyIncomingCallsParams
     >{
@@ -267,30 +272,43 @@ describe("qLangServer tests", () => {
     const result = server.onOutgoingCallsCallHierarchy({
       item: <CallHierarchyItem>{ uri: "test", name: "test" },
     });
+    // TODO
     assert.ok(result);
   });
 
-  it("onReferences should return empty array for no document", () => {
+  it("onReferences should return an empty array", () => {
+    const textDocument = TextDocumentIdentifier.create("/test/test.q");
+    const position = Position.create(0, 0);
     const getStub = sinon.stub(server.documents, "get");
     getStub.value(() => undefined);
     const result = server["onReferences"](<ReferenceParams>{
-      textDocument: TextDocumentIdentifier.create("/test/test.q"),
-      position: Position.create(0, 0),
+      textDocument,
+      position,
     });
     assert.strictEqual(result.length, 0);
   });
 
   it("onReferences should return a value", () => {
-    const doc = TextDocument.create("/test/test.q", "q", 1, "a:1; b:2;");
+    const doc = TextDocument.create(
+      "/test/test.q",
+      "q",
+      1,
+      "test_func: {[x] x*x};\ntest_func[2];"
+    );
     const textDocument = TextDocumentIdentifier.create("/test/test.q");
-    const position = Position.create(0, 0);
+    const position = Position.create(1, 1);
     const getStub = sinon.stub(server.documents, "get");
+    getStub.value(() => doc);
+    const valuesStub = sinon.stub(
+      server.analyzer["uriToTextDocument"],
+      "values"
+    );
+    valuesStub.value(() => [doc]);
     const result = server["onReferences"](<ReferenceParams>{
       textDocument,
       position,
     });
-    // TODO
-    assert.strictEqual(result.length, 0);
+    assert.ok(result.length > 0);
   });
 
   it("onRenameRequest should return a value", () => {
@@ -328,10 +346,11 @@ describe("qLangServer tests", () => {
     const result = server["onSemanticsTokens"](<SemanticTokensParams>{
       textDocument,
     });
+    // TODO
     assert.strictEqual(result.data.length, 0);
   });
 
-  it("validateTextDocument should return a value", async () => {
+  it("validateTextDocument should publish a diagnostic", async () => {
     const sendDiagnosticsStub = sinon.stub(
       server.connection,
       "sendDiagnostics"

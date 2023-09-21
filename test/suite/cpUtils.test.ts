@@ -15,22 +15,22 @@ import * as assert from "assert";
 import * as cpUtils from "../../server/src/utils/cpUtils";
 
 describe("cpUtils tests", () => {
-  it("wrapArgInQuotes should return quoted string", () => {
+  it("wrapArgInQuotes should return a quoted string", () => {
     const result = cpUtils.wrapArgInQuotes("test");
     assert.strictEqual(result.substring(1, 5), "test");
   });
 
-  it("wrapArgInQuotes should return string value for boolean", () => {
+  it("wrapArgInQuotes should return a string value", () => {
     const result = cpUtils.wrapArgInQuotes(true);
     assert.strictEqual(result, "true");
   });
 
-  it("wrapArgInQuotes should return string value for number", () => {
+  it("wrapArgInQuotes should return a string value", () => {
     const result = cpUtils.wrapArgInQuotes(1);
     assert.strictEqual(result, "1");
   });
 
-  it("wrapArgInQuotes should return empty quoted string for none", () => {
+  it("wrapArgInQuotes should return an empty quoted string", () => {
     const result = cpUtils.wrapArgInQuotes();
     assert.strictEqual(result.length, 2);
   });
