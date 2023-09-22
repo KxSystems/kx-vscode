@@ -2,24 +2,22 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
-# 0.1.18
+# 1.0.0
 
 ### Enhancements
 
-- Added ability to view results in a table view
+- Added kdb Insights Enterprise connections
+- kdb Insights Enterprise Scratchpad integration; execute q commands and scripts in VS Code
+- Create persisted Data Sources to execute API, SQL and qSQL against kdb Insights Enterprise connections
+- Populate Scratchpads from Data Sources and interrogate on the scratchpad
+- Support for TLS secured remote kdb connections
+- KDB Results View - graphical tabular view of executed queries
 
-- Added Insights authentication integration
+### Internal Improvements
 
-- Added datasources with support for querying Insights
-
-- Added ability to execute q against Insights Scratchpad
-
-### Internal Improvements
-
-- Updated refresh icon
-
-- Updated license and CI
-
+- Improved kdb connections tree to support embedded namespaces
+- kdb connections tree is now sorted
+- Autocomplete fixes for embedded namespaces
 # 0.1.17
 
 ### Internal Improvements
