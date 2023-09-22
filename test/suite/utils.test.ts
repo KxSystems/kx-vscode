@@ -14,10 +14,29 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { CancellationEvent } from "../../src/models/cancellationEvent";
 import { QueryResultType } from "../../src/models/queryResult";
 import * as dataSourceUtils from "../../src/utils/dataSource";
 import * as executionUtils from "../../src/utils/execution";
+import { getNonce } from "../../src/utils/getNonce";
+import { getUri } from "../../src/utils/getUri";
+import { openUrl } from "../../src/utils/openUrl";
 import * as queryUtils from "../../src/utils/queryUtils";
+import { showRegistrationNotification } from "../../src/utils/registration";
+import { killPid } from "../../src/utils/shell";
+import {
+  showInputBox,
+  showOpenFolderDialog,
+  showQuickPick,
+} from "../../src/utils/userInteraction";
+import { validateUtils } from "../../src/utils/validateUtils";
+
+interface ITestItem extends vscode.QuickPickItem {
+  id: number;
+  label: string;
+  description: string;
+  testProperty: string;
+}
 
 describe("Utils", () => {
   let windowMock: sinon.SinonMock;
@@ -174,6 +193,150 @@ describe("Utils", () => {
   //   });
   // });
 
+  describe("getNonce", () => {
+    it("should return a string with length 32", () => {
+      const nonce = getNonce();
+      assert.strictEqual(nonce.length, 32);
+    });
+
+    it("should return a string containing only alphanumeric characters", () => {
+      const nonce = getNonce();
+      const alphanumericRegex = /^[a-zA-Z0-9]+$/;
+      assert.match(nonce, alphanumericRegex);
+    });
+  });
+
+  describe("getUri", () => {
+    it("should return a Uri object", () => {
+      const panel = vscode.window.createWebviewPanel(
+        "testPanel",
+        "Test Panel",
+        vscode.ViewColumn.One,
+        {}
+      );
+      const webview = panel.webview;
+      const extensionUri = vscode.Uri.parse("file:///path/to/extension");
+      const pathList = ["path", "to", "file.txt"];
+      const uri = getUri(webview, extensionUri, pathList);
+      assert.ok(uri instanceof vscode.Uri);
+    });
+
+    it("should return a Uri object with the correct path", () => {
+      const panel = vscode.window.createWebviewPanel(
+        "testPanel",
+        "Test Panel",
+        vscode.ViewColumn.One,
+        {}
+      );
+      const webview = panel.webview;
+      const extensionUri = vscode.Uri.parse("file:///path/to/extension");
+      const pathList = ["path", "to", "file.txt"];
+      const uri = getUri(webview, extensionUri, pathList);
+      assert.strictEqual(uri.path, "/path/to/extension/path/to/file.txt");
+    });
+  });
+
+  describe("openUrl", () => {
+    let envOpenExternalStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      envOpenExternalStub = sinon.stub(vscode.env, "openExternal");
+    });
+
+    afterEach(() => {
+      envOpenExternalStub.restore();
+    });
+
+    it("should call env.openExternal for a valid url", async () => {
+      const validUrl = "https://example.com";
+      await openUrl(validUrl);
+      assert.ok(envOpenExternalStub.calledOnceWith(vscode.Uri.parse(validUrl)));
+    });
+  });
+
+  // describe("Output", () => {
+  //   let windowCreateOutputChannelStub: sinon.SinonStub;
+  //   let outputChannelAppendStub: sinon.SinonStub;
+  //   let outputChannelAppendLineStub: sinon.SinonStub;
+  //   let outputChannelShowStub: sinon.SinonStub;
+  //   let outputChannelHideStub: sinon.SinonStub;
+  //   let outputChannelDisposeStub: sinon.SinonStub;
+  //   Output._outputChannel = {
+  //     name: "",
+  //     append: sinon.stub(),
+  //     appendLine: sinon.stub(),
+  //     show: sinon.stub(),
+  //     hide: sinon.stub(),
+  //     dispose: sinon.stub(),
+  //   } as unknown as vscode.OutputChannel;
+
+  //   beforeEach(() => {
+  //     windowCreateOutputChannelStub = sinon.stub(
+  //       vscode.window,
+  //       "createOutputChannel"
+  //     );
+  //     outputChannelAppendStub = sinon.stub(Output._outputChannel, "append");
+  //     outputChannelAppendLineStub = sinon.stub(
+  //       Output._outputChannel,
+  //       "appendLine"
+  //     );
+  //     outputChannelShowStub = sinon.stub(Output._outputChannel, "show");
+  //     outputChannelHideStub = sinon.stub(Output._outputChannel, "hide");
+  //     outputChannelDisposeStub = sinon.stub(Output._outputChannel, "dispose");
+  //   });
+
+  //   afterEach(() => {
+  //     windowCreateOutputChannelStub.restore();
+  //     outputChannelAppendStub.restore();
+  //     outputChannelAppendLineStub.restore();
+  //     outputChannelShowStub.restore();
+  //     outputChannelHideStub.restore();
+  //     outputChannelDisposeStub.restore();
+  //   });
+
+  //   it("should create an output channel with the correct name", () => {
+  //     Output._outputChannel = undefined as unknown as vscode.OutputChannel;
+  //     windowCreateOutputChannelStub.returns(Output._outputChannel);
+  //     Output._outputChannel =
+  //       Output._outputChannel ||
+  //       vscode.window.createOutputChannel("kdb-telemetry");
+  //     assert.ok(windowCreateOutputChannelStub.calledOnceWith("kdb-telemetry"));
+  //   });
+
+  //   it("should append a message to the output channel", () => {
+  //     const label = "label";
+  //     const message = "message";
+  //     Output.output(label, message);
+  //     assert.ok(
+  //       outputChannelAppendStub.calledOnceWith(`[${label}] ${message}`)
+  //     );
+  //   });
+
+  //   it("should append a message with a newline to the output channel", () => {
+  //     const label = "label";
+  //     const message = "message";
+  //     Output.outputLine(label, message);
+  //     assert.ok(
+  //       outputChannelAppendLineStub.calledOnceWith(`[${label}] ${message}`)
+  //     );
+  //   });
+
+  //   it("should show the output channel", () => {
+  //     Output.show();
+  //     assert.ok(outputChannelShowStub.calledOnce);
+  //   });
+
+  //   it("should hide the output channel", () => {
+  //     Output.hide();
+  //     assert.ok(outputChannelHideStub.calledOnce);
+  //   });
+
+  //   it("should dispose the output channel", () => {
+  //     Output.dispose();
+  //     assert.ok(outputChannelDisposeStub.calledOnce);
+  //   });
+  // });
+
   describe("queryUtils", () => {
     it("sanitizeQuery", () => {
       const query1 = "`select from t";
@@ -183,12 +346,6 @@ describe("Utils", () => {
       assert.strictEqual(sanitizedQuery1, "`select from t ");
       assert.strictEqual(sanitizedQuery2, "select from t");
     });
-
-    //check how test context
-    // it("queryWrapper", () => {
-    //   const queryWrapper = queryUtils.queryWrapper();
-    //   assert.strictEqual(queryWrapper, "evaluate.q");
-    // });
 
     it("handleWSResults", () => {
       const ab = new ArrayBuffer(128);
@@ -217,6 +374,333 @@ describe("Utils", () => {
       const expectedRes = ["a  b  ", "------", "1  2  ", "3  4  "].toString();
       const result = queryUtils.convertRowsToConsole(rows);
       assert.equal(result, expectedRes);
+    });
+  });
+
+  describe("Registration", () => {
+    let getConfigurationStub: sinon.SinonStub;
+    let showInformationMessageStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
+      showInformationMessageStub = sinon.stub(
+        vscode.window,
+        "showInformationMessage"
+      ) as sinon.SinonStub<
+        [
+          message: string,
+          options: vscode.MessageOptions,
+          ...items: vscode.MessageItem[]
+        ],
+        Thenable<vscode.MessageItem>
+      >;
+    });
+
+    afterEach(() => {
+      getConfigurationStub.restore();
+      showInformationMessageStub.restore();
+    });
+
+    it("should show registration notification if setting is false", async () => {
+      getConfigurationStub.returns({
+        get: sinon.stub().returns(false),
+        update: sinon.stub(),
+      });
+      showInformationMessageStub.resolves("Opt-In");
+      await showRegistrationNotification();
+      sinon.assert.calledOnce(showInformationMessageStub);
+    });
+
+    it("should not show registration notification if setting is true", async () => {
+      getConfigurationStub.returns({
+        get: sinon.stub().returns(true),
+        update: sinon.stub(),
+      });
+      await showRegistrationNotification();
+      sinon.assert.notCalled(showInformationMessageStub);
+    });
+  });
+
+  // describe("AuthSettings", () => {
+  //   let secrets: vscode.SecretStorage;
+  //   let storeStub: sinon.SinonStub;
+  //   let getStub: sinon.SinonStub;
+  //   let storeSpy: sinon.SinonSpy;
+  //   let getSpy: sinon.SinonSpy;
+
+  //   beforeEach(() => {
+  //     secrets = {
+  //       store: sinon.stub(),
+  //       get: sinon.stub(),
+  //     } as unknown as vscode.SecretStorage;
+  //     storeStub = sinon.stub(secrets, "store");
+  //     getStub = sinon.stub(secrets, "get");
+  //     storeSpy = sinon.spy();
+  //     getSpy = sinon.spy();
+  //   });
+
+  //   afterEach(() => {
+  //     storeStub.restore();
+  //     getStub.restore();
+  //   });
+
+  //   it("should store auth data", async () => {
+  //     const tokenKey = "tokenKey";
+  //     const tokenValue = "tokenValue";
+  //     const authSettings = new AuthSettings(secrets);
+  //     storeSpy = sinon.spy(secrets, "store");
+  //     await authSettings.storeAuthData(tokenKey, tokenValue);
+  //     sinon.assert.calledOnceWithExactly(storeStub, tokenKey, tokenValue);
+  //     sinon.assert.calledOnceWithExactly(storeSpy, tokenKey, tokenValue);
+  //   });
+
+  //   it("should get auth data", async () => {
+  //     const tokenKey = "tokenKey";
+  //     const tokenValue = "tokenValue";
+  //     const authSettings = new AuthSettings(secrets);
+  //     getStub.resolves(tokenValue);
+  //     getSpy = sinon.spy(secrets, "get");
+  //     const result = await authSettings.getAuthData(tokenKey);
+  //     sinon.assert.calledOnceWithExactly(getStub, tokenKey);
+  //     sinon.assert.match(result, tokenValue);
+  //     sinon.assert.calledOnceWithExactly(getSpy, tokenKey);
+  //   });
+  // });
+
+  describe("killPid", () => {
+    let tryExecuteCommandStub: sinon.SinonStub;
+    let outputChannelAppendLineSpy: sinon.SinonSpy;
+
+    beforeEach(() => {
+      tryExecuteCommandStub = sinon.stub();
+      outputChannelAppendLineSpy = sinon.spy();
+    });
+
+    it("should not execute command if pid is NaN", async () => {
+      await killPid(NaN);
+      sinon.assert.notCalled(tryExecuteCommandStub);
+    });
+  });
+
+  describe("userInteraction", () => {
+    let windowMock: sinon.SinonMock;
+    // let getConfigurationMock: any;
+    // let withProgressMock: any;
+
+    beforeEach(() => {
+      windowMock = sinon.mock(vscode.window);
+      // getConfigurationMock = sinon.stub(workspace, 'getConfiguration');
+      // withProgressMock = sinon.stub(window, 'withProgress');
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("showInputBox should return a value", async () => {
+      const option: vscode.InputBoxOptions = {};
+      windowMock.expects("showInputBox").withArgs(option).returns("test");
+      const result = await showInputBox(option);
+      assert.strictEqual(result, "test");
+    });
+
+    it("showInputBox should throw cancellation event", async () => {
+      const option: vscode.InputBoxOptions = {};
+      windowMock.expects("showInputBox").withArgs(option).returns(undefined);
+      await assert.rejects(showInputBox(option), CancellationEvent);
+    });
+
+    it("showQuickPick should return a value", async () => {
+      const option: vscode.QuickPickOptions = {};
+      const items: vscode.QuickPickItem[] = [
+        {
+          description: "test 1",
+          label: "test 1",
+        },
+        {
+          description: "test 2",
+          label: "test 2",
+        },
+      ];
+
+      windowMock
+        .expects("showQuickPick")
+        .withArgs(items, option)
+        .returns(items[1]);
+      const result = await showQuickPick(items, option);
+      assert.deepStrictEqual(result, items[1]);
+    });
+
+    it("showQuickPick with custom items should return a value", async () => {
+      const option: vscode.QuickPickOptions = {};
+      const items: ITestItem[] = [
+        {
+          description: "test 1",
+          id: 1,
+          label: "test 1",
+          testProperty: "test 1",
+        },
+        {
+          description: "test 2",
+          id: 2,
+          label: "test 2",
+          testProperty: "test 2",
+        },
+      ];
+
+      windowMock
+        .expects("showQuickPick")
+        .withArgs(items, option)
+        .returns(items[1]);
+      const result = await showQuickPick(items, option);
+      assert.deepStrictEqual(result, items[1]);
+    });
+
+    it("showQuickPick should throw cancellation event", async () => {
+      const option: vscode.QuickPickOptions = {};
+      const items: vscode.QuickPickItem[] = [
+        {
+          description: "test 1",
+          label: "test 1",
+        },
+        {
+          description: "test 2",
+          label: "test 2",
+        },
+      ];
+
+      windowMock
+        .expects("showQuickPick")
+        .withArgs(items, option)
+        .returns(undefined);
+      await assert.rejects(showQuickPick(items, option), CancellationEvent);
+    });
+
+    it("showOpenFolderDialog should return a folder path", async () => {
+      const folderPath = "test/test";
+      const uris: vscode.Uri[] = [{ fsPath: folderPath } as vscode.Uri];
+
+      windowMock.expects("showOpenDialog").returns(uris);
+      const result = await showOpenFolderDialog();
+      assert.deepStrictEqual(result, folderPath);
+    });
+
+    it("showOpenFolderDialog should return path of first folder", async () => {
+      const folderPath1 = "test/test";
+      const folderPath2 = "test2/test2";
+      const uris: vscode.Uri[] = [
+        { fsPath: folderPath1 },
+        { fsPath: folderPath2 },
+      ] as vscode.Uri[];
+
+      windowMock.expects("showOpenDialog").returns(uris);
+      const result = await showOpenFolderDialog();
+      assert.strictEqual(result, folderPath1);
+    });
+
+    it("showOpenFolderDialog should throw cancellation event if dialog cancelled", async () => {
+      windowMock.expects("showOpenDialog").returns(undefined);
+      await assert.rejects(showOpenFolderDialog(), CancellationEvent);
+    });
+  });
+
+  describe("validateUtils", () => {
+    describe("isValidLength", () => {
+      it("should return true if value length is within range", () => {
+        const value = "test-value";
+        const lower = 1;
+        const upper = 20;
+        const result = validateUtils.isValidLength(value, lower, upper);
+        assert.strictEqual(result, true);
+      });
+
+      it("should return false if value length is less than lower bound", () => {
+        const value = "test-value";
+        const lower = 20;
+        const upper = 30;
+        const result = validateUtils.isValidLength(value, lower, upper);
+        assert.strictEqual(result, false);
+      });
+
+      it("should return false if value length is greater than upper bound", () => {
+        const value = "test-value";
+        const lower = 1;
+        const upper = 5;
+        const result = validateUtils.isValidLength(value, lower, upper);
+        assert.strictEqual(result, false);
+      });
+
+      it("should return false if lower bound is greater than upper bound", () => {
+        const value = "test-value";
+        const lower = 30;
+        const upper = 20;
+        const result = validateUtils.isValidLength(value, lower, upper);
+        assert.strictEqual(result, false);
+      });
+
+      it("should return true if upper bound is greater than max integer", () => {
+        const value = "test-value";
+        const lower = 1;
+        const upper = 2147483648;
+        const result = validateUtils.isValidLength(value, lower, upper);
+        assert.strictEqual(result, true);
+      });
+    });
+
+    describe("isAlphanumericWithHypens", () => {
+      it("should return true if value is alphanumeric with hyphens", () => {
+        const value = "test-value-123";
+        const result = validateUtils.isAlphanumericWithHypens(value);
+        assert.strictEqual(result, true);
+      });
+    });
+
+    describe("isLowerCaseAlphanumericWithHypens", () => {
+      it("should return true if value is lowercase alphanumeric with hyphens", () => {
+        const value = "test-value-123";
+        const result = validateUtils.isLowerCaseAlphanumericWithHypens(value);
+        assert.strictEqual(result, true);
+      });
+
+      it("should return false if value contains uppercase characters", () => {
+        const value = "Test-Value-123";
+        const result = validateUtils.isLowerCaseAlphanumericWithHypens(value);
+        assert.strictEqual(result, false);
+      });
+    });
+
+    describe("isNumber", () => {
+      it("should return true if value is a number", () => {
+        const value = "123";
+        const result = validateUtils.isNumber(value);
+        assert.strictEqual(result, true);
+      });
+
+      it("should return false if value is not a number", () => {
+        const value = "test";
+        const result = validateUtils.isNumber(value);
+        assert.strictEqual(result, false);
+      });
+    });
+
+    describe("isBoolean", () => {
+      it("should return true if value is 'true'", () => {
+        const value = "true";
+        const result = validateUtils.isBoolean(value);
+        assert.strictEqual(result, true);
+      });
+
+      it("should return true if value is 'false'", () => {
+        const value = "false";
+        const result = validateUtils.isBoolean(value);
+        assert.strictEqual(result, true);
+      });
+
+      it("should return false if value is not 'true' or 'false'", () => {
+        const value = "test";
+        const result = validateUtils.isBoolean(value);
+        assert.strictEqual(result, false);
+      });
     });
   });
 });
