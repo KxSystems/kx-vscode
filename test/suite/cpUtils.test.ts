@@ -34,4 +34,8 @@ describe("cpUtils tests", () => {
     const result = cpUtils.wrapArgInQuotes();
     assert.strictEqual(result.length, 2);
   });
+
+  it("executeCommand should throw an exception", async () => {
+    await assert.rejects(cpUtils.executeCommand("./", "__none"));
+  });
 });
