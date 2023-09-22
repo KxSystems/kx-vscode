@@ -21,7 +21,7 @@ import { getUri } from "../utils/getUri";
 export class DataSourcesPanel {
   public static currentPanel: DataSourcesPanel | undefined;
   private uri;
-  private readonly _panel: vscode.WebviewPanel;
+  public readonly _panel: vscode.WebviewPanel;
   private _disposables: vscode.Disposable[] = [];
   public static dataSourceFile: DataSourceFiles;
 
