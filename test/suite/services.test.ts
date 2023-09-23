@@ -11,9 +11,9 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { before } from "mocha";
 import assert from "node:assert";
 import { TreeItemCollapsibleState } from "vscode";
+import { ext } from "../../src/extensionVariables";
 import { Insights } from "../../src/models/insights";
 import { Server } from "../../src/models/server";
 import * as dataSourceTreeProvider from "../../src/services/dataSourceTreeProvider";
@@ -22,6 +22,9 @@ import {
   InsightsNode,
   KdbNode,
   KdbTreeProvider,
+  QCategoryNode,
+  QNamespaceNode,
+  QServerNode,
 } from "../../src/services/kdbTreeProvider";
 import * as terminalProvider from "../../src/services/terminalProvider";
 
@@ -37,7 +40,7 @@ describe("kdbTreeProvider", () => {
   let kdbNode: KdbNode;
   let insightNode: InsightsNode;
 
-  before(() => {
+  beforeEach(() => {
     servers = {
       testServer: {
         serverAlias: "testServerAlias",
@@ -144,10 +147,226 @@ describe("kdbTreeProvider", () => {
   it("Should return no children for the tree when serverList is empty", async () => {
     const kdbProvider = new KdbTreeProvider({}, {});
     const result = await kdbProvider.getChildren();
-    assert.notStrictEqual(
-      result,
-      undefined,
-      "Children should not be undefined"
+    assert.strictEqual(result.length, 0, "Children should be empty");
+  });
+
+  it("Should return children for the tree when serverList has entries", async () => {
+    const kdbProvider = new KdbTreeProvider(servers, insights);
+    const result = await kdbProvider.getChildren();
+    assert.strictEqual(result.length, 2, "Children count should be 2");
+  });
+
+  it("Should return a new KdbNode", () => {
+    const kdbNode = new KdbNode(
+      [],
+      "kdbnode1",
+      {
+        serverName: "kdbservername",
+        serverAlias: "kdbserveralias",
+        serverPort: "5001",
+        managed: false,
+        auth: false,
+        tls: false,
+      },
+      TreeItemCollapsibleState.None
+    );
+    assert.strictEqual(
+      kdbNode.label,
+      "kdbnode1 [kdbserveralias]",
+      "KdbNode node creation failed"
+    );
+  });
+
+  it("Should return a new KdbNode with no static alias", () => {
+    const kdbNode = new KdbNode(
+      [],
+      "kdbnode1",
+      {
+        serverName: "kdbservername",
+        serverAlias: "",
+        serverPort: "5001",
+        managed: false,
+        auth: false,
+        tls: false,
+      },
+      TreeItemCollapsibleState.None
+    );
+    assert.strictEqual(
+      kdbNode.label,
+      "kdbnode1",
+      "KdbNode node creation failed"
+    );
+  });
+
+  it("Should return a new KdbNode with children", () => {
+    const kdbNode = new KdbNode(
+      ["node1", "node2", "node3", "node4"],
+      "kdbnode1",
+      {
+        serverName: "kdbservername",
+        serverAlias: "kdbserveralias",
+        serverPort: "5001",
+        managed: false,
+        auth: false,
+        tls: false,
+      },
+      TreeItemCollapsibleState.None
+    );
+    assert.strictEqual(
+      kdbNode.label,
+      "kdbnode1 [kdbserveralias]",
+      "KdbNode node creation failed"
+    );
+  });
+
+  it("Should return a new KdbNode that is connected", () => {
+    const kdbNode = new KdbNode(
+      [],
+      "kdbnode1",
+      {
+        serverName: "kdbservername",
+        serverAlias: "kdbserveralias",
+        serverPort: "5001",
+        managed: false,
+        auth: false,
+        tls: false,
+      },
+      TreeItemCollapsibleState.None
+    );
+
+    ext.connectionNode = kdbNode;
+
+    const kdbNode1 = new KdbNode(
+      [],
+      "kdbnode1",
+      {
+        serverName: "kdbservername",
+        serverAlias: "kdbserveralias",
+        serverPort: "5001",
+        managed: false,
+        auth: false,
+        tls: false,
+      },
+      TreeItemCollapsibleState.None
+    );
+
+    assert.strictEqual(
+      kdbNode1.label,
+      "kdbnode1 [kdbserveralias] (connected)",
+      "KdbNode node creation failed"
+    );
+  });
+
+  it("Should retun a new InsightsNode", () => {
+    const insightsNode = new InsightsNode(
+      [],
+      "insightsnode1",
+      {
+        server: "insightsservername",
+        alias: "insightsserveralias",
+        auth: true,
+      },
+      TreeItemCollapsibleState.None
+    );
+    assert.strictEqual(
+      insightsNode.label,
+      "insightsnode1",
+      "InsightsNode node creation failed"
+    );
+  });
+
+  it("Should return a new InsightsNode with children", () => {
+    const insightsNode = new InsightsNode(
+      ["child1", "child2", "child3", "child4"],
+      "insightsnode1",
+      {
+        server: "insightsservername",
+        alias: "insightsserveralias",
+        auth: true,
+      },
+      TreeItemCollapsibleState.None
+    );
+    assert.strictEqual(
+      insightsNode.label,
+      "insightsnode1",
+      "InsightsNode node creation failed"
+    );
+  });
+
+  it("Should return a new InsightsNode that is connected", () => {
+    const insightsNode = new InsightsNode(
+      [],
+      "insightsnode1",
+      {
+        server: "insightsservername",
+        alias: "insightsserveralias",
+        auth: true,
+      },
+      TreeItemCollapsibleState.None
+    );
+
+    ext.connectionNode = insightsNode;
+
+    const insightsNode1 = new InsightsNode(
+      [],
+      "insightsnode1",
+      {
+        server: "insightsservername",
+        alias: "insightsserveralias",
+        auth: true,
+      },
+      TreeItemCollapsibleState.None
+    );
+
+    assert.strictEqual(
+      insightsNode1.label,
+      "insightsnode1 (connected)",
+      "InsightsNode node creation failed"
+    );
+  });
+
+  it("Should return a new QNamespaceNode", () => {
+    const qNsNode = new QNamespaceNode(
+      [],
+      "nsnode1",
+      "nsnodedetails1",
+      TreeItemCollapsibleState.None,
+      "nsfullname"
+    );
+    assert.strictEqual(
+      qNsNode.label,
+      "nsnode1",
+      "QNamespaceNode node creation failed"
+    );
+  });
+
+  it("should return a new QCategoryNode", () => {
+    const qCategoryNode = new QCategoryNode(
+      [],
+      "categorynode1",
+      "categorynodedetails1",
+      "categoryns",
+      TreeItemCollapsibleState.None
+    );
+    assert.strictEqual(
+      qCategoryNode.label,
+      "categorynode1",
+      "QCategoryNode node creation failed"
+    );
+  });
+
+  it("Should return a new QServerNode", () => {
+    const qServerNode = new QServerNode(
+      [],
+      "servernode1",
+      "servernodedetails1",
+      TreeItemCollapsibleState.None,
+      ""
+    );
+    assert.strictEqual(
+      qServerNode.label,
+      "servernode1",
+      "QServer node creation failed"
     );
   });
 });
