@@ -35,7 +35,7 @@ export function instrument() {
     const inputPath = path.join(REPO_ROOT, "out", files[i]);
     const outputPath = path.join(REPO_ROOT, "out-cov", files[i]);
 
-    if (!/\.js$/.test(file) || /(^|[\\/])test[\\/]/.test(file)) {
+    if (!/\.js$/.test(file) || /(^|[\\/])(test|ipc)[\\/]/.test(file)) {
       copyFile(inputPath, outputPath);
       continue;
     }
