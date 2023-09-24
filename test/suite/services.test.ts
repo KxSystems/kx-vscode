@@ -156,6 +156,68 @@ describe("kdbTreeProvider", () => {
     assert.strictEqual(result.length, 2, "Children count should be 2");
   });
 
+  it("Should return merged elements for parent", async () => {
+    const kdbProvider = new KdbTreeProvider(servers, insights);
+    const kdbNode = new KdbNode(
+      [],
+      "testServer",
+      {
+        serverName: "testServername",
+        serverAlias: "testServerAlias",
+        serverPort: "5001",
+        managed: false,
+        auth: false,
+        tls: false,
+      },
+      TreeItemCollapsibleState.None
+    );
+    kdbNode.contextValue = "testServerAlias";
+    kdbProvider.getChildren(kdbNode);
+    const result = await kdbProvider.getChildren(kdbNode);
+    assert.notStrictEqual(result, undefined);
+  });
+
+  it("Should return namespaces for parent", async () => {
+    const kdbProvider = new KdbTreeProvider(servers, insights);
+    const kdbNode = new KdbNode(
+      [],
+      "testServer",
+      {
+        serverName: "testServername",
+        serverAlias: "testServerAlias",
+        serverPort: "5001",
+        managed: false,
+        auth: false,
+        tls: false,
+      },
+      TreeItemCollapsibleState.None
+    );
+    kdbProvider.getChildren(kdbNode);
+    const result = await kdbProvider.getChildren(kdbNode);
+    assert.notStrictEqual(result, undefined);
+  });
+
+  it("Should return categories for parent", async () => {
+    const kdbProvider = new KdbTreeProvider(servers, insights);
+    const kdbNode = new KdbNode(
+      [],
+      "testServer",
+      {
+        serverName: "testServername",
+        serverAlias: "testServerAlias",
+        serverPort: "5001",
+        managed: false,
+        auth: false,
+        tls: false,
+      },
+      TreeItemCollapsibleState.None
+    );
+    kdbNode.contextValue = "ns";
+    kdbProvider.getChildren(kdbNode);
+    const result = await kdbProvider.getChildren(kdbNode);
+    assert.notStrictEqual(result, undefined);
+  });
+
   it("Should return a new KdbNode", () => {
     const kdbNode = new KdbNode(
       [],
