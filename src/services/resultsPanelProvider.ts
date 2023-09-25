@@ -28,7 +28,7 @@ import { getUri } from "../utils/getUri";
 export class KdbResultsViewProvider implements WebviewViewProvider {
   public static readonly viewType = "kdb-results";
   private _view?: WebviewView;
-  private _colorTheme: any;
+  public _colorTheme: any;
   private _results: string | string[] = "";
 
   constructor(private readonly _extensionUri: Uri) {

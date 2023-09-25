@@ -11,17 +11,121 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import * as datasourcePanel from "../../src/panels/datasource";
-import * as resultsPanel from "../../src/services/resultsPanelProvider";
+import assert from "assert";
+import * as vscode from "vscode";
+import { defaultDataSourceFile } from "../../src/models/dataSource";
+import { DataSourcesPanel } from "../../src/panels/datasource";
+import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 
-describe("datasource", () => {
-  //write tests for src/panels/datasource.ts
-  //function to be deleted after write the tests
-  datasourcePanel;
-});
+describe("WebPanels", () => {
+  describe("DataSourcesPanel", () => {
+    const dsTest = defaultDataSourceFile;
+    const uriTest: vscode.Uri = vscode.Uri.parse("test");
 
-describe("results panel", () => {
-  //write tests for src/services/resultsPanelProvider.ts
-  //function to be deleted after write the tests
-  resultsPanel;
+    beforeEach(() => {
+      DataSourcesPanel.render(uriTest, dsTest);
+    });
+
+    afterEach(() => {
+      DataSourcesPanel.close();
+    });
+
+    it("should create a new panel", () => {
+      assert.ok(
+        DataSourcesPanel.currentPanel,
+        "DataSourcesPanel.currentPanel should be truthy"
+      );
+    });
+
+    it("should close", () => {
+      DataSourcesPanel.close();
+      assert.strictEqual(
+        DataSourcesPanel.currentPanel,
+        undefined,
+        "DataSourcesPanel.currentPanel should be undefined"
+      );
+    });
+
+    it("should make sure the datasource is rendered, check if the tabs exists", () => {
+      const expectedHtmlTab1 = `<vscode-panel-tab id="tab-1" class="type-tab">API</vscode-panel-tab>`;
+      const expectedHtmlTab2 = `<vscode-panel-tab id="tab-2" class="type-tab">QSQL</vscode-panel-tab>`;
+      const expectedHtmlTab3 = `<vscode-panel-tab id="tab-3" class="type-tab">SQL</vscode-panel-tab>`;
+      const actualHtml = DataSourcesPanel.currentPanel._panel.webview.html;
+      assert.ok(
+        actualHtml.indexOf(expectedHtmlTab1) !== -1,
+        "Panel HTML should include expected TAB btn 1"
+      );
+      assert.ok(
+        actualHtml.indexOf(expectedHtmlTab2) !== -1,
+        "Panel HTML should include expected TAB btn 2"
+      );
+      assert.ok(
+        actualHtml.indexOf(expectedHtmlTab3) !== -1,
+        "Panel HTML should include expected TAB btn 3"
+      );
+    });
+  });
+
+  describe("ResultsPanelProvider", () => {
+    const uriTest: vscode.Uri = vscode.Uri.parse("test");
+    let resultsPanel: KdbResultsViewProvider;
+
+    beforeEach(() => {
+      resultsPanel = new KdbResultsViewProvider(uriTest);
+    });
+
+    describe("defineAgGridTheme()", () => {
+      it("should return 'ag-theme-alpine' if the color theme is not dark", () => {
+        resultsPanel._colorTheme = { kind: vscode.ColorThemeKind.Light };
+        const expectedTheme = "ag-theme-alpine";
+        const actualTheme = resultsPanel.defineAgGridTheme();
+        assert.strictEqual(actualTheme, expectedTheme);
+      });
+
+      it("should return 'ag-theme-alpine-dark' if the color theme is dark", () => {
+        resultsPanel._colorTheme = { kind: vscode.ColorThemeKind.Dark };
+        const expectedTheme = "ag-theme-alpine-dark";
+        const actualTheme = resultsPanel.defineAgGridTheme();
+        assert.strictEqual(actualTheme, expectedTheme);
+      });
+    });
+    describe("sanitizeString()", () => {
+      it("should remove leading and trailing whitespace", () => {
+        const inputString = "  test string  ";
+        const expectedString = "test string";
+        const actualString = resultsPanel.sanitizeString(inputString);
+        assert.strictEqual(actualString, expectedString);
+      });
+
+      it("should remove single quotes, double quotes, and backticks", () => {
+        const inputString = `'test' "string" \`with\` quotes`;
+        const expectedString = "test string with quotes";
+        const actualString = resultsPanel.sanitizeString(inputString);
+        assert.strictEqual(actualString, expectedString);
+      });
+
+      it("should remove ${ and } characters", () => {
+        const inputString = "test ${string} with ${variables}";
+        const expectedString = "test string} with variables}";
+        const actualString = resultsPanel.sanitizeString(inputString);
+        assert.strictEqual(actualString, expectedString);
+      });
+    });
+
+    describe("convertToGrid()", () => {
+      it("should return '<p>No results to show</p>' if queryResult is an empty string", () => {
+        const inputQueryResult = "";
+        const expectedOutput = "<p>No results to show</p>";
+        const actualOutput = resultsPanel.convertToGrid(inputQueryResult);
+        assert.strictEqual(actualOutput, expectedOutput);
+      });
+
+      it("should return a string with the query result if queryResult is a string with one value", () => {
+        const inputQueryResult = "test string";
+        const expectedOutput = "<p>test string</p>";
+        const actualOutput = resultsPanel.convertToGrid(inputQueryResult);
+        assert.strictEqual(actualOutput, expectedOutput);
+      });
+    });
+  });
 });

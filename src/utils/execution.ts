@@ -17,7 +17,12 @@ import { Uri, window, workspace } from "vscode";
 import { ext } from "../extensionVariables";
 import { QueryResultType, queryConstants } from "../models/queryResult";
 
-export function runQFileTerminal(filename: string) {
+interface tblHeader {
+  label: string;
+  count: number;
+}
+
+export function runQFileTerminal(filename: string): void {
   filename = filename.replace(/\\/g, "/");
   const terminalName = path.parse(filename).base;
   const command = `q ${filename}`;
@@ -56,11 +61,6 @@ export function handleQueryResults(
       break;
   }
   return handledResult;
-}
-
-interface tblHeader {
-  label: string;
-  count: number;
 }
 
 export function convertArrayStringInVector(resultRows: any[]): any[] {
@@ -117,21 +117,7 @@ export function convertResultToVector(result: any): any[] {
   return convertArrayInVector(result);
 }
 
-export function convertToArrayOfObjects(resultString: string): any[] {
-  const result = convertResultStringToVector(resultString);
-  const keys = result[0];
-  const values = result.slice(1);
-
-  const res = values.map((row) =>
-    row.reduce((obj: { [key: string]: any }, value: any, index: any) => {
-      obj[keys[index]] = value;
-      return obj;
-    }, {})
-  );
-  return res;
-}
-
-export async function exportToCsv(workspaceUri: Uri) {
+export async function exportToCsv(workspaceUri: Uri): Promise<void> {
   const timestamp = Date.now();
   const fileName = `results-${timestamp}.csv`;
   const filePath = Uri.parse(path.join(workspaceUri.fsPath, fileName));
