@@ -14,28 +14,32 @@
 import * as assert from "assert";
 import * as cpUtils from "../../server/src/utils/cpUtils";
 
-describe("cpUtils tests", () => {
-  it("wrapArgInQuotes should return a quoted string", () => {
-    const result = cpUtils.wrapArgInQuotes("test");
-    assert.strictEqual(result.substring(1, 5), "test");
+describe("cpUtils", () => {
+  describe("wrapArgInQuotes", () => {
+    it("should return a quoted string for string", () => {
+      const result = cpUtils.wrapArgInQuotes("test");
+      assert.strictEqual(result.substring(1, 5), "test");
+    });
+
+    it("should return a string value for boolean", () => {
+      const result = cpUtils.wrapArgInQuotes(true);
+      assert.strictEqual(result, "true");
+    });
+
+    it("should return a string value for number", () => {
+      const result = cpUtils.wrapArgInQuotes(1);
+      assert.strictEqual(result, "1");
+    });
+
+    it("should return an empty quoted string for none", () => {
+      const result = cpUtils.wrapArgInQuotes();
+      assert.strictEqual(result.length, 2);
+    });
   });
 
-  it("wrapArgInQuotes should return a string value", () => {
-    const result = cpUtils.wrapArgInQuotes(true);
-    assert.strictEqual(result, "true");
-  });
-
-  it("wrapArgInQuotes should return a string value", () => {
-    const result = cpUtils.wrapArgInQuotes(1);
-    assert.strictEqual(result, "1");
-  });
-
-  it("wrapArgInQuotes should return an empty quoted string", () => {
-    const result = cpUtils.wrapArgInQuotes();
-    assert.strictEqual(result.length, 2);
-  });
-
-  it("executeCommand should throw an exception", async () => {
-    await assert.rejects(cpUtils.executeCommand("./", "__none"));
+  describe("executeCommand", () => {
+    it("should throw an exception for none", async () => {
+      await assert.rejects(cpUtils.executeCommand("./", "__none"));
+    });
   });
 });
