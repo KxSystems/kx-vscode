@@ -330,6 +330,9 @@ describe("kdbTreeProvider", () => {
       },
       TreeItemCollapsibleState.None
     );
+
+    ext.kdbinsightsNodes.pop();
+
     assert.strictEqual(
       insightsNode.label,
       "insightsnode1",
@@ -348,6 +351,9 @@ describe("kdbTreeProvider", () => {
       },
       TreeItemCollapsibleState.None
     );
+
+    ext.kdbinsightsNodes.pop();
+
     assert.strictEqual(
       insightsNode.label,
       "insightsnode1",
@@ -379,6 +385,8 @@ describe("kdbTreeProvider", () => {
       },
       TreeItemCollapsibleState.None
     );
+
+    ext.kdbinsightsNodes.pop();
 
     assert.strictEqual(
       insightsNode1.label,
