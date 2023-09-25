@@ -36,6 +36,34 @@ describe("WebPanels", () => {
         "DataSourcesPanel.currentPanel should be truthy"
       );
     });
+
+    it("should close", () => {
+      DataSourcesPanel.close();
+      assert.strictEqual(
+        DataSourcesPanel.currentPanel,
+        undefined,
+        "DataSourcesPanel.currentPanel should be undefined"
+      );
+    });
+
+    it("should make sure the datasource is rendered, check if the tabs exists", () => {
+      const expectedHtmlTab1 = `<vscode-panel-tab id="tab-1" class="type-tab">API</vscode-panel-tab>`;
+      const expectedHtmlTab2 = `<vscode-panel-tab id="tab-2" class="type-tab">QSQL</vscode-panel-tab>`;
+      const expectedHtmlTab3 = `<vscode-panel-tab id="tab-3" class="type-tab">SQL</vscode-panel-tab>`;
+      const actualHtml = DataSourcesPanel.currentPanel._panel.webview.html;
+      assert.ok(
+        actualHtml.indexOf(expectedHtmlTab1) !== -1,
+        "Panel HTML should include expected TAB btn 1"
+      );
+      assert.ok(
+        actualHtml.indexOf(expectedHtmlTab2) !== -1,
+        "Panel HTML should include expected TAB btn 2"
+      );
+      assert.ok(
+        actualHtml.indexOf(expectedHtmlTab3) !== -1,
+        "Panel HTML should include expected TAB btn 3"
+      );
+    });
   });
 
   describe("ResultsPanelProvider", () => {
