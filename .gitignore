@@ -7,3 +7,8 @@ node_modules
 
 /vscode.proposed.d.ts
 /vscode.d.ts
+.DS_Store
+
+out/
+out-cov/
+coverage-reports/

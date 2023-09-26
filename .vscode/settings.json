@@ -5,5 +5,8 @@
   "editor.codeActionsOnSave": {
     "source.organizeImports": true
   },
-  "cSpell.words": ["klaw", "picomatch"]
+  "cSpell.words": ["klaw", "picomatch"],
+  "[antlr]": {
+    "editor.defaultFormatter": "mike-lischke.vscode-antlr4"
+  }
 }

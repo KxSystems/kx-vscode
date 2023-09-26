@@ -367,7 +367,7 @@ export class AnalyzerContent {
   }
 
   public isWordCharacter(ch: string): boolean {
-    return /\w/.test(ch);
+    return /[.\w]/.test(ch);
   }
 
   public analyzeWorkspace({

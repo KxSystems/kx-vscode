@@ -1,6 +1,8 @@
 .vscode
 .vscode-test
 out/test/**
+out-cov/
+coverage-reports/
 src
 .gitignore
 .yarnrc
@@ -8,3 +10,6 @@ tsconfig.json
 node_modules
 server
 test/
+img/
+esbuild.js
+sonar-project.properties

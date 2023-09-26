@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 1998-2023 Kx Systems Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
 import * as nodeq from "node-q";
 import { commands, window } from "vscode";
 import { ext } from "../extensionVariables";
@@ -11,7 +24,7 @@ export class Connection {
   private connection?: nodeq.Connection;
   public connected: boolean;
 
-  constructor(connectionString: string, creds?: string[]) {
+  constructor(connectionString: string, creds?: string[], tls?: boolean) {
     const params = connectionString.split(":");
     if (!params) {
       throw new Error("Missing or invalid connection string");
@@ -21,6 +34,12 @@ export class Connection {
       nanos2date: false,
       socketNoDelay: true,
     };
+
+    if (tls != undefined) {
+      options.useTLS = tls;
+    } else {
+      options.useTLS = false;
+    }
 
     if (params.length > 0) {
       options.host = params[0];
@@ -71,7 +90,10 @@ export class Connection {
     return result;
   }
 
-  public async executeQuery(command: string): Promise<string> {
+  public async executeQuery(
+    command: string,
+    context?: string
+  ): Promise<string> {
     let result;
     let retryCount = 0;
     while (this.connection === undefined) {
@@ -81,15 +103,24 @@ export class Connection {
       await delay(500);
       retryCount++;
     }
+
     const wrapper = queryWrapper();
-    this.connection.k(wrapper, command, (err: Error, res: QueryResult) => {
-      if (err) {
-        result = handleQueryResults(err.toString(), QueryResultType.Error);
+    this.connection.k(
+      wrapper,
+      context ?? ".",
+      command,
+      (err: Error, res: QueryResult) => {
+        if (err) {
+          result = handleQueryResults(err.toString(), QueryResultType.Error);
+        } else if (res) {
+          if (res.errored) {
+            result = handleQueryResults(res.error, QueryResultType.Error);
+          } else {
+            result = res.result;
+          }
+        }
       }
-      if (res) {
-        result = res.data;
-      }
-    });
+    );
 
     while (result === undefined || result === null) {
       await delay(500);
@@ -153,6 +184,11 @@ export class Connection {
     });
   }
 
+  public update(): void {
+    this.updateGlobal();
+    this.updateReservedKeywords();
+  }
+
   private updateGlobal() {
     const globalQuery =
       '{[q] t:system"T";tm:@[{$[x>0;[system"T ",string x;1b];0b]};0;{0b}];r:$[tm;@[0;(q;::);{[tm; t; msgs] if[tm;system"T ",string t];\'msgs}[tm;t]];@[q;::;{\'x}]];if[tm;system"T ",string t];r}{do[1000;2+2];{@[{.z.ide.ns.r1:x;:.z.ide.ns.r1};x;{r:y;:r}[;x]]}({:x!{![sv[`;] each x cross `Tables`Functions`Variables; system each "afv" cross enlist[" "] cross enlist string x]} each x} [{raze x,.z.s\'[{x where{@[{1#get x};x;`]~1#.q}\'[x]}` sv\'x,\'key x]}`]),(enlist `.z)!flip (`.z.Tables`.z.Functions`.z.Variables)!(enlist 0#`;enlist `ac`bm`exit`pc`pd`pg`ph`pi`pm`po`pp`ps`pw`vs`ts`s`wc`wo`ws;enlist `a`b`e`f`h`i`k`K`l`o`q`u`w`W`x`X`n`N`p`P`z`Z`t`T`d`D`c`zd)}';
@@ -173,6 +209,10 @@ export class Connection {
     const globals = result;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const entries: [string, any][] = Object.entries(globals);
+
+    ext.functions.length = 0;
+    ext.tables.length = 0;
+    ext.variables.length = 0;
 
     entries.forEach(([key, value]) => {
       key = key === "null" ? "." : key + ".";

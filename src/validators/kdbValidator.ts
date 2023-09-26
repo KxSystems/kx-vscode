@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 1998-2023 Kx Systems Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
 import { validateUtils } from "../utils/validateUtils";
 
 export function validateServerAlias(
@@ -13,6 +26,10 @@ export function validateServerAlias(
     }
     if (!validateUtils.isAlphanumericWithHypens(input)) {
       return "Input value must contain only alphanumeric characters and hypens only";
+    }
+
+    if (input === "InsightsEnterprise") {
+      return "Input value using restricted keywords of Insights Enterprise";
     }
   }
   return undefined;
@@ -61,6 +78,15 @@ export function validateServerPassword(
   if (input !== undefined) {
     if (!validateUtils.isValidLength(input, 1, 64)) {
       return "Input value must be between 1 and 64 alphanumeric characters in length.";
+    }
+  }
+  return undefined;
+}
+
+export function validateTls(input: string | undefined): string | undefined {
+  if (input !== undefined && input !== "") {
+    if (!validateUtils.isBoolean(input)) {
+      return "Input value must be a boolean (true or false)";
     }
   }
   return undefined;

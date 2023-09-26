@@ -3,12 +3,11 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "0.1.17",
-  "preview": true,
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.66.0"
   },
-  "icon": "images/kx-logo-vs.png",
+  "icon": "resources/images/kx-logo-vs.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/KxSystems/kx-vscode.git"
@@ -37,8 +36,18 @@
     "onCommand:kdb.removeConnection",
     "onCommand:kdb.connect",
     "onCommand:kdb.disconnect",
-    "onWalkthrough:kdb.hideWalkthrough",
+    "onCommand:kdb.dataSource.addDataSource",
+    "onCommand:kdb.dataSource.saveDataSource",
+    "onCommand:kdb.dataSource.runDataSource",
+    "onCommand:kdb.dataSource.renameDataSource",
+    "onCommand:kdb.dataSource.deleteDataSource",
+    "onCommand:kdb.dataSource.openDataSource",
+    "onCommand:kdb.resultsPanel.update",
+    "onCommand:kdb.resultsPanel.clear",
+    "onCommand:kdb.resultsPanel.export.csv",
     "onView:kdb-servers",
+    "onView:kdb-datasources-explorer",
+    "onView:kdb-results",
     "onTerminalProfile:kdb.q-terminal"
   ],
   "main": "./out/extension.js",
@@ -141,9 +150,14 @@
           "type": "object",
           "description": "kdb servers for explorer"
         },
-        "kdb.hideWalkthrough": {
-          "type": "boolean",
-          "description": "Hide visibility of the walkthrough at startup of extension"
+        "kdb.insights": {
+          "deprecationMessage": "This setting is deprecated, use kdb.insightsEnterpriseConnections instead",
+          "type": "object",
+          "description": "kdb insights for explorer"
+        },
+        "kdb.insightsEnterpriseConnections": {
+          "type": "object",
+          "description": "kdb insights enterprise connections for explorer"
         },
         "kdb.hideInstallationNotification": {
           "type": "boolean",
@@ -152,6 +166,11 @@
         "kdb.qHomeDirectory": {
           "type": "string",
           "description": "QHOME directory for q runtime"
+        },
+        "kdb.hideSubscribeRegistrationNotification": {
+          "type": "boolean",
+          "description": "Hide subscribe for registration notification",
+          "default": false
         }
       }
     },
@@ -173,10 +192,6 @@
         "title": "Stop q process"
       },
       {
-        "command": "kdb.hideWalkthrough",
-        "title": "Hide walkthrough"
-      },
-      {
         "command": "kdb.addConnection",
         "title": "Add new connection"
       },
@@ -186,11 +201,59 @@
       },
       {
         "command": "kdb.connect",
-        "title": "Connect kdb server"
+        "title": "Connect server"
+      },
+      {
+        "command": "kdb.insightsConnect",
+        "title": "Connect to Insights"
+      },
+      {
+        "command": "kdb.insightsRemove",
+        "title": "Remove connection"
       },
       {
         "command": "kdb.disconnect",
-        "title": "Disconnect kdb server"
+        "title": "Disconnect"
+      },
+      {
+        "command": "kdb.dataSource.addDataSource",
+        "title": "Add new DataSource"
+      },
+      {
+        "command": "kdb.dataSource.populateScratchpad",
+        "title": "Populate a new scratchpad"
+      },
+      {
+        "command": "kdb.dataSource.saveDataSource",
+        "title": "Save changes in the DataSource"
+      },
+      {
+        "command": "kdb.dataSource.runDataSource",
+        "title": "Execute DataSource at Inisghts Instance"
+      },
+      {
+        "command": "kdb.dataSource.renameDataSource",
+        "title": "Rename DataSource"
+      },
+      {
+        "command": "kdb.dataSource.deleteDataSource",
+        "title": "Delete DataSource"
+      },
+      {
+        "command": "kdb.dataSource.openDataSource",
+        "title": "Open DataSource"
+      },
+      {
+        "command": "kdb.resultsPanel.update",
+        "title": "Update Results View"
+      },
+      {
+        "command": "kdb.resultsPanel.clear",
+        "title": "Clear Results View"
+      },
+      {
+        "command": "kdb.resultsPanel.export.csv",
+        "title": "Export to CSV"
       },
       {
         "command": "kdb.terminal.run",
@@ -208,17 +271,20 @@
     "keybindings": [
       {
         "command": "kdb.execute.selectedQuery",
-        "key": "ctrl+q",
+        "key": "ctrl+d",
+        "mac": "cmd+d",
         "when": "editorLangId == q"
       },
       {
         "command": "kdb.execute.fileQuery",
-        "key": "ctrl+shift+q",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d",
         "when": "editorLangId == q"
       },
       {
         "command": "kdb.terminal.run",
         "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
         "when": "editorLangId == q"
       }
     ],
@@ -241,8 +307,8 @@
           ".quke"
         ],
         "icon": {
-          "dark": "./images/kx.png",
-          "light": "./images/kx.png"
+          "dark": "./resources/dark/kx_logo.png",
+          "light": "./resources/light/kx_logo.png"
         },
         "configuration": "./language-configuration.json"
       }
@@ -261,28 +327,88 @@
           "title": "KX",
           "icon": "resources/kx_logo.svg"
         }
+      ],
+      "panel": [
+        {
+          "id": "kdb-results",
+          "title": "KDB Results",
+          "icon": "resources/kx_logo.svg"
+        }
       ]
     },
     "views": {
       "kdb-explorer": [
         {
           "id": "kdb-servers",
-          "name": "kdb servers",
+          "name": "Connections",
           "icon": "resources/server.svg"
+        },
+        {
+          "id": "kdb-datasources-explorer",
+          "name": "Data Sources",
+          "contextualTitle": "Data Sources",
+          "when": "kdb.insightsConnected"
+        }
+      ],
+      "kdb-results": [
+        {
+          "id": "kdb-results",
+          "name": "KDB Results",
+          "type": "webview"
         }
       ]
     },
     "viewsWelcome": [
       {
         "view": "kdb-servers",
-        "contents": "No kdb servers registered [learn more](https://www.bing.com).\n[Connect to kdb server](command:kdb.addConnection)"
+        "contents": "No connections registered.\n[Add Connection](command:kdb.addConnection)"
       }
     ],
     "menus": {
       "commandPalette": [
         {
-          "when": "false",
-          "command": "kdb.hideWalkthrough"
+          "command": "kdb.insightsConnect",
+          "when": "false"
+        },
+        {
+          "command": "kdb.insightsRemove",
+          "when": "false"
+        },
+        {
+          "command": "kdb.startLocalProcess",
+          "when": "false"
+        },
+        {
+          "command": "kdb.stopLocalProcess",
+          "when": "false"
+        },
+        {
+          "command": "kdb.addConnection",
+          "when": "false"
+        },
+        {
+          "command": "kdb.removeConnection",
+          "when": "false"
+        },
+        {
+          "command": "kdb.connect",
+          "when": "false"
+        },
+        {
+          "command": "kdb.disconnect",
+          "when": "false"
+        }
+      ],
+      "webview/context": [
+        {
+          "command": "kdb.resultsPanel.clear",
+          "when": "view == kdb-results",
+          "group": "resultsPanel"
+        },
+        {
+          "command": "kdb.resultsPanel.export.csv",
+          "when": "view == kdb-results",
+          "group": "resultsPanel"
         }
       ],
       "view/title": [
@@ -294,6 +420,21 @@
           "command": "kdb.refreshServerObjects",
           "when": "view == kdb-servers",
           "group": "navigation"
+        },
+        {
+          "command": "kdb.dataSource.addDataSource",
+          "when": "view == kdb-datasources-explorer",
+          "group": "dataSourceFiles"
+        },
+        {
+          "command": "kdb.resultsPanel.clear",
+          "when": "view == kdb-results",
+          "group": "resultsPanel"
+        },
+        {
+          "command": "kdb.resultsPanel.export.csv",
+          "when": "view == kdb-results",
+          "group": "resultsPanel"
         }
       ],
       "view/item/context": [
@@ -303,8 +444,18 @@
           "group": "connection"
         },
         {
+          "command": "kdb.insightsConnect",
+          "when": "view == kdb-servers && viewItem not in kdb.connected && viewItem in kdb.insightsNodes",
+          "group": "connection"
+        },
+        {
+          "command": "kdb.insightsRemove",
+          "when": "view == kdb-servers && viewItem in kdb.insightsNodes",
+          "group": "connection"
+        },
+        {
           "command": "kdb.disconnect",
-          "when": "view == kdb-servers && viewItem in kdb.connected && viewItem in kdb.rootNodes",
+          "when": "view == kdb-servers && viewItem in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection"
         },
         {
@@ -321,6 +472,21 @@
           "command": "kdb.stopLocalProcess",
           "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running && viewItem in kdb.rootNodes",
           "group": "connection"
+        },
+        {
+          "command": "kdb.dataSource.openDataSource",
+          "when": "view == kdb-datasources-explorer && viewItem in kdb.dataSourceTreeNodes",
+          "group": "dataSourceFiles"
+        },
+        {
+          "command": "kdb.dataSource.renameDataSource",
+          "when": "view == kdb-datasources-explorer && viewItem in kdb.dataSourceTreeNodes",
+          "group": "dataSourceFiles"
+        },
+        {
+          "command": "kdb.dataSource.deleteDataSource",
+          "when": "view == kdb-datasources-explorer && viewItem in kdb.dataSourceTreeNodes",
+          "group": "dataSourceFiles"
         }
       ],
       "editor/title": [
@@ -355,17 +521,15 @@
     }
   },
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/KxSystems/kx-vscode/issues"
-  },
-  "homepage": "https://github.com/KxSystems/kx-vscode#readme",
+  "homepage": "https://kx.com",
   "scripts": {
     "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
-    "esbuild-base": "rimraf out && esbuild ./server/src/server.ts --bundle --outfile=out/server.js --external:vscode --format=cjs --platform=node && esbuild ./src/extension.ts --bundle --outfile=out/extension.js --external:vscode --format=cjs --platform=node",
+    "esbuild-base": "rimraf out && node ./esbuild.js",
     "build": "npm run -S esbuild-base -- --sourcemap",
     "watch": "npm run -S esbuild-base -- --sourcemap --watch",
     "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
-    "test": "npm run -S esbuild-base -- --sourcemap && tsc -p ./test && node ./out/test/runTest.js",
+    "test": "tsc -p ./test && node ./out/test/runTest.js",
+    "coverage": "tsc -p ./test && node ./out/test/runTest.js --coverage",
     "package": "npx vsce package",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
     "generate-parser": "antlr4-tool -o q-parser grammars/q.g4"
@@ -379,11 +543,16 @@
     "@types/fs-extra": "^9.0.13",
     "@types/glob": "^8.0.1",
     "@types/graceful-fs": "^4.1.6",
+    "@types/istanbul-lib-coverage": "^2.0.4",
+    "@types/istanbul-reports": "^3.0.1",
+    "@types/jwt-decode": "^3.1.0",
     "@types/klaw": "^3.0.3",
     "@types/mocha": "^10.0.1",
     "@types/node": "^18.15.11",
     "@types/node-fetch": "^2.6.2",
     "@types/picomatch": "^2.3.0",
+    "@types/request-promise": "^4.1.48",
+    "@types/semver": "^7.5.0",
     "@types/sinon": "^10.0.13",
     "@types/vscode": "^1.66.0",
     "@typescript-eslint/eslint-plugin": "^5.36.2",
@@ -394,7 +563,13 @@
     "esbuild": "^0.15.7",
     "eslint": "^8.23.0",
     "eslint-plugin-header": "^3.1.1",
+    "eslint-plugin-license-header": "^0.6.0",
     "glob": "^8.1.0",
+    "istanbul-lib-coverage": "^3.2.0",
+    "istanbul-lib-instrument": "^3.3.0",
+    "istanbul-lib-report": "^2.0.8",
+    "istanbul-lib-source-maps": "^3.0.6",
+    "istanbul-reports": "^3.1.6",
     "mocha": "^10.2.0",
     "mocha-junit-reporter": "^2.2.0",
     "mocha-multi-reporters": "^1.5.1",
@@ -403,10 +578,10 @@
     "sinon": "^15.0.1",
     "typescript": "^4.8.2",
     "vscode-dts": "^0.3.3",
-    "vscode-test": "^1.6.1",
     "vscode-languageclient": "^8.0.2",
     "vscode-languageserver": "^8.1.0",
-    "vscode-languageserver-textdocument": "^1.0.7"
+    "vscode-languageserver-textdocument": "^1.0.7",
+    "vscode-test": "^1.6.1"
   },
   "dependencies": {
     "@azure/arm-resources": "4.2.2",
@@ -419,18 +594,29 @@
     "@types/graceful-fs": "^4.1.6",
     "@types/klaw": "^3.0.3",
     "@types/picomatch": "^2.3.0",
+    "@vscode/webview-ui-toolkit": "^1.2.2",
     "@windozer/node-q": "^2.6.0",
+    "ag-grid-community": "^30.1.0",
     "antlr4-runtime": "^4.13.0",
     "antlr4ts": "^0.5.0-alpha.4",
+    "axios": "^1.4.0",
     "azure-arm-resource": "^7.4.0",
     "csv-parser": "^3.0.0",
+    "esbuild-plugin-copy": "^2.1.1",
     "extract-zip": "^2.0.1",
     "fs-extra": "^10.1.0",
     "fuse.js": "^6.6.2",
+    "jwt-decode": "^3.1.2",
     "klaw": "^4.1.0",
+    "moment": "^2.29.4",
+    "moment-duration-format": "^2.3.2",
+    "moment-timezone": "^0.5.43",
     "node-fetch": "^2.6.6",
-    "node-q": "^2.6.0",
+    "node-q": "^2.6.1",
+    "open": "^6.4.0",
     "picomatch": "^2.3.1",
+    "request-promise": "^4.2.6",
+    "semver": "^7.5.3",
     "vscode-extension-telemetry": "^0.4.5",
     "vscode-languageclient": "^8.0.2",
     "vscode-languageserver": "^8.1.0",
