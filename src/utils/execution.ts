@@ -124,27 +124,3 @@ export async function exportToCsv(workspaceUri: Uri): Promise<void> {
   await workspace.fs.writeFile(filePath, Buffer.from(ext.resultPanelCSV));
   window.showTextDocument(filePath, { preview: false });
 }
-
-export async function exportToCsv1(workspaceUri: Uri): Promise<void> {
-  const timestamp = Date.now();
-  const fileName = `results-${timestamp}.csv`;
-  const filePath = Uri.parse(path.join(workspaceUri.fsPath, fileName));
-  await workspace.fs.writeFile(filePath, Buffer.from(ext.resultPanelCSV));
-  window.showTextDocument(filePath, { preview: false });
-}
-
-export async function exportToCsv2(workspaceUri: Uri): Promise<void> {
-  const timestamp = Date.now();
-  const fileName = `results-${timestamp}.csv`;
-  const filePath = Uri.parse(path.join(workspaceUri.fsPath, fileName));
-  await workspace.fs.writeFile(filePath, Buffer.from(ext.resultPanelCSV));
-  window.showTextDocument(filePath, { preview: false });
-}
-
-export async function exportToCsv3(workspaceUri: Uri): Promise<void> {
-  const timestamp = Date.now();
-  const fileName = `results-${timestamp}.csv`;
-  const filePath = Uri.parse(path.join(workspaceUri.fsPath, fileName));
-  await workspace.fs.writeFile(filePath, Buffer.from(ext.resultPanelCSV));
-  window.showTextDocument(filePath, { preview: false });  
-}
