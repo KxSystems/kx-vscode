@@ -131,6 +131,7 @@ export async function exportToCsv1(workspaceUri: Uri): Promise<void> {
   const filePath = Uri.parse(path.join(workspaceUri.fsPath, fileName));
   await workspace.fs.writeFile(filePath, Buffer.from(ext.resultPanelCSV));
   window.showTextDocument(filePath, { preview: false });
+}
 
 export async function exportToCsv2(workspaceUri: Uri): Promise<void> {
   const timestamp = Date.now();
@@ -138,6 +139,7 @@ export async function exportToCsv2(workspaceUri: Uri): Promise<void> {
   const filePath = Uri.parse(path.join(workspaceUri.fsPath, fileName));
   await workspace.fs.writeFile(filePath, Buffer.from(ext.resultPanelCSV));
   window.showTextDocument(filePath, { preview: false });
+}
 
 export async function exportToCsv3(workspaceUri: Uri): Promise<void> {
   const timestamp = Date.now();
@@ -145,3 +147,4 @@ export async function exportToCsv3(workspaceUri: Uri): Promise<void> {
   const filePath = Uri.parse(path.join(workspaceUri.fsPath, fileName));
   await workspace.fs.writeFile(filePath, Buffer.from(ext.resultPanelCSV));
   window.showTextDocument(filePath, { preview: false });  
+}
