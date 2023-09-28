@@ -391,6 +391,88 @@ describe("qLangServer", () => {
   });
 
   describe("onRenameRequest", () => {
+    it("should return null", () => {
+      const doc = TextDocument.create(
+        "/test/test.q",
+        "q",
+        1,
+        "SOMEVAR:1;\nSOMEVAR:2;\nSOMEVAR:2;"
+      );
+      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const position = Position.create(0, 1);
+      const newName = "CHANGEDVAR";
+      const getStub = sinon.stub(server.documents, "get");
+      getStub.value(() => undefined);
+      const valuesStub = sinon.stub(
+        server.analyzer["uriToTextDocument"],
+        "values"
+      );
+      valuesStub.value(() => [doc]);
+      const result = server["onRenameRequest"](<RenameParams>{
+        textDocument,
+        position,
+        newName,
+      });
+      assert.strictEqual(result, null);
+    });
+
+    it("should return null", () => {
+      const doc = TextDocument.create(
+        "/test/test.q",
+        "q",
+        1,
+        "SOMEVAR:1;\nSOMEVAR:2;\nSOMEVAR:2;"
+      );
+      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const position = Position.create(0, 1);
+      const newName = "CHANGEDVAR";
+      const getStub = sinon.stub(server.documents, "get");
+      getStub.value(() => doc);
+      const valuesStub = sinon.stub(
+        server.analyzer["uriToTextDocument"],
+        "values"
+      );
+      valuesStub.value(() => [doc]);
+      const getWordRangeAtPositionStub = sinon.stub(
+        server.analyzer,
+        "getWordRangeAtPosition"
+      );
+      getWordRangeAtPositionStub.value(() => undefined);
+      const result = server["onRenameRequest"](<RenameParams>{
+        textDocument,
+        position,
+        newName,
+      });
+      assert.strictEqual(result, null);
+    });
+
+    it("should return null", () => {
+      const doc = TextDocument.create(
+        "/test/test.q",
+        "q",
+        1,
+        "SOMEVAR:1;\nSOMEVAR:2;\nSOMEVAR:2;"
+      );
+      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const position = Position.create(0, 1);
+      const newName = "CHANGEDVAR";
+      const getStub = sinon.stub(server.documents, "get");
+      getStub.value(() => doc);
+      const valuesStub = sinon.stub(
+        server.analyzer["uriToTextDocument"],
+        "values"
+      );
+      valuesStub.value(() => [doc]);
+      const getTextStub = sinon.stub(doc, "getText");
+      getTextStub.value(() => "");
+      const result = server["onRenameRequest"](<RenameParams>{
+        textDocument,
+        position,
+        newName,
+      });
+      assert.strictEqual(result, null);
+    });
+
     it("should return a value", () => {
       const doc = TextDocument.create(
         "/test/test.q",
