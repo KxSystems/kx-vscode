@@ -392,19 +392,28 @@ describe("qLangServer", () => {
 
   describe("onRenameRequest", () => {
     it("should return a value", () => {
-      const doc = TextDocument.create("/test/test.q", "q", 1, "SOMEVAR:1");
+      const doc = TextDocument.create(
+        "/test/test.q",
+        "q",
+        1,
+        "SOMEVAR:1;\nSOMEVAR:2;\nSOMEVAR:2;"
+      );
       const textDocument = TextDocumentIdentifier.create("/test/test.q");
       const position = Position.create(0, 1);
       const newName = "CHANGEDVAR";
       const getStub = sinon.stub(server.documents, "get");
       getStub.value(() => doc);
+      const valuesStub = sinon.stub(
+        server.analyzer["uriToTextDocument"],
+        "values"
+      );
+      valuesStub.value(() => [doc]);
       const result = server["onRenameRequest"](<RenameParams>{
         textDocument,
         position,
         newName,
       });
-      // TODO
-      assert.strictEqual(result, null);
+      assert.strictEqual(result.changes["/test/test.q"].length, 3);
     });
   });
 

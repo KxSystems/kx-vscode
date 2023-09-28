@@ -134,6 +134,7 @@ export default class QLangServer {
       // Whether the server supports finding references to a symbol.
       referencesProvider: true,
       // Whether the server supports renaming a symbol.
+      renameProvider: true,
       // renameProvider: { prepareProvider: true },
       // Whether the server supports providing semantic tokens for a document.
       /*
@@ -337,13 +338,16 @@ export default class QLangServer {
     position,
     newName,
   }: RenameParams): WorkspaceEdit | null | undefined {
-    // Create a new TextDocumentPositionParams object with the textDocument and position properties.
-    const params: TextDocumentPositionParams = { textDocument, position };
-    // Get the keyword at the given position in the document.
-    const keyword = this.getKeyword(params);
-    const document = this.documents.get(params.textDocument.uri);
-    // If there is no keyword, return null.
-    if (!keyword || !document) {
+    const document = this.documents.get(textDocument.uri);
+    if (!document) {
+      return null;
+    }
+    const wordRange = this.analyzer.getWordRangeAtPosition(document, position);
+    if (!wordRange) {
+      return null;
+    }
+    const keyword = document.getText(wordRange);
+    if (!keyword) {
       return null;
     }
     // Find all references to the symbol in the document and create a workspace edit to rename them.
