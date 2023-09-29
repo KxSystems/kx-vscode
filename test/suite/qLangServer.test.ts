@@ -33,6 +33,10 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import QLangServer from "../../server/src/qLangServer";
 
 describe("qLangServer", () => {
+  function createTextDocumentIdentifier() {
+    return TextDocumentIdentifier.create("/test/test.q");
+  }
+
   let server: QLangServer;
 
   beforeEach(async () => {
@@ -124,7 +128,7 @@ describe("qLangServer", () => {
       const getKeywordStub = sinon.stub(server, <any>"getKeyword");
       getKeywordStub.value(() => undefined);
       const result = server["onCompletion"](<TextDocumentPositionParams>{
-        textDocument: TextDocumentIdentifier.create("/test/test.q"),
+        textDocument: createTextDocumentIdentifier(),
         position: Position.create(0, 0),
       });
       assert.strictEqual(result.length, 0);
@@ -132,7 +136,7 @@ describe("qLangServer", () => {
 
     it("should return a value", () => {
       const doc = TextDocument.create("/test/test.q", "q", 1, "aco");
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const textDocument = createTextDocumentIdentifier();
       const position = Position.create(0, 3);
       const getStub = sinon.stub(server.documents, "get");
       getStub.value(() => doc);
@@ -157,7 +161,7 @@ describe("qLangServer", () => {
       const getKeywordStub = sinon.stub(server, <any>"getEntireKeyword");
       getKeywordStub.value(() => undefined);
       const result = await server["onHover"](<TextDocumentPositionParams>{
-        textDocument: TextDocumentIdentifier.create("/test/test.q"),
+        textDocument: createTextDocumentIdentifier(),
         position: Position.create(0, 0),
       });
       assert.strictEqual(result, null);
@@ -165,7 +169,7 @@ describe("qLangServer", () => {
 
     it("onHover should return a value", async () => {
       const doc = TextDocument.create("/test/test.q", "q", 1, "acos");
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const textDocument = createTextDocumentIdentifier();
       const position = Position.create(0, 1);
       const getStub = sinon.stub(server.documents, "get");
       getStub.value(() => doc);
@@ -181,7 +185,7 @@ describe("qLangServer", () => {
   describe("onDocumentHighlight", () => {
     it("should return an empty array", () => {
       const result = server["onDocumentHighlight"](<TextDocumentPositionParams>{
-        textDocument: TextDocumentIdentifier.create("/test/test.q"),
+        textDocument: createTextDocumentIdentifier(),
         position: Position.create(0, 0),
       });
       assert.strictEqual(result.length, 0);
@@ -193,7 +197,7 @@ describe("qLangServer", () => {
       const getStub = sinon.stub(server.documents, "get");
       getStub.value(() => undefined);
       const result = server["onDefinition"](<TextDocumentPositionParams>{
-        textDocument: TextDocumentIdentifier.create("/test/test.q"),
+        textDocument: createTextDocumentIdentifier(),
         position: Position.create(0, 0),
       });
       assert.strictEqual(result.length, 0);
@@ -206,7 +210,7 @@ describe("qLangServer", () => {
         1,
         "test_func: {[x] x*x};\ntest_func[2];"
       );
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const textDocument = createTextDocumentIdentifier();
       const position = Position.create(1, 1);
       const getStub = sinon.stub(server.documents, "get");
       getStub.value(() => doc);
@@ -229,7 +233,7 @@ describe("qLangServer", () => {
         1,
         "test_func: {[x] x*x};\ntest_func[2];"
       );
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const textDocument = createTextDocumentIdentifier();
       const position = Position.create(1, 1);
       const getStub = sinon.stub(server.documents, "get");
       getStub.value(() => doc);
@@ -257,7 +261,7 @@ describe("qLangServer", () => {
         1,
         "test_func: {[x] x*x};\ntest_func[2];"
       );
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const textDocument = createTextDocumentIdentifier();
       const position = Position.create(1, 1);
       const getStub = sinon.stub(server.documents, "get");
       getStub.value(() => doc);
@@ -281,7 +285,7 @@ describe("qLangServer", () => {
       const getStub = sinon.stub(server.documents, "get");
       getStub.value(() => undefined);
       const result = server["onDocumentSymbol"](<TextDocumentPositionParams>{
-        textDocument: TextDocumentIdentifier.create("/test/test.q"),
+        textDocument: createTextDocumentIdentifier(),
         position: Position.create(0, 0),
       });
       assert.strictEqual(result.length, 0);
@@ -289,7 +293,7 @@ describe("qLangServer", () => {
 
     it("should return a value", () => {
       const doc = TextDocument.create("/test/test.q", "q", 1, "a:1; b:2;");
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const textDocument = createTextDocumentIdentifier();
       const position = Position.create(0, 3);
       const getStub = sinon.stub(server.documents, "get");
       getStub.value(() => doc);
@@ -309,7 +313,7 @@ describe("qLangServer", () => {
       const result = server["onPrepareCallHierarchy"](<
         TextDocumentPositionParams
       >{
-        textDocument: TextDocumentIdentifier.create("/test/test.q"),
+        textDocument: createTextDocumentIdentifier(),
         position: Position.create(0, 0),
       });
       assert.strictEqual(result.length, 0);
@@ -317,7 +321,7 @@ describe("qLangServer", () => {
 
     it("should return a value", () => {
       const doc = TextDocument.create("/test/test.q", "q", 1, "a:1; b:2;");
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const textDocument = createTextDocumentIdentifier();
       const position = Position.create(0, 3);
       const getStub = sinon.stub(server.documents, "get");
       getStub.value(() => doc);
@@ -355,7 +359,7 @@ describe("qLangServer", () => {
 
   describe("onReferences", () => {
     it("should return an empty array", () => {
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const textDocument = createTextDocumentIdentifier();
       const position = Position.create(0, 0);
       const getStub = sinon.stub(server.documents, "get");
       getStub.value(() => undefined);
@@ -373,7 +377,7 @@ describe("qLangServer", () => {
         1,
         "test_func: {[x] x*x};\ntest_func[2];"
       );
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const textDocument = createTextDocumentIdentifier();
       const position = Position.create(1, 1);
       const getStub = sinon.stub(server.documents, "get");
       getStub.value(() => doc);
@@ -391,14 +395,18 @@ describe("qLangServer", () => {
   });
 
   describe("onRenameRequest", () => {
-    it("should return null", () => {
-      const doc = TextDocument.create(
+    function createDocument() {
+      return TextDocument.create(
         "/test/test.q",
         "q",
         1,
         "SOMEVAR:1;\nSOMEVAR:2;\nSOMEVAR:2;"
       );
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+    }
+
+    it("should return null", () => {
+      const doc = createDocument();
+      const textDocument = createTextDocumentIdentifier();
       const position = Position.create(0, 1);
       const newName = "CHANGEDVAR";
       const getStub = sinon.stub(server.documents, "get");
@@ -417,13 +425,8 @@ describe("qLangServer", () => {
     });
 
     it("should return null", () => {
-      const doc = TextDocument.create(
-        "/test/test.q",
-        "q",
-        1,
-        "SOMEVAR:1;\nSOMEVAR:2;\nSOMEVAR:2;"
-      );
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const doc = createDocument();
+      const textDocument = createTextDocumentIdentifier();
       const position = Position.create(0, 1);
       const newName = "CHANGEDVAR";
       const getStub = sinon.stub(server.documents, "get");
@@ -447,13 +450,8 @@ describe("qLangServer", () => {
     });
 
     it("should return null", () => {
-      const doc = TextDocument.create(
-        "/test/test.q",
-        "q",
-        1,
-        "SOMEVAR:1;\nSOMEVAR:2;\nSOMEVAR:2;"
-      );
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const doc = createDocument();
+      const textDocument = createTextDocumentIdentifier();
       const position = Position.create(0, 1);
       const newName = "CHANGEDVAR";
       const getStub = sinon.stub(server.documents, "get");
@@ -474,13 +472,8 @@ describe("qLangServer", () => {
     });
 
     it("should return a value", () => {
-      const doc = TextDocument.create(
-        "/test/test.q",
-        "q",
-        1,
-        "SOMEVAR:1;\nSOMEVAR:2;\nSOMEVAR:2;"
-      );
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const doc = createDocument();
+      const textDocument = createTextDocumentIdentifier();
       const position = Position.create(0, 1);
       const newName = "CHANGEDVAR";
       const getStub = sinon.stub(server.documents, "get");
@@ -501,7 +494,7 @@ describe("qLangServer", () => {
 
   describe("onSignatureHelp", () => {
     it("should return a value", () => {
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const textDocument = createTextDocumentIdentifier();
       const position = Position.create(0, 0);
       const result = server["onSignatureHelp"](<SignatureHelpParams>{
         textDocument,
@@ -515,7 +508,7 @@ describe("qLangServer", () => {
   describe("onSemanticsTokens", () => {
     it("should return a value", () => {
       const doc = TextDocument.create("/test/test.q", "q", 1, "TOKEN:1");
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const textDocument = createTextDocumentIdentifier();
       const getStub = sinon.stub(server.documents, "get");
       getStub.value(() => doc);
       const result = server["onSemanticsTokens"](<SemanticTokensParams>{
@@ -547,7 +540,7 @@ describe("qLangServer", () => {
       const getStub = sinon.stub(server.documents, "get");
       getStub.value(() => undefined);
       const result = server["getKeyword"](<TextDocumentPositionParams>{
-        textDocument: TextDocumentIdentifier.create("/test/test.q"),
+        textDocument: createTextDocumentIdentifier(),
         position: Position.create(0, 0),
       });
       assert.strictEqual(result, undefined);
@@ -559,7 +552,7 @@ describe("qLangServer", () => {
       const getStub = sinon.stub(server.documents, "get");
       getStub.value(() => undefined);
       const result = server["getEntireKeyword"](<TextDocumentPositionParams>{
-        textDocument: TextDocumentIdentifier.create("/test/test.q"),
+        textDocument: createTextDocumentIdentifier(),
         position: Position.create(0, 0),
       });
       assert.strictEqual(result, undefined);
