@@ -16,6 +16,7 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { CancellationEvent } from "../../src/models/cancellationEvent";
 import { QueryResultType } from "../../src/models/queryResult";
+import { ServerType } from "../../src/models/server";
 import * as dataSourceUtils from "../../src/utils/dataSource";
 import * as executionUtils from "../../src/utils/execution";
 import { getNonce } from "../../src/utils/getNonce";
@@ -374,6 +375,19 @@ describe("Utils", () => {
       const expectedRes = ["a  b  ", "------", "1  2  ", "3  4  "].toString();
       const result = queryUtils.convertRowsToConsole(rows);
       assert.equal(result, expectedRes);
+    });
+
+    it("getConnectionType", () => {
+      const params: ServerType[] = [
+        ServerType.INSIGHTS,
+        ServerType.KDB,
+        ServerType.undefined,
+      ];
+      const expectedRes = ["insights", "kdb", "undefined"];
+      for (let i = 0; i < params.length; i++) {
+        const result = queryUtils.getConnectionType(params[i]);
+        assert.equal(result, expectedRes[i]);
+      }
     });
   });
 

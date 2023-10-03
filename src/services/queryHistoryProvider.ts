@@ -60,7 +60,6 @@ export class queryHistoryProvider implements TreeDataProvider<TreeItem> {
     return Promise.resolve(
       this.queryList.map((query) => {
         const label = query.connectionName + " - " + query.time;
-
         return new QueryHistoryTreeItem(
           label,
           query,
@@ -82,7 +81,7 @@ export class QueryHistoryTreeItem extends TreeItem {
       ext.kdbQueryHistoryNodes.push(label);
       commands.executeCommand(
         "setContext",
-        "kdb.kdbQueryHistoryNodes",
+        "kdb.kdbQueryHistoryList",
         ext.kdbQueryHistoryList
       );
     }
