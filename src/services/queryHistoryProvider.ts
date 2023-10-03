@@ -101,9 +101,6 @@ export class QueryHistoryTreeItem extends TreeItem {
       "- Connection Name: **" + this.details.connectionName + "** \n"
     );
     tooltipMd.appendMarkdown("- Connection Type: **" + connType + "** \n");
-    tooltipMd.appendMarkdown(
-      "- Connection Type: **" + this.details.connectionType + "** \n"
-    );
     tooltipMd.appendMarkdown("- Time: **" + this.details.time + "** \n");
     tooltipMd.appendMarkdown("- Query:");
     tooltipMd.appendCodeblock(this.details.query, "q");
