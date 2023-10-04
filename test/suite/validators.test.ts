@@ -12,38 +12,204 @@
  */
 
 import assert from "assert";
-import * as index from "../../src/validators/debounceValidation/index";
-import * as interfaceValidator from "../../src/validators/interfaceValidator";
-import * as kdbValidator from "../../src/validators/kdbValidator";
-import * as rule from "../../src/validators/rule";
-import * as hasLowerCase from "../../src/validators/validationFunctions/hasLowerCase";
-import * as hasNoForbiddenChar from "../../src/validators/validationFunctions/hasNoForbiddenChar";
-import * as hasSpecialChar from "../../src/validators/validationFunctions/hasSpecialChar";
-import * as hasUpperCase from "../../src/validators/validationFunctions/hasUpperCase";
-import * as isAvailable from "../../src/validators/validationFunctions/isAvailable";
-import * as isNotEmpty from "../../src/validators/validationFunctions/isNotEmpty";
-import * as lengthRange from "../../src/validators/validationFunctions/lengthRange";
+import { validateScratchpadOutputVariableName } from "../../src/validators/interfaceValidator";
+import {
+  validateServerAlias,
+  validateServerName,
+  validateServerPassword,
+  validateServerPort,
+  validateServerUsername,
+  validateTls,
+} from "../../src/validators/kdbValidator";
 import { Validator } from "../../src/validators/validator";
 
-describe("interfaceValidator", () => {
-  //write tests for src/validators/interfaceValidator.ts
-  //function to be deleted after write the tests
-  interfaceValidator;
+describe("Interface validation tests", () => {
+  it("Should return successful scratchpad variable output name", () => {
+    const result = validateScratchpadOutputVariableName("test");
+    assert.strictEqual(
+      result,
+      undefined,
+      "Correct input value should return success."
+    );
+  });
+
+  it("Should return failed validation with invalid scratchpad variable output name", () => {
+    const result = validateScratchpadOutputVariableName(
+      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+    );
+    assert.strictEqual(
+      result,
+      "Input value must be between 1 and 64 alphanumeric characters in length.",
+      "Invalid input value should return fail."
+    );
+  });
 });
 
 describe("kdbValidator", () => {
-  //write tests for src/validators/kdbValidator.ts
-  //function to be deleted after write the tests
-  kdbValidator;
+  it("Should return fail for server alias that is blank or undefined", () => {
+    const result = validateServerAlias(undefined);
+    assert.strictEqual(
+      result,
+      undefined,
+      "Server alias that is undefined should validate as undefined"
+    );
+  });
+
+  it("Should return fail for server alias that starts with a space", () => {
+    const result = validateServerAlias(" test");
+    assert.strictEqual(
+      result,
+      "Input value cannot start with a space.",
+      "Input started with a space and should fail validation."
+    );
+  });
+
+  it("Should return fail for server alias that is outside the size limits", () => {
+    const result = validateServerAlias(
+      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+    );
+    assert.strictEqual(
+      result,
+      "Input value must be between 1 and 64 alphanumeric characters in length.",
+      "Input was outside the size limits."
+    );
+  });
+
+  it("Should return fail for server alias should not contain special chars", () => {
+    const result = validateServerAlias("test!");
+    assert.strictEqual(
+      result,
+      "Input value must contain only alphanumeric characters and hypens only",
+      "Input contained special chars"
+    );
+  });
+
+  it("Should return fail if using restricted keyword", () => {
+    const result = validateServerAlias("InsightsEnterprise");
+    assert.strictEqual(
+      result,
+      "Input value using restricted keywords of Insights Enterprise",
+      "Input contained restricted keyword."
+    );
+  });
+
+  it("Should return fail for server name that is blank or undefined", () => {
+    const result = validateServerName(undefined);
+    assert.strictEqual(
+      result,
+      undefined,
+      "Server name that is undefined should validate as undefined"
+    );
+  });
+
+  it("Should return fail for server name that is outside the size limits", () => {
+    const result = validateServerName(
+      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+    );
+    assert.strictEqual(
+      result,
+      "Input value must be between 1 and 64 alphanumeric characters in length.",
+      "Input was outside the size limits."
+    );
+  });
+
+  it("Should return fail for server port that is blank or undefined", () => {
+    const result = validateServerPort(undefined);
+    assert.strictEqual(
+      result,
+      undefined,
+      "Server port that is undefined should validate as undefined"
+    );
+  });
+
+  it("Should return fail for server port that is not a number", () => {
+    const result = validateServerPort("test");
+    assert.strictEqual(
+      result,
+      "Input value must be a number.",
+      "Input was not a number for server port."
+    );
+  });
+
+  it("Should return fail for server port that is outside of range", () => {
+    const result = validateServerPort("65537");
+    assert.strictEqual(
+      result,
+      "Invalid port number, valid range is 1-65536",
+      "input was not in valid port range"
+    );
+  });
+
+  it("Should return success for server port that is valid", () => {
+    const result = validateServerPort("5001");
+    assert.strictEqual(result, undefined, "Server port was valid");
+  });
+
+  it("Should return fail for server username that is blank or undefined", () => {
+    const result = validateServerUsername(undefined);
+    assert.strictEqual(
+      result,
+      undefined,
+      "Server username that is undefined should validate as undefined."
+    );
+  });
+
+  it("Should return fail for server username that is outside the size limits", () => {
+    const result = validateServerUsername(
+      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+    );
+    assert.strictEqual(
+      result,
+      "Input value must be between 1 and 64 alphanumeric characters in length.",
+      "Input was outside the size limits."
+    );
+  });
+
+  it("Should return fail for server password that is blank or undefined", () => {
+    const result = validateServerPassword(undefined);
+    assert.strictEqual(
+      result,
+      undefined,
+      "Server password that is undefined should validate as undefined."
+    );
+  });
+
+  it("Should return fail for server password that is outside the size limits", () => {
+    const result = validateServerPassword(
+      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+    );
+    assert.strictEqual(
+      result,
+      "Input value must be between 1 and 64 alphanumeric characters in length.",
+      "Input was outside the size limits."
+    );
+  });
+
+  it("Should return fail for server tls that is blank or undefined", () => {
+    const result = validateTls(undefined);
+    assert.strictEqual(
+      result,
+      undefined,
+      "Server tls that is undefined should validate as undefined."
+    );
+  });
+
+  it("Should return fail for server tls that is not true or false", () => {
+    const result = validateTls("test");
+    assert.strictEqual(
+      result,
+      "Input value must be a boolean (true or false)",
+      "Server tls should be boolean"
+    );
+  });
+
+  it("Should return success for server tls that is true", () => {
+    const result = validateTls("true");
+    assert.strictEqual(result, undefined, "Server tls is valid boolean");
+  });
 });
 
-describe("rule", () => {
-  //write tests for src/validators/rule.ts
-  //function to be deleted after write the tests
-  rule;
-});
-
-describe("validator", () => {
+describe("Validation functions", () => {
   it("Should return validated empty object", () => {
     const vTest = new Validator("");
     const result = vTest.isNotEmpty();
@@ -56,63 +222,87 @@ describe("validator", () => {
 
   it("Should return validated success for special char", () => {
     const vTest = new Validator("t*st");
-    const result = vTest.hasSpecialChar(new RegExp("*"));
+    const result = vTest.hasSpecialChar(new RegExp("\\*"));
     assert.strictEqual(
       result.getErrors(),
-      undefined,
-      "String passed contained special chars"
+      null,
+      "String passed contains the special chars and didn't pass validation."
     );
   });
-});
 
-describe("debounceValidation", () => {
-  describe("index", () => {
-    //write tests for src/validators/debounceValidation/index.ts
-    //function to be deleted after write the tests
-    index;
-  });
-});
-
-describe("validationFunctions", () => {
-  describe("hasLowerCase", () => {
-    //write tests for src/validators/validationFunctions/hasLowerCase.ts
-    //function to be deleted after write the tests
-    hasLowerCase;
+  it("Should return validated fail for special char", () => {
+    const vTest = new Validator("t*st");
+    const result = vTest.hasSpecialChar(new RegExp("\\!"));
+    assert.strictEqual(
+      result.getErrors(),
+      "Password must have 1 special character.",
+      "String passed does not contain the special chars and should not pass."
+    );
   });
 
-  describe("hasNoForbiddenChar", () => {
-    //write tests for src/validators/validationFunctions/hasNoForbiddenChar.ts
-    //function to be deleted after write the tests
-    hasNoForbiddenChar;
+  it("Should return validated success for forbidden chars", () => {
+    const vTest = new Validator("t*est");
+    const result = vTest.hasNoForbiddenChar(
+      new RegExp("\\!"),
+      "Forbidden char found"
+    );
+    assert.strictEqual(
+      result.getErrors(),
+      null,
+      "String passsed does not contain forbidden characters"
+    );
   });
 
-  describe("hasSpecialChar", () => {
-    //write tests for src/validators/validationFunctions/hasSpecialChar.ts
-    //function to be deleted after write the tests
-    hasSpecialChar;
+  it("Should return validated fail for forbidden chars", () => {
+    const vTest = new Validator("t*est");
+    const result = vTest.hasNoForbiddenChar(
+      new RegExp("\\*"),
+      "Forbidden char found"
+    );
+    assert.strictEqual(
+      result.getErrors(),
+      "Forbidden char found",
+      "String passsed does not contain forbidden characters"
+    );
   });
 
-  describe("hasUpperCase", () => {
-    //write tests for src/validators/validationFunctions/hasUpperCase.ts
-    //function to be deleted after write the tests
-    hasUpperCase;
+  it("Should return validated success for length", () => {
+    const vTest = new Validator("test");
+    const result = vTest.inLengthRange(1, 4);
+    assert.strictEqual(
+      result.getErrors(),
+      null,
+      "Length of string is in range"
+    );
   });
 
-  describe("isAvailable", () => {
-    //write tests for src/validators/validationFunctions/isAvailable.ts
-    //function to be deleted after write the tests
-    isAvailable;
+  it("Should return validated failed for length", () => {
+    const vTest = new Validator("test");
+    const result = vTest.inLengthRange(1, 3);
+    assert.strictEqual(
+      result.getErrors(),
+      "Length must be between 1 and 3 characters",
+      "Length of string is not in range"
+    );
   });
 
-  describe("isNotEmpty", () => {
-    //write tests for src/validators/validationFunctions/isNotEmpty.ts
-    //function to be deleted after write the tests
-    isNotEmpty;
+  it("Should return validated success for lower case", () => {
+    const vTest = new Validator("test");
+    const result = vTest.hasLowerCase();
+    assert.strictEqual(
+      result.getErrors(),
+      null,
+      `String contains at least one lower case char: ${result.getErrors()}`
+    );
   });
 
-  describe("lengthRange", () => {
-    //write tests for src/validators/validationFunctions/lengthRange.ts
-    //function to be deleted after write the tests
-    lengthRange;
+  it("Should return validated fail for lower case", () => {
+    const vTest = new Validator("TEST");
+    const result = vTest.hasLowerCase();
+    assert.strictEqual(
+      result.getErrors(),
+      "Password should have at least one lowercase letter from a to z.",
+      "String contains both cases"
+    );
   });
 });
