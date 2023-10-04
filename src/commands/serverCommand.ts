@@ -18,13 +18,14 @@ import { join } from "path";
 import requestPromise from "request-promise";
 import * as url from "url";
 import {
-  commands,
   InputBoxOptions,
   Position,
   ProgressLocation,
   QuickPickItem,
   QuickPickOptions,
   Range,
+  commands,
+  env,
   window,
 } from "vscode";
 import { ext } from "../extensionVariables";
@@ -314,6 +315,13 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
 }
 
 export async function connectInsights(viewItem: InsightsNode): Promise<void> {
+  if (env.remoteName === "ssh-remote") {
+    window.showInformationMessage(
+      "Connecting to an Insights Enterprise server with a remote connection is not supported."
+    );
+    return;
+  }
+
   commands.executeCommand("kdb-results.focus");
 
   await getCurrentToken(viewItem.details.server, viewItem.details.alias);
