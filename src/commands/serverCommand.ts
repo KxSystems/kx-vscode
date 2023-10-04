@@ -289,6 +289,10 @@ export function addKdbConnection(): void {
 }
 
 export async function removeConnection(viewItem: KdbNode): Promise<void> {
+  if (viewItem.label.indexOf("connected") !== -1) {
+    await disconnect();
+  }
+
   const servers: Server | undefined = getServers();
 
   const key =
@@ -622,6 +626,10 @@ export async function getScratchpadQuery(
 export async function removeInsightsConnection(
   viewItem: InsightsNode
 ): Promise<void> {
+  if (viewItem.label.indexOf("connected") !== -1) {
+    await disconnect();
+  }
+
   const insights: Insights | undefined = getInsights();
 
   const key = getHash(viewItem.details.server);
