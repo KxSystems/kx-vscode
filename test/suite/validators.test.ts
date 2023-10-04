@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import * as azureValidator from "../../src/validators/azureValidator";
+import assert from "assert";
 import * as index from "../../src/validators/debounceValidation/index";
 import * as interfaceValidator from "../../src/validators/interfaceValidator";
 import * as kdbValidator from "../../src/validators/kdbValidator";
@@ -23,13 +23,7 @@ import * as hasUpperCase from "../../src/validators/validationFunctions/hasUpper
 import * as isAvailable from "../../src/validators/validationFunctions/isAvailable";
 import * as isNotEmpty from "../../src/validators/validationFunctions/isNotEmpty";
 import * as lengthRange from "../../src/validators/validationFunctions/lengthRange";
-import * as validator from "../../src/validators/validator";
-
-describe("azureValidator", () => {
-  //write tests for src/validators/azureValidator.ts
-  //function to be deleted after write the tests
-  azureValidator;
-});
+import { Validator } from "../../src/validators/validator";
 
 describe("interfaceValidator", () => {
   //write tests for src/validators/interfaceValidator.ts
@@ -50,9 +44,25 @@ describe("rule", () => {
 });
 
 describe("validator", () => {
-  //write tests for src/validators/validator.ts
-  //function to be deleted after write the tests
-  validator;
+  it("Should return validated empty object", () => {
+    const vTest = new Validator("");
+    const result = vTest.isNotEmpty();
+    assert.strictEqual(
+      result.getErrors(),
+      "Value cannot be empty.",
+      "Empty value should return validation error"
+    );
+  });
+
+  it("Should return validated success for special char", () => {
+    const vTest = new Validator("t*st");
+    const result = vTest.hasSpecialChar(new RegExp("*"));
+    assert.strictEqual(
+      result.getErrors(),
+      undefined,
+      "String passed contained special chars"
+    );
+  });
 });
 
 describe("debounceValidation", () => {
