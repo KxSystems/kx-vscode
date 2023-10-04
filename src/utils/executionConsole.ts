@@ -110,7 +110,7 @@ export class ExecutionConsole {
       `<<< ERROR -  ${serverName}  @ ${date.toLocaleTimeString()} >>>`
     );
     if (isConnected) {
-      this._console.appendLine(`ERROR Query executed: ${query}`);
+      this._console.appendLine(`ERROR Query executed: ${query}\n`);
       this._console.appendLine(result);
     } else {
       window.showErrorMessage(`Please connect to a kdb+ server`);
