@@ -261,11 +261,13 @@
       },
       {
         "command": "kdb.execute.selectedQuery",
-        "title": "Execute Current Selection"
+        "title": "Execute Current Selection",
+        "when": "kdb.connected"
       },
       {
         "command": "kdb.execute.fileQuery",
-        "title": "Execute Entire File"
+        "title": "Execute Entire File",
+        "when": "kdb.connected"
       }
     ],
     "keybindings": [
@@ -273,13 +275,13 @@
         "command": "kdb.execute.selectedQuery",
         "key": "ctrl+d",
         "mac": "cmd+d",
-        "when": "editorLangId == q"
+        "when": "editorLangId == q  && kdb.connected"
       },
       {
         "command": "kdb.execute.fileQuery",
         "key": "ctrl+shift+d",
         "mac": "cmd+shift+d",
-        "when": "editorLangId == q"
+        "when": "editorLangId == q && kdb.connected"
       },
       {
         "command": "kdb.terminal.run",
@@ -497,7 +499,7 @@
         },
         {
           "command": "kdb.execute.fileQuery",
-          "when": "resourceLangId ==  q",
+          "when": "resourceLangId ==  q  && kdb.connected",
           "group": "navigation"
         }
       ],
@@ -510,12 +512,12 @@
         {
           "command": "kdb.execute.selectedQuery",
           "group": "q",
-          "when": "editorLangId == q"
+          "when": "editorLangId == q  && kdb.connected"
         },
         {
           "command": "kdb.execute.fileQuery",
           "group": "q",
-          "when": "editorLangId == q"
+          "when": "editorLangId == q  && kdb.connected"
         }
       ]
     }
