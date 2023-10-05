@@ -114,7 +114,10 @@ export class Connection {
           result = handleQueryResults(err.toString(), QueryResultType.Error);
         } else if (res) {
           if (res.errored) {
-            result = handleQueryResults(res.error, QueryResultType.Error);
+            result = handleQueryResults(
+              res.error + (res.backtrace ? "\n" + res.backtrace : ""),
+              QueryResultType.Error
+            );
           } else {
             result = res.result;
           }
