@@ -55,10 +55,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     });
   }
 
-  public updateResults(
-    queryResults: string | string[],
-    dataSourceType?: string
-  ) {
+  public updateResults(queryResults: any, dataSourceType?: string) {
     if (this._view) {
       this._view.show?.(true);
       this._view.webview.postMessage(queryResults);
@@ -125,6 +122,10 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     };
   }
 
+  isVisible(): boolean {
+    return !!this._view?.visible;
+  }
+
   sanitizeString(str: string): string {
     str = str.trim();
     str = str.replace(/['"`]/g, "");
@@ -137,6 +138,12 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       return "ag-theme-alpine-dark";
     }
     return "ag-theme-alpine";
+  }
+
+  private _getLibUri(path: string) {
+    return this._view
+      ? getUri(this._view.webview, this._extensionUri, ["out", path])
+      : "";
   }
 
   private _getWebviewContent(
@@ -153,33 +160,12 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         "webview.js",
       ]);
       const nonce = getNonce();
-      const styleUri = getUri(this._view.webview, this._extensionUri, [
-        "out",
-        "resultsPanel.css",
-      ]);
-      const resetStyleUri = getUri(this._view.webview, this._extensionUri, [
-        "out",
-        "reset.css",
-      ]);
-      const vscodeStyleUri = getUri(this._view.webview, this._extensionUri, [
-        "out",
-        "vscode.css",
-      ]);
-      const agGridJS = getUri(this._view.webview, this._extensionUri, [
-        "out",
-        "ag-grid-community.min.js",
-      ]);
-      const agGridStyle = getUri(this._view.webview, this._extensionUri, [
-        "out",
-        "ag-grid.min.css",
-      ]);
-      const agGridThemeStyle = getUri(this._view.webview, this._extensionUri, [
-        "out",
-        "ag-theme-alpine.min.css",
-      ]);
       let result = "";
       let gridOptionsString = "";
       let rowsLimited = "";
+
+      // TODO - handle object (not string)
+
       if (typeof queryResult === "string" && queryResult.endsWith("\n..\n")) {
         queryResult = queryResult.slice(0, -4);
         rowsLimited =
@@ -230,13 +216,17 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-        <link rel="stylesheet" href="${resetStyleUri}" />
-        <link rel="stylesheet" href="${vscodeStyleUri}" />
-        <link rel="stylesheet" href="${styleUri}" />
-        <link rel="stylesheet" href="${agGridStyle}" />
-        <link rel="stylesheet" href="${agGridThemeStyle}" />
+        <link rel="stylesheet" href="${this._getLibUri("reset.css")}" />
+        <link rel="stylesheet" href="${this._getLibUri("vscode.css")}" />
+        <link rel="stylesheet" href="${this._getLibUri("resultsPanel.css")}" />
+        <link rel="stylesheet" href="${this._getLibUri("ag-grid.min.css")}" />
+        <link rel="stylesheet" href="${this._getLibUri(
+          "ag-theme-alpine.min.css"
+        )}" />
         <title>Q Results</title>
-        <script nonce="${nonce}" src="${agGridJS}"></script>
+        <script nonce="${nonce}" src="${this._getLibUri(
+        "ag-grid-community.min.js"
+      )}"></script>
       </head>
       <body>      
         <div class="results-view-container">
