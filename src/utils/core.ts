@@ -173,12 +173,11 @@ export function getServers(): Server | undefined {
 
 export function getInsights(): Insights | undefined {
   const configuration = workspace.getConfiguration();
-  const insights = configuration.get<Insights>(
-    "kdb.insightsEnterpriseConnections"
-  );
+  const insights = 
+    configuration.get<Insights>("kdb.insightsEnterpriseConnections");
 
-  return insights && Object.keys(insights).length > 0
-    ? insights
+  return insights && Object.keys(insights).length > 0 
+    ? insights 
     : configuration.get("kdb.insights");
 }
 
