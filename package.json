@@ -286,7 +286,7 @@
         "command": "kdb.terminal.run",
         "key": "ctrl+shift+r",
         "mac": "cmd+shift+r",
-        "when": "editorLangId == q && kdb.QHOME || config.kdb.qHomeDirectory"
+        "when": "editorLangId == q && (kdb.QHOME || config.kdb.qHomeDirectory)"
       }
     ],
     "snippets": [
@@ -493,7 +493,7 @@
       "editor/title": [
         {
           "command": "kdb.terminal.run",
-          "when": "resourceLangId ==  q && kdb.QHOME || config.kdb.qHomeDirectory",
+          "when": "resourceLangId ==  q && (kdb.QHOME || config.kdb.qHomeDirectory)",
           "group": "navigation"
         },
         {
@@ -505,7 +505,7 @@
       "editor/context": [
         {
           "command": "kdb.terminal.run",
-          "when": "resourceLangId == q && kdb.QHOME || config.kdb.qHomeDirectory",
+          "when": "resourceLangId == q && (kdb.QHOME || config.kdb.qHomeDirectory)",
           "group": "q"
         },
         {
