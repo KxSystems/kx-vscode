@@ -829,13 +829,10 @@ export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
           context = getQueryContext(editor.selection.end.line);
         }
         break;
-      case ExecutionTypes.ReRunQuery:
-        query = rerunQuery ? rerunQuery : "";
-        context = getQueryContext();
-        break;
       case ExecutionTypes.QueryFile:
+      case ExecutionTypes.ReRunQuery:
       default:
-        query = editor.document.getText();
+        query = rerunQuery ? rerunQuery : editor.document.getText();
         context = getQueryContext();
     }
     executeQuery(query, context);

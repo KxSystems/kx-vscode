@@ -73,7 +73,7 @@ import {
   KdbTreeProvider,
 } from "./services/kdbTreeProvider";
 import {
-  queryHistoryProvider,
+  QueryHistoryProvider,
   QueryHistoryTreeItem,
 } from "./services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
@@ -100,7 +100,7 @@ export async function activate(context: ExtensionContext) {
 
   ext.serverProvider = new KdbTreeProvider(servers!, insights!);
   ext.dataSourceProvider = new KdbDataSourceProvider();
-  ext.queryHistoryProvider = new queryHistoryProvider();
+  ext.queryHistoryProvider = new QueryHistoryProvider();
   ext.resultsViewProvider = new KdbResultsViewProvider(
     ext.context.extensionUri
   );
@@ -181,8 +181,8 @@ export async function activate(context: ExtensionContext) {
     }),
     commands.registerCommand(
       "kdb.queryHistory.rerun",
-      async (viewItem: QueryHistoryTreeItem) => {
-        await runQuery(ExecutionTypes.ReRunQuery, viewItem.details.query);
+      (viewItem: QueryHistoryTreeItem) => {
+        runQuery(ExecutionTypes.ReRunQuery, viewItem.details.query);
       }
     ),
     commands.registerCommand("kdb.queryHistory.clear", () => {

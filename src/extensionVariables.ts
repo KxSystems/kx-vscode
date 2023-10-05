@@ -24,7 +24,7 @@ import {
   KdbNode,
   KdbTreeProvider,
 } from "./services/kdbTreeProvider";
-import { queryHistoryProvider } from "./services/queryHistoryProvider";
+import { QueryHistoryProvider } from "./services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import AuthSettings from "./utils/secretStorage";
 
@@ -35,7 +35,7 @@ export namespace ext {
   export let consolePanel: OutputChannel;
   export let serverProvider: KdbTreeProvider;
   export let dataSourceProvider: KdbDataSourceProvider;
-  export let queryHistoryProvider: queryHistoryProvider;
+  export let queryHistoryProvider: QueryHistoryProvider;
   export let resultsViewProvider: KdbResultsViewProvider;
   export let serverObjects: ServerObject;
   export let openSslVersion: string | null;

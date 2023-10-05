@@ -26,10 +26,11 @@ import { ext } from "../extensionVariables";
 import { QueryHistory } from "../models/queryHistory";
 import { getConnectionType } from "../utils/queryUtils";
 
-export class queryHistoryProvider implements TreeDataProvider<TreeItem> {
-  private _onDidChangeTreeData: EventEmitter<
-    QueryHistoryTreeItem | undefined | void
-  > = new EventEmitter<QueryHistoryTreeItem | undefined | void>();
+type QueryHistoryType = QueryHistoryTreeItem | undefined | void;
+
+export class QueryHistoryProvider implements TreeDataProvider<TreeItem> {
+  private _onDidChangeTreeData: EventEmitter<QueryHistoryType> =
+    new EventEmitter<QueryHistoryType>();
   private queryList = ext.kdbQueryHistoryList;
   readonly onDidChangeTreeData: Event<QueryHistoryTreeItem | undefined | void> =
     this._onDidChangeTreeData.event;
