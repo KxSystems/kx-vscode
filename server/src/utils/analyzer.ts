@@ -252,6 +252,7 @@ export class AnalyzerContent {
 
   public getReferences(keyword: string, document: TextDocument): Location[] {
     const locations = [];
+    this.uriToTextDocument.set(document.uri, document);
     for (const doc of this.uriToTextDocument.values()) {
       const text = doc.getText();
 
