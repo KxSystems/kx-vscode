@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { env } from "node:process";
 import path from "path";
 import {
   CancellationToken,
@@ -99,6 +100,8 @@ export async function activate(context: ExtensionContext) {
   ext.resultsViewProvider = new KdbResultsViewProvider(
     ext.context.extensionUri
   );
+
+  commands.executeCommand("setContext", "kdb.QHOME", env.QHOME);
 
   window.registerTreeDataProvider("kdb-servers", ext.serverProvider);
   window.registerTreeDataProvider(
