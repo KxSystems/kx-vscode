@@ -42,6 +42,7 @@
     "onCommand:kdb.resultsPanel.clear",
     "onCommand:kdb.resultsPanel.export.csv",
     "onView:kdb-servers",
+    "onView:kdb-query-history",
     "onView:kdb-datasources-explorer",
     "onView:kdb-results",
     "onTerminalProfile:kdb.q-terminal"
@@ -212,6 +213,14 @@
         "title": "Disconnect"
       },
       {
+        "command": "kdb.queryHistory.rerun",
+        "title": "Rerun query"
+      },
+      {
+        "command": "kdb.queryHistory.clear",
+        "title": "Clear query history"
+      },
+      {
         "command": "kdb.dataSource.addDataSource",
         "title": "Add new DataSource"
       },
@@ -340,6 +349,12 @@
           "icon": "resources/server.svg"
         },
         {
+          "id": "kdb-query-history",
+          "name": "Query History",
+          "contextualTitle": "Query History",
+          "icon": "resources/history.svg"
+        },
+        {
           "id": "kdb-datasources-explorer",
           "name": "Data Sources",
           "contextualTitle": "Data Sources",
@@ -428,6 +443,11 @@
           "group": "resultsPanel"
         },
         {
+          "command": "kdb.queryHistory.clear",
+          "when": "view == kdb-query-history",
+          "group": "queryHistory"
+        },
+        {
           "command": "kdb.resultsPanel.export.csv",
           "when": "view == kdb-results",
           "group": "resultsPanel"
@@ -468,6 +488,11 @@
           "command": "kdb.stopLocalProcess",
           "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running && viewItem in kdb.rootNodes",
           "group": "connection"
+        },
+        {
+          "command": "kdb.queryHistory.rerun",
+          "when": "view == kdb-query-history",
+          "group": "queryHistory"
         },
         {
           "command": "kdb.dataSource.openDataSource",
