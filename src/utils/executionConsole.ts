@@ -12,6 +12,10 @@
  */
 
 import { OutputChannel, commands, window } from "vscode";
+import { ext } from "../extensionVariables";
+import { QueryHistory } from "../models/queryHistory";
+import { ServerType } from "../models/server";
+import { KdbNode } from "../services/kdbTreeProvider";
 import { convertRowsToConsole } from "./queryUtils";
 
 export class ExecutionConsole {
@@ -77,6 +81,12 @@ export class ExecutionConsole {
         dataSourceRes = convertRowsToConsole(output);
       }
     }
+    const connectionType: ServerType =
+      ext.connectionNode instanceof KdbNode
+        ? ServerType.KDB
+        : ServerType.INSIGHTS;
+    addQueryHistory(query, serverName, connectionType, true);
+
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
     this._console.appendLine(
@@ -112,10 +122,16 @@ export class ExecutionConsole {
     if (isConnected) {
       this._console.appendLine(`ERROR Query executed: ${query}\n`);
       this._console.appendLine(result);
+      const connectionType: ServerType =
+        ext.connectionNode instanceof KdbNode
+          ? ServerType.KDB
+          : ServerType.INSIGHTS;
+      addQueryHistory(query, serverName, connectionType, false);
     } else {
       window.showErrorMessage(`Please connect to a kdb+ server`);
       this._console.appendLine(`Please connect to a kdb+ server`);
       commands.executeCommand("kdb.disconnect");
+      addQueryHistory(query, "No connection", ServerType.undefined, false);
     }
     this._console.appendLine(`<<< >>>`);
   }
@@ -133,6 +149,21 @@ export class ExecutionConsole {
   }
 }
 
-export function appendQuery(query: string) {
-  throw new Error("Function not implemented.");
+export function addQueryHistory(
+  query: string,
+  connectionName: string,
+  connectionType: ServerType,
+  success: boolean
+) {
+  const newQueryHistory: QueryHistory = {
+    query: query,
+    time: new Date().toLocaleString(),
+    success,
+    connectionName,
+    connectionType,
+  };
+
+  ext.kdbQueryHistoryList.unshift(newQueryHistory);
+
+  ext.queryHistoryProvider.refresh();
 }

@@ -11,6 +11,12 @@
  * specific language governing permissions and limitations under the License.
  */
 
+export enum ServerType {
+  INSIGHTS,
+  KDB,
+  undefined,
+}
+
 export interface ServerDetails {
   serverName: string;
   serverPort: string;
