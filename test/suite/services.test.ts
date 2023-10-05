@@ -12,13 +12,18 @@
  */
 
 import assert from "node:assert";
+import sinon from "sinon";
 import { TreeItemCollapsibleState } from "vscode";
 import { ext } from "../../src/extensionVariables";
 import { Insights } from "../../src/models/insights";
 import { QueryHistory } from "../../src/models/queryHistory";
 import { Server, ServerType } from "../../src/models/server";
-import * as dataSourceTreeProvider from "../../src/services/dataSourceTreeProvider";
-import * as codeFlowLogin from "../../src/services/kdbInsights/codeFlowLogin";
+import {
+  getCurrentToken,
+  refreshToken,
+  signIn,
+  signOut,
+} from "../../src/services/kdbInsights/codeFlowLogin";
 import {
   InsightsNode,
   KdbNode,
@@ -31,13 +36,12 @@ import {
   QueryHistoryProvider,
   QueryHistoryTreeItem,
 } from "../../src/services/queryHistoryProvider";
-import * as terminalProvider from "../../src/services/terminalProvider";
 
-describe("dataSourceTreeProvider", () => {
-  //write tests for src/services/dataSourceTreeProvider.ts
-  //function to be deleted after write the tests
-  dataSourceTreeProvider;
-});
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const rp = require("request-promise");
 
 describe("kdbTreeProvider", () => {
   let servers: Server;
@@ -446,16 +450,56 @@ describe("kdbTreeProvider", () => {
   });
 });
 
-describe("terminalProvider", () => {
-  //write tests for src/services/terminalProvider.ts
-  //function to be deleted after write the tests
-  terminalProvider;
-});
+describe("Code flow login service tests", () => {
+  const token = {
+    access_token:
+      "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6Imk2bEdrM0ZaenhSY1ViMkMzbkVRN3N5SEpsWSJ9.eyJhdWQiOiI2ZTc0MTcyYi1iZTU2LTQ4NDMtOWZmNC1lNjZhMzliYjEyZTMiLCJpc3MiOiJodHRwczovL2xvZ2luLm1pY3Jvc29mdG9ubGluZS5jb20vNzJmOTg4YmYtODZmMS00MWFmLTkxYWItMmQ3Y2QwMTFkYjQ3L3YyLjAiLCJpYXQiOjE1MzcyMzEwNDgsIm5iZiI6MTUzNzIzMTA0OCwiZXhwIjoxNTM3MjM0OTQ4LCJhaW8iOiJBWFFBaS84SUFBQUF0QWFaTG8zQ2hNaWY2S09udHRSQjdlQnE0L0RjY1F6amNKR3hQWXkvQzNqRGFOR3hYZDZ3TklJVkdSZ2hOUm53SjFsT2NBbk5aY2p2a295ckZ4Q3R0djMzMTQwUmlvT0ZKNGJDQ0dWdW9DYWcxdU9UVDIyMjIyZ0h3TFBZUS91Zjc5UVgrMEtJaWpkcm1wNjlSY3R6bVE9PSIsImF6cCI6IjZlNzQxNzJiLWJlNTYtNDg0My05ZmY0LWU2NmEzOWJiMTJlMyIsImF6cGFjciI6IjAiLCJuYW1lIjoiQWJlIExpbmNvbG4iLCJvaWQiOiI2OTAyMjJiZS1mZjFhLTRkNTYtYWJkMS03ZTRmN2QzOGU0NzQiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJhYmVsaUBtaWNyb3NvZnQuY29tIiwicmgiOiJJIiwic2NwIjoiYWNjZXNzX2FzX3VzZXIiLCJzdWIiOiJIS1pwZmFIeVdhZGVPb3VZbGl0anJJLUtmZlRtMjIyWDVyclYzeERxZktRIiwidGlkIjoiNzJmOTg4YmYtODZmMS00MWFmLTkxYWItMmQ3Y2QwMTFkYjQ3IiwidXRpIjoiZnFpQnFYTFBqMGVRYTgyUy1JWUZBQSIsInZlciI6IjIuMCJ9.pj4N-w_3Us9DrBLfpCt",
+    request_token:
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTY4ODUwMjJ9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ",
+    expires_in: 0,
+  };
 
-describe("codeFlowLogin", () => {
-  //write tests for src/services/kdbInsights/codeFlowLogin.ts
-  //function to be deleted after write the tests
-  codeFlowLogin;
+  it("Should return a correct login", async () => {
+    sinon.stub(codeFlow, "signIn").returns(token);
+    const result = await signIn("http://localhost");
+    assert.strictEqual(result, token, "Invalid token returned");
+  });
+
+  it("Should execute a correct logout", async () => {
+    sinon.stub(rp, "post").resolves(JSON.stringify(token));
+    const result = await signOut("http://localhost", "token");
+    assert.strictEqual(result, undefined, "Invalid response from logout");
+  });
+
+  it("Should execute token refresh", async () => {
+    const result = await refreshToken(
+      "http://loclahost",
+      JSON.stringify(token)
+    );
+    assert.strictEqual(
+      result.accessToken,
+      token.access_token,
+      "Token has not refreshed correctly"
+    );
+  });
+
+  it("Should not return token from secret store", async () => {
+    const result = await getCurrentToken("", "testalias");
+    assert.strictEqual(
+      result,
+      undefined,
+      "Should return undefined when server name is empty."
+    );
+  });
+
+  it("Should not return token from secret store", async () => {
+    const result = await getCurrentToken("testserver", "");
+    assert.strictEqual(
+      result,
+      undefined,
+      "Should return undefined when server alias is empty."
+    );
+  });
 });
 
 describe("queryHistoryProvider", () => {

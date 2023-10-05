@@ -3,15 +3,11 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "1.0.0-rc1",
+  "version": "1.0.1",
   "engines": {
     "vscode": "^1.66.0"
   },
   "icon": "resources/images/kx-logo-vs.png",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/KxSystems/kx-vscode.git"
-  },
   "aiKey": "93119af7-5d98-45d0-abf8-5074976a1472",
   "capabilities": {
     "untrustedWorkspaces": {
@@ -647,8 +643,5 @@
     "vscode-languageserver": "^8.1.0",
     "vscode-languageserver-textdocument": "^1.0.7",
     "vscode-uri": "^3.0.7"
-  },
-  "extensionDependencies": [
-    "ms-vscode.azure-account"
-  ]
+  }
 }
