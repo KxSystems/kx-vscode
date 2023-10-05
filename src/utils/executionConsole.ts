@@ -85,7 +85,7 @@ export class ExecutionConsole {
       ext.connectionNode instanceof KdbNode
         ? ServerType.KDB
         : ServerType.INSIGHTS;
-    this.addQueryHistory(query, serverName, connectionType, true);
+    addQueryHistory(query, serverName, connectionType, true);
 
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
@@ -126,12 +126,12 @@ export class ExecutionConsole {
         ext.connectionNode instanceof KdbNode
           ? ServerType.KDB
           : ServerType.INSIGHTS;
-      this.addQueryHistory(query, serverName, connectionType, false);
+      addQueryHistory(query, serverName, connectionType, false);
     } else {
       window.showErrorMessage(`Please connect to a kdb+ server`);
       this._console.appendLine(`Please connect to a kdb+ server`);
       commands.executeCommand("kdb.disconnect");
-      this.addQueryHistory(query, "No connection", ServerType.undefined, false);
+      addQueryHistory(query, "No connection", ServerType.undefined, false);
     }
     this._console.appendLine(`<<< >>>`);
   }
@@ -147,27 +147,23 @@ export class ExecutionConsole {
     }
     commands.executeCommand("kdb.resultsPanel.update", query, dataSourceType);
   }
-
-  public addQueryHistory(
-    query: string,
-    connectionName: string,
-    connectionType: ServerType,
-    success: boolean
-  ) {
-    const newQueryHistory: QueryHistory = {
-      query: query,
-      time: new Date().toLocaleString(),
-      success,
-      connectionName,
-      connectionType,
-    };
-
-    ext.kdbQueryHistoryList.unshift(newQueryHistory);
-
-    ext.queryHistoryProvider.refresh();
-  }
 }
 
-export function appendQuery(query: string) {
-  throw new Error("Function not implemented.");
+export function addQueryHistory(
+  query: string,
+  connectionName: string,
+  connectionType: ServerType,
+  success: boolean
+) {
+  const newQueryHistory: QueryHistory = {
+    query: query,
+    time: new Date().toLocaleString(),
+    success,
+    connectionName,
+    connectionType,
+  };
+
+  ext.kdbQueryHistoryList.unshift(newQueryHistory);
+
+  ext.queryHistoryProvider.refresh();
 }

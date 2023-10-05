@@ -14,11 +14,16 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { TreeItemCollapsibleState } from "vscode";
+import { ext } from "../../src/extensionVariables";
 import { CancellationEvent } from "../../src/models/cancellationEvent";
 import { QueryResultType } from "../../src/models/queryResult";
 import { ServerType } from "../../src/models/server";
+import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
+import { queryHistoryProvider } from "../../src/services/queryHistoryProvider";
 import * as dataSourceUtils from "../../src/utils/dataSource";
 import * as executionUtils from "../../src/utils/execution";
+import * as executionConsoleUtils from "../../src/utils/executionConsole";
 import { getNonce } from "../../src/utils/getNonce";
 import { getUri } from "../../src/utils/getUri";
 import { openUrl } from "../../src/utils/openUrl";
@@ -172,27 +177,139 @@ describe("Utils", () => {
     });
   });
 
-  // describe("executionConsole", () => {
-  //   let outputChannelMock: sinon.SinonMock;
-  //   let executionConsole: executionConsoleUtils.ExecutionConsole;
+  describe("executionConsole", () => {
+    ext.queryHistoryProvider = new queryHistoryProvider();
 
-  //   beforeEach(() => {
-  //     outputChannelMock = sinon.mock(
-  //       vscode.window.createOutputChannel("Test Output Channel")
-  //       executionConsole = new executionConsoleUtils.ExecutionConsole();
-  //     );
-  //   });
+    describe("ExecutionConsole", () => {
+      let queryConsole: executionConsoleUtils.ExecutionConsole;
+      const kdbNode = new KdbNode(
+        [],
+        "kdbnode1",
+        {
+          serverName: "kdbservername",
+          serverAlias: "kdbserveralias",
+          serverPort: "5001",
+          managed: false,
+          auth: false,
+          tls: false,
+        },
+        TreeItemCollapsibleState.None
+      );
 
-  //   afterEach(() => {
-  //     outputChannelMock.restore();
-  //   });
+      const insightsNode = new InsightsNode(
+        [],
+        "insightsnode1",
+        {
+          server: "insightsservername",
+          alias: "insightsserveralias",
+          auth: true,
+        },
+        TreeItemCollapsibleState.None
+      );
 
-  //   it("appendQuery", () => {
-  //     const query = "test";
-  //     const result = executionConsole.appendQuery(query);
-  //     assert.strictEqual(result, "evaluate.q");
-  //   });
-  // });
+      beforeEach(() => {
+        queryConsole = executionConsoleUtils.ExecutionConsole.start();
+
+        ext.kdbQueryHistoryList.length = 0;
+      });
+
+      it("should append and add queryHistory with kdbNode", () => {
+        const query = "SELECT * FROM table";
+        const output = "test";
+        const serverName = "testServer";
+
+        ext.connectionNode = kdbNode;
+
+        queryConsole.append(output, query, serverName);
+        assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+        assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
+        assert.strictEqual(
+          ext.kdbQueryHistoryList[0].connectionType,
+          ServerType.KDB
+        );
+      });
+
+      it("should append and add queryHistory with insightsNode", () => {
+        const query = "SELECT * FROM table";
+        const output = "test";
+        const serverName = "testServer";
+
+        ext.connectionNode = insightsNode;
+
+        queryConsole.append(output, query, serverName);
+        assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+        assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
+        assert.strictEqual(
+          ext.kdbQueryHistoryList[0].connectionType,
+          ServerType.INSIGHTS
+        );
+      });
+
+      it("should return add query history error with kdbNode", () => {
+        const query = "SELECT * FROM table";
+        const output = "test";
+        const serverName = "testServer";
+
+        ext.connectionNode = kdbNode;
+
+        queryConsole.appendQueryError(query, output, true, serverName);
+        assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+        assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
+        assert.strictEqual(
+          ext.kdbQueryHistoryList[0].connectionType,
+          ServerType.KDB
+        );
+      });
+
+      it("should return add query history error with insightsNode", () => {
+        const query = "SELECT * FROM table";
+        const output = "test";
+        const serverName = "testServer";
+
+        ext.connectionNode = insightsNode;
+
+        queryConsole.appendQueryError(query, output, true, serverName);
+        assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+        assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
+        assert.strictEqual(
+          ext.kdbQueryHistoryList[0].connectionType,
+          ServerType.INSIGHTS
+        );
+      });
+
+      it("should return add query history error with no connection", () => {
+        const query = "SELECT * FROM table";
+        const output = "test";
+        const serverName = "testServer";
+
+        ext.connectionNode = insightsNode;
+
+        queryConsole.appendQueryError(query, output, false, serverName);
+        assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+        assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
+        assert.strictEqual(
+          ext.kdbQueryHistoryList[0].connectionType,
+          ServerType.undefined
+        );
+      });
+    });
+
+    it("addQueryHistory", () => {
+      const query = "SELECT * FROM table";
+      const connectionName = "test";
+      const connectionType = ServerType.KDB;
+
+      ext.kdbQueryHistoryList.length = 0;
+
+      executionConsoleUtils.addQueryHistory(
+        query,
+        connectionName,
+        connectionType,
+        true
+      );
+      assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+    });
+  });
 
   describe("getNonce", () => {
     it("should return a string with length 32", () => {
