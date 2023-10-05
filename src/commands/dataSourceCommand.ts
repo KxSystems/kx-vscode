@@ -236,9 +236,9 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
         fileContent.dataSource.api.fill !== ""
           ? fileContent.dataSource.api.fill
           : undefined;
-      const temporary =
-        fileContent.dataSource.api.temporary !== ""
-          ? fileContent.dataSource.api.temporary
+      const temporality =
+        fileContent.dataSource.api.temporality !== ""
+          ? fileContent.dataSource.api.temporality
           : undefined;
       const filter =
         fileContent.dataSource.api.filter.length > 0
@@ -279,8 +279,8 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
         apiBody.fill = fill;
       }
 
-      if (temporary !== undefined) {
-        apiBody.temporary = temporary;
+      if (temporality !== undefined) {
+        apiBody.temporality = temporality;
       }
 
       if (filter !== undefined) {
