@@ -20,7 +20,7 @@ import { CancellationEvent } from "../../src/models/cancellationEvent";
 import { QueryResultType } from "../../src/models/queryResult";
 import { ServerType } from "../../src/models/server";
 import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
-import { queryHistoryProvider } from "../../src/services/queryHistoryProvider";
+import { QueryHistoryProvider } from "../../src/services/queryHistoryProvider";
 import * as dataSourceUtils from "../../src/utils/dataSource";
 import * as executionUtils from "../../src/utils/execution";
 import * as executionConsoleUtils from "../../src/utils/executionConsole";
@@ -178,7 +178,7 @@ describe("Utils", () => {
   });
 
   describe("executionConsole", () => {
-    ext.queryHistoryProvider = new queryHistoryProvider();
+    ext.queryHistoryProvider = new QueryHistoryProvider();
 
     describe("ExecutionConsole", () => {
       let queryConsole: executionConsoleUtils.ExecutionConsole;
