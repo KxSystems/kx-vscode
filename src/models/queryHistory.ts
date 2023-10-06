@@ -11,8 +11,12 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export enum ExecutionTypes {
-  QuerySelection,
-  QueryFile,
-  ReRunQuery,
+import { ServerType } from "./server";
+
+export interface QueryHistory {
+  connectionName: string;
+  connectionType: ServerType;
+  query: string;
+  time: string;
+  success: boolean;
 }
