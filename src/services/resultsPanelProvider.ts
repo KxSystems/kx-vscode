@@ -11,7 +11,6 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { GridOptions } from "ag-grid-community";
 import {
   ColorThemeKind,
   Uri,
@@ -66,6 +65,19 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     }
   }
 
+  convertToCsv(data: any[]): string[] {
+    const keys = Object.keys(data[0]);
+    const header = keys.join(",");
+    const rows = data.map((obj) => {
+      return keys
+        .map((key) => {
+          return obj[key];
+        })
+        .join(",");
+    });
+    return [header, ...rows];
+  }
+
   exportToCsv() {
     if (ext.resultPanelCSV === "") {
       window.showErrorMessage("No results to export");
@@ -80,32 +92,20 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     utils.exportToCsv(workspaceUri);
   }
 
-  convertToGrid(queryResult: any): string | GridOptions {
-    if (queryResult === "") {
-      return `<p>No results to show</p>`;
-    }
-
-    const vectorRes =
-      typeof queryResult === "string"
-        ? utils.convertResultStringToVector(queryResult)
-        : utils.convertResultToVector(queryResult);
-    if (vectorRes.length === 1) {
-      return `<p>${vectorRes[0]}</p>`;
-    }
-    ext.resultPanelCSV = vectorRes.map((row) => row.join(",")).join("\n");
-    const keys = vectorRes[0];
-    const value = vectorRes.slice(1);
-    const rowData = value.map((row) =>
-      keys.reduce((obj: any, key: string, index: number) => {
-        key = this.sanitizeString(key);
-        obj[key] = this.sanitizeString(row[index]);
-        return obj;
-      }, {})
-    );
-    const columnDefs = keys.map((str: string) => ({
-      field: this.sanitizeString(str),
+  convertToGrid(queryResult: any): string {
+    const columnDefs = Object.keys(queryResult[0]).map((key: string) => ({
+      field: this.sanitizeString(key),
     }));
-    return {
+    const rowData = queryResult.map((row: any) => {
+      for (const key in row) {
+        if (Object.prototype.hasOwnProperty.call(row, key)) {
+          row[key] = this.sanitizeString(row[key]);
+        }
+      }
+      return row;
+    });
+    ext.resultPanelCSV = this.convertToCsv(rowData).join("\n");
+    return JSON.stringify({
       defaultColDef: {
         sortable: true,
         resizable: true,
@@ -119,14 +119,18 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       pagination: true,
       paginationPageSize: 100,
       cacheBlockSize: 100,
-    };
+    });
   }
 
   isVisible(): boolean {
     return !!this._view?.visible;
   }
 
-  sanitizeString(str: string): string {
+  sanitizeString(str: string | string[]): string {
+    if (str instanceof Array) {
+      str = str.join(",");
+    }
+    str = str.toString();
     str = str.trim();
     str = str.replace(/['"`]/g, "");
     str = str.replace(/\$\{/g, "");
@@ -146,12 +150,8 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       : "";
   }
 
-  private _getWebviewContent(
-    queryResult: string | string[],
-    _dataSourceType?: string
-  ) {
+  private _getWebviewContent(queryResult: any, _dataSourceType?: string) {
     ext.resultPanelCSV = "";
-    let rowsCount = 0;
     this._results = queryResult;
     const agGridTheme = this.defineAgGridTheme();
     if (this._view) {
@@ -162,48 +162,22 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       const nonce = getNonce();
       let result = "";
       let gridOptionsString = "";
-      let rowsLimited = "";
 
-      // TODO - handle object (not string)
-
-      if (typeof queryResult === "string" && queryResult.endsWith("\n..\n")) {
-        queryResult = queryResult.slice(0, -4);
-        rowsLimited =
-          "<p>Showing results returned from q instance, that is limited by your q settings";
+      let isGrid = false;
+      if (typeof queryResult === "string" || typeof queryResult === "number") {
+        result =
+          queryResult !== ""
+            ? `<p>${queryResult}</p>`
+            : "<p>No results to show</p>";
       } else if (
-        queryResult instanceof Array &&
-        queryResult.length > 0 &&
-        queryResult[queryResult.length - 1].endsWith("\n..\n")
+        typeof queryResult === "object" &&
+        queryResult !== null &&
+        queryResult instanceof Array
       ) {
-        queryResult[0] = queryResult[0].slice(0, -4);
-        rowsLimited =
-          "<p>Showing results returned from q instance, that is limited by your q settings";
+        isGrid = true;
+        gridOptionsString = this.convertToGrid(queryResult);
       }
-      if (queryResult !== "") {
-        const convertedGrid = this.convertToGrid(queryResult);
-        if (typeof convertedGrid === "string") {
-          result = convertedGrid;
-        } else {
-          gridOptionsString = JSON.stringify(convertedGrid);
-        }
-      }
-      const isGrid =
-        gridOptionsString !== "" &&
-        gridOptionsString !== "<p>No results to show</p>";
 
-      const gridOptionsObj = isGrid ? JSON.parse(gridOptionsString) : "";
-      const gridRows = isGrid ? [...gridOptionsObj.rowData] : "";
-      if (isGrid) {
-        const totalRowsLenght = JSON.stringify(gridRows).length;
-        if (totalRowsLenght > ext.rowLimit) {
-          const sampleRowLength = JSON.stringify(gridRows[0]).length;
-          rowsCount = Math.round(ext.rowLimit / sampleRowLength);
-          rowsLimited = `<p>Showing ${rowsCount} of ${gridRows.length} rows due high amount of data, to retrieve the entire data, export to CSV</p>`;
-          const expectedRows = gridRows.slice(0, rowsCount);
-          gridOptionsObj.rowData = expectedRows;
-          gridOptionsString = JSON.stringify(gridOptionsObj);
-        }
-      }
       result =
         gridOptionsString === ""
           ? result !== ""
@@ -232,7 +206,6 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         <div class="results-view-container">
           <div class="content-wrapper">
               ${result}
-              ${rowsLimited}
             </div>
           </div>      
         <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
