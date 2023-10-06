@@ -826,7 +826,7 @@ export function getQueryContext(lineNum?: number): string {
   return context;
 }
 
-export function runQuery(type: ExecutionTypes) {
+export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
   const editor = window.activeTextEditor;
   if (editor) {
     let context;
@@ -846,8 +846,9 @@ export function runQuery(type: ExecutionTypes) {
         }
         break;
       case ExecutionTypes.QueryFile:
+      case ExecutionTypes.ReRunQuery:
       default:
-        query = editor.document.getText();
+        query = rerunQuery ? rerunQuery : editor.document.getText();
         context = getQueryContext();
     }
     executeQuery(query, context);

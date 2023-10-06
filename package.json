@@ -3,15 +3,11 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "1.0.0-rc1",
+  "version": "1.0.1",
   "engines": {
     "vscode": "^1.66.0"
   },
   "icon": "resources/images/kx-logo-vs.png",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/KxSystems/kx-vscode.git"
-  },
   "aiKey": "93119af7-5d98-45d0-abf8-5074976a1472",
   "capabilities": {
     "untrustedWorkspaces": {
@@ -46,6 +42,7 @@
     "onCommand:kdb.resultsPanel.clear",
     "onCommand:kdb.resultsPanel.export.csv",
     "onView:kdb-servers",
+    "onView:kdb-query-history",
     "onView:kdb-datasources-explorer",
     "onView:kdb-results",
     "onTerminalProfile:kdb.q-terminal"
@@ -216,6 +213,14 @@
         "title": "Disconnect"
       },
       {
+        "command": "kdb.queryHistory.rerun",
+        "title": "Rerun query"
+      },
+      {
+        "command": "kdb.queryHistory.clear",
+        "title": "Clear query history"
+      },
+      {
         "command": "kdb.dataSource.addDataSource",
         "title": "Add new DataSource"
       },
@@ -346,6 +351,12 @@
           "icon": "resources/server.svg"
         },
         {
+          "id": "kdb-query-history",
+          "name": "Query History",
+          "contextualTitle": "Query History",
+          "icon": "resources/history.svg"
+        },
+        {
           "id": "kdb-datasources-explorer",
           "name": "Data Sources",
           "contextualTitle": "Data Sources",
@@ -434,6 +445,11 @@
           "group": "resultsPanel"
         },
         {
+          "command": "kdb.queryHistory.clear",
+          "when": "view == kdb-query-history",
+          "group": "queryHistory"
+        },
+        {
           "command": "kdb.resultsPanel.export.csv",
           "when": "view == kdb-results",
           "group": "resultsPanel"
@@ -474,6 +490,11 @@
           "command": "kdb.stopLocalProcess",
           "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running && viewItem in kdb.rootNodes",
           "group": "connection"
+        },
+        {
+          "command": "kdb.queryHistory.rerun",
+          "when": "view == kdb-query-history",
+          "group": "queryHistory"
         },
         {
           "command": "kdb.dataSource.openDataSource",
@@ -624,8 +645,5 @@
     "vscode-languageserver": "^8.1.0",
     "vscode-languageserver-textdocument": "^1.0.7",
     "vscode-uri": "^3.0.7"
-  },
-  "extensionDependencies": [
-    "ms-vscode.azure-account"
-  ]
+  }
 }
