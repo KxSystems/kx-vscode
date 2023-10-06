@@ -73,6 +73,10 @@ import {
   KdbNode,
   KdbTreeProvider,
 } from "./services/kdbTreeProvider";
+import {
+  QueryHistoryProvider,
+  QueryHistoryTreeItem,
+} from "./services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import {
   checkLocalInstall,
@@ -97,6 +101,7 @@ export async function activate(context: ExtensionContext) {
 
   ext.serverProvider = new KdbTreeProvider(servers!, insights!);
   ext.dataSourceProvider = new KdbDataSourceProvider();
+  ext.queryHistoryProvider = new QueryHistoryProvider();
   ext.resultsViewProvider = new KdbResultsViewProvider(
     ext.context.extensionUri
   );
@@ -107,6 +112,10 @@ export async function activate(context: ExtensionContext) {
   window.registerTreeDataProvider(
     "kdb-datasources-explorer",
     ext.dataSourceProvider
+  );
+  window.registerTreeDataProvider(
+    "kdb-query-history",
+    ext.queryHistoryProvider
   );
 
   // initialize local servers
@@ -172,6 +181,17 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.refreshServerObjects", () => {
       ext.serverProvider.reload();
       ext.connection?.update();
+    }),
+    commands.registerCommand(
+      "kdb.queryHistory.rerun",
+      (viewItem: QueryHistoryTreeItem) => {
+        runQuery(ExecutionTypes.ReRunQuery, viewItem.details.query);
+      }
+    ),
+    commands.registerCommand("kdb.queryHistory.clear", () => {
+      ext.kdbQueryHistoryList.length = 0;
+      ext.kdbQueryHistoryNodes.length = 0;
+      ext.queryHistoryProvider.refresh();
     }),
     commands.registerCommand("kdb.dataSource.addDataSource", async () => {
       await addDataSource();
