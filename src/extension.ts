@@ -72,6 +72,10 @@ import {
   KdbNode,
   KdbTreeProvider,
 } from "./services/kdbTreeProvider";
+import {
+  QueryHistoryProvider,
+  QueryHistoryTreeItem,
+} from "./services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import {
   checkLocalInstall,
@@ -96,6 +100,7 @@ export async function activate(context: ExtensionContext) {
 
   ext.serverProvider = new KdbTreeProvider(servers!, insights!);
   ext.dataSourceProvider = new KdbDataSourceProvider();
+  ext.queryHistoryProvider = new QueryHistoryProvider();
   ext.resultsViewProvider = new KdbResultsViewProvider(
     ext.context.extensionUri
   );
@@ -104,6 +109,10 @@ export async function activate(context: ExtensionContext) {
   window.registerTreeDataProvider(
     "kdb-datasources-explorer",
     ext.dataSourceProvider
+  );
+  window.registerTreeDataProvider(
+    "kdb-query-history",
+    ext.queryHistoryProvider
   );
 
   // initialize local servers
@@ -169,6 +178,17 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.refreshServerObjects", () => {
       ext.serverProvider.reload();
       ext.connection?.update();
+    }),
+    commands.registerCommand(
+      "kdb.queryHistory.rerun",
+      (viewItem: QueryHistoryTreeItem) => {
+        runQuery(ExecutionTypes.ReRunQuery, viewItem.details.query);
+      }
+    ),
+    commands.registerCommand("kdb.queryHistory.clear", () => {
+      ext.kdbQueryHistoryList.length = 0;
+      ext.kdbQueryHistoryNodes.length = 0;
+      ext.queryHistoryProvider.refresh();
     }),
     commands.registerCommand("kdb.dataSource.addDataSource", async () => {
       await addDataSource();
@@ -253,7 +273,7 @@ export async function activate(context: ExtensionContext) {
     onDidChangeEmitter = new EventEmitter<Uri>();
     onDidChange = this.onDidChangeEmitter.event;
 
-    provideTextDocumentContent(uri: Uri): string {
+    provideTextDocumentContent(_uri: Uri): string {
       const result = lastResult!;
 
       return result.result;
@@ -268,16 +288,10 @@ export async function activate(context: ExtensionContext) {
     languages.registerCompletionItemProvider("q", {
       provideCompletionItems(
         document: TextDocument,
-        position: Position,
-        token: CancellationToken
+        _position: Position,
+        _token: CancellationToken
       ) {
         const items: CompletionItem[] = [];
-        const getInsertText = (x: string) => {
-          if ((x.match(/\./g) || []).length > 1) {
-            return x.substr(1);
-          }
-          return x;
-        };
 
         ext.keywords.forEach((x) =>
           items.push({ label: x, kind: CompletionItemKind.Keyword })
@@ -285,24 +299,39 @@ export async function activate(context: ExtensionContext) {
         ext.functions.forEach((x) =>
           items.push({
             label: x,
-            insertText: getInsertText(x),
+            insertText: x,
             kind: CompletionItemKind.Function,
           })
         );
         ext.tables.forEach((x) =>
           items.push({
             label: x,
-            insertText: getInsertText(x),
+            insertText: x,
             kind: CompletionItemKind.Value,
           })
         );
         ext.variables.forEach((x) =>
           items.push({
             label: x,
-            insertText: getInsertText(x),
+            insertText: x,
             kind: CompletionItemKind.Variable,
           })
         );
+
+        const text = document.getText();
+        const regex = /([.\w]+)[ \t]*:/gm;
+        let match;
+        while ((match = regex.exec(text))) {
+          const name = match[1];
+          const found = items.find((item) => item.label === name);
+          if (!found) {
+            items.push({
+              label: name,
+              insertText: name,
+              kind: CompletionItemKind.Variable,
+            });
+          }
+        }
 
         return items;
       },

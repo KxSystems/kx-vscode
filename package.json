@@ -3,15 +3,11 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "1.0.0-rc1",
+  "version": "1.0.1",
   "engines": {
     "vscode": "^1.66.0"
   },
   "icon": "resources/images/kx-logo-vs.png",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/KxSystems/kx-vscode.git"
-  },
   "aiKey": "93119af7-5d98-45d0-abf8-5074976a1472",
   "capabilities": {
     "untrustedWorkspaces": {
@@ -46,6 +42,7 @@
     "onCommand:kdb.resultsPanel.clear",
     "onCommand:kdb.resultsPanel.export.csv",
     "onView:kdb-servers",
+    "onView:kdb-query-history",
     "onView:kdb-datasources-explorer",
     "onView:kdb-results",
     "onTerminalProfile:kdb.q-terminal"
@@ -151,8 +148,13 @@
           "description": "kdb servers for explorer"
         },
         "kdb.insights": {
+          "deprecationMessage": "This setting is deprecated, use kdb.insightsEnterpriseConnections instead",
           "type": "object",
           "description": "kdb insights for explorer"
+        },
+        "kdb.insightsEnterpriseConnections": {
+          "type": "object",
+          "description": "kdb insights enterprise connections for explorer"
         },
         "kdb.hideInstallationNotification": {
           "type": "boolean",
@@ -209,6 +211,14 @@
       {
         "command": "kdb.disconnect",
         "title": "Disconnect"
+      },
+      {
+        "command": "kdb.queryHistory.rerun",
+        "title": "Rerun query"
+      },
+      {
+        "command": "kdb.queryHistory.clear",
+        "title": "Clear query history"
       },
       {
         "command": "kdb.dataSource.addDataSource",
@@ -339,6 +349,12 @@
           "icon": "resources/server.svg"
         },
         {
+          "id": "kdb-query-history",
+          "name": "Query History",
+          "contextualTitle": "Query History",
+          "icon": "resources/history.svg"
+        },
+        {
           "id": "kdb-datasources-explorer",
           "name": "Data Sources",
           "contextualTitle": "Data Sources",
@@ -427,6 +443,11 @@
           "group": "resultsPanel"
         },
         {
+          "command": "kdb.queryHistory.clear",
+          "when": "view == kdb-query-history",
+          "group": "queryHistory"
+        },
+        {
           "command": "kdb.resultsPanel.export.csv",
           "when": "view == kdb-results",
           "group": "resultsPanel"
@@ -467,6 +488,11 @@
           "command": "kdb.stopLocalProcess",
           "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running && viewItem in kdb.rootNodes",
           "group": "connection"
+        },
+        {
+          "command": "kdb.queryHistory.rerun",
+          "when": "view == kdb-query-history",
+          "group": "queryHistory"
         },
         {
           "command": "kdb.dataSource.openDataSource",
@@ -516,17 +542,15 @@
     }
   },
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/KxSystems/kx-vscode/issues"
-  },
-  "homepage": "https://github.com/KxSystems/kx-vscode#readme",
+  "homepage": "https://kx.com",
   "scripts": {
     "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
     "esbuild-base": "rimraf out && node ./esbuild.js",
     "build": "npm run -S esbuild-base -- --sourcemap",
     "watch": "npm run -S esbuild-base -- --sourcemap --watch",
     "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
-    "test": "npm run -S esbuild-base -- --sourcemap && tsc -p ./test && node ./out/test/runTest.js",
+    "test": "tsc -p ./test && node ./out/test/runTest.js",
+    "coverage": "tsc -p ./test && node ./out/test/runTest.js --coverage",
     "package": "npx vsce package",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
     "generate-parser": "antlr4-tool -o q-parser grammars/q.g4"
@@ -540,6 +564,8 @@
     "@types/fs-extra": "^9.0.13",
     "@types/glob": "^8.0.1",
     "@types/graceful-fs": "^4.1.6",
+    "@types/istanbul-lib-coverage": "^2.0.4",
+    "@types/istanbul-reports": "^3.0.1",
     "@types/jwt-decode": "^3.1.0",
     "@types/klaw": "^3.0.3",
     "@types/mocha": "^10.0.1",
@@ -560,6 +586,11 @@
     "eslint-plugin-header": "^3.1.1",
     "eslint-plugin-license-header": "^0.6.0",
     "glob": "^8.1.0",
+    "istanbul-lib-coverage": "^3.2.0",
+    "istanbul-lib-instrument": "^3.3.0",
+    "istanbul-lib-report": "^2.0.8",
+    "istanbul-lib-source-maps": "^3.0.6",
+    "istanbul-reports": "^3.1.6",
     "mocha": "^10.2.0",
     "mocha-junit-reporter": "^2.2.0",
     "mocha-multi-reporters": "^1.5.1",
@@ -612,8 +643,5 @@
     "vscode-languageserver": "^8.1.0",
     "vscode-languageserver-textdocument": "^1.0.7",
     "vscode-uri": "^3.0.7"
-  },
-  "extensionDependencies": [
-    "ms-vscode.azure-account"
-  ]
+  }
 }

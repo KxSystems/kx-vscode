@@ -181,7 +181,7 @@ export default class QSymbol extends TypeBase {
     arg: QSymbol,
     indices: Array<number>,
     indexOffset: number,
-    maxRows: number
+    _maxRows: number
   ): void {
     if (this.values === undefined) {
       const values = [];

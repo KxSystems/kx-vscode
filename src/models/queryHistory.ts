@@ -11,10 +11,12 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { ResourceGroup } from "@azure/arm-resources/esm/models";
+import { ServerType } from "./server";
 
-export interface ResourceGroupItem {
-  label: string;
-  description?: string;
-  resourceGroup?: ResourceGroup;
+export interface QueryHistory {
+  connectionName: string;
+  connectionType: ServerType;
+  query: string;
+  time: string;
+  success: boolean;
 }

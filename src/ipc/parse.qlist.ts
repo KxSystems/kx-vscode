@@ -269,10 +269,14 @@ export class Parse {
               .concat(Tools.times(cols.length, (i) => cols.getValue(i)))
               .map((x) => Parse.col(x, dv) as Vector)
           );
+        } else {
+          return new QTable();
         }
       } else {
         return Parse.dict(qObj as c.Dict, dv);
       }
+    } else {
+      return new QTable();
     }
   }
 }
@@ -364,6 +368,7 @@ export class QList extends TypeBase {
     return qa.offset + (c.getTypeSize(Math.abs(qa.qtype)) as number);
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   getValue(i: number): any {
     if (!this.dataView) {
       return this.values[(i + this.indexOffset) % this.length];
@@ -450,7 +455,7 @@ export class QList extends TypeBase {
   }
 
   offsetQTyped(
-    i: number,
+    _i: number,
     offset: number,
     qStruct: c.Typed,
     dataView: DataView
@@ -568,7 +573,7 @@ export class QList extends TypeBase {
     arg: QList,
     indices: Array<number>,
     indexOffset: number,
-    maxRows: number
+    _maxRows: number
   ): void {
     if (this.values === undefined) {
       this.values = new Array(this.length);
@@ -597,6 +602,7 @@ export class QList extends TypeBase {
     this.indexOffset = indexOffset;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   toLegacy(i: number): any {
     const qCol = this.values[i];
     if (!this.dataView) {
@@ -616,7 +622,7 @@ export class QList extends TypeBase {
       const col = Parse.col(qCol as c.Vector, this.dataView) as Vector;
       return Tools.times(col.length, (j) => col.toLegacy(j));
     } else if (qCol.qtype === 98 || qCol.qtype === 99) {
-      return Parse.table(qCol as c.Dict, this.dataView).toLegacy();
+      return Parse.table(qCol as c.Dict, this.dataView)?.toLegacy();
     } else if (qCol.qtype === 101) {
       return null;
     }
@@ -625,7 +631,7 @@ export class QList extends TypeBase {
   public toViewState(i: number) {
     const qCol = this.values[i];
     return this.dataView && (qCol.qtype === 99 || qCol.qtype === 98)
-      ? Parse.table(qCol as c.Dict, this.dataView).toViewState()
+      ? Parse.table(qCol as c.Dict, this.dataView)?.toViewState()
       : {
           _type:
             qCol.qtype === 10

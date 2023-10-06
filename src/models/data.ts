@@ -29,7 +29,7 @@ export type getDataBodyPayload = {
   endTS?: string;
   fill?: string;
   temporary?: string;
-  filter?: string[];
+  filter?: string[][];
   groupBy?: string[];
   agg?: string[];
   sortCols?: string[];

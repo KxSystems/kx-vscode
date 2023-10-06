@@ -449,10 +449,11 @@ export async function getDataInsights(
 
 export async function importScratchpad(
   variableName: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params: any
 ): Promise<void> {
   if (ext.connectionNode instanceof InsightsNode) {
-    let queryParams, coreUrl;
+    let queryParams, coreUrl: string;
     switch (params.selectedType) {
       case "API":
         queryParams = {
@@ -809,7 +810,7 @@ export function getQueryContext(lineNum?: number): string {
   return context;
 }
 
-export function runQuery(type: ExecutionTypes) {
+export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
   const editor = window.activeTextEditor;
   if (editor) {
     let context;
@@ -829,8 +830,9 @@ export function runQuery(type: ExecutionTypes) {
         }
         break;
       case ExecutionTypes.QueryFile:
+      case ExecutionTypes.ReRunQuery:
       default:
-        query = editor.document.getText();
+        query = rerunQuery ? rerunQuery : editor.document.getText();
         context = getQueryContext();
     }
     executeQuery(query, context);
