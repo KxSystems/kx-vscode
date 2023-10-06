@@ -297,8 +297,7 @@ describe("qLangServer", () => {
         textDocument,
         position,
       });
-      // TODO PR-103
-      assert.strictEqual(result.length, 0);
+      assert.strictEqual(result.length, 2);
     });
   });
 
