@@ -9,7 +9,7 @@
       "include": "#strings"
     },
     {
-      "include": "#types"
+      "include": "#constants"
     },
     {
       "include": "#numbers"
@@ -18,7 +18,7 @@
       "include": "#keywords"
     },
     {
-      "include": "#functions"
+      "include": "#tests"
     },
     {
       "include": "#variables"
@@ -47,12 +47,8 @@
         }
       ]
     },
-    "types": {
+    "constants": {
       "patterns": [
-        {
-          "name": "constant.character.commands.q",
-          "match": "\\\\(a|b|B|cd?|C|d|e|E|f|g|l|L|o|p|P|q|r|s|S|ts?|T|u|v|w|W|x|z|1|2|_|\\\\)"
-        },
         {
           "name": "constant.language.null.q",
           "match": "\\b0N[hjenpmdznuvt]\\b"
@@ -64,10 +60,6 @@
         {
           "name": "support.type.symbol.q",
           "match": "`\\w*"
-        },
-        {
-          "name": "entity.name.function.q",
-          "match": "\\.\\w+"
         }
       ]
     },
@@ -89,10 +81,6 @@
     },
     "keywords": {
       "patterns": [
-        {
-          "name": "keyword.operator.q",
-          "match": "(=|<=?|>=?|~|<>|::?)"
-        },
         {
           "name": "keyword.control.q",
           "match": "\\b(do|exit|if|while)\\b"
@@ -151,39 +139,18 @@
         }
       ]
     },
-    "functions": {
+    "tests": {
       "patterns": [
         {
-          "begin": "(\\w+)\\s*(:\\s*{|\\s*\\[)",
-          "beginCaptures": {
-            "0": {
-              "name": "entity.name.function.q"
+          "match": "(feature|should|expect|before|after)\\s+(.*)",
+          "captures": {
+            "1": {
+              "name": "support.function.q"
+            },
+            "2": {
+              "name": "string.quoted.q"
             }
-          },
-          "end": "[}\\]]",
-          "patterns": [
-            {
-              "include": "#comments"
-            },
-            {
-              "include": "#strings"
-            },
-            {
-              "include": "#types"
-            },
-            {
-              "include": "#numbers"
-            },
-            {
-              "include": "#keywords"
-            },
-            {
-              "include": "#functions"
-            },
-            {
-              "include": "#variables"
-            }
-          ]
+          }
         }
       ]
     },
