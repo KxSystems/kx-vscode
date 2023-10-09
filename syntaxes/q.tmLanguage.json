@@ -43,7 +43,13 @@
         {
           "name": "string.quoted.q",
           "begin": "\"",
-          "end": "\""
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.q",
+              "match": "\\\\[\"\\\\]"
+            }
+          ]
         }
       ]
     },
@@ -142,7 +148,11 @@
     "tests": {
       "patterns": [
         {
-          "match": "(feature|should|expect|before|after)\\s+(.*)",
+          "name": "support.function.q",
+          "match": "(before|after)\\s+"
+        },
+        {
+          "match": "(feature|should|expect)\\s+(.*)",
           "captures": {
             "1": {
               "name": "support.function.q"
