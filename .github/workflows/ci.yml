@@ -74,18 +74,11 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-      - name: get-npm-version
-        id: package-version
-        uses: martinbeentjes/npm-get-version-action@v1.3.1            
-          
       - name: SonarCloud Scan
         uses: sonarsource/sonarqube-scan-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        with:
-          args: >
-            -Dsonar.projectVersion=${{ steps.package-version.outputs.current-version}}
 
       - name: Snyk scan for all vulnerabilities
         uses: snyk/actions/node@master
