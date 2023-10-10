@@ -2,6 +2,12 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
+# 1.0.1
+
+### Internal Improvements
+
+- Documentation improvements
+
 # 1.0.0
 
 ### Enhancements
@@ -18,6 +24,7 @@ All notable changes to the kdb extension will be documented in this file.
 - Improved kdb connections tree to support embedded namespaces
 - kdb connections tree is now sorted
 - Autocomplete fixes for embedded namespaces
+
 # 0.1.17
 
 ### Internal Improvements
