@@ -262,7 +262,8 @@
       },
       {
         "command": "kdb.terminal.run",
-        "title": "Run q file in a new q instance"
+        "title": "Run q file in a new q instance",
+        "when": "kdb.QHOME || config.kdb.qHomeDirectory"
       },
       {
         "command": "kdb.execute.selectedQuery",
@@ -292,7 +293,7 @@
         "command": "kdb.terminal.run",
         "key": "ctrl+shift+r",
         "mac": "cmd+shift+r",
-        "when": "editorLangId == q"
+        "when": "editorLangId == q && (kdb.QHOME || config.kdb.qHomeDirectory)"
       }
     ],
     "snippets": [
@@ -515,7 +516,7 @@
       "editor/title": [
         {
           "command": "kdb.terminal.run",
-          "when": "resourceLangId ==  q",
+          "when": "resourceLangId ==  q && (kdb.QHOME || config.kdb.qHomeDirectory)",
           "group": "navigation"
         },
         {
@@ -527,7 +528,7 @@
       "editor/context": [
         {
           "command": "kdb.terminal.run",
-          "when": "resourceLangId == q",
+          "when": "resourceLangId == q && (kdb.QHOME || config.kdb.qHomeDirectory)",
           "group": "q"
         },
         {
