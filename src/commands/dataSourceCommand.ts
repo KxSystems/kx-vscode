@@ -267,21 +267,16 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
       const apiBody: getDataBodyPayload = {
         table: fileContent.dataSource.api.table,
       };
-      if (startTS !== undefined) {
-        apiBody.startTS = startTS;
-      }
 
-      if (endTS !== undefined) {
-        apiBody.endTS = endTS;
-      }
-
-      if (fill !== undefined) {
-        apiBody.fill = fill;
-      }
-
-      if (temporality !== undefined) {
-        apiBody.temporality = temporality;
-      }
+      apiBody.startTS = startTS;
+      apiBody.endTS = endTS;
+      apiBody.fill = fill;
+      apiBody.temporality = temporality;
+      apiBody.groupBy = groupBy;
+      apiBody.agg = agg;
+      apiBody.sortCols = sortCols;
+      apiBody.slice = slice;
+      apiBody.labels = labels;
 
       if (filter !== undefined) {
         apiBody.filter = filter.map((filterEl: string) => {
@@ -289,25 +284,6 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
         });
       }
 
-      if (groupBy !== undefined) {
-        apiBody.groupBy = groupBy;
-      }
-
-      if (agg !== undefined) {
-        apiBody.agg = agg;
-      }
-
-      if (sortCols !== undefined) {
-        apiBody.sortCols = sortCols;
-      }
-
-      if (slice !== undefined) {
-        apiBody.slice = slice;
-      }
-
-      if (labels !== undefined) {
-        apiBody.labels = labels;
-      }
       const apiCall = await getDataInsights(
         ext.insightsAuthUrls.dataURL,
         JSON.stringify(apiBody)
