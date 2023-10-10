@@ -68,7 +68,7 @@ export default class QLangServer {
       this.documentSettings.delete(e.document.uri);
     });
     this.documents.onDidChangeContent(async (change) => {
-      await this.validateTextDocument(change.document);
+      //await this.validateTextDocument(change.document);
     });
     this.connection.onNotification("analyzeSourceCode", (config) =>
       this.analyzer.analyzeWorkspace(config)

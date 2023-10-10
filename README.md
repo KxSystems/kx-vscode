@@ -48,7 +48,7 @@ item | write q | run q queries | explore results | shared kdb process with kdb I
 ---- | ------- | ------------- | --------------- | ----------------------------------
 [kdb+ Personal Edition](https://kx.com/kdb-personal-edition-download/) | yes | yes | yes | no
 [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/)  | yes | yes | yes | no
-[kdb Insights Enterprise Personal Edition](https://trykdb.kx.com/) | yes | yes | yes | yes            
+[kdb Insights Enterprise Personal Edition](https://trykdb.kx.com/kx/signup) | yes | yes | yes | yes            
 
 Contact licadmin@kx.com for commercial kdb licensing.
 
@@ -164,7 +164,7 @@ If you close the extension, the connection to the child q process also closes.
 
 ### kdb Insights Enterprise
 
-For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb process.  Unlike for a **managed q session**, you must have [kdb Insights Enterprise Personal Edition](https://trykdb.kx.com/) running before using these connections. 
+For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb process.  Unlike for a **managed q session**, you must have [kdb Insights Enterprise Personal Edition](https://trykdb.kx.com/kx/signup) running before using these connections. 
 
 **Step 1**: Click *connect to kdb server*.
 
