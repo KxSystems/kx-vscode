@@ -35,6 +35,10 @@
           "name": "comment.block.q",
           "begin": "^/\\s*$",
           "end": "^\\\\\\s*$"
+        },
+        {
+          "name": "comment.block.q",
+          "begin": "^\\\\\\s*$"
         }
       ]
     },
@@ -149,10 +153,10 @@
       "patterns": [
         {
           "name": "support.function.q",
-          "match": "(before|after)\\s+"
+          "match": "\\b(before|after)\\b\\s+"
         },
         {
-          "match": "(feature|should|expect)\\s+(.*)",
+          "match": "\\b(feature|should|expect)\\b\\s+(.*)",
           "captures": {
             "1": {
               "name": "support.function.q"
