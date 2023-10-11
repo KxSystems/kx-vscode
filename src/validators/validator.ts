@@ -15,7 +15,6 @@ import { IRule } from "./rule";
 import { HasLowerCase } from "./validationFunctions/hasLowerCase";
 import { HasNoForbiddenChar } from "./validationFunctions/hasNoForbiddenChar";
 import { HasSpecialChar } from "./validationFunctions/hasSpecialChar";
-import { IsAvailable } from "./validationFunctions/isAvailable";
 import { IsNotEmpty } from "./validationFunctions/isNotEmpty";
 import { LengthRange } from "./validationFunctions/lengthRange";
 
@@ -56,28 +55,8 @@ export class Validator {
     return this;
   }
 
-  public async isAvailable(
-    checkAvailable: (
-      name: string
-    ) => Promise<
-      | { message: string | null; nameAvailable: boolean; reason: string }
-      | boolean
-    >,
-    errorMessage: string
-  ): Promise<Validator> {
-    await this.validate(new IsAvailable(checkAvailable, errorMessage));
-    return this;
-  }
-
   private validateSync(fn: IRule): void {
     const error = fn.validate(this.value) as string | null;
-    if (error) {
-      this.errors.add(error);
-    }
-  }
-
-  private async validate(fn: IRule): Promise<void> {
-    const error = await fn.validate(this.value);
     if (error) {
       this.errors.add(error);
     }

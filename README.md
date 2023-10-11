@@ -4,9 +4,11 @@ This is a companion extension for kdb developers to edit q files, connect to kdb
 
 Please use vscode-questions@kx.com to raise any questions, issues or feedback. 
 
+<!--
 [![KX VS Code CI Testing](https://github.com/KxSystems/kx-vscode/actions/workflows/ci.yml/badge.svg)](https://github.com/KxSystems/kx-vscode/actions/workflows/ci.yml)
 
 [![KX VS Code Release](https://github.com/KxSystems/kx-vscode/actions/workflows/release.yml/badge.svg)](https://github.com/KxSystems/kx-vscode/actions/workflows/release.yml)
+-->
 
 ## Contents
 
@@ -46,7 +48,7 @@ item | write q | run q queries | explore results | shared kdb process with kdb I
 ---- | ------- | ------------- | --------------- | ----------------------------------
 [kdb+ Personal Edition](https://kx.com/kdb-personal-edition-download/) | yes | yes | yes | no
 [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/)  | yes | yes | yes | no
-[kdb Insights Enterprise Personal Edition](https://trykdb.kx.com/) | yes | yes | yes | yes            
+[kdb Insights Enterprise Personal Edition](https://trykdb.kx.com/kx/signup) | yes | yes | yes | yes            
 
 Contact licadmin@kx.com for commercial kdb licensing.
 
@@ -108,7 +110,7 @@ The kdb VS Code extension allows you to connect VS Code to a q process; this can
 
 ![setendpoint](https://code.kx.com/img/vscode/step1connecttoakdbserver.jpg)
 
-**Step 4**: Assign a *server name / alias*. The server name selected **cannot be `local` or `insights`**, as these are reserved for use by [managed q sessions](#managed-q-session) and [kdb Insights Enterprise connections](#kdb-insights-enterprise).
+**Step 4**: Assign a *server name / alias*. The server name selected **cannot be `local` or `insights`**, as these are reserved for use by [managed q sessions](#managed-q-session) and [kdb Insights Enterprise connections](#kdb-insights-enterprise); e.g. *dev*
 
 **Step 5**: Set the *hostname* or ip address of the kdb server; e.g. *localhost*.
 
@@ -162,7 +164,7 @@ If you close the extension, the connection to the child q process also closes.
 
 ### kdb Insights Enterprise
 
-For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb process.  Unlike for a **managed q session**, you must have [kdb Insights Enterprise Personal Edition](https://trykdb.kx.com/) running before using these connections. 
+For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb process.  Unlike for a **managed q session**, you must have [kdb Insights Enterprise Personal Edition](https://trykdb.kx.com/kx/signup) running before using these connections. 
 
 **Step 1**: Click *connect to kdb server*.
 
