@@ -119,6 +119,9 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       pagination: true,
       paginationPageSize: 100,
       cacheBlockSize: 100,
+      enableCellTextSelection: true,
+      ensureDomOrder: true,
+      suppressContextMenu: true,
     });
   }
 
