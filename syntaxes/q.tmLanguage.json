@@ -9,6 +9,12 @@
       "include": "#strings"
     },
     {
+      "include": "#commands"
+    },
+    {
+      "include": "#operators"
+    },
+    {
       "include": "#constants"
     },
     {
@@ -28,7 +34,7 @@
     "comments": {
       "patterns": [
         {
-          "name": "comment.line.q",
+          "name": "comment.line.character.q",
           "match": "(\\s+/|^/).*?\\S+.*"
         },
         {
@@ -57,11 +63,39 @@
         }
       ]
     },
+    "commands": {
+      "patterns": [
+        {
+          "name": "constant.character.q",
+          "match": "\\\\(cd|ts|[abBcCdeEfglLopPrsStTuvwWxz_])"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "punctuation.terminator.statement.q",
+          "match": ";"
+        },
+        {
+          "name": "keyword.operator.arithmetic.q",
+          "match": "[\\+\\-\\%\\*]"
+        },
+        {
+          "name": "keyword.operator.logical.q",
+          "match": "(=|<>|~|<|<=|>=|>|\\|&)"
+        },
+        {
+          "name": "keyword.operator.other.q",
+          "match": "(::|':|/:|\\\\:|[:@\\\\!$#?'/,\\^])"
+        }
+      ]
+    },
     "constants": {
       "patterns": [
         {
           "name": "constant.language.null.q",
-          "match": "\\b0N[hjenpmdznuvt]\\b"
+          "match": "\\b0N[hjenpmdznuvtg]\\b"
         },
         {
           "name": "constant.language.infinity.q",
@@ -85,7 +119,7 @@
         },
         {
           "name": "constant.numeric.number.q",
-          "match": "([0-9]+([.][0-9]*)?|[.][0-9]+)(h|i|j|f|e)?"
+          "match": "([0-9]+([.][0-9]*)?|[.][0-9]+)[hijfem]?"
         }
       ]
     },
