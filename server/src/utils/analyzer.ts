@@ -251,27 +251,33 @@ export class AnalyzerContent {
   }
 
   public getReferences(keyword: string, document: TextDocument): Location[] {
-    const locations = [];
+    const locations: Location[] = [];
     this.uriToTextDocument.set(document.uri, document);
     for (const doc of this.uriToTextDocument.values()) {
-      const text = doc.getText();
+      this.getDocumentReferences(keyword, doc).forEach((location) =>
+        locations.push(location)
+      );
+    }
+    return locations;
+  }
 
-      let offset = 0;
-      let index = text.indexOf(keyword, offset);
-
-      while (index !== -1) {
-        const position = doc.positionAt(index);
-        const range = this.getWordRangeAtPosition(doc, position, keyword);
-        if (
-          range &&
-          range.start.line === position.line &&
-          range.start.character === position.character
-        ) {
-          locations.push({ uri: doc.uri, range });
-        }
-        offset = index + keyword.length;
-        index = text.indexOf(keyword, offset);
+  public getDocumentReferences(keyword: string, doc: TextDocument): Location[] {
+    const locations = [];
+    const text = doc.getText();
+    let offset = 0;
+    let index = text.indexOf(keyword, offset);
+    while (index !== -1) {
+      const position = doc.positionAt(index);
+      const range = this.getWordRangeAtPosition(doc, position, keyword);
+      if (
+        range &&
+        range.start.line === position.line &&
+        range.start.character === position.character
+      ) {
+        locations.push({ uri: doc.uri, range });
       }
+      offset = index + keyword.length;
+      index = text.indexOf(keyword, offset);
     }
     return locations;
   }

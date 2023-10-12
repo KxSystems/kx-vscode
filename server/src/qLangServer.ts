@@ -351,7 +351,7 @@ export default class QLangServer {
       return null;
     }
     // Find all references to the symbol in the document and create a workspace edit to rename them.
-    const locations = this.analyzer.getReferences(keyword, document);
+    const locations = this.analyzer.getDocumentReferences(keyword, document);
     const changes = locations.reduce((acc, location) => {
       const uri = location.uri;
       const range = location.range;
