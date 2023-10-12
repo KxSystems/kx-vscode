@@ -13,6 +13,8 @@
 
 import assert from "assert";
 import sinon from "sinon";
+import { ext } from "../../src/extensionVariables";
+import { Connection } from "../../src/models/connection";
 import {
   ServerObject,
   loadDictionaries,
@@ -20,10 +22,12 @@ import {
   loadNamespaces,
   loadTables,
   loadVariables,
+  loadViews,
 } from "../../src/models/serverObject";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const so = require("../../src/commands/serverCommand");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const vw = require("../../src/models/serverObject");
 
 describe("Models", () => {
@@ -40,7 +44,17 @@ describe("Models", () => {
         id: 1,
         pid: 1,
         name: "test",
-        fname: "test",
+        fname: "test1",
+        typeNum: 1,
+        namespace: ".",
+        context: {},
+        isNs: true,
+      },
+      {
+        id: 2,
+        pid: 2,
+        name: "test",
+        fname: "test2",
         typeNum: 1,
         namespace: ".",
         context: {},
@@ -57,8 +71,41 @@ describe("Models", () => {
     sinon.restore();
   });
 
+  it("Should return a single server object that ia a namespace (reverse sort)", async () => {
+    const testObject0: ServerObject[] = [
+      {
+        id: 1,
+        pid: 1,
+        name: "test",
+        fname: "test",
+        typeNum: 1,
+        namespace: ".",
+        context: {},
+        isNs: true,
+      },
+      {
+        id: 0,
+        pid: 0,
+        name: "test",
+        fname: "test0",
+        typeNum: 1,
+        namespace: ".",
+        context: {},
+        isNs: true,
+      },
+    ];
+    sinon.stub(so, "loadServerObjects").resolves(testObject0);
+    const result = await loadNamespaces();
+    assert.strictEqual(
+      result[0],
+      testObject0[0],
+      "Single server object that is a namespace should be returned."
+    );
+    sinon.restore();
+  });
+
   it("Should return a single server object that ia a namespace", async () => {
-    const testObject: ServerObject[] = [
+    const testObject2: ServerObject[] = [
       {
         id: 1,
         pid: 1,
@@ -70,11 +117,11 @@ describe("Models", () => {
         isNs: true,
       },
     ];
-    sinon.stub(so, "loadServerObjects").resolves(testObject);
+    sinon.stub(so, "loadServerObjects").resolves(testObject2);
     const result = await loadNamespaces(".");
     assert.strictEqual(
       result[0],
-      testObject[0],
+      testObject2[0],
       `Single server object that is a namespace should be returned: ${JSON.stringify(
         result
       )}`
@@ -217,5 +264,49 @@ describe("Models", () => {
       "Single server object that is a namespace should be returned."
     );
     sinon.restore();
+  });
+
+  it("Should return sorted views", async () => {
+    ext.connection = new Connection("localhost:5001");
+    sinon.stub(ext.connection, "executeQuery").resolves("`vw1`vw2");
+    const result = await loadViews();
+    assert.strictEqual(result[0], "vw1", "Should return the first view");
+    sinon.restore();
+  });
+
+  it("Should return sorted views (reverse order)", async () => {
+    ext.connection = new Connection("localhost:5001");
+    sinon.stub(ext.connection, "executeQuery").resolves("`vw2`vw1");
+    const result = await loadViews();
+    assert.strictEqual(result[0], "vw1", "Should return the first view");
+    sinon.restore();
+  });
+
+  it("Should create a new connection object", () => {
+    const conn = new Connection("server:5001");
+    assert.strictEqual(
+      conn.connected,
+      false,
+      "Connection should be created but not connected."
+    );
+  });
+
+  it("Should create a new connection object (full options)", () => {
+    const conn = new Connection("server:5001", ["username", "password"], true);
+    assert.strictEqual(
+      conn.connected,
+      false,
+      "Connection should be created but not connected."
+    );
+  });
+
+  it("Should create a new connection object", () => {
+    const conn = new Connection("server:5001");
+    conn.disconnect();
+    assert.strictEqual(
+      conn.connected,
+      false,
+      "Connection should be created but not connected."
+    );
   });
 });
