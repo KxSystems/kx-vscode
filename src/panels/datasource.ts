@@ -270,7 +270,7 @@ export class DataSourcesPanel {
     const startTS = datasourceFile.dataSource.api.startTS;
     const endTS = datasourceFile.dataSource.api.endTS;
     const fill = datasourceFile.dataSource.api.fill;
-    const temporary = datasourceFile.dataSource.api.temporary;
+    const temporality = datasourceFile.dataSource.api.temporality;
     const qsql = datasourceFile.dataSource.qsql.query;
     const qsqlTarget = datasourceFile.dataSource.qsql.selectedTarget;
     const sql = datasourceFile.dataSource.sql.query;
@@ -344,7 +344,7 @@ export class DataSourcesPanel {
                         <vscode-text-field size="100" id="fill" name="fill" placeholder="fill" value="${fill}">fill</vscode-text-field>
                       </div>
                       <div class="field-row">
-                        <vscode-text-field size="100" id="temporary" name="temporary" placeholder="temporary" value="${temporary}">temporary</vscode-text-field>
+                        <vscode-text-field size="100" id="temporality" name="temporality" placeholder="temporality" value="${temporality}">temporality</vscode-text-field>
                       </div>
                       <div class="params-wrapper" id="filter-wrapper">
                         <label>filter</label>
