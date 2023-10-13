@@ -221,6 +221,9 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
               const gridApi = new agGrid.Grid(gridDiv, obj);
             }
           });
+          document.addEventListener('contextmenu', (e) => {
+            e.stopImmediatePropagation()
+          }, true);
         </script>
       </body>
     </html>
