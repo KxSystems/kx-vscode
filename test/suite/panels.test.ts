@@ -110,6 +110,20 @@ describe("WebPanels", () => {
         const actualString = resultsPanel.sanitizeString(inputString);
         assert.strictEqual(actualString, expectedString);
       });
+
+      it("should transform an array of strings into a single string", () => {
+        const inputString = ["test", "string", "with", "array"];
+        const expectedString = "test,string,with,array";
+        const actualString = resultsPanel.sanitizeString(inputString);
+        assert.strictEqual(actualString, expectedString);
+      });
+    });
+
+    describe("isVisible()", () => {
+      it("should return false if the panel is not visible", () => {
+        const actualVisibility = resultsPanel.isVisible();
+        assert.strictEqual(actualVisibility, false);
+      });
     });
 
     describe("convertToGrid()", () => {
