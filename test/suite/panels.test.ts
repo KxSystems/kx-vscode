@@ -114,15 +114,9 @@ describe("WebPanels", () => {
 
     describe("convertToGrid()", () => {
       it("should return '<p>No results to show</p>' if queryResult is an empty string", () => {
-        const inputQueryResult = "";
-        const expectedOutput = "<p>No results to show</p>";
-        const actualOutput = resultsPanel.convertToGrid(inputQueryResult);
-        assert.strictEqual(actualOutput, expectedOutput);
-      });
-
-      it("should return a string with the query result if queryResult is a string with one value", () => {
-        const inputQueryResult = "test string";
-        const expectedOutput = "<p>test string</p>";
+        const inputQueryResult = [{ a: "1" }, { a: "2" }, { a: "3" }];
+        const expectedOutput =
+          '{"defaultColDef":{"sortable":true,"resizable":true,"filter":true,"flex":1,"minWidth":100},"rowData":[{"a":"1"},{"a":"2"},{"a":"3"}],"columnDefs":[{"field":"a"}],"domLayout":"autoHeight","pagination":true,"paginationPageSize":100,"cacheBlockSize":100,"enableCellTextSelection":true,"ensureDomOrder":true,"suppressContextMenu":true}';
         const actualOutput = resultsPanel.convertToGrid(inputQueryResult);
         assert.strictEqual(actualOutput, expectedOutput);
       });

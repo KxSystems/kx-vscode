@@ -92,7 +92,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     utils.exportToCsv(workspaceUri);
   }
 
-  convertToGrid(queryResult: any): string {
+  convertToGrid(queryResult: any[]): string {
     const columnDefs = Object.keys(queryResult[0]).map((key: string) => ({
       field: this.sanitizeString(key),
     }));
