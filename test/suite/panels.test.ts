@@ -113,12 +113,25 @@ describe("WebPanels", () => {
     });
 
     describe("convertToGrid()", () => {
-      it("should return '<p>No results to show</p>' if queryResult is an empty string", () => {
+      it("should return 'gridOptions' if queryResult is an empty string", () => {
         const inputQueryResult = [{ a: "1" }, { a: "2" }, { a: "3" }];
         const expectedOutput =
           '{"defaultColDef":{"sortable":true,"resizable":true,"filter":true,"flex":1,"minWidth":100},"rowData":[{"a":"1"},{"a":"2"},{"a":"3"}],"columnDefs":[{"field":"a"}],"domLayout":"autoHeight","pagination":true,"paginationPageSize":100,"cacheBlockSize":100,"enableCellTextSelection":true,"ensureDomOrder":true,"suppressContextMenu":true}';
         const actualOutput = resultsPanel.convertToGrid(inputQueryResult);
         assert.strictEqual(actualOutput, expectedOutput);
+      });
+    });
+
+    describe("convertToCsv()", () => {
+      it("should return string array from objects", () => {
+        const inputQueryResult = [
+          { a: "1", b: "1" },
+          { a: "2", b: "2" },
+          { a: "3", b: "3" },
+        ];
+        const expectedOutput = ["a,b", "1,1", "2,2", "3,3"];
+        const actualOutput = resultsPanel.convertToCsv(inputQueryResult);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
       });
     });
   });
