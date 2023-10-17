@@ -12,10 +12,13 @@
  */
 
 import assert from "assert";
+import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { ext } from "../../src/extensionVariables";
 import { defaultDataSourceFile } from "../../src/models/dataSource";
 import { DataSourcesPanel } from "../../src/panels/datasource";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
+import * as utils from "../../src/utils/execution";
 
 describe("WebPanels", () => {
   describe("DataSourcesPanel", () => {
@@ -133,6 +136,28 @@ describe("WebPanels", () => {
           '{"defaultColDef":{"sortable":true,"resizable":true,"filter":true,"flex":1,"minWidth":100},"rowData":[{"a":"1"},{"a":"2"},{"a":"3"}],"columnDefs":[{"field":"a"}],"domLayout":"autoHeight","pagination":true,"paginationPageSize":100,"cacheBlockSize":100,"enableCellTextSelection":true,"ensureDomOrder":true,"suppressContextMenu":true}';
         const actualOutput = resultsPanel.convertToGrid(inputQueryResult);
         assert.strictEqual(actualOutput, expectedOutput);
+      });
+    });
+
+    describe("exportToCsv()", () => {
+      it("should show error message if no results to export", () => {
+        const windowMock = sinon.mock(vscode.window);
+        const workspaceMock = sinon.mock(vscode.workspace);
+        const exportToCsvStub = sinon.stub(utils, "exportToCsv");
+        windowMock
+          .expects("showErrorMessage")
+          .once()
+          .withArgs("No results to export");
+
+        ext.resultPanelCSV = "";
+
+        workspaceMock.expects("getWorkspaceFolder").never();
+
+        resultsPanel.exportToCsv();
+
+        windowMock.verify();
+        workspaceMock.verify();
+        exportToCsvStub.notCalled;
       });
     });
 
