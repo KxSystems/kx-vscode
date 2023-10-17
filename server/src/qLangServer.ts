@@ -413,7 +413,9 @@ export default class QLangServer {
         severity: DiagnosticSeverity.Error,
         range: {
           start: textDocument.positionAt(error.token.startOffset),
-          end: textDocument.positionAt(error.token.endOffset || 0),
+          end: textDocument.positionAt(
+            error.token.endOffset || error.token.startOffset
+          ),
         },
         message: error.message,
         source: "kdb q",

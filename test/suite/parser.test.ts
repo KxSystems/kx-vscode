@@ -16,14 +16,14 @@ import { QParser } from "../../server/src/parser/parser";
 
 describe("QParser", () => {
   describe("script", () => {
-    it("should parse empty string", () => {
+    it("should parse empty", () => {
       QParser.parse("");
       assert.deepEqual(QParser.errors, []);
     });
   });
 
   describe("statement", () => {
-    it("should parse empty statement", () => {
+    it("should parse empty", () => {
       QParser.parse(";\n\r\n;");
       assert.deepEqual(QParser.errors, []);
     });
@@ -31,25 +31,30 @@ describe("QParser", () => {
 
   describe("expression", () => {
     describe("identifier", () => {
-      it("should parse identifier", () => {
+      it("should parse", () => {
         QParser.parse("absolute;");
         assert.deepEqual(QParser.errors, []);
       });
 
-      it("should parse namespaced identifier", () => {
+      it("should parse namespaced", () => {
         QParser.parse(".absolute.value;");
         assert.deepEqual(QParser.errors, []);
       });
     });
 
     describe("assignment", () => {
+      it("should parse", () => {
+        QParser.parse("a:1;");
+        assert.deepEqual(QParser.errors, []);
+      });
+
       it("should parse multiple", () => {
         QParser.parse("a:b:c:1;");
         assert.deepEqual(QParser.errors, []);
       });
 
-      it("should parse multi line", () => {
-        QParser.parse("a\n :b:c:\n 1;");
+      it("should parse multiline", () => {
+        QParser.parse("a\n :b:c:\r\n 1;");
         assert.deepEqual(QParser.errors, []);
       });
 
@@ -58,7 +63,7 @@ describe("QParser", () => {
         assert.deepEqual(QParser.errors, []);
       });
 
-      it("should parse infix", () => {
+      it("should parse infixed", () => {
         QParser.parse("a[1]+:1;");
         assert.deepEqual(QParser.errors, []);
       });

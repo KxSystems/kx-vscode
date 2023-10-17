@@ -152,8 +152,8 @@ class Parser extends CstParser {
 
   public parse(script: string) {
     const lexed = QLexer.tokenize(script);
-    QParser.input = lexed.tokens;
-    return QParser.script();
+    this.input = lexed.tokens;
+    return this.script();
   }
 }
 
