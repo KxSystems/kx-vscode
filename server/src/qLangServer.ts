@@ -418,7 +418,7 @@ export default class QLangServer {
           ),
         },
         message: error.message,
-        source: "kdb q",
+        source: "kdb",
       };
       diagnostics.push(diagnostic);
     }

@@ -15,6 +15,28 @@ import * as assert from "assert";
 import { QParser } from "../../server/src/parser/parser";
 
 describe("QParser", () => {
+  describe("comments", () => {
+    it("should ignore block", () => {
+      QParser.parse("/\na:\n1\n\\");
+      assert.deepEqual(QParser.errors, []);
+    });
+
+    it("should ignore line", () => {
+      QParser.parse("/a:\n");
+      assert.deepEqual(QParser.errors, []);
+    });
+
+    it("should ignore inline", () => {
+      QParser.parse("a: 1 /a:\n");
+      assert.deepEqual(QParser.errors, []);
+    });
+
+    it("should not ignore overloaded slash", () => {
+      QParser.parse("a: ,/ a:\n");
+      assert.strictEqual(QParser.errors.length, 1);
+    });
+  });
+
   describe("script", () => {
     it("should parse empty", () => {
       QParser.parse("");

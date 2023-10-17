@@ -23,13 +23,13 @@ import {
 
 export const BlockComment = createToken({
   name: "BlockComment",
-  pattern: /(?<=\r?\n)\/(?:[ \t]*\r?\n)[^\\]*\\?/, // TODO
+  pattern: /(?<=(\r?\n|[ \t]*))\/(?:[ \t]*\r?\n)[^\\]*\\?/,
   group: Lexer.SKIPPED,
 });
 
 export const LineComment = createToken({
   name: "LineComment",
-  pattern: /(?<=\r?\n|[ \t])\/.*/, // TODO
+  pattern: /(?:(?<=\r?\n|[ \t])|(?<!.))\/.*/,
   longer_alt: BlockComment,
   group: Lexer.SKIPPED,
 });
