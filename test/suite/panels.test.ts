@@ -123,9 +123,39 @@ describe("WebPanels", () => {
     });
 
     describe("isVisible()", () => {
+      const uriTest: vscode.Uri = vscode.Uri.parse("test");
+      let resultsPanel: KdbResultsViewProvider;
+      const view: vscode.WebviewView = {
+        visible: true,
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        show: (): void => {},
+        viewType: "kdb-results",
+        webview: {
+          options: {},
+          html: "",
+          cspSource: "",
+          asWebviewUri: (uri: vscode.Uri) => uri,
+          onDidReceiveMessage: new vscode.EventEmitter<any>().event,
+          postMessage: (): Thenable<boolean> => {
+            return Promise.resolve(true);
+          },
+        },
+        onDidDispose: new vscode.EventEmitter<void>().event,
+        onDidChangeVisibility: new vscode.EventEmitter<null>().event,
+      };
+
+      beforeEach(() => {
+        resultsPanel = new KdbResultsViewProvider(uriTest);
+      });
       it("should return false if the panel is not visible", () => {
         const actualVisibility = resultsPanel.isVisible();
         assert.strictEqual(actualVisibility, false);
+      });
+
+      it("should return false if the panel visible", () => {
+        resultsPanel["_view"] = view;
+        const actualVisibility = resultsPanel.isVisible();
+        assert.strictEqual(actualVisibility, true);
       });
     });
 
@@ -171,6 +201,61 @@ describe("WebPanels", () => {
         const expectedOutput = ["a,b", "1,1", "2,2", "3,3"];
         const actualOutput = resultsPanel.convertToCsv(inputQueryResult);
         assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+    });
+
+    describe("_getWebviewContent", () => {
+      const uriTest: vscode.Uri = vscode.Uri.parse("test");
+      let resultsPanel: KdbResultsViewProvider;
+      const view: vscode.WebviewView = {
+        visible: true,
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        show: (): void => {},
+        viewType: "kdb-results",
+        webview: {
+          options: {},
+          html: "",
+          cspSource: "",
+          asWebviewUri: (uri: vscode.Uri) => uri,
+          onDidReceiveMessage: new vscode.EventEmitter<any>().event,
+          postMessage: (): Thenable<boolean> => {
+            return Promise.resolve(true);
+          },
+        },
+        onDidDispose: new vscode.EventEmitter<void>().event,
+        onDidChangeVisibility: new vscode.EventEmitter<null>().event,
+      };
+
+      beforeEach(() => {
+        resultsPanel = new KdbResultsViewProvider(uriTest);
+        resultsPanel["_view"] = view;
+      });
+
+      it("returns a table", () => {
+        const input = [
+          { id: 1, teste: "test1" },
+          { id: 2, teste: "test2" },
+        ];
+        const expectedOutput = `"rowData":[{"id":"1","test":"test1"},{"id":"2","test":"test2"}],"columnDefs":[{"field":"id"},{"field":"test"}]`;
+        const actualOutput = resultsPanel["_getWebviewContent"](input);
+        assert.strictEqual(typeof actualOutput, "string");
+        assert.ok(actualOutput.includes(expectedOutput));
+      });
+
+      it("returns no results", () => {
+        const input = "Test";
+        const expectedOutput = `<p>Test</p>`;
+        const actualOutput = resultsPanel["_getWebviewContent"](input);
+        assert.strictEqual(typeof actualOutput, "string");
+        assert.ok(actualOutput.includes(expectedOutput));
+      });
+
+      it("returns no results", () => {
+        const input = "";
+        const expectedOutput = `<p>No results to show</p>`;
+        const actualOutput = resultsPanel["_getWebviewContent"](input);
+        assert.strictEqual(typeof actualOutput, "string");
+        assert.ok(actualOutput.includes(expectedOutput));
       });
     });
   });
