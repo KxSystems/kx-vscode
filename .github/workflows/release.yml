@@ -60,8 +60,8 @@ jobs:
 
       - name: get-npm-version
         id: package-version
-        uses: martinbeentjes/npm-get-version-action@v1.3.1            
-          
+        uses: martinbeentjes/npm-get-version-action@v1.3.1
+
       - name: Download lcov result from test job
         uses: actions/download-artifact@v3
         with:
@@ -75,6 +75,12 @@ jobs:
         with:
           args: >
             -Dsonar.projectVersion=${{ steps.package-version.outputs.current-version}}
+
+      - name: SonarQube Quality Gate Check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
       - name: Snyk scan for all vulnerabilities
         uses: snyk/actions/node@master
