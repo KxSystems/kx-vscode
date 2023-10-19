@@ -92,7 +92,8 @@ export class Connection {
 
   public async executeQuery(
     command: string,
-    context?: string
+    context?: string,
+    stringify?: boolean
   ): Promise<string> {
     let result;
     let retryCount = 0;
@@ -109,6 +110,7 @@ export class Connection {
       wrapper,
       context ?? ".",
       command,
+      !!stringify,
       (err: Error, res: QueryResult) => {
         if (err) {
           result = handleQueryResults(err.toString(), QueryResultType.Error);

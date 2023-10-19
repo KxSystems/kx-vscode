@@ -11,6 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import * as sinon from "sinon";
+import * as vscode from "vscode";
 import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
 import * as installTools from "../../src/commands/installTools";
 import * as serverCommand from "../../src/commands/serverCommand";
@@ -30,6 +32,44 @@ describe("serverCommand", () => {
   //write tests for src/commands/serverCommand.ts
   //function to be deleted after write the tests
   serverCommand.addNewConnection();
+  describe("writeQueryResultsToView", () => {
+    it("should call executeCommand with correct arguments", () => {
+      const result = { data: [1, 2, 3] };
+      const dataSourceType = "test";
+      const executeCommandStub = sinon.stub(vscode.commands, "executeCommand");
+
+      serverCommand.writeQueryResultsToView(result, dataSourceType);
+
+      sinon.assert.calledWith(
+        executeCommandStub.firstCall,
+        "kdb-results.focus"
+      );
+      sinon.assert.calledWith(
+        executeCommandStub.secondCall,
+        "kdb.resultsPanel.update",
+        result,
+        dataSourceType
+      );
+
+      executeCommandStub.restore();
+    });
+
+    it("should call executeCommand with correct arguments", () => {
+      const result = { data: [1, 2, 3] };
+      const executeCommandStub = sinon.stub(vscode.commands, "executeCommand");
+
+      serverCommand.writeQueryResultsToView(result);
+
+      sinon.assert.calledWith(
+        executeCommandStub.firstCall,
+        "kdb.resultsPanel.update",
+        result,
+        undefined
+      );
+
+      executeCommandStub.restore();
+    });
+  });
 });
 describe("walkthroughCommand", () => {
   //write tests for src/commands/walkthroughCommand.ts

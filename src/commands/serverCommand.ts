@@ -776,8 +776,14 @@ export async function executeQuery(
     writeScratchpadResult(queryRes, query);
   } else if (ext.connection !== undefined && ext.connection.connected) {
     query = sanitizeQuery(query);
-    const queryRes = await ext.connection.executeQuery(query, context);
-    writeQueryResult(queryRes, query);
+
+    if (ext.resultsViewProvider.isVisible()) {
+      const queryRes = await ext.connection.executeQuery(query, context, false);
+      writeQueryResultsToView(queryRes, query);
+    } else {
+      const queryRes = await ext.connection.executeQuery(query, context, true);
+      writeQueryResultsToConsole(queryRes, query);
+    }
   } else {
     const isConnected = ext.connection
       ? ext.connection.connected
@@ -881,7 +887,7 @@ export async function loadServerObjects(): Promise<ServerObject[]> {
   }
 }
 
-export function writeQueryResult(
+export function writeQueryResultsToConsole(
   result: string | string[],
   query: string,
   dataSourceType?: string
@@ -906,6 +912,16 @@ export function writeQueryResult(
       ext.connectionNode?.label ? ext.connectionNode.label : ""
     );
   }
+}
+
+export function writeQueryResultsToView(
+  result: any,
+  dataSourceType?: string
+): void {
+  if (dataSourceType !== undefined) {
+    commands.executeCommand("kdb-results.focus");
+  }
+  commands.executeCommand("kdb.resultsPanel.update", result, dataSourceType);
 }
 
 function writeScratchpadResult(result: ScratchpadResult, query: string): void {

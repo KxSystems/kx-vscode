@@ -33,7 +33,7 @@ import {
   getDataInsights,
   getMeta,
   importScratchpad,
-  writeQueryResult,
+  writeQueryResultsToConsole,
 } from "./serverCommand";
 
 export async function addDataSource(): Promise<void> {
@@ -291,7 +291,11 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
       if (apiCall?.arrayBuffer) {
         res = handleWSResults(apiCall.arrayBuffer);
       }
-      writeQueryResult(res, "GetData - table: " + apiBody.table, selectedType);
+      writeQueryResultsToConsole(
+        res,
+        "GetData - table: " + apiBody.table,
+        selectedType
+      );
       break;
     case "QSQL":
       const assembly = fileContent.dataSource.qsql.selectedTarget.slice(0, -4);
@@ -308,7 +312,11 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
       if (qsqlCall?.arrayBuffer) {
         res = handleWSResults(qsqlCall.arrayBuffer);
       }
-      writeQueryResult(res, fileContent.dataSource.qsql.query, selectedType);
+      writeQueryResultsToConsole(
+        res,
+        fileContent.dataSource.qsql.query,
+        selectedType
+      );
       break;
     case "SQL":
     default:
@@ -322,7 +330,11 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
       if (sqlCall?.arrayBuffer) {
         res = handleWSResults(sqlCall.arrayBuffer);
       }
-      writeQueryResult(res, fileContent.dataSource.sql.query, selectedType);
+      writeQueryResultsToConsole(
+        res,
+        fileContent.dataSource.sql.query,
+        selectedType
+      );
       break;
   }
 }
