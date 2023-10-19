@@ -28,7 +28,7 @@ export interface DataSourceFiles {
       startTS: string;
       endTS: string;
       fill: string;
-      temporary: string;
+      temporality: string;
       filter: string[];
       groupBy: string[];
       agg: string[];
@@ -56,7 +56,7 @@ export const defaultDataSourceFile: DataSourceFiles = {
       startTS: "",
       endTS: "",
       fill: "",
-      temporary: "",
+      temporality: "",
       filter: [],
       groupBy: [],
       agg: [],

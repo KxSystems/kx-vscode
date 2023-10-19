@@ -1,4 +1,4 @@
-{[ctx; code]
+{[ctx; code; stringify]
  if [-10h ~ type ctx;
  ctx: enlist ctx];
  toString: {[data]
@@ -125,7 +125,7 @@
  index +: 1];
  };
  result: evalInContext[ctx; splitExpression stripTrailingSemi wrapLines removeMultilineComments code];
- if [not result `errored;
+ if [(not result `errored) and stringify;
  result[`result]: toString result `result];
  result
  }

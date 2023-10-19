@@ -28,7 +28,7 @@ export type getDataBodyPayload = {
   startTS?: string;
   endTS?: string;
   fill?: string;
-  temporary?: string;
+  temporality?: string;
   filter?: string[][];
   groupBy?: string[];
   agg?: string[];

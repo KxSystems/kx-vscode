@@ -33,7 +33,7 @@ import {
   getDataInsights,
   getMeta,
   importScratchpad,
-  writeQueryResult,
+  writeQueryResultsToConsole,
 } from "./serverCommand";
 
 export async function addDataSource(): Promise<void> {
@@ -236,9 +236,9 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
         fileContent.dataSource.api.fill !== ""
           ? fileContent.dataSource.api.fill
           : undefined;
-      const temporary =
-        fileContent.dataSource.api.temporary !== ""
-          ? fileContent.dataSource.api.temporary
+      const temporality =
+        fileContent.dataSource.api.temporality !== ""
+          ? fileContent.dataSource.api.temporality
           : undefined;
       const filter =
         fileContent.dataSource.api.filter.length > 0
@@ -267,21 +267,16 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
       const apiBody: getDataBodyPayload = {
         table: fileContent.dataSource.api.table,
       };
-      if (startTS !== undefined) {
-        apiBody.startTS = startTS;
-      }
 
-      if (endTS !== undefined) {
-        apiBody.endTS = endTS;
-      }
-
-      if (fill !== undefined) {
-        apiBody.fill = fill;
-      }
-
-      if (temporary !== undefined) {
-        apiBody.temporary = temporary;
-      }
+      apiBody.startTS = startTS;
+      apiBody.endTS = endTS;
+      apiBody.fill = fill;
+      apiBody.temporality = temporality;
+      apiBody.groupBy = groupBy;
+      apiBody.agg = agg;
+      apiBody.sortCols = sortCols;
+      apiBody.slice = slice;
+      apiBody.labels = labels;
 
       if (filter !== undefined) {
         apiBody.filter = filter.map((filterEl: string) => {
@@ -289,25 +284,6 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
         });
       }
 
-      if (groupBy !== undefined) {
-        apiBody.groupBy = groupBy;
-      }
-
-      if (agg !== undefined) {
-        apiBody.agg = agg;
-      }
-
-      if (sortCols !== undefined) {
-        apiBody.sortCols = sortCols;
-      }
-
-      if (slice !== undefined) {
-        apiBody.slice = slice;
-      }
-
-      if (labels !== undefined) {
-        apiBody.labels = labels;
-      }
       const apiCall = await getDataInsights(
         ext.insightsAuthUrls.dataURL,
         JSON.stringify(apiBody)
@@ -315,7 +291,11 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
       if (apiCall?.arrayBuffer) {
         res = handleWSResults(apiCall.arrayBuffer);
       }
-      writeQueryResult(res, "GetData - table: " + apiBody.table, selectedType);
+      writeQueryResultsToConsole(
+        res,
+        "GetData - table: " + apiBody.table,
+        selectedType
+      );
       break;
     case "QSQL":
       const assembly = fileContent.dataSource.qsql.selectedTarget.slice(0, -4);
@@ -332,7 +312,11 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
       if (qsqlCall?.arrayBuffer) {
         res = handleWSResults(qsqlCall.arrayBuffer);
       }
-      writeQueryResult(res, fileContent.dataSource.qsql.query, selectedType);
+      writeQueryResultsToConsole(
+        res,
+        fileContent.dataSource.qsql.query,
+        selectedType
+      );
       break;
     case "SQL":
     default:
@@ -346,7 +330,11 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
       if (sqlCall?.arrayBuffer) {
         res = handleWSResults(sqlCall.arrayBuffer);
       }
-      writeQueryResult(res, fileContent.dataSource.sql.query, selectedType);
+      writeQueryResultsToConsole(
+        res,
+        fileContent.dataSource.sql.query,
+        selectedType
+      );
       break;
   }
 }

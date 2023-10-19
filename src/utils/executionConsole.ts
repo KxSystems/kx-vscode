@@ -98,11 +98,9 @@ export class ExecutionConsole {
       output.forEach((o) => this._console.appendLine(o));
     } else if (dataSourceRes.length > 0) {
       dataSourceRes.forEach((o) => this._console.appendLine(o));
-      this.rendResults(output, dataSourceType);
     } else {
       output = Array.isArray(output) ? output.join("\n") : output;
       this._console.appendLine(output);
-      this.rendResults(output, dataSourceType);
     }
     this._console.appendLine(`<<<\n`);
   }
@@ -139,13 +137,6 @@ export class ExecutionConsole {
   // this to debug in case debug of extension doesn't work
   public appendQueryDebug(msg: string) {
     this._console.appendLine(msg);
-  }
-
-  public rendResults(query: string | string[], dataSourceType?: string) {
-    if (dataSourceType !== undefined) {
-      commands.executeCommand("kdb-results.focus");
-    }
-    commands.executeCommand("kdb.resultsPanel.update", query, dataSourceType);
   }
 }
 
