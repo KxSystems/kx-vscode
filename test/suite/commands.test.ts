@@ -53,6 +53,22 @@ describe("serverCommand", () => {
 
       executeCommandStub.restore();
     });
+
+    it("should call executeCommand with correct arguments", () => {
+      const result = { data: [1, 2, 3] };
+      const executeCommandStub = sinon.stub(vscode.commands, "executeCommand");
+
+      serverCommand.writeQueryResultsToView(result);
+
+      sinon.assert.calledWith(
+        executeCommandStub.firstCall,
+        "kdb.resultsPanel.update",
+        result,
+        undefined
+      );
+
+      executeCommandStub.restore();
+    });
   });
 });
 describe("walkthroughCommand", () => {
