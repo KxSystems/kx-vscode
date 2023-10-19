@@ -233,8 +233,8 @@ describe("WebPanels", () => {
 
       it("returns a table", () => {
         const input = [
-          { id: 1, teste: "test1" },
-          { id: 2, teste: "test2" },
+          { id: 1, test: "test1" },
+          { id: 2, test: "test2" },
         ];
         const expectedOutput = `"rowData":[{"id":"1","test":"test1"},{"id":"2","test":"test2"}],"columnDefs":[{"field":"id"},{"field":"test"}]`;
         const actualOutput = resultsPanel["_getWebviewContent"](input);
