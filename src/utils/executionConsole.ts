@@ -16,7 +16,10 @@ import { ext } from "../extensionVariables";
 import { QueryHistory } from "../models/queryHistory";
 import { ServerType } from "../models/server";
 import { KdbNode } from "../services/kdbTreeProvider";
-import { getHideDetailedConsoleQueryOutput } from "./core";
+import {
+  getHideDetailedConsoleQueryOutput,
+  setOutputWordWrapper,
+} from "./core";
 import { convertRowsToConsole } from "./queryUtils";
 
 export class ExecutionConsole {
@@ -28,6 +31,7 @@ export class ExecutionConsole {
   }
 
   public static start(): ExecutionConsole {
+    setOutputWordWrapper();
     if (!ExecutionConsole.current) {
       const _console = window.createOutputChannel("q Console Output");
       ExecutionConsole.current = new ExecutionConsole(_console);
