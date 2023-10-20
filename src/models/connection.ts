@@ -26,6 +26,9 @@ export class Connection {
 
   constructor(connectionString: string, creds?: string[], tls?: boolean) {
     const params = connectionString.split(":");
+    if (!params) {
+      throw new Error("Missing or invalid connection string");
+    }
 
     const options: nodeq.ConnectionParameters = {
       nanos2date: false,
