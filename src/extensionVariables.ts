@@ -43,6 +43,7 @@ export namespace ext {
   export const rowLimit = 150000000;
 
   export let connection: Connection | undefined;
+  export let hideDetailedConsoleQueryOutput: boolean;
   export let connectionNode: KdbNode | InsightsNode | undefined;
   export const kdbDataSourceFolder = ".kdb-datasources";
   export const kdbDataSourceFileExtension = ".ds";
