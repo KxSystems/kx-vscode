@@ -21,6 +21,7 @@ import { QueryResultType } from "../../src/models/queryResult";
 import { ServerType } from "../../src/models/server";
 import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import { QueryHistoryProvider } from "../../src/services/queryHistoryProvider";
+import * as coreUtils from "../../src/utils/core";
 import * as dataSourceUtils from "../../src/utils/dataSource";
 import * as executionUtils from "../../src/utils/execution";
 import * as executionConsoleUtils from "../../src/utils/executionConsole";
@@ -53,6 +54,33 @@ describe("Utils", () => {
 
   afterEach(() => {
     windowMock.restore();
+  });
+
+  describe("core", () => {
+    describe("setOutputWordWrapper", () => {
+      let getConfigurationStub: sinon.SinonStub;
+      beforeEach(() => {
+        getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
+      });
+
+      afterEach(() => {
+        getConfigurationStub.restore();
+      });
+      it("should create wordwrapper if doesn't exist", () => {
+        getConfigurationStub.returns({
+          get: sinon.stub().returns({ "[Log]": { "editor.wordWrap": "off" } }),
+          update: sinon.stub(),
+        });
+        coreUtils.setOutputWordWrapper();
+        sinon.assert.calledTwice(getConfigurationStub);
+      });
+
+      it("should let wordwrapper if it exist", () => {
+        getConfigurationStub.returns({ "editor.wordWrap": "on" });
+        coreUtils.setOutputWordWrapper();
+        sinon.assert.calledOnce(getConfigurationStub);
+      });
+    });
   });
 
   describe("dataSource", () => {
