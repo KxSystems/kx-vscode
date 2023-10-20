@@ -207,25 +207,6 @@ export function setOutputWordWrapper(): void {
       );
   }
 }
-export function setOutputWordWrapper(): void {
-  let existWrap = false;
-  const logConfig = workspace.getConfiguration("[Log]");
-  if (logConfig) {
-    const wordWrap = logConfig["editor.wordWrap"];
-    if (wordWrap) {
-      existWrap = true;
-    }
-  }
-  if (!existWrap) {
-    workspace
-      .getConfiguration()
-      .update(
-        "[Log]",
-        { "editor.wordWrap": "off" },
-        ConfigurationTarget.Global
-      );
-  }
-}
 
 export function getInsights(): Insights | undefined {
   const configuration = workspace.getConfiguration();
