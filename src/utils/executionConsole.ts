@@ -16,6 +16,7 @@ import { ext } from "../extensionVariables";
 import { QueryHistory } from "../models/queryHistory";
 import { ServerType } from "../models/server";
 import { KdbNode } from "../services/kdbTreeProvider";
+import { getHideDetailedConsoleQueryOutput } from "./core";
 import { convertRowsToConsole } from "./queryUtils";
 
 export class ExecutionConsole {
@@ -72,6 +73,8 @@ export class ExecutionConsole {
     serverName: string,
     dataSourceType?: string
   ): void {
+    getHideDetailedConsoleQueryOutput();
+    const hideDetails = ext.hideDetailedConsoleQueryOutput;
     output = this.checkOutput(output, query);
     let dataSourceRes: string[] = [];
     if (dataSourceType === undefined) {
@@ -89,10 +92,12 @@ export class ExecutionConsole {
 
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
-    this._console.appendLine(
-      `>>> ${serverName}  @ ${date.toLocaleTimeString()} <<<`
-    );
-    this.appendQuery(query);
+    if (!hideDetails) {
+      this._console.appendLine(
+        `>>> ${serverName}  @ ${date.toLocaleTimeString()} <<<`
+      );
+      this.appendQuery(query);
+    }
     if (Array.isArray(output) && dataSourceType === undefined) {
       this._console.appendLine(output[0]);
       output.forEach((o) => this._console.appendLine(o));
@@ -102,7 +107,9 @@ export class ExecutionConsole {
       output = Array.isArray(output) ? output.join("\n") : output;
       this._console.appendLine(output);
     }
-    this._console.appendLine(`<<<\n`);
+    if (!hideDetails) {
+      this._console.appendLine(`<<<\n`);
+    }
   }
 
   public appendQueryError(
@@ -111,19 +118,27 @@ export class ExecutionConsole {
     isConnected: boolean,
     serverName: string
   ): void {
+    getHideDetailedConsoleQueryOutput();
+    const hideDetails = ext.hideDetailedConsoleQueryOutput;
     this._console.show(true);
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
-    this._console.appendLine(
-      `<<< ERROR -  ${serverName}  @ ${date.toLocaleTimeString()} >>>`
-    );
+    if (!hideDetails) {
+      this._console.appendLine(
+        `<<< ERROR -  ${serverName}  @ ${date.toLocaleTimeString()} >>>`
+      );
+    }
     if (isConnected) {
-      this._console.appendLine(`ERROR Query executed: ${query}\n`);
-      this._console.appendLine(result);
       const connectionType: ServerType =
         ext.connectionNode instanceof KdbNode
           ? ServerType.KDB
           : ServerType.INSIGHTS;
+      if (!hideDetails) {
+        this._console.appendLine(`ERROR Query executed: ${query}\n`);
+        this._console.appendLine(result);
+      } else {
+        this._console.appendLine(`ERROR: ${result}`);
+      }
       addQueryHistory(query, serverName, connectionType, false);
     } else {
       window.showErrorMessage(`Please connect to a kdb+ server`);
@@ -131,7 +146,9 @@ export class ExecutionConsole {
       commands.executeCommand("kdb.disconnect");
       addQueryHistory(query, "No connection", ServerType.undefined, false);
     }
-    this._console.appendLine(`<<< >>>`);
+    if (!hideDetails) {
+      this._console.appendLine(`<<< >>>`);
+    }
   }
 
   // this to debug in case debug of extension doesn't work

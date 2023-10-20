@@ -160,6 +160,11 @@
           "type": "boolean",
           "description": "Hide notification for installation path, after first install"
         },
+        "kdb.hideDetailedConsoleQueryOutput": {
+          "type": "boolean",
+          "description": "Hide detailed console query output",
+          "default": true
+        },
         "kdb.qHomeDirectory": {
           "type": "string",
           "description": "QHOME directory for q runtime"
