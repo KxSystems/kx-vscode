@@ -249,6 +249,7 @@ describe("Utils", () => {
 
     describe("ExecutionConsole", () => {
       let queryConsole: executionConsoleUtils.ExecutionConsole;
+      let getConfigurationStub: sinon.SinonStub;
       const kdbNode = new KdbNode(
         [],
         "kdbnode1",
@@ -280,7 +281,12 @@ describe("Utils", () => {
         ext.kdbQueryHistoryList.length = 0;
       });
 
-      it("should append and add queryHistory with kdbNode", () => {
+      it("should append and add queryHistory with kdbNode without details", () => {
+        getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
+        getConfigurationStub.returns({
+          get: sinon.stub().returns(true),
+          update: sinon.stub(),
+        });
         const query = "SELECT * FROM table";
         const output = "test";
         const serverName = "testServer";
@@ -294,6 +300,30 @@ describe("Utils", () => {
           ext.kdbQueryHistoryList[0].connectionType,
           ServerType.KDB
         );
+
+        getConfigurationStub.restore();
+      });
+
+      it("should append and add queryHistory with kdbNode with details", () => {
+        getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
+        getConfigurationStub.returns({
+          get: sinon.stub().returns(false),
+          update: sinon.stub(),
+        });
+        const query = "SELECT * FROM table";
+        const output = "test";
+        const serverName = "testServer";
+
+        ext.connectionNode = kdbNode;
+
+        queryConsole.append(output, query, serverName);
+        assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+        assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
+        assert.strictEqual(
+          ext.kdbQueryHistoryList[0].connectionType,
+          ServerType.KDB
+        );
+        getConfigurationStub.restore();
       });
 
       it("should append and add queryHistory with insightsNode", () => {
