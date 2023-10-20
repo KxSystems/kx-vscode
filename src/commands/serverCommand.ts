@@ -652,6 +652,7 @@ export async function removeInsightsConnection(
 export async function connect(viewItem: KdbNode): Promise<void> {
   commands.executeCommand("kdb-results.focus");
   await commands.executeCommand("setContext", "kdb.insightsConnected", false);
+  const queryConsole = ExecutionConsole.start();
   // handle cleaning up existing connection
   if (
     ext.connectionNode !== undefined &&
