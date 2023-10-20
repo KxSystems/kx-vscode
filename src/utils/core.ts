@@ -207,24 +207,6 @@ export function setOutputWordWrapper(): void {
       );
   }
 }
-
-export function getHideDetailedConsoleQueryOutput(): void {
-  const setting = workspace
-    .getConfiguration()
-    .get<boolean | undefined>("kdb.hideDetailedConsoleQueryOutput");
-  if (setting === undefined) {
-    workspace
-      .getConfiguration()
-      .update(
-        "kdb.hideDetailedConsoleQueryOutput",
-        true,
-        ConfigurationTarget.Global
-      );
-    ext.hideDetailedConsoleQueryOutput = true;
-  } else {
-    ext.hideDetailedConsoleQueryOutput = setting;
-  }
-}
 export function setOutputWordWrapper(): void {
   let existWrap = false;
   const logConfig = workspace.getConfiguration("[Log]");
