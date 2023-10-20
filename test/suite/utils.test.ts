@@ -81,6 +81,45 @@ describe("Utils", () => {
         sinon.assert.calledOnce(getConfigurationStub);
       });
     });
+
+    describe("getHideDetailedConsoleQueryOutput", () => {
+      let getConfigurationStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        getConfigurationStub = sinon.stub(
+          vscode.workspace,
+          "getConfiguration"
+        ) as sinon.SinonStub;
+      });
+
+      afterEach(() => {
+        getConfigurationStub.restore();
+      });
+
+      it("should update configuration and set hideDetailedConsoleQueryOutput to true when setting is undefined", async () => {
+        getConfigurationStub.returns({
+          get: sinon.stub().returns(undefined),
+          update: sinon.stub(),
+        });
+
+        await coreUtils.getHideDetailedConsoleQueryOutput();
+
+        sinon.assert.calledTwice(getConfigurationStub);
+        assert.strictEqual(ext.hideDetailedConsoleQueryOutput, true);
+      });
+
+      it("should set hideDetailedConsoleQueryOutput to setting when setting is defined", async () => {
+        getConfigurationStub.returns({
+          get: sinon.stub().returns(false),
+          update: sinon.stub(),
+        });
+
+        await coreUtils.getHideDetailedConsoleQueryOutput();
+
+        sinon.assert.calledOnce(getConfigurationStub);
+        assert.strictEqual(ext.hideDetailedConsoleQueryOutput, false);
+      });
+    });
   });
 
   describe("dataSource", () => {
