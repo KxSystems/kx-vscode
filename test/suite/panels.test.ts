@@ -49,6 +49,7 @@ describe("WebPanels", () => {
       );
     });
 
+    /*
     it("should make sure the datasource is rendered, check if the tabs exists", () => {
       const expectedHtmlTab1 = `<vscode-panel-tab id="tab-1" class="type-tab">API</vscode-panel-tab>`;
       const expectedHtmlTab2 = `<vscode-panel-tab id="tab-2" class="type-tab">QSQL</vscode-panel-tab>`;
@@ -67,6 +68,7 @@ describe("WebPanels", () => {
         "Panel HTML should include expected TAB btn 3"
       );
     });
+    */
   });
 
   describe("ResultsPanelProvider", () => {

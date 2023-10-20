@@ -43,7 +43,7 @@ export function convertDataSourceFormToDataSourceFile(
   form: any
 ): DataSourceFiles {
   const insightsNode = getConnectedInsightsNode();
-  const fileContent = defaultDataSourceFile;
+  const fileContent = structuredClone(defaultDataSourceFile);
   const filter: string[] = [];
   const groupBy: string[] = [];
   const agg: string[] = [];

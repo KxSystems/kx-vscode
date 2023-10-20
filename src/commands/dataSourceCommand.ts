@@ -49,7 +49,7 @@ export async function addDataSource(): Promise<void> {
     filePath = path.join(kdbDataSourcesFolderPath, fileName);
   }
   const dataSourceName = fileName.replace(ext.kdbDataSourceFileExtension, "");
-  const defaultDataSourceContent = defaultDataSourceFile;
+  const defaultDataSourceContent = structuredClone(defaultDataSourceFile);
   const insightsNode = getConnectedInsightsNode();
   defaultDataSourceContent.name = dataSourceName;
   defaultDataSourceContent.insightsNode = insightsNode;

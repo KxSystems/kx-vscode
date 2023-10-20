@@ -12,9 +12,9 @@
  */
 
 export enum DataSourceTypes {
-  API,
-  QSQL,
-  SQL,
+  API = "API",
+  QSQL = "QSQL",
+  SQL = "SQL",
 }
 
 export interface DataSourceFiles {
