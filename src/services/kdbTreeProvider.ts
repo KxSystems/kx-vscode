@@ -316,6 +316,50 @@ export class KdbNode extends TreeItem {
       commands.executeCommand("setContext", "kdb.rootNodes", ext.kdbrootNodes);
     }
 
+    // set context for nodes without auth
+    if (details.auth === false) {
+      if (ext.kdbNodesWithoutAuth.indexOf(label) === -1) {
+        ext.kdbNodesWithoutAuth.push(label);
+        commands.executeCommand(
+          "setContext",
+          "kdb.kdbNodesWithoutAuth",
+          ext.kdbNodesWithoutAuth
+        );
+      }
+    } else {
+      const index = ext.kdbNodesWithoutAuth.indexOf(label);
+      if (index !== -1) {
+        ext.kdbNodesWithoutAuth.splice(index, 1);
+        commands.executeCommand(
+          "setContext",
+          "kdb.kdbNodesWithoutAuth",
+          ext.kdbNodesWithoutAuth
+        );
+      }
+    }
+
+    // set context for nodes without tls
+    if (details.tls === false) {
+      if (ext.kdbNodesWithoutTls.indexOf(label) === -1) {
+        ext.kdbNodesWithoutTls.push(label);
+        commands.executeCommand(
+          "setContext",
+          "kdb.kdbNodesWithoutTls",
+          ext.kdbNodesWithoutTls
+        );
+      }
+    } else {
+      const index = ext.kdbNodesWithoutTls.indexOf(label);
+      if (index !== -1) {
+        ext.kdbNodesWithoutTls.splice(index, 1);
+        commands.executeCommand(
+          "setContext",
+          "kdb.kdbNodesWithoutTls",
+          ext.kdbNodesWithoutTls
+        );
+      }
+    }
+
     super(label, collapsibleState);
     this.description = this.getDescription();
   }
