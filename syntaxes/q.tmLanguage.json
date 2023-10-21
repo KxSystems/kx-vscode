@@ -110,44 +110,44 @@
     "numbers": {
       "patterns": [
         {
-          "name": "constant.numeric.binary.q",
-          "match": "[01]+b"
-        },
-        {
-          "name": "constant.numeric.byte.q",
-          "match": "0x(?:[0-9a-fA-F]{2})+"
-        },
-        {
-          "name": "constant.numeric.date.q",
-          "match": "\\d{4}\\.\\d{2}\\.\\d{2}"
-        },
-        {
-          "name": "constant.numeric.militime.q",
-          "match": "\\d{2}:\\d{2}:\\d{2}\\.\\d{3}"
-        },
-        {
-          "name": "constant.numeric.nanotime.q",
-          "match": "(?:0D)?\\d{2}:\\d{2}:\\d{2}\\.\\d{9}"
+          "name": "constant.numeric.timestamp.q",
+          "match": "\\d{4}\\.\\d{2}\\.\\d{2}D\\d{2}:\\d{2}:\\d{2}\\.\\d{9}"
         },
         {
           "name": "constant.numeric.datetime.q",
           "match": "\\d{4}\\.\\d{2}\\.\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}"
         },
         {
-          "name": "constant.numeric.timestamp.q",
-          "match": "\\d{4}\\.\\d{2}\\.\\d{2}D\\d{2}:\\d{2}:\\d{2}\\.\\d{9}"
+          "name": "constant.numeric.date.q",
+          "match": "\\d{4}\\.\\d{2}\\.\\d{2}"
         },
         {
           "name": "constant.numeric.month.q",
           "match": "\\d{4}\\.\\d{2}m"
         },
         {
-          "name": "constant.numeric.month.q",
+          "name": "constant.numeric.nanotime.q",
+          "match": "(?:0D)?\\d{2}:\\d{2}:\\d{2}\\.\\d{9}"
+        },
+        {
+          "name": "constant.numeric.militime.q",
+          "match": "\\d{2}:\\d{2}:\\d{2}\\.\\d{3}"
+        },
+        {
+          "name": "constant.numeric.second.q",
           "match": "\\d{2}:\\d{2}:\\d{2}"
         },
         {
           "name": "constant.numeric.minute.q",
           "match": "\\d{2}:\\d{2}"
+        },
+        {
+          "name": "constant.numeric.binary.q",
+          "match": "[01]+b"
+        },
+        {
+          "name": "constant.numeric.byte.q",
+          "match": "0x(?:[0-9a-fA-F]{2})+"
         },
         {
           "name": "constant.numeric.float.q",
@@ -170,12 +170,12 @@
           "match": "\\.j\\.(j|k|jd)\\b"
         },
         {
-          "name": "keyword.other.namespaces.q.q",
-          "match": "\\.[Qq]\\.(addmonths|Cf|Xf|btoa|j10|j12|M|ty|x10|x12|chk|dpft|dpfts|dsftg|en|ens|fk|hdpf|qt|qp|bv|ind|cn|MAP|D|par|PD|pd|pf|pn|qp|pt|PV|pv|vp|D|P|u|bt|dd|def|f|ff|fmt|ft|fu|gc|gz|id|qt|res|s|s1|sbt|trp|ts|u|V|v|view|A|a|b6|nA|k|opt|w|x|addr|fps|fpn|fs|fsn|hg|host|hp|l)\\b"
+          "name": "keyword.other.namespaces.Q.q",
+          "match": "\\.[Qq]\\.(addmonths|Cf|Xf|btoa|j10|j12|M|ty|x10|x12|chk|dpft|dpfts|dsftg|en|ens|fk|hdpf|qt|qp|bv|ind|cn|MAP|D|par|PD|pd|pf|pn|qp|pt|PV|pv|vp|D|P|u|bt|dd|def|f|ff|fmt|ft|fu|gc|gz|id|qt|res|s|s1|sbt|trp|ts|u|V|v|view|A|a|b6|nA|k|opt|w|x|addr|fps|fpn|fs|fsn|hg|host|hp|l|sha1)\\b"
         },
         {
           "name": "keyword.other.namespaces.z.q",
-          "match": "\\.z\\.(a|b|c|D/d|e|ex|ey|f|h|i|K|k|l|N|n|o|P|p|pm|q|s|T|t|u|W|w|X|x|Z|z|zd|ac|bm|exit|pc|pd|pg|ph|pi|po|pp|pq|ps|pw|ts|vs|wc|wo|ws)\\b"
+          "match": "\\.z\\.(a|b|c|D/d|e|ex|ey|f|h|i|K|k|l|N|n|o|P|p|pm|q|s|T|t|u|W|w|X|x|Z|z|zd|ac|bm|exit|pc|pd|pg|ph|pi|po|pp|pq|ps|pw|ts|vs|wc|wo|ws|d|D)\\b"
         },
         {
           "name": "keyword.other.namespaces.m.q",
@@ -190,7 +190,7 @@
     "keywords": {
       "patterns": [
         {
-          "name": "keyword.other.q",
+          "name": "keyword.other.control.q",
           "match": "\\b(do|exit|if|while)\\b"
         },
         {
@@ -250,11 +250,26 @@
     "tests": {
       "patterns": [
         {
-          "name": "support.function.q",
-          "match": "\\b(before|after|skip)\\b\\s+"
+          "name": "comment.feature.q",
+          "begin": "\\b[x]feature\\b",
+          "end": "^(?=\\S)"
         },
         {
-          "match": "\\bx?(feature|should|expect|bench|property)\\b\\s+(.*)",
+          "name": "comment.should.q",
+          "begin": "\\b[x]should\\b",
+          "end": "^((?=\\S)|\\s+(?=[x]?should))\\b"
+        },
+        {
+          "name": "comment.other.q",
+          "begin": "\\b[x](expect|bench|property)\\b",
+          "end": "^((?=\\S)|\\s+(?=[x]?(should|expect|bench|property)))\\b"
+        },
+        {
+          "name": "support.function.q",
+          "match": "\\b(before|after|skip)\\b"
+        },
+        {
+          "match": "\\b(feature|should|expect|bench|property)\\b\\s+(.*)",
           "captures": {
             "1": {
               "name": "support.function.q"
