@@ -74,6 +74,11 @@ jobs:
     needs: app-sec
     runs-on: ubuntu-latest
     steps:
+      - name: Set Tag Var
+        id: vars
+        run: |
+          VERSION=${{ github.ref_name }}
+          echo "run_tag=$(echo ${VERSION:1})" >> $GITHUB_OUTPUT
       - name: Checkout code
         uses: actions/checkout@v2
         with:
@@ -101,8 +106,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: kdb-${{ github.ref_name }}.vsix
-          asset_name: kdb-${{ github.ref_name }}.vsix
+          asset_path: kdb-${steps.vars.outputs.run_tag}.vsix
+          asset_name: kdb-${steps.vars.outputs.run_tag}.vsix
           asset_content_type: application/octet-stream
 
   # manual-approve:
