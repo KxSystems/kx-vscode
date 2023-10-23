@@ -16,6 +16,7 @@ import { join } from "path";
 import { ext } from "../extensionVariables";
 import { deserialize, isCompressed, uncompress } from "../ipc/c";
 import { Parse } from "../ipc/parse.qlist";
+import { ServerType } from "../models/server";
 
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {
@@ -107,4 +108,15 @@ export function convertRowsToConsole(rows: string[]): string[] {
   result.splice(1, 0, totalCounter);
 
   return result;
+}
+
+export function getConnectionType(type: ServerType): string {
+  switch (type) {
+    case ServerType.KDB:
+      return "kdb";
+    case ServerType.INSIGHTS:
+      return "insights";
+    default:
+      return "undefined";
+  }
 }

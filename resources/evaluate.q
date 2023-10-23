@@ -1,4 +1,4 @@
-{[ctx; code]
+{[ctx; code; stringify]
  if [-10h ~ type ctx;
  ctx: enlist ctx];
  toString: {[data]
@@ -110,14 +110,14 @@
  if [err ~ enlist " ";
  err: "syntax error"];
  userCode: (-1 + last where (.Q.trp ~ first first @) each backtrace) # backtrace;
- callstack: {`name`text`index!(x[1;0]; x[1;3]; x 2)} each userCode;
- callstack[-1 + count callstack; `text]: (neg count suffix) _ (count prefix) _ (last callstack) `text;
- callstack[-1 + count callstack; `index]-: count prefix;
+ userCode[;3]: reverse 1 + til count userCode;
+ userCode[-1 + count userCode; 1; 3]: (neg count suffix) _ (count prefix) _ userCode[-1 + count userCode; 1; 3];
+ userCode[-1 + count userCode; 2]-: count prefix;
  (!) . flip (
  (`result;    ::);
  (`errored;   1b);
  (`error;     err);
- (`backtrace; callstack))
+ (`backtrace; .Q.sbt userCode))
  }[suffix; prefix]];
  if [isLastLine or result`errored;
  system "d ", cachedCtx;
@@ -125,7 +125,7 @@
  index +: 1];
  };
  result: evalInContext[ctx; splitExpression stripTrailingSemi wrapLines removeMultilineComments code];
- if [not result `errored;
+ if [(not result `errored) and stringify;
  result[`result]: toString result `result];
  result
  }

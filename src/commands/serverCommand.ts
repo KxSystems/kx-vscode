@@ -18,13 +18,14 @@ import { join } from "path";
 import requestPromise from "request-promise";
 import * as url from "url";
 import {
-  commands,
   InputBoxOptions,
   Position,
   ProgressLocation,
   QuickPickItem,
   QuickPickOptions,
   Range,
+  commands,
+  env,
   window,
 } from "vscode";
 import { ext } from "../extensionVariables";
@@ -54,12 +55,7 @@ import { ScratchpadResult } from "../models/scratchpadResult";
 import { Server } from "../models/server";
 import { ServerObject } from "../models/serverObject";
 import { DataSourcesPanel } from "../panels/datasource";
-import {
-  getCurrentToken,
-  IToken,
-  refreshToken,
-  signIn,
-} from "../services/kdbInsights/codeFlowLogin";
+import { getCurrentToken } from "../services/kdbInsights/codeFlowLogin";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import {
   addLocalConnectionContexts,
@@ -293,6 +289,10 @@ export function addKdbConnection(): void {
 }
 
 export async function removeConnection(viewItem: KdbNode): Promise<void> {
+  if (viewItem.label.indexOf("connected") !== -1) {
+    await disconnect();
+  }
+
   const servers: Server | undefined = getServers();
 
   const key =
@@ -319,36 +319,17 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
 }
 
 export async function connectInsights(viewItem: InsightsNode): Promise<void> {
+  if (env.remoteName === "ssh-remote") {
+    window.showErrorMessage(
+      "Connecting to a kdb Insights Enterprise server with a remote connection is not supported.",
+      ""
+    );
+    return;
+  }
+
   commands.executeCommand("kdb-results.focus");
 
-  let token: IToken | undefined;
-  const existingToken = await ext.context.secrets.get(viewItem.details.alias);
-  if (existingToken !== undefined) {
-    const storedToken: IToken = JSON.parse(existingToken);
-    if (new Date(storedToken.accessTokenExpirationDate) < new Date()) {
-      token = await refreshToken(
-        viewItem.details.server,
-        storedToken.refreshToken
-      );
-      if (token === undefined) {
-        token = await signIn(viewItem.details.server);
-        ext.context.secrets.store(
-          viewItem.details.alias,
-          JSON.stringify(token)
-        );
-      } else {
-        ext.context.secrets.store(
-          viewItem.details.alias,
-          JSON.stringify(token)
-        );
-      }
-    } else {
-      token = storedToken;
-    }
-  } else {
-    token = await signIn(viewItem.details.server);
-    ext.context.secrets.store(viewItem.details.alias, JSON.stringify(token));
-  }
+  await getCurrentToken(viewItem.details.server, viewItem.details.alias);
 
   ext.outputChannel.appendLine(
     `Connection established successfully to: ${viewItem.details.server}`
@@ -481,10 +462,11 @@ export async function getDataInsights(
 
 export async function importScratchpad(
   variableName: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params: any
 ): Promise<void> {
   if (ext.connectionNode instanceof InsightsNode) {
-    let queryParams, coreUrl;
+    let queryParams, coreUrl: string;
     switch (params.selectedType) {
       case "API":
         queryParams = {
@@ -645,6 +627,10 @@ export async function getScratchpadQuery(
 export async function removeInsightsConnection(
   viewItem: InsightsNode
 ): Promise<void> {
+  if (viewItem.label.indexOf("connected") !== -1) {
+    await disconnect();
+  }
+
   const insights: Insights | undefined = getInsights();
 
   const key = getHash(viewItem.details.server);
@@ -666,6 +652,7 @@ export async function removeInsightsConnection(
 export async function connect(viewItem: KdbNode): Promise<void> {
   commands.executeCommand("kdb-results.focus");
   await commands.executeCommand("setContext", "kdb.insightsConnected", false);
+  const queryConsole = ExecutionConsole.start();
   // handle cleaning up existing connection
   if (
     ext.connectionNode !== undefined &&
@@ -790,8 +777,14 @@ export async function executeQuery(
     writeScratchpadResult(queryRes, query);
   } else if (ext.connection !== undefined && ext.connection.connected) {
     query = sanitizeQuery(query);
-    const queryRes = await ext.connection.executeQuery(query, context);
-    writeQueryResult(queryRes, query);
+
+    if (ext.resultsViewProvider.isVisible()) {
+      const queryRes = await ext.connection.executeQuery(query, context, false);
+      writeQueryResultsToView(queryRes, query);
+    } else {
+      const queryRes = await ext.connection.executeQuery(query, context, true);
+      writeQueryResultsToConsole(queryRes, query);
+    }
   } else {
     const isConnected = ext.connection
       ? ext.connection.connected
@@ -841,7 +834,7 @@ export function getQueryContext(lineNum?: number): string {
   return context;
 }
 
-export function runQuery(type: ExecutionTypes) {
+export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
   const editor = window.activeTextEditor;
   if (editor) {
     let context;
@@ -861,8 +854,9 @@ export function runQuery(type: ExecutionTypes) {
         }
         break;
       case ExecutionTypes.QueryFile:
+      case ExecutionTypes.ReRunQuery:
       default:
-        query = editor.document.getText();
+        query = rerunQuery ? rerunQuery : editor.document.getText();
         context = getQueryContext();
     }
     executeQuery(query, context);
@@ -894,7 +888,7 @@ export async function loadServerObjects(): Promise<ServerObject[]> {
   }
 }
 
-export function writeQueryResult(
+export function writeQueryResultsToConsole(
   result: string | string[],
   query: string,
   dataSourceType?: string
@@ -919,6 +913,16 @@ export function writeQueryResult(
       ext.connectionNode?.label ? ext.connectionNode.label : ""
     );
   }
+}
+
+export function writeQueryResultsToView(
+  result: any,
+  dataSourceType?: string
+): void {
+  if (dataSourceType !== undefined) {
+    commands.executeCommand("kdb-results.focus");
+  }
+  commands.executeCommand("kdb.resultsPanel.update", result, dataSourceType);
 }
 
 function writeScratchpadResult(result: ScratchpadResult, query: string): void {

@@ -16,7 +16,46 @@
     ["(", ")"],
     ["\"", "\""]
   ],
+  "onEnterRules": [
+    {
+      "beforeText": "\\}",
+      "action": {
+        "indent": "outdent"
+      }
+    },
+    {
+      "beforeText": "\\{",
+      "action": {
+        "indent": "indent"
+      }
+    },
+    {
+      "beforeText": "\\)",
+      "action": {
+        "indent": "outdent"
+      }
+    },
+    {
+      "beforeText": "\\(",
+      "action": {
+        "indent": "indent"
+      }
+    },
+    {
+      "beforeText": "\\]",
+      "action": {
+        "indent": "outdent"
+      }
+    },
+    {
+      "beforeText": "\\[",
+      "action": {
+        "indent": "indent"
+      }
+    }
+  ],
   "comments": {
+    "blockComment": ["/", "\\"],
     "lineComment": "/"
   },
   "wordPattern": "(`:[a-zA-Z0-9._/]*)|(`[a-zA-Z0-9._]*)|(-?\\d*\\.\\d\\w*)|([^\\`\\~\\$\\!\\@\\#\\%\\^\\&\\*\\(\\)\\-\\=\\+\\[\\{\\]\\}\\\\\\|\\;\\:\\'\\\"\\,\\<\\>\\/\\?\\s]+)"

@@ -78,21 +78,24 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
       return Promise.resolve(await this.getNamespaces());
     } else if (element.contextValue === "ns") {
       return Promise.resolve(
-        this.getCategories(element.label?.toString(), ext.qObjectCategories)
+        this.getCategories(
+          (element as QNamespaceNode).details?.toString(),
+          ext.qObjectCategories
+        )
       );
     } else {
       return Promise.resolve(this.getServerObjects(element));
     }
   }
 
-  private getMergedElements(_element?: KdbNode): TreeItem[] {
+  private getMergedElements(_element?: TreeItem): TreeItem[] {
     const servers = this.getChildElements(_element);
     const insights = this.getInsightsChildElements();
     return [...servers, ...insights];
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private getChildElements(_element?: KdbNode): KdbNode[] {
+  private getChildElements(_element?: TreeItem): KdbNode[] {
     return this.createLeafItems(this.serverList);
   }
 
@@ -105,7 +108,13 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     const ns = await loadNamespaces();
     const result = ns.map(
       (x) =>
-        new QNamespaceNode([], x.name, "", TreeItemCollapsibleState.Collapsed)
+        new QNamespaceNode(
+          [],
+          x.name,
+          "",
+          TreeItemCollapsibleState.Collapsed,
+          x.fname
+        )
     );
     if (result !== undefined) {
       return result;
@@ -140,7 +149,9 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     return result;
   }
 
-  private async getServerObjects(serverType: TreeItem): Promise<QServerNode[]> {
+  private async getServerObjects(
+    serverType: TreeItem
+  ): Promise<QServerNode[] | QNamespaceNode[]> {
     if (serverType === undefined) return new Array<QServerNode>();
     const ns = serverType.contextValue ?? "";
     if (serverType.label === ext.qObjectCategories[0]) {
@@ -204,7 +215,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
         (x) =>
           new QServerNode(
             [],
-            `${ns === "." ? "" : ns + "."}${x.name}`,
+            `${ns === "." ? "." : ""}${x.name}`,
             "",
             TreeItemCollapsibleState.None,
             "p-var"
@@ -232,6 +243,24 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
         return result;
       } else {
         return new Array<QServerNode>();
+      }
+    } else if (serverType.label === ext.qObjectCategories[5]) {
+      // nested namespaces
+      const namespaces = await loadNamespaces(ns);
+      const result = namespaces.map(
+        (x) =>
+          new QNamespaceNode(
+            [],
+            x.fname,
+            "",
+            TreeItemCollapsibleState.Collapsed,
+            x.fname
+          )
+      );
+      if (result !== undefined) {
+        return result;
+      } else {
+        return Array<QNamespaceNode>();
       }
     }
     return new Array<QServerNode>();
@@ -399,9 +428,10 @@ export class QNamespaceNode extends TreeItem {
     public readonly children: string[],
     public readonly label: string,
     public readonly details: string,
-    public readonly collapsibleState: TreeItemCollapsibleState
+    public readonly collapsibleState: TreeItemCollapsibleState,
+    public readonly fullName: string
   ) {
-    details = "";
+    details = fullName;
     super(label, collapsibleState);
     this.description = this.getDescription();
   }

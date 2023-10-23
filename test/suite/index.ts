@@ -11,9 +11,10 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import * as glob from "glob";
-import * as Mocha from "mocha";
+import glob from "glob";
+import Mocha from "mocha";
 import * as path from "path";
+import { createReport } from "../coverage";
 
 export function run(): Promise<void> {
   const options: Mocha.MochaOptions = {
@@ -23,21 +24,21 @@ export function run(): Promise<void> {
     reporterOptions: {
       reporterEnabled: "spec, mocha-junit-reporter",
       mochaJunitReporterReporterOptions: {
-        mochaFile: path.resolve(__dirname, "..", "..", "test-results.xml"),
+        mochaFile: path.join(__dirname, "..", "..", "test-results.xml"),
       },
     },
   };
 
   const mocha = new Mocha(options);
-  const testsRoot = path.resolve(__dirname, "..");
+  const testsRoot = path.join(__dirname, "..");
 
-  return new Promise((c, e) => {
+  return new Promise<void>((c, e) => {
     glob("**/**.test.js", { cwd: testsRoot }, (err, files) => {
       if (err) {
         return e(err);
       }
 
-      files.forEach((f) => mocha.addFile(path.resolve(testsRoot, f)));
+      files.forEach((f) => mocha.addFile(path.join(testsRoot, f)));
 
       try {
         mocha.run((failures) => {
@@ -52,5 +53,9 @@ export function run(): Promise<void> {
         e(err);
       }
     });
+  }).then(() => {
+    if (process.env["GENERATE_COVERAGE"]) {
+      createReport();
+    }
   });
 }

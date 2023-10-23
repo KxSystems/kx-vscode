@@ -24,7 +24,6 @@ import {
   Diagnostic,
   DiagnosticSeverity,
   DocumentHighlight,
-  DocumentHighlightKind,
   DocumentSymbolParams,
   Hover,
   InitializeParams,
@@ -69,7 +68,7 @@ export default class QLangServer {
       this.documentSettings.delete(e.document.uri);
     });
     this.documents.onDidChangeContent(async (change) => {
-      await this.validateTextDocument(change.document);
+      //await this.validateTextDocument(change.document);
     });
     this.connection.onNotification("analyzeSourceCode", (config) =>
       this.analyzer.analyzeWorkspace(config)
@@ -103,7 +102,10 @@ export default class QLangServer {
     { workspaceFolders }: InitializeParams
   ): Promise<QLangServer> {
     // Get the URI of the root folder, if it exists.
-    const rootUri = workspaceFolders ? workspaceFolders[0].uri : "";
+    const rootUri =
+      workspaceFolders && workspaceFolders.length > 0
+        ? workspaceFolders[0].uri
+        : "";
     const analyzer = await AnalyzerContent.fromRoot(connection, rootUri);
     const server = new QLangServer(connection, analyzer);
     // Write a console message to indicate that the server is being initialized.
@@ -122,18 +124,19 @@ export default class QLangServer {
       // Whether the server supports resolving additional information for a completion item.
       completionProvider: { resolveProvider: true },
       // Whether the server supports providing hover information for a symbol.
-      hoverProvider: true,
+      // hoverProvider: true,
       // Whether the server supports providing document highlights for a symbol.
-      documentHighlightProvider: true,
+      // documentHighlightProvider: true,
       // Whether the server supports providing definitions for a symbol.
       definitionProvider: true,
       // Whether the server supports providing symbols for a document.
-      documentSymbolProvider: true,
+      // documentSymbolProvider: true,
       // Whether the server supports finding references to a symbol.
       referencesProvider: true,
       // Whether the server supports renaming a symbol.
-      renameProvider: { prepareProvider: true },
+      // renameProvider: { prepareProvider: true },
       // Whether the server supports providing semantic tokens for a document.
+      /*
       semanticTokensProvider: {
         documentSelector: null,
         legend: {
@@ -142,8 +145,9 @@ export default class QLangServer {
         },
         full: true,
       },
-      // Whether the server supports providing call hierarchy information for a symbol.
-      callHierarchyProvider: true,
+      */
+      // Whether the server supports providing call hierarchy information for a symbol - disabled for the moment.
+      callHierarchyProvider: false,
     };
   }
 
@@ -205,15 +209,7 @@ export default class QLangServer {
     params: TextDocumentPositionParams
   ): DocumentHighlight[] | null {
     const position = params.position;
-    return [
-      DocumentHighlight.create(
-        {
-          start: { line: position.line + 1, character: position.character },
-          end: { line: position.line + 1, character: position.character + 5 },
-        },
-        DocumentHighlightKind.Write
-      ),
-    ];
+    return [];
   }
 
   private onDefinition(params: TextDocumentPositionParams): Location[] {

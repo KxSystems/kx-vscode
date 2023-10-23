@@ -13,11 +13,27 @@
 
 import { runTests } from "@vscode/test-electron";
 import * as path from "path";
+import { instrument } from "./coverage";
 
 async function main() {
   try {
-    const extensionDevelopmentPath = path.resolve(__dirname, "../../");
-    const extensionTestsPath = path.resolve(__dirname, "./suite/index");
+    const extensionDevelopmentPath = path.join(__dirname, "../../");
+
+    let extensionTestsPath = path.join(__dirname, "./suite/index");
+    if (process.argv.indexOf("--coverage") >= 0) {
+      // generate instrumented files at out-cov
+      instrument();
+
+      // load the instrumented files
+      extensionTestsPath = path.join(
+        __dirname,
+        "../../out-cov/test/suite/index"
+      );
+
+      // signal that the coverage data should be gathered
+      process.env["GENERATE_COVERAGE"] = "1";
+    }
+
     await runTests({ extensionDevelopmentPath, extensionTestsPath });
   } catch (err) {
     console.error("Failed to run tests.");

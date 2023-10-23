@@ -12,6 +12,14 @@
  */
 
 import { OutputChannel, commands, window } from "vscode";
+import { ext } from "../extensionVariables";
+import { QueryHistory } from "../models/queryHistory";
+import { ServerType } from "../models/server";
+import { KdbNode } from "../services/kdbTreeProvider";
+import {
+  getHideDetailedConsoleQueryOutput,
+  setOutputWordWrapper,
+} from "./core";
 import { convertRowsToConsole } from "./queryUtils";
 
 export class ExecutionConsole {
@@ -23,6 +31,7 @@ export class ExecutionConsole {
   }
 
   public static start(): ExecutionConsole {
+    setOutputWordWrapper();
     if (!ExecutionConsole.current) {
       const _console = window.createOutputChannel("q Console Output");
       ExecutionConsole.current = new ExecutionConsole(_console);
@@ -68,6 +77,8 @@ export class ExecutionConsole {
     serverName: string,
     dataSourceType?: string
   ): void {
+    getHideDetailedConsoleQueryOutput();
+    const hideDetails = ext.hideDetailedConsoleQueryOutput;
     output = this.checkOutput(output, query);
     let dataSourceRes: string[] = [];
     if (dataSourceType === undefined) {
@@ -77,24 +88,32 @@ export class ExecutionConsole {
         dataSourceRes = convertRowsToConsole(output);
       }
     }
+    const connectionType: ServerType =
+      ext.connectionNode instanceof KdbNode
+        ? ServerType.KDB
+        : ServerType.INSIGHTS;
+    addQueryHistory(query, serverName, connectionType, true);
+
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
-    this._console.appendLine(
-      `>>> ${serverName}  @ ${date.toLocaleTimeString()} <<<`
-    );
-    this.appendQuery(query);
+    if (!hideDetails) {
+      this._console.appendLine(
+        `>>> ${serverName}  @ ${date.toLocaleTimeString()} <<<`
+      );
+      this.appendQuery(query);
+    }
     if (Array.isArray(output) && dataSourceType === undefined) {
       this._console.appendLine(output[0]);
       output.forEach((o) => this._console.appendLine(o));
     } else if (dataSourceRes.length > 0) {
       dataSourceRes.forEach((o) => this._console.appendLine(o));
-      this.rendResults(output, dataSourceType);
     } else {
       output = Array.isArray(output) ? output.join("\n") : output;
       this._console.appendLine(output);
-      this.rendResults(output, dataSourceType);
     }
-    this._console.appendLine(`<<<\n`);
+    if (!hideDetails) {
+      this._console.appendLine(`<<<\n`);
+    }
   }
 
   public appendQueryError(
@@ -103,32 +122,60 @@ export class ExecutionConsole {
     isConnected: boolean,
     serverName: string
   ): void {
+    getHideDetailedConsoleQueryOutput();
+    const hideDetails = ext.hideDetailedConsoleQueryOutput;
     this._console.show(true);
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
-    this._console.appendLine(
-      `<<< ERROR -  ${serverName}  @ ${date.toLocaleTimeString()} >>>`
-    );
+    if (!hideDetails) {
+      this._console.appendLine(
+        `<<< ERROR -  ${serverName}  @ ${date.toLocaleTimeString()} >>>`
+      );
+    }
     if (isConnected) {
-      this._console.appendLine(`ERROR Query executed: ${query}`);
-      this._console.appendLine(result);
+      const connectionType: ServerType =
+        ext.connectionNode instanceof KdbNode
+          ? ServerType.KDB
+          : ServerType.INSIGHTS;
+      if (!hideDetails) {
+        this._console.appendLine(`ERROR Query executed: ${query}\n`);
+        this._console.appendLine(result);
+      } else {
+        this._console.appendLine(`ERROR: ${result}`);
+      }
+      addQueryHistory(query, serverName, connectionType, false);
     } else {
       window.showErrorMessage(`Please connect to a kdb+ server`);
       this._console.appendLine(`Please connect to a kdb+ server`);
       commands.executeCommand("kdb.disconnect");
+      addQueryHistory(query, "No connection", ServerType.undefined, false);
     }
-    this._console.appendLine(`<<< >>>`);
+    if (!hideDetails) {
+      this._console.appendLine(`<<< >>>`);
+    }
   }
 
   // this to debug in case debug of extension doesn't work
   public appendQueryDebug(msg: string) {
     this._console.appendLine(msg);
   }
+}
 
-  public rendResults(query: string | string[], dataSourceType?: string) {
-    if (dataSourceType !== undefined) {
-      commands.executeCommand("kdb-results.focus");
-    }
-    commands.executeCommand("kdb.resultsPanel.update", query, dataSourceType);
-  }
+export function addQueryHistory(
+  query: string,
+  connectionName: string,
+  connectionType: ServerType,
+  success: boolean
+) {
+  const newQueryHistory: QueryHistory = {
+    query: query,
+    time: new Date().toLocaleString(),
+    success,
+    connectionName,
+    connectionType,
+  };
+
+  ext.kdbQueryHistoryList.unshift(newQueryHistory);
+
+  ext.queryHistoryProvider.refresh();
 }

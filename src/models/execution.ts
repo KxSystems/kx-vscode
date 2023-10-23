@@ -14,4 +14,5 @@
 export enum ExecutionTypes {
   QuerySelection,
   QueryFile,
+  ReRunQuery,
 }

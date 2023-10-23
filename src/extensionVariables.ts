@@ -16,6 +16,7 @@ import { LanguageClient } from "vscode-languageclient/node";
 import { Connection } from "./models/connection";
 import { LocalProcess } from "./models/localProcess";
 import { MetaObjectPayload } from "./models/meta";
+import { QueryHistory } from "./models/queryHistory";
 import { ServerObject } from "./models/serverObject";
 import { KdbDataSourceProvider } from "./services/dataSourceTreeProvider";
 import {
@@ -23,6 +24,7 @@ import {
   KdbNode,
   KdbTreeProvider,
 } from "./services/kdbTreeProvider";
+import { QueryHistoryProvider } from "./services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import AuthSettings from "./utils/secretStorage";
 
@@ -33,17 +35,22 @@ export namespace ext {
   export let consolePanel: OutputChannel;
   export let serverProvider: KdbTreeProvider;
   export let dataSourceProvider: KdbDataSourceProvider;
+  export let queryHistoryProvider: QueryHistoryProvider;
   export let resultsViewProvider: KdbResultsViewProvider;
   export let serverObjects: ServerObject;
   export let openSslVersion: string | null;
   export let resultPanelCSV: string;
+  export const rowLimit = 150000000;
 
   export let connection: Connection | undefined;
+  export let hideDetailedConsoleQueryOutput: boolean;
   export let connectionNode: KdbNode | InsightsNode | undefined;
   export const kdbDataSourceFolder = ".kdb-datasources";
   export const kdbDataSourceFileExtension = ".ds";
   export const kdbDataSourceFileGlob = "*.ds";
   export const kdbDataSourceRootNodes: string[] = [];
+  export const kdbQueryHistoryNodes: string[] = [];
+  export const kdbQueryHistoryList: QueryHistory[] = [];
   export const kdbrootNodes: string[] = [];
   export const kdbinsightsNodes: string[] = [];
   export const maxRetryCount = 5;
@@ -134,6 +141,7 @@ export namespace ext {
     "Tables",
     "Variables",
     "Views",
+    "Namespaces",
   ];
 
   export const qNamespaceFilters = [".q", ".Q", ".h", ".z", ".o", ".j", ".m"];

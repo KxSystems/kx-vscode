@@ -107,18 +107,25 @@ export async function getCurrentToken(
     return undefined;
   }
 
-  const rawToken = await ext.context.secrets.get(serverAlias);
+  let token: IToken | undefined;
+  const existingToken = await ext.context.secrets.get(serverAlias);
 
-  let token;
-  if (rawToken !== undefined) {
-    token = JSON.parse(rawToken!);
-    if (new Date(token.accessTokenExpirationDate) < new Date()) {
-      token = await signIn(serverName);
+  if (existingToken !== undefined) {
+    const storedToken: IToken = JSON.parse(existingToken);
+    if (new Date(storedToken.accessTokenExpirationDate) < new Date()) {
+      token = await refreshToken(serverName, storedToken.refreshToken);
+      if (token === undefined) {
+        token = await signIn(serverName);
+        ext.context.secrets.store(serverAlias, JSON.stringify(token));
+      }
       ext.context.secrets.store(serverAlias, JSON.stringify(token));
+      return token;
+    } else {
+      return storedToken;
     }
   } else {
     token = await signIn(serverName);
-    ext.context.secrets.store(serverName, JSON.stringify(token));
+    ext.context.secrets.store(serverAlias, JSON.stringify(token));
   }
   return token;
 }

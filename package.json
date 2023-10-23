@@ -3,15 +3,11 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "1.0.0-rc1",
+  "version": "1.0.1",
   "engines": {
     "vscode": "^1.66.0"
   },
   "icon": "resources/images/kx-logo-vs.png",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/KxSystems/kx-vscode.git"
-  },
   "aiKey": "93119af7-5d98-45d0-abf8-5074976a1472",
   "capabilities": {
     "untrustedWorkspaces": {
@@ -46,6 +42,7 @@
     "onCommand:kdb.resultsPanel.clear",
     "onCommand:kdb.resultsPanel.export.csv",
     "onView:kdb-servers",
+    "onView:kdb-query-history",
     "onView:kdb-datasources-explorer",
     "onView:kdb-results",
     "onTerminalProfile:kdb.q-terminal"
@@ -151,12 +148,22 @@
           "description": "kdb servers for explorer"
         },
         "kdb.insights": {
+          "deprecationMessage": "This setting is deprecated, use kdb.insightsEnterpriseConnections instead",
           "type": "object",
           "description": "kdb insights for explorer"
+        },
+        "kdb.insightsEnterpriseConnections": {
+          "type": "object",
+          "description": "kdb insights enterprise connections for explorer"
         },
         "kdb.hideInstallationNotification": {
           "type": "boolean",
           "description": "Hide notification for installation path, after first install"
+        },
+        "kdb.hideDetailedConsoleQueryOutput": {
+          "type": "boolean",
+          "description": "Hide detailed console query output",
+          "default": true
         },
         "kdb.qHomeDirectory": {
           "type": "string",
@@ -196,7 +203,7 @@
       },
       {
         "command": "kdb.connect",
-        "title": "Connect kdb server"
+        "title": "Connect server"
       },
       {
         "command": "kdb.insightsConnect",
@@ -209,6 +216,14 @@
       {
         "command": "kdb.disconnect",
         "title": "Disconnect"
+      },
+      {
+        "command": "kdb.queryHistory.rerun",
+        "title": "Rerun query"
+      },
+      {
+        "command": "kdb.queryHistory.clear",
+        "title": "Clear query history"
       },
       {
         "command": "kdb.dataSource.addDataSource",
@@ -252,15 +267,18 @@
       },
       {
         "command": "kdb.terminal.run",
-        "title": "Run q file in a new q instance"
+        "title": "Run q file in a new q instance",
+        "when": "kdb.QHOME || config.kdb.qHomeDirectory"
       },
       {
         "command": "kdb.execute.selectedQuery",
-        "title": "Execute Current Selection"
+        "title": "Execute Current Selection",
+        "when": "kdb.connected"
       },
       {
         "command": "kdb.execute.fileQuery",
-        "title": "Execute Entire File"
+        "title": "Execute Entire File",
+        "when": "kdb.connected"
       }
     ],
     "keybindings": [
@@ -268,19 +286,19 @@
         "command": "kdb.execute.selectedQuery",
         "key": "ctrl+d",
         "mac": "cmd+d",
-        "when": "editorLangId == q"
+        "when": "editorLangId == q  && kdb.connected"
       },
       {
         "command": "kdb.execute.fileQuery",
         "key": "ctrl+shift+d",
         "mac": "cmd+shift+d",
-        "when": "editorLangId == q"
+        "when": "editorLangId == q && kdb.connected"
       },
       {
         "command": "kdb.terminal.run",
         "key": "ctrl+shift+r",
         "mac": "cmd+shift+r",
-        "when": "editorLangId == q"
+        "when": "editorLangId == q && (kdb.QHOME || config.kdb.qHomeDirectory)"
       }
     ],
     "snippets": [
@@ -339,6 +357,12 @@
           "icon": "resources/server.svg"
         },
         {
+          "id": "kdb-query-history",
+          "name": "Query History",
+          "contextualTitle": "Query History",
+          "icon": "resources/history.svg"
+        },
+        {
           "id": "kdb-datasources-explorer",
           "name": "Data Sources",
           "contextualTitle": "Data Sources",
@@ -356,7 +380,7 @@
     "viewsWelcome": [
       {
         "view": "kdb-servers",
-        "contents": "No kdb servers registered.\n[Connect to kdb server](command:kdb.addConnection)"
+        "contents": "No connections registered.\n[Add Connection](command:kdb.addConnection)"
       }
     ],
     "menus": {
@@ -427,6 +451,11 @@
           "group": "resultsPanel"
         },
         {
+          "command": "kdb.queryHistory.clear",
+          "when": "view == kdb-query-history",
+          "group": "queryHistory"
+        },
+        {
           "command": "kdb.resultsPanel.export.csv",
           "when": "view == kdb-results",
           "group": "resultsPanel"
@@ -469,6 +498,11 @@
           "group": "connection"
         },
         {
+          "command": "kdb.queryHistory.rerun",
+          "when": "view == kdb-query-history",
+          "group": "queryHistory"
+        },
+        {
           "command": "kdb.dataSource.openDataSource",
           "when": "view == kdb-datasources-explorer && viewItem in kdb.dataSourceTreeNodes",
           "group": "dataSourceFiles"
@@ -487,46 +521,44 @@
       "editor/title": [
         {
           "command": "kdb.terminal.run",
-          "when": "resourceLangId ==  q",
+          "when": "resourceLangId ==  q && (kdb.QHOME || config.kdb.qHomeDirectory)",
           "group": "navigation"
         },
         {
           "command": "kdb.execute.fileQuery",
-          "when": "resourceLangId ==  q",
+          "when": "resourceLangId ==  q  && kdb.connected",
           "group": "navigation"
         }
       ],
       "editor/context": [
         {
           "command": "kdb.terminal.run",
-          "when": "resourceLangId == q",
+          "when": "resourceLangId == q && (kdb.QHOME || config.kdb.qHomeDirectory)",
           "group": "q"
         },
         {
           "command": "kdb.execute.selectedQuery",
           "group": "q",
-          "when": "editorLangId == q"
+          "when": "editorLangId == q  && kdb.connected"
         },
         {
           "command": "kdb.execute.fileQuery",
           "group": "q",
-          "when": "editorLangId == q"
+          "when": "editorLangId == q  && kdb.connected"
         }
       ]
     }
   },
   "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/KxSystems/kx-vscode/issues"
-  },
-  "homepage": "https://github.com/KxSystems/kx-vscode#readme",
+  "homepage": "https://kx.com",
   "scripts": {
     "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
     "esbuild-base": "rimraf out && node ./esbuild.js",
     "build": "npm run -S esbuild-base -- --sourcemap",
     "watch": "npm run -S esbuild-base -- --sourcemap --watch",
     "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
-    "test": "npm run -S esbuild-base -- --sourcemap && tsc -p ./test && node ./out/test/runTest.js",
+    "test": "tsc -p ./test && node ./out/test/runTest.js",
+    "coverage": "tsc -p ./test && node ./out/test/runTest.js --coverage",
     "package": "npx vsce package",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
     "generate-parser": "antlr4-tool -o q-parser grammars/q.g4"
@@ -540,6 +572,8 @@
     "@types/fs-extra": "^9.0.13",
     "@types/glob": "^8.0.1",
     "@types/graceful-fs": "^4.1.6",
+    "@types/istanbul-lib-coverage": "^2.0.4",
+    "@types/istanbul-reports": "^3.0.1",
     "@types/jwt-decode": "^3.1.0",
     "@types/klaw": "^3.0.3",
     "@types/mocha": "^10.0.1",
@@ -560,6 +594,11 @@
     "eslint-plugin-header": "^3.1.1",
     "eslint-plugin-license-header": "^0.6.0",
     "glob": "^8.1.0",
+    "istanbul-lib-coverage": "^3.2.0",
+    "istanbul-lib-instrument": "^3.3.0",
+    "istanbul-lib-report": "^2.0.8",
+    "istanbul-lib-source-maps": "^3.0.6",
+    "istanbul-reports": "^3.1.6",
     "mocha": "^10.2.0",
     "mocha-junit-reporter": "^2.2.0",
     "mocha-multi-reporters": "^1.5.1",
@@ -586,7 +625,7 @@
     "@types/picomatch": "^2.3.0",
     "@vscode/webview-ui-toolkit": "^1.2.2",
     "@windozer/node-q": "^2.6.0",
-    "ag-grid-community": "^30.1.0",
+    "ag-grid-community": "^30.2.0",
     "antlr4-runtime": "^4.13.0",
     "antlr4ts": "^0.5.0-alpha.4",
     "axios": "^1.4.0",
@@ -612,8 +651,5 @@
     "vscode-languageserver": "^8.1.0",
     "vscode-languageserver-textdocument": "^1.0.7",
     "vscode-uri": "^3.0.7"
-  },
-  "extensionDependencies": [
-    "ms-vscode.azure-account"
-  ]
+  }
 }
