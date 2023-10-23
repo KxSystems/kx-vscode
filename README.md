@@ -48,7 +48,7 @@ item | write q | run q queries | explore results | shared kdb process with kdb I
 ---- | ------- | ------------- | --------------- | ----------------------------------
 [kdb+ Personal Edition](https://kx.com/kdb-personal-edition-download/) | yes | yes | yes | no
 [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/)  | yes | yes | yes | no
-[kdb Insights Enterprise Personal Edition](https://trykdb.kx.com/kx/signup) | yes | yes | yes | yes            
+kdb Insights Enterprise | yes | yes | yes | yes            
 
 Contact licadmin@kx.com for commercial kdb licensing.
 
