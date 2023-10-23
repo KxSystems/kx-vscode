@@ -162,24 +162,31 @@ export function addAuthConnection(serverKey: string): void {
   };
 
   window.showInputBox(connectionUsername).then(async (username) => {
-    window.showInputBox(connectionPassword).then(async (password) => {
-      const servers: Server | undefined = getServers();
-      // store secrets
-      if (
-        (username != undefined || username != "") &&
-        (password != undefined || password != "") &&
-        servers &&
-        servers[serverKey]
-      ) {
-        servers[serverKey].auth = true;
-        ext.secretSettings.storeAuthData(serverKey, `${username}:${password}`);
-        await updateServers(servers);
-        const newServers = getServers();
-        if (newServers != undefined) {
-          ext.serverProvider.refresh(newServers);
+    if (username) {
+      window.showInputBox(connectionPassword).then(async (password) => {
+        if (password) {
+          const servers: Server | undefined = getServers();
+          // store secrets
+          if (
+            (username != undefined || username != "") &&
+            (password != undefined || password != "") &&
+            servers &&
+            servers[serverKey]
+          ) {
+            servers[serverKey].auth = true;
+            ext.secretSettings.storeAuthData(
+              serverKey,
+              `${username}:${password}`
+            );
+            await updateServers(servers);
+            const newServers = getServers();
+            if (newServers != undefined) {
+              ext.serverProvider.refresh(newServers);
+            }
+          }
         }
-      }
-    });
+      });
+    }
   });
 }
 
