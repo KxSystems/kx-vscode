@@ -147,6 +147,8 @@ export async function addInsightsConnection() {
   });
 }
 
+// Not possible to test secrets
+/* istanbul ignore next */
 export function addAuthConnection(serverKey: string): void {
   const connectionUsername: InputBoxOptions = {
     prompt: connectionUsernameInput.prompt,
