@@ -160,11 +160,10 @@ export function addAuthConnection(serverKey: string): void {
     placeHolder: connectionPasswordInput.placeholder,
     password: true,
   };
-
   window.showInputBox(connectionUsername).then(async (username) => {
-    if (username) {
+    if (username?.trim()?.length) {
       window.showInputBox(connectionPassword).then(async (password) => {
-        if (password) {
+        if (password?.trim()?.length) {
           const servers: Server | undefined = getServers();
           // store secrets
           if (
