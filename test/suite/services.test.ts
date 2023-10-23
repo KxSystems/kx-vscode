@@ -102,7 +102,7 @@ describe("kdbTreeProvider", () => {
 
   it("Validate refreshing KDB provider with KDB instance", () => {
     const kdbProvider = new KdbTreeProvider(servers, insights);
-    servers["testServer2"] = {
+    servers["testServer"] = {
       serverAlias: "testServer2Alias",
       serverName: "testServer2Name",
       serverPort: "5001",
@@ -328,6 +328,81 @@ describe("kdbTreeProvider", () => {
     );
   });
 
+  it("Should add node to no tls list", () => {
+    ext.kdbNodesWithoutTls.length = 0;
+    ext.kdbNodesWithoutTls.push("testServer [testServerAlias]");
+    const kdbNode = new KdbNode(
+      [],
+      "testServer",
+      {
+        serverName: "testServername",
+        serverAlias: "testServerAlias",
+        serverPort: "5001",
+        managed: false,
+        auth: false,
+        tls: false,
+      },
+      TreeItemCollapsibleState.None
+    );
+    assert.equal(ext.kdbNodesWithoutTls.length, 1);
+  });
+
+  it("Should remove node from no tls list", () => {
+    ext.kdbNodesWithoutTls.length = 0;
+    ext.kdbNodesWithoutTls.push("testServer [testServerAlias]");
+    const kdbNode = new KdbNode(
+      [],
+      "testServer",
+      {
+        serverName: "testServername",
+        serverAlias: "testServerAlias",
+        serverPort: "5001",
+        managed: false,
+        auth: false,
+        tls: true,
+      },
+      TreeItemCollapsibleState.None
+    );
+    assert.equal(ext.kdbNodesWithoutTls, 0);
+  });
+
+  it("Should add node to no auth list", () => {
+    ext.kdbNodesWithoutAuth.length = 0;
+    ext.kdbNodesWithoutAuth.push("testServer [testServerAlias]");
+    const kdbNode = new KdbNode(
+      [],
+      "testServer",
+      {
+        serverName: "testServername",
+        serverAlias: "testServerAlias",
+        serverPort: "5001",
+        managed: false,
+        auth: false,
+        tls: false,
+      },
+      TreeItemCollapsibleState.None
+    );
+    assert.equal(ext.kdbNodesWithoutAuth.length, 1);
+  });
+
+  it("Should remove node from no auth list", () => {
+    ext.kdbNodesWithoutAuth.length = 0;
+    ext.kdbNodesWithoutAuth.push("testServer [testServerAlias]");
+    const kdbNode = new KdbNode(
+      [],
+      "testServer",
+      {
+        serverName: "testServername",
+        serverAlias: "testServerAlias",
+        serverPort: "5001",
+        managed: false,
+        auth: true,
+        tls: false,
+      },
+      TreeItemCollapsibleState.None
+    );
+    assert.equal(ext.kdbNodesWithoutAuth, 0);
+  });
   it("Should retun a new InsightsNode", () => {
     const insightsNode = new InsightsNode(
       [],
