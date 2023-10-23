@@ -160,7 +160,7 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand(
       "kdb.addAuthentication",
       async (viewItem: KdbNode) => {
-        await addAuthConnection(viewItem.children[0]);
+        addAuthConnection(viewItem.children[0]);
       }
     ),
 
