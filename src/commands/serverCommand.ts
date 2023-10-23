@@ -221,7 +221,6 @@ export async function enableTLS(serverKey: string): Promise<void> {
     "Server not found, please ensure this is a correct server",
     "Cancel"
   );
-  return;
 }
 
 export function addKdbConnection(): void {
