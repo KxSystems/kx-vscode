@@ -18,6 +18,7 @@ import * as installTools from "../../src/commands/installTools";
 import * as serverCommand from "../../src/commands/serverCommand";
 import * as walkthroughCommand from "../../src/commands/walkthroughCommand";
 import { ext } from "../../src/extensionVariables";
+import { KdbTreeProvider } from "../../src/services/kdbTreeProvider";
 import * as coreUtils from "../../src/utils/core";
 
 describe("dataSourceCommand", () => {
@@ -119,6 +120,40 @@ describe("serverCommand", () => {
       );
       sinon.assert.calledOnce(getServersStub);
       sinon.assert.notCalled(updateServersStub);
+    });
+
+    it("should update server with correct arguments", async () => {
+      const servers = {
+        testServer: {
+          serverAlias: "testServerAlias",
+          serverName: "testServerName",
+          serverPort: "5001",
+          tls: false,
+          auth: false,
+          managed: false,
+        },
+      };
+      const insights = {
+        testInsight: {
+          alias: "testInsightsAlias",
+          server: "testInsightsName",
+          auth: false,
+        },
+      };
+      ext.serverProvider = new KdbTreeProvider(servers, insights);
+      ext.openSslVersion = "1.0.2";
+      getServersStub.returns({
+        test: {
+          auth: true,
+          tls: false,
+          serverName: "test",
+          serverPort: "1001",
+          serverAlias: "testando",
+          managed: false,
+        },
+      });
+      await serverCommand.enableTLS("test");
+      sinon.assert.calledOnce(updateServersStub);
     });
   });
 });
