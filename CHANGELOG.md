@@ -2,6 +2,12 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
+# v9.9.9
+
+### Internal Improvements
+
+- This is a test
+
 # v0.1.17
 
 ### Internal Improvements
