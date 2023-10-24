@@ -123,9 +123,9 @@ Upon completion, the localhost connection appears under _KX:CONNECTIONS_ in the 
 
 ![localkdbconnection](https://code.kx.com/img/vscode/connectserver.jpg)
 
-If authentication is required, from the connection dropdown menu define the _username_, then the _password_.
+If authentication is required to access the connection, from the connection dropdown menu, add the required _username_ and the _password_, clicking Enter to move between the two.
 
-An option to enable TLS encryption is offered; the default is _false_.
+From the connection dropdown menu there is also an option to enable TLS encryption; the default is _false_.
 
 - I want to learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).
 
