@@ -18,39 +18,15 @@
   ],
   "onEnterRules": [
     {
-      "beforeText": "\\}",
-      "action": {
-        "indent": "outdent"
-      }
-    },
-    {
-      "beforeText": "\\{",
+      "beforeText": "^[{[(]",
       "action": {
         "indent": "indent"
       }
     },
     {
-      "beforeText": "\\)",
+      "beforeText": "^s*[)}]]",
       "action": {
         "indent": "outdent"
-      }
-    },
-    {
-      "beforeText": "\\(",
-      "action": {
-        "indent": "indent"
-      }
-    },
-    {
-      "beforeText": "\\]",
-      "action": {
-        "indent": "outdent"
-      }
-    },
-    {
-      "beforeText": "\\[",
-      "action": {
-        "indent": "indent"
       }
     }
   ],
