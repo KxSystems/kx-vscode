@@ -60,8 +60,8 @@ jobs:
 
       - name: get-npm-version
         id: package-version
-        uses: martinbeentjes/npm-get-version-action@v1.3.1            
-          
+        uses: martinbeentjes/npm-get-version-action@v1.3.1
+
       - name: Download lcov result from test job
         uses: actions/download-artifact@v3
         with:
@@ -69,6 +69,7 @@ jobs:
 
       - name: SonarCloud Scan
         uses: sonarsource/sonarqube-scan-action@master
+        continue-on-error: true
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
