@@ -115,19 +115,19 @@ The kdb VS Code extension allows you to connect VS Code to a q process; this can
 
 - I want to learn more about [setting a q port](https://code.kx.com/q/basics/ipc/)
 
-**Step 7**: If authentication is required, define the _username_, then the _password_; clicking Enter with these inputs blank skips these steps.
-
-**Step 8**: An option to enable TLS encryption is offered; the default is _false_.
-
-- I want to learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).
-
 Upon completion, the localhost connection appears under _KX:CONNECTIONS_ in the left hand panel.
 
 ![localkdbconnection](https://code.kx.com/img/vscode/localkdbconnection.jpg)
 
-**Step 9**: Right-click the connection to _connect kdb server_. Ensure the q process is running.
+**Step 7**: Right-click the connection to _connect kdb server_. Ensure the q process is running.
 
 ![localkdbconnection](https://code.kx.com/img/vscode/connectserver.jpg)
+
+If authentication is required, from the connection dropdown menu define the _username_, then the _password_.
+
+An option to enable TLS encryption is offered; the default is _false_.
+
+- I want to learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).
 
 ### Managed q session
 
