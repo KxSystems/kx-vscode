@@ -83,6 +83,8 @@ export class DataSourcesPanel {
       extensionUri,
       dataSourceFile
     );
+
+    DataSourcesPanel.currentPanel.update();
   }
 
   public static close() {
@@ -108,16 +110,11 @@ export class DataSourcesPanel {
     }
   }
 
-  private _getWebviewContent(
-    webview: vscode.Webview,
-    extensionUri: vscode.Uri
-  ) {
+  private update() {
     const dataSourceFile = this.dataSourceFile;
     const dataSourceName = dataSourceFile.name;
     const insightsMeta = ext.insightsMeta;
     const isInsights = ext.connectionNode instanceof InsightsNode;
-    const webviewUri = getUri(webview, extensionUri, ["out", "webview.js"]);
-    const nonce = getNonce();
 
     const params = {
       isInsights,
@@ -125,6 +122,16 @@ export class DataSourcesPanel {
       dataSourceName,
       dataSourceFile,
     };
+
+    this._panel.webview.postMessage(params);
+  }
+
+  private _getWebviewContent(
+    webview: vscode.Webview,
+    extensionUri: vscode.Uri
+  ) {
+    const webviewUri = getUri(webview, extensionUri, ["out", "webview.js"]);
+    const nonce = getNonce();
 
     return /* html */ `
       <!DOCTYPE html>
@@ -135,9 +142,7 @@ export class DataSourcesPanel {
         <title>DataSource</title>
       </head>
       <body>
-        <kdb-data-source-view 
-          params="${JSON.stringify(params).replace(/"/g, "&quot;")}"
-        ></kdb-data-source-view>
+        <kdb-data-source-view></kdb-data-source-view>
         <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
       </body>
       </html>

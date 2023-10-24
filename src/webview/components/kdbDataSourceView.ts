@@ -11,12 +11,13 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { LitElement, html } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { LitElement, css, html } from "lit";
+import { customElement, state } from "lit/decorators.js";
+import { ifDefined } from "lit/directives/if-defined.js";
 import { Ref, createRef, ref } from "lit/directives/ref.js";
 import { DataSourceFiles, DataSourceTypes } from "../../models/dataSource";
 import { MetaObjectPayload } from "../../models/meta";
-import { dataSourcesPanelStyles, resetStyles, vscodeStyles } from "./styles";
+import { vscodeStyles } from "./styles";
 
 type Params = {
   isInsights: boolean;
@@ -27,34 +28,131 @@ type Params = {
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {
-  static styles = [resetStyles, vscodeStyles, dataSourcesPanelStyles];
+  static styles = [
+    vscodeStyles,
+    css`
+      .container {
+        display: flex;
+        flex-direction: row;
+        gap: 1em;
+      }
 
-  @property({ type: Object })
-  declare params: Params;
+      .list {
+        display: flex;
+        flex-direction: column;
+        gap: 1em;
+      }
 
-  constructor() {
-    super();
+      .list-item {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 1em;
+        justify-content: flex-start;
+        align-items: flex-end;
+      }
 
-    this.params = {
-      isInsights: false,
-      insightsMeta: <MetaObjectPayload>{},
-      dataSourceName: "",
-      dataSourceFile: <DataSourceFiles>{},
-    };
-  }
+      .button-group {
+        display: flex;
+        flex-direction: row;
+        gap: 4px;
+        justify-content: flex-start;
+        align-items: flex-end;
+      }
+
+      .align-end {
+        justify-content: flex-end;
+      }
+
+      .grow {
+        flex-grow: 1;
+      }
+
+      .dropdown {
+        min-width: 13em;
+      }
+
+      .dropdown.larger {
+        min-width: 15.5em;
+      }
+
+      .text-field {
+        min-width: 13em;
+      }
+
+      .text-field.larger {
+        min-width: 15.5em;
+      }
+
+      .actions {
+        margin-top: 4px;
+        padding-top: 1em;
+      }
+    `,
+  ];
 
   private vscode = acquireVsCodeApi();
   private dataSourceFormRef: Ref<HTMLFormElement> = createRef();
 
-  private get isMetaLoaded() {
-    return this.params.insightsMeta.dap ? true : false;
+  @state() declare isInsights: boolean;
+  @state() declare isMetaLoaded: boolean;
+  @state() declare insightsMeta: MetaObjectPayload;
+  @state() declare originalName: string;
+  @state() declare dataSourceName: string;
+  @state() declare selectedType: DataSourceTypes;
+  @state() declare selectedApi: string;
+  @state() declare selectedTable: string;
+  @state() declare startTS: string;
+  @state() declare endTS: string;
+  @state() declare fill: string;
+  @state() declare temporality: string;
+  @state() declare qsqlTarget: string;
+  @state() declare qsql: string;
+  @state() declare sql: string;
+
+  constructor() {
+    super();
+
+    this.isInsights = false;
+    this.isMetaLoaded = false;
+    this.insightsMeta = <MetaObjectPayload>{};
+    this.originalName = "";
+    this.dataSourceName = "";
+    this.selectedType = DataSourceTypes.API;
+    this.selectedApi = "";
+    this.selectedTable = "";
+    this.startTS = "";
+    this.endTS = "";
+    this.fill = "";
+    this.temporality = "";
+    this.qsqlTarget = "";
+    this.qsql = "";
+    this.sql = "";
+
+    window.addEventListener("message", (event) => {
+      const params = event.data as Params;
+      this.isInsights = params.isInsights;
+      this.isMetaLoaded = params.insightsMeta.dap ? true : false;
+      this.insightsMeta = params.insightsMeta;
+      this.originalName = params.dataSourceName;
+      this.dataSourceName = params.dataSourceName;
+      this.selectedType = params.dataSourceFile.dataSource.selectedType;
+      this.selectedApi = params.dataSourceFile.dataSource.api.selectedApi;
+      this.selectedTable = params.dataSourceFile.dataSource.api.table;
+      this.startTS = params.dataSourceFile.dataSource.api.startTS;
+      this.endTS = params.dataSourceFile.dataSource.api.endTS;
+      this.fill = params.dataSourceFile.dataSource.api.fill;
+      this.temporality = params.dataSourceFile.dataSource.api.temporality;
+      this.qsqlTarget = params.dataSourceFile.dataSource.qsql.selectedTarget;
+      this.qsql = params.dataSourceFile.dataSource.qsql.query;
+      this.sql = params.dataSourceFile.dataSource.sql.query;
+    });
   }
 
-  private get tabSelected() {
-    const selectedType = this.params.dataSourceFile.dataSource.selectedType;
-    return selectedType === DataSourceTypes.API
+  private get selectedTab() {
+    return this.selectedType === DataSourceTypes.API
       ? "tab-1"
-      : selectedType === DataSourceTypes.QSQL
+      : this.selectedType === DataSourceTypes.QSQL
       ? "tab-2"
       : "tab-3";
   }
@@ -65,24 +163,21 @@ export class KdbDataSourceView extends LitElement {
     return Object.fromEntries(formData.entries());
   }
 
-  private save(e: Event) {
-    e.preventDefault();
+  private save() {
     this.vscode.postMessage({
       command: "kdb.dataSource.saveDataSource",
       data: this.data,
     });
   }
 
-  private run(e: Event) {
-    e.preventDefault();
+  private run() {
     this.vscode.postMessage({
       command: "kdb.dataSource.runDataSource",
       data: this.data,
     });
   }
 
-  private populateScratchpad(e: Event) {
-    e.preventDefault();
+  private populateScratchpad() {
     this.vscode.postMessage({
       command: "kdb.dataSource.populateScratchpad",
       data: this.data,
@@ -90,104 +185,132 @@ export class KdbDataSourceView extends LitElement {
   }
 
   private selectApiTab() {
-    this.params.dataSourceFile.dataSource.selectedType = DataSourceTypes.API;
-    this.requestUpdate();
+    this.selectedType = DataSourceTypes.API;
   }
 
   private selectQSqlTab() {
-    this.params.dataSourceFile.dataSource.selectedType = DataSourceTypes.QSQL;
-    this.requestUpdate();
+    this.selectedType = DataSourceTypes.QSQL;
   }
 
   private selectSqlTab() {
-    this.params.dataSourceFile.dataSource.selectedType = DataSourceTypes.SQL;
-    this.requestUpdate();
+    this.selectedType = DataSourceTypes.SQL;
+  }
+
+  private tableChanged(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    this.selectedTable = select.value;
   }
 
   private addFilter() {
-    const filter = this.params.dataSourceFile.dataSource.api.filter;
-    filter.push(`filter ${filter.length + 1}`);
-    this.requestUpdate();
+    return false;
   }
 
   private removeFilter() {
-    const filter = this.params.dataSourceFile.dataSource.api.filter;
-    if (filter.pop()) {
-      this.requestUpdate();
-    }
+    return false;
   }
 
-  private addGroupBy() {
-    const groupBy = this.params.dataSourceFile.dataSource.api.groupBy;
-    groupBy.push(`groupBy ${groupBy.length + 1}`);
-    this.requestUpdate();
+  private addLabel() {
+    return false;
   }
 
-  private removeGroupBy() {
-    const groupBy = this.params.dataSourceFile.dataSource.api.groupBy;
-    if (groupBy.pop()) {
-      this.requestUpdate();
-    }
+  private removeLabel() {
+    return false;
+  }
+
+  private addSortBy() {
+    return false;
+  }
+
+  private removeSortBy() {
+    return false;
   }
 
   private addAgg() {
-    const agg = this.params.dataSourceFile.dataSource.api.agg;
-    agg.push(`agg ${agg.length + 1}`);
-    this.requestUpdate();
+    return false;
   }
 
   private removeAgg() {
-    const agg = this.params.dataSourceFile.dataSource.api.agg;
-    if (agg.pop()) {
-      this.requestUpdate();
+    return false;
+  }
+
+  private addGroupBy() {
+    return false;
+  }
+
+  private removeGroupBy() {
+    return false;
+  }
+
+  private renderApiOptions(selected: string) {
+    if (this.isInsights && this.isMetaLoaded) {
+      return html`
+        ${this.insightsMeta.api
+          .filter(
+            (api) => api.api === ".kxi.getData" || !api.api.startsWith(".kxi.")
+          )
+          .map((api) => {
+            const generatedValue =
+              api.api === ".kxi.getData"
+                ? api.api.replace(".kxi.", "")
+                : api.api;
+
+            return generatedValue === selected
+              ? html`<vscode-option value="${generatedValue}" selected
+                  >${generatedValue}</vscode-option
+                >`
+              : html`<vscode-option value="${generatedValue}"
+                  >${generatedValue}</vscode-option
+                >`;
+          })}
+      `;
     }
+    return [];
   }
 
-  private addSortCols() {
-    const sortCols = this.params.dataSourceFile.dataSource.api.sortCols;
-    sortCols.push(`sortCols ${sortCols.length + 1}`);
-    this.requestUpdate();
-  }
-
-  private removeSortCols() {
-    const sortCols = this.params.dataSourceFile.dataSource.api.sortCols;
-    if (sortCols.pop()) {
-      this.requestUpdate();
+  private renderTableOptions(selected: string) {
+    if (this.isInsights && this.isMetaLoaded) {
+      const auxOptions = this.insightsMeta.assembly.flatMap((assembly) => {
+        return assembly.tbls.map((tbl) => {
+          const generatedValue = tbl;
+          if (!this.selectedTable) {
+            this.selectedTable = generatedValue;
+          }
+          if (generatedValue === selected) {
+            return html`<vscode-option value="${generatedValue}" selected
+              >${generatedValue}</vscode-option
+            >`;
+          }
+          return html`<vscode-option value="${generatedValue}"
+            >${generatedValue}</vscode-option
+          >`;
+        });
+      });
+      return auxOptions;
     }
+    return [];
   }
 
-  private addSlice() {
-    const slice = this.params.dataSourceFile.dataSource.api.slice;
-    slice.push(`slice ${slice.length + 1}`);
-    this.requestUpdate();
-  }
-
-  private removeSlice() {
-    const slice = this.params.dataSourceFile.dataSource.api.slice;
-    if (slice.pop()) {
-      this.requestUpdate();
+  private renderColumnOptions() {
+    if (this.isInsights && this.isMetaLoaded) {
+      const schema = this.insightsMeta.schema;
+      if (schema) {
+        const found = schema.find((item) => item.table === this.selectedTable);
+        if (found) {
+          return found.columns.map(
+            (column) => html` <vscode-option>${column.column}</vscode-option> `
+          );
+        }
+      }
     }
+    return [];
   }
 
-  private addLabels() {
-    const labels = this.params.dataSourceFile.dataSource.api.labels;
-    labels.push(`labels ${labels.length + 1}`);
-    this.requestUpdate();
-  }
-
-  private removeLabels() {
-    const labels = this.params.dataSourceFile.dataSource.api.labels;
-    if (labels.pop()) {
-      this.requestUpdate();
-    }
-  }
-
-  private generateTarget(targetApi: string) {
-    if (this.params.isInsights && this.isMetaLoaded) {
-      const auxOptions = this.params.insightsMeta.dap.map((dap) => {
+  private renderTargetOptions(selected: string) {
+    if (this.isInsights && this.isMetaLoaded) {
+      return this.insightsMeta.dap.map((dap) => {
         const generatedValue = `${dap.assembly}-qe ${dap.instance}`;
         const option =
-          generatedValue === targetApi
+          generatedValue === selected
             ? html`
                 <vscode-option value="${generatedValue}" selected
                   >${generatedValue}</vscode-option
@@ -200,424 +323,358 @@ export class KdbDataSourceView extends LitElement {
               `;
         return option;
       });
-      return [
-        html`
-          <vscode-dropdown
-            id="selectedTarget"
-            name="selectedTarget"
-            value="${targetApi}"
-            class="dropdown">
-            ${auxOptions}
-          </vscode-dropdown>
-        `,
-      ];
     }
-    return [
-      html`
-        <vscode-dropdown
-          id="selectedTarget"
-          name="selectedTarget"
-          class="dropdown">
-          <vscode-option>Not connected to Insights</vscode-option>
-        </vscode-dropdown>
-      `,
-    ];
+    return [];
   }
 
-  private generateTables(targetTable: string) {
-    if (this.params.isInsights && this.isMetaLoaded) {
-      const auxOptions = this.params.insightsMeta.assembly.flatMap(
-        (assembly) => {
-          return assembly.tbls.map((tbl) => {
-            const generatedValue = tbl;
-            const option =
-              generatedValue === targetTable
-                ? html`<vscode-option value="${generatedValue}" selected
-                    >${generatedValue}</vscode-option
-                  >`
-                : html`<vscode-option value="${generatedValue}"
-                    >${generatedValue}</vscode-option
-                  >`;
-            return option;
-          });
-        }
-      );
-      return [
-        html`
-          <vscode-dropdown
-            id="selectedTable"
-            name="selectedTable"
-            value="${targetTable}"
-            class="dropdown">
-            ${auxOptions}
+  private renderFilter() {
+    return html`
+      <div class="list-item">
+        <vscode-checkbox></vscode-checkbox>
+        <div class="dropdown-container">
+          <label>Filter By Column</label>
+          <vscode-dropdown class="dropdown">
+            ${this.renderColumnOptions()}
           </vscode-dropdown>
-        `,
-      ];
-    }
-    return [
-      html`
-        <vscode-dropdown
-          id="selectedTable"
-          name="selectedTable"
-          class="dropdown">
-          <vscode-option>Not connected to Insights</vscode-option>
-        </vscode-dropdown>
-      `,
-    ];
+        </div>
+        <div class="dropdown-container">
+          <label>Apply Function</label>
+          <vscode-dropdown class="dropdown">
+            <vscode-option>in</vscode-option>
+            <vscode-option>within</vscode-option>
+            <vscode-option>&lt;</vscode-option>
+            <vscode-option>&gt;</vscode-option>
+            <vscode-option>&lt;=</vscode-option>
+            <vscode-option>&gt;=</vscode-option>
+            <vscode-option>=</vscode-option>
+            <vscode-option>&lt;&gt;</vscode-option>
+            <vscode-option>like</vscode-option>
+          </vscode-dropdown>
+        </div>
+        <vscode-text-field class="text-field">Set Parameter</vscode-text-field>
+        <div class="button-group align-end">
+          <vscode-button
+            aria-label="Add Filter"
+            appearance="secondary"
+            @click="${this.addFilter}"
+            >+</vscode-button
+          >
+          <vscode-button
+            aria-label="Remove Filter"
+            appearance="secondary"
+            @click="${this.removeFilter}"
+            >-</vscode-button
+          >
+        </div>
+      </div>
+    `;
   }
 
-  private generateApiTarget(target: string) {
-    return this.params.isInsights && this.isMetaLoaded
-      ? html`
-          <vscode-dropdown
-            id="selectedApi"
-            name="selectedApi"
-            value="${target}"
-            class="dropdown">
-            ${this.params.insightsMeta.api
-              .filter(
-                (api) =>
-                  api.api === ".kxi.getData" || !api.api.startsWith(".kxi.")
-              )
-              .map((api) => {
-                const generatedValue =
-                  api.api === ".kxi.getData"
-                    ? api.api.replace(".kxi.", "")
-                    : api.api;
-
-                return generatedValue === target
-                  ? html`<vscode-option value="${generatedValue}" selected
-                      >${generatedValue}</vscode-option
-                    >`
-                  : html`<vscode-option value="${generatedValue}"
-                      >${generatedValue}</vscode-option
-                    >`;
-              })}
-          </vscode-dropdown>
-        `
-      : html`
-          <vscode-dropdown id="selectedApi" name="selectedApi" class="dropdown">
-            <vscode-option>Not connected to Insights</vscode-option>
-          </vscode-dropdown>
-        `;
+  private renderLabel() {
+    return html`
+      <div class="list-item">
+        <vscode-checkbox></vscode-checkbox>
+        <vscode-text-field class="text-field"
+          >Filter By Label</vscode-text-field
+        >
+        <vscode-text-field class="text-field">Value</vscode-text-field>
+        <div class="button-group align-end">
+          <vscode-button
+            aria-label="Add Label"
+            appearance="secondary"
+            @click="${this.addLabel}"
+            >+</vscode-button
+          >
+          <vscode-button
+            aria-label="Remove Label"
+            appearance="secondary"
+            @click="${this.removeLabel}"
+            >-</vscode-button
+          >
+        </div>
+      </div>
+    `;
   }
 
-  private generateAPIListParams(
-    listParamType: string,
-    actualParamArray: string[]
-  ) {
-    if (actualParamArray.length > 0) {
-      return actualParamArray.map((param, i) => {
-        return html`
-          <div class="field-row ${listParamType}-row">
-            <vscode-text-field
-              size="100"
-              id="${listParamType}-${i + 1}"
-              name="${listParamType}-${i + 1}"
-              placeholder="${listParamType} ${i + 1}"
-              value="${param}"
-              class="text-input ${listParamType}-input"></vscode-text-field>
-          </div>
-        `;
-      });
-    } else {
-      return [
-        html`
-          <div class="field-row ${listParamType}-row">
-            <vscode-text-field
-              size="100"
-              id="${listParamType}-1"
-              name="${listParamType}-1"
-              placeholder="${listParamType} 1"
-              class="text-input ${listParamType}-input"></vscode-text-field>
-          </div>
-        `,
-      ];
-    }
+  private renderSort() {
+    return html`
+      <div class="list-item">
+        <vscode-checkbox></vscode-checkbox>
+        <div class="dropdown-container">
+          <label>Sort By</label>
+          <vscode-dropdown class="dropdown">
+            ${this.renderColumnOptions()}
+          </vscode-dropdown>
+        </div>
+        <div class="button-group align-end">
+          <vscode-button
+            aria-label="Add Sort By"
+            appearance="secondary"
+            @click="${this.addSortBy}"
+            >+</vscode-button
+          >
+          <vscode-button
+            aria-label="Remove Sort By"
+            appearance="secondary"
+            @click="${this.removeSortBy}"
+            >-</vscode-button
+          >
+        </div>
+      </div>
+    `;
+  }
+
+  private renderAgg() {
+    return html`
+      <div class="list-item">
+        <vscode-checkbox></vscode-checkbox>
+        <vscode-text-field class="text-field"
+          >Define Output Aggregate</vscode-text-field
+        >
+        <div class="dropdown-container">
+          <label>Choose Aggregation</label>
+          <vscode-dropdown class="dropdown">
+            <vscode-option>count</vscode-option>
+            <vscode-option>first</vscode-option>
+            <vscode-option>last</vscode-option>
+            <vscode-option>sum</vscode-option>
+            <vscode-option>prd</vscode-option>
+            <vscode-option>min</vscode-option>
+            <vscode-option>max</vscode-option>
+            <vscode-option>all</vscode-option>
+            <vscode-option>any</vscode-option>
+            <vscode-option>var</vscode-option>
+            <vscode-option>avg</vscode-option>
+            <vscode-option>dev</vscode-option>
+            <vscode-option>distinct</vscode-option>
+            <vscode-option>svar</vscode-option>
+            <vscode-option>sdev</vscode-option>
+          </vscode-dropdown>
+        </div>
+        <div class="dropdown-container">
+          <label>By Column</label>
+          <vscode-dropdown class="dropdown">
+            ${this.renderColumnOptions()}
+          </vscode-dropdown>
+        </div>
+        <div class="button-group align-end">
+          <vscode-button
+            aria-label="Add Aggregation"
+            appearance="secondary"
+            @click="${this.addAgg}"
+            >+</vscode-button
+          >
+          <vscode-button
+            aria-label="Remove Aggregation"
+            appearance="secondary"
+            @click="${this.removeAgg}"
+            >-</vscode-button
+          >
+        </div>
+      </div>
+    `;
+  }
+
+  private renderGroupBy() {
+    return html`
+      <div class="list-item">
+        <vscode-checkbox></vscode-checkbox>
+        <div class="dropdown-container">
+          <label>Group Aggregation By</label>
+          <vscode-dropdown class="dropdown">
+            ${this.renderColumnOptions()}
+          </vscode-dropdown>
+        </div>
+        <div class="button-group align-end">
+          <vscode-button
+            aria-label="Add Group By"
+            appearance="secondary"
+            @click="${this.addGroupBy}"
+            >+</vscode-button
+          >
+          <vscode-button
+            aria-label="Remove Group By"
+            appearance="secondary"
+            @click="${this.removeGroupBy}"
+            >-</vscode-button
+          >
+        </div>
+      </div>
+    `;
   }
 
   render() {
     return html`
-      <form id="dataSourceForm" ${ref(this.dataSourceFormRef)}>
-        <div class="datasource-view-container">
-          <div class="content-wrapper">
-            <div class="field-row name-row">
-              <label for="name">DataSource Name</label>
+      <form ${ref(this.dataSourceFormRef)}>
+        <input type="hidden" name="originalName" value="${this.originalName}" />
+        <input type="hidden" name="selectedType" value="${this.selectedType}" />
+
+        <div class="container">
+          <div class="list">
+            <div class="list-item">
               <vscode-text-field
-                size="100"
-                id="name"
                 name="name"
-                placeholder="DataSource Name"
-                value="${this.params.dataSourceFile.name}"
-                class="text-input name-input"></vscode-text-field>
-              <input
-                type="hidden"
-                name="originalName"
-                value="${this.params.dataSourceName}" />
+                placeholder="Data Source Name"
+                value="${this.dataSourceName}"
+                class="grow"
+                >Data Source Name</vscode-text-field
+              >
             </div>
-            <div class="form-wrapper">
-              <vscode-panels activeid="${this.tabSelected}">
-                <vscode-panel-tab
-                  id="tab-1"
-                  class="type-tab"
-                  @click="${this.selectApiTab}"
+
+            <div class="list-item">
+              <vscode-panels activeid="${this.selectedTab}">
+                <vscode-panel-tab id="tab-1" @click="${this.selectApiTab}"
                   >API</vscode-panel-tab
                 >
-                <vscode-panel-tab
-                  id="tab-2"
-                  class="type-tab"
-                  @click="${this.selectQSqlTab}"
+                <vscode-panel-tab id="tab-2" @click="${this.selectQSqlTab}"
                   >QSQL</vscode-panel-tab
                 >
-                <vscode-panel-tab
-                  id="tab-3"
-                  class="type-tab"
-                  @click="${this.selectSqlTab}"
+                <vscode-panel-tab id="tab-3" @click="${this.selectSqlTab}"
                   >SQL</vscode-panel-tab
                 >
-                <input
-                  type="hidden"
-                  name="selectedType"
-                  value="${this.params.dataSourceFile.dataSource
-                    .selectedType}" />
-                <vscode-panel-view id="view-1">
-                  <div class="editor-panel">
-                    <div class="field-row">
+                <vscode-panel-view>
+                  <div class="list">
+                    <div class="list-item">
                       <div class="dropdown-container">
                         <label for="selectedApi">Select API</label>
-                        ${this.generateApiTarget(
-                          this.params.dataSourceFile.dataSource.api.selectedApi
-                        )}
+                        <vscode-dropdown
+                          id="selectedApi"
+                          name="selectedApi"
+                          class="dropdown larger">
+                          ${this.renderApiOptions(this.selectedApi)}
+                        </vscode-dropdown>
                       </div>
                     </div>
-                    <div class="field-row">
+
+                    <div class="list-item">
                       <div class="dropdown-container">
                         <label for="selectedTable">Table</label>
-                        ${this.generateTables(
-                          this.params.dataSourceFile.dataSource.api.table
-                        )}
+                        <vscode-dropdown
+                          id="selectedTable"
+                          name="selectedTable"
+                          class="dropdown larger"
+                          @change="${this.tableChanged}">
+                          ${this.renderTableOptions(this.selectedTable)}
+                        </vscode-dropdown>
                       </div>
                     </div>
-                    <div class="field-row">
+
+                    <div class="list-item">
                       <vscode-text-field
                         type="datetime-local"
-                        size="100"
-                        id="startTS"
                         name="startTS"
                         placeholder="startTS"
-                        value="${this.params.dataSourceFile.dataSource.api
-                          .startTS}"
-                        >startTS</vscode-text-field
+                        class="text-field larger"
+                        value="${this.startTS}"
+                        >Start Time</vscode-text-field
                       >
                     </div>
-                    <div class="field-row">
+
+                    <div class="list-item">
                       <vscode-text-field
                         type="datetime-local"
-                        size="100"
-                        id="endTS"
                         name="endTS"
                         placeholder="endTS"
-                        value="${this.params.dataSourceFile.dataSource.api
-                          .endTS}"
-                        >endTS</vscode-text-field
+                        class="text-field larger"
+                        value="${this.endTS}"
+                        >End Time</vscode-text-field
                       >
                     </div>
-                    <div class="field-row">
-                      <vscode-text-field
-                        size="100"
-                        id="fill"
-                        name="fill"
-                        placeholder="fill"
-                        value="${this.params.dataSourceFile.dataSource.api
-                          .fill}"
-                        >fill</vscode-text-field
-                      >
+
+                    <div class="list-item">
+                      <vscode-checkbox></vscode-checkbox>
+                      <div class="dropdown-container">
+                        <label for="fill">Fill</label>
+                        <vscode-dropdown id="fill" name="fill" class="dropdown">
+                          <vscode-option
+                            value="zero"
+                            selected="${ifDefined(this.fill === "zero")}"
+                            >zero</vscode-option
+                          >
+                          <vscode-option
+                            value="forward"
+                            selected="${ifDefined(this.fill === "forward")}"
+                            >forward</vscode-option
+                          >
+                        </vscode-dropdown>
+                      </div>
                     </div>
-                    <div class="field-row">
-                      <vscode-text-field
-                        size="100"
-                        id="temporality"
-                        name="temporality"
-                        placeholder="temporality"
-                        value="${this.params.dataSourceFile.dataSource.api
-                          .temporality}"
-                        >temporality</vscode-text-field
-                      >
+
+                    <div class="list-item">
+                      <vscode-checkbox></vscode-checkbox>
+                      <div class="dropdown-container">
+                        <label for="temporality">Temporality</label>
+                        <vscode-dropdown
+                          id="temporality"
+                          name="temporality"
+                          class="dropdown">
+                          <vscode-option>snapshot</vscode-option>
+                          <vscode-option>slice</vscode-option>
+                        </vscode-dropdown>
+                      </div>
                     </div>
-                    <div class="params-wrapper" id="filter-wrapper">
-                      <label>filter</label>
-                      ${this.generateAPIListParams(
-                        "filter",
-                        this.params.dataSourceFile.dataSource.api.filter
-                      )}
+
+                    <div class="list">
+                      ${this.renderFilter()} ${this.renderFilter()}
+                      ${this.renderFilter()} ${this.renderFilter()}
                     </div>
-                    <div class="field-row">
-                      <vscode-button
-                        id="addFilter"
-                        appearance="secondary"
-                        class="btn-add-param"
-                        @click="${this.addFilter}"
-                        >ADD FILTER</vscode-button
-                      >
-                      <vscode-button
-                        id="removeFilter"
-                        appearance="secondary"
-                        class="btn-remove-param"
-                        @click="${this.removeFilter}"
-                        >REMOVE FILTER</vscode-button
-                      >
+
+                    <div class="list">
+                      ${this.renderLabel()} ${this.renderLabel()}
+                      ${this.renderLabel()} ${this.renderLabel()}
                     </div>
-                    <div class="params-wrapper" id="groupBy-wrapper">
-                      <label>groupBy</label>
-                      ${this.generateAPIListParams(
-                        "groupBy",
-                        this.params.dataSourceFile.dataSource.api.groupBy
-                      )}
+
+                    <div class="list">
+                      ${this.renderSort()} ${this.renderSort()}
+                      ${this.renderSort()} ${this.renderSort()}
                     </div>
-                    <div class="field-row">
-                      <vscode-button
-                        id="addGroupBy"
-                        appearance="secondary"
-                        class="btn-add-param"
-                        @click="${this.addGroupBy}"
-                        >ADD GROUP BY</vscode-button
-                      >
-                      <vscode-button
-                        id="removeGroupBy"
-                        appearance="secondary"
-                        class="btn-remove-param"
-                        @click="${this.removeGroupBy}"
-                        >REMOVE GROUP BY</vscode-button
-                      >
+
+                    <div class="list">
+                      ${this.renderAgg()} ${this.renderAgg()}
+                      ${this.renderAgg()} ${this.renderAgg()}
                     </div>
-                    <div class="params-wrapper" id="agg-wrapper">
-                      <label>agg</label>
-                      ${this.generateAPIListParams(
-                        "agg",
-                        this.params.dataSourceFile.dataSource.api.agg
-                      )}
-                    </div>
-                    <div class="field-row">
-                      <vscode-button
-                        id="addAgg"
-                        appearance="secondary"
-                        class="btn-add-param"
-                        @click="${this.addAgg}"
-                        >ADD AGG</vscode-button
-                      >
-                      <vscode-button
-                        id="removeAgg"
-                        appearance="secondary"
-                        class="btn-remove-param"
-                        @click="${this.removeAgg}"
-                        >REMOVE AGG</vscode-button
-                      >
-                    </div>
-                    <div class="params-wrapper" id="sortCols-wrapper">
-                      <label>sortCols</label>
-                      ${this.generateAPIListParams(
-                        "sortCols",
-                        this.params.dataSourceFile.dataSource.api.sortCols
-                      )}
-                    </div>
-                    <div class="field-row">
-                      <vscode-button
-                        id="addSortCols"
-                        appearance="secondary"
-                        class="btn-add-param"
-                        @click="${this.addSortCols}"
-                        >ADD SORT COLS</vscode-button
-                      >
-                      <vscode-button
-                        id="removeSortCols"
-                        appearance="secondary"
-                        class="btn-remove-param"
-                        @click="${this.removeSortCols}"
-                        >REMOVE SORT COLS</vscode-button
-                      >
-                    </div>
-                    <div class="params-wrapper" id="slice-wrapper">
-                      <label>slice</label>
-                      ${this.generateAPIListParams(
-                        "slice",
-                        this.params.dataSourceFile.dataSource.api.slice
-                      )}
-                    </div>
-                    <div class="field-row">
-                      <vscode-button
-                        id="addSlice"
-                        appearance="secondary"
-                        class="btn-add-param"
-                        @click="${this.addSlice}"
-                        >ADD SLICE</vscode-button
-                      >
-                      <vscode-button
-                        id="removeSlice"
-                        appearance="secondary"
-                        class="btn-remove-param"
-                        @click="${this.removeSlice}"
-                        >REMOVE SLICE</vscode-button
-                      >
-                    </div>
-                    <div class="params-wrapper" id="labels-wrapper">
-                      <label>labels</label>
-                      ${this.generateAPIListParams(
-                        "labels",
-                        this.params.dataSourceFile.dataSource.api.labels
-                      )}
-                    </div>
-                    <div class="field-row">
-                      <vscode-button
-                        id="addLabels"
-                        appearance="secondary"
-                        class="btn-add-param"
-                        @click="${this.addLabels}"
-                        >ADD LABEL</vscode-button
-                      >
-                      <vscode-button
-                        id="removeLabels"
-                        appearance="secondary"
-                        class="btn-remove-param"
-                        @click="${this.removeLabels}"
-                        >REMOVE LABEL</vscode-button
-                      >
+
+                    <div class="list">
+                      ${this.renderGroupBy()} ${this.renderGroupBy()}
+                      ${this.renderGroupBy()} ${this.renderGroupBy()}
                     </div>
                   </div>
                 </vscode-panel-view>
-                <vscode-panel-view id="view-2">
-                  <div class="editor-panel">
-                    <div class="field-row">
+
+                <vscode-panel-view>
+                  <div class="list">
+                    <div class="list-item">
                       <div class="dropdown-container">
                         <label for="selectedTarget">Target</label>
-                        ${this.generateTarget(
-                          this.params.dataSourceFile.dataSource.qsql
-                            .selectedTarget
-                        )}
+                        <vscode-dropdown
+                          id="selectedTarget"
+                          class="dropdown larger">
+                          ${this.renderTargetOptions(
+                            this.qsqlTarget
+                          )}</vscode-dropdown
+                        >
                       </div>
                     </div>
-                    <div class="field-row">
+                    <div class="list-item">
                       <vscode-text-area
-                        class="text-area"
-                        id="qsql"
                         name="qsql"
-                        value="${this.params.dataSourceFile.dataSource.api
-                          .endTS}"
+                        cols="60"
                         rows="20"
+                        value="${this.qsql}"
                         >Query</vscode-text-area
                       >
                     </div>
                   </div>
                 </vscode-panel-view>
-                <vscode-panel-view id="view-3">
-                  <div class="editor-panel">
-                    <div class="field-row">
+
+                <vscode-panel-view>
+                  <div class="list">
+                    <div class="list-item">
                       <vscode-text-area
-                        class="text-area"
-                        id="sql"
-                        value="${this.params.dataSourceFile.dataSource.sql
-                          .query}"
                         name="sql"
+                        cols="60"
                         rows="20"
+                        value="${this.sql}"
                         >Query</vscode-text-area
                       >
                     </div>
@@ -625,37 +682,27 @@ export class KdbDataSourceView extends LitElement {
                 </vscode-panel-view>
               </vscode-panels>
             </div>
-            <div class="actions-wrapper">
-              <div class="btn-actions-group">
-                <div class="btn-action">
-                  <vscode-button
-                    id="save"
-                    appearance="primary"
-                    class="btn-save"
-                    @click="${this.save}"
-                    >SAVE</vscode-button
-                  >
-                </div>
-                <div class="btn-action">
-                  <vscode-button
-                    id="run"
-                    appearance="secondary"
-                    class="btn-run"
-                    @click="${this.run}"
-                    >RUN</vscode-button
-                  >
-                </div>
-                <div class="btn-action">
-                  <vscode-button
-                    id="populateScratchpad"
-                    appearance="secondary"
-                    class="btn-scratchpad"
-                    @click="${this.populateScratchpad}"
-                    >POPULATE SCRATCHPAD</vscode-button
-                  >
-                </div>
-              </div>
+          </div>
+          <div class="list actions">
+            <div class="list-item">
+              <vscode-button
+                appearance="primary"
+                class="grow"
+                @click="${this.save}"
+                >Save</vscode-button
+              >
+              <vscode-button
+                appearance="secondary"
+                class="grow"
+                @click="${this.run}"
+                >Run</vscode-button
+              >
             </div>
+            <vscode-button
+              appearance="secondary"
+              @click="${this.populateScratchpad}"
+              >Populate Scratchpad</vscode-button
+            >
           </div>
         </div>
       </form>
