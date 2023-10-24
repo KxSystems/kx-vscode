@@ -11,13 +11,12 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { LitElement, css, html } from "lit";
+import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { ifDefined } from "lit/directives/if-defined.js";
 import { Ref, createRef, ref } from "lit/directives/ref.js";
 import { DataSourceFiles, DataSourceTypes } from "../../models/dataSource";
 import { MetaObjectPayload } from "../../models/meta";
-import { vscodeStyles } from "./styles";
+import { kdbStyles, vscodeStyles } from "./styles";
 
 type Params = {
   isInsights: boolean;
@@ -28,68 +27,7 @@ type Params = {
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {
-  static styles = [
-    vscodeStyles,
-    css`
-      .container {
-        display: flex;
-        flex-direction: row;
-        gap: 1em;
-      }
-
-      .list {
-        display: flex;
-        flex-direction: column;
-        gap: 1em;
-      }
-
-      .list-item {
-        display: flex;
-        flex-direction: row;
-        flex-wrap: wrap;
-        gap: 1em;
-        justify-content: flex-start;
-        align-items: flex-end;
-      }
-
-      .button-group {
-        display: flex;
-        flex-direction: row;
-        gap: 4px;
-        justify-content: flex-start;
-        align-items: flex-end;
-      }
-
-      .align-end {
-        justify-content: flex-end;
-      }
-
-      .grow {
-        flex-grow: 1;
-      }
-
-      .dropdown {
-        min-width: 13em;
-      }
-
-      .dropdown.larger {
-        min-width: 15.5em;
-      }
-
-      .text-field {
-        min-width: 13em;
-      }
-
-      .text-field.larger {
-        min-width: 15.5em;
-      }
-
-      .actions {
-        margin-top: 4px;
-        padding-top: 1em;
-      }
-    `,
-  ];
+  static styles = [vscodeStyles, kdbStyles];
 
   private vscode = acquireVsCodeApi();
   private dataSourceFormRef: Ref<HTMLFormElement> = createRef();
@@ -199,6 +137,11 @@ export class KdbDataSourceView extends LitElement {
   private tableChanged(event: Event) {
     const select = event.target as HTMLSelectElement;
     this.selectedTable = select.value;
+  }
+
+  private temporalityChanged(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    this.temporality = select.value;
   }
 
   private addFilter() {
@@ -588,12 +531,12 @@ export class KdbDataSourceView extends LitElement {
                         <vscode-dropdown id="fill" name="fill" class="dropdown">
                           <vscode-option
                             value="zero"
-                            selected="${ifDefined(this.fill === "zero")}"
+                            ?selected="${this.fill === "zero"}"
                             >zero</vscode-option
                           >
                           <vscode-option
                             value="forward"
-                            selected="${ifDefined(this.fill === "forward")}"
+                            ?selected="${this.fill === "forward"}"
                             >forward</vscode-option
                           >
                         </vscode-dropdown>
@@ -607,11 +550,32 @@ export class KdbDataSourceView extends LitElement {
                         <vscode-dropdown
                           id="temporality"
                           name="temporality"
-                          class="dropdown">
-                          <vscode-option>snapshot</vscode-option>
-                          <vscode-option>slice</vscode-option>
+                          class="dropdown"
+                          @change="${this.temporalityChanged}">
+                          <vscode-option
+                            value="snapshot"
+                            ?selected="${this.temporality === "snapshot"}"
+                            >snapshot</vscode-option
+                          >
+                          <vscode-option
+                            value="slice"
+                            ?selected="${this.temporality === "slice"}"
+                            >slice</vscode-option
+                          >
                         </vscode-dropdown>
                       </div>
+                      <vscode-text-field
+                        type="time"
+                        class="text-field"
+                        ?hidden="${this.temporality !== "slice"}"
+                        >Start Time</vscode-text-field
+                      >
+                      <vscode-text-field
+                        type="time"
+                        class="text-field"
+                        ?hidden="${this.temporality !== "slice"}"
+                        >End Time</vscode-text-field
+                      >
                     </div>
 
                     <div class="list">

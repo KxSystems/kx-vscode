@@ -31,3 +31,63 @@ export const vscodeStyles = css`
     margin-bottom: 2px;
   }
 `;
+
+export const kdbStyles = css`
+  .container {
+    display: flex;
+    flex-direction: row;
+    gap: 1em;
+  }
+
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 1em;
+  }
+
+  .list-item {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 1em;
+    justify-content: flex-start;
+    align-items: flex-end;
+  }
+
+  .button-group {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    justify-content: flex-start;
+    align-items: flex-end;
+  }
+
+  .align-end {
+    justify-content: flex-end;
+  }
+
+  .grow {
+    flex-grow: 1;
+  }
+
+  .dropdown {
+    min-width: 13em;
+  }
+
+  .dropdown.larger {
+    min-width: 15.5em;
+  }
+
+  .text-field {
+    min-width: 13em;
+  }
+
+  .text-field.larger {
+    min-width: 15.5em;
+  }
+
+  .actions {
+    margin-top: 4px;
+    padding-top: 1em;
+  }
+`;
