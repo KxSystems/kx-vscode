@@ -32,6 +32,8 @@
     "onCommand:kdb.removeConnection",
     "onCommand:kdb.connect",
     "onCommand:kdb.disconnect",
+    "onCommand:kdb.addAuthentication",
+    "onCommand:kdb.enableTLS",
     "onCommand:kdb.dataSource.addDataSource",
     "onCommand:kdb.dataSource.saveDataSource",
     "onCommand:kdb.dataSource.runDataSource",
@@ -204,6 +206,15 @@
       {
         "command": "kdb.connect",
         "title": "Connect server"
+      },
+      {
+        "command": "kdb.addAuthentication",
+        "title": "Add Authentication",
+        "position": "end"
+      },
+      {
+        "command": "kdb.enableTLS",
+        "title": "Enable TLS"
       },
       {
         "command": "kdb.insightsConnect",
@@ -416,6 +427,14 @@
         {
           "command": "kdb.disconnect",
           "when": "false"
+        },
+        {
+          "command": "kdb.addAuthentication",
+          "when": "false"
+        },
+        {
+          "command": "kdb.enableTLS",
+          "when": "false"
         }
       ],
       "webview/context": [
@@ -465,7 +484,17 @@
         {
           "command": "kdb.connect",
           "when": "view == kdb-servers && viewItem not in kdb.connected && viewItem in kdb.rootNodes",
-          "group": "connection"
+          "group": "connection@1"
+        },
+        {
+          "command": "kdb.addAuthentication",
+          "when": "view == kdb-servers && viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutAuth",
+          "group": "connection@3"
+        },
+        {
+          "command": "kdb.enableTLS",
+          "when": "view == kdb-servers && viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutTls",
+          "group": "connection@4"
         },
         {
           "command": "kdb.insightsConnect",
@@ -485,7 +514,7 @@
         {
           "command": "kdb.removeConnection",
           "when": "view == kdb-servers && viewItem in kdb.rootNodes",
-          "group": "connection"
+          "group": "connection@2"
         },
         {
           "command": "kdb.startLocalProcess",

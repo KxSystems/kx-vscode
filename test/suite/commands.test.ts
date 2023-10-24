@@ -17,6 +17,9 @@ import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
 import * as installTools from "../../src/commands/installTools";
 import * as serverCommand from "../../src/commands/serverCommand";
 import * as walkthroughCommand from "../../src/commands/walkthroughCommand";
+import { ext } from "../../src/extensionVariables";
+import { KdbTreeProvider } from "../../src/services/kdbTreeProvider";
+import * as coreUtils from "../../src/utils/core";
 
 describe("dataSourceCommand", () => {
   //write tests for src/commands/dataSourceCommand.ts
@@ -70,7 +73,91 @@ describe("serverCommand", () => {
       executeCommandStub.restore();
     });
   });
+  describe("enableTLS", () => {
+    let getServersStub: sinon.SinonStub;
+    let updateServersStub: sinon.SinonStub;
+    let showErrorMessageStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      getServersStub = sinon.stub(coreUtils, "getServers");
+      updateServersStub = sinon.stub(coreUtils, "updateServers");
+      showErrorMessageStub = sinon.stub(vscode.window, "showErrorMessage");
+    });
+
+    afterEach(() => {
+      getServersStub.restore();
+      updateServersStub.restore();
+      showErrorMessageStub.restore();
+    });
+
+    it("should show error message when OpenSSL is not found", async () => {
+      ext.openSslVersion = null;
+      showErrorMessageStub.resolves("More Info");
+
+      await serverCommand.enableTLS("test");
+
+      sinon.assert.calledOnce(showErrorMessageStub);
+      sinon.assert.calledWith(
+        showErrorMessageStub,
+        "OpenSSL not found, please ensure this is installed",
+        "More Info",
+        "Cancel"
+      );
+      sinon.assert.notCalled(updateServersStub);
+    });
+
+    it("should show error message when server is not found", async () => {
+      ext.openSslVersion = "1.0.2";
+      getServersStub.returns({});
+
+      await serverCommand.enableTLS("test");
+
+      sinon.assert.calledOnce(showErrorMessageStub);
+      sinon.assert.calledWith(
+        showErrorMessageStub,
+        "Server not found, please ensure this is a correct server",
+        "Cancel"
+      );
+      sinon.assert.calledOnce(getServersStub);
+      sinon.assert.notCalled(updateServersStub);
+    });
+
+    it("should update server with correct arguments", async () => {
+      const servers = {
+        testServer: {
+          serverAlias: "testServerAlias",
+          serverName: "testServerName",
+          serverPort: "5001",
+          tls: false,
+          auth: false,
+          managed: false,
+        },
+      };
+      const insights = {
+        testInsight: {
+          alias: "testInsightsAlias",
+          server: "testInsightsName",
+          auth: false,
+        },
+      };
+      ext.serverProvider = new KdbTreeProvider(servers, insights);
+      ext.openSslVersion = "1.0.2";
+      getServersStub.returns({
+        test: {
+          auth: true,
+          tls: false,
+          serverName: "test",
+          serverPort: "1001",
+          serverAlias: "testando",
+          managed: false,
+        },
+      });
+      await serverCommand.enableTLS("test");
+      sinon.assert.calledOnce(updateServersStub);
+    });
+  });
 });
+
 describe("walkthroughCommand", () => {
   //write tests for src/commands/walkthroughCommand.ts
   //function to be deleted after write the tests

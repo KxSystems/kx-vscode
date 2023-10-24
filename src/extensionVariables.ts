@@ -53,6 +53,8 @@ export namespace ext {
   export const kdbQueryHistoryList: QueryHistory[] = [];
   export const kdbrootNodes: string[] = [];
   export const kdbinsightsNodes: string[] = [];
+  export const kdbNodesWithoutAuth: string[] = [];
+  export const kdbNodesWithoutTls: string[] = [];
   export const maxRetryCount = 5;
 
   export let secretSettings: AuthSettings;
