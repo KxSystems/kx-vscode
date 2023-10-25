@@ -59,10 +59,10 @@ export function convertRows(rows: any[]): any[] {
     return [];
   }
   const keys = Object.keys(rows[0]);
-  const result = [keys.join(",")];
+  const result = [keys.join("#$#;#$#")];
   for (const row of rows) {
     const values = keys.map((key) => row[key]);
-    result.push(values.join(","));
+    result.push(values.join("#$#;#$#"));
   }
   return result;
 }
@@ -72,36 +72,28 @@ export function convertRowsToConsole(rows: string[]): string[] {
     return [];
   }
 
-  const vector = [];
-  for (let i = 0; i < rows.length; i++) {
-    vector.push(rows[i].split(","));
-  }
+  const vector = rows.map((row) => row.split("#$#;#$#"));
 
-  const columnCounters = [];
-  for (let j = 0; j < vector[0].length; j++) {
-    let maxLength = 0;
-    for (let i = 0; i < vector.length; i++) {
-      maxLength = Math.max(maxLength, vector[i][j].length);
-    }
-    columnCounters.push(maxLength + 2);
-  }
+  const columnCounters = vector[0].reduce((counters: number[], _, j) => {
+    const maxLength = vector.reduce(
+      (max, row) => Math.max(max, row[j].length),
+      0
+    );
+    counters.push(maxLength + 2);
+    return counters;
+  }, []);
 
-  for (let i = 0; i < vector.length; i++) {
-    const row = vector[i];
-    for (let j = 0; j < row.length; j++) {
-      const value = row[j];
+  vector.forEach((row) => {
+    row.forEach((value, j) => {
       const counter = columnCounters[j];
       const diff = counter - value.length;
       if (diff > 0) {
         row[j] = value + " ".repeat(diff);
       }
-    }
-  }
+    });
+  });
 
-  const result = [];
-  for (let i = 0; i < vector.length; i++) {
-    result.push(vector[i].join(""));
-  }
+  const result = vector.map((row) => row.join(""));
 
   const totalCount = columnCounters.reduce((sum, count) => sum + count, 0);
   const totalCounter = "-".repeat(totalCount);

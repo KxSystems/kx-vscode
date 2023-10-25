@@ -57,12 +57,41 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   public updateResults(queryResults: any, dataSourceType?: string) {
     if (this._view) {
       this._view.show?.(true);
+      queryResults = dataSourceType
+        ? this.convertStringArrToObjArr(queryResults)
+        : queryResults;
       this._view.webview.postMessage(queryResults);
       this._view.webview.html = this._getWebviewContent(
         queryResults,
         dataSourceType
       );
     }
+  }
+
+  public removeEndCommaFromStrings(data: string[]): string[] {
+    return data.map((element) => {
+      if (element.endsWith(",")) {
+        return element.slice(0, -1);
+      }
+      return element;
+    });
+  }
+
+  convertStringArrToObjArr<T>(data: string[]): any[] {
+    const [keys, ...values] = data.map((line) =>
+      this.removeEndCommaFromStrings(line.split("#$#;#$#"))
+    );
+
+    const result = [];
+    for (const curr of values) {
+      const obj: any = {};
+      for (let i = 0; i < keys.length; i++) {
+        obj[keys[i]] = curr[i];
+      }
+      result.push(obj);
+    }
+
+    return result;
   }
 
   convertToCsv(data: any[]): string[] {
