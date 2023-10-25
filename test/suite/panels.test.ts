@@ -15,14 +15,14 @@ import assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { ext } from "../../src/extensionVariables";
-import { defaultDataSourceFile } from "../../src/models/dataSource";
+import { createDefaultDataSourceFile } from "../../src/models/dataSource";
 import { DataSourcesPanel } from "../../src/panels/datasource";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as utils from "../../src/utils/execution";
 
 describe("WebPanels", () => {
   describe("DataSourcesPanel", () => {
-    const dsTest = defaultDataSourceFile;
+    const dsTest = createDefaultDataSourceFile();
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
 
     beforeEach(() => {
