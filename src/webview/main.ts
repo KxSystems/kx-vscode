@@ -15,7 +15,6 @@ import {
   allComponents,
   provideVSCodeDesignSystem,
 } from "@vscode/webview-ui-toolkit";
+import "./components/kdbDataSourceView";
 
 provideVSCodeDesignSystem().register(allComponents);
-
-import "./components/kdbDataSourceView";

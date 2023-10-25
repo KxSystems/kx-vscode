@@ -15,13 +15,27 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { Ref, createRef, ref } from "lit/directives/ref.js";
 import {
+  Agg,
   DataSourceTypes,
-  aggFuncs,
-  filterFuncs,
+  Filter,
+  Group,
+  Label,
+  Slice,
+  Sort,
+  aggOperators,
+  createAgg,
+  createFilter,
+  createGroup,
+  createLabel,
+  createSlice,
+  createSort,
+  filterOperators,
 } from "../../models/dataSource";
 import { DataSourceMessage } from "../../models/messages";
 import { MetaObjectPayload } from "../../models/meta";
 import { kdbStyles, vscodeStyles } from "./styles";
+
+const MAX_ITEMS = 32;
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {
@@ -39,6 +53,12 @@ export class KdbDataSourceView extends LitElement {
   @state() declare endTS: string;
   @state() declare fill: string;
   @state() declare temporality: string;
+  @state() declare slices: Slice[];
+  @state() declare filters: Filter[];
+  @state() declare labels: Label[];
+  @state() declare sorts: Sort[];
+  @state() declare aggs: Agg[];
+  @state() declare groups: Group[];
   @state() declare qsqlTarget: string;
   @state() declare qsql: string;
   @state() declare sql: string;
@@ -57,6 +77,12 @@ export class KdbDataSourceView extends LitElement {
     this.endTS = "";
     this.fill = "";
     this.temporality = "";
+    this.slices = [createSlice()];
+    this.filters = [createFilter()];
+    this.labels = [createLabel()];
+    this.sorts = [createSort()];
+    this.aggs = [createAgg()];
+    this.groups = [createGroup()];
     this.qsqlTarget = "";
     this.qsql = "";
     this.sql = "";
@@ -129,46 +155,6 @@ export class KdbDataSourceView extends LitElement {
     });
   }
 
-  private addFilter() {
-    return false;
-  }
-
-  private removeFilter() {
-    return false;
-  }
-
-  private addLabel() {
-    return false;
-  }
-
-  private removeLabel() {
-    return false;
-  }
-
-  private addSortBy() {
-    return false;
-  }
-
-  private removeSortBy() {
-    return false;
-  }
-
-  private addAgg() {
-    return false;
-  }
-
-  private removeAgg() {
-    return false;
-  }
-
-  private addGroupBy() {
-    return false;
-  }
-
-  private removeGroupBy() {
-    return false;
-  }
-
   private renderApiOptions(selected: string) {
     if (this.isInsights && this.isMetaLoaded) {
       return html`
@@ -177,16 +163,14 @@ export class KdbDataSourceView extends LitElement {
             (api) => api.api === ".kxi.getData" || !api.api.startsWith(".kxi.")
           )
           .map((api) => {
-            const generatedValue =
+            const value =
               api.api === ".kxi.getData"
                 ? api.api.replace(".kxi.", "")
                 : api.api;
 
             return html`
-              <vscode-option
-                value="${generatedValue}"
-                ?selected="${generatedValue === selected}"
-                >${generatedValue}</vscode-option
+              <vscode-option value="${value}" ?selected="${value === selected}"
+                >${value}</vscode-option
               >
             `;
           })}
@@ -198,15 +182,13 @@ export class KdbDataSourceView extends LitElement {
   private renderTableOptions(selected: string) {
     if (this.isInsights && this.isMetaLoaded) {
       return this.insightsMeta.assembly.flatMap((assembly) => {
-        return assembly.tbls.map((generatedValue) => {
+        return assembly.tbls.map((value) => {
           if (!this.selectedTable) {
-            this.selectedTable = generatedValue;
+            this.selectedTable = value;
           }
           return html`
-            <vscode-option
-              value="${generatedValue}"
-              ?selected="${generatedValue === selected}"
-              >${generatedValue}</vscode-option
+            <vscode-option value="${value}" ?selected="${value === selected}"
+              >${value}</vscode-option
             >
           `;
         });
@@ -240,12 +222,10 @@ export class KdbDataSourceView extends LitElement {
   private renderTargetOptions(selected: string) {
     if (this.isInsights && this.isMetaLoaded) {
       return this.insightsMeta.dap.map((dap) => {
-        const generatedValue = `${dap.assembly}-qe ${dap.instance}`;
+        const value = `${dap.assembly}-qe ${dap.instance}`;
         return html`
-          <vscode-option
-            value="${generatedValue}"
-            ?selected="${generatedValue === selected}"
-            >${generatedValue}</vscode-option
+          <vscode-option value="${value}" ?selected="${value === selected}"
+            >${value}</vscode-option
           >
         `;
       });
@@ -253,37 +233,84 @@ export class KdbDataSourceView extends LitElement {
     return [];
   }
 
-  private renderFilter() {
+  private renderFilter(filter: Filter) {
     return html`
       <div class="row align-bottom">
-        <vscode-checkbox></vscode-checkbox>
+        <vscode-checkbox
+          ?checked="${filter.active}"
+          @change="${(event: Event) =>
+            (filter.active = (
+              event.target as HTMLInputElement
+            ).checked)}"></vscode-checkbox>
         <div class="dropdown-container">
           <label>Filter By Column</label>
-          <vscode-dropdown class="dropdown">
-            ${this.renderColumnOptions("")}
+          <vscode-dropdown
+            class="dropdown"
+            @change="${(event: Event) =>
+              (filter.column = (event.target as HTMLInputElement).value)}"
+            >${this.renderColumnOptions(filter.column)}
           </vscode-dropdown>
         </div>
         <div class="dropdown-container">
           <label>Apply Function</label>
-          <vscode-dropdown class="dropdown">
-            ${filterFuncs.map(
-              (func) =>
-                html`<vscode-option value="${func}">${func}</vscode-option>`
+          <vscode-dropdown
+            class="dropdown"
+            @change="${(event: Event) =>
+              (filter.operator = (event.target as HTMLInputElement).value)}">
+            ${filterOperators.map(
+              (operator) =>
+                html` <vscode-option
+                  value="${operator}"
+                  ?selected="${operator === filter.operator}"
+                  >${operator}</vscode-option
+                >`
             )}
           </vscode-dropdown>
         </div>
-        <vscode-text-field class="text-field">Set Parameter</vscode-text-field>
+        <vscode-text-field
+          class="text-field"
+          value="${filter.values}"
+          @input="${(event: Event) =>
+            (filter.values = (event.target as HTMLInputElement).value)}"
+          >Set Parameter</vscode-text-field
+        >
         <div class="row gap-1 align-end">
           <vscode-button
             aria-label="Add Filter"
             appearance="secondary"
-            @click="${this.addFilter}"
+            @click="${() => {
+              if (this.filters.length < MAX_ITEMS) {
+                // TODO
+                const index = this.filters.indexOf(filter);
+                const value = this.filters;
+                this.filters = [];
+                this.requestUpdate();
+                queueMicrotask(() => {
+                  value.splice(index + 1, 0, createFilter());
+                  this.filters = value;
+                  this.requestUpdate();
+                });
+              }
+            }}"
             >+</vscode-button
           >
           <vscode-button
             aria-label="Remove Filter"
             appearance="secondary"
-            @click="${this.removeFilter}"
+            @click="${() => {
+              if (this.filters.length > 1) {
+                // TODO
+                const index = this.filters.indexOf(filter);
+                const value = this.filters;
+                this.filters = [];
+                this.requestUpdate();
+                queueMicrotask(() => {
+                  value.splice(index, 1);
+                  this.filters = value;
+                  this.requestUpdate();
+                });
+              }
+            }}"
             >-</vscode-button
           >
         </div>
@@ -291,25 +318,56 @@ export class KdbDataSourceView extends LitElement {
     `;
   }
 
-  private renderLabel() {
+  private renderLabel(label: Label) {
     return html`
       <div class="row align-bottom">
-        <vscode-checkbox></vscode-checkbox>
-        <vscode-text-field class="text-field"
+        <vscode-checkbox
+          ?checked="${label.active}"
+          @change="${(event: Event) =>
+            (label.active = (
+              event.target as HTMLInputElement
+            ).checked)}"></vscode-checkbox>
+        <vscode-text-field class="text-field" value="${label.key}"
           >Filter By Label</vscode-text-field
         >
-        <vscode-text-field class="text-field">Value</vscode-text-field>
+        <vscode-text-field class="text-field" value="${label.value}"
+          >Value</vscode-text-field
+        >
         <div class="row gap-1 align-end">
           <vscode-button
             aria-label="Add Label"
             appearance="secondary"
-            @click="${this.addLabel}"
+            @click="${() => {
+              if (this.labels.length < MAX_ITEMS) {
+                const index = this.labels.indexOf(label);
+                const value = this.labels;
+                this.labels = [];
+                this.requestUpdate();
+                queueMicrotask(() => {
+                  value.splice(index + 1, 0, createLabel());
+                  this.labels = value;
+                  this.requestUpdate();
+                });
+              }
+            }}"
             >+</vscode-button
           >
           <vscode-button
             aria-label="Remove Label"
             appearance="secondary"
-            @click="${this.removeLabel}"
+            @click="${() => {
+              if (this.labels.length > 1) {
+                const index = this.labels.indexOf(label);
+                const value = this.labels;
+                this.labels = [];
+                this.requestUpdate();
+                queueMicrotask(() => {
+                  value.splice(index, 1);
+                  this.labels = value;
+                  this.requestUpdate();
+                });
+              }
+            }}"
             >-</vscode-button
           >
         </div>
@@ -317,27 +375,56 @@ export class KdbDataSourceView extends LitElement {
     `;
   }
 
-  private renderSort() {
+  private renderSort(sort: Sort) {
     return html`
       <div class="row align-bottom">
-        <vscode-checkbox></vscode-checkbox>
+        <vscode-checkbox
+          ?checked="${sort.active}"
+          @change="${(event: Event) =>
+            (sort.active = (
+              event.target as HTMLInputElement
+            ).checked)}"></vscode-checkbox>
         <div class="dropdown-container">
           <label>Sort By</label>
           <vscode-dropdown class="dropdown">
-            ${this.renderColumnOptions("")}
+            ${this.renderColumnOptions(sort.column)}
           </vscode-dropdown>
         </div>
         <div class="row gap-1 align-end">
           <vscode-button
             aria-label="Add Sort By"
             appearance="secondary"
-            @click="${this.addSortBy}"
+            @click="${() => {
+              if (this.sorts.length < MAX_ITEMS) {
+                const index = this.sorts.indexOf(sort);
+                const value = this.sorts;
+                this.sorts = [];
+                this.requestUpdate();
+                queueMicrotask(() => {
+                  value.splice(index + 1, 0, createSort());
+                  this.sorts = value;
+                  this.requestUpdate();
+                });
+              }
+            }}"
             >+</vscode-button
           >
           <vscode-button
             aria-label="Remove Sort By"
             appearance="secondary"
-            @click="${this.removeSortBy}"
+            @click="${() => {
+              if (this.sorts.length > 1) {
+                const index = this.sorts.indexOf(sort);
+                const value = this.sorts;
+                this.sorts = [];
+                this.requestUpdate();
+                queueMicrotask(() => {
+                  value.splice(index, 1);
+                  this.sorts = value;
+                  this.requestUpdate();
+                });
+              }
+            }}"
             >-</vscode-button
           >
         </div>
@@ -345,39 +432,72 @@ export class KdbDataSourceView extends LitElement {
     `;
   }
 
-  private renderAgg() {
+  private renderAgg(agg: Agg) {
     return html`
       <div class="row align-bottom">
-        <vscode-checkbox></vscode-checkbox>
-        <vscode-text-field class="text-field"
+        <vscode-checkbox
+          ?checked="${agg.active}"
+          @change="${(event: Event) =>
+            (agg.active = (
+              event.target as HTMLInputElement
+            ).checked)}"></vscode-checkbox>
+        <vscode-text-field class="text-field" value="${agg.key}"
           >Define Output Aggregate</vscode-text-field
         >
         <div class="dropdown-container">
           <label>Choose Aggregation</label>
           <vscode-dropdown class="dropdown">
-            ${aggFuncs.map(
-              (func) =>
-                html`<vscode-option value="${func}">${func}</vscode-option>`
+            ${aggOperators.map(
+              (operator) =>
+                html`<vscode-option
+                  value="${operator}"
+                  ?selected="${operator === agg.operator}"
+                  >${operator}</vscode-option
+                >`
             )}
           </vscode-dropdown>
         </div>
         <div class="dropdown-container">
           <label>By Column</label>
           <vscode-dropdown class="dropdown">
-            ${this.renderColumnOptions("")}
+            ${this.renderColumnOptions(agg.column)}
           </vscode-dropdown>
         </div>
         <div class="row gap-1 align-end">
           <vscode-button
             aria-label="Add Aggregation"
             appearance="secondary"
-            @click="${this.addAgg}"
+            @click="${() => {
+              if (this.aggs.length < MAX_ITEMS) {
+                const index = this.aggs.indexOf(agg);
+                const value = this.aggs;
+                this.aggs = [];
+                this.requestUpdate();
+                queueMicrotask(() => {
+                  value.splice(index + 1, 0, createAgg());
+                  this.aggs = value;
+                  this.requestUpdate();
+                });
+              }
+            }}"
             >+</vscode-button
           >
           <vscode-button
             aria-label="Remove Aggregation"
             appearance="secondary"
-            @click="${this.removeAgg}"
+            @click="${() => {
+              if (this.aggs.length > 1) {
+                const index = this.aggs.indexOf(agg);
+                const value = this.aggs;
+                this.aggs = [];
+                this.requestUpdate();
+                queueMicrotask(() => {
+                  value.splice(index, 1);
+                  this.aggs = value;
+                  this.requestUpdate();
+                });
+              }
+            }}"
             >-</vscode-button
           >
         </div>
@@ -385,27 +505,56 @@ export class KdbDataSourceView extends LitElement {
     `;
   }
 
-  private renderGroupBy() {
+  private renderGroup(group: Group) {
     return html`
       <div class="row align-bottom">
-        <vscode-checkbox></vscode-checkbox>
+        <vscode-checkbox
+          ?checked="${group.active}"
+          @change="${(event: Event) =>
+            (group.active = (
+              event.target as HTMLInputElement
+            ).checked)}"></vscode-checkbox>
         <div class="dropdown-container">
           <label>Group Aggregation By</label>
           <vscode-dropdown class="dropdown">
-            ${this.renderColumnOptions("")}
+            ${this.renderColumnOptions(group.column)}
           </vscode-dropdown>
         </div>
         <div class="row gap-1 align-end">
           <vscode-button
             aria-label="Add Group By"
             appearance="secondary"
-            @click="${this.addGroupBy}"
+            @click="${() => {
+              if (this.groups.length < MAX_ITEMS) {
+                const index = this.groups.indexOf(group);
+                const value = this.groups;
+                this.groups = [];
+                this.requestUpdate();
+                queueMicrotask(() => {
+                  value.splice(index + 1, 0, createGroup());
+                  this.groups = value;
+                  this.requestUpdate();
+                });
+              }
+            }}"
             >+</vscode-button
           >
           <vscode-button
             aria-label="Remove Group By"
             appearance="secondary"
-            @click="${this.removeGroupBy}"
+            @click="${() => {
+              if (this.groups.length > 1) {
+                const index = this.groups.indexOf(group);
+                const value = this.groups;
+                this.groups = [];
+                this.requestUpdate();
+                queueMicrotask(() => {
+                  value.splice(index, 1);
+                  this.groups = value;
+                  this.requestUpdate();
+                });
+              }
+            }}"
             >-</vscode-button
           >
         </div>
@@ -419,7 +568,7 @@ export class KdbDataSourceView extends LitElement {
         <input type="hidden" name="originalName" value="${this.originalName}" />
         <input type="hidden" name="selectedType" value="${this.selectedType}" />
 
-        <div class="row mt-1">
+        <div class="row mt-1 mb-1">
           <div class="col">
             <div class="row">
               <vscode-text-field
@@ -555,11 +704,21 @@ export class KdbDataSourceView extends LitElement {
                       >
                     </div>
 
-                    <div class="col">${this.renderFilter()}</div>
-                    <div class="col">${this.renderLabel()}</div>
-                    <div class="col">${this.renderSort()}</div>
-                    <div class="col">${this.renderAgg()}</div>
-                    <div class="col">${this.renderGroupBy()}</div>
+                    <div class="col">
+                      ${this.filters.map((filter) => this.renderFilter(filter))}
+                    </div>
+                    <div class="col">
+                      ${this.labels.map((label) => this.renderLabel(label))}
+                    </div>
+                    <div class="col">
+                      ${this.sorts.map((sort) => this.renderSort(sort))}
+                    </div>
+                    <div class="col">
+                      ${this.aggs.map((agg) => this.renderAgg(agg))}
+                    </div>
+                    <div class="col">
+                      ${this.groups.map((group) => this.renderGroup(group))}
+                    </div>
                   </div>
                 </vscode-panel-view>
 

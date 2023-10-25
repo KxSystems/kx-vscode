@@ -17,7 +17,7 @@ import { ext } from "../extensionVariables";
 import {
   DataSourceFiles,
   DataSourceTypes,
-  defaultDataSourceFile,
+  createDefaultDataSourceFile,
 } from "../models/dataSource";
 import { DataSourcesPanel } from "../panels/datasource";
 
@@ -43,7 +43,7 @@ export function convertDataSourceFormToDataSourceFile(
   form: any
 ): DataSourceFiles {
   const insightsNode = getConnectedInsightsNode();
-  const fileContent = structuredClone(defaultDataSourceFile);
+  const fileContent = createDefaultDataSourceFile();
   const filter: string[] = [];
   const groupBy: string[] = [];
   const agg: string[] = [];

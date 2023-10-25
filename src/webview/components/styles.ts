@@ -73,6 +73,10 @@ export const kdbStyles = css`
     margin-top: 1em;
   }
 
+  .mb-1 {
+    margin-bottom: 1em;
+  }
+
   .mt-6 {
     margin-top: 6em;
   }

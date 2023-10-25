@@ -16,7 +16,10 @@ import path from "path";
 import { InputBoxOptions, Uri, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { getDataBodyPayload } from "../models/data";
-import { DataSourceFiles, defaultDataSourceFile } from "../models/dataSource";
+import {
+  DataSourceFiles,
+  createDefaultDataSourceFile,
+} from "../models/dataSource";
 import { scratchpadVariableInput } from "../models/items/server";
 import { DataSourcesPanel } from "../panels/datasource";
 import { KdbDataSourceTreeItem } from "../services/dataSourceTreeProvider";
@@ -49,7 +52,7 @@ export async function addDataSource(): Promise<void> {
     filePath = path.join(kdbDataSourcesFolderPath, fileName);
   }
   const dataSourceName = fileName.replace(ext.kdbDataSourceFileExtension, "");
-  const defaultDataSourceContent = structuredClone(defaultDataSourceFile);
+  const defaultDataSourceContent = createDefaultDataSourceFile();
   const insightsNode = getConnectedInsightsNode();
   defaultDataSourceContent.name = dataSourceName;
   defaultDataSourceContent.insightsNode = insightsNode;

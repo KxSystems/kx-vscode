@@ -46,35 +46,37 @@ export interface DataSourceFiles {
   };
 }
 
-export const defaultDataSourceFile: DataSourceFiles = {
-  name: "DataSource",
-  dataSource: {
-    selectedType: DataSourceTypes.API,
-    api: {
-      selectedApi: "",
-      table: "",
-      startTS: "",
-      endTS: "",
-      fill: "",
-      temporality: "",
-      filter: [],
-      groupBy: [],
-      agg: [],
-      sortCols: [],
-      slice: [],
-      labels: [],
+export function createDefaultDataSourceFile(): DataSourceFiles {
+  return {
+    name: "DataSource",
+    dataSource: {
+      selectedType: DataSourceTypes.API,
+      api: {
+        selectedApi: "",
+        table: "",
+        startTS: "",
+        endTS: "",
+        fill: "",
+        temporality: "",
+        filter: [],
+        groupBy: [],
+        agg: [],
+        sortCols: [],
+        slice: [],
+        labels: [],
+      },
+      qsql: {
+        query: "",
+        selectedTarget: "",
+      },
+      sql: {
+        query: "",
+      },
     },
-    qsql: {
-      query: "",
-      selectedTarget: "",
-    },
-    sql: {
-      query: "",
-    },
-  },
-};
+  };
+}
 
-export const filterFuncs = [
+export const filterOperators = [
   "in",
   "within",
   "<",
@@ -86,7 +88,7 @@ export const filterFuncs = [
   "like",
 ];
 
-export const aggFuncs = [
+export const aggOperators = [
   "all",
   "any",
   "avg",
@@ -104,3 +106,87 @@ export const aggFuncs = [
   "svar",
   "var",
 ];
+
+export type Filter = {
+  active: boolean;
+  column: string;
+  operator: string;
+  values: string;
+};
+
+export function createFilter(): Filter {
+  return {
+    active: false,
+    column: "",
+    operator: "",
+    values: "",
+  };
+}
+
+export type Label = {
+  active: boolean;
+  key: string;
+  value: string;
+};
+
+export function createLabel(): Label {
+  return {
+    active: false,
+    key: "",
+    value: "",
+  };
+}
+
+export type Sort = {
+  active: boolean;
+  column: string;
+};
+
+export function createSort(): Sort {
+  return {
+    active: false,
+    column: "",
+  };
+}
+
+export type Agg = {
+  active: boolean;
+  key: string;
+  operator: string;
+  column: string;
+};
+
+export function createAgg(): Agg {
+  return {
+    active: false,
+    key: "",
+    operator: "",
+    column: "",
+  };
+}
+
+export type Group = {
+  active: boolean;
+  column: string;
+};
+
+export function createGroup(): Group {
+  return {
+    active: false,
+    column: "",
+  };
+}
+
+export type Slice = {
+  active: boolean;
+  start: string;
+  end: string;
+};
+
+export function createSlice(): Slice {
+  return {
+    active: false,
+    start: "",
+    end: "",
+  };
+}
