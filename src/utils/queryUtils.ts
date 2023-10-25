@@ -47,11 +47,25 @@ export function handleWSResults(ab: ArrayBuffer): any {
     if (res.rows.length === 0) {
       return "No results found.";
     }
+    if (ext.resultsViewProvider.isVisible()) {
+      return getValueFromArray(res.rows);
+    }
     return convertRows(res.rows);
   } catch (error) {
     console.log(error);
     throw error;
   }
+}
+
+function getValueFromArray(arr: any[]): string | any[] {
+  if (arr.length === 1 && typeof arr[0] === "object" && arr[0] !== null) {
+    const obj = arr[0];
+    const keys = Object.keys(obj);
+    if (keys.length === 1 && keys[0] === "Value") {
+      return String(obj.Value);
+    }
+  }
+  return arr;
 }
 
 export function convertRows(rows: any[]): any[] {
