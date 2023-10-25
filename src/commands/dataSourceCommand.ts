@@ -289,10 +289,8 @@ export function getApiBody(
     table,
   } = fileContent.dataSource.api;
 
-  const startTSValue = startTS?.trim()
-    ? convertTimeToTimestamp(startTS)
-    : undefined;
-  const endTSValue = endTS?.trim() ? convertTimeToTimestamp(endTS) : undefined;
+  const startTSValue = startTS?.trim() ? convertTimeToTimestamp(startTS) : "";
+  const endTSValue = endTS?.trim() ? convertTimeToTimestamp(endTS) : "";
   const fillValue = fill?.trim() || undefined;
   const temporalityValue = temporality?.trim() || undefined;
   const filterValue = filter.length ? filter : undefined;

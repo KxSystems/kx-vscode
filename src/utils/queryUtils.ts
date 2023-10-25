@@ -75,7 +75,12 @@ export function convertRows(rows: any[]): any[] {
   const keys = Object.keys(rows[0]);
   const result = [keys.join("#$#;#$#")];
   for (const row of rows) {
-    const values = keys.map((key) => row[key]);
+    const values = keys.map((key) => {
+      if (Array.isArray(row[key])) {
+        return row[key].join(" ");
+      }
+      return row[key];
+    });
     result.push(values.join("#$#;#$#"));
   }
   return result;

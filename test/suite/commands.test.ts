@@ -227,6 +227,76 @@ describe("dataSourceCommand", () => {
       ]);
     });
   });
+
+  describe("runQsqlDataSource", () => {
+    let getDataInsightsStub: sinon.SinonStub;
+    let handleWSResultsStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      getDataInsightsStub = sinon.stub(serverCommand, "getDataInsights");
+      handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should call the API and handle the results", async () => {
+      getDataInsightsStub.resolves({ arrayBuffer: true });
+      handleWSResultsStub.resolves([
+        { a: "2", b: "3" },
+        { a: "4", b: "6" },
+        { a: "6", b: "9" },
+      ]);
+
+      const result = await dataSourceCommand.runQsqlDataSource(
+        dummyDataSourceFiles
+      );
+
+      sinon.assert.calledOnce(getDataInsightsStub);
+      sinon.assert.calledOnce(handleWSResultsStub);
+      assert.deepStrictEqual(result, [
+        { a: "2", b: "3" },
+        { a: "4", b: "6" },
+        { a: "6", b: "9" },
+      ]);
+    });
+  });
+
+  describe("runSqlDataSource", () => {
+    let getDataInsightsStub: sinon.SinonStub;
+    let handleWSResultsStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      getDataInsightsStub = sinon.stub(serverCommand, "getDataInsights");
+      handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should call the API and handle the results", async () => {
+      getDataInsightsStub.resolves({ arrayBuffer: true });
+      handleWSResultsStub.resolves([
+        { a: "2", b: "3" },
+        { a: "4", b: "6" },
+        { a: "6", b: "9" },
+      ]);
+
+      const result = await dataSourceCommand.runSqlDataSource(
+        dummyDataSourceFiles
+      );
+
+      sinon.assert.calledOnce(getDataInsightsStub);
+      sinon.assert.calledOnce(handleWSResultsStub);
+      assert.deepStrictEqual(result, [
+        { a: "2", b: "3" },
+        { a: "4", b: "6" },
+        { a: "6", b: "9" },
+      ]);
+    });
+  });
 });
 
 describe("installTools", () => {

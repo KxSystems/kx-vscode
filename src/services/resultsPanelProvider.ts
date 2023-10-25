@@ -140,7 +140,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
   sanitizeString(str: string | string[]): string {
     if (str instanceof Array) {
-      str = str.join(",");
+      str = str.join(" ");
     }
     str = str.toString();
     str = str.trim();

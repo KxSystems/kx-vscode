@@ -116,7 +116,7 @@ describe("WebPanels", () => {
 
       it("should transform an array of strings into a single string", () => {
         const inputString = ["test", "string", "with", "array"];
-        const expectedString = "test,string,with,array";
+        const expectedString = "test string with array";
         const actualString = resultsPanel.sanitizeString(inputString);
         assert.strictEqual(actualString, expectedString);
       });
