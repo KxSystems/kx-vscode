@@ -236,9 +236,14 @@ export function getSelectedType(fileContent: DataSourceFiles): string {
   const selectedType = fileContent.dataSource.selectedType.toString();
   switch (selectedType) {
     case "API":
+    case "0":
+      return "API";
     case "QSQL":
+    case "1":
+      return "QSQL";
     case "SQL":
-      return selectedType;
+    case "2":
+      return "SQL";
     default:
       throw new Error(`Invalid selectedType: ${selectedType}`);
   }
@@ -267,7 +272,9 @@ export async function runApiDataSource(
   }
 }
 
-export function getApiBody(fileContent: DataSourceFiles): getDataBodyPayload {
+export function getApiBody(
+  fileContent: DataSourceFiles
+): Partial<getDataBodyPayload> {
   const {
     startTS,
     endTS,
@@ -295,7 +302,7 @@ export function getApiBody(fileContent: DataSourceFiles): getDataBodyPayload {
   const sliceValue = slice.length ? slice : undefined;
   const labelsValue = labels.length ? labels : undefined;
 
-  const apiBody: getDataBodyPayload = {
+  const apiBodyAux: getDataBodyPayload = {
     table,
     startTS: startTSValue,
     endTS: endTSValue,
@@ -309,10 +316,14 @@ export function getApiBody(fileContent: DataSourceFiles): getDataBodyPayload {
   };
 
   if (filterValue !== undefined) {
-    apiBody.filter = filterValue.map((filterEl: string) => {
+    apiBodyAux.filter = filterValue.map((filterEl: string) => {
       return filterEl.split(";");
     });
   }
+
+  const apiBody = Object.fromEntries(
+    Object.entries(apiBodyAux).filter(([_, value]) => value !== undefined)
+  );
 
   return apiBody;
 }
