@@ -376,6 +376,10 @@
       {
         "view": "kdb-servers",
         "contents": "No connections registered.\n[Add Connection](command:kdb.addConnection)"
+      },
+      {
+        "view": "kdb-datasources-explorer",
+        "contents": "No data sources registered.\n[Add Data Source](command:kdb.dataSource.addDataSource)"
       }
     ],
     "menus": {

@@ -14,37 +14,14 @@
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import { Ref, createRef, ref } from "lit/directives/ref.js";
-import { DataSourceFiles, DataSourceTypes } from "../../models/dataSource";
+import {
+  DataSourceTypes,
+  aggFuncs,
+  filterFuncs,
+} from "../../models/dataSource";
+import { DataSourceMessage } from "../../models/messages";
 import { MetaObjectPayload } from "../../models/meta";
 import { kdbStyles, vscodeStyles } from "./styles";
-
-const filterFuncs = ["in", "within", "<", ">", "<=", ">=", "=", "<>", "like"];
-
-const aggFuncs = [
-  "all",
-  "any",
-  "avg",
-  "count",
-  "dev",
-  "distinct",
-  "first",
-  "last",
-  "max",
-  "min",
-  "prd",
-  "sdev",
-  "scov",
-  "sum",
-  "svar",
-  "var",
-];
-
-type Params = {
-  isInsights: boolean;
-  insightsMeta: MetaObjectPayload;
-  dataSourceName: string;
-  dataSourceFile: DataSourceFiles;
-};
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {
@@ -68,7 +45,6 @@ export class KdbDataSourceView extends LitElement {
 
   constructor() {
     super();
-
     this.isInsights = false;
     this.isMetaLoaded = false;
     this.insightsMeta = <MetaObjectPayload>{};
@@ -88,29 +64,35 @@ export class KdbDataSourceView extends LitElement {
 
   connectedCallback() {
     super.connectedCallback();
-
-    window.addEventListener("message", (event) => {
-      const params = event.data as Params;
-      this.isInsights = params.isInsights;
-      this.isMetaLoaded = params.insightsMeta.dap ? true : false;
-      this.insightsMeta = params.insightsMeta;
-      this.originalName = params.dataSourceName;
-      this.name = params.dataSourceName;
-      this.selectedType = params.dataSourceFile.dataSource.selectedType;
-      this.selectedApi = params.dataSourceFile.dataSource.api.selectedApi;
-      this.selectedTable = params.dataSourceFile.dataSource.api.table;
-      this.startTS = params.dataSourceFile.dataSource.api.startTS;
-      this.endTS = params.dataSourceFile.dataSource.api.endTS;
-      this.fill = params.dataSourceFile.dataSource.api.fill;
-      this.temporality = params.dataSourceFile.dataSource.api.temporality;
-      this.qsqlTarget = params.dataSourceFile.dataSource.qsql.selectedTarget;
-      this.qsql = params.dataSourceFile.dataSource.qsql.query;
-      this.sql = params.dataSourceFile.dataSource.sql.query;
-    });
+    window.addEventListener("message", this.message);
   }
 
-  private vscode = acquireVsCodeApi();
-  private dataSourceFormRef: Ref<HTMLFormElement> = createRef();
+  disconnectedCallback() {
+    window.removeEventListener("message", this.message);
+    super.disconnectedCallback();
+  }
+
+  private message = (event: MessageEvent<DataSourceMessage>) => {
+    const params = event.data;
+    this.isInsights = params.isInsights;
+    this.isMetaLoaded = params.insightsMeta.dap ? true : false;
+    this.insightsMeta = params.insightsMeta;
+    this.originalName = params.dataSourceName;
+    this.name = params.dataSourceName;
+    this.selectedType = params.dataSourceFile.dataSource.selectedType;
+    this.selectedApi = params.dataSourceFile.dataSource.api.selectedApi;
+    this.selectedTable = params.dataSourceFile.dataSource.api.table;
+    this.startTS = params.dataSourceFile.dataSource.api.startTS;
+    this.endTS = params.dataSourceFile.dataSource.api.endTS;
+    this.fill = params.dataSourceFile.dataSource.api.fill;
+    this.temporality = params.dataSourceFile.dataSource.api.temporality;
+    this.qsqlTarget = params.dataSourceFile.dataSource.qsql.selectedTarget;
+    this.qsql = params.dataSourceFile.dataSource.qsql.query;
+    this.sql = params.dataSourceFile.dataSource.sql.query;
+  };
+
+  private readonly vscode = acquireVsCodeApi();
+  private readonly formRef: Ref<HTMLFormElement> = createRef();
 
   private get selectedTab() {
     return this.selectedType === DataSourceTypes.API
@@ -121,7 +103,7 @@ export class KdbDataSourceView extends LitElement {
   }
 
   private get data() {
-    const form = this.dataSourceFormRef.value;
+    const form = this.formRef.value;
     const formData = new FormData(form);
     return Object.fromEntries(formData.entries());
   }
@@ -433,7 +415,7 @@ export class KdbDataSourceView extends LitElement {
 
   render() {
     return html`
-      <form ${ref(this.dataSourceFormRef)}>
+      <form ${ref(this.formRef)}>
         <input type="hidden" name="originalName" value="${this.originalName}" />
         <input type="hidden" name="selectedType" value="${this.selectedType}" />
 

@@ -73,3 +73,34 @@ export const defaultDataSourceFile: DataSourceFiles = {
     },
   },
 };
+
+export const filterFuncs = [
+  "in",
+  "within",
+  "<",
+  ">",
+  "<=",
+  ">=",
+  "=",
+  "<>",
+  "like",
+];
+
+export const aggFuncs = [
+  "all",
+  "any",
+  "avg",
+  "count",
+  "dev",
+  "distinct",
+  "first",
+  "last",
+  "max",
+  "min",
+  "prd",
+  "sdev",
+  "scov",
+  "sum",
+  "svar",
+  "var",
+];

@@ -14,6 +14,7 @@
 import * as vscode from "vscode";
 import { ext } from "../extensionVariables";
 import { DataSourceFiles } from "../models/dataSource";
+import { DataSourceMessage } from "../models/messages";
 import { InsightsNode } from "../services/kdbTreeProvider";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
@@ -116,14 +117,14 @@ export class DataSourcesPanel {
     const insightsMeta = ext.insightsMeta;
     const isInsights = ext.connectionNode instanceof InsightsNode;
 
-    const params = {
+    const message: DataSourceMessage = {
       isInsights,
       insightsMeta,
       dataSourceName,
       dataSourceFile,
     };
 
-    this._panel.webview.postMessage(params);
+    this._panel.webview.postMessage(message);
   }
 
   private _getWebviewContent(
