@@ -33,61 +33,57 @@ export const vscodeStyles = css`
 `;
 
 export const kdbStyles = css`
-  .container {
-    display: flex;
-    flex-direction: row;
-    gap: 1em;
-  }
-
-  .list {
+  .col {
     display: flex;
     flex-direction: column;
     gap: 1em;
   }
 
-  .list-item {
+  .row {
     display: flex;
     flex-direction: row;
-    flex-wrap: wrap;
     gap: 1em;
-    justify-content: flex-start;
-    align-items: flex-end;
   }
 
-  .button-group {
-    display: flex;
-    flex-direction: row;
-    gap: 4px;
+  .align-start {
     justify-content: flex-start;
-    align-items: flex-end;
   }
 
   .align-end {
     justify-content: flex-end;
   }
 
+  .align-top {
+    align-items: flex-start;
+  }
+
+  .align-bottom {
+    align-items: flex-end;
+  }
+
+  .gap-1 {
+    gap: 4px;
+  }
+
   .grow {
     flex-grow: 1;
   }
 
-  .dropdown {
-    min-width: 13em;
+  .mt-1 {
+    margin-top: 1em;
   }
 
-  .dropdown.larger {
-    min-width: 15.5em;
+  .mt-6 {
+    margin-top: 6em;
   }
 
+  .dropdown,
   .text-field {
-    min-width: 13em;
+    width: 12em;
   }
 
+  .dropdown.larger,
   .text-field.larger {
-    min-width: 15.5em;
-  }
-
-  .actions {
-    margin-top: 4px;
-    padding-top: 1em;
+    width: 14.5em;
   }
 `;
