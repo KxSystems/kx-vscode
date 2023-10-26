@@ -169,6 +169,29 @@ describe("WebPanels", () => {
       });
     });
 
+    describe("removeEndCommaFromStrings", () => {
+      it("should remove the comma from the end of a string if it ends with a comma", () => {
+        const input = ["hello,", "world,"];
+        const expectedOutput = ["hello", "world"];
+        const actualOutput = resultsPanel.removeEndCommaFromStrings(input);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+
+      it("should not modify a string if it does not end with a comma", () => {
+        const input = ["hello", "world"];
+        const expectedOutput = ["hello", "world"];
+        const actualOutput = resultsPanel.removeEndCommaFromStrings(input);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+
+      it("should return an empty array if the input is an empty array", () => {
+        const input: string[] = [];
+        const expectedOutput: string[] = [];
+        const actualOutput = resultsPanel.removeEndCommaFromStrings(input);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+    });
+
     describe("exportToCsv()", () => {
       it("should show error message if no results to export", () => {
         const windowMock = sinon.mock(vscode.window);
