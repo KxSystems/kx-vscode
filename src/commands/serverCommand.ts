@@ -649,8 +649,7 @@ export async function getScratchpadQuery(
           const buffer = new Uint8Array(
             spRes.data.map((x: string) => parseInt(x, 16))
           ).buffer;
-          const res = handleWSResults(buffer);
-          return res;
+          return handleWSResults(buffer);
         }
         return spRes;
       }

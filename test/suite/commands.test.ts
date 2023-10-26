@@ -30,6 +30,7 @@ describe("dataSourceCommand", () => {
   let dummyDataSourceFiles: DataSourceFiles;
   const uriTest: vscode.Uri = vscode.Uri.parse("test");
   let resultsPanel: KdbResultsViewProvider;
+  ext.outputChannel = vscode.window.createOutputChannel("kdb");
   const view: vscode.WebviewView = {
     visible: true,
     // eslint-disable-next-line @typescript-eslint/no-empty-function
