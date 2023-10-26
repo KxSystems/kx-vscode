@@ -16,11 +16,13 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { TreeItemCollapsibleState } from "vscode";
 import { ext } from "../../src/extensionVariables";
+import * as QTable from "../../src/ipc/QTable";
 import { CancellationEvent } from "../../src/models/cancellationEvent";
 import { QueryResultType } from "../../src/models/queryResult";
 import { ServerType } from "../../src/models/server";
 import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import { QueryHistoryProvider } from "../../src/services/queryHistoryProvider";
+import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as coreUtils from "../../src/utils/core";
 import * as dataSourceUtils from "../../src/utils/dataSource";
 import * as executionUtils from "../../src/utils/execution";
@@ -585,10 +587,32 @@ describe("Utils", () => {
       });
     });
 
-    it("handleWSResults", () => {
-      const ab = new ArrayBuffer(128);
-      const result = queryUtils.handleWSResults(ab);
-      assert.strictEqual(result, "No results found.");
+    describe("handleWSResults", () => {
+      it("should return no results found", () => {
+        const ab = new ArrayBuffer(128);
+        const result = queryUtils.handleWSResults(ab);
+        assert.strictEqual(result, "No results found.");
+      });
+
+      it("should return the result of getValueFromArray if the results are an array with a single object with a 'Value' property", () => {
+        const ab = new ArrayBuffer(128);
+        const expectedOutput = "10";
+        const uriTest: vscode.Uri = vscode.Uri.parse("test");
+        ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
+        const qtableStub = sinon.stub(QTable.default, "toLegacy").returns({
+          class: "203",
+          columns: ["Value"],
+          meta: { Value: 7 },
+          rows: [{ Value: "10" }],
+        });
+        const isVisibleStub = sinon
+          .stub(ext.resultsViewProvider, "isVisible")
+          .returns(true);
+        const convertRowsSpy = sinon.spy(queryUtils, "convertRows");
+        const result = queryUtils.handleWSResults(ab);
+        sinon.assert.notCalled(convertRowsSpy);
+        assert.strictEqual(result, expectedOutput);
+      });
     });
 
     it("convertRows", () => {
