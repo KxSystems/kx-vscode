@@ -20,10 +20,12 @@ import * as serverCommand from "../../src/commands/serverCommand";
 import * as walkthroughCommand from "../../src/commands/walkthroughCommand";
 import { ext } from "../../src/extensionVariables";
 import { DataSourceFiles, DataSourceTypes } from "../../src/models/dataSource";
+import { ScratchpadResult } from "../../src/models/scratchpadResult";
 import { KdbTreeProvider } from "../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as coreUtils from "../../src/utils/core";
 import * as dataSourceUtils from "../../src/utils/dataSource";
+import { ExecutionConsole } from "../../src/utils/executionConsole";
 import * as queryUtils from "../../src/utils/queryUtils";
 
 describe("dataSourceCommand", () => {
@@ -499,7 +501,7 @@ describe("dataSourceCommand", () => {
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
     });
 
-    it("should return API results)", async () => {
+    it("should return SQL results)", async () => {
       getMetaStub.resolves(dummyMeta);
       convertDSFormToDSFile.returns(dummyFileContent);
       getSelectedTypeStub.returns("SQL");
@@ -517,9 +519,6 @@ describe("installTools", () => {
   installTools.installTools();
 });
 describe("serverCommand", () => {
-  //write tests for src/commands/serverCommand.ts
-  //function to be deleted after write the tests
-  serverCommand.addNewConnection();
   describe("writeQueryResultsToView", () => {
     it("should call executeCommand with correct arguments", () => {
       const result = { data: [1, 2, 3] };
@@ -639,6 +638,71 @@ describe("serverCommand", () => {
       });
       await serverCommand.enableTLS("test");
       sinon.assert.calledOnce(updateServersStub);
+    });
+  });
+
+  describe("writeScratchpadResult", () => {
+    const _console = vscode.window.createOutputChannel("q Console Output");
+    const executionConsole = new ExecutionConsole(_console);
+    const uriTest: vscode.Uri = vscode.Uri.parse("test");
+    ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
+    let executionConsoleStub: sinon.SinonStub;
+    let scratchpadResult: ScratchpadResult;
+    let queryConsoleErrorStub: sinon.SinonStub;
+    let writeQueryResultsToViewStub: sinon.SinonStub;
+    let writeQueryResultsToConsoleStub: sinon.SinonStub;
+    let isVisibleStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      executionConsoleStub = sinon
+        .stub(ExecutionConsole, "start")
+        .returns(executionConsole);
+      scratchpadResult = {
+        data: "1234",
+        error: false,
+        errorMsg: "",
+        sessionID: "123",
+      };
+      queryConsoleErrorStub = sinon.stub(
+        ExecutionConsole.prototype,
+        "appendQueryError"
+      );
+      writeQueryResultsToViewStub = sinon.stub(
+        serverCommand,
+        "writeQueryResultsToView"
+      );
+      writeQueryResultsToConsoleStub = sinon.stub(
+        serverCommand,
+        "writeQueryResultsToConsole"
+      );
+      isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should write appendQueryError", () => {
+      scratchpadResult.error = true;
+      scratchpadResult.errorMsg = "error";
+      serverCommand.writeScratchpadResult(scratchpadResult, "dummy query");
+      sinon.assert.notCalled(writeQueryResultsToViewStub);
+      sinon.assert.notCalled(writeQueryResultsToConsoleStub);
+    });
+
+    it("should write to view", () => {
+      scratchpadResult.data = "data";
+      isVisibleStub.returns(true);
+      serverCommand.writeScratchpadResult(scratchpadResult, "dummy query");
+      sinon.assert.notCalled(writeQueryResultsToConsoleStub);
+      sinon.assert.notCalled(queryConsoleErrorStub);
+    });
+
+    it("should write to console", () => {
+      scratchpadResult.data = "data";
+      isVisibleStub.returns(false);
+      serverCommand.writeScratchpadResult(scratchpadResult, "dummy query");
+      sinon.assert.notCalled(writeQueryResultsToViewStub);
     });
   });
 });

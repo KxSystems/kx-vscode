@@ -960,7 +960,10 @@ export function writeQueryResultsToView(
   commands.executeCommand("kdb.resultsPanel.update", result, dataSourceType);
 }
 
-function writeScratchpadResult(result: ScratchpadResult, query: string): void {
+export function writeScratchpadResult(
+  result: ScratchpadResult,
+  query: string
+): void {
   const queryConsole = ExecutionConsole.start();
 
   if (result.error) {
