@@ -13,21 +13,19 @@
 
 import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
-import { Ref, createRef, ref } from "lit/directives/ref.js";
 import {
   Agg,
+  DataSourceFiles,
   DataSourceTypes,
   Filter,
   Group,
   Label,
-  Slice,
   Sort,
   aggOperators,
   createAgg,
   createFilter,
   createGroup,
   createLabel,
-  createSlice,
   createSort,
   filterOperators,
 } from "../../models/dataSource";
@@ -35,7 +33,7 @@ import { DataSourceMessage } from "../../models/messages";
 import { MetaObjectPayload } from "../../models/meta";
 import { kdbStyles, vscodeStyles } from "./styles";
 
-const MAX_ITEMS = 32;
+const MAX_RULES = 32;
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {
@@ -52,8 +50,11 @@ export class KdbDataSourceView extends LitElement {
   @state() declare startTS: string;
   @state() declare endTS: string;
   @state() declare fill: string;
+  @state() declare filled: boolean;
   @state() declare temporality: string;
-  @state() declare slices: Slice[];
+  @state() declare temporal: boolean;
+  @state() declare temporalStartTS: string;
+  @state() declare temporalEndTS: string;
   @state() declare filters: Filter[];
   @state() declare labels: Label[];
   @state() declare sorts: Sort[];
@@ -67,7 +68,7 @@ export class KdbDataSourceView extends LitElement {
     super();
     this.isInsights = false;
     this.isMetaLoaded = false;
-    this.insightsMeta = <MetaObjectPayload>{};
+    this.insightsMeta = {} as MetaObjectPayload;
     this.originalName = "";
     this.name = "";
     this.selectedType = DataSourceTypes.API;
@@ -76,8 +77,11 @@ export class KdbDataSourceView extends LitElement {
     this.startTS = "";
     this.endTS = "";
     this.fill = "";
+    this.filled = false;
     this.temporality = "";
-    this.slices = [createSlice()];
+    this.temporal = false;
+    this.temporalStartTS = "";
+    this.temporalEndTS = "";
     this.filters = [createFilter()];
     this.labels = [createLabel()];
     this.sorts = [createSort()];
@@ -100,25 +104,79 @@ export class KdbDataSourceView extends LitElement {
 
   private message = (event: MessageEvent<DataSourceMessage>) => {
     const params = event.data;
+    const ds = params.dataSourceFile;
     this.isInsights = params.isInsights;
     this.isMetaLoaded = params.insightsMeta.dap ? true : false;
     this.insightsMeta = params.insightsMeta;
     this.originalName = params.dataSourceName;
     this.name = params.dataSourceName;
-    this.selectedType = params.dataSourceFile.dataSource.selectedType;
-    this.selectedApi = params.dataSourceFile.dataSource.api.selectedApi;
-    this.selectedTable = params.dataSourceFile.dataSource.api.table;
-    this.startTS = params.dataSourceFile.dataSource.api.startTS;
-    this.endTS = params.dataSourceFile.dataSource.api.endTS;
-    this.fill = params.dataSourceFile.dataSource.api.fill;
-    this.temporality = params.dataSourceFile.dataSource.api.temporality;
-    this.qsqlTarget = params.dataSourceFile.dataSource.qsql.selectedTarget;
-    this.qsql = params.dataSourceFile.dataSource.qsql.query;
-    this.sql = params.dataSourceFile.dataSource.sql.query;
+    this.selectedType = ds.dataSource.selectedType;
+    this.selectedApi = ds.dataSource.api.selectedApi;
+    this.selectedTable = ds.dataSource.api.table;
+    this.startTS = ds.dataSource.api.startTS;
+    this.endTS = ds.dataSource.api.endTS;
+    this.fill = ds.dataSource.api.fill;
+    this.temporality = ds.dataSource.api.temporality;
+    this.qsqlTarget = ds.dataSource.qsql.selectedTarget;
+    this.qsql = ds.dataSource.qsql.query;
+    this.sql = ds.dataSource.sql.query;
+    const optional = ds.dataSource.api.optional;
+    if (optional) {
+      this.filled = optional.filled;
+      this.temporal = optional.temporal;
+      this.temporalStartTS = optional.startTS;
+      this.temporalEndTS = optional.endTS;
+      this.filters = optional.filters;
+      this.labels = optional.labels;
+      this.sorts = optional.sorts;
+      this.aggs = optional.aggs;
+      this.groups = optional.groups;
+    }
   };
 
+  private get data(): DataSourceFiles {
+    return {
+      name: this.name,
+      originalName: this.originalName,
+      dataSource: {
+        selectedType: this.selectedType,
+        api: {
+          selectedApi: this.selectedApi,
+          table: this.selectedTable,
+          startTS: this.startTS,
+          endTS: this.endTS,
+          fill: this.fill,
+          temporality: this.temporality,
+          filter: [],
+          groupBy: [],
+          agg: [],
+          sortCols: [],
+          slice: [],
+          labels: [],
+          optional: {
+            filled: this.filled,
+            temporal: this.temporal,
+            startTS: this.temporalStartTS,
+            endTS: this.temporalEndTS,
+            filters: this.filters,
+            labels: this.labels,
+            sorts: this.sorts,
+            aggs: this.aggs,
+            groups: this.groups,
+          },
+        },
+        qsql: {
+          query: this.qsql,
+          selectedTarget: this.qsqlTarget,
+        },
+        sql: {
+          query: this.sql,
+        },
+      },
+    };
+  }
+
   private readonly vscode = acquireVsCodeApi();
-  private readonly formRef: Ref<HTMLFormElement> = createRef();
 
   private get selectedTab() {
     return this.selectedType === DataSourceTypes.API
@@ -126,12 +184,6 @@ export class KdbDataSourceView extends LitElement {
       : this.selectedType === DataSourceTypes.QSQL
       ? "tab-2"
       : "tab-3";
-  }
-
-  private get data() {
-    const form = this.formRef.value;
-    const formData = new FormData(form);
-    return Object.fromEntries(formData.entries());
   }
 
   private save() {
@@ -250,7 +302,6 @@ export class KdbDataSourceView extends LitElement {
           >
           <vscode-dropdown
             class="dropdown"
-            value="${filter.column}"
             @change="${(event: Event) =>
               (filter.column = (event.target as HTMLInputElement).value)}"
             >${this.renderColumnOptions(filter.column)}
@@ -264,7 +315,6 @@ export class KdbDataSourceView extends LitElement {
           >
           <vscode-dropdown
             class="dropdown"
-            value="${filter.operator}"
             @change="${(event: Event) =>
               (filter.operator = (event.target as HTMLInputElement).value)}">
             ${filterOperators.map(
@@ -289,7 +339,7 @@ export class KdbDataSourceView extends LitElement {
             aria-label="Add Filter"
             appearance="secondary"
             @click="${() => {
-              if (this.filters.length < MAX_ITEMS) {
+              if (this.filters.length < MAX_RULES) {
                 const index = this.filters.indexOf(filter);
                 const value = this.filters;
                 this.filters = [];
@@ -359,7 +409,7 @@ export class KdbDataSourceView extends LitElement {
             aria-label="Add Label"
             appearance="secondary"
             @click="${() => {
-              if (this.labels.length < MAX_ITEMS) {
+              if (this.labels.length < MAX_RULES) {
                 const index = this.labels.indexOf(label);
                 const value = this.labels;
                 this.labels = [];
@@ -422,7 +472,7 @@ export class KdbDataSourceView extends LitElement {
             aria-label="Add Sort By"
             appearance="secondary"
             @click="${() => {
-              if (this.sorts.length < MAX_ITEMS) {
+              if (this.sorts.length < MAX_RULES) {
                 const index = this.sorts.indexOf(sort);
                 const value = this.sorts;
                 this.sorts = [];
@@ -512,7 +562,7 @@ export class KdbDataSourceView extends LitElement {
             aria-label="Add Aggregation"
             appearance="secondary"
             @click="${() => {
-              if (this.aggs.length < MAX_ITEMS) {
+              if (this.aggs.length < MAX_RULES) {
                 const index = this.aggs.indexOf(agg);
                 const value = this.aggs;
                 this.aggs = [];
@@ -579,7 +629,7 @@ export class KdbDataSourceView extends LitElement {
             aria-label="Add Group By"
             appearance="secondary"
             @click="${() => {
-              if (this.groups.length < MAX_ITEMS) {
+              if (this.groups.length < MAX_RULES) {
                 const index = this.groups.indexOf(group);
                 const value = this.groups;
                 this.groups = [];
@@ -621,230 +671,266 @@ export class KdbDataSourceView extends LitElement {
 
   render() {
     return html`
-      <form ${ref(this.formRef)}>
-        <input type="hidden" name="originalName" value="${this.originalName}" />
-        <input type="hidden" name="selectedType" value="${this.selectedType}" />
-
-        <div class="row mt-1 mb-1">
-          <div class="col">
-            <div class="row">
-              <vscode-text-field
-                name="name"
-                value="${this.name}"
-                class="grow"
-                placeholder="Data Source Name"
-                >Data Source Name</vscode-text-field
-              >
-            </div>
-
-            <div class="row">
-              <vscode-panels activeid="${this.selectedTab}">
-                <vscode-panel-tab
-                  id="tab-1"
-                  @click="${() => (this.selectedType = DataSourceTypes.API)}"
-                  >API</vscode-panel-tab
-                >
-                <vscode-panel-tab
-                  id="tab-2"
-                  @click="${() => (this.selectedType = DataSourceTypes.QSQL)}"
-                  >QSQL</vscode-panel-tab
-                >
-                <vscode-panel-tab
-                  id="tab-3"
-                  @click="${() => (this.selectedType = DataSourceTypes.SQL)}"
-                  >SQL</vscode-panel-tab
-                >
-                <vscode-panel-view>
-                  <div class="col">
-                    <div class="row">
-                      <div class="dropdown-container">
-                        <label for="selectedApi">Select API</label>
-                        <vscode-dropdown
-                          id="selectedApi"
-                          name="selectedApi"
-                          class="dropdown larger">
-                          ${this.renderApiOptions(this.selectedApi)}
-                        </vscode-dropdown>
-                      </div>
-                    </div>
-
-                    <div class="row">
-                      <div class="dropdown-container">
-                        <label for="selectedTable">Table</label>
-                        <vscode-dropdown
-                          id="selectedTable"
-                          name="selectedTable"
-                          class="dropdown larger"
-                          @change="${(event: Event) =>
-                            (this.selectedTable = (
-                              event.target as HTMLSelectElement
-                            ).value)}">
-                          ${this.renderTableOptions(this.selectedTable)}
-                        </vscode-dropdown>
-                      </div>
-                    </div>
-
-                    <div class="row">
-                      <vscode-text-field
-                        type="datetime-local"
-                        name="startTS"
-                        class="text-field larger"
-                        value="${this.startTS}"
-                        >Start Time</vscode-text-field
-                      >
-                    </div>
-
-                    <div class="row">
-                      <vscode-text-field
-                        type="datetime-local"
-                        name="endTS"
-                        class="text-field larger"
-                        value="${this.endTS}"
-                        >End Time</vscode-text-field
-                      >
-                    </div>
-
-                    <div class="row align-bottom">
-                      <vscode-checkbox></vscode-checkbox>
-                      <div class="dropdown-container">
-                        <label for="fill">Fill</label>
-                        <vscode-dropdown id="fill" name="fill" class="dropdown">
-                          <vscode-option
-                            value="zero"
-                            ?selected="${this.fill === "zero"}"
-                            >zero</vscode-option
-                          >
-                          <vscode-option
-                            value="forward"
-                            ?selected="${this.fill === "forward"}"
-                            >forward</vscode-option
-                          >
-                        </vscode-dropdown>
-                      </div>
-                    </div>
-
-                    <div class="row align-bottom">
-                      <vscode-checkbox></vscode-checkbox>
-                      <div class="dropdown-container">
-                        <label for="temporality">Temporality</label>
-                        <vscode-dropdown
-                          id="temporality"
-                          name="temporality"
-                          class="dropdown"
-                          @change="${(event: Event) =>
-                            (this.temporality = (
-                              event.target as HTMLSelectElement
-                            ).value)}">
-                          <vscode-option
-                            value="snapshot"
-                            ?selected="${this.temporality === "snapshot"}"
-                            >snapshot</vscode-option
-                          >
-                          <vscode-option
-                            value="slice"
-                            ?selected="${this.temporality === "slice"}"
-                            >slice</vscode-option
-                          >
-                        </vscode-dropdown>
-                      </div>
-                      <vscode-text-field
-                        type="time"
-                        class="text-field"
-                        ?hidden="${this.temporality !== "slice"}"
-                        >Start Time</vscode-text-field
-                      >
-                      <vscode-text-field
-                        type="time"
-                        class="text-field"
-                        ?hidden="${this.temporality !== "slice"}"
-                        >End Time</vscode-text-field
-                      >
-                    </div>
-
-                    <div class="col">
-                      ${this.filters.map((filter) => this.renderFilter(filter))}
-                    </div>
-                    <div class="col">
-                      ${this.labels.map((label) => this.renderLabel(label))}
-                    </div>
-                    <div class="col">
-                      ${this.sorts.map((sort) => this.renderSort(sort))}
-                    </div>
-                    <div class="col">
-                      ${this.aggs.map((agg) => this.renderAgg(agg))}
-                    </div>
-                    <div class="col">
-                      ${this.groups.map((group) => this.renderGroup(group))}
-                    </div>
-                  </div>
-                </vscode-panel-view>
-
-                <vscode-panel-view>
-                  <div class="col">
-                    <div class="row">
-                      <div class="dropdown-container">
-                        <label for="selectedTarget">Target</label>
-                        <vscode-dropdown
-                          id="selectedTarget"
-                          name="selectedTarget"
-                          class="dropdown larger">
-                          ${this.renderTargetOptions(
-                            this.qsqlTarget
-                          )}</vscode-dropdown
-                        >
-                      </div>
-                    </div>
-                    <div class="row">
-                      <vscode-text-area
-                        name="qsql"
-                        cols="64"
-                        rows="16"
-                        value="${this.qsql}"
-                        >Query</vscode-text-area
-                      >
-                    </div>
-                  </div>
-                </vscode-panel-view>
-
-                <vscode-panel-view>
-                  <div class="col">
-                    <div class="row">
-                      <vscode-text-area
-                        name="sql"
-                        cols="64"
-                        rows="16"
-                        value="${this.sql}"
-                        >Query</vscode-text-area
-                      >
-                    </div>
-                  </div>
-                </vscode-panel-view>
-              </vscode-panels>
-            </div>
-          </div>
-          <div class="col">
-            <div class="row mt-6">
-              <vscode-button
-                appearance="primary"
-                class="grow"
-                @click="${this.save}"
-                >Save</vscode-button
-              >
-              <vscode-button
-                appearance="secondary"
-                class="grow"
-                @click="${this.run}"
-                >Run</vscode-button
-              >
-            </div>
-            <vscode-button
-              appearance="secondary"
-              @click="${this.populateScratchpad}"
-              >Populate Scratchpad</vscode-button
+      <div class="row mt-1 mb-1">
+        <div class="col">
+          <div class="row">
+            <vscode-text-field
+              class="grow"
+              placeholder="Data Source Name"
+              value="${this.name}"
+              @input="${(event: Event) =>
+                (this.name = (event.target as HTMLInputElement).value)}"
+              >Data Source Name</vscode-text-field
             >
           </div>
+
+          <div class="row">
+            <vscode-panels activeid="${this.selectedTab}">
+              <vscode-panel-tab
+                id="tab-1"
+                @click="${() => (this.selectedType = DataSourceTypes.API)}"
+                >API</vscode-panel-tab
+              >
+              <vscode-panel-tab
+                id="tab-2"
+                @click="${() => (this.selectedType = DataSourceTypes.QSQL)}"
+                >QSQL</vscode-panel-tab
+              >
+              <vscode-panel-tab
+                id="tab-3"
+                @click="${() => (this.selectedType = DataSourceTypes.SQL)}"
+                >SQL</vscode-panel-tab
+              >
+              <vscode-panel-view>
+                <div class="col">
+                  <div class="row">
+                    <div class="dropdown-container">
+                      <label for="selectedApi">Select API</label>
+                      <vscode-dropdown
+                        id="selectedApi"
+                        class="dropdown larger"
+                        @change="${(event: Event) =>
+                          (this.selectedApi = (
+                            event.target as HTMLInputElement
+                          ).value)}">
+                        ${this.renderApiOptions(this.selectedApi)}
+                      </vscode-dropdown>
+                    </div>
+                  </div>
+
+                  <div class="row">
+                    <div class="dropdown-container">
+                      <label for="selectedTable">Table</label>
+                      <vscode-dropdown
+                        id="selectedTable"
+                        class="dropdown larger"
+                        @change="${(event: Event) =>
+                          (this.selectedTable = (
+                            event.target as HTMLSelectElement
+                          ).value)}">
+                        ${this.renderTableOptions(this.selectedTable)}
+                      </vscode-dropdown>
+                    </div>
+                  </div>
+
+                  <div class="row">
+                    <vscode-text-field
+                      type="datetime-local"
+                      class="text-field larger"
+                      value="${this.startTS}"
+                      @input="${(event: Event) =>
+                        (this.startTS = (
+                          event.target as HTMLSelectElement
+                        ).value)}"
+                      >Start Time</vscode-text-field
+                    >
+                  </div>
+
+                  <div class="row">
+                    <vscode-text-field
+                      type="datetime-local"
+                      class="text-field larger"
+                      value="${this.endTS}"
+                      @input="${(event: Event) =>
+                        (this.endTS = (
+                          event.target as HTMLSelectElement
+                        ).value)}"
+                      >End Time</vscode-text-field
+                    >
+                  </div>
+
+                  <div class="row align-bottom">
+                    <vscode-checkbox
+                      ?checked="${this.filled}"
+                      @change="${(event: Event) =>
+                        (this.filled = (
+                          event.target as HTMLInputElement
+                        ).checked)}"></vscode-checkbox>
+                    <div class="dropdown-container">
+                      <label for="fill">Fill</label>
+                      <vscode-dropdown
+                        id="fill"
+                        class="dropdown"
+                        @change="${(event: Event) =>
+                          (this.fill = (
+                            event.target as HTMLSelectElement
+                          ).value)}">
+                        <vscode-option
+                          value="zero"
+                          ?selected="${this.fill === "zero"}"
+                          >zero</vscode-option
+                        >
+                        <vscode-option
+                          value="forward"
+                          ?selected="${this.fill === "forward"}"
+                          >forward</vscode-option
+                        >
+                      </vscode-dropdown>
+                    </div>
+                  </div>
+
+                  <div class="row align-bottom">
+                    <vscode-checkbox
+                      ?checked="${this.temporal}"
+                      @change="${(event: Event) =>
+                        (this.temporal = (
+                          event.target as HTMLInputElement
+                        ).checked)}"></vscode-checkbox>
+                    <div class="dropdown-container">
+                      <label for="temporality">Temporality</label>
+                      <vscode-dropdown
+                        id="temporality"
+                        class="dropdown"
+                        @change="${(event: Event) =>
+                          (this.temporality = (
+                            event.target as HTMLSelectElement
+                          ).value)}">
+                        <vscode-option
+                          value="snapshot"
+                          ?selected="${this.temporality === "snapshot"}"
+                          >snapshot</vscode-option
+                        >
+                        <vscode-option
+                          value="slice"
+                          ?selected="${this.temporality === "slice"}"
+                          >slice</vscode-option
+                        >
+                      </vscode-dropdown>
+                    </div>
+                    <vscode-text-field
+                      type="time"
+                      class="text-field"
+                      value="${this.temporalStartTS}"
+                      @input="${(event: Event) =>
+                        (this.temporalStartTS = (
+                          event.target as HTMLSelectElement
+                        ).value)}"
+                      ?hidden="${this.temporality !== "slice"}"
+                      >Start Time</vscode-text-field
+                    >
+                    <vscode-text-field
+                      type="time"
+                      class="text-field"
+                      value="${this.temporalEndTS}"
+                      @input="${(event: Event) =>
+                        (this.temporalEndTS = (
+                          event.target as HTMLSelectElement
+                        ).value)}"
+                      ?hidden="${this.temporality !== "slice"}"
+                      >End Time</vscode-text-field
+                    >
+                  </div>
+
+                  <div class="col">
+                    ${this.filters.map((filter) => this.renderFilter(filter))}
+                  </div>
+                  <div class="col">
+                    ${this.labels.map((label) => this.renderLabel(label))}
+                  </div>
+                  <div class="col">
+                    ${this.sorts.map((sort) => this.renderSort(sort))}
+                  </div>
+                  <div class="col">
+                    ${this.aggs.map((agg) => this.renderAgg(agg))}
+                  </div>
+                  <div class="col">
+                    ${this.groups.map((group) => this.renderGroup(group))}
+                  </div>
+                </div>
+              </vscode-panel-view>
+
+              <vscode-panel-view>
+                <div class="col">
+                  <div class="row">
+                    <div class="dropdown-container">
+                      <label for="selectedTarget">Target</label>
+                      <vscode-dropdown
+                        id="selectedTarget"
+                        class="dropdown larger"
+                        @change="${(event: Event) =>
+                          (this.qsqlTarget = (
+                            event.target as HTMLSelectElement
+                          ).value)}">
+                        ${this.renderTargetOptions(
+                          this.qsqlTarget
+                        )}</vscode-dropdown
+                      >
+                    </div>
+                  </div>
+                  <div class="row">
+                    <vscode-text-area
+                      cols="64"
+                      rows="16"
+                      value="${this.qsql}"
+                      @input="${(event: Event) =>
+                        (this.qsql = (
+                          event.target as HTMLSelectElement
+                        ).value)}"
+                      >Query</vscode-text-area
+                    >
+                  </div>
+                </div>
+              </vscode-panel-view>
+
+              <vscode-panel-view>
+                <div class="col">
+                  <div class="row">
+                    <vscode-text-area
+                      cols="64"
+                      rows="16"
+                      value="${this.sql}"
+                      @input="${(event: Event) =>
+                        (this.sql = (event.target as HTMLSelectElement).value)}"
+                      >Query</vscode-text-area
+                    >
+                  </div>
+                </div>
+              </vscode-panel-view>
+            </vscode-panels>
+          </div>
         </div>
-      </form>
+        <div class="col">
+          <div class="row mt-6">
+            <vscode-button
+              appearance="primary"
+              class="grow"
+              @click="${this.save}"
+              >Save</vscode-button
+            >
+            <vscode-button
+              appearance="secondary"
+              class="grow"
+              @click="${this.run}"
+              >Run</vscode-button
+            >
+          </div>
+          <vscode-button
+            appearance="secondary"
+            @click="${this.populateScratchpad}"
+            >Populate Scratchpad</vscode-button
+          >
+        </div>
+      </div>
     `;
   }
 }

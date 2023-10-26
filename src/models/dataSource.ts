@@ -19,6 +19,7 @@ export enum DataSourceTypes {
 
 export interface DataSourceFiles {
   name: string;
+  originalName?: string;
   insightsNode?: string;
   dataSource: {
     selectedType: DataSourceTypes;
@@ -36,9 +37,10 @@ export interface DataSourceFiles {
       slice: string[];
       labels: string[];
       optional?: {
-        fill: boolean;
-        temporality: boolean;
-        slices: Slice[];
+        filled: boolean;
+        temporal: boolean;
+        startTS: string;
+        endTS: string;
         filters: Filter[];
         labels: Label[];
         sorts: Sort[];
@@ -116,20 +118,6 @@ export const aggOperators = [
   "svar",
   "var",
 ];
-
-export type Slice = {
-  active: boolean;
-  start: string;
-  end: string;
-};
-
-export function createSlice(): Slice {
-  return {
-    active: false,
-    start: "",
-    end: "",
-  };
-}
 
 export type Filter = {
   active: boolean;

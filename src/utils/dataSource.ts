@@ -14,11 +14,7 @@
 import * as fs from "fs";
 import path from "path";
 import { ext } from "../extensionVariables";
-import {
-  DataSourceFiles,
-  DataSourceTypes,
-  createDefaultDataSourceFile,
-} from "../models/dataSource";
+import { DataSourceFiles } from "../models/dataSource";
 import { DataSourcesPanel } from "../panels/datasource";
 
 export function createKdbDataSourcesFolder(): string {
@@ -40,69 +36,12 @@ export function createKdbDataSourcesFolder(): string {
 }
 
 export function convertDataSourceFormToDataSourceFile(
-  form: any
+  form: DataSourceFiles
 ): DataSourceFiles {
   const insightsNode = getConnectedInsightsNode();
-  const fileContent = createDefaultDataSourceFile();
-  const filter: string[] = [];
-  const groupBy: string[] = [];
-  const agg: string[] = [];
-  const sortCols: string[] = [];
-  const slice: string[] = [];
-  const labels: string[] = [];
-  fileContent.name = form.name;
-  fileContent.insightsNode = insightsNode;
-  fileContent.dataSource.selectedType = form.selectedType as DataSourceTypes;
-  fileContent.dataSource.api.selectedApi = form.selectedApi;
-  fileContent.dataSource.api.table = form.selectedTable;
-  fileContent.dataSource.api.startTS = form.startTS;
-  fileContent.dataSource.api.endTS = form.endTS;
-  fileContent.dataSource.api.fill = form.fill;
-  fileContent.dataSource.api.temporality = form.temporality;
-  fileContent.dataSource.qsql.query = form.qsql;
-  fileContent.dataSource.qsql.selectedTarget = form.selectedTarget;
-  fileContent.dataSource.sql.query = form.sql;
-
-  for (const [key, value] of Object.entries(form)) {
-    if (key.includes("filter")) {
-      if (value) {
-        filter.push(value.toString());
-      }
-    }
-    if (key.includes("groupBy")) {
-      if (value) {
-        groupBy.push(value.toString());
-      }
-    }
-    if (key.includes("agg")) {
-      if (value) {
-        agg.push(value.toString());
-      }
-    }
-    if (key.includes("sortCols")) {
-      if (value) {
-        sortCols.push(value.toString());
-      }
-    }
-    if (key.includes("slice")) {
-      if (value) {
-        slice.push(value.toString());
-      }
-    }
-    if (key.includes("labels")) {
-      if (value) {
-        labels.push(value.toString());
-      }
-    }
-  }
-  fileContent.dataSource.api.filter = filter;
-  fileContent.dataSource.api.groupBy = groupBy;
-  fileContent.dataSource.api.agg = agg;
-  fileContent.dataSource.api.sortCols = sortCols;
-  fileContent.dataSource.api.slice = slice;
-  fileContent.dataSource.api.labels = labels;
-
-  return fileContent;
+  form.insightsNode = insightsNode;
+  delete form.originalName;
+  return form;
 }
 
 export function convertTimeToTimestamp(time: string): string {

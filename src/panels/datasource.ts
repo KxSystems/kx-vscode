@@ -74,6 +74,8 @@ export class DataSourcesPanel {
       {
         // Enable javascript in the webview
         enableScripts: true,
+        // Keep content even when the webview no longer in the foreground
+        retainContextWhenHidden: true,
         // Restrict the webview to only load resources from the `out` directory
         localResourceRoots: [vscode.Uri.joinPath(extensionUri, "out")],
       }

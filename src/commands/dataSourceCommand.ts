@@ -148,7 +148,9 @@ export async function openDataSource(
   );
 }
 
-export async function saveDataSource(dataSourceForm: any): Promise<void> {
+export async function saveDataSource(
+  dataSourceForm: DataSourceFiles
+): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
   if (!kdbDataSourcesFolderPath) {
     return;
@@ -158,7 +160,11 @@ export async function saveDataSource(dataSourceForm: any): Promise<void> {
     window.showErrorMessage("Name is required");
     return;
   }
-  if (dataSourceForm.name !== dataSourceForm.originalName) {
+
+  if (
+    dataSourceForm.originalName &&
+    dataSourceForm.name !== dataSourceForm.originalName
+  ) {
     await renameDataSource(dataSourceForm.originalName, dataSourceForm.name);
   }
 
