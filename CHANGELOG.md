@@ -2,13 +2,14 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
-# 1.0.1
+
+# v1.0.1
 
 ### Internal Improvements
 
 - Documentation improvements
 
-# 1.0.0
+# v1.0.0
 
 ### Enhancements
 
@@ -25,13 +26,13 @@ All notable changes to the kdb extension will be documented in this file.
 - kdb connections tree is now sorted
 - Autocomplete fixes for embedded namespaces
 
-# 0.1.17
+# v0.1.17
 
 ### Internal Improvements
 
 - KX Language Server improvements
 
-# 0.1.16
+# v0.1.16
 
 ### Internal Improvements
 
@@ -39,7 +40,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 - Preview KX Language Server implementation
 
-# 0.1.15
+# v0.1.15
 
 ### Enhancements
 
@@ -47,7 +48,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 - Refresh functionality moved from context menu to icon in view title bar
 
-# 0.1.14
+# v0.1.14
 
 ### Fixes
 
@@ -59,7 +60,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 - Fix to filter "," namespace from views retrieval
 
-# 0.1.13
+# v0.1.13
 
 ### Enhancements
 
@@ -81,7 +82,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 - Logo improved to work with both light and dark themes
 
-# 0.1.12
+# v0.1.12
 
 ### Enhancements
 
@@ -97,7 +98,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 - Added language server to support code completion and navigation
 
-# 0.1.11
+# v0.1.11
 
 ### Enhancements
 
@@ -117,7 +118,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 - Branding updates
 
-# 0.1.10
+# v0.1.10
 
 ### Enhancements
 
@@ -133,7 +134,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 ### Internal Improvements
 
-# 0.1.9
+# v0.1.9
 
 ### Enhancements
 
@@ -147,7 +148,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 - Removed q terminal from the extension with the decision to use the editor and output window in favor of the confusion with the terminal.
 
-# 0.1.8
+# v0.1.8
 
 ### Enhancements
 
@@ -157,7 +158,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 ### Internal Improvements
 
-# 0.1.7
+# v0.1.7
 
 ### Enhancements
 
@@ -167,7 +168,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 ### Internal Improvements
 
-# 0.1.6
+# v0.1.6
 
 ### Enhancements
 
@@ -177,7 +178,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 ### Internal Improvements
 
-# 0.1.5
+# v0.1.5
 
 ### Enhancements
 
@@ -191,7 +192,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 ### Internal Improvements
 
-# 0.1.4
+# v0.1.4
 
 ### Enhancements
 
@@ -201,7 +202,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 ### Internal Improvements
 
-# 0.1.3
+# v0.1.3
 
 ### Enhancements
 
@@ -217,7 +218,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 - Initial infrastructure code for SQL queries from editor, more to come in next release.
 
-# 0.1.2
+# v0.1.2
 
 ### Enhancements
 
@@ -235,7 +236,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 - Updated the internal connection manager caching for better response and less connections required when using multiple inputs such as q terminal and the editor pane.
 
-# 0.1.1
+# v0.1.1
 
 ### Enhancements
 
