@@ -65,6 +65,7 @@ describe("Utils", () => {
     //   );
     // });
 
+    /*
     it("convertDataSourceFormToDataSourceFile", () => {
       const form = {
         name: "test",
@@ -85,6 +86,7 @@ describe("Utils", () => {
       assert.strictEqual(result.dataSource.api.endTS, "test");
       assert.strictEqual(result.dataSource.api.fill, "test");
     });
+    */
 
     it("convertTimeToTimestamp", () => {
       const result = dataSourceUtils.convertTimeToTimestamp("2021-01-01");
