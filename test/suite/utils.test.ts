@@ -17,7 +17,6 @@ import * as vscode from "vscode";
 import { TreeItemCollapsibleState } from "vscode";
 import { ext } from "../../src/extensionVariables";
 import { CancellationEvent } from "../../src/models/cancellationEvent";
-import { DataSourceFiles, DataSourceTypes } from "../../src/models/dataSource";
 import { QueryResultType } from "../../src/models/queryResult";
 import { ServerType } from "../../src/models/server";
 import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
@@ -132,45 +131,6 @@ describe("Utils", () => {
     //     "/Users/username/.vscode-server/data/User/kdb/dataSources"
     //   );
     // });
-
-    it("convertDataSourceFormToDataSourceFile", () => {
-      const form: DataSourceFiles = {
-        name: "test",
-        dataSource: {
-          selectedType: DataSourceTypes.API,
-          api: {
-            selectedApi: "test",
-            table: "test",
-            startTS: "test",
-            endTS: "test",
-            fill: "test",
-            temporality: "test",
-            filter: [],
-            groupBy: [],
-            agg: [],
-            sortCols: [],
-            slice: [],
-            labels: [],
-          },
-          qsql: {
-            query: "test",
-            selectedTarget: "test",
-          },
-          sql: {
-            query: "test",
-          },
-        },
-      };
-      const result =
-        dataSourceUtils.convertDataSourceFormToDataSourceFile(form);
-      assert.strictEqual(result.name, "test");
-      assert.strictEqual(result.dataSource.selectedType, DataSourceTypes.API);
-      assert.strictEqual(result.dataSource.api.selectedApi, "test");
-      assert.strictEqual(result.dataSource.api.table, "test");
-      assert.strictEqual(result.dataSource.api.startTS, "test");
-      assert.strictEqual(result.dataSource.api.endTS, "test");
-      assert.strictEqual(result.dataSource.api.fill, "test");
-    });
 
     it("convertTimeToTimestamp", () => {
       const result = dataSourceUtils.convertTimeToTimestamp("2021-01-01");

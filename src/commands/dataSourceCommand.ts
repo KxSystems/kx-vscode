@@ -18,6 +18,7 @@ import { ext } from "../extensionVariables";
 import { getDataBodyPayload } from "../models/data";
 import {
   DataSourceFiles,
+  DataSourceTypes,
   createDefaultDataSourceFile,
 } from "../models/dataSource";
 import { scratchpadVariableInput } from "../models/items/server";
@@ -25,7 +26,6 @@ import { DataSourcesPanel } from "../panels/datasource";
 import { KdbDataSourceTreeItem } from "../services/dataSourceTreeProvider";
 import {
   checkIfTimeParamIsCorrect,
-  convertDataSourceFormToDataSourceFile,
   convertTimeToTimestamp,
   createKdbDataSourcesFolder,
   getConnectedInsightsNode,
@@ -156,19 +156,17 @@ export async function saveDataSource(
     return;
   }
 
-  if (dataSourceForm.name === "") {
+  if (!dataSourceForm.originalName || dataSourceForm.name === "") {
     window.showErrorMessage("Name is required");
     return;
   }
 
-  if (
-    dataSourceForm.originalName &&
-    dataSourceForm.name !== dataSourceForm.originalName
-  ) {
+  if (dataSourceForm.name !== dataSourceForm.originalName) {
     await renameDataSource(dataSourceForm.originalName, dataSourceForm.name);
   }
 
-  const fileContent = convertDataSourceFormToDataSourceFile(dataSourceForm);
+  dataSourceForm.insightsNode = getConnectedInsightsNode();
+  const fileContent = dataSourceForm;
 
   const dataSourceFilePath = path.join(
     kdbDataSourcesFolderPath,
@@ -177,11 +175,13 @@ export async function saveDataSource(
 
   if (fs.existsSync(dataSourceFilePath)) {
     fs.writeFileSync(dataSourceFilePath, JSON.stringify(fileContent));
+    window.showInformationMessage(`DataSource ${dataSourceForm.name} saved.`);
   }
-  window.showInformationMessage(`DataSource ${dataSourceForm.name} saved.`);
 }
 
-export async function populateScratchpad(dataSourceForm: any): Promise<void> {
+export async function populateScratchpad(
+  dataSourceForm: DataSourceFiles
+): Promise<void> {
   const scratchpadVariable: InputBoxOptions = {
     prompt: scratchpadVariableInput.prompt,
     placeHolder: scratchpadVariableInput.placeholder,
@@ -200,7 +200,17 @@ export async function populateScratchpad(dataSourceForm: any): Promise<void> {
   });
 }
 
-export async function runDataSource(dataSourceForm: any): Promise<void> {
+function parseParams(params: string) {
+  const tokens = params.split(/\s+/).map((token) => {
+    const number = parseFloat(token);
+    return isNaN(number) ? token : number;
+  });
+  return tokens.length === 1 ? tokens[0] : tokens;
+}
+
+export async function runDataSource(
+  dataSourceForm: DataSourceFiles
+): Promise<void> {
   Object.assign(ext.insightsMeta, await getMeta());
   if (!ext.insightsMeta.assembly) {
     ext.outputChannel.appendLine(
@@ -211,102 +221,125 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
     );
     return;
   }
-  const fileContent = convertDataSourceFormToDataSourceFile(dataSourceForm);
+
+  dataSourceForm.insightsNode = getConnectedInsightsNode();
+  const fileContent = dataSourceForm;
 
   let res: any;
-  const selectedType =
-    fileContent.dataSource.selectedType.toString() === "API"
-      ? "API"
-      : fileContent.dataSource.selectedType.toString() === "QSQL"
-      ? "QSQL"
-      : "SQL";
+  const selectedType = fileContent.dataSource.selectedType;
 
   switch (selectedType) {
-    case "API":
-      const isTimeCorrect = checkIfTimeParamIsCorrect(
-        fileContent.dataSource.api.startTS,
-        fileContent.dataSource.api.endTS
-      );
+    case DataSourceTypes.API:
+      const api = fileContent.dataSource.api;
+
+      const isTimeCorrect = checkIfTimeParamIsCorrect(api.startTS, api.endTS);
+
       if (!isTimeCorrect) {
         window.showErrorMessage(
-          "The time parameters(startTS and endTS) are not correct, please check the format or if the startTS is before the endTS"
+          "The time parameters (startTS and endTS) are not correct, please check the format or if the startTS is before the endTS"
         );
         break;
       }
-      const startTS =
-        fileContent.dataSource.api.startTS !== ""
-          ? convertTimeToTimestamp(fileContent.dataSource.api.startTS)
-          : undefined;
-      const endTS =
-        fileContent.dataSource.api.endTS !== ""
-          ? convertTimeToTimestamp(fileContent.dataSource.api.endTS)
-          : undefined;
-      const fill =
-        fileContent.dataSource.api.fill !== ""
-          ? fileContent.dataSource.api.fill
-          : undefined;
-      const temporality =
-        fileContent.dataSource.api.temporality !== ""
-          ? fileContent.dataSource.api.temporality
-          : undefined;
-      const filter =
-        fileContent.dataSource.api.filter.length > 0
-          ? fileContent.dataSource.api.filter
-          : undefined;
-      const groupBy =
-        fileContent.dataSource.api.groupBy.length > 0
-          ? fileContent.dataSource.api.groupBy
-          : undefined;
-      const agg =
-        fileContent.dataSource.api.agg.length > 0
-          ? fileContent.dataSource.api.agg
-          : undefined;
-      const sortCols =
-        fileContent.dataSource.api.sortCols.length > 0
-          ? fileContent.dataSource.api.sortCols
-          : undefined;
-      const slice =
-        fileContent.dataSource.api.slice.length > 0
-          ? fileContent.dataSource.api.slice
-          : undefined;
-      const labels =
-        fileContent.dataSource.api.labels.length > 0
-          ? fileContent.dataSource.api.labels
-          : undefined;
+
       const apiBody: getDataBodyPayload = {
         table: fileContent.dataSource.api.table,
+        startTS: convertTimeToTimestamp(api.startTS),
+        endTS: convertTimeToTimestamp(api.endTS),
       };
 
-      apiBody.startTS = startTS;
-      apiBody.endTS = endTS;
-      apiBody.fill = fill;
-      apiBody.temporality = temporality;
-      apiBody.groupBy = groupBy;
-      apiBody.agg = agg;
-      apiBody.sortCols = sortCols;
-      apiBody.slice = slice;
-      apiBody.labels = labels;
+      const optional = api.optional;
 
-      if (filter !== undefined) {
-        apiBody.filter = filter.map((filterEl: string) => {
-          return filterEl.split(";");
-        });
+      if (optional) {
+        if (optional.filled) {
+          apiBody.fill = api.fill;
+        }
+        if (optional.temporal) {
+          apiBody.temporality = api.temporality;
+          if (api.temporality === "slice") {
+            if (optional.startTS >= optional.endTS) {
+              window.showErrorMessage(
+                "The slice time parameters (startTS and endTS) are not correct, please check the format or if the startTS is before the endTS"
+              );
+              break;
+            }
+            const start = api.startTS.split("T");
+            if (start.length === 2) {
+              start[1] = optional.startTS;
+              const end = api.endTS.split("T");
+              if (end.length === 2) {
+                end[1] = optional.endTS;
+                apiBody.startTS = convertTimeToTimestamp(start.join("T"));
+                apiBody.endTS = convertTimeToTimestamp(end.join("T"));
+              }
+            }
+          }
+        }
+
+        const labels = optional.labels.filter((label) => label.active);
+
+        if (labels.length > 0) {
+          apiBody.labels = Object.assign(
+            {},
+            ...labels.map((label) => ({ [label.key]: label.value }))
+          );
+        }
+
+        const filters = optional.filters
+          .filter((filter) => filter.active)
+          .map((filter) => [
+            filter.operator,
+            filter.column,
+            parseParams(filter.values),
+          ]);
+
+        if (filters.length > 0) {
+          apiBody.filter = filters;
+        }
+
+        const sorts = optional.sorts
+          .filter((sort) => sort.active)
+          .map((sort) => sort.column);
+
+        if (sorts.length > 0) {
+          apiBody.sortCols = sorts;
+        }
+
+        const aggs = optional.aggs
+          .filter((agg) => agg.active)
+          .map((agg) => [agg.key, agg.operator, agg.column]);
+
+        if (aggs.length > 0) {
+          apiBody.agg = aggs;
+        }
+
+        const groups = optional.groups
+          .filter((group) => group.active)
+          .map((group) => group.column);
+
+        if (groups.length > 0) {
+          apiBody.groupBy = groups;
+        }
       }
 
-      const apiCall = await getDataInsights(
-        ext.insightsAuthUrls.dataURL,
-        JSON.stringify(apiBody)
-      );
+      const body = JSON.stringify(apiBody);
+      const apiCall = await getDataInsights(ext.insightsAuthUrls.dataURL, body);
+
       if (apiCall?.arrayBuffer) {
         res = handleWSResults(apiCall.arrayBuffer);
+      } else {
+        window.showErrorMessage("An error occured during API call");
+        break;
       }
+
       writeQueryResultsToConsole(
         res,
         "GetData - table: " + apiBody.table,
         selectedType
       );
+
+      console.log(res);
       break;
-    case "QSQL":
+    case DataSourceTypes.QSQL:
       const assembly = fileContent.dataSource.qsql.selectedTarget.slice(0, -4);
       const target = fileContent.dataSource.qsql.selectedTarget.slice(-3);
       const qsqlBody = {
@@ -327,7 +360,7 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
         selectedType
       );
       break;
-    case "SQL":
+    case DataSourceTypes.SQL:
     default:
       const sqlBody = {
         query: fileContent.dataSource.sql.query,

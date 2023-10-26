@@ -53,8 +53,8 @@ export class KdbDataSourceView extends LitElement {
   @state() declare filled: boolean;
   @state() declare temporality: string;
   @state() declare temporal: boolean;
-  @state() declare temporalStartTS: string;
-  @state() declare temporalEndTS: string;
+  @state() declare sliceStartTS: string;
+  @state() declare sliceEndTS: string;
   @state() declare filters: Filter[];
   @state() declare labels: Label[];
   @state() declare sorts: Sort[];
@@ -80,8 +80,8 @@ export class KdbDataSourceView extends LitElement {
     this.filled = false;
     this.temporality = "";
     this.temporal = false;
-    this.temporalStartTS = "";
-    this.temporalEndTS = "";
+    this.sliceStartTS = "";
+    this.sliceEndTS = "";
     this.filters = [createFilter()];
     this.labels = [createLabel()];
     this.sorts = [createSort()];
@@ -106,7 +106,7 @@ export class KdbDataSourceView extends LitElement {
     const params = event.data;
     const ds = params.dataSourceFile;
     this.isInsights = params.isInsights;
-    this.isMetaLoaded = params.insightsMeta.dap ? true : false;
+    this.isMetaLoaded = !!params.insightsMeta.dap;
     this.insightsMeta = params.insightsMeta;
     this.originalName = params.dataSourceName;
     this.name = params.dataSourceName;
@@ -124,8 +124,8 @@ export class KdbDataSourceView extends LitElement {
     if (optional) {
       this.filled = optional.filled;
       this.temporal = optional.temporal;
-      this.temporalStartTS = optional.startTS;
-      this.temporalEndTS = optional.endTS;
+      this.sliceStartTS = optional.startTS;
+      this.sliceEndTS = optional.endTS;
       this.filters = optional.filters;
       this.labels = optional.labels;
       this.sorts = optional.sorts;
@@ -156,8 +156,8 @@ export class KdbDataSourceView extends LitElement {
           optional: {
             filled: this.filled,
             temporal: this.temporal,
-            startTS: this.temporalStartTS,
-            endTS: this.temporalEndTS,
+            startTS: this.sliceStartTS,
+            endTS: this.sliceEndTS,
             filters: this.filters,
             labels: this.labels,
             sorts: this.sorts,
@@ -179,11 +179,16 @@ export class KdbDataSourceView extends LitElement {
   private readonly vscode = acquireVsCodeApi();
 
   private get selectedTab() {
-    return this.selectedType === DataSourceTypes.API
-      ? "tab-1"
-      : this.selectedType === DataSourceTypes.QSQL
-      ? "tab-2"
-      : "tab-3";
+    switch (this.selectedType) {
+      case DataSourceTypes.API:
+        return "tab-1";
+      case DataSourceTypes.QSQL:
+        return "tab-2";
+      case DataSourceTypes.SQL:
+        return "tab-3";
+      default:
+        return "tab-1";
+    }
   }
 
   private save() {
@@ -820,9 +825,9 @@ export class KdbDataSourceView extends LitElement {
                     <vscode-text-field
                       type="time"
                       class="text-field"
-                      value="${this.temporalStartTS}"
+                      value="${this.sliceStartTS}"
                       @input="${(event: Event) =>
-                        (this.temporalStartTS = (
+                        (this.sliceStartTS = (
                           event.target as HTMLSelectElement
                         ).value)}"
                       ?hidden="${this.temporality !== "slice"}"
@@ -831,9 +836,9 @@ export class KdbDataSourceView extends LitElement {
                     <vscode-text-field
                       type="time"
                       class="text-field"
-                      value="${this.temporalEndTS}"
+                      value="${this.sliceEndTS}"
                       @input="${(event: Event) =>
-                        (this.temporalEndTS = (
+                        (this.sliceEndTS = (
                           event.target as HTMLSelectElement
                         ).value)}"
                       ?hidden="${this.temporality !== "slice"}"

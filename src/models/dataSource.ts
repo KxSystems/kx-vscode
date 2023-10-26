@@ -183,8 +183,5 @@ export type Group = {
 };
 
 export function createGroup(): Group {
-  return {
-    active: false,
-    column: "",
-  };
+  return createSort();
 }

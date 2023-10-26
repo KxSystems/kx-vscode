@@ -27,12 +27,12 @@ export type getDataBodyPayload = {
   table: string;
   startTS?: string;
   endTS?: string;
+  labels?: { [id: string]: string };
+  filter?: (string | number | (string | number)[])[][];
+  groupBy?: string[];
+  agg?: string[][];
   fill?: string;
   temporality?: string;
-  filter?: string[][];
-  groupBy?: string[];
-  agg?: string[];
-  sortCols?: string[];
   slice?: string[];
-  labels?: string[];
+  sortCols?: string[];
 };

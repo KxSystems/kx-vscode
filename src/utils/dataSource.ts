@@ -35,15 +35,6 @@ export function createKdbDataSourcesFolder(): string {
   return kdbDataSourcesFolderPath;
 }
 
-export function convertDataSourceFormToDataSourceFile(
-  form: DataSourceFiles
-): DataSourceFiles {
-  const insightsNode = getConnectedInsightsNode();
-  form.insightsNode = insightsNode;
-  delete form.originalName;
-  return form;
-}
-
 export function convertTimeToTimestamp(time: string): string {
   try {
     const date = new Date(time);
