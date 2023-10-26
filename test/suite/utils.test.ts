@@ -562,6 +562,29 @@ describe("Utils", () => {
       assert.strictEqual(sanitizedQuery2, "select from t");
     });
 
+    describe("getValueFromArray", () => {
+      it("should return the value of the 'Value' property if the input is an array with a single object with a 'Value' property", () => {
+        const input = [{ Value: "hello" }];
+        const expectedOutput = "hello";
+        const actualOutput = queryUtils.getValueFromArray(input);
+        assert.strictEqual(actualOutput, expectedOutput);
+      });
+
+      it("should return the input array if it is not an array with a single object with a 'Value' property", () => {
+        const input = ["hello", "world"];
+        const expectedOutput = ["hello", "world"];
+        const actualOutput = queryUtils.getValueFromArray(input);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+
+      it("should return the input array if it is an empty array", () => {
+        const input: any[] = [];
+        const expectedOutput: any[] = [];
+        const actualOutput = queryUtils.getValueFromArray(input);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+    });
+
     it("handleWSResults", () => {
       const ab = new ArrayBuffer(128);
       const result = queryUtils.handleWSResults(ab);

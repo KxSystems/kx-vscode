@@ -57,7 +57,7 @@ export function handleWSResults(ab: ArrayBuffer): any {
   }
 }
 
-function getValueFromArray(arr: any[]): string | any[] {
+export function getValueFromArray(arr: any[]): string | any[] {
   if (arr.length === 1 && typeof arr[0] === "object" && arr[0] !== null) {
     const obj = arr[0];
     const keys = Object.keys(obj);
