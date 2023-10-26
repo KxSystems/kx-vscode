@@ -431,7 +431,6 @@ describe("dataSourceCommand", () => {
       },
       insightsNode: "dummyNode",
     };
-    const dataSourceForm = {};
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
     ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
     let isVisibleStub: sinon.SinonStub;
@@ -477,7 +476,7 @@ describe("dataSourceCommand", () => {
 
     it("should show an error message if not connected to an Insights server", async () => {
       getMetaStub.resolves({});
-      await dataSourceCommand.runDataSource(dataSourceForm);
+      await dataSourceCommand.runDataSource({});
       sinon.assert.notCalled(convertDSFormToDSFile);
     });
 
@@ -487,27 +486,29 @@ describe("dataSourceCommand", () => {
       getSelectedTypeStub.returns("QSQL");
       runQsqlDataSourceStub.resolves("dummy results");
       isVisibleStub.returns(true);
-      await dataSourceCommand.runDataSource(dataSourceForm);
+      await dataSourceCommand.runDataSource({});
       sinon.assert.calledOnce(writeQueryResultsToViewStub);
     });
 
     it("should return API results)", async () => {
+      dummyFileContent.dataSource.selectedType = "API";
       getMetaStub.resolves(dummyMeta);
       convertDSFormToDSFile.returns(dummyFileContent);
       getSelectedTypeStub.returns("API");
       runApiDataSourceStub.resolves("dummy results");
       isVisibleStub.returns(false);
-      await dataSourceCommand.runDataSource(dataSourceForm);
+      await dataSourceCommand.runDataSource({});
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
     });
 
     it("should return SQL results)", async () => {
+      dummyFileContent.dataSource.selectedType = "SQL";
       getMetaStub.resolves(dummyMeta);
       convertDSFormToDSFile.returns(dummyFileContent);
       getSelectedTypeStub.returns("SQL");
       runSqlDataSourceStub.resolves("dummy results");
       isVisibleStub.returns(false);
-      await dataSourceCommand.runDataSource(dataSourceForm);
+      await dataSourceCommand.runDataSource({});
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
     });
   });
