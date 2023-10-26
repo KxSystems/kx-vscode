@@ -298,6 +298,217 @@ describe("dataSourceCommand", () => {
       ]);
     });
   });
+
+  describe("runDataSource", () => {
+    const dummyMeta = {
+      rc: [
+        {
+          api: 3,
+          agg: 1,
+          assembly: 1,
+          schema: 1,
+          rc: "dummy-rc",
+          labels: [{ kxname: "dummy-assembly" }],
+          started: "2023-10-04T17:20:57.659088747",
+        },
+      ],
+      dap: [
+        {
+          assembly: "dummy-assembly",
+          instance: "idb",
+          startTS: "2023-10-25T01:40:03.000000000",
+          endTS: "2023-10-25T14:00:03.000000000",
+        },
+      ],
+      api: [
+        {
+          api: ".kxi.getData",
+          kxname: ["dummy-assembly"],
+          aggFn: ".sgagg.getData",
+          custom: false,
+          full: true,
+          metadata: {
+            description: "dummy desc.",
+            params: [
+              {
+                name: "table",
+                type: -11,
+                isReq: true,
+                description: "dummy desc.",
+              },
+            ],
+            return: {
+              type: 0,
+              description: "dummy desc.",
+            },
+            misc: { safe: true },
+            aggReturn: {
+              type: 98,
+              description: "dummy desc.",
+            },
+          },
+          procs: [],
+        },
+      ],
+      agg: [
+        {
+          aggFn: ".sgagg.aggFnDflt",
+          custom: false,
+          full: true,
+          metadata: {
+            description: "dummy desc.",
+            params: [{ description: "dummy desc." }],
+            return: { description: "dummy desc." },
+            misc: {},
+          },
+          procs: [],
+        },
+      ],
+      assembly: [
+        {
+          assembly: "dummy-assembly",
+          kxname: "dummy-assembly",
+          tbls: ["dummyTbl"],
+        },
+      ],
+      schema: [
+        {
+          table: "dummyTbl",
+          assembly: ["dummy-assembly"],
+          typ: "partitioned",
+          pkCols: [],
+          prtnCol: "srcTime",
+          sortColsMem: [],
+          sortColsIDisk: [],
+          sortColsDisk: [],
+          isSplayed: true,
+          isPartitioned: true,
+          isSharded: false,
+          columns: [
+            {
+              column: "sym",
+              typ: 10,
+              description: "dummy desc.",
+              oldName: "",
+              attrMem: "",
+              attrIDisk: "",
+              attrDisk: "",
+              isSerialized: false,
+              foreign: "",
+              anymap: false,
+              backfill: "",
+            },
+          ],
+        },
+      ],
+    };
+    const dummyFileContent = {
+      name: "dummy-DS",
+      dataSource: {
+        selectedType: "QSQL",
+        api: {
+          selectedApi: "getData",
+          table: "dummyTbl",
+          startTS: "2023-09-10T09:30",
+          endTS: "2023-09-19T12:30",
+          fill: "",
+          temporality: "",
+          filter: [],
+          groupBy: [],
+          agg: [],
+          sortCols: [],
+          slice: [],
+          labels: [],
+        },
+        qsql: {
+          query:
+            "n:10;\n([] date:n?(reverse .z.d-1+til 10); instance:n?`inst1`inst2`inst3`inst4; sym:n?`USD`EUR`GBP`JPY; cnt:n?10; lists:{x?10}@/:1+n?10)\n",
+          selectedTarget: "dummy-target",
+        },
+        sql: { query: "test query" },
+      },
+      insightsNode: "dummyNode",
+    };
+    const dataSourceForm = {};
+    const uriTest: vscode.Uri = vscode.Uri.parse("test");
+    ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
+    let isVisibleStub: sinon.SinonStub;
+    let getMetaStub: sinon.SinonStub;
+    let convertDSFormToDSFile: sinon.SinonStub;
+    let getSelectedTypeStub: sinon.SinonStub;
+    let runApiDataSourceStub: sinon.SinonStub;
+    let runQsqlDataSourceStub: sinon.SinonStub;
+    let runSqlDataSourceStub: sinon.SinonStub;
+    let writeQueryResultsToViewStub: sinon.SinonStub;
+    let writeQueryResultsToConsoleStub: sinon.SinonStub;
+    const appendLineSpy = sinon.spy(ext.outputChannel, "appendLine");
+    // const windowErrorSpy = sinon.spy(vscode.window, "showErrorMessage");
+    ext.outputChannel = vscode.window.createOutputChannel("kdb");
+
+    beforeEach(() => {
+      getMetaStub = sinon.stub(serverCommand, "getMeta");
+      convertDSFormToDSFile = sinon.stub(
+        dataSourceUtils,
+        "convertDataSourceFormToDataSourceFile"
+      );
+      isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
+      getSelectedTypeStub = sinon.stub(dataSourceCommand, "getSelectedType");
+      runApiDataSourceStub = sinon.stub(dataSourceCommand, "runApiDataSource");
+      runQsqlDataSourceStub = sinon.stub(
+        dataSourceCommand,
+        "runQsqlDataSource"
+      );
+      runSqlDataSourceStub = sinon.stub(dataSourceCommand, "runSqlDataSource");
+      writeQueryResultsToViewStub = sinon.stub(
+        serverCommand,
+        "writeQueryResultsToView"
+      );
+      writeQueryResultsToConsoleStub = sinon.stub(
+        serverCommand,
+        "writeQueryResultsToConsole"
+      );
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should show an error message if not connected to an Insights server", async () => {
+      getMetaStub.resolves({});
+      await dataSourceCommand.runDataSource(dataSourceForm);
+      sinon.assert.notCalled(convertDSFormToDSFile);
+    });
+
+    it("should return QSQL results)", async () => {
+      getMetaStub.resolves(dummyMeta);
+      convertDSFormToDSFile.returns(dummyFileContent);
+      getSelectedTypeStub.returns("QSQL");
+      runQsqlDataSourceStub.resolves("dummy results");
+      isVisibleStub.returns(true);
+      await dataSourceCommand.runDataSource(dataSourceForm);
+      sinon.assert.calledOnce(writeQueryResultsToViewStub);
+    });
+
+    it("should return API results)", async () => {
+      getMetaStub.resolves(dummyMeta);
+      convertDSFormToDSFile.returns(dummyFileContent);
+      getSelectedTypeStub.returns("API");
+      runApiDataSourceStub.resolves("dummy results");
+      isVisibleStub.returns(false);
+      await dataSourceCommand.runDataSource(dataSourceForm);
+      sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
+    });
+
+    it("should return API results)", async () => {
+      getMetaStub.resolves(dummyMeta);
+      convertDSFormToDSFile.returns(dummyFileContent);
+      getSelectedTypeStub.returns("SQL");
+      runSqlDataSourceStub.resolves("dummy results");
+      isVisibleStub.returns(false);
+      await dataSourceCommand.runDataSource(dataSourceForm);
+      sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
+    });
+  });
 });
 
 describe("installTools", () => {
