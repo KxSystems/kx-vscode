@@ -35,6 +35,16 @@ export interface DataSourceFiles {
       sortCols: string[];
       slice: string[];
       labels: string[];
+      optional?: {
+        fill: boolean;
+        temporality: boolean;
+        slices: Slice[];
+        filters: Filter[];
+        labels: Label[];
+        sorts: Sort[];
+        aggs: Agg[];
+        groups: Group[];
+      };
     };
     qsql: {
       query: string;
@@ -107,6 +117,20 @@ export const aggOperators = [
   "var",
 ];
 
+export type Slice = {
+  active: boolean;
+  start: string;
+  end: string;
+};
+
+export function createSlice(): Slice {
+  return {
+    active: false,
+    start: "",
+    end: "",
+  };
+}
+
 export type Filter = {
   active: boolean;
   column: string;
@@ -174,19 +198,5 @@ export function createGroup(): Group {
   return {
     active: false,
     column: "",
-  };
-}
-
-export type Slice = {
-  active: boolean;
-  start: string;
-  end: string;
-};
-
-export function createSlice(): Slice {
-  return {
-    active: false,
-    start: "",
-    end: "",
   };
 }

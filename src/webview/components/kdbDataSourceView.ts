@@ -243,18 +243,28 @@ export class KdbDataSourceView extends LitElement {
               event.target as HTMLInputElement
             ).checked)}"></vscode-checkbox>
         <div class="dropdown-container">
-          <label>Filter By Column</label>
+          <label
+            >${this.filters.indexOf(filter) === 0
+              ? "Filter By Column"
+              : ""}</label
+          >
           <vscode-dropdown
             class="dropdown"
+            value="${filter.column}"
             @change="${(event: Event) =>
               (filter.column = (event.target as HTMLInputElement).value)}"
             >${this.renderColumnOptions(filter.column)}
           </vscode-dropdown>
         </div>
         <div class="dropdown-container">
-          <label>Apply Function</label>
+          <label
+            >${this.filters.indexOf(filter) === 0
+              ? "Apply Function"
+              : ""}</label
+          >
           <vscode-dropdown
             class="dropdown"
+            value="${filter.operator}"
             @change="${(event: Event) =>
               (filter.operator = (event.target as HTMLInputElement).value)}">
             ${filterOperators.map(
@@ -272,15 +282,14 @@ export class KdbDataSourceView extends LitElement {
           value="${filter.values}"
           @input="${(event: Event) =>
             (filter.values = (event.target as HTMLInputElement).value)}"
-          >Set Parameter</vscode-text-field
-        >
+          >${this.filters.indexOf(filter) === 0 ? "Set Parameter" : ""}
+        </vscode-text-field>
         <div class="row gap-1 align-end">
           <vscode-button
             aria-label="Add Filter"
             appearance="secondary"
             @click="${() => {
               if (this.filters.length < MAX_ITEMS) {
-                // TODO
                 const index = this.filters.indexOf(filter);
                 const value = this.filters;
                 this.filters = [];
@@ -298,14 +307,16 @@ export class KdbDataSourceView extends LitElement {
             aria-label="Remove Filter"
             appearance="secondary"
             @click="${() => {
-              if (this.filters.length > 1) {
-                // TODO
+              if (this.filters.length > 0) {
                 const index = this.filters.indexOf(filter);
                 const value = this.filters;
                 this.filters = [];
                 this.requestUpdate();
                 queueMicrotask(() => {
                   value.splice(index, 1);
+                  if (value.length === 0) {
+                    value.push(createFilter());
+                  }
                   this.filters = value;
                   this.requestUpdate();
                 });
@@ -327,11 +338,21 @@ export class KdbDataSourceView extends LitElement {
             (label.active = (
               event.target as HTMLInputElement
             ).checked)}"></vscode-checkbox>
-        <vscode-text-field class="text-field" value="${label.key}"
-          >Filter By Label</vscode-text-field
+        <vscode-text-field
+          class="text-field"
+          value="${label.key}"
+          @input="${(event: Event) =>
+            (label.key = (event.target as HTMLInputElement).value)}"
+          >${this.labels.indexOf(label) === 0
+            ? "Filter By Label"
+            : ""}</vscode-text-field
         >
-        <vscode-text-field class="text-field" value="${label.value}"
-          >Value</vscode-text-field
+        <vscode-text-field
+          class="text-field"
+          value="${label.value}"
+          @input="${(event: Event) =>
+            (label.value = (event.target as HTMLInputElement).value)}"
+          >${this.labels.indexOf(label) === 0 ? "Value" : ""}</vscode-text-field
         >
         <div class="row gap-1 align-end">
           <vscode-button
@@ -356,13 +377,16 @@ export class KdbDataSourceView extends LitElement {
             aria-label="Remove Label"
             appearance="secondary"
             @click="${() => {
-              if (this.labels.length > 1) {
+              if (this.labels.length > 0) {
                 const index = this.labels.indexOf(label);
                 const value = this.labels;
                 this.labels = [];
                 this.requestUpdate();
                 queueMicrotask(() => {
                   value.splice(index, 1);
+                  if (value.length === 0) {
+                    value.push(createLabel());
+                  }
                   this.labels = value;
                   this.requestUpdate();
                 });
@@ -385,8 +409,11 @@ export class KdbDataSourceView extends LitElement {
               event.target as HTMLInputElement
             ).checked)}"></vscode-checkbox>
         <div class="dropdown-container">
-          <label>Sort By</label>
-          <vscode-dropdown class="dropdown">
+          <label>${this.sorts.indexOf(sort) === 0 ? "Sort By" : ""}</label>
+          <vscode-dropdown
+            class="dropdown"
+            @change="${(event: Event) =>
+              (sort.column = (event.target as HTMLInputElement).value)}">
             ${this.renderColumnOptions(sort.column)}
           </vscode-dropdown>
         </div>
@@ -413,13 +440,16 @@ export class KdbDataSourceView extends LitElement {
             aria-label="Remove Sort By"
             appearance="secondary"
             @click="${() => {
-              if (this.sorts.length > 1) {
+              if (this.sorts.length > 0) {
                 const index = this.sorts.indexOf(sort);
                 const value = this.sorts;
                 this.sorts = [];
                 this.requestUpdate();
                 queueMicrotask(() => {
                   value.splice(index, 1);
+                  if (value.length === 0) {
+                    value.push(createSort());
+                  }
                   this.sorts = value;
                   this.requestUpdate();
                 });
@@ -441,12 +471,23 @@ export class KdbDataSourceView extends LitElement {
             (agg.active = (
               event.target as HTMLInputElement
             ).checked)}"></vscode-checkbox>
-        <vscode-text-field class="text-field" value="${agg.key}"
-          >Define Output Aggregate</vscode-text-field
+        <vscode-text-field
+          class="text-field"
+          value="${agg.key}"
+          @input="${(event: Event) =>
+            (agg.key = (event.target as HTMLInputElement).value)}"
+          >${this.aggs.indexOf(agg) === 0
+            ? "Define Output Aggregate"
+            : ""}</vscode-text-field
         >
         <div class="dropdown-container">
-          <label>Choose Aggregation</label>
-          <vscode-dropdown class="dropdown">
+          <label
+            >${this.aggs.indexOf(agg) === 0 ? "Choose Aggregation" : ""}</label
+          >
+          <vscode-dropdown
+            class="dropdown"
+            @change="${(event: Event) =>
+              (agg.operator = (event.target as HTMLInputElement).value)}">
             ${aggOperators.map(
               (operator) =>
                 html`<vscode-option
@@ -458,8 +499,11 @@ export class KdbDataSourceView extends LitElement {
           </vscode-dropdown>
         </div>
         <div class="dropdown-container">
-          <label>By Column</label>
-          <vscode-dropdown class="dropdown">
+          <label>${this.aggs.indexOf(agg) === 0 ? "By Column" : ""}</label>
+          <vscode-dropdown
+            class="dropdown"
+            @change="${(event: Event) =>
+              (agg.column = (event.target as HTMLInputElement).value)}">
             ${this.renderColumnOptions(agg.column)}
           </vscode-dropdown>
         </div>
@@ -486,13 +530,16 @@ export class KdbDataSourceView extends LitElement {
             aria-label="Remove Aggregation"
             appearance="secondary"
             @click="${() => {
-              if (this.aggs.length > 1) {
+              if (this.aggs.length > 0) {
                 const index = this.aggs.indexOf(agg);
                 const value = this.aggs;
                 this.aggs = [];
                 this.requestUpdate();
                 queueMicrotask(() => {
                   value.splice(index, 1);
+                  if (value.length === 0) {
+                    value.push(createAgg());
+                  }
                   this.aggs = value;
                   this.requestUpdate();
                 });
@@ -515,8 +562,15 @@ export class KdbDataSourceView extends LitElement {
               event.target as HTMLInputElement
             ).checked)}"></vscode-checkbox>
         <div class="dropdown-container">
-          <label>Group Aggregation By</label>
-          <vscode-dropdown class="dropdown">
+          <label
+            >${this.groups.indexOf(group) === 0
+              ? "Group Aggregation By"
+              : ""}</label
+          >
+          <vscode-dropdown
+            class="dropdown"
+            @change="${(event: Event) =>
+              (group.column = (event.target as HTMLInputElement).value)}">
             ${this.renderColumnOptions(group.column)}
           </vscode-dropdown>
         </div>
@@ -543,13 +597,16 @@ export class KdbDataSourceView extends LitElement {
             aria-label="Remove Group By"
             appearance="secondary"
             @click="${() => {
-              if (this.groups.length > 1) {
+              if (this.groups.length > 0) {
                 const index = this.groups.indexOf(group);
                 const value = this.groups;
                 this.groups = [];
                 this.requestUpdate();
                 queueMicrotask(() => {
                   value.splice(index, 1);
+                  if (value.length === 0) {
+                    value.push(createGroup());
+                  }
                   this.groups = value;
                   this.requestUpdate();
                 });
