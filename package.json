@@ -637,6 +637,7 @@
     "mocha": "^10.2.0",
     "mocha-junit-reporter": "^2.2.0",
     "mocha-multi-reporters": "^1.5.1",
+    "mock-fs": "^5.2.0",
     "prettier": "^2.7.1",
     "rimraf": "^3.0.2",
     "sinon": "^15.0.1",
