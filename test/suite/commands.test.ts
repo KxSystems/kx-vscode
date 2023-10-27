@@ -149,6 +149,33 @@ describe("dataSourceCommand", () => {
 
     await assert.doesNotReject(dataSourceCommand.deleteDataSource(item));
   });
+
+  it("should open a data source", async () => {
+    mock({
+      "/temp": {
+        ".kdb-datasources": {
+          "datasource-0.ds": '{"name": "datasource-0"}',
+        },
+      },
+    });
+
+    ext.context = {} as vscode.ExtensionContext;
+    sinon.stub(ext, "context").value({
+      globalStorageUri: {
+        fsPath: "/temp/",
+      },
+    });
+
+    const item = new KdbDataSourceTreeItem(
+      "datasource-0",
+      vscode.TreeItemCollapsibleState.Collapsed,
+      []
+    );
+
+    const uri = vscode.Uri.file("/temp/.kdb-datasources/datasource-0.ds");
+
+    await assert.doesNotReject(dataSourceCommand.openDataSource(item, uri));
+  });
 });
 
 describe("dataSourceCommand2", () => {
@@ -300,6 +327,35 @@ describe("dataSourceCommand2", () => {
         fill: "zero",
         temporality: "snapshot",
       });
+    });
+
+    it("should return the correct API body for a new data source with slice", () => {
+      const api = dummyDataSourceFiles.dataSource.api;
+
+      api.startTS = "2022-01-01T00:00:00Z";
+      api.endTS = "2022-01-02T00:00:00Z";
+      api.fill = "zero";
+      api.temporality = "slice";
+      api.filter = [];
+      api.groupBy = [];
+      api.agg = [];
+      api.sortCols = [];
+      api.slice = [];
+      api.labels = [];
+      api.table = "myTable";
+      api.optional = {
+        filled: false,
+        temporal: true,
+        startTS: "10:00",
+        endTS: "11:00",
+        filters: [],
+        sorts: [],
+        groups: [],
+        aggs: [],
+        labels: [],
+      };
+      const apiBody = dataSourceCommand.getApiBody(dummyDataSourceFiles);
+      assert.strictEqual(apiBody.temporality, "slice");
     });
 
     it("should return the correct API body for a new data source with all fields", () => {
