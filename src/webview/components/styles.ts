@@ -34,7 +34,7 @@ export const vscodeStyles = css`
 
 export const kdbStyles = css`
   .panel {
-    min-width: 47em;
+    width: 47em;
   }
 
   .col {
