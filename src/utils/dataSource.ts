@@ -97,3 +97,9 @@ export function refreshDataSourcesPanel(): void {
     DataSourcesPanel.currentPanel.refresh();
   }
 }
+
+export function convertDataSourceFormToDataSourceFile(
+  form: any
+): DataSourceFiles {
+  return form as DataSourceFiles;
+}

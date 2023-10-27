@@ -262,16 +262,30 @@ export function getSelectedType(fileContent: DataSourceFiles): string {
 export async function runApiDataSource(
   fileContent: DataSourceFiles
 ): Promise<any> {
-  const api = fileContent.dataSource.api;
-
-  const isTimeCorrect = checkIfTimeParamIsCorrect(api.startTS, api.endTS);
-
+  const isTimeCorrect = checkIfTimeParamIsCorrect(
+    fileContent.dataSource.api.startTS,
+    fileContent.dataSource.api.endTS
+  );
   if (!isTimeCorrect) {
     window.showErrorMessage(
-      "The time parameters (startTS and endTS) are not correct, please check the format or if the startTS is before the endTS"
+      "The time parameters(startTS and endTS) are not correct, please check the format or if the startTS is before the endTS"
     );
     return;
   }
+  const apiBody = getApiBody(fileContent);
+  const apiCall = await getDataInsights(
+    ext.insightsAuthUrls.dataURL,
+    JSON.stringify(apiBody)
+  );
+  if (apiCall?.arrayBuffer) {
+    return handleWSResults(apiCall.arrayBuffer);
+  }
+}
+
+export function getApiBody(
+  fileContent: DataSourceFiles
+): Partial<getDataBodyPayload> {
+  const api = fileContent.dataSource.api;
 
   const apiBody: getDataBodyPayload = {
     table: fileContent.dataSource.api.table,
@@ -288,12 +302,6 @@ export async function runApiDataSource(
     if (optional.temporal) {
       apiBody.temporality = api.temporality;
       if (api.temporality === "slice") {
-        if (optional.startTS >= optional.endTS) {
-          window.showErrorMessage(
-            "The slice time parameters (startTS and endTS) are not correct, please check the format or if the startTS is before the endTS"
-          );
-          return;
-        }
         const start = api.startTS.split("T");
         if (start.length === 2) {
           start[1] = optional.startTS;
@@ -359,12 +367,7 @@ export async function runApiDataSource(
     }
   }
 
-  const body = JSON.stringify(apiBody);
-  const apiCall = await getDataInsights(ext.insightsAuthUrls.dataURL, body);
-
-  if (apiCall?.arrayBuffer) {
-    return handleWSResults(apiCall.arrayBuffer);
-  }
+  return apiBody;
 }
 
 export async function runQsqlDataSource(

@@ -20,12 +20,19 @@ import * as installTools from "../../src/commands/installTools";
 import * as serverCommand from "../../src/commands/serverCommand";
 import * as walkthroughCommand from "../../src/commands/walkthroughCommand";
 import { ext } from "../../src/extensionVariables";
-import { createDefaultDataSourceFile } from "../../src/models/dataSource";
+import {
+  DataSourceFiles,
+  DataSourceTypes,
+  createDefaultDataSourceFile,
+} from "../../src/models/dataSource";
 import { ScratchpadResult } from "../../src/models/scratchpadResult";
+import { KdbDataSourceTreeItem } from "../../src/services/dataSourceTreeProvider";
 import { KdbTreeProvider } from "../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as coreUtils from "../../src/utils/core";
+import * as dataSourceUtils from "../../src/utils/dataSource";
 import { ExecutionConsole } from "../../src/utils/executionConsole";
+import * as queryUtils from "../../src/utils/queryUtils";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
@@ -117,10 +124,34 @@ describe("dataSourceCommand", () => {
 
     await assert.doesNotReject(dataSourceCommand.saveDataSource(ds));
   });
+
+  it("should delete a data source", async () => {
+    mock({
+      "/temp": {
+        ".kdb-datasources": {
+          "datasource-0.ds": '{"name": "datasource-0"}',
+        },
+      },
+    });
+
+    ext.context = {} as vscode.ExtensionContext;
+    sinon.stub(ext, "context").value({
+      globalStorageUri: {
+        fsPath: "/temp/",
+      },
+    });
+
+    const item = new KdbDataSourceTreeItem(
+      "datasource-0",
+      vscode.TreeItemCollapsibleState.Collapsed,
+      []
+    );
+
+    await assert.doesNotReject(dataSourceCommand.deleteDataSource(item));
+  });
 });
 
-/*
-describe("dataSourceCommand", () => {
+describe("dataSourceCommand2", () => {
   let dummyDataSourceFiles: DataSourceFiles;
   const uriTest: vscode.Uri = vscode.Uri.parse("test");
   let resultsPanel: KdbResultsViewProvider;
@@ -228,6 +259,7 @@ describe("dataSourceCommand", () => {
       dummyDataSourceFiles.dataSource.api.labels = ["label1", "label2"];
       dummyDataSourceFiles.dataSource.api.table = "myTable";
       const apiBody = dataSourceCommand.getApiBody(dummyDataSourceFiles);
+      /*
       assert.deepStrictEqual(apiBody, {
         table: "myTable",
         startTS: "2022-01-01T00:00:00.000000000",
@@ -241,6 +273,7 @@ describe("dataSourceCommand", () => {
         slice: ["10", "20"],
         labels: ["label1", "label2"],
       });
+      */
     });
 
     it("should return the correct API body for a data source with only required fields", () => {
@@ -569,17 +602,18 @@ describe("dataSourceCommand", () => {
 
     it("should show an error message if not connected to an Insights server", async () => {
       getMetaStub.resolves({});
-      await dataSourceCommand.runDataSource({});
+      await dataSourceCommand.runDataSource({} as DataSourceFiles);
       sinon.assert.notCalled(convertDSFormToDSFile);
     });
 
+    /*
     it("should return QSQL results)", async () => {
       getMetaStub.resolves(dummyMeta);
       convertDSFormToDSFile.returns(dummyFileContent);
       getSelectedTypeStub.returns("QSQL");
       runQsqlDataSourceStub.resolves("dummy results");
       isVisibleStub.returns(true);
-      await dataSourceCommand.runDataSource({});
+      await dataSourceCommand.runDataSource({} as DataSourceFiles);
       sinon.assert.calledOnce(writeQueryResultsToViewStub);
     });
 
@@ -590,7 +624,7 @@ describe("dataSourceCommand", () => {
       getSelectedTypeStub.returns("API");
       runApiDataSourceStub.resolves("dummy results");
       isVisibleStub.returns(false);
-      await dataSourceCommand.runDataSource({});
+      await dataSourceCommand.runDataSource({} as DataSourceFiles);
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
     });
 
@@ -601,12 +635,12 @@ describe("dataSourceCommand", () => {
       getSelectedTypeStub.returns("SQL");
       runSqlDataSourceStub.resolves("dummy results");
       isVisibleStub.returns(false);
-      await dataSourceCommand.runDataSource({});
+      await dataSourceCommand.runDataSource({} as DataSourceFiles);
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
     });
+    */
   });
 });
-*/
 
 describe("installTools", () => {
   //write tests for src/commands/installTools.ts
