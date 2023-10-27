@@ -309,12 +309,12 @@ describe("dataSourceCommand2", () => {
       api.endTS = "2022-01-02T00:00:00Z";
       api.fill = "zero";
       api.temporality = "snapshot";
-      api.filter = ["col1=val1;col2=val2", "col3=val3"];
-      api.groupBy = ["col1", "col2"];
-      api.agg = ["sum(col3)", "avg(col4)"];
-      api.sortCols = ["col1 ASC", "col2 DESC"];
-      api.slice = ["10", "20"];
-      api.labels = ["label1", "label2"];
+      api.filter = [];
+      api.groupBy = [];
+      api.agg = [];
+      api.sortCols = [];
+      api.slice = [];
+      api.labels = [];
       api.table = "myTable";
       api.optional = {
         filled: true,
@@ -677,14 +677,15 @@ describe("dataSourceCommand2", () => {
       sinon.assert.notCalled(convertDSFormToDSFile);
     });
 
-    /*
     it("should return QSQL results)", async () => {
       getMetaStub.resolves(dummyMeta);
       convertDSFormToDSFile.returns(dummyFileContent);
       getSelectedTypeStub.returns("QSQL");
       runQsqlDataSourceStub.resolves("dummy results");
       isVisibleStub.returns(true);
-      await dataSourceCommand.runDataSource({} as DataSourceFiles);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
       sinon.assert.calledOnce(writeQueryResultsToViewStub);
     });
 
@@ -695,7 +696,9 @@ describe("dataSourceCommand2", () => {
       getSelectedTypeStub.returns("API");
       runApiDataSourceStub.resolves("dummy results");
       isVisibleStub.returns(false);
-      await dataSourceCommand.runDataSource({} as DataSourceFiles);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
     });
 
@@ -706,10 +709,11 @@ describe("dataSourceCommand2", () => {
       getSelectedTypeStub.returns("SQL");
       runSqlDataSourceStub.resolves("dummy results");
       isVisibleStub.returns(false);
-      await dataSourceCommand.runDataSource({} as DataSourceFiles);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
     });
-    */
   });
 });
 
