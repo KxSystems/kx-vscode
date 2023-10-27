@@ -134,27 +134,6 @@ describe("Utils", () => {
     //   );
     // });
 
-    it("convertDataSourceFormToDataSourceFile", () => {
-      const form = {
-        name: "test",
-        selectedType: "api",
-        selectedApi: "test",
-        selectedTable: "test",
-        startTS: "test",
-        endTS: "test",
-        fill: "test",
-      };
-      const result =
-        dataSourceUtils.convertDataSourceFormToDataSourceFile(form);
-      assert.strictEqual(result.name, "test");
-      assert.strictEqual(result.dataSource.selectedType, "api");
-      assert.strictEqual(result.dataSource.api.selectedApi, "test");
-      assert.strictEqual(result.dataSource.api.table, "test");
-      assert.strictEqual(result.dataSource.api.startTS, "test");
-      assert.strictEqual(result.dataSource.api.endTS, "test");
-      assert.strictEqual(result.dataSource.api.fill, "test");
-    });
-
     it("convertTimeToTimestamp", () => {
       const result = dataSourceUtils.convertTimeToTimestamp("2021-01-01");
       assert.strictEqual(result, "2021-01-01T00:00:00.000000000");

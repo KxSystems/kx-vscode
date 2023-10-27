@@ -15,14 +15,14 @@ import assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { ext } from "../../src/extensionVariables";
-import { defaultDataSourceFile } from "../../src/models/dataSource";
+import { createDefaultDataSourceFile } from "../../src/models/dataSource";
 import { DataSourcesPanel } from "../../src/panels/datasource";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as utils from "../../src/utils/execution";
 
 describe("WebPanels", () => {
   describe("DataSourcesPanel", () => {
-    const dsTest = defaultDataSourceFile;
+    const dsTest = createDefaultDataSourceFile();
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
 
     beforeEach(() => {
@@ -49,22 +49,12 @@ describe("WebPanels", () => {
       );
     });
 
-    it("should make sure the datasource is rendered, check if the tabs exists", () => {
-      const expectedHtmlTab1 = `<vscode-panel-tab id="tab-1" class="type-tab">API</vscode-panel-tab>`;
-      const expectedHtmlTab2 = `<vscode-panel-tab id="tab-2" class="type-tab">QSQL</vscode-panel-tab>`;
-      const expectedHtmlTab3 = `<vscode-panel-tab id="tab-3" class="type-tab">SQL</vscode-panel-tab>`;
+    it("should make sure the datasource is rendered, check if the web component exists", () => {
+      const expectedHtml = `<kdb-data-source-view></kdb-data-source-view>`;
       const actualHtml = DataSourcesPanel.currentPanel._panel.webview.html;
       assert.ok(
-        actualHtml.indexOf(expectedHtmlTab1) !== -1,
-        "Panel HTML should include expected TAB btn 1"
-      );
-      assert.ok(
-        actualHtml.indexOf(expectedHtmlTab2) !== -1,
-        "Panel HTML should include expected TAB btn 2"
-      );
-      assert.ok(
-        actualHtml.indexOf(expectedHtmlTab3) !== -1,
-        "Panel HTML should include expected TAB btn 3"
+        actualHtml.indexOf(expectedHtml) !== -1,
+        "Panel HTML should include expected web component"
       );
     });
   });

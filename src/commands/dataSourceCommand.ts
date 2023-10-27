@@ -16,13 +16,16 @@ import path from "path";
 import { InputBoxOptions, Uri, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { getDataBodyPayload } from "../models/data";
-import { DataSourceFiles, defaultDataSourceFile } from "../models/dataSource";
+import {
+  DataSourceFiles,
+  DataSourceTypes,
+  createDefaultDataSourceFile,
+} from "../models/dataSource";
 import { scratchpadVariableInput } from "../models/items/server";
 import { DataSourcesPanel } from "../panels/datasource";
 import { KdbDataSourceTreeItem } from "../services/dataSourceTreeProvider";
 import {
   checkIfTimeParamIsCorrect,
-  convertDataSourceFormToDataSourceFile,
   convertTimeToTimestamp,
   createKdbDataSourcesFolder,
   getConnectedInsightsNode,
@@ -50,7 +53,7 @@ export async function addDataSource(): Promise<void> {
     filePath = path.join(kdbDataSourcesFolderPath, fileName);
   }
   const dataSourceName = fileName.replace(ext.kdbDataSourceFileExtension, "");
-  const defaultDataSourceContent = defaultDataSourceFile;
+  const defaultDataSourceContent = createDefaultDataSourceFile();
   const insightsNode = getConnectedInsightsNode();
   defaultDataSourceContent.name = dataSourceName;
   defaultDataSourceContent.insightsNode = insightsNode;
@@ -146,21 +149,25 @@ export async function openDataSource(
   );
 }
 
-export async function saveDataSource(dataSourceForm: any): Promise<void> {
+export async function saveDataSource(
+  dataSourceForm: DataSourceFiles
+): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
   if (!kdbDataSourcesFolderPath) {
     return;
   }
 
-  if (dataSourceForm.name === "") {
+  if (!dataSourceForm.originalName || dataSourceForm.name === "") {
     window.showErrorMessage("Name is required");
     return;
   }
+
   if (dataSourceForm.name !== dataSourceForm.originalName) {
     await renameDataSource(dataSourceForm.originalName, dataSourceForm.name);
   }
 
-  const fileContent = convertDataSourceFormToDataSourceFile(dataSourceForm);
+  dataSourceForm.insightsNode = getConnectedInsightsNode();
+  const fileContent = dataSourceForm;
 
   const dataSourceFilePath = path.join(
     kdbDataSourcesFolderPath,
@@ -169,11 +176,13 @@ export async function saveDataSource(dataSourceForm: any): Promise<void> {
 
   if (fs.existsSync(dataSourceFilePath)) {
     fs.writeFileSync(dataSourceFilePath, JSON.stringify(fileContent));
+    window.showInformationMessage(`DataSource ${dataSourceForm.name} saved.`);
   }
-  window.showInformationMessage(`DataSource ${dataSourceForm.name} saved.`);
 }
 
-export async function populateScratchpad(dataSourceForm: any): Promise<void> {
+export async function populateScratchpad(
+  dataSourceForm: DataSourceFiles
+): Promise<void> {
   const scratchpadVariable: InputBoxOptions = {
     prompt: scratchpadVariableInput.prompt,
     placeHolder: scratchpadVariableInput.placeholder,
@@ -192,7 +201,9 @@ export async function populateScratchpad(dataSourceForm: any): Promise<void> {
   });
 }
 
-export async function runDataSource(dataSourceForm: any): Promise<void> {
+export async function runDataSource(
+  dataSourceForm: DataSourceFiles
+): Promise<void> {
   Object.assign(ext.insightsMeta, await getMeta());
   if (!ext.insightsMeta.assembly) {
     ext.outputChannel.appendLine(
@@ -203,7 +214,9 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
     );
     return;
   }
-  const fileContent = convertDataSourceFormToDataSourceFile(dataSourceForm);
+
+  dataSourceForm.insightsNode = getConnectedInsightsNode();
+  const fileContent = dataSourceForm;
 
   let res: any;
   const selectedType = getSelectedType(fileContent);
@@ -233,16 +246,13 @@ export async function runDataSource(dataSourceForm: any): Promise<void> {
 }
 
 export function getSelectedType(fileContent: DataSourceFiles): string {
-  const selectedType = fileContent.dataSource.selectedType.toString();
+  const selectedType = fileContent.dataSource.selectedType;
   switch (selectedType) {
-    case "API":
-    case "0":
+    case DataSourceTypes.API:
       return "API";
-    case "QSQL":
-    case "1":
+    case DataSourceTypes.QSQL:
       return "QSQL";
-    case "SQL":
-    case "2":
+    case DataSourceTypes.SQL:
       return "SQL";
     default:
       throw new Error(`Invalid selectedType: ${selectedType}`);
@@ -275,53 +285,87 @@ export async function runApiDataSource(
 export function getApiBody(
   fileContent: DataSourceFiles
 ): Partial<getDataBodyPayload> {
-  const {
-    startTS,
-    endTS,
-    fill,
-    temporality,
-    filter,
-    groupBy,
-    agg,
-    sortCols,
-    slice,
-    labels,
-    table,
-  } = fileContent.dataSource.api;
+  const api = fileContent.dataSource.api;
 
-  const startTSValue = startTS?.trim() ? convertTimeToTimestamp(startTS) : "";
-  const endTSValue = endTS?.trim() ? convertTimeToTimestamp(endTS) : "";
-  const fillValue = fill?.trim() || undefined;
-  const temporalityValue = temporality?.trim() || undefined;
-  const filterValue = filter.length ? filter : undefined;
-  const groupByValue = groupBy.length ? groupBy : undefined;
-  const aggValue = agg.length ? agg : undefined;
-  const sortColsValue = sortCols.length ? sortCols : undefined;
-  const sliceValue = slice.length ? slice : undefined;
-  const labelsValue = labels.length ? labels : undefined;
-
-  const apiBodyAux: getDataBodyPayload = {
-    table,
-    startTS: startTSValue,
-    endTS: endTSValue,
-    fill: fillValue,
-    temporality: temporalityValue,
-    groupBy: groupByValue,
-    agg: aggValue,
-    sortCols: sortColsValue,
-    slice: sliceValue,
-    labels: labelsValue,
+  const apiBody: getDataBodyPayload = {
+    table: fileContent.dataSource.api.table,
+    startTS: convertTimeToTimestamp(api.startTS),
+    endTS: convertTimeToTimestamp(api.endTS),
   };
 
-  if (filterValue !== undefined) {
-    apiBodyAux.filter = filterValue.map((filterEl: string) => {
-      return filterEl.split(";");
-    });
-  }
+  const optional = api.optional;
 
-  const apiBody = Object.fromEntries(
-    Object.entries(apiBodyAux).filter(([_, value]) => value !== undefined)
-  );
+  if (optional) {
+    if (optional.filled) {
+      apiBody.fill = api.fill;
+    }
+    if (optional.temporal) {
+      apiBody.temporality = api.temporality;
+      if (api.temporality === "slice") {
+        const start = api.startTS.split("T");
+        if (start.length === 2) {
+          start[1] = optional.startTS;
+          const end = api.endTS.split("T");
+          if (end.length === 2) {
+            end[1] = optional.endTS;
+            apiBody.startTS = convertTimeToTimestamp(start.join("T"));
+            apiBody.endTS = convertTimeToTimestamp(end.join("T"));
+          }
+        }
+      }
+    }
+
+    const labels = optional.labels.filter((label) => label.active);
+
+    if (labels.length > 0) {
+      apiBody.labels = Object.assign(
+        {},
+        ...labels.map((label) => ({ [label.key]: label.value }))
+      );
+    }
+
+    const filters = optional.filters
+      .filter((filter) => filter.active)
+      .map((filter) => [
+        filter.operator,
+        filter.column,
+        ((values: string) => {
+          const tokens = values.split(/[;\s]+/).map((token) => {
+            const number = parseFloat(token);
+            return isNaN(number) ? token : number;
+          });
+          return tokens.length === 1 ? tokens[0] : tokens;
+        })(filter.values),
+      ]);
+
+    if (filters.length > 0) {
+      apiBody.filter = filters;
+    }
+
+    const sorts = optional.sorts
+      .filter((sort) => sort.active)
+      .map((sort) => sort.column);
+
+    if (sorts.length > 0) {
+      apiBody.sortCols = sorts;
+    }
+
+    const aggs = optional.aggs
+      .filter((agg) => agg.active)
+      .map((agg) => [agg.key, agg.operator, agg.column]);
+
+    if (aggs.length > 0) {
+      apiBody.agg = aggs;
+    }
+
+    const groups = optional.groups
+      .filter((group) => group.active)
+      .map((group) => group.column);
+
+    if (groups.length > 0) {
+      apiBody.groupBy = groups;
+    }
+  }
 
   return apiBody;
 }

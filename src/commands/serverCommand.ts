@@ -32,6 +32,7 @@ import { ext } from "../extensionVariables";
 import { isCompressed, uncompress } from "../ipc/c";
 import { Connection } from "../models/connection";
 import { GetDataObjectPayload } from "../models/data";
+import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
 import { Insights } from "../models/insights";
 import {
@@ -480,29 +481,29 @@ export async function getDataInsights(
 export async function importScratchpad(
   variableName: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params: any
+  params: DataSourceFiles
 ): Promise<void> {
   if (ext.connectionNode instanceof InsightsNode) {
     let queryParams, coreUrl: string;
-    switch (params.selectedType) {
-      case "API":
+    switch (params.dataSource.selectedType) {
+      case DataSourceTypes.API:
         queryParams = {
-          table: params.selectedTable,
-          startTS: params.startTS,
-          endTS: params.endTS,
+          table: params.dataSource.api.table,
+          startTS: params.dataSource.api.startTS,
+          endTS: params.dataSource.api.endTS,
         };
         coreUrl = ext.insightsScratchpadUrls.import;
         break;
-      case "SQL":
-        queryParams = { query: params.sql };
+      case DataSourceTypes.SQL:
+        queryParams = { query: params.dataSource.sql.query };
         coreUrl = ext.insightsScratchpadUrls.importSql;
         break;
-      case "QSQL":
-        const assemblyParts = params.selectedTarget.split(" ");
+      case DataSourceTypes.QSQL:
+        const assemblyParts = params.dataSource.qsql.selectedTarget.split(" ");
         queryParams = {
           assembly: assemblyParts[0],
           target: assemblyParts[1],
-          query: params.qsql,
+          query: params.dataSource.qsql.query,
         };
         coreUrl = ext.insightsScratchpadUrls.importQsql;
         break;

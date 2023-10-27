@@ -11,7 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import assert from "assert";
+import * as assert from "assert";
+import mock from "mock-fs";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
@@ -19,8 +20,13 @@ import * as installTools from "../../src/commands/installTools";
 import * as serverCommand from "../../src/commands/serverCommand";
 import * as walkthroughCommand from "../../src/commands/walkthroughCommand";
 import { ext } from "../../src/extensionVariables";
-import { DataSourceFiles, DataSourceTypes } from "../../src/models/dataSource";
+import {
+  DataSourceFiles,
+  DataSourceTypes,
+  createDefaultDataSourceFile,
+} from "../../src/models/dataSource";
 import { ScratchpadResult } from "../../src/models/scratchpadResult";
+import { KdbDataSourceTreeItem } from "../../src/services/dataSourceTreeProvider";
 import { KdbTreeProvider } from "../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as coreUtils from "../../src/utils/core";
@@ -29,6 +35,150 @@ import { ExecutionConsole } from "../../src/utils/executionConsole";
 import * as queryUtils from "../../src/utils/queryUtils";
 
 describe("dataSourceCommand", () => {
+  afterEach(() => {
+    sinon.restore();
+    mock.restore();
+  });
+
+  it("should add a data source", async () => {
+    mock({
+      "/temp": {
+        ".kdb-datasources": {
+          "datasource-0.ds": '{"name": "datasource-0"}',
+        },
+      },
+    });
+
+    ext.context = {} as vscode.ExtensionContext;
+    sinon.stub(ext, "context").value({
+      globalStorageUri: {
+        fsPath: "/temp/",
+      },
+    });
+
+    await assert.doesNotReject(dataSourceCommand.addDataSource());
+  });
+
+  it("should rename a data source", async () => {
+    mock({
+      "/temp": {
+        ".kdb-datasources": {
+          "datasource-0.ds": '{"name": "datasource-0"}',
+        },
+      },
+    });
+
+    ext.context = {} as vscode.ExtensionContext;
+    sinon.stub(ext, "context").value({
+      globalStorageUri: {
+        fsPath: "/temp/",
+      },
+    });
+
+    await assert.doesNotReject(
+      dataSourceCommand.renameDataSource("datasource-0", "datasource-1")
+    );
+  });
+
+  it("should save a data source", async () => {
+    mock({
+      "/temp": {
+        ".kdb-datasources": {
+          "datasource-0.ds": '{"name": "datasource-0"}',
+        },
+      },
+    });
+
+    ext.context = {} as vscode.ExtensionContext;
+    sinon.stub(ext, "context").value({
+      globalStorageUri: {
+        fsPath: "/temp/",
+      },
+    });
+
+    const ds = createDefaultDataSourceFile();
+    ds.name = "datasource-0";
+
+    await assert.doesNotReject(dataSourceCommand.saveDataSource(ds));
+  });
+
+  it("should save a data source with a different name", async () => {
+    mock({
+      "/temp": {
+        ".kdb-datasources": {
+          "datasource-0.ds": '{"name": "datasource-0"}',
+        },
+      },
+    });
+
+    ext.context = {} as vscode.ExtensionContext;
+    sinon.stub(ext, "context").value({
+      globalStorageUri: {
+        fsPath: "/temp/",
+      },
+    });
+
+    const ds = createDefaultDataSourceFile();
+    ds.name = "datasource-1";
+    ds.originalName = "datasource-0";
+
+    await assert.doesNotReject(dataSourceCommand.saveDataSource(ds));
+  });
+
+  it("should delete a data source", async () => {
+    mock({
+      "/temp": {
+        ".kdb-datasources": {
+          "datasource-0.ds": '{"name": "datasource-0"}',
+        },
+      },
+    });
+
+    ext.context = {} as vscode.ExtensionContext;
+    sinon.stub(ext, "context").value({
+      globalStorageUri: {
+        fsPath: "/temp/",
+      },
+    });
+
+    const item = new KdbDataSourceTreeItem(
+      "datasource-0",
+      vscode.TreeItemCollapsibleState.Collapsed,
+      []
+    );
+
+    await assert.doesNotReject(dataSourceCommand.deleteDataSource(item));
+  });
+
+  it("should open a data source", async () => {
+    mock({
+      "/temp": {
+        ".kdb-datasources": {
+          "datasource-0.ds": '{"name": "datasource-0"}',
+        },
+      },
+    });
+
+    ext.context = {} as vscode.ExtensionContext;
+    sinon.stub(ext, "context").value({
+      globalStorageUri: {
+        fsPath: "/temp/",
+      },
+    });
+
+    const item = new KdbDataSourceTreeItem(
+      "datasource-0",
+      vscode.TreeItemCollapsibleState.Collapsed,
+      []
+    );
+
+    const uri = vscode.Uri.file("/temp/.kdb-datasources/datasource-0.ds");
+
+    await assert.doesNotReject(dataSourceCommand.openDataSource(item, uri));
+  });
+});
+
+describe("dataSourceCommand2", () => {
   let dummyDataSourceFiles: DataSourceFiles;
   const uriTest: vscode.Uri = vscode.Uri.parse("test");
   let resultsPanel: KdbResultsViewProvider;
@@ -120,34 +270,136 @@ describe("dataSourceCommand", () => {
   });
 
   describe("getApiBody", () => {
-    it("should return the correct API body for a data source with all fields", () => {
-      dummyDataSourceFiles.dataSource.api.startTS = "2022-01-01T00:00:00Z";
-      dummyDataSourceFiles.dataSource.api.endTS = "2022-01-02T00:00:00Z";
-      dummyDataSourceFiles.dataSource.api.fill = "none";
-      dummyDataSourceFiles.dataSource.api.temporality = "1h";
-      dummyDataSourceFiles.dataSource.api.filter = [
-        "col1=val1;col2=val2",
-        "col3=val3",
-      ];
-      dummyDataSourceFiles.dataSource.api.groupBy = ["col1", "col2"];
-      dummyDataSourceFiles.dataSource.api.agg = ["sum(col3)", "avg(col4)"];
-      dummyDataSourceFiles.dataSource.api.sortCols = ["col1 ASC", "col2 DESC"];
-      dummyDataSourceFiles.dataSource.api.slice = ["10", "20"];
-      dummyDataSourceFiles.dataSource.api.labels = ["label1", "label2"];
-      dummyDataSourceFiles.dataSource.api.table = "myTable";
+    it("should return the correct API body for an old data source with all fields", () => {
+      const api = dummyDataSourceFiles.dataSource.api;
+
+      api.startTS = "2022-01-01T00:00:00Z";
+      api.endTS = "2022-01-02T00:00:00Z";
+      api.fill = "none";
+      api.temporality = "1h";
+      api.filter = ["col1=val1;col2=val2", "col3=val3"];
+      api.groupBy = ["col1", "col2"];
+      api.agg = ["sum(col3)", "avg(col4)"];
+      api.sortCols = ["col1 ASC", "col2 DESC"];
+      api.slice = ["10", "20"];
+      api.labels = ["label1", "label2"];
+      api.table = "myTable";
       const apiBody = dataSourceCommand.getApiBody(dummyDataSourceFiles);
+
       assert.deepStrictEqual(apiBody, {
         table: "myTable",
         startTS: "2022-01-01T00:00:00.000000000",
         endTS: "2022-01-02T00:00:00.000000000",
-        fill: "none",
-        temporality: "1h",
-        filter: [["col1=val1", "col2=val2"], ["col3=val3"]],
-        groupBy: ["col1", "col2"],
-        agg: ["sum(col3)", "avg(col4)"],
-        sortCols: ["col1 ASC", "col2 DESC"],
-        slice: ["10", "20"],
-        labels: ["label1", "label2"],
+      });
+    });
+
+    it("should return the correct API body for a new data source with some fields", () => {
+      const api = dummyDataSourceFiles.dataSource.api;
+
+      api.startTS = "2022-01-01T00:00:00Z";
+      api.endTS = "2022-01-02T00:00:00Z";
+      api.fill = "zero";
+      api.temporality = "snapshot";
+      api.filter = ["col1=val1;col2=val2", "col3=val3"];
+      api.groupBy = ["col1", "col2"];
+      api.agg = ["sum(col3)", "avg(col4)"];
+      api.sortCols = ["col1 ASC", "col2 DESC"];
+      api.slice = ["10", "20"];
+      api.labels = ["label1", "label2"];
+      api.table = "myTable";
+      api.optional = {
+        filled: true,
+        temporal: true,
+        startTS: "",
+        endTS: "",
+        filters: [],
+        sorts: [],
+        groups: [],
+        aggs: [],
+        labels: [],
+      };
+      const apiBody = dataSourceCommand.getApiBody(dummyDataSourceFiles);
+
+      assert.deepStrictEqual(apiBody, {
+        table: "myTable",
+        startTS: "2022-01-01T00:00:00.000000000",
+        endTS: "2022-01-02T00:00:00.000000000",
+        fill: "zero",
+        temporality: "snapshot",
+      });
+    });
+
+    it("should return the correct API body for a new data source with slice", () => {
+      const api = dummyDataSourceFiles.dataSource.api;
+
+      api.startTS = "2022-01-01T00:00:00Z";
+      api.endTS = "2022-01-02T00:00:00Z";
+      api.fill = "zero";
+      api.temporality = "slice";
+      api.filter = [];
+      api.groupBy = [];
+      api.agg = [];
+      api.sortCols = [];
+      api.slice = [];
+      api.labels = [];
+      api.table = "myTable";
+      api.optional = {
+        filled: false,
+        temporal: true,
+        startTS: "10:00",
+        endTS: "11:00",
+        filters: [],
+        sorts: [],
+        groups: [],
+        aggs: [],
+        labels: [],
+      };
+      const apiBody = dataSourceCommand.getApiBody(dummyDataSourceFiles);
+      assert.strictEqual(apiBody.temporality, "slice");
+    });
+
+    it("should return the correct API body for a new data source with all fields", () => {
+      const api = dummyDataSourceFiles.dataSource.api;
+
+      api.startTS = "2022-01-01T00:00:00Z";
+      api.endTS = "2022-01-02T00:00:00Z";
+      api.fill = "zero";
+      api.temporality = "snapshot";
+      api.filter = [];
+      api.groupBy = [];
+      api.agg = [];
+      api.sortCols = [];
+      api.slice = [];
+      api.labels = [];
+      api.table = "myTable";
+      api.optional = {
+        filled: true,
+        temporal: true,
+        startTS: "10:00",
+        endTS: "11:00",
+        filters: [
+          { active: true, column: "bid", operator: ">", values: "100" },
+        ],
+        sorts: [{ active: true, column: "sym" }],
+        groups: [{ active: true, column: "bid" }],
+        aggs: [{ active: true, column: "ask", operator: "sum", key: "sumC" }],
+        labels: [{ active: true, key: "key", value: "value" }],
+      };
+      const apiBody = dataSourceCommand.getApiBody(dummyDataSourceFiles);
+
+      assert.deepStrictEqual(apiBody, {
+        table: "myTable",
+        startTS: "2022-01-01T00:00:00.000000000",
+        endTS: "2022-01-02T00:00:00.000000000",
+        fill: "zero",
+        temporality: "snapshot",
+        labels: {
+          key: "value",
+        },
+        sortCols: ["sym"],
+        groupBy: ["bid"],
+        agg: [["sumC", "sum", "ask"]],
+        filter: [[">", "bid", 100]],
       });
     });
 
@@ -171,6 +423,7 @@ describe("dataSourceCommand", () => {
       });
     });
   });
+
   describe("runApiDataSource", () => {
     let getApiBodyStub: sinon.SinonStub;
     let checkIfTimeParamIsCorrectStub: sinon.SinonStub;
@@ -476,7 +729,7 @@ describe("dataSourceCommand", () => {
 
     it("should show an error message if not connected to an Insights server", async () => {
       getMetaStub.resolves({});
-      await dataSourceCommand.runDataSource({});
+      await dataSourceCommand.runDataSource({} as DataSourceFiles);
       sinon.assert.notCalled(convertDSFormToDSFile);
     });
 
@@ -486,7 +739,9 @@ describe("dataSourceCommand", () => {
       getSelectedTypeStub.returns("QSQL");
       runQsqlDataSourceStub.resolves("dummy results");
       isVisibleStub.returns(true);
-      await dataSourceCommand.runDataSource({});
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
       sinon.assert.calledOnce(writeQueryResultsToViewStub);
     });
 
@@ -497,7 +752,9 @@ describe("dataSourceCommand", () => {
       getSelectedTypeStub.returns("API");
       runApiDataSourceStub.resolves("dummy results");
       isVisibleStub.returns(false);
-      await dataSourceCommand.runDataSource({});
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
     });
 
@@ -508,7 +765,9 @@ describe("dataSourceCommand", () => {
       getSelectedTypeStub.returns("SQL");
       runSqlDataSourceStub.resolves("dummy results");
       isVisibleStub.returns(false);
-      await dataSourceCommand.runDataSource({});
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
     });
   });

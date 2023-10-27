@@ -72,7 +72,7 @@ jobs:
           name: lcov
 
       - name: Install dependencies
-        run: yarn install
+        run: npm install
 
       - name: SonarCloud Scan
         uses: sonarsource/sonarqube-scan-action@master
