@@ -33,6 +33,10 @@ export const vscodeStyles = css`
 `;
 
 export const kdbStyles = css`
+  .panel {
+    min-width: 47em;
+  }
+
   .col {
     display: flex;
     flex-direction: column;
