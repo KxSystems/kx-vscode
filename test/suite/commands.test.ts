@@ -243,37 +243,108 @@ describe("dataSourceCommand2", () => {
   });
 
   describe("getApiBody", () => {
-    it("should return the correct API body for a data source with all fields", () => {
-      dummyDataSourceFiles.dataSource.api.startTS = "2022-01-01T00:00:00Z";
-      dummyDataSourceFiles.dataSource.api.endTS = "2022-01-02T00:00:00Z";
-      dummyDataSourceFiles.dataSource.api.fill = "none";
-      dummyDataSourceFiles.dataSource.api.temporality = "1h";
-      dummyDataSourceFiles.dataSource.api.filter = [
-        "col1=val1;col2=val2",
-        "col3=val3",
-      ];
-      dummyDataSourceFiles.dataSource.api.groupBy = ["col1", "col2"];
-      dummyDataSourceFiles.dataSource.api.agg = ["sum(col3)", "avg(col4)"];
-      dummyDataSourceFiles.dataSource.api.sortCols = ["col1 ASC", "col2 DESC"];
-      dummyDataSourceFiles.dataSource.api.slice = ["10", "20"];
-      dummyDataSourceFiles.dataSource.api.labels = ["label1", "label2"];
-      dummyDataSourceFiles.dataSource.api.table = "myTable";
+    it("should return the correct API body for an old data source with all fields", () => {
+      const api = dummyDataSourceFiles.dataSource.api;
+
+      api.startTS = "2022-01-01T00:00:00Z";
+      api.endTS = "2022-01-02T00:00:00Z";
+      api.fill = "none";
+      api.temporality = "1h";
+      api.filter = ["col1=val1;col2=val2", "col3=val3"];
+      api.groupBy = ["col1", "col2"];
+      api.agg = ["sum(col3)", "avg(col4)"];
+      api.sortCols = ["col1 ASC", "col2 DESC"];
+      api.slice = ["10", "20"];
+      api.labels = ["label1", "label2"];
+      api.table = "myTable";
       const apiBody = dataSourceCommand.getApiBody(dummyDataSourceFiles);
-      /*
+
       assert.deepStrictEqual(apiBody, {
         table: "myTable",
         startTS: "2022-01-01T00:00:00.000000000",
         endTS: "2022-01-02T00:00:00.000000000",
-        fill: "none",
-        temporality: "1h",
-        filter: [["col1=val1", "col2=val2"], ["col3=val3"]],
-        groupBy: ["col1", "col2"],
-        agg: ["sum(col3)", "avg(col4)"],
-        sortCols: ["col1 ASC", "col2 DESC"],
-        slice: ["10", "20"],
-        labels: ["label1", "label2"],
       });
-      */
+    });
+
+    it("should return the correct API body for a new data source with some fields", () => {
+      const api = dummyDataSourceFiles.dataSource.api;
+
+      api.startTS = "2022-01-01T00:00:00Z";
+      api.endTS = "2022-01-02T00:00:00Z";
+      api.fill = "zero";
+      api.temporality = "snapshot";
+      api.filter = ["col1=val1;col2=val2", "col3=val3"];
+      api.groupBy = ["col1", "col2"];
+      api.agg = ["sum(col3)", "avg(col4)"];
+      api.sortCols = ["col1 ASC", "col2 DESC"];
+      api.slice = ["10", "20"];
+      api.labels = ["label1", "label2"];
+      api.table = "myTable";
+      api.optional = {
+        filled: true,
+        temporal: true,
+        startTS: "",
+        endTS: "",
+        filters: [],
+        sorts: [],
+        groups: [],
+        aggs: [],
+        labels: [],
+      };
+      const apiBody = dataSourceCommand.getApiBody(dummyDataSourceFiles);
+
+      assert.deepStrictEqual(apiBody, {
+        table: "myTable",
+        startTS: "2022-01-01T00:00:00.000000000",
+        endTS: "2022-01-02T00:00:00.000000000",
+        fill: "zero",
+        temporality: "snapshot",
+      });
+    });
+
+    it("should return the correct API body for a new data source with all fields", () => {
+      const api = dummyDataSourceFiles.dataSource.api;
+
+      api.startTS = "2022-01-01T00:00:00Z";
+      api.endTS = "2022-01-02T00:00:00Z";
+      api.fill = "zero";
+      api.temporality = "snapshot";
+      api.filter = ["col1=val1;col2=val2", "col3=val3"];
+      api.groupBy = ["col1", "col2"];
+      api.agg = ["sum(col3)", "avg(col4)"];
+      api.sortCols = ["col1 ASC", "col2 DESC"];
+      api.slice = ["10", "20"];
+      api.labels = ["label1", "label2"];
+      api.table = "myTable";
+      api.optional = {
+        filled: true,
+        temporal: true,
+        startTS: "10:00",
+        endTS: "11:00",
+        filters: [
+          { active: true, column: "bid", operator: ">", values: "100" },
+        ],
+        sorts: [{ active: true, column: "sym" }],
+        groups: [{ active: true, column: "bid" }],
+        aggs: [{ active: true, column: "ask", operator: "sum", key: "sumC" }],
+        labels: [{ active: true, key: "key", value: "value" }],
+      };
+      const apiBody = dataSourceCommand.getApiBody(dummyDataSourceFiles);
+
+      assert.deepStrictEqual(apiBody, {
+        table: "myTable",
+        startTS: "2022-01-01T00:00:00.000000000",
+        endTS: "2022-01-02T00:00:00.000000000",
+        fill: "zero",
+        temporality: "snapshot",
+        labels: {
+          key: "value",
+        },
+        sortCols: ["sym"],
+        groupBy: ["bid"],
+        agg: [["sumC", "sum", "ask"]],
+        filter: [[">", "bid", 100]],
+      });
     });
 
     it("should return the correct API body for a data source with only required fields", () => {
