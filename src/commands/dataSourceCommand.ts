@@ -200,14 +200,6 @@ export async function populateScratchpad(
   });
 }
 
-function parseParams(params: string) {
-  const tokens = params.split(/\s+/).map((token) => {
-    const number = parseFloat(token);
-    return isNaN(number) ? token : number;
-  });
-  return tokens.length === 1 ? tokens[0] : tokens;
-}
-
 export async function runDataSource(
   dataSourceForm: DataSourceFiles
 ): Promise<void> {
@@ -289,7 +281,13 @@ export async function runDataSource(
           .map((filter) => [
             filter.operator,
             filter.column,
-            parseParams(filter.values),
+            ((values: string) => {
+              const tokens = values.split(/[;\s]+/).map((token) => {
+                const number = parseFloat(token);
+                return isNaN(number) ? token : number;
+              });
+              return tokens.length === 1 ? tokens[0] : tokens;
+            })(filter.values),
           ]);
 
         if (filters.length > 0) {
@@ -337,7 +335,6 @@ export async function runDataSource(
         selectedType
       );
 
-      console.log(res);
       break;
     case DataSourceTypes.QSQL:
       const assembly = fileContent.dataSource.qsql.selectedTarget.slice(0, -4);
