@@ -18,7 +18,6 @@ import { ext } from "../extensionVariables";
 import { getDataBodyPayload } from "../models/data";
 import {
   DataSourceFiles,
-  DataSourceTypes,
   createDefaultDataSourceFile,
 } from "../models/dataSource";
 import { scratchpadVariableInput } from "../models/items/server";
@@ -37,6 +36,7 @@ import {
   getMeta,
   importScratchpad,
   writeQueryResultsToConsole,
+  writeQueryResultsToView,
 } from "./serverCommand";
 
 export async function addDataSource(): Promise<void> {
@@ -218,162 +218,171 @@ export async function runDataSource(
   const fileContent = dataSourceForm;
 
   let res: any;
-  const selectedType = fileContent.dataSource.selectedType;
+  const selectedType = getSelectedType(fileContent);
 
   switch (selectedType) {
-    case DataSourceTypes.API:
-      const api = fileContent.dataSource.api;
-
-      const isTimeCorrect = checkIfTimeParamIsCorrect(api.startTS, api.endTS);
-
-      if (!isTimeCorrect) {
-        window.showErrorMessage(
-          "The time parameters (startTS and endTS) are not correct, please check the format or if the startTS is before the endTS"
-        );
-        break;
-      }
-
-      const apiBody: getDataBodyPayload = {
-        table: fileContent.dataSource.api.table,
-        startTS: convertTimeToTimestamp(api.startTS),
-        endTS: convertTimeToTimestamp(api.endTS),
-      };
-
-      const optional = api.optional;
-
-      if (optional) {
-        if (optional.filled) {
-          apiBody.fill = api.fill;
-        }
-        if (optional.temporal) {
-          apiBody.temporality = api.temporality;
-          if (api.temporality === "slice") {
-            if (optional.startTS >= optional.endTS) {
-              window.showErrorMessage(
-                "The slice time parameters (startTS and endTS) are not correct, please check the format or if the startTS is before the endTS"
-              );
-              break;
-            }
-            const start = api.startTS.split("T");
-            if (start.length === 2) {
-              start[1] = optional.startTS;
-              const end = api.endTS.split("T");
-              if (end.length === 2) {
-                end[1] = optional.endTS;
-                apiBody.startTS = convertTimeToTimestamp(start.join("T"));
-                apiBody.endTS = convertTimeToTimestamp(end.join("T"));
-              }
-            }
-          }
-        }
-
-        const labels = optional.labels.filter((label) => label.active);
-
-        if (labels.length > 0) {
-          apiBody.labels = Object.assign(
-            {},
-            ...labels.map((label) => ({ [label.key]: label.value }))
-          );
-        }
-
-        const filters = optional.filters
-          .filter((filter) => filter.active)
-          .map((filter) => [
-            filter.operator,
-            filter.column,
-            ((values: string) => {
-              const tokens = values.split(/[;\s]+/).map((token) => {
-                const number = parseFloat(token);
-                return isNaN(number) ? token : number;
-              });
-              return tokens.length === 1 ? tokens[0] : tokens;
-            })(filter.values),
-          ]);
-
-        if (filters.length > 0) {
-          apiBody.filter = filters;
-        }
-
-        const sorts = optional.sorts
-          .filter((sort) => sort.active)
-          .map((sort) => sort.column);
-
-        if (sorts.length > 0) {
-          apiBody.sortCols = sorts;
-        }
-
-        const aggs = optional.aggs
-          .filter((agg) => agg.active)
-          .map((agg) => [agg.key, agg.operator, agg.column]);
-
-        if (aggs.length > 0) {
-          apiBody.agg = aggs;
-        }
-
-        const groups = optional.groups
-          .filter((group) => group.active)
-          .map((group) => group.column);
-
-        if (groups.length > 0) {
-          apiBody.groupBy = groups;
-        }
-      }
-
-      const body = JSON.stringify(apiBody);
-      const apiCall = await getDataInsights(ext.insightsAuthUrls.dataURL, body);
-
-      if (apiCall?.arrayBuffer) {
-        res = handleWSResults(apiCall.arrayBuffer);
-      } else {
-        window.showErrorMessage("An error occured during API call");
-        break;
-      }
-
-      writeQueryResultsToConsole(
-        res,
-        "GetData - table: " + apiBody.table,
-        selectedType
-      );
-
+    case "API":
+      res = await runApiDataSource(fileContent);
       break;
-    case DataSourceTypes.QSQL:
-      const assembly = fileContent.dataSource.qsql.selectedTarget.slice(0, -4);
-      const target = fileContent.dataSource.qsql.selectedTarget.slice(-3);
-      const qsqlBody = {
-        assembly: assembly,
-        target: target,
-        query: fileContent.dataSource.qsql.query,
-      };
-      const qsqlCall = await getDataInsights(
-        ext.insightsAuthUrls.qsqlURL,
-        JSON.stringify(qsqlBody)
-      );
-      if (qsqlCall?.arrayBuffer) {
-        res = handleWSResults(qsqlCall.arrayBuffer);
-      }
-      writeQueryResultsToConsole(
-        res,
-        fileContent.dataSource.qsql.query,
-        selectedType
-      );
+    case "QSQL":
+      res = await runQsqlDataSource(fileContent);
       break;
-    case DataSourceTypes.SQL:
+    case "SQL":
     default:
-      const sqlBody = {
-        query: fileContent.dataSource.sql.query,
-      };
-      const sqlCall = await getDataInsights(
-        ext.insightsAuthUrls.sqlURL,
-        JSON.stringify(sqlBody)
-      );
-      if (sqlCall?.arrayBuffer) {
-        res = handleWSResults(sqlCall.arrayBuffer);
-      }
-      writeQueryResultsToConsole(
-        res,
-        fileContent.dataSource.sql.query,
-        selectedType
-      );
+      res = await runSqlDataSource(fileContent);
       break;
+  }
+
+  if (ext.resultsViewProvider.isVisible()) {
+    writeQueryResultsToView(res, selectedType);
+  } else {
+    writeQueryResultsToConsole(
+      res,
+      getQuery(fileContent, selectedType),
+      selectedType
+    );
+  }
+}
+
+export function getSelectedType(fileContent: DataSourceFiles): string {
+  const selectedType = fileContent.dataSource.selectedType.toString();
+  switch (selectedType) {
+    case "API":
+    case "0":
+      return "API";
+    case "QSQL":
+    case "1":
+      return "QSQL";
+    case "SQL":
+    case "2":
+      return "SQL";
+    default:
+      throw new Error(`Invalid selectedType: ${selectedType}`);
+  }
+}
+
+export async function runApiDataSource(
+  fileContent: DataSourceFiles
+): Promise<any> {
+  const isTimeCorrect = checkIfTimeParamIsCorrect(
+    fileContent.dataSource.api.startTS,
+    fileContent.dataSource.api.endTS
+  );
+  if (!isTimeCorrect) {
+    window.showErrorMessage(
+      "The time parameters(startTS and endTS) are not correct, please check the format or if the startTS is before the endTS"
+    );
+    return;
+  }
+  const apiBody = getApiBody(fileContent);
+  const apiCall = await getDataInsights(
+    ext.insightsAuthUrls.dataURL,
+    JSON.stringify(apiBody)
+  );
+  if (apiCall?.arrayBuffer) {
+    return handleWSResults(apiCall.arrayBuffer);
+  }
+}
+
+export function getApiBody(
+  fileContent: DataSourceFiles
+): Partial<getDataBodyPayload> {
+  const {
+    startTS,
+    endTS,
+    fill,
+    temporality,
+    filter,
+    groupBy,
+    agg,
+    sortCols,
+    slice,
+    labels,
+    table,
+  } = fileContent.dataSource.api;
+
+  const startTSValue = startTS?.trim() ? convertTimeToTimestamp(startTS) : "";
+  const endTSValue = endTS?.trim() ? convertTimeToTimestamp(endTS) : "";
+  const fillValue = fill?.trim() || undefined;
+  const temporalityValue = temporality?.trim() || undefined;
+  const filterValue = filter.length ? filter : undefined;
+  const groupByValue = groupBy.length ? groupBy : undefined;
+  const aggValue = agg.length ? agg : undefined;
+  const sortColsValue = sortCols.length ? sortCols : undefined;
+  const sliceValue = slice.length ? slice : undefined;
+  const labelsValue = labels.length ? labels : undefined;
+
+  const apiBodyAux: getDataBodyPayload = {
+    table,
+    startTS: startTSValue,
+    endTS: endTSValue,
+    fill: fillValue,
+    temporality: temporalityValue,
+    groupBy: groupByValue,
+    agg: aggValue,
+    sortCols: sortColsValue,
+    slice: sliceValue,
+    labels: labelsValue,
+  };
+
+  if (filterValue !== undefined) {
+    apiBodyAux.filter = filterValue.map((filterEl: string) => {
+      return filterEl.split(";");
+    });
+  }
+
+  const apiBody = Object.fromEntries(
+    Object.entries(apiBodyAux).filter(([_, value]) => value !== undefined)
+  );
+
+  return apiBody;
+}
+
+export async function runQsqlDataSource(
+  fileContent: DataSourceFiles
+): Promise<any> {
+  const assembly = fileContent.dataSource.qsql.selectedTarget.slice(0, -4);
+  const target = fileContent.dataSource.qsql.selectedTarget.slice(-3);
+  const qsqlBody = {
+    assembly: assembly,
+    target: target,
+    query: fileContent.dataSource.qsql.query,
+  };
+  const qsqlCall = await getDataInsights(
+    ext.insightsAuthUrls.qsqlURL,
+    JSON.stringify(qsqlBody)
+  );
+  if (qsqlCall?.arrayBuffer) {
+    return handleWSResults(qsqlCall.arrayBuffer);
+  }
+}
+
+export async function runSqlDataSource(
+  fileContent: DataSourceFiles
+): Promise<any> {
+  const sqlBody = {
+    query: fileContent.dataSource.sql.query,
+  };
+  const sqlCall = await getDataInsights(
+    ext.insightsAuthUrls.sqlURL,
+    JSON.stringify(sqlBody)
+  );
+  if (sqlCall?.arrayBuffer) {
+    return handleWSResults(sqlCall.arrayBuffer);
+  }
+}
+
+export function getQuery(
+  fileContent: DataSourceFiles,
+  selectedType: string
+): string {
+  switch (selectedType) {
+    case "API":
+      return `GetData - table: ${fileContent.dataSource.api.table}`;
+    case "QSQL":
+      return fileContent.dataSource.qsql.query;
+    case "SQL":
+    default:
+      return fileContent.dataSource.sql.query;
   }
 }

@@ -72,7 +72,7 @@ import {
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { ExecutionConsole } from "../utils/executionConsole";
 import { openUrl } from "../utils/openUrl";
-import { sanitizeQuery } from "../utils/queryUtils";
+import { handleWSResults, sanitizeQuery } from "../utils/queryUtils";
 import {
   validateServerAlias,
   validateServerName,
@@ -583,6 +583,7 @@ export async function getScratchpadQuery(
   context?: string
 ): Promise<any | undefined> {
   if (ext.connectionNode instanceof InsightsNode) {
+    const isTableView = ext.resultsViewProvider.isVisible();
     const scratchpadURL = new url.URL(
       ext.insightsAuthUrls.scratchpadURL,
       ext.connectionNode.details.server
@@ -613,7 +614,14 @@ export async function getScratchpadQuery(
         Authorization: `Bearer ${token.accessToken}`,
         Username: username.preferred_username,
       },
-      body: { expression: query, language: "q", context: context || "." },
+      body: {
+        expression: query,
+        isTableView,
+        language: "q",
+        context: context || ".",
+        sampleFn: "first",
+        sampleSize: 10000,
+      },
       json: true,
     };
 
@@ -633,7 +641,17 @@ export async function getScratchpadQuery(
           scratchpadURL.toString(),
           options
         );
-
+        if (
+          isTableView &&
+          spRes?.data &&
+          Array.isArray(spRes.data) &&
+          !spRes.error
+        ) {
+          const buffer = new Uint8Array(
+            spRes.data.map((x: string) => parseInt(x, 16))
+          ).buffer;
+          return handleWSResults(buffer);
+        }
         return spRes;
       }
     );
@@ -943,7 +961,10 @@ export function writeQueryResultsToView(
   commands.executeCommand("kdb.resultsPanel.update", result, dataSourceType);
 }
 
-function writeScratchpadResult(result: ScratchpadResult, query: string): void {
+export function writeScratchpadResult(
+  result: ScratchpadResult,
+  query: string
+): void {
   const queryConsole = ExecutionConsole.start();
 
   if (result.error) {
@@ -954,10 +975,10 @@ function writeScratchpadResult(result: ScratchpadResult, query: string): void {
       ext.connectionNode?.label ? ext.connectionNode.label : ""
     );
   } else {
-    queryConsole.append(
-      result.data,
-      query,
-      ext.connectionNode?.label ? ext.connectionNode.label : ""
-    );
+    if (ext.resultsViewProvider.isVisible()) {
+      writeQueryResultsToView(result, "SCRATCHPAD");
+    } else {
+      writeQueryResultsToConsole(result.data, query);
+    }
   }
 }

@@ -106,7 +106,7 @@ describe("WebPanels", () => {
 
       it("should transform an array of strings into a single string", () => {
         const inputString = ["test", "string", "with", "array"];
-        const expectedString = "test,string,with,array";
+        const expectedString = "test string with array";
         const actualString = resultsPanel.sanitizeString(inputString);
         assert.strictEqual(actualString, expectedString);
       });
@@ -156,6 +156,29 @@ describe("WebPanels", () => {
           '{"defaultColDef":{"sortable":true,"resizable":true,"filter":true,"flex":1,"minWidth":100},"rowData":[{"a":"1"},{"a":"2"},{"a":"3"}],"columnDefs":[{"field":"a"}],"domLayout":"autoHeight","pagination":true,"paginationPageSize":100,"cacheBlockSize":100,"enableCellTextSelection":true,"ensureDomOrder":true,"suppressContextMenu":true}';
         const actualOutput = resultsPanel.convertToGrid(inputQueryResult);
         assert.strictEqual(actualOutput, expectedOutput);
+      });
+    });
+
+    describe("removeEndCommaFromStrings", () => {
+      it("should remove the comma from the end of a string if it ends with a comma", () => {
+        const input = ["hello,", "world,"];
+        const expectedOutput = ["hello", "world"];
+        const actualOutput = resultsPanel.removeEndCommaFromStrings(input);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+
+      it("should not modify a string if it does not end with a comma", () => {
+        const input = ["hello", "world"];
+        const expectedOutput = ["hello", "world"];
+        const actualOutput = resultsPanel.removeEndCommaFromStrings(input);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+
+      it("should return an empty array if the input is an empty array", () => {
+        const input: string[] = [];
+        const expectedOutput: string[] = [];
+        const actualOutput = resultsPanel.removeEndCommaFromStrings(input);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
       });
     });
 

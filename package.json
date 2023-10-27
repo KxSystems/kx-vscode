@@ -666,6 +666,7 @@
     "antlr4ts": "^0.5.0-alpha.4",
     "axios": "^1.6.0",
     "azure-arm-resource": "^7.4.0",
+    "chevrotain": "^10.5.0",
     "csv-parser": "^3.0.0",
     "esbuild-plugin-copy": "^2.1.1",
     "extract-zip": "^2.0.1",
