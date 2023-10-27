@@ -18,6 +18,7 @@ import { ext } from "../extensionVariables";
 import { getDataBodyPayload } from "../models/data";
 import {
   DataSourceFiles,
+  DataSourceTypes,
   createDefaultDataSourceFile,
 } from "../models/dataSource";
 import { scratchpadVariableInput } from "../models/items/server";
@@ -245,16 +246,13 @@ export async function runDataSource(
 }
 
 export function getSelectedType(fileContent: DataSourceFiles): string {
-  const selectedType = fileContent.dataSource.selectedType.toString();
+  const selectedType = fileContent.dataSource.selectedType;
   switch (selectedType) {
-    case "API":
-    case "0":
+    case DataSourceTypes.API:
       return "API";
-    case "QSQL":
-    case "1":
+    case DataSourceTypes.QSQL:
       return "QSQL";
-    case "SQL":
-    case "2":
+    case DataSourceTypes.SQL:
       return "SQL";
     default:
       throw new Error(`Invalid selectedType: ${selectedType}`);
@@ -264,78 +262,109 @@ export function getSelectedType(fileContent: DataSourceFiles): string {
 export async function runApiDataSource(
   fileContent: DataSourceFiles
 ): Promise<any> {
-  const isTimeCorrect = checkIfTimeParamIsCorrect(
-    fileContent.dataSource.api.startTS,
-    fileContent.dataSource.api.endTS
-  );
+  const api = fileContent.dataSource.api;
+
+  const isTimeCorrect = checkIfTimeParamIsCorrect(api.startTS, api.endTS);
+
   if (!isTimeCorrect) {
     window.showErrorMessage(
-      "The time parameters(startTS and endTS) are not correct, please check the format or if the startTS is before the endTS"
+      "The time parameters (startTS and endTS) are not correct, please check the format or if the startTS is before the endTS"
     );
     return;
   }
-  const apiBody = getApiBody(fileContent);
-  const apiCall = await getDataInsights(
-    ext.insightsAuthUrls.dataURL,
-    JSON.stringify(apiBody)
-  );
+
+  const apiBody: getDataBodyPayload = {
+    table: fileContent.dataSource.api.table,
+    startTS: convertTimeToTimestamp(api.startTS),
+    endTS: convertTimeToTimestamp(api.endTS),
+  };
+
+  const optional = api.optional;
+
+  if (optional) {
+    if (optional.filled) {
+      apiBody.fill = api.fill;
+    }
+    if (optional.temporal) {
+      apiBody.temporality = api.temporality;
+      if (api.temporality === "slice") {
+        if (optional.startTS >= optional.endTS) {
+          window.showErrorMessage(
+            "The slice time parameters (startTS and endTS) are not correct, please check the format or if the startTS is before the endTS"
+          );
+          return;
+        }
+        const start = api.startTS.split("T");
+        if (start.length === 2) {
+          start[1] = optional.startTS;
+          const end = api.endTS.split("T");
+          if (end.length === 2) {
+            end[1] = optional.endTS;
+            apiBody.startTS = convertTimeToTimestamp(start.join("T"));
+            apiBody.endTS = convertTimeToTimestamp(end.join("T"));
+          }
+        }
+      }
+    }
+
+    const labels = optional.labels.filter((label) => label.active);
+
+    if (labels.length > 0) {
+      apiBody.labels = Object.assign(
+        {},
+        ...labels.map((label) => ({ [label.key]: label.value }))
+      );
+    }
+
+    const filters = optional.filters
+      .filter((filter) => filter.active)
+      .map((filter) => [
+        filter.operator,
+        filter.column,
+        ((values: string) => {
+          const tokens = values.split(/[;\s]+/).map((token) => {
+            const number = parseFloat(token);
+            return isNaN(number) ? token : number;
+          });
+          return tokens.length === 1 ? tokens[0] : tokens;
+        })(filter.values),
+      ]);
+
+    if (filters.length > 0) {
+      apiBody.filter = filters;
+    }
+
+    const sorts = optional.sorts
+      .filter((sort) => sort.active)
+      .map((sort) => sort.column);
+
+    if (sorts.length > 0) {
+      apiBody.sortCols = sorts;
+    }
+
+    const aggs = optional.aggs
+      .filter((agg) => agg.active)
+      .map((agg) => [agg.key, agg.operator, agg.column]);
+
+    if (aggs.length > 0) {
+      apiBody.agg = aggs;
+    }
+
+    const groups = optional.groups
+      .filter((group) => group.active)
+      .map((group) => group.column);
+
+    if (groups.length > 0) {
+      apiBody.groupBy = groups;
+    }
+  }
+
+  const body = JSON.stringify(apiBody);
+  const apiCall = await getDataInsights(ext.insightsAuthUrls.dataURL, body);
+
   if (apiCall?.arrayBuffer) {
     return handleWSResults(apiCall.arrayBuffer);
   }
-}
-
-export function getApiBody(
-  fileContent: DataSourceFiles
-): Partial<getDataBodyPayload> {
-  const {
-    startTS,
-    endTS,
-    fill,
-    temporality,
-    filter,
-    groupBy,
-    agg,
-    sortCols,
-    slice,
-    labels,
-    table,
-  } = fileContent.dataSource.api;
-
-  const startTSValue = startTS?.trim() ? convertTimeToTimestamp(startTS) : "";
-  const endTSValue = endTS?.trim() ? convertTimeToTimestamp(endTS) : "";
-  const fillValue = fill?.trim() || undefined;
-  const temporalityValue = temporality?.trim() || undefined;
-  const filterValue = filter.length ? filter : undefined;
-  const groupByValue = groupBy.length ? groupBy : undefined;
-  const aggValue = agg.length ? agg : undefined;
-  const sortColsValue = sortCols.length ? sortCols : undefined;
-  const sliceValue = slice.length ? slice : undefined;
-  const labelsValue = labels.length ? labels : undefined;
-
-  const apiBodyAux: getDataBodyPayload = {
-    table,
-    startTS: startTSValue,
-    endTS: endTSValue,
-    fill: fillValue,
-    temporality: temporalityValue,
-    groupBy: groupByValue,
-    agg: aggValue,
-    sortCols: sortColsValue,
-    slice: sliceValue,
-    labels: labelsValue,
-  };
-
-  if (filterValue !== undefined) {
-    apiBodyAux.filter = filterValue.map((filterEl: string) => {
-      return filterEl.split(";");
-    });
-  }
-
-  const apiBody = Object.fromEntries(
-    Object.entries(apiBodyAux).filter(([_, value]) => value !== undefined)
-  );
-
-  return apiBody;
 }
 
 export async function runQsqlDataSource(

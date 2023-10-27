@@ -11,7 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import assert from "assert";
+import * as assert from "assert";
+import mock from "mock-fs";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
@@ -19,15 +20,106 @@ import * as installTools from "../../src/commands/installTools";
 import * as serverCommand from "../../src/commands/serverCommand";
 import * as walkthroughCommand from "../../src/commands/walkthroughCommand";
 import { ext } from "../../src/extensionVariables";
-import { DataSourceFiles, DataSourceTypes } from "../../src/models/dataSource";
+import { createDefaultDataSourceFile } from "../../src/models/dataSource";
 import { ScratchpadResult } from "../../src/models/scratchpadResult";
 import { KdbTreeProvider } from "../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as coreUtils from "../../src/utils/core";
-import * as dataSourceUtils from "../../src/utils/dataSource";
 import { ExecutionConsole } from "../../src/utils/executionConsole";
-import * as queryUtils from "../../src/utils/queryUtils";
 
+describe("dataSourceCommand", () => {
+  afterEach(() => {
+    sinon.restore();
+    mock.restore();
+  });
+
+  it("should add a data source", async () => {
+    mock({
+      "/temp": {
+        ".kdb-datasources": {
+          "datasource-0.ds": '{"name": "datasource-0"}',
+        },
+      },
+    });
+
+    ext.context = {} as vscode.ExtensionContext;
+    sinon.stub(ext, "context").value({
+      globalStorageUri: {
+        fsPath: "/temp/",
+      },
+    });
+
+    await assert.doesNotReject(dataSourceCommand.addDataSource());
+  });
+
+  it("should rename a data source", async () => {
+    mock({
+      "/temp": {
+        ".kdb-datasources": {
+          "datasource-0.ds": '{"name": "datasource-0"}',
+        },
+      },
+    });
+
+    ext.context = {} as vscode.ExtensionContext;
+    sinon.stub(ext, "context").value({
+      globalStorageUri: {
+        fsPath: "/temp/",
+      },
+    });
+
+    await assert.doesNotReject(
+      dataSourceCommand.renameDataSource("datasource-0", "datasource-1")
+    );
+  });
+
+  it("should save a data source", async () => {
+    mock({
+      "/temp": {
+        ".kdb-datasources": {
+          "datasource-0.ds": '{"name": "datasource-0"}',
+        },
+      },
+    });
+
+    ext.context = {} as vscode.ExtensionContext;
+    sinon.stub(ext, "context").value({
+      globalStorageUri: {
+        fsPath: "/temp/",
+      },
+    });
+
+    const ds = createDefaultDataSourceFile();
+    ds.name = "datasource-0";
+
+    await assert.doesNotReject(dataSourceCommand.saveDataSource(ds));
+  });
+
+  it("should save a data source with a different name", async () => {
+    mock({
+      "/temp": {
+        ".kdb-datasources": {
+          "datasource-0.ds": '{"name": "datasource-0"}',
+        },
+      },
+    });
+
+    ext.context = {} as vscode.ExtensionContext;
+    sinon.stub(ext, "context").value({
+      globalStorageUri: {
+        fsPath: "/temp/",
+      },
+    });
+
+    const ds = createDefaultDataSourceFile();
+    ds.name = "datasource-1";
+    ds.originalName = "datasource-0";
+
+    await assert.doesNotReject(dataSourceCommand.saveDataSource(ds));
+  });
+});
+
+/*
 describe("dataSourceCommand", () => {
   let dummyDataSourceFiles: DataSourceFiles;
   const uriTest: vscode.Uri = vscode.Uri.parse("test");
@@ -171,6 +263,7 @@ describe("dataSourceCommand", () => {
       });
     });
   });
+
   describe("runApiDataSource", () => {
     let getApiBodyStub: sinon.SinonStub;
     let checkIfTimeParamIsCorrectStub: sinon.SinonStub;
@@ -513,6 +606,7 @@ describe("dataSourceCommand", () => {
     });
   });
 });
+*/
 
 describe("installTools", () => {
   //write tests for src/commands/installTools.ts

@@ -25,8 +25,12 @@ export type GetDataObjectPayload = {
 
 export type getDataBodyPayload = {
   table: string;
-  startTS: string;
-  endTS: string;
+  startTS?: string;
+  endTS?: string;
+  labels?: { [id: string]: string };
+  filter?: (string | number | (string | number)[])[][];
+  groupBy?: string[];
+  agg?: string[][];
   fill?: string;
   temporality?: string;
   slice?: string[];
