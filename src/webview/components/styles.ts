@@ -33,8 +33,8 @@ export const vscodeStyles = css`
 `;
 
 export const kdbStyles = css`
-  .panel {
-    width: 47em;
+  .w-full {
+    min-width: 50em;
   }
 
   .col {
