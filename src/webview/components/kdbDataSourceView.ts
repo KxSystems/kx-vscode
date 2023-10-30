@@ -680,7 +680,7 @@ export class KdbDataSourceView extends LitElement {
         <div class="col">
           <div class="row">
             <vscode-text-field
-              class="grow"
+              class="w-full"
               placeholder="Data Source Name"
               value="${this.name}"
               @input="${(event: Event) =>
@@ -706,7 +706,7 @@ export class KdbDataSourceView extends LitElement {
                 @click="${() => (this.selectedType = DataSourceTypes.SQL)}"
                 >SQL</vscode-panel-tab
               >
-              <vscode-panel-view class="panel">
+              <vscode-panel-view>
                 <div class="col">
                   <div class="row">
                     <div class="dropdown-container">
@@ -864,7 +864,7 @@ export class KdbDataSourceView extends LitElement {
                 </div>
               </vscode-panel-view>
 
-              <vscode-panel-view class="panel">
+              <vscode-panel-view>
                 <div class="col">
                   <div class="row">
                     <div class="dropdown-container">
