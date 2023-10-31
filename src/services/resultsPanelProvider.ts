@@ -109,7 +109,8 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     const rowData = queryResult.map((row: any) => {
       for (const key in row) {
         if (Object.prototype.hasOwnProperty.call(row, key)) {
-          row[key] = row[key] ? this.sanitizeString(row[key]) : "";
+          row[key] =
+            row[key] !== undefined ? this.sanitizeString(row[key]) : "";
         }
       }
       return row;

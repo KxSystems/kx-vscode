@@ -124,3 +124,31 @@ export async function exportToCsv(workspaceUri: Uri): Promise<void> {
   await workspace.fs.writeFile(filePath, Buffer.from(ext.resultPanelCSV));
   window.showTextDocument(filePath, { preview: false });
 }
+
+export function convertArrayOfArraysToObjects(arr: any[][]): any[] {
+  if (!Array.isArray(arr) || arr.length === 0) {
+    return arr;
+  }
+
+  const firstRow = arr[0];
+  if (!Array.isArray(firstRow) || firstRow.length === 0) {
+    return arr;
+  }
+
+  const numColumns = firstRow.length;
+  const result: any[] = [];
+
+  for (let i = 0; i < numColumns; i++) {
+    const obj: any = {};
+    for (const row of arr) {
+      if (!Array.isArray(row) || row.length !== numColumns) {
+        return [];
+      }
+      const key = Object.keys(row[i])[0];
+      obj[key] = row[i][key];
+    }
+    result.push(obj);
+  }
+
+  return result;
+}
