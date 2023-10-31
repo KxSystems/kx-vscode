@@ -15,7 +15,7 @@ import { env } from "node:process";
 import path from "path";
 import { Uri, window, workspace } from "vscode";
 import { ext } from "../extensionVariables";
-import { QueryResultType, queryConstants } from "../models/queryResult";
+import { QueryResultType } from "../models/queryResult";
 
 interface tblHeader {
   label: string;
@@ -57,7 +57,7 @@ export function handleQueryResults(
     //   break;
     case QueryResultType.Error:
     default:
-      handledResult = queryConstants.error + results;
+      handledResult = results;
       break;
   }
   return handledResult;

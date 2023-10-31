@@ -141,7 +141,7 @@ export class ExecutionConsole {
         this._console.appendLine(`ERROR Query executed: ${query}\n`);
         this._console.appendLine(result);
       } else {
-        this._console.appendLine(`ERROR: ${result}`);
+        this._console.appendLine(`Error: ${result}`);
       }
       addQueryHistory(query, serverName, connectionType, false);
     } else {
