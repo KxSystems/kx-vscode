@@ -15,14 +15,14 @@ import assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { ext } from "../../src/extensionVariables";
-import { defaultDataSourceFile } from "../../src/models/dataSource";
+import { createDefaultDataSourceFile } from "../../src/models/dataSource";
 import { DataSourcesPanel } from "../../src/panels/datasource";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as utils from "../../src/utils/execution";
 
 describe("WebPanels", () => {
   describe("DataSourcesPanel", () => {
-    const dsTest = defaultDataSourceFile;
+    const dsTest = createDefaultDataSourceFile();
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
 
     beforeEach(() => {
@@ -49,22 +49,12 @@ describe("WebPanels", () => {
       );
     });
 
-    it("should make sure the datasource is rendered, check if the tabs exists", () => {
-      const expectedHtmlTab1 = `<vscode-panel-tab id="tab-1" class="type-tab">API</vscode-panel-tab>`;
-      const expectedHtmlTab2 = `<vscode-panel-tab id="tab-2" class="type-tab">QSQL</vscode-panel-tab>`;
-      const expectedHtmlTab3 = `<vscode-panel-tab id="tab-3" class="type-tab">SQL</vscode-panel-tab>`;
+    it("should make sure the datasource is rendered, check if the web component exists", () => {
+      const expectedHtml = `<kdb-data-source-view></kdb-data-source-view>`;
       const actualHtml = DataSourcesPanel.currentPanel._panel.webview.html;
       assert.ok(
-        actualHtml.indexOf(expectedHtmlTab1) !== -1,
-        "Panel HTML should include expected TAB btn 1"
-      );
-      assert.ok(
-        actualHtml.indexOf(expectedHtmlTab2) !== -1,
-        "Panel HTML should include expected TAB btn 2"
-      );
-      assert.ok(
-        actualHtml.indexOf(expectedHtmlTab3) !== -1,
-        "Panel HTML should include expected TAB btn 3"
+        actualHtml.indexOf(expectedHtml) !== -1,
+        "Panel HTML should include expected web component"
       );
     });
   });
@@ -116,7 +106,7 @@ describe("WebPanels", () => {
 
       it("should transform an array of strings into a single string", () => {
         const inputString = ["test", "string", "with", "array"];
-        const expectedString = "test,string,with,array";
+        const expectedString = "test string with array";
         const actualString = resultsPanel.sanitizeString(inputString);
         assert.strictEqual(actualString, expectedString);
       });
@@ -166,6 +156,29 @@ describe("WebPanels", () => {
           '{"defaultColDef":{"sortable":true,"resizable":true,"filter":true,"flex":1,"minWidth":100},"rowData":[{"a":"1"},{"a":"2"},{"a":"3"}],"columnDefs":[{"field":"a"}],"domLayout":"autoHeight","pagination":true,"paginationPageSize":100,"cacheBlockSize":100,"enableCellTextSelection":true,"ensureDomOrder":true,"suppressContextMenu":true}';
         const actualOutput = resultsPanel.convertToGrid(inputQueryResult);
         assert.strictEqual(actualOutput, expectedOutput);
+      });
+    });
+
+    describe("removeEndCommaFromStrings", () => {
+      it("should remove the comma from the end of a string if it ends with a comma", () => {
+        const input = ["hello,", "world,"];
+        const expectedOutput = ["hello", "world"];
+        const actualOutput = resultsPanel.removeEndCommaFromStrings(input);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+
+      it("should not modify a string if it does not end with a comma", () => {
+        const input = ["hello", "world"];
+        const expectedOutput = ["hello", "world"];
+        const actualOutput = resultsPanel.removeEndCommaFromStrings(input);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+
+      it("should return an empty array if the input is an empty array", () => {
+        const input: string[] = [];
+        const expectedOutput: string[] = [];
+        const actualOutput = resultsPanel.removeEndCommaFromStrings(input);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
       });
     });
 

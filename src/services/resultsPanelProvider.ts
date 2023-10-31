@@ -65,6 +65,15 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     }
   }
 
+  public removeEndCommaFromStrings(data: string[]): string[] {
+    return data.map((element) => {
+      if (element.endsWith(",")) {
+        return element.slice(0, -1);
+      }
+      return element;
+    });
+  }
+
   convertToCsv(data: any[]): string[] {
     const keys = Object.keys(data[0]);
     const header = keys.join(",");
@@ -99,7 +108,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     const rowData = queryResult.map((row: any) => {
       for (const key in row) {
         if (Object.prototype.hasOwnProperty.call(row, key)) {
-          row[key] = this.sanitizeString(row[key]);
+          row[key] = row[key] ? this.sanitizeString(row[key]) : "";
         }
       }
       return row;
@@ -131,7 +140,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
   sanitizeString(str: string | string[]): string {
     if (str instanceof Array) {
-      str = str.join(",");
+      str = str.join(" ");
     }
     str = str.toString();
     str = str.trim();

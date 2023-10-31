@@ -1,0 +1,137 @@
+name: KX VS Code Production Release Workflow
+
+on:
+  push:
+    tags:
+      - "v[129].[0-9]+.[0-9]+"
+
+env:
+  NODE_ENV: production
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+      - name: Install dependencies
+        run: npm ci --include=dev
+      - name: Build VSIX file
+        run: npm run build
+      - name: Run Tests
+        run: xvfb-run -a npm run test
+      - name: Packaging
+        run: npm run package
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: KDB-VSCode-Extension
+          path: ./kdb-*vsix
+
+  app-sec:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: SonarCloud Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: Snyk scan for all vulnerabilities
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
+
+      - name: Snyk scan for high or critical vulnerabilities
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
+        with:
+          args: --severity-threshold=high
+
+  release:
+    needs: app-sec
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Tag Var
+        id: vars
+        run: |
+          VERSION=${{ github.ref_name }}
+          echo "run_tag=$(echo ${VERSION:1})" >> $GITHUB_OUTPUT
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Download VSIX file from build job
+        uses: actions/download-artifact@v3
+        with:
+          name: KDB-VSCode-Extension
+      - name: Get Body
+        run: |
+          sed -n "/# ${{ github.ref_name }}/,/# v/{s/^# .*//;p;}" CHANGELOG.md > temp.md
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: ${{ github.ref_name }}
+          body_path: ./temp.md
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: kdb-${{ steps.vars.outputs.run_tag }}.vsix
+          asset_name: kdb-${{ steps.vars.outputs.run_tag }}.vsix
+          asset_content_type: application/octet-stream
+
+  # manual-approve:
+  #   needs: release
+  #   environment:
+  #     name: approvers
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Manual Approve
+  #       run: echo "Manually approved"
+
+  # publish:
+  #   needs: manual-approve
+  #   - name: Checkout source code
+  #     uses: actions/checkout@v2
+  #     with:
+  #       fetch-depth: 0
+  #   - name: Install Node.js
+  #     uses: actions/setup-node@v3
+  #     with:
+  #       node-version: 16.x
+  #   - name: Install dependencies
+  #     run: npm ci --include=dev
+  #   - name: Publish to VSCode Marketplace
+  #     run: npm run publish
+  #     env:
+  #       VSCE_PAT: ${{ secrets.VSCE_PAT }}

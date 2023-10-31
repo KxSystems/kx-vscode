@@ -12,13 +12,14 @@
  */
 
 export enum DataSourceTypes {
-  API,
-  QSQL,
-  SQL,
+  API = "API",
+  QSQL = "QSQL",
+  SQL = "SQL",
 }
 
 export interface DataSourceFiles {
   name: string;
+  originalName?: string;
   insightsNode?: string;
   dataSource: {
     selectedType: DataSourceTypes;
@@ -35,6 +36,17 @@ export interface DataSourceFiles {
       sortCols: string[];
       slice: string[];
       labels: string[];
+      optional?: {
+        filled: boolean;
+        temporal: boolean;
+        startTS: string;
+        endTS: string;
+        filters: Filter[];
+        labels: Label[];
+        sorts: Sort[];
+        aggs: Agg[];
+        groups: Group[];
+      };
     };
     qsql: {
       query: string;
@@ -46,30 +58,130 @@ export interface DataSourceFiles {
   };
 }
 
-export const defaultDataSourceFile: DataSourceFiles = {
-  name: "DataSource",
-  dataSource: {
-    selectedType: DataSourceTypes.API,
-    api: {
-      selectedApi: "",
-      table: "",
-      startTS: "",
-      endTS: "",
-      fill: "",
-      temporality: "",
-      filter: [],
-      groupBy: [],
-      agg: [],
-      sortCols: [],
-      slice: [],
-      labels: [],
+export function createDefaultDataSourceFile(): DataSourceFiles {
+  return {
+    name: "DataSource",
+    dataSource: {
+      selectedType: DataSourceTypes.API,
+      api: {
+        selectedApi: "",
+        table: "",
+        startTS: "",
+        endTS: "",
+        fill: "",
+        temporality: "",
+        filter: [],
+        groupBy: [],
+        agg: [],
+        sortCols: [],
+        slice: [],
+        labels: [],
+      },
+      qsql: {
+        query: "",
+        selectedTarget: "",
+      },
+      sql: {
+        query: "",
+      },
     },
-    qsql: {
-      query: "",
-      selectedTarget: "",
-    },
-    sql: {
-      query: "",
-    },
-  },
+  };
+}
+
+export const filterOperators = [
+  "in",
+  "within",
+  "<",
+  ">",
+  "<=",
+  ">=",
+  "=",
+  "<>",
+  "like",
+];
+
+export const aggOperators = [
+  "all",
+  "any",
+  "avg",
+  "count",
+  "dev",
+  "distinct",
+  "first",
+  "last",
+  "max",
+  "min",
+  "prd",
+  "sdev",
+  "scov",
+  "sum",
+  "svar",
+  "var",
+];
+
+export type Filter = {
+  active: boolean;
+  column: string;
+  operator: string;
+  values: string;
 };
+
+export function createFilter(): Filter {
+  return {
+    active: false,
+    column: "",
+    operator: "",
+    values: "",
+  };
+}
+
+export type Label = {
+  active: boolean;
+  key: string;
+  value: string;
+};
+
+export function createLabel(): Label {
+  return {
+    active: false,
+    key: "",
+    value: "",
+  };
+}
+
+export type Sort = {
+  active: boolean;
+  column: string;
+};
+
+export function createSort(): Sort {
+  return {
+    active: false,
+    column: "",
+  };
+}
+
+export type Agg = {
+  active: boolean;
+  key: string;
+  operator: string;
+  column: string;
+};
+
+export function createAgg(): Agg {
+  return {
+    active: false,
+    key: "",
+    operator: "",
+    column: "",
+  };
+}
+
+export type Group = {
+  active: boolean;
+  column: string;
+};
+
+export function createGroup(): Group {
+  return createSort();
+}

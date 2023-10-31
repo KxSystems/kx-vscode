@@ -43,6 +43,7 @@ export namespace ext {
   export const rowLimit = 150000000;
 
   export let connection: Connection | undefined;
+  export let hideDetailedConsoleQueryOutput: boolean;
   export let connectionNode: KdbNode | InsightsNode | undefined;
   export const kdbDataSourceFolder = ".kdb-datasources";
   export const kdbDataSourceFileExtension = ".ds";
@@ -52,6 +53,8 @@ export namespace ext {
   export const kdbQueryHistoryList: QueryHistory[] = [];
   export const kdbrootNodes: string[] = [];
   export const kdbinsightsNodes: string[] = [];
+  export const kdbNodesWithoutAuth: string[] = [];
+  export const kdbNodesWithoutTls: string[] = [];
   export const maxRetryCount = 5;
 
   export let secretSettings: AuthSettings;

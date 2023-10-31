@@ -45,6 +45,7 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver/node";
+import { QParser } from "./parser/parser";
 import { AnalyzerContent, GlobalSettings, Keyword } from "./utils/analyzer";
 
 export default class QLangServer {
@@ -68,7 +69,7 @@ export default class QLangServer {
       this.documentSettings.delete(e.document.uri);
     });
     this.documents.onDidChangeContent(async (change) => {
-      //await this.validateTextDocument(change.document);
+      // await this.validateTextDocument(change.document);
     });
     this.connection.onNotification("analyzeSourceCode", (config) =>
       this.analyzer.analyzeWorkspace(config)
@@ -399,44 +400,28 @@ export default class QLangServer {
   private async validateTextDocument(
     textDocument: TextDocument
   ): Promise<void> {
-    const settings = await this.getDocumentSettings(textDocument.uri);
     const text = textDocument.getText();
-    const pattern = /\b[A-Z]{2,}\b/g;
-    let m: RegExpExecArray | null;
-
-    let problems = 0;
+    QParser.parse(text);
     const diagnostics: Diagnostic[] = [];
-    while ((m = pattern.exec(text)) && problems < 1000) {
-      problems++;
+    let problems = QParser.errors.length;
+    if (problems > 1000) {
+      problems = 1000;
+    }
+    for (let i = 0; i < problems; i++) {
+      const error = QParser.errors[i];
       const diagnostic: Diagnostic = {
-        severity: DiagnosticSeverity.Warning,
+        severity: DiagnosticSeverity.Error,
         range: {
-          start: textDocument.positionAt(m.index),
-          end: textDocument.positionAt(m.index + m[0].length),
+          start: textDocument.positionAt(error.token.startOffset),
+          end: textDocument.positionAt(
+            error.token.endOffset || error.token.startOffset
+          ),
         },
-        message: `${m[0]} is all uppercase.`,
-        source: "ex",
+        message: error.message,
+        source: "kdb",
       };
-      diagnostic.relatedInformation = [
-        {
-          location: {
-            uri: textDocument.uri,
-            range: Object.assign({}, diagnostic.range),
-          },
-          message: "Spelling matters",
-        },
-        {
-          location: {
-            uri: textDocument.uri,
-            range: Object.assign({}, diagnostic.range),
-          },
-          message: "Particularly for names",
-        },
-      ];
-
       diagnostics.push(diagnostic);
     }
-
     this.connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
   }
 

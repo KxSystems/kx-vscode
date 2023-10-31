@@ -32,6 +32,8 @@
     "onCommand:kdb.removeConnection",
     "onCommand:kdb.connect",
     "onCommand:kdb.disconnect",
+    "onCommand:kdb.addAuthentication",
+    "onCommand:kdb.enableTLS",
     "onCommand:kdb.dataSource.addDataSource",
     "onCommand:kdb.dataSource.saveDataSource",
     "onCommand:kdb.dataSource.runDataSource",
@@ -160,6 +162,11 @@
           "type": "boolean",
           "description": "Hide notification for installation path, after first install"
         },
+        "kdb.hideDetailedConsoleQueryOutput": {
+          "type": "boolean",
+          "description": "Hide detailed console query output",
+          "default": true
+        },
         "kdb.qHomeDirectory": {
           "type": "string",
           "description": "QHOME directory for q runtime"
@@ -199,6 +206,15 @@
       {
         "command": "kdb.connect",
         "title": "Connect server"
+      },
+      {
+        "command": "kdb.addAuthentication",
+        "title": "Add Authentication",
+        "position": "end"
+      },
+      {
+        "command": "kdb.enableTLS",
+        "title": "Enable TLS"
       },
       {
         "command": "kdb.insightsConnect",
@@ -376,6 +392,10 @@
       {
         "view": "kdb-servers",
         "contents": "No connections registered.\n[Add Connection](command:kdb.addConnection)"
+      },
+      {
+        "view": "kdb-datasources-explorer",
+        "contents": "No data sources registered.\n[Add Data Source](command:kdb.dataSource.addDataSource)"
       }
     ],
     "menus": {
@@ -410,6 +430,14 @@
         },
         {
           "command": "kdb.disconnect",
+          "when": "false"
+        },
+        {
+          "command": "kdb.addAuthentication",
+          "when": "false"
+        },
+        {
+          "command": "kdb.enableTLS",
           "when": "false"
         }
       ],
@@ -460,7 +488,17 @@
         {
           "command": "kdb.connect",
           "when": "view == kdb-servers && viewItem not in kdb.connected && viewItem in kdb.rootNodes",
-          "group": "connection"
+          "group": "connection@1"
+        },
+        {
+          "command": "kdb.addAuthentication",
+          "when": "view == kdb-servers && viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutAuth",
+          "group": "connection@3"
+        },
+        {
+          "command": "kdb.enableTLS",
+          "when": "view == kdb-servers && viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutTls",
+          "group": "connection@4"
         },
         {
           "command": "kdb.insightsConnect",
@@ -480,7 +518,7 @@
         {
           "command": "kdb.removeConnection",
           "when": "view == kdb-servers && viewItem in kdb.rootNodes",
-          "group": "connection"
+          "group": "connection@2"
         },
         {
           "command": "kdb.startLocalProcess",
@@ -579,6 +617,7 @@
     "@types/semver": "^7.5.0",
     "@types/sinon": "^10.0.13",
     "@types/vscode": "^1.66.0",
+    "@types/vscode-webview": "^1.57.2",
     "@typescript-eslint/eslint-plugin": "^5.36.2",
     "@typescript-eslint/parser": "^5.36.2",
     "@vscode/test-electron": "^2.2.3",
@@ -594,9 +633,11 @@
     "istanbul-lib-report": "^2.0.8",
     "istanbul-lib-source-maps": "^3.0.6",
     "istanbul-reports": "^3.1.6",
+    "lit": "^2.8.0",
     "mocha": "^10.2.0",
     "mocha-junit-reporter": "^2.2.0",
     "mocha-multi-reporters": "^1.5.1",
+    "mock-fs": "^5.2.0",
     "prettier": "^2.7.1",
     "rimraf": "^3.0.2",
     "sinon": "^15.0.1",
@@ -623,8 +664,9 @@
     "ag-grid-community": "^30.2.0",
     "antlr4-runtime": "^4.13.0",
     "antlr4ts": "^0.5.0-alpha.4",
-    "axios": "^1.4.0",
+    "axios": "^1.6.0",
     "azure-arm-resource": "^7.4.0",
+    "chevrotain": "^10.5.0",
     "csv-parser": "^3.0.0",
     "esbuild-plugin-copy": "^2.1.1",
     "extract-zip": "^2.0.1",
