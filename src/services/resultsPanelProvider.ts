@@ -217,7 +217,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       )}"></script>
       </head>
       <body>      
-        <div class="results-view-container">
+        <div id="results" class="results-view-container">
           <div class="content-wrapper">
               ${result}
             </div>
@@ -230,6 +230,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
               const gridDiv = document.getElementById('grid');
               const obj = JSON.parse('${gridOptionsString}');
               const gridApi = new agGrid.Grid(gridDiv, obj);
+              document.getElementById("results").scrollIntoView();
             }
           });
           document.addEventListener('contextmenu', (e) => {
