@@ -110,7 +110,9 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       for (const key in row) {
         if (Object.prototype.hasOwnProperty.call(row, key)) {
           row[key] =
-            row[key] !== undefined ? this.sanitizeString(row[key]) : "";
+            row[key] !== undefined && row[key] !== null
+              ? this.sanitizeString(row[key])
+              : "";
         }
       }
       return row;
