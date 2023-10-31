@@ -102,9 +102,10 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   }
 
   convertToGrid(queryResult: any[]): string {
-    const columnDefs = Object.keys(queryResult[0]).map((key: string) => ({
-      field: this.sanitizeString(key),
-    }));
+    const columnDefs = Object.keys(queryResult[0]).map((key: string) => {
+      const sanitizedKey = this.sanitizeString(key);
+      return { field: sanitizedKey, headerName: sanitizedKey };
+    });
     const rowData = queryResult.map((row: any) => {
       for (const key in row) {
         if (Object.prototype.hasOwnProperty.call(row, key)) {
