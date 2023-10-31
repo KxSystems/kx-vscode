@@ -955,9 +955,6 @@ export function writeQueryResultsToView(
   result: any,
   dataSourceType?: string
 ): void {
-  if (dataSourceType !== undefined) {
-    commands.executeCommand("kdb-results.focus");
-  }
   commands.executeCommand("kdb.resultsPanel.update", result, dataSourceType);
 }
 
