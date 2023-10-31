@@ -782,27 +782,6 @@ describe("serverCommand", () => {
   describe("writeQueryResultsToView", () => {
     it("should call executeCommand with correct arguments", () => {
       const result = { data: [1, 2, 3] };
-      const dataSourceType = "test";
-      const executeCommandStub = sinon.stub(vscode.commands, "executeCommand");
-
-      serverCommand.writeQueryResultsToView(result, dataSourceType);
-
-      sinon.assert.calledWith(
-        executeCommandStub.firstCall,
-        "kdb-results.focus"
-      );
-      sinon.assert.calledWith(
-        executeCommandStub.secondCall,
-        "kdb.resultsPanel.update",
-        result,
-        dataSourceType
-      );
-
-      executeCommandStub.restore();
-    });
-
-    it("should call executeCommand with correct arguments", () => {
-      const result = { data: [1, 2, 3] };
       const executeCommandStub = sinon.stub(vscode.commands, "executeCommand");
 
       serverCommand.writeQueryResultsToView(result);

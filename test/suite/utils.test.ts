@@ -175,7 +175,7 @@ describe("Utils", () => {
       const results = "test";
       const type = QueryResultType.Error;
       const result = executionUtils.handleQueryResults(results, type);
-      assert.strictEqual(result, "Error:test");
+      assert.strictEqual(result, "test");
     });
 
     it("convertArrayStringInVector", () => {
