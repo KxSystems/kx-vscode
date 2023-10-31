@@ -125,7 +125,7 @@ export async function exportToCsv(workspaceUri: Uri): Promise<void> {
   window.showTextDocument(filePath, { preview: false });
 }
 
-export function convertArrayOfArraysToObjects(arr: any[][]): any[] {
+export function convertArrayOfArraysToObjects(arr: any): any[] {
   if (!Array.isArray(arr) || arr.length === 0) {
     return arr;
   }

@@ -223,6 +223,50 @@ describe("Utils", () => {
         .toString();
       assert.equal(result, expectedRes);
     });
+
+    describe("convertArrayOfArraysToObjects", () => {
+      it("should return an empty array if the input is not an array", () => {
+        const result = executionUtils.convertArrayOfArraysToObjects(null);
+        assert.deepStrictEqual(result, null);
+      });
+
+      it("should return the input array if it is empty", () => {
+        const result = executionUtils.convertArrayOfArraysToObjects([]);
+        assert.deepStrictEqual(result, []);
+      });
+
+      it("should return the input array if the first row is not an array", () => {
+        const result = executionUtils.convertArrayOfArraysToObjects([1, 2, 3]);
+        assert.deepStrictEqual(result, [1, 2, 3]);
+      });
+
+      it("should return the input array if the first row is empty", () => {
+        const result = executionUtils.convertArrayOfArraysToObjects([[]]);
+        assert.deepStrictEqual(result, [[]]);
+      });
+
+      it("should return an empty array if any row has a different length than the first row", () => {
+        const result = executionUtils.convertArrayOfArraysToObjects([
+          [1, 2],
+          [3],
+        ]);
+        assert.deepStrictEqual(result, []);
+      });
+
+      it("should convert an array of arrays to an array of objects", () => {
+        const input = [
+          [{ b: 0 }, { b: 1 }, { b: 2 }],
+          [{ a: 0 }, { a: 1 }, { a: 2 }],
+        ];
+        const expectedOutput = [
+          { b: 0, a: 0 },
+          { b: 1, a: 1 },
+          { b: 2, a: 2 },
+        ];
+        const result = executionUtils.convertArrayOfArraysToObjects(input);
+        assert.deepStrictEqual(result, expectedOutput);
+      });
+    });
   });
 
   describe("executionConsole", () => {
