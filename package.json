@@ -583,6 +583,9 @@
     }
   },
   "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/KxSystems/kx-vscode/issues"
+  },
   "homepage": "https://kx.com",
   "scripts": {
     "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
