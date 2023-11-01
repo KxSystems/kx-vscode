@@ -153,7 +153,7 @@ describe("WebPanels", () => {
       it("should return 'gridOptions' if queryResult is an empty string", () => {
         const inputQueryResult = [{ a: "1" }, { a: "2" }, { a: "3" }];
         const expectedOutput =
-          '{"defaultColDef":{"sortable":true,"resizable":true,"filter":true,"flex":1,"minWidth":100},"rowData":[{"a":"1"},{"a":"2"},{"a":"3"}],"columnDefs":[{"field":"a"}],"domLayout":"autoHeight","pagination":true,"paginationPageSize":100,"cacheBlockSize":100,"enableCellTextSelection":true,"ensureDomOrder":true,"suppressContextMenu":true}';
+          '{"defaultColDef":{"sortable":true,"resizable":true,"filter":true,"flex":1,"minWidth":100},"rowData":[{"a":"1"},{"a":"2"},{"a":"3"}],"columnDefs":[{"field":"a","headerName":"a"}],"domLayout":"autoHeight","pagination":true,"paginationPageSize":100,"cacheBlockSize":100,"enableCellTextSelection":true,"ensureDomOrder":true,"suppressContextMenu":true}';
         const actualOutput = resultsPanel.convertToGrid(inputQueryResult);
         assert.strictEqual(actualOutput, expectedOutput);
       });
@@ -249,7 +249,7 @@ describe("WebPanels", () => {
           { id: 1, test: "test1" },
           { id: 2, test: "test2" },
         ];
-        const expectedOutput = `"rowData":[{"id":"1","test":"test1"},{"id":"2","test":"test2"}],"columnDefs":[{"field":"id"},{"field":"test"}]`;
+        const expectedOutput = `"rowData":[{"id":"1","test":"test1"},{"id":"2","test":"test2"}],"columnDefs":[{"field":"id","headerName":"id"},{"field":"test","headerName":"test"}]`;
         const actualOutput = resultsPanel["_getWebviewContent"](input);
         assert.strictEqual(typeof actualOutput, "string");
         assert.ok(actualOutput.includes(expectedOutput));

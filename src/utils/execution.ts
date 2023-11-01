@@ -15,7 +15,7 @@ import { env } from "node:process";
 import path from "path";
 import { Uri, window, workspace } from "vscode";
 import { ext } from "../extensionVariables";
-import { QueryResultType, queryConstants } from "../models/queryResult";
+import { QueryResultType } from "../models/queryResult";
 
 interface tblHeader {
   label: string;
@@ -57,7 +57,7 @@ export function handleQueryResults(
     //   break;
     case QueryResultType.Error:
     default:
-      handledResult = queryConstants.error + results;
+      handledResult = results;
       break;
   }
   return handledResult;
@@ -123,4 +123,32 @@ export async function exportToCsv(workspaceUri: Uri): Promise<void> {
   const filePath = Uri.parse(path.join(workspaceUri.fsPath, fileName));
   await workspace.fs.writeFile(filePath, Buffer.from(ext.resultPanelCSV));
   window.showTextDocument(filePath, { preview: false });
+}
+
+export function convertArrayOfArraysToObjects(arr: any): any[] {
+  if (!Array.isArray(arr) || arr.length === 0) {
+    return arr;
+  }
+
+  const firstRow = arr[0];
+  if (!Array.isArray(firstRow) || firstRow.length === 0) {
+    return arr;
+  }
+
+  const numColumns = firstRow.length;
+  const result: any[] = [];
+
+  for (let i = 0; i < numColumns; i++) {
+    const obj: any = {};
+    for (const row of arr) {
+      if (!Array.isArray(row) || row.length !== numColumns) {
+        return [];
+      }
+      const key = Object.keys(row[i])[0];
+      obj[key] = row[i][key];
+    }
+    result.push(obj);
+  }
+
+  return result;
 }

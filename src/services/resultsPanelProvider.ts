@@ -102,13 +102,17 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   }
 
   convertToGrid(queryResult: any[]): string {
-    const columnDefs = Object.keys(queryResult[0]).map((key: string) => ({
-      field: this.sanitizeString(key),
-    }));
+    const columnDefs = Object.keys(queryResult[0]).map((key: string) => {
+      const sanitizedKey = this.sanitizeString(key);
+      return { field: sanitizedKey, headerName: sanitizedKey };
+    });
     const rowData = queryResult.map((row: any) => {
       for (const key in row) {
         if (Object.prototype.hasOwnProperty.call(row, key)) {
-          row[key] = row[key] ? this.sanitizeString(row[key]) : "";
+          row[key] =
+            row[key] !== undefined && row[key] !== null
+              ? this.sanitizeString(row[key])
+              : "";
         }
       }
       return row;
@@ -215,7 +219,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       )}"></script>
       </head>
       <body>      
-        <div class="results-view-container">
+        <div id="results" class="results-view-container">
           <div class="content-wrapper">
               ${result}
             </div>
@@ -228,6 +232,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
               const gridDiv = document.getElementById('grid');
               const obj = JSON.parse('${gridOptionsString}');
               const gridApi = new agGrid.Grid(gridDiv, obj);
+              document.getElementById("results").scrollIntoView();
             }
           });
           document.addEventListener('contextmenu', (e) => {

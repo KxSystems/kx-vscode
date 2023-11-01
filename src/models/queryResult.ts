@@ -36,5 +36,5 @@ export enum QueryResultType {
 }
 
 export const queryConstants = {
-  error: "!@#ERROR^&*%-",
+  error: "Error:",
 };
