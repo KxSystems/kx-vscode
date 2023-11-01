@@ -649,12 +649,6 @@
     "vscode-test": "^1.6.1"
   },
   "dependencies": {
-    "@azure/arm-resources": "4.2.2",
-    "@azure/arm-subscriptions": "3.1.2",
-    "@azure/core-auth": "^1.4.0",
-    "@azure/ms-rest-azure-env": "^2.0.0",
-    "@azure/ms-rest-nodeauth": "^3.1.1",
-    "@microsoft/vscode-azext-utils": "0.3.7",
     "@types/antlr4": "^4.11.2",
     "@types/graceful-fs": "^4.1.6",
     "@types/klaw": "^3.0.3",
@@ -665,7 +659,6 @@
     "antlr4-runtime": "^4.13.0",
     "antlr4ts": "^0.5.0-alpha.4",
     "axios": "^1.6.0",
-    "azure-arm-resource": "^7.4.0",
     "chevrotain": "^10.5.0",
     "csv-parser": "^3.0.0",
     "esbuild-plugin-copy": "^2.1.1",
