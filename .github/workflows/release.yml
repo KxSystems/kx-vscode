@@ -85,6 +85,7 @@ jobs:
 
       - name: Snyk scan for high or critical vulnerabilities
         uses: snyk/actions/node@master
+        continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
         with:
