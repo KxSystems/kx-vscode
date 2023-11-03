@@ -11,10 +11,24 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import {
-  allComponents,
-  provideVSCodeDesignSystem,
-} from "@vscode/webview-ui-toolkit";
-import "./components/kdbDataSourceView";
+import * as assert from "assert";
+import * as sinon from "sinon";
+import { KdbDataSourceView } from "../../src/webview/components/kdbDataSourceView";
 
-provideVSCodeDesignSystem().register(allComponents);
+describe("KdbDataSourceView", () => {
+  let view: KdbDataSourceView;
+
+  beforeEach(async () => {
+    view = new KdbDataSourceView();
+  });
+
+  afterEach(() => {
+    sinon.restore();
+  });
+
+  describe("", () => {
+    it("should", () => {
+      assert.ok(view);
+    });
+  });
+});

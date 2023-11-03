@@ -11,10 +11,12 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import {
-  allComponents,
-  provideVSCodeDesignSystem,
-} from "@vscode/webview-ui-toolkit";
-import "./components/kdbDataSourceView";
+import { ServerType } from "./server";
 
-provideVSCodeDesignSystem().register(allComponents);
+export interface QueryHistory {
+  connectionName: string;
+  connectionType: ServerType;
+  query: string;
+  time: string;
+  success: boolean;
+}

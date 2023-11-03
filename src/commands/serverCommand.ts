@@ -18,19 +18,21 @@ import { join } from "path";
 import requestPromise from "request-promise";
 import * as url from "url";
 import {
-  commands,
   InputBoxOptions,
   Position,
   ProgressLocation,
   QuickPickItem,
   QuickPickOptions,
   Range,
+  commands,
+  env,
   window,
 } from "vscode";
 import { ext } from "../extensionVariables";
 import { isCompressed, uncompress } from "../ipc/c";
 import { Connection } from "../models/connection";
 import { GetDataObjectPayload } from "../models/data";
+import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
 import { Insights } from "../models/insights";
 import {
@@ -70,7 +72,7 @@ import {
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { ExecutionConsole } from "../utils/executionConsole";
 import { openUrl } from "../utils/openUrl";
-import { sanitizeQuery } from "../utils/queryUtils";
+import { handleWSResults, sanitizeQuery } from "../utils/queryUtils";
 import {
   validateServerAlias,
   validateServerName,
@@ -146,6 +148,81 @@ export async function addInsightsConnection() {
   });
 }
 
+// Not possible to test secrets
+/* istanbul ignore next */
+export function addAuthConnection(serverKey: string): void {
+  const connectionUsername: InputBoxOptions = {
+    prompt: connectionUsernameInput.prompt,
+    placeHolder: connectionUsernameInput.placeholder,
+    validateInput: (value: string | undefined) => validateServerUsername(value),
+  };
+  const connectionPassword: InputBoxOptions = {
+    prompt: connectionPasswordInput.prompt,
+    placeHolder: connectionPasswordInput.placeholder,
+    password: true,
+  };
+  window.showInputBox(connectionUsername).then(async (username) => {
+    if (username?.trim()?.length) {
+      window.showInputBox(connectionPassword).then(async (password) => {
+        if (password?.trim()?.length) {
+          const servers: Server | undefined = getServers();
+          // store secrets
+          if (
+            (username != undefined || username != "") &&
+            (password != undefined || password != "") &&
+            servers &&
+            servers[serverKey]
+          ) {
+            servers[serverKey].auth = true;
+            ext.secretSettings.storeAuthData(
+              serverKey,
+              `${username}:${password}`
+            );
+            await updateServers(servers);
+            const newServers = getServers();
+            if (newServers != undefined) {
+              ext.serverProvider.refresh(newServers);
+            }
+          }
+        }
+      });
+    }
+  });
+}
+
+export async function enableTLS(serverKey: string): Promise<void> {
+  const servers: Server | undefined = getServers();
+
+  // validate if TLS is possible
+  if (ext.openSslVersion === null) {
+    window
+      .showErrorMessage(
+        "OpenSSL not found, please ensure this is installed",
+        "More Info",
+        "Cancel"
+      )
+      .then(async (result) => {
+        if (result === "More Info") {
+          await openUrl("https://code.kx.com/q/kb/ssl/");
+        }
+      });
+    return;
+  }
+  if (servers && servers[serverKey]) {
+    servers[serverKey].tls = true;
+    await updateServers(servers);
+    const newServers = getServers();
+    if (newServers != undefined) {
+      ext.serverProvider.refresh(newServers);
+    }
+    return;
+  }
+  window.showErrorMessage(
+    "Server not found, please ensure this is a correct server",
+    "Cancel"
+  );
+}
+
 export function addKdbConnection(): void {
   const connectionAlias: InputBoxOptions = {
     prompt: connectionAliasInput.prompt,
@@ -162,16 +239,6 @@ export function addKdbConnection(): void {
     placeHolder: connectionPortInput.placeholder,
     validateInput: (value: string | undefined) => validateServerPort(value),
   };
-  const connectionUsername: InputBoxOptions = {
-    prompt: connectionUsernameInput.prompt,
-    placeHolder: connectionUsernameInput.placeholder,
-    validateInput: (value: string | undefined) => validateServerUsername(value),
-  };
-  const connectionPassword: InputBoxOptions = {
-    prompt: connectionPasswordInput.prompt,
-    placeHolder: connectionPasswordInput.placeholder,
-    password: true,
-  };
 
   const connectionTls: InputBoxOptions = {
     prompt: connnectionTls.prompt,
@@ -184,102 +251,54 @@ export function addKdbConnection(): void {
       if (hostname) {
         window.showInputBox(connectionPort).then(async (port) => {
           if (port) {
-            window.showInputBox(connectionUsername).then(async (username) => {
-              window.showInputBox(connectionPassword).then(async (password) => {
-                window.showInputBox(connectionTls).then(async (tls) => {
-                  let tlsEnabled;
-                  if (tls !== undefined && tls === "true") {
-                    tlsEnabled = true;
-                  } else {
-                    tlsEnabled = false;
-                  }
+            let servers: Server | undefined = getServers();
 
-                  // validate if TLS is possible
-                  if (tlsEnabled && ext.openSslVersion === null) {
-                    window
-                      .showErrorMessage(
-                        "OpenSSL not found, please ensure this is installed",
-                        "More Info",
-                        "Cancel"
-                      )
-                      .then(async (result) => {
-                        if (result === "More Info") {
-                          await openUrl("https://code.kx.com/q/kb/ssl/");
-                        }
-                      });
-                    return;
-                  }
+            if (
+              servers != undefined &&
+              servers[getHash(`${hostname}:${port}`)]
+            ) {
+              await window.showErrorMessage(
+                `Server ${hostname}:${port} already exists.`
+              );
+            } else {
+              const key =
+                alias != undefined
+                  ? getHash(`${hostname}${port}${alias}`)
+                  : getHash(`${hostname}${port}`);
+              if (servers === undefined) {
+                servers = {
+                  key: {
+                    auth: false,
+                    serverName: hostname,
+                    serverPort: port,
+                    serverAlias: alias,
+                    managed: alias === "local" ? true : false,
+                    tls: false,
+                  },
+                };
+                if (servers[0].managed) {
+                  await addLocalConnectionContexts(getServerName(servers[0]));
+                }
+              } else {
+                servers[key] = {
+                  auth: false,
+                  serverName: hostname,
+                  serverPort: port,
+                  serverAlias: alias,
+                  managed: alias === "local" ? true : false,
+                  tls: false,
+                };
+                if (servers[key].managed) {
+                  await addLocalConnectionContexts(getServerName(servers[key]));
+                }
+              }
 
-                  // store secrets
-                  let authUsed = false;
-                  if (
-                    (username != undefined || username != "") &&
-                    (password != undefined || password != "")
-                  ) {
-                    authUsed = true;
-                    ext.secretSettings.storeAuthData(
-                      alias !== undefined
-                        ? getHash(`${hostname}${port}${alias}`)
-                        : getHash(`${hostname}${port}`),
-                      `${username}:${password}`
-                    );
-                  }
-
-                  let servers: Server | undefined = getServers();
-
-                  if (
-                    servers != undefined &&
-                    servers[getHash(`${hostname}:${port}`)]
-                  ) {
-                    await window.showErrorMessage(
-                      `Server ${hostname}:${port} already exists.`
-                    );
-                  } else {
-                    const key =
-                      alias != undefined
-                        ? getHash(`${hostname}${port}${alias}`)
-                        : getHash(`${hostname}${port}`);
-                    if (servers === undefined) {
-                      servers = {
-                        key: {
-                          auth: authUsed,
-                          serverName: hostname,
-                          serverPort: port,
-                          serverAlias: alias,
-                          managed: alias === "local" ? true : false,
-                          tls: tlsEnabled,
-                        },
-                      };
-                      if (servers[0].managed) {
-                        await addLocalConnectionContexts(
-                          getServerName(servers[0])
-                        );
-                      }
-                    } else {
-                      servers[key] = {
-                        auth: authUsed,
-                        serverName: hostname,
-                        serverPort: port,
-                        serverAlias: alias,
-                        managed: alias === "local" ? true : false,
-                        tls: tlsEnabled,
-                      };
-                      if (servers[key].managed) {
-                        await addLocalConnectionContexts(
-                          getServerName(servers[key])
-                        );
-                      }
-                    }
-
-                    await updateServers(servers);
-                    const newServers = getServers();
-                    if (newServers != undefined) {
-                      ext.serverProvider.refresh(newServers);
-                    }
-                  }
-                });
-              });
-            });
+              await updateServers(servers);
+              const newServers = getServers();
+              if (newServers != undefined) {
+                ext.serverProvider.refresh(newServers);
+              }
+            }
           }
         });
       }
@@ -288,6 +307,10 @@ export function addKdbConnection(): void {
 }
 
 export async function removeConnection(viewItem: KdbNode): Promise<void> {
+  if (viewItem.label.indexOf("connected") !== -1) {
+    await disconnect();
+  }
+
   const servers: Server | undefined = getServers();
 
   const key =
@@ -314,6 +337,14 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
 }
 
 export async function connectInsights(viewItem: InsightsNode): Promise<void> {
+  if (env.remoteName === "ssh-remote") {
+    window.showErrorMessage(
+      "Connecting to a kdb Insights Enterprise server with a remote connection is not supported.",
+      ""
+    );
+    return;
+  }
+
   commands.executeCommand("kdb-results.focus");
 
   await getCurrentToken(viewItem.details.server, viewItem.details.alias);
@@ -450,29 +481,29 @@ export async function getDataInsights(
 export async function importScratchpad(
   variableName: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params: any
+  params: DataSourceFiles
 ): Promise<void> {
   if (ext.connectionNode instanceof InsightsNode) {
     let queryParams, coreUrl: string;
-    switch (params.selectedType) {
-      case "API":
+    switch (params.dataSource.selectedType) {
+      case DataSourceTypes.API:
         queryParams = {
-          table: params.selectedTable,
-          startTS: params.startTS,
-          endTS: params.endTS,
+          table: params.dataSource.api.table,
+          startTS: params.dataSource.api.startTS,
+          endTS: params.dataSource.api.endTS,
         };
         coreUrl = ext.insightsScratchpadUrls.import;
         break;
-      case "SQL":
-        queryParams = { query: params.sql };
+      case DataSourceTypes.SQL:
+        queryParams = { query: params.dataSource.sql.query };
         coreUrl = ext.insightsScratchpadUrls.importSql;
         break;
-      case "QSQL":
-        const assemblyParts = params.selectedTarget.split(" ");
+      case DataSourceTypes.QSQL:
+        const assemblyParts = params.dataSource.qsql.selectedTarget.split(" ");
         queryParams = {
           assembly: assemblyParts[0],
           target: assemblyParts[1],
-          query: params.qsql,
+          query: params.dataSource.qsql.query,
         };
         coreUrl = ext.insightsScratchpadUrls.importQsql;
         break;
@@ -552,6 +583,7 @@ export async function getScratchpadQuery(
   context?: string
 ): Promise<any | undefined> {
   if (ext.connectionNode instanceof InsightsNode) {
+    const isTableView = ext.resultsViewProvider.isVisible();
     const scratchpadURL = new url.URL(
       ext.insightsAuthUrls.scratchpadURL,
       ext.connectionNode.details.server
@@ -582,7 +614,14 @@ export async function getScratchpadQuery(
         Authorization: `Bearer ${token.accessToken}`,
         Username: username.preferred_username,
       },
-      body: { expression: query, language: "q", context: context || "." },
+      body: {
+        expression: query,
+        isTableView,
+        language: "q",
+        context: context || ".",
+        sampleFn: "first",
+        sampleSize: 10000,
+      },
       json: true,
     };
 
@@ -602,7 +641,17 @@ export async function getScratchpadQuery(
           scratchpadURL.toString(),
           options
         );
-
+        if (
+          isTableView &&
+          spRes?.data &&
+          Array.isArray(spRes.data) &&
+          !spRes.error
+        ) {
+          const buffer = new Uint8Array(
+            spRes.data.map((x: string) => parseInt(x, 16))
+          ).buffer;
+          return handleWSResults(buffer);
+        }
         return spRes;
       }
     );
@@ -614,6 +663,10 @@ export async function getScratchpadQuery(
 export async function removeInsightsConnection(
   viewItem: InsightsNode
 ): Promise<void> {
+  if (viewItem.label.indexOf("connected") !== -1) {
+    await disconnect();
+  }
+
   const insights: Insights | undefined = getInsights();
 
   const key = getHash(viewItem.details.server);
@@ -635,6 +688,7 @@ export async function removeInsightsConnection(
 export async function connect(viewItem: KdbNode): Promise<void> {
   commands.executeCommand("kdb-results.focus");
   await commands.executeCommand("setContext", "kdb.insightsConnected", false);
+  const queryConsole = ExecutionConsole.start();
   // handle cleaning up existing connection
   if (
     ext.connectionNode !== undefined &&
@@ -759,8 +813,14 @@ export async function executeQuery(
     writeScratchpadResult(queryRes, query);
   } else if (ext.connection !== undefined && ext.connection.connected) {
     query = sanitizeQuery(query);
-    const queryRes = await ext.connection.executeQuery(query, context);
-    writeQueryResult(queryRes, query);
+
+    if (ext.resultsViewProvider.isVisible()) {
+      const queryRes = await ext.connection.executeQuery(query, context, false);
+      writeQueryResultsToView(queryRes, query);
+    } else {
+      const queryRes = await ext.connection.executeQuery(query, context, true);
+      writeQueryResultsToConsole(queryRes, query);
+    }
   } else {
     const isConnected = ext.connection
       ? ext.connection.connected
@@ -810,7 +870,7 @@ export function getQueryContext(lineNum?: number): string {
   return context;
 }
 
-export function runQuery(type: ExecutionTypes) {
+export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
   const editor = window.activeTextEditor;
   if (editor) {
     let context;
@@ -830,8 +890,9 @@ export function runQuery(type: ExecutionTypes) {
         }
         break;
       case ExecutionTypes.QueryFile:
+      case ExecutionTypes.ReRunQuery:
       default:
-        query = editor.document.getText();
+        query = rerunQuery ? rerunQuery : editor.document.getText();
         context = getQueryContext();
     }
     executeQuery(query, context);
@@ -863,7 +924,7 @@ export async function loadServerObjects(): Promise<ServerObject[]> {
   }
 }
 
-export function writeQueryResult(
+export function writeQueryResultsToConsole(
   result: string | string[],
   query: string,
   dataSourceType?: string
@@ -890,7 +951,17 @@ export function writeQueryResult(
   }
 }
 
-function writeScratchpadResult(result: ScratchpadResult, query: string): void {
+export function writeQueryResultsToView(
+  result: any,
+  dataSourceType?: string
+): void {
+  commands.executeCommand("kdb.resultsPanel.update", result, dataSourceType);
+}
+
+export function writeScratchpadResult(
+  result: ScratchpadResult,
+  query: string
+): void {
   const queryConsole = ExecutionConsole.start();
 
   if (result.error) {
@@ -901,10 +972,10 @@ function writeScratchpadResult(result: ScratchpadResult, query: string): void {
       ext.connectionNode?.label ? ext.connectionNode.label : ""
     );
   } else {
-    queryConsole.append(
-      result.data,
-      query,
-      ext.connectionNode?.label ? ext.connectionNode.label : ""
-    );
+    if (ext.resultsViewProvider.isVisible()) {
+      writeQueryResultsToView(result, "SCRATCHPAD");
+    } else {
+      writeQueryResultsToConsole(result.data, query);
+    }
   }
 }
