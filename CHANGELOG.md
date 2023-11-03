@@ -2,6 +2,25 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
+# v1.1.0
+
+### Enhancements
+
+- Updated connection creation workflow
+- Reduced visual noise in output pane
+
+### Fixes
+
+- Several fixes for results tab
+- Fix where uppercase variables are flagged as issues
+- Fix where removing connection did not disconnect first
+- Fixes for highlighting and indenting
+- Fix to remove option to run q in a new instance if not available
+
+### Internal Improvements
+
+- Updated authentication service
+- Improved datasource rendering
 
 # v1.0.1
 
