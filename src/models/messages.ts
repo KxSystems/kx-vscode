@@ -11,10 +11,12 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import {
-  allComponents,
-  provideVSCodeDesignSystem,
-} from "@vscode/webview-ui-toolkit";
-import "./components/kdbDataSourceView";
+import { DataSourceFiles } from "./dataSource";
+import { MetaObjectPayload } from "./meta";
 
-provideVSCodeDesignSystem().register(allComponents);
+export type DataSourceMessage = {
+  isInsights: boolean;
+  insightsMeta: MetaObjectPayload;
+  dataSourceName: string;
+  dataSourceFile: DataSourceFiles;
+};

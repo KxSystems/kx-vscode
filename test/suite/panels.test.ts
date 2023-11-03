@@ -12,14 +12,17 @@
  */
 
 import assert from "assert";
+import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { defaultDataSourceFile } from "../../src/models/dataSource";
+import { ext } from "../../src/extensionVariables";
+import { createDefaultDataSourceFile } from "../../src/models/dataSource";
 import { DataSourcesPanel } from "../../src/panels/datasource";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
+import * as utils from "../../src/utils/execution";
 
 describe("WebPanels", () => {
   describe("DataSourcesPanel", () => {
-    const dsTest = defaultDataSourceFile;
+    const dsTest = createDefaultDataSourceFile();
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
 
     beforeEach(() => {
@@ -46,22 +49,12 @@ describe("WebPanels", () => {
       );
     });
 
-    it("should make sure the datasource is rendered, check if the tabs exists", () => {
-      const expectedHtmlTab1 = `<vscode-panel-tab id="tab-1" class="type-tab">API</vscode-panel-tab>`;
-      const expectedHtmlTab2 = `<vscode-panel-tab id="tab-2" class="type-tab">QSQL</vscode-panel-tab>`;
-      const expectedHtmlTab3 = `<vscode-panel-tab id="tab-3" class="type-tab">SQL</vscode-panel-tab>`;
+    it("should make sure the datasource is rendered, check if the web component exists", () => {
+      const expectedHtml = `<kdb-data-source-view></kdb-data-source-view>`;
       const actualHtml = DataSourcesPanel.currentPanel._panel.webview.html;
       assert.ok(
-        actualHtml.indexOf(expectedHtmlTab1) !== -1,
-        "Panel HTML should include expected TAB btn 1"
-      );
-      assert.ok(
-        actualHtml.indexOf(expectedHtmlTab2) !== -1,
-        "Panel HTML should include expected TAB btn 2"
-      );
-      assert.ok(
-        actualHtml.indexOf(expectedHtmlTab3) !== -1,
-        "Panel HTML should include expected TAB btn 3"
+        actualHtml.indexOf(expectedHtml) !== -1,
+        "Panel HTML should include expected web component"
       );
     });
   });
@@ -110,21 +103,172 @@ describe("WebPanels", () => {
         const actualString = resultsPanel.sanitizeString(inputString);
         assert.strictEqual(actualString, expectedString);
       });
+
+      it("should transform an array of strings into a single string", () => {
+        const inputString = ["test", "string", "with", "array"];
+        const expectedString = "test string with array";
+        const actualString = resultsPanel.sanitizeString(inputString);
+        assert.strictEqual(actualString, expectedString);
+      });
+    });
+
+    describe("isVisible()", () => {
+      const uriTest: vscode.Uri = vscode.Uri.parse("test");
+      let resultsPanel: KdbResultsViewProvider;
+      const view: vscode.WebviewView = {
+        visible: true,
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        show: (): void => {},
+        viewType: "kdb-results",
+        webview: {
+          options: {},
+          html: "",
+          cspSource: "",
+          asWebviewUri: (uri: vscode.Uri) => uri,
+          onDidReceiveMessage: new vscode.EventEmitter<any>().event,
+          postMessage: (): Thenable<boolean> => {
+            return Promise.resolve(true);
+          },
+        },
+        onDidDispose: new vscode.EventEmitter<void>().event,
+        onDidChangeVisibility: new vscode.EventEmitter<null>().event,
+      };
+
+      beforeEach(() => {
+        resultsPanel = new KdbResultsViewProvider(uriTest);
+      });
+      it("should return false if the panel is not visible", () => {
+        const actualVisibility = resultsPanel.isVisible();
+        assert.strictEqual(actualVisibility, false);
+      });
+
+      it("should return false if the panel visible", () => {
+        resultsPanel["_view"] = view;
+        const actualVisibility = resultsPanel.isVisible();
+        assert.strictEqual(actualVisibility, true);
+      });
     });
 
     describe("convertToGrid()", () => {
-      it("should return '<p>No results to show</p>' if queryResult is an empty string", () => {
-        const inputQueryResult = "";
-        const expectedOutput = "<p>No results to show</p>";
+      it("should return 'gridOptions' if queryResult is an empty string", () => {
+        const inputQueryResult = [{ a: "1" }, { a: "2" }, { a: "3" }];
+        const expectedOutput =
+          '{"defaultColDef":{"sortable":true,"resizable":true,"filter":true,"flex":1,"minWidth":100},"rowData":[{"a":"1"},{"a":"2"},{"a":"3"}],"columnDefs":[{"field":"a","headerName":"a"}],"domLayout":"autoHeight","pagination":true,"paginationPageSize":100,"cacheBlockSize":100,"enableCellTextSelection":true,"ensureDomOrder":true,"suppressContextMenu":true}';
         const actualOutput = resultsPanel.convertToGrid(inputQueryResult);
         assert.strictEqual(actualOutput, expectedOutput);
       });
+    });
 
-      it("should return a string with the query result if queryResult is a string with one value", () => {
-        const inputQueryResult = "test string";
-        const expectedOutput = "<p>test string</p>";
-        const actualOutput = resultsPanel.convertToGrid(inputQueryResult);
-        assert.strictEqual(actualOutput, expectedOutput);
+    describe("removeEndCommaFromStrings", () => {
+      it("should remove the comma from the end of a string if it ends with a comma", () => {
+        const input = ["hello,", "world,"];
+        const expectedOutput = ["hello", "world"];
+        const actualOutput = resultsPanel.removeEndCommaFromStrings(input);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+
+      it("should not modify a string if it does not end with a comma", () => {
+        const input = ["hello", "world"];
+        const expectedOutput = ["hello", "world"];
+        const actualOutput = resultsPanel.removeEndCommaFromStrings(input);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+
+      it("should return an empty array if the input is an empty array", () => {
+        const input: string[] = [];
+        const expectedOutput: string[] = [];
+        const actualOutput = resultsPanel.removeEndCommaFromStrings(input);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+    });
+
+    describe("exportToCsv()", () => {
+      it("should show error message if no results to export", () => {
+        const windowMock = sinon.mock(vscode.window);
+        const workspaceMock = sinon.mock(vscode.workspace);
+        const exportToCsvStub = sinon.stub(utils, "exportToCsv");
+        windowMock
+          .expects("showErrorMessage")
+          .once()
+          .withArgs("No results to export");
+
+        ext.resultPanelCSV = "";
+
+        workspaceMock.expects("getWorkspaceFolder").never();
+
+        resultsPanel.exportToCsv();
+
+        windowMock.verify();
+        workspaceMock.verify();
+        exportToCsvStub.notCalled;
+      });
+    });
+
+    describe("convertToCsv()", () => {
+      it("should return string array from objects", () => {
+        const inputQueryResult = [
+          { a: "1", b: "1" },
+          { a: "2", b: "2" },
+          { a: "3", b: "3" },
+        ];
+        const expectedOutput = ["a,b", "1,1", "2,2", "3,3"];
+        const actualOutput = resultsPanel.convertToCsv(inputQueryResult);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+    });
+
+    describe("_getWebviewContent", () => {
+      const uriTest: vscode.Uri = vscode.Uri.parse("test");
+      let resultsPanel: KdbResultsViewProvider;
+      const view: vscode.WebviewView = {
+        visible: true,
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
+        show: (): void => {},
+        viewType: "kdb-results",
+        webview: {
+          options: {},
+          html: "",
+          cspSource: "",
+          asWebviewUri: (uri: vscode.Uri) => uri,
+          onDidReceiveMessage: new vscode.EventEmitter<any>().event,
+          postMessage: (): Thenable<boolean> => {
+            return Promise.resolve(true);
+          },
+        },
+        onDidDispose: new vscode.EventEmitter<void>().event,
+        onDidChangeVisibility: new vscode.EventEmitter<null>().event,
+      };
+
+      beforeEach(() => {
+        resultsPanel = new KdbResultsViewProvider(uriTest);
+        resultsPanel["_view"] = view;
+      });
+
+      it("returns a table", () => {
+        const input = [
+          { id: 1, test: "test1" },
+          { id: 2, test: "test2" },
+        ];
+        const expectedOutput = `"rowData":[{"id":"1","test":"test1"},{"id":"2","test":"test2"}],"columnDefs":[{"field":"id","headerName":"id"},{"field":"test","headerName":"test"}]`;
+        const actualOutput = resultsPanel["_getWebviewContent"](input);
+        assert.strictEqual(typeof actualOutput, "string");
+        assert.ok(actualOutput.includes(expectedOutput));
+      });
+
+      it("returns no results", () => {
+        const input = "Test";
+        const expectedOutput = `<p>Test</p>`;
+        const actualOutput = resultsPanel["_getWebviewContent"](input);
+        assert.strictEqual(typeof actualOutput, "string");
+        assert.ok(actualOutput.includes(expectedOutput));
+      });
+
+      it("returns no results", () => {
+        const input = "";
+        const expectedOutput = `<p>No results to show</p>`;
+        const actualOutput = resultsPanel["_getWebviewContent"](input);
+        assert.strictEqual(typeof actualOutput, "string");
+        assert.ok(actualOutput.includes(expectedOutput));
       });
     });
   });

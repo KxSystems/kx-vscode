@@ -11,7 +11,6 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { GridOptions } from "ag-grid-community";
 import {
   ColorThemeKind,
   Uri,
@@ -55,10 +54,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     });
   }
 
-  public updateResults(
-    queryResults: string | string[],
-    dataSourceType?: string
-  ) {
+  public updateResults(queryResults: any, dataSourceType?: string) {
     if (this._view) {
       this._view.show?.(true);
       this._view.webview.postMessage(queryResults);
@@ -67,6 +63,28 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         dataSourceType
       );
     }
+  }
+
+  public removeEndCommaFromStrings(data: string[]): string[] {
+    return data.map((element) => {
+      if (element.endsWith(",")) {
+        return element.slice(0, -1);
+      }
+      return element;
+    });
+  }
+
+  convertToCsv(data: any[]): string[] {
+    const keys = Object.keys(data[0]);
+    const header = keys.join(",");
+    const rows = data.map((obj) => {
+      return keys
+        .map((key) => {
+          return obj[key];
+        })
+        .join(",");
+    });
+    return [header, ...rows];
   }
 
   exportToCsv() {
@@ -83,32 +101,24 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     utils.exportToCsv(workspaceUri);
   }
 
-  convertToGrid(queryResult: any): string | GridOptions {
-    if (queryResult === "") {
-      return `<p>No results to show</p>`;
-    }
-
-    const vectorRes =
-      typeof queryResult === "string"
-        ? utils.convertResultStringToVector(queryResult)
-        : utils.convertResultToVector(queryResult);
-    if (vectorRes.length === 1) {
-      return `<p>${vectorRes[0]}</p>`;
-    }
-    ext.resultPanelCSV = vectorRes.map((row) => row.join(",")).join("\n");
-    const keys = vectorRes[0];
-    const value = vectorRes.slice(1);
-    const rowData = value.map((row) =>
-      keys.reduce((obj: any, key: string, index: number) => {
-        key = this.sanitizeString(key);
-        obj[key] = this.sanitizeString(row[index]);
-        return obj;
-      }, {})
-    );
-    const columnDefs = keys.map((str: string) => ({
-      field: this.sanitizeString(str),
-    }));
-    return {
+  convertToGrid(queryResult: any[]): string {
+    const columnDefs = Object.keys(queryResult[0]).map((key: string) => {
+      const sanitizedKey = this.sanitizeString(key);
+      return { field: sanitizedKey, headerName: sanitizedKey };
+    });
+    const rowData = queryResult.map((row: any) => {
+      for (const key in row) {
+        if (Object.prototype.hasOwnProperty.call(row, key)) {
+          row[key] =
+            row[key] !== undefined && row[key] !== null
+              ? this.sanitizeString(row[key])
+              : "";
+        }
+      }
+      return row;
+    });
+    ext.resultPanelCSV = this.convertToCsv(rowData).join("\n");
+    return JSON.stringify({
       defaultColDef: {
         sortable: true,
         resizable: true,
@@ -122,10 +132,21 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       pagination: true,
       paginationPageSize: 100,
       cacheBlockSize: 100,
-    };
+      enableCellTextSelection: true,
+      ensureDomOrder: true,
+      suppressContextMenu: true,
+    });
   }
 
-  sanitizeString(str: string): string {
+  isVisible(): boolean {
+    return !!this._view?.visible;
+  }
+
+  sanitizeString(str: string | string[]): string {
+    if (str instanceof Array) {
+      str = str.join(" ");
+    }
+    str = str.toString();
     str = str.trim();
     str = str.replace(/['"`]/g, "");
     str = str.replace(/\$\{/g, "");
@@ -139,12 +160,14 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     return "ag-theme-alpine";
   }
 
-  private _getWebviewContent(
-    queryResult: string | string[],
-    _dataSourceType?: string
-  ) {
+  private _getLibUri(path: string) {
+    return this._view
+      ? getUri(this._view.webview, this._extensionUri, ["out", path])
+      : "";
+  }
+
+  private _getWebviewContent(queryResult: any, _dataSourceType?: string) {
     ext.resultPanelCSV = "";
-    let rowsCount = 0;
     this._results = queryResult;
     const agGridTheme = this.defineAgGridTheme();
     if (this._view) {
@@ -153,71 +176,24 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         "webview.js",
       ]);
       const nonce = getNonce();
-      const styleUri = getUri(this._view.webview, this._extensionUri, [
-        "out",
-        "resultsPanel.css",
-      ]);
-      const resetStyleUri = getUri(this._view.webview, this._extensionUri, [
-        "out",
-        "reset.css",
-      ]);
-      const vscodeStyleUri = getUri(this._view.webview, this._extensionUri, [
-        "out",
-        "vscode.css",
-      ]);
-      const agGridJS = getUri(this._view.webview, this._extensionUri, [
-        "out",
-        "ag-grid-community.min.js",
-      ]);
-      const agGridStyle = getUri(this._view.webview, this._extensionUri, [
-        "out",
-        "ag-grid.min.css",
-      ]);
-      const agGridThemeStyle = getUri(this._view.webview, this._extensionUri, [
-        "out",
-        "ag-theme-alpine.min.css",
-      ]);
       let result = "";
       let gridOptionsString = "";
-      let rowsLimited = "";
-      if (typeof queryResult === "string" && queryResult.endsWith("\n..\n")) {
-        queryResult = queryResult.slice(0, -4);
-        rowsLimited =
-          "<p>Showing results returned from q instance, that is limited by your q settings";
-      } else if (
-        queryResult instanceof Array &&
-        queryResult.length > 0 &&
-        queryResult[queryResult.length - 1].endsWith("\n..\n")
-      ) {
-        queryResult[0] = queryResult[0].slice(0, -4);
-        rowsLimited =
-          "<p>Showing results returned from q instance, that is limited by your q settings";
-      }
-      if (queryResult !== "") {
-        const convertedGrid = this.convertToGrid(queryResult);
-        if (typeof convertedGrid === "string") {
-          result = convertedGrid;
-        } else {
-          gridOptionsString = JSON.stringify(convertedGrid);
-        }
-      }
-      const isGrid =
-        gridOptionsString !== "" &&
-        gridOptionsString !== "<p>No results to show</p>";
 
-      const gridOptionsObj = isGrid ? JSON.parse(gridOptionsString) : "";
-      const gridRows = isGrid ? [...gridOptionsObj.rowData] : "";
-      if (isGrid) {
-        const totalRowsLenght = JSON.stringify(gridRows).length;
-        if (totalRowsLenght > ext.rowLimit) {
-          const sampleRowLength = JSON.stringify(gridRows[0]).length;
-          rowsCount = Math.round(ext.rowLimit / sampleRowLength);
-          rowsLimited = `<p>Showing ${rowsCount} of ${gridRows.length} rows due high amount of data, to retrieve the entire data, export to CSV</p>`;
-          const expectedRows = gridRows.slice(0, rowsCount);
-          gridOptionsObj.rowData = expectedRows;
-          gridOptionsString = JSON.stringify(gridOptionsObj);
-        }
+      let isGrid = false;
+      if (typeof queryResult === "string" || typeof queryResult === "number") {
+        result =
+          queryResult !== ""
+            ? `<p>${queryResult}</p>`
+            : "<p>No results to show</p>";
+      } else if (
+        typeof queryResult === "object" &&
+        queryResult !== null &&
+        queryResult instanceof Array
+      ) {
+        isGrid = true;
+        gridOptionsString = this.convertToGrid(queryResult);
       }
+
       result =
         gridOptionsString === ""
           ? result !== ""
@@ -230,19 +206,22 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-        <link rel="stylesheet" href="${resetStyleUri}" />
-        <link rel="stylesheet" href="${vscodeStyleUri}" />
-        <link rel="stylesheet" href="${styleUri}" />
-        <link rel="stylesheet" href="${agGridStyle}" />
-        <link rel="stylesheet" href="${agGridThemeStyle}" />
+        <link rel="stylesheet" href="${this._getLibUri("reset.css")}" />
+        <link rel="stylesheet" href="${this._getLibUri("vscode.css")}" />
+        <link rel="stylesheet" href="${this._getLibUri("resultsPanel.css")}" />
+        <link rel="stylesheet" href="${this._getLibUri("ag-grid.min.css")}" />
+        <link rel="stylesheet" href="${this._getLibUri(
+          "ag-theme-alpine.min.css"
+        )}" />
         <title>Q Results</title>
-        <script nonce="${nonce}" src="${agGridJS}"></script>
+        <script nonce="${nonce}" src="${this._getLibUri(
+        "ag-grid-community.min.js"
+      )}"></script>
       </head>
       <body>      
-        <div class="results-view-container">
+        <div id="results" class="results-view-container">
           <div class="content-wrapper">
               ${result}
-              ${rowsLimited}
             </div>
           </div>      
         <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
@@ -253,8 +232,12 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
               const gridDiv = document.getElementById('grid');
               const obj = JSON.parse('${gridOptionsString}');
               const gridApi = new agGrid.Grid(gridDiv, obj);
+              document.getElementById("results").scrollIntoView();
             }
           });
+          document.addEventListener('contextmenu', (e) => {
+            e.stopImmediatePropagation()
+          }, true);
         </script>
       </body>
     </html>

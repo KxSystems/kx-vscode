@@ -171,13 +171,51 @@ export function getServers(): Server | undefined {
   return workspace.getConfiguration().get("kdb.servers");
 }
 
+export function getHideDetailedConsoleQueryOutput(): void {
+  const setting = workspace
+    .getConfiguration()
+    .get<boolean | undefined>("kdb.hideDetailedConsoleQueryOutput");
+  if (setting === undefined) {
+    workspace
+      .getConfiguration()
+      .update(
+        "kdb.hideDetailedConsoleQueryOutput",
+        true,
+        ConfigurationTarget.Global
+      );
+    ext.hideDetailedConsoleQueryOutput = true;
+  } else {
+    ext.hideDetailedConsoleQueryOutput = setting;
+  }
+}
+export function setOutputWordWrapper(): void {
+  let existWrap = false;
+  const logConfig = workspace.getConfiguration("[Log]");
+  if (logConfig) {
+    const wordWrap = logConfig["editor.wordWrap"];
+    if (wordWrap) {
+      existWrap = true;
+    }
+  }
+  if (!existWrap) {
+    workspace
+      .getConfiguration()
+      .update(
+        "[Log]",
+        { "editor.wordWrap": "off" },
+        ConfigurationTarget.Global
+      );
+  }
+}
+
 export function getInsights(): Insights | undefined {
   const configuration = workspace.getConfiguration();
-  const insights = 
-    configuration.get<Insights>("kdb.insightsEnterpriseConnections");
+  const insights = configuration.get<Insights>(
+    "kdb.insightsEnterpriseConnections"
+  );
 
-  return insights && Object.keys(insights).length > 0 
-    ? insights 
+  return insights && Object.keys(insights).length > 0
+    ? insights
     : configuration.get("kdb.insights");
 }
 

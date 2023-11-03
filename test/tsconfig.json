@@ -3,12 +3,14 @@
     "module": "commonjs",
     "target": "ES2019",
     "outDir": "../out",
-    "lib": ["ES2019", "WebWorker", "DOM"],
+    "lib": ["ES2019", "WebWorker", "DOM", "DOM.Iterable"],
     "sourceMap": true,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "strict": false,
     "noImplicitAny": false,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "experimentalDecorators": true
   },
   "include": ["./**/*", "../src/**/*"],
   "exclude": ["node_modules", ".vscode-test"]

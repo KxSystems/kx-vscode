@@ -15,7 +15,10 @@ import * as nodeq from "node-q";
 import { commands, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { delay } from "../utils/core";
-import { handleQueryResults } from "../utils/execution";
+import {
+  convertArrayOfArraysToObjects,
+  handleQueryResults,
+} from "../utils/execution";
 import { queryWrapper } from "../utils/queryUtils";
 import { QueryResult, QueryResultType } from "./queryResult";
 
@@ -92,8 +95,9 @@ export class Connection {
 
   public async executeQuery(
     command: string,
-    context?: string
-  ): Promise<string> {
+    context?: string,
+    stringify?: boolean
+  ): Promise<any> {
     let result;
     let retryCount = 0;
     while (this.connection === undefined) {
@@ -109,12 +113,16 @@ export class Connection {
       wrapper,
       context ?? ".",
       command,
+      !!stringify,
       (err: Error, res: QueryResult) => {
         if (err) {
           result = handleQueryResults(err.toString(), QueryResultType.Error);
         } else if (res) {
           if (res.errored) {
-            result = handleQueryResults(res.error, QueryResultType.Error);
+            result = handleQueryResults(
+              res.error + (res.backtrace ? "\n" + res.backtrace : ""),
+              QueryResultType.Error
+            );
           } else {
             result = res.result;
           }
@@ -124,6 +132,10 @@ export class Connection {
 
     while (result === undefined || result === null) {
       await delay(500);
+    }
+
+    if (!stringify) {
+      result = convertArrayOfArraysToObjects(result);
     }
 
     return result;

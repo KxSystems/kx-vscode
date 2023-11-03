@@ -14,10 +14,19 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { TreeItemCollapsibleState } from "vscode";
+import { ext } from "../../src/extensionVariables";
+import * as QTable from "../../src/ipc/QTable";
 import { CancellationEvent } from "../../src/models/cancellationEvent";
 import { QueryResultType } from "../../src/models/queryResult";
+import { ServerType } from "../../src/models/server";
+import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
+import { QueryHistoryProvider } from "../../src/services/queryHistoryProvider";
+import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
+import * as coreUtils from "../../src/utils/core";
 import * as dataSourceUtils from "../../src/utils/dataSource";
 import * as executionUtils from "../../src/utils/execution";
+import * as executionConsoleUtils from "../../src/utils/executionConsole";
 import { getNonce } from "../../src/utils/getNonce";
 import { getUri } from "../../src/utils/getUri";
 import { openUrl } from "../../src/utils/openUrl";
@@ -49,6 +58,72 @@ describe("Utils", () => {
     windowMock.restore();
   });
 
+  describe("core", () => {
+    describe("setOutputWordWrapper", () => {
+      let getConfigurationStub: sinon.SinonStub;
+      beforeEach(() => {
+        getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
+      });
+
+      afterEach(() => {
+        getConfigurationStub.restore();
+      });
+      it("should create wordwrapper if doesn't exist", () => {
+        getConfigurationStub.returns({
+          get: sinon.stub().returns({ "[Log]": { "editor.wordWrap": "off" } }),
+          update: sinon.stub(),
+        });
+        coreUtils.setOutputWordWrapper();
+        sinon.assert.calledTwice(getConfigurationStub);
+      });
+
+      it("should let wordwrapper if it exist", () => {
+        getConfigurationStub.returns({ "editor.wordWrap": "on" });
+        coreUtils.setOutputWordWrapper();
+        sinon.assert.calledOnce(getConfigurationStub);
+      });
+    });
+
+    describe("getHideDetailedConsoleQueryOutput", () => {
+      let getConfigurationStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        getConfigurationStub = sinon.stub(
+          vscode.workspace,
+          "getConfiguration"
+        ) as sinon.SinonStub;
+      });
+
+      afterEach(() => {
+        getConfigurationStub.restore();
+      });
+
+      it("should update configuration and set hideDetailedConsoleQueryOutput to true when setting is undefined", async () => {
+        getConfigurationStub.returns({
+          get: sinon.stub().returns(undefined),
+          update: sinon.stub(),
+        });
+
+        await coreUtils.getHideDetailedConsoleQueryOutput();
+
+        sinon.assert.calledTwice(getConfigurationStub);
+        assert.strictEqual(ext.hideDetailedConsoleQueryOutput, true);
+      });
+
+      it("should set hideDetailedConsoleQueryOutput to setting when setting is defined", async () => {
+        getConfigurationStub.returns({
+          get: sinon.stub().returns(false),
+          update: sinon.stub(),
+        });
+
+        await coreUtils.getHideDetailedConsoleQueryOutput();
+
+        sinon.assert.calledOnce(getConfigurationStub);
+        assert.strictEqual(ext.hideDetailedConsoleQueryOutput, false);
+      });
+    });
+  });
+
   describe("dataSource", () => {
     // need check how to mock ext variables and populate it with values
     // it("createKdbDataSourcesFolder", () => {
@@ -58,27 +133,6 @@ describe("Utils", () => {
     //     "/Users/username/.vscode-server/data/User/kdb/dataSources"
     //   );
     // });
-
-    it("convertDataSourceFormToDataSourceFile", () => {
-      const form = {
-        name: "test",
-        selectedType: "api",
-        selectedApi: "test",
-        selectedTable: "test",
-        startTS: "test",
-        endTS: "test",
-        fill: "test",
-      };
-      const result =
-        dataSourceUtils.convertDataSourceFormToDataSourceFile(form);
-      assert.strictEqual(result.name, "test");
-      assert.strictEqual(result.dataSource.selectedType, "api");
-      assert.strictEqual(result.dataSource.api.selectedApi, "test");
-      assert.strictEqual(result.dataSource.api.table, "test");
-      assert.strictEqual(result.dataSource.api.startTS, "test");
-      assert.strictEqual(result.dataSource.api.endTS, "test");
-      assert.strictEqual(result.dataSource.api.fill, "test");
-    });
 
     it("convertTimeToTimestamp", () => {
       const result = dataSourceUtils.convertTimeToTimestamp("2021-01-01");
@@ -121,7 +175,7 @@ describe("Utils", () => {
       const results = "test";
       const type = QueryResultType.Error;
       const result = executionUtils.handleQueryResults(results, type);
-      assert.strictEqual(result, "!@#ERROR^&*%-test");
+      assert.strictEqual(result, "test");
     });
 
     it("convertArrayStringInVector", () => {
@@ -169,29 +223,215 @@ describe("Utils", () => {
         .toString();
       assert.equal(result, expectedRes);
     });
+
+    describe("convertArrayOfArraysToObjects", () => {
+      it("should return an empty array if the input is not an array", () => {
+        const result = executionUtils.convertArrayOfArraysToObjects(null);
+        assert.deepStrictEqual(result, null);
+      });
+
+      it("should return the input array if it is empty", () => {
+        const result = executionUtils.convertArrayOfArraysToObjects([]);
+        assert.deepStrictEqual(result, []);
+      });
+
+      it("should return the input array if the first row is not an array", () => {
+        const result = executionUtils.convertArrayOfArraysToObjects([1, 2, 3]);
+        assert.deepStrictEqual(result, [1, 2, 3]);
+      });
+
+      it("should return the input array if the first row is empty", () => {
+        const result = executionUtils.convertArrayOfArraysToObjects([[]]);
+        assert.deepStrictEqual(result, [[]]);
+      });
+
+      it("should return an empty array if any row has a different length than the first row", () => {
+        const result = executionUtils.convertArrayOfArraysToObjects([
+          [1, 2],
+          [3],
+        ]);
+        assert.deepStrictEqual(result, []);
+      });
+
+      it("should convert an array of arrays to an array of objects", () => {
+        const input = [
+          [{ b: 0 }, { b: 1 }, { b: 2 }],
+          [{ a: 0 }, { a: 1 }, { a: 2 }],
+        ];
+        const expectedOutput = [
+          { b: 0, a: 0 },
+          { b: 1, a: 1 },
+          { b: 2, a: 2 },
+        ];
+        const result = executionUtils.convertArrayOfArraysToObjects(input);
+        assert.deepStrictEqual(result, expectedOutput);
+      });
+    });
   });
 
-  // describe("executionConsole", () => {
-  //   let outputChannelMock: sinon.SinonMock;
-  //   let executionConsole: executionConsoleUtils.ExecutionConsole;
+  describe("executionConsole", () => {
+    ext.queryHistoryProvider = new QueryHistoryProvider();
 
-  //   beforeEach(() => {
-  //     outputChannelMock = sinon.mock(
-  //       vscode.window.createOutputChannel("Test Output Channel")
-  //       executionConsole = new executionConsoleUtils.ExecutionConsole();
-  //     );
-  //   });
+    describe("ExecutionConsole", () => {
+      let queryConsole: executionConsoleUtils.ExecutionConsole;
+      let getConfigurationStub: sinon.SinonStub;
+      const kdbNode = new KdbNode(
+        [],
+        "kdbnode1",
+        {
+          serverName: "kdbservername",
+          serverAlias: "kdbserveralias",
+          serverPort: "5001",
+          managed: false,
+          auth: false,
+          tls: false,
+        },
+        TreeItemCollapsibleState.None
+      );
 
-  //   afterEach(() => {
-  //     outputChannelMock.restore();
-  //   });
+      const insightsNode = new InsightsNode(
+        [],
+        "insightsnode1",
+        {
+          server: "insightsservername",
+          alias: "insightsserveralias",
+          auth: true,
+        },
+        TreeItemCollapsibleState.None
+      );
 
-  //   it("appendQuery", () => {
-  //     const query = "test";
-  //     const result = executionConsole.appendQuery(query);
-  //     assert.strictEqual(result, "evaluate.q");
-  //   });
-  // });
+      beforeEach(() => {
+        queryConsole = executionConsoleUtils.ExecutionConsole.start();
+
+        ext.kdbQueryHistoryList.length = 0;
+      });
+
+      it("should append and add queryHistory with kdbNode without details", () => {
+        getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
+        getConfigurationStub.returns({
+          get: sinon.stub().returns(true),
+          update: sinon.stub(),
+        });
+        const query = "SELECT * FROM table";
+        const output = "test";
+        const serverName = "testServer";
+
+        ext.connectionNode = kdbNode;
+
+        queryConsole.append(output, query, serverName);
+        assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+        assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
+        assert.strictEqual(
+          ext.kdbQueryHistoryList[0].connectionType,
+          ServerType.KDB
+        );
+
+        getConfigurationStub.restore();
+      });
+
+      it("should append and add queryHistory with kdbNode with details", () => {
+        getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
+        getConfigurationStub.returns({
+          get: sinon.stub().returns(false),
+          update: sinon.stub(),
+        });
+        const query = "SELECT * FROM table";
+        const output = "test";
+        const serverName = "testServer";
+
+        ext.connectionNode = kdbNode;
+
+        queryConsole.append(output, query, serverName);
+        assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+        assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
+        assert.strictEqual(
+          ext.kdbQueryHistoryList[0].connectionType,
+          ServerType.KDB
+        );
+        getConfigurationStub.restore();
+      });
+
+      it("should append and add queryHistory with insightsNode", () => {
+        const query = "SELECT * FROM table";
+        const output = "test";
+        const serverName = "testServer";
+
+        ext.connectionNode = insightsNode;
+
+        queryConsole.append(output, query, serverName);
+        assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+        assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
+        assert.strictEqual(
+          ext.kdbQueryHistoryList[0].connectionType,
+          ServerType.INSIGHTS
+        );
+      });
+
+      it("should return add query history error with kdbNode", () => {
+        const query = "SELECT * FROM table";
+        const output = "test";
+        const serverName = "testServer";
+
+        ext.connectionNode = kdbNode;
+
+        queryConsole.appendQueryError(query, output, true, serverName);
+        assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+        assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
+        assert.strictEqual(
+          ext.kdbQueryHistoryList[0].connectionType,
+          ServerType.KDB
+        );
+      });
+
+      it("should return add query history error with insightsNode", () => {
+        const query = "SELECT * FROM table";
+        const output = "test";
+        const serverName = "testServer";
+
+        ext.connectionNode = insightsNode;
+
+        queryConsole.appendQueryError(query, output, true, serverName);
+        assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+        assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
+        assert.strictEqual(
+          ext.kdbQueryHistoryList[0].connectionType,
+          ServerType.INSIGHTS
+        );
+      });
+
+      it("should return add query history error with no connection", () => {
+        const query = "SELECT * FROM table";
+        const output = "test";
+        const serverName = "testServer";
+
+        ext.connectionNode = insightsNode;
+
+        queryConsole.appendQueryError(query, output, false, serverName);
+        assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+        assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
+        assert.strictEqual(
+          ext.kdbQueryHistoryList[0].connectionType,
+          ServerType.undefined
+        );
+      });
+    });
+
+    it("addQueryHistory", () => {
+      const query = "SELECT * FROM table";
+      const connectionName = "test";
+      const connectionType = ServerType.KDB;
+
+      ext.kdbQueryHistoryList.length = 0;
+
+      executionConsoleUtils.addQueryHistory(
+        query,
+        connectionName,
+        connectionType,
+        true
+      );
+      assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+    });
+  });
 
   describe("getNonce", () => {
     it("should return a string with length 32", () => {
@@ -347,10 +587,55 @@ describe("Utils", () => {
       assert.strictEqual(sanitizedQuery2, "select from t");
     });
 
-    it("handleWSResults", () => {
-      const ab = new ArrayBuffer(128);
-      const result = queryUtils.handleWSResults(ab);
-      assert.strictEqual(result, "No results found.");
+    describe("getValueFromArray", () => {
+      it("should return the value of the 'Value' property if the input is an array with a single object with a 'Value' property", () => {
+        const input = [{ Value: "hello" }];
+        const expectedOutput = "hello";
+        const actualOutput = queryUtils.getValueFromArray(input);
+        assert.strictEqual(actualOutput, expectedOutput);
+      });
+
+      it("should return the input array if it is not an array with a single object with a 'Value' property", () => {
+        const input = ["hello", "world"];
+        const expectedOutput = ["hello", "world"];
+        const actualOutput = queryUtils.getValueFromArray(input);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+
+      it("should return the input array if it is an empty array", () => {
+        const input: any[] = [];
+        const expectedOutput: any[] = [];
+        const actualOutput = queryUtils.getValueFromArray(input);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+    });
+
+    describe("handleWSResults", () => {
+      it("should return no results found", () => {
+        const ab = new ArrayBuffer(128);
+        const result = queryUtils.handleWSResults(ab);
+        assert.strictEqual(result, "No results found.");
+      });
+
+      it("should return the result of getValueFromArray if the results are an array with a single object with a 'Value' property", () => {
+        const ab = new ArrayBuffer(128);
+        const expectedOutput = "10";
+        const uriTest: vscode.Uri = vscode.Uri.parse("test");
+        ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
+        const qtableStub = sinon.stub(QTable.default, "toLegacy").returns({
+          class: "203",
+          columns: ["Value"],
+          meta: { Value: 7 },
+          rows: [{ Value: "10" }],
+        });
+        const isVisibleStub = sinon
+          .stub(ext.resultsViewProvider, "isVisible")
+          .returns(true);
+        const convertRowsSpy = sinon.spy(queryUtils, "convertRows");
+        const result = queryUtils.handleWSResults(ab);
+        sinon.assert.notCalled(convertRowsSpy);
+        assert.strictEqual(result, expectedOutput);
+      });
     });
 
     it("convertRows", () => {
@@ -364,16 +649,29 @@ describe("Utils", () => {
           b: 4,
         },
       ];
-      const expectedRes = ["a,b", "1,2", "3,4"].toString();
+      const expectedRes = ["a#$#;#$#b", "1#$#;#$#2", "3#$#;#$#4"].toString();
       const result = queryUtils.convertRows(rows);
       assert.equal(result, expectedRes);
     });
 
     it("convertRowsToConsole", () => {
       const rows = ["a,b", "1,2", "3,4"];
-      const expectedRes = ["a  b  ", "------", "1  2  ", "3  4  "].toString();
+      const expectedRes = ["a,b  ", "-----", "1,2  ", "3,4  "].toString();
       const result = queryUtils.convertRowsToConsole(rows);
       assert.equal(result, expectedRes);
+    });
+
+    it("getConnectionType", () => {
+      const params: ServerType[] = [
+        ServerType.INSIGHTS,
+        ServerType.KDB,
+        ServerType.undefined,
+      ];
+      const expectedRes = ["insights", "kdb", "undefined"];
+      for (let i = 0; i < params.length; i++) {
+        const result = queryUtils.getConnectionType(params[i]);
+        assert.equal(result, expectedRes[i]);
+      }
     });
   });
 
