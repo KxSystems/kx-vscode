@@ -110,6 +110,14 @@ describe("WebPanels", () => {
         const actualString = resultsPanel.sanitizeString(inputString);
         assert.strictEqual(actualString, expectedString);
       });
+
+      it("should return a number", () => {
+        const inputString = 123;
+        const expectedString = 123;
+        const actualString = resultsPanel.sanitizeString(inputString);
+        assert.strictEqual(actualString, expectedString);
+        assert.ok(typeof actualString === "number");
+      });
     });
 
     describe("isVisible()", () => {
@@ -249,7 +257,7 @@ describe("WebPanels", () => {
           { id: 1, test: "test1" },
           { id: 2, test: "test2" },
         ];
-        const expectedOutput = `"rowData":[{"id":"1","test":"test1"},{"id":"2","test":"test2"}],"columnDefs":[{"field":"id","headerName":"id"},{"field":"test","headerName":"test"}]`;
+        const expectedOutput = `"rowData":[{"id":1,"test":"test1"},{"id":2,"test":"test2"}],"columnDefs":[{"field":"id","headerName":"id"},{"field":"test","headerName":"test"}]`;
         const actualOutput = resultsPanel["_getWebviewContent"](input);
         assert.strictEqual(typeof actualOutput, "string");
         assert.ok(actualOutput.includes(expectedOutput));
