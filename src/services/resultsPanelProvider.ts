@@ -135,6 +135,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       enableCellTextSelection: true,
       ensureDomOrder: true,
       suppressContextMenu: true,
+      suppressDragLeaveHidesColumns: true,
     });
   }
 
