@@ -29,7 +29,7 @@ export function decodeQUTF(text: string): string {
     return text
       .replace(/\\[23][0-7]{2}/g, decodeOctal)
       .split(
-        /((?:[\x00-\x7f]|[\xc0-\xdf][\x80-\xbf]|[\xe0-\xef][\x80-\xbf]{2}|[\xf0-\xf7][\x80-\xbf]{3}|[\u0100-\uFFFF])+)/
+        /((?:[!-~]|[\xc0-\xdf][\x80-\xbf]|[\xe0-\xef][\x80-\xbf]{2}|[\xf0-\xf7][\x80-\xbf]{3}|[\u0100-\uFFFF])+)/
       )
       .map(decodeUnicode)
       .join("");
