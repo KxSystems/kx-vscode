@@ -36,8 +36,45 @@
           "end": "^\\\\\\s*$"
         },
         {
+          "include": "#qdoc"
+        },
+        {
           "name": "comment.line.q",
           "match": "(?:(?<=\\r?\\n|[ \\t])|(?<!.))\\/.*"
+        }
+      ]
+    },
+    "qdoc": {
+      "patterns": [
+        {
+          "name": "comment.qdoc",
+          "begin": "(?:(?<=\\r?\\n|[ \\t])|(?<!.))\\/\\/",
+          "end": "\\r?\\n",
+          "patterns": [
+            {
+              "name": "storage.type.qdoc",
+              "match": "@\\b(?:author|category|deprecated|doctest|end|example|fileoverview|kind|name|private|see|subcategory|throws|todo|default-category|default-subcategory|typedef|fileOverview|param|desc|return[s]?|)\\b"
+            },
+            {
+              "name": "keyword.control.qdoc",
+              "begin": "{",
+              "end": "}",
+              "patterns": [
+                {
+                  "name": "entity.name.type.qdoc",
+                  "match": "\\b(type|atom|anything|dict|enum|function|hsym|option|string|table|tuple|typedef|vector|bool|boolean|byte|char|character|date|datetime|float|guid|int|integer|long|minute|month|real|second|short|string|symbol|time|timespan|timestamp)\\b"
+                }
+              ]
+            },
+            {
+              "name": "variable.other.qdoc",
+              "match": "[\\w.]+?(?=\\s*{.+})"
+            },
+            {
+              "name": "variable.other.qdoc",
+              "match": "\\s\\.[\\w.]+?\\s"
+            }
+          ]
         }
       ]
     },
