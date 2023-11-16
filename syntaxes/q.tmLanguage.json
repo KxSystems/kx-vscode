@@ -53,7 +53,7 @@
           "patterns": [
             {
               "name": "storage.type.qdoc",
-              "match": "@\\b(?:author|category|deprecated|doctest|end|example|fileoverview|kind|name|private|see|subcategory|throws|todo|default-category|default-subcategory|typedef|fileOverview|param|desc|return[s]?|)\\b"
+              "match": "@\\b(?:author|category|deprecated|doctest|end|example|fileoverview|kind|name|private|see|subcategory|throws|todo|default-category|default-subcategory|typedef|fileOverview|param|desc|return[s]?|overview)\\b"
             },
             {
               "name": "keyword.control.qdoc",
