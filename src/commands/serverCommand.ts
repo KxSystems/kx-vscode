@@ -69,6 +69,7 @@ import {
   updateServers,
 } from "../utils/core";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
+import { decodeQUTF } from "../utils/decode";
 import { ExecutionConsole } from "../utils/executionConsole";
 import { openUrl } from "../utils/openUrl";
 import {
@@ -937,13 +938,15 @@ export function writeQueryResultsToConsole(
   dataSourceType?: string
 ): void {
   const queryConsole = ExecutionConsole.start();
-  const res = Array.isArray(result) ? result[0] : result;
+  const res = Array.isArray(result)
+    ? decodeQUTF(result[0])
+    : decodeQUTF(result);
   if (
     (ext.connection || ext.connectionNode) &&
     !res.startsWith(queryConstants.error)
   ) {
     queryConsole.append(
-      result,
+      res,
       query,
       ext.connectionNode?.label ? ext.connectionNode.label : "",
       dataSourceType
