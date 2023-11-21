@@ -57,7 +57,7 @@ export function handleWSResults(ab: ArrayBuffer): any {
   }
 }
 
-export function handleScratchpadTableRes(scratchpadResponse: any[]): any {
+export function handleScratchpadTableRes(scratchpadResponse: any): any {
   if (!Array.isArray(scratchpadResponse)) {
     return scratchpadResponse;
   }
