@@ -12,15 +12,17 @@
  */
 
 import assert from "assert";
+import axios from "axios";
 import mock from "mock-fs";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { QuickPickItem, window } from "vscode";
+import { QuickPickItem, TreeItemCollapsibleState, window } from "vscode";
 import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
 import * as installTools from "../../src/commands/installTools";
 import {
   addKdbConnection,
   addNewConnection,
+  importScratchpad,
   writeQueryResultsToView,
 } from "../../src/commands/serverCommand";
 import * as walkthroughCommand from "../../src/commands/walkthroughCommand";
@@ -33,7 +35,11 @@ import {
 import { Insights } from "../../src/models/insights";
 import { ScratchpadResult } from "../../src/models/scratchpadResult";
 import { KdbDataSourceTreeItem } from "../../src/services/dataSourceTreeProvider";
-import { KdbTreeProvider } from "../../src/services/kdbTreeProvider";
+import * as codeFlowLogin from "../../src/services/kdbInsights/codeFlowLogin";
+import {
+  InsightsNode,
+  KdbTreeProvider,
+} from "../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as coreUtils from "../../src/utils/core";
 import * as dataSourceUtils from "../../src/utils/dataSource";
@@ -1024,9 +1030,6 @@ describe("serverCommand", () => {
     qpStub.restore();
   });
 
-  //write tests for src/commands/serverCommand.ts
-  //function to be deleted after write the tests
-  //serverCommand.addNewConnection();
   describe("writeQueryResultsToView", () => {
     it("should call executeCommand with correct arguments", () => {
       const result = { data: [1, 2, 3] };
@@ -1190,6 +1193,108 @@ describe("serverCommand", () => {
       isVisibleStub.returns(false);
       srvCommand.writeScratchpadResult(scratchpadResult, "dummy query");
       sinon.assert.notCalled(writeQueryResultsToViewStub);
+    });
+  });
+
+  describe("importScratchpad", () => {
+    ext.outputChannel = vscode.window.createOutputChannel("kdb");
+    const insightsNode = new InsightsNode(
+      [],
+      "insightsnode1",
+      {
+        server: "https://insightsservername.com/",
+        alias: "insightsserveralias",
+        auth: true,
+      },
+      TreeItemCollapsibleState.None
+    );
+
+    const token: codeFlowLogin.IToken = {
+      accessToken:
+        "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6Imk2bEdrM0ZaenhSY1ViMkMzbkVRN3N5SEpsWSJ9.eyJhdWQiOiI2ZTc0MTcyYi1iZTU2LTQ4NDMtOWZmNC1lNjZhMzliYjEyZTMiLCJpc3MiOiJodHRwczovL2xvZ2luLm1pY3Jvc29mdG9ubGluZS5jb20vNzJmOTg4YmYtODZmMS00MWFmLTkxYWItMmQ3Y2QwMTFkYjQ3L3YyLjAiLCJpYXQiOjE1MzcyMzEwNDgsIm5iZiI6MTUzNzIzMTA0OCwiZXhwIjoxNTM3MjM0OTQ4LCJhaW8iOiJBWFFBaS84SUFBQUF0QWFaTG8zQ2hNaWY2S09udHRSQjdlQnE0L0RjY1F6amNKR3hQWXkvQzNqRGFOR3hYZDZ3TklJVkdSZ2hOUm53SjFsT2NBbk5aY2p2a295ckZ4Q3R0djMzMTQwUmlvT0ZKNGJDQ0dWdW9DYWcxdU9UVDIyMjIyZ0h3TFBZUS91Zjc5UVgrMEtJaWpkcm1wNjlSY3R6bVE9PSIsImF6cCI6IjZlNzQxNzJiLWJlNTYtNDg0My05ZmY0LWU2NmEzOWJiMTJlMyIsImF6cGFjciI6IjAiLCJuYW1lIjoiQWJlIExpbmNvbG4iLCJvaWQiOiI2OTAyMjJiZS1mZjFhLTRkNTYtYWJkMS03ZTRmN2QzOGU0NzQiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJhYmVsaUBtaWNyb3NvZnQuY29tIiwicmgiOiJJIiwic2NwIjoiYWNjZXNzX2FzX3VzZXIiLCJzdWIiOiJIS1pwZmFIeVdhZGVPb3VZbGl0anJJLUtmZlRtMjIyWDVyclYzeERxZktRIiwidGlkIjoiNzJmOTg4YmYtODZmMS00MWFmLTkxYWItMmQ3Y2QwMTFkYjQ3IiwidXRpIjoiZnFpQnFYTFBqMGVRYTgyUy1JWUZBQSIsInZlciI6IjIuMCJ9.pj4N-w_3Us9DrBLfpCt",
+      refreshToken:
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTY4ODUwMjJ9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ",
+      accessTokenExpirationDate: new Date(),
+    };
+
+    const params: DataSourceFiles = {
+      name: "dummy ds",
+      insightsNode: "dummy insights",
+      dataSource: {
+        selectedType: DataSourceTypes.API,
+        api: {
+          selectedApi: "getData",
+          table: "dummy_table",
+          startTS: "2023-09-10T09:30",
+          endTS: "2023-09-19T12:30",
+          fill: "",
+          filter: [],
+          groupBy: [],
+          labels: [],
+          slice: [],
+          sortCols: [],
+          temporality: "",
+          agg: [],
+        },
+        qsql: {
+          selectedTarget: "dummy_table rdb",
+          query: "dummy QSQL query",
+        },
+        sql: {
+          query: "dummy SQL query",
+        },
+      },
+    };
+
+    afterEach(() => {
+      sinon.restore();
+    });
+    it("should return undefined if ext.connectionNode is not an InsightsNode", async () => {
+      // Mock ext.connectionNode to not be an InsightsNode
+      ext.connectionNode = undefined;
+
+      const variableName = "testVariable";
+
+      const result = await importScratchpad(variableName, params);
+      assert.equal(result, undefined);
+    });
+
+    it("should return undefined if token is undefined", async () => {
+      // Mock ext.connectionNode to be an InsightsNode
+      ext.connectionNode = insightsNode;
+
+      // Mock getCurrentToken to return undefined
+      sinon.stub(codeFlowLogin, "getCurrentToken").resolves(undefined);
+
+      const variableName = "testVariable";
+
+      const result = await importScratchpad(variableName, params);
+      assert.equal(result, undefined);
+    });
+
+    it("should return undefined if token is undefined", async () => {
+      // Mock ext.connectionNode to be an InsightsNode
+      ext.connectionNode = insightsNode;
+
+      // Mock getCurrentToken to return undefined
+      sinon.stub(codeFlowLogin, "getCurrentToken").resolves(undefined);
+
+      const variableName = "testVariable";
+
+      const result = await importScratchpad(variableName, params);
+      assert.equal(result, undefined);
+    });
+
+    it("should reach the axios call", async () => {
+      // Mock ext.connectionNode to be an InsightsNode
+      ext.connectionNode = insightsNode;
+      sinon.stub(codeFlowLogin, "getCurrentToken").resolves(token);
+      const axiosPostStub = sinon
+        .stub(axios, "post")
+        .resolves({ data: { success: true } });
+      const variableName = "testVariable";
+      await importScratchpad(variableName, params);
+      sinon.assert.calledOnce(axiosPostStub);
     });
   });
 });

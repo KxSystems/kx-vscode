@@ -539,7 +539,6 @@ export async function importScratchpad(
         "JWT did not contain a valid preferred username"
       );
     }
-
     const headers = {
       headers: {
         Authorization: `Bearer ${token.accessToken}`,
@@ -555,7 +554,6 @@ export async function importScratchpad(
         params: queryParams,
       },
     };
-
     window.withProgress(
       {
         location: ProgressLocation.Notification,
