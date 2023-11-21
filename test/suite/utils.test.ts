@@ -694,7 +694,7 @@ describe("Utils", () => {
         assert.strictEqual(result, input);
       });
 
-      it("should convert bigint values to number", () => {
+      it("should convert bigint values to numbers", () => {
         const input = [
           { key1: BigInt(123), key2: "value2" },
           { key3: BigInt(456), key4: "value4" },
