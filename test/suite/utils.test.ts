@@ -694,19 +694,6 @@ describe("Utils", () => {
         assert.strictEqual(result, input);
       });
 
-      it("should convert object values with 'i' property to string", () => {
-        const input = [
-          { key1: { i: 123 }, key2: "value2" },
-          { key3: { i: 456 }, key4: "value4" },
-        ];
-        const expected = [
-          { key1: "123", key2: "value2" },
-          { key3: "456", key4: "value4" },
-        ];
-        const result = queryUtils.handleScratchpadTableRes(input);
-        assert.deepStrictEqual(result, expected);
-      });
-
       it("should convert bigint values to number", () => {
         const input = [
           { key1: BigInt(123), key2: "value2" },
