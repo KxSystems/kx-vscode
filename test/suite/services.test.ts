@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import axios from "axios";
 import assert from "node:assert";
 import sinon from "sinon";
 import { TreeItemCollapsibleState } from "vscode";
@@ -533,6 +534,9 @@ describe("Code flow login service tests", () => {
       "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTY4ODUwMjJ9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ",
     expires_in: 0,
   };
+  afterEach(() => {
+    sinon.restore();
+  });
 
   it("Should return a correct login", async () => {
     sinon.stub(codeFlow, "signIn").returns(token);
@@ -541,14 +545,15 @@ describe("Code flow login service tests", () => {
   });
 
   it("Should execute a correct logout", async () => {
-    sinon.stub(rp, "post").resolves(JSON.stringify(token));
+    sinon.stub(axios, "post").resolves(Promise.resolve({ data: token }));
     const result = await signOut("http://localhost", "token");
     assert.strictEqual(result, undefined, "Invalid response from logout");
   });
 
   it("Should execute token refresh", async () => {
+    sinon.stub(axios, "post").resolves(Promise.resolve({ data: token }));
     const result = await refreshToken(
-      "http://loclahost",
+      "http://localhost",
       JSON.stringify(token)
     );
     assert.strictEqual(

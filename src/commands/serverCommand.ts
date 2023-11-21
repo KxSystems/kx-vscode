@@ -15,7 +15,6 @@ import axios, { AxiosRequestConfig } from "axios";
 import { readFileSync } from "fs-extra";
 import jwt_decode from "jwt-decode";
 import { join } from "path";
-import requestPromise from "request-promise";
 import * as url from "url";
 import {
   InputBoxOptions,
@@ -72,7 +71,11 @@ import {
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { ExecutionConsole } from "../utils/executionConsole";
 import { openUrl } from "../utils/openUrl";
-import { handleWSResults, sanitizeQuery } from "../utils/queryUtils";
+import {
+  handleScratchpadTableRes,
+  handleWSResults,
+  sanitizeQuery,
+} from "../utils/queryUtils";
 import {
   validateServerAlias,
   validateServerName,
@@ -397,8 +400,8 @@ export async function getMeta(): Promise<MetaObjectPayload | undefined> {
       headers: { Authorization: `Bearer ${token.accessToken}` },
     };
 
-    const metaResponse = await requestPromise.post(metaUrl.toString(), options);
-    const meta: MetaObject = JSON.parse(metaResponse);
+    const metaResponse = await axios.post(metaUrl.toString(), options);
+    const meta: MetaObject = metaResponse.data;
     return meta.payload;
   }
   return undefined;
@@ -536,17 +539,20 @@ export async function importScratchpad(
       );
     }
 
-    const options = {
+    const headers = {
       headers: {
         Authorization: `Bearer ${token.accessToken}`,
         username: username.preferred_username!,
+
+        json: true,
       },
+    };
+    const body = {
       body: {
         output: variableName,
         isTableView: false,
         params: queryParams,
       },
-      json: true,
     };
 
     window.withProgress(
@@ -561,12 +567,13 @@ export async function importScratchpad(
 
         progress.report({ message: "Scratchpad creating..." });
 
-        const scratchpadResponse = await requestPromise.post(
+        const scratchpadResponse = await axios.post(
           scratchpadURL.toString(),
-          options
+          body,
+          headers
         );
 
-        ext.outputChannel.append(scratchpadResponse);
+        ext.outputChannel.append(JSON.stringify(scratchpadResponse.data));
         window.showInformationMessage(
           `Scratchpad created successfully, stored in ${variableName}`
         );
@@ -608,21 +615,26 @@ export async function getScratchpadQuery(
         "JWT did not contain a valid preferred username"
       );
     }
+    const body = {
+      expression: query,
+      isTableView,
+      language: "q",
+      context: context || ".",
+      sampleFn: "first",
+      sampleSize: 10000,
+    };
 
-    const options = {
-      headers: {
-        Authorization: `Bearer ${token.accessToken}`,
-        Username: username.preferred_username,
-      },
-      body: {
-        expression: query,
-        isTableView,
-        language: "q",
-        context: context || ".",
-        sampleFn: "first",
-        sampleSize: 10000,
-      },
-      json: true,
+    const headers = {
+      Authorization: `Bearer ${token.accessToken}`,
+      Username: username.preferred_username,
+      "Content-Type": "application/json",
+    };
+
+    const options: AxiosRequestConfig = {
+      method: "post",
+      url: scratchpadURL.toString(),
+      data: body,
+      headers: headers,
     };
 
     const spReponse = await window.withProgress(
@@ -636,22 +648,17 @@ export async function getScratchpadQuery(
         });
 
         progress.report({ message: "Query is executing..." });
+        const spRes = await axios(options).then((response: any) => {
+          if (isTableView && !response.data.error) {
+            const buffer = new Uint8Array(
+              response.data.data.map((x: string) => parseInt(x, 16))
+            ).buffer;
 
-        const spRes = await requestPromise.post(
-          scratchpadURL.toString(),
-          options
-        );
-        if (
-          isTableView &&
-          spRes?.data &&
-          Array.isArray(spRes.data) &&
-          !spRes.error
-        ) {
-          const buffer = new Uint8Array(
-            spRes.data.map((x: string) => parseInt(x, 16))
-          ).buffer;
-          return handleWSResults(buffer);
-        }
+            response.data.data = handleWSResults(buffer);
+            response.data.data = handleScratchpadTableRes(response.data.data);
+          }
+          return response.data;
+        });
         return spRes;
       }
     );
@@ -973,7 +980,7 @@ export function writeScratchpadResult(
     );
   } else {
     if (ext.resultsViewProvider.isVisible()) {
-      writeQueryResultsToView(result, "SCRATCHPAD");
+      writeQueryResultsToView(result.data, "SCRATCHPAD");
     } else {
       writeQueryResultsToConsole(result.data, query);
     }

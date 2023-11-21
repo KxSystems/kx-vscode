@@ -11,13 +11,13 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import axios from "axios";
 import * as crypto from "crypto";
 import * as fs from "fs-extra";
 import * as http from "http";
 import open from "open";
 import { join } from "path";
 import * as querystring from "querystring";
-import * as requestPromise from "request-promise";
 import * as url from "url";
 import { ext } from "../../extensionVariables";
 
@@ -80,13 +80,17 @@ export async function signOut(
     grant_type: ext.insightsGrantType.authorizationCode,
     token,
   });
-  const options = {
+  const body = {
     body: queryParams,
+  };
+  const headers = {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
   };
   const requestUrl = new url.URL(ext.insightsAuthUrls.revoke, insightsUrl);
 
-  await requestPromise.post(requestUrl.toString(), options);
+  await axios.post(requestUrl.toString(), body, headers).then((res) => {
+    return res.data;
+  });
 }
 
 export async function refreshToken(
@@ -145,8 +149,7 @@ async function tokenRequest(
   params: any
 ): Promise<IToken | undefined> {
   const queryParams = queryString(params);
-  const options = {
-    body: queryParams,
+  const headers = {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
   };
 
@@ -155,15 +158,15 @@ async function tokenRequest(
   let response;
   if (params.grant_type === "refresh_token") {
     try {
-      response = await requestPromise.post(requestUrl.toString(), options);
+      response = await axios.post(requestUrl.toString(), queryParams, headers);
     } catch (err) {
       return undefined;
     }
   } else {
-    response = await requestPromise.post(requestUrl.toString(), options);
+    response = await axios.post(requestUrl.toString(), queryParams, headers);
   }
 
-  const result = JSON.parse(response);
+  const result = response.data;
   const expirationDate = new Date();
 
   if (Number.isInteger(result.expires_in)) {

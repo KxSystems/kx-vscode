@@ -57,6 +57,33 @@ export function handleWSResults(ab: ArrayBuffer): any {
   }
 }
 
+export function handleScratchpadTableRes(scratchpadResponse: any[]): any {
+  if (!Array.isArray(scratchpadResponse)) {
+    return scratchpadResponse;
+  }
+  const result = [];
+  for (const row of scratchpadResponse) {
+    const newObj = {};
+    for (const key in row) {
+      if (
+        typeof row[key] === "object" &&
+        row[key] !== null &&
+        "i" in row[key]
+      ) {
+        Object.assign(newObj, { [key]: row[key].toString() });
+      } else if (typeof row[key] === "bigint" && row[key] !== null) {
+        Object.assign(newObj, { [key]: Number(row[key]) });
+      } else {
+        Object.assign(newObj, { [key]: row[key] });
+      }
+    }
+
+    result.push(newObj);
+  }
+
+  return result;
+}
+
 export function getValueFromArray(arr: any[]): string | any[] {
   if (arr.length === 1 && typeof arr[0] === "object" && arr[0] !== null) {
     const obj = arr[0];
