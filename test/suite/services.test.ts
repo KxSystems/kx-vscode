@@ -41,9 +41,6 @@ import {
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const rp = require("request-promise");
-
 describe("kdbTreeProvider", () => {
   let servers: Server;
   let insights: Insights;
