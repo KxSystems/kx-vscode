@@ -401,7 +401,7 @@ export async function getMeta(): Promise<MetaObjectPayload | undefined> {
       headers: { Authorization: `Bearer ${token.accessToken}` },
     };
 
-    const metaResponse = await axios.post(metaUrl.toString(), options);
+    const metaResponse = await axios.post(metaUrl.toString(), {}, options);
     const meta: MetaObject = metaResponse.data;
     return meta.payload;
   }
