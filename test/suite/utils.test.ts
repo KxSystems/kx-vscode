@@ -687,6 +687,49 @@ describe("Utils", () => {
       });
     });
 
+    describe("handleScratchpadTableRes", () => {
+      it("should return the input if it is not an array", () => {
+        const input = "not an array";
+        const result = queryUtils.handleScratchpadTableRes(input);
+        assert.strictEqual(result, input);
+      });
+
+      it("should convert object values with 'i' property to string", () => {
+        const input = [
+          { key1: { i: 123 }, key2: "value2" },
+          { key3: { i: 456 }, key4: "value4" },
+        ];
+        const expected = [
+          { key1: "[object Object]", key2: "value2" },
+          { key3: "[object Object]", key4: "value4" },
+        ];
+        const result = queryUtils.handleScratchpadTableRes(input);
+        assert.deepStrictEqual(result, expected);
+      });
+
+      it("should convert bigint values to number", () => {
+        const input = [
+          { key1: BigInt(123), key2: "value2" },
+          { key3: BigInt(456), key4: "value4" },
+        ];
+        const expected = [
+          { key1: 123, key2: "value2" },
+          { key3: 456, key4: "value4" },
+        ];
+        const result = queryUtils.handleScratchpadTableRes(input);
+        assert.deepStrictEqual(result, expected);
+      });
+
+      it("should not modify other values", () => {
+        const input = [
+          { key1: "value1", key2: "value2" },
+          { key3: "value3", key4: "value4" },
+        ];
+        const result = queryUtils.handleScratchpadTableRes(input);
+        assert.deepStrictEqual(result, input);
+      });
+    });
+
     it("convertRows", () => {
       const rows = [
         {
