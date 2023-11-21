@@ -594,12 +594,10 @@ export async function getScratchpadQuery(
       ext.insightsAuthUrls.scratchpadURL,
       ext.connectionNode.details.server
     );
-
     const token = await getCurrentToken(
       ext.connectionNode.details.server,
       ext.connectionNode.details.alias
     );
-
     if (token === undefined) {
       ext.outputChannel.appendLine(
         "Error retrieving access token for insights."
@@ -607,7 +605,6 @@ export async function getScratchpadQuery(
       window.showErrorMessage("Failed to retrieve access token for insights");
       return undefined;
     }
-
     const username = jwt_decode<JwtUser>(token.accessToken);
     if (username === undefined || username.preferred_username === "") {
       ext.outputChannel.appendLine(
@@ -622,18 +619,10 @@ export async function getScratchpadQuery(
       sampleFn: "first",
       sampleSize: 10000,
     };
-
     const headers = {
       Authorization: `Bearer ${token.accessToken}`,
       Username: username.preferred_username,
       "Content-Type": "application/json",
-    };
-
-    const options: AxiosRequestConfig = {
-      method: "post",
-      url: scratchpadURL.toString(),
-      data: body,
-      headers: headers,
     };
 
     const spReponse = await window.withProgress(
@@ -647,17 +636,19 @@ export async function getScratchpadQuery(
         });
 
         progress.report({ message: "Query is executing..." });
-        const spRes = await axios(options).then((response: any) => {
-          if (isTableView && !response.data.error) {
-            const buffer = new Uint8Array(
-              response.data.data.map((x: string) => parseInt(x, 16))
-            ).buffer;
+        const spRes = await axios
+          .post(scratchpadURL.toString(), body, { headers })
+          .then((response: any) => {
+            if (isTableView && !response.data.error) {
+              const buffer = new Uint8Array(
+                response.data.data.map((x: string) => parseInt(x, 16))
+              ).buffer;
 
-            response.data.data = handleWSResults(buffer);
-            response.data.data = handleScratchpadTableRes(response.data.data);
-          }
-          return response.data;
-        });
+              response.data.data = handleWSResults(buffer);
+              response.data.data = handleScratchpadTableRes(response.data.data);
+            }
+            return response.data;
+          });
         return spRes;
       }
     );

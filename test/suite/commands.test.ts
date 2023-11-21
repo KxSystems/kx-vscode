@@ -22,6 +22,7 @@ import * as installTools from "../../src/commands/installTools";
 import {
   addKdbConnection,
   addNewConnection,
+  getScratchpadQuery,
   importScratchpad,
   writeQueryResultsToView,
 } from "../../src/commands/serverCommand";
@@ -1295,6 +1296,128 @@ describe("serverCommand", () => {
       const variableName = "testVariable";
       await importScratchpad(variableName, params);
       sinon.assert.calledOnce(axiosPostStub);
+    });
+  });
+
+  describe("getScratchpadQuery", () => {
+    let axiosPostStub: sinon.SinonStub;
+    let getTokenStub: sinon.SinonStub;
+    let isVisibleStub: sinon.SinonStub;
+    let handleWSResultsStub: sinon.SinonStub;
+    let handleScratchpadTableResStub: sinon.SinonStub;
+    const dummyTableViewDataRes = [
+      "01",
+      "00",
+      "00",
+      "00",
+      "2b",
+      "00",
+      "00",
+      "00",
+      "62",
+      "00",
+      "63",
+      "0b",
+      "00",
+      "01",
+      "00",
+      "00",
+      "00",
+      "56",
+      "61",
+      "6c",
+      "75",
+      "65",
+      "00",
+      "00",
+      "00",
+      "01",
+      "00",
+      "00",
+      "00",
+      "07",
+      "00",
+      "01",
+      "00",
+      "00",
+      "00",
+      "0a",
+      "00",
+      "00",
+      "00",
+      "00",
+      "00",
+      "00",
+      "00",
+    ];
+    const insightsNode = new InsightsNode(
+      [],
+      "insightsnode1",
+      {
+        server: "https://insightsservername.com/",
+        alias: "insightsserveralias",
+        auth: true,
+      },
+      TreeItemCollapsibleState.None
+    );
+    const token: codeFlowLogin.IToken = {
+      accessToken:
+        "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6Imk2bEdrM0ZaenhSY1ViMkMzbkVRN3N5SEpsWSJ9.eyJhdWQiOiI2ZTc0MTcyYi1iZTU2LTQ4NDMtOWZmNC1lNjZhMzliYjEyZTMiLCJpc3MiOiJodHRwczovL2xvZ2luLm1pY3Jvc29mdG9ubGluZS5jb20vNzJmOTg4YmYtODZmMS00MWFmLTkxYWItMmQ3Y2QwMTFkYjQ3L3YyLjAiLCJpYXQiOjE1MzcyMzEwNDgsIm5iZiI6MTUzNzIzMTA0OCwiZXhwIjoxNTM3MjM0OTQ4LCJhaW8iOiJBWFFBaS84SUFBQUF0QWFaTG8zQ2hNaWY2S09udHRSQjdlQnE0L0RjY1F6amNKR3hQWXkvQzNqRGFOR3hYZDZ3TklJVkdSZ2hOUm53SjFsT2NBbk5aY2p2a295ckZ4Q3R0djMzMTQwUmlvT0ZKNGJDQ0dWdW9DYWcxdU9UVDIyMjIyZ0h3TFBZUS91Zjc5UVgrMEtJaWpkcm1wNjlSY3R6bVE9PSIsImF6cCI6IjZlNzQxNzJiLWJlNTYtNDg0My05ZmY0LWU2NmEzOWJiMTJlMyIsImF6cGFjciI6IjAiLCJuYW1lIjoiQWJlIExpbmNvbG4iLCJvaWQiOiI2OTAyMjJiZS1mZjFhLTRkNTYtYWJkMS03ZTRmN2QzOGU0NzQiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJhYmVsaUBtaWNyb3NvZnQuY29tIiwicmgiOiJJIiwic2NwIjoiYWNjZXNzX2FzX3VzZXIiLCJzdWIiOiJIS1pwZmFIeVdhZGVPb3VZbGl0anJJLUtmZlRtMjIyWDVyclYzeERxZktRIiwidGlkIjoiNzJmOTg4YmYtODZmMS00MWFmLTkxYWItMmQ3Y2QwMTFkYjQ3IiwidXRpIjoiZnFpQnFYTFBqMGVRYTgyUy1JWUZBQSIsInZlciI6IjIuMCJ9.pj4N-w_3Us9DrBLfpCt",
+      refreshToken:
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTY4ODUwMjJ9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ",
+      accessTokenExpirationDate: new Date(),
+    };
+
+    beforeEach(() => {
+      ext.connectionNode = insightsNode;
+      axiosPostStub = sinon.stub(axios, "post");
+      getTokenStub = sinon.stub(codeFlowLogin, "getCurrentToken");
+      isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
+      handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
+      handleScratchpadTableResStub = sinon.stub(
+        queryUtils,
+        "handleScratchpadTableRes"
+      );
+    });
+
+    afterEach(() => {
+      axiosPostStub.restore();
+      getTokenStub.restore();
+      isVisibleStub.restore();
+      handleWSResultsStub.restore();
+      handleScratchpadTableResStub.restore();
+    });
+
+    it("should return the response from axios", async () => {
+      const query = "SELECT * FROM table";
+      const context = "context";
+
+      const mockedResponse = { data: { data: dummyTableViewDataRes } };
+      axiosPostStub.resolves(mockedResponse);
+      getTokenStub.resolves(token);
+      isVisibleStub.returns(true);
+      handleWSResultsStub.returns("10");
+      handleScratchpadTableResStub.returns("10");
+
+      const response = await getScratchpadQuery(query, context);
+
+      assert.equal(response.data, "10");
+      sinon.assert.calledOnce(axiosPostStub);
+      sinon.assert.calledOnce(handleWSResultsStub);
+      sinon.assert.calledOnce(handleScratchpadTableResStub);
+    });
+
+    it("should return undefined if token is undefined", async () => {
+      const query = "SELECT * FROM table";
+      const context = "context";
+
+      const expectedToken = undefined;
+      getTokenStub.resolves(expectedToken);
+
+      const response = await getScratchpadQuery(query, context);
+
+      assert.equal(response, undefined);
+      sinon.assert.notCalled(axiosPostStub);
     });
   });
 });
