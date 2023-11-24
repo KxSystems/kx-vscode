@@ -11,24 +11,18 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import * as assert from "assert";
-import * as sinon from "sinon";
-import { KdbDataSourceView } from "../../src/webview/components/kdbDataSourceView";
+/* eslint @typescript-eslint/ban-ts-comment: 0 */
 
-describe("KdbDataSourceView", () => {
-  let view: KdbDataSourceView;
+import Module from "module";
+import path from "path";
 
-  beforeEach(async () => {
-    view = new KdbDataSourceView();
-  });
+// @ts-ignore
+const resolve = Module._resolveFilename;
 
-  afterEach(() => {
-    sinon.restore();
-  });
-
-  describe("", () => {
-    it("should", () => {
-      assert.ok(view);
-    });
-  });
-});
+// @ts-ignore
+Module._resolveFilename = function (specifier: string, parent: string) {
+  if (specifier.startsWith("lit")) {
+    specifier = path.resolve(__dirname, "webview.js");
+  }
+  return resolve(specifier, parent);
+};
