@@ -19,20 +19,25 @@ global.window = <any>{
   removeEventListener: () => undefined,
 };
 
-global.acquireVsCodeApi = function () {
-  return <any>{
-    getState() {},
-    setState() {},
-    postMessage() {},
-  };
+const vsCodeApi = <any>{
+  getState() {},
+  setState() {},
+  postMessage() {},
 };
 
-export function customElement() {}
-export function state() {}
-export function html() {}
-export function css() {}
+global.acquireVsCodeApi = function () {
+  return vsCodeApi;
+};
 
 export class LitElement {
   connectedCallback() {}
   disconnectedCallback() {}
 }
+export function html(strings: any, ...values: unknown[]) {
+  return { strings, values };
+}
+export function css(strings: any, ...values: unknown[]) {
+  return { strings, values };
+}
+export function customElement() {}
+export function state() {}
