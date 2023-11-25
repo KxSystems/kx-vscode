@@ -18,7 +18,14 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { DataSourceMessage } from "../../src/models/messages";
 import { MetaObjectPayload } from "../../src/models/meta";
-import { createDefaultDataSourceFile } from "../../src/models/dataSource";
+import {
+  createAgg,
+  createDefaultDataSourceFile,
+  createFilter,
+  createGroup,
+  createLabel,
+  createSort,
+} from "../../src/models/dataSource";
 import { KdbDataSourceView } from "../../src/webview/components/kdbDataSourceView";
 
 describe("KdbDataSourceView", () => {
@@ -67,8 +74,12 @@ describe("KdbDataSourceView", () => {
         data: message,
       };
       cb(event);
-      assert.strictEqual(view.isInsights, true);
-      assert.strictEqual(view.isMetaLoaded, true);
+      const data = view["data"];
+      assert.deepEqual(data, {
+        ...dataSourceFile,
+        name: "test",
+        originalName: "test",
+      });
     });
   });
 
@@ -142,7 +153,6 @@ describe("KdbDataSourceView", () => {
     });
   });
 
-  // TODO
   describe("renderApiOptions", () => {
     it("should render empty array", () => {
       const result = view["renderApiOptions"]("");
@@ -156,11 +166,7 @@ describe("KdbDataSourceView", () => {
         .stub(view, "insightsMeta")
         .value({ api: [{ api: ".kxi.getData" }] });
       const result = view["renderApiOptions"]("getData");
-      assert.deepEqual(result.values[0][0].values, [
-        "getData",
-        true,
-        "getData",
-      ]);
+      assert.deepEqual(result[0].values, ["getData", true, "getData"]);
     });
 
     it("should render other api", () => {
@@ -168,7 +174,7 @@ describe("KdbDataSourceView", () => {
       sinon.stub(view, "isMetaLoaded").value(true);
       sinon.stub(view, "insightsMeta").value({ api: [{ api: "other" }] });
       const result = view["renderApiOptions"]("other");
-      assert.deepEqual(result.values[0][0].values, ["other", true, "other"]);
+      assert.deepEqual(result[0].values, ["other", true, "other"]);
     });
   });
 
@@ -225,6 +231,53 @@ describe("KdbDataSourceView", () => {
         true,
         "assembly-qe instance",
       ]);
+    });
+  });
+
+  describe("renderFilter", () => {
+    it("should render filter", () => {
+      const filter = createFilter();
+      const result = view["renderFilter"](filter);
+      assert.ok(result.values);
+    });
+  });
+
+  describe("renderLabel", () => {
+    it("should render label", () => {
+      const label = createLabel();
+      const result = view["renderLabel"](label);
+      assert.ok(result.values);
+    });
+  });
+
+  describe("renderSort", () => {
+    it("should render sort", () => {
+      const sort = createSort();
+      const result = view["renderSort"](sort);
+      assert.ok(result.values);
+    });
+  });
+
+  describe("renderAgg", () => {
+    it("should render agg", () => {
+      const agg = createAgg();
+      const result = view["renderAgg"](agg);
+      assert.ok(result.values);
+    });
+  });
+
+  describe("renderGroup", () => {
+    it("should render group", () => {
+      const group = createGroup();
+      const result = view["renderGroup"](group);
+      assert.ok(result.values);
+    });
+  });
+
+  describe("render", () => {
+    it("should render component", () => {
+      const result = view["render"]();
+      assert.ok(result.values);
     });
   });
 });

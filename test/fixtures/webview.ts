@@ -15,8 +15,8 @@
 /* eslint @typescript-eslint/no-empty-function: 0 */
 
 global.window = <any>{
-  addEventListener: () => undefined,
-  removeEventListener: () => undefined,
+  addEventListener() {},
+  removeEventListener() {},
 };
 
 const vsCodeApi = <any>{

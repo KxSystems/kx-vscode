@@ -21,8 +21,11 @@ const resolve = Module._resolveFilename;
 
 // @ts-ignore
 Module._resolveFilename = function (specifier: string, parent: string) {
-  if (specifier.startsWith("lit")) {
-    specifier = path.resolve(__dirname, "webview.js");
+  switch (specifier) {
+    case "lit":
+    case "lit/decorators.js":
+      specifier = path.resolve(__dirname, "webview.js");
+      break;
   }
   return resolve(specifier, parent);
 };
