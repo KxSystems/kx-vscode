@@ -197,7 +197,7 @@ describe("KdbDataSourceView", () => {
 
   describe("renderColumnOptions", () => {
     it("should render empty array", () => {
-      const result = view["renderColumnOptions"]("");
+      const result = view["renderColumnOptions"]({ column: "" });
       assert.deepEqual(result, []);
     });
 
@@ -208,7 +208,7 @@ describe("KdbDataSourceView", () => {
       sinon
         .stub(view, "insightsMeta")
         .value({ schema: [{ table: "table", columns: [{ column: "id" }] }] });
-      const result = view["renderColumnOptions"]("id");
+      const result = view["renderColumnOptions"]({ column: "id" });
       assert.deepEqual(result[0].values, ["id", true, "id"]);
     });
   });
