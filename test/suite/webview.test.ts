@@ -202,13 +202,15 @@ describe("KdbDataSourceView", () => {
     });
 
     it("should render columns for selected table", () => {
+      const provider = { column: "" };
       sinon.stub(view, "isInsights").value(true);
       sinon.stub(view, "isMetaLoaded").value(true);
       sinon.stub(view, "selectedTable").value("table");
       sinon
         .stub(view, "insightsMeta")
         .value({ schema: [{ table: "table", columns: [{ column: "id" }] }] });
-      const result = view["renderColumnOptions"]({ column: "id" });
+      const result = view["renderColumnOptions"](provider);
+      assert.strictEqual(provider.column, "id");
       assert.deepEqual(result[0].values, ["id", true, "id"]);
     });
   });
@@ -275,9 +277,20 @@ describe("KdbDataSourceView", () => {
   });
 
   describe("render", () => {
-    it("should render component", () => {
+    it("should update state for name input", () => {
       const result = view["render"]();
-      assert.ok(result.values);
+      (result.values[1] as any)({ target: { value: "datatsource-test" } });
+      assert.strictEqual(view.name, "datatsource-test");
+    });
+
+    it("should update state for tab selection", () => {
+      const result = view["render"]();
+      (result.values[3] as any)();
+      assert.strictEqual(view.selectedType, "API");
+      (result.values[4] as any)();
+      assert.strictEqual(view.selectedType, "QSQL");
+      (result.values[5] as any)();
+      assert.strictEqual(view.selectedType, "SQL");
     });
   });
 });
