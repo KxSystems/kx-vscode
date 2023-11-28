@@ -1036,7 +1036,7 @@ describe("serverCommand", () => {
       const result = { data: [1, 2, 3] };
       const executeCommandStub = sinon.stub(vscode.commands, "executeCommand");
 
-      writeQueryResultsToView(result);
+      writeQueryResultsToView(result, "");
 
       sinon.assert.calledWith(
         executeCommandStub.firstCall,
