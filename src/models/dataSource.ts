@@ -68,8 +68,8 @@ export function createDefaultDataSourceFile(): DataSourceFiles {
         table: "",
         startTS: "",
         endTS: "",
-        fill: "",
-        temporality: "",
+        fill: "zero",
+        temporality: "snapshot",
         filter: [],
         groupBy: [],
         agg: [],
@@ -130,7 +130,7 @@ export function createFilter(): Filter {
   return {
     active: false,
     column: "",
-    operator: "",
+    operator: "in",
     values: "",
   };
 }
@@ -172,7 +172,7 @@ export function createAgg(): Agg {
   return {
     active: false,
     key: "",
-    operator: "",
+    operator: "all",
     column: "",
   };
 }
@@ -184,4 +184,8 @@ export type Group = {
 
 export function createGroup(): Group {
   return createSort();
+}
+
+export interface ColumnProvider {
+  column: string;
 }

@@ -15,6 +15,7 @@ import { LitElement, html } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import {
   Agg,
+  ColumnProvider,
   DataSourceFiles,
   DataSourceTypes,
   Filter,
@@ -214,24 +215,22 @@ export class KdbDataSourceView extends LitElement {
 
   private renderApiOptions(selected: string) {
     if (this.isInsights && this.isMetaLoaded) {
-      return html`
-        ${this.insightsMeta.api
-          .filter(
-            (api) => api.api === ".kxi.getData" || !api.api.startsWith(".kxi.")
-          )
-          .map((api) => {
-            const value =
-              api.api === ".kxi.getData"
-                ? api.api.replace(".kxi.", "")
-                : api.api;
-
-            return html`
-              <vscode-option value="${value}" ?selected="${value === selected}"
-                >${value}</vscode-option
-              >
-            `;
-          })}
-      `;
+      return this.insightsMeta.api
+        .filter(
+          (api) => api.api === ".kxi.getData" || !api.api.startsWith(".kxi.")
+        )
+        .map((api) => {
+          const value =
+            api.api === ".kxi.getData" ? api.api.replace(".kxi.", "") : api.api;
+          if (!this.selectedApi) {
+            this.selectedApi = value;
+          }
+          return html`
+            <vscode-option value="${value}" ?selected="${value === selected}"
+              >${value}</vscode-option
+            >
+          `;
+        });
     }
     return [];
   }
@@ -254,22 +253,24 @@ export class KdbDataSourceView extends LitElement {
     return [];
   }
 
-  private renderColumnOptions(selected: string) {
+  private renderColumnOptions(selected: ColumnProvider) {
     if (this.isInsights && this.isMetaLoaded) {
       const schema = this.insightsMeta.schema;
       if (schema) {
         const found = schema.find((item) => item.table === this.selectedTable);
         if (found) {
-          return found.columns.map(
-            ({ column }) =>
-              html`
-                <vscode-option
-                  value="${column}"
-                  ?selected="${column === selected}"
-                  >${column}</vscode-option
-                >
-              `
-          );
+          return found.columns.map(({ column }) => {
+            if (!selected.column) {
+              selected.column = column;
+            }
+            return html`
+              <vscode-option
+                value="${column}"
+                ?selected="${column === selected.column}"
+                >${column}</vscode-option
+              >
+            `;
+          });
         }
       }
     }
@@ -280,6 +281,9 @@ export class KdbDataSourceView extends LitElement {
     if (this.isInsights && this.isMetaLoaded) {
       return this.insightsMeta.dap.map((dap) => {
         const value = `${dap.assembly}-qe ${dap.instance}`;
+        if (!this.qsqlTarget) {
+          this.qsqlTarget = value;
+        }
         return html`
           <vscode-option value="${value}" ?selected="${value === selected}"
             >${value}</vscode-option
@@ -309,7 +313,7 @@ export class KdbDataSourceView extends LitElement {
             class="dropdown"
             @change="${(event: Event) =>
               (filter.column = (event.target as HTMLInputElement).value)}"
-            >${this.renderColumnOptions(filter.column)}
+            >${this.renderColumnOptions(filter)}
           </vscode-dropdown>
         </div>
         <div class="dropdown-container">
@@ -469,7 +473,7 @@ export class KdbDataSourceView extends LitElement {
             class="dropdown"
             @change="${(event: Event) =>
               (sort.column = (event.target as HTMLInputElement).value)}">
-            ${this.renderColumnOptions(sort.column)}
+            ${this.renderColumnOptions(sort)}
           </vscode-dropdown>
         </div>
         <div class="row gap-1 align-end">
@@ -559,7 +563,7 @@ export class KdbDataSourceView extends LitElement {
             class="dropdown"
             @change="${(event: Event) =>
               (agg.column = (event.target as HTMLInputElement).value)}">
-            ${this.renderColumnOptions(agg.column)}
+            ${this.renderColumnOptions(agg)}
           </vscode-dropdown>
         </div>
         <div class="row gap-1 align-end">
@@ -626,7 +630,7 @@ export class KdbDataSourceView extends LitElement {
             class="dropdown"
             @change="${(event: Event) =>
               (group.column = (event.target as HTMLInputElement).value)}">
-            ${this.renderColumnOptions(group.column)}
+            ${this.renderColumnOptions(group)}
           </vscode-dropdown>
         </div>
         <div class="row gap-1 align-end">
