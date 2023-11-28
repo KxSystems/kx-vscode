@@ -104,7 +104,7 @@ export const Underscore = createToken({
 
 export const Infix = createToken({
   name: "Infix",
-  pattern: /[%*+-]/,
+  pattern: /[,%*+-]/,
 });
 
 export const BinaryColon = createToken({

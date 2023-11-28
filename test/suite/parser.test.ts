@@ -12,7 +12,23 @@
  */
 
 import * as assert from "assert";
-import { QParser } from "../../server/src/parser/parser";
+import { CharLiteral, QLexer, QParser } from "../../server/src/parser";
+
+describe("QLexer", () => {
+  describe("CharLiteral", () => {
+    it("should tokenize string", () => {
+      const lexed = QLexer.tokenize('"char"');
+      assert.strictEqual(lexed.tokens.length, 1);
+      assert.strictEqual(lexed.tokens[0].tokenType, CharLiteral);
+    });
+
+    it("should tokenize empty string", () => {
+      const lexed = QLexer.tokenize('""');
+      assert.strictEqual(lexed.tokens.length, 1);
+      assert.strictEqual(lexed.tokens[0].tokenType, CharLiteral);
+    });
+  });
+});
 
 describe("QParser", () => {
   describe("comments", () => {
