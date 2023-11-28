@@ -52,7 +52,7 @@ import { JwtUser } from "../models/jwt_user";
 import { MetaObject, MetaObjectPayload } from "../models/meta";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
-import { Server } from "../models/server";
+import { Server, ServerType } from "../models/server";
 import { ServerObject } from "../models/serverObject";
 import { DataSourcesPanel } from "../panels/datasource";
 import { getCurrentToken } from "../services/kdbInsights/codeFlowLogin";
@@ -70,7 +70,7 @@ import {
 } from "../utils/core";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { decodeQUTF } from "../utils/decode";
-import { ExecutionConsole } from "../utils/executionConsole";
+import { ExecutionConsole, addQueryHistory } from "../utils/executionConsole";
 import { openUrl } from "../utils/openUrl";
 import {
   handleScratchpadTableRes,
@@ -586,7 +586,8 @@ export async function importScratchpad(
 
 export async function getScratchpadQuery(
   query: string,
-  context?: string
+  context?: string,
+  isPython?: boolean
 ): Promise<any | undefined> {
   if (ext.connectionNode instanceof InsightsNode) {
     const isTableView = ext.resultsViewProvider.isVisible();
@@ -614,7 +615,7 @@ export async function getScratchpadQuery(
     const body = {
       expression: query,
       isTableView,
-      language: "q",
+      language: !isPython ? "q" : "python",
       context: context || ".",
       sampleFn: "first",
       sampleSize: 10000,
@@ -789,7 +790,8 @@ export async function disconnect(): Promise<void> {
 
 export async function executeQuery(
   query: string,
-  context?: string
+  context?: string,
+  isPython?: boolean
 ): Promise<void> {
   const queryConsole = ExecutionConsole.start();
 
@@ -806,8 +808,8 @@ export async function executeQuery(
   // set context for root nodes
   if (insightsNode) {
     query = sanitizeQuery(query);
-    const queryRes = await getScratchpadQuery(query, context);
-    writeScratchpadResult(queryRes, query);
+    const queryRes = await getScratchpadQuery(query, context, isPython);
+    writeScratchpadResult(queryRes, query, isPython);
   } else if (ext.connection !== undefined && ext.connection.connected) {
     query = sanitizeQuery(query);
 
@@ -869,31 +871,46 @@ export function getQueryContext(lineNum?: number): string {
 
 export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
   const editor = window.activeTextEditor;
-  if (editor) {
-    let context;
-    let query;
-    switch (type) {
-      case ExecutionTypes.QuerySelection:
-        query = editor?.document.getText(
-          new Range(editor.selection.start, editor.selection.end)
-        );
-
-        if (query === "") {
-          const docLine = editor.selection.active.line;
-          query = editor.document.lineAt(docLine).text;
-          context = getQueryContext(docLine);
-        } else {
-          context = getQueryContext(editor.selection.end.line);
-        }
-        break;
-      case ExecutionTypes.QueryFile:
-      case ExecutionTypes.ReRunQuery:
-      default:
-        query = rerunQuery ? rerunQuery : editor.document.getText();
-        context = getQueryContext();
-    }
-    executeQuery(query, context);
+  if (!editor) {
+    return;
   }
+  let context;
+  let query;
+  let isPython = false;
+  const insightsNode = ext.kdbinsightsNodes.find((n) =>
+    ext.connectionNode instanceof InsightsNode
+      ? n === ext.connectionNode?.details.alias + " (connected)"
+      : false
+  );
+
+  switch (type) {
+    case ExecutionTypes.QuerySelection:
+    case ExecutionTypes.PythonQuerySelection:
+      const selection = editor.selection;
+      query = selection.isEmpty
+        ? editor.document.lineAt(selection.active.line).text
+        : editor.document.getText(selection);
+
+      context = getQueryContext(selection.end.line);
+
+      if (type === ExecutionTypes.PythonQuerySelection && insightsNode) {
+        isPython = true;
+      }
+      break;
+
+    case ExecutionTypes.QueryFile:
+    case ExecutionTypes.ReRunQuery:
+    case ExecutionTypes.PythonQueryFile:
+    default:
+      query = rerunQuery || editor.document.getText();
+      context = getQueryContext();
+
+      if (type === ExecutionTypes.PythonQueryFile && insightsNode) {
+        isPython = true;
+      }
+      break;
+  }
+  executeQuery(query, context, isPython);
 }
 
 export async function loadServerObjects(): Promise<ServerObject[]> {
@@ -924,7 +941,8 @@ export async function loadServerObjects(): Promise<ServerObject[]> {
 export function writeQueryResultsToConsole(
   result: string | string[],
   query: string,
-  dataSourceType?: string
+  dataSourceType?: string,
+  isPython?: boolean
 ): void {
   const queryConsole = ExecutionConsole.start();
   const res = Array.isArray(result)
@@ -938,28 +956,44 @@ export function writeQueryResultsToConsole(
       res,
       query,
       ext.connectionNode?.label ? ext.connectionNode.label : "",
-      dataSourceType
+      dataSourceType,
+      isPython
     );
   } else {
     queryConsole.appendQueryError(
       query,
       res.substring(queryConstants.error.length),
       !!ext.connection,
-      ext.connectionNode?.label ? ext.connectionNode.label : ""
+      ext.connectionNode?.label ? ext.connectionNode.label : "",
+      isPython
     );
   }
 }
 
 export function writeQueryResultsToView(
   result: any,
-  dataSourceType?: string
+  query: string,
+  dataSourceType?: string,
+  isPython?: boolean
 ): void {
   commands.executeCommand("kdb.resultsPanel.update", result, dataSourceType);
+  const connectionType: ServerType =
+    ext.connectionNode instanceof KdbNode
+      ? ServerType.KDB
+      : ServerType.INSIGHTS;
+  addQueryHistory(
+    query,
+    ext.connectionNode?.label ? ext.connectionNode.label : "",
+    connectionType,
+    true,
+    isPython
+  );
 }
 
 export function writeScratchpadResult(
   result: ScratchpadResult,
-  query: string
+  query: string,
+  isPython?: boolean
 ): void {
   const queryConsole = ExecutionConsole.start();
 
@@ -972,9 +1006,9 @@ export function writeScratchpadResult(
     );
   } else {
     if (ext.resultsViewProvider.isVisible()) {
-      writeQueryResultsToView(result.data, "SCRATCHPAD");
+      writeQueryResultsToView(result.data, query, "SCRATCHPAD", isPython);
     } else {
-      writeQueryResultsToConsole(result.data, query);
+      writeQueryResultsToConsole(result.data, query, undefined, isPython);
     }
   }
 }

@@ -235,7 +235,11 @@ export async function runDataSource(
   }
 
   if (ext.resultsViewProvider.isVisible()) {
-    writeQueryResultsToView(res, selectedType);
+    writeQueryResultsToView(
+      res,
+      getQuery(fileContent, selectedType),
+      selectedType
+    );
   } else {
     writeQueryResultsToConsole(
       res,
