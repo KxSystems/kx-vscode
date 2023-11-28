@@ -33,7 +33,7 @@ export interface LintResult {
   name: string;
   message: string;
   severity: RuleSeverity;
-  entity: Entity;
+  problems: Entity[];
 }
 
 export function lint(ast: QAst) {
@@ -43,8 +43,8 @@ export function lint(ast: QAst) {
         name: rule.name,
         message: rule.message,
         severity: rule.severity,
-        entity: rule.check(ast),
+        problems: rule.check(ast),
       } as LintResult;
     })
-    .filter((result) => !!result.entity);
+    .filter((result) => result.problems.length > 0);
 }

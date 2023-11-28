@@ -12,6 +12,7 @@
  */
 
 import { Entity, QAst } from "../parser";
+import { assignReservedWord } from "./symbols";
 
 export enum RuleSeverity {
   ERROR = "ERROR",
@@ -23,16 +24,16 @@ export interface LinterRule {
   name: string;
   message: string;
   severity: RuleSeverity;
-  check: (ast: QAst) => Entity | undefined;
+  check: (ast: QAst) => Entity[];
 }
 
-const check = () => undefined;
+const check = () => [];
 
 const AssignReservedWordRule: LinterRule = {
   name: "ASSIGN_RESERVED_WORD",
   message: "Assignment to a reserved word",
   severity: RuleSeverity.ERROR,
-  check,
+  check: assignReservedWord,
 };
 
 const CondEvenArgsRule: LinterRule = {

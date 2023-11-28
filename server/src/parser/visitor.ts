@@ -51,6 +51,8 @@ class QVisitor extends BaseQVisitor {
   }
 
   expression(ctx: any) {
+    ctx.literal?.forEach((rule: any) => this.visit(rule));
+    ctx.keyword?.forEach((rule: any) => this.visit(rule));
     ctx.list?.forEach((rule: any) => this.visit(rule));
     ctx.lambda?.forEach((rule: any) => this.visit(rule));
     ctx.bracket?.forEach((rule: any) => this.visit(rule));
@@ -96,24 +98,10 @@ class QVisitor extends BaseQVisitor {
   }
 
   assignment(ctx: any) {
-    let i = this.symbols.length;
-    let symbol = undefined;
-    while (i > 0) {
-      i--;
-      symbol = this.symbols[i];
-      if (
-        symbol.scope === this.scope &&
-        symbol.type === EntityType.IDENTIFIER
-      ) {
-        break;
-      }
-    }
-    if (!symbol) {
-      return;
-    }
     const entity = this.createEntity({
-      ...symbol,
       type: EntityType.ASSIGNMENT,
+      startOffset: ctx.Colon[0].startOffset,
+      endOffset: ctx.Colon[0].endOffset,
     });
     this.symbols.push(entity);
     this.scopes.push(entity);
@@ -128,6 +116,70 @@ class QVisitor extends BaseQVisitor {
     });
     this.symbols.push(entity);
   }
+
+  keyword(ctx: any) {
+    const entity = this.createEntity({
+      ...(ctx.Keyword || ctx.Underscore || ctx.Dot || ctx.BinaryColon)[0],
+      type: EntityType.KEYWORD,
+    });
+    this.symbols.push(entity);
+  }
+
+  literal(ctx: any) {
+    let type: EntityType;
+    let item: any;
+
+    if (ctx.CharLiteral) {
+      type = EntityType.CHAR_LITERAL;
+      item = ctx.CharLiteral;
+    } else if (ctx.TimeStampLiteral) {
+      type = EntityType.TIMESTAMP_LITERAL;
+      item = ctx.TimeStampLiteral;
+    } else if (ctx.DateTimeLiteral) {
+      type = EntityType.DATETIME_LITERAL;
+      item = ctx.DateTimeLiteral;
+    } else if (ctx.MiliTimeLiteral) {
+      type = EntityType.MILITIME_LITERAL;
+      item = ctx.MiliTimeLiteral;
+    } else if (ctx.NanoTimeLiteral) {
+      type = EntityType.NANOTIME_LITERAL;
+      item = ctx.NanoTimeLiteral;
+    } else if (ctx.DateLiteral) {
+      type = EntityType.DATE_LITERAL;
+      item = ctx.DateLiteral;
+    } else if (ctx.MonthLiteral) {
+      type = EntityType.MONTH_LITERAL;
+      item = ctx.MonthLiteral;
+    } else if (ctx.SecondLiteral) {
+      type = EntityType.SECOND_LITERAL;
+      item = ctx.SecondLiteral;
+    } else if (ctx.MinuteLiteral) {
+      type = EntityType.MINUTE_LITERAL;
+      item = ctx.MinuteLiteral;
+    } else if (ctx.FloatLiteral) {
+      type = EntityType.FLOAT_LITERAL;
+      item = ctx.FloatLiteral;
+    } else if (ctx.BinaryLiteral) {
+      type = EntityType.BINARY_LITERAL;
+      item = ctx.BinaryLiteral;
+    } else if (ctx.ByteLiteral) {
+      type = EntityType.BYTE_LITERAL;
+      item = ctx.ByteLiteral;
+    } else if (ctx.IntegerLiteral) {
+      type = EntityType.INTEGER_LITERAL;
+      item = ctx.IntegerLiteral;
+    } else {
+      type = EntityType.LITERAL;
+    }
+
+    if (item) {
+      const entity = this.createEntity({
+        ...item[0],
+        type,
+      });
+      this.symbols.push(entity);
+    }
+  }
 }
 
 export enum EntityType {
@@ -136,6 +188,21 @@ export enum EntityType {
   BRACKET = "BRACKET",
   ASSIGNMENT = "ASSIGNMENT",
   IDENTIFIER = "IDENTIFIER",
+  KEYWORD = "KEYWORD",
+  LITERAL = "LITERAL",
+  CHAR_LITERAL = "CHAR_LITERAL",
+  TIMESTAMP_LITERAL = "TIMESTAMP_LITERAL",
+  DATETIME_LITERAL = "DATETIME_LITERAL",
+  MILITIME_LITERAL = "MILITIME_LITERAL",
+  NANOTIME_LITERAL = "NANOTIME_LITERAL",
+  DATE_LITERAL = "DATE_LITERAL",
+  MONTH_LITERAL = "MONTH_LITERAL",
+  SECOND_LITERAL = "SECOND_LITERAL",
+  MINUTE_LITERAL = "MINUTE_LITERAL",
+  FLOAT_LITERAL = "FLOAT_LITERAL",
+  BINARY_LITERAL = "BINARY_LITERAL",
+  BYTE_LITERAL = "BYTE_LITERAL",
+  INTEGER_LITERAL = "INTEGER_LITERAL",
 }
 
 export interface Entity {

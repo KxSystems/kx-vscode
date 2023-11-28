@@ -46,6 +46,7 @@ import {
   WorkspaceEdit,
 } from "vscode-languageserver/node";
 import { lint } from "./linter";
+import { RuleSeverity } from "./linter/rules";
 import { EntityType, analyze } from "./parser";
 import { QParser } from "./parser/parser";
 import { AnalyzerContent, GlobalSettings, Keyword } from "./utils/analyzer";
@@ -430,26 +431,33 @@ export default class QLangServer {
           ),
         },
         message: "Syntax error",
-        source: "kdb",
+        source: "kdb.QParser",
       };
       diagnostics.push(diagnostic);
     }
     if (problems === 0) {
-      const results = lint(analyze(cst));
-      results.forEach((result) => {
-        const diagnostic: Diagnostic = {
-          severity: DiagnosticSeverity.Hint,
-          range: {
-            start: textDocument.positionAt(result.entity.startOffset),
-            end: textDocument.positionAt(
-              result.entity.endOffset || result.entity.startOffset
-            ),
-          },
-          message: result.message,
-          source: "kdb",
-        };
-        diagnostics.push(diagnostic);
-      });
+      const ast = analyze(cst);
+      const results = lint(ast);
+      for (const result of results) {
+        const severity =
+          result.severity === RuleSeverity.ERROR
+            ? DiagnosticSeverity.Error
+            : result.severity === RuleSeverity.WARNING
+            ? DiagnosticSeverity.Warning
+            : DiagnosticSeverity.Information;
+        for (const problem of result.problems) {
+          const diagnostic: Diagnostic = {
+            severity,
+            range: {
+              start: textDocument.positionAt(problem.startOffset),
+              end: textDocument.positionAt(problem.endOffset),
+            },
+            message: result.message,
+            source: "kdb.QLinter",
+          };
+          diagnostics.push(diagnostic);
+        }
+      }
     }
     this.connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
   }
