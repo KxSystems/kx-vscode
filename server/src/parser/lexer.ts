@@ -25,6 +25,7 @@ import {
   MonthLiteral,
   NanoTimeLiteral,
   SecondLiteral,
+  SymbolLiteral,
   TimeStampLiteral,
 } from "./literals";
 import {
@@ -65,6 +66,7 @@ export const QTokens = [
   RCurly,
   Dot,
   Underscore,
+  SymbolLiteral,
   TimeStampLiteral,
   DateTimeLiteral,
   MiliTimeLiteral,

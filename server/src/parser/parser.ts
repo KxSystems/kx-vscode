@@ -26,6 +26,7 @@ import {
   MonthLiteral,
   NanoTimeLiteral,
   SecondLiteral,
+  SymbolLiteral,
   TimeStampLiteral,
 } from "./literals";
 import {
@@ -122,6 +123,7 @@ class Parser extends CstParser {
   private literal = this.RULE("literal", () => {
     this.OR([
       { ALT: () => this.CONSUME(CharLiteral) },
+      { ALT: () => this.CONSUME(SymbolLiteral) },
       { ALT: () => this.CONSUME(TimeStampLiteral) },
       { ALT: () => this.CONSUME(DateTimeLiteral) },
       { ALT: () => this.CONSUME(MiliTimeLiteral) },

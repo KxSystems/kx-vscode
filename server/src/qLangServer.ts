@@ -430,7 +430,7 @@ export default class QLangServer {
             error.token.endOffset || error.token.startOffset
           ),
         },
-        message: "Syntax error",
+        message: (error.message || error.name).replace(/\s+/g, " "),
         source: "kdb.QParser",
       };
       diagnostics.push(diagnostic);

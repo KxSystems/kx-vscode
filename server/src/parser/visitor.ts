@@ -48,6 +48,7 @@ class QVisitor extends BaseQVisitor {
 
   statement(ctx: any) {
     ctx.expression?.forEach((rule: any) => this.visit(rule));
+    ctx.terminate?.forEach((rule: any) => this.visit(rule));
   }
 
   expression(ctx: any) {
@@ -132,6 +133,9 @@ class QVisitor extends BaseQVisitor {
     if (ctx.CharLiteral) {
       type = EntityType.CHAR_LITERAL;
       item = ctx.CharLiteral;
+    } else if (ctx.SymbolLiteral) {
+      type = EntityType.SYMBOL_LITERAL;
+      item = ctx.SymbolLiteral;
     } else if (ctx.TimeStampLiteral) {
       type = EntityType.TIMESTAMP_LITERAL;
       item = ctx.TimeStampLiteral;
@@ -180,9 +184,20 @@ class QVisitor extends BaseQVisitor {
       this.symbols.push(entity);
     }
   }
+
+  terminate(ctx: any) {
+    if (ctx.EndOfLine) {
+      const entity = this.createEntity({
+        ...ctx.EndOfLine[0],
+        type: EntityType.EOL,
+      });
+      this.symbols.push(entity);
+    }
+  }
 }
 
 export enum EntityType {
+  EOL = "EOL",
   LIST = "LIST",
   LAMBDA = "LAMBDA",
   BRACKET = "BRACKET",
@@ -191,6 +206,7 @@ export enum EntityType {
   KEYWORD = "KEYWORD",
   LITERAL = "LITERAL",
   CHAR_LITERAL = "CHAR_LITERAL",
+  SYMBOL_LITERAL = "SYMBOL_LITERAL",
   TIMESTAMP_LITERAL = "TIMESTAMP_LITERAL",
   DATETIME_LITERAL = "DATETIME_LITERAL",
   MILITIME_LITERAL = "MILITIME_LITERAL",

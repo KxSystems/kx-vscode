@@ -13,24 +13,8 @@
 
 import { Entity, EntityType, QAst } from "../parser";
 
-export function assignReservedWord({ symbols }: QAst): Entity[] {
-  const indexes: number[] = [];
-  const problems: Entity[] = [];
-
-  for (let i = 0; i < symbols.length; i++) {
-    if (symbols[i].type === EntityType.ASSIGNMENT) {
-      indexes.push(i);
-    }
-  }
-
-  for (let i = 0; i < indexes.length; i++) {
-    const index = indexes[i];
-    if (index > 0) {
-      if (symbols[index - 1].type === EntityType.KEYWORD) {
-        problems.push(symbols[index - 1]);
-      }
-    }
-  }
-
-  return problems;
+export function deprecatedDatetime({ symbols }: QAst): Entity[] {
+  return symbols.filter(
+    (symbol) => symbol.type === EntityType.DATETIME_LITERAL
+  );
 }

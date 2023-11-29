@@ -16,17 +16,15 @@ import { RuleSeverity, Rules } from "./rules";
 
 const names = [
   "ASSIGN_RESERVED_WORD",
-  "DECLARED_AFTER_USE",
   "INVALID_ASSIGN",
+  "DECLARED_AFTER_USE",
+  "UNUSED_PARAM",
+  "UNUSED_VAR",
+  "LINE_LENGTH",
   "TOO_MANY_CONSTANTS",
   "TOO_MANY_GLOBALS",
   "TOO_MANY_LOCALS",
   "DEPRECATED_DATETIME",
-  "EMPTY_IF",
-  "INSUFFICIENT_INDENT",
-  "UNUSED_PARAM",
-  "UNUSED_VAR",
-  "LINE_LENGTH",
 ];
 
 export interface LintResult {
@@ -39,12 +37,13 @@ export interface LintResult {
 export function lint(ast: QAst) {
   return Rules.filter((rule) => names.find((name) => rule.name === name))
     .map((rule) => {
-      return {
+      const result: LintResult = {
         name: rule.name,
         message: rule.message,
         severity: rule.severity,
         problems: rule.check(ast),
-      } as LintResult;
+      };
+      return result;
     })
     .filter((result) => result.problems.length > 0);
 }

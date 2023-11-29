@@ -12,7 +12,20 @@
  */
 
 import { Entity, QAst } from "../parser";
-import { assignReservedWord } from "./symbols";
+import {
+  assignReservedWord,
+  declaredAfterUse,
+  invalidAssign,
+  unusedParam,
+  unusedVar,
+} from "./assign";
+import {
+  lineLength,
+  tooManyConstants,
+  tooManyGlobals,
+  tooManyLocals,
+} from "./limit";
+import { deprecatedDatetime } from "./other";
 
 export enum RuleSeverity {
   ERROR = "ERROR",
@@ -47,7 +60,7 @@ const DeclaredAfterUserRule: LinterRule = {
   name: "DECLARED_AFTER_USE",
   message: "The variable was declared after being used",
   severity: RuleSeverity.ERROR,
-  check,
+  check: declaredAfterUse,
 };
 
 const GlobalPeachRule: LinterRule = {
@@ -68,7 +81,7 @@ const InvalidAssignRule: LinterRule = {
   name: "INVALID_ASSIGN",
   message: "Attempt to assign to a string, symbol, or number",
   severity: RuleSeverity.ERROR,
-  check,
+  check: invalidAssign,
 };
 
 const InvalidEscapeRule: LinterRule = {
@@ -112,14 +125,14 @@ const TooManyConstantsRule: LinterRule = {
   name: "TOO_MANY_CONSTANTS",
   message: "Too many constants in a function",
   severity: RuleSeverity.ERROR,
-  check,
+  check: tooManyConstants,
 };
 
 const TooManyGlobalsRule: LinterRule = {
   name: "TOO_MANY_GLOBALS",
   message: "Too many globals in a function",
   severity: RuleSeverity.ERROR,
-  check,
+  check: tooManyGlobals,
 };
 
 const UnindentedCodeRule: LinterRule = {
@@ -133,7 +146,7 @@ const TooManyLocalsRule: LinterRule = {
   name: "TOO_MANY_LOCALS",
   message: "Too many locals in a function",
   severity: RuleSeverity.ERROR,
-  check,
+  check: tooManyLocals,
 };
 
 const BackwardCompatibilityRule: LinterRule = {
@@ -171,7 +184,7 @@ const DeprecatedDatetimeRule: LinterRule = {
   name: "DEPRECATED_DATETIME",
   message: "Datetime has been deprecated",
   severity: RuleSeverity.WARNING,
-  check,
+  check: deprecatedDatetime,
 };
 
 const DeprecatedFunctionRule: LinterRule = {
@@ -281,14 +294,14 @@ const UnusedParamRule: LinterRule = {
   name: "UNUSED_PARAM",
   message: "This param was declared then never used",
   severity: RuleSeverity.WARNING,
-  check,
+  check: unusedParam,
 };
 
 const UnusedVarRule: LinterRule = {
   name: "UNUSED_VAR",
   message: "This variable was declared then never used",
   severity: RuleSeverity.WARNING,
-  check,
+  check: unusedVar,
 };
 
 const RandomGuidsRule: LinterRule = {
@@ -355,7 +368,7 @@ const LineLengthRule: LinterRule = {
   name: "LINE_LENGTH",
   message: "Maximum line length exceeded",
   severity: RuleSeverity.WARNING,
-  check,
+  check: lineLength,
 };
 
 const DefaultQdocRule: LinterRule = {

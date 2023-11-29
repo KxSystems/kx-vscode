@@ -107,9 +107,10 @@ export const Infix = createToken({
   pattern: /[,%*+-]/,
 });
 
+// TODO
 export const BinaryColon = createToken({
   name: "BinaryColon",
-  pattern: /['`/\\:012]:/,
+  pattern: /['/\\:012]:/,
 });
 
 export const Colon = createToken({

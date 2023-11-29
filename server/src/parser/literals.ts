@@ -13,6 +13,11 @@
 
 import { createToken } from "chevrotain";
 
+export const SymbolLiteral = createToken({
+  name: "SymbolLiteral",
+  pattern: /`[.:\w]*/,
+});
+
 export const CharLiteral = createToken({
   name: "CharLiteral",
   pattern: /"(?:\\.|(?:(?!\r?\n\S)[^"]))*"/,
