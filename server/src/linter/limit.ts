@@ -35,16 +35,16 @@ export function lineLength({ symbols }: QAst): Entity[] {
 }
 
 export function tooManyConstants({ symbols }: QAst): Entity[] {
-  symbols;
+  console.log(symbols);
   return [];
 }
 
 export function tooManyGlobals({ symbols }: QAst): Entity[] {
-  symbols;
+  console.log(symbols);
   return [];
 }
 
 export function tooManyLocals({ symbols }: QAst): Entity[] {
-  symbols;
+  console.log(symbols);
   return [];
 }

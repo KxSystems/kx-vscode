@@ -12,7 +12,13 @@
  */
 
 import * as assert from "assert";
-import { CharLiteral, QLexer, QParser } from "../../server/src/parser";
+import {
+  CharLiteral,
+  EntityType,
+  QLexer,
+  QParser,
+  analyze,
+} from "../../server/src/parser";
 
 describe("QLexer", () => {
   describe("CharLiteral", () => {
@@ -106,5 +112,35 @@ describe("QParser", () => {
         assert.deepEqual(QParser.errors, []);
       });
     });
+  });
+});
+
+describe("QVisitor", () => {
+  it("should analyze list", () => {
+    const script = "(1;2;3)";
+    const cst = QParser.parse(script);
+    const { symbols } = analyze(cst);
+    assert.strictEqual(symbols[0].type, EntityType.LIST);
+  });
+
+  it("should analyze lambda", () => {
+    const script = "{}";
+    const cst = QParser.parse(script);
+    const { symbols } = analyze(cst);
+    assert.strictEqual(symbols[0].type, EntityType.LAMBDA);
+  });
+
+  it("should analyze bracket", () => {
+    const script = "[]";
+    const cst = QParser.parse(script);
+    const { symbols } = analyze(cst);
+    assert.strictEqual(symbols[0].type, EntityType.BRACKET);
+  });
+
+  it("should analyze identifier", () => {
+    const script = "a";
+    const cst = QParser.parse(script);
+    const { symbols } = analyze(cst);
+    assert.strictEqual(symbols[0].type, EntityType.IDENTIFIER);
   });
 });

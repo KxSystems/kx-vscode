@@ -36,21 +36,21 @@ export function assignReservedWord({ symbols }: QAst): Entity[] {
 }
 
 export function invalidAssign({ symbols }: QAst): Entity[] {
-  symbols;
+  console.log(symbols);
   return [];
 }
 
 export function declaredAfterUse({ symbols }: QAst): Entity[] {
-  symbols;
+  console.log(symbols);
   return [];
 }
 
 export function unusedParam({ symbols }: QAst): Entity[] {
-  symbols;
+  console.log(symbols);
   return [];
 }
 
 export function unusedVar({ symbols }: QAst): Entity[] {
-  symbols;
+  console.log(symbols);
   return [];
 }

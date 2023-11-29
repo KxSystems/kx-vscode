@@ -233,16 +233,6 @@ export interface QAst {
   symbols: Entity[];
 }
 
-export function getSymbolScope(entity: Entity) {
-  let scope;
-  while ((scope = entity.scope)) {
-    if (scope.type === EntityType.LAMBDA) {
-      break;
-    }
-  }
-  return scope;
-}
-
 export function analyze(cstNode: CstNode | CstNode[]): QAst {
   const visitor = new QVisitor();
   visitor.visit(cstNode);
