@@ -564,7 +564,7 @@ export async function importScratchpad(
           ext.outputChannel.appendLine("User cancelled the installation.");
         });
 
-        progress.report({ message: "Scratchpad creating..." });
+        progress.report({ message: "Query executing..." });
 
         const scratchpadResponse = await axios.post(
           scratchpadURL.toString(),
@@ -574,7 +574,7 @@ export async function importScratchpad(
 
         ext.outputChannel.append(JSON.stringify(scratchpadResponse.data));
         window.showInformationMessage(
-          `Scratchpad created successfully, stored in ${variableName}`
+          `Executed successfully, stored in ${variableName}`
         );
 
         const p = new Promise<void>((resolve) => resolve());
