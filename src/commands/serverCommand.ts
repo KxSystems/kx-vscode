@@ -872,7 +872,7 @@ export function getQueryContext(lineNum?: number): string {
 export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
   const editor = window.activeTextEditor;
   if (!editor) {
-    return;
+    return false;
   }
   let context;
   let query;
@@ -882,7 +882,6 @@ export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
       ? n === ext.connectionNode?.details.alias + " (connected)"
       : false
   );
-
   switch (type) {
     case ExecutionTypes.QuerySelection:
     case ExecutionTypes.PythonQuerySelection:
@@ -890,9 +889,7 @@ export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
       query = selection.isEmpty
         ? editor.document.lineAt(selection.active.line).text
         : editor.document.getText(selection);
-
       context = getQueryContext(selection.end.line);
-
       if (type === ExecutionTypes.PythonQuerySelection && insightsNode) {
         isPython = true;
       }
