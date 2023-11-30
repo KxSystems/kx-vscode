@@ -19,13 +19,7 @@ import * as vscode from "vscode";
 import { QuickPickItem, TreeItemCollapsibleState, window } from "vscode";
 import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
 import * as installTools from "../../src/commands/installTools";
-import {
-  addKdbConnection,
-  addNewConnection,
-  getScratchpadQuery,
-  importScratchpad,
-  writeQueryResultsToView,
-} from "../../src/commands/serverCommand";
+import * as serverCommand from "../../src/commands/serverCommand";
 import * as walkthroughCommand from "../../src/commands/walkthroughCommand";
 import { ext } from "../../src/extensionVariables";
 import {
@@ -33,6 +27,7 @@ import {
   DataSourceTypes,
   createDefaultDataSourceFile,
 } from "../../src/models/dataSource";
+import { ExecutionTypes } from "../../src/models/execution";
 import { Insights } from "../../src/models/insights";
 import { ScratchpadResult } from "../../src/models/scratchpadResult";
 import { KdbDataSourceTreeItem } from "../../src/services/dataSourceTreeProvider";
@@ -810,7 +805,7 @@ describe("serverCommand", () => {
     const insMock = sinon.mock(srvCommand);
     insMock.expects("addInsightsConnection").never();
 
-    await addNewConnection();
+    await serverCommand.addNewConnection();
     kdbMock.verify();
     insMock.verify();
 
@@ -834,7 +829,7 @@ describe("serverCommand", () => {
       .stub(srvCommand, "addKdbConnection")
       .returns(undefined);
 
-    await addNewConnection();
+    await serverCommand.addNewConnection();
 
     assert(kdbStub.notCalled);
 
@@ -851,7 +846,7 @@ describe("serverCommand", () => {
 
     const qpStub = sinon.stub(window, "showQuickPick").resolves(qpItem);
 
-    await addKdbConnection();
+    await serverCommand.addKdbConnection();
 
     assert.strictEqual(true, true);
 
@@ -869,7 +864,7 @@ describe("serverCommand", () => {
       .stub(srvCommand, "addInsightsConnection")
       .returns(undefined);
 
-    await addNewConnection();
+    await serverCommand.addNewConnection();
 
     assert(insStub.notCalled);
 
@@ -894,7 +889,7 @@ describe("serverCommand", () => {
       .stub(srvCommand, "addInsightsConnection")
       .returns(undefined);
 
-    await addNewConnection();
+    await serverCommand.addNewConnection();
 
     assert(insStub.notCalled);
 
@@ -920,7 +915,7 @@ describe("serverCommand", () => {
       .stub(srvCommand, "addInsightsConnection")
       .returns(undefined);
 
-    await addNewConnection();
+    await serverCommand.addNewConnection();
 
     assert(insStub.notCalled);
 
@@ -949,7 +944,7 @@ describe("serverCommand", () => {
       .stub(insModule, "getInsights")
       .returns(undefined);
 
-    await addNewConnection();
+    await serverCommand.addNewConnection();
 
     assert(insStub.notCalled);
 
@@ -983,7 +978,7 @@ describe("serverCommand", () => {
       .stub(insModule, "getInsights")
       .returns(insTest);
 
-    await addNewConnection();
+    await serverCommand.addNewConnection();
 
     assert(insStub.notCalled);
 
@@ -1021,7 +1016,7 @@ describe("serverCommand", () => {
       .stub(insModule, "getInsights")
       .returns(insTest);
 
-    await addNewConnection();
+    await serverCommand.addNewConnection();
 
     assert(insStub.notCalled);
 
@@ -1036,7 +1031,7 @@ describe("serverCommand", () => {
       const result = { data: [1, 2, 3] };
       const executeCommandStub = sinon.stub(vscode.commands, "executeCommand");
 
-      writeQueryResultsToView(result);
+      serverCommand.writeQueryResultsToView(result, "");
 
       sinon.assert.calledWith(
         executeCommandStub.firstCall,
@@ -1256,7 +1251,7 @@ describe("serverCommand", () => {
 
       const variableName = "testVariable";
 
-      const result = await importScratchpad(variableName, params);
+      const result = await serverCommand.importScratchpad(variableName, params);
       assert.equal(result, undefined);
     });
 
@@ -1269,7 +1264,7 @@ describe("serverCommand", () => {
 
       const variableName = "testVariable";
 
-      const result = await importScratchpad(variableName, params);
+      const result = await serverCommand.importScratchpad(variableName, params);
       assert.equal(result, undefined);
     });
 
@@ -1282,7 +1277,7 @@ describe("serverCommand", () => {
 
       const variableName = "testVariable";
 
-      const result = await importScratchpad(variableName, params);
+      const result = await serverCommand.importScratchpad(variableName, params);
       assert.equal(result, undefined);
     });
 
@@ -1294,7 +1289,7 @@ describe("serverCommand", () => {
         .stub(axios, "post")
         .resolves({ data: { success: true } });
       const variableName = "testVariable";
-      await importScratchpad(variableName, params);
+      await serverCommand.importScratchpad(variableName, params);
       sinon.assert.calledOnce(axiosPostStub);
     });
   });
@@ -1399,7 +1394,7 @@ describe("serverCommand", () => {
       handleWSResultsStub.returns("10");
       handleScratchpadTableResStub.returns("10");
 
-      const response = await getScratchpadQuery(query, context);
+      const response = await serverCommand.getScratchpadQuery(query, context);
 
       assert.equal(response.data, "10");
       sinon.assert.calledOnce(axiosPostStub);
@@ -1414,10 +1409,114 @@ describe("serverCommand", () => {
       const expectedToken = undefined;
       getTokenStub.resolves(expectedToken);
 
-      const response = await getScratchpadQuery(query, context);
+      const response = await serverCommand.getScratchpadQuery(query, context);
 
       assert.equal(response, undefined);
       sinon.assert.notCalled(axiosPostStub);
+    });
+  });
+
+  describe("runQuery", () => {
+    const editor = {
+      selection: {
+        isEmpty: false,
+        active: { line: 5 },
+        end: sinon.stub().returns({ line: 10 }),
+      },
+      document: {
+        lineAt: sinon.stub().returns({ text: "SELECT * FROM table" }),
+        getText: sinon.stub().returns("SELECT * FROM table"),
+      },
+    };
+
+    const insightsNode = new InsightsNode(
+      [],
+      "insightsnode1",
+      {
+        server: "https://insightsservername.com/",
+        alias: "insightsserveralias",
+        auth: true,
+      },
+      TreeItemCollapsibleState.None
+    );
+
+    let getQueryContextStub,
+      activeTextEditorStub,
+      executeQueryStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      activeTextEditorStub = sinon
+        .stub(vscode.window, "activeTextEditor")
+        .value(editor);
+      getQueryContextStub = sinon
+        .stub(serverCommand, "getQueryContext")
+        .returns(".");
+      executeQueryStub = sinon
+        .stub(serverCommand, "executeQuery")
+        .resolves(undefined);
+      ext.kdbinsightsNodes.push("insightsserveralias (connected)");
+    });
+
+    afterEach(() => {
+      activeTextEditorStub.restore();
+      getQueryContextStub.restore();
+      executeQueryStub.restore();
+      ext.kdbinsightsNodes.pop();
+    });
+
+    it("runQuery with undefined editor ", () => {
+      activeTextEditorStub.value(undefined);
+      const result = serverCommand.runQuery(ExecutionTypes.PythonQueryFile);
+      assert.equal(result, false);
+    });
+
+    it("runQuery with QuerySelection", () => {
+      ext.connectionNode = undefined;
+      const result = serverCommand.runQuery(ExecutionTypes.QuerySelection);
+      assert.equal(result, undefined);
+    });
+
+    it("runQuery with PythonQueryFile not connected to inisghts node", () => {
+      ext.connectionNode = undefined;
+      const result = serverCommand.runQuery(
+        ExecutionTypes.PythonQuerySelection
+      );
+      assert.equal(result, undefined);
+    });
+
+    it("runQuery with PythonQueryFile connected to inisghts node", () => {
+      ext.connectionNode = insightsNode;
+      const result = serverCommand.runQuery(
+        ExecutionTypes.PythonQuerySelection
+      );
+      assert.equal(result, undefined);
+    });
+
+    it("runQuery with QueryFile", () => {
+      ext.connectionNode = undefined;
+      const result = serverCommand.runQuery(ExecutionTypes.QueryFile);
+      assert.equal(result, undefined);
+    });
+
+    it("runQuery with ReRunQuery", () => {
+      ext.connectionNode = undefined;
+      const result = serverCommand.runQuery(
+        ExecutionTypes.ReRunQuery,
+        "rerun query"
+      );
+      assert.equal(result, undefined);
+    });
+
+    it("runQuery with PythonQueryFile", () => {
+      ext.connectionNode = undefined;
+      const result = serverCommand.runQuery(ExecutionTypes.PythonQueryFile);
+      assert.equal(result, undefined);
+    });
+
+    it("runQuery with PythonQueryFile", () => {
+      ext.connectionNode = insightsNode;
+      const result = serverCommand.runQuery(ExecutionTypes.PythonQueryFile);
+      assert.equal(result, undefined);
     });
   });
 });

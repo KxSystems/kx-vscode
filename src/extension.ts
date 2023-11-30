@@ -281,7 +281,18 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.execute.fileQuery", async () => {
       runQuery(ExecutionTypes.QueryFile);
       ext.connection?.update();
-    })
+    }),
+    commands.registerCommand("kdb.execute.pythonScratchpadQuery", async () => {
+      runQuery(ExecutionTypes.PythonQuerySelection);
+      ext.connection?.update();
+    }),
+    commands.registerCommand(
+      "kdb.execute.pythonFileScratchpadQuery",
+      async () => {
+        runQuery(ExecutionTypes.PythonQueryFile);
+        ext.connection?.update();
+      }
+    )
   );
 
   const lastResult: QueryResult | undefined = undefined;

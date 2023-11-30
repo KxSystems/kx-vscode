@@ -15,4 +15,6 @@ export enum ExecutionTypes {
   QuerySelection,
   QueryFile,
   ReRunQuery,
+  PythonQuerySelection,
+  PythonQueryFile,
 }

@@ -294,6 +294,16 @@
         "command": "kdb.execute.fileQuery",
         "title": "Execute Entire File",
         "when": "kdb.connected"
+      },
+      {
+        "command": "kdb.execute.pythonScratchpadQuery",
+        "title": "Execute Current Selection in Insights Scratchpad",
+        "when": "kdb.connected"
+      },
+      {
+        "command": "kdb.execute.pythonFileScratchpadQuery",
+        "title": "Execute Entire File in Insights Scratchpad",
+        "when": "kdb.connected"
       }
     ],
     "keybindings": [
@@ -308,6 +318,18 @@
         "key": "ctrl+shift+d",
         "mac": "cmd+shift+d",
         "when": "editorLangId == q && kdb.connected"
+      },
+      {
+        "command": "kdb.execute.pythonScratchpadQuery",
+        "key": "ctrl+d",
+        "mac": "cmd+d",
+        "when": "editorLangId == python  && kdb.insightsConnected"
+      },
+      {
+        "command": "kdb.execute.pythonFileScratchpadQuery",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d",
+        "when": "editorLangId == python && kdb.insightsConnected"
       },
       {
         "command": "kdb.terminal.run",
@@ -565,6 +587,11 @@
           "command": "kdb.execute.fileQuery",
           "when": "resourceLangId ==  q  && kdb.connected",
           "group": "navigation"
+        },
+        {
+          "command": "kdb.execute.pythonFileScratchpadQuery",
+          "group": "navigation",
+          "when": "editorLangId == python && kdb.insightsConnected"
         }
       ],
       "editor/context": [
@@ -582,6 +609,16 @@
           "command": "kdb.execute.fileQuery",
           "group": "q",
           "when": "editorLangId == q  && kdb.connected"
+        },
+        {
+          "command": "kdb.execute.pythonScratchpadQuery",
+          "group": "q",
+          "when": "editorLangId == python && kdb.insightsConnected"
+        },
+        {
+          "command": "kdb.execute.pythonFileScratchpadQuery",
+          "group": "q",
+          "when": "editorLangId == python && kdb.insightsConnected"
         }
       ]
     }

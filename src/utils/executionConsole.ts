@@ -75,7 +75,8 @@ export class ExecutionConsole {
     output: string | string[],
     query = "",
     serverName: string,
-    dataSourceType?: string
+    dataSourceType?: string,
+    isPhython?: boolean
   ): void {
     getHideDetailedConsoleQueryOutput();
     const hideDetails = ext.hideDetailedConsoleQueryOutput;
@@ -92,7 +93,7 @@ export class ExecutionConsole {
       ext.connectionNode instanceof KdbNode
         ? ServerType.KDB
         : ServerType.INSIGHTS;
-    addQueryHistory(query, serverName, connectionType, true);
+    addQueryHistory(query, serverName, connectionType, true, isPhython);
 
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
@@ -120,7 +121,8 @@ export class ExecutionConsole {
     query: string,
     result: string,
     isConnected: boolean,
-    serverName: string
+    serverName: string,
+    isPython?: boolean
   ): void {
     getHideDetailedConsoleQueryOutput();
     const hideDetails = ext.hideDetailedConsoleQueryOutput;
@@ -143,12 +145,18 @@ export class ExecutionConsole {
       } else {
         this._console.appendLine(`Error: ${result}`);
       }
-      addQueryHistory(query, serverName, connectionType, false);
+      addQueryHistory(query, serverName, connectionType, false, isPython);
     } else {
       window.showErrorMessage(`Please connect to a kdb+ server`);
       this._console.appendLine(`Please connect to a kdb+ server`);
       commands.executeCommand("kdb.disconnect");
-      addQueryHistory(query, "No connection", ServerType.undefined, false);
+      addQueryHistory(
+        query,
+        "No connection",
+        ServerType.undefined,
+        false,
+        isPython
+      );
     }
     if (!hideDetails) {
       this._console.appendLine(`<<< >>>`);
@@ -165,7 +173,8 @@ export function addQueryHistory(
   query: string,
   connectionName: string,
   connectionType: ServerType,
-  success: boolean
+  success: boolean,
+  isPython?: boolean
 ) {
   const newQueryHistory: QueryHistory = {
     query: query,
@@ -173,6 +182,7 @@ export function addQueryHistory(
     success,
     connectionName,
     connectionType,
+    language: isPython ? "python" : "q",
   };
 
   ext.kdbQueryHistoryList.unshift(newQueryHistory);

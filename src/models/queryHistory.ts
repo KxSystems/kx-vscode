@@ -19,4 +19,5 @@ export interface QueryHistory {
   query: string;
   time: string;
   success: boolean;
+  language?: string;
 }
