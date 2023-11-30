@@ -30,7 +30,7 @@ import {
   createKdbDataSourcesFolder,
   getConnectedInsightsNode,
 } from "../utils/dataSource";
-import { handleWSResults } from "../utils/queryUtils";
+import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
 import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
 import {
   getDataInsights,
@@ -287,7 +287,8 @@ export async function runApiDataSource(
     JSON.stringify(apiBody)
   );
   if (apiCall?.arrayBuffer) {
-    return handleWSResults(apiCall.arrayBuffer);
+    const results = handleWSResults(apiCall.arrayBuffer);
+    return handleScratchpadTableRes(results);
   }
 }
 
@@ -394,7 +395,8 @@ export async function runQsqlDataSource(
     JSON.stringify(qsqlBody)
   );
   if (qsqlCall?.arrayBuffer) {
-    return handleWSResults(qsqlCall.arrayBuffer);
+    const results = handleWSResults(qsqlCall.arrayBuffer);
+    return handleScratchpadTableRes(results);
   }
 }
 
@@ -409,7 +411,8 @@ export async function runSqlDataSource(
     JSON.stringify(sqlBody)
   );
   if (sqlCall?.arrayBuffer) {
-    return handleWSResults(sqlCall.arrayBuffer);
+    const results = handleWSResults(sqlCall.arrayBuffer);
+    return handleScratchpadTableRes(results);
   }
 }
 
