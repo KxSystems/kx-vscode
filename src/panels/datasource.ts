@@ -129,6 +129,11 @@ export class DataSourcesPanel {
     this._panel.webview.postMessage(message);
   }
 
+  public reload(dataSourceFile: DataSourceFiles) {
+    this.dataSourceFile = dataSourceFile;
+    this.update();
+  }
+
   private _getWebviewContent(
     webview: vscode.Webview,
     extensionUri: vscode.Uri
