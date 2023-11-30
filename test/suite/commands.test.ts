@@ -1462,6 +1462,7 @@ describe("serverCommand", () => {
     });
 
     it("runQuery with QuerySelection", () => {
+      insightsNodeBoolStub.returns(false);
       const result = serverCommand.runQuery(ExecutionTypes.QuerySelection);
       assert.equal(result, undefined);
     });
@@ -1477,6 +1478,7 @@ describe("serverCommand", () => {
     });
 
     it("runQuery with ReRunQuery", () => {
+      insightsNodeBoolStub.returns(false);
       const result = serverCommand.runQuery(
         ExecutionTypes.ReRunQuery,
         "rerun query"
