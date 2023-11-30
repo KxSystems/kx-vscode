@@ -351,8 +351,8 @@ export default class QLangServer {
       return null;
     }
     const offset = document.offsetAt(position);
-    const { symbols } = analyze(cst);
-    const symbol = symbols.find(
+    const { script } = analyze(cst);
+    const symbol = script.find(
       (entity) =>
         entity.type === EntityType.IDENTIFIER &&
         offset >= entity.startOffset &&
@@ -361,7 +361,7 @@ export default class QLangServer {
     if (!symbol) {
       return null;
     }
-    const targets = symbols.filter(
+    const targets = script.filter(
       (entity) =>
         entity.type === EntityType.IDENTIFIER && entity.image === symbol.image
     );

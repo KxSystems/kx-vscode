@@ -16,15 +16,16 @@ import { RuleSeverity, Rules } from "./rules";
 
 const names = [
   "ASSIGN_RESERVED_WORD",
-  "INVALID_ASSIGN",
   "DECLARED_AFTER_USE",
-  "UNUSED_PARAM",
-  "UNUSED_VAR",
-  "LINE_LENGTH",
+  "INVALID_ASSIGN",
   "TOO_MANY_CONSTANTS",
   "TOO_MANY_GLOBALS",
   "TOO_MANY_LOCALS",
   "DEPRECATED_DATETIME",
+  "EMPTY_IF",
+  "UNUSED_PARAM",
+  "UNUSED_VAR",
+  "LINE_LENGTH",
 ];
 
 export interface LintResult {

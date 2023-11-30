@@ -52,11 +52,6 @@ describe("QParser", () => {
       QParser.parse("a: 1 /a:\n");
       assert.deepEqual(QParser.errors, []);
     });
-
-    it("should not ignore overloaded slash", () => {
-      QParser.parse("a: ,/ a:\n");
-      assert.strictEqual(QParser.errors.length, 1);
-    });
   });
 
   describe("script", () => {
@@ -116,31 +111,10 @@ describe("QParser", () => {
 });
 
 describe("QVisitor", () => {
-  it("should analyze list", () => {
-    const script = "(1;2;3)";
-    const cst = QParser.parse(script);
-    const { symbols } = analyze(cst);
-    assert.strictEqual(symbols[0].type, EntityType.LIST);
-  });
-
-  it("should analyze lambda", () => {
-    const script = "{}";
-    const cst = QParser.parse(script);
-    const { symbols } = analyze(cst);
-    assert.strictEqual(symbols[0].type, EntityType.LAMBDA);
-  });
-
-  it("should analyze bracket", () => {
-    const script = "[]";
-    const cst = QParser.parse(script);
-    const { symbols } = analyze(cst);
-    assert.strictEqual(symbols[0].type, EntityType.BRACKET);
-  });
-
   it("should analyze identifier", () => {
-    const script = "a";
-    const cst = QParser.parse(script);
-    const { symbols } = analyze(cst);
-    assert.strictEqual(symbols[0].type, EntityType.IDENTIFIER);
+    const text = "a";
+    const cst = QParser.parse(text);
+    const { script } = analyze(cst);
+    assert.strictEqual(script[0].type, EntityType.IDENTIFIER);
   });
 });

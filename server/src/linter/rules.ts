@@ -25,7 +25,7 @@ import {
   tooManyGlobals,
   tooManyLocals,
 } from "./limit";
-import { deprecatedDatetime } from "./other";
+import { deprecatedDatetime, emptyIf } from "./other";
 
 export enum RuleSeverity {
   ERROR = "ERROR",
@@ -198,7 +198,7 @@ const EmptyIfRule: LinterRule = {
   name: "EMPTY_IF",
   message: "If statement lacks code to execute",
   severity: RuleSeverity.WARNING,
-  check,
+  check: emptyIf,
 };
 
 const FixedSeedRule: LinterRule = {

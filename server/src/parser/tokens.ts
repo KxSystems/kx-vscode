@@ -34,12 +34,6 @@ export const LineComment = createToken({
   group: Lexer.SKIPPED,
 });
 
-export const WhiteSpace = createToken({
-  name: "WhiteSpace",
-  pattern: /(?:\r?\n)*[ \t]+/,
-  group: Lexer.SKIPPED,
-});
-
 export const EndOfLine = createToken({
   name: "EndOfLine",
   pattern: /\r?\n/,
@@ -48,11 +42,6 @@ export const EndOfLine = createToken({
 export const SemiColon = createToken({
   name: "SemiColon",
   pattern: /;/,
-});
-
-export const Quote = createToken({
-  name: "Quote",
-  pattern: /"/,
 });
 
 export const LParen = createToken({
@@ -90,34 +79,22 @@ export const Identifier = createToken({
   pattern: /(?:\.[A-Za-z][A-Za-z_0-9.]*(?<!\.)|[A-Za-z][A-Za-z_0-9]*)/,
 });
 
-export const Dot = createToken({
-  name: "Dot",
-  pattern: /\./,
-  longer_alt: Identifier,
+export const DynamicLoad = createToken({
+  name: "DynamicLoad",
+  pattern: /['/\\012]:/,
 });
 
-export const Underscore = createToken({
-  name: "Underscore",
-  pattern: /_/,
-  longer_alt: Identifier,
-});
-
-export const Infix = createToken({
-  name: "Infix",
-  pattern: /[,%*+-]/,
-});
-
-// TODO
-export const BinaryColon = createToken({
-  name: "BinaryColon",
-  pattern: /['/\\:012]:/,
+export const DoubleColon = createToken({
+  name: "DoubleColon",
+  pattern: /::/,
 });
 
 export const Colon = createToken({
   name: "Colon",
   pattern: /:/,
   longer_alt: [
-    BinaryColon,
+    DynamicLoad,
+    DoubleColon,
     MiliTimeLiteral,
     NanoTimeLiteral,
     DateTimeLiteral,
@@ -125,6 +102,11 @@ export const Colon = createToken({
     SecondLiteral,
     MinuteLiteral,
   ],
+});
+
+export const Operator = createToken({
+  name: "Operator",
+  pattern: /[_.,'^<=>?!#@$&~|%*+-]/,
 });
 
 export const Keyword = createToken({

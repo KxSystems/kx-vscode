@@ -11,40 +11,70 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Entity, EntityType, QAst } from "../parser";
+import { Entity, EntityType, QAst, getNameScope } from "../parser";
 
 const DEFAULT_MAX_LINE_LENGTH = 200;
-const DEFAULT_MAX_LOCALS = 23;
-const DEFAULT_MAX_GLOBALS = 31;
-const DEFAULT_MAX_CONSTANTS = 95;
+const DEFAULT_MAX_CONSTANTS = 255;
+const DEFAULT_MAX_LOCALS = 1;
+const DEFAULT_MAX_GLOBALS = 1;
 
-export function lineLength({ symbols }: QAst): Entity[] {
+export function lineLength({ script }: QAst): Entity[] {
   const problems: Entity[] = [];
 
-  const eols = symbols.filter((symbol) => symbol.type === EntityType.EOL);
+  const symbols = script.filter(
+    (entity) => entity.type === EntityType.ENDOFLINE
+  );
 
-  for (let i = 0; i < eols.length; i++) {
-    const start = i === 0 ? 0 : eols[i - 1].endOffset;
+  for (let i = 0; i < symbols.length; i++) {
+    const start = i === 0 ? 0 : symbols[i - 1].endOffset;
 
-    if (eols[i].endOffset - start > DEFAULT_MAX_LINE_LENGTH) {
-      problems.push(eols[i]);
+    if (symbols[i].endOffset - start > DEFAULT_MAX_LINE_LENGTH + 1) {
+      problems.push(symbols[i]);
     }
   }
 
   return problems;
 }
 
-export function tooManyConstants({ symbols }: QAst): Entity[] {
-  console.log(symbols);
+export function tooManyConstants({ script }: QAst): Entity[] {
+  const scopes = new Set(script.map((entity) => getNameScope(entity)));
+
+  for (const entity of script) {
+    for (const scope of scopes) {
+      if (scope === getNameScope(entity)) {
+        if (scope) {
+          if (!scope.related) {
+            scope.related = [];
+          }
+          scope.related.push(entity);
+        }
+      }
+    }
+  }
+
+  const problems: Entity[] = [];
+
+  for (const scope of scopes) {
+    if (
+      scope &&
+      scope.related &&
+      scope.related.length > DEFAULT_MAX_CONSTANTS
+    ) {
+      problems.push(scope);
+    }
+  }
+
+  return problems;
+}
+
+export function tooManyGlobals({ script }: QAst): Entity[] {
+  const scopes = new Set(script.map((entity) => getNameScope(entity)));
+  console.log(scopes);
   return [];
 }
 
-export function tooManyGlobals({ symbols }: QAst): Entity[] {
-  console.log(symbols);
-  return [];
-}
-
-export function tooManyLocals({ symbols }: QAst): Entity[] {
-  console.log(symbols);
+export function tooManyLocals({ script }: QAst): Entity[] {
+  const scopes = new Set(script.map((entity) => getNameScope(entity)));
+  console.log(scopes);
   return [];
 }

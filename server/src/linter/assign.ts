@@ -11,46 +11,29 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Entity, EntityType, QAst } from "../parser";
+import { Entity, QAst } from "../parser";
 
-export function assignReservedWord({ symbols }: QAst): Entity[] {
-  const indexes: number[] = [];
-  const problems: Entity[] = [];
-
-  for (let i = 0; i < symbols.length; i++) {
-    if (symbols[i].type === EntityType.ASSIGNMENT) {
-      indexes.push(i);
-    }
-  }
-
-  for (let i = 0; i < indexes.length; i++) {
-    const index = indexes[i];
-    if (index > 0) {
-      if (symbols[index - 1].type === EntityType.KEYWORD) {
-        problems.push(symbols[index - 1]);
-      }
-    }
-  }
-
-  return problems;
-}
-
-export function invalidAssign({ symbols }: QAst): Entity[] {
-  console.log(symbols);
+export function assignReservedWord({ script }: QAst): Entity[] {
+  console.log(script);
   return [];
 }
 
-export function declaredAfterUse({ symbols }: QAst): Entity[] {
-  console.log(symbols);
+export function invalidAssign({ script }: QAst): Entity[] {
+  console.log(script);
   return [];
 }
 
-export function unusedParam({ symbols }: QAst): Entity[] {
-  console.log(symbols);
+export function declaredAfterUse({ script }: QAst): Entity[] {
+  console.log(script);
   return [];
 }
 
-export function unusedVar({ symbols }: QAst): Entity[] {
-  console.log(symbols);
+export function unusedParam({ script }: QAst): Entity[] {
+  console.log(script);
+  return [];
+}
+
+export function unusedVar({ script }: QAst): Entity[] {
+  console.log(script);
   return [];
 }

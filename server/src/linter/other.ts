@@ -13,8 +13,11 @@
 
 import { Entity, EntityType, QAst } from "../parser";
 
-export function deprecatedDatetime({ symbols }: QAst): Entity[] {
-  return symbols.filter(
-    (symbol) => symbol.type === EntityType.DATETIME_LITERAL
-  );
+export function emptyIf({ script }: QAst): Entity[] {
+  console.log(script);
+  return [];
+}
+
+export function deprecatedDatetime({ script }: QAst): Entity[] {
+  return script.filter((entity) => entity.type === EntityType.DATETIME_LITERAL);
 }

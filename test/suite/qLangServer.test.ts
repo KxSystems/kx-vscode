@@ -11,6 +11,9 @@
  * specific language governing permissions and limitations under the License.
  */
 
+/* eslint @typescript-eslint/no-explicit-any: 0 */
+/* eslint @typescript-eslint/no-empty-function: 0 */
+
 import * as assert from "assert";
 import * as sinon from "sinon";
 import {
@@ -403,8 +406,25 @@ describe("qLangServer", () => {
         position,
         newName,
       });
-      // TODO
-      assert.strictEqual(result, null);
+      assert.deepEqual(result, {
+        changes: {
+          "/test/test.q": [
+            {
+              newText: "CHANGEDVAR",
+              range: {
+                end: {
+                  character: 7,
+                  line: 0,
+                },
+                start: {
+                  character: 0,
+                  line: 0,
+                },
+              },
+            },
+          ],
+        },
+      });
     });
   });
 
@@ -445,7 +465,7 @@ describe("qLangServer", () => {
       sendDiagnosticsStub.value(
         async (params: PublishDiagnosticsParams) => (result = params)
       );
-      const doc = TextDocument.create("/test/test.q", "q", 1, "SOMEVAR:1");
+      const doc = TextDocument.create("/test/test.q", "q", 1, "til:1");
       await server["validateTextDocument"](doc);
       assert.strictEqual(result.diagnostics.length, 1);
     });
