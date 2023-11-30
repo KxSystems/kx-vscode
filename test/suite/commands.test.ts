@@ -1428,8 +1428,19 @@ describe("serverCommand", () => {
         getText: sinon.stub().returns("SELECT * FROM table"),
       },
     };
-    let insightsNodeBoolStub,
-      getQueryContextStub,
+
+    const insightsNode = new InsightsNode(
+      [],
+      "insightsnode1",
+      {
+        server: "https://insightsservername.com/",
+        alias: "insightsserveralias",
+        auth: true,
+      },
+      TreeItemCollapsibleState.None
+    );
+
+    let getQueryContextStub,
       activeTextEditorStub,
       executeQueryStub: sinon.SinonStub;
 
@@ -1437,20 +1448,16 @@ describe("serverCommand", () => {
       activeTextEditorStub = sinon
         .stub(vscode.window, "activeTextEditor")
         .value(editor);
-      insightsNodeBoolStub = sinon
-        .stub(ext.kdbinsightsNodes, "find")
-        .returns("ok");
       getQueryContextStub = sinon
         .stub(serverCommand, "getQueryContext")
         .returns(".");
       executeQueryStub = sinon
         .stub(serverCommand, "executeQuery")
-        .returns(undefined);
+        .resolves(undefined);
     });
 
     afterEach(() => {
       activeTextEditorStub.restore();
-      insightsNodeBoolStub.restore();
       getQueryContextStub.restore();
       executeQueryStub.restore();
     });
@@ -1462,23 +1469,35 @@ describe("serverCommand", () => {
     });
 
     it("runQuery with QuerySelection", () => {
-      insightsNodeBoolStub.returns(false);
+      ext.connectionNode = undefined;
       const result = serverCommand.runQuery(ExecutionTypes.QuerySelection);
       assert.equal(result, undefined);
     });
 
-    it("runQuery with PythonQueryFile", () => {
-      const result = serverCommand.runQuery(ExecutionTypes.PythonQueryFile);
+    it("runQuery with PythonQueryFile not connected to inisghts node", () => {
+      ext.connectionNode = undefined;
+      const result = serverCommand.runQuery(
+        ExecutionTypes.PythonQuerySelection
+      );
+      assert.equal(result, undefined);
+    });
+
+    it("runQuery with PythonQueryFile not connected to inisghts node", () => {
+      ext.connectionNode = insightsNode;
+      const result = serverCommand.runQuery(
+        ExecutionTypes.PythonQuerySelection
+      );
       assert.equal(result, undefined);
     });
 
     it("runQuery with QueryFile", () => {
+      ext.connectionNode = undefined;
       const result = serverCommand.runQuery(ExecutionTypes.QueryFile);
       assert.equal(result, undefined);
     });
 
     it("runQuery with ReRunQuery", () => {
-      insightsNodeBoolStub.returns(false);
+      ext.connectionNode = undefined;
       const result = serverCommand.runQuery(
         ExecutionTypes.ReRunQuery,
         "rerun query"
@@ -1487,6 +1506,13 @@ describe("serverCommand", () => {
     });
 
     it("runQuery with PythonQueryFile", () => {
+      ext.connectionNode = undefined;
+      const result = serverCommand.runQuery(ExecutionTypes.PythonQueryFile);
+      assert.equal(result, undefined);
+    });
+
+    it("runQuery with PythonQueryFile", () => {
+      ext.connectionNode = insightsNode;
       const result = serverCommand.runQuery(ExecutionTypes.PythonQueryFile);
       assert.equal(result, undefined);
     });
