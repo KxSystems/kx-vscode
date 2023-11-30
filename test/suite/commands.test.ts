@@ -1454,12 +1454,14 @@ describe("serverCommand", () => {
       executeQueryStub = sinon
         .stub(serverCommand, "executeQuery")
         .resolves(undefined);
+      ext.kdbinsightsNodes.push("insightsserveralias (connected)");
     });
 
     afterEach(() => {
       activeTextEditorStub.restore();
       getQueryContextStub.restore();
       executeQueryStub.restore();
+      ext.kdbinsightsNodes.pop();
     });
 
     it("runQuery with undefined editor ", () => {
@@ -1482,7 +1484,7 @@ describe("serverCommand", () => {
       assert.equal(result, undefined);
     });
 
-    it("runQuery with PythonQueryFile not connected to inisghts node", () => {
+    it("runQuery with PythonQueryFile connected to inisghts node", () => {
       ext.connectionNode = insightsNode;
       const result = serverCommand.runQuery(
         ExecutionTypes.PythonQuerySelection
