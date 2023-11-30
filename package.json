@@ -587,6 +587,11 @@
           "command": "kdb.execute.fileQuery",
           "when": "resourceLangId ==  q  && kdb.connected",
           "group": "navigation"
+        },
+        {
+          "command": "kdb.execute.pythonFileScratchpadQuery",
+          "group": "navigation",
+          "when": "editorLangId == python && kdb.insightsConnected"
         }
       ],
       "editor/context": [
