@@ -10,7 +10,8 @@
     "strict": false,
     "noImplicitAny": false,
     "skipLibCheck": true,
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false
   },
   "include": ["./**/*", "../src/**/*"],
   "exclude": ["node_modules", ".vscode-test"]

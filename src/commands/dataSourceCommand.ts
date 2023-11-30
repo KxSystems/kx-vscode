@@ -89,6 +89,11 @@ export async function renameDataSource(
   fs.writeFileSync(oldFilePath, newFileContent);
 
   fs.renameSync(oldFilePath, newFilePath);
+
+  const panel = DataSourcesPanel.currentPanel;
+  if (panel) {
+    panel.reload(data);
+  }
 }
 
 export async function deleteDataSource(
