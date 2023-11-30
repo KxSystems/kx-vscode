@@ -135,7 +135,6 @@ export async function activate(context: ExtensionContext) {
   // check for installed q runtime
   await checkLocalInstall();
 
-  /* istanbul ignore next */
   context.subscriptions.push(
     window.registerWebviewViewProvider(
       KdbResultsViewProvider.viewType,
