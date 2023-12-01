@@ -275,7 +275,11 @@ export async function activate(context: ExtensionContext) {
       if (filename) runQFileTerminal(filename);
     }),
     commands.registerCommand("kdb.terminal.start", () => {
-      runQFileTerminal();
+      if (env.QHOME) {
+        runQFileTerminal();
+      } else {
+        checkLocalInstall();
+      }
     }),
     commands.registerCommand("kdb.execute.selectedQuery", async () => {
       runQuery(ExecutionTypes.QuerySelection);
