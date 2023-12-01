@@ -235,15 +235,15 @@
         },
         {
           "name": "keyword.other.namespace.Q.q",
-          "match": "\\.[Qq]\\.(addmonths|Cf|Xf|btoa|j10|j12|M|ty|x10|x12|chk|dpft|dpfts|dsftg|en|ens|fk|hdpf|qt|qp|bv|ind|cn|MAP|D|par|PD|pd|pf|pn|qp|pt|PV|pv|vp|D|P|u|bt|dd|def|f|ff|fmt|ft|fu|gc|gz|id|qt|res|s|s1|sbt|trp|ts|u|V|v|view|A|a|b6|nA|k|opt|w|x|addr|fps|fpn|fs|fsn|hg|host|hp|l|sha1)\\b"
+          "match": "\\.[Qq]\\.(addmonths|Cf|Xf|btoa|j10|j12|M|ty|x10|x12|chk|dpft|dpfts|dsftg|en|ens|fk|hdpf|qt|qp|bv|ind|cn|MAP|D|par|PD|pd|pf|pn|qp|pt|PV|pv|vp|D|P|u|bt|dd|def|f|ff|fmt|ft|fu|gc|gz|id|qt|res|s|s1|sbt|trp|ts|u|V|v|view|A|a|b6|nA|k|opt|w|x|addr|fps|fpn|fs|fsn|hg|host|hp|l|sha1|fc|S)\\b"
         },
         {
           "name": "keyword.other.namespace.z.q",
-          "match": "\\.z\\.(a|b|c|D/d|e|ex|ey|f|h|i|K|k|l|N|n|o|P|p|pm|q|s|T|t|u|W|w|X|x|Z|z|zd|ac|bm|exit|pc|pd|pg|ph|pi|po|pp|pq|ps|pw|ts|vs|wc|wo|ws|d|D)\\b"
+          "match": "\\.z\\.(a|b|c|D|d|e|ex|ey|f|h|i|K|k|l|N|n|o|P|p|pm|q|s|T|t|u|W|w|X|x|Z|z|zd|ac|bm|exit|pc|pd|pg|ph|pi|po|pp|pq|ps|pw|ts|vs|wc|wo|ws|d|D)\\b"
         },
         {
           "name": "keyword.other.namespace.m.q",
-          "match": "\\.m\\.\\w+\\b"
+          "match": "\\.m\\.(btoa|j10|j12|M|ty|x10|x12|chk|dpft|dpfts|dsftg|en|ens|fk|hdpf|qt|qp|bv|ind|cn|MAP|D|par|PD|pd|pf|pn|qp|pt|PV|pv|vp|D|P|u|addmonths|bt|dd|def|f|ff|fmt|ft|fu|gc|gz|id|qt|res|s|s1|sbt|trp|ts|u|V|v|view|A|a|b6|nA|k|opt|w|x|addr|fps|fs|hg|host|hp|l|fpn|fsn|Cf|Xf)\\b"
         },
         {
           "name": "keyword.other.namespace.q",

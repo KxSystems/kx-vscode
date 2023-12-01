@@ -286,6 +286,10 @@
         "when": "kdb.QHOME || config.kdb.qHomeDirectory"
       },
       {
+        "command": "kdb.terminal.start",
+        "title": "Start kdb q REPL"
+      },
+      {
         "command": "kdb.execute.selectedQuery",
         "title": "Execute Current Selection",
         "when": "kdb.connected"

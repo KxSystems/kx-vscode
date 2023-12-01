@@ -274,6 +274,9 @@ export async function activate(context: ExtensionContext) {
       const filename = window.activeTextEditor?.document.fileName;
       if (filename) runQFileTerminal(filename);
     }),
+    commands.registerCommand("kdb.terminal.start", () => {
+      runQFileTerminal();
+    }),
     commands.registerCommand("kdb.execute.selectedQuery", async () => {
       runQuery(ExecutionTypes.QuerySelection);
       ext.connection?.update();
