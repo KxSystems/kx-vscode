@@ -33,6 +33,49 @@ export function queryWrapper(): string {
   ).toString();
 }
 
+export function handleWSError(ab: ArrayBuffer): any {
+  let errorString;
+
+  try {
+    // error for: qe/sql & gateway/data
+    const errorHeader = Parse.reshape(deserialize(ab).values[0], ab)
+      .toLegacy()
+      .rows?.reduce((o: any, k: any) => {
+        o[k.Property] = k.Value;
+        return o;
+      }, {});
+
+    errorString = errorHeader.ai;
+  } catch {
+    // error for: qe/qsql
+    // deserializer didn't recognize the format
+    const raw = new Uint8Array(ab);
+    if (
+      raw.byteLength >= 10 &&
+      // header?
+      raw.subarray(0, 4).toString() === "1,2,0,0" &&
+      // last char is string terminator
+      raw[raw.byteLength - 1] === 0 &&
+      // error message size, message can be clipped (always less than 256 chars)
+      raw[5] * 256 + raw[4] === raw.byteLength &&
+      // 128 - start of string/error ?
+      raw.subarray(6, 9).toString() === "0,0,128"
+    ) {
+      errorString = {
+        // eslint-disable-next-line prefer-spread
+        ipc: String.fromCharCode.apply(
+          String,
+          raw.subarray(9, raw.byteLength - 1) as unknown as number[]
+        ),
+      };
+    } else {
+      errorString = "Query error";
+    }
+  }
+
+  return { error: errorString };
+}
+
 export function handleWSResults(ab: ArrayBuffer): any {
   let res: any;
   try {

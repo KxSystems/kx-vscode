@@ -15,7 +15,7 @@ import * as fs from "fs";
 import path from "path";
 import { InputBoxOptions, Uri, window } from "vscode";
 import { ext } from "../extensionVariables";
-import { getDataBodyPayload } from "../models/data";
+import { GetDataError, getDataBodyPayload } from "../models/data";
 import {
   DataSourceFiles,
   DataSourceTypes,
@@ -30,7 +30,11 @@ import {
   createKdbDataSourcesFolder,
   getConnectedInsightsNode,
 } from "../utils/dataSource";
-import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
+import {
+  handleScratchpadTableRes,
+  handleWSError,
+  handleWSResults,
+} from "../utils/queryUtils";
 import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
 import {
   getDataInsights,
@@ -239,7 +243,9 @@ export async function runDataSource(
       break;
   }
 
-  if (ext.resultsViewProvider.isVisible()) {
+  if (res.error) {
+    window.showErrorMessage(res.error);
+  } else if (ext.resultsViewProvider.isVisible()) {
     writeQueryResultsToView(
       res,
       getQuery(fileContent, selectedType),
@@ -286,7 +292,10 @@ export async function runApiDataSource(
     ext.insightsAuthUrls.dataURL,
     JSON.stringify(apiBody)
   );
-  if (apiCall?.arrayBuffer) {
+
+  if (apiCall?.error) {
+    return parseError(apiCall.error);
+  } else if (apiCall?.arrayBuffer) {
     const results = handleWSResults(apiCall.arrayBuffer);
     return handleScratchpadTableRes(results);
   }
@@ -394,7 +403,10 @@ export async function runQsqlDataSource(
     ext.insightsAuthUrls.qsqlURL,
     JSON.stringify(qsqlBody)
   );
-  if (qsqlCall?.arrayBuffer) {
+
+  if (qsqlCall?.error) {
+    return parseError(qsqlCall.error);
+  } else if (qsqlCall?.arrayBuffer) {
     const results = handleWSResults(qsqlCall.arrayBuffer);
     return handleScratchpadTableRes(results);
   }
@@ -410,7 +422,10 @@ export async function runSqlDataSource(
     ext.insightsAuthUrls.sqlURL,
     JSON.stringify(sqlBody)
   );
-  if (sqlCall?.arrayBuffer) {
+
+  if (sqlCall?.error) {
+    return parseError(sqlCall.error);
+  } else if (sqlCall?.arrayBuffer) {
     const results = handleWSResults(sqlCall.arrayBuffer);
     return handleScratchpadTableRes(results);
   }
@@ -428,5 +443,15 @@ export function getQuery(
     case "SQL":
     default:
       return fileContent.dataSource.sql.query;
+  }
+}
+
+function parseError(error: GetDataError) {
+  if (error instanceof Object && error.buffer) {
+    return handleWSError(error.buffer);
+  } else {
+    return {
+      error,
+    };
   }
 }

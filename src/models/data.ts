@@ -11,8 +11,10 @@
  * specific language governing permissions and limitations under the License.
  */
 
+export type GetDataError = string | { buffer: ArrayBuffer };
+
 export type GetDataObjectPayload = {
-  error: string;
+  error: GetDataError;
   table?: {
     meta: {
       [column: string]: string;
