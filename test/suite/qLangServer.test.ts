@@ -465,7 +465,12 @@ describe("qLangServer", () => {
       sendDiagnosticsStub.value(
         async (params: PublishDiagnosticsParams) => (result = params)
       );
-      const doc = TextDocument.create("/test/test.q", "q", 1, "til:1");
+      const doc = TextDocument.create(
+        "/test/test.q",
+        "q",
+        1,
+        "2000.01.01T12:00:00.000"
+      );
       await server["validateTextDocument"](doc);
       assert.strictEqual(result.diagnostics.length, 1);
     });

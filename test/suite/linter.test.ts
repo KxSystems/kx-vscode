@@ -21,23 +21,30 @@ describe("linter", () => {
     sinon.restore();
   });
 
-  describe("ASSIGN_RESERVED_WORD", () => {
-    it("should lint assignment", () => {
-      const cst = QParser.parse(`
-        til: 0;
-      `);
+  describe("LINE_LENGTH", () => {
+    it("should lint invalid line length", () => {
+      const cst = QParser.parse(
+        "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901\n"
+      );
       const ast = analyze(cst);
       const results = lint(ast);
       assert.strictEqual(results.length, 1);
-      assert.strictEqual(results[0].name, "ASSIGN_RESERVED_WORD");
+      assert.strictEqual(results[0].name, "LINE_LENGTH");
+    });
+
+    it("should not lint valid line length", () => {
+      const cst = QParser.parse(
+        "12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890\n"
+      );
+      const ast = analyze(cst);
+      const results = lint(ast);
+      assert.strictEqual(results.length, 0);
     });
   });
 
   describe("DEPRECATED_DATETIME", () => {
     it("should lint datetime", () => {
-      const cst = QParser.parse(`
-        2000.01.01T12:00:00.000
-      `);
+      const cst = QParser.parse("2000.01.01T12:00:00.000");
       const ast = analyze(cst);
       const results = lint(ast);
       assert.strictEqual(results.length, 1);
