@@ -12,6 +12,7 @@
  */
 
 import { Lexer } from "chevrotain";
+import { Keyword } from "./keywords";
 import {
   BinaryLiteral,
   ByteLiteral,
@@ -31,11 +32,11 @@ import {
 import {
   BlockComment,
   Colon,
+  Command,
   DoubleColon,
   DynamicLoad,
   EndOfLine,
   Identifier,
-  Keyword,
   LBracket,
   LCurly,
   LParen,
@@ -50,8 +51,11 @@ import {
 export const QTokens = [
   BlockComment,
   LineComment,
-  CharLiteral,
   DynamicLoad,
+  DoubleColon,
+  Command,
+  EndOfLine,
+  CharLiteral,
   SymbolLiteral,
   TimeStampLiteral,
   DateTimeLiteral,
@@ -67,8 +71,6 @@ export const QTokens = [
   IntegerLiteral,
   Keyword,
   Identifier,
-  EndOfLine,
-  DoubleColon,
   Operator,
   SemiColon,
   Colon,

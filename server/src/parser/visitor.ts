@@ -47,10 +47,12 @@ class QVisitor extends BaseQVisitor {
   }
 
   entity(ctx: any) {
-    ctx.dateTimeLiteral?.forEach((rule: any) => this.visit(rule));
-    ctx.identifier?.forEach((rule: any) => this.visit(rule));
-    ctx.endOfLine?.forEach((rule: any) => this.visit(rule));
     ctx.doubleColon?.forEach((rule: any) => this.visit(rule));
+    ctx.command?.forEach((rule: any) => this.visit(rule));
+    ctx.endOfLine?.forEach((rule: any) => this.visit(rule));
+    ctx.dateTimeLiteral?.forEach((rule: any) => this.visit(rule));
+    ctx.keyword?.forEach((rule: any) => this.visit(rule));
+    ctx.identifier?.forEach((rule: any) => this.visit(rule));
     ctx.operator?.forEach((rule: any) => this.visit(rule));
     ctx.colon?.forEach((rule: any) => this.visit(rule));
     ctx.lparen?.forEach((rule: any) => this.visit(rule));
@@ -61,18 +63,18 @@ class QVisitor extends BaseQVisitor {
     ctx.rcurly?.forEach((rule: any) => this.visit(rule));
   }
 
-  dateTimeLiteral(ctx: any) {
+  doubleColon(ctx: any) {
     const entity = this.createEntity({
-      ...ctx.DateTimeLiteral[0],
-      type: EntityType.DATETIME_LITERAL,
+      ...ctx.DoubleColon[0],
+      type: EntityType.DOUBLE_COLON,
     });
     this.symbols.push(entity);
   }
 
-  identifier(ctx: any) {
+  command(ctx: any) {
     const entity = this.createEntity({
-      ...ctx.Identifier[0],
-      type: EntityType.IDENTIFIER,
+      ...ctx.Command[0],
+      type: EntityType.COMMAND,
     });
     this.symbols.push(entity);
   }
@@ -85,10 +87,26 @@ class QVisitor extends BaseQVisitor {
     this.symbols.push(entity);
   }
 
-  doubleColon(ctx: any) {
+  dateTimeLiteral(ctx: any) {
     const entity = this.createEntity({
-      ...ctx.DoubleColon[0],
-      type: EntityType.DOUBLE_COLON,
+      ...ctx.DateTimeLiteral[0],
+      type: EntityType.DATETIME_LITERAL,
+    });
+    this.symbols.push(entity);
+  }
+
+  keyword(ctx: any) {
+    const entity = this.createEntity({
+      ...ctx.Keyword[0],
+      type: EntityType.KEYWORD,
+    });
+    this.symbols.push(entity);
+  }
+
+  identifier(ctx: any) {
+    const entity = this.createEntity({
+      ...ctx.Identifier[0],
+      type: EntityType.IDENTIFIER,
     });
     this.symbols.push(entity);
   }
@@ -166,6 +184,9 @@ class QVisitor extends BaseQVisitor {
 
 export enum EntityType {
   UNKNOWN = "UNKNOWN",
+  DOUBLE_COLON = "DOUBLE_COLON",
+  COMMAND = "COMMAND",
+  ENDOFLINE = "ENDOFLINE",
   CHAR_LITERAL = "CHAR_LITERAL",
   SYMBOL_LITERAL = "SYMBOL_LITERAL",
   TIMESTAMP_LITERAL = "TIMESTAMP_LITERAL",
@@ -182,8 +203,6 @@ export enum EntityType {
   INTEGER_LITERAL = "INTEGER_LITERAL",
   KEYWORD = "KEYWORD",
   IDENTIFIER = "IDENTIFIER",
-  ENDOFLINE = "ENDOFLINE",
-  DOUBLE_COLON = "DOUBLE_COLON",
   OPERATOR = "OPERATOR",
   COLON = "COLON",
   LPAREN = "LPAREN",

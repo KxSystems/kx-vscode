@@ -24,12 +24,14 @@ import {
 export const BlockComment = createToken({
   name: "BlockComment",
   pattern: /(?<=(\r?\n|[ \t]*))\/(?:[ \t]*\r?\n)[^\\]*\\?/,
+  line_breaks: true,
   group: Lexer.SKIPPED,
 });
 
 export const LineComment = createToken({
   name: "LineComment",
   pattern: /(?:(?<=\r?\n|[ \t])|(?<!.))\/.*/,
+  line_breaks: true,
   longer_alt: BlockComment,
   group: Lexer.SKIPPED,
 });
@@ -37,6 +39,49 @@ export const LineComment = createToken({
 export const EndOfLine = createToken({
   name: "EndOfLine",
   pattern: /\r?\n/,
+  line_breaks: true,
+});
+
+export const Identifier = createToken({
+  name: "Identifier",
+  pattern: /(?:\.[A-Za-z][A-Za-z_0-9.]*(?<!\.)|[A-Za-z][A-Za-z_0-9]*)/,
+  line_breaks: false,
+});
+
+export const DoubleColon = createToken({
+  name: "DoubleColon",
+  pattern: /::/,
+});
+
+export const DynamicLoad = createToken({
+  name: "DynamicLoad",
+  pattern: /[\\'/012]:/,
+});
+
+export const Command = createToken({
+  name: "Command",
+  pattern: /\\(?:cd|ts|[abBcCdefglopPrsStTuvwWxz12_\\])/,
+  longer_alt: DynamicLoad,
+});
+
+export const Colon = createToken({
+  name: "Colon",
+  pattern: /:/,
+  longer_alt: [
+    DynamicLoad,
+    DoubleColon,
+    MiliTimeLiteral,
+    NanoTimeLiteral,
+    DateTimeLiteral,
+    TimeStampLiteral,
+    SecondLiteral,
+    MinuteLiteral,
+  ],
+});
+
+export const Operator = createToken({
+  name: "Operator",
+  pattern: /[_.,'^<=>?!#@$&~|%*+-]/,
 });
 
 export const SemiColon = createToken({
@@ -72,46 +117,4 @@ export const LCurly = createToken({
 export const RCurly = createToken({
   name: "RCurly",
   pattern: /}/,
-});
-
-export const Identifier = createToken({
-  name: "Identifier",
-  pattern: /(?:\.[A-Za-z][A-Za-z_0-9.]*(?<!\.)|[A-Za-z][A-Za-z_0-9]*)/,
-});
-
-export const DynamicLoad = createToken({
-  name: "DynamicLoad",
-  pattern: /['/\\012]:/,
-});
-
-export const DoubleColon = createToken({
-  name: "DoubleColon",
-  pattern: /::/,
-});
-
-export const Colon = createToken({
-  name: "Colon",
-  pattern: /:/,
-  longer_alt: [
-    DynamicLoad,
-    DoubleColon,
-    MiliTimeLiteral,
-    NanoTimeLiteral,
-    DateTimeLiteral,
-    TimeStampLiteral,
-    SecondLiteral,
-    MinuteLiteral,
-  ],
-});
-
-export const Operator = createToken({
-  name: "Operator",
-  pattern: /[_.,'^<=>?!#@$&~|%*+-]/,
-});
-
-export const Keyword = createToken({
-  name: "Keyword",
-  pattern:
-    /(?:do|exit|if|while|getenv|gtime|ltime|setenv|eval|parse|reval|show|system|value|dsave|get|hclose|hcount|hdel|hopen|hsym|load|read0|read1|rload|rsave|save|set|each|over|peach|prior|scan|aj|aj0|ajf|ajf0|asof|ej|ij|ijf|lj|ljf|pj|uj|ujf|wj|wj1|count|cross|cut|enlist|except|fills|first|flip|group|in|inter|last|mcount|next|prev|raze|reverse|rotate|sublist|sv|til|union|vs|where|xprev|all|and|any|not|or|abs|acos|asin|atan|avg|avgs|ceiling|cor|cos|cov|deltas|dev|div|ema|exp|floor|inv|log|lsq|mavg|max|maxs|mdev|med|min|mins|mmax|mmin|mmu|mod|msum|neg|prd|prds|rand|ratios|reciprocal|scov|sdev|signum|sin|sqrt|sum|sums|svar|tan|var|wavg|within|wsum|xexp|xlog|attr|null|tables|type|view|views|delete|exec|fby|from|select|update|asc|bin|binr|desc|differ|distinct|iasc|idesc|rank|xbar|xrank|cols|csv|fkeys|insert|key|keys|meta|ungroup|upsert|xasc|xcol|xcols|xdesc|xgroup|xkey|like|lower|ltrim|md5|rtrim|ss|ssr|string|trim|upper)/,
-  longer_alt: Identifier,
 });

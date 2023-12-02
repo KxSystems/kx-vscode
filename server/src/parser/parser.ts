@@ -12,6 +12,7 @@
  */
 
 import { CstParser } from "chevrotain";
+import { Keyword } from "./keywords";
 import { QLexer, QTokens } from "./lexer";
 import {
   BinaryLiteral,
@@ -31,11 +32,11 @@ import {
 } from "./literals";
 import {
   Colon,
+  Command,
   DoubleColon,
   DynamicLoad,
   EndOfLine,
   Identifier,
-  Keyword,
   LBracket,
   LCurly,
   LParen,
@@ -58,8 +59,11 @@ class Parser extends CstParser {
 
   private entity = this.RULE("entity", () => {
     this.OR([
-      { ALT: () => this.SUBRULE(this.charLiteral) },
       { ALT: () => this.SUBRULE(this.dynamicLoad) },
+      { ALT: () => this.SUBRULE(this.doubleColon) },
+      { ALT: () => this.SUBRULE(this.command) },
+      { ALT: () => this.SUBRULE(this.endOfLine) },
+      { ALT: () => this.SUBRULE(this.charLiteral) },
       { ALT: () => this.SUBRULE(this.symbolLiteral) },
       { ALT: () => this.SUBRULE(this.timeStampLiteral) },
       { ALT: () => this.SUBRULE(this.dateTimeLiteral) },
@@ -75,8 +79,6 @@ class Parser extends CstParser {
       { ALT: () => this.SUBRULE(this.integerLiteral) },
       { ALT: () => this.SUBRULE(this.keyword) },
       { ALT: () => this.SUBRULE(this.identifier) },
-      { ALT: () => this.SUBRULE(this.endOfLine) },
-      { ALT: () => this.SUBRULE(this.doubleColon) },
       { ALT: () => this.SUBRULE(this.operator) },
       { ALT: () => this.SUBRULE(this.semiColon) },
       { ALT: () => this.SUBRULE(this.colon) },
@@ -89,12 +91,16 @@ class Parser extends CstParser {
     ]);
   });
 
-  private charLiteral = this.RULE("charLiteral", () => {
-    this.CONSUME(CharLiteral);
-  });
-
   private dynamicLoad = this.RULE("dynamicLoad", () => {
     this.CONSUME(DynamicLoad);
+  });
+
+  private command = this.RULE("command", () => {
+    this.CONSUME(Command);
+  });
+
+  private charLiteral = this.RULE("charLiteral", () => {
+    this.CONSUME(CharLiteral);
   });
 
   private symbolLiteral = this.RULE("symbolLiteral", () => {
