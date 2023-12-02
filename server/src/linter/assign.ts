@@ -11,29 +11,63 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Entity, QAst } from "../parser";
+import { Entity, EntityType, QAst, getNameScope, isLiteral } from "../parser";
 
-export function assignReservedWord({ script }: QAst): Entity[] {
-  console.log(script);
-  return [];
+export function assignReservedWord({ assign }: QAst): Entity[] {
+  return assign.filter((entity) => entity.type === EntityType.KEYWORD);
 }
 
-export function invalidAssign({ script }: QAst): Entity[] {
-  console.log(script);
-  return [];
+export function invalidAssign({ assign }: QAst): Entity[] {
+  return assign.filter((entity) => isLiteral(entity));
 }
 
-export function declaredAfterUse({ script }: QAst): Entity[] {
-  console.log(script);
-  return [];
+export function declaredAfterUse({ script, assign }: QAst): Entity[] {
+  return script.filter((entity, index) => {
+    if (entity.type === EntityType.IDENTIFIER) {
+      const declared = assign.find(
+        (symbol) =>
+          getNameScope(symbol) === getNameScope(entity) &&
+          symbol.image === entity.image
+      );
+      return declared && script.indexOf(declared) > index;
+    }
+    return false;
+  });
 }
 
-export function unusedParam({ script }: QAst): Entity[] {
-  console.log(script);
-  return [];
+export function unusedParam({ script, assign }: QAst): Entity[] {
+  return assign
+    .filter(
+      (entity) =>
+        entity.type === EntityType.IDENTIFIER &&
+        entity.scope?.type === EntityType.LBRACKET
+    )
+    .filter(
+      (entity) =>
+        !script.find(
+          (symbol) =>
+            symbol !== entity &&
+            symbol.image === entity.image &&
+            symbol.type === EntityType.IDENTIFIER &&
+            getNameScope(symbol) === getNameScope(entity)
+        )
+    );
 }
 
-export function unusedVar({ script }: QAst): Entity[] {
-  console.log(script);
-  return [];
+export function unusedVar({ script, assign }: QAst): Entity[] {
+  const locals = assign.filter((entity) => getNameScope(entity));
+
+  return assign
+    .filter((entity) => entity.type === EntityType.IDENTIFIER)
+    .filter(
+      (entity) =>
+        !script.find(
+          (symbol) =>
+            symbol !== entity &&
+            symbol.image === entity.image &&
+            symbol.type === EntityType.IDENTIFIER &&
+            (getNameScope(symbol) === getNameScope(entity) ||
+              !locals.find((local) => local.image === symbol.image))
+        )
+    );
 }

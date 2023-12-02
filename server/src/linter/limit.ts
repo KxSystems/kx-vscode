@@ -15,8 +15,8 @@ import { Entity, EntityType, QAst, getNameScope } from "../parser";
 
 const DEFAULT_MAX_LINE_LENGTH = 200;
 const DEFAULT_MAX_CONSTANTS = 255;
-const DEFAULT_MAX_LOCALS = 1;
-const DEFAULT_MAX_GLOBALS = 1;
+const DEFAULT_MAX_GLOBALS = 255;
+const DEFAULT_MAX_LOCALS = 255;
 
 export function lineLength({ script }: QAst): Entity[] {
   const problems: Entity[] = [];
@@ -37,44 +37,88 @@ export function lineLength({ script }: QAst): Entity[] {
 }
 
 export function tooManyConstants({ script }: QAst): Entity[] {
-  const scopes = new Set(script.map((entity) => getNameScope(entity)));
+  const counts = new Map<Entity, number>();
 
-  for (const entity of script) {
-    for (const scope of scopes) {
-      if (scope === getNameScope(entity)) {
-        if (scope) {
-          if (!scope.related) {
-            scope.related = [];
-          }
-          scope.related.push(entity);
+  script
+    .filter((entity) => getNameScope(entity))
+    .forEach((entity) => {
+      const scope = getNameScope(entity);
+      if (scope) {
+        let count = counts.get(scope);
+        if (!count) {
+          count = 0;
         }
+        count++;
+        counts.set(scope, count);
       }
-    }
-  }
+    });
 
   const problems: Entity[] = [];
 
-  for (const scope of scopes) {
-    if (
-      scope &&
-      scope.related &&
-      scope.related.length > DEFAULT_MAX_CONSTANTS
-    ) {
-      problems.push(scope);
+  for (const entry of counts.entries()) {
+    if (entry[1] > DEFAULT_MAX_CONSTANTS) {
+      problems.push(entry[0]);
     }
   }
 
   return problems;
 }
 
-export function tooManyGlobals({ script }: QAst): Entity[] {
-  const scopes = new Set(script.map((entity) => getNameScope(entity)));
-  console.log(scopes);
-  return [];
+export function tooManyGlobals({ script, assign }: QAst): Entity[] {
+  const counts = new Map<Entity, number>();
+
+  const globals = assign.filter((entity) => !getNameScope(entity));
+
+  script
+    .filter((entity) => getNameScope(entity))
+    .filter((entity) => globals.find((global) => global.image === entity.image))
+    .forEach((entity) => {
+      const scope = getNameScope(entity);
+      if (scope) {
+        let count = counts.get(scope);
+        if (!count) {
+          count = 0;
+        }
+        count++;
+        counts.set(scope, count);
+      }
+    });
+
+  const problems: Entity[] = [];
+
+  for (const entry of counts.entries()) {
+    if (entry[1] > DEFAULT_MAX_GLOBALS) {
+      problems.push(entry[0]);
+    }
+  }
+
+  return problems;
 }
 
-export function tooManyLocals({ script }: QAst): Entity[] {
-  const scopes = new Set(script.map((entity) => getNameScope(entity)));
-  console.log(scopes);
-  return [];
+export function tooManyLocals({ assign }: QAst): Entity[] {
+  const counts = new Map<Entity, number>();
+
+  assign
+    .filter((entity) => getNameScope(entity))
+    .forEach((entity) => {
+      const scope = getNameScope(entity);
+      if (scope) {
+        let count = counts.get(scope);
+        if (!count) {
+          count = 0;
+        }
+        count++;
+        counts.set(scope, count);
+      }
+    });
+
+  const problems: Entity[] = [];
+
+  for (const entry of counts.entries()) {
+    if (entry[1] > DEFAULT_MAX_LOCALS) {
+      problems.push(entry[0]);
+    }
+  }
+
+  return problems;
 }
