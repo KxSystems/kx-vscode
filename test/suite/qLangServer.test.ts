@@ -494,6 +494,57 @@ describe("qLangServer", () => {
       assert.strictEqual(result, null);
     });
 
+    it("should not rename to a keyword", () => {
+      const script = "a:1;";
+      const uri = "/test/test.q";
+      const doc = TextDocument.create(uri, "q", 1, script);
+      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const position = Position.create(0, 1);
+      const newName = "til";
+      const getStub = sinon.stub(server.documents, "get");
+      getStub.value(() => doc);
+      const result = server["onRenameRequest"](<RenameParams>{
+        textDocument,
+        position,
+        newName,
+      });
+      assert.strictEqual(result, null);
+    });
+
+    it("should not rename to a none identifier", () => {
+      const script = "a:1;";
+      const uri = "/test/test.q";
+      const doc = TextDocument.create(uri, "q", 1, script);
+      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const position = Position.create(0, 1);
+      const newName = "1";
+      const getStub = sinon.stub(server.documents, "get");
+      getStub.value(() => doc);
+      const result = server["onRenameRequest"](<RenameParams>{
+        textDocument,
+        position,
+        newName,
+      });
+      assert.strictEqual(result, null);
+    });
+
+    it("should not rename to a none identifier 2", () => {
+      const script = "a:1;";
+      const uri = "/test/test.q";
+      const doc = TextDocument.create(uri, "q", 1, script);
+      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const position = Position.create(0, 1);
+      const newName = "1somename";
+      const getStub = sinon.stub(server.documents, "get");
+      getStub.value(() => doc);
+      const result = server["onRenameRequest"](<RenameParams>{
+        textDocument,
+        position,
+        newName,
+      });
+      assert.strictEqual(result, null);
+    });
+
     it("should rename locals", () => {
       const script = "a:1;{a:1}";
       const uri = "/test/test.q";

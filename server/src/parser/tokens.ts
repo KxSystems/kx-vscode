@@ -42,9 +42,12 @@ export const EndOfLine = createToken({
   line_breaks: true,
 });
 
+export const IdentifierPattern =
+  /(?:\.[A-Za-z][A-Za-z_0-9.]*(?<!\.)|[A-Za-z][A-Za-z_0-9]*)/;
+
 export const Identifier = createToken({
   name: "Identifier",
-  pattern: /(?:\.[A-Za-z][A-Za-z_0-9.]*(?<!\.)|[A-Za-z][A-Za-z_0-9]*)/,
+  pattern: IdentifierPattern,
   line_breaks: false,
 });
 

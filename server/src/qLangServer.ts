@@ -47,7 +47,8 @@ import {
 } from "vscode-languageserver/node";
 import { lint } from "./linter";
 import { RuleSeverity } from "./linter/rules";
-import { EntityType, analyze, getNameScope } from "./parser";
+import { EntityType, IdentifierPattern, analyze, getNameScope } from "./parser";
+import { KeywordPattern } from "./parser/keywords";
 import { QParser } from "./parser/parser";
 import { AnalyzerContent, GlobalSettings, Keyword } from "./utils/analyzer";
 
@@ -342,6 +343,14 @@ export default class QLangServer {
     position,
     newName,
   }: RenameParams): WorkspaceEdit | null | undefined {
+    let match = IdentifierPattern.exec(newName);
+    if (!match || match[0] !== newName) {
+      return null;
+    }
+    match = KeywordPattern.exec(newName);
+    if (match && match[0] === newName) {
+      return null;
+    }
     const document = this.documents.get(textDocument.uri);
     if (!document) {
       return null;
