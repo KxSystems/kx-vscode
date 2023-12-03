@@ -47,7 +47,7 @@ import {
 } from "vscode-languageserver/node";
 import { lint } from "./linter";
 import { RuleSeverity } from "./linter/rules";
-import { EntityType, analyze } from "./parser";
+import { EntityType, analyze, getNameScope } from "./parser";
 import { QParser } from "./parser/parser";
 import { AnalyzerContent, GlobalSettings, Keyword } from "./utils/analyzer";
 
@@ -351,7 +351,7 @@ export default class QLangServer {
       return null;
     }
     const offset = document.offsetAt(position);
-    const { script } = analyze(cst);
+    const { script, assign } = analyze(cst);
     const symbol = script.find(
       (entity) =>
         entity.type === EntityType.IDENTIFIER &&
@@ -361,10 +361,46 @@ export default class QLangServer {
     if (!symbol) {
       return null;
     }
-    const targets = script.filter(
+    let targets;
+    const symbolScope = getNameScope(symbol);
+    const local = assign.find(
       (entity) =>
-        entity.type === EntityType.IDENTIFIER && entity.image === symbol.image
+        symbol.image === entity.image &&
+        symbolScope &&
+        symbolScope === getNameScope(entity)
     );
+    if (local) {
+      targets = script.filter(
+        (entity) =>
+          symbol.image === entity.image &&
+          symbolScope &&
+          symbolScope === getNameScope(entity) &&
+          entity.type === EntityType.IDENTIFIER
+      );
+    } else {
+      const global = assign.find(
+        (entity) => !getNameScope(entity) && symbol.image === entity.image
+      );
+      if (!global) {
+        return null;
+      }
+      targets = script.filter((entity) => {
+        if (
+          entity.type !== EntityType.IDENTIFIER ||
+          entity.image !== symbol.image
+        ) {
+          return false;
+        }
+        const scope = getNameScope(entity);
+        const local = assign.find(
+          (ident) =>
+            ident.image === entity.image &&
+            scope &&
+            getNameScope(ident) === scope
+        );
+        return !local;
+      });
+    }
     const edits = targets.map((entity) => {
       const start = document.positionAt(entity.startOffset);
       const end = document.positionAt(entity.endOffset);
@@ -413,6 +449,9 @@ export default class QLangServer {
   private async validateTextDocument(
     textDocument: TextDocument
   ): Promise<void> {
+    if (!textDocument.uri.toString().endsWith(".q")) {
+      return;
+    }
     const text = textDocument.getText();
     const cst = QParser.parse(text);
     const diagnostics: Diagnostic[] = [];

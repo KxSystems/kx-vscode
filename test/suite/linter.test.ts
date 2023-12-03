@@ -21,6 +21,46 @@ describe("linter", () => {
     sinon.restore();
   });
 
+  describe("ASSIGN_RESERVED_WORD", () => {
+    it("should lint assign reseved word", () => {
+      const cst = QParser.parse("til:1");
+      const ast = analyze(cst);
+      const results = lint(ast);
+      assert.strictEqual(results.length, 1);
+      assert.strictEqual(results[0].name, "ASSIGN_RESERVED_WORD");
+    });
+  });
+
+  describe("INVALID_ASSIGN", () => {
+    it("should lint invalid assign", () => {
+      const cst = QParser.parse("123:1");
+      const ast = analyze(cst);
+      const results = lint(ast);
+      assert.strictEqual(results.length, 1);
+      assert.strictEqual(results[0].name, "INVALID_ASSIGN");
+    });
+  });
+
+  describe("UNUSED_PARAM", () => {
+    it("should lint unused param", () => {
+      const cst = QParser.parse("{[a]}");
+      const ast = analyze(cst);
+      const results = lint(ast);
+      assert.strictEqual(results.length, 1);
+      assert.strictEqual(results[0].name, "UNUSED_PARAM");
+    });
+  });
+
+  describe("UNUSED_VAR", () => {
+    it("should lint unused var", () => {
+      const cst = QParser.parse("a:1");
+      const ast = analyze(cst);
+      const results = lint(ast);
+      assert.strictEqual(results.length, 1);
+      assert.strictEqual(results[0].name, "UNUSED_VAR");
+    });
+  });
+
   describe("LINE_LENGTH", () => {
     it("should lint invalid line length", () => {
       const cst = QParser.parse(
@@ -39,6 +79,20 @@ describe("linter", () => {
       const ast = analyze(cst);
       const results = lint(ast);
       assert.strictEqual(results.length, 0);
+    });
+  });
+
+  describe("TOO_MANY_CONSTANTS", () => {
+    it("should lint too many constants", () => {
+      let text = "";
+      for (let i = 1; i <= 255; i++) {
+        text += `${i} `;
+      }
+      const cst = QParser.parse(`{${text}}`);
+      const ast = analyze(cst);
+      const results = lint(ast);
+      assert.strictEqual(results.length, 1);
+      assert.strictEqual(results[0].name, "TOO_MANY_CONSTANTS");
     });
   });
 

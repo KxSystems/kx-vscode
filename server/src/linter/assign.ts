@@ -58,7 +58,11 @@ export function unusedVar({ script, assign }: QAst): Entity[] {
   const locals = assign.filter((entity) => getNameScope(entity));
 
   return assign
-    .filter((entity) => entity.type === EntityType.IDENTIFIER)
+    .filter(
+      (entity) =>
+        entity.type === EntityType.IDENTIFIER &&
+        entity.scope?.type !== EntityType.LBRACKET
+    )
     .filter(
       (entity) =>
         !script.find(

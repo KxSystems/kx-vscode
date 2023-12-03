@@ -60,10 +60,9 @@ class QVisitor extends BaseQVisitor {
     ctx.monthLiteral?.forEach((rule: any) => this.visit(rule));
     ctx.secondLiteral?.forEach((rule: any) => this.visit(rule));
     ctx.minuteLiteral?.forEach((rule: any) => this.visit(rule));
-    ctx.floatLiteral?.forEach((rule: any) => this.visit(rule));
     ctx.binaryLiteral?.forEach((rule: any) => this.visit(rule));
     ctx.byteLiteral?.forEach((rule: any) => this.visit(rule));
-    ctx.integerLiteral?.forEach((rule: any) => this.visit(rule));
+    ctx.numberLiteral?.forEach((rule: any) => this.visit(rule));
     ctx.keyword?.forEach((rule: any) => this.visit(rule));
     ctx.identifier?.forEach((rule: any) => this.visit(rule));
     ctx.operator?.forEach((rule: any) => this.visit(rule));
@@ -181,14 +180,6 @@ class QVisitor extends BaseQVisitor {
     this.symbols.push(entity);
   }
 
-  floatLiteral(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.FloatLiteral[0],
-      type: EntityType.FLOAT_LITERAL,
-    });
-    this.symbols.push(entity);
-  }
-
   binaryLiteral(ctx: any) {
     const entity = this.createEntity({
       ...ctx.BinaryLiteral[0],
@@ -205,10 +196,10 @@ class QVisitor extends BaseQVisitor {
     this.symbols.push(entity);
   }
 
-  integerLiteral(ctx: any) {
+  numberLiteral(ctx: any) {
     const entity = this.createEntity({
-      ...ctx.IntegerLiteral[0],
-      type: EntityType.INTEGER_LITERAL,
+      ...ctx.NumberLiteral[0],
+      type: EntityType.NUMBER_LITERAL,
     });
     this.symbols.push(entity);
   }
@@ -219,6 +210,15 @@ class QVisitor extends BaseQVisitor {
       type: EntityType.KEYWORD,
     });
     this.symbols.push(entity);
+
+    switch (entity.image) {
+      case "select":
+        this.scopes.push(entity);
+        break;
+      case "from":
+        this.scopes.pop();
+        break;
+    }
   }
 
   identifier(ctx: any) {
@@ -233,6 +233,14 @@ class QVisitor extends BaseQVisitor {
     const entity = this.createEntity({
       ...ctx.Operator[0],
       type: EntityType.OPERATOR,
+    });
+    this.symbols.push(entity);
+  }
+
+  semiColon(ctx: any) {
+    const entity = this.createEntity({
+      ...ctx.SemiColon[0],
+      type: EntityType.SEMICOLON,
     });
     this.symbols.push(entity);
   }
@@ -315,13 +323,13 @@ export enum EntityType {
   MONTH_LITERAL = "MONTH_LITERAL",
   SECOND_LITERAL = "SECOND_LITERAL",
   MINUTE_LITERAL = "MINUTE_LITERAL",
-  FLOAT_LITERAL = "FLOAT_LITERAL",
   BINARY_LITERAL = "BINARY_LITERAL",
   BYTE_LITERAL = "BYTE_LITERAL",
-  INTEGER_LITERAL = "INTEGER_LITERAL",
+  NUMBER_LITERAL = "NUMBER_LITERAL",
   KEYWORD = "KEYWORD",
   IDENTIFIER = "IDENTIFIER",
   OPERATOR = "OPERATOR",
+  SEMICOLON = "SEMICOLON",
   COLON = "COLON",
   LPAREN = "LPAREN",
   RPAREN = "RPAREN",
@@ -367,10 +375,9 @@ export function isLiteral(entity: Entity) {
     case EntityType.MONTH_LITERAL:
     case EntityType.SECOND_LITERAL:
     case EntityType.MINUTE_LITERAL:
-    case EntityType.FLOAT_LITERAL:
     case EntityType.BINARY_LITERAL:
     case EntityType.BYTE_LITERAL:
-    case EntityType.INTEGER_LITERAL:
+    case EntityType.NUMBER_LITERAL:
       return true;
     default:
       return false;
@@ -391,6 +398,17 @@ export function analyze(cstNode: CstNode | CstNode[]): QAst {
     switch (script[i].type) {
       case EntityType.COLON:
       case EntityType.DOUBLE_COLON:
+        if (script[i].scope?.type === EntityType.LPAREN) {
+          const start = script.find(
+            (entity) => entity.scope === script[i].scope
+          );
+          if (start?.type === EntityType.LBRACKET) {
+            break;
+          }
+        }
+        if (script[i].scope?.image === "select") {
+          break;
+        }
         let entity;
         if (
           script[i + 1]?.type === EntityType.LBRACKET &&
@@ -407,14 +425,29 @@ export function analyze(cstNode: CstNode | CstNode[]): QAst {
           entity = script[c];
         }
         if (entity) {
-          if (script[i].type === EntityType.DOUBLE_COLON) {
-            entity.scope = undefined;
+          if (
+            entity.type === EntityType.KEYWORD ||
+            entity.type === EntityType.IDENTIFIER ||
+            isLiteral(entity)
+          ) {
+            if (
+              script[i + 1]?.type !== EntityType.SEMICOLON &&
+              script[i + 1]?.type !== EntityType.ENDOFLINE
+            ) {
+              if (script[i].type === EntityType.DOUBLE_COLON) {
+                entity.scope = undefined;
+              }
+              ast.assign.push(entity);
+            }
           }
-          ast.assign.push(entity);
         }
         break;
       case EntityType.LBRACKET:
-        if (script[i - 1]?.type === EntityType.LCURLY) {
+        let c = i - 1;
+        while (c >= 0 && script[c].type === EntityType.ENDOFLINE) {
+          c--;
+        }
+        if (script[c]?.type === EntityType.LCURLY) {
           let c = i + 1;
           const anchor = script[c]?.scope;
           while (c < script.length && anchor === script[c].scope) {

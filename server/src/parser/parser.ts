@@ -20,12 +20,11 @@ import {
   CharLiteral,
   DateLiteral,
   DateTimeLiteral,
-  FloatLiteral,
-  IntegerLiteral,
   MiliTimeLiteral,
   MinuteLiteral,
   MonthLiteral,
   NanoTimeLiteral,
+  NumberLiteral,
   SecondLiteral,
   SymbolLiteral,
   TimeStampLiteral,
@@ -73,10 +72,9 @@ class Parser extends CstParser {
       { ALT: () => this.SUBRULE(this.monthLiteral) },
       { ALT: () => this.SUBRULE(this.secondLiteral) },
       { ALT: () => this.SUBRULE(this.minuteLiteral) },
-      { ALT: () => this.SUBRULE(this.floatLiteral) },
       { ALT: () => this.SUBRULE(this.binaryLiteral) },
       { ALT: () => this.SUBRULE(this.byteLiteral) },
-      { ALT: () => this.SUBRULE(this.integerLiteral) },
+      { ALT: () => this.SUBRULE(this.numberLiteral) },
       { ALT: () => this.SUBRULE(this.keyword) },
       { ALT: () => this.SUBRULE(this.identifier) },
       { ALT: () => this.SUBRULE(this.operator) },
@@ -139,10 +137,6 @@ class Parser extends CstParser {
     this.CONSUME(MinuteLiteral);
   });
 
-  private floatLiteral = this.RULE("floatLiteral", () => {
-    this.CONSUME(FloatLiteral);
-  });
-
   private binaryLiteral = this.RULE("binaryLiteral", () => {
     this.CONSUME(BinaryLiteral);
   });
@@ -151,8 +145,8 @@ class Parser extends CstParser {
     this.CONSUME(ByteLiteral);
   });
 
-  private integerLiteral = this.RULE("integerLiteral", () => {
-    this.CONSUME(IntegerLiteral);
+  private numberLiteral = this.RULE("numberLiteral", () => {
+    this.CONSUME(NumberLiteral);
   });
 
   private keyword = this.RULE("keyword", () => {

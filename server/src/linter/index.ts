@@ -14,17 +14,17 @@
 import { Entity, QAst } from "../parser";
 import { RuleSeverity, Rules } from "./rules";
 
-const names = [
+const enabled = [
   "ASSIGN_RESERVED_WORD",
-  "DECLARED_AFTER_USE",
   "INVALID_ASSIGN",
+  //"DECLARED_AFTER_USE",
+  "UNUSED_PARAM",
+  "UNUSED_VAR",
+  "LINE_LENGTH",
   "TOO_MANY_CONSTANTS",
   "TOO_MANY_GLOBALS",
   "TOO_MANY_LOCALS",
   "DEPRECATED_DATETIME",
-  "UNUSED_PARAM",
-  "UNUSED_VAR",
-  "LINE_LENGTH",
 ];
 
 export interface LintResult {
@@ -35,7 +35,7 @@ export interface LintResult {
 }
 
 export function lint(ast: QAst) {
-  return Rules.filter((rule) => names.find((name) => rule.name === name))
+  return Rules.filter((rule) => enabled.find((name) => rule.name === name))
     .map((rule) => {
       const result: LintResult = {
         name: rule.name,
