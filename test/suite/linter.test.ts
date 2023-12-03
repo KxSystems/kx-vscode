@@ -41,6 +41,16 @@ describe("linter", () => {
     });
   });
 
+  describe("DECLARED_AFTER_USE", () => {
+    it("should lint invalid assign", () => {
+      const cst = QParser.parse("a;a:1;");
+      const ast = analyze(cst);
+      const results = lint(ast);
+      assert.strictEqual(results.length, 1);
+      assert.strictEqual(results[0].name, "DECLARED_AFTER_USE");
+    });
+  });
+
   describe("UNUSED_PARAM", () => {
     it("should lint unused param", () => {
       const cst = QParser.parse("{[a]}");

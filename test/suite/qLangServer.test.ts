@@ -426,6 +426,73 @@ describe("qLangServer", () => {
         },
       });
     });
+
+    it("should not rename if new name is assigned", () => {
+      const script = "a:1;b:2;";
+      const doc = TextDocument.create("/test/test.q", "q", 1, script);
+      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const position = Position.create(0, 1);
+      const newName = "b";
+      const getStub = sinon.stub(server.documents, "get");
+      getStub.value(() => doc);
+      const result = server["onRenameRequest"](<RenameParams>{
+        textDocument,
+        position,
+        newName,
+      });
+      assert.strictEqual(result, null);
+    });
+
+    it("should not rename if new name is not assigned", () => {
+      const script = "a:1;{b:2};";
+      const uri = "/test/test.q";
+      const doc = TextDocument.create(uri, "q", 1, script);
+      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const position = Position.create(0, 1);
+      const newName = "b";
+      const getStub = sinon.stub(server.documents, "get");
+      getStub.value(() => doc);
+      const result = server["onRenameRequest"](<RenameParams>{
+        textDocument,
+        position,
+        newName,
+      });
+      assert.strictEqual(result.changes[uri].length, 1);
+    });
+
+    it("should respect name scope", () => {
+      const script = "a:1;{a:2};";
+      const uri = "/test/test.q";
+      const doc = TextDocument.create(uri, "q", 1, script);
+      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const position = Position.create(0, 1);
+      const newName = "b";
+      const getStub = sinon.stub(server.documents, "get");
+      getStub.value(() => doc);
+      const result = server["onRenameRequest"](<RenameParams>{
+        textDocument,
+        position,
+        newName,
+      });
+      assert.strictEqual(result.changes[uri].length, 1);
+    });
+
+    it("should not rename keywords", () => {
+      const script = "til:1;";
+      const uri = "/test/test.q";
+      const doc = TextDocument.create(uri, "q", 1, script);
+      const textDocument = TextDocumentIdentifier.create("/test/test.q");
+      const position = Position.create(0, 1);
+      const newName = "b";
+      const getStub = sinon.stub(server.documents, "get");
+      getStub.value(() => doc);
+      const result = server["onRenameRequest"](<RenameParams>{
+        textDocument,
+        position,
+        newName,
+      });
+      assert.strictEqual(result, null);
+    });
   });
 
   describe("onSignatureHelp", () => {

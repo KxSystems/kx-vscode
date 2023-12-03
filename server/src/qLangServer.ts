@@ -370,6 +370,13 @@ export default class QLangServer {
         symbolScope === getNameScope(entity)
     );
     if (local) {
+      const exists = assign.find(
+        (entity) =>
+          entity.image === newName && symbolScope === getNameScope(entity)
+      );
+      if (exists) {
+        return null;
+      }
       targets = script.filter(
         (entity) =>
           symbol.image === entity.image &&
@@ -382,6 +389,12 @@ export default class QLangServer {
         (entity) => !getNameScope(entity) && symbol.image === entity.image
       );
       if (!global) {
+        return null;
+      }
+      const exists = assign.find(
+        (entity) => !getNameScope(entity) && entity.image === newName
+      );
+      if (exists) {
         return null;
       }
       targets = script.filter((entity) => {
