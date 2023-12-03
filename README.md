@@ -314,6 +314,12 @@ All query executions happen remotely from the kdb VS Code extension either again
 
   ![kdb results view](https://github.com/KxSystems/kx-vscode/blob/main/img/kdbview-results.png?raw=true)
 
+## q REPL
+
+q REPL terminal can be started from the command prompt by searching "q REPL".
+
+![REPL](https://github.com/KxSystems/kx-vscode/blob/main/img/repl.png?raw=true)
+
 ## Settings
 
 To update kdb VS Code settings, search for `kdb` from _Preferences_ > _Settings_, or right-click the settings icon in kdb VS Code marketplace panel and choose _Extension Settings_.
