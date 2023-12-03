@@ -207,19 +207,11 @@
         },
         {
           "name": "constant.language.null.q",
-          "match": "\\b0N[hjenpmdznuvtg]\\b"
+          "match": "(?:0N[ghjepmdznuvt]|-?0[wW]|0[nNwW])"
         },
         {
-          "name": "constant.numeric.infinity.q",
-          "match": "\\b0[wnWN]\\b"
-        },
-        {
-          "name": "constant.numeric.float.q",
-          "match": "-?(?:\\d+\\.\\d+|\\.\\d+|\\d+\\.)(?:e[-+]?\\d?\\d)?e?"
-        },
-        {
-          "name": "constant.numeric.integer.q",
-          "match": "-?\\d+[jhife]?"
+          "name": "constant.numeric.number.q",
+          "match": "-?(?:\\d+\\.\\d+|\\.\\d+|\\d+\\.|\\d+)(?:e[+-]?\\d?\\d)?[jhife]?"
         }
       ]
     },
