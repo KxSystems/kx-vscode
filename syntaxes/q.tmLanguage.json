@@ -207,19 +207,11 @@
         },
         {
           "name": "constant.language.null.q",
-          "match": "\\b0N[hjenpmdznuvtg]\\b"
+          "match": "(?:0N[ghjepmdznuvt]|-?0[wW]|0[nNwW])"
         },
         {
-          "name": "constant.numeric.infinity.q",
-          "match": "\\b0[wnWN]\\b"
-        },
-        {
-          "name": "constant.numeric.float.q",
-          "match": "-?(?:\\d+\\.\\d+|\\.\\d+|\\d+\\.)(?:e[-+]?\\d?\\d)?e?"
-        },
-        {
-          "name": "constant.numeric.integer.q",
-          "match": "-?\\d+[jhife]?"
+          "name": "constant.numeric.number.q",
+          "match": "-?(?:\\d+\\.\\d+|\\.\\d+|\\d+\\.|\\d+)(?:e[+-]?\\d?\\d)?[jhife]?"
         }
       ]
     },
@@ -227,83 +219,31 @@
       "patterns": [
         {
           "name": "keyword.other.namespace.h.q",
-          "match": "\\.h\\.(br|code|fram|ha|hb|ht|hta|htac|htc|html|http|nbr|pre|he|hn|hp|hy|hu|hug|sc|uh|sa|text|xmp|cd|d|ed|edsn|hc|hr|iso8601|jx|td|tx|xd|xs|xt|c0|c1|HOME|logo|sb|ty|val)\\b"
+          "match": "\\.h\\.(?:iso8601|code|edsn|fram|HOME|htac|html|http|logo|text|hta|htc|hug|nbr|pre|val|xmp|br|c0|c1|cd|ed|ha|hb|hc|he|hn|hp|hr|ht|hu|hy|jx|sa|sb|sc|td|tx|ty|uh|xd|xs|xt|d)\\b"
         },
         {
           "name": "keyword.other.namespace.j.q",
-          "match": "\\.j\\.(j|k|jd)\\b"
-        },
-        {
-          "name": "keyword.other.namespace.Q.q",
-          "match": "\\.[Qq]\\.(addmonths|Cf|Xf|btoa|j10|j12|M|ty|x10|x12|chk|dpft|dpfts|dsftg|en|ens|fk|hdpf|qt|qp|bv|ind|cn|MAP|D|par|PD|pd|pf|pn|qp|pt|PV|pv|vp|D|P|u|bt|dd|def|f|ff|fmt|ft|fu|gc|gz|id|qt|res|s|s1|sbt|trp|ts|u|V|v|view|A|a|b6|nA|k|opt|w|x|addr|fps|fpn|fs|fsn|hg|host|hp|l|sha1)\\b"
-        },
-        {
-          "name": "keyword.other.namespace.z.q",
-          "match": "\\.z\\.(a|b|c|D/d|e|ex|ey|f|h|i|K|k|l|N|n|o|P|p|pm|q|s|T|t|u|W|w|X|x|Z|z|zd|ac|bm|exit|pc|pd|pg|ph|pi|po|pp|pq|ps|pw|ts|vs|wc|wo|ws|d|D)\\b"
+          "match": "\\.j\\.(?:jd|[jk])\\b"
         },
         {
           "name": "keyword.other.namespace.m.q",
-          "match": "\\.m\\.\\w+\\b"
+          "match": "\\.m\\.(?:addmonths|dpfts|dsftg|addr|btoa|dpft|hdpf|host|view|chk|def|ens|fmt|fpn|fps|fsn|ind|j10|j12|MAP|opt|par|res|sbt|trp|x10|x12|b6|bt|bv|Cf|cn|dd|en|ff|fk|fs|ft|fu|gc|gz|hg|hp|id|nA|pd|PD|pf|pn|pt|pv|PV|qp|qt|s1|ts|ty|vp|Xf|[aADfklMPsuvVwx])\\b"
+        },
+        {
+          "name": "keyword.other.namespace.Q.q",
+          "match": "\\.[Qq]\\.(?:addmonths|dpfts|dsftg|addr|btoa|dpft|hdpf|host|sha1|view|chk|def|ens|fmt|fpn|fps|fsn|ind|j10|j12|MAP|opt|par|res|sbt|trp|x10|x12|b6|bt|bv|Cf|cn|dd|en|fc|ff|fk|fs|ft|fu|gc|gz|hg|hp|id|nA|pd|PD|pf|pn|pt|pv|PV|qp|qt|s1|ts|ty|vp|Xf|[aADfklMPsSuvVwx])\\b"
+        },
+        {
+          "name": "keyword.other.namespace.z.q",
+          "match": "\\.z\\.(?:exit|ac|bm|ex|ey|pc|pd|pg|ph|pi|pm|po|pp|pq|ps|pw|ts|vs|wc|wo|ws|zd|[abcdDefhikKlnNopPqstTuwWxXzZ])\\b"
         },
         {
           "name": "keyword.other.namespace.q",
-          "match": "\\.[hjqQzm]\\b"
+          "match": "\\.[hjmqQz]\\b"
         },
         {
-          "name": "keyword.other.control.q",
-          "match": "\\b(do|exit|if|while)\\b"
-        },
-        {
-          "name": "keyword.other.env.q",
-          "match": "\\b(getenv|gtime|ltime|setenv)\\b"
-        },
-        {
-          "name": "keyword.other.interpret.q",
-          "match": "\\b(eval|parse|reval|show|system|value)\\b"
-        },
-        {
-          "name": "keyword.other.io.q",
-          "match": "\\b(dsave|get|hclose|hcount|hdel|hopen|hsym|load|read0|read1|rload|rsave|save|set)\\b"
-        },
-        {
-          "name": "keyword.other.iterate.q",
-          "match": "\\b(each|over|peach|prior|scan)\\b"
-        },
-        {
-          "name": "keyword.other.join.q",
-          "match": "\\b(aj|aj0|ajf|ajf0|asof|ej|ij|ijf|lj|ljf|pj|uj|ujf|wj|wj1)\\b"
-        },
-        {
-          "name": "keyword.other.list.q",
-          "match": "\\b(count|cross|cut|enlist|except|fills|first|flip|group|in|inter|last|mcount|next|prev|raze|reverse|rotate|sublist|sv|til|union|vs|where|xprev)\\b"
-        },
-        {
-          "name": "keyword.other.logic.q",
-          "match": "\\b(all|and|any|not|or)\\b"
-        },
-        {
-          "name": "keyword.other.math.q",
-          "match": "\\b(abs|acos|asin|atan|avg|avgs|ceiling|cor|cos|cov|deltas|dev|div|ema|exp|floor|inv|log|lsq|mavg|max|maxs|mdev|med|min|mins|mmax|mmin|mmu|mod|msum|neg|prd|prds|rand|ratios|reciprocal|scov|sdev|signum|sin|sqrt|sum|sums|svar|tan|var|wavg|within|wsum|xexp|xlog)\\b"
-        },
-        {
-          "name": "keyword.other.meta.q",
-          "match": "\\b(attr|null|tables|type|view|views)\\b"
-        },
-        {
-          "name": "keyword.other.query.q",
-          "match": "\\b(delete|exec|fby|from|select|update)\\b"
-        },
-        {
-          "name": "keyword.other.sort.q",
-          "match": "\\b(asc|bin|binr|desc|differ|distinct|iasc|idesc|rank|xbar|xrank)\\b"
-        },
-        {
-          "name": "keyword.other.table.q",
-          "match": "\\b(cols|csv|fkeys|insert|key|keys|meta|ungroup|upsert|xasc|xcol|xcols|xdesc|xgroup|xkey)\\b"
-        },
-        {
-          "name": "keyword.other.text.q",
-          "match": "\\b(like|lower|ltrim|md5|rtrim|ss|ssr|string|trim|upper)\\b"
+          "name": "keyword.other.q",
+          "match": "\\b(?:reciprocal|distinct|ceiling|reverse|sublist|ungroup|delete|deltas|differ|enlist|except|getenv|hclose|hcount|insert|mcount|ratios|rotate|select|setenv|signum|string|system|tables|update|upsert|within|xgroup|count|cross|dsave|fills|first|fkeys|floor|group|gtime|hopen|idesc|inter|lower|ltime|ltrim|parse|peach|prior|read0|read1|reval|rload|rsave|rtrim|union|upper|value|views|where|while|xcols|xdesc|xprev|xrank|acos|ajf0|asin|asof|atan|attr|avgs|binr|cols|desc|each|eval|exec|exit|flip|from|hdel|hsym|iasc|keys|last|like|load|mavg|maxs|mdev|meta|mins|mmax|mmin|msum|next|null|over|prds|prev|rand|rank|raze|save|scan|scov|sdev|show|sqrt|sums|svar|trim|type|view|wavg|wsum|xasc|xbar|xcol|xexp|xkey|xlog|abs|aj0|ajf|all|and|any|asc|avg|bin|cor|cos|cov|csv|cut|dev|div|ema|exp|fby|get|ijf|inv|key|ljf|log|lsq|max|md5|med|min|mmu|mod|neg|not|prd|set|sin|ssr|sum|tan|til|ujf|var|wj1|aj|do|ej|if|ij|in|lj|or|pj|ss|sv|uj|vs|wj)\\b"
         }
       ]
     },
