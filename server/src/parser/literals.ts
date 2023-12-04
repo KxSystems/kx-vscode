@@ -13,19 +13,19 @@
 
 import { createToken } from "chevrotain";
 
+export const SymbolLiteral = createToken({
+  name: "SymbolLiteral",
+  pattern: /`[.:\w]*/,
+});
+
 export const CharLiteral = createToken({
   name: "CharLiteral",
   pattern: /"(?:\\.|(?:(?!\r?\n\S)[^"]))*"/,
 });
 
-export const FloatLiteral = createToken({
-  name: "FloatLiteral",
-  pattern: /-?(?:\d+\.\d+|\.\d+|\d+\.)(?:e[+-]?\d?\d)?e?/,
-});
-
-export const IntegerLiteral = createToken({
-  name: "IntegerLiteral",
-  pattern: /-?\d+[jhi]?/,
+export const NumberLiteral = createToken({
+  name: "NumberLiteral",
+  pattern: /-?(?:\d+\.\d+|\.\d+|\d+\.|\d+)(?:e[+-]?\d?\d)?[jhife]?/,
 });
 
 export const BinaryLiteral = createToken({
