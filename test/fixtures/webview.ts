@@ -32,6 +32,7 @@ global.acquireVsCodeApi = function () {
 export class LitElement {
   connectedCallback() {}
   disconnectedCallback() {}
+  requestUpdate() {}
 }
 export function html(strings: any, ...values: unknown[]) {
   return { strings, values };
