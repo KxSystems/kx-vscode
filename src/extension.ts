@@ -274,6 +274,13 @@ export async function activate(context: ExtensionContext) {
       const filename = window.activeTextEditor?.document.fileName;
       if (filename) runQFileTerminal(filename);
     }),
+    commands.registerCommand("kdb.terminal.start", () => {
+      if (env.QHOME) {
+        runQFileTerminal();
+      } else {
+        checkLocalInstall();
+      }
+    }),
     commands.registerCommand("kdb.execute.selectedQuery", async () => {
       runQuery(ExecutionTypes.QuerySelection);
       ext.connection?.update();
