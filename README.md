@@ -316,7 +316,7 @@ All query executions happen remotely from the kdb VS Code extension either again
 
 ## q REPL
 
-q REPL terminal can be started from the command prompt by searching "q REPL".
+q REPL can be started from the command prompt by searching "q REPL".
 
 ![REPL](https://github.com/KxSystems/kx-vscode/blob/main/img/repl.png?raw=true)
 

@@ -287,7 +287,7 @@
       },
       {
         "command": "kdb.terminal.start",
-        "title": "Start kdb q REPL"
+        "title": "q: Start REPL"
       },
       {
         "command": "kdb.execute.selectedQuery",
