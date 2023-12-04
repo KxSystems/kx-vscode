@@ -239,40 +239,101 @@ describe("KdbDataSourceView", () => {
   describe("renderFilter", () => {
     it("should render filter", () => {
       const filter = createFilter();
-      const result = view["renderFilter"](filter);
-      assert.ok(result.values);
+      const render = view["renderFilter"](filter);
+      (render.values[1] as any)({ target: { checked: true } });
+      assert.strictEqual(filter.active, true);
+      (render.values[3] as any)({ target: { value: "test" } });
+      assert.strictEqual(filter.column, "test");
+      (render.values[6] as any)({ target: { value: "test" } });
+      assert.strictEqual(filter.column, "test");
+      (render.values[9] as any)({ target: { value: "test" } });
+      assert.strictEqual(filter.column, "test");
+      let result = false;
+      sinon.stub(view, "requestUpdate").value(() => (result = true));
+      (render.values[11] as any)();
+      assert.strictEqual(result, true);
+      result = false;
+      view.filters = [filter];
+      (render.values[12] as any)();
+      assert.strictEqual(result, true);
     });
   });
 
   describe("renderLabel", () => {
     it("should render label", () => {
       const label = createLabel();
-      const result = view["renderLabel"](label);
-      assert.ok(result.values);
+      const render = view["renderLabel"](label);
+      (render.values[1] as any)({ target: { checked: true } });
+      assert.strictEqual(label.active, true);
+      (render.values[3] as any)({ target: { value: "test" } });
+      assert.strictEqual(label.key, "test");
+      (render.values[6] as any)({ target: { value: "test" } });
+      assert.strictEqual(label.key, "test");
+      let result = false;
+      sinon.stub(view, "requestUpdate").value(() => (result = true));
+      (render.values[8] as any)();
+      assert.strictEqual(result, true);
+      view.labels = [label];
+      (render.values[9] as any)();
+      assert.strictEqual(result, true);
     });
   });
 
   describe("renderSort", () => {
     it("should render sort", () => {
       const sort = createSort();
-      const result = view["renderSort"](sort);
-      assert.ok(result.values);
+      const render = view["renderSort"](sort);
+      (render.values[1] as any)({ target: { checked: true } });
+      assert.strictEqual(sort.active, true);
+      (render.values[3] as any)({ target: { value: "test" } });
+      assert.strictEqual(sort.column, "test");
+      let result = false;
+      sinon.stub(view, "requestUpdate").value(() => (result = true));
+      (render.values[5] as any)();
+      assert.strictEqual(result, true);
+      view.sorts = [sort];
+      (render.values[6] as any)();
+      assert.strictEqual(result, true);
     });
   });
 
   describe("renderAgg", () => {
     it("should render agg", () => {
       const agg = createAgg();
-      const result = view["renderAgg"](agg);
-      assert.ok(result.values);
+      const render = view["renderAgg"](agg);
+      (render.values[1] as any)({ target: { checked: true } });
+      assert.strictEqual(agg.active, true);
+      (render.values[3] as any)({ target: { value: "test" } });
+      assert.strictEqual(agg.key, "test");
+      (render.values[6] as any)({ target: { value: "test" } });
+      assert.strictEqual(agg.operator, "test");
+      (render.values[9] as any)({ target: { value: "test" } });
+      assert.strictEqual(agg.column, "test");
+      let result = false;
+      sinon.stub(view, "requestUpdate").value(() => (result = true));
+      (render.values[11] as any)();
+      assert.strictEqual(result, true);
+      view.aggs = [agg];
+      (render.values[12] as any)();
+      assert.strictEqual(result, true);
     });
   });
 
   describe("renderGroup", () => {
     it("should render group", () => {
       const group = createGroup();
-      const result = view["renderGroup"](group);
-      assert.ok(result.values);
+      const render = view["renderGroup"](group);
+      (render.values[1] as any)({ target: { checked: true } });
+      assert.strictEqual(group.active, true);
+      (render.values[3] as any)({ target: { value: "test" } });
+      assert.strictEqual(group.column, "test");
+      let result = false;
+      sinon.stub(view, "requestUpdate").value(() => (result = true));
+      (render.values[5] as any)();
+      assert.strictEqual(result, true);
+      view.groups = [group];
+      (render.values[6] as any)();
+      assert.strictEqual(result, true);
     });
   });
 
