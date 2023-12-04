@@ -289,7 +289,7 @@ export async function runApiDataSource(
   }
   const apiBody = getApiBody(fileContent);
   const apiCall = await getDataInsights(
-    ext.insightsAuthUrls.dataURL,
+    ext.insightsServiceGatewayUrls.data,
     JSON.stringify(apiBody)
   );
 
@@ -402,7 +402,7 @@ export async function runQsqlDataSource(
     query: fileContent.dataSource.qsql.query,
   };
   const qsqlCall = await getDataInsights(
-    ext.insightsAuthUrls.qsqlURL,
+    ext.insightsServiceGatewayUrls.qsql,
     JSON.stringify(qsqlBody)
   );
 
@@ -423,7 +423,7 @@ export async function runSqlDataSource(
     query: fileContent.dataSource.sql.query,
   };
   const sqlCall = await getDataInsights(
-    ext.insightsAuthUrls.sqlURL,
+    ext.insightsServiceGatewayUrls.sql,
     JSON.stringify(sqlBody)
   );
 

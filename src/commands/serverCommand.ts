@@ -380,7 +380,7 @@ export async function connectInsights(viewItem: InsightsNode): Promise<void> {
 export async function getMeta(): Promise<MetaObjectPayload | undefined> {
   if (ext.connectionNode instanceof InsightsNode) {
     const metaUrl = new url.URL(
-      ext.insightsAuthUrls.metaURL,
+      ext.insightsServiceGatewayUrls.meta,
       ext.connectionNode.details.server
     );
 
