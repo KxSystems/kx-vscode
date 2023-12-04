@@ -765,6 +765,40 @@ describe("Utils", () => {
         assert.equal(result, expectedRes[i]);
       }
     });
+
+    describe("handleWSError", () => {
+      let sandbox: sinon.SinonSandbox;
+
+      beforeEach(() => {
+        sandbox = sinon.createSandbox();
+      });
+
+      afterEach(() => {
+        sandbox.restore();
+      });
+
+      it("should handle qe/sql & gateway/data error", () => {
+        const ab = new ArrayBuffer(10); // Mock ArrayBuffer
+
+        // Stub the necessary functions
+
+        // Call the function being tested
+        const result = queryUtils.handleWSError(ab);
+
+        // Assert the result
+        assert.deepStrictEqual(result, { error: "Query error" });
+      });
+
+      it("should handle unknown error", () => {
+        const ab = new ArrayBuffer(8); // Mock ArrayBuffer
+
+        // Call the function being tested
+        const result = queryUtils.handleWSError(ab);
+
+        // Assert the result
+        assert.deepStrictEqual(result, { error: "Query error" });
+      });
+    });
   });
 
   describe("Registration", () => {
