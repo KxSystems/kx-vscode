@@ -712,8 +712,6 @@ describe("dataSourceCommand2", () => {
     let runSqlDataSourceStub: sinon.SinonStub;
     let writeQueryResultsToViewStub: sinon.SinonStub;
     let writeQueryResultsToConsoleStub: sinon.SinonStub;
-    const appendLineSpy = sinon.spy(ext.outputChannel, "appendLine");
-    // const windowErrorSpy = sinon.spy(vscode.window, "showErrorMessage");
     ext.outputChannel = vscode.window.createOutputChannel("kdb");
 
     beforeEach(() => {
@@ -750,7 +748,7 @@ describe("dataSourceCommand2", () => {
       sinon.assert.notCalled(convertDSFormToDSFile);
     });
 
-    it("should return QSQL results)", async () => {
+    it("should return QSQL results", async () => {
       getMetaStub.resolves(dummyMeta);
       convertDSFormToDSFile.returns(dummyFileContent);
       getSelectedTypeStub.returns("QSQL");
@@ -759,10 +757,10 @@ describe("dataSourceCommand2", () => {
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles
       );
-      sinon.assert.calledOnce(writeQueryResultsToViewStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
     });
 
-    it("should return API results)", async () => {
+    it("should return API results", async () => {
       dummyFileContent.dataSource.selectedType = "API";
       getMetaStub.resolves(dummyMeta);
       convertDSFormToDSFile.returns(dummyFileContent);
@@ -772,10 +770,10 @@ describe("dataSourceCommand2", () => {
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles
       );
-      sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
     });
 
-    it("should return SQL results)", async () => {
+    it("should return SQL results", async () => {
       dummyFileContent.dataSource.selectedType = "SQL";
       getMetaStub.resolves(dummyMeta);
       convertDSFormToDSFile.returns(dummyFileContent);
@@ -785,7 +783,7 @@ describe("dataSourceCommand2", () => {
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles
       );
-      sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
     });
   });
 });

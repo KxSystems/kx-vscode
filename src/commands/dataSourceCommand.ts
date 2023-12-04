@@ -298,6 +298,8 @@ export async function runApiDataSource(
   } else if (apiCall?.arrayBuffer) {
     const results = handleWSResults(apiCall.arrayBuffer);
     return handleScratchpadTableRes(results);
+  } else {
+    return { error: "API call failed" };
   }
 }
 
@@ -409,6 +411,8 @@ export async function runQsqlDataSource(
   } else if (qsqlCall?.arrayBuffer) {
     const results = handleWSResults(qsqlCall.arrayBuffer);
     return handleScratchpadTableRes(results);
+  } else {
+    return { error: "API call failed" };
   }
 }
 
@@ -428,6 +432,8 @@ export async function runSqlDataSource(
   } else if (sqlCall?.arrayBuffer) {
     const results = handleWSResults(sqlCall.arrayBuffer);
     return handleScratchpadTableRes(results);
+  } else {
+    return { error: "API call failed" };
   }
 }
 
