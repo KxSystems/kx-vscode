@@ -812,6 +812,42 @@ describe("dataSourceCommand2", () => {
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
     });
+
+    it("should return error message QSQL", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.QSQL;
+      getMetaStub.resolves(dummyMeta);
+      getDataInsightsStub.resolves(undefined);
+      isVisibleStub.returns(false);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+    });
+
+    it("should return error message API", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.API;
+      getMetaStub.resolves(dummyMeta);
+      getDataInsightsStub.resolves(undefined);
+      isVisibleStub.returns(false);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+    });
+
+    it("should return error message SQL", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.SQL;
+      getMetaStub.resolves(dummyMeta);
+      getDataInsightsStub.resolves(undefined);
+      isVisibleStub.returns(false);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+    });
   });
 });
 
