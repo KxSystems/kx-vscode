@@ -204,6 +204,8 @@ The extension provides keyword syntax highlighting, comments and linting help.
 
 ![Linting](https://github.com/KxSystems/kx-vscode/blob/main/img/linting.png?raw=true)
 
+Linting is supported for assignment to reserved words and literals, unused arguments and variables, line length, deprecated date time, too many globals, locals and constants. More linter rules will be supported for future releases.
+
 ### Code navigation
 
 While developing q scripts, the kdb VS Code extension supports:
@@ -316,7 +318,7 @@ All query executions happen remotely from the kdb VS Code extension either again
 
 ## q REPL
 
-q REPL terminal can be started from the command prompt by searching "q REPL".
+q REPL can be started from the command prompt by searching "q REPL".
 
 ![REPL](https://github.com/KxSystems/kx-vscode/blob/main/img/repl.png?raw=true)
 
