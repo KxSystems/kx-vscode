@@ -93,11 +93,43 @@ describe("linter", () => {
     });
   });
 
+  describe("TOO_MANY_LOCALS", () => {
+    it("should lint too many locals", () => {
+      let usage = "";
+      for (let i = 1; i <= 111; i++) {
+        usage += `i${i}:${i};i${i}*${i};`;
+      }
+      const cst = QParser.parse(`{${usage}}`);
+      const ast = analyze(cst);
+      const results = lint(ast);
+      assert.strictEqual(results.length, 1);
+      assert.strictEqual(results[0].name, "TOO_MANY_LOCALS");
+    });
+  });
+
+  describe("TOO_MANY_GLOBALS", () => {
+    it("should lint too many globals", () => {
+      let globals = "";
+      for (let i = 1; i <= 111; i++) {
+        globals += `i${i}:${i};`;
+      }
+      let usage = "";
+      for (let i = 1; i <= 111; i++) {
+        usage += `i${i}*${i};`;
+      }
+      const cst = QParser.parse(`${globals}{${usage}}`);
+      const ast = analyze(cst);
+      const results = lint(ast);
+      assert.strictEqual(results.length, 1);
+      assert.strictEqual(results[0].name, "TOO_MANY_GLOBALS");
+    });
+  });
+
   describe("TOO_MANY_CONSTANTS", () => {
     it("should lint too many constants", () => {
       let text = "";
-      for (let i = 1; i <= 255; i++) {
-        text += `${i} `;
+      for (let i = 1; i <= 240; i++) {
+        text += `i${i};`;
       }
       const cst = QParser.parse(`{${text}}`);
       const ast = analyze(cst);
