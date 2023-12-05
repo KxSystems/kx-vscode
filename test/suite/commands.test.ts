@@ -46,6 +46,9 @@ import * as queryUtils from "../../src/utils/queryUtils";
 const srvCommand = require("../../src/commands/serverCommand");
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
+const dsCmd = require("../../src/commands/dataSourceCommand");
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const insModule = require("../../src/utils/core");
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -674,10 +677,10 @@ describe("dataSourceCommand2", () => {
         },
       ],
     };
-    const dummyFileContent = {
+    const dummyFileContent: DataSourceFiles = {
       name: "dummy-DS",
       dataSource: {
-        selectedType: "QSQL",
+        selectedType: DataSourceTypes.QSQL,
         api: {
           selectedApi: "getData",
           table: "dummyTbl",
@@ -702,34 +705,23 @@ describe("dataSourceCommand2", () => {
       insightsNode: "dummyNode",
     };
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
+    const ab = new ArrayBuffer(26);
     ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
-    let isVisibleStub: sinon.SinonStub;
-    let getMetaStub: sinon.SinonStub;
-    let convertDSFormToDSFile: sinon.SinonStub;
-    let getSelectedTypeStub: sinon.SinonStub;
-    let runApiDataSourceStub: sinon.SinonStub;
-    let runQsqlDataSourceStub: sinon.SinonStub;
-    let runSqlDataSourceStub: sinon.SinonStub;
-    let writeQueryResultsToViewStub: sinon.SinonStub;
-    let writeQueryResultsToConsoleStub: sinon.SinonStub;
-    const appendLineSpy = sinon.spy(ext.outputChannel, "appendLine");
-    // const windowErrorSpy = sinon.spy(vscode.window, "showErrorMessage");
+    let isVisibleStub,
+      getMetaStub,
+      handleWSResultsStub,
+      getDataInsightsStub,
+      writeQueryResultsToViewStub,
+      writeQueryResultsToConsoleStub: sinon.SinonStub;
     ext.outputChannel = vscode.window.createOutputChannel("kdb");
 
     beforeEach(() => {
       getMetaStub = sinon.stub(srvCommand, "getMeta");
-      convertDSFormToDSFile = sinon.stub(
-        dataSourceUtils,
-        "convertDataSourceFormToDataSourceFile"
-      );
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
-      getSelectedTypeStub = sinon.stub(dataSourceCommand, "getSelectedType");
-      runApiDataSourceStub = sinon.stub(dataSourceCommand, "runApiDataSource");
-      runQsqlDataSourceStub = sinon.stub(
-        dataSourceCommand,
-        "runQsqlDataSource"
-      );
-      runSqlDataSourceStub = sinon.stub(dataSourceCommand, "runSqlDataSource");
+      handleWSResultsStub = sinon
+        .stub(queryUtils, "handleWSResults")
+        .returns("dummy results");
+      getDataInsightsStub = sinon.stub(srvCommand, "getDataInsights");
       writeQueryResultsToViewStub = sinon.stub(
         srvCommand,
         "writeQueryResultsToView"
@@ -747,45 +739,114 @@ describe("dataSourceCommand2", () => {
     it("should show an error message if not connected to an Insights server", async () => {
       getMetaStub.resolves({});
       await dataSourceCommand.runDataSource({} as DataSourceFiles);
-      sinon.assert.notCalled(convertDSFormToDSFile);
+      sinon.assert.notCalled(isVisibleStub);
     });
 
-    it("should return QSQL results)", async () => {
+    it("should return QSQL results", async () => {
       getMetaStub.resolves(dummyMeta);
-      convertDSFormToDSFile.returns(dummyFileContent);
-      getSelectedTypeStub.returns("QSQL");
-      runQsqlDataSourceStub.resolves("dummy results");
+      getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
       isVisibleStub.returns(true);
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles
       );
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
       sinon.assert.calledOnce(writeQueryResultsToViewStub);
     });
 
-    it("should return API results)", async () => {
-      dummyFileContent.dataSource.selectedType = "API";
+    it("should return API results", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.API;
       getMetaStub.resolves(dummyMeta);
-      convertDSFormToDSFile.returns(dummyFileContent);
-      getSelectedTypeStub.returns("API");
-      runApiDataSourceStub.resolves("dummy results");
+      getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles
       );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
     });
 
-    it("should return SQL results)", async () => {
-      dummyFileContent.dataSource.selectedType = "SQL";
+    it("should return SQL results", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.SQL;
       getMetaStub.resolves(dummyMeta);
-      convertDSFormToDSFile.returns(dummyFileContent);
-      getSelectedTypeStub.returns("SQL");
-      runSqlDataSourceStub.resolves("dummy results");
+      getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles
       );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
+    });
+
+    it("should return error message QSQL", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.QSQL;
+      getMetaStub.resolves(dummyMeta);
+      getDataInsightsStub.resolves({ arrayBuffer: ab, error: "error" });
+      isVisibleStub.returns(false);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+    });
+
+    it("should return error message API", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.API;
+      getMetaStub.resolves(dummyMeta);
+      getDataInsightsStub.resolves({ arrayBuffer: ab, error: "error" });
+      isVisibleStub.returns(false);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+    });
+
+    it("should return error message SQL", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.SQL;
+      getMetaStub.resolves(dummyMeta);
+      getDataInsightsStub.resolves({ arrayBuffer: ab, error: "error" });
+      isVisibleStub.returns(false);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+    });
+
+    it("should return error message QSQL", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.QSQL;
+      getMetaStub.resolves(dummyMeta);
+      getDataInsightsStub.resolves(undefined);
+      isVisibleStub.returns(false);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+    });
+
+    it("should return error message API", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.API;
+      getMetaStub.resolves(dummyMeta);
+      getDataInsightsStub.resolves(undefined);
+      isVisibleStub.returns(false);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+    });
+
+    it("should return error message SQL", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.SQL;
+      getMetaStub.resolves(dummyMeta);
+      getDataInsightsStub.resolves(undefined);
+      isVisibleStub.returns(false);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
     });
   });
 });
