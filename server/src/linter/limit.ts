@@ -14,9 +14,9 @@
 import { Entity, EntityType, QAst, getNameScope } from "../parser";
 
 const DEFAULT_MAX_LINE_LENGTH = 200;
-const DEFAULT_MAX_CONSTANTS = 255;
-const DEFAULT_MAX_GLOBALS = 255;
-const DEFAULT_MAX_LOCALS = 255;
+const DEFAULT_MAX_LOCALS = 110;
+const DEFAULT_MAX_GLOBALS = 110;
+const DEFAULT_MAX_CONSTANTS = 239;
 
 export function lineLength({ script }: QAst): Entity[] {
   const problems: Entity[] = [];
@@ -42,14 +42,16 @@ export function tooManyConstants({ script }: QAst): Entity[] {
   script
     .filter((entity) => getNameScope(entity))
     .forEach((entity) => {
-      const scope = getNameScope(entity);
-      if (scope) {
-        let count = counts.get(scope);
-        if (!count) {
-          count = 0;
+      if (entity.type === EntityType.IDENTIFIER) {
+        const scope = getNameScope(entity);
+        if (scope) {
+          let count = counts.get(scope);
+          if (!count) {
+            count = 0;
+          }
+          count++;
+          counts.set(scope, count);
         }
-        count++;
-        counts.set(scope, count);
       }
     });
 
@@ -71,7 +73,6 @@ export function tooManyGlobals({ script, assign }: QAst): Entity[] {
 
   script
     .filter((entity) => getNameScope(entity))
-    .filter((entity) => globals.find((global) => global.image === entity.image))
     .forEach((entity) => {
       const scope = getNameScope(entity);
       if (scope) {
@@ -79,7 +80,9 @@ export function tooManyGlobals({ script, assign }: QAst): Entity[] {
         if (!count) {
           count = 0;
         }
-        count++;
+        if (globals.find((symbol) => symbol.image === entity.image)) {
+          count++;
+        }
         counts.set(scope, count);
       }
     });
@@ -107,7 +110,14 @@ export function tooManyLocals({ assign }: QAst): Entity[] {
         if (!count) {
           count = 0;
         }
-        count++;
+        if (
+          assign.find(
+            (symbol) =>
+              getNameScope(symbol) === scope && entity.image === symbol.image
+          )
+        ) {
+          count++;
+        }
         counts.set(scope, count);
       }
     });
