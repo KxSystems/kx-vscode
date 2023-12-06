@@ -13,7 +13,7 @@
 
 import * as fs from "fs";
 import path from "path";
-import { InputBoxOptions, Uri, window } from "vscode";
+import { InputBoxOptions, Uri, window, commands } from "vscode";
 import { ext } from "../extensionVariables";
 import { GetDataError, getDataBodyPayload } from "../models/data";
 import {
@@ -226,6 +226,7 @@ export async function runDataSource(
 
   dataSourceForm.insightsNode = getConnectedInsightsNode();
   const fileContent = dataSourceForm;
+  commands.executeCommand("kdb-results.focus");
 
   let res: any;
   const selectedType = getSelectedType(fileContent);
