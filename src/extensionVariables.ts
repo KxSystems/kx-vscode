@@ -45,6 +45,7 @@ export namespace ext {
   export let connection: Connection | undefined;
   export let hideDetailedConsoleQueryOutput: boolean;
   export let connectionNode: KdbNode | InsightsNode | undefined;
+  export let isRunningDS = false;
   export const kdbDataSourceFolder = ".kdb-datasources";
   export const kdbDataSourceFileExtension = ".ds";
   export const kdbDataSourceFileGlob = "*.ds";

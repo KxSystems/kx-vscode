@@ -245,15 +245,15 @@ export async function runDataSource(
 
   if (res.error) {
     window.showErrorMessage(res.error);
-  } else if (ext.resultsViewProvider.isVisible()) {
+  } else {
     writeQueryResultsToView(
       res,
       getQuery(fileContent, selectedType),
       selectedType
     );
-  } else {
+    const rawResults = "Raw JSON Output\n" + JSON.stringify(res);
     writeQueryResultsToConsole(
-      res,
+      rawResults,
       getQuery(fileContent, selectedType),
       selectedType
     );
@@ -296,7 +296,9 @@ export async function runApiDataSource(
   if (apiCall?.error) {
     return parseError(apiCall.error);
   } else if (apiCall?.arrayBuffer) {
+    ext.isRunningDS = true;
     const results = handleWSResults(apiCall.arrayBuffer);
+    ext.isRunningDS = false;
     return handleScratchpadTableRes(results);
   } else {
     return { error: "API call failed" };
@@ -409,7 +411,9 @@ export async function runQsqlDataSource(
   if (qsqlCall?.error) {
     return parseError(qsqlCall.error);
   } else if (qsqlCall?.arrayBuffer) {
+    ext.isRunningDS = true;
     const results = handleWSResults(qsqlCall.arrayBuffer);
+    ext.isRunningDS = false;
     return handleScratchpadTableRes(results);
   } else {
     return { error: "API call failed" };
@@ -430,7 +434,9 @@ export async function runSqlDataSource(
   if (sqlCall?.error) {
     return parseError(sqlCall.error);
   } else if (sqlCall?.arrayBuffer) {
+    ext.isRunningDS = true;
     const results = handleWSResults(sqlCall.arrayBuffer);
+    ext.isRunningDS = false;
     return handleScratchpadTableRes(results);
   } else {
     return { error: "API call failed" };

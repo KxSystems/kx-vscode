@@ -90,7 +90,7 @@ export function handleWSResults(ab: ArrayBuffer): any {
     if (res.rows.length === 0) {
       return "No results found.";
     }
-    if (ext.resultsViewProvider.isVisible()) {
+    if (ext.resultsViewProvider.isVisible() || ext.isRunningDS) {
       return getValueFromArray(res.rows);
     }
     return convertRows(res.rows);

@@ -749,7 +749,7 @@ describe("dataSourceCommand2", () => {
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles
       );
-      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+      sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
       sinon.assert.calledOnce(writeQueryResultsToViewStub);
     });
 
@@ -761,7 +761,7 @@ describe("dataSourceCommand2", () => {
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles
       );
-      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.calledOnce(writeQueryResultsToViewStub);
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
     });
 
@@ -773,7 +773,7 @@ describe("dataSourceCommand2", () => {
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles
       );
-      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.calledOnce(writeQueryResultsToViewStub);
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
     });
 
