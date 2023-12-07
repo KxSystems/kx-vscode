@@ -548,11 +548,9 @@ export async function importScratchpad(
       },
     };
     const body = {
-      body: {
-        output: variableName,
-        isTableView: false,
-        params: queryParams,
-      },
+      output: variableName,
+      isTableView: false,
+      params: queryParams,
     };
     window.withProgress(
       {
