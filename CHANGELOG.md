@@ -2,6 +2,55 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
+# v1.2.0
+
+### Enhancements
+
+- Execution of Python code on server
+- Rename symbol support
+- Basic linting support
+- KDB/q REPL flow
+
+### Fixes
+
+- Fix auto closing quote in wrong place
+- Fix confusing scratchpad wording
+- Fix for datasource rename
+- Fix for datasource qsql execution
+- Fix flickering output tab
+- Fix for activate results view on query execution
+- Fix for displaying error messages from datasource execution
+- Fix non-ascii character rendering for console and results view
+
+### Internal Improvements
+
+- Removed request-promise dependency
+- Implemented webview tests
+
+# v1.1.1
+
+### Fixes
+- Documentation fixes
+
+# v1.1.0
+
+### Enhancements
+
+- Updated connection creation workflow
+- Reduced visual noise in output pane
+
+### Fixes
+
+- Several fixes for results tab
+- Fix where uppercase variables are flagged as issues
+- Fix where removing connection did not disconnect first
+- Fixes for highlighting and indenting
+- Fix to remove option to run q in a new instance if not available
+
+### Internal Improvements
+
+- Updated authentication service
+- Improved datasource rendering
 
 # v1.0.1
 
