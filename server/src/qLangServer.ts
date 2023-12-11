@@ -47,7 +47,7 @@ import {
 } from "vscode-languageserver/node";
 import { lint } from "./linter";
 import { RuleSeverity } from "./linter/rules";
-import { EntityType, IdentifierPattern, analyze, getNameScope } from "./parser";
+import { TokenType, IdentifierPattern, scope, analyze } from "./parser";
 import { KeywordPattern } from "./parser/keywords";
 import { QParser } from "./parser/parser";
 import { AnalyzerContent, GlobalSettings, Keyword } from "./utils/analyzer";
@@ -363,7 +363,7 @@ export default class QLangServer {
     const { script, assign } = analyze(cst);
     const symbol = script.find(
       (entity) =>
-        entity.type === EntityType.IDENTIFIER &&
+        entity.type === TokenType.IDENTIFIER &&
         offset >= entity.startOffset &&
         offset <= entity.endOffset
     );
@@ -371,17 +371,16 @@ export default class QLangServer {
       return null;
     }
     let targets;
-    const symbolScope = getNameScope(symbol);
+    const symbolScope = scope(symbol);
     const local = assign.find(
       (entity) =>
         symbol.image === entity.image &&
         symbolScope &&
-        symbolScope === getNameScope(entity)
+        symbolScope === scope(entity)
     );
     if (local) {
       const exists = assign.find(
-        (entity) =>
-          entity.image === newName && symbolScope === getNameScope(entity)
+        (entity) => entity.image === newName && symbolScope === scope(entity)
       );
       if (exists) {
         return null;
@@ -390,35 +389,33 @@ export default class QLangServer {
         (entity) =>
           symbol.image === entity.image &&
           symbolScope &&
-          symbolScope === getNameScope(entity) &&
-          entity.type === EntityType.IDENTIFIER
+          symbolScope === scope(entity) &&
+          entity.type === TokenType.IDENTIFIER
       );
     } else {
       const global = assign.find(
-        (entity) => !getNameScope(entity) && symbol.image === entity.image
+        (entity) => !scope(entity) && symbol.image === entity.image
       );
       if (!global) {
         return null;
       }
       const exists = assign.find(
-        (entity) => !getNameScope(entity) && entity.image === newName
+        (entity) => !scope(entity) && entity.image === newName
       );
       if (exists) {
         return null;
       }
       targets = script.filter((entity) => {
         if (
-          entity.type !== EntityType.IDENTIFIER ||
+          entity.type !== TokenType.IDENTIFIER ||
           entity.image !== symbol.image
         ) {
           return false;
         }
-        const scope = getNameScope(entity);
+        const scoped = scope(entity);
         const local = assign.find(
           (ident) =>
-            ident.image === entity.image &&
-            scope &&
-            getNameScope(ident) === scope
+            ident.image === entity.image && scoped && scope(ident) === scoped
         );
         return !local;
       });

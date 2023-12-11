@@ -36,11 +36,15 @@
           "end": "^\\\\\\s*$"
         },
         {
+          "name": "comment.last.q",
+          "begin": "^\\\\\\s*$"
+        },
+        {
           "include": "#qdoc"
         },
         {
           "name": "comment.line.q",
-          "match": "(?:(?<=\\r?\\n|[ \\t])|(?<!.))\\/.*"
+          "match": "(?:(?<=[ \\t])|(?<!.))\\/.*"
         }
       ]
     },

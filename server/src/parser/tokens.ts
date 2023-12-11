@@ -12,43 +12,48 @@
  */
 
 import { Lexer, createToken } from "chevrotain";
-import {
-  DateTimeLiteral,
-  MiliTimeLiteral,
-  MinuteLiteral,
-  NanoTimeLiteral,
-  SecondLiteral,
-  TimeStampLiteral,
-} from "./literals";
 
 export const BlockComment = createToken({
   name: "BlockComment",
-  pattern: /(?<=(\r?\n|[ \t]*))\/(?:[ \t]*\r?\n)[^\\]*\\?/,
+  pattern: /(?<!.)\/(?!.)[\s\S]*?(?<!.)\\(?!.)/,
+  line_breaks: true,
+  group: Lexer.SKIPPED,
+});
+
+export const LastComment = createToken({
+  name: "LastComment",
+  pattern: /(?<!.)\\[ \t]*(?!.)[\s\S]*/,
   line_breaks: true,
   group: Lexer.SKIPPED,
 });
 
 export const LineComment = createToken({
   name: "LineComment",
-  pattern: /(?:(?<=\r?\n|[ \t])|(?<!.))\/.*/,
-  line_breaks: true,
-  longer_alt: BlockComment,
+  pattern: /(?:(?<=[ \t])|(?<!.))\/.*/,
+  line_breaks: false,
   group: Lexer.SKIPPED,
+});
+
+export const WhiteSpace = createToken({
+  name: "WhiteSpace",
+  pattern: /[ \t]+/,
+  group: Lexer.SKIPPED,
+});
+
+export const Space = createToken({
+  name: "Space",
+  line_breaks: false,
+  pattern: /(?<=\r?\n)[ \t]+/,
 });
 
 export const EndOfLine = createToken({
   name: "EndOfLine",
   pattern: /\r?\n/,
-  line_breaks: true,
 });
 
-export const IdentifierPattern =
-  /(?:\.[A-Za-z][A-Za-z_0-9.]*(?<!\.)|[A-Za-z][A-Za-z_0-9]*)/;
-
-export const Identifier = createToken({
-  name: "Identifier",
-  pattern: IdentifierPattern,
-  line_breaks: false,
+export const Command = createToken({
+  name: "Command",
+  pattern: /\\(?:cd|ts|[abBcCdefglopPrsStTuvwWxz12_\\])/,
 });
 
 export const DoubleColon = createToken({
@@ -56,35 +61,19 @@ export const DoubleColon = createToken({
   pattern: /::/,
 });
 
-export const DynamicLoad = createToken({
-  name: "DynamicLoad",
-  pattern: /[\\'/012]:/,
+export const Iterator = createToken({
+  name: "Iterator",
+  pattern: /(?:[\\'/]:|')/,
 });
 
-export const Command = createToken({
-  name: "Command",
-  pattern: /\\(?:cd|ts|[abBcCdefglopPrsStTuvwWxz12_\\])/,
-  longer_alt: DynamicLoad,
+export const Operator = createToken({
+  name: "Operator",
+  pattern: /[_.,^<=>?!#@$&~|%*+-]/,
 });
 
 export const Colon = createToken({
   name: "Colon",
   pattern: /:/,
-  longer_alt: [
-    DynamicLoad,
-    DoubleColon,
-    MiliTimeLiteral,
-    NanoTimeLiteral,
-    DateTimeLiteral,
-    TimeStampLiteral,
-    SecondLiteral,
-    MinuteLiteral,
-  ],
-});
-
-export const Operator = createToken({
-  name: "Operator",
-  pattern: /[_.,'^<=>?!#@$&~|%*+-]/,
 });
 
 export const SemiColon = createToken({

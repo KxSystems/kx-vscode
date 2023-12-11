@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Entity, QAst } from "../parser";
+import { Token, QAst } from "../parser";
 import {
   assignReservedWord,
   declaredAfterUse,
@@ -37,7 +37,7 @@ export interface LinterRule {
   name: string;
   message: string;
   severity: RuleSeverity;
-  check: (ast: QAst) => Entity[];
+  check: (ast: QAst) => Token[];
 }
 
 const check = () => [];

@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Entity, QAst } from "../parser";
+import { Token, QAst } from "../parser";
 import { RuleSeverity, Rules } from "./rules";
 
 const enabled = [
@@ -31,7 +31,7 @@ export interface LintResult {
   name: string;
   message: string;
   severity: RuleSeverity;
-  problems: Entity[];
+  problems: Token[];
 }
 
 export function lint(ast: QAst) {

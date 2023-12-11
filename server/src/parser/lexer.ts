@@ -12,13 +12,15 @@
  */
 
 import { Lexer } from "chevrotain";
-import { Keyword } from "./keywords";
+import { Identifier, Keyword } from "./keywords";
 import {
   BinaryLiteral,
   ByteLiteral,
   CharLiteral,
   DateLiteral,
   DateTimeLiteral,
+  FileLiteral,
+  InfinityLiteral,
   MiliTimeLiteral,
   MinuteLiteral,
   MonthLiteral,
@@ -29,13 +31,11 @@ import {
   TimeStampLiteral,
 } from "./literals";
 import {
-  BlockComment,
   Colon,
   Command,
   DoubleColon,
-  DynamicLoad,
+  Iterator,
   EndOfLine,
-  Identifier,
   LBracket,
   LCurly,
   LParen,
@@ -45,17 +45,20 @@ import {
   RCurly,
   RParen,
   SemiColon,
+  WhiteSpace,
+  BlockComment,
+  LastComment,
+  Space,
 } from "./tokens";
 
 export const QTokens = [
   BlockComment,
+  LastComment,
   LineComment,
-  DynamicLoad,
-  DoubleColon,
-  Command,
-  EndOfLine,
   CharLiteral,
   SymbolLiteral,
+  FileLiteral,
+  InfinityLiteral,
   TimeStampLiteral,
   DateTimeLiteral,
   MiliTimeLiteral,
@@ -69,9 +72,15 @@ export const QTokens = [
   NumberLiteral,
   Keyword,
   Identifier,
+  Space,
+  WhiteSpace,
+  EndOfLine,
+  Command,
+  DoubleColon,
+  Iterator,
   Operator,
-  SemiColon,
   Colon,
+  SemiColon,
   LParen,
   RParen,
   LBracket,
@@ -80,4 +89,4 @@ export const QTokens = [
   RCurly,
 ];
 
-export const QLexer = new Lexer(QTokens);
+export const QLexer = new Lexer(QTokens, { safeMode: true });

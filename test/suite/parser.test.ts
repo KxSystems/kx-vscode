@@ -12,13 +12,7 @@
  */
 
 import * as assert from "assert";
-import {
-  CharLiteral,
-  EntityType,
-  QLexer,
-  QParser,
-  analyze,
-} from "../../server/src/parser";
+import { CharLiteral, QLexer, QParser } from "../../server/src/parser";
 
 describe("QLexer", () => {
   describe("CharLiteral", () => {
@@ -107,14 +101,5 @@ describe("QParser", () => {
         assert.deepEqual(QParser.errors, []);
       });
     });
-  });
-});
-
-describe("QVisitor", () => {
-  it("should analyze identifier", () => {
-    const text = "a";
-    const cst = QParser.parse(text);
-    const { script } = analyze(cst);
-    assert.strictEqual(script[0].type, EntityType.IDENTIFIER);
   });
 });

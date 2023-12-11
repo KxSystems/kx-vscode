@@ -13,19 +13,24 @@
 
 import { createToken } from "chevrotain";
 
-export const SymbolLiteral = createToken({
-  name: "SymbolLiteral",
-  pattern: /`[.:\w]*/,
-});
-
 export const CharLiteral = createToken({
   name: "CharLiteral",
   pattern: /"(?:\\.|(?:(?!\r?\n\S)[^"]))*"/,
 });
 
-export const NumberLiteral = createToken({
-  name: "NumberLiteral",
-  pattern: /-?(?:\d+\.\d+|\.\d+|\d+\.|\d+)(?:e[+-]?\d?\d)?[jhife]?/,
+export const SymbolLiteral = createToken({
+  name: "SymbolLiteral",
+  pattern: /`[.:\w]*/,
+});
+
+export const FileLiteral = createToken({
+  name: "FileLiteral",
+  pattern: /[012]:/,
+});
+
+export const InfinityLiteral = createToken({
+  name: "InfinityLiteral",
+  pattern: /(?:0N[deghjmnptuvz]?|-?0[wW]|0n)/,
 });
 
 export const BinaryLiteral = createToken({
@@ -78,4 +83,9 @@ export const MinuteLiteral = createToken({
   name: "MinuteLiteral",
   pattern: /\d{2}:\d{2}/,
   longer_alt: SecondLiteral,
+});
+
+export const NumberLiteral = createToken({
+  name: "NumberLiteral",
+  pattern: /-?(?:\d+\.\d+|\.\d+|\d+\.|\d+)(?:e[+-]?\d?\d)?[jhife]?/,
 });

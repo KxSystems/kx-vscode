@@ -11,453 +11,384 @@
  * specific language governing permissions and limitations under the License.
  */
 
-/* eslint @typescript-eslint/no-explicit-any: 0 */
-
-import { CstNode } from "chevrotain";
+import type {
+  AssignmentCstChildren,
+  BinaryLiteralCstChildren,
+  BracketCstChildren,
+  ByteLiteralCstChildren,
+  CharLiteralCstChildren,
+  CommandCstChildren,
+  DateLiteralCstChildren,
+  DateTimeLiteralCstChildren,
+  EndOfLineCstChildren,
+  ExpressionCstChildren,
+  FileLiteralCstChildren,
+  GroupCstChildren,
+  ICstNodeVisitor,
+  IdentifierCstChildren,
+  InfinityLiteralCstChildren,
+  IteratorCstChildren,
+  KeywordCstChildren,
+  LambdaCstChildren,
+  LiteralCstChildren,
+  MiliTimeLiteralCstChildren,
+  MinuteLiteralCstChildren,
+  MonthLiteralCstChildren,
+  NanoTimeLiteralCstChildren,
+  NumberLiteralCstChildren,
+  OperatorCstChildren,
+  ScriptCstChildren,
+  SecondLiteralCstChildren,
+  SemiColonCstChildren,
+  SpaceCstChildren,
+  SymbolCstChildren,
+  SymbolLiteralCstChildren,
+  TimeStampLiteralCstChildren,
+} from "./types";
+import { CstNode, IToken } from "chevrotain";
 import { QParser } from "./parser";
 
 const BaseQVisitor = QParser.getBaseCstVisitorConstructorWithDefaults();
 
-class QVisitor extends BaseQVisitor {
-  readonly symbols: Entity[] = [];
-  private scopes: Entity[] = [];
+class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
+  private tokens: Token[] = [];
+  private assigns: Token[] = [];
+  private scopes: Token[] = [];
+  private statement = 0;
 
   constructor() {
     super();
     this.validateVisitor();
   }
 
-  private get scope() {
-    const size = this.scopes.length;
-    return size === 0 ? undefined : this.scopes[size - 1];
-  }
-
-  private createEntity(entity: Partial<Entity>): Entity {
+  ast(): QAst {
     return {
-      type: entity.type || EntityType.UNKNOWN,
-      image: entity.image || "",
-      startOffset: entity.startOffset || 0,
-      endOffset: (entity.endOffset || 0) + 1,
-      scope: this.scope,
+      script: this.tokens,
+      assign: this.assigns,
     };
   }
 
-  script(ctx: any) {
-    ctx.entity?.forEach((rule: any) => this.visit(rule));
+  private get current() {
+    return this.tokens[this.tokens.length - 1];
   }
 
-  entity(ctx: any) {
-    ctx.doubleColon?.forEach((rule: any) => this.visit(rule));
-    ctx.command?.forEach((rule: any) => this.visit(rule));
-    ctx.endOfLine?.forEach((rule: any) => this.visit(rule));
-    ctx.charLiteral?.forEach((rule: any) => this.visit(rule));
-    ctx.symbolLiteral?.forEach((rule: any) => this.visit(rule));
-    ctx.timeStampLiteral?.forEach((rule: any) => this.visit(rule));
-    ctx.dateTimeLiteral?.forEach((rule: any) => this.visit(rule));
-    ctx.miliTimeLiteral?.forEach((rule: any) => this.visit(rule));
-    ctx.nanoTimeLiteral?.forEach((rule: any) => this.visit(rule));
-    ctx.dateLiteral?.forEach((rule: any) => this.visit(rule));
-    ctx.monthLiteral?.forEach((rule: any) => this.visit(rule));
-    ctx.secondLiteral?.forEach((rule: any) => this.visit(rule));
-    ctx.minuteLiteral?.forEach((rule: any) => this.visit(rule));
-    ctx.binaryLiteral?.forEach((rule: any) => this.visit(rule));
-    ctx.byteLiteral?.forEach((rule: any) => this.visit(rule));
-    ctx.numberLiteral?.forEach((rule: any) => this.visit(rule));
-    ctx.keyword?.forEach((rule: any) => this.visit(rule));
-    ctx.identifier?.forEach((rule: any) => this.visit(rule));
-    ctx.operator?.forEach((rule: any) => this.visit(rule));
-    ctx.semiColon?.forEach((rule: any) => this.visit(rule));
-    ctx.colon?.forEach((rule: any) => this.visit(rule));
-    ctx.lparen?.forEach((rule: any) => this.visit(rule));
-    ctx.rparen?.forEach((rule: any) => this.visit(rule));
-    ctx.lbracket?.forEach((rule: any) => this.visit(rule));
-    ctx.rbracket?.forEach((rule: any) => this.visit(rule));
-    ctx.lcurly?.forEach((rule: any) => this.visit(rule));
-    ctx.rcurly?.forEach((rule: any) => this.visit(rule));
+  private consume(ctx: IToken & Partial<Token>) {
+    const token = {
+      type: ctx.type || TokenType.LITERAL,
+      name: ctx.tokenType.name,
+      image: ctx.image,
+      startOffset: ctx.startOffset,
+      endOffset: (ctx.endOffset || ctx.startOffset) + 1,
+      statement: this.statement,
+      scope: this.scopes[this.scopes.length - 1],
+    };
+    this.tokens.push(token);
+    return token;
   }
 
-  doubleColon(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.DoubleColon[0],
-      type: EntityType.DOUBLE_COLON,
-    });
-    this.symbols.push(entity);
+  private push(ctx: IToken & Partial<Token>) {
+    const token = this.consume(ctx);
+    this.scopes.push(token);
+    return token;
   }
 
-  command(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.Command[0],
-      type: EntityType.COMMAND,
-    });
-    this.symbols.push(entity);
+  private pop() {
+    return this.scopes.pop();
   }
 
-  endOfLine(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.EndOfLine[0],
-      type: EntityType.ENDOFLINE,
-    });
-    this.symbols.push(entity);
-  }
-
-  charLiteral(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.CharLiteral[0],
-      type: EntityType.CHAR_LITERAL,
-    });
-    this.symbols.push(entity);
-  }
-
-  symbolLiteral(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.SymbolLiteral[0],
-      type: EntityType.SYMBOL_LITERAL,
-    });
-    this.symbols.push(entity);
-  }
-
-  timeStampLiteral(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.TimeStampLiteral[0],
-      type: EntityType.TIMESTAMP_LITERAL,
-    });
-    this.symbols.push(entity);
-  }
-
-  dateTimeLiteral(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.DateTimeLiteral[0],
-      type: EntityType.DATETIME_LITERAL,
-    });
-    this.symbols.push(entity);
-  }
-
-  miliTimeLiteral(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.MiliTimeLiteral[0],
-      type: EntityType.MILITIME_LITERAL,
-    });
-    this.symbols.push(entity);
-  }
-
-  nanoTimeLiteral(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.NanoTimeLiteral[0],
-      type: EntityType.NANOTIME_LITERAL,
-    });
-    this.symbols.push(entity);
-  }
-
-  dateLiteral(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.DateLiteral[0],
-      type: EntityType.DATE_LITERAL,
-    });
-    this.symbols.push(entity);
-  }
-
-  monthLiteral(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.MonthLiteral[0],
-      type: EntityType.MONTH_LITERAL,
-    });
-    this.symbols.push(entity);
-  }
-
-  secondLiteral(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.SecondLiteral[0],
-      type: EntityType.SECOND_LITERAL,
-    });
-    this.symbols.push(entity);
-  }
-
-  minuteLiteral(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.MinuteLiteral[0],
-      type: EntityType.MINUTE_LITERAL,
-    });
-    this.symbols.push(entity);
-  }
-
-  binaryLiteral(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.BinaryLiteral[0],
-      type: EntityType.BINARY_LITERAL,
-    });
-    this.symbols.push(entity);
-  }
-
-  byteLiteral(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.ByteLiteral[0],
-      type: EntityType.BYTE_LITERAL,
-    });
-    this.symbols.push(entity);
-  }
-
-  numberLiteral(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.NumberLiteral[0],
-      type: EntityType.NUMBER_LITERAL,
-    });
-    this.symbols.push(entity);
-  }
-
-  keyword(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.Keyword[0],
-      type: EntityType.KEYWORD,
-    });
-    this.symbols.push(entity);
-
-    switch (entity.image) {
-      case "select":
-        this.scopes.push(entity);
+  private backtrack(
+    find: TokenType[],
+    count = 1,
+    scope = true,
+    skip = [TokenType.SPACE]
+  ) {
+    let c = this.tokens.length - 1;
+    const anchor = this.tokens[c];
+    let current: Token;
+    while (count > 0 && c > 0) {
+      count--;
+      c--;
+      current = this.tokens[c];
+      if (current.statement !== anchor.statement) {
         break;
-      case "from":
-        this.scopes.pop();
-        break;
+      }
+      if (skip.indexOf(current.type) >= 0) {
+        count++;
+        continue;
+      }
+      if (scope && current.scope !== anchor.scope) {
+        count++;
+        continue;
+      }
+      if (find.indexOf(current.type) >= 0) {
+        return current;
+      }
+    }
+    return undefined;
+  }
+
+  script(ctx: ScriptCstChildren) {
+    ctx.expression?.forEach((rule) => this.visit(rule));
+  }
+
+  expression(ctx: ExpressionCstChildren) {
+    ctx.assignment?.forEach((rule) => this.visit(rule));
+    ctx.bracket?.forEach((rule) => this.visit(rule));
+    ctx.command?.forEach((rule) => this.visit(rule));
+    ctx.endOfLine?.forEach((rule) => this.visit(rule));
+    ctx.group?.forEach((rule) => this.visit(rule));
+    ctx.iterator?.forEach((rule) => this.visit(rule));
+    ctx.lambda?.forEach((rule) => this.visit(rule));
+    ctx.operator?.forEach((rule) => this.visit(rule));
+    ctx.semiColon?.forEach((rule) => this.visit(rule));
+    ctx.space?.forEach((rule) => this.visit(rule));
+    ctx.symbol?.forEach((rule) => this.visit(rule));
+  }
+
+  space(ctx: SpaceCstChildren) {
+    this.statement--;
+    this.consume({ ...ctx.Space[0], type: TokenType.SPACE });
+  }
+
+  semiColon(ctx: SemiColonCstChildren) {
+    this.consume({ ...ctx.SemiColon[0], type: TokenType.SEMICOLON });
+    this.statement++;
+  }
+
+  endOfLine(ctx: EndOfLineCstChildren) {
+    this.consume({ ...ctx.EndOfLine[0], type: TokenType.ENDOFLINE });
+    this.statement++;
+  }
+
+  group(ctx: GroupCstChildren) {
+    this.push({ ...ctx.LParen[0], type: TokenType.GROUP });
+    ctx.expression?.forEach((rule) => this.visit(rule));
+    this.pop();
+  }
+
+  lambda(ctx: LambdaCstChildren) {
+    this.push({ ...ctx.LCurly[0], type: TokenType.LAMBDA });
+    ctx.space?.forEach((rule) => this.visit(rule));
+    ctx.bracket?.forEach((rule) => this.visit(rule));
+    ctx.expression?.forEach((rule) => this.visit(rule));
+    this.pop();
+  }
+
+  bracket(ctx: BracketCstChildren) {
+    this.push({ ...ctx.LBracket[0], type: TokenType.BRACKET });
+    const lambda = this.backtrack([TokenType.LAMBDA], 1, false);
+    const group = this.backtrack([TokenType.GROUP], 1, false);
+    if (group) {
+      group.type = TokenType.TABLE;
+    }
+    const assignment = this.backtrack([TokenType.ASSIGN_INFIX]);
+    let symbol: Token | undefined;
+    ctx.expression?.forEach((rule) => {
+      this.visit(rule);
+      if (lambda) {
+        symbol = this.current;
+      } else if (assignment && !symbol && rule.children.symbol) {
+        symbol = this.current;
+        if (assignment.name === "DoubleColon") {
+          symbol.scope = undefined;
+        }
+      }
+    });
+    if (symbol) {
+      if (!scope(symbol, NoAssignTypes)) {
+        this.assigns.push(symbol);
+      }
+    }
+    this.pop();
+  }
+
+  assignment(ctx: AssignmentCstChildren) {
+    ctx.operator?.forEach((rule) => this.visit(rule));
+    ctx.space?.forEach((rule) => this.visit(rule));
+    this.consume({
+      ...(ctx.Colon || ctx.DoubleColon || [])[0],
+      type: ctx.operator ? TokenType.ASSIGN_INFIX : TokenType.ASSIGN,
+    });
+    const assignment = this.current;
+    if (!scope(this.current, NoAssignTypes)) {
+      const count = ctx.operator ? 2 : 1;
+      const symbol = this.backtrack(SymbolTypes, count, true, [
+        TokenType.SPACE,
+        TokenType.BRACKET,
+      ]);
+      if (symbol) {
+        if (assignment.name === "DoubleColon") {
+          symbol.scope = undefined;
+        }
+        this.assigns.push(symbol);
+      }
     }
   }
 
-  identifier(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.Identifier[0],
-      type: EntityType.IDENTIFIER,
-    });
-    this.symbols.push(entity);
+  symbol(ctx: SymbolCstChildren) {
+    ctx.literal?.forEach((rule) => this.visit(rule));
+    ctx.keyword?.forEach((rule) => this.visit(rule));
+    ctx.identifier?.forEach((rule) => this.visit(rule));
   }
 
-  operator(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.Operator[0],
-      type: EntityType.OPERATOR,
-    });
-    this.symbols.push(entity);
+  literal(ctx: LiteralCstChildren) {
+    ctx.binaryLiteral?.forEach((rule) => this.visit(rule));
+    ctx.byteLiteral?.forEach((rule) => this.visit(rule));
+    ctx.charLiteral?.forEach((rule) => this.visit(rule));
+    ctx.dateLiteral?.forEach((rule) => this.visit(rule));
+    ctx.dateTimeLiteral?.forEach((rule) => this.visit(rule));
+    ctx.fileLiteral?.forEach((rule) => this.visit(rule));
+    ctx.infinityLiteral?.forEach((rule) => this.visit(rule));
+    ctx.miliTimeLiteral?.forEach((rule) => this.visit(rule));
+    ctx.minuteLiteral?.forEach((rule) => this.visit(rule));
+    ctx.monthLiteral?.forEach((rule) => this.visit(rule));
+    ctx.nanoTimeLiteral?.forEach((rule) => this.visit(rule));
+    ctx.numberLiteral?.forEach((rule) => this.visit(rule));
+    ctx.secondLiteral?.forEach((rule) => this.visit(rule));
+    ctx.symbolLiteral?.forEach((rule) => this.visit(rule));
+    ctx.timeStampLiteral?.forEach((rule) => this.visit(rule));
   }
 
-  semiColon(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.SemiColon[0],
-      type: EntityType.SEMICOLON,
-    });
-    this.symbols.push(entity);
+  binaryLiteral(ctx: BinaryLiteralCstChildren) {
+    this.consume({ ...ctx.BinaryLiteral[0], type: TokenType.LITERAL });
   }
 
-  colon(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.Colon[0],
-      type: EntityType.COLON,
-    });
-    this.symbols.push(entity);
+  byteLiteral(ctx: ByteLiteralCstChildren) {
+    this.consume({ ...ctx.ByteLiteral[0], type: TokenType.LITERAL });
   }
 
-  lparen(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.LParen[0],
-      type: EntityType.LPAREN,
-    });
-    this.symbols.push(entity);
-    this.scopes.push(entity);
+  charLiteral(ctx: CharLiteralCstChildren) {
+    this.consume({ ...ctx.CharLiteral[0], type: TokenType.LITERAL });
   }
 
-  rparen(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.RParen[0],
-      type: EntityType.RPAREN,
-    });
-    this.scopes.pop();
-    this.symbols.push(entity);
+  dateLiteral(ctx: DateLiteralCstChildren) {
+    this.consume({ ...ctx.DateLiteral[0], type: TokenType.LITERAL });
   }
 
-  lbracket(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.LBracket[0],
-      type: EntityType.LBRACKET,
-    });
-    this.symbols.push(entity);
-    this.scopes.push(entity);
+  dateTimeLiteral(ctx: DateTimeLiteralCstChildren) {
+    this.consume({ ...ctx.DateTimeLiteral[0], type: TokenType.LITERAL });
   }
 
-  rbracket(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.RBracket[0],
-      type: EntityType.RBRACKET,
-    });
-    this.scopes.pop();
-    this.symbols.push(entity);
+  fileLiteral(ctx: FileLiteralCstChildren) {
+    this.consume({ ...ctx.FileLiteral[0], type: TokenType.LITERAL });
   }
 
-  lcurly(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.LCurly[0],
-      type: EntityType.LCURLY,
-    });
-    this.symbols.push(entity);
-    this.scopes.push(entity);
+  infinityLiteral(ctx: InfinityLiteralCstChildren) {
+    this.consume({ ...ctx.InfinityLiteral[0], type: TokenType.LITERAL });
   }
 
-  rcurly(ctx: any) {
-    const entity = this.createEntity({
-      ...ctx.RCurly[0],
-      type: EntityType.RCURLY,
-    });
-    this.scopes.pop();
-    this.symbols.push(entity);
+  miliTimeLiteral(ctx: MiliTimeLiteralCstChildren) {
+    this.consume({ ...ctx.MiliTimeLiteral[0], type: TokenType.LITERAL });
+  }
+
+  minuteLiteral(ctx: MinuteLiteralCstChildren) {
+    this.consume({ ...ctx.MinuteLiteral[0], type: TokenType.LITERAL });
+  }
+
+  monthLiteral(ctx: MonthLiteralCstChildren) {
+    this.consume({ ...ctx.MonthLiteral[0], type: TokenType.LITERAL });
+  }
+
+  nanoTimeLiteral(ctx: NanoTimeLiteralCstChildren) {
+    this.consume({ ...ctx.NanoTimeLiteral[0], type: TokenType.LITERAL });
+  }
+
+  numberLiteral(ctx: NumberLiteralCstChildren) {
+    this.consume({ ...ctx.NumberLiteral[0], type: TokenType.LITERAL });
+  }
+
+  secondLiteral(ctx: SecondLiteralCstChildren) {
+    this.consume({ ...ctx.SecondLiteral[0], type: TokenType.LITERAL });
+  }
+
+  symbolLiteral(ctx: SymbolLiteralCstChildren) {
+    this.consume({ ...ctx.SymbolLiteral[0], type: TokenType.LITERAL });
+  }
+
+  timeStampLiteral(ctx: TimeStampLiteralCstChildren) {
+    this.consume({ ...ctx.TimeStampLiteral[0], type: TokenType.LITERAL });
+  }
+
+  keyword(ctx: KeywordCstChildren) {
+    this.consume({ ...ctx.Keyword[0], type: TokenType.KEYWORD });
+  }
+
+  identifier(ctx: IdentifierCstChildren) {
+    this.consume({ ...ctx.Identifier[0], type: TokenType.IDENTIFIER });
+  }
+
+  iterator(ctx: IteratorCstChildren) {
+    this.consume({ ...ctx.Iterator[0], type: TokenType.ITERATOR });
+  }
+
+  command(ctx: CommandCstChildren) {
+    this.consume({ ...ctx.Command[0], type: TokenType.COMMAND });
+  }
+
+  operator(ctx: OperatorCstChildren) {
+    this.consume({ ...ctx.Operator[0], type: TokenType.OPERATOR });
   }
 }
 
-export enum EntityType {
-  UNKNOWN = "UNKNOWN",
-  DOUBLE_COLON = "DOUBLE_COLON",
-  COMMAND = "COMMAND",
-  ENDOFLINE = "ENDOFLINE",
-  CHAR_LITERAL = "CHAR_LITERAL",
-  SYMBOL_LITERAL = "SYMBOL_LITERAL",
-  TIMESTAMP_LITERAL = "TIMESTAMP_LITERAL",
-  DATETIME_LITERAL = "DATETIME_LITERAL",
-  MILITIME_LITERAL = "MILITIME_LITERAL",
-  NANOTIME_LITERAL = "NANOTIME_LITERAL",
-  DATE_LITERAL = "DATE_LITERAL",
-  MONTH_LITERAL = "MONTH_LITERAL",
-  SECOND_LITERAL = "SECOND_LITERAL",
-  MINUTE_LITERAL = "MINUTE_LITERAL",
-  BINARY_LITERAL = "BINARY_LITERAL",
-  BYTE_LITERAL = "BYTE_LITERAL",
-  NUMBER_LITERAL = "NUMBER_LITERAL",
-  KEYWORD = "KEYWORD",
-  IDENTIFIER = "IDENTIFIER",
-  OPERATOR = "OPERATOR",
-  SEMICOLON = "SEMICOLON",
-  COLON = "COLON",
-  LPAREN = "LPAREN",
-  RPAREN = "RPAREN",
-  LBRACKET = "LBRACKET",
-  RBRACKET = "RBRACKET",
-  LCURLY = "LCURLY",
-  RCURLY = "RCURLY",
-}
-
-export interface Entity {
-  type: EntityType;
+export interface Token {
+  type: TokenType;
+  name: string;
+  scope?: Token;
+  statement: number;
   image: string;
   startOffset: number;
   endOffset: number;
-  scope?: Entity;
 }
 
 export interface QAst {
-  script: Entity[];
-  assign: Entity[];
+  script: Token[];
+  assign: Token[];
 }
 
-export function getNameScope(entity: Entity): Entity | undefined {
+export const enum TokenType {
+  LITERAL,
+  KEYWORD,
+  IDENTIFIER,
+  LAMBDA,
+  BRACKET,
+  GROUP,
+  TABLE,
+  SQL,
+  ITERATOR,
+  OPERATOR,
+  COMMAND,
+  ASSIGN,
+  ASSIGN_INFIX,
+  SPACE,
+  SEMICOLON,
+  ENDOFLINE,
+}
+
+export const SymbolTypes = [
+  TokenType.LITERAL,
+  TokenType.KEYWORD,
+  TokenType.IDENTIFIER,
+];
+
+export const AssignTypes = [TokenType.ASSIGN, TokenType.ASSIGN_INFIX];
+export const NoAssignTypes = [TokenType.TABLE, TokenType.SQL];
+
+export function scope(
+  token: Token,
+  types = [TokenType.LAMBDA]
+): Token | undefined {
   let scope;
-  while ((scope = entity.scope)) {
-    if (scope.type === EntityType.LCURLY) {
+  while ((scope = token.scope)) {
+    if (types.indexOf(scope.type) >= 0) {
       break;
     }
-    entity = scope;
+    token = scope;
   }
   return scope;
-}
-
-export function isLiteral(entity: Entity) {
-  switch (entity.type) {
-    case EntityType.CHAR_LITERAL:
-    case EntityType.SYMBOL_LITERAL:
-    case EntityType.TIMESTAMP_LITERAL:
-    case EntityType.DATETIME_LITERAL:
-    case EntityType.MILITIME_LITERAL:
-    case EntityType.NANOTIME_LITERAL:
-    case EntityType.DATE_LITERAL:
-    case EntityType.MONTH_LITERAL:
-    case EntityType.SECOND_LITERAL:
-    case EntityType.MINUTE_LITERAL:
-    case EntityType.BINARY_LITERAL:
-    case EntityType.BYTE_LITERAL:
-    case EntityType.NUMBER_LITERAL:
-      return true;
-    default:
-      return false;
-  }
 }
 
 export function analyze(cstNode: CstNode | CstNode[]): QAst {
   const visitor = new QVisitor();
   visitor.visit(cstNode);
-
-  const script = visitor.symbols;
-  const ast: QAst = {
-    script,
-    assign: [],
-  };
-
-  for (let i = 0; i < script.length; i++) {
-    switch (script[i].type) {
-      case EntityType.COLON:
-      case EntityType.DOUBLE_COLON:
-        if (script[i].scope?.type === EntityType.LPAREN) {
-          const start = script.find(
-            (entity) => entity.scope === script[i].scope
-          );
-          if (start?.type === EntityType.LBRACKET) {
-            break;
-          }
-        }
-        if (script[i].scope?.image === "select") {
-          break;
-        }
-        let entity;
-        if (
-          script[i + 1]?.type === EntityType.LBRACKET &&
-          script[i - 1]?.type === EntityType.OPERATOR
-        ) {
-          entity = script[i + 2];
-        } else {
-          let c = i - 1;
-          c >= 0 && script[c].type === EntityType.OPERATOR && c--;
-          while (c >= 0 && script[c].scope !== script[i].scope) {
-            c--;
-          }
-          c >= 0 && script[c].type === EntityType.LBRACKET && c--;
-          entity = script[c];
-        }
-        if (entity) {
-          if (
-            entity.type === EntityType.KEYWORD ||
-            entity.type === EntityType.IDENTIFIER ||
-            isLiteral(entity)
-          ) {
-            if (
-              script[i + 1]?.type !== EntityType.SEMICOLON &&
-              script[i + 1]?.type !== EntityType.ENDOFLINE
-            ) {
-              if (script[i].type === EntityType.DOUBLE_COLON) {
-                entity.scope = undefined;
-              }
-              ast.assign.push(entity);
-            }
-          }
-        }
-        break;
-      case EntityType.LBRACKET:
-        let c = i - 1;
-        while (c >= 0 && script[c].type === EntityType.ENDOFLINE) {
-          c--;
-        }
-        if (script[c]?.type === EntityType.LCURLY) {
-          let c = i + 1;
-          const anchor = script[c]?.scope;
-          while (c < script.length && anchor === script[c].scope) {
-            ast.assign.push(script[c]);
-            c++;
-          }
-        }
-        break;
-    }
-  }
-
-  return ast;
+  return visitor.ast();
 }

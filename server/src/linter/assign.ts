@@ -11,23 +11,22 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Entity, EntityType, QAst, getNameScope, isLiteral } from "../parser";
+import { Token, TokenType, QAst, scope } from "../parser";
 
-export function assignReservedWord({ assign }: QAst): Entity[] {
-  return assign.filter((entity) => entity.type === EntityType.KEYWORD);
+export function assignReservedWord({ assign }: QAst): Token[] {
+  return assign.filter((entity) => entity.type === TokenType.KEYWORD);
 }
 
-export function invalidAssign({ assign }: QAst): Entity[] {
-  return assign.filter((entity) => isLiteral(entity));
+export function invalidAssign({ assign }: QAst): Token[] {
+  return assign.filter((entity) => entity.type === TokenType.LITERAL);
 }
 
-export function declaredAfterUse({ script, assign }: QAst): Entity[] {
+export function declaredAfterUse({ script, assign }: QAst): Token[] {
   return script.filter((entity, index) => {
-    if (entity.type === EntityType.IDENTIFIER) {
+    if (entity.type === TokenType.IDENTIFIER) {
       const declared = assign.find(
         (symbol) =>
-          getNameScope(symbol) === getNameScope(entity) &&
-          symbol.image === entity.image
+          scope(symbol) === scope(entity) && symbol.image === entity.image
       );
       return declared && script.indexOf(declared) > index;
     }
@@ -35,12 +34,12 @@ export function declaredAfterUse({ script, assign }: QAst): Entity[] {
   });
 }
 
-export function unusedParam({ script, assign }: QAst): Entity[] {
+export function unusedParam({ script, assign }: QAst): Token[] {
   return assign
     .filter(
       (entity) =>
-        entity.type === EntityType.IDENTIFIER &&
-        entity.scope?.type === EntityType.LBRACKET
+        entity.type === TokenType.IDENTIFIER &&
+        entity.scope?.type === TokenType.BRACKET
     )
     .filter(
       (entity) =>
@@ -48,20 +47,20 @@ export function unusedParam({ script, assign }: QAst): Entity[] {
           (symbol) =>
             symbol !== entity &&
             symbol.image === entity.image &&
-            symbol.type === EntityType.IDENTIFIER &&
-            getNameScope(symbol) === getNameScope(entity)
+            symbol.type === TokenType.IDENTIFIER &&
+            scope(symbol) === scope(entity)
         )
     );
 }
 
-export function unusedVar({ script, assign }: QAst): Entity[] {
-  const locals = assign.filter((entity) => getNameScope(entity));
+export function unusedVar({ script, assign }: QAst): Token[] {
+  const locals = assign.filter((entity) => scope(entity));
 
   return assign
     .filter(
       (entity) =>
-        entity.type === EntityType.IDENTIFIER &&
-        entity.scope?.type !== EntityType.LBRACKET
+        entity.type === TokenType.IDENTIFIER &&
+        entity.scope?.type !== TokenType.BRACKET
     )
     .filter(
       (entity) =>
@@ -69,8 +68,8 @@ export function unusedVar({ script, assign }: QAst): Entity[] {
           (symbol) =>
             symbol !== entity &&
             symbol.image === entity.image &&
-            symbol.type === EntityType.IDENTIFIER &&
-            (getNameScope(symbol) === getNameScope(entity) ||
+            symbol.type === TokenType.IDENTIFIER &&
+            (scope(symbol) === scope(entity) ||
               !locals.find((local) => local.image === symbol.image))
         )
     );
