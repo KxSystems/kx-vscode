@@ -2,14 +2,20 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
+# v1.2.1
+
+### Fixes
+
+- Documentation fixes
+
 # v1.2.0
 
 ### Enhancements
 
-- Execution of Python code on server
+- Execution of Python code on kdb Insights Enterprise
 - Rename symbol support
 - Basic linting support
-- KDB/q REPL flow
+- kdb+/q REPL flow
 
 ### Fixes
 
@@ -30,6 +36,7 @@ All notable changes to the kdb extension will be documented in this file.
 # v1.1.1
 
 ### Fixes
+
 - Documentation fixes
 
 # v1.1.0
