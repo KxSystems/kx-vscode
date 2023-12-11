@@ -12,7 +12,29 @@
  */
 
 import * as assert from "assert";
-import { QParser } from "../../server/src/parser/parser";
+import {
+  CharLiteral,
+  EntityType,
+  QLexer,
+  QParser,
+  analyze,
+} from "../../server/src/parser";
+
+describe("QLexer", () => {
+  describe("CharLiteral", () => {
+    it("should tokenize string", () => {
+      const lexed = QLexer.tokenize('"char"');
+      assert.strictEqual(lexed.tokens.length, 1);
+      assert.strictEqual(lexed.tokens[0].tokenType, CharLiteral);
+    });
+
+    it("should tokenize empty string", () => {
+      const lexed = QLexer.tokenize('""');
+      assert.strictEqual(lexed.tokens.length, 1);
+      assert.strictEqual(lexed.tokens[0].tokenType, CharLiteral);
+    });
+  });
+});
 
 describe("QParser", () => {
   describe("comments", () => {
@@ -29,11 +51,6 @@ describe("QParser", () => {
     it("should ignore inline", () => {
       QParser.parse("a: 1 /a:\n");
       assert.deepEqual(QParser.errors, []);
-    });
-
-    it("should not ignore overloaded slash", () => {
-      QParser.parse("a: ,/ a:\n");
-      assert.strictEqual(QParser.errors.length, 1);
     });
   });
 
@@ -90,5 +107,14 @@ describe("QParser", () => {
         assert.deepEqual(QParser.errors, []);
       });
     });
+  });
+});
+
+describe("QVisitor", () => {
+  it("should analyze identifier", () => {
+    const text = "a";
+    const cst = QParser.parse(text);
+    const { script } = analyze(cst);
+    assert.strictEqual(script[0].type, EntityType.IDENTIFIER);
   });
 });

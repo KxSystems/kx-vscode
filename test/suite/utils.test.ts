@@ -25,6 +25,7 @@ import { QueryHistoryProvider } from "../../src/services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as coreUtils from "../../src/utils/core";
 import * as dataSourceUtils from "../../src/utils/dataSource";
+import * as decodeUtils from "../../src/utils/decode";
 import * as executionUtils from "../../src/utils/execution";
 import * as executionConsoleUtils from "../../src/utils/executionConsole";
 import { getNonce } from "../../src/utils/getNonce";
@@ -161,6 +162,54 @@ describe("Utils", () => {
         "2021-01-01"
       );
       assert.strictEqual(result2, false);
+    });
+  });
+
+  describe("decode", () => {
+    describe("decodeQUTF", () => {
+      it("should return undefined if the input is undefined", () => {
+        const result = decodeUtils.decodeQUTF(undefined);
+        assert.strictEqual(result, undefined);
+      });
+
+      it("should decode octal escape sequences in the input string", () => {
+        const input = "\\344\\275\\240\\345\\245\\275";
+        const expectedOutput = "你好";
+        const result = decodeUtils.decodeQUTF(input);
+        assert.strictEqual(result, expectedOutput);
+      });
+    });
+
+    describe("decodeUnicode", () => {
+      it("should return the input string if the index is even", () => {
+        const input = "hello";
+        const result = decodeUtils.decodeUnicode(input, 0);
+        assert.strictEqual(result, input);
+      });
+
+      it("should decode percent-encoded characters in the input string if the index is odd", () => {
+        const input = "ããç ãã¯ãªããªãªããªãªããª";
+        const expectedOutput = "もう眠くはないなないなないな";
+        const result = decodeUtils.decodeUnicode(input, 1);
+        assert.strictEqual(result, expectedOutput);
+      });
+    });
+
+    describe("toOctalEscapes", () => {
+      it("should return the input string if all characters have code points less than 128", () => {
+        const input = "hello";
+        const result = decodeUtils.toOctalEscapes(input);
+        assert.strictEqual(result, input);
+      });
+    });
+
+    describe("decodeOctal", () => {
+      it("should decode an octal escape sequence to a character", () => {
+        const input = "\\344";
+        const expectedOutput = "ä";
+        const result = decodeUtils.decodeOctal(input);
+        assert.strictEqual(result, expectedOutput);
+      });
     });
   });
 
@@ -638,6 +687,49 @@ describe("Utils", () => {
       });
     });
 
+    describe("handleScratchpadTableRes", () => {
+      it("should return the input if it is not an array", () => {
+        const input = "not an array";
+        const result = queryUtils.handleScratchpadTableRes(input);
+        assert.strictEqual(result, input);
+      });
+
+      it("should convert object values with 'i' property to string", () => {
+        const input = [
+          { key1: { i: 123 }, key2: "value2" },
+          { key3: { i: 456 }, key4: "value4" },
+        ];
+        const expected = [
+          { key1: "[object Object]", key2: "value2" },
+          { key3: "[object Object]", key4: "value4" },
+        ];
+        const result = queryUtils.handleScratchpadTableRes(input);
+        assert.deepStrictEqual(result, expected);
+      });
+
+      it("should convert bigint values to number", () => {
+        const input = [
+          { key1: BigInt(123), key2: "value2" },
+          { key3: BigInt(456), key4: "value4" },
+        ];
+        const expected = [
+          { key1: 123, key2: "value2" },
+          { key3: 456, key4: "value4" },
+        ];
+        const result = queryUtils.handleScratchpadTableRes(input);
+        assert.deepStrictEqual(result, expected);
+      });
+
+      it("should not modify other values", () => {
+        const input = [
+          { key1: "value1", key2: "value2" },
+          { key3: "value3", key4: "value4" },
+        ];
+        const result = queryUtils.handleScratchpadTableRes(input);
+        assert.deepStrictEqual(result, input);
+      });
+    });
+
     it("convertRows", () => {
       const rows = [
         {
@@ -672,6 +764,40 @@ describe("Utils", () => {
         const result = queryUtils.getConnectionType(params[i]);
         assert.equal(result, expectedRes[i]);
       }
+    });
+
+    describe("handleWSError", () => {
+      let sandbox: sinon.SinonSandbox;
+
+      beforeEach(() => {
+        sandbox = sinon.createSandbox();
+      });
+
+      afterEach(() => {
+        sandbox.restore();
+      });
+
+      it("should handle qe/sql & gateway/data error", () => {
+        const ab = new ArrayBuffer(10); // Mock ArrayBuffer
+
+        // Stub the necessary functions
+
+        // Call the function being tested
+        const result = queryUtils.handleWSError(ab);
+
+        // Assert the result
+        assert.deepStrictEqual(result, { error: "Query error" });
+      });
+
+      it("should handle unknown error", () => {
+        const ab = new ArrayBuffer(8); // Mock ArrayBuffer
+
+        // Call the function being tested
+        const result = queryUtils.handleWSError(ab);
+
+        // Assert the result
+        assert.deepStrictEqual(result, { error: "Query error" });
+      });
     });
   });
 

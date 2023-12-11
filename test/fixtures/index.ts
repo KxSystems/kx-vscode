@@ -11,30 +11,21 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export type GetDataError = string | { buffer: ArrayBuffer };
+/* eslint @typescript-eslint/ban-ts-comment: 0 */
 
-export type GetDataObjectPayload = {
-  error: GetDataError;
-  table?: {
-    meta: {
-      [column: string]: string;
-    };
-    columns: string[];
-    rows: any;
-  };
-  arrayBuffer?: ArrayBuffer;
-};
+import Module from "module";
+import path from "path";
 
-export type getDataBodyPayload = {
-  table: string;
-  startTS: string;
-  endTS: string;
-  labels?: { [id: string]: string };
-  filter?: (string | number | (string | number)[])[][];
-  groupBy?: string[];
-  agg?: string[][];
-  fill?: string;
-  temporality?: string;
-  slice?: string[];
-  sortCols?: string[];
+// @ts-ignore
+const resolve = Module._resolveFilename;
+
+// @ts-ignore
+Module._resolveFilename = function (specifier: string, parent: string) {
+  switch (specifier) {
+    case "lit":
+    case "lit/decorators.js":
+      specifier = path.resolve(__dirname, "webview.js");
+      break;
+  }
+  return resolve(specifier, parent);
 };

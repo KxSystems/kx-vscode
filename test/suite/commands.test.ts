@@ -12,17 +12,14 @@
  */
 
 import assert from "assert";
+import axios from "axios";
 import mock from "mock-fs";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { QuickPickItem, window } from "vscode";
+import { QuickPickItem, TreeItemCollapsibleState, window } from "vscode";
 import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
 import * as installTools from "../../src/commands/installTools";
-import {
-  addKdbConnection,
-  addNewConnection,
-  writeQueryResultsToView,
-} from "../../src/commands/serverCommand";
+import * as serverCommand from "../../src/commands/serverCommand";
 import * as walkthroughCommand from "../../src/commands/walkthroughCommand";
 import { ext } from "../../src/extensionVariables";
 import {
@@ -30,10 +27,15 @@ import {
   DataSourceTypes,
   createDefaultDataSourceFile,
 } from "../../src/models/dataSource";
+import { ExecutionTypes } from "../../src/models/execution";
 import { Insights } from "../../src/models/insights";
 import { ScratchpadResult } from "../../src/models/scratchpadResult";
 import { KdbDataSourceTreeItem } from "../../src/services/dataSourceTreeProvider";
-import { KdbTreeProvider } from "../../src/services/kdbTreeProvider";
+import * as codeFlowLogin from "../../src/services/kdbInsights/codeFlowLogin";
+import {
+  InsightsNode,
+  KdbTreeProvider,
+} from "../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as coreUtils from "../../src/utils/core";
 import * as dataSourceUtils from "../../src/utils/dataSource";
@@ -42,6 +44,9 @@ import * as queryUtils from "../../src/utils/queryUtils";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const srvCommand = require("../../src/commands/serverCommand");
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const dsCmd = require("../../src/commands/dataSourceCommand");
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const insModule = require("../../src/utils/core");
@@ -672,10 +677,10 @@ describe("dataSourceCommand2", () => {
         },
       ],
     };
-    const dummyFileContent = {
+    const dummyFileContent: DataSourceFiles = {
       name: "dummy-DS",
       dataSource: {
-        selectedType: "QSQL",
+        selectedType: DataSourceTypes.QSQL,
         api: {
           selectedApi: "getData",
           table: "dummyTbl",
@@ -700,34 +705,23 @@ describe("dataSourceCommand2", () => {
       insightsNode: "dummyNode",
     };
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
+    const ab = new ArrayBuffer(26);
     ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
-    let isVisibleStub: sinon.SinonStub;
-    let getMetaStub: sinon.SinonStub;
-    let convertDSFormToDSFile: sinon.SinonStub;
-    let getSelectedTypeStub: sinon.SinonStub;
-    let runApiDataSourceStub: sinon.SinonStub;
-    let runQsqlDataSourceStub: sinon.SinonStub;
-    let runSqlDataSourceStub: sinon.SinonStub;
-    let writeQueryResultsToViewStub: sinon.SinonStub;
-    let writeQueryResultsToConsoleStub: sinon.SinonStub;
-    const appendLineSpy = sinon.spy(ext.outputChannel, "appendLine");
-    // const windowErrorSpy = sinon.spy(vscode.window, "showErrorMessage");
+    let isVisibleStub,
+      getMetaStub,
+      handleWSResultsStub,
+      getDataInsightsStub,
+      writeQueryResultsToViewStub,
+      writeQueryResultsToConsoleStub: sinon.SinonStub;
     ext.outputChannel = vscode.window.createOutputChannel("kdb");
 
     beforeEach(() => {
       getMetaStub = sinon.stub(srvCommand, "getMeta");
-      convertDSFormToDSFile = sinon.stub(
-        dataSourceUtils,
-        "convertDataSourceFormToDataSourceFile"
-      );
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
-      getSelectedTypeStub = sinon.stub(dataSourceCommand, "getSelectedType");
-      runApiDataSourceStub = sinon.stub(dataSourceCommand, "runApiDataSource");
-      runQsqlDataSourceStub = sinon.stub(
-        dataSourceCommand,
-        "runQsqlDataSource"
-      );
-      runSqlDataSourceStub = sinon.stub(dataSourceCommand, "runSqlDataSource");
+      handleWSResultsStub = sinon
+        .stub(queryUtils, "handleWSResults")
+        .returns("dummy results");
+      getDataInsightsStub = sinon.stub(srvCommand, "getDataInsights");
       writeQueryResultsToViewStub = sinon.stub(
         srvCommand,
         "writeQueryResultsToView"
@@ -745,45 +739,114 @@ describe("dataSourceCommand2", () => {
     it("should show an error message if not connected to an Insights server", async () => {
       getMetaStub.resolves({});
       await dataSourceCommand.runDataSource({} as DataSourceFiles);
-      sinon.assert.notCalled(convertDSFormToDSFile);
+      sinon.assert.notCalled(isVisibleStub);
     });
 
-    it("should return QSQL results)", async () => {
+    it("should return QSQL results", async () => {
       getMetaStub.resolves(dummyMeta);
-      convertDSFormToDSFile.returns(dummyFileContent);
-      getSelectedTypeStub.returns("QSQL");
-      runQsqlDataSourceStub.resolves("dummy results");
+      getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
       isVisibleStub.returns(true);
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles
       );
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
       sinon.assert.calledOnce(writeQueryResultsToViewStub);
     });
 
-    it("should return API results)", async () => {
-      dummyFileContent.dataSource.selectedType = "API";
+    it("should return API results", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.API;
       getMetaStub.resolves(dummyMeta);
-      convertDSFormToDSFile.returns(dummyFileContent);
-      getSelectedTypeStub.returns("API");
-      runApiDataSourceStub.resolves("dummy results");
+      getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles
       );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
     });
 
-    it("should return SQL results)", async () => {
-      dummyFileContent.dataSource.selectedType = "SQL";
+    it("should return SQL results", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.SQL;
       getMetaStub.resolves(dummyMeta);
-      convertDSFormToDSFile.returns(dummyFileContent);
-      getSelectedTypeStub.returns("SQL");
-      runSqlDataSourceStub.resolves("dummy results");
+      getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles
       );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
+    });
+
+    it("should return error message QSQL", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.QSQL;
+      getMetaStub.resolves(dummyMeta);
+      getDataInsightsStub.resolves({ arrayBuffer: ab, error: "error" });
+      isVisibleStub.returns(false);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+    });
+
+    it("should return error message API", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.API;
+      getMetaStub.resolves(dummyMeta);
+      getDataInsightsStub.resolves({ arrayBuffer: ab, error: "error" });
+      isVisibleStub.returns(false);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+    });
+
+    it("should return error message SQL", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.SQL;
+      getMetaStub.resolves(dummyMeta);
+      getDataInsightsStub.resolves({ arrayBuffer: ab, error: "error" });
+      isVisibleStub.returns(false);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+    });
+
+    it("should return error message QSQL", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.QSQL;
+      getMetaStub.resolves(dummyMeta);
+      getDataInsightsStub.resolves(undefined);
+      isVisibleStub.returns(false);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+    });
+
+    it("should return error message API", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.API;
+      getMetaStub.resolves(dummyMeta);
+      getDataInsightsStub.resolves(undefined);
+      isVisibleStub.returns(false);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+    });
+
+    it("should return error message SQL", async () => {
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.SQL;
+      getMetaStub.resolves(dummyMeta);
+      getDataInsightsStub.resolves(undefined);
+      isVisibleStub.returns(false);
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
     });
   });
 });
@@ -803,7 +866,7 @@ describe("serverCommand", () => {
     const insMock = sinon.mock(srvCommand);
     insMock.expects("addInsightsConnection").never();
 
-    await addNewConnection();
+    await serverCommand.addNewConnection();
     kdbMock.verify();
     insMock.verify();
 
@@ -827,7 +890,7 @@ describe("serverCommand", () => {
       .stub(srvCommand, "addKdbConnection")
       .returns(undefined);
 
-    await addNewConnection();
+    await serverCommand.addNewConnection();
 
     assert(kdbStub.notCalled);
 
@@ -844,7 +907,7 @@ describe("serverCommand", () => {
 
     const qpStub = sinon.stub(window, "showQuickPick").resolves(qpItem);
 
-    await addKdbConnection();
+    await serverCommand.addKdbConnection();
 
     assert.strictEqual(true, true);
 
@@ -862,7 +925,7 @@ describe("serverCommand", () => {
       .stub(srvCommand, "addInsightsConnection")
       .returns(undefined);
 
-    await addNewConnection();
+    await serverCommand.addNewConnection();
 
     assert(insStub.notCalled);
 
@@ -887,7 +950,7 @@ describe("serverCommand", () => {
       .stub(srvCommand, "addInsightsConnection")
       .returns(undefined);
 
-    await addNewConnection();
+    await serverCommand.addNewConnection();
 
     assert(insStub.notCalled);
 
@@ -913,7 +976,7 @@ describe("serverCommand", () => {
       .stub(srvCommand, "addInsightsConnection")
       .returns(undefined);
 
-    await addNewConnection();
+    await serverCommand.addNewConnection();
 
     assert(insStub.notCalled);
 
@@ -942,7 +1005,7 @@ describe("serverCommand", () => {
       .stub(insModule, "getInsights")
       .returns(undefined);
 
-    await addNewConnection();
+    await serverCommand.addNewConnection();
 
     assert(insStub.notCalled);
 
@@ -976,7 +1039,7 @@ describe("serverCommand", () => {
       .stub(insModule, "getInsights")
       .returns(insTest);
 
-    await addNewConnection();
+    await serverCommand.addNewConnection();
 
     assert(insStub.notCalled);
 
@@ -1014,7 +1077,7 @@ describe("serverCommand", () => {
       .stub(insModule, "getInsights")
       .returns(insTest);
 
-    await addNewConnection();
+    await serverCommand.addNewConnection();
 
     assert(insStub.notCalled);
 
@@ -1024,15 +1087,12 @@ describe("serverCommand", () => {
     qpStub.restore();
   });
 
-  //write tests for src/commands/serverCommand.ts
-  //function to be deleted after write the tests
-  //serverCommand.addNewConnection();
   describe("writeQueryResultsToView", () => {
     it("should call executeCommand with correct arguments", () => {
       const result = { data: [1, 2, 3] };
       const executeCommandStub = sinon.stub(vscode.commands, "executeCommand");
 
-      writeQueryResultsToView(result);
+      serverCommand.writeQueryResultsToView(result, "");
 
       sinon.assert.calledWith(
         executeCommandStub.firstCall,
@@ -1190,6 +1250,334 @@ describe("serverCommand", () => {
       isVisibleStub.returns(false);
       srvCommand.writeScratchpadResult(scratchpadResult, "dummy query");
       sinon.assert.notCalled(writeQueryResultsToViewStub);
+    });
+  });
+
+  describe("importScratchpad", () => {
+    ext.outputChannel = vscode.window.createOutputChannel("kdb");
+    const insightsNode = new InsightsNode(
+      [],
+      "insightsnode1",
+      {
+        server: "https://insightsservername.com/",
+        alias: "insightsserveralias",
+        auth: true,
+      },
+      TreeItemCollapsibleState.None
+    );
+
+    const token: codeFlowLogin.IToken = {
+      accessToken:
+        "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6Imk2bEdrM0ZaenhSY1ViMkMzbkVRN3N5SEpsWSJ9.eyJhdWQiOiI2ZTc0MTcyYi1iZTU2LTQ4NDMtOWZmNC1lNjZhMzliYjEyZTMiLCJpc3MiOiJodHRwczovL2xvZ2luLm1pY3Jvc29mdG9ubGluZS5jb20vNzJmOTg4YmYtODZmMS00MWFmLTkxYWItMmQ3Y2QwMTFkYjQ3L3YyLjAiLCJpYXQiOjE1MzcyMzEwNDgsIm5iZiI6MTUzNzIzMTA0OCwiZXhwIjoxNTM3MjM0OTQ4LCJhaW8iOiJBWFFBaS84SUFBQUF0QWFaTG8zQ2hNaWY2S09udHRSQjdlQnE0L0RjY1F6amNKR3hQWXkvQzNqRGFOR3hYZDZ3TklJVkdSZ2hOUm53SjFsT2NBbk5aY2p2a295ckZ4Q3R0djMzMTQwUmlvT0ZKNGJDQ0dWdW9DYWcxdU9UVDIyMjIyZ0h3TFBZUS91Zjc5UVgrMEtJaWpkcm1wNjlSY3R6bVE9PSIsImF6cCI6IjZlNzQxNzJiLWJlNTYtNDg0My05ZmY0LWU2NmEzOWJiMTJlMyIsImF6cGFjciI6IjAiLCJuYW1lIjoiQWJlIExpbmNvbG4iLCJvaWQiOiI2OTAyMjJiZS1mZjFhLTRkNTYtYWJkMS03ZTRmN2QzOGU0NzQiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJhYmVsaUBtaWNyb3NvZnQuY29tIiwicmgiOiJJIiwic2NwIjoiYWNjZXNzX2FzX3VzZXIiLCJzdWIiOiJIS1pwZmFIeVdhZGVPb3VZbGl0anJJLUtmZlRtMjIyWDVyclYzeERxZktRIiwidGlkIjoiNzJmOTg4YmYtODZmMS00MWFmLTkxYWItMmQ3Y2QwMTFkYjQ3IiwidXRpIjoiZnFpQnFYTFBqMGVRYTgyUy1JWUZBQSIsInZlciI6IjIuMCJ9.pj4N-w_3Us9DrBLfpCt",
+      refreshToken:
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTY4ODUwMjJ9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ",
+      accessTokenExpirationDate: new Date(),
+    };
+
+    const params: DataSourceFiles = {
+      name: "dummy ds",
+      insightsNode: "dummy insights",
+      dataSource: {
+        selectedType: DataSourceTypes.API,
+        api: {
+          selectedApi: "getData",
+          table: "dummy_table",
+          startTS: "2023-09-10T09:30",
+          endTS: "2023-09-19T12:30",
+          fill: "",
+          filter: [],
+          groupBy: [],
+          labels: [],
+          slice: [],
+          sortCols: [],
+          temporality: "",
+          agg: [],
+        },
+        qsql: {
+          selectedTarget: "dummy_table rdb",
+          query: "dummy QSQL query",
+        },
+        sql: {
+          query: "dummy SQL query",
+        },
+      },
+    };
+
+    afterEach(() => {
+      sinon.restore();
+    });
+    it("should return undefined if ext.connectionNode is not an InsightsNode", async () => {
+      // Mock ext.connectionNode to not be an InsightsNode
+      ext.connectionNode = undefined;
+
+      const variableName = "testVariable";
+
+      const result = await serverCommand.importScratchpad(variableName, params);
+      assert.equal(result, undefined);
+    });
+
+    it("should return undefined if token is undefined", async () => {
+      // Mock ext.connectionNode to be an InsightsNode
+      ext.connectionNode = insightsNode;
+
+      // Mock getCurrentToken to return undefined
+      sinon.stub(codeFlowLogin, "getCurrentToken").resolves(undefined);
+
+      const variableName = "testVariable";
+
+      const result = await serverCommand.importScratchpad(variableName, params);
+      assert.equal(result, undefined);
+    });
+
+    it("should return undefined if token is undefined", async () => {
+      // Mock ext.connectionNode to be an InsightsNode
+      ext.connectionNode = insightsNode;
+
+      // Mock getCurrentToken to return undefined
+      sinon.stub(codeFlowLogin, "getCurrentToken").resolves(undefined);
+
+      const variableName = "testVariable";
+
+      const result = await serverCommand.importScratchpad(variableName, params);
+      assert.equal(result, undefined);
+    });
+
+    it("should reach the axios call", async () => {
+      // Mock ext.connectionNode to be an InsightsNode
+      ext.connectionNode = insightsNode;
+      sinon.stub(codeFlowLogin, "getCurrentToken").resolves(token);
+      const axiosPostStub = sinon
+        .stub(axios, "post")
+        .resolves({ data: { success: true } });
+      const variableName = "testVariable";
+      await serverCommand.importScratchpad(variableName, params);
+      sinon.assert.calledOnce(axiosPostStub);
+    });
+  });
+
+  describe("getScratchpadQuery", () => {
+    let axiosPostStub: sinon.SinonStub;
+    let getTokenStub: sinon.SinonStub;
+    let isVisibleStub: sinon.SinonStub;
+    let handleWSResultsStub: sinon.SinonStub;
+    let handleScratchpadTableResStub: sinon.SinonStub;
+    const dummyTableViewDataRes = [
+      "01",
+      "00",
+      "00",
+      "00",
+      "2b",
+      "00",
+      "00",
+      "00",
+      "62",
+      "00",
+      "63",
+      "0b",
+      "00",
+      "01",
+      "00",
+      "00",
+      "00",
+      "56",
+      "61",
+      "6c",
+      "75",
+      "65",
+      "00",
+      "00",
+      "00",
+      "01",
+      "00",
+      "00",
+      "00",
+      "07",
+      "00",
+      "01",
+      "00",
+      "00",
+      "00",
+      "0a",
+      "00",
+      "00",
+      "00",
+      "00",
+      "00",
+      "00",
+      "00",
+    ];
+    const insightsNode = new InsightsNode(
+      [],
+      "insightsnode1",
+      {
+        server: "https://insightsservername.com/",
+        alias: "insightsserveralias",
+        auth: true,
+      },
+      TreeItemCollapsibleState.None
+    );
+    const token: codeFlowLogin.IToken = {
+      accessToken:
+        "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6Imk2bEdrM0ZaenhSY1ViMkMzbkVRN3N5SEpsWSJ9.eyJhdWQiOiI2ZTc0MTcyYi1iZTU2LTQ4NDMtOWZmNC1lNjZhMzliYjEyZTMiLCJpc3MiOiJodHRwczovL2xvZ2luLm1pY3Jvc29mdG9ubGluZS5jb20vNzJmOTg4YmYtODZmMS00MWFmLTkxYWItMmQ3Y2QwMTFkYjQ3L3YyLjAiLCJpYXQiOjE1MzcyMzEwNDgsIm5iZiI6MTUzNzIzMTA0OCwiZXhwIjoxNTM3MjM0OTQ4LCJhaW8iOiJBWFFBaS84SUFBQUF0QWFaTG8zQ2hNaWY2S09udHRSQjdlQnE0L0RjY1F6amNKR3hQWXkvQzNqRGFOR3hYZDZ3TklJVkdSZ2hOUm53SjFsT2NBbk5aY2p2a295ckZ4Q3R0djMzMTQwUmlvT0ZKNGJDQ0dWdW9DYWcxdU9UVDIyMjIyZ0h3TFBZUS91Zjc5UVgrMEtJaWpkcm1wNjlSY3R6bVE9PSIsImF6cCI6IjZlNzQxNzJiLWJlNTYtNDg0My05ZmY0LWU2NmEzOWJiMTJlMyIsImF6cGFjciI6IjAiLCJuYW1lIjoiQWJlIExpbmNvbG4iLCJvaWQiOiI2OTAyMjJiZS1mZjFhLTRkNTYtYWJkMS03ZTRmN2QzOGU0NzQiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJhYmVsaUBtaWNyb3NvZnQuY29tIiwicmgiOiJJIiwic2NwIjoiYWNjZXNzX2FzX3VzZXIiLCJzdWIiOiJIS1pwZmFIeVdhZGVPb3VZbGl0anJJLUtmZlRtMjIyWDVyclYzeERxZktRIiwidGlkIjoiNzJmOTg4YmYtODZmMS00MWFmLTkxYWItMmQ3Y2QwMTFkYjQ3IiwidXRpIjoiZnFpQnFYTFBqMGVRYTgyUy1JWUZBQSIsInZlciI6IjIuMCJ9.pj4N-w_3Us9DrBLfpCt",
+      refreshToken:
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTY4ODUwMjJ9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ",
+      accessTokenExpirationDate: new Date(),
+    };
+
+    beforeEach(() => {
+      ext.connectionNode = insightsNode;
+      axiosPostStub = sinon.stub(axios, "post");
+      getTokenStub = sinon.stub(codeFlowLogin, "getCurrentToken");
+      isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
+      handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
+      handleScratchpadTableResStub = sinon.stub(
+        queryUtils,
+        "handleScratchpadTableRes"
+      );
+    });
+
+    afterEach(() => {
+      axiosPostStub.restore();
+      getTokenStub.restore();
+      isVisibleStub.restore();
+      handleWSResultsStub.restore();
+      handleScratchpadTableResStub.restore();
+    });
+
+    it("should return the response from axios", async () => {
+      const query = "SELECT * FROM table";
+      const context = "context";
+
+      const mockedResponse = { data: { data: dummyTableViewDataRes } };
+      axiosPostStub.resolves(mockedResponse);
+      getTokenStub.resolves(token);
+      isVisibleStub.returns(true);
+      handleWSResultsStub.returns("10");
+      handleScratchpadTableResStub.returns("10");
+
+      const response = await serverCommand.getScratchpadQuery(query, context);
+
+      assert.equal(response.data, "10");
+      sinon.assert.calledOnce(axiosPostStub);
+      sinon.assert.calledOnce(handleWSResultsStub);
+      sinon.assert.calledOnce(handleScratchpadTableResStub);
+    });
+
+    it("should return undefined if token is undefined", async () => {
+      const query = "SELECT * FROM table";
+      const context = "context";
+
+      const expectedToken = undefined;
+      getTokenStub.resolves(expectedToken);
+
+      const response = await serverCommand.getScratchpadQuery(query, context);
+
+      assert.equal(response, undefined);
+      sinon.assert.notCalled(axiosPostStub);
+    });
+  });
+
+  describe("runQuery", () => {
+    const editor = {
+      selection: {
+        isEmpty: false,
+        active: { line: 5 },
+        end: sinon.stub().returns({ line: 10 }),
+      },
+      document: {
+        lineAt: sinon.stub().returns({ text: "SELECT * FROM table" }),
+        getText: sinon.stub().returns("SELECT * FROM table"),
+      },
+    };
+
+    const insightsNode = new InsightsNode(
+      [],
+      "insightsnode1",
+      {
+        server: "https://insightsservername.com/",
+        alias: "insightsserveralias",
+        auth: true,
+      },
+      TreeItemCollapsibleState.None
+    );
+
+    let getQueryContextStub,
+      activeTextEditorStub,
+      executeQueryStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      activeTextEditorStub = sinon
+        .stub(vscode.window, "activeTextEditor")
+        .value(editor);
+      getQueryContextStub = sinon
+        .stub(serverCommand, "getQueryContext")
+        .returns(".");
+      executeQueryStub = sinon
+        .stub(serverCommand, "executeQuery")
+        .resolves(undefined);
+      ext.kdbinsightsNodes.push("insightsserveralias (connected)");
+    });
+
+    afterEach(() => {
+      activeTextEditorStub.restore();
+      getQueryContextStub.restore();
+      executeQueryStub.restore();
+      ext.kdbinsightsNodes.pop();
+    });
+
+    it("runQuery with undefined editor ", () => {
+      activeTextEditorStub.value(undefined);
+      const result = serverCommand.runQuery(ExecutionTypes.PythonQueryFile);
+      assert.equal(result, false);
+    });
+
+    it("runQuery with QuerySelection", () => {
+      ext.connectionNode = undefined;
+      const result = serverCommand.runQuery(ExecutionTypes.QuerySelection);
+      assert.equal(result, undefined);
+    });
+
+    it("runQuery with PythonQueryFile not connected to inisghts node", () => {
+      ext.connectionNode = undefined;
+      const result = serverCommand.runQuery(
+        ExecutionTypes.PythonQuerySelection
+      );
+      assert.equal(result, undefined);
+    });
+
+    it("runQuery with PythonQueryFile connected to inisghts node", () => {
+      ext.connectionNode = insightsNode;
+      const result = serverCommand.runQuery(
+        ExecutionTypes.PythonQuerySelection
+      );
+      assert.equal(result, undefined);
+    });
+
+    it("runQuery with QueryFile", () => {
+      ext.connectionNode = undefined;
+      const result = serverCommand.runQuery(ExecutionTypes.QueryFile);
+      assert.equal(result, undefined);
+    });
+
+    it("runQuery with ReRunQuery", () => {
+      ext.connectionNode = undefined;
+      const result = serverCommand.runQuery(
+        ExecutionTypes.ReRunQuery,
+        "rerun query"
+      );
+      assert.equal(result, undefined);
+    });
+
+    it("runQuery with PythonQueryFile", () => {
+      ext.connectionNode = undefined;
+      const result = serverCommand.runQuery(ExecutionTypes.PythonQueryFile);
+      assert.equal(result, undefined);
+    });
+
+    it("runQuery with PythonQueryFile", () => {
+      ext.connectionNode = insightsNode;
+      const result = serverCommand.runQuery(ExecutionTypes.PythonQueryFile);
+      assert.equal(result, undefined);
     });
   });
 });

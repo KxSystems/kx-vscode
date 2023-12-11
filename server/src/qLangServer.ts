@@ -45,6 +45,10 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver/node";
+import { lint } from "./linter";
+import { RuleSeverity } from "./linter/rules";
+import { EntityType, IdentifierPattern, analyze, getNameScope } from "./parser";
+import { KeywordPattern } from "./parser/keywords";
 import { QParser } from "./parser/parser";
 import { AnalyzerContent, GlobalSettings, Keyword } from "./utils/analyzer";
 
@@ -69,7 +73,7 @@ export default class QLangServer {
       this.documentSettings.delete(e.document.uri);
     });
     this.documents.onDidChangeContent(async (change) => {
-      // await this.validateTextDocument(change.document);
+      await this.validateTextDocument(change.document);
     });
     this.connection.onNotification("analyzeSourceCode", (config) =>
       this.analyzer.analyzeWorkspace(config)
@@ -135,6 +139,7 @@ export default class QLangServer {
       // Whether the server supports finding references to a symbol.
       referencesProvider: true,
       // Whether the server supports renaming a symbol.
+      renameProvider: true,
       // renameProvider: { prepareProvider: true },
       // Whether the server supports providing semantic tokens for a document.
       /*
@@ -338,33 +343,99 @@ export default class QLangServer {
     position,
     newName,
   }: RenameParams): WorkspaceEdit | null | undefined {
-    // Create a new TextDocumentPositionParams object with the textDocument and position properties.
-    const params: TextDocumentPositionParams = { textDocument, position };
-    // Get the keyword at the given position in the document.
-    const keyword = this.getKeyword(params);
-    const document = this.documents.get(params.textDocument.uri);
-    // If there is no keyword, return null.
-    if (!keyword || !document) {
+    let match = IdentifierPattern.exec(newName);
+    if (!match || match[0] !== newName) {
       return null;
     }
-    // Find all references to the symbol in the document and create a workspace edit to rename them.
-    const locations = this.analyzer.getReferences(keyword, document);
-    const changes = locations.reduce((acc, location) => {
-      const uri = location.uri;
-      const range = location.range;
-      const textEdit = TextEdit.replace(range, newName);
-      if (!acc[uri]) {
-        acc[uri] = [textEdit];
-      } else {
-        acc[uri].push(textEdit);
-      }
-      return acc;
-    }, {} as { [uri: string]: TextEdit[] });
-    // If there are changes, return a workspace edit with the changes.
-    if (Object.keys(changes).length > 0) {
-      return { changes };
+    match = KeywordPattern.exec(newName);
+    if (match && match[0] === newName) {
+      return null;
     }
-    // Otherwise, return null.
+    const document = this.documents.get(textDocument.uri);
+    if (!document) {
+      return null;
+    }
+    const cst = QParser.parse(document.getText());
+    if (QParser.errors.length > 0) {
+      return null;
+    }
+    const offset = document.offsetAt(position);
+    const { script, assign } = analyze(cst);
+    const symbol = script.find(
+      (entity) =>
+        entity.type === EntityType.IDENTIFIER &&
+        offset >= entity.startOffset &&
+        offset <= entity.endOffset
+    );
+    if (!symbol) {
+      return null;
+    }
+    let targets;
+    const symbolScope = getNameScope(symbol);
+    const local = assign.find(
+      (entity) =>
+        symbol.image === entity.image &&
+        symbolScope &&
+        symbolScope === getNameScope(entity)
+    );
+    if (local) {
+      const exists = assign.find(
+        (entity) =>
+          entity.image === newName && symbolScope === getNameScope(entity)
+      );
+      if (exists) {
+        return null;
+      }
+      targets = script.filter(
+        (entity) =>
+          symbol.image === entity.image &&
+          symbolScope &&
+          symbolScope === getNameScope(entity) &&
+          entity.type === EntityType.IDENTIFIER
+      );
+    } else {
+      const global = assign.find(
+        (entity) => !getNameScope(entity) && symbol.image === entity.image
+      );
+      if (!global) {
+        return null;
+      }
+      const exists = assign.find(
+        (entity) => !getNameScope(entity) && entity.image === newName
+      );
+      if (exists) {
+        return null;
+      }
+      targets = script.filter((entity) => {
+        if (
+          entity.type !== EntityType.IDENTIFIER ||
+          entity.image !== symbol.image
+        ) {
+          return false;
+        }
+        const scope = getNameScope(entity);
+        const local = assign.find(
+          (ident) =>
+            ident.image === entity.image &&
+            scope &&
+            getNameScope(ident) === scope
+        );
+        return !local;
+      });
+    }
+    const edits = targets.map((entity) => {
+      const start = document.positionAt(entity.startOffset);
+      const end = document.positionAt(entity.endOffset);
+      const range = Range.create(start, end);
+      return TextEdit.replace(range, newName);
+    });
+    if (edits.length > 0) {
+      return {
+        changes: {
+          [textDocument.uri]: edits,
+        },
+      };
+    }
     return null;
   }
 
@@ -400,8 +471,11 @@ export default class QLangServer {
   private async validateTextDocument(
     textDocument: TextDocument
   ): Promise<void> {
+    if (!textDocument.uri.toString().endsWith(".q")) {
+      return;
+    }
     const text = textDocument.getText();
-    QParser.parse(text);
+    const cst = QParser.parse(text);
     const diagnostics: Diagnostic[] = [];
     let problems = QParser.errors.length;
     if (problems > 1000) {
@@ -417,10 +491,34 @@ export default class QLangServer {
             error.token.endOffset || error.token.startOffset
           ),
         },
-        message: error.message,
-        source: "kdb",
+        message: (error.message || error.name).replace(/\s+/g, " "),
+        source: "kdb.QParser",
       };
       diagnostics.push(diagnostic);
+    }
+    if (problems === 0) {
+      const ast = analyze(cst);
+      const results = lint(ast);
+      for (const result of results) {
+        const severity =
+          result.severity === RuleSeverity.ERROR
+            ? DiagnosticSeverity.Error
+            : result.severity === RuleSeverity.WARNING
+            ? DiagnosticSeverity.Warning
+            : DiagnosticSeverity.Information;
+        for (const problem of result.problems) {
+          const diagnostic: Diagnostic = {
+            severity,
+            range: {
+              start: textDocument.positionAt(problem.startOffset),
+              end: textDocument.positionAt(problem.endOffset),
+            },
+            message: result.message,
+            source: "kdb.QLinter",
+          };
+          diagnostics.push(diagnostic);
+        }
+      }
     }
     this.connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
   }

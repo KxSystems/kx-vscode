@@ -274,6 +274,13 @@ export async function activate(context: ExtensionContext) {
       const filename = window.activeTextEditor?.document.fileName;
       if (filename) runQFileTerminal(filename);
     }),
+    commands.registerCommand("kdb.terminal.start", () => {
+      if (env.QHOME) {
+        runQFileTerminal();
+      } else {
+        checkLocalInstall();
+      }
+    }),
     commands.registerCommand("kdb.execute.selectedQuery", async () => {
       runQuery(ExecutionTypes.QuerySelection);
       ext.connection?.update();
@@ -281,7 +288,18 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.execute.fileQuery", async () => {
       runQuery(ExecutionTypes.QueryFile);
       ext.connection?.update();
-    })
+    }),
+    commands.registerCommand("kdb.execute.pythonScratchpadQuery", async () => {
+      runQuery(ExecutionTypes.PythonQuerySelection);
+      ext.connection?.update();
+    }),
+    commands.registerCommand(
+      "kdb.execute.pythonFileScratchpadQuery",
+      async () => {
+        runQuery(ExecutionTypes.PythonQueryFile);
+        ext.connection?.update();
+      }
+    )
   );
 
   const lastResult: QueryResult | undefined = undefined;

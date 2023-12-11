@@ -11,30 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export type GetDataError = string | { buffer: ArrayBuffer };
-
-export type GetDataObjectPayload = {
-  error: GetDataError;
-  table?: {
-    meta: {
-      [column: string]: string;
-    };
-    columns: string[];
-    rows: any;
-  };
-  arrayBuffer?: ArrayBuffer;
-};
-
-export type getDataBodyPayload = {
-  table: string;
-  startTS: string;
-  endTS: string;
-  labels?: { [id: string]: string };
-  filter?: (string | number | (string | number)[])[][];
-  groupBy?: string[];
-  agg?: string[][];
-  fill?: string;
-  temporality?: string;
-  slice?: string[];
-  sortCols?: string[];
-};
+export * from "./lexer";
+export * from "./literals";
+export * from "./parser";
+export * from "./tokens";
+export * from "./visitor";

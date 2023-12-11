@@ -15,7 +15,6 @@ import axios, { AxiosRequestConfig } from "axios";
 import { readFileSync } from "fs-extra";
 import jwt_decode from "jwt-decode";
 import { join } from "path";
-import requestPromise from "request-promise";
 import * as url from "url";
 import {
   InputBoxOptions,
@@ -53,7 +52,7 @@ import { JwtUser } from "../models/jwt_user";
 import { MetaObject, MetaObjectPayload } from "../models/meta";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
-import { Server } from "../models/server";
+import { Server, ServerType } from "../models/server";
 import { ServerObject } from "../models/serverObject";
 import { DataSourcesPanel } from "../panels/datasource";
 import { getCurrentToken } from "../services/kdbInsights/codeFlowLogin";
@@ -70,9 +69,14 @@ import {
   updateServers,
 } from "../utils/core";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
-import { ExecutionConsole } from "../utils/executionConsole";
+import { decodeQUTF } from "../utils/decode";
+import { ExecutionConsole, addQueryHistory } from "../utils/executionConsole";
 import { openUrl } from "../utils/openUrl";
-import { handleWSResults, sanitizeQuery } from "../utils/queryUtils";
+import {
+  handleScratchpadTableRes,
+  handleWSResults,
+  sanitizeQuery,
+} from "../utils/queryUtils";
 import {
   validateServerAlias,
   validateServerName,
@@ -376,7 +380,7 @@ export async function connectInsights(viewItem: InsightsNode): Promise<void> {
 export async function getMeta(): Promise<MetaObjectPayload | undefined> {
   if (ext.connectionNode instanceof InsightsNode) {
     const metaUrl = new url.URL(
-      ext.insightsAuthUrls.metaURL,
+      ext.insightsServiceGatewayUrls.meta,
       ext.connectionNode.details.server
     );
 
@@ -397,8 +401,8 @@ export async function getMeta(): Promise<MetaObjectPayload | undefined> {
       headers: { Authorization: `Bearer ${token.accessToken}` },
     };
 
-    const metaResponse = await requestPromise.post(metaUrl.toString(), options);
-    const meta: MetaObject = JSON.parse(metaResponse);
+    const metaResponse = await axios.post(metaUrl.toString(), {}, options);
+    const meta: MetaObject = metaResponse.data;
     return meta.payload;
   }
   return undefined;
@@ -535,20 +539,19 @@ export async function importScratchpad(
         "JWT did not contain a valid preferred username"
       );
     }
-
-    const options = {
+    const headers = {
       headers: {
         Authorization: `Bearer ${token.accessToken}`,
         username: username.preferred_username!,
-      },
-      body: {
-        output: variableName,
-        isTableView: false,
-        params: queryParams,
-      },
-      json: true,
-    };
 
+        json: true,
+      },
+    };
+    const body = {
+      output: variableName,
+      isTableView: false,
+      params: queryParams,
+    };
     window.withProgress(
       {
         location: ProgressLocation.Notification,
@@ -559,16 +562,17 @@ export async function importScratchpad(
           ext.outputChannel.appendLine("User cancelled the installation.");
         });
 
-        progress.report({ message: "Scratchpad creating..." });
+        progress.report({ message: "Query executing..." });
 
-        const scratchpadResponse = await requestPromise.post(
+        const scratchpadResponse = await axios.post(
           scratchpadURL.toString(),
-          options
+          body,
+          headers
         );
 
-        ext.outputChannel.append(scratchpadResponse);
+        ext.outputChannel.append(JSON.stringify(scratchpadResponse.data));
         window.showInformationMessage(
-          `Scratchpad created successfully, stored in ${variableName}`
+          `Executed successfully, stored in ${variableName}`
         );
 
         const p = new Promise<void>((resolve) => resolve());
@@ -580,7 +584,8 @@ export async function importScratchpad(
 
 export async function getScratchpadQuery(
   query: string,
-  context?: string
+  context?: string,
+  isPython?: boolean
 ): Promise<any | undefined> {
   if (ext.connectionNode instanceof InsightsNode) {
     const isTableView = ext.resultsViewProvider.isVisible();
@@ -588,12 +593,10 @@ export async function getScratchpadQuery(
       ext.insightsAuthUrls.scratchpadURL,
       ext.connectionNode.details.server
     );
-
     const token = await getCurrentToken(
       ext.connectionNode.details.server,
       ext.connectionNode.details.alias
     );
-
     if (token === undefined) {
       ext.outputChannel.appendLine(
         "Error retrieving access token for insights."
@@ -601,28 +604,24 @@ export async function getScratchpadQuery(
       window.showErrorMessage("Failed to retrieve access token for insights");
       return undefined;
     }
-
     const username = jwt_decode<JwtUser>(token.accessToken);
     if (username === undefined || username.preferred_username === "") {
       ext.outputChannel.appendLine(
         "JWT did not contain a valid preferred username"
       );
     }
-
-    const options = {
-      headers: {
-        Authorization: `Bearer ${token.accessToken}`,
-        Username: username.preferred_username,
-      },
-      body: {
-        expression: query,
-        isTableView,
-        language: "q",
-        context: context || ".",
-        sampleFn: "first",
-        sampleSize: 10000,
-      },
-      json: true,
+    const body = {
+      expression: query,
+      isTableView,
+      language: !isPython ? "q" : "python",
+      context: context || ".",
+      sampleFn: "first",
+      sampleSize: 10000,
+    };
+    const headers = {
+      Authorization: `Bearer ${token.accessToken}`,
+      Username: username.preferred_username,
+      "Content-Type": "application/json",
     };
 
     const spReponse = await window.withProgress(
@@ -636,22 +635,19 @@ export async function getScratchpadQuery(
         });
 
         progress.report({ message: "Query is executing..." });
+        const spRes = await axios
+          .post(scratchpadURL.toString(), body, { headers })
+          .then((response: any) => {
+            if (isTableView && !response.data.error) {
+              const buffer = new Uint8Array(
+                response.data.data.map((x: string) => parseInt(x, 16))
+              ).buffer;
 
-        const spRes = await requestPromise.post(
-          scratchpadURL.toString(),
-          options
-        );
-        if (
-          isTableView &&
-          spRes?.data &&
-          Array.isArray(spRes.data) &&
-          !spRes.error
-        ) {
-          const buffer = new Uint8Array(
-            spRes.data.map((x: string) => parseInt(x, 16))
-          ).buffer;
-          return handleWSResults(buffer);
-        }
+              response.data.data = handleWSResults(buffer);
+              response.data.data = handleScratchpadTableRes(response.data.data);
+            }
+            return response.data;
+          });
         return spRes;
       }
     );
@@ -792,7 +788,8 @@ export async function disconnect(): Promise<void> {
 
 export async function executeQuery(
   query: string,
-  context?: string
+  context?: string,
+  isPython?: boolean
 ): Promise<void> {
   const queryConsole = ExecutionConsole.start();
 
@@ -809,8 +806,8 @@ export async function executeQuery(
   // set context for root nodes
   if (insightsNode) {
     query = sanitizeQuery(query);
-    const queryRes = await getScratchpadQuery(query, context);
-    writeScratchpadResult(queryRes, query);
+    const queryRes = await getScratchpadQuery(query, context, isPython);
+    writeScratchpadResult(queryRes, query, isPython);
   } else if (ext.connection !== undefined && ext.connection.connected) {
     query = sanitizeQuery(query);
 
@@ -872,31 +869,43 @@ export function getQueryContext(lineNum?: number): string {
 
 export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
   const editor = window.activeTextEditor;
-  if (editor) {
-    let context;
-    let query;
-    switch (type) {
-      case ExecutionTypes.QuerySelection:
-        query = editor?.document.getText(
-          new Range(editor.selection.start, editor.selection.end)
-        );
-
-        if (query === "") {
-          const docLine = editor.selection.active.line;
-          query = editor.document.lineAt(docLine).text;
-          context = getQueryContext(docLine);
-        } else {
-          context = getQueryContext(editor.selection.end.line);
-        }
-        break;
-      case ExecutionTypes.QueryFile:
-      case ExecutionTypes.ReRunQuery:
-      default:
-        query = rerunQuery ? rerunQuery : editor.document.getText();
-        context = getQueryContext();
-    }
-    executeQuery(query, context);
+  if (!editor) {
+    return false;
   }
+  let context;
+  let query;
+  let isPython = false;
+  const insightsNode = ext.kdbinsightsNodes.find((n) =>
+    ext.connectionNode instanceof InsightsNode
+      ? n === ext.connectionNode?.details.alias + " (connected)"
+      : false
+  );
+  switch (type) {
+    case ExecutionTypes.QuerySelection:
+    case ExecutionTypes.PythonQuerySelection:
+      const selection = editor.selection;
+      query = selection.isEmpty
+        ? editor.document.lineAt(selection.active.line).text
+        : editor.document.getText(selection);
+      context = getQueryContext(selection.end.line);
+      if (type === ExecutionTypes.PythonQuerySelection && insightsNode) {
+        isPython = true;
+      }
+      break;
+
+    case ExecutionTypes.QueryFile:
+    case ExecutionTypes.ReRunQuery:
+    case ExecutionTypes.PythonQueryFile:
+    default:
+      query = rerunQuery || editor.document.getText();
+      context = getQueryContext();
+
+      if (type === ExecutionTypes.PythonQueryFile && insightsNode) {
+        isPython = true;
+      }
+      break;
+  }
+  executeQuery(query, context, isPython);
 }
 
 export async function loadServerObjects(): Promise<ServerObject[]> {
@@ -927,40 +936,59 @@ export async function loadServerObjects(): Promise<ServerObject[]> {
 export function writeQueryResultsToConsole(
   result: string | string[],
   query: string,
-  dataSourceType?: string
+  dataSourceType?: string,
+  isPython?: boolean
 ): void {
   const queryConsole = ExecutionConsole.start();
-  const res = Array.isArray(result) ? result[0] : result;
+  const res = Array.isArray(result)
+    ? decodeQUTF(result[0])
+    : decodeQUTF(result);
   if (
     (ext.connection || ext.connectionNode) &&
     !res.startsWith(queryConstants.error)
   ) {
     queryConsole.append(
-      result,
+      res,
       query,
       ext.connectionNode?.label ? ext.connectionNode.label : "",
-      dataSourceType
+      dataSourceType,
+      isPython
     );
   } else {
     queryConsole.appendQueryError(
       query,
       res.substring(queryConstants.error.length),
       !!ext.connection,
-      ext.connectionNode?.label ? ext.connectionNode.label : ""
+      ext.connectionNode?.label ? ext.connectionNode.label : "",
+      isPython
     );
   }
 }
 
 export function writeQueryResultsToView(
   result: any,
-  dataSourceType?: string
+  query: string,
+  dataSourceType?: string,
+  isPython?: boolean
 ): void {
   commands.executeCommand("kdb.resultsPanel.update", result, dataSourceType);
+  const connectionType: ServerType =
+    ext.connectionNode instanceof KdbNode
+      ? ServerType.KDB
+      : ServerType.INSIGHTS;
+  addQueryHistory(
+    query,
+    ext.connectionNode?.label ? ext.connectionNode.label : "",
+    connectionType,
+    true,
+    isPython
+  );
 }
 
 export function writeScratchpadResult(
   result: ScratchpadResult,
-  query: string
+  query: string,
+  isPython?: boolean
 ): void {
   const queryConsole = ExecutionConsole.start();
 
@@ -973,9 +1001,9 @@ export function writeScratchpadResult(
     );
   } else {
     if (ext.resultsViewProvider.isVisible()) {
-      writeQueryResultsToView(result, "SCRATCHPAD");
+      writeQueryResultsToView(result.data, query, "SCRATCHPAD", isPython);
     } else {
-      writeQueryResultsToConsole(result.data, query);
+      writeQueryResultsToConsole(result.data, query, undefined, isPython);
     }
   }
 }

@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "engines": {
     "vscode": "^1.66.0"
   },
@@ -286,6 +286,10 @@
         "when": "kdb.QHOME || config.kdb.qHomeDirectory"
       },
       {
+        "command": "kdb.terminal.start",
+        "title": "q: Start REPL"
+      },
+      {
         "command": "kdb.execute.selectedQuery",
         "title": "Execute Current Selection",
         "when": "kdb.connected"
@@ -293,6 +297,16 @@
       {
         "command": "kdb.execute.fileQuery",
         "title": "Execute Entire File",
+        "when": "kdb.connected"
+      },
+      {
+        "command": "kdb.execute.pythonScratchpadQuery",
+        "title": "Execute Current Selection in Insights Scratchpad",
+        "when": "kdb.connected"
+      },
+      {
+        "command": "kdb.execute.pythonFileScratchpadQuery",
+        "title": "Execute Entire File in Insights Scratchpad",
         "when": "kdb.connected"
       }
     ],
@@ -308,6 +322,18 @@
         "key": "ctrl+shift+d",
         "mac": "cmd+shift+d",
         "when": "editorLangId == q && kdb.connected"
+      },
+      {
+        "command": "kdb.execute.pythonScratchpadQuery",
+        "key": "ctrl+d",
+        "mac": "cmd+d",
+        "when": "editorLangId == python  && kdb.insightsConnected"
+      },
+      {
+        "command": "kdb.execute.pythonFileScratchpadQuery",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d",
+        "when": "editorLangId == python && kdb.insightsConnected"
       },
       {
         "command": "kdb.terminal.run",
@@ -565,6 +591,11 @@
           "command": "kdb.execute.fileQuery",
           "when": "resourceLangId ==  q  && kdb.connected",
           "group": "navigation"
+        },
+        {
+          "command": "kdb.execute.pythonFileScratchpadQuery",
+          "group": "navigation",
+          "when": "editorLangId == python && kdb.insightsConnected"
         }
       ],
       "editor/context": [
@@ -582,6 +613,16 @@
           "command": "kdb.execute.fileQuery",
           "group": "q",
           "when": "editorLangId == q  && kdb.connected"
+        },
+        {
+          "command": "kdb.execute.pythonScratchpadQuery",
+          "group": "q",
+          "when": "editorLangId == python && kdb.insightsConnected"
+        },
+        {
+          "command": "kdb.execute.pythonFileScratchpadQuery",
+          "group": "q",
+          "when": "editorLangId == python && kdb.insightsConnected"
         }
       ]
     }
@@ -600,8 +641,7 @@
     "test": "tsc -p ./test && node ./out/test/runTest.js",
     "coverage": "tsc -p ./test && node ./out/test/runTest.js --coverage",
     "package": "npx vsce package",
-    "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
-    "generate-parser": "antlr4-tool -o q-parser grammars/q.g4"
+    "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\""
   },
   "prettier": {
     "printWidth": 80,
@@ -620,7 +660,6 @@
     "@types/node": "^18.15.11",
     "@types/node-fetch": "^2.6.2",
     "@types/picomatch": "^2.3.0",
-    "@types/request-promise": "^4.1.48",
     "@types/semver": "^7.5.0",
     "@types/sinon": "^10.0.13",
     "@types/vscode": "^1.66.0",
@@ -629,7 +668,6 @@
     "@typescript-eslint/parser": "^5.36.2",
     "@vscode/test-electron": "^2.2.3",
     "antlr4": "^4.13.0",
-    "antlr4-tool": "^1.1.1",
     "esbuild": "^0.15.7",
     "eslint": "^8.23.0",
     "eslint-plugin-header": "^3.1.1",
@@ -681,7 +719,6 @@
     "node-q": "^2.6.1",
     "open": "^6.4.0",
     "picomatch": "^2.3.1",
-    "request-promise": "^4.2.6",
     "semver": "^7.5.3",
     "vscode-extension-telemetry": "^0.4.5",
     "vscode-languageclient": "^8.0.2",

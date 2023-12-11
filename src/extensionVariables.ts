@@ -105,17 +105,20 @@ export namespace ext {
     callbackURL: "http://localhost:9010/redirect",
     revoke: "auth/realms/insights/protocol/openid-connect/revoke",
     tokenURL: "auth/realms/insights/protocol/openid-connect/token",
-    metaURL: "servicegateway/meta",
-    dataURL: "servicegateway/data",
     scratchpadURL: "servicebroker/scratchpad/display",
-    sqlURL: "servicegateway/qe/sql",
-    qsqlURL: "servicegateway/qe/qsql",
   };
 
   export const insightsScratchpadUrls = {
     import: "servicebroker/scratchpad/import/data",
     importSql: "servicebroker/scratchpad/import/sql",
     importQsql: "servicebroker/scratchpad/import/qsql",
+  };
+
+  export const insightsServiceGatewayUrls = {
+    meta: "servicegateway/meta",
+    data: "servicegateway/data",
+    sql: "servicegateway/qe/sql",
+    qsql: "servicegateway/qe/qsql",
   };
 
   export const insightsGrantType = {

@@ -11,24 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import * as assert from "assert";
-import * as sinon from "sinon";
-import { KdbDataSourceView } from "../../src/webview/components/kdbDataSourceView";
+import { Entity, EntityType, QAst } from "../parser";
 
-describe("KdbDataSourceView", () => {
-  let view: KdbDataSourceView;
-
-  beforeEach(async () => {
-    view = new KdbDataSourceView();
-  });
-
-  afterEach(() => {
-    sinon.restore();
-  });
-
-  describe("", () => {
-    it("should", () => {
-      assert.ok(view);
-    });
-  });
-});
+export function deprecatedDatetime({ script }: QAst): Entity[] {
+  return script.filter((entity) => entity.type === EntityType.DATETIME_LITERAL);
+}

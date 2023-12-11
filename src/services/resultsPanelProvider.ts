@@ -135,6 +135,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       enableCellTextSelection: true,
       ensureDomOrder: true,
       suppressContextMenu: true,
+      suppressDragLeaveHidesColumns: true,
     });
   }
 
@@ -142,15 +143,18 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     return !!this._view?.visible;
   }
 
-  sanitizeString(str: string | string[]): string {
-    if (str instanceof Array) {
-      str = str.join(" ");
+  sanitizeString(value: any): any {
+    if (value instanceof Array) {
+      value = value.join(" ");
     }
-    str = str.toString();
-    str = str.trim();
-    str = str.replace(/['"`]/g, "");
-    str = str.replace(/\$\{/g, "");
-    return str;
+    if (!isNaN(value)) {
+      return value;
+    }
+    value = value.toString();
+    value = value.trim();
+    value = value.replace(/['"`]/g, "");
+    value = value.replace(/\$\{/g, "");
+    return value;
   }
 
   defineAgGridTheme(): string {

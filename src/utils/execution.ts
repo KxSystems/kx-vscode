@@ -22,10 +22,14 @@ interface tblHeader {
   count: number;
 }
 
-export function runQFileTerminal(filename: string): void {
-  filename = filename.replace(/\\/g, "/");
-  const terminalName = path.parse(filename).base;
-  const command = `q ${filename}`;
+export function runQFileTerminal(filename?: string): void {
+  let terminalName = "REPL: kdb q";
+  let command = "q";
+  if (filename) {
+    filename = filename.replace(/\\/g, "/");
+    terminalName = path.parse(filename).base;
+    command = `q ${filename}`;
+  }
   window.terminals.forEach((terminal) => {
     if (terminal.name === terminalName) terminal.dispose();
   });

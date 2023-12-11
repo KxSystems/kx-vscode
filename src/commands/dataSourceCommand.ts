@@ -13,9 +13,9 @@
 
 import * as fs from "fs";
 import path from "path";
-import { InputBoxOptions, Uri, window } from "vscode";
+import { InputBoxOptions, Uri, window, commands } from "vscode";
 import { ext } from "../extensionVariables";
-import { getDataBodyPayload } from "../models/data";
+import { GetDataError, getDataBodyPayload } from "../models/data";
 import {
   DataSourceFiles,
   DataSourceTypes,
@@ -30,7 +30,11 @@ import {
   createKdbDataSourcesFolder,
   getConnectedInsightsNode,
 } from "../utils/dataSource";
-import { handleWSResults } from "../utils/queryUtils";
+import {
+  handleScratchpadTableRes,
+  handleWSError,
+  handleWSResults,
+} from "../utils/queryUtils";
 import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
 import {
   getDataInsights,
@@ -89,6 +93,11 @@ export async function renameDataSource(
   fs.writeFileSync(oldFilePath, newFileContent);
 
   fs.renameSync(oldFilePath, newFilePath);
+
+  const panel = DataSourcesPanel.currentPanel;
+  if (panel) {
+    panel.reload(data);
+  }
 }
 
 export async function deleteDataSource(
@@ -217,6 +226,7 @@ export async function runDataSource(
 
   dataSourceForm.insightsNode = getConnectedInsightsNode();
   const fileContent = dataSourceForm;
+  commands.executeCommand("kdb-results.focus");
 
   let res: any;
   const selectedType = getSelectedType(fileContent);
@@ -234,8 +244,14 @@ export async function runDataSource(
       break;
   }
 
-  if (ext.resultsViewProvider.isVisible()) {
-    writeQueryResultsToView(res, selectedType);
+  if (res.error) {
+    window.showErrorMessage(res.error);
+  } else if (ext.resultsViewProvider.isVisible()) {
+    writeQueryResultsToView(
+      res,
+      getQuery(fileContent, selectedType),
+      selectedType
+    );
   } else {
     writeQueryResultsToConsole(
       res,
@@ -274,11 +290,17 @@ export async function runApiDataSource(
   }
   const apiBody = getApiBody(fileContent);
   const apiCall = await getDataInsights(
-    ext.insightsAuthUrls.dataURL,
+    ext.insightsServiceGatewayUrls.data,
     JSON.stringify(apiBody)
   );
-  if (apiCall?.arrayBuffer) {
-    return handleWSResults(apiCall.arrayBuffer);
+
+  if (apiCall?.error) {
+    return parseError(apiCall.error);
+  } else if (apiCall?.arrayBuffer) {
+    const results = handleWSResults(apiCall.arrayBuffer);
+    return handleScratchpadTableRes(results);
+  } else {
+    return { error: "API call failed" };
   }
 }
 
@@ -381,11 +403,17 @@ export async function runQsqlDataSource(
     query: fileContent.dataSource.qsql.query,
   };
   const qsqlCall = await getDataInsights(
-    ext.insightsAuthUrls.qsqlURL,
+    ext.insightsServiceGatewayUrls.qsql,
     JSON.stringify(qsqlBody)
   );
-  if (qsqlCall?.arrayBuffer) {
-    return handleWSResults(qsqlCall.arrayBuffer);
+
+  if (qsqlCall?.error) {
+    return parseError(qsqlCall.error);
+  } else if (qsqlCall?.arrayBuffer) {
+    const results = handleWSResults(qsqlCall.arrayBuffer);
+    return handleScratchpadTableRes(results);
+  } else {
+    return { error: "API call failed" };
   }
 }
 
@@ -396,11 +424,17 @@ export async function runSqlDataSource(
     query: fileContent.dataSource.sql.query,
   };
   const sqlCall = await getDataInsights(
-    ext.insightsAuthUrls.sqlURL,
+    ext.insightsServiceGatewayUrls.sql,
     JSON.stringify(sqlBody)
   );
-  if (sqlCall?.arrayBuffer) {
-    return handleWSResults(sqlCall.arrayBuffer);
+
+  if (sqlCall?.error) {
+    return parseError(sqlCall.error);
+  } else if (sqlCall?.arrayBuffer) {
+    const results = handleWSResults(sqlCall.arrayBuffer);
+    return handleScratchpadTableRes(results);
+  } else {
+    return { error: "API call failed" };
   }
 }
 
@@ -416,5 +450,15 @@ export function getQuery(
     case "SQL":
     default:
       return fileContent.dataSource.sql.query;
+  }
+}
+
+function parseError(error: GetDataError) {
+  if (error instanceof Object && error.buffer) {
+    return handleWSError(error.buffer);
+  } else {
+    return {
+      error,
+    };
   }
 }

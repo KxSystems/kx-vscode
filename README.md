@@ -194,14 +194,17 @@ A kdb language server is bundled with the kdb VS Code extension. It offers vario
 - [Syntax highlighting and linting](#syntax-highlighting)
 - [Code navigation](#code-navigation)
 - [Code completion](#code-completion)
+- [Rename symbol](#rename-symbol)
 
 ### Syntax highlighting
 
 The extension provides keyword syntax highlighting, comments and linting help.
 
-![Syntax Highlighting](https://github.com/KxSystems/kx-vscode/blob/main/img/syntax-highlighting.png?raw=true)
+![Syntax Highlighting and Linting](https://github.com/KxSystems/kx-vscode/blob/main/img/syntax-highlighting.png?raw=true)
 
 ![Linting](https://github.com/KxSystems/kx-vscode/blob/main/img/linting.png?raw=true)
+
+Linting is supported for assignment to reserved words and literals, unused arguments and variables, line length, deprecated date time, too many globals, locals and constants. More linter rules will be supported for future releases.
 
 ### Code navigation
 
@@ -226,6 +229,12 @@ While developing q scripts, the kdb VS Code extension supports:
   ![Autocomplete](https://github.com/KxSystems/kx-vscode/blob/main/img/autocomplete.png?raw=true)
 
 - Autocomplete for local and remotely connected q processes
+
+### Rename Symbol
+
+Supports renaming symbols in text editor. Right-click and select "Rename Symbol" on any identifier and extension will rename it.
+
+![Rename](https://github.com/KxSystems/kx-vscode/blob/main/img/rename.png?raw=true)
 
 ## Execute code
 
@@ -306,6 +315,12 @@ All query executions happen remotely from the kdb VS Code extension either again
   Results are displayed under the kdb results view, which shows the returned data in a table.
 
   ![kdb results view](https://github.com/KxSystems/kx-vscode/blob/main/img/kdbview-results.png?raw=true)
+
+## q REPL
+
+q REPL can be started from the command prompt by searching "q REPL".
+
+![REPL](https://github.com/KxSystems/kx-vscode/blob/main/img/repl.png?raw=true)
 
 ## Settings
 
