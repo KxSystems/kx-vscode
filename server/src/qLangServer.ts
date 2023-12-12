@@ -70,6 +70,7 @@ export default class QLangServer {
       this.analyzer.analyzeWorkspace();
     });
     this.documents.onDidClose((e) => {
+      this.connection.sendDiagnostics({ uri: e.document.uri, diagnostics: [] });
       this.documentSettings.delete(e.document.uri);
     });
     this.documents.onDidChangeContent(async (change) => {

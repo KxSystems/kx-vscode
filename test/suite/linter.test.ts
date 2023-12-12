@@ -84,6 +84,15 @@ describe("linter", () => {
       assert.strictEqual(results.length, 1);
       assert.strictEqual(results[0].name, "UNUSED_VAR");
     });
+
+    it("should lint unused var in assign through", () => {
+      const cst = QParser.parse("+:[a;1]");
+      assert.deepEqual(QParser.errors, []);
+      const ast = analyze(cst);
+      const results = lint(ast);
+      assert.strictEqual(results.length, 1);
+      assert.strictEqual(results[0].name, "UNUSED_VAR");
+    });
   });
 
   describe("LINE_LENGTH", () => {

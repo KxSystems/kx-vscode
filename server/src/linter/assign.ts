@@ -38,9 +38,7 @@ export function unusedParam({ script, assign }: QAst): Token[] {
   return assign
     .filter(
       (entity) =>
-        entity.type === TokenType.IDENTIFIER &&
-        scope(entity) !== undefined &&
-        entity.scope?.type === TokenType.BRACKET
+        entity.type === TokenType.IDENTIFIER && entity.tag === "PARAMETER"
     )
     .filter(
       (entity) =>
@@ -60,8 +58,7 @@ export function unusedVar({ script, assign }: QAst): Token[] {
   return assign
     .filter(
       (entity) =>
-        entity.type === TokenType.IDENTIFIER &&
-        entity.scope?.type !== TokenType.BRACKET
+        entity.type === TokenType.IDENTIFIER && entity.tag !== "PARAMETER"
     )
     .filter(
       (entity) =>

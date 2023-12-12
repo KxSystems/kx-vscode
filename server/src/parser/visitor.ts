@@ -167,6 +167,7 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
       for (let i = this.scoped(); i < this.tokens.length; i++) {
         const token = this.tokens[i];
         if (token.type === TokenType.IDENTIFIER) {
+          token.tag = "PARAMETER";
           this.assigns.push(token);
         }
       }
@@ -333,6 +334,7 @@ export interface Token {
   type: TokenType;
   name: string;
   scope?: Token;
+  tag?: string;
   statement: number;
   image: string;
   startOffset: number;
