@@ -502,7 +502,9 @@ export default class QLangServer {
             ? DiagnosticSeverity.Error
             : result.severity === RuleSeverity.WARNING
             ? DiagnosticSeverity.Warning
-            : DiagnosticSeverity.Information;
+            : result.severity === RuleSeverity.INFO
+            ? DiagnosticSeverity.Information
+            : DiagnosticSeverity.Hint;
         for (const problem of result.problems) {
           const diagnostic: Diagnostic = {
             severity,

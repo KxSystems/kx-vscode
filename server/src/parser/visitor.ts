@@ -195,7 +195,13 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
       this.visit(ctx.expression);
       if (ctx.operator && ctx.expression[0].children.bracket) {
         symbol = this.tokens[this.scoped(1)];
+      } else {
+        if (ctx.expression[0].children.semiColon) {
+          symbol = undefined;
+        }
       }
+    } else {
+      symbol = undefined;
     }
     if (symbol) {
       if (!scope(assignment, NoAssignTypes)) {
@@ -342,11 +348,11 @@ export const enum TokenType {
   LITERAL,
   KEYWORD,
   IDENTIFIER,
+  SQL,
+  GROUP,
   LAMBDA,
   BRACKET,
-  GROUP,
   TABLE,
-  SQL,
   ITERATOR,
   OPERATOR,
   COMMAND,
@@ -355,6 +361,7 @@ export const enum TokenType {
 }
 
 export const SymbolTypes = [
+  TokenType.SQL,
   TokenType.LITERAL,
   TokenType.KEYWORD,
   TokenType.IDENTIFIER,

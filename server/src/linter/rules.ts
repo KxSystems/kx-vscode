@@ -31,6 +31,7 @@ export enum RuleSeverity {
   ERROR = "ERROR",
   WARNING = "WARNING",
   INFO = "INFO",
+  HINT = "HINT",
 }
 
 export interface LinterRule {
@@ -300,7 +301,7 @@ const UnusedParamRule: LinterRule = {
 const UnusedVarRule: LinterRule = {
   name: "UNUSED_VAR",
   message: "This variable was declared then never used",
-  severity: RuleSeverity.WARNING,
+  severity: RuleSeverity.HINT,
   check: unusedVar,
 };
 
