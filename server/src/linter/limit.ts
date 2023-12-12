@@ -22,7 +22,7 @@ export function lineLength({ script }: QAst): Token[] {
   const problems: Token[] = [];
 
   const symbols = script.filter(
-    (entity) => entity.type === TokenType.ENDOFLINE
+    (entity) => entity.type === TokenType.SEMICOLON
   );
 
   for (let i = 0; i < symbols.length; i++) {

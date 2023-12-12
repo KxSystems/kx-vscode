@@ -39,6 +39,7 @@ export function unusedParam({ script, assign }: QAst): Token[] {
     .filter(
       (entity) =>
         entity.type === TokenType.IDENTIFIER &&
+        scope(entity) !== undefined &&
         entity.scope?.type === TokenType.BRACKET
     )
     .filter(

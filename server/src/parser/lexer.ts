@@ -35,7 +35,6 @@ import {
   Command,
   DoubleColon,
   Iterator,
-  EndOfLine,
   LBracket,
   LCurly,
   LParen,
@@ -48,7 +47,6 @@ import {
   WhiteSpace,
   BlockComment,
   LastComment,
-  Space,
 } from "./tokens";
 
 export const QTokens = [
@@ -72,15 +70,13 @@ export const QTokens = [
   NumberLiteral,
   Keyword,
   Identifier,
-  Space,
+  SemiColon,
   WhiteSpace,
-  EndOfLine,
   Command,
-  DoubleColon,
   Iterator,
   Operator,
+  DoubleColon,
   Colon,
-  SemiColon,
   LParen,
   RParen,
   LBracket,

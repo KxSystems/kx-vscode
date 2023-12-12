@@ -20,7 +20,6 @@ import type {
   CommandCstChildren,
   DateLiteralCstChildren,
   DateTimeLiteralCstChildren,
-  EndOfLineCstChildren,
   ExpressionCstChildren,
   FileLiteralCstChildren,
   GroupCstChildren,
@@ -40,7 +39,6 @@ import type {
   ScriptCstChildren,
   SecondLiteralCstChildren,
   SemiColonCstChildren,
-  SpaceCstChildren,
   SymbolCstChildren,
   SymbolLiteralCstChildren,
   TimeStampLiteralCstChildren,
@@ -68,10 +66,6 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
     };
   }
 
-  private get current() {
-    return this.tokens[this.tokens.length - 1];
-  }
-
   private consume(ctx: IToken & Partial<Token>) {
     const token = {
       type: ctx.type || TokenType.LITERAL,
@@ -96,35 +90,45 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
     return this.scopes.pop();
   }
 
-  private backtrack(
-    find: TokenType[],
+  private peek(
+    type: TokenType[],
+    skip: TokenType[] = [],
     count = 1,
-    scope = true,
-    skip = [TokenType.SPACE]
+    scope = true
   ) {
     let c = this.tokens.length - 1;
     const anchor = this.tokens[c];
     let current: Token;
     while (count > 0 && c > 0) {
-      count--;
       c--;
       current = this.tokens[c];
       if (current.statement !== anchor.statement) {
         break;
       }
-      if (skip.indexOf(current.type) >= 0) {
-        count++;
-        continue;
-      }
       if (scope && current.scope !== anchor.scope) {
-        count++;
         continue;
       }
-      if (find.indexOf(current.type) >= 0) {
+      if (skip.indexOf(current.type) >= 0) {
+        continue;
+      }
+      if (type.indexOf(current.type) >= 0) {
         return current;
       }
+      count--;
     }
     return undefined;
+  }
+
+  private scoped(delta = 0) {
+    let c = this.tokens.length - 1;
+    const anchor = this.tokens[c].scope;
+    while (anchor && c > 0) {
+      c--;
+      if (this.tokens[c] === anchor) {
+        break;
+      }
+    }
+    return c + delta;
   }
 
   script(ctx: ScriptCstChildren) {
@@ -135,19 +139,12 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
     ctx.assignment?.forEach((rule) => this.visit(rule));
     ctx.bracket?.forEach((rule) => this.visit(rule));
     ctx.command?.forEach((rule) => this.visit(rule));
-    ctx.endOfLine?.forEach((rule) => this.visit(rule));
     ctx.group?.forEach((rule) => this.visit(rule));
     ctx.iterator?.forEach((rule) => this.visit(rule));
     ctx.lambda?.forEach((rule) => this.visit(rule));
     ctx.operator?.forEach((rule) => this.visit(rule));
     ctx.semiColon?.forEach((rule) => this.visit(rule));
-    ctx.space?.forEach((rule) => this.visit(rule));
     ctx.symbol?.forEach((rule) => this.visit(rule));
-  }
-
-  space(ctx: SpaceCstChildren) {
-    this.statement--;
-    this.consume({ ...ctx.Space[0], type: TokenType.SPACE });
   }
 
   semiColon(ctx: SemiColonCstChildren) {
@@ -155,69 +152,54 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
     this.statement++;
   }
 
-  endOfLine(ctx: EndOfLineCstChildren) {
-    this.consume({ ...ctx.EndOfLine[0], type: TokenType.ENDOFLINE });
-    this.statement++;
-  }
-
   group(ctx: GroupCstChildren) {
-    this.push({ ...ctx.LParen[0], type: TokenType.GROUP });
+    const type = ctx.bracket ? TokenType.TABLE : TokenType.GROUP;
+    this.push({ ...ctx.LParen[0], type });
+    ctx.bracket?.forEach((rule) => this.visit(rule));
     ctx.expression?.forEach((rule) => this.visit(rule));
     this.pop();
   }
 
   lambda(ctx: LambdaCstChildren) {
     this.push({ ...ctx.LCurly[0], type: TokenType.LAMBDA });
-    ctx.space?.forEach((rule) => this.visit(rule));
-    ctx.bracket?.forEach((rule) => this.visit(rule));
+    if (ctx.bracket) {
+      this.visit(ctx.bracket);
+      for (let i = this.scoped(); i < this.tokens.length; i++) {
+        const token = this.tokens[i];
+        if (token.type === TokenType.IDENTIFIER) {
+          this.assigns.push(token);
+        }
+      }
+    }
     ctx.expression?.forEach((rule) => this.visit(rule));
     this.pop();
   }
 
   bracket(ctx: BracketCstChildren) {
     this.push({ ...ctx.LBracket[0], type: TokenType.BRACKET });
-    const lambda = this.backtrack([TokenType.LAMBDA], 1, false);
-    const group = this.backtrack([TokenType.GROUP], 1, false);
-    if (group) {
-      group.type = TokenType.TABLE;
-    }
-    const assignment = this.backtrack([TokenType.ASSIGN_INFIX]);
-    let symbol: Token | undefined;
-    ctx.expression?.forEach((rule) => {
-      this.visit(rule);
-      if (lambda) {
-        symbol = this.current;
-      } else if (assignment && !symbol && rule.children.symbol) {
-        symbol = this.current;
-        if (assignment.name === "DoubleColon") {
-          symbol.scope = undefined;
-        }
-      }
-    });
-    if (symbol) {
-      if (!scope(symbol, NoAssignTypes)) {
-        this.assigns.push(symbol);
-      }
-    }
+    ctx.expression?.forEach((rule) => this.visit(rule));
     this.pop();
   }
 
   assignment(ctx: AssignmentCstChildren) {
     ctx.operator?.forEach((rule) => this.visit(rule));
-    ctx.space?.forEach((rule) => this.visit(rule));
-    this.consume({
+    const assignment = this.consume({
       ...(ctx.Colon || ctx.DoubleColon || [])[0],
-      type: ctx.operator ? TokenType.ASSIGN_INFIX : TokenType.ASSIGN,
+      type: TokenType.ASSIGN,
     });
-    const assignment = this.current;
-    if (!scope(this.current, NoAssignTypes)) {
-      const count = ctx.operator ? 2 : 1;
-      const symbol = this.backtrack(SymbolTypes, count, true, [
-        TokenType.SPACE,
-        TokenType.BRACKET,
-      ]);
-      if (symbol) {
-        if (assignment.name === "DoubleColon") {
+    let symbol = this.peek(SymbolTypes, [
+      TokenType.OPERATOR,
+      TokenType.BRACKET,
+    ]);
+    if (ctx.expression) {
+      this.visit(ctx.expression);
+      if (ctx.operator && ctx.expression[0].children.bracket) {
+        symbol = this.tokens[this.scoped(1)];
+      }
+    }
+    if (symbol) {
+      if (!scope(assignment, NoAssignTypes)) {
+        if (ctx.DoubleColon) {
           symbol.scope = undefined;
         }
         this.assigns.push(symbol);
@@ -310,7 +292,18 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
   }
 
   keyword(ctx: KeywordCstChildren) {
-    this.consume({ ...ctx.Keyword[0], type: TokenType.KEYWORD });
+    const symbol = ctx.Keyword[0];
+
+    switch (symbol.image) {
+      case "select":
+        this.push({ ...symbol, type: TokenType.SQL });
+        return;
+      case "from":
+        this.pop();
+        break;
+    }
+
+    this.consume({ ...symbol, type: TokenType.KEYWORD });
   }
 
   identifier(ctx: IdentifierCstChildren) {
@@ -358,10 +351,7 @@ export const enum TokenType {
   OPERATOR,
   COMMAND,
   ASSIGN,
-  ASSIGN_INFIX,
-  SPACE,
   SEMICOLON,
-  ENDOFLINE,
 }
 
 export const SymbolTypes = [
@@ -370,13 +360,9 @@ export const SymbolTypes = [
   TokenType.IDENTIFIER,
 ];
 
-export const AssignTypes = [TokenType.ASSIGN, TokenType.ASSIGN_INFIX];
 export const NoAssignTypes = [TokenType.TABLE, TokenType.SQL];
 
-export function scope(
-  token: Token,
-  types = [TokenType.LAMBDA]
-): Token | undefined {
+export function scope(token: Token, types = [TokenType.LAMBDA]) {
   let scope;
   while ((scope = token.scope)) {
     if (types.indexOf(scope.type) >= 0) {
@@ -387,7 +373,7 @@ export function scope(
   return scope;
 }
 
-export function analyze(cstNode: CstNode | CstNode[]): QAst {
+export function analyze(cstNode: CstNode | CstNode[]) {
   const visitor = new QVisitor();
   visitor.visit(cstNode);
   return visitor.ast();

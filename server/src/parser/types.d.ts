@@ -17,13 +17,11 @@ export interface ExpressionCstNode extends CstNode {
 export type ExpressionCstChildren = {
   iterator?: IteratorCstNode[];
   assignment?: AssignmentCstNode[];
+  group?: GroupCstNode[];
   lambda?: LambdaCstNode[];
   bracket?: BracketCstNode[];
-  group?: GroupCstNode[];
   symbol?: SymbolCstNode[];
   command?: CommandCstNode[];
-  endOfLine?: EndOfLineCstNode[];
-  space?: SpaceCstNode[];
   operator?: OperatorCstNode[];
   semiColon?: SemiColonCstNode[];
 };
@@ -44,9 +42,21 @@ export interface AssignmentCstNode extends CstNode {
 
 export type AssignmentCstChildren = {
   operator?: OperatorCstNode[];
-  space?: SpaceCstNode[];
   DoubleColon?: IToken[];
   Colon?: IToken[];
+  expression?: ExpressionCstNode[];
+};
+
+export interface GroupCstNode extends CstNode {
+  name: "group";
+  children: GroupCstChildren;
+}
+
+export type GroupCstChildren = {
+  LParen: IToken[];
+  bracket?: BracketCstNode[];
+  expression?: ExpressionCstNode[];
+  RParen: IToken[];
 };
 
 export interface LambdaCstNode extends CstNode {
@@ -56,7 +66,6 @@ export interface LambdaCstNode extends CstNode {
 
 export type LambdaCstChildren = {
   LCurly: IToken[];
-  space?: SpaceCstNode[];
   bracket?: BracketCstNode[];
   expression?: ExpressionCstNode[];
   RCurly: IToken[];
@@ -71,17 +80,6 @@ export type BracketCstChildren = {
   LBracket: IToken[];
   expression?: ExpressionCstNode[];
   RBracket: IToken[];
-};
-
-export interface GroupCstNode extends CstNode {
-  name: "group";
-  children: GroupCstChildren;
-}
-
-export type GroupCstChildren = {
-  LParen: IToken[];
-  expression?: ExpressionCstNode[];
-  RParen: IToken[];
 };
 
 export interface SymbolCstNode extends CstNode {
@@ -280,24 +278,6 @@ export type CommandCstChildren = {
   Command: IToken[];
 };
 
-export interface EndOfLineCstNode extends CstNode {
-  name: "endOfLine";
-  children: EndOfLineCstChildren;
-}
-
-export type EndOfLineCstChildren = {
-  EndOfLine: IToken[];
-};
-
-export interface SpaceCstNode extends CstNode {
-  name: "space";
-  children: SpaceCstChildren;
-}
-
-export type SpaceCstChildren = {
-  Space: IToken[];
-};
-
 export interface OperatorCstNode extends CstNode {
   name: "operator";
   children: OperatorCstChildren;
@@ -321,9 +301,9 @@ export interface ICstNodeVisitor<IN, OUT> extends ICstVisitor<IN, OUT> {
   expression(children: ExpressionCstChildren, param?: IN): OUT;
   iterator(children: IteratorCstChildren, param?: IN): OUT;
   assignment(children: AssignmentCstChildren, param?: IN): OUT;
+  group(children: GroupCstChildren, param?: IN): OUT;
   lambda(children: LambdaCstChildren, param?: IN): OUT;
   bracket(children: BracketCstChildren, param?: IN): OUT;
-  group(children: GroupCstChildren, param?: IN): OUT;
   symbol(children: SymbolCstChildren, param?: IN): OUT;
   literal(children: LiteralCstChildren, param?: IN): OUT;
   charLiteral(children: CharLiteralCstChildren, param?: IN): OUT;
@@ -344,8 +324,6 @@ export interface ICstNodeVisitor<IN, OUT> extends ICstVisitor<IN, OUT> {
   keyword(children: KeywordCstChildren, param?: IN): OUT;
   identifier(children: IdentifierCstChildren, param?: IN): OUT;
   command(children: CommandCstChildren, param?: IN): OUT;
-  endOfLine(children: EndOfLineCstChildren, param?: IN): OUT;
-  space(children: SpaceCstChildren, param?: IN): OUT;
   operator(children: OperatorCstChildren, param?: IN): OUT;
   semiColon(children: SemiColonCstChildren, param?: IN): OUT;
 }

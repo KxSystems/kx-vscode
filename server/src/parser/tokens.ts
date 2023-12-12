@@ -34,21 +34,16 @@ export const LineComment = createToken({
   group: Lexer.SKIPPED,
 });
 
+export const SemiColon = createToken({
+  name: "SemiColon",
+  pattern: /(?:(?<!;[ \t]*)\r?\n(?![ \t])|;)/,
+  line_breaks: true,
+});
+
 export const WhiteSpace = createToken({
   name: "WhiteSpace",
   pattern: /[ \t]+/,
   group: Lexer.SKIPPED,
-});
-
-export const Space = createToken({
-  name: "Space",
-  line_breaks: false,
-  pattern: /(?<=\r?\n)[ \t]+/,
-});
-
-export const EndOfLine = createToken({
-  name: "EndOfLine",
-  pattern: /\r?\n/,
 });
 
 export const Command = createToken({
@@ -56,29 +51,24 @@ export const Command = createToken({
   pattern: /\\(?:cd|ts|[abBcCdefglopPrsStTuvwWxz12_\\])/,
 });
 
+export const Iterator = createToken({
+  name: "Iterator",
+  pattern: /[\\'/]:/,
+});
+
+export const Operator = createToken({
+  name: "Operator",
+  pattern: /[_.,'^<=>?!#@$&~|%*+-]/,
+});
+
 export const DoubleColon = createToken({
   name: "DoubleColon",
   pattern: /::/,
 });
 
-export const Iterator = createToken({
-  name: "Iterator",
-  pattern: /(?:[\\'/]:|')/,
-});
-
-export const Operator = createToken({
-  name: "Operator",
-  pattern: /[_.,^<=>?!#@$&~|%*+-]/,
-});
-
 export const Colon = createToken({
   name: "Colon",
   pattern: /:/,
-});
-
-export const SemiColon = createToken({
-  name: "SemiColon",
-  pattern: /;/,
 });
 
 export const LParen = createToken({

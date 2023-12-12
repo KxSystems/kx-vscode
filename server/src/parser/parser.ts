@@ -35,7 +35,6 @@ import {
   Command,
   DoubleColon,
   Iterator,
-  EndOfLine,
   LBracket,
   LCurly,
   LParen,
@@ -44,7 +43,6 @@ import {
   RCurly,
   RParen,
   SemiColon,
-  Space,
 } from "./tokens";
 import { Identifier, Keyword } from "./keywords";
 
@@ -62,13 +60,11 @@ class Parser extends CstParser {
     this.OR([
       { ALT: () => this.SUBRULE(this.iterator) },
       { ALT: () => this.SUBRULE(this.assignment) },
+      { ALT: () => this.SUBRULE(this.group) },
       { ALT: () => this.SUBRULE(this.lambda) },
       { ALT: () => this.SUBRULE(this.bracket) },
-      { ALT: () => this.SUBRULE(this.group) },
       { ALT: () => this.SUBRULE(this.symbol) },
       { ALT: () => this.SUBRULE(this.command) },
-      { ALT: () => this.SUBRULE(this.endOfLine) },
-      { ALT: () => this.SUBRULE(this.space) },
       { ALT: () => this.SUBRULE(this.operator) },
       { ALT: () => this.SUBRULE(this.semiColon) },
     ]);
@@ -80,18 +76,24 @@ class Parser extends CstParser {
 
   private assignment = this.RULE("assignment", () => {
     this.OPTION(() => this.SUBRULE(this.operator));
-    this.MANY(() => this.SUBRULE(this.space));
     this.OR([
       { ALT: () => this.CONSUME(DoubleColon) },
       { ALT: () => this.CONSUME(Colon) },
     ]);
+    this.OPTION1(() => this.SUBRULE(this.expression));
+  });
+
+  private group = this.RULE("group", () => {
+    this.CONSUME(LParen);
+    this.OPTION(() => this.SUBRULE(this.bracket));
+    this.MANY(() => this.SUBRULE(this.expression));
+    this.CONSUME(RParen);
   });
 
   private lambda = this.RULE("lambda", () => {
     this.CONSUME(LCurly);
-    this.MANY(() => this.SUBRULE(this.space));
     this.OPTION(() => this.SUBRULE(this.bracket));
-    this.MANY1(() => this.SUBRULE(this.expression));
+    this.MANY(() => this.SUBRULE(this.expression));
     this.CONSUME(RCurly);
   });
 
@@ -99,12 +101,6 @@ class Parser extends CstParser {
     this.CONSUME(LBracket);
     this.MANY(() => this.SUBRULE(this.expression));
     this.CONSUME(RBracket);
-  });
-
-  private group = this.RULE("group", () => {
-    this.CONSUME(LParen);
-    this.MANY(() => this.SUBRULE(this.expression));
-    this.CONSUME(RParen);
   });
 
   private symbol = this.RULE("symbol", () => {
@@ -205,14 +201,6 @@ class Parser extends CstParser {
 
   private command = this.RULE("command", () => {
     this.CONSUME(Command);
-  });
-
-  private endOfLine = this.RULE("endOfLine", () => {
-    this.CONSUME(EndOfLine);
-  });
-
-  private space = this.RULE("space", () => {
-    this.CONSUME(Space);
   });
 
   private operator = this.RULE("operator", () => {
