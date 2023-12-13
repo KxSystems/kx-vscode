@@ -44,7 +44,7 @@ import {
   RParen,
   SemiColon,
 } from "./tokens";
-import { Identifier, Keyword } from "./keywords";
+import { RSql, Identifier, Keyword, LSql } from "./keywords";
 
 class Parser extends CstParser {
   constructor() {
@@ -63,6 +63,7 @@ class Parser extends CstParser {
       { ALT: () => this.SUBRULE(this.group) },
       { ALT: () => this.SUBRULE(this.lambda) },
       { ALT: () => this.SUBRULE(this.bracket) },
+      { ALT: () => this.SUBRULE(this.sql) },
       { ALT: () => this.SUBRULE(this.symbol) },
       { ALT: () => this.SUBRULE(this.command) },
       { ALT: () => this.SUBRULE(this.operator) },
@@ -101,6 +102,12 @@ class Parser extends CstParser {
     this.CONSUME(LBracket);
     this.MANY(() => this.SUBRULE(this.expression));
     this.CONSUME(RBracket);
+  });
+
+  private sql = this.RULE("sql", () => {
+    this.CONSUME(LSql);
+    this.MANY(() => this.SUBRULE(this.expression));
+    this.CONSUME(RSql);
   });
 
   private symbol = this.RULE("symbol", () => {

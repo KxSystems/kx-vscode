@@ -20,6 +20,7 @@ export type ExpressionCstChildren = {
   group?: GroupCstNode[];
   lambda?: LambdaCstNode[];
   bracket?: BracketCstNode[];
+  sql?: SqlCstNode[];
   symbol?: SymbolCstNode[];
   command?: CommandCstNode[];
   operator?: OperatorCstNode[];
@@ -80,6 +81,17 @@ export type BracketCstChildren = {
   LBracket: IToken[];
   expression?: ExpressionCstNode[];
   RBracket: IToken[];
+};
+
+export interface SqlCstNode extends CstNode {
+  name: "sql";
+  children: SqlCstChildren;
+}
+
+export type SqlCstChildren = {
+  LSql: IToken[];
+  expression?: ExpressionCstNode[];
+  RSql: IToken[];
 };
 
 export interface SymbolCstNode extends CstNode {
@@ -304,6 +316,7 @@ export interface ICstNodeVisitor<IN, OUT> extends ICstVisitor<IN, OUT> {
   group(children: GroupCstChildren, param?: IN): OUT;
   lambda(children: LambdaCstChildren, param?: IN): OUT;
   bracket(children: BracketCstChildren, param?: IN): OUT;
+  sql(children: SqlCstChildren, param?: IN): OUT;
   symbol(children: SymbolCstChildren, param?: IN): OUT;
   literal(children: LiteralCstChildren, param?: IN): OUT;
   charLiteral(children: CharLiteralCstChildren, param?: IN): OUT;

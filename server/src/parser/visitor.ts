@@ -39,6 +39,7 @@ import type {
   ScriptCstChildren,
   SecondLiteralCstChildren,
   SemiColonCstChildren,
+  SqlCstChildren,
   SymbolCstChildren,
   SymbolLiteralCstChildren,
   TimeStampLiteralCstChildren,
@@ -144,6 +145,7 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
     ctx.lambda?.forEach((rule) => this.visit(rule));
     ctx.operator?.forEach((rule) => this.visit(rule));
     ctx.semiColon?.forEach((rule) => this.visit(rule));
+    ctx.sql?.forEach((rule) => this.visit(rule));
     ctx.symbol?.forEach((rule) => this.visit(rule));
   }
 
@@ -212,6 +214,12 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
         this.assigns.push(symbol);
       }
     }
+  }
+
+  sql(ctx: SqlCstChildren) {
+    this.push({ ...ctx.LSql[0], type: TokenType.SQL });
+    ctx.expression?.forEach((rule) => this.visit(rule));
+    this.pop();
   }
 
   symbol(ctx: SymbolCstChildren) {
@@ -299,18 +307,7 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
   }
 
   keyword(ctx: KeywordCstChildren) {
-    const symbol = ctx.Keyword[0];
-
-    switch (symbol.image) {
-      case "select":
-        this.push({ ...symbol, type: TokenType.SQL });
-        return;
-      case "from":
-        this.pop();
-        break;
-    }
-
-    this.consume({ ...symbol, type: TokenType.KEYWORD });
+    this.consume({ ...ctx.Keyword[0], type: TokenType.KEYWORD });
   }
 
   identifier(ctx: IdentifierCstChildren) {
@@ -363,7 +360,6 @@ export const enum TokenType {
 }
 
 export const SymbolTypes = [
-  TokenType.SQL,
   TokenType.LITERAL,
   TokenType.KEYWORD,
   TokenType.IDENTIFIER,
