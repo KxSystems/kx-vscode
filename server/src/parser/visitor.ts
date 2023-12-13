@@ -91,6 +91,18 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
     return this.scopes.pop();
   }
 
+  private scoped(delta = 0) {
+    let c = this.tokens.length - 1;
+    const anchor = this.tokens[c].scope;
+    while (anchor && c > 0) {
+      c--;
+      if (this.tokens[c] === anchor) {
+        break;
+      }
+    }
+    return c + delta;
+  }
+
   private peek(
     type: TokenType[],
     skip: TokenType[] = [],
@@ -120,18 +132,6 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
     return undefined;
   }
 
-  private scoped(delta = 0) {
-    let c = this.tokens.length - 1;
-    const anchor = this.tokens[c].scope;
-    while (anchor && c > 0) {
-      c--;
-      if (this.tokens[c] === anchor) {
-        break;
-      }
-    }
-    return c + delta;
-  }
-
   script(ctx: ScriptCstChildren) {
     ctx.expression?.forEach((rule) => this.visit(rule));
   }
@@ -154,6 +154,18 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
     this.statement++;
   }
 
+  sql(ctx: SqlCstChildren) {
+    this.push({ ...ctx.LSql[0], type: TokenType.SQL });
+    ctx.expression?.forEach((rule) => this.visit(rule));
+    this.pop();
+  }
+
+  bracket(ctx: BracketCstChildren) {
+    this.push({ ...ctx.LBracket[0], type: TokenType.BRACKET });
+    ctx.expression?.forEach((rule) => this.visit(rule));
+    this.pop();
+  }
+
   group(ctx: GroupCstChildren) {
     const type = ctx.bracket ? TokenType.TABLE : TokenType.GROUP;
     this.push({ ...ctx.LParen[0], type });
@@ -174,12 +186,6 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
         }
       }
     }
-    ctx.expression?.forEach((rule) => this.visit(rule));
-    this.pop();
-  }
-
-  bracket(ctx: BracketCstChildren) {
-    this.push({ ...ctx.LBracket[0], type: TokenType.BRACKET });
     ctx.expression?.forEach((rule) => this.visit(rule));
     this.pop();
   }
@@ -214,12 +220,6 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
         this.assigns.push(symbol);
       }
     }
-  }
-
-  sql(ctx: SqlCstChildren) {
-    this.push({ ...ctx.LSql[0], type: TokenType.SQL });
-    ctx.expression?.forEach((rule) => this.visit(rule));
-    this.pop();
   }
 
   symbol(ctx: SymbolCstChildren) {
