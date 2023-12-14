@@ -90,7 +90,7 @@ export function handleWSResults(ab: ArrayBuffer): any {
     if (res.rows.length === 0) {
       return "No results found.";
     }
-    if (ext.resultsViewProvider.isVisible()) {
+    if (ext.resultsViewProvider.isVisible() || ext.isDatasourceExecution) {
       return getValueFromArray(res.rows);
     }
     return convertRows(res.rows);
@@ -189,6 +189,38 @@ export function convertRowsToConsole(rows: string[]): string[] {
   result.splice(1, 0, totalCounter);
 
   return result;
+}
+
+export function arrayToTable(data: any[]): any {
+  // Obter as chaves do primeiro objeto para usar como cabeçalho da tabela
+  if (!Array.isArray(data) || data.length === 0) {
+    return data;
+  }
+
+  const header = Object.keys(data[0]);
+
+  // Calcular o tamanho máximo de cada coluna
+  const columnLengths = header.map((key) => {
+    return Math.max(key.length, ...data.map((obj) => String(obj[key]).length));
+  });
+
+  // Converter o cabeçalho em uma string, alinhando os valores
+  const headerString = header
+    .map((key, i) => key.padEnd(columnLengths[i]))
+    .join("   ");
+
+  const separator = header
+    .map((key, i) => "-".repeat(columnLengths[i]))
+    .join("---");
+  // Converter cada objeto em uma string, alinhando os valores
+  const rows = data.map((obj) => {
+    return header
+      .map((key, i) => String(obj[key]).padEnd(columnLengths[i]))
+      .join("   ");
+  });
+
+  // Juntar o cabeçalho e as linhas para formar a tabela
+  return [headerString, separator, ...rows].join("\n");
 }
 
 export function getConnectionType(type: ServerType): string {
