@@ -807,10 +807,11 @@ describe("Utils", () => {
           { a: "1", b: "-1.2894694634258276e+29" },
         ];
 
-        const expected = `a   b
-----------------------------
-0   1.4198733294891718e+38
-1   -1.2894694634258276e+29`;
+        const expected =
+          "a   b                      \n" +
+          "---------------------------\n" +
+          "0   1.4198733294891718e+38 \n" +
+          "1   -1.2894694634258276e+29";
 
         const result = queryUtils.arrayToTable(data);
         assert.strictEqual(result, expected);
