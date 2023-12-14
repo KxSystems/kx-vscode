@@ -30,18 +30,15 @@ import type {
   KeywordCstChildren,
   LambdaCstChildren,
   LiteralCstChildren,
-  MiliTimeLiteralCstChildren,
-  MinuteLiteralCstChildren,
   MonthLiteralCstChildren,
-  NanoTimeLiteralCstChildren,
   NumberLiteralCstChildren,
   OperatorCstChildren,
   ScriptCstChildren,
-  SecondLiteralCstChildren,
   SemiColonCstChildren,
   SqlCstChildren,
   SymbolCstChildren,
   SymbolLiteralCstChildren,
+  TimeLiteralCstChildren,
   TimeStampLiteralCstChildren,
 } from "./types";
 import { CstNode, IToken } from "chevrotain";
@@ -51,8 +48,8 @@ const BaseQVisitor = QParser.getBaseCstVisitorConstructorWithDefaults();
 
 class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
   private tokens: Token[] = [];
-  private assigns: Token[] = [];
   private scopes: Token[] = [];
+  private assigns: Token[] = [];
   private statement = 0;
 
   constructor() {
@@ -107,7 +104,7 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
     type: TokenType[],
     skip: TokenType[] = [],
     count = 1,
-    scope = true
+    scope = true,
   ) {
     let c = this.tokens.length - 1;
     const anchor = this.tokens[c];
@@ -130,6 +127,11 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
       count--;
     }
     return undefined;
+  }
+
+  private assign(token: Token, tag?: string) {
+    token.tag = tag;
+    this.assigns.push(token);
   }
 
   script(ctx: ScriptCstChildren) {
@@ -181,8 +183,7 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
       for (let i = this.scoped(); i < this.tokens.length; i++) {
         const token = this.tokens[i];
         if (token.type === TokenType.IDENTIFIER) {
-          token.tag = "PARAMETER";
-          this.assigns.push(token);
+          this.assign(token, "ARGUMENT");
         }
       }
     }
@@ -217,7 +218,7 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
         if (ctx.DoubleColon) {
           symbol.scope = undefined;
         }
-        this.assigns.push(symbol);
+        this.assign(symbol, "ASSIGNED");
       }
     }
   }
@@ -236,12 +237,8 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
     ctx.dateTimeLiteral?.forEach((rule) => this.visit(rule));
     ctx.fileLiteral?.forEach((rule) => this.visit(rule));
     ctx.infinityLiteral?.forEach((rule) => this.visit(rule));
-    ctx.miliTimeLiteral?.forEach((rule) => this.visit(rule));
-    ctx.minuteLiteral?.forEach((rule) => this.visit(rule));
     ctx.monthLiteral?.forEach((rule) => this.visit(rule));
-    ctx.nanoTimeLiteral?.forEach((rule) => this.visit(rule));
     ctx.numberLiteral?.forEach((rule) => this.visit(rule));
-    ctx.secondLiteral?.forEach((rule) => this.visit(rule));
     ctx.symbolLiteral?.forEach((rule) => this.visit(rule));
     ctx.timeStampLiteral?.forEach((rule) => this.visit(rule));
   }
@@ -274,28 +271,16 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
     this.consume({ ...ctx.InfinityLiteral[0], type: TokenType.LITERAL });
   }
 
-  miliTimeLiteral(ctx: MiliTimeLiteralCstChildren) {
-    this.consume({ ...ctx.MiliTimeLiteral[0], type: TokenType.LITERAL });
-  }
-
-  minuteLiteral(ctx: MinuteLiteralCstChildren) {
-    this.consume({ ...ctx.MinuteLiteral[0], type: TokenType.LITERAL });
-  }
-
   monthLiteral(ctx: MonthLiteralCstChildren) {
     this.consume({ ...ctx.MonthLiteral[0], type: TokenType.LITERAL });
   }
 
-  nanoTimeLiteral(ctx: NanoTimeLiteralCstChildren) {
-    this.consume({ ...ctx.NanoTimeLiteral[0], type: TokenType.LITERAL });
+  timeLiteral(ctx: TimeLiteralCstChildren) {
+    this.consume({ ...ctx.TimeLiteral[0], type: TokenType.LITERAL });
   }
 
   numberLiteral(ctx: NumberLiteralCstChildren) {
     this.consume({ ...ctx.NumberLiteral[0], type: TokenType.LITERAL });
-  }
-
-  secondLiteral(ctx: SecondLiteralCstChildren) {
-    this.consume({ ...ctx.SecondLiteral[0], type: TokenType.LITERAL });
   }
 
   symbolLiteral(ctx: SymbolLiteralCstChildren) {

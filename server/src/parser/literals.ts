@@ -43,46 +43,29 @@ export const ByteLiteral = createToken({
   pattern: /0x(?:[0-9a-fA-F]{2})+/,
 });
 
+export const DateTimeLiteral = createToken({
+  name: "DateTimeLiteral",
+  pattern: /\d{4}\.\d{2}\.\d{2}T(?:\d{2}:){1,2}\d{2}\.?\d*/,
+});
+
+export const TimeStampLiteral = createToken({
+  name: "TimeStampLiteral",
+  pattern: /\d{4}\.\d{2}\.\d{2}D(?:\d{2}:){1,2}\d{2}\.?\d*/,
+});
+
 export const DateLiteral = createToken({
   name: "DateLiteral",
   pattern: /\d{4}\.\d{2}\.\d{2}/,
 });
 
-export const MiliTimeLiteral = createToken({
-  name: "MiliTimeLiteral",
-  pattern: /\d{2}:\d{2}:\d{2}\.\d{3}/,
-});
-
-export const NanoTimeLiteral = createToken({
-  name: "NanoTimeLiteral",
-  pattern: /(?:0D)?\d{2}:\d{2}:\d{2}\.\d{9}/,
-});
-
-export const DateTimeLiteral = createToken({
-  name: "DateTimeLiteral",
-  pattern: /\d{4}\.\d{2}\.\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}/,
-});
-
-export const TimeStampLiteral = createToken({
-  name: "TimeStampLiteral",
-  pattern: /\d{4}\.\d{2}\.\d{2}D\d{2}:\d{2}:\d{2}\.\d{9}/,
-});
-
 export const MonthLiteral = createToken({
   name: "MonthLiteral",
   pattern: /\d{4}\.\d{2}m/,
-  longer_alt: DateLiteral,
 });
 
-export const SecondLiteral = createToken({
-  name: "SecondLiteral",
-  pattern: /\d{2}:\d{2}:\d{2}/,
-});
-
-export const MinuteLiteral = createToken({
-  name: "MinuteLiteral",
-  pattern: /\d{2}:\d{2}/,
-  longer_alt: SecondLiteral,
+export const TimeLiteral = createToken({
+  name: "TimeLiteral",
+  pattern: /(?:0D)?(?:\d{2}:){1,2}\d{2}\.?\d*/,
 });
 
 export const NumberLiteral = createToken({

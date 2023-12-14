@@ -115,16 +115,13 @@ export type LiteralCstChildren = {
   symbolLiteral?: SymbolLiteralCstNode[];
   fileLiteral?: FileLiteralCstNode[];
   infinityLiteral?: InfinityLiteralCstNode[];
-  timeStampLiteral?: TimeStampLiteralCstNode[];
-  dateTimeLiteral?: DateTimeLiteralCstNode[];
-  miliTimeLiteral?: MiliTimeLiteralCstNode[];
-  nanoTimeLiteral?: NanoTimeLiteralCstNode[];
-  dateLiteral?: DateLiteralCstNode[];
-  monthLiteral?: MonthLiteralCstNode[];
-  secondLiteral?: SecondLiteralCstNode[];
-  minuteLiteral?: MinuteLiteralCstNode[];
   binaryLiteral?: BinaryLiteralCstNode[];
   byteLiteral?: ByteLiteralCstNode[];
+  dateTimeLiteral?: DateTimeLiteralCstNode[];
+  timeStampLiteral?: TimeStampLiteralCstNode[];
+  dateLiteral?: DateLiteralCstNode[];
+  monthLiteral?: MonthLiteralCstNode[];
+  timeLiteral?: TimeLiteralCstNode[];
   numberLiteral?: NumberLiteralCstNode[];
 };
 
@@ -164,13 +161,22 @@ export type InfinityLiteralCstChildren = {
   InfinityLiteral: IToken[];
 };
 
-export interface TimeStampLiteralCstNode extends CstNode {
-  name: "timeStampLiteral";
-  children: TimeStampLiteralCstChildren;
+export interface BinaryLiteralCstNode extends CstNode {
+  name: "binaryLiteral";
+  children: BinaryLiteralCstChildren;
 }
 
-export type TimeStampLiteralCstChildren = {
-  TimeStampLiteral: IToken[];
+export type BinaryLiteralCstChildren = {
+  BinaryLiteral: IToken[];
+};
+
+export interface ByteLiteralCstNode extends CstNode {
+  name: "byteLiteral";
+  children: ByteLiteralCstChildren;
+}
+
+export type ByteLiteralCstChildren = {
+  ByteLiteral: IToken[];
 };
 
 export interface DateTimeLiteralCstNode extends CstNode {
@@ -182,22 +188,13 @@ export type DateTimeLiteralCstChildren = {
   DateTimeLiteral: IToken[];
 };
 
-export interface MiliTimeLiteralCstNode extends CstNode {
-  name: "miliTimeLiteral";
-  children: MiliTimeLiteralCstChildren;
+export interface TimeStampLiteralCstNode extends CstNode {
+  name: "timeStampLiteral";
+  children: TimeStampLiteralCstChildren;
 }
 
-export type MiliTimeLiteralCstChildren = {
-  MiliTimeLiteral: IToken[];
-};
-
-export interface NanoTimeLiteralCstNode extends CstNode {
-  name: "nanoTimeLiteral";
-  children: NanoTimeLiteralCstChildren;
-}
-
-export type NanoTimeLiteralCstChildren = {
-  NanoTimeLiteral: IToken[];
+export type TimeStampLiteralCstChildren = {
+  TimeStampLiteral: IToken[];
 };
 
 export interface DateLiteralCstNode extends CstNode {
@@ -218,40 +215,13 @@ export type MonthLiteralCstChildren = {
   MonthLiteral: IToken[];
 };
 
-export interface SecondLiteralCstNode extends CstNode {
-  name: "secondLiteral";
-  children: SecondLiteralCstChildren;
+export interface TimeLiteralCstNode extends CstNode {
+  name: "timeLiteral";
+  children: TimeLiteralCstChildren;
 }
 
-export type SecondLiteralCstChildren = {
-  SecondLiteral: IToken[];
-};
-
-export interface MinuteLiteralCstNode extends CstNode {
-  name: "minuteLiteral";
-  children: MinuteLiteralCstChildren;
-}
-
-export type MinuteLiteralCstChildren = {
-  MinuteLiteral: IToken[];
-};
-
-export interface BinaryLiteralCstNode extends CstNode {
-  name: "binaryLiteral";
-  children: BinaryLiteralCstChildren;
-}
-
-export type BinaryLiteralCstChildren = {
-  BinaryLiteral: IToken[];
-};
-
-export interface ByteLiteralCstNode extends CstNode {
-  name: "byteLiteral";
-  children: ByteLiteralCstChildren;
-}
-
-export type ByteLiteralCstChildren = {
-  ByteLiteral: IToken[];
+export type TimeLiteralCstChildren = {
+  TimeLiteral: IToken[];
 };
 
 export interface NumberLiteralCstNode extends CstNode {
@@ -323,16 +293,13 @@ export interface ICstNodeVisitor<IN, OUT> extends ICstVisitor<IN, OUT> {
   symbolLiteral(children: SymbolLiteralCstChildren, param?: IN): OUT;
   fileLiteral(children: FileLiteralCstChildren, param?: IN): OUT;
   infinityLiteral(children: InfinityLiteralCstChildren, param?: IN): OUT;
-  timeStampLiteral(children: TimeStampLiteralCstChildren, param?: IN): OUT;
-  dateTimeLiteral(children: DateTimeLiteralCstChildren, param?: IN): OUT;
-  miliTimeLiteral(children: MiliTimeLiteralCstChildren, param?: IN): OUT;
-  nanoTimeLiteral(children: NanoTimeLiteralCstChildren, param?: IN): OUT;
-  dateLiteral(children: DateLiteralCstChildren, param?: IN): OUT;
-  monthLiteral(children: MonthLiteralCstChildren, param?: IN): OUT;
-  secondLiteral(children: SecondLiteralCstChildren, param?: IN): OUT;
-  minuteLiteral(children: MinuteLiteralCstChildren, param?: IN): OUT;
   binaryLiteral(children: BinaryLiteralCstChildren, param?: IN): OUT;
   byteLiteral(children: ByteLiteralCstChildren, param?: IN): OUT;
+  dateTimeLiteral(children: DateTimeLiteralCstChildren, param?: IN): OUT;
+  timeStampLiteral(children: TimeStampLiteralCstChildren, param?: IN): OUT;
+  dateLiteral(children: DateLiteralCstChildren, param?: IN): OUT;
+  monthLiteral(children: MonthLiteralCstChildren, param?: IN): OUT;
+  timeLiteral(children: TimeLiteralCstChildren, param?: IN): OUT;
   numberLiteral(children: NumberLiteralCstChildren, param?: IN): OUT;
   keyword(children: KeywordCstChildren, param?: IN): OUT;
   identifier(children: IdentifierCstChildren, param?: IN): OUT;

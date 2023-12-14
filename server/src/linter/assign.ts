@@ -35,40 +35,59 @@ export function declaredAfterUse({ script, assign }: QAst): Token[] {
 }
 
 export function unusedParam({ script, assign }: QAst): Token[] {
-  return assign
-    .filter(
-      (entity) =>
-        entity.type === TokenType.IDENTIFIER && entity.tag === "PARAMETER"
-    )
-    .filter(
-      (entity) =>
-        !script.find(
-          (symbol) =>
-            symbol !== entity &&
-            symbol.image === entity.image &&
-            symbol.type === TokenType.IDENTIFIER &&
-            scope(symbol) === scope(entity)
-        )
-    );
+  assign = assign.filter(
+    (token) => token.type === TokenType.IDENTIFIER && token.tag === "ARGUMENT"
+  );
+
+  script = script.filter(
+    (token) =>
+      token.tag !== "ASSIGNED" &&
+      token.tag !== "ARGUMENT" &&
+      token.type === TokenType.IDENTIFIER &&
+      assign.find((symbol) => symbol.image === token.image)
+  );
+
+  assign = assign.filter(
+    (token) =>
+      !script.find(
+        (symbol) =>
+          symbol.image === token.image && scope(symbol) === scope(token)
+      )
+  );
+
+  return assign;
 }
 
 export function unusedVar({ script, assign }: QAst): Token[] {
-  const locals = assign.filter((entity) => scope(entity));
+  const locals = assign.filter(
+    (token) => token.type === TokenType.IDENTIFIER && scope(token)
+  );
 
-  return assign
-    .filter(
-      (entity) =>
-        entity.type === TokenType.IDENTIFIER && entity.tag !== "PARAMETER"
-    )
-    .filter(
-      (entity) =>
-        !script.find(
-          (symbol) =>
-            symbol !== entity &&
-            symbol.image === entity.image &&
-            symbol.type === TokenType.IDENTIFIER &&
-            (scope(symbol) === scope(entity) ||
-              !locals.find((local) => local.image === symbol.image))
-        )
-    );
+  assign = assign.filter(
+    (token) => token.type === TokenType.IDENTIFIER && token.tag === "ASSIGNED"
+  );
+
+  script = script.filter(
+    (token) =>
+      token.tag !== "ASSIGNED" &&
+      token.tag !== "ARGUMENT" &&
+      token.type === TokenType.IDENTIFIER &&
+      assign.find((symbol) => symbol.image === token.image)
+  );
+
+  assign = assign.filter(
+    (token) =>
+      !script.find(
+        (symbol) =>
+          symbol.image === token.image &&
+          (scope(symbol) === scope(token) ||
+            (!scope(token) &&
+              !locals.find(
+                (local) =>
+                  local.image === token.image && scope(local) === scope(symbol)
+              )))
+      )
+  );
+
+  return assign;
 }

@@ -21,13 +21,10 @@ import {
   DateTimeLiteral,
   FileLiteral,
   InfinityLiteral,
-  MiliTimeLiteral,
-  MinuteLiteral,
   MonthLiteral,
-  NanoTimeLiteral,
   NumberLiteral,
-  SecondLiteral,
   SymbolLiteral,
+  TimeLiteral,
   TimeStampLiteral,
 } from "./literals";
 import {
@@ -124,16 +121,13 @@ class Parser extends CstParser {
       { ALT: () => this.SUBRULE(this.symbolLiteral) },
       { ALT: () => this.SUBRULE(this.fileLiteral) },
       { ALT: () => this.SUBRULE(this.infinityLiteral) },
-      { ALT: () => this.SUBRULE(this.timeStampLiteral) },
-      { ALT: () => this.SUBRULE(this.dateTimeLiteral) },
-      { ALT: () => this.SUBRULE(this.miliTimeLiteral) },
-      { ALT: () => this.SUBRULE(this.nanoTimeLiteral) },
-      { ALT: () => this.SUBRULE(this.dateLiteral) },
-      { ALT: () => this.SUBRULE(this.monthLiteral) },
-      { ALT: () => this.SUBRULE(this.secondLiteral) },
-      { ALT: () => this.SUBRULE(this.minuteLiteral) },
       { ALT: () => this.SUBRULE(this.binaryLiteral) },
       { ALT: () => this.SUBRULE(this.byteLiteral) },
+      { ALT: () => this.SUBRULE(this.dateTimeLiteral) },
+      { ALT: () => this.SUBRULE(this.timeStampLiteral) },
+      { ALT: () => this.SUBRULE(this.dateLiteral) },
+      { ALT: () => this.SUBRULE(this.monthLiteral) },
+      { ALT: () => this.SUBRULE(this.timeLiteral) },
       { ALT: () => this.SUBRULE(this.numberLiteral) },
     ]);
   });
@@ -154,20 +148,20 @@ class Parser extends CstParser {
     this.CONSUME(InfinityLiteral);
   });
 
-  private timeStampLiteral = this.RULE("timeStampLiteral", () => {
-    this.CONSUME(TimeStampLiteral);
+  private binaryLiteral = this.RULE("binaryLiteral", () => {
+    this.CONSUME(BinaryLiteral);
+  });
+
+  private byteLiteral = this.RULE("byteLiteral", () => {
+    this.CONSUME(ByteLiteral);
   });
 
   private dateTimeLiteral = this.RULE("dateTimeLiteral", () => {
     this.CONSUME(DateTimeLiteral);
   });
 
-  private miliTimeLiteral = this.RULE("miliTimeLiteral", () => {
-    this.CONSUME(MiliTimeLiteral);
-  });
-
-  private nanoTimeLiteral = this.RULE("nanoTimeLiteral", () => {
-    this.CONSUME(NanoTimeLiteral);
+  private timeStampLiteral = this.RULE("timeStampLiteral", () => {
+    this.CONSUME(TimeStampLiteral);
   });
 
   private dateLiteral = this.RULE("dateLiteral", () => {
@@ -178,20 +172,8 @@ class Parser extends CstParser {
     this.CONSUME(MonthLiteral);
   });
 
-  private secondLiteral = this.RULE("secondLiteral", () => {
-    this.CONSUME(SecondLiteral);
-  });
-
-  private minuteLiteral = this.RULE("minuteLiteral", () => {
-    this.CONSUME(MinuteLiteral);
-  });
-
-  private binaryLiteral = this.RULE("binaryLiteral", () => {
-    this.CONSUME(BinaryLiteral);
-  });
-
-  private byteLiteral = this.RULE("byteLiteral", () => {
-    this.CONSUME(ByteLiteral);
+  private timeLiteral = this.RULE("timeLiteral", () => {
+    this.CONSUME(TimeLiteral);
   });
 
   private numberLiteral = this.RULE("numberLiteral", () => {
