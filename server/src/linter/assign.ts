@@ -22,16 +22,19 @@ export function invalidAssign({ assign }: QAst): Token[] {
 }
 
 export function declaredAfterUse({ script, assign }: QAst): Token[] {
-  return script.filter((entity, index) => {
-    if (entity.type === TokenType.IDENTIFIER) {
-      const declared = assign.find(
-        (symbol) =>
-          scope(symbol) === scope(entity) && symbol.image === entity.image
-      );
-      return declared && script.indexOf(declared) > index;
-    }
-    return false;
-  });
+  return script.filter(
+    (token) =>
+      token.tag !== "ASSIGNED" &&
+      token.tag !== "ARGUMENT" &&
+      token.type === TokenType.IDENTIFIER &&
+      assign.find((symbol) =>
+        scope(symbol, [TokenType.GROUP]) === scope(token, [TokenType.GROUP])
+          ? symbol.statement < token.statement
+          : symbol.statement > token.statement &&
+            symbol.image === token.image &&
+            scope(symbol) === scope(token)
+      )
+  );
 }
 
 export function unusedParam({ script, assign }: QAst): Token[] {

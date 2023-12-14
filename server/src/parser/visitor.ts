@@ -104,7 +104,7 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
     type: TokenType[],
     skip: TokenType[] = [],
     count = 1,
-    scope = true,
+    scope = true
   ) {
     let c = this.tokens.length - 1;
     const anchor = this.tokens[c];
