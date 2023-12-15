@@ -19,12 +19,7 @@ import {
   unusedParam,
   unusedVar,
 } from "./assign";
-import {
-  lineLength,
-  tooManyConstants,
-  tooManyGlobals,
-  tooManyLocals,
-} from "./limit";
+import { tooManyConstants, tooManyGlobals, tooManyLocals } from "./limit";
 import { deprecatedDatetime } from "./other";
 
 export enum RuleSeverity {
@@ -369,7 +364,7 @@ const LineLengthRule: LinterRule = {
   name: "LINE_LENGTH",
   message: "Maximum line length exceeded",
   severity: RuleSeverity.WARNING,
-  check: lineLength,
+  check,
 };
 
 const DefaultQdocRule: LinterRule = {

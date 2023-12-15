@@ -13,28 +13,9 @@
 
 import { Token, TokenType, QAst, scope } from "../parser";
 
-const DEFAULT_MAX_LINE_LENGTH = 200;
 const DEFAULT_MAX_LOCALS = 110;
 const DEFAULT_MAX_GLOBALS = 110;
 const DEFAULT_MAX_CONSTANTS = 239;
-
-export function lineLength({ script }: QAst): Token[] {
-  const problems: Token[] = [];
-
-  const symbols = script.filter(
-    (entity) => entity.type === TokenType.SEMICOLON
-  );
-
-  for (let i = 0; i < symbols.length; i++) {
-    const start = i === 0 ? 0 : symbols[i - 1].endOffset;
-
-    if (symbols[i].endOffset - start > DEFAULT_MAX_LINE_LENGTH + 1) {
-      problems.push(symbols[i]);
-    }
-  }
-
-  return problems;
-}
 
 export function tooManyConstants({ script }: QAst): Token[] {
   const counts = new Map<Token, number>();
