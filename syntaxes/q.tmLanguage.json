@@ -12,12 +12,6 @@
       "include": "#qcumber"
     },
     {
-      "include": "#operators"
-    },
-    {
-      "include": "#commands"
-    },
-    {
       "include": "#literals"
     },
     {
@@ -25,6 +19,12 @@
     },
     {
       "include": "#identifiers"
+    },
+    {
+      "include": "#commands"
+    },
+    {
+      "include": "#operators"
     }
   ],
   "repository": {
@@ -131,38 +131,6 @@
         }
       ]
     },
-    "operators": {
-      "patterns": [
-        {
-          "name": "keyword.operator.arithmetic.q",
-          "match": "[-+%*=<>~|&]"
-        },
-        {
-          "name": "keyword.other.control.q",
-          "match": "[\\/\\\\':]:"
-        },
-        {
-          "name": "keyword.other.control.q",
-          "match": "[$!?#@'^]"
-        },
-        {
-          "name": "punctuation.assignment.q",
-          "match": ":"
-        },
-        {
-          "name": "punctuation.terminator.statement.q",
-          "match": ";"
-        }
-      ]
-    },
-    "commands": {
-      "patterns": [
-        {
-          "name": "constant.character.q",
-          "match": "\\\\(ts|cd|[arsbBSctCTdueEvfwgWlxzo12p_P\\\\])"
-        }
-      ]
-    },
     "literals": {
       "patterns": [
         {
@@ -171,11 +139,11 @@
         },
         {
           "name": "constant.numeric.timestamp.q",
-          "match": "\\d{4}\\.\\d{2}\\.\\d{2}D\\d{2}:\\d{2}:\\d{2}\\.\\d{9}"
+          "match": "\\d{4}\\.\\d{2}\\.\\d{2}D(?:\\d{2}:){1,2}\\d{2}\\.?\\d*"
         },
         {
           "name": "constant.numeric.datetime.q",
-          "match": "\\d{4}\\.\\d{2}\\.\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}"
+          "match": "\\d{4}\\.\\d{2}\\.\\d{2}T(?:\\d{2}:){1,2}\\d{2}\\.?\\d*"
         },
         {
           "name": "constant.numeric.date.q",
@@ -186,22 +154,6 @@
           "match": "\\d{4}\\.\\d{2}m"
         },
         {
-          "name": "constant.numeric.nanotime.q",
-          "match": "(?:0D)?\\d{2}:\\d{2}:\\d{2}\\.\\d{9}"
-        },
-        {
-          "name": "constant.numeric.militime.q",
-          "match": "\\d{2}:\\d{2}:\\d{2}\\.\\d{3}"
-        },
-        {
-          "name": "constant.numeric.second.q",
-          "match": "\\d{2}:\\d{2}:\\d{2}"
-        },
-        {
-          "name": "constant.numeric.minute.q",
-          "match": "\\d{2}:\\d{2}"
-        },
-        {
           "name": "constant.numeric.binary.q",
           "match": "[01]+b"
         },
@@ -210,8 +162,16 @@
           "match": "0x(?:[0-9a-fA-F]{2})+"
         },
         {
-          "name": "constant.language.null.q",
-          "match": "(?:0N[ghjepmdznuvt]|-?0[wW]|0[nNwW])"
+          "name": "constant.numeric.file.q",
+          "match": "[012]:"
+        },
+        {
+          "name": "constant.language.infinity.q",
+          "match": "(?:0N[deghjmnptuvz]?|-?0[wW]|0n)"
+        },
+        {
+          "name": "constant.numeric.time.q",
+          "match": "(?:0D)?(?:\\d{2}:){1,2}\\d{2}\\.?\\d*"
         },
         {
           "name": "constant.numeric.number.q",
@@ -242,10 +202,6 @@
           "match": "\\.z\\.(?:exit|ac|bm|ex|ey|pc|pd|pg|ph|pi|pm|po|pp|pq|ps|pw|ts|vs|wc|wo|ws|zd|[abcdDefhikKlnNopPqstTuwWxXzZ])\\b"
         },
         {
-          "name": "keyword.other.namespace.q",
-          "match": "\\.[hjmqQz]\\b"
-        },
-        {
           "name": "keyword.other.q",
           "match": "\\b(?:reciprocal|distinct|ceiling|reverse|sublist|ungroup|delete|deltas|differ|enlist|except|getenv|hclose|hcount|insert|mcount|ratios|rotate|select|setenv|signum|string|system|tables|update|upsert|within|xgroup|count|cross|dsave|fills|first|fkeys|floor|group|gtime|hopen|idesc|inter|lower|ltime|ltrim|parse|peach|prior|read0|read1|reval|rload|rsave|rtrim|union|upper|value|views|where|while|xcols|xdesc|xprev|xrank|acos|ajf0|asin|asof|atan|attr|avgs|binr|cols|desc|each|eval|exec|exit|flip|from|hdel|hsym|iasc|keys|last|like|load|mavg|maxs|mdev|meta|mins|mmax|mmin|msum|next|null|over|prds|prev|rand|rank|raze|save|scan|scov|sdev|show|sqrt|sums|svar|trim|type|view|wavg|wsum|xasc|xbar|xcol|xexp|xkey|xlog|abs|aj0|ajf|all|and|any|asc|avg|bin|cor|cos|cov|csv|cut|dev|div|ema|exp|fby|get|ijf|inv|key|ljf|log|lsq|max|md5|med|min|mmu|mod|neg|not|prd|set|sin|ssr|sum|tan|til|ujf|var|wj1|aj|do|ej|if|ij|in|lj|or|pj|ss|sv|uj|vs|wj)\\b"
         }
@@ -255,7 +211,39 @@
       "patterns": [
         {
           "name": "variable.other.q",
-          "match": "(\\.[A-Za-z][A-Za-z_0-9.]*(?<!\\.)|[A-Za-z][A-Za-z_0-9]*)\\b"
+          "match": "(?:(?:\\.[a-zA-Z_0-9]+)+|[a-zA-Z][a-zA-Z_0-9]*)\\b"
+        }
+      ]
+    },
+    "commands": {
+      "patterns": [
+        {
+          "name": "constant.character.q",
+          "match": "\\\\(?:cd|ts|[abBcCdefglopPrsStTuvwWxz12_\\\\])"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.other.iterator.q",
+          "match": "[\\\\'/]:"
+        },
+        {
+          "name": "keyword.other.control.q",
+          "match": "[$!?#@'^]"
+        },
+        {
+          "name": "keyword.operator.arithmetic.q",
+          "match": "[-+%*=<>~|&]"
+        },
+        {
+          "name": "punctuation.assignment.q",
+          "match": ":{1,2}"
+        },
+        {
+          "name": "punctuation.terminator.statement.q",
+          "match": ";"
         }
       ]
     }

@@ -27,12 +27,14 @@ export function declaredAfterUse({ script, assign }: QAst): Token[] {
       token.tag !== "ASSIGNED" &&
       token.tag !== "ARGUMENT" &&
       token.type === TokenType.IDENTIFIER &&
-      assign.find((symbol) =>
-        scope(symbol, [TokenType.GROUP]) === scope(token, [TokenType.GROUP])
-          ? symbol.statement < token.statement
-          : symbol.statement > token.statement &&
-            symbol.image === token.image &&
-            scope(symbol) === scope(token)
+      assign.find(
+        (symbol) =>
+          symbol.image === token.image &&
+          scope(symbol) === scope(token) &&
+          (scope(symbol, [TokenType.GROUP]) &&
+          scope(symbol, [TokenType.GROUP]) === scope(token, [TokenType.GROUP])
+            ? symbol.statement < token.statement
+            : symbol.statement > token.statement)
       )
   );
 }

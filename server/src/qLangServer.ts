@@ -51,6 +51,7 @@ import { TokenType, IdentifierPattern, scope, analyze } from "./parser";
 import { KeywordPattern } from "./parser/keywords";
 import { QParser } from "./parser/parser";
 import { AnalyzerContent, GlobalSettings, Keyword } from "./utils/analyzer";
+import { IToken } from "chevrotain";
 
 export default class QLangServer {
   public connection: Connection;
@@ -476,18 +477,24 @@ export default class QLangServer {
     const cst = QParser.parse(text);
     const diagnostics: Diagnostic[] = [];
     let problems = QParser.errors.length;
-    if (problems > 1000) {
-      problems = 1000;
+    if (problems > 99) {
+      problems = 99;
     }
     for (let i = 0; i < problems; i++) {
       const error = QParser.errors[i];
+      let offset = -1;
+      if ("previousToken" in error) {
+        const token = error.previousToken as IToken;
+        offset = token.startOffset || -1;
+      }
+      if (offset < 0) {
+        offset = error.token.startOffset || 0;
+      }
       const diagnostic: Diagnostic = {
         severity: DiagnosticSeverity.Error,
         range: {
-          start: textDocument.positionAt(error.token.startOffset),
-          end: textDocument.positionAt(
-            error.token.endOffset || error.token.startOffset
-          ),
+          start: textDocument.positionAt(offset),
+          end: textDocument.positionAt(offset),
         },
         message: (error.message || error.name).replace(/\s+/g, " "),
         source: "kdb.QParser",

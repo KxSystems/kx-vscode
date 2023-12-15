@@ -294,7 +294,7 @@ const UnusedInternalRule: LinterRule = {
 const UnusedParamRule: LinterRule = {
   name: "UNUSED_PARAM",
   message: "This param was declared then never used",
-  severity: RuleSeverity.WARNING,
+  severity: RuleSeverity.HINT,
   check: unusedParam,
 };
 
