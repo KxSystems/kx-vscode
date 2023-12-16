@@ -43,8 +43,7 @@ export interface AssignmentCstNode extends CstNode {
 
 export type AssignmentCstChildren = {
   operator?: OperatorCstNode[];
-  DoubleColon?: IToken[];
-  Colon?: IToken[];
+  Colon: IToken[];
   expression?: ExpressionCstNode[];
 };
 
@@ -113,15 +112,15 @@ export interface LiteralCstNode extends CstNode {
 export type LiteralCstChildren = {
   charLiteral?: CharLiteralCstNode[];
   symbolLiteral?: SymbolLiteralCstNode[];
-  fileLiteral?: FileLiteralCstNode[];
-  infinityLiteral?: InfinityLiteralCstNode[];
-  binaryLiteral?: BinaryLiteralCstNode[];
-  byteLiteral?: ByteLiteralCstNode[];
   dateTimeLiteral?: DateTimeLiteralCstNode[];
   timeStampLiteral?: TimeStampLiteralCstNode[];
   dateLiteral?: DateLiteralCstNode[];
   monthLiteral?: MonthLiteralCstNode[];
   timeLiteral?: TimeLiteralCstNode[];
+  fileLiteral?: FileLiteralCstNode[];
+  infinityLiteral?: InfinityLiteralCstNode[];
+  binaryLiteral?: BinaryLiteralCstNode[];
+  byteLiteral?: ByteLiteralCstNode[];
   numberLiteral?: NumberLiteralCstNode[];
 };
 
@@ -141,42 +140,6 @@ export interface SymbolLiteralCstNode extends CstNode {
 
 export type SymbolLiteralCstChildren = {
   SymbolLiteral: IToken[];
-};
-
-export interface FileLiteralCstNode extends CstNode {
-  name: "fileLiteral";
-  children: FileLiteralCstChildren;
-}
-
-export type FileLiteralCstChildren = {
-  FileLiteral: IToken[];
-};
-
-export interface InfinityLiteralCstNode extends CstNode {
-  name: "infinityLiteral";
-  children: InfinityLiteralCstChildren;
-}
-
-export type InfinityLiteralCstChildren = {
-  InfinityLiteral: IToken[];
-};
-
-export interface BinaryLiteralCstNode extends CstNode {
-  name: "binaryLiteral";
-  children: BinaryLiteralCstChildren;
-}
-
-export type BinaryLiteralCstChildren = {
-  BinaryLiteral: IToken[];
-};
-
-export interface ByteLiteralCstNode extends CstNode {
-  name: "byteLiteral";
-  children: ByteLiteralCstChildren;
-}
-
-export type ByteLiteralCstChildren = {
-  ByteLiteral: IToken[];
 };
 
 export interface DateTimeLiteralCstNode extends CstNode {
@@ -222,6 +185,42 @@ export interface TimeLiteralCstNode extends CstNode {
 
 export type TimeLiteralCstChildren = {
   TimeLiteral: IToken[];
+};
+
+export interface FileLiteralCstNode extends CstNode {
+  name: "fileLiteral";
+  children: FileLiteralCstChildren;
+}
+
+export type FileLiteralCstChildren = {
+  FileLiteral: IToken[];
+};
+
+export interface InfinityLiteralCstNode extends CstNode {
+  name: "infinityLiteral";
+  children: InfinityLiteralCstChildren;
+}
+
+export type InfinityLiteralCstChildren = {
+  InfinityLiteral: IToken[];
+};
+
+export interface BinaryLiteralCstNode extends CstNode {
+  name: "binaryLiteral";
+  children: BinaryLiteralCstChildren;
+}
+
+export type BinaryLiteralCstChildren = {
+  BinaryLiteral: IToken[];
+};
+
+export interface ByteLiteralCstNode extends CstNode {
+  name: "byteLiteral";
+  children: ByteLiteralCstChildren;
+}
+
+export type ByteLiteralCstChildren = {
+  ByteLiteral: IToken[];
 };
 
 export interface NumberLiteralCstNode extends CstNode {
@@ -291,15 +290,15 @@ export interface ICstNodeVisitor<IN, OUT> extends ICstVisitor<IN, OUT> {
   literal(children: LiteralCstChildren, param?: IN): OUT;
   charLiteral(children: CharLiteralCstChildren, param?: IN): OUT;
   symbolLiteral(children: SymbolLiteralCstChildren, param?: IN): OUT;
-  fileLiteral(children: FileLiteralCstChildren, param?: IN): OUT;
-  infinityLiteral(children: InfinityLiteralCstChildren, param?: IN): OUT;
-  binaryLiteral(children: BinaryLiteralCstChildren, param?: IN): OUT;
-  byteLiteral(children: ByteLiteralCstChildren, param?: IN): OUT;
   dateTimeLiteral(children: DateTimeLiteralCstChildren, param?: IN): OUT;
   timeStampLiteral(children: TimeStampLiteralCstChildren, param?: IN): OUT;
   dateLiteral(children: DateLiteralCstChildren, param?: IN): OUT;
   monthLiteral(children: MonthLiteralCstChildren, param?: IN): OUT;
   timeLiteral(children: TimeLiteralCstChildren, param?: IN): OUT;
+  fileLiteral(children: FileLiteralCstChildren, param?: IN): OUT;
+  infinityLiteral(children: InfinityLiteralCstChildren, param?: IN): OUT;
+  binaryLiteral(children: BinaryLiteralCstChildren, param?: IN): OUT;
+  byteLiteral(children: ByteLiteralCstChildren, param?: IN): OUT;
   numberLiteral(children: NumberLiteralCstChildren, param?: IN): OUT;
   keyword(children: KeywordCstChildren, param?: IN): OUT;
   identifier(children: IdentifierCstChildren, param?: IN): OUT;

@@ -194,7 +194,7 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
   assignment(ctx: AssignmentCstChildren) {
     ctx.operator?.forEach((rule) => this.visit(rule));
     const assignment = this.consume({
-      ...(ctx.Colon || ctx.DoubleColon || [])[0],
+      ...ctx.Colon[0],
       type: TokenType.ASSIGN,
     });
     let symbol = this.peek(SymbolTypes, [
@@ -215,8 +215,16 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
     }
     if (symbol) {
       if (!scope(assignment, NoAssignTypes)) {
-        if (ctx.DoubleColon) {
-          symbol.scope = undefined;
+        if (ctx.Colon.length > 1) {
+          const local = this.assigns.find(
+            (token) =>
+              token.type === TokenType.IDENTIFIER &&
+              token.image === symbol?.image &&
+              scope(token) === scope(assignment)
+          );
+          if (!local) {
+            symbol.scope = undefined;
+          }
         }
         this.assign(symbol, "ASSIGNED");
       }

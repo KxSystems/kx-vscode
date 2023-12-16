@@ -16,14 +16,13 @@ import { RuleSeverity, Rules } from "./rules";
 
 const enabled = [
   "ASSIGN_RESERVED_WORD",
+  "DEPRECATED_DATETIME",
   "INVALID_ASSIGN",
-  //"DECLARED_AFTER_USE",
-  "UNUSED_PARAM",
-  "UNUSED_VAR",
   "TOO_MANY_CONSTANTS",
   "TOO_MANY_GLOBALS",
   "TOO_MANY_LOCALS",
-  "DEPRECATED_DATETIME",
+  "UNUSED_PARAM",
+  "UNUSED_VAR",
 ];
 
 export interface LintResult {

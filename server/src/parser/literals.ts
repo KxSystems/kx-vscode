@@ -23,26 +23,6 @@ export const SymbolLiteral = createToken({
   pattern: /`[.:\w]*/,
 });
 
-export const FileLiteral = createToken({
-  name: "FileLiteral",
-  pattern: /[012]:/,
-});
-
-export const InfinityLiteral = createToken({
-  name: "InfinityLiteral",
-  pattern: /(?:0N[deghjmnptuvz]?|-?0[wW]|0n)/,
-});
-
-export const BinaryLiteral = createToken({
-  name: "BinaryLiteral",
-  pattern: /[01]+b/,
-});
-
-export const ByteLiteral = createToken({
-  name: "ByteLiteral",
-  pattern: /0x(?:[0-9a-fA-F]{2})+/,
-});
-
 export const DateTimeLiteral = createToken({
   name: "DateTimeLiteral",
   pattern: /\d{4}\.\d{2}\.\d{2}T(?:\d{2}:){1,2}\d{2}\.?\d*/,
@@ -66,6 +46,26 @@ export const MonthLiteral = createToken({
 export const TimeLiteral = createToken({
   name: "TimeLiteral",
   pattern: /(?:0D)?(?:\d{2}:){1,2}\d{2}\.?\d*/,
+});
+
+export const FileLiteral = createToken({
+  name: "FileLiteral",
+  pattern: /[012]:/,
+});
+
+export const InfinityLiteral = createToken({
+  name: "InfinityLiteral",
+  pattern: /(?:0N[deghjmnptuvz]?|-?0[wW]|0n)/,
+});
+
+export const BinaryLiteral = createToken({
+  name: "BinaryLiteral",
+  pattern: /[01]+b/,
+});
+
+export const ByteLiteral = createToken({
+  name: "ByteLiteral",
+  pattern: /0x(?:[0-9a-fA-F]{2})+/,
 });
 
 export const NumberLiteral = createToken({

@@ -61,11 +61,6 @@ export const Operator = createToken({
   pattern: /[_.,'^<=>?!#@$&~|%*+-]/,
 });
 
-export const DoubleColon = createToken({
-  name: "DoubleColon",
-  pattern: /::/,
-});
-
 export const Colon = createToken({
   name: "Colon",
   pattern: /:/,

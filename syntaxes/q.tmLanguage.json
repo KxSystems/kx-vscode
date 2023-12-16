@@ -9,7 +9,7 @@
       "include": "#strings"
     },
     {
-      "include": "#qcumber"
+      "include": "#qtest"
     },
     {
       "include": "#literals"
@@ -97,7 +97,7 @@
         }
       ]
     },
-    "qcumber": {
+    "qtest": {
       "patterns": [
         {
           "name": "comment.feature.q",
@@ -138,12 +138,12 @@
           "match": "`[.:\\w]*"
         },
         {
-          "name": "constant.numeric.timestamp.q",
-          "match": "\\d{4}\\.\\d{2}\\.\\d{2}D(?:\\d{2}:){1,2}\\d{2}\\.?\\d*"
-        },
-        {
           "name": "constant.numeric.datetime.q",
           "match": "\\d{4}\\.\\d{2}\\.\\d{2}T(?:\\d{2}:){1,2}\\d{2}\\.?\\d*"
+        },
+        {
+          "name": "constant.numeric.timestamp.q",
+          "match": "\\d{4}\\.\\d{2}\\.\\d{2}D(?:\\d{2}:){1,2}\\d{2}\\.?\\d*"
         },
         {
           "name": "constant.numeric.date.q",
@@ -154,12 +154,8 @@
           "match": "\\d{4}\\.\\d{2}m"
         },
         {
-          "name": "constant.numeric.binary.q",
-          "match": "[01]+b"
-        },
-        {
-          "name": "constant.numeric.byte.q",
-          "match": "0x(?:[0-9a-fA-F]{2})+"
+          "name": "constant.numeric.time.q",
+          "match": "(?:0D)?(?:\\d{2}:){1,2}\\d{2}\\.?\\d*"
         },
         {
           "name": "constant.numeric.file.q",
@@ -170,8 +166,12 @@
           "match": "(?:0N[deghjmnptuvz]?|-?0[wW]|0n)"
         },
         {
-          "name": "constant.numeric.time.q",
-          "match": "(?:0D)?(?:\\d{2}:){1,2}\\d{2}\\.?\\d*"
+          "name": "constant.numeric.binary.q",
+          "match": "[01]+b"
+        },
+        {
+          "name": "constant.numeric.byte.q",
+          "match": "0x(?:[0-9a-fA-F]{2})+"
         },
         {
           "name": "constant.numeric.number.q",
@@ -235,11 +235,11 @@
         },
         {
           "name": "keyword.operator.arithmetic.q",
-          "match": "[-+%*=<>~|&]"
+          "match": "[_.,'^<=>?!#@$&~|%*+-]"
         },
         {
           "name": "punctuation.assignment.q",
-          "match": ":{1,2}"
+          "match": ":"
         },
         {
           "name": "punctuation.terminator.statement.q",

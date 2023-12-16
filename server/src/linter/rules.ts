@@ -14,7 +14,6 @@
 import { Token, QAst } from "../parser";
 import {
   assignReservedWord,
-  declaredAfterUse,
   invalidAssign,
   unusedParam,
   unusedVar,
@@ -56,7 +55,7 @@ const DeclaredAfterUserRule: LinterRule = {
   name: "DECLARED_AFTER_USE",
   message: "The variable was declared after being used",
   severity: RuleSeverity.ERROR,
-  check: declaredAfterUse,
+  check,
 };
 
 const GlobalPeachRule: LinterRule = {

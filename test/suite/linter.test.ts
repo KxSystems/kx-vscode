@@ -43,18 +43,6 @@ describe("linter", () => {
     });
   });
 
-  describe("DECLARED_AFTER_USE", () => {
-    it("should lint invalid assign", () => {
-      const cst = QParser.parse("a;a:1;");
-      assert.deepEqual(QParser.errors, []);
-      const ast = analyze(cst);
-      const results = lint(ast);
-      // TODO
-      assert.strictEqual(results.length, 0);
-      //assert.strictEqual(results[0].name, "DECLARED_AFTER_USE");
-    });
-  });
-
   describe("UNUSED_PARAM", () => {
     it("should lint unused param", () => {
       const cst = QParser.parse("{[a]}");
@@ -96,17 +84,6 @@ describe("linter", () => {
   });
 
   describe("LINE_LENGTH", () => {
-    it("should lint invalid line length", () => {
-      const cst = QParser.parse(
-        "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901\n"
-      );
-      assert.deepEqual(QParser.errors, []);
-      const ast = analyze(cst);
-      const results = lint(ast);
-      assert.strictEqual(results.length, 0);
-      //assert.strictEqual(results[0].name, "LINE_LENGTH");
-    });
-
     it("should not lint valid line length", () => {
       const cst = QParser.parse(
         "12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890\n"

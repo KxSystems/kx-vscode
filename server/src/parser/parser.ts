@@ -30,7 +30,6 @@ import {
 import {
   Colon,
   Command,
-  DoubleColon,
   Iterator,
   LBracket,
   LCurly,
@@ -74,10 +73,7 @@ class Parser extends CstParser {
 
   private assignment = this.RULE("assignment", () => {
     this.OPTION(() => this.SUBRULE(this.operator));
-    this.OR([
-      { ALT: () => this.CONSUME(DoubleColon) },
-      { ALT: () => this.CONSUME(Colon) },
-    ]);
+    this.AT_LEAST_ONE(() => this.CONSUME(Colon));
     this.OPTION1(() => this.SUBRULE(this.expression));
   });
 
@@ -119,15 +115,15 @@ class Parser extends CstParser {
     this.OR([
       { ALT: () => this.SUBRULE(this.charLiteral) },
       { ALT: () => this.SUBRULE(this.symbolLiteral) },
-      { ALT: () => this.SUBRULE(this.fileLiteral) },
-      { ALT: () => this.SUBRULE(this.infinityLiteral) },
-      { ALT: () => this.SUBRULE(this.binaryLiteral) },
-      { ALT: () => this.SUBRULE(this.byteLiteral) },
       { ALT: () => this.SUBRULE(this.dateTimeLiteral) },
       { ALT: () => this.SUBRULE(this.timeStampLiteral) },
       { ALT: () => this.SUBRULE(this.dateLiteral) },
       { ALT: () => this.SUBRULE(this.monthLiteral) },
       { ALT: () => this.SUBRULE(this.timeLiteral) },
+      { ALT: () => this.SUBRULE(this.fileLiteral) },
+      { ALT: () => this.SUBRULE(this.infinityLiteral) },
+      { ALT: () => this.SUBRULE(this.binaryLiteral) },
+      { ALT: () => this.SUBRULE(this.byteLiteral) },
       { ALT: () => this.SUBRULE(this.numberLiteral) },
     ]);
   });
@@ -138,22 +134,6 @@ class Parser extends CstParser {
 
   private symbolLiteral = this.RULE("symbolLiteral", () => {
     this.CONSUME(SymbolLiteral);
-  });
-
-  private fileLiteral = this.RULE("fileLiteral", () => {
-    this.CONSUME(FileLiteral);
-  });
-
-  private infinityLiteral = this.RULE("infinityLiteral", () => {
-    this.CONSUME(InfinityLiteral);
-  });
-
-  private binaryLiteral = this.RULE("binaryLiteral", () => {
-    this.CONSUME(BinaryLiteral);
-  });
-
-  private byteLiteral = this.RULE("byteLiteral", () => {
-    this.CONSUME(ByteLiteral);
   });
 
   private dateTimeLiteral = this.RULE("dateTimeLiteral", () => {
@@ -174,6 +154,22 @@ class Parser extends CstParser {
 
   private timeLiteral = this.RULE("timeLiteral", () => {
     this.CONSUME(TimeLiteral);
+  });
+
+  private fileLiteral = this.RULE("fileLiteral", () => {
+    this.CONSUME(FileLiteral);
+  });
+
+  private infinityLiteral = this.RULE("infinityLiteral", () => {
+    this.CONSUME(InfinityLiteral);
+  });
+
+  private binaryLiteral = this.RULE("binaryLiteral", () => {
+    this.CONSUME(BinaryLiteral);
+  });
+
+  private byteLiteral = this.RULE("byteLiteral", () => {
+    this.CONSUME(ByteLiteral);
   });
 
   private numberLiteral = this.RULE("numberLiteral", () => {

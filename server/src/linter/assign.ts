@@ -21,24 +21,6 @@ export function invalidAssign({ assign }: QAst): Token[] {
   return assign.filter((entity) => entity.type === TokenType.LITERAL);
 }
 
-export function declaredAfterUse({ script, assign }: QAst): Token[] {
-  return script.filter(
-    (token) =>
-      token.tag !== "ASSIGNED" &&
-      token.tag !== "ARGUMENT" &&
-      token.type === TokenType.IDENTIFIER &&
-      assign.find(
-        (symbol) =>
-          symbol.image === token.image &&
-          scope(symbol) === scope(token) &&
-          (scope(symbol, [TokenType.GROUP]) &&
-          scope(symbol, [TokenType.GROUP]) === scope(token, [TokenType.GROUP])
-            ? symbol.statement < token.statement
-            : symbol.statement > token.statement)
-      )
-  );
-}
-
 export function unusedParam({ script, assign }: QAst): Token[] {
   assign = assign.filter(
     (token) => token.type === TokenType.IDENTIFIER && token.tag === "ARGUMENT"
