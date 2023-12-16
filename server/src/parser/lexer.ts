@@ -12,7 +12,7 @@
  */
 
 import { Lexer } from "chevrotain";
-import { RSql, Identifier, Keyword, LSql } from "./keywords";
+import { RSql, Identifier, Keyword, LSql, Reserved } from "./keywords";
 import {
   BinaryLiteral,
   ByteLiteral,
@@ -63,6 +63,7 @@ export const QTokens = [
   NumberLiteral,
   LSql,
   RSql,
+  Reserved,
   Keyword,
   Identifier,
   SemiColon,

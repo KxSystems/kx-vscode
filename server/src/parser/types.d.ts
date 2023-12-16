@@ -100,6 +100,7 @@ export interface SymbolCstNode extends CstNode {
 
 export type SymbolCstChildren = {
   literal?: LiteralCstNode[];
+  reserved?: ReservedCstNode[];
   keyword?: KeywordCstNode[];
   identifier?: IdentifierCstNode[];
 };
@@ -232,6 +233,15 @@ export type NumberLiteralCstChildren = {
   NumberLiteral: IToken[];
 };
 
+export interface ReservedCstNode extends CstNode {
+  name: "reserved";
+  children: ReservedCstChildren;
+}
+
+export type ReservedCstChildren = {
+  Reserved: IToken[];
+};
+
 export interface KeywordCstNode extends CstNode {
   name: "keyword";
   children: KeywordCstChildren;
@@ -300,6 +310,7 @@ export interface ICstNodeVisitor<IN, OUT> extends ICstVisitor<IN, OUT> {
   binaryLiteral(children: BinaryLiteralCstChildren, param?: IN): OUT;
   byteLiteral(children: ByteLiteralCstChildren, param?: IN): OUT;
   numberLiteral(children: NumberLiteralCstChildren, param?: IN): OUT;
+  reserved(children: ReservedCstChildren, param?: IN): OUT;
   keyword(children: KeywordCstChildren, param?: IN): OUT;
   identifier(children: IdentifierCstChildren, param?: IN): OUT;
   command(children: CommandCstChildren, param?: IN): OUT;

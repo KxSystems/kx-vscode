@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Token, TokenType, QAst, scope, reserved } from "../parser";
+import { Token, TokenType, QAst, scope } from "../parser";
 
 export function assignReservedWord({ assign }: QAst): Token[] {
   return assign.filter((entity) => entity.type === TokenType.KEYWORD);
@@ -23,10 +23,7 @@ export function invalidAssign({ assign }: QAst): Token[] {
 
 export function unusedParam({ script, assign }: QAst): Token[] {
   assign = assign.filter(
-    (token) =>
-      token.type === TokenType.IDENTIFIER &&
-      token.tag === "ARGUMENT" &&
-      !reserved(token)
+    (token) => token.type === TokenType.IDENTIFIER && token.tag === "ARGUMENT"
   );
 
   script = script.filter(
@@ -54,10 +51,7 @@ export function unusedVar({ script, assign }: QAst): Token[] {
   );
 
   assign = assign.filter(
-    (token) =>
-      token.type === TokenType.IDENTIFIER &&
-      token.tag === "ASSIGNED" &&
-      !reserved(token)
+    (token) => token.type === TokenType.IDENTIFIER && token.tag === "ASSIGNED"
   );
 
   script = script.filter(

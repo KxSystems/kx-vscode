@@ -42,10 +42,11 @@ export const Keyword = createToken({
   longer_alt: Identifier,
 });
 
-export const Reserved = [
-  /\.h\.(?:iso8601|code|edsn|fram|HOME|htac|html|http|logo|text|hta|htc|hug|nbr|pre|val|xmp|br|c0|c1|cd|ed|ha|hb|hc|he|hn|hp|hr|ht|hu|hy|jx|sa|sb|sc|td|tx|ty|uh|xd|xs|xt|d)\b/,
-  /\.j\.(?:jd|[jk])\b/,
-  /\.m\.(?:addmonths|dpfts|dsftg|addr|btoa|dpft|hdpf|host|view|chk|def|ens|fmt|fpn|fps|fsn|ind|j10|j12|MAP|opt|par|res|sbt|trp|x10|x12|b6|bt|bv|Cf|cn|dd|en|ff|fk|fs|ft|fu|gc|gz|hg|hp|id|nA|pd|PD|pf|pn|pt|pv|PV|qp|qt|s1|ts|ty|vp|Xf|[aADfklMPsuvVwx])\b/,
-  /\.[Qq]\.(?:addmonths|dpfts|dsftg|addr|btoa|dpft|hdpf|host|sha1|view|chk|def|ens|fmt|fpn|fps|fsn|ind|j10|j12|MAP|opt|par|res|sbt|trp|x10|x12|b6|bt|bv|Cf|cn|dd|en|fc|ff|fk|fs|ft|fu|gc|gz|hg|hp|id|nA|pd|PD|pf|pn|pt|pv|PV|qp|qt|s1|ts|ty|vp|Xf|[aADfklMPsSuvVwx])\b/,
-  /\.z\.(?:exit|ac|bm|ex|ey|pc|pd|pg|ph|pi|pm|po|pp|pq|ps|pw|ts|vs|wc|wo|ws|zd|[abcdDefhikKlnNopPqstTuwWxXzZ])\b/,
-];
+export const ReservedPattern =
+  /(?:\.h\.(?:iso8601|code|edsn|fram|HOME|htac|html|http|logo|text|hta|htc|hug|nbr|pre|val|xmp|br|c0|c1|cd|ed|ha|hb|hc|he|hn|hp|hr|ht|hu|hy|jx|sa|sb|sc|td|tx|ty|uh|xd|xs|xt|d)|\.j\.(?:jd|[jk])|\.m\.(?:addmonths|dpfts|dsftg|addr|btoa|dpft|hdpf|host|view|chk|def|ens|fmt|fpn|fps|fsn|ind|j10|j12|MAP|opt|par|res|sbt|trp|x10|x12|b6|bt|bv|Cf|cn|dd|en|ff|fk|fs|ft|fu|gc|gz|hg|hp|id|nA|pd|PD|pf|pn|pt|pv|PV|qp|qt|s1|ts|ty|vp|Xf|[aADfklMPsuvVwx])|\.[Qq]\.(?:addmonths|dpfts|dsftg|addr|btoa|dpft|hdpf|host|sha1|view|chk|def|ens|fmt|fpn|fps|fsn|ind|j10|j12|MAP|opt|par|res|sbt|trp|x10|x12|b6|bt|bv|Cf|cn|dd|en|fc|ff|fk|fs|ft|fu|gc|gz|hg|hp|id|nA|pd|PD|pf|pn|pt|pv|PV|qp|qt|s1|ts|ty|vp|Xf|[aADfklMPsSuvVwx])|\.z\.(?:exit|ac|bm|ex|ey|pc|pd|pg|ph|pi|pm|po|pp|pq|ps|pw|ts|vs|wc|wo|ws|zd|[abcdDefhikKlnNopPqstTuwWxXzZ]))/;
+
+export const Reserved = createToken({
+  name: "Reserved",
+  pattern: ReservedPattern,
+  longer_alt: Identifier,
+});

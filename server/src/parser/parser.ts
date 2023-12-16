@@ -40,7 +40,7 @@ import {
   RParen,
   SemiColon,
 } from "./tokens";
-import { RSql, Identifier, Keyword, LSql } from "./keywords";
+import { RSql, Identifier, Keyword, LSql, Reserved } from "./keywords";
 
 class Parser extends CstParser {
   constructor() {
@@ -106,6 +106,7 @@ class Parser extends CstParser {
   private symbol = this.RULE("symbol", () => {
     this.OR([
       { ALT: () => this.SUBRULE(this.literal) },
+      { ALT: () => this.SUBRULE(this.reserved) },
       { ALT: () => this.SUBRULE(this.keyword) },
       { ALT: () => this.SUBRULE(this.identifier) },
     ]);
@@ -174,6 +175,10 @@ class Parser extends CstParser {
 
   private numberLiteral = this.RULE("numberLiteral", () => {
     this.CONSUME(NumberLiteral);
+  });
+
+  private reserved = this.RULE("reserved", () => {
+    this.CONSUME(Reserved);
   });
 
   private keyword = this.RULE("keyword", () => {

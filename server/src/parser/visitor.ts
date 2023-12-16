@@ -33,6 +33,7 @@ import type {
   MonthLiteralCstChildren,
   NumberLiteralCstChildren,
   OperatorCstChildren,
+  ReservedCstChildren,
   ScriptCstChildren,
   SemiColonCstChildren,
   SqlCstChildren,
@@ -42,7 +43,6 @@ import type {
   TimeStampLiteralCstChildren,
 } from "./types";
 import { CstNode, IToken } from "chevrotain";
-import { Reserved } from "./keywords";
 import { QParser } from "./parser";
 
 const BaseQVisitor = QParser.getBaseCstVisitorConstructorWithDefaults();
@@ -234,6 +234,7 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
 
   symbol(ctx: SymbolCstChildren) {
     ctx.literal?.forEach((rule) => this.visit(rule));
+    ctx.reserved?.forEach((rule) => this.visit(rule));
     ctx.keyword?.forEach((rule) => this.visit(rule));
     ctx.identifier?.forEach((rule) => this.visit(rule));
   }
@@ -300,6 +301,10 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
     this.consume({ ...ctx.TimeStampLiteral[0], type: TokenType.LITERAL });
   }
 
+  reserved(ctx: ReservedCstChildren) {
+    this.consume({ ...ctx.Reserved[0], type: TokenType.RESERVED });
+  }
+
   keyword(ctx: KeywordCstChildren) {
     this.consume({ ...ctx.Keyword[0], type: TokenType.KEYWORD });
   }
@@ -339,6 +344,7 @@ export interface QAst {
 
 export const enum TokenType {
   LITERAL,
+  RESERVED,
   KEYWORD,
   IDENTIFIER,
   SQL,
@@ -355,6 +361,7 @@ export const enum TokenType {
 
 export const SymbolTypes = [
   TokenType.LITERAL,
+  TokenType.RESERVED,
   TokenType.KEYWORD,
   TokenType.IDENTIFIER,
 ];
@@ -370,15 +377,6 @@ export function scope(token: Token, types = [TokenType.LAMBDA]) {
     token = scope;
   }
   return scope;
-}
-
-export function reserved(token: Token) {
-  for (const regex of Reserved) {
-    if (regex.exec(token.image)) {
-      return true;
-    }
-  }
-  return false;
 }
 
 export function analyze(cstNode: CstNode | CstNode[]) {
