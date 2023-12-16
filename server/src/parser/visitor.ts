@@ -42,6 +42,7 @@ import type {
   TimeStampLiteralCstChildren,
 } from "./types";
 import { CstNode, IToken } from "chevrotain";
+import { Reserved } from "./keywords";
 import { QParser } from "./parser";
 
 const BaseQVisitor = QParser.getBaseCstVisitorConstructorWithDefaults();
@@ -369,6 +370,15 @@ export function scope(token: Token, types = [TokenType.LAMBDA]) {
     token = scope;
   }
   return scope;
+}
+
+export function reserved(token: Token) {
+  for (const regex of Reserved) {
+    if (regex.exec(token.image)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function analyze(cstNode: CstNode | CstNode[]) {
