@@ -13,6 +13,7 @@
 
 import {
   Connection,
+  DidChangeConfigurationNotification,
   InitializeParams,
   InitializeResult,
   ProposedFeatures,
@@ -30,5 +31,11 @@ connection.onInitialize(
     };
   }
 );
+
+connection.onInitialized(() => {
+  connection.client.register(DidChangeConfigurationNotification.type, {
+    section: "kdb",
+  });
+});
 
 connection.listen();

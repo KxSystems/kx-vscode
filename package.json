@@ -179,6 +179,11 @@
           "type": "boolean",
           "description": "Hide subscribe for registration notification",
           "default": false
+        },
+        "kdb.linting": {
+          "type": "boolean",
+          "description": "Enable linting for q files",
+          "default": true
         }
       }
     },

@@ -1,3 +1,16 @@
+/*
+ * Copyright (c) 1998-2023 Kx Systems Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
 import {
   BinaryLiteral,
   ByteLiteral,
@@ -16,11 +29,84 @@ import { Command, Iterator, LineComment, Operator } from "./tokens";
 import { TokenType } from "chevrotain";
 
 function _(token: TokenType | RegExp) {
-  if ("PATTERN" in token) {
-    return `${token.PATTERN}`.slice(1, -1);
-  }
-  return `${token}`.slice(1, -1);
+  return ("PATTERN" in token ? `${token.PATTERN}` : `${token}`).slice(1, -1);
 }
+
+const qdoc = {
+  patterns: [
+    {
+      name: "comment.qdoc",
+      begin: "(?:(?<=\\r?\\n|[ \\t])|(?<!.))\\/\\/",
+      end: "\\r?\\n",
+      patterns: [
+        {
+          name: "storage.type.qdoc",
+          match:
+            "@\\b(?:author|category|deprecated|doctest|end|example|fileoverview|kind|name|private|see|subcategory|throws|todo|default-category|default-subcategory|typedef|fileOverview|param|desc|return[s]?|overview)\\b",
+        },
+        {
+          name: "keyword.control.qdoc",
+          begin: "{",
+          end: "}",
+          patterns: [
+            {
+              name: "entity.name.type.qdoc",
+              match:
+                "\\b(type|atom|anything|dict|enum|function|hsym|option|string|table|tuple|typedef|vector|bool|boolean|byte|char|character|date|datetime|float|guid|int|integer|long|minute|month|real|second|short|string|symbol|time|timespan|timestamp)\\b",
+            },
+          ],
+        },
+        {
+          name: "variable.other.qdoc",
+          match: "[\\w.]+?(?=\\s*{.+})",
+        },
+        {
+          name: "variable.other.qdoc",
+          match: "\\s\\.[\\w.]+?\\s",
+        },
+      ],
+    },
+  ],
+};
+
+const qtest = {
+  patterns: [
+    {
+      name: "comment.feature.q",
+      begin: "\\b[x]feature\\b",
+      end: "^(?=\\S)",
+    },
+    {
+      name: "comment.should.q",
+      begin: "\\b[x]should\\b",
+      end: "^((?=\\S)|\\s+(?=[x]?should))\\b",
+    },
+    {
+      name: "comment.other.q",
+      begin: "\\b[x](expect|bench|property)\\b",
+      end: "^((?=\\S)|\\s+(?=[x]?(should|expect|bench|property)))\\b",
+    },
+    {
+      name: "support.function.q",
+      match: "\\b(before|after|skip)\\b",
+    },
+    {
+      match: "\\b(feature|should|expect|bench|property)\\b\\s+(.*)",
+      captures: {
+        1: {
+          name: "support.function.q",
+        },
+        2: {
+          name: "string.quoted.q",
+        },
+      },
+    },
+  ],
+};
+
+const BlockComment = [/^\/\s*$/, /^\\\s*$/];
+const StringLiteral = [/"/, /\\["\\]/];
+const ControlKeyword = /[$!?#@'^]/;
 
 export const language = {
   name: "q",
@@ -56,12 +142,12 @@ export const language = {
       patterns: [
         {
           name: "comment.block.q",
-          begin: "^\\/\\s*$",
-          end: "^\\\\\\s*$",
+          begin: _(BlockComment[0]),
+          end: _(BlockComment[1]),
         },
         {
           name: "comment.last.q",
-          begin: "^\\\\\\s*$",
+          begin: _(BlockComment[1]),
         },
         {
           include: "#qdoc",
@@ -72,91 +158,23 @@ export const language = {
         },
       ],
     },
-    qdoc: {
-      patterns: [
-        {
-          name: "comment.qdoc",
-          begin: "(?:(?<=\\r?\\n|[ \\t])|(?<!.))\\/\\/",
-          end: "\\r?\\n",
-          patterns: [
-            {
-              name: "storage.type.qdoc",
-              match:
-                "@\\b(?:author|category|deprecated|doctest|end|example|fileoverview|kind|name|private|see|subcategory|throws|todo|default-category|default-subcategory|typedef|fileOverview|param|desc|return[s]?|overview)\\b",
-            },
-            {
-              name: "keyword.control.qdoc",
-              begin: "{",
-              end: "}",
-              patterns: [
-                {
-                  name: "entity.name.type.qdoc",
-                  match:
-                    "\\b(type|atom|anything|dict|enum|function|hsym|option|string|table|tuple|typedef|vector|bool|boolean|byte|char|character|date|datetime|float|guid|int|integer|long|minute|month|real|second|short|string|symbol|time|timespan|timestamp)\\b",
-                },
-              ],
-            },
-            {
-              name: "variable.other.qdoc",
-              match: "[\\w.]+?(?=\\s*{.+})",
-            },
-            {
-              name: "variable.other.qdoc",
-              match: "\\s\\.[\\w.]+?\\s",
-            },
-          ],
-        },
-      ],
-    },
+    qdoc,
     strings: {
       patterns: [
         {
           name: "string.quoted.q",
-          begin: '"',
-          end: '"',
+          begin: _(StringLiteral[0]),
+          end: _(StringLiteral[0]),
           patterns: [
             {
               name: "constant.character.escape.q",
-              match: '\\\\["\\\\]',
+              match: _(StringLiteral[1]),
             },
           ],
         },
       ],
     },
-    qtest: {
-      patterns: [
-        {
-          name: "comment.feature.q",
-          begin: "\\b[x]feature\\b",
-          end: "^(?=\\S)",
-        },
-        {
-          name: "comment.should.q",
-          begin: "\\b[x]should\\b",
-          end: "^((?=\\S)|\\s+(?=[x]?should))\\b",
-        },
-        {
-          name: "comment.other.q",
-          begin: "\\b[x](expect|bench|property)\\b",
-          end: "^((?=\\S)|\\s+(?=[x]?(should|expect|bench|property)))\\b",
-        },
-        {
-          name: "support.function.q",
-          match: "\\b(before|after|skip)\\b",
-        },
-        {
-          match: "\\b(feature|should|expect|bench|property)\\b\\s+(.*)",
-          captures: {
-            1: {
-              name: "support.function.q",
-            },
-            2: {
-              name: "string.quoted.q",
-            },
-          },
-        },
-      ],
-    },
+    qtest,
     literals: {
       patterns: [
         {
@@ -241,7 +259,7 @@ export const language = {
         },
         {
           name: "keyword.other.control.q",
-          match: "[$!?#@'^]",
+          match: _(ControlKeyword),
         },
         {
           name: "keyword.operator.arithmetic.q",

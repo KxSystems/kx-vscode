@@ -23,6 +23,7 @@ import {
   Connection,
   Diagnostic,
   DiagnosticSeverity,
+  DidChangeConfigurationParams,
   DocumentHighlight,
   DocumentSymbolParams,
   Hover,
@@ -53,7 +54,14 @@ import { QParser } from "./parser/parser";
 import { AnalyzerContent, GlobalSettings, Keyword } from "./utils/analyzer";
 import { IToken } from "chevrotain";
 
+interface Settings {
+  linting: boolean;
+}
+
+const defaultSettings: Settings = { linting: true };
+
 export default class QLangServer {
+  private settings: Settings = defaultSettings;
   public connection: Connection;
   public documents: TextDocuments<TextDocument> = new TextDocuments(
     TextDocument
@@ -101,6 +109,9 @@ export default class QLangServer {
     );
     this.connection.languages.callHierarchy.onOutgoingCalls(
       this.onOutgoingCallsCallHierarchy.bind(this)
+    );
+    this.connection.onDidChangeConfiguration(
+      this.onDidChangeConfiguration.bind(this)
     );
   }
 
@@ -186,6 +197,10 @@ export default class QLangServer {
         this.connection.console.info(msg);
         break;
     }
+  }
+
+  private onDidChangeConfiguration(change: DidChangeConfigurationParams) {
+    this.settings = <Settings>(change.settings.kdb || defaultSettings);
   }
 
   private onCompletion(params: TextDocumentPositionParams): CompletionItem[] {
@@ -501,7 +516,7 @@ export default class QLangServer {
       };
       diagnostics.push(diagnostic);
     }
-    if (problems === 0) {
+    if (this.settings.linting && problems === 0) {
       const ast = analyze(cst);
       const results = lint(ast);
       for (const result of results) {
