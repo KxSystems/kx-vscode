@@ -799,6 +799,30 @@ describe("Utils", () => {
         assert.deepStrictEqual(result, { error: "Query error" });
       });
     });
+
+    describe("arrayToTable", () => {
+      it("should format an array of objects as a table", () => {
+        const data = [
+          { a: "0", b: "1.4198733294891718e+38" },
+          { a: "1", b: "-1.2894694634258276e+29" },
+        ];
+
+        const expected =
+          "a   b                      \n" +
+          "---------------------------\n" +
+          "0   1.4198733294891718e+38 \n" +
+          "1   -1.2894694634258276e+29";
+
+        const result = queryUtils.arrayToTable(data);
+        assert.strictEqual(result, expected);
+      });
+
+      it("should return the input if it is not a non-empty array", () => {
+        const data = [];
+        const result = queryUtils.arrayToTable(data);
+        assert.strictEqual(result, data);
+      });
+    });
   });
 
   describe("Registration", () => {

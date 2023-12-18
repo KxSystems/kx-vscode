@@ -40,6 +40,7 @@ export namespace ext {
   export let serverObjects: ServerObject;
   export let openSslVersion: string | null;
   export let resultPanelCSV: string;
+  export let isDatasourceExecution: boolean;
   export const rowLimit = 150000000;
 
   export let connection: Connection | undefined;

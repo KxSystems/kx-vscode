@@ -31,6 +31,7 @@ import {
   getConnectedInsightsNode,
 } from "../utils/dataSource";
 import {
+  arrayToTable,
   handleScratchpadTableRes,
   handleWSError,
   handleWSResults,
@@ -226,11 +227,10 @@ export async function runDataSource(
 
   dataSourceForm.insightsNode = getConnectedInsightsNode();
   const fileContent = dataSourceForm;
-  commands.executeCommand("kdb-results.focus");
 
   let res: any;
   const selectedType = getSelectedType(fileContent);
-
+  ext.isDatasourceExecution = true;
   switch (selectedType) {
     case "API":
       res = await runApiDataSource(fileContent);
@@ -244,6 +244,7 @@ export async function runDataSource(
       break;
   }
 
+  ext.isDatasourceExecution = false;
   if (res.error) {
     window.showErrorMessage(res.error);
   } else if (ext.resultsViewProvider.isVisible()) {
@@ -253,8 +254,9 @@ export async function runDataSource(
       selectedType
     );
   } else {
+    const resString = arrayToTable(res);
     writeQueryResultsToConsole(
-      res,
+      resString,
       getQuery(fileContent, selectedType),
       selectedType
     );
