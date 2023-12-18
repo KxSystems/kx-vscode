@@ -17,3 +17,4 @@ export * from "./keywords";
 export * from "./lexer";
 export * from "./parser";
 export * from "./visitor";
+export * from "./language";

@@ -105,7 +105,7 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
     type: TokenType[],
     skip: TokenType[] = [],
     count = 1,
-    scope = true
+    scope = true,
   ) {
     let c = this.tokens.length - 1;
     const anchor = this.tokens[c];
@@ -221,7 +221,7 @@ class QVisitor extends BaseQVisitor implements ICstNodeVisitor<void, void> {
             (token) =>
               token.type === TokenType.IDENTIFIER &&
               token.image === symbol?.image &&
-              scope(token) === scope(assignment)
+              scope(token) === scope(assignment),
           );
           if (!local) {
             symbol.scope = undefined;

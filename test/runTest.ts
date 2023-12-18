@@ -34,11 +34,7 @@ async function main() {
       process.env["GENERATE_COVERAGE"] = "1";
     }
 
-    await runTests({
-      extensionDevelopmentPath,
-      extensionTestsPath,
-      version: "1.84.2",
-    });
+    await runTests({ extensionDevelopmentPath, extensionTestsPath });
   } catch (err) {
     console.error("Failed to run tests.");
     process.exit(1);
