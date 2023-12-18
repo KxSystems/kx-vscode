@@ -215,9 +215,10 @@ export class KdbDataSourceView extends LitElement {
 
   private renderApiOptions(selected: string) {
     if (this.isInsights && this.isMetaLoaded) {
+      /*
       return this.insightsMeta.api
         .filter(
-          (api) => api.api === ".kxi.getData" //|| !api.api.startsWith(".kxi.")
+          (api) => api.api === ".kxi.getData" || !api.api.startsWith(".kxi.")
         )
         .map((api) => {
           const value =
@@ -230,7 +231,11 @@ export class KdbDataSourceView extends LitElement {
               >${value}</vscode-option
             >
           `;
-        });
+        });  
+        */
+      return html`
+        <vscode-option value="getData" selected>getData</vscode-option>
+      `;
     }
     return [];
   }
