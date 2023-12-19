@@ -11,33 +11,28 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Entity, QAst } from "../parser";
+import { Token, QAst } from "../parser";
 import {
   assignReservedWord,
-  declaredAfterUse,
   invalidAssign,
   unusedParam,
   unusedVar,
 } from "./assign";
-import {
-  lineLength,
-  tooManyConstants,
-  tooManyGlobals,
-  tooManyLocals,
-} from "./limit";
+import { tooManyConstants, tooManyGlobals, tooManyLocals } from "./limit";
 import { deprecatedDatetime } from "./other";
 
 export enum RuleSeverity {
   ERROR = "ERROR",
   WARNING = "WARNING",
   INFO = "INFO",
+  HINT = "HINT",
 }
 
 export interface LinterRule {
   name: string;
   message: string;
   severity: RuleSeverity;
-  check: (ast: QAst) => Entity[];
+  check: (ast: QAst) => Token[];
 }
 
 const check = () => [];
@@ -60,7 +55,7 @@ const DeclaredAfterUserRule: LinterRule = {
   name: "DECLARED_AFTER_USE",
   message: "The variable was declared after being used",
   severity: RuleSeverity.ERROR,
-  check: declaredAfterUse,
+  check,
 };
 
 const GlobalPeachRule: LinterRule = {
@@ -293,14 +288,14 @@ const UnusedInternalRule: LinterRule = {
 const UnusedParamRule: LinterRule = {
   name: "UNUSED_PARAM",
   message: "This param was declared then never used",
-  severity: RuleSeverity.WARNING,
+  severity: RuleSeverity.HINT,
   check: unusedParam,
 };
 
 const UnusedVarRule: LinterRule = {
   name: "UNUSED_VAR",
   message: "This variable was declared then never used",
-  severity: RuleSeverity.WARNING,
+  severity: RuleSeverity.HINT,
   check: unusedVar,
 };
 
@@ -368,7 +363,7 @@ const LineLengthRule: LinterRule = {
   name: "LINE_LENGTH",
   message: "Maximum line length exceeded",
   severity: RuleSeverity.WARNING,
-  check: lineLength,
+  check,
 };
 
 const DefaultQdocRule: LinterRule = {

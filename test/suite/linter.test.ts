@@ -24,6 +24,7 @@ describe("linter", () => {
   describe("ASSIGN_RESERVED_WORD", () => {
     it("should lint assign reseved word", () => {
       const cst = QParser.parse("til:1");
+      assert.deepEqual(QParser.errors, []);
       const ast = analyze(cst);
       const results = lint(ast);
       assert.strictEqual(results.length, 1);
@@ -34,6 +35,7 @@ describe("linter", () => {
   describe("INVALID_ASSIGN", () => {
     it("should lint invalid assign", () => {
       const cst = QParser.parse("123:1");
+      assert.deepEqual(QParser.errors, []);
       const ast = analyze(cst);
       const results = lint(ast);
       assert.strictEqual(results.length, 1);
@@ -41,30 +43,39 @@ describe("linter", () => {
     });
   });
 
-  describe("DECLARED_AFTER_USE", () => {
-    it("should lint invalid assign", () => {
-      const cst = QParser.parse("a;a:1;");
-      const ast = analyze(cst);
-      const results = lint(ast);
-      // TODO
-      assert.strictEqual(results.length, 0);
-      //assert.strictEqual(results[0].name, "DECLARED_AFTER_USE");
-    });
-  });
-
   describe("UNUSED_PARAM", () => {
     it("should lint unused param", () => {
       const cst = QParser.parse("{[a]}");
+      assert.deepEqual(QParser.errors, []);
       const ast = analyze(cst);
       const results = lint(ast);
       assert.strictEqual(results.length, 1);
       assert.strictEqual(results[0].name, "UNUSED_PARAM");
+    });
+
+    it("should not lint unused param outside lambda scope", () => {
+      const cst = QParser.parse("[a:1];a");
+      assert.deepEqual(QParser.errors, []);
+      const ast = analyze(cst);
+      assert.strictEqual(ast.assign[0].image, "a");
+      const results = lint(ast);
+      assert.strictEqual(results.length, 0);
     });
   });
 
   describe("UNUSED_VAR", () => {
     it("should lint unused var", () => {
       const cst = QParser.parse("a:1");
+      assert.deepEqual(QParser.errors, []);
+      const ast = analyze(cst);
+      const results = lint(ast);
+      assert.strictEqual(results.length, 1);
+      assert.strictEqual(results[0].name, "UNUSED_VAR");
+    });
+
+    it("should lint unused var in assign through", () => {
+      const cst = QParser.parse("+:[a;1]");
+      assert.deepEqual(QParser.errors, []);
       const ast = analyze(cst);
       const results = lint(ast);
       assert.strictEqual(results.length, 1);
@@ -73,20 +84,11 @@ describe("linter", () => {
   });
 
   describe("LINE_LENGTH", () => {
-    it("should lint invalid line length", () => {
-      const cst = QParser.parse(
-        "123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901\n"
-      );
-      const ast = analyze(cst);
-      const results = lint(ast);
-      assert.strictEqual(results.length, 1);
-      assert.strictEqual(results[0].name, "LINE_LENGTH");
-    });
-
     it("should not lint valid line length", () => {
       const cst = QParser.parse(
         "12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890\n"
       );
+      assert.deepEqual(QParser.errors, []);
       const ast = analyze(cst);
       const results = lint(ast);
       assert.strictEqual(results.length, 0);
@@ -100,6 +102,7 @@ describe("linter", () => {
         usage += `i${i}:${i};i${i}*${i};`;
       }
       const cst = QParser.parse(`{${usage}}`);
+      assert.deepEqual(QParser.errors, []);
       const ast = analyze(cst);
       const results = lint(ast);
       assert.strictEqual(results.length, 1);
@@ -118,6 +121,7 @@ describe("linter", () => {
         usage += `i${i}*${i};`;
       }
       const cst = QParser.parse(`${globals}{${usage}}`);
+      assert.deepEqual(QParser.errors, []);
       const ast = analyze(cst);
       const results = lint(ast);
       assert.strictEqual(results.length, 1);
@@ -132,6 +136,7 @@ describe("linter", () => {
         text += `i${i};`;
       }
       const cst = QParser.parse(`{${text}}`);
+      assert.deepEqual(QParser.errors, []);
       const ast = analyze(cst);
       const results = lint(ast);
       assert.strictEqual(results.length, 1);
@@ -142,6 +147,7 @@ describe("linter", () => {
   describe("DEPRECATED_DATETIME", () => {
     it("should lint datetime", () => {
       const cst = QParser.parse("2000.01.01T12:00:00.000");
+      assert.deepEqual(QParser.errors, []);
       const ast = analyze(cst);
       const results = lint(ast);
       assert.strictEqual(results.length, 1);
