@@ -45,6 +45,8 @@ import {
   writeQueryResultsToView,
 } from "./serverCommand";
 
+export let running = 0;
+
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
 
@@ -214,52 +216,63 @@ export async function populateScratchpad(
 export async function runDataSource(
   dataSourceForm: DataSourceFiles
 ): Promise<void> {
-  Object.assign(ext.insightsMeta, await getMeta());
-  if (!ext.insightsMeta.assembly) {
-    ext.outputChannel.appendLine(
-      `To run a datasource you need to be connected to an Insights server`
-    );
-    window.showErrorMessage(
-      "To run a datasource you need to be connected to an Insights server"
-    );
+  if (running) {
     return;
   }
+  running++;
 
-  dataSourceForm.insightsNode = getConnectedInsightsNode();
-  const fileContent = dataSourceForm;
+  try {
+    Object.assign(ext.insightsMeta, await getMeta());
+    if (!ext.insightsMeta.assembly) {
+      ext.outputChannel.appendLine(
+        `To run a datasource you need to be connected to an Insights server`
+      );
+      window.showErrorMessage(
+        "To run a datasource you need to be connected to an Insights server"
+      );
+      return;
+    }
 
-  let res: any;
-  const selectedType = getSelectedType(fileContent);
-  ext.isDatasourceExecution = true;
-  switch (selectedType) {
-    case "API":
-      res = await runApiDataSource(fileContent);
-      break;
-    case "QSQL":
-      res = await runQsqlDataSource(fileContent);
-      break;
-    case "SQL":
-    default:
-      res = await runSqlDataSource(fileContent);
-      break;
-  }
+    dataSourceForm.insightsNode = getConnectedInsightsNode();
+    const fileContent = dataSourceForm;
 
-  ext.isDatasourceExecution = false;
-  if (res.error) {
-    window.showErrorMessage(res.error);
-  } else if (ext.resultsViewProvider.isVisible()) {
-    writeQueryResultsToView(
-      res,
-      getQuery(fileContent, selectedType),
-      selectedType
-    );
-  } else {
-    const resString = arrayToTable(res);
-    writeQueryResultsToConsole(
-      resString,
-      getQuery(fileContent, selectedType),
-      selectedType
-    );
+    let res: any;
+    const selectedType = getSelectedType(fileContent);
+    ext.isDatasourceExecution = true;
+    switch (selectedType) {
+      case "API":
+        res = await runApiDataSource(fileContent);
+        break;
+      case "QSQL":
+        res = await runQsqlDataSource(fileContent);
+        break;
+      case "SQL":
+      default:
+        res = await runSqlDataSource(fileContent);
+        break;
+    }
+
+    ext.isDatasourceExecution = false;
+    if (res.error) {
+      window.showErrorMessage(res.error);
+    } else if (ext.resultsViewProvider.isVisible()) {
+      writeQueryResultsToView(
+        res,
+        getQuery(fileContent, selectedType),
+        selectedType
+      );
+    } else {
+      const resString = arrayToTable(res);
+      writeQueryResultsToConsole(
+        resString,
+        getQuery(fileContent, selectedType),
+        selectedType
+      );
+    }
+  } catch (error) {
+    throw error;
+  } finally {
+    running--;
   }
 }
 
