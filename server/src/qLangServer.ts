@@ -28,6 +28,7 @@ import {
   DocumentSymbolParams,
   Hover,
   InitializeParams,
+  LSPAny,
   Location,
   Position,
   Range,
@@ -199,8 +200,13 @@ export default class QLangServer {
     }
   }
 
+  public setSettings(settings: LSPAny) {
+    this.settings = settings;
+    this.documents.all().forEach((doc) => this.validateTextDocument(doc));
+  }
+
   private onDidChangeConfiguration(change: DidChangeConfigurationParams) {
-    this.settings = <Settings>(change.settings.kdb || defaultSettings);
+    this.setSettings(change.settings?.kdb || defaultSettings);
   }
 
   private onCompletion(params: TextDocumentPositionParams): CompletionItem[] {
