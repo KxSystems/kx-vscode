@@ -233,6 +233,7 @@ export class KdbDataSourceView extends LitElement {
           `;
         });  
         */
+      this.selectedApi = "getData";
       return html`
         <vscode-option value="getData" selected>getData</vscode-option>
       `;
