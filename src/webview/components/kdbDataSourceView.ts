@@ -217,7 +217,7 @@ export class KdbDataSourceView extends LitElement {
     if (this.isInsights && this.isMetaLoaded) {
       return this.insightsMeta.api
         .filter(
-          (api) => api.api === ".kxi.getData" || !api.api.startsWith(".kxi.")
+          (api) => api.api === ".kxi.getData" //|| !api.api.startsWith(".kxi.")
         )
         .map((api) => {
           const value =
