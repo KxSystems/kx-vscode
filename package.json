@@ -594,7 +594,7 @@
         },
         {
           "command": "kdb.execute.fileQuery",
-          "when": "resourceLangId ==  q  && kdb.connected",
+          "when": "resourceLangId ==  q  && kdb.connected && editorFocus",
           "group": "navigation"
         },
         {
