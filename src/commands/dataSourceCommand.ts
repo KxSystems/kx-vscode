@@ -45,8 +45,6 @@ import {
   writeQueryResultsToView,
 } from "./serverCommand";
 
-export let running = 0;
-
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
 
@@ -216,10 +214,10 @@ export async function populateScratchpad(
 export async function runDataSource(
   dataSourceForm: DataSourceFiles
 ): Promise<void> {
-  if (running) {
+  if (DataSourcesPanel.running) {
     return;
   }
-  running++;
+  DataSourcesPanel.running = true;
 
   try {
     Object.assign(ext.insightsMeta, await getMeta());
@@ -269,10 +267,8 @@ export async function runDataSource(
         selectedType
       );
     }
-  } catch (error) {
-    throw error;
   } finally {
-    running--;
+    DataSourcesPanel.running = false;
   }
 }
 
