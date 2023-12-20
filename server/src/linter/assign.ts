@@ -11,67 +11,70 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Entity, EntityType, QAst, getNameScope, isLiteral } from "../parser";
+import { Token, TokenType, QAst, scope } from "../parser";
 
-export function assignReservedWord({ assign }: QAst): Entity[] {
-  return assign.filter((entity) => entity.type === EntityType.KEYWORD);
+export function assignReservedWord({ assign }: QAst): Token[] {
+  return assign.filter((entity) => entity.type === TokenType.KEYWORD);
 }
 
-export function invalidAssign({ assign }: QAst): Entity[] {
-  return assign.filter((entity) => isLiteral(entity));
+export function invalidAssign({ assign }: QAst): Token[] {
+  return assign.filter((entity) => entity.type === TokenType.LITERAL);
 }
 
-export function declaredAfterUse({ script, assign }: QAst): Entity[] {
-  return script.filter((entity, index) => {
-    if (entity.type === EntityType.IDENTIFIER) {
-      const declared = assign.find(
+export function unusedParam({ script, assign }: QAst): Token[] {
+  assign = assign.filter(
+    (token) => token.type === TokenType.IDENTIFIER && token.tag === "ARGUMENT"
+  );
+
+  script = script.filter(
+    (token) =>
+      token.tag !== "ASSIGNED" &&
+      token.tag !== "ARGUMENT" &&
+      token.type === TokenType.IDENTIFIER &&
+      assign.find((symbol) => symbol.image === token.image)
+  );
+
+  assign = assign.filter(
+    (token) =>
+      !script.find(
         (symbol) =>
-          getNameScope(symbol) === getNameScope(entity) &&
-          symbol.image === entity.image
-      );
-      return declared && script.indexOf(declared) > index;
-    }
-    return false;
-  });
+          symbol.image === token.image && scope(symbol) === scope(token)
+      )
+  );
+
+  return assign;
 }
 
-export function unusedParam({ script, assign }: QAst): Entity[] {
-  return assign
-    .filter(
-      (entity) =>
-        entity.type === EntityType.IDENTIFIER &&
-        entity.scope?.type === EntityType.LBRACKET
-    )
-    .filter(
-      (entity) =>
-        !script.find(
-          (symbol) =>
-            symbol !== entity &&
-            symbol.image === entity.image &&
-            symbol.type === EntityType.IDENTIFIER &&
-            getNameScope(symbol) === getNameScope(entity)
-        )
-    );
-}
+export function unusedVar({ script, assign }: QAst): Token[] {
+  const locals = assign.filter(
+    (token) => token.type === TokenType.IDENTIFIER && scope(token)
+  );
 
-export function unusedVar({ script, assign }: QAst): Entity[] {
-  const locals = assign.filter((entity) => getNameScope(entity));
+  assign = assign.filter(
+    (token) => token.type === TokenType.IDENTIFIER && token.tag === "ASSIGNED"
+  );
 
-  return assign
-    .filter(
-      (entity) =>
-        entity.type === EntityType.IDENTIFIER &&
-        entity.scope?.type !== EntityType.LBRACKET
-    )
-    .filter(
-      (entity) =>
-        !script.find(
-          (symbol) =>
-            symbol !== entity &&
-            symbol.image === entity.image &&
-            symbol.type === EntityType.IDENTIFIER &&
-            (getNameScope(symbol) === getNameScope(entity) ||
-              !locals.find((local) => local.image === symbol.image))
-        )
-    );
+  script = script.filter(
+    (token) =>
+      token.tag !== "ASSIGNED" &&
+      token.tag !== "ARGUMENT" &&
+      token.type === TokenType.IDENTIFIER &&
+      assign.find((symbol) => symbol.image === token.image)
+  );
+
+  assign = assign.filter(
+    (token) =>
+      !script.find(
+        (symbol) =>
+          symbol.image === token.image &&
+          (scope(symbol) === scope(token) ||
+            (!scope(token) &&
+              !locals.find(
+                (local) =>
+                  local.image === token.image && scope(local) === scope(symbol)
+              )))
+      )
+  );
+
+  return assign;
 }

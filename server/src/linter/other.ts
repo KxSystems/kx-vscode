@@ -11,8 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Entity, EntityType, QAst } from "../parser";
+import { Token, QAst } from "../parser";
 
-export function deprecatedDatetime({ script }: QAst): Entity[] {
-  return script.filter((entity) => entity.type === EntityType.DATETIME_LITERAL);
+export function deprecatedDatetime({ script }: QAst): Token[] {
+  return script.filter((entity) => entity.name === "DateTimeLiteral");
 }

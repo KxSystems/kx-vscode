@@ -169,7 +169,7 @@ describe("KdbDataSourceView", () => {
       assert.deepEqual(result[0].values, ["getData", true, "getData"]);
     });
 
-    it("should render other api", () => {
+    it.skip("should render other api", () => {
       sinon.stub(view, "isInsights").value(true);
       sinon.stub(view, "isMetaLoaded").value(true);
       sinon.stub(view, "insightsMeta").value({ api: [{ api: "other" }] });

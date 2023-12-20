@@ -179,6 +179,11 @@
           "type": "boolean",
           "description": "Hide subscribe for registration notification",
           "default": false
+        },
+        "kdb.linting": {
+          "type": "boolean",
+          "description": "Enable linting for q files",
+          "default": true
         }
       }
     },
@@ -589,7 +594,7 @@
         },
         {
           "command": "kdb.execute.fileQuery",
-          "when": "resourceLangId ==  q  && kdb.connected",
+          "when": "resourceLangId ==  q  && kdb.connected && editorFocus",
           "group": "navigation"
         },
         {

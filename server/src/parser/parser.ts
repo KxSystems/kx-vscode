@@ -12,7 +12,6 @@
  */
 
 import { CstParser } from "chevrotain";
-import { Keyword } from "./keywords";
 import { QLexer, QTokens } from "./lexer";
 import {
   BinaryLiteral,
@@ -20,22 +19,18 @@ import {
   CharLiteral,
   DateLiteral,
   DateTimeLiteral,
-  MiliTimeLiteral,
-  MinuteLiteral,
+  FileLiteral,
+  InfinityLiteral,
   MonthLiteral,
-  NanoTimeLiteral,
   NumberLiteral,
-  SecondLiteral,
   SymbolLiteral,
+  TimeLiteral,
   TimeStampLiteral,
 } from "./literals";
 import {
   Colon,
   Command,
-  DoubleColon,
-  DynamicLoad,
-  EndOfLine,
-  Identifier,
+  Iterator,
   LBracket,
   LCurly,
   LParen,
@@ -45,56 +40,93 @@ import {
   RParen,
   SemiColon,
 } from "./tokens";
+import { RSql, Identifier, Keyword, LSql, Reserved } from "./keywords";
 
 class Parser extends CstParser {
   constructor() {
-    super(QTokens, { recoveryEnabled: true });
+    super(QTokens, { maxLookahead: 3 });
     this.performSelfAnalysis();
   }
 
   public script = this.RULE("script", () => {
-    this.MANY(() => this.SUBRULE(this.entity));
+    this.MANY(() => this.SUBRULE(this.expression));
   });
 
-  private entity = this.RULE("entity", () => {
+  private expression = this.RULE("expression", () => {
     this.OR([
-      { ALT: () => this.SUBRULE(this.dynamicLoad) },
-      { ALT: () => this.SUBRULE(this.doubleColon) },
+      { ALT: () => this.SUBRULE(this.iterator) },
+      { ALT: () => this.SUBRULE(this.assignment) },
+      { ALT: () => this.SUBRULE(this.group) },
+      { ALT: () => this.SUBRULE(this.lambda) },
+      { ALT: () => this.SUBRULE(this.bracket) },
+      { ALT: () => this.SUBRULE(this.sql) },
+      { ALT: () => this.SUBRULE(this.symbol) },
       { ALT: () => this.SUBRULE(this.command) },
-      { ALT: () => this.SUBRULE(this.endOfLine) },
-      { ALT: () => this.SUBRULE(this.charLiteral) },
-      { ALT: () => this.SUBRULE(this.symbolLiteral) },
-      { ALT: () => this.SUBRULE(this.timeStampLiteral) },
-      { ALT: () => this.SUBRULE(this.dateTimeLiteral) },
-      { ALT: () => this.SUBRULE(this.miliTimeLiteral) },
-      { ALT: () => this.SUBRULE(this.nanoTimeLiteral) },
-      { ALT: () => this.SUBRULE(this.dateLiteral) },
-      { ALT: () => this.SUBRULE(this.monthLiteral) },
-      { ALT: () => this.SUBRULE(this.secondLiteral) },
-      { ALT: () => this.SUBRULE(this.minuteLiteral) },
-      { ALT: () => this.SUBRULE(this.binaryLiteral) },
-      { ALT: () => this.SUBRULE(this.byteLiteral) },
-      { ALT: () => this.SUBRULE(this.numberLiteral) },
-      { ALT: () => this.SUBRULE(this.keyword) },
-      { ALT: () => this.SUBRULE(this.identifier) },
       { ALT: () => this.SUBRULE(this.operator) },
       { ALT: () => this.SUBRULE(this.semiColon) },
-      { ALT: () => this.SUBRULE(this.colon) },
-      { ALT: () => this.SUBRULE(this.lparen) },
-      { ALT: () => this.SUBRULE(this.rparen) },
-      { ALT: () => this.SUBRULE(this.lbracket) },
-      { ALT: () => this.SUBRULE(this.rbracket) },
-      { ALT: () => this.SUBRULE(this.lcurly) },
-      { ALT: () => this.SUBRULE(this.rcurly) },
     ]);
   });
 
-  private dynamicLoad = this.RULE("dynamicLoad", () => {
-    this.CONSUME(DynamicLoad);
+  private iterator = this.RULE("iterator", () => {
+    this.CONSUME(Iterator);
   });
 
-  private command = this.RULE("command", () => {
-    this.CONSUME(Command);
+  private assignment = this.RULE("assignment", () => {
+    this.OPTION(() => this.SUBRULE(this.operator));
+    this.AT_LEAST_ONE(() => this.CONSUME(Colon));
+    this.OPTION1(() => this.SUBRULE(this.expression));
+  });
+
+  private group = this.RULE("group", () => {
+    this.CONSUME(LParen);
+    this.OPTION(() => this.SUBRULE(this.bracket));
+    this.MANY(() => this.SUBRULE(this.expression));
+    this.CONSUME(RParen);
+  });
+
+  private lambda = this.RULE("lambda", () => {
+    this.CONSUME(LCurly);
+    this.OPTION(() => this.SUBRULE(this.bracket));
+    this.MANY(() => this.SUBRULE(this.expression));
+    this.CONSUME(RCurly);
+  });
+
+  private bracket = this.RULE("bracket", () => {
+    this.CONSUME(LBracket);
+    this.MANY(() => this.SUBRULE(this.expression));
+    this.CONSUME(RBracket);
+  });
+
+  private sql = this.RULE("sql", () => {
+    this.CONSUME(LSql);
+    this.MANY(() => this.SUBRULE(this.expression));
+    this.CONSUME(RSql);
+  });
+
+  private symbol = this.RULE("symbol", () => {
+    this.OR([
+      { ALT: () => this.SUBRULE(this.literal) },
+      { ALT: () => this.SUBRULE(this.reserved) },
+      { ALT: () => this.SUBRULE(this.keyword) },
+      { ALT: () => this.SUBRULE(this.identifier) },
+    ]);
+  });
+
+  private literal = this.RULE("literal", () => {
+    this.OR([
+      { ALT: () => this.SUBRULE(this.charLiteral) },
+      { ALT: () => this.SUBRULE(this.symbolLiteral) },
+      { ALT: () => this.SUBRULE(this.dateTimeLiteral) },
+      { ALT: () => this.SUBRULE(this.timeStampLiteral) },
+      { ALT: () => this.SUBRULE(this.dateLiteral) },
+      { ALT: () => this.SUBRULE(this.monthLiteral) },
+      { ALT: () => this.SUBRULE(this.timeLiteral) },
+      { ALT: () => this.SUBRULE(this.fileLiteral) },
+      { ALT: () => this.SUBRULE(this.infinityLiteral) },
+      { ALT: () => this.SUBRULE(this.binaryLiteral) },
+      { ALT: () => this.SUBRULE(this.byteLiteral) },
+      { ALT: () => this.SUBRULE(this.numberLiteral) },
+    ]);
   });
 
   private charLiteral = this.RULE("charLiteral", () => {
@@ -105,20 +137,12 @@ class Parser extends CstParser {
     this.CONSUME(SymbolLiteral);
   });
 
-  private timeStampLiteral = this.RULE("timeStampLiteral", () => {
-    this.CONSUME(TimeStampLiteral);
-  });
-
   private dateTimeLiteral = this.RULE("dateTimeLiteral", () => {
     this.CONSUME(DateTimeLiteral);
   });
 
-  private miliTimeLiteral = this.RULE("miliTimeLiteral", () => {
-    this.CONSUME(MiliTimeLiteral);
-  });
-
-  private nanoTimeLiteral = this.RULE("nanoTimeLiteral", () => {
-    this.CONSUME(NanoTimeLiteral);
+  private timeStampLiteral = this.RULE("timeStampLiteral", () => {
+    this.CONSUME(TimeStampLiteral);
   });
 
   private dateLiteral = this.RULE("dateLiteral", () => {
@@ -129,12 +153,16 @@ class Parser extends CstParser {
     this.CONSUME(MonthLiteral);
   });
 
-  private secondLiteral = this.RULE("secondLiteral", () => {
-    this.CONSUME(SecondLiteral);
+  private timeLiteral = this.RULE("timeLiteral", () => {
+    this.CONSUME(TimeLiteral);
   });
 
-  private minuteLiteral = this.RULE("minuteLiteral", () => {
-    this.CONSUME(MinuteLiteral);
+  private fileLiteral = this.RULE("fileLiteral", () => {
+    this.CONSUME(FileLiteral);
+  });
+
+  private infinityLiteral = this.RULE("infinityLiteral", () => {
+    this.CONSUME(InfinityLiteral);
   });
 
   private binaryLiteral = this.RULE("binaryLiteral", () => {
@@ -149,6 +177,10 @@ class Parser extends CstParser {
     this.CONSUME(NumberLiteral);
   });
 
+  private reserved = this.RULE("reserved", () => {
+    this.CONSUME(Reserved);
+  });
+
   private keyword = this.RULE("keyword", () => {
     this.CONSUME(Keyword);
   });
@@ -157,12 +189,8 @@ class Parser extends CstParser {
     this.CONSUME(Identifier);
   });
 
-  private endOfLine = this.RULE("endOfLine", () => {
-    this.CONSUME(EndOfLine);
-  });
-
-  private doubleColon = this.RULE("doubleColon", () => {
-    this.CONSUME(DoubleColon);
+  private command = this.RULE("command", () => {
+    this.CONSUME(Command);
   });
 
   private operator = this.RULE("operator", () => {
@@ -171,34 +199,6 @@ class Parser extends CstParser {
 
   private semiColon = this.RULE("semiColon", () => {
     this.CONSUME(SemiColon);
-  });
-
-  private colon = this.RULE("colon", () => {
-    this.CONSUME(Colon);
-  });
-
-  private lparen = this.RULE("lparen", () => {
-    this.CONSUME(LParen);
-  });
-
-  private rparen = this.RULE("rparen", () => {
-    this.CONSUME(RParen);
-  });
-
-  private lcurly = this.RULE("lcurly", () => {
-    this.CONSUME(LCurly);
-  });
-
-  private rcurly = this.RULE("rcurly", () => {
-    this.CONSUME(RCurly);
-  });
-
-  private lbracket = this.RULE("lbracket", () => {
-    this.CONSUME(LBracket);
-  });
-
-  private rbracket = this.RULE("rbracket", () => {
-    this.CONSUME(RBracket);
   });
 
   public parse(script: string) {
