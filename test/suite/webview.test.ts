@@ -98,6 +98,15 @@ describe("KdbDataSourceView", () => {
     });
   });
 
+  describe("message", () => {
+    it("should update status", () => {
+      view["message"](<MessageEvent<DataSourceMessage>>{
+        data: { running: true },
+      });
+      assert.strictEqual(view.running, true);
+    });
+  });
+
   describe("selectTab", () => {
     it("should return the selected tab", () => {
       sinon.stub(view, "selectedType").value("DEFAULT");

@@ -19,4 +19,5 @@ export type DataSourceMessage = {
   insightsMeta: MetaObjectPayload;
   dataSourceName: string;
   dataSourceFile: DataSourceFiles;
+  running?: boolean;
 };

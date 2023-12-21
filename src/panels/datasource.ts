@@ -19,6 +19,8 @@ import { InsightsNode } from "../services/kdbTreeProvider";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
 
+let running = false;
+
 export class DataSourcesPanel {
   public static currentPanel: DataSourcesPanel | undefined;
   private uri;
@@ -94,6 +96,22 @@ export class DataSourcesPanel {
     if (DataSourcesPanel.currentPanel) {
       DataSourcesPanel.currentPanel.dispose();
     }
+  }
+
+  public static set running(flag: boolean) {
+    running = flag;
+    const panel = DataSourcesPanel.currentPanel;
+    if (panel) {
+      panel.status();
+    }
+  }
+
+  public static get running() {
+    return running;
+  }
+
+  public status() {
+    this._panel.webview.postMessage({ running });
   }
 
   public refresh() {
