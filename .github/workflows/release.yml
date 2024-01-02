@@ -34,6 +34,7 @@ jobs:
         with:
           name: KDB-VSCode-Extension
           path: ./kdb-*vsix
+          retention_days: 1
       - name: Upload lcov result for app-sec job
         uses: actions/upload-artifact@v3
         with:

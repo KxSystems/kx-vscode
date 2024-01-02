@@ -33,6 +33,7 @@ jobs:
         with:
           name: KDB-VSCode-Extension
           path: ./kdb-*vsix
+          retention_days: 1
 
   app-sec:
     runs-on: ubuntu-latest
