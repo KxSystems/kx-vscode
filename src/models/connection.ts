@@ -15,10 +15,7 @@ import * as nodeq from "node-q";
 import { commands, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { delay } from "../utils/core";
-import {
-  convertArrayOfArraysToObjects,
-  handleQueryResults,
-} from "../utils/execution";
+import { convertStringToArray, handleQueryResults } from "../utils/execution";
 import { queryWrapper } from "../utils/queryUtils";
 import { QueryResult, QueryResultType } from "./queryResult";
 
@@ -134,8 +131,8 @@ export class Connection {
       await delay(500);
     }
 
-    if (!stringify) {
-      result = convertArrayOfArraysToObjects(result);
+    if (ext.resultsViewProvider.isVisible()) {
+      return convertStringToArray(result);
     }
 
     return result;

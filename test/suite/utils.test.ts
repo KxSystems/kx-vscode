@@ -316,6 +316,69 @@ describe("Utils", () => {
         assert.deepStrictEqual(result, expectedOutput);
       });
     });
+
+    describe("convertArrayOfObjectsToArrays", () => {
+      it("convertStringToArray handles string with separator", function () {
+        const input = "key1 | value1\nkey2 | value2";
+        const expectedOutput = [
+          { Index: 1, Key: "key1", Value: "value1" },
+          { Index: 2, Key: "key2", Value: "value2" },
+        ];
+        const output = executionUtils.convertStringToArray(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("convertStringToArray handles string without separator", function () {
+        const input = "value1\nvalue2";
+        const expectedOutput = [
+          { Index: 1, Value: "value1" },
+          { Index: 2, Value: "value2" },
+        ];
+        const output = executionUtils.convertStringToArray(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("convertStringToArray handles string with field names and lengths", function () {
+        const input = "name age\n---\nJohn 25\nDoe  30";
+        const expectedOutput = [
+          { Index: 1, name: "John", age: "25" },
+          { Index: 2, name: "Doe", age: "30" },
+        ];
+        const output = executionUtils.convertStringToArray(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("convertStringToArray filters out lines starting with '-'", function () {
+        const input = "key1 | value1\nkey2 | value2\nkey3 | value3";
+        const expectedOutput = [
+          { Index: 1, Key: "key1", Value: "value1" },
+          { Index: 2, Key: "key2", Value: "value2" },
+          { Index: 3, Key: "key3", Value: "value3" },
+        ];
+        const output = executionUtils.convertStringToArray(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("convertStringToArray handles single value results", function () {
+        const input = "2001.01.01D12:00:00.000000000\n";
+        const expectedOutput = [
+          { Index: 1, Value: "2001.01.01D12:00:00.000000000" },
+        ];
+        const output = executionUtils.convertStringToArray(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("convertStringToArray handles single line with multiple value results", function () {
+        const input =
+          "2001.01.01D12:00:00.000000000 2001.01.01D12:00:00.000000001\n";
+        const expectedOutput = [
+          { Index: 1, Value: "2001.01.01D12:00:00.000000000" },
+          { Index: 2, Value: "2001.01.01D12:00:00.000000001" },
+        ];
+        const output = executionUtils.convertStringToArray(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+    });
   });
 
   describe("executionConsole", () => {
