@@ -812,7 +812,7 @@ export async function executeQuery(
     query = sanitizeQuery(query);
 
     if (ext.resultsViewProvider.isVisible()) {
-      const queryRes = await ext.connection.executeQuery(query, context, false);
+      const queryRes = await ext.connection.executeQuery(query, context, true);
       writeQueryResultsToView(queryRes, query);
     } else {
       const queryRes = await ext.connection.executeQuery(query, context, true);

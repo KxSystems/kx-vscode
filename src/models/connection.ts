@@ -15,10 +15,7 @@ import * as nodeq from "node-q";
 import { commands, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { delay } from "../utils/core";
-import {
-  convertArrayOfArraysToObjects,
-  handleQueryResults,
-} from "../utils/execution";
+import { convertStringToArray, handleQueryResults } from "../utils/execution";
 import { queryWrapper } from "../utils/queryUtils";
 import { QueryResult, QueryResultType } from "./queryResult";
 
@@ -26,6 +23,7 @@ export class Connection {
   private options: nodeq.ConnectionParameters;
   private connection?: nodeq.Connection;
   public connected: boolean;
+  private result?: string;
 
   constructor(connectionString: string, creds?: string[], tls?: boolean) {
     const params = connectionString.split(":");
@@ -98,16 +96,11 @@ export class Connection {
     context?: string,
     stringify?: boolean
   ): Promise<any> {
-    let result;
-    let retryCount = 0;
-    while (this.connection === undefined) {
-      if (retryCount > ext.maxRetryCount) {
-        return "timeout";
-      }
-      await delay(500);
-      retryCount++;
-    }
+    await this.waitForConnection();
 
+    if (!this.connection) {
+      return "timeout";
+    }
     const wrapper = queryWrapper();
     this.connection.k(
       wrapper,
@@ -116,29 +109,53 @@ export class Connection {
       !!stringify,
       (err: Error, res: QueryResult) => {
         if (err) {
-          result = handleQueryResults(err.toString(), QueryResultType.Error);
-        } else if (res) {
-          if (res.errored) {
-            result = handleQueryResults(
-              res.error + (res.backtrace ? "\n" + res.backtrace : ""),
-              QueryResultType.Error
-            );
-          } else {
-            result = res.result;
-          }
+          this.result = handleQueryResults(
+            err.toString(),
+            QueryResultType.Error
+          );
+        }
+        if (res) {
+          this.handleQueryResult(res);
         }
       }
     );
 
-    while (result === undefined || result === null) {
-      await delay(500);
-    }
+    const result = await this.waitForResult();
 
-    if (!stringify) {
-      result = convertArrayOfArraysToObjects(result);
+    if (ext.resultsViewProvider.isVisible()) {
+      return convertStringToArray(result);
     }
 
     return result;
+  }
+
+  private async waitForConnection(): Promise<void> {
+    let retryCount = 0;
+    while (this.connection === undefined) {
+      if (retryCount > ext.maxRetryCount) {
+        throw new Error("timeout");
+      }
+      await delay(500);
+      retryCount++;
+    }
+  }
+
+  private handleQueryResult = (res: QueryResult): void => {
+    if (res.errored) {
+      this.result = handleQueryResults(
+        res.error + (res.backtrace ? "\n" + res.backtrace : ""),
+        QueryResultType.Error
+      );
+    } else {
+      this.result = res.result;
+    }
+  };
+
+  private async waitForResult(): Promise<any> {
+    while (this.result === undefined || this.result === null) {
+      await delay(500);
+    }
+    return this.result;
   }
 
   public async executeQueryRaw(command: string): Promise<string> {
