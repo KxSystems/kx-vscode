@@ -78,3 +78,24 @@ export function unusedVar({ script, assign }: QAst): Token[] {
 
   return assign;
 }
+
+export function declaredAfterUse({ script, assign }: QAst): Token[] {
+  return assign
+    .filter((token) => token.tag === "ASSIGNED" && !scope(token))
+    .filter((token) => {
+      const found = script.find(
+        (entity) =>
+          entity.type === TokenType.IDENTIFIER &&
+          entity.tag !== "ASSIGNED" &&
+          entity.image === token.image &&
+          !scope(entity)
+      );
+      const reverse = !!scope(token, [TokenType.GROUP]);
+      return (
+        found &&
+        (reverse
+          ? found.statement > token.statement
+          : found.statement < token.statement)
+      );
+    });
+}

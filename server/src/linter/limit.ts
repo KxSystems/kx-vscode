@@ -16,6 +16,7 @@ import { Token, TokenType, QAst, scope } from "../parser";
 const DEFAULT_MAX_LOCALS = 110;
 const DEFAULT_MAX_GLOBALS = 110;
 const DEFAULT_MAX_CONSTANTS = 239;
+const DEFAULT_MAX_ARGUMENTS = 8;
 
 export function tooManyConstants({ script }: QAst): Token[] {
   const counts = new Map<Token, number>();
@@ -107,6 +108,36 @@ export function tooManyLocals({ assign }: QAst): Token[] {
 
   for (const entry of counts.entries()) {
     if (entry[1] > DEFAULT_MAX_LOCALS) {
+      problems.push(entry[0]);
+    }
+  }
+
+  return problems;
+}
+
+export function tooManyArguments({ assign }: QAst): Token[] {
+  const counts = new Map<Token, number>();
+
+  assign
+    .filter(
+      (token) => token.type === TokenType.IDENTIFIER && token.tag === "ARGUMENT"
+    )
+    .forEach((token) => {
+      const scoped = scope(token);
+      if (scoped) {
+        let count = counts.get(scoped);
+        if (!count) {
+          count = 0;
+        }
+        count++;
+        counts.set(scoped, count);
+      }
+    });
+
+  const problems: Token[] = [];
+
+  for (const entry of counts.entries()) {
+    if (entry[1] > DEFAULT_MAX_ARGUMENTS) {
       problems.push(entry[0]);
     }
   }
