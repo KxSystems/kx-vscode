@@ -29,7 +29,7 @@ export function sanitizeQuery(query: string): string {
 
 export function queryWrapper(): string {
   return readFileSync(
-    ext.context.asAbsolutePath(join("resources", "evaluate.q"))
+    ext.context.asAbsolutePath(join("resources", "evaluate.q")),
   ).toString();
 }
 
@@ -65,7 +65,7 @@ export function handleWSError(ab: ArrayBuffer): any {
         // eslint-disable-next-line prefer-spread
         ipc: String.fromCharCode.apply(
           String,
-          raw.subarray(9, raw.byteLength - 1) as unknown as number[]
+          raw.subarray(9, raw.byteLength - 1) as unknown as number[],
         ),
       };
     } else {
@@ -166,7 +166,7 @@ export function convertRowsToConsole(rows: string[]): string[] {
   const columnCounters = vector[0].reduce((counters: number[], _, j) => {
     const maxLength = vector.reduce(
       (max, row) => Math.max(max, row[j].length),
-      0
+      0,
     );
     counters.push(maxLength + 2);
     return counters;
@@ -210,7 +210,7 @@ export function arrayToTable(data: any[]): any {
     .join("   ");
 
   const separator = header
-    .map((key, i) => "-".repeat(columnLengths[i]))
+    .map((_, i) => "-".repeat(columnLengths[i]))
     .join("---");
   // Converter cada objeto em uma string, alinhando os valores
   const rows = data.map((obj) => {
