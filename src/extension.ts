@@ -56,6 +56,7 @@ import {
   connectInsights,
   disconnect,
   enableTLS,
+  executeQuery,
   removeConnection,
   removeInsightsConnection,
   runQuery,
@@ -299,7 +300,18 @@ export async function activate(context: ExtensionContext) {
         runQuery(ExecutionTypes.PythonQueryFile);
         ext.connection?.update();
       }
-    )
+    ),
+    commands.registerCommand("kdb.execute.entireFile", async (uri: Uri) => {
+      if (!uri) {
+        return;
+      }
+      const isPython = uri.fsPath.endsWith(".py");
+      if (uri.fsPath.endsWith(".q") || isPython) {
+        const content = await workspace.fs.readFile(uri);
+        const query = content.toString();
+        await executeQuery(query, undefined, isPython);
+      }
+    })
   );
 
   const lastResult: QueryResult | undefined = undefined;

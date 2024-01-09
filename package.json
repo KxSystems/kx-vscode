@@ -313,6 +313,10 @@
         "command": "kdb.execute.pythonFileScratchpadQuery",
         "title": "Execute Entire File in Insights Scratchpad",
         "when": "kdb.connected"
+      },
+      {
+        "command": "kdb.execute.entireFile",
+        "title": "Execute Entire File"
       }
     ],
     "keybindings": [
@@ -628,6 +632,13 @@
           "command": "kdb.execute.pythonFileScratchpadQuery",
           "group": "q",
           "when": "editorLangId == python && kdb.insightsConnected"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "kdb.execute.entireFile",
+          "group": "q",
+          "when": "(resourceExtname == .q && (kdb.connected || kdb.insightsConnected)) || (resourceExtname == .py && kdb.insightsConnected)"
         }
       ]
     }
