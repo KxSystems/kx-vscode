@@ -99,10 +99,10 @@ export async function loadVariables(ns: string): Promise<ServerObject[]> {
 export async function loadViews(): Promise<string[]> {
   const rawViews = await ext.connection?.executeQuery("views`");
   const rawViewArray = rawViews?.replace("\r\n", "").split("`");
-  const views = rawViewArray?.filter((item) => {
+  const views = rawViewArray?.filter((item: any) => {
     return item !== "s#" && item !== "" && item !== ",";
   });
-  const sorted = views?.sort((object1, object2) => {
+  const sorted = views?.sort((object1: any, object2: any) => {
     if (object1 < object2) {
       return -1;
     } else if (object1 > object2) {
