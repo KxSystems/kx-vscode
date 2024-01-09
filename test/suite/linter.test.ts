@@ -154,4 +154,66 @@ describe("linter", () => {
       assert.strictEqual(results[0].name, "DEPRECATED_DATETIME");
     });
   });
+
+  describe("TOO_MANY_ARGUMENTS", () => {
+    it("should not lint too many arguments", () => {
+      const cst = QParser.parse(
+        "{[a, b, c, d, e, f, g, h, i] a*b*c*d*e*f*g*h*i}"
+      );
+      assert.deepEqual(QParser.errors, []);
+      const ast = analyze(cst);
+      const results = lint(ast);
+      assert.strictEqual(results.length, 1);
+      assert.strictEqual(results[0].name, "TOO_MANY_ARGUMENTS");
+    });
+  });
+
+  describe("INVALID_ESCAPE", () => {
+    it("should lint invalid escape", () => {
+      const cst = QParser.parse('"\\a"');
+      assert.deepEqual(QParser.errors, []);
+      const ast = analyze(cst);
+      const results = lint(ast);
+      assert.strictEqual(results.length, 1);
+      assert.strictEqual(results[0].name, "INVALID_ESCAPE");
+    });
+  });
+
+  describe("FIXED_SEED", () => {
+    it("should lint fixed seed", () => {
+      const cst = QParser.parse("1?0Ng");
+      assert.deepEqual(QParser.errors, []);
+      const ast = analyze(cst);
+      const results = lint(ast);
+      assert.strictEqual(results.length, 1);
+      assert.strictEqual(results[0].name, "FIXED_SEED");
+    });
+
+    it("should not lint fixed seed", () => {
+      const cst = QParser.parse("-1?0Ng");
+      assert.deepEqual(QParser.errors, []);
+      const ast = analyze(cst);
+      const results = lint(ast);
+      assert.strictEqual(results.length, 0);
+    });
+  });
+
+  describe("DECLARED_AFTER_USE", () => {
+    it("should lint declared after use", () => {
+      const cst = QParser.parse("a;a:1");
+      assert.deepEqual(QParser.errors, []);
+      const ast = analyze(cst);
+      const results = lint(ast);
+      assert.strictEqual(results.length, 1);
+      assert.strictEqual(results[0].name, "DECLARED_AFTER_USE");
+    });
+
+    it("should respect right to left", () => {
+      const cst = QParser.parse("(a;a:1)");
+      assert.deepEqual(QParser.errors, []);
+      const ast = analyze(cst);
+      const results = lint(ast);
+      assert.strictEqual(results.length, 0);
+    });
+  });
 });
