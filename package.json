@@ -5,7 +5,7 @@
   "publisher": "KX",
   "version": "1.2.0",
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.75.0"
   },
   "icon": "resources/images/kx-logo-vs.png",
   "repository": {
@@ -667,7 +667,7 @@
     "@types/picomatch": "^2.3.3",
     "@types/semver": "^7.5.6",
     "@types/sinon": "^17.0.2",
-    "@types/vscode": "^1.85.0",
+    "@types/vscode": "^1.75.0",
     "@types/vscode-webview": "^1.57.4",
     "@typescript-eslint/eslint-plugin": "^6.18.1",
     "@typescript-eslint/parser": "^6.18.1",
