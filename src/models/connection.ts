@@ -122,7 +122,7 @@ export class Connection {
 
     const result = await this.waitForResult();
 
-    if (ext.resultsViewProvider.isVisible()) {
+    if (ext.resultsViewProvider.isVisible() && stringify) {
       return convertStringToArray(result);
     }
 

@@ -85,7 +85,7 @@ export async function loadVariables(ns: string): Promise<ServerObject[]> {
   if (serverObjects !== undefined) {
     const vars = serverObjects.filter((value) => {
       return views.indexOf(value.name) === -1 &&
-        value.typeNum === -7 &&
+        value.typeNum < 98 &&
         !value.isNs &&
         value.namespace === ns
         ? value
@@ -97,8 +97,7 @@ export async function loadVariables(ns: string): Promise<ServerObject[]> {
 }
 
 export async function loadViews(): Promise<string[]> {
-  const rawViews = await ext.connection?.executeQuery("views`");
-  const rawViewArray = rawViews?.replace("\r\n", "").split("`");
+  const rawViewArray = await ext.connection?.executeQuery("views`");
   const views = rawViewArray?.filter((item: any) => {
     return item !== "s#" && item !== "" && item !== ",";
   });
