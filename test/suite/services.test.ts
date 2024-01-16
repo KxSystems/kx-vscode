@@ -586,9 +586,9 @@ describe("Code flow login service tests", () => {
 
   it("Should not sign in in case of error", async () => {
     sinon.stub(env, "openExternal").value(async () => true);
-    setTimeout(() => {
-      axios.get("http://127.0.0.1:9010/redirect?error=1");
-    }, 100);
+    setTimeout(async () => {
+      await axios.get("http://127.0.0.1:9010/redirect?error=1");
+    }, 500);
     await assert.rejects(() => signIn("http://127.0.0.1"));
   });
 });
