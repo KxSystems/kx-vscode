@@ -342,7 +342,7 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
 
 export async function connectInsights(viewItem: InsightsNode): Promise<void> {
   commands.executeCommand("kdb-results.focus");
-
+  ext.context.secrets.delete(viewItem.details.alias);
   await getCurrentToken(viewItem.details.server, viewItem.details.alias);
 
   ext.outputChannel.appendLine(
