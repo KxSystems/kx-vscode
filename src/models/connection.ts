@@ -94,7 +94,7 @@ export class Connection {
   public async executeQuery(
     command: string,
     context?: string,
-    stringify?: boolean
+    stringify?: boolean,
   ): Promise<any> {
     await this.waitForConnection();
 
@@ -111,13 +111,13 @@ export class Connection {
         if (err) {
           this.result = handleQueryResults(
             err.toString(),
-            QueryResultType.Error
+            QueryResultType.Error,
           );
         }
         if (res) {
           this.handleQueryResult(res);
         }
-      }
+      },
     );
 
     const result = await this.waitForResult();
@@ -144,7 +144,7 @@ export class Connection {
     if (res.errored) {
       this.result = handleQueryResults(
         res.error + (res.backtrace ? "\n" + res.backtrace : ""),
-        QueryResultType.Error
+        QueryResultType.Error,
       );
     } else {
       this.result = res.result;
@@ -155,7 +155,9 @@ export class Connection {
     while (this.result === undefined || this.result === null) {
       await delay(500);
     }
-    return this.result;
+    const result = this.result;
+    this.result = undefined;
+    return result;
   }
 
   public async executeQueryRaw(command: string): Promise<string> {
@@ -188,17 +190,17 @@ export class Connection {
         ext.serverProvider.reload();
 
         window.showErrorMessage(
-          `Connection to server ${this.options.host}:${this.options.port} failed!  Details: ${err?.message}`
+          `Connection to server ${this.options.host}:${this.options.port} failed!  Details: ${err?.message}`,
         );
         ext.outputChannel.appendLine(
-          `Connection to server ${this.options.host}:${this.options.port} failed!  Details: ${err?.message}`
+          `Connection to server ${this.options.host}:${this.options.port} failed!  Details: ${err?.message}`,
         );
         return;
       }
 
       conn.addListener("close", () => {
         ext.outputChannel.appendLine(
-          `Connection stopped from ${this.options.host}:${this.options.port}`
+          `Connection stopped from ${this.options.host}:${this.options.port}`,
         );
         this.connected = false;
       });
@@ -224,7 +226,7 @@ export class Connection {
     this.connection?.k(globalQuery, (err, result) => {
       if (err) {
         window.showErrorMessage(
-          `Failed to retrieve kdb+ global variables: '${err.message}`
+          `Failed to retrieve kdb+ global variables: '${err.message}`,
         );
         return;
       }
@@ -276,7 +278,7 @@ export class Connection {
     this.connection?.k(reservedQuery, (err, result) => {
       if (err) {
         window.showErrorMessage(
-          `Failed to retrieve kdb+ reserved keywords: '${err.message}`
+          `Failed to retrieve kdb+ reserved keywords: '${err.message}`,
         );
         return;
       }
@@ -288,7 +290,7 @@ export class Connection {
   private onConnect(
     err: Error | undefined,
     conn: nodeq.Connection,
-    callback: nodeq.AsyncValueCallback<Connection>
+    callback: nodeq.AsyncValueCallback<Connection>,
   ): void {
     this.connected = true;
     this.connection = conn;
