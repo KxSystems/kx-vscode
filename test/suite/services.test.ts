@@ -37,6 +37,7 @@ import {
   QueryHistoryProvider,
   QueryHistoryTreeItem,
 } from "../../src/services/queryHistoryProvider";
+import * as http from "http";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -579,8 +580,16 @@ describe("Code flow login service tests", () => {
   });
 
   it("Should not sign in if link is not opened", async () => {
-    sinon.stub(env, "openExternal").value(() => false);
-    await assert.rejects(() => signIn("http://localhost"));
+    sinon.stub(env, "openExternal").value(async () => false);
+    await assert.rejects(() => signIn("http://127.0.0.1"));
+  });
+
+  it("Should not sign in in case of error", async () => {
+    sinon.stub(env, "openExternal").value(async () => true);
+    setTimeout(() => {
+      axios.get("http://127.0.0.1:9010/redirect?error=1");
+    }, 100);
+    await assert.rejects(() => signIn("http://127.0.0.1"));
   });
 });
 

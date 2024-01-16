@@ -42,8 +42,15 @@ const commonRequestParams = {
   redirect_uri: ext.insightsAuthUrls.callbackURL,
 };
 
+let flow: { server: http.Server; codePromise: Promise<string> } | undefined;
+
 export async function signIn(insightsUrl: string) {
-  const { server, codePromise } = createServer();
+  if (flow) {
+    flow.server.close();
+  }
+  flow = createServer();
+
+  const { server, codePromise } = flow;
   const sockets: Socket[] = [];
 
   server.on("connection", (socket) => {
@@ -89,7 +96,10 @@ export async function signIn(insightsUrl: string) {
 
     throw new Error("Error opening url");
   } finally {
-    setImmediate(() => server.close());
+    setImmediate(() => {
+      server.close();
+      flow = undefined;
+    });
   }
 }
 
@@ -174,8 +184,8 @@ async function tokenRequest(
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    timeout: 5000,
-    signal: AbortSignal.timeout(5000),
+    timeout: closeTimeout,
+    signal: AbortSignal.timeout(closeTimeout),
   };
 
   const requestUrl = new url.URL(ext.insightsAuthUrls.tokenURL, insightsUrl);
