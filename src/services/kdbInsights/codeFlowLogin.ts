@@ -15,11 +15,12 @@ import axios from "axios";
 import * as crypto from "crypto";
 import * as fs from "fs-extra";
 import * as http from "http";
-import open from "open";
 import { join } from "path";
 import * as querystring from "querystring";
 import * as url from "url";
 import { ext } from "../../extensionVariables";
+import { Uri, env } from "vscode";
+import { Socket } from "net";
 
 interface IDeferred<T> {
   resolve: (result: T | Promise<T>) => void;
@@ -43,6 +44,23 @@ const commonRequestParams = {
 
 export async function signIn(insightsUrl: string) {
   const { server, codePromise } = createServer();
+  const sockets: Socket[] = [];
+
+  server.on("connection", (socket) => {
+    sockets.push(socket);
+    socket.on("close", () => {
+      const index = sockets.indexOf(socket);
+      if (index > -1) {
+        sockets.splice(index, 1);
+      }
+    });
+  });
+
+  server.on("close", () => {
+    for (const socket of sockets) {
+      socket.destroy();
+    }
+  });
 
   try {
     await startServer(server);
@@ -60,15 +78,18 @@ export async function signIn(insightsUrl: string) {
 
     authorizationUrl.search = queryString(authParams);
 
-    await open(authorizationUrl.toString());
+    const opened = await env.openExternal(
+      Uri.parse(authorizationUrl.toString())
+    );
 
-    const code = await codePromise;
+    if (opened) {
+      const code = await codePromise;
+      return await getToken(insightsUrl, code);
+    }
 
-    return await getToken(insightsUrl, code);
-  } catch (error) {
-    throw error;
+    throw new Error("Error opening url");
   } finally {
-    setTimeout(() => server.close(), closeTimeout);
+    setImmediate(() => server.close());
   }
 }
 
@@ -150,7 +171,11 @@ async function tokenRequest(
 ): Promise<IToken | undefined> {
   const queryParams = queryString(params);
   const headers = {
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    timeout: 5000,
+    signal: AbortSignal.timeout(5000),
   };
 
   const requestUrl = new url.URL(ext.insightsAuthUrls.tokenURL, insightsUrl);
@@ -278,7 +303,14 @@ function startServer(server: http.Server): Promise<number> {
   server.listen(9010, ext.localhost);
 
   portPromise.then(cancelPortTimer, cancelPortTimer);
-  return portPromise;
+
+  return new Promise((resolve) => {
+    env
+      .asExternalUri(
+        Uri.parse(`${ext.networkProtocols.http}${ext.localhost}:9010`)
+      )
+      .then(() => resolve(portPromise));
+  });
 }
 
 function sendFile(

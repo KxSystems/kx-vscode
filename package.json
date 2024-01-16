@@ -234,6 +234,10 @@
         "title": "Remove connection"
       },
       {
+        "command": "kdb.insightsClear",
+        "title": "Clear authentication"
+      },
+      {
         "command": "kdb.disconnect",
         "title": "Disconnect"
       },
@@ -542,6 +546,11 @@
         },
         {
           "command": "kdb.insightsRemove",
+          "when": "view == kdb-servers && viewItem in kdb.insightsNodes",
+          "group": "connection"
+        },
+        {
+          "command": "kdb.insightsClear",
           "when": "view == kdb-servers && viewItem in kdb.insightsNodes",
           "group": "connection"
         },

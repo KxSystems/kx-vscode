@@ -180,6 +180,12 @@ export async function activate(context: ExtensionContext) {
         await removeInsightsConnection(viewItem);
       }
     ),
+    commands.registerCommand(
+      "kdb.insightsClear",
+      async (viewItem: InsightsNode) => {
+        ext.context.secrets.delete(viewItem.label);
+      }
+    ),
     commands.registerCommand("kdb.disconnect", async () => {
       await disconnect();
     }),
