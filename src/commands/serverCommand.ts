@@ -341,16 +341,8 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
 }
 
 export async function connectInsights(viewItem: InsightsNode): Promise<void> {
-  if (env.remoteName === "ssh-remote") {
-    window.showErrorMessage(
-      "Connecting to a kdb Insights Enterprise server with a remote connection is not supported.",
-      ""
-    );
-    return;
-  }
-
   commands.executeCommand("kdb-results.focus");
-
+  ext.context.secrets.delete(viewItem.details.alias);
   await getCurrentToken(viewItem.details.server, viewItem.details.alias);
 
   ext.outputChannel.appendLine(

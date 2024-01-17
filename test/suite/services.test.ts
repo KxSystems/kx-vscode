@@ -14,7 +14,7 @@
 import axios from "axios";
 import assert from "node:assert";
 import sinon from "sinon";
-import { TreeItemCollapsibleState } from "vscode";
+import { TreeItemCollapsibleState, env } from "vscode";
 import { ext } from "../../src/extensionVariables";
 import { Insights } from "../../src/models/insights";
 import { QueryHistory } from "../../src/models/queryHistory";
@@ -37,6 +37,7 @@ import {
   QueryHistoryProvider,
   QueryHistoryTreeItem,
 } from "../../src/services/queryHistoryProvider";
+import * as http from "http";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -576,6 +577,19 @@ describe("Code flow login service tests", () => {
       undefined,
       "Should return undefined when server alias is empty."
     );
+  });
+
+  it("Should not sign in if link is not opened", async () => {
+    sinon.stub(env, "openExternal").value(async () => false);
+    await assert.rejects(() => signIn("http://127.0.0.1"));
+  });
+
+  it("Should not sign in in case of error", async () => {
+    sinon.stub(env, "openExternal").value(async () => true);
+    setTimeout(async () => {
+      await axios.get("http://127.0.0.1:9010/redirect?error=1");
+    }, 500);
+    await assert.rejects(() => signIn("http://127.0.0.1"));
   });
 });
 
