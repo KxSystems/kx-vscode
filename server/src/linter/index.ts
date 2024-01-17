@@ -16,8 +16,12 @@ import { RuleSeverity, Rules } from "./rules";
 
 const enabled = [
   "ASSIGN_RESERVED_WORD",
+  "DECLARED_AFTER_USE",
   "DEPRECATED_DATETIME",
+  "FIXED_SEED",
   "INVALID_ASSIGN",
+  "INVALID_ESCAPE",
+  "TOO_MANY_ARGUMENTS",
   "TOO_MANY_CONSTANTS",
   "TOO_MANY_GLOBALS",
   "TOO_MANY_LOCALS",
