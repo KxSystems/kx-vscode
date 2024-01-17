@@ -40,6 +40,7 @@ import {
   showQuickPick,
 } from "../../src/utils/userInteraction";
 import { validateUtils } from "../../src/utils/validateUtils";
+import { DCDS } from "../../src/ipc/c";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;
@@ -91,7 +92,7 @@ describe("Utils", () => {
       beforeEach(() => {
         getConfigurationStub = sinon.stub(
           vscode.workspace,
-          "getConfiguration"
+          "getConfiguration",
         ) as sinon.SinonStub;
       });
 
@@ -154,12 +155,12 @@ describe("Utils", () => {
     it("checkIfTimeParamIsCorrect", () => {
       const result = dataSourceUtils.checkIfTimeParamIsCorrect(
         "2021-01-01",
-        "2021-01-02"
+        "2021-01-02",
       );
       assert.strictEqual(result, true);
       const result2 = dataSourceUtils.checkIfTimeParamIsCorrect(
         "2021-01-02",
-        "2021-01-01"
+        "2021-01-01",
       );
       assert.strictEqual(result2, false);
     });
@@ -398,7 +399,7 @@ describe("Utils", () => {
           auth: false,
           tls: false,
         },
-        TreeItemCollapsibleState.None
+        TreeItemCollapsibleState.None,
       );
 
       const insightsNode = new InsightsNode(
@@ -409,7 +410,7 @@ describe("Utils", () => {
           alias: "insightsserveralias",
           auth: true,
         },
-        TreeItemCollapsibleState.None
+        TreeItemCollapsibleState.None,
       );
 
       beforeEach(() => {
@@ -435,7 +436,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.KDB
+          ServerType.KDB,
         );
 
         getConfigurationStub.restore();
@@ -458,7 +459,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.KDB
+          ServerType.KDB,
         );
         getConfigurationStub.restore();
       });
@@ -475,7 +476,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.INSIGHTS
+          ServerType.INSIGHTS,
         );
       });
 
@@ -491,7 +492,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.KDB
+          ServerType.KDB,
         );
       });
 
@@ -507,7 +508,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.INSIGHTS
+          ServerType.INSIGHTS,
         );
       });
 
@@ -523,7 +524,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.undefined
+          ServerType.undefined,
         );
       });
     });
@@ -539,7 +540,7 @@ describe("Utils", () => {
         query,
         connectionName,
         connectionType,
-        true
+        true,
       );
       assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
     });
@@ -564,7 +565,7 @@ describe("Utils", () => {
         "testPanel",
         "Test Panel",
         vscode.ViewColumn.One,
-        {}
+        {},
       );
       const webview = panel.webview;
       const extensionUri = vscode.Uri.parse("file:///path/to/extension");
@@ -578,7 +579,7 @@ describe("Utils", () => {
         "testPanel",
         "Test Panel",
         vscode.ViewColumn.One,
-        {}
+        {},
       );
       const webview = panel.webview;
       const extensionUri = vscode.Uri.parse("file:///path/to/extension");
@@ -700,25 +701,35 @@ describe("Utils", () => {
     });
 
     describe("getValueFromArray", () => {
+      let inputSample: DCDS = undefined;
+      beforeEach(() => {
+        inputSample = {
+          class: "203",
+          columns: ["Value"],
+          meta: { Value: 7 },
+          rows: [],
+        };
+      });
+
       it("should return the value of the 'Value' property if the input is an array with a single object with a 'Value' property", () => {
-        const input = [{ Value: "hello" }];
-        const expectedOutput = "hello";
-        const actualOutput = queryUtils.getValueFromArray(input);
-        assert.strictEqual(actualOutput, expectedOutput);
+        inputSample.rows = [{ Value: "hello" }];
+        const expectedOutput = [{ Value: "hello" }];
+        const actualOutput = queryUtils.getValueFromArray(inputSample);
+        console.log(JSON.stringify(actualOutput.rows));
+        assert.deepEqual(actualOutput.rows, expectedOutput);
       });
 
       it("should return the input array if it is not an array with a single object with a 'Value' property", () => {
-        const input = ["hello", "world"];
-        const expectedOutput = ["hello", "world"];
-        const actualOutput = queryUtils.getValueFromArray(input);
-        assert.deepStrictEqual(actualOutput, expectedOutput);
+        inputSample.rows = [{ Value: "hello" }, { Value: "world" }];
+        const expectedOutput = [{ Value: "hello" }, { Value: "world" }];
+        const actualOutput = queryUtils.getValueFromArray(inputSample);
+        assert.deepStrictEqual(actualOutput.rows, expectedOutput);
       });
 
       it("should return the input array if it is an empty array", () => {
-        const input: any[] = [];
         const expectedOutput: any[] = [];
-        const actualOutput = queryUtils.getValueFromArray(input);
-        assert.deepStrictEqual(actualOutput, expectedOutput);
+        const actualOutput = queryUtils.getValueFromArray(inputSample);
+        assert.deepStrictEqual(actualOutput.rows, expectedOutput);
       });
     });
 
@@ -731,15 +742,17 @@ describe("Utils", () => {
 
       it("should return the result of getValueFromArray if the results are an array with a single object with a 'Value' property", () => {
         const ab = new ArrayBuffer(128);
-        const expectedOutput = "10";
-        const uriTest: vscode.Uri = vscode.Uri.parse("test");
-        ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
-        const qtableStub = sinon.stub(QTable.default, "toLegacy").returns({
+        const expectedOutput = {
           class: "203",
           columns: ["Value"],
           meta: { Value: 7 },
           rows: [{ Value: "10" }],
-        });
+        };
+        const uriTest: vscode.Uri = vscode.Uri.parse("test");
+        ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
+        const qtableStub = sinon
+          .stub(QTable.default, "toLegacy")
+          .returns(expectedOutput);
         const isVisibleStub = sinon
           .stub(ext.resultsViewProvider, "isVisible")
           .returns(true);
@@ -747,49 +760,41 @@ describe("Utils", () => {
         const result = queryUtils.handleWSResults(ab);
         sinon.assert.notCalled(convertRowsSpy);
         assert.strictEqual(result, expectedOutput);
+        sinon.restore();
       });
     });
 
     describe("handleScratchpadTableRes", () => {
-      it("should return the input if it is not an array", () => {
-        const input = "not an array";
-        const result = queryUtils.handleScratchpadTableRes(input);
-        assert.strictEqual(result, input);
-      });
-
-      it("should convert object values with 'i' property to string", () => {
-        const input = [
-          { key1: { i: 123 }, key2: "value2" },
-          { key3: { i: 456 }, key4: "value4" },
-        ];
-        const expected = [
-          { key1: "[object Object]", key2: "value2" },
-          { key3: "[object Object]", key4: "value4" },
-        ];
-        const result = queryUtils.handleScratchpadTableRes(input);
-        assert.deepStrictEqual(result, expected);
+      let inputSample: DCDS = undefined;
+      beforeEach(() => {
+        inputSample = {
+          class: "203",
+          columns: ["Value"],
+          meta: { Value: 7 },
+          rows: [],
+        };
       });
 
       it("should convert bigint values to number", () => {
-        const input = [
+        inputSample.rows = [
           { key1: BigInt(123), key2: "value2" },
           { key3: BigInt(456), key4: "value4" },
         ];
         const expected = [
-          { key1: 123, key2: "value2" },
-          { key3: 456, key4: "value4" },
+          { Index: 1, key1: 123, key2: "value2" },
+          { Index: 2, key3: 456, key4: "value4" },
         ];
-        const result = queryUtils.handleScratchpadTableRes(input);
-        assert.deepStrictEqual(result, expected);
+        const result = queryUtils.handleScratchpadTableRes(inputSample);
+        assert.deepStrictEqual(result.rows, expected);
       });
 
       it("should not modify other values", () => {
-        const input = [
+        inputSample.rows = [
           { key1: "value1", key2: "value2" },
           { key3: "value3", key4: "value4" },
         ];
-        const result = queryUtils.handleScratchpadTableRes(input);
-        assert.deepStrictEqual(result, input);
+        const result = queryUtils.handleScratchpadTableRes(inputSample);
+        assert.deepStrictEqual(result.rows, inputSample.rows);
       });
     });
 
@@ -896,12 +901,12 @@ describe("Utils", () => {
       getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
       showInformationMessageStub = sinon.stub(
         vscode.window,
-        "showInformationMessage"
+        "showInformationMessage",
       ) as sinon.SinonStub<
         [
           message: string,
           options: vscode.MessageOptions,
-          ...items: vscode.MessageItem[]
+          ...items: vscode.MessageItem[],
         ],
         Thenable<vscode.MessageItem>
       >;
