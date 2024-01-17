@@ -23,6 +23,7 @@ import { ext } from "../extensionVariables";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
+import { InsightsNode } from "./kdbTreeProvider";
 
 export class KdbResultsViewProvider implements WebviewViewProvider {
   public static readonly viewType = "kdb-results";
@@ -60,7 +61,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       this._view.webview.postMessage(queryResults);
       this._view.webview.html = this._getWebviewContent(
         queryResults,
-        dataSourceType
+        dataSourceType,
       );
     }
   }
@@ -101,10 +102,18 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     utils.exportToCsv(workspaceUri);
   }
 
-  convertToGrid(queryResult: any[]): string {
+  convertToGrid(results: any): string {
+    const isInsights = ext.connectionNode instanceof InsightsNode;
+    const queryResult = isInsights ? results.rows : results;
+
     const columnDefs = Object.keys(queryResult[0]).map((key: string) => {
       const sanitizedKey = this.sanitizeString(key);
-      return { field: sanitizedKey, headerName: sanitizedKey };
+      let type = "";
+      if (isInsights && results.meta.hasOwnProperty(key)) {
+        type = results.meta[key];
+      }
+      const headerTooltip = type;
+      return { field: sanitizedKey, headerName: sanitizedKey, headerTooltip };
     });
     const rowData = queryResult.map((row: any) => {
       for (const key in row) {
@@ -136,6 +145,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       ensureDomOrder: true,
       suppressContextMenu: true,
       suppressDragLeaveHidesColumns: true,
+      tooltipShowDelay: 200,
     });
   }
 
@@ -189,11 +199,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
           queryResult !== ""
             ? `<p>${queryResult}</p>`
             : "<p>No results to show</p>";
-      } else if (
-        typeof queryResult === "object" &&
-        queryResult !== null &&
-        queryResult instanceof Array
-      ) {
+      } else if (queryResult) {
         isGrid = true;
         gridOptionsString = this.convertToGrid(queryResult);
       }
@@ -215,12 +221,12 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         <link rel="stylesheet" href="${this._getLibUri("resultsPanel.css")}" />
         <link rel="stylesheet" href="${this._getLibUri("ag-grid.min.css")}" />
         <link rel="stylesheet" href="${this._getLibUri(
-          "ag-theme-alpine.min.css"
+          "ag-theme-alpine.min.css",
         )}" />
         <title>Q Results</title>
         <script nonce="${nonce}" src="${this._getLibUri(
-        "ag-grid-community.min.js"
-      )}"></script>
+          "ag-grid-community.min.js",
+        )}"></script>
       </head>
       <body>      
         <div id="results" class="results-view-container">
