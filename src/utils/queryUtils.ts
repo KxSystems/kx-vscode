@@ -90,7 +90,7 @@ export function handleWSResults(ab: ArrayBuffer): any {
       des = des.values[1];
     }
     res = Parse.reshape(des, ab).toLegacy();
-    if (res.rows.length === 0) {
+    if (res.rows.length === 0 && res.columns.length === 0) {
       return "No results found.";
     }
     if (ext.resultsViewProvider.isVisible() || ext.isDatasourceExecution) {
@@ -103,14 +103,19 @@ export function handleWSResults(ab: ArrayBuffer): any {
   }
 }
 
-export function handleScratchpadTableRes(results: DCDS): any {
+export function handleScratchpadTableRes(results: DCDS | string): any {
+  if (typeof results === "string" || results?.rows === undefined) {
+    return results;
+  }
   let scratchpadResponse = results.rows;
   if (!Array.isArray(scratchpadResponse)) {
     if (typeof scratchpadResponse === "string") {
       scratchpadResponse = convertStringToArray(scratchpadResponse);
     }
   }
-  scratchpadResponse = addIndexKey(scratchpadResponse);
+  if (scratchpadResponse?.length !== 0) {
+    scratchpadResponse = addIndexKey(scratchpadResponse);
+  }
   const result = [];
   for (const row of scratchpadResponse) {
     const newObj = {};

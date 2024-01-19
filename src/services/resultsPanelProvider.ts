@@ -102,19 +102,44 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     utils.exportToCsv(workspaceUri);
   }
 
+  generateCoumnDefs(results: any, isInsights: boolean): any {
+    if (isInsights) {
+      if (results.rows.length === 0) {
+        return Object.keys(results.meta).map((key: string) => {
+          const sanitizedKey = this.sanitizeString(key);
+          const type = results.meta[key];
+          const headerTooltip = type;
+          return {
+            field: sanitizedKey,
+            headerName: sanitizedKey,
+            headerTooltip,
+          };
+        });
+      } else {
+        return Object.keys(results.rows[0]).map((key: string) => {
+          const sanitizedKey = this.sanitizeString(key);
+          const type = results.meta[key];
+          const headerTooltip = type;
+          return {
+            field: sanitizedKey,
+            headerName: sanitizedKey,
+            headerTooltip,
+          };
+        });
+      }
+    } else {
+      return Object.keys(results[0]).map((key: string) => {
+        const sanitizedKey = this.sanitizeString(key);
+        return { field: sanitizedKey, headerName: sanitizedKey };
+      });
+    }
+  }
+
   convertToGrid(results: any): string {
     const isInsights = ext.connectionNode instanceof InsightsNode;
     const queryResult = isInsights ? results.rows : results;
 
-    const columnDefs = Object.keys(queryResult[0]).map((key: string) => {
-      const sanitizedKey = this.sanitizeString(key);
-      let type = "";
-      if (isInsights && results.meta.hasOwnProperty(key)) {
-        type = results.meta[key];
-      }
-      const headerTooltip = type;
-      return { field: sanitizedKey, headerName: sanitizedKey, headerTooltip };
-    });
+    const columnDefs = this.generateCoumnDefs(results, isInsights);
     const rowData = queryResult.map((row: any) => {
       for (const key in row) {
         if (Object.prototype.hasOwnProperty.call(row, key)) {
@@ -126,7 +151,9 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       }
       return row;
     });
-    ext.resultPanelCSV = this.convertToCsv(rowData).join("\n");
+    if (rowData.length > 0) {
+      ext.resultPanelCSV = this.convertToCsv(rowData).join("\n");
+    }
     return JSON.stringify({
       defaultColDef: {
         sortable: true,
