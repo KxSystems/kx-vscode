@@ -67,7 +67,7 @@ export class Connection {
 
   public async execute(command: string): Promise<string | Error> {
     let result;
-
+    let error;
     // try 5 times, then fail
     let retryCount = 0;
     while (this.connection === undefined) {
@@ -79,13 +79,21 @@ export class Connection {
     }
 
     this.connection.k(command, function (err: Error, res: string) {
-      if (err) throw err;
+      if (err) {
+        error = err;
+        result = "";
+        return;
+      }
       result = res;
     });
 
     // wait for result (lack of await using callbacks)
     while (result === undefined || result === null) {
       await delay(500);
+    }
+
+    if (error) {
+      throw error;
     }
 
     return result;
@@ -163,6 +171,7 @@ export class Connection {
   public async executeQueryRaw(command: string): Promise<string> {
     let result;
     let retryCount = 0;
+    let error;
     while (this.connection === undefined) {
       if (retryCount > ext.maxRetryCount) {
         return "timeout";
@@ -171,12 +180,20 @@ export class Connection {
       retryCount++;
     }
     this.connection.k(command, (err: Error, res: string) => {
-      if (err) throw err;
+      if (err) {
+        error = err;
+        result = "";
+        return;
+      }
       result = res;
     });
 
     while (result === undefined || result === null) {
       await delay(500);
+    }
+
+    if (error) {
+      throw error;
     }
 
     return result;
