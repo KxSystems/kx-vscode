@@ -133,8 +133,12 @@ export async function activate(context: ExtensionContext) {
 
   ext.outputChannel.appendLine("kdb extension is now active!");
 
-  // check for installed q runtime
-  await checkLocalInstall();
+  try {
+    // check for installed q runtime
+    await checkLocalInstall();
+  } catch (err) {
+    window.showErrorMessage(`${err}`);
+  }
 
   context.subscriptions.push(
     window.registerWebviewViewProvider(
