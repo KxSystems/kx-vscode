@@ -45,6 +45,9 @@ jobs:
   app-sec:
     needs: build
     uses: ./.github/workflows/app-sec-template.yml
+    with:
+      github_ref: ${{ github.ref_name }}
+    secrets: inherit
 
   release:
     runs-on: ubuntu-latest

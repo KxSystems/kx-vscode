@@ -55,3 +55,6 @@ jobs:
   app-sec:
     needs: test
     uses: ./.github/workflows/app-sec-template.yml
+    with:
+      github_ref: ${{ github.ref_name }}
+    secrets: inherit
