@@ -1,5 +1,15 @@
 name: Application Security
 
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+  push:
+    branches:
+      - dev
+      - main
+
 jobs:
   app-sec:
     runs-on: ubuntu-latest
