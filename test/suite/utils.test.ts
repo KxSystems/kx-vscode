@@ -607,89 +607,6 @@ describe("Utils", () => {
     });
   });
 
-  // describe("Output", () => {
-  //   let windowCreateOutputChannelStub: sinon.SinonStub;
-  //   let outputChannelAppendStub: sinon.SinonStub;
-  //   let outputChannelAppendLineStub: sinon.SinonStub;
-  //   let outputChannelShowStub: sinon.SinonStub;
-  //   let outputChannelHideStub: sinon.SinonStub;
-  //   let outputChannelDisposeStub: sinon.SinonStub;
-  //   Output._outputChannel = {
-  //     name: "",
-  //     append: sinon.stub(),
-  //     appendLine: sinon.stub(),
-  //     show: sinon.stub(),
-  //     hide: sinon.stub(),
-  //     dispose: sinon.stub(),
-  //   } as unknown as vscode.OutputChannel;
-
-  //   beforeEach(() => {
-  //     windowCreateOutputChannelStub = sinon.stub(
-  //       vscode.window,
-  //       "createOutputChannel"
-  //     );
-  //     outputChannelAppendStub = sinon.stub(Output._outputChannel, "append");
-  //     outputChannelAppendLineStub = sinon.stub(
-  //       Output._outputChannel,
-  //       "appendLine"
-  //     );
-  //     outputChannelShowStub = sinon.stub(Output._outputChannel, "show");
-  //     outputChannelHideStub = sinon.stub(Output._outputChannel, "hide");
-  //     outputChannelDisposeStub = sinon.stub(Output._outputChannel, "dispose");
-  //   });
-
-  //   afterEach(() => {
-  //     windowCreateOutputChannelStub.restore();
-  //     outputChannelAppendStub.restore();
-  //     outputChannelAppendLineStub.restore();
-  //     outputChannelShowStub.restore();
-  //     outputChannelHideStub.restore();
-  //     outputChannelDisposeStub.restore();
-  //   });
-
-  //   it("should create an output channel with the correct name", () => {
-  //     Output._outputChannel = undefined as unknown as vscode.OutputChannel;
-  //     windowCreateOutputChannelStub.returns(Output._outputChannel);
-  //     Output._outputChannel =
-  //       Output._outputChannel ||
-  //       vscode.window.createOutputChannel("kdb-telemetry");
-  //     assert.ok(windowCreateOutputChannelStub.calledOnceWith("kdb-telemetry"));
-  //   });
-
-  //   it("should append a message to the output channel", () => {
-  //     const label = "label";
-  //     const message = "message";
-  //     Output.output(label, message);
-  //     assert.ok(
-  //       outputChannelAppendStub.calledOnceWith(`[${label}] ${message}`)
-  //     );
-  //   });
-
-  //   it("should append a message with a newline to the output channel", () => {
-  //     const label = "label";
-  //     const message = "message";
-  //     Output.outputLine(label, message);
-  //     assert.ok(
-  //       outputChannelAppendLineStub.calledOnceWith(`[${label}] ${message}`)
-  //     );
-  //   });
-
-  //   it("should show the output channel", () => {
-  //     Output.show();
-  //     assert.ok(outputChannelShowStub.calledOnce);
-  //   });
-
-  //   it("should hide the output channel", () => {
-  //     Output.hide();
-  //     assert.ok(outputChannelHideStub.calledOnce);
-  //   });
-
-  //   it("should dispose the output channel", () => {
-  //     Output.dispose();
-  //     assert.ok(outputChannelDisposeStub.calledOnce);
-  //   });
-  // });
-
   describe("queryUtils", () => {
     it("sanitizeQuery", () => {
       const query1 = "`select from t";
@@ -795,6 +712,59 @@ describe("Utils", () => {
         ];
         const result = queryUtils.handleScratchpadTableRes(inputSample);
         assert.deepStrictEqual(result.rows, inputSample.rows);
+      });
+    });
+
+    describe("addIndexKey", () => {
+      it("should add index key to array of objects", () => {
+        const input = [
+          { prop1: "value1", prop2: "value2" },
+          { prop1: "value3", prop2: "value4" },
+        ];
+
+        const expectedOutput = [
+          { Index: 1, prop1: "value1", prop2: "value2" },
+          { Index: 2, prop1: "value3", prop2: "value4" },
+        ];
+
+        const output = queryUtils.addIndexKey(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("should add index key to single object", () => {
+        const input = { prop1: "value1", prop2: "value2" };
+
+        const expectedOutput = [{ Index: 1, prop1: "value1", prop2: "value2" }];
+
+        const output = queryUtils.addIndexKey(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("should return empty array when input is empty array", () => {
+        const input = [];
+
+        const expectedOutput = [];
+
+        const output = queryUtils.addIndexKey(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("should not add index key when it already exists", () => {
+        const input = [{ Index: 5, prop1: "value1", prop2: "value2" }];
+
+        const expectedOutput = [{ Index: 5, prop1: "value1", prop2: "value2" }];
+
+        const output = queryUtils.addIndexKey(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("should add index key to non-array input", () => {
+        const input = "not an array";
+
+        const expectedOutput = [{ Index: 1, Value: "not an array" }];
+
+        const output = queryUtils.addIndexKey(input);
+        assert.deepStrictEqual(output, expectedOutput);
       });
     });
 

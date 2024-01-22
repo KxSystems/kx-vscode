@@ -144,11 +144,9 @@ export function handleScratchpadTableRes(results: DCDS | string): any {
 export function addIndexKey(input: any) {
   let arr: any[];
 
-  // Verifica se o input é uma array
   if (Array.isArray(input)) {
     arr = input;
   } else {
-    // Se não for uma array, converte para uma array
     arr = [input];
   }
 
@@ -160,8 +158,12 @@ export function addIndexKey(input: any) {
     arr = arr.map((obj, index) => {
       const newObj = { Index: index + 1 };
 
-      for (const prop in obj) {
-        newObj[prop] = obj[prop];
+      if (typeof obj === "string") {
+        newObj["Value"] = obj;
+      } else {
+        for (const prop in obj) {
+          newObj[prop] = obj[prop];
+        }
       }
 
       return newObj;
