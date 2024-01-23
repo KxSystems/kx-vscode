@@ -128,6 +128,12 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         });
       }
     } else {
+      if (typeof results[0] === "string") {
+        return results.map((key: string) => {
+          const sanitizedKey = this.sanitizeString(key);
+          return { field: sanitizedKey, headerName: sanitizedKey };
+        });
+      }
       return Object.keys(results[0]).map((key: string) => {
         const sanitizedKey = this.sanitizeString(key);
         return { field: sanitizedKey, headerName: sanitizedKey };
@@ -140,17 +146,22 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     const queryResult = isInsights ? results.rows : results;
 
     const columnDefs = this.generateCoumnDefs(results, isInsights);
-    const rowData = queryResult.map((row: any) => {
-      for (const key in row) {
-        if (Object.prototype.hasOwnProperty.call(row, key)) {
-          row[key] =
-            row[key] !== undefined && row[key] !== null
-              ? this.sanitizeString(row[key])
-              : "";
+    let rowData = [];
+    if (!isInsights && typeof results[0] === "string") {
+      rowData = [];
+    } else {
+      rowData = queryResult.map((row: any) => {
+        for (const key in row) {
+          if (Object.prototype.hasOwnProperty.call(row, key)) {
+            row[key] =
+              row[key] !== undefined && row[key] !== null
+                ? this.sanitizeString(row[key])
+                : "";
+          }
         }
-      }
-      return row;
-    });
+        return row;
+      });
+    }
     if (rowData.length > 0) {
       ext.resultPanelCSV = this.convertToCsv(rowData).join("\n");
     }
@@ -224,7 +235,9 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       if (typeof queryResult === "string" || typeof queryResult === "number") {
         result =
           queryResult !== ""
-            ? `<p>${queryResult}</p>`
+            ? `<p class="results-txt">${queryResult
+                .toString()
+                .replace(/\n/g, "<br/>")}</p>`
             : "<p>No results to show</p>";
       } else if (queryResult) {
         isGrid = true;
