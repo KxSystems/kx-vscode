@@ -320,9 +320,9 @@ describe("WebPanels", () => {
         stub.restore();
       });
 
-      it("returns no results", () => {
+      it("returns string results", () => {
         const input = "Test";
-        const expectedOutput = `<p>Test</p>`;
+        const expectedOutput = `<p class="results-txt">Test</p>`;
         const actualOutput = resultsPanel["_getWebviewContent"](input);
         assert.strictEqual(typeof actualOutput, "string");
         assert.ok(actualOutput.includes(expectedOutput));
