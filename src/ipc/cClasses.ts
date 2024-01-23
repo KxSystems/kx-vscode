@@ -16,7 +16,7 @@ import Tools from "./tools";
 
 function stringifyTemporal(
   temporal: DDateClass | DDateTimeClass | DMonthClass,
-  stringify: () => string
+  stringify: () => string,
 ): string {
   const i = temporal.i;
 
@@ -48,7 +48,9 @@ export class DTimestampClass {
   }
 
   toString(): string {
-    return this.toDate().formatNano("YYYY-MM-DD HH:mm:ss.SSSSSSSSS");
+    return this.toDate()
+      .formatNano("YYYY-MM-DD HH:mm:ss.SSSSSSSSS")
+      .replace(" ", "D");
   }
 }
 export class DMonthClass {
@@ -84,7 +86,7 @@ export class DDateClass {
 
   toString(): string {
     return stringifyTemporal(this, () =>
-      moment(new Date(this.i)).utcOffset(0).format("YYYY-MM-DD")
+      moment(new Date(this.i)).utcOffset(0).format("YYYY-MM-DD"),
     );
   }
 }
@@ -103,7 +105,7 @@ export class DDateTimeClass {
 
   toString(): string {
     return stringifyTemporal(this, () =>
-      this.toDate().format("YYYY-MM-DD HH:mm:ss.SSS")
+      this.toDate().format("YYYY-MM-DD HH:mm:ss.SSS").replace(" ", "T"),
     );
   }
 }

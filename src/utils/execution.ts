@@ -42,7 +42,7 @@ export function runQFileTerminal(filename?: string): void {
 
 export function handleQueryResults(
   results: any,
-  type: QueryResultType
+  type: QueryResultType,
 ): string {
   let handledResult: string;
   switch (type) {
@@ -177,7 +177,7 @@ function processLine(
   line: string,
   index: number,
   fieldLengths: number[],
-  fieldNames: string[]
+  fieldNames: string[],
 ): object {
   let start = 0;
   const obj: { [key: string]: any } = { Index: index + 1 };
@@ -207,8 +207,13 @@ export function convertStringToArray(str: string): any[] {
     return lines.flatMap((line, index) =>
       fieldLengths.length > 0
         ? processLine(line, index, fieldLengths, fieldNames)
-        : []
+        : [],
     );
+  }
+
+  if (lines.length === 2 && lines[1].startsWith("---")) {
+    lines.splice(1, 1);
+    return lines[0].split(" ").filter((part) => part !== "");
   }
 
   return lines
@@ -219,6 +224,6 @@ export function convertStringToArray(str: string): any[] {
         : processLineWithoutSeparator(line, index);
     })
     .filter(
-      (obj) => !("Value" in obj && (obj.Value as string).startsWith("-"))
+      (obj) => !("Value" in obj && (obj.Value as string).startsWith("-")),
     );
 }

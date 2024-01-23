@@ -23,6 +23,7 @@ export class Connection {
   private options: nodeq.ConnectionParameters;
   private connection?: nodeq.Connection;
   public connected: boolean;
+  private isError: boolean = false;
   private result?: string;
 
   constructor(connectionString: string, creds?: string[], tls?: boolean) {
@@ -117,6 +118,7 @@ export class Connection {
       !!stringify,
       (err: Error, res: QueryResult) => {
         if (err) {
+          this.isError = true;
           this.result = handleQueryResults(
             err.toString(),
             QueryResultType.Error,
@@ -131,6 +133,10 @@ export class Connection {
     const result = await this.waitForResult();
 
     if (ext.resultsViewProvider.isVisible() && stringify) {
+      if (this.isError) {
+        this.isError = false;
+        return result;
+      }
       return convertStringToArray(result);
     }
 
@@ -150,6 +156,7 @@ export class Connection {
 
   private handleQueryResult = (res: QueryResult): void => {
     if (res.errored) {
+      this.isError = true;
       this.result = handleQueryResults(
         res.error + (res.backtrace ? "\n" + res.backtrace : ""),
         QueryResultType.Error,
