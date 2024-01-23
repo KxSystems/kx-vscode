@@ -43,69 +43,11 @@ jobs:
           retention-days: 1
 
   app-sec:
-    runs-on: ubuntu-latest
     needs: build
-    steps:
-      - name: Checkout source code
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-
-      - name: Install Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16.x
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: get-npm-version
-        id: package-version
-        uses: martinbeentjes/npm-get-version-action@v1.3.1
-
-      - name: Download lcov result from test job
-        uses: actions/download-artifact@v3
-        with:
-          name: lcov
-
-      - name: SonarCloud Scan
-        uses: sonarsource/sonarqube-scan-action@master
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        with:
-          args: >
-            -Dsonar.projectVersion=${{ steps.package-version.outputs.current-version}}
-
-      - name: Sonarqube Quality Gate Check
-        id: sonarqube-quality-gate-check
-        uses: sonarsource/sonarqube-quality-gate-action@master
-        # Force to fail step after specific time
-        timeout-minutes: 5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-
-      - name: Snyk scan for all vulnerabilities
-        uses: snyk/actions/node@master
-        continue-on-error: true
-        env:
-          SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
-
-      - name: Snyk scan for high or critical vulnerabilities
-        uses: snyk/actions/node@master
-        env:
-          SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
-        with:
-          args: --severity-threshold=high
-
-      - name: Snyk Monitor
-        uses: snyk/actions/node@master
-        env:
-          SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
-        with:
-          command: monitor
-          args: --target-reference=${{ github.ref_name }}
+    uses: ./.github/workflows/app-sec-template.yml
+    with:
+      github_ref: ${{ github.ref_name }}
+    secrets: inherit
 
   release:
     runs-on: ubuntu-latest
