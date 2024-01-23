@@ -17,7 +17,6 @@ import { ext } from "../extensionVariables";
 import { DCDS, deserialize, isCompressed, uncompress } from "../ipc/c";
 import { Parse } from "../ipc/parse.qlist";
 import { ServerType } from "../models/server";
-import { convertStringToArray } from "./execution";
 import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
 import { TypeBase } from "../ipc/typeBase";
 
@@ -186,7 +185,7 @@ export function generateQTypes(meta: { [key: string]: number }): any {
   const newMeta: { [key: string]: string } = {};
   for (const key in meta) {
     const value = meta[key];
-    newMeta[key] = TypeBase.typeNames[value] || `Unknown type: ${value}`;
+    newMeta[key] = TypeBase.typeNames[value] ?? `Unknown type: ${value}`;
   }
   return newMeta;
 }
