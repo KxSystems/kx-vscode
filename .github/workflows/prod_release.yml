@@ -82,28 +82,28 @@ jobs:
           asset_name: kdb-${{ steps.vars.outputs.run_tag }}.vsix
           asset_content_type: application/octet-stream
 
-  # manual-approve:
-  #   needs: release
-  #   environment:
-  #     name: approvers
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Manual Approve
-  #       run: echo "Manually approved"
+  manual-approve:
+    needs: release
+    environment:
+      name: approvers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Manual Approve
+        run: echo "Manually approved"
 
-  # publish:
-  #   needs: manual-approve
-  #   - name: Checkout source code
-  #     uses: actions/checkout@v2
-  #     with:
-  #       fetch-depth: 0
-  #   - name: Install Node.js
-  #     uses: actions/setup-node@v3
-  #     with:
-  #       node-version: 16.x
-  #   - name: Install dependencies
-  #     run: npm ci --include=dev
-  #   - name: Publish to VSCode Marketplace
-  #     run: npm run publish
-  #     env:
-  #       VSCE_PAT: ${{ secrets.VSCE_PAT }}
+  publish:
+    needs: manual-approve
+    - name: Checkout source code
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Install Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 16.x
+    - name: Install dependencies
+      run: npm ci --include=dev
+    - name: Publish to VSCode Marketplace
+      run: npm run publish
+      env:
+        VSCE_PAT: ${{ secrets.VSCE_PAT }}

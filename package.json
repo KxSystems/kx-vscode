@@ -657,7 +657,8 @@
     "test": "tsc -p ./test && node ./out/test/runTest.js",
     "coverage": "tsc -p ./test && node ./out/test/runTest.js --coverage",
     "package": "npx vsce package",
-    "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\""
+    "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
+    "publish": "npx vsce publish --yarn"
   },
   "prettier": {
     "printWidth": 80,
