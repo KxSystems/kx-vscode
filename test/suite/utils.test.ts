@@ -41,6 +41,11 @@ import {
 } from "../../src/utils/userInteraction";
 import { validateUtils } from "../../src/utils/validateUtils";
 import { DCDS } from "../../src/ipc/c";
+import {
+  DDateClass,
+  DDateTimeClass,
+  DTimestampClass,
+} from "../../src/ipc/cClasses";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;
@@ -712,6 +717,58 @@ describe("Utils", () => {
         ];
         const result = queryUtils.handleScratchpadTableRes(inputSample);
         assert.deepStrictEqual(result.rows, inputSample.rows);
+      });
+
+      it("should return case results is string type", () => {
+        const result = queryUtils.handleScratchpadTableRes("test");
+        assert.strictEqual(result, "test");
+      });
+
+      it("should return same results case results.rows is undefined", () => {
+        inputSample.rows = undefined;
+        const result = queryUtils.handleScratchpadTableRes(inputSample);
+        assert.strictEqual(result, inputSample);
+      });
+
+      it("should return same results case results.rows is an empty array", () => {
+        const result = queryUtils.handleScratchpadTableRes(inputSample);
+        assert.strictEqual(result, inputSample);
+      });
+    });
+
+    describe("checkIfIsQDateTypes", () => {
+      it("should return string representation of DTimestampClass instance", () => {
+        const input = { Value: new DTimestampClass(978350400000, 0) };
+        const expectedOutput = input.Value.toString();
+
+        const output = queryUtils.checkIfIsQDateTypes(input);
+        assert.strictEqual(output, expectedOutput);
+      });
+
+      it("should return string representation of DDateTimeClass instance", () => {
+        const input = { Value: new DDateTimeClass(978350400000) };
+        const expectedOutput = input.Value.toString();
+
+        const output = queryUtils.checkIfIsQDateTypes(input);
+        assert.strictEqual(output, expectedOutput);
+      });
+
+      it("should return string representation of DDateClass instance", () => {
+        const input = { Value: new DDateClass(978350400000) };
+        const expectedOutput = input.Value.toString();
+
+        const output = queryUtils.checkIfIsQDateTypes(input);
+        assert.strictEqual(output, expectedOutput);
+      });
+
+      it("should return input as is when Value is not an instance of DTimestampClass, DDateTimeClass, or DDateClass", () => {
+        const input = {
+          Value:
+            "not an instance of DTimestampClass, DDateTimeClass, or DDateClass",
+        };
+
+        const output = queryUtils.checkIfIsQDateTypes(input);
+        assert.deepStrictEqual(output, input);
       });
     });
 

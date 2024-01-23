@@ -109,9 +109,7 @@ export function handleScratchpadTableRes(results: DCDS | string): any {
   }
   let scratchpadResponse = results.rows;
   if (!Array.isArray(scratchpadResponse)) {
-    if (typeof scratchpadResponse === "string") {
-      scratchpadResponse = convertStringToArray(scratchpadResponse);
-    }
+    return results;
   }
   if (scratchpadResponse?.length !== 0) {
     scratchpadResponse = addIndexKey(scratchpadResponse);
