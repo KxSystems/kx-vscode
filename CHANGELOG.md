@@ -35,7 +35,7 @@ All notable changes to the kdb extension will be documented in this file.
 - Ensure the "Execute Entire File" button works even if the cursor is not in the code editor window.
 
 - Fixes for the Data Sources:
-    - Custom APIs are nolonger listed, these will be added in a future release when the execution of a Custom API is supported.
+    - Custom APIs are no longer listed, these will be added in a future release when the execution of a Custom API is supported.
     - The "Run" button will be greyed out while a Data Source is executing, to ensure there are no concurrent executions.
     - To see Data Source results within the "Output" tab, ensure that the output is from "q Console Output".
 
