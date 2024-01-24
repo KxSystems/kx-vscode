@@ -16,7 +16,7 @@ All notable changes to the kdb extension will be documented in this file.
         - Invalid Escape
         - Fixed Seed
         - Too many arguments - when more than 8 arguments are being passed
-    - Line length limits have been removed to ensure there aer no warnings after a long block comment.
+    - Line length limits have been removed to ensure there are no warnings after a long block comment.
     - Handle .z.exit correctly.
     - Optionally disable linting.
 
