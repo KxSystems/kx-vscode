@@ -2,6 +2,63 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
+
+# v1.3.0
+
+### Enhancements
+
+- Ability to connect to kdb Insights Enterprise using a WSL connection.
+- Execute files from the right-click menu.
+
+- Linting enhancements:
+    - Implement the following rules:
+        - Declare after use
+        - Invalid Escape
+        - Fixed Seed
+        - Too many arguments - when more than 8 arguments are being passed
+    - Line length limits have been removed to ensure there aer no warnings after a long block comment.
+    - Handle .z.exit correctly.
+    - Optionally disable linting.
+
+### Fixes
+
+
+- Ability to switch users connected to a kdb Insights Enterprise URL. The new flow to switch users when you are already logged in is as follows:
+    - Disconnect from the URL.
+    - Log into the URL using browser and log out of environment.
+    - On reconnecting you are asked to enter your login details and you can chose a different user.
+
+- Fix to ensure you can login again if a login attempt fails.
+
+- Fix for an invalid "settings.json" file causing "Add Connection" to fail without error.
+
+- Ensure the "Execute Entire File" button works even if the cursor is not in the code editor window.
+
+- Fixes for the Data Sources:
+    - Custom APIs are nolonger listed, these will be added in a future release when the execution of a Custom API is supported.
+    - The "Run" button will be greyed out while a Data Source is executing, to ensure there are no concurrent executions.
+    - To see Data Source results within the "Output" tab, ensure that the output is from "q Console Output".
+
+- Fixes for the tree:
+    - The only variables being displayed were longs 
+    - Connections were string queries were forbidden broke the tree
+
+- Fixes for KDB Results:
+    - incorrect display of empty tables
+    - not displaying results for non-tables or non-atoms.
+
+- Fix for incorrectly displayed types for local q and kdb Insights Enterprise connections.
+
+- Fix for the console occasionally displaying the results from the previous query.
+
+- Fix for syntax highlighting when using the @see qdoc tag
+
+
+### Internal Improvements
+
+- Fixed various CVEs
+
+
 # v1.2.0
 
 ### Enhancements
