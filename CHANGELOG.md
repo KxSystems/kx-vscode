@@ -40,7 +40,7 @@ All notable changes to the kdb extension will be documented in this file.
     - To see Data Source results within the "Output" tab, ensure that the output is from "q Console Output".
 
 - Fixes for the tree:
-    - The only variables being displayed were longs 
+    - The only variables being displayed were longs.
     - Connections were string queries were forbidden broke the tree
 
 - Fixes for KDB Results:
