@@ -72,11 +72,7 @@
             },
             {
               "name": "variable.other.qdoc",
-              "match": "[\\w.]+?(?=\\s*{.+})"
-            },
-            {
-              "name": "variable.other.qdoc",
-              "match": "\\s\\.[\\w.]+?\\s"
+              "match": "\\s\\.[\\w.]+"
             }
           ]
         }
