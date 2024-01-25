@@ -93,17 +93,18 @@ jobs:
 
   publish:
     needs: manual-approve
-    - name: Checkout source code
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
-    - name: Install Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: 16.x
-    - name: Install dependencies
-      run: npm ci --include=dev
-    - name: Publish to VSCode Marketplace
-      run: npm run publish
-      env:
-        VSCE_PAT: ${{ secrets.VSCE_PAT }}
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+      - name: Install dependencies
+        run: npm ci --include=dev
+      - name: Publish to VSCode Marketplace
+        run: npm run publish
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
