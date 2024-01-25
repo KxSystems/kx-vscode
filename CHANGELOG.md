@@ -7,7 +7,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 ### Enhancements
 
-- Ability to connect to kdb Insights Enterprise using a WSL connection.
+- Ability to connect to Insights Enterprise in case of remote development environments such as WSL and SSH.
 - Execute files from the right-click menu.
 
 - Linting enhancements:
