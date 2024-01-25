@@ -9,7 +9,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 - Ability to connect to Insights Enterprise in case of remote development environments such as WSL and SSH.
 - Execute files from the right-click menu.
-
+- On the Results tab, on a kdb Insights Enterprise connection, hover the mouse over a column header to see the column Q type if it exists.
 - Linting enhancements:
     - Implement the following rules:
         - Declare after use
