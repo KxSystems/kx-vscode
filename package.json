@@ -733,6 +733,7 @@
     "moment-timezone": "^0.5.44",
     "node-fetch": "^2.6.6",
     "node-q": "^2.6.1",
+    "pick-port": "^2.0.1",
     "picomatch": "^3.0.1",
     "semver": "^7.5.3",
     "vscode-extension-telemetry": "^0.4.5",
