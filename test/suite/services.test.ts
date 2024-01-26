@@ -577,6 +577,11 @@ describe("Code flow login service tests", () => {
       "Should return undefined when server alias is empty.",
     );
   });
+
+  it("Should not sign in if link is not opened", async () => {
+    sinon.stub(env, "openExternal").value(async () => false);
+    await assert.rejects(() => signIn("http://127.0.0.1"));
+  });
 });
 
 describe("queryHistoryProvider", () => {
