@@ -103,7 +103,6 @@ export namespace ext {
 
   export const insightsAuthUrls = {
     authURL: "auth/realms/insights/protocol/openid-connect/auth ",
-    callbackURL: "http://localhost:9001/redirect",
     revoke: "auth/realms/insights/protocol/openid-connect/revoke",
     tokenURL: "auth/realms/insights/protocol/openid-connect/token",
     scratchpadURL: "servicebroker/scratchpad/display",

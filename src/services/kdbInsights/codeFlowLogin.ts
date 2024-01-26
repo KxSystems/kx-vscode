@@ -39,7 +39,6 @@ const closeTimeout = 10 * 1000; // 10 sec
 
 const commonRequestParams = {
   client_id: "insights-app",
-  redirect_uri: ext.insightsAuthUrls.callbackURL,
 };
 
 export async function signIn(insightsUrl: string) {
@@ -47,11 +46,11 @@ export async function signIn(insightsUrl: string) {
 
   try {
     const port = await startServer(server);
-    console.log(port);
 
     const authParams = {
       response_type: "code",
       scope: "profile",
+      redirect_uri: `http://localhost:${port}/redirect`,
       state: crypto.randomBytes(20).toString("hex"),
     };
 
@@ -282,6 +281,7 @@ function startServer(server: http.Server): Promise<number> {
     const cancelPortTimer = () => clearTimeout(portTimer);
 
     pickPort({
+      ip: "127.0.0.1",
       type: "tcp",
       minPort: 9000,
       maxPort: 9999,
@@ -293,9 +293,7 @@ function startServer(server: http.Server): Promise<number> {
         server.listen(port, ext.localhost);
         portPromise.then(cancelPortTimer, cancelPortTimer);
         env
-          .asExternalUri(
-            Uri.parse(`${ext.networkProtocols.http}${ext.localhost}:${port}`),
-          )
+          .asExternalUri(Uri.parse(`http://localhost:${port}`))
           .then(() => resolve(portPromise));
       })
       .catch(reject);
