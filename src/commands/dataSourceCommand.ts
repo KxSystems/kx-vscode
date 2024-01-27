@@ -31,7 +31,6 @@ import {
   getConnectedInsightsNode,
 } from "../utils/dataSource";
 import {
-  arrayToTable,
   handleScratchpadTableRes,
   handleWSError,
   handleWSResults,
@@ -65,13 +64,13 @@ export async function addDataSource(): Promise<void> {
 
   fs.writeFileSync(filePath, JSON.stringify(defaultDataSourceContent));
   window.showInformationMessage(
-    `Created ${fileName} in ${kdbDataSourcesFolderPath}.`
+    `Created ${fileName} in ${kdbDataSourcesFolderPath}.`,
   );
 }
 
 export async function renameDataSource(
   oldName: string,
-  newName: string
+  newName: string,
 ): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
   if (!kdbDataSourcesFolderPath) {
@@ -80,11 +79,11 @@ export async function renameDataSource(
 
   const oldFilePath = path.join(
     kdbDataSourcesFolderPath,
-    `${oldName}${ext.kdbDataSourceFileExtension}`
+    `${oldName}${ext.kdbDataSourceFileExtension}`,
   );
   const newFilePath = path.join(
     kdbDataSourcesFolderPath,
-    `${newName}${ext.kdbDataSourceFileExtension}`
+    `${newName}${ext.kdbDataSourceFileExtension}`,
   );
 
   const dataSourceContent = fs.readFileSync(oldFilePath, "utf8");
@@ -102,7 +101,7 @@ export async function renameDataSource(
 }
 
 export async function deleteDataSource(
-  dataSource: KdbDataSourceTreeItem
+  dataSource: KdbDataSourceTreeItem,
 ): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
   if (!kdbDataSourcesFolderPath) {
@@ -111,28 +110,28 @@ export async function deleteDataSource(
 
   const dataSourceFilePath = path.join(
     kdbDataSourcesFolderPath,
-    `${dataSource.label}${ext.kdbDataSourceFileExtension}`
+    `${dataSource.label}${ext.kdbDataSourceFileExtension}`,
   );
   if (fs.existsSync(dataSourceFilePath)) {
     fs.unlinkSync(dataSourceFilePath);
     window.showInformationMessage(
-      `Deleted ${dataSource.label} from ${kdbDataSourcesFolderPath}.`
+      `Deleted ${dataSource.label} from ${kdbDataSourcesFolderPath}.`,
     );
   }
 }
 
 export async function openDataSource(
   dataSource: KdbDataSourceTreeItem,
-  uri: Uri
+  uri: Uri,
 ): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
   Object.assign(ext.insightsMeta, await getMeta());
   if (!ext.insightsMeta.assembly) {
     ext.outputChannel.appendLine(
-      `To edit or run a datasource you need to be connected to an Insights server`
+      `To edit or run a datasource you need to be connected to an Insights server`,
     );
     window.showErrorMessage(
-      "To edit or run a datasource you need to be connected to an Insights server"
+      "To edit or run a datasource you need to be connected to an Insights server",
     );
   }
   if (!kdbDataSourcesFolderPath) {
@@ -141,12 +140,12 @@ export async function openDataSource(
   fs.readFile(
     path.join(
       kdbDataSourcesFolderPath,
-      `${dataSource.label}${ext.kdbDataSourceFileExtension}`
+      `${dataSource.label}${ext.kdbDataSourceFileExtension}`,
     ),
     (err, data) => {
       if (err) {
         ext.outputChannel.appendLine(
-          `Error reading the file ${dataSource.label}${ext.kdbDataSourceFileExtension}, this file maybe doesn't exist`
+          `Error reading the file ${dataSource.label}${ext.kdbDataSourceFileExtension}, this file maybe doesn't exist`,
         );
         window.showErrorMessage("Error reading file");
         return;
@@ -155,12 +154,12 @@ export async function openDataSource(
         const datasourceContent: DataSourceFiles = JSON.parse(data.toString());
         DataSourcesPanel.render(uri, datasourceContent);
       }
-    }
+    },
   );
 }
 
 export async function saveDataSource(
-  dataSourceForm: DataSourceFiles
+  dataSourceForm: DataSourceFiles,
 ): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
   if (!kdbDataSourcesFolderPath) {
@@ -181,7 +180,7 @@ export async function saveDataSource(
 
   const dataSourceFilePath = path.join(
     kdbDataSourcesFolderPath,
-    `${dataSourceForm.name}${ext.kdbDataSourceFileExtension}`
+    `${dataSourceForm.name}${ext.kdbDataSourceFileExtension}`,
   );
 
   if (fs.existsSync(dataSourceFilePath)) {
@@ -191,7 +190,7 @@ export async function saveDataSource(
 }
 
 export async function populateScratchpad(
-  dataSourceForm: DataSourceFiles
+  dataSourceForm: DataSourceFiles,
 ): Promise<void> {
   const scratchpadVariable: InputBoxOptions = {
     prompt: scratchpadVariableInput.prompt,
@@ -205,14 +204,14 @@ export async function populateScratchpad(
       await importScratchpad(outputVariable!, dataSourceForm!);
     } else {
       ext.outputChannel.appendLine(
-        `Invalid scratchpad output variable name: ${outputVariable}`
+        `Invalid scratchpad output variable name: ${outputVariable}`,
       );
     }
   });
 }
 
 export async function runDataSource(
-  dataSourceForm: DataSourceFiles
+  dataSourceForm: DataSourceFiles,
 ): Promise<void> {
   if (DataSourcesPanel.running) {
     return;
@@ -223,10 +222,10 @@ export async function runDataSource(
     Object.assign(ext.insightsMeta, await getMeta());
     if (!ext.insightsMeta.assembly) {
       ext.outputChannel.appendLine(
-        `To run a datasource you need to be connected to an Insights server`
+        `To run a datasource you need to be connected to an Insights server`,
       );
       window.showErrorMessage(
-        "To run a datasource you need to be connected to an Insights server"
+        "To run a datasource you need to be connected to an Insights server",
       );
       return;
     }
@@ -257,14 +256,13 @@ export async function runDataSource(
       writeQueryResultsToView(
         res,
         getQuery(fileContent, selectedType),
-        selectedType
+        selectedType,
       );
     } else {
-      const resString = arrayToTable(res);
       writeQueryResultsToConsole(
-        resString,
+        res,
         getQuery(fileContent, selectedType),
-        selectedType
+        selectedType,
       );
     }
   } finally {
@@ -287,22 +285,22 @@ export function getSelectedType(fileContent: DataSourceFiles): string {
 }
 
 export async function runApiDataSource(
-  fileContent: DataSourceFiles
+  fileContent: DataSourceFiles,
 ): Promise<any> {
   const isTimeCorrect = checkIfTimeParamIsCorrect(
     fileContent.dataSource.api.startTS,
-    fileContent.dataSource.api.endTS
+    fileContent.dataSource.api.endTS,
   );
   if (!isTimeCorrect) {
     window.showErrorMessage(
-      "The time parameters(startTS and endTS) are not correct, please check the format or if the startTS is before the endTS"
+      "The time parameters(startTS and endTS) are not correct, please check the format or if the startTS is before the endTS",
     );
     return;
   }
   const apiBody = getApiBody(fileContent);
   const apiCall = await getDataInsights(
     ext.insightsServiceGatewayUrls.data,
-    JSON.stringify(apiBody)
+    JSON.stringify(apiBody),
   );
 
   if (apiCall?.error) {
@@ -316,7 +314,7 @@ export async function runApiDataSource(
 }
 
 export function getApiBody(
-  fileContent: DataSourceFiles
+  fileContent: DataSourceFiles,
 ): Partial<getDataBodyPayload> {
   const api = fileContent.dataSource.api;
 
@@ -353,7 +351,7 @@ export function getApiBody(
     if (labels.length > 0) {
       apiBody.labels = Object.assign(
         {},
-        ...labels.map((label) => ({ [label.key]: label.value }))
+        ...labels.map((label) => ({ [label.key]: label.value })),
       );
     }
 
@@ -404,7 +402,7 @@ export function getApiBody(
 }
 
 export async function runQsqlDataSource(
-  fileContent: DataSourceFiles
+  fileContent: DataSourceFiles,
 ): Promise<any> {
   const assembly = fileContent.dataSource.qsql.selectedTarget.slice(0, -4);
   const target = fileContent.dataSource.qsql.selectedTarget.slice(-3);
@@ -415,7 +413,7 @@ export async function runQsqlDataSource(
   };
   const qsqlCall = await getDataInsights(
     ext.insightsServiceGatewayUrls.qsql,
-    JSON.stringify(qsqlBody)
+    JSON.stringify(qsqlBody),
   );
 
   if (qsqlCall?.error) {
@@ -429,14 +427,14 @@ export async function runQsqlDataSource(
 }
 
 export async function runSqlDataSource(
-  fileContent: DataSourceFiles
+  fileContent: DataSourceFiles,
 ): Promise<any> {
   const sqlBody = {
     query: fileContent.dataSource.sql.query,
   };
   const sqlCall = await getDataInsights(
     ext.insightsServiceGatewayUrls.sql,
-    JSON.stringify(sqlBody)
+    JSON.stringify(sqlBody),
   );
 
   if (sqlCall?.error) {
@@ -451,7 +449,7 @@ export async function runSqlDataSource(
 
 export function getQuery(
   fileContent: DataSourceFiles,
-  selectedType: string
+  selectedType: string,
 ): string {
   switch (selectedType) {
     case "API":

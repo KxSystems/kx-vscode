@@ -19,6 +19,7 @@ import { Parse } from "../ipc/parse.qlist";
 import { ServerType } from "../models/server";
 import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
 import { TypeBase } from "../ipc/typeBase";
+import { boolean } from "node-q";
 
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {
@@ -92,10 +93,10 @@ export function handleWSResults(ab: ArrayBuffer): any {
     if (res.rows.length === 0 && res.columns.length === 0) {
       return "No results found.";
     }
-    if (ext.resultsViewProvider.isVisible() || ext.isDatasourceExecution) {
+    if (ext.resultsViewProvider.isVisible()) {
       return getValueFromArray(res);
     }
-    return convertRows(res);
+    return convertRows(res.rows);
   } catch (error) {
     console.log(error);
     throw error;
@@ -201,12 +202,14 @@ export function checkIfIsQDateTypes(obj: any): any {
   return obj;
 }
 
-export function convertRows(rows: any[]): any[] {
+export function convertRows(rows: any[]): any {
   if (rows.length === 0) {
     return [];
   }
   const keys = Object.keys(rows[0]);
-  const result = [keys.join("#$#;#$#")];
+  const isObj = typeof rows[0] === "object";
+  const isPropVal = isObj ? checkIfIsPropVal(keys) : false;
+  const result = isPropVal ? [] : [keys.join("#$#;header;#$#")];
   for (const row of rows) {
     const values = keys.map((key) => {
       if (Array.isArray(row[key])) {
@@ -216,15 +219,23 @@ export function convertRows(rows: any[]): any[] {
     });
     result.push(values.join("#$#;#$#"));
   }
-  return result;
+  return convertRowsToConsole(result).join("\n") + "\n\n";
 }
 
 export function convertRowsToConsole(rows: string[]): string[] {
   if (rows.length === 0) {
     return [];
   }
-
+  const haveHeader = rows[0].includes("#$#;header;#$#");
+  let header;
+  if (haveHeader) {
+    header = rows[0].split("#$#;header;#$#");
+    rows.shift();
+  }
   const vector = rows.map((row) => row.split("#$#;#$#"));
+  if (header) {
+    vector.unshift(header);
+  }
 
   const columnCounters = vector[0].reduce((counters: number[], _, j) => {
     const maxLength = vector.reduce(
@@ -240,7 +251,11 @@ export function convertRowsToConsole(rows: string[]): string[] {
       const counter = columnCounters[j];
       const diff = counter - value.length;
       if (diff > 0) {
-        row[j] = value + " ".repeat(diff);
+        if (!haveHeader && j !== columnCounters.length - 1) {
+          row[j] = value + "|" + " ".repeat(diff > 1 ? diff - 1 : diff);
+        } else {
+          row[j] = value + " ".repeat(diff);
+        }
       }
     });
   });
@@ -249,41 +264,19 @@ export function convertRowsToConsole(rows: string[]): string[] {
 
   const totalCount = columnCounters.reduce((sum, count) => sum + count, 0);
   const totalCounter = "-".repeat(totalCount);
-  result.splice(1, 0, totalCounter);
+  if (haveHeader) {
+    result.splice(1, 0, totalCounter);
+  }
 
   return result;
 }
 
-export function arrayToTable(data: any[]): any {
-  // Obter as chaves do primeiro objeto para usar como cabeçalho da tabela
-  if (!Array.isArray(data) || data.length === 0) {
-    return data;
-  }
-
-  const header = Object.keys(data[0]);
-
-  // Calcular o tamanho máximo de cada coluna
-  const columnLengths = header.map((key) => {
-    return Math.max(key.length, ...data.map((obj) => String(obj[key]).length));
-  });
-
-  // Converter o cabeçalho em uma string, alinhando os valores
-  const headerString = header
-    .map((key, i) => key.padEnd(columnLengths[i]))
-    .join("   ");
-
-  const separator = header
-    .map((_, i) => "-".repeat(columnLengths[i]))
-    .join("---");
-  // Converter cada objeto em uma string, alinhando os valores
-  const rows = data.map((obj) => {
-    return header
-      .map((key, i) => String(obj[key]).padEnd(columnLengths[i]))
-      .join("   ");
-  });
-
-  // Juntar o cabeçalho e as linhas para formar a tabela
-  return [headerString, separator, ...rows].join("\n");
+export function checkIfIsPropVal(columns: string[]): boolean {
+  return (
+    columns.length === 2 &&
+    columns.includes("Property") &&
+    columns.includes("Value")
+  );
 }
 
 export function getConnectionType(type: ServerType): string {
