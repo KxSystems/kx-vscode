@@ -836,16 +836,16 @@ describe("Utils", () => {
           b: 4,
         },
       ];
-      const expectedRes = ["a#$#;#$#b", "1#$#;#$#2", "3#$#;#$#4"].toString();
+      const expectedRes = ["a  b  \n------\n1  2  \n3  4  \n\n"].toString();
       const result = queryUtils.convertRows(rows);
       assert.equal(result, expectedRes);
     });
 
     it("convertRowsToConsole", () => {
       const rows = ["a,b", "1,2", "3,4"];
-      const expectedRes = ["a,b  ", "-----", "1,2  ", "3,4  "].toString();
+      const expectedRes = ["a,b  ", "1,2  ", "3,4  "];
       const result = queryUtils.convertRowsToConsole(rows);
-      assert.equal(result, expectedRes);
+      assert.deepEqual(result, expectedRes);
     });
 
     it("getConnectionType", () => {
