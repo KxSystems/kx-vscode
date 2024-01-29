@@ -91,7 +91,7 @@ jobs:
   manual-approve:
     needs: release
     environment:
-      name: approvers
+      name: manual-approval
     runs-on: ubuntu-latest
     steps:
       - name: Manual Approve

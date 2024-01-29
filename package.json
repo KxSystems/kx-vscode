@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "9.2.0",
+  "version": "9.2.1",
   "engines": {
     "vscode": "^1.75.0"
   },
@@ -658,7 +658,7 @@
     "coverage": "tsc -p ./test && node ./out/test/runTest.js --coverage",
     "package": "npx vsce package",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
-    "publish": "npx vsce publish --yarn"
+    "publish": "npx vsce publish"
   },
   "prettier": {
     "printWidth": 80,
