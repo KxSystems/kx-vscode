@@ -836,16 +836,31 @@ describe("Utils", () => {
           b: 4,
         },
       ];
-      const expectedRes = ["a#$#;#$#b", "1#$#;#$#2", "3#$#;#$#4"].toString();
+      const expectedRes = ["a  b  \n------\n1  2  \n3  4  \n\n"].toString();
       const result = queryUtils.convertRows(rows);
       assert.equal(result, expectedRes);
     });
 
-    it("convertRowsToConsole", () => {
-      const rows = ["a,b", "1,2", "3,4"];
-      const expectedRes = ["a,b  ", "-----", "1,2  ", "3,4  "].toString();
-      const result = queryUtils.convertRowsToConsole(rows);
-      assert.equal(result, expectedRes);
+    describe("convertRowsToConsole", () => {
+      it("should work with headers", () => {
+        const rows = ["a#$#;header;#$#b", "1#$#;#$#2", "3#$#;#$#4"];
+        const expectedRes = ["a  b  ", "------", "1  2  ", "3  4  "];
+        const result = queryUtils.convertRowsToConsole(rows);
+        assert.deepEqual(result, expectedRes);
+      });
+      it("should work without headers", () => {
+        const rows = ["a#$#;#$#1", "b#$#;#$#2", "c#$#;#$#3"];
+        const expectedRes = ["a| 1  ", "b| 2  ", "c| 3  "];
+        const result = queryUtils.convertRowsToConsole(rows);
+        assert.deepEqual(result, expectedRes);
+      });
+
+      it("should work with empty rows", () => {
+        const rows = [];
+        const expectedRes = [];
+        const result = queryUtils.convertRowsToConsole(rows);
+        assert.deepEqual(result, expectedRes);
+      });
     });
 
     it("getConnectionType", () => {
@@ -892,30 +907,6 @@ describe("Utils", () => {
 
         // Assert the result
         assert.deepStrictEqual(result, { error: "Query error" });
-      });
-    });
-
-    describe("arrayToTable", () => {
-      it("should format an array of objects as a table", () => {
-        const data = [
-          { a: "0", b: "1.4198733294891718e+38" },
-          { a: "1", b: "-1.2894694634258276e+29" },
-        ];
-
-        const expected =
-          "a   b                      \n" +
-          "---------------------------\n" +
-          "0   1.4198733294891718e+38 \n" +
-          "1   -1.2894694634258276e+29";
-
-        const result = queryUtils.arrayToTable(data);
-        assert.strictEqual(result, expected);
-      });
-
-      it("should return the input if it is not a non-empty array", () => {
-        const data = [];
-        const result = queryUtils.arrayToTable(data);
-        assert.strictEqual(result, data);
       });
     });
   });
