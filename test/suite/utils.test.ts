@@ -841,11 +841,26 @@ describe("Utils", () => {
       assert.equal(result, expectedRes);
     });
 
-    it("convertRowsToConsole", () => {
-      const rows = ["a,b", "1,2", "3,4"];
-      const expectedRes = ["a,b  ", "1,2  ", "3,4  "];
-      const result = queryUtils.convertRowsToConsole(rows);
-      assert.deepEqual(result, expectedRes);
+    describe("convertRowsToConsole", () => {
+      it("should work with headers", () => {
+        const rows = ["a#$#;header;#$#b", "1#$#;#$#2", "3#$#;#$#4"];
+        const expectedRes = ["a  b  ", "------", "1  2  ", "3  4  "];
+        const result = queryUtils.convertRowsToConsole(rows);
+        assert.deepEqual(result, expectedRes);
+      });
+      it("should work without headers", () => {
+        const rows = ["a#$#;#$#1", "b#$#;#$#2", "c#$#;#$#3"];
+        const expectedRes = ["a| 1  ", "b| 2  ", "c| 3  "];
+        const result = queryUtils.convertRowsToConsole(rows);
+        assert.deepEqual(result, expectedRes);
+      });
+
+      it("should work with empty rows", () => {
+        const rows = [];
+        const expectedRes = [];
+        const result = queryUtils.convertRowsToConsole(rows);
+        assert.deepEqual(result, expectedRes);
+      });
     });
 
     it("getConnectionType", () => {
