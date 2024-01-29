@@ -25,7 +25,7 @@ jobs:
       - name: Build VSIX file
         run: npm run build
       - name: Run Tests
-        run: xvfb-run -a npm run test
+        run: xvfb-run -a npm run coverage
       - name: Packaging
         run: npm run package
       - name: Upload artifact
@@ -33,7 +33,13 @@ jobs:
         with:
           name: KDB-VSCode-Extension
           path: ./kdb-*vsix
-          retention_days: 1
+          retention-days: 1
+      - name: Upload lcov result for app-sec job
+        uses: actions/upload-artifact@v3
+        with:
+          name: lcov
+          path: coverage-reports/lcov.info
+          retention-days: 1
 
   app-sec:
     needs: build
