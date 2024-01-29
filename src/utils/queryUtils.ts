@@ -19,7 +19,6 @@ import { Parse } from "../ipc/parse.qlist";
 import { ServerType } from "../models/server";
 import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
 import { TypeBase } from "../ipc/typeBase";
-import { boolean } from "node-q";
 
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {
