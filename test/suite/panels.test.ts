@@ -171,7 +171,7 @@ describe("WebPanels", () => {
     });
 
     describe("convertToGrid()", () => {
-      it("should convert results to grid format", () => {
+      it("should convert results to grid format for inisights", () => {
         const results = {
           rows: [
             { prop1: "value1", prop2: "value2" },
@@ -193,13 +193,22 @@ describe("WebPanels", () => {
             { prop1: "value3", prop2: "value4" },
           ],
           columnDefs: [
-            { field: "prop1", headerName: "prop1", headerTooltip: "type1" },
-            { field: "prop2", headerName: "prop2", headerTooltip: "type2" },
+            {
+              field: "prop1",
+              headerName: "prop1",
+              headerTooltip: "type1",
+              cellDataType: "text",
+            },
+            {
+              field: "prop2",
+              headerName: "prop2",
+              headerTooltip: "type2",
+              cellDataType: "text",
+            },
           ],
           domLayout: "autoHeight",
           pagination: true,
           paginationPageSize: 100,
-          cacheBlockSize: 100,
           enableCellTextSelection: true,
           ensureDomOrder: true,
           suppressContextMenu: true,
@@ -216,6 +225,97 @@ describe("WebPanels", () => {
 
         // Restore the stub
         stub.restore();
+      });
+
+      it("should convert results to grid format with empty rows ", () => {
+        const results = {
+          rows: [],
+          meta: { prop1: "type1", prop2: "type2" },
+        };
+
+        const expectedOutput = JSON.stringify({
+          defaultColDef: {
+            sortable: true,
+            resizable: true,
+            filter: true,
+            flex: 1,
+            minWidth: 100,
+          },
+          rowData: [],
+          columnDefs: [
+            {
+              field: "prop1",
+              headerName: "prop1",
+              headerTooltip: "type1",
+              cellDataType: "text",
+            },
+            {
+              field: "prop2",
+              headerName: "prop2",
+              headerTooltip: "type2",
+              cellDataType: "text",
+            },
+          ],
+          domLayout: "autoHeight",
+          pagination: true,
+          paginationPageSize: 100,
+          enableCellTextSelection: true,
+          ensureDomOrder: true,
+          suppressContextMenu: true,
+          suppressDragLeaveHidesColumns: true,
+          tooltipShowDelay: 200,
+        });
+
+        // Mock ext.connectionNode
+        const stub = sinon.stub(ext, "connectionNode");
+        stub.get(() => insightsNode);
+
+        const output = resultsPanel.convertToGrid(results);
+        assert.equal(output, expectedOutput);
+
+        // Restore the stub
+        stub.restore();
+      });
+    });
+
+    describe("generateColumnDefs", () => {
+      it("should return an array of column definitions if the results are not empty", () => {
+        const input = [
+          { prop1: "value1", prop2: "value2" },
+          { prop1: "value3", prop2: "value4" },
+        ];
+        const expectedOutput = [
+          {
+            field: "prop1",
+            headerName: "prop1",
+            cellDataType: "text",
+          },
+          {
+            field: "prop2",
+            headerName: "prop2",
+            cellDataType: "text",
+          },
+        ];
+        const actualOutput = resultsPanel.generateCoumnDefs(input, false);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+
+      it("should return the results if the results are array of strings", () => {
+        const input = ["value1", "value2"];
+        const expectedOutput = [
+          {
+            field: "value1",
+            headerName: "value1",
+            cellDataType: "text",
+          },
+          {
+            field: "value2",
+            headerName: "value2",
+            cellDataType: "text",
+          },
+        ];
+        const actualOutput = resultsPanel.generateCoumnDefs(input, false);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
       });
     });
 
