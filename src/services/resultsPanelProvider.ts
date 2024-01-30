@@ -102,6 +102,19 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     utils.exportToCsv(workspaceUri);
   }
 
+  defineDataType(type: string): string {
+    const typeMapping: { [key: string]: string } = {
+      short: "number",
+      int: "number",
+      long: "number",
+      float: "number",
+      real: "number",
+      boolean: "boolean",
+    };
+
+    return typeMapping[type] || "text";
+  }
+
   generateCoumnDefs(results: any, isInsights: boolean): any {
     if (isInsights) {
       if (results.rows.length === 0) {
@@ -109,10 +122,12 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
           const sanitizedKey = this.sanitizeString(key);
           const type = results.meta[key];
           const headerTooltip = type;
+          const cellDataType = this.defineDataType(type);
           return {
             field: sanitizedKey,
             headerName: sanitizedKey,
             headerTooltip,
+            cellDataType,
           };
         });
       } else {
@@ -120,10 +135,12 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
           const sanitizedKey = this.sanitizeString(key);
           const type = results.meta[key];
           const headerTooltip = type;
+          const cellDataType = this.defineDataType(type);
           return {
             field: sanitizedKey,
             headerName: sanitizedKey,
             headerTooltip,
+            cellDataType,
           };
         });
       }
@@ -131,12 +148,18 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       if (typeof results[0] === "string") {
         return results.map((key: string) => {
           const sanitizedKey = this.sanitizeString(key);
-          return { field: sanitizedKey, headerName: sanitizedKey };
+          const cellDataType = "text";
+          return {
+            field: sanitizedKey,
+            headerName: sanitizedKey,
+            cellDataType,
+          };
         });
       }
       return Object.keys(results[0]).map((key: string) => {
         const sanitizedKey = this.sanitizeString(key);
-        return { field: sanitizedKey, headerName: sanitizedKey };
+        const cellDataType = "text";
+        return { field: sanitizedKey, headerName: sanitizedKey, cellDataType };
       });
     }
   }
@@ -178,7 +201,6 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       domLayout: "autoHeight",
       pagination: true,
       paginationPageSize: 100,
-      cacheBlockSize: 100,
       enableCellTextSelection: true,
       ensureDomOrder: true,
       suppressContextMenu: true,
@@ -281,7 +303,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
             if(${isGrid}){
               const gridDiv = document.getElementById('grid');
               const obj = JSON.parse('${gridOptionsString}');
-              const gridApi = new agGrid.Grid(gridDiv, obj);
+              const gridApi = agGrid.createGrid(gridDiv, obj);
               document.getElementById("results").scrollIntoView();
             }
           });
