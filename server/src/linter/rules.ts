@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Entity, QAst } from "../parser";
+import { Token, QAst } from "../parser";
 import {
   assignReservedWord,
   declaredAfterUse,
@@ -20,24 +20,25 @@ import {
   unusedVar,
 } from "./assign";
 import {
-  lineLength,
+  tooManyArguments,
   tooManyConstants,
   tooManyGlobals,
   tooManyLocals,
 } from "./limit";
-import { deprecatedDatetime } from "./other";
+import { deprecatedDatetime, fixedSeed, invalidEscape } from "./other";
 
 export enum RuleSeverity {
   ERROR = "ERROR",
   WARNING = "WARNING",
   INFO = "INFO",
+  HINT = "HINT",
 }
 
 export interface LinterRule {
   name: string;
   message: string;
   severity: RuleSeverity;
-  check: (ast: QAst) => Entity[];
+  check: (ast: QAst) => Token[];
 }
 
 const check = () => [];
@@ -56,7 +57,7 @@ const CondEvenArgsRule: LinterRule = {
   check,
 };
 
-const DeclaredAfterUserRule: LinterRule = {
+const DeclaredAfterUseRule: LinterRule = {
   name: "DECLARED_AFTER_USE",
   message: "The variable was declared after being used",
   severity: RuleSeverity.ERROR,
@@ -87,9 +88,9 @@ const InvalidAssignRule: LinterRule = {
 const InvalidEscapeRule: LinterRule = {
   name: "INVALID_ESCAPE",
   message:
-    "Invalid Escape Sequence: Valid escape sequences are: \\n,\\r,\\t,/,,/ and three digit octal sequences \\377 or smaller",
-  severity: RuleSeverity.ERROR,
-  check,
+    'Invalid Escape Sequence: Valid escape sequences are: \\n,\\r,\\t,\\\\,\\/,\\" and three digit octal sequences \\377 or smaller',
+  severity: RuleSeverity.HINT,
+  check: invalidEscape,
 };
 
 const InvalidQukeRule: LinterRule = {
@@ -149,6 +150,13 @@ const TooManyLocalsRule: LinterRule = {
   check: tooManyLocals,
 };
 
+const TooManyArgumentsRule: LinterRule = {
+  name: "TOO_MANY_ARGUMENTS",
+  message: "Too many arguments in a function",
+  severity: RuleSeverity.ERROR,
+  check: tooManyArguments,
+};
+
 const BackwardCompatibilityRule: LinterRule = {
   name: "BACKWARD_COMPATIBILITY",
   message:
@@ -206,7 +214,7 @@ const FixedSeedRule: LinterRule = {
   message:
     "Inputting a positive number into ?0Ng will result in the same sequence every run",
   severity: RuleSeverity.WARNING,
-  check,
+  check: fixedSeed,
 };
 
 const FunctionStartRule: LinterRule = {
@@ -293,14 +301,14 @@ const UnusedInternalRule: LinterRule = {
 const UnusedParamRule: LinterRule = {
   name: "UNUSED_PARAM",
   message: "This param was declared then never used",
-  severity: RuleSeverity.WARNING,
+  severity: RuleSeverity.HINT,
   check: unusedParam,
 };
 
 const UnusedVarRule: LinterRule = {
   name: "UNUSED_VAR",
   message: "This variable was declared then never used",
-  severity: RuleSeverity.WARNING,
+  severity: RuleSeverity.HINT,
   check: unusedVar,
 };
 
@@ -368,7 +376,7 @@ const LineLengthRule: LinterRule = {
   name: "LINE_LENGTH",
   message: "Maximum line length exceeded",
   severity: RuleSeverity.WARNING,
-  check: lineLength,
+  check,
 };
 
 const DefaultQdocRule: LinterRule = {
@@ -473,7 +481,7 @@ const UnusedDependencyRule: LinterRule = {
 export const Rules: LinterRule[] = [
   AssignReservedWordRule,
   CondEvenArgsRule,
-  DeclaredAfterUserRule,
+  DeclaredAfterUseRule,
   GlobalPeachRule,
   InvalidAdverbRule,
   InvalidAssignRule,
@@ -485,6 +493,7 @@ export const Rules: LinterRule[] = [
   TooManyConstantsRule,
   TooManyGlobalsRule,
   TooManyLocalsRule,
+  TooManyArgumentsRule,
   UnindentedCodeRule,
   BackwardCompatibilityRule,
   CastTypeNumericalRule,

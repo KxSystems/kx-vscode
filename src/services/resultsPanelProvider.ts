@@ -23,6 +23,7 @@ import { ext } from "../extensionVariables";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
+import { InsightsNode } from "./kdbTreeProvider";
 
 export class KdbResultsViewProvider implements WebviewViewProvider {
   public static readonly viewType = "kdb-results";
@@ -60,7 +61,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       this._view.webview.postMessage(queryResults);
       this._view.webview.html = this._getWebviewContent(
         queryResults,
-        dataSourceType
+        dataSourceType,
       );
     }
   }
@@ -101,23 +102,92 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     utils.exportToCsv(workspaceUri);
   }
 
-  convertToGrid(queryResult: any[]): string {
-    const columnDefs = Object.keys(queryResult[0]).map((key: string) => {
-      const sanitizedKey = this.sanitizeString(key);
-      return { field: sanitizedKey, headerName: sanitizedKey };
-    });
-    const rowData = queryResult.map((row: any) => {
-      for (const key in row) {
-        if (Object.prototype.hasOwnProperty.call(row, key)) {
-          row[key] =
-            row[key] !== undefined && row[key] !== null
-              ? this.sanitizeString(row[key])
-              : "";
-        }
+  defineDataType(type: string): string {
+    const typeMapping: { [key: string]: string } = {
+      short: "number",
+      int: "number",
+      long: "number",
+      float: "number",
+      real: "number",
+      boolean: "boolean",
+    };
+
+    return typeMapping[type] || "text";
+  }
+
+  generateCoumnDefs(results: any, isInsights: boolean): any {
+    if (isInsights) {
+      if (results.rows.length === 0) {
+        return Object.keys(results.meta).map((key: string) => {
+          const sanitizedKey = this.sanitizeString(key);
+          const type = results.meta[key];
+          const headerTooltip = type;
+          const cellDataType = this.defineDataType(type);
+          return {
+            field: sanitizedKey,
+            headerName: sanitizedKey,
+            headerTooltip,
+            cellDataType,
+          };
+        });
+      } else {
+        return Object.keys(results.rows[0]).map((key: string) => {
+          const sanitizedKey = this.sanitizeString(key);
+          const type = results.meta[key];
+          const headerTooltip = type;
+          const cellDataType = this.defineDataType(type);
+          return {
+            field: sanitizedKey,
+            headerName: sanitizedKey,
+            headerTooltip,
+            cellDataType,
+          };
+        });
       }
-      return row;
-    });
-    ext.resultPanelCSV = this.convertToCsv(rowData).join("\n");
+    } else {
+      if (typeof results[0] === "string") {
+        return results.map((key: string) => {
+          const sanitizedKey = this.sanitizeString(key);
+          const cellDataType = "text";
+          return {
+            field: sanitizedKey,
+            headerName: sanitizedKey,
+            cellDataType,
+          };
+        });
+      }
+      return Object.keys(results[0]).map((key: string) => {
+        const sanitizedKey = this.sanitizeString(key);
+        const cellDataType = "text";
+        return { field: sanitizedKey, headerName: sanitizedKey, cellDataType };
+      });
+    }
+  }
+
+  convertToGrid(results: any): string {
+    const isInsights = ext.connectionNode instanceof InsightsNode;
+    const queryResult = isInsights ? results.rows : results;
+
+    const columnDefs = this.generateCoumnDefs(results, isInsights);
+    let rowData = [];
+    if (!isInsights && typeof results[0] === "string") {
+      rowData = [];
+    } else {
+      rowData = queryResult.map((row: any) => {
+        for (const key in row) {
+          if (Object.prototype.hasOwnProperty.call(row, key)) {
+            row[key] =
+              row[key] !== undefined && row[key] !== null
+                ? this.sanitizeString(row[key])
+                : "";
+          }
+        }
+        return row;
+      });
+    }
+    if (rowData.length > 0) {
+      ext.resultPanelCSV = this.convertToCsv(rowData).join("\n");
+    }
     return JSON.stringify({
       defaultColDef: {
         sortable: true,
@@ -131,11 +201,11 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       domLayout: "autoHeight",
       pagination: true,
       paginationPageSize: 100,
-      cacheBlockSize: 100,
       enableCellTextSelection: true,
       ensureDomOrder: true,
       suppressContextMenu: true,
       suppressDragLeaveHidesColumns: true,
+      tooltipShowDelay: 200,
     });
   }
 
@@ -187,13 +257,11 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       if (typeof queryResult === "string" || typeof queryResult === "number") {
         result =
           queryResult !== ""
-            ? `<p>${queryResult}</p>`
+            ? `<p class="results-txt">${queryResult
+                .toString()
+                .replace(/\n/g, "<br/>")}</p>`
             : "<p>No results to show</p>";
-      } else if (
-        typeof queryResult === "object" &&
-        queryResult !== null &&
-        queryResult instanceof Array
-      ) {
+      } else if (queryResult) {
         isGrid = true;
         gridOptionsString = this.convertToGrid(queryResult);
       }
@@ -215,12 +283,12 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         <link rel="stylesheet" href="${this._getLibUri("resultsPanel.css")}" />
         <link rel="stylesheet" href="${this._getLibUri("ag-grid.min.css")}" />
         <link rel="stylesheet" href="${this._getLibUri(
-          "ag-theme-alpine.min.css"
+          "ag-theme-alpine.min.css",
         )}" />
         <title>Q Results</title>
         <script nonce="${nonce}" src="${this._getLibUri(
-        "ag-grid-community.min.js"
-      )}"></script>
+          "ag-grid-community.min.js",
+        )}"></script>
       </head>
       <body>      
         <div id="results" class="results-view-container">
@@ -235,7 +303,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
             if(${isGrid}){
               const gridDiv = document.getElementById('grid');
               const obj = JSON.parse('${gridOptionsString}');
-              const gridApi = new agGrid.Grid(gridDiv, obj);
+              const gridApi = agGrid.createGrid(gridDiv, obj);
               document.getElementById("results").scrollIntoView();
             }
           });

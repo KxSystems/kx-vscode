@@ -19,6 +19,8 @@ import { createDefaultDataSourceFile } from "../../src/models/dataSource";
 import { DataSourcesPanel } from "../../src/panels/datasource";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as utils from "../../src/utils/execution";
+import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
+import { TreeItemCollapsibleState } from "vscode";
 
 describe("WebPanels", () => {
   describe("DataSourcesPanel", () => {
@@ -36,7 +38,7 @@ describe("WebPanels", () => {
     it("should create a new panel", () => {
       assert.ok(
         DataSourcesPanel.currentPanel,
-        "DataSourcesPanel.currentPanel should be truthy"
+        "DataSourcesPanel.currentPanel should be truthy",
       );
     });
 
@@ -45,7 +47,7 @@ describe("WebPanels", () => {
       assert.strictEqual(
         DataSourcesPanel.currentPanel,
         undefined,
-        "DataSourcesPanel.currentPanel should be undefined"
+        "DataSourcesPanel.currentPanel should be undefined",
       );
     });
 
@@ -54,7 +56,7 @@ describe("WebPanels", () => {
       const actualHtml = DataSourcesPanel.currentPanel._panel.webview.html;
       assert.ok(
         actualHtml.indexOf(expectedHtml) !== -1,
-        "Panel HTML should include expected web component"
+        "Panel HTML should include expected web component",
       );
     });
   });
@@ -62,6 +64,17 @@ describe("WebPanels", () => {
   describe("ResultsPanelProvider", () => {
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
     let resultsPanel: KdbResultsViewProvider;
+
+    const insightsNode = new InsightsNode(
+      [],
+      "insightsnode1",
+      {
+        server: "insightsservername",
+        alias: "insightsserveralias",
+        auth: true,
+      },
+      TreeItemCollapsibleState.None,
+    );
 
     beforeEach(() => {
       resultsPanel = new KdbResultsViewProvider(uriTest);
@@ -158,12 +171,151 @@ describe("WebPanels", () => {
     });
 
     describe("convertToGrid()", () => {
-      it("should return 'gridOptions' if queryResult is an empty string", () => {
-        const inputQueryResult = [{ a: "1" }, { a: "2" }, { a: "3" }];
-        const expectedOutput =
-          '{"defaultColDef":{"sortable":true,"resizable":true,"filter":true,"flex":1,"minWidth":100},"rowData":[{"a":"1"},{"a":"2"},{"a":"3"}],"columnDefs":[{"field":"a","headerName":"a"}],"domLayout":"autoHeight","pagination":true,"paginationPageSize":100,"cacheBlockSize":100,"enableCellTextSelection":true,"ensureDomOrder":true,"suppressContextMenu":true,"suppressDragLeaveHidesColumns":true}';
-        const actualOutput = resultsPanel.convertToGrid(inputQueryResult);
-        assert.strictEqual(actualOutput, expectedOutput);
+      it("should convert results to grid format for inisights", () => {
+        const results = {
+          rows: [
+            { prop1: "value1", prop2: "value2" },
+            { prop1: "value3", prop2: "value4" },
+          ],
+          meta: { prop1: "type1", prop2: "type2" },
+        };
+
+        const expectedOutput = JSON.stringify({
+          defaultColDef: {
+            sortable: true,
+            resizable: true,
+            filter: true,
+            flex: 1,
+            minWidth: 100,
+          },
+          rowData: [
+            { prop1: "value1", prop2: "value2" },
+            { prop1: "value3", prop2: "value4" },
+          ],
+          columnDefs: [
+            {
+              field: "prop1",
+              headerName: "prop1",
+              headerTooltip: "type1",
+              cellDataType: "text",
+            },
+            {
+              field: "prop2",
+              headerName: "prop2",
+              headerTooltip: "type2",
+              cellDataType: "text",
+            },
+          ],
+          domLayout: "autoHeight",
+          pagination: true,
+          paginationPageSize: 100,
+          enableCellTextSelection: true,
+          ensureDomOrder: true,
+          suppressContextMenu: true,
+          suppressDragLeaveHidesColumns: true,
+          tooltipShowDelay: 200,
+        });
+
+        // Mock ext.connectionNode
+        const stub = sinon.stub(ext, "connectionNode");
+        stub.get(() => insightsNode);
+
+        const output = resultsPanel.convertToGrid(results);
+        assert.equal(output, expectedOutput);
+
+        // Restore the stub
+        stub.restore();
+      });
+
+      it("should convert results to grid format with empty rows ", () => {
+        const results = {
+          rows: [],
+          meta: { prop1: "type1", prop2: "type2" },
+        };
+
+        const expectedOutput = JSON.stringify({
+          defaultColDef: {
+            sortable: true,
+            resizable: true,
+            filter: true,
+            flex: 1,
+            minWidth: 100,
+          },
+          rowData: [],
+          columnDefs: [
+            {
+              field: "prop1",
+              headerName: "prop1",
+              headerTooltip: "type1",
+              cellDataType: "text",
+            },
+            {
+              field: "prop2",
+              headerName: "prop2",
+              headerTooltip: "type2",
+              cellDataType: "text",
+            },
+          ],
+          domLayout: "autoHeight",
+          pagination: true,
+          paginationPageSize: 100,
+          enableCellTextSelection: true,
+          ensureDomOrder: true,
+          suppressContextMenu: true,
+          suppressDragLeaveHidesColumns: true,
+          tooltipShowDelay: 200,
+        });
+
+        // Mock ext.connectionNode
+        const stub = sinon.stub(ext, "connectionNode");
+        stub.get(() => insightsNode);
+
+        const output = resultsPanel.convertToGrid(results);
+        assert.equal(output, expectedOutput);
+
+        // Restore the stub
+        stub.restore();
+      });
+    });
+
+    describe("generateColumnDefs", () => {
+      it("should return an array of column definitions if the results are not empty", () => {
+        const input = [
+          { prop1: "value1", prop2: "value2" },
+          { prop1: "value3", prop2: "value4" },
+        ];
+        const expectedOutput = [
+          {
+            field: "prop1",
+            headerName: "prop1",
+            cellDataType: "text",
+          },
+          {
+            field: "prop2",
+            headerName: "prop2",
+            cellDataType: "text",
+          },
+        ];
+        const actualOutput = resultsPanel.generateCoumnDefs(input, false);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+
+      it("should return the results if the results are array of strings", () => {
+        const input = ["value1", "value2"];
+        const expectedOutput = [
+          {
+            field: "value1",
+            headerName: "value1",
+            cellDataType: "text",
+          },
+          {
+            field: "value2",
+            headerName: "value2",
+            cellDataType: "text",
+          },
+        ];
+        const actualOutput = resultsPanel.generateCoumnDefs(input, false);
+        assert.deepStrictEqual(actualOutput, expectedOutput);
       });
     });
 
@@ -227,6 +379,7 @@ describe("WebPanels", () => {
 
     describe("_getWebviewContent", () => {
       const uriTest: vscode.Uri = vscode.Uri.parse("test");
+
       let resultsPanel: KdbResultsViewProvider;
       const view: vscode.WebviewView = {
         visible: true,
@@ -258,14 +411,18 @@ describe("WebPanels", () => {
           { id: 2, test: "test2" },
         ];
         const expectedOutput = `"rowData":[{"id":1,"test":"test1"},{"id":2,"test":"test2"}],"columnDefs":[{"field":"id","headerName":"id"},{"field":"test","headerName":"test"}]`;
+        const stub = sinon
+          .stub(resultsPanel, "convertToGrid")
+          .returns(expectedOutput);
         const actualOutput = resultsPanel["_getWebviewContent"](input);
         assert.strictEqual(typeof actualOutput, "string");
         assert.ok(actualOutput.includes(expectedOutput));
+        stub.restore();
       });
 
-      it("returns no results", () => {
+      it("returns string results", () => {
         const input = "Test";
-        const expectedOutput = `<p>Test</p>`;
+        const expectedOutput = `<p class="results-txt">Test</p>`;
         const actualOutput = resultsPanel["_getWebviewContent"](input);
         assert.strictEqual(typeof actualOutput, "string");
         assert.ok(actualOutput.includes(expectedOutput));

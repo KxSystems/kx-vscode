@@ -23,3 +23,7 @@ body {
 .results-header-datagrid {
   background: #00000050;
 }
+
+.results-txt {
+  white-space: pre;
+}

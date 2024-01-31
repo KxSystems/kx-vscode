@@ -15,10 +15,7 @@ import * as nodeq from "node-q";
 import { commands, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { delay } from "../utils/core";
-import {
-  convertArrayOfArraysToObjects,
-  handleQueryResults,
-} from "../utils/execution";
+import { convertStringToArray, handleQueryResults } from "../utils/execution";
 import { queryWrapper } from "../utils/queryUtils";
 import { QueryResult, QueryResultType } from "./queryResult";
 
@@ -26,6 +23,8 @@ export class Connection {
   private options: nodeq.ConnectionParameters;
   private connection?: nodeq.Connection;
   public connected: boolean;
+  private isError: boolean = false;
+  private result?: string;
 
   constructor(connectionString: string, creds?: string[], tls?: boolean) {
     const params = connectionString.split(":");
@@ -69,7 +68,7 @@ export class Connection {
 
   public async execute(command: string): Promise<string | Error> {
     let result;
-
+    let error;
     // try 5 times, then fail
     let retryCount = 0;
     while (this.connection === undefined) {
@@ -81,7 +80,11 @@ export class Connection {
     }
 
     this.connection.k(command, function (err: Error, res: string) {
-      if (err) throw err;
+      if (err) {
+        error = err;
+        result = "";
+        return;
+      }
       result = res;
     });
 
@@ -90,24 +93,23 @@ export class Connection {
       await delay(500);
     }
 
+    if (error) {
+      throw error;
+    }
+
     return result;
   }
 
   public async executeQuery(
     command: string,
     context?: string,
-    stringify?: boolean
+    stringify?: boolean,
   ): Promise<any> {
-    let result;
-    let retryCount = 0;
-    while (this.connection === undefined) {
-      if (retryCount > ext.maxRetryCount) {
-        return "timeout";
-      }
-      await delay(500);
-      retryCount++;
-    }
+    await this.waitForConnection();
 
+    if (!this.connection) {
+      return "timeout";
+    }
     const wrapper = queryWrapper();
     this.connection.k(
       wrapper,
@@ -116,34 +118,67 @@ export class Connection {
       !!stringify,
       (err: Error, res: QueryResult) => {
         if (err) {
-          result = handleQueryResults(err.toString(), QueryResultType.Error);
-        } else if (res) {
-          if (res.errored) {
-            result = handleQueryResults(
-              res.error + (res.backtrace ? "\n" + res.backtrace : ""),
-              QueryResultType.Error
-            );
-          } else {
-            result = res.result;
-          }
+          this.isError = true;
+          this.result = handleQueryResults(
+            err.toString(),
+            QueryResultType.Error,
+          );
         }
-      }
+        if (res) {
+          this.handleQueryResult(res);
+        }
+      },
     );
 
-    while (result === undefined || result === null) {
+    const result = await this.waitForResult();
+
+    if (ext.resultsViewProvider.isVisible() && stringify) {
+      if (this.isError) {
+        this.isError = false;
+        return result;
+      }
+      return convertStringToArray(result);
+    }
+
+    return result;
+  }
+
+  private async waitForConnection(): Promise<void> {
+    let retryCount = 0;
+    while (this.connection === undefined) {
+      if (retryCount > ext.maxRetryCount) {
+        throw new Error("timeout");
+      }
+      await delay(500);
+      retryCount++;
+    }
+  }
+
+  private handleQueryResult = (res: QueryResult): void => {
+    if (res.errored) {
+      this.isError = true;
+      this.result = handleQueryResults(
+        res.error + (res.backtrace ? "\n" + res.backtrace : ""),
+        QueryResultType.Error,
+      );
+    } else {
+      this.result = res.result;
+    }
+  };
+
+  private async waitForResult(): Promise<any> {
+    while (this.result === undefined || this.result === null) {
       await delay(500);
     }
-
-    if (!stringify) {
-      result = convertArrayOfArraysToObjects(result);
-    }
-
+    const result = this.result;
+    this.result = undefined;
     return result;
   }
 
   public async executeQueryRaw(command: string): Promise<string> {
     let result;
     let retryCount = 0;
+    let error;
     while (this.connection === undefined) {
       if (retryCount > ext.maxRetryCount) {
         return "timeout";
@@ -152,12 +187,20 @@ export class Connection {
       retryCount++;
     }
     this.connection.k(command, (err: Error, res: string) => {
-      if (err) throw err;
+      if (err) {
+        error = err;
+        result = "";
+        return;
+      }
       result = res;
     });
 
     while (result === undefined || result === null) {
       await delay(500);
+    }
+
+    if (error) {
+      throw error;
     }
 
     return result;
@@ -171,17 +214,17 @@ export class Connection {
         ext.serverProvider.reload();
 
         window.showErrorMessage(
-          `Connection to server ${this.options.host}:${this.options.port} failed!  Details: ${err?.message}`
+          `Connection to server ${this.options.host}:${this.options.port} failed!  Details: ${err?.message}`,
         );
         ext.outputChannel.appendLine(
-          `Connection to server ${this.options.host}:${this.options.port} failed!  Details: ${err?.message}`
+          `Connection to server ${this.options.host}:${this.options.port} failed!  Details: ${err?.message}`,
         );
         return;
       }
 
       conn.addListener("close", () => {
         ext.outputChannel.appendLine(
-          `Connection stopped from ${this.options.host}:${this.options.port}`
+          `Connection stopped from ${this.options.host}:${this.options.port}`,
         );
         this.connected = false;
       });
@@ -207,7 +250,7 @@ export class Connection {
     this.connection?.k(globalQuery, (err, result) => {
       if (err) {
         window.showErrorMessage(
-          `Failed to retrieve kdb+ global variables: '${err.message}`
+          `Failed to retrieve kdb+ global variables: '${err.message}`,
         );
         return;
       }
@@ -259,7 +302,7 @@ export class Connection {
     this.connection?.k(reservedQuery, (err, result) => {
       if (err) {
         window.showErrorMessage(
-          `Failed to retrieve kdb+ reserved keywords: '${err.message}`
+          `Failed to retrieve kdb+ reserved keywords: '${err.message}`,
         );
         return;
       }
@@ -271,7 +314,7 @@ export class Connection {
   private onConnect(
     err: Error | undefined,
     conn: nodeq.Connection,
-    callback: nodeq.AsyncValueCallback<Connection>
+    callback: nodeq.AsyncValueCallback<Connection>,
   ): void {
     this.connected = true;
     this.connection = conn;

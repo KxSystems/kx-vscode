@@ -96,7 +96,7 @@ describe("dataSourceCommand", () => {
     });
 
     await assert.doesNotReject(
-      dataSourceCommand.renameDataSource("datasource-0", "datasource-1")
+      dataSourceCommand.renameDataSource("datasource-0", "datasource-1"),
     );
   });
 
@@ -164,7 +164,7 @@ describe("dataSourceCommand", () => {
     const item = new KdbDataSourceTreeItem(
       "datasource-0",
       vscode.TreeItemCollapsibleState.Collapsed,
-      []
+      [],
     );
 
     await assert.doesNotReject(dataSourceCommand.deleteDataSource(item));
@@ -189,7 +189,7 @@ describe("dataSourceCommand", () => {
     const item = new KdbDataSourceTreeItem(
       "datasource-0",
       vscode.TreeItemCollapsibleState.Collapsed,
-      []
+      [],
     );
 
     const uri = vscode.Uri.file("/temp/.kdb-datasources/datasource-0.ds");
@@ -449,15 +449,20 @@ describe("dataSourceCommand2", () => {
     let checkIfTimeParamIsCorrectStub: sinon.SinonStub;
     let getDataInsightsStub: sinon.SinonStub;
     let handleWSResultsStub: sinon.SinonStub;
+    let handleScratchpadTableRes: sinon.SinonStub;
 
     beforeEach(() => {
       getApiBodyStub = sinon.stub(dataSourceCommand, "getApiBody");
       checkIfTimeParamIsCorrectStub = sinon.stub(
         dataSourceUtils,
-        "checkIfTimeParamIsCorrect"
+        "checkIfTimeParamIsCorrect",
       );
       getDataInsightsStub = sinon.stub(srvCommand, "getDataInsights");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
+      handleScratchpadTableRes = sinon.stub(
+        queryUtils,
+        "handleScratchpadTableRes",
+      );
     });
 
     afterEach(() => {
@@ -473,7 +478,7 @@ describe("dataSourceCommand2", () => {
         .expects("showErrorMessage")
         .once()
         .withArgs(
-          "The time parameters(startTS and endTS) are not correct, please check the format or if the startTS is before the endTS"
+          "The time parameters(startTS and endTS) are not correct, please check the format or if the startTS is before the endTS",
         );
       sinon.assert.notCalled(getApiBodyStub);
       sinon.assert.notCalled(getDataInsightsStub);
@@ -489,10 +494,14 @@ describe("dataSourceCommand2", () => {
         { a: "4", b: "6" },
         { a: "6", b: "9" },
       ]);
+      handleScratchpadTableRes.resolves([
+        { a: "2", b: "3" },
+        { a: "4", b: "6" },
+        { a: "6", b: "9" },
+      ]);
 
-      const result = await dataSourceCommand.runApiDataSource(
-        dummyDataSourceFiles
-      );
+      const result =
+        await dataSourceCommand.runApiDataSource(dummyDataSourceFiles);
 
       sinon.assert.calledOnce(getDataInsightsStub);
       sinon.assert.calledOnce(handleWSResultsStub);
@@ -507,10 +516,15 @@ describe("dataSourceCommand2", () => {
   describe("runQsqlDataSource", () => {
     let getDataInsightsStub: sinon.SinonStub;
     let handleWSResultsStub: sinon.SinonStub;
+    let handleScratchpadTableRes: sinon.SinonStub;
 
     beforeEach(() => {
       getDataInsightsStub = sinon.stub(srvCommand, "getDataInsights");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
+      handleScratchpadTableRes = sinon.stub(
+        queryUtils,
+        "handleScratchpadTableRes",
+      );
     });
 
     afterEach(() => {
@@ -524,10 +538,14 @@ describe("dataSourceCommand2", () => {
         { a: "4", b: "6" },
         { a: "6", b: "9" },
       ]);
+      handleScratchpadTableRes.resolves([
+        { a: "2", b: "3" },
+        { a: "4", b: "6" },
+        { a: "6", b: "9" },
+      ]);
 
-      const result = await dataSourceCommand.runQsqlDataSource(
-        dummyDataSourceFiles
-      );
+      const result =
+        await dataSourceCommand.runQsqlDataSource(dummyDataSourceFiles);
 
       sinon.assert.calledOnce(getDataInsightsStub);
       sinon.assert.calledOnce(handleWSResultsStub);
@@ -542,10 +560,15 @@ describe("dataSourceCommand2", () => {
   describe("runSqlDataSource", () => {
     let getDataInsightsStub: sinon.SinonStub;
     let handleWSResultsStub: sinon.SinonStub;
+    let handleScratchpadTableRes: sinon.SinonStub;
 
     beforeEach(() => {
       getDataInsightsStub = sinon.stub(srvCommand, "getDataInsights");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
+      handleScratchpadTableRes = sinon.stub(
+        queryUtils,
+        "handleScratchpadTableRes",
+      );
     });
 
     afterEach(() => {
@@ -559,10 +582,14 @@ describe("dataSourceCommand2", () => {
         { a: "4", b: "6" },
         { a: "6", b: "9" },
       ]);
+      handleScratchpadTableRes.resolves([
+        { a: "2", b: "3" },
+        { a: "4", b: "6" },
+        { a: "6", b: "9" },
+      ]);
 
-      const result = await dataSourceCommand.runSqlDataSource(
-        dummyDataSourceFiles
-      );
+      const result =
+        await dataSourceCommand.runSqlDataSource(dummyDataSourceFiles);
 
       sinon.assert.calledOnce(getDataInsightsStub);
       sinon.assert.calledOnce(handleWSResultsStub);
@@ -710,9 +737,11 @@ describe("dataSourceCommand2", () => {
     let isVisibleStub,
       getMetaStub,
       handleWSResultsStub,
+      handleScratchpadTableRes,
       getDataInsightsStub,
       writeQueryResultsToViewStub,
       writeQueryResultsToConsoleStub: sinon.SinonStub;
+
     ext.outputChannel = vscode.window.createOutputChannel("kdb");
 
     beforeEach(() => {
@@ -721,14 +750,17 @@ describe("dataSourceCommand2", () => {
       handleWSResultsStub = sinon
         .stub(queryUtils, "handleWSResults")
         .returns("dummy results");
+      handleScratchpadTableRes = sinon
+        .stub(queryUtils, "handleScratchpadTableRes")
+        .returns("dummy results");
       getDataInsightsStub = sinon.stub(srvCommand, "getDataInsights");
       writeQueryResultsToViewStub = sinon.stub(
         srvCommand,
-        "writeQueryResultsToView"
+        "writeQueryResultsToView",
       );
       writeQueryResultsToConsoleStub = sinon.stub(
         srvCommand,
-        "writeQueryResultsToConsole"
+        "writeQueryResultsToConsole",
       );
     });
 
@@ -747,7 +779,7 @@ describe("dataSourceCommand2", () => {
       getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
       isVisibleStub.returns(true);
       await dataSourceCommand.runDataSource(
-        dummyFileContent as DataSourceFiles
+        dummyFileContent as DataSourceFiles,
       );
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
       sinon.assert.calledOnce(writeQueryResultsToViewStub);
@@ -759,7 +791,7 @@ describe("dataSourceCommand2", () => {
       getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
-        dummyFileContent as DataSourceFiles
+        dummyFileContent as DataSourceFiles,
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
@@ -771,7 +803,7 @@ describe("dataSourceCommand2", () => {
       getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
-        dummyFileContent as DataSourceFiles
+        dummyFileContent as DataSourceFiles,
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
@@ -783,7 +815,7 @@ describe("dataSourceCommand2", () => {
       getDataInsightsStub.resolves({ arrayBuffer: ab, error: "error" });
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
-        dummyFileContent as DataSourceFiles
+        dummyFileContent as DataSourceFiles,
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
@@ -795,7 +827,7 @@ describe("dataSourceCommand2", () => {
       getDataInsightsStub.resolves({ arrayBuffer: ab, error: "error" });
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
-        dummyFileContent as DataSourceFiles
+        dummyFileContent as DataSourceFiles,
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
@@ -807,7 +839,7 @@ describe("dataSourceCommand2", () => {
       getDataInsightsStub.resolves({ arrayBuffer: ab, error: "error" });
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
-        dummyFileContent as DataSourceFiles
+        dummyFileContent as DataSourceFiles,
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
@@ -819,7 +851,7 @@ describe("dataSourceCommand2", () => {
       getDataInsightsStub.resolves(undefined);
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
-        dummyFileContent as DataSourceFiles
+        dummyFileContent as DataSourceFiles,
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
@@ -831,7 +863,7 @@ describe("dataSourceCommand2", () => {
       getDataInsightsStub.resolves(undefined);
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
-        dummyFileContent as DataSourceFiles
+        dummyFileContent as DataSourceFiles,
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
@@ -843,7 +875,7 @@ describe("dataSourceCommand2", () => {
       getDataInsightsStub.resolves(undefined);
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
-        dummyFileContent as DataSourceFiles
+        dummyFileContent as DataSourceFiles,
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
@@ -1098,7 +1130,7 @@ describe("serverCommand", () => {
         executeCommandStub.firstCall,
         "kdb.resultsPanel.update",
         result,
-        undefined
+        undefined,
       );
 
       executeCommandStub.restore();
@@ -1132,7 +1164,7 @@ describe("serverCommand", () => {
         showErrorMessageStub,
         "OpenSSL not found, please ensure this is installed",
         "More Info",
-        "Cancel"
+        "Cancel",
       );
       sinon.assert.notCalled(updateServersStub);
     });
@@ -1147,7 +1179,7 @@ describe("serverCommand", () => {
       sinon.assert.calledWith(
         showErrorMessageStub,
         "Server not found, please ensure this is a correct server",
-        "Cancel"
+        "Cancel",
       );
       sinon.assert.calledOnce(getServersStub);
       sinon.assert.notCalled(updateServersStub);
@@ -1212,15 +1244,15 @@ describe("serverCommand", () => {
       };
       queryConsoleErrorStub = sinon.stub(
         ExecutionConsole.prototype,
-        "appendQueryError"
+        "appendQueryError",
       );
       writeQueryResultsToViewStub = sinon.stub(
         srvCommand,
-        "writeQueryResultsToView"
+        "writeQueryResultsToView",
       );
       writeQueryResultsToConsoleStub = sinon.stub(
         srvCommand,
-        "writeQueryResultsToConsole"
+        "writeQueryResultsToConsole",
       );
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
     });
@@ -1263,7 +1295,7 @@ describe("serverCommand", () => {
         alias: "insightsserveralias",
         auth: true,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
 
     const token: codeFlowLogin.IToken = {
@@ -1414,7 +1446,7 @@ describe("serverCommand", () => {
         alias: "insightsserveralias",
         auth: true,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
     const token: codeFlowLogin.IToken = {
       accessToken:
@@ -1432,7 +1464,7 @@ describe("serverCommand", () => {
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableResStub = sinon.stub(
         queryUtils,
-        "handleScratchpadTableRes"
+        "handleScratchpadTableRes",
       );
     });
 
@@ -1498,7 +1530,7 @@ describe("serverCommand", () => {
         alias: "insightsserveralias",
         auth: true,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
 
     let getQueryContextStub,
@@ -1540,7 +1572,7 @@ describe("serverCommand", () => {
     it("runQuery with PythonQueryFile not connected to inisghts node", () => {
       ext.connectionNode = undefined;
       const result = serverCommand.runQuery(
-        ExecutionTypes.PythonQuerySelection
+        ExecutionTypes.PythonQuerySelection,
       );
       assert.equal(result, undefined);
     });
@@ -1548,7 +1580,7 @@ describe("serverCommand", () => {
     it("runQuery with PythonQueryFile connected to inisghts node", () => {
       ext.connectionNode = insightsNode;
       const result = serverCommand.runQuery(
-        ExecutionTypes.PythonQuerySelection
+        ExecutionTypes.PythonQuerySelection,
       );
       assert.equal(result, undefined);
     });
@@ -1563,7 +1595,7 @@ describe("serverCommand", () => {
       ext.connectionNode = undefined;
       const result = serverCommand.runQuery(
         ExecutionTypes.ReRunQuery,
-        "rerun query"
+        "rerun query",
       );
       assert.equal(result, undefined);
     });

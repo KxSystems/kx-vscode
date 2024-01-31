@@ -23,10 +23,12 @@ import {
   Connection,
   Diagnostic,
   DiagnosticSeverity,
+  DidChangeConfigurationParams,
   DocumentHighlight,
   DocumentSymbolParams,
   Hover,
   InitializeParams,
+  LSPAny,
   Location,
   Position,
   Range,
@@ -47,12 +49,20 @@ import {
 } from "vscode-languageserver/node";
 import { lint } from "./linter";
 import { RuleSeverity } from "./linter/rules";
-import { EntityType, IdentifierPattern, analyze, getNameScope } from "./parser";
+import { TokenType, IdentifierPattern, scope, analyze } from "./parser";
 import { KeywordPattern } from "./parser/keywords";
 import { QParser } from "./parser/parser";
 import { AnalyzerContent, GlobalSettings, Keyword } from "./utils/analyzer";
+import { IToken } from "chevrotain";
+
+interface Settings {
+  linting: boolean;
+}
+
+const defaultSettings: Settings = { linting: true };
 
 export default class QLangServer {
+  private settings: Settings = defaultSettings;
   public connection: Connection;
   public documents: TextDocuments<TextDocument> = new TextDocuments(
     TextDocument
@@ -70,6 +80,7 @@ export default class QLangServer {
       this.analyzer.analyzeWorkspace();
     });
     this.documents.onDidClose((e) => {
+      this.connection.sendDiagnostics({ uri: e.document.uri, diagnostics: [] });
       this.documentSettings.delete(e.document.uri);
     });
     this.documents.onDidChangeContent(async (change) => {
@@ -99,6 +110,9 @@ export default class QLangServer {
     );
     this.connection.languages.callHierarchy.onOutgoingCalls(
       this.onOutgoingCallsCallHierarchy.bind(this)
+    );
+    this.connection.onDidChangeConfiguration(
+      this.onDidChangeConfiguration.bind(this)
     );
   }
 
@@ -184,6 +198,15 @@ export default class QLangServer {
         this.connection.console.info(msg);
         break;
     }
+  }
+
+  public setSettings(settings: LSPAny) {
+    this.settings = settings;
+    this.documents.all().forEach((doc) => this.validateTextDocument(doc));
+  }
+
+  private onDidChangeConfiguration(change: DidChangeConfigurationParams) {
+    this.setSettings(change.settings?.kdb || defaultSettings);
   }
 
   private onCompletion(params: TextDocumentPositionParams): CompletionItem[] {
@@ -363,7 +386,7 @@ export default class QLangServer {
     const { script, assign } = analyze(cst);
     const symbol = script.find(
       (entity) =>
-        entity.type === EntityType.IDENTIFIER &&
+        entity.type === TokenType.IDENTIFIER &&
         offset >= entity.startOffset &&
         offset <= entity.endOffset
     );
@@ -371,17 +394,16 @@ export default class QLangServer {
       return null;
     }
     let targets;
-    const symbolScope = getNameScope(symbol);
+    const symbolScope = scope(symbol);
     const local = assign.find(
       (entity) =>
         symbol.image === entity.image &&
         symbolScope &&
-        symbolScope === getNameScope(entity)
+        symbolScope === scope(entity)
     );
     if (local) {
       const exists = assign.find(
-        (entity) =>
-          entity.image === newName && symbolScope === getNameScope(entity)
+        (entity) => entity.image === newName && symbolScope === scope(entity)
       );
       if (exists) {
         return null;
@@ -390,35 +412,33 @@ export default class QLangServer {
         (entity) =>
           symbol.image === entity.image &&
           symbolScope &&
-          symbolScope === getNameScope(entity) &&
-          entity.type === EntityType.IDENTIFIER
+          symbolScope === scope(entity) &&
+          entity.type === TokenType.IDENTIFIER
       );
     } else {
       const global = assign.find(
-        (entity) => !getNameScope(entity) && symbol.image === entity.image
+        (entity) => !scope(entity) && symbol.image === entity.image
       );
       if (!global) {
         return null;
       }
       const exists = assign.find(
-        (entity) => !getNameScope(entity) && entity.image === newName
+        (entity) => !scope(entity) && entity.image === newName
       );
       if (exists) {
         return null;
       }
       targets = script.filter((entity) => {
         if (
-          entity.type !== EntityType.IDENTIFIER ||
+          entity.type !== TokenType.IDENTIFIER ||
           entity.image !== symbol.image
         ) {
           return false;
         }
-        const scope = getNameScope(entity);
+        const scoped = scope(entity);
         const local = assign.find(
           (ident) =>
-            ident.image === entity.image &&
-            scope &&
-            getNameScope(ident) === scope
+            ident.image === entity.image && scoped && scope(ident) === scoped
         );
         return !local;
       });
@@ -478,25 +498,31 @@ export default class QLangServer {
     const cst = QParser.parse(text);
     const diagnostics: Diagnostic[] = [];
     let problems = QParser.errors.length;
-    if (problems > 1000) {
-      problems = 1000;
+    if (problems > 99) {
+      problems = 99;
     }
     for (let i = 0; i < problems; i++) {
       const error = QParser.errors[i];
+      let offset = -1;
+      if ("previousToken" in error) {
+        const token = error.previousToken as IToken;
+        offset = token.startOffset || -1;
+      }
+      if (offset < 0) {
+        offset = error.token.startOffset || 0;
+      }
       const diagnostic: Diagnostic = {
         severity: DiagnosticSeverity.Error,
         range: {
-          start: textDocument.positionAt(error.token.startOffset),
-          end: textDocument.positionAt(
-            error.token.endOffset || error.token.startOffset
-          ),
+          start: textDocument.positionAt(offset),
+          end: textDocument.positionAt(offset),
         },
         message: (error.message || error.name).replace(/\s+/g, " "),
         source: "kdb.QParser",
       };
       diagnostics.push(diagnostic);
     }
-    if (problems === 0) {
+    if (this.settings.linting && problems === 0) {
       const ast = analyze(cst);
       const results = lint(ast);
       for (const result of results) {
@@ -505,7 +531,9 @@ export default class QLangServer {
             ? DiagnosticSeverity.Error
             : result.severity === RuleSeverity.WARNING
             ? DiagnosticSeverity.Warning
-            : DiagnosticSeverity.Information;
+            : result.severity === RuleSeverity.INFO
+            ? DiagnosticSeverity.Information
+            : DiagnosticSeverity.Hint;
         for (const problem of result.problems) {
           const diagnostic: Diagnostic = {
             severity,

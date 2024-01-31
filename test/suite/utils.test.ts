@@ -40,6 +40,12 @@ import {
   showQuickPick,
 } from "../../src/utils/userInteraction";
 import { validateUtils } from "../../src/utils/validateUtils";
+import { DCDS } from "../../src/ipc/c";
+import {
+  DDateClass,
+  DDateTimeClass,
+  DTimestampClass,
+} from "../../src/ipc/cClasses";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;
@@ -91,7 +97,7 @@ describe("Utils", () => {
       beforeEach(() => {
         getConfigurationStub = sinon.stub(
           vscode.workspace,
-          "getConfiguration"
+          "getConfiguration",
         ) as sinon.SinonStub;
       });
 
@@ -154,12 +160,12 @@ describe("Utils", () => {
     it("checkIfTimeParamIsCorrect", () => {
       const result = dataSourceUtils.checkIfTimeParamIsCorrect(
         "2021-01-01",
-        "2021-01-02"
+        "2021-01-02",
       );
       assert.strictEqual(result, true);
       const result2 = dataSourceUtils.checkIfTimeParamIsCorrect(
         "2021-01-02",
-        "2021-01-01"
+        "2021-01-01",
       );
       assert.strictEqual(result2, false);
     });
@@ -316,6 +322,69 @@ describe("Utils", () => {
         assert.deepStrictEqual(result, expectedOutput);
       });
     });
+
+    describe("convertArrayOfObjectsToArrays", () => {
+      it("convertStringToArray handles string with separator", () => {
+        const input = "key1 | value1\nkey2 | value2";
+        const expectedOutput = [
+          { Index: 1, Key: "key1", Value: "value1" },
+          { Index: 2, Key: "key2", Value: "value2" },
+        ];
+        const output = executionUtils.convertStringToArray(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("convertStringToArray handles string without separator", () => {
+        const input = "value1\nvalue2";
+        const expectedOutput = [
+          { Index: 1, Value: "value1" },
+          { Index: 2, Value: "value2" },
+        ];
+        const output = executionUtils.convertStringToArray(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("convertStringToArray handles string with field names and lengths", () => {
+        const input = "name age\n---\nJohn 25\nDoe  30";
+        const expectedOutput = [
+          { Index: 1, name: "John", age: "25" },
+          { Index: 2, name: "Doe", age: "30" },
+        ];
+        const output = executionUtils.convertStringToArray(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("convertStringToArray filters out lines starting with '-'", () => {
+        const input = "key1 | value1\nkey2 | value2\nkey3 | value3";
+        const expectedOutput = [
+          { Index: 1, Key: "key1", Value: "value1" },
+          { Index: 2, Key: "key2", Value: "value2" },
+          { Index: 3, Key: "key3", Value: "value3" },
+        ];
+        const output = executionUtils.convertStringToArray(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("convertStringToArray handles single value results", () => {
+        const input = "2001.01.01D12:00:00.000000000\n";
+        const expectedOutput = [
+          { Index: 1, Value: "2001.01.01D12:00:00.000000000" },
+        ];
+        const output = executionUtils.convertStringToArray(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("convertStringToArray handles single line with multiple value results", () => {
+        const input =
+          "2001.01.01D12:00:00.000000000 2001.01.01D12:00:00.000000001\n";
+        const expectedOutput = [
+          { Index: 1, Value: "2001.01.01D12:00:00.000000000" },
+          { Index: 2, Value: "2001.01.01D12:00:00.000000001" },
+        ];
+        const output = executionUtils.convertStringToArray(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+    });
   });
 
   describe("executionConsole", () => {
@@ -335,7 +404,7 @@ describe("Utils", () => {
           auth: false,
           tls: false,
         },
-        TreeItemCollapsibleState.None
+        TreeItemCollapsibleState.None,
       );
 
       const insightsNode = new InsightsNode(
@@ -346,7 +415,7 @@ describe("Utils", () => {
           alias: "insightsserveralias",
           auth: true,
         },
-        TreeItemCollapsibleState.None
+        TreeItemCollapsibleState.None,
       );
 
       beforeEach(() => {
@@ -372,7 +441,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.KDB
+          ServerType.KDB,
         );
 
         getConfigurationStub.restore();
@@ -395,7 +464,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.KDB
+          ServerType.KDB,
         );
         getConfigurationStub.restore();
       });
@@ -412,7 +481,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.INSIGHTS
+          ServerType.INSIGHTS,
         );
       });
 
@@ -428,7 +497,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.KDB
+          ServerType.KDB,
         );
       });
 
@@ -444,7 +513,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.INSIGHTS
+          ServerType.INSIGHTS,
         );
       });
 
@@ -460,7 +529,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.undefined
+          ServerType.undefined,
         );
       });
     });
@@ -476,7 +545,7 @@ describe("Utils", () => {
         query,
         connectionName,
         connectionType,
-        true
+        true,
       );
       assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
     });
@@ -501,7 +570,7 @@ describe("Utils", () => {
         "testPanel",
         "Test Panel",
         vscode.ViewColumn.One,
-        {}
+        {},
       );
       const webview = panel.webview;
       const extensionUri = vscode.Uri.parse("file:///path/to/extension");
@@ -515,7 +584,7 @@ describe("Utils", () => {
         "testPanel",
         "Test Panel",
         vscode.ViewColumn.One,
-        {}
+        {},
       );
       const webview = panel.webview;
       const extensionUri = vscode.Uri.parse("file:///path/to/extension");
@@ -543,89 +612,6 @@ describe("Utils", () => {
     });
   });
 
-  // describe("Output", () => {
-  //   let windowCreateOutputChannelStub: sinon.SinonStub;
-  //   let outputChannelAppendStub: sinon.SinonStub;
-  //   let outputChannelAppendLineStub: sinon.SinonStub;
-  //   let outputChannelShowStub: sinon.SinonStub;
-  //   let outputChannelHideStub: sinon.SinonStub;
-  //   let outputChannelDisposeStub: sinon.SinonStub;
-  //   Output._outputChannel = {
-  //     name: "",
-  //     append: sinon.stub(),
-  //     appendLine: sinon.stub(),
-  //     show: sinon.stub(),
-  //     hide: sinon.stub(),
-  //     dispose: sinon.stub(),
-  //   } as unknown as vscode.OutputChannel;
-
-  //   beforeEach(() => {
-  //     windowCreateOutputChannelStub = sinon.stub(
-  //       vscode.window,
-  //       "createOutputChannel"
-  //     );
-  //     outputChannelAppendStub = sinon.stub(Output._outputChannel, "append");
-  //     outputChannelAppendLineStub = sinon.stub(
-  //       Output._outputChannel,
-  //       "appendLine"
-  //     );
-  //     outputChannelShowStub = sinon.stub(Output._outputChannel, "show");
-  //     outputChannelHideStub = sinon.stub(Output._outputChannel, "hide");
-  //     outputChannelDisposeStub = sinon.stub(Output._outputChannel, "dispose");
-  //   });
-
-  //   afterEach(() => {
-  //     windowCreateOutputChannelStub.restore();
-  //     outputChannelAppendStub.restore();
-  //     outputChannelAppendLineStub.restore();
-  //     outputChannelShowStub.restore();
-  //     outputChannelHideStub.restore();
-  //     outputChannelDisposeStub.restore();
-  //   });
-
-  //   it("should create an output channel with the correct name", () => {
-  //     Output._outputChannel = undefined as unknown as vscode.OutputChannel;
-  //     windowCreateOutputChannelStub.returns(Output._outputChannel);
-  //     Output._outputChannel =
-  //       Output._outputChannel ||
-  //       vscode.window.createOutputChannel("kdb-telemetry");
-  //     assert.ok(windowCreateOutputChannelStub.calledOnceWith("kdb-telemetry"));
-  //   });
-
-  //   it("should append a message to the output channel", () => {
-  //     const label = "label";
-  //     const message = "message";
-  //     Output.output(label, message);
-  //     assert.ok(
-  //       outputChannelAppendStub.calledOnceWith(`[${label}] ${message}`)
-  //     );
-  //   });
-
-  //   it("should append a message with a newline to the output channel", () => {
-  //     const label = "label";
-  //     const message = "message";
-  //     Output.outputLine(label, message);
-  //     assert.ok(
-  //       outputChannelAppendLineStub.calledOnceWith(`[${label}] ${message}`)
-  //     );
-  //   });
-
-  //   it("should show the output channel", () => {
-  //     Output.show();
-  //     assert.ok(outputChannelShowStub.calledOnce);
-  //   });
-
-  //   it("should hide the output channel", () => {
-  //     Output.hide();
-  //     assert.ok(outputChannelHideStub.calledOnce);
-  //   });
-
-  //   it("should dispose the output channel", () => {
-  //     Output.dispose();
-  //     assert.ok(outputChannelDisposeStub.calledOnce);
-  //   });
-  // });
-
   describe("queryUtils", () => {
     it("sanitizeQuery", () => {
       const query1 = "`select from t";
@@ -637,25 +623,35 @@ describe("Utils", () => {
     });
 
     describe("getValueFromArray", () => {
+      let inputSample: DCDS = undefined;
+      beforeEach(() => {
+        inputSample = {
+          class: "203",
+          columns: ["Value"],
+          meta: { Value: 7 },
+          rows: [],
+        };
+      });
+
       it("should return the value of the 'Value' property if the input is an array with a single object with a 'Value' property", () => {
-        const input = [{ Value: "hello" }];
-        const expectedOutput = "hello";
-        const actualOutput = queryUtils.getValueFromArray(input);
-        assert.strictEqual(actualOutput, expectedOutput);
+        inputSample.rows = [{ Value: "hello" }];
+        const expectedOutput = [{ Value: "hello" }];
+        const actualOutput = queryUtils.getValueFromArray(inputSample);
+        console.log(JSON.stringify(actualOutput.rows));
+        assert.deepEqual(actualOutput.rows, expectedOutput);
       });
 
       it("should return the input array if it is not an array with a single object with a 'Value' property", () => {
-        const input = ["hello", "world"];
-        const expectedOutput = ["hello", "world"];
-        const actualOutput = queryUtils.getValueFromArray(input);
-        assert.deepStrictEqual(actualOutput, expectedOutput);
+        inputSample.rows = [{ Value: "hello" }, { Value: "world" }];
+        const expectedOutput = [{ Value: "hello" }, { Value: "world" }];
+        const actualOutput = queryUtils.getValueFromArray(inputSample);
+        assert.deepStrictEqual(actualOutput.rows, expectedOutput);
       });
 
       it("should return the input array if it is an empty array", () => {
-        const input: any[] = [];
         const expectedOutput: any[] = [];
-        const actualOutput = queryUtils.getValueFromArray(input);
-        assert.deepStrictEqual(actualOutput, expectedOutput);
+        const actualOutput = queryUtils.getValueFromArray(inputSample);
+        assert.deepStrictEqual(actualOutput.rows, expectedOutput);
       });
     });
 
@@ -668,15 +664,17 @@ describe("Utils", () => {
 
       it("should return the result of getValueFromArray if the results are an array with a single object with a 'Value' property", () => {
         const ab = new ArrayBuffer(128);
-        const expectedOutput = "10";
-        const uriTest: vscode.Uri = vscode.Uri.parse("test");
-        ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
-        const qtableStub = sinon.stub(QTable.default, "toLegacy").returns({
+        const expectedOutput = {
           class: "203",
           columns: ["Value"],
           meta: { Value: 7 },
           rows: [{ Value: "10" }],
-        });
+        };
+        const uriTest: vscode.Uri = vscode.Uri.parse("test");
+        ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
+        const qtableStub = sinon
+          .stub(QTable.default, "toLegacy")
+          .returns(expectedOutput);
         const isVisibleStub = sinon
           .stub(ext.resultsViewProvider, "isVisible")
           .returns(true);
@@ -684,49 +682,146 @@ describe("Utils", () => {
         const result = queryUtils.handleWSResults(ab);
         sinon.assert.notCalled(convertRowsSpy);
         assert.strictEqual(result, expectedOutput);
+        sinon.restore();
       });
     });
 
     describe("handleScratchpadTableRes", () => {
-      it("should return the input if it is not an array", () => {
-        const input = "not an array";
-        const result = queryUtils.handleScratchpadTableRes(input);
-        assert.strictEqual(result, input);
-      });
-
-      it("should convert object values with 'i' property to string", () => {
-        const input = [
-          { key1: { i: 123 }, key2: "value2" },
-          { key3: { i: 456 }, key4: "value4" },
-        ];
-        const expected = [
-          { key1: "[object Object]", key2: "value2" },
-          { key3: "[object Object]", key4: "value4" },
-        ];
-        const result = queryUtils.handleScratchpadTableRes(input);
-        assert.deepStrictEqual(result, expected);
+      let inputSample: DCDS = undefined;
+      beforeEach(() => {
+        inputSample = {
+          class: "203",
+          columns: ["Value"],
+          meta: { Value: 7 },
+          rows: [],
+        };
       });
 
       it("should convert bigint values to number", () => {
-        const input = [
+        inputSample.rows = [
           { key1: BigInt(123), key2: "value2" },
           { key3: BigInt(456), key4: "value4" },
         ];
         const expected = [
-          { key1: 123, key2: "value2" },
-          { key3: 456, key4: "value4" },
+          { Index: 1, key1: 123, key2: "value2" },
+          { Index: 2, key3: 456, key4: "value4" },
         ];
-        const result = queryUtils.handleScratchpadTableRes(input);
-        assert.deepStrictEqual(result, expected);
+        const result = queryUtils.handleScratchpadTableRes(inputSample);
+        assert.deepStrictEqual(result.rows, expected);
       });
 
       it("should not modify other values", () => {
-        const input = [
+        inputSample.rows = [
           { key1: "value1", key2: "value2" },
           { key3: "value3", key4: "value4" },
         ];
-        const result = queryUtils.handleScratchpadTableRes(input);
-        assert.deepStrictEqual(result, input);
+        const result = queryUtils.handleScratchpadTableRes(inputSample);
+        assert.deepStrictEqual(result.rows, inputSample.rows);
+      });
+
+      it("should return case results is string type", () => {
+        const result = queryUtils.handleScratchpadTableRes("test");
+        assert.strictEqual(result, "test");
+      });
+
+      it("should return same results case results.rows is undefined", () => {
+        inputSample.rows = undefined;
+        const result = queryUtils.handleScratchpadTableRes(inputSample);
+        assert.strictEqual(result, inputSample);
+      });
+
+      it("should return same results case results.rows is an empty array", () => {
+        const result = queryUtils.handleScratchpadTableRes(inputSample);
+        assert.strictEqual(result, inputSample);
+      });
+    });
+
+    describe("checkIfIsQDateTypes", () => {
+      it("should return string representation of DTimestampClass instance", () => {
+        const input = { Value: new DTimestampClass(978350400000, 0) };
+        const expectedOutput = input.Value.toString();
+
+        const output = queryUtils.checkIfIsQDateTypes(input);
+        assert.strictEqual(output, expectedOutput);
+      });
+
+      it("should return string representation of DDateTimeClass instance", () => {
+        const input = { Value: new DDateTimeClass(978350400000) };
+        const expectedOutput = input.Value.toString();
+
+        const output = queryUtils.checkIfIsQDateTypes(input);
+        assert.strictEqual(output, expectedOutput);
+      });
+
+      it("should return string representation of DDateClass instance", () => {
+        const input = { Value: new DDateClass(978350400000) };
+        const expectedOutput = input.Value.toString();
+
+        const output = queryUtils.checkIfIsQDateTypes(input);
+        assert.strictEqual(output, expectedOutput);
+      });
+
+      it("should return input as is when Value is not an instance of DTimestampClass, DDateTimeClass, or DDateClass", () => {
+        const input = {
+          Value:
+            "not an instance of DTimestampClass, DDateTimeClass, or DDateClass",
+        };
+
+        const output = queryUtils.checkIfIsQDateTypes(input);
+        assert.deepStrictEqual(output, input);
+      });
+    });
+
+    describe("addIndexKey", () => {
+      it("should add index key to array of objects", () => {
+        const input = [
+          { prop1: "value1", prop2: "value2" },
+          { prop1: "value3", prop2: "value4" },
+        ];
+
+        const expectedOutput = [
+          { Index: 1, prop1: "value1", prop2: "value2" },
+          { Index: 2, prop1: "value3", prop2: "value4" },
+        ];
+
+        const output = queryUtils.addIndexKey(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("should add index key to single object", () => {
+        const input = { prop1: "value1", prop2: "value2" };
+
+        const expectedOutput = [{ Index: 1, prop1: "value1", prop2: "value2" }];
+
+        const output = queryUtils.addIndexKey(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("should return empty array when input is empty array", () => {
+        const input = [];
+
+        const expectedOutput = [];
+
+        const output = queryUtils.addIndexKey(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("should not add index key when it already exists", () => {
+        const input = [{ Index: 5, prop1: "value1", prop2: "value2" }];
+
+        const expectedOutput = [{ Index: 5, prop1: "value1", prop2: "value2" }];
+
+        const output = queryUtils.addIndexKey(input);
+        assert.deepStrictEqual(output, expectedOutput);
+      });
+
+      it("should add index key to non-array input", () => {
+        const input = "not an array";
+
+        const expectedOutput = [{ Index: 1, Value: "not an array" }];
+
+        const output = queryUtils.addIndexKey(input);
+        assert.deepStrictEqual(output, expectedOutput);
       });
     });
 
@@ -741,16 +836,31 @@ describe("Utils", () => {
           b: 4,
         },
       ];
-      const expectedRes = ["a#$#;#$#b", "1#$#;#$#2", "3#$#;#$#4"].toString();
+      const expectedRes = ["a  b  \n------\n1  2  \n3  4  \n\n"].toString();
       const result = queryUtils.convertRows(rows);
       assert.equal(result, expectedRes);
     });
 
-    it("convertRowsToConsole", () => {
-      const rows = ["a,b", "1,2", "3,4"];
-      const expectedRes = ["a,b  ", "-----", "1,2  ", "3,4  "].toString();
-      const result = queryUtils.convertRowsToConsole(rows);
-      assert.equal(result, expectedRes);
+    describe("convertRowsToConsole", () => {
+      it("should work with headers", () => {
+        const rows = ["a#$#;header;#$#b", "1#$#;#$#2", "3#$#;#$#4"];
+        const expectedRes = ["a  b  ", "------", "1  2  ", "3  4  "];
+        const result = queryUtils.convertRowsToConsole(rows);
+        assert.deepEqual(result, expectedRes);
+      });
+      it("should work without headers", () => {
+        const rows = ["a#$#;#$#1", "b#$#;#$#2", "c#$#;#$#3"];
+        const expectedRes = ["a| 1  ", "b| 2  ", "c| 3  "];
+        const result = queryUtils.convertRowsToConsole(rows);
+        assert.deepEqual(result, expectedRes);
+      });
+
+      it("should work with empty rows", () => {
+        const rows = [];
+        const expectedRes = [];
+        const result = queryUtils.convertRowsToConsole(rows);
+        assert.deepEqual(result, expectedRes);
+      });
     });
 
     it("getConnectionType", () => {
@@ -809,12 +919,12 @@ describe("Utils", () => {
       getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
       showInformationMessageStub = sinon.stub(
         vscode.window,
-        "showInformationMessage"
+        "showInformationMessage",
       ) as sinon.SinonStub<
         [
           message: string,
           options: vscode.MessageOptions,
-          ...items: vscode.MessageItem[]
+          ...items: vscode.MessageItem[],
         ],
         Thenable<vscode.MessageItem>
       >;

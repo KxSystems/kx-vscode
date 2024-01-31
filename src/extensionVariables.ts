@@ -40,6 +40,7 @@ export namespace ext {
   export let serverObjects: ServerObject;
   export let openSslVersion: string | null;
   export let resultPanelCSV: string;
+  export let isDatasourceExecution: boolean;
   export const rowLimit = 150000000;
 
   export let connection: Connection | undefined;
@@ -102,7 +103,6 @@ export namespace ext {
 
   export const insightsAuthUrls = {
     authURL: "auth/realms/insights/protocol/openid-connect/auth ",
-    callbackURL: "http://localhost:9010/redirect",
     revoke: "auth/realms/insights/protocol/openid-connect/revoke",
     tokenURL: "auth/realms/insights/protocol/openid-connect/token",
     scratchpadURL: "servicebroker/scratchpad/display",

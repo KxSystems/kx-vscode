@@ -11,51 +11,33 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Entity, EntityType, QAst, getNameScope } from "../parser";
+import { Token, TokenType, QAst, scope } from "../parser";
 
-const DEFAULT_MAX_LINE_LENGTH = 200;
 const DEFAULT_MAX_LOCALS = 110;
 const DEFAULT_MAX_GLOBALS = 110;
 const DEFAULT_MAX_CONSTANTS = 239;
+const DEFAULT_MAX_ARGUMENTS = 8;
 
-export function lineLength({ script }: QAst): Entity[] {
-  const problems: Entity[] = [];
-
-  const symbols = script.filter(
-    (entity) => entity.type === EntityType.ENDOFLINE
-  );
-
-  for (let i = 0; i < symbols.length; i++) {
-    const start = i === 0 ? 0 : symbols[i - 1].endOffset;
-
-    if (symbols[i].endOffset - start > DEFAULT_MAX_LINE_LENGTH + 1) {
-      problems.push(symbols[i]);
-    }
-  }
-
-  return problems;
-}
-
-export function tooManyConstants({ script }: QAst): Entity[] {
-  const counts = new Map<Entity, number>();
+export function tooManyConstants({ script }: QAst): Token[] {
+  const counts = new Map<Token, number>();
 
   script
-    .filter((entity) => getNameScope(entity))
+    .filter((entity) => scope(entity))
     .forEach((entity) => {
-      if (entity.type === EntityType.IDENTIFIER) {
-        const scope = getNameScope(entity);
-        if (scope) {
-          let count = counts.get(scope);
+      if (entity.type === TokenType.IDENTIFIER) {
+        const scoped = scope(entity);
+        if (scoped) {
+          let count = counts.get(scoped);
           if (!count) {
             count = 0;
           }
           count++;
-          counts.set(scope, count);
+          counts.set(scoped, count);
         }
       }
     });
 
-  const problems: Entity[] = [];
+  const problems: Token[] = [];
 
   for (const entry of counts.entries()) {
     if (entry[1] > DEFAULT_MAX_CONSTANTS) {
@@ -66,28 +48,28 @@ export function tooManyConstants({ script }: QAst): Entity[] {
   return problems;
 }
 
-export function tooManyGlobals({ script, assign }: QAst): Entity[] {
-  const counts = new Map<Entity, number>();
+export function tooManyGlobals({ script, assign }: QAst): Token[] {
+  const counts = new Map<Token, number>();
 
-  const globals = assign.filter((entity) => !getNameScope(entity));
+  const globals = assign.filter((entity) => !scope(entity));
 
   script
-    .filter((entity) => getNameScope(entity))
+    .filter((entity) => scope(entity))
     .forEach((entity) => {
-      const scope = getNameScope(entity);
-      if (scope) {
-        let count = counts.get(scope);
+      const scoped = scope(entity);
+      if (scoped) {
+        let count = counts.get(scoped);
         if (!count) {
           count = 0;
         }
         if (globals.find((symbol) => symbol.image === entity.image)) {
           count++;
         }
-        counts.set(scope, count);
+        counts.set(scoped, count);
       }
     });
 
-  const problems: Entity[] = [];
+  const problems: Token[] = [];
 
   for (const entry of counts.entries()) {
     if (entry[1] > DEFAULT_MAX_GLOBALS) {
@@ -98,34 +80,64 @@ export function tooManyGlobals({ script, assign }: QAst): Entity[] {
   return problems;
 }
 
-export function tooManyLocals({ assign }: QAst): Entity[] {
-  const counts = new Map<Entity, number>();
+export function tooManyLocals({ assign }: QAst): Token[] {
+  const counts = new Map<Token, number>();
 
   assign
-    .filter((entity) => getNameScope(entity))
+    .filter((entity) => scope(entity))
     .forEach((entity) => {
-      const scope = getNameScope(entity);
-      if (scope) {
-        let count = counts.get(scope);
+      const scoped = scope(entity);
+      if (scoped) {
+        let count = counts.get(scoped);
         if (!count) {
           count = 0;
         }
         if (
           assign.find(
             (symbol) =>
-              getNameScope(symbol) === scope && entity.image === symbol.image
+              scope(symbol) === scoped && entity.image === symbol.image
           )
         ) {
           count++;
         }
-        counts.set(scope, count);
+        counts.set(scoped, count);
       }
     });
 
-  const problems: Entity[] = [];
+  const problems: Token[] = [];
 
   for (const entry of counts.entries()) {
     if (entry[1] > DEFAULT_MAX_LOCALS) {
+      problems.push(entry[0]);
+    }
+  }
+
+  return problems;
+}
+
+export function tooManyArguments({ assign }: QAst): Token[] {
+  const counts = new Map<Token, number>();
+
+  assign
+    .filter(
+      (token) => token.type === TokenType.IDENTIFIER && token.tag === "ARGUMENT"
+    )
+    .forEach((token) => {
+      const scoped = scope(token);
+      if (scoped) {
+        let count = counts.get(scoped);
+        if (!count) {
+          count = 0;
+        }
+        count++;
+        counts.set(scoped, count);
+      }
+    });
+
+  const problems: Token[] = [];
+
+  for (const entry of counts.entries()) {
+    if (entry[1] > DEFAULT_MAX_ARGUMENTS) {
       problems.push(entry[0]);
     }
   }

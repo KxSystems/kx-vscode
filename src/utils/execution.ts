@@ -42,7 +42,7 @@ export function runQFileTerminal(filename?: string): void {
 
 export function handleQueryResults(
   results: any,
-  type: QueryResultType
+  type: QueryResultType,
 ): string {
   let handledResult: string;
   switch (type) {
@@ -155,4 +155,75 @@ export function convertArrayOfArraysToObjects(arr: any): any[] {
   }
 
   return result;
+}
+
+function processLineWithSeparator(line: string, index: number): object {
+  const parts = line.split("|").map((part) => part.trim());
+  return { Index: index + 1, Key: parts[0], Value: parts[1] };
+}
+
+function processLineWithoutSeparator(line: string, index: number): object[] {
+  if (!line.startsWith('"') && line.includes(" ")) {
+    // Split the line into parts by spaces and map each part to an object
+    return line.split(" ").map((part, i) => {
+      return { Index: index + i + 1, Value: part };
+    });
+  } else {
+    return [{ Index: index + 1, Value: line.trim() }];
+  }
+}
+
+function processLine(
+  line: string,
+  index: number,
+  fieldLengths: number[],
+  fieldNames: string[],
+): object {
+  let start = 0;
+  const obj: { [key: string]: any } = { Index: index + 1 };
+  fieldLengths.forEach((length, i) => {
+    obj[fieldNames[i]] = line.substring(start, start + length).trim();
+    start += length;
+  });
+  return obj;
+}
+
+export function convertStringToArray(str: string): any[] {
+  const lines = str.split("\n").filter((line) => line.trim() !== "");
+  if (lines.length > 2 && lines[1].startsWith("---")) {
+    const fieldNames = lines[0].split(" ").filter((part) => part !== "");
+    lines.splice(1, 1);
+    let total = 0;
+    const fieldLengths = fieldNames.map((name, i) => {
+      if (i === fieldNames.length - 1) {
+        return lines[0].length - total;
+      }
+      const elementLength =
+        lines[0].indexOf(fieldNames[i + 1] ?? "") - lines[0].indexOf(name);
+      total += elementLength;
+      return elementLength;
+    });
+    lines.shift();
+    return lines.flatMap((line, index) =>
+      fieldLengths.length > 0
+        ? processLine(line, index, fieldLengths, fieldNames)
+        : [],
+    );
+  }
+
+  if (lines.length === 2 && lines[1].startsWith("---")) {
+    lines.splice(1, 1);
+    return lines[0].split(" ").filter((part) => part !== "");
+  }
+
+  return lines
+    .flatMap((line, index) => {
+      const parts = line.split("|").map((part) => part.trim());
+      return parts.length === 2
+        ? processLineWithSeparator(line, index)
+        : processLineWithoutSeparator(line, index);
+    })
+    .filter(
+      (obj) => !("Value" in obj && (obj.Value as string).startsWith("-")),
+    );
 }

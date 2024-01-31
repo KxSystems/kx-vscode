@@ -13,6 +13,7 @@
 
 import {
   Connection,
+  DidChangeConfigurationNotification,
   InitializeParams,
   InitializeResult,
   ProposedFeatures,
@@ -21,14 +22,29 @@ import { createConnection } from "vscode-languageserver/node";
 import QLangServer from "./qLangServer";
 
 const connection: Connection = createConnection(ProposedFeatures.all);
+let server: QLangServer;
 
 connection.onInitialize(
   async (params: InitializeParams): Promise<InitializeResult> => {
-    const server = await QLangServer.initialize(connection, params);
+    server = await QLangServer.initialize(connection, params);
     return {
       capabilities: server.capabilities(),
     };
   }
 );
+
+connection.onInitialized(() => {
+  connection.client.register(DidChangeConfigurationNotification.type, {
+    section: "kdb",
+  });
+
+  if (connection.workspace) {
+    connection.workspace.getConfiguration("kdb").then((settings) => {
+      if (server) {
+        server.setSettings(settings);
+      }
+    });
+  }
+});
 
 connection.listen();
