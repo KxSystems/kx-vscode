@@ -396,11 +396,24 @@ To update kdb VS Code settings, search for `kdb` from _Preferences_ > _Settings_
 
 ## Shortcuts
 
-| Key                    | Action                       |
-| ---------------------- | ---------------------------- |
-| F12                    | Go to definition             |
-| Shift + F12            | Go to references             |
-| Cmd/Ctrl + Shift + F12 | Find all references          |
-| Ctrl + Q               | Execute current selection    |
-| Ctrl + Shift + Q       | Execute entire file          |
-| Ctrl + Shift + R       | Run q file in new q instance |
+### For Windows
+
+| Key                | Action                       |
+| ------------------ | ---------------------------- |
+| F12                | Go to definition             |
+| Shift + F12        | Go to references             |
+| Ctrl + Shift + F12 | Find all references          |
+| Ctrl + Q           | Execute current selection    |
+| Ctrl + Shift + Q   | Execute entire file          |
+| Ctrl + Shift + R   | Run q file in new q instance |
+
+### For MacOS
+
+| Key             | Action                       |
+| --------------- | ---------------------------- |
+| F12             | Go to definition             |
+| Shift + F12     | Go to references             |
+| ⌘ + Shift + F12 | Find all references          |
+| ⌘ + Q           | Execute current selection    |
+| ⌘ + Shift + Q   | Execute entire file          |
+| ⌘ + Shift + R   | Run q file in new q instance |
