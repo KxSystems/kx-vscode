@@ -14,9 +14,11 @@
 import { readFileSync } from "fs";
 import { join } from "path";
 import { ext } from "../extensionVariables";
-import { deserialize, isCompressed, uncompress } from "../ipc/c";
+import { DCDS, deserialize, isCompressed, uncompress } from "../ipc/c";
 import { Parse } from "../ipc/parse.qlist";
 import { ServerType } from "../models/server";
+import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
+import { TypeBase } from "../ipc/typeBase";
 
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {
@@ -29,7 +31,7 @@ export function sanitizeQuery(query: string): string {
 
 export function queryWrapper(): string {
   return readFileSync(
-    ext.context.asAbsolutePath(join("resources", "evaluate.q"))
+    ext.context.asAbsolutePath(join("resources", "evaluate.q")),
   ).toString();
 }
 
@@ -65,7 +67,7 @@ export function handleWSError(ab: ArrayBuffer): any {
         // eslint-disable-next-line prefer-spread
         ipc: String.fromCharCode.apply(
           String,
-          raw.subarray(9, raw.byteLength - 1) as unknown as number[]
+          raw.subarray(9, raw.byteLength - 1) as unknown as number[],
         ),
       };
     } else {
@@ -87,11 +89,11 @@ export function handleWSResults(ab: ArrayBuffer): any {
       des = des.values[1];
     }
     res = Parse.reshape(des, ab).toLegacy();
-    if (res.rows.length === 0) {
+    if (res.rows.length === 0 && res.columns.length === 0) {
       return "No results found.";
     }
     if (ext.resultsViewProvider.isVisible()) {
-      return getValueFromArray(res.rows);
+      return getValueFromArray(res);
     }
     return convertRows(res.rows);
   } catch (error) {
@@ -100,22 +102,31 @@ export function handleWSResults(ab: ArrayBuffer): any {
   }
 }
 
-export function handleScratchpadTableRes(scratchpadResponse: any): any {
+export function handleScratchpadTableRes(results: DCDS | string): any {
+  if (typeof results === "string" || results?.rows === undefined) {
+    return results;
+  }
+  let scratchpadResponse = results.rows;
   if (!Array.isArray(scratchpadResponse)) {
-    return scratchpadResponse;
+    return results;
+  }
+  if (scratchpadResponse?.length !== 0) {
+    scratchpadResponse = addIndexKey(scratchpadResponse);
   }
   const result = [];
   for (const row of scratchpadResponse) {
     const newObj = {};
     for (const key in row) {
-      if (
-        typeof row[key] === "object" &&
+      row[key] = checkIfIsQDateTypes(row[key]);
+      if (typeof row[key] === "bigint") {
+        Object.assign(newObj, { [key]: Number(row[key]) });
+      } else if (
         row[key] !== null &&
-        "i" in row[key]
+        typeof row[key] === "number" &&
+        (row[key].toString() === "Infinity" ||
+          row[key].toString() === "-Infinity")
       ) {
         Object.assign(newObj, { [key]: row[key].toString() });
-      } else if (typeof row[key] === "bigint" && row[key] !== null) {
-        Object.assign(newObj, { [key]: Number(row[key]) });
       } else {
         Object.assign(newObj, { [key]: row[key] });
       }
@@ -123,27 +134,81 @@ export function handleScratchpadTableRes(scratchpadResponse: any): any {
 
     result.push(newObj);
   }
-
-  return result;
+  results.rows = result;
+  return results;
 }
 
-export function getValueFromArray(arr: any[]): string | any[] {
-  if (arr.length === 1 && typeof arr[0] === "object" && arr[0] !== null) {
-    const obj = arr[0];
-    const keys = Object.keys(obj);
-    if (keys.length === 1 && keys[0] === "Value") {
-      return String(obj.Value);
-    }
+export function addIndexKey(input: any) {
+  let arr: any[];
+
+  if (Array.isArray(input)) {
+    arr = input;
+  } else {
+    arr = [input];
   }
+
+  if (arr.length === 0) {
+    return arr;
+  }
+
+  if (!arr[0].hasOwnProperty("Index")) {
+    arr = arr.map((obj, index) => {
+      const newObj = { Index: index + 1 };
+
+      if (typeof obj === "string") {
+        newObj["Value"] = obj;
+      } else {
+        for (const prop in obj) {
+          newObj[prop] = obj[prop];
+        }
+      }
+
+      return newObj;
+    });
+  }
+
   return arr;
 }
 
-export function convertRows(rows: any[]): any[] {
+export function getValueFromArray(results: DCDS): any {
+  const arr = results.rows;
+  if (arr !== undefined) {
+    if (arr.length === 1 && typeof arr[0] === "object" && arr[0] !== null) {
+      results.rows = [checkIfIsQDateTypes(arr[0])];
+    }
+  }
+  results.meta = generateQTypes(results.meta);
+  return results;
+}
+
+export function generateQTypes(meta: { [key: string]: number }): any {
+  const newMeta: { [key: string]: string } = {};
+  for (const key in meta) {
+    const value = meta[key];
+    newMeta[key] = TypeBase.typeNames[value] ?? `Unknown type: ${value}`;
+  }
+  return newMeta;
+}
+
+export function checkIfIsQDateTypes(obj: any): any {
+  if (
+    obj?.Value instanceof DTimestampClass ||
+    obj?.Value instanceof DDateTimeClass ||
+    obj?.Value instanceof DDateClass
+  ) {
+    return obj.Value.toString();
+  }
+  return obj;
+}
+
+export function convertRows(rows: any[]): any {
   if (rows.length === 0) {
     return [];
   }
   const keys = Object.keys(rows[0]);
-  const result = [keys.join("#$#;#$#")];
+  const isObj = typeof rows[0] === "object";
+  const isPropVal = isObj ? checkIfIsPropVal(keys) : false;
+  const result = isPropVal ? [] : [keys.join("#$#;header;#$#")];
   for (const row of rows) {
     const values = keys.map((key) => {
       if (Array.isArray(row[key])) {
@@ -153,20 +218,28 @@ export function convertRows(rows: any[]): any[] {
     });
     result.push(values.join("#$#;#$#"));
   }
-  return result;
+  return convertRowsToConsole(result).join("\n") + "\n\n";
 }
 
 export function convertRowsToConsole(rows: string[]): string[] {
   if (rows.length === 0) {
     return [];
   }
-
+  const haveHeader = rows[0].includes("#$#;header;#$#");
+  let header;
+  if (haveHeader) {
+    header = rows[0].split("#$#;header;#$#");
+    rows.shift();
+  }
   const vector = rows.map((row) => row.split("#$#;#$#"));
+  if (header) {
+    vector.unshift(header);
+  }
 
   const columnCounters = vector[0].reduce((counters: number[], _, j) => {
     const maxLength = vector.reduce(
       (max, row) => Math.max(max, row[j].length),
-      0
+      0,
     );
     counters.push(maxLength + 2);
     return counters;
@@ -177,7 +250,11 @@ export function convertRowsToConsole(rows: string[]): string[] {
       const counter = columnCounters[j];
       const diff = counter - value.length;
       if (diff > 0) {
-        row[j] = value + " ".repeat(diff);
+        if (!haveHeader && j !== columnCounters.length - 1) {
+          row[j] = value + "|" + " ".repeat(diff > 1 ? diff - 1 : diff);
+        } else {
+          row[j] = value + " ".repeat(diff);
+        }
       }
     });
   });
@@ -186,9 +263,19 @@ export function convertRowsToConsole(rows: string[]): string[] {
 
   const totalCount = columnCounters.reduce((sum, count) => sum + count, 0);
   const totalCounter = "-".repeat(totalCount);
-  result.splice(1, 0, totalCounter);
+  if (haveHeader) {
+    result.splice(1, 0, totalCounter);
+  }
 
   return result;
+}
+
+export function checkIfIsPropVal(columns: string[]): boolean {
+  return (
+    columns.length === 2 &&
+    columns.includes("Property") &&
+    columns.includes("Value")
+  );
 }
 
 export function getConnectionType(type: ServerType): string {

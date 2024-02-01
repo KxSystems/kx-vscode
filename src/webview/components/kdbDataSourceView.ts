@@ -64,6 +64,7 @@ export class KdbDataSourceView extends LitElement {
   @state() declare qsqlTarget: string;
   @state() declare qsql: string;
   @state() declare sql: string;
+  @state() declare running: boolean;
 
   constructor() {
     super();
@@ -91,6 +92,7 @@ export class KdbDataSourceView extends LitElement {
     this.qsqlTarget = "";
     this.qsql = "";
     this.sql = "";
+    this.running = false;
   }
 
   connectedCallback() {
@@ -105,6 +107,10 @@ export class KdbDataSourceView extends LitElement {
 
   private message = (event: MessageEvent<DataSourceMessage>) => {
     const params = event.data;
+    if (params.running !== undefined) {
+      this.running = params.running;
+      return;
+    }
     const ds = params.dataSourceFile;
     this.isInsights = params.isInsights;
     this.isMetaLoaded = !!params.insightsMeta.dap;
@@ -217,7 +223,7 @@ export class KdbDataSourceView extends LitElement {
     if (this.isInsights && this.isMetaLoaded) {
       return this.insightsMeta.api
         .filter(
-          (api) => api.api === ".kxi.getData" || !api.api.startsWith(".kxi.")
+          (api) => api.api === ".kxi.getData" //|| !api.api.startsWith(".kxi.")
         )
         .map((api) => {
           const value =
@@ -930,6 +936,7 @@ export class KdbDataSourceView extends LitElement {
               appearance="secondary"
               class="grow"
               @click="${this.run}"
+              ?disabled="${this.running}"
               >Run</vscode-button
             >
           </div>

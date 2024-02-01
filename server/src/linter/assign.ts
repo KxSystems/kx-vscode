@@ -11,67 +11,91 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Entity, EntityType, QAst, getNameScope, isLiteral } from "../parser";
+import { Token, TokenType, QAst, scope } from "../parser";
 
-export function assignReservedWord({ assign }: QAst): Entity[] {
-  return assign.filter((entity) => entity.type === EntityType.KEYWORD);
+export function assignReservedWord({ assign }: QAst): Token[] {
+  return assign.filter((entity) => entity.type === TokenType.KEYWORD);
 }
 
-export function invalidAssign({ assign }: QAst): Entity[] {
-  return assign.filter((entity) => isLiteral(entity));
+export function invalidAssign({ assign }: QAst): Token[] {
+  return assign.filter((entity) => entity.type === TokenType.LITERAL);
 }
 
-export function declaredAfterUse({ script, assign }: QAst): Entity[] {
-  return script.filter((entity, index) => {
-    if (entity.type === EntityType.IDENTIFIER) {
-      const declared = assign.find(
+export function unusedParam({ script, assign }: QAst): Token[] {
+  assign = assign.filter(
+    (token) => token.type === TokenType.IDENTIFIER && token.tag === "ARGUMENT"
+  );
+
+  script = script.filter(
+    (token) =>
+      token.tag !== "ASSIGNED" &&
+      token.tag !== "ARGUMENT" &&
+      token.type === TokenType.IDENTIFIER &&
+      assign.find((symbol) => symbol.image === token.image)
+  );
+
+  assign = assign.filter(
+    (token) =>
+      !script.find(
         (symbol) =>
-          getNameScope(symbol) === getNameScope(entity) &&
-          symbol.image === entity.image
+          symbol.image === token.image && scope(symbol) === scope(token)
+      )
+  );
+
+  return assign;
+}
+
+export function unusedVar({ script, assign }: QAst): Token[] {
+  const locals = assign.filter(
+    (token) => token.type === TokenType.IDENTIFIER && scope(token)
+  );
+
+  assign = assign.filter(
+    (token) => token.type === TokenType.IDENTIFIER && token.tag === "ASSIGNED"
+  );
+
+  script = script.filter(
+    (token) =>
+      token.tag !== "ASSIGNED" &&
+      token.tag !== "ARGUMENT" &&
+      token.type === TokenType.IDENTIFIER &&
+      assign.find((symbol) => symbol.image === token.image)
+  );
+
+  assign = assign.filter(
+    (token) =>
+      !script.find(
+        (symbol) =>
+          symbol.image === token.image &&
+          (scope(symbol) === scope(token) ||
+            (!scope(token) &&
+              !locals.find(
+                (local) =>
+                  local.image === token.image && scope(local) === scope(symbol)
+              )))
+      )
+  );
+
+  return assign;
+}
+
+export function declaredAfterUse({ script, assign }: QAst): Token[] {
+  return assign
+    .filter((token) => token.tag === "ASSIGNED" && !scope(token))
+    .filter((token) => {
+      const found = script.find(
+        (entity) =>
+          entity.type === TokenType.IDENTIFIER &&
+          entity.tag !== "ASSIGNED" &&
+          entity.image === token.image &&
+          !scope(entity)
       );
-      return declared && script.indexOf(declared) > index;
-    }
-    return false;
-  });
-}
-
-export function unusedParam({ script, assign }: QAst): Entity[] {
-  return assign
-    .filter(
-      (entity) =>
-        entity.type === EntityType.IDENTIFIER &&
-        entity.scope?.type === EntityType.LBRACKET
-    )
-    .filter(
-      (entity) =>
-        !script.find(
-          (symbol) =>
-            symbol !== entity &&
-            symbol.image === entity.image &&
-            symbol.type === EntityType.IDENTIFIER &&
-            getNameScope(symbol) === getNameScope(entity)
-        )
-    );
-}
-
-export function unusedVar({ script, assign }: QAst): Entity[] {
-  const locals = assign.filter((entity) => getNameScope(entity));
-
-  return assign
-    .filter(
-      (entity) =>
-        entity.type === EntityType.IDENTIFIER &&
-        entity.scope?.type !== EntityType.LBRACKET
-    )
-    .filter(
-      (entity) =>
-        !script.find(
-          (symbol) =>
-            symbol !== entity &&
-            symbol.image === entity.image &&
-            symbol.type === EntityType.IDENTIFIER &&
-            (getNameScope(symbol) === getNameScope(entity) ||
-              !locals.find((local) => local.image === symbol.image))
-        )
-    );
+      const reverse = !!scope(token, [TokenType.GROUP]);
+      return (
+        found &&
+        (reverse
+          ? found.statement > token.statement
+          : found.statement < token.statement)
+      );
+    });
 }

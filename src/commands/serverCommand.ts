@@ -13,7 +13,7 @@
 
 import axios, { AxiosRequestConfig } from "axios";
 import { readFileSync } from "fs-extra";
-import jwt_decode from "jwt-decode";
+import { jwtDecode } from "jwt-decode";
 import { join } from "path";
 import * as url from "url";
 import {
@@ -341,16 +341,8 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
 }
 
 export async function connectInsights(viewItem: InsightsNode): Promise<void> {
-  if (env.remoteName === "ssh-remote") {
-    window.showErrorMessage(
-      "Connecting to a kdb Insights Enterprise server with a remote connection is not supported.",
-      ""
-    );
-    return;
-  }
-
   commands.executeCommand("kdb-results.focus");
-
+  ext.context.secrets.delete(viewItem.details.alias);
   await getCurrentToken(viewItem.details.server, viewItem.details.alias);
 
   ext.outputChannel.appendLine(
@@ -533,7 +525,7 @@ export async function importScratchpad(
       return undefined;
     }
 
-    const username = jwt_decode<JwtUser>(token.accessToken);
+    const username = jwtDecode<JwtUser>(token.accessToken);
     if (username === undefined || username.preferred_username === "") {
       ext.outputChannel.appendLine(
         "JWT did not contain a valid preferred username"
@@ -604,7 +596,7 @@ export async function getScratchpadQuery(
       window.showErrorMessage("Failed to retrieve access token for insights");
       return undefined;
     }
-    const username = jwt_decode<JwtUser>(token.accessToken);
+    const username = jwtDecode<JwtUser>(token.accessToken);
     if (username === undefined || username.preferred_username === "") {
       ext.outputChannel.appendLine(
         "JWT did not contain a valid preferred username"
@@ -812,7 +804,7 @@ export async function executeQuery(
     query = sanitizeQuery(query);
 
     if (ext.resultsViewProvider.isVisible()) {
-      const queryRes = await ext.connection.executeQuery(query, context, false);
+      const queryRes = await ext.connection.executeQuery(query, context, true);
       writeQueryResultsToView(queryRes, query);
     } else {
       const queryRes = await ext.connection.executeQuery(query, context, true);

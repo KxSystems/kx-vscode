@@ -14,7 +14,7 @@
 import axios from "axios";
 import assert from "node:assert";
 import sinon from "sinon";
-import { TreeItemCollapsibleState } from "vscode";
+import { TreeItemCollapsibleState, env } from "vscode";
 import { ext } from "../../src/extensionVariables";
 import { Insights } from "../../src/models/insights";
 import { QueryHistory } from "../../src/models/queryHistory";
@@ -69,13 +69,13 @@ describe("kdbTreeProvider", () => {
       ["child1"],
       "testElement",
       servers["testServer"],
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
     insightNode = new InsightsNode(
       ["child1"],
       "testElement",
       insights["testInsight"],
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
   });
 
@@ -84,7 +84,7 @@ describe("kdbTreeProvider", () => {
     assert.notStrictEqual(
       kdbProvider,
       undefined,
-      "KdbTreeProvider should be created."
+      "KdbTreeProvider should be created.",
     );
   });
 
@@ -94,7 +94,7 @@ describe("kdbTreeProvider", () => {
     assert.notStrictEqual(
       kdbProvider,
       undefined,
-      "KdbTreeProvider should be created."
+      "KdbTreeProvider should be created.",
     );
   });
 
@@ -112,7 +112,7 @@ describe("kdbTreeProvider", () => {
     assert.notStrictEqual(
       kdbProvider,
       undefined,
-      "KdbTreeProvider should be created."
+      "KdbTreeProvider should be created.",
     );
   });
 
@@ -127,7 +127,7 @@ describe("kdbTreeProvider", () => {
     assert.notStrictEqual(
       kdbProvider,
       undefined,
-      "KdbTreeProvider should be created."
+      "KdbTreeProvider should be created.",
     );
   });
 
@@ -137,7 +137,7 @@ describe("kdbTreeProvider", () => {
     assert.strictEqual(
       element.label,
       kdbNode.label,
-      "Get kdb node element is incorrect"
+      "Get kdb node element is incorrect",
     );
   });
 
@@ -147,7 +147,7 @@ describe("kdbTreeProvider", () => {
     assert.strictEqual(
       element.label,
       insightNode.label,
-      "Get insights node element is incorrect"
+      "Get insights node element is incorrect",
     );
   });
 
@@ -176,7 +176,7 @@ describe("kdbTreeProvider", () => {
         auth: false,
         tls: false,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
     kdbNode.contextValue = "testServerAlias";
     kdbProvider.getChildren(kdbNode);
@@ -197,7 +197,7 @@ describe("kdbTreeProvider", () => {
         auth: false,
         tls: false,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
     kdbProvider.getChildren(kdbNode);
     const result = await kdbProvider.getChildren(kdbNode);
@@ -217,7 +217,7 @@ describe("kdbTreeProvider", () => {
         auth: false,
         tls: false,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
     kdbNode.contextValue = "ns";
     kdbProvider.getChildren(kdbNode);
@@ -237,12 +237,12 @@ describe("kdbTreeProvider", () => {
         auth: false,
         tls: false,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
     assert.strictEqual(
       kdbNode.label,
       "kdbnode1 [kdbserveralias]",
-      "KdbNode node creation failed"
+      "KdbNode node creation failed",
     );
   });
 
@@ -258,12 +258,12 @@ describe("kdbTreeProvider", () => {
         auth: false,
         tls: false,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
     assert.strictEqual(
       kdbNode.label,
       "kdbnode1",
-      "KdbNode node creation failed"
+      "KdbNode node creation failed",
     );
   });
 
@@ -279,12 +279,12 @@ describe("kdbTreeProvider", () => {
         auth: false,
         tls: false,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
     assert.strictEqual(
       kdbNode.label,
       "kdbnode1 [kdbserveralias]",
-      "KdbNode node creation failed"
+      "KdbNode node creation failed",
     );
   });
 
@@ -300,7 +300,7 @@ describe("kdbTreeProvider", () => {
         auth: false,
         tls: false,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
 
     ext.connectionNode = kdbNode;
@@ -316,13 +316,13 @@ describe("kdbTreeProvider", () => {
         auth: false,
         tls: false,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
 
     assert.strictEqual(
       kdbNode1.label,
       "kdbnode1 [kdbserveralias] (connected)",
-      "KdbNode node creation failed"
+      "KdbNode node creation failed",
     );
   });
 
@@ -340,7 +340,7 @@ describe("kdbTreeProvider", () => {
         auth: false,
         tls: false,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
     assert.equal(ext.kdbNodesWithoutTls.length, 1);
   });
@@ -359,7 +359,7 @@ describe("kdbTreeProvider", () => {
         auth: false,
         tls: true,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
     assert.equal(ext.kdbNodesWithoutTls, 0);
   });
@@ -378,7 +378,7 @@ describe("kdbTreeProvider", () => {
         auth: false,
         tls: false,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
     assert.equal(ext.kdbNodesWithoutAuth.length, 1);
   });
@@ -397,7 +397,7 @@ describe("kdbTreeProvider", () => {
         auth: true,
         tls: false,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
     assert.equal(ext.kdbNodesWithoutAuth, 0);
   });
@@ -410,7 +410,7 @@ describe("kdbTreeProvider", () => {
         alias: "insightsserveralias",
         auth: true,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
 
     ext.kdbinsightsNodes.pop();
@@ -418,7 +418,7 @@ describe("kdbTreeProvider", () => {
     assert.strictEqual(
       insightsNode.label,
       "insightsnode1",
-      "InsightsNode node creation failed"
+      "InsightsNode node creation failed",
     );
   });
 
@@ -431,7 +431,7 @@ describe("kdbTreeProvider", () => {
         alias: "insightsserveralias",
         auth: true,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
 
     ext.kdbinsightsNodes.pop();
@@ -439,7 +439,7 @@ describe("kdbTreeProvider", () => {
     assert.strictEqual(
       insightsNode.label,
       "insightsnode1",
-      "InsightsNode node creation failed"
+      "InsightsNode node creation failed",
     );
   });
 
@@ -452,7 +452,7 @@ describe("kdbTreeProvider", () => {
         alias: "insightsserveralias",
         auth: true,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
 
     ext.connectionNode = insightsNode;
@@ -465,7 +465,7 @@ describe("kdbTreeProvider", () => {
         alias: "insightsserveralias",
         auth: true,
       },
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
 
     ext.kdbinsightsNodes.pop();
@@ -473,7 +473,7 @@ describe("kdbTreeProvider", () => {
     assert.strictEqual(
       insightsNode1.label,
       "insightsnode1 (connected)",
-      "InsightsNode node creation failed"
+      "InsightsNode node creation failed",
     );
   });
 
@@ -483,12 +483,12 @@ describe("kdbTreeProvider", () => {
       "nsnode1",
       "nsnodedetails1",
       TreeItemCollapsibleState.None,
-      "nsfullname"
+      "nsfullname",
     );
     assert.strictEqual(
       qNsNode.label,
       "nsnode1",
-      "QNamespaceNode node creation failed"
+      "QNamespaceNode node creation failed",
     );
   });
 
@@ -498,12 +498,12 @@ describe("kdbTreeProvider", () => {
       "categorynode1",
       "categorynodedetails1",
       "categoryns",
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
     assert.strictEqual(
       qCategoryNode.label,
       "categorynode1",
-      "QCategoryNode node creation failed"
+      "QCategoryNode node creation failed",
     );
   });
 
@@ -513,12 +513,12 @@ describe("kdbTreeProvider", () => {
       "servernode1",
       "servernodedetails1",
       TreeItemCollapsibleState.None,
-      ""
+      "",
     );
     assert.strictEqual(
       qServerNode.label,
       "servernode1",
-      "QServer node creation failed"
+      "QServer node creation failed",
     );
   });
 });
@@ -551,12 +551,12 @@ describe("Code flow login service tests", () => {
     sinon.stub(axios, "post").resolves(Promise.resolve({ data: token }));
     const result = await refreshToken(
       "http://localhost",
-      JSON.stringify(token)
+      JSON.stringify(token),
     );
     assert.strictEqual(
       result.accessToken,
       token.access_token,
-      "Token has not refreshed correctly"
+      "Token has not refreshed correctly",
     );
   });
 
@@ -565,7 +565,7 @@ describe("Code flow login service tests", () => {
     assert.strictEqual(
       result,
       undefined,
-      "Should return undefined when server name is empty."
+      "Should return undefined when server name is empty.",
     );
   });
 
@@ -574,8 +574,13 @@ describe("Code flow login service tests", () => {
     assert.strictEqual(
       result,
       undefined,
-      "Should return undefined when server alias is empty."
+      "Should return undefined when server alias is empty.",
     );
+  });
+
+  it("Should not sign in if link is not opened", async () => {
+    sinon.stub(env, "openExternal").value(async () => false);
+    await assert.rejects(() => signIn("http://127.0.0.1"));
   });
 });
 
@@ -613,7 +618,7 @@ describe("queryHistoryProvider", () => {
     assert.notStrictEqual(
       queryHistoryProvider,
       undefined,
-      "queryHistoryProvider should be created."
+      "queryHistoryProvider should be created.",
     );
   });
   it("Should refresh the provider", () => {
@@ -622,7 +627,7 @@ describe("queryHistoryProvider", () => {
     assert.notStrictEqual(
       queryHistoryProvider,
       undefined,
-      "queryHistoryProvider should be created."
+      "queryHistoryProvider should be created.",
     );
   });
 
@@ -630,14 +635,14 @@ describe("queryHistoryProvider", () => {
     const queryHistoryTreeItem = new QueryHistoryTreeItem(
       "testLabel",
       dummyQueryHistory[0],
-      TreeItemCollapsibleState.None
+      TreeItemCollapsibleState.None,
     );
     const queryHistoryProvider = new QueryHistoryProvider();
     const element = queryHistoryProvider.getTreeItem(queryHistoryTreeItem);
     assert.strictEqual(
       element.label,
       queryHistoryTreeItem.label,
-      "Get query history item is incorrect"
+      "Get query history item is incorrect",
     );
   });
 
@@ -661,25 +666,25 @@ describe("queryHistoryProvider", () => {
       const queryHistoryTreeItem = new QueryHistoryTreeItem(
         "testLabel",
         dummyQueryHistory[0],
-        TreeItemCollapsibleState.None
+        TreeItemCollapsibleState.None,
       );
       assert.strictEqual(
         queryHistoryTreeItem.label,
         "testLabel",
-        "QueryHistoryTreeItem node creation failed"
+        "QueryHistoryTreeItem node creation failed",
       );
     });
     it("Should return a new QueryHistoryTreeItem with sucess icom", () => {
       const queryHistoryTreeItem = new QueryHistoryTreeItem(
         "testLabel",
         dummyQueryHistory[0],
-        TreeItemCollapsibleState.None
+        TreeItemCollapsibleState.None,
       );
       const result = queryHistoryTreeItem.defineQueryIcon(true);
       assert.strictEqual(
         result,
         sucessIcon,
-        "QueryHistoryTreeItem defineQueryIcon failed"
+        "QueryHistoryTreeItem defineQueryIcon failed",
       );
     });
 
@@ -687,13 +692,13 @@ describe("queryHistoryProvider", () => {
       const queryHistoryTreeItem = new QueryHistoryTreeItem(
         "testLabel",
         dummyQueryHistory[0],
-        TreeItemCollapsibleState.None
+        TreeItemCollapsibleState.None,
       );
       const result = queryHistoryTreeItem.defineQueryIcon(false);
       assert.strictEqual(
         result,
         failIcon,
-        "QueryHistoryTreeItem defineQueryIcon failed"
+        "QueryHistoryTreeItem defineQueryIcon failed",
       );
     });
   });

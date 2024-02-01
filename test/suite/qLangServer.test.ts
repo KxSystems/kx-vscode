@@ -56,6 +56,7 @@ describe("qLangServer", () => {
       onDocumentSymbol() {},
       onReferences() {},
       onRenameRequest() {},
+      onDidChangeConfiguration() {},
       sendDiagnostics() {},
       languages: {
         semanticTokens: {

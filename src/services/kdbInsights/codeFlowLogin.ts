@@ -15,11 +15,12 @@ import axios from "axios";
 import * as crypto from "crypto";
 import * as fs from "fs-extra";
 import * as http from "http";
-import open from "open";
 import { join } from "path";
 import * as querystring from "querystring";
 import * as url from "url";
 import { ext } from "../../extensionVariables";
+import { Uri, env } from "vscode";
+import { pickPort } from "pick-port";
 
 interface IDeferred<T> {
   resolve: (result: T | Promise<T>) => void;
@@ -33,48 +34,51 @@ export interface IToken {
   refreshToken: string;
 }
 
-const defaultTimeout = 5 * 60 * 1000; // 5 min
+const defaultTimeout = 3 * 60 * 1000; // 3 min
 const closeTimeout = 10 * 1000; // 10 sec
 
 const commonRequestParams = {
   client_id: "insights-app",
-  redirect_uri: ext.insightsAuthUrls.callbackURL,
 };
 
 export async function signIn(insightsUrl: string) {
   const { server, codePromise } = createServer();
 
   try {
-    await startServer(server);
+    const port = await startServer(server);
 
     const authParams = {
       response_type: "code",
       scope: "profile",
+      redirect_uri: `http://localhost:${port}/redirect`,
       state: crypto.randomBytes(20).toString("hex"),
     };
 
     const authorizationUrl = new url.URL(
       ext.insightsAuthUrls.authURL,
-      insightsUrl
+      insightsUrl,
     );
 
     authorizationUrl.search = queryString(authParams);
 
-    await open(authorizationUrl.toString());
+    const opened = await env.openExternal(
+      Uri.parse(authorizationUrl.toString()),
+    );
 
-    const code = await codePromise;
+    if (opened) {
+      const code = await codePromise;
+      return await getToken(insightsUrl, code);
+    }
 
-    return await getToken(insightsUrl, code);
-  } catch (error) {
-    throw error;
+    throw new Error("Error opening url");
   } finally {
-    setTimeout(() => server.close(), closeTimeout);
+    setImmediate(() => server.close());
   }
 }
 
 export async function signOut(
   insightsUrl: string,
-  token: string
+  token: string,
 ): Promise<void> {
   const queryParams = queryString({
     grant_type: ext.insightsGrantType.authorizationCode,
@@ -95,7 +99,7 @@ export async function signOut(
 
 export async function refreshToken(
   insightsUrl: string,
-  token: string
+  token: string,
 ): Promise<IToken | undefined> {
   return await tokenRequest(insightsUrl, {
     grant_type: ext.insightsGrantType.refreshToken,
@@ -105,7 +109,7 @@ export async function refreshToken(
 
 export async function getCurrentToken(
   serverName: string,
-  serverAlias: string
+  serverAlias: string,
 ): Promise<IToken | undefined> {
   if (serverName === "" || serverAlias === "") {
     return undefined;
@@ -136,7 +140,7 @@ export async function getCurrentToken(
 
 async function getToken(
   insightsUrl: string,
-  code: string
+  code: string,
 ): Promise<IToken | undefined> {
   return await tokenRequest(insightsUrl, {
     code,
@@ -146,11 +150,15 @@ async function getToken(
 
 async function tokenRequest(
   insightsUrl: string,
-  params: any
+  params: any,
 ): Promise<IToken | undefined> {
   const queryParams = queryString(params);
   const headers = {
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    timeout: closeTimeout,
+    signal: AbortSignal.timeout(closeTimeout),
   };
 
   const requestUrl = new url.URL(ext.insightsAuthUrls.tokenURL, insightsUrl);
@@ -190,18 +198,18 @@ function queryString(options: any): string {
 function createServer() {
   let deferredCode: IDeferred<string>;
   const codePromise = new Promise<string>(
-    (resolve, reject) => (deferredCode = { resolve, reject })
+    (resolve, reject) => (deferredCode = { resolve, reject }),
   );
   const codeTimer = setTimeout(
     () => deferredCode.reject(new Error("Timeout waiting for code.")),
-    defaultTimeout
+    defaultTimeout,
   );
   const cancelCodeTimer = () => clearTimeout(codeTimer);
 
   const server = http.createServer((req, res) => {
     const reqUrl = new url.URL(
       req.url!,
-      `${ext.networkProtocols.http}${ext.localhost}`
+      `${ext.networkProtocols.http}${ext.localhost}`,
     );
     switch (reqUrl.pathname) {
       case "/":
@@ -210,9 +218,9 @@ function createServer() {
           join(
             ext.context.asAbsolutePath("resources"),
             "codeFlowResult",
-            "index.html"
+            "index.html",
           ),
-          "text/html; charset=utf-8"
+          "text/html; charset=utf-8",
         );
         break;
       case "/redirect":
@@ -240,9 +248,9 @@ function createServer() {
           join(
             ext.context.asAbsolutePath("resources"),
             "codeFlowResult",
-            "main.css"
+            "main.css",
           ),
-          "text/css; charset=utf-8"
+          "text/css; charset=utf-8",
         );
         break;
       default:
@@ -261,30 +269,41 @@ function createServer() {
 }
 
 function startServer(server: http.Server): Promise<number> {
-  let deferredCode: IDeferred<number>;
-  const portPromise = new Promise<number>(
-    (resolve, reject) => (deferredCode = { resolve, reject })
-  );
-  const portTimer = setTimeout(
-    () => deferredCode.reject(new Error("Timeout waiting for port")),
-    closeTimeout
-  );
-  const cancelPortTimer = () => clearTimeout(portTimer);
+  return new Promise((resolve, reject) => {
+    let deferredCode: IDeferred<number>;
+    const portPromise = new Promise<number>(
+      (resolve, reject) => (deferredCode = { resolve, reject }),
+    );
+    const portTimer = setTimeout(
+      () => deferredCode.reject(new Error("Timeout waiting for port")),
+      closeTimeout,
+    );
+    const cancelPortTimer = () => clearTimeout(portTimer);
 
-  server.on("listening", () => deferredCode.resolve(9010));
-  server.on("error", (error) => deferredCode.reject(error));
-  server.on("close", () => deferredCode.reject(new Error("Closed")));
-
-  server.listen(9010, ext.localhost);
-
-  portPromise.then(cancelPortTimer, cancelPortTimer);
-  return portPromise;
+    pickPort({
+      ip: "127.0.0.1",
+      type: "tcp",
+      minPort: 9000,
+      maxPort: 9999,
+    })
+      .then((port) => {
+        server.on("listening", () => deferredCode.resolve(port));
+        server.on("error", (error) => deferredCode.reject(error));
+        server.on("close", () => deferredCode.reject(new Error("Closed")));
+        server.listen(port, ext.localhost);
+        portPromise.then(cancelPortTimer, cancelPortTimer);
+        env
+          .asExternalUri(Uri.parse(`http://localhost:${port}`))
+          .then(() => resolve(portPromise));
+      })
+      .catch(reject);
+  });
 }
 
 function sendFile(
   res: http.ServerResponse,
   filePath: string,
-  contentType: string
+  contentType: string,
 ) {
   fs.readFile(filePath, (_err: any, _body: any) => {
     if (!_err) {

@@ -11,27 +11,29 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Entity, QAst } from "../parser";
+import { Token, QAst } from "../parser";
 import { RuleSeverity, Rules } from "./rules";
 
 const enabled = [
   "ASSIGN_RESERVED_WORD",
+  "DECLARED_AFTER_USE",
+  "DEPRECATED_DATETIME",
+  "FIXED_SEED",
   "INVALID_ASSIGN",
-  //"DECLARED_AFTER_USE",
-  "UNUSED_PARAM",
-  "UNUSED_VAR",
-  "LINE_LENGTH",
+  "INVALID_ESCAPE",
+  "TOO_MANY_ARGUMENTS",
   "TOO_MANY_CONSTANTS",
   "TOO_MANY_GLOBALS",
   "TOO_MANY_LOCALS",
-  "DEPRECATED_DATETIME",
+  "UNUSED_PARAM",
+  "UNUSED_VAR",
 ];
 
 export interface LintResult {
   name: string;
   message: string;
   severity: RuleSeverity;
-  problems: Entity[];
+  problems: Token[];
 }
 
 export function lint(ast: QAst) {

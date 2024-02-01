@@ -11,8 +11,47 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Entity, EntityType, QAst } from "../parser";
+import { Token, QAst, TokenType } from "../parser";
 
-export function deprecatedDatetime({ script }: QAst): Entity[] {
-  return script.filter((entity) => entity.type === EntityType.DATETIME_LITERAL);
+export function deprecatedDatetime({ script }: QAst): Token[] {
+  return script.filter((entity) => entity.name === "DateTimeLiteral");
+}
+
+export function invalidEscape({ script }: QAst): Token[] {
+  return script
+    .filter((entity) => entity.name === "CharLiteral")
+    .filter((entity) => {
+      const image = entity.image;
+      let match = image.match(/(?:\\\\|\\)/g);
+      const count = match ? match.length : 0;
+      if (count > 0) {
+        match = image.match(/\\(?:\d{3}|[\\"rnt/])/g);
+        if (count !== (match ? match.length : 0)) {
+          return true;
+        }
+      }
+      return false;
+    });
+}
+
+export function fixedSeed({ script }: QAst): Token[] {
+  const problems: Token[] = [];
+
+  for (let i = 0; i < script.length; i++) {
+    const token = script[i];
+    if (token.type === TokenType.OPERATOR && token.image === "?") {
+      let next = script[i + 1];
+      if (next && next.image === "0Ng") {
+        next = script[i - 1];
+        if (next && next.name === "NumberLiteral") {
+          const val = parseInt(next.image);
+          if (val > 0) {
+            problems.push(next);
+          }
+        }
+      }
+    }
+  }
+
+  return problems;
 }

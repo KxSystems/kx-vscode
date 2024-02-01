@@ -56,6 +56,7 @@ import {
   connectInsights,
   disconnect,
   enableTLS,
+  executeQuery,
   removeConnection,
   removeInsightsConnection,
   runQuery,
@@ -132,8 +133,12 @@ export async function activate(context: ExtensionContext) {
 
   ext.outputChannel.appendLine("kdb extension is now active!");
 
-  // check for installed q runtime
-  await checkLocalInstall();
+  try {
+    // check for installed q runtime
+    await checkLocalInstall();
+  } catch (err) {
+    window.showErrorMessage(`${err}`);
+  }
 
   context.subscriptions.push(
     window.registerWebviewViewProvider(
@@ -299,7 +304,18 @@ export async function activate(context: ExtensionContext) {
         runQuery(ExecutionTypes.PythonQueryFile);
         ext.connection?.update();
       }
-    )
+    ),
+    commands.registerCommand("kdb.execute.entireFile", async (uri: Uri) => {
+      if (!uri) {
+        return;
+      }
+      const isPython = uri.fsPath.endsWith(".py");
+      if (uri.fsPath.endsWith(".q") || isPython) {
+        const content = await workspace.fs.readFile(uri);
+        const query = content.toString();
+        await executeQuery(query, undefined, isPython);
+      }
+    })
   );
 
   const lastResult: QueryResult | undefined = undefined;
