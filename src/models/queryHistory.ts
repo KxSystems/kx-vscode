@@ -23,4 +23,5 @@ export interface QueryHistory {
   language?: string;
   isDatasource?: boolean;
   datasourceType?: DataSourceTypes;
+  duration?: string;
 }

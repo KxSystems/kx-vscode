@@ -80,6 +80,7 @@ export class ExecutionConsole {
     serverName: string,
     dataSourceType?: string,
     isPhython?: boolean,
+    duration?: string,
   ): void {
     getHideDetailedConsoleQueryOutput();
     const hideDetails = ext.hideDetailedConsoleQueryOutput;
@@ -98,7 +99,16 @@ export class ExecutionConsole {
         : ServerType.INSIGHTS;
     checkIfIsDatasource(dataSourceType)
       ? null
-      : addQueryHistory(query, serverName, connectionType, true, isPhython);
+      : addQueryHistory(
+          query,
+          serverName,
+          connectionType,
+          true,
+          isPhython,
+          undefined,
+          undefined,
+          duration,
+        );
 
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
@@ -129,6 +139,7 @@ export class ExecutionConsole {
     serverName: string,
     isPython?: boolean,
     isDatasource?: boolean,
+    duration?: string,
   ): void {
     getHideDetailedConsoleQueryOutput();
     const hideDetails = ext.hideDetailedConsoleQueryOutput;
@@ -152,7 +163,16 @@ export class ExecutionConsole {
         this._console.appendLine(`Error: ${result}`);
       }
       if (!isDatasource) {
-        addQueryHistory(query, serverName, connectionType, false, isPython);
+        addQueryHistory(
+          query,
+          serverName,
+          connectionType,
+          false,
+          isPython,
+          undefined,
+          undefined,
+          duration,
+        );
       }
     } else {
       window.showErrorMessage(`Please connect to a kdb+ server`);

@@ -320,6 +320,7 @@ export function addQueryHistory(
   isPython?: boolean,
   isDatasource?: boolean,
   datasourceType?: DataSourceTypes,
+  duration?: string,
 ) {
   const newQueryHistory: QueryHistory = {
     query: query,
@@ -330,6 +331,7 @@ export function addQueryHistory(
     language: isPython ? "python" : "q",
     isDatasource,
     datasourceType,
+    duration,
   };
 
   ext.kdbQueryHistoryList.unshift(newQueryHistory);

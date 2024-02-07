@@ -114,6 +114,11 @@ export class QueryHistoryTreeItem extends TreeItem {
         "- Data Source Type: **" + this.details.datasourceType + "** \n",
       );
     }
+    if (this.details.duration) {
+      tooltipMd.appendMarkdown(
+        "- Duration: **" + this.details.duration + "ms** \n",
+      );
+    }
     return tooltipMd;
   }
 }

@@ -541,12 +541,7 @@ describe("Utils", () => {
 
       ext.kdbQueryHistoryList.length = 0;
 
-      executionConsoleUtils.addQueryHistory(
-        query,
-        connectionName,
-        connectionType,
-        true,
-      );
+      queryUtils.addQueryHistory(query, connectionName, connectionType, true);
       assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
     });
   });

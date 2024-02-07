@@ -805,11 +805,27 @@ export async function executeQuery(
     query = sanitizeQuery(query);
 
     if (ext.resultsViewProvider.isVisible()) {
+      const startTime = Date.now();
       const queryRes = await ext.connection.executeQuery(query, context, true);
-      writeQueryResultsToView(queryRes, query);
+      const endTime = Date.now();
+      writeQueryResultsToView(
+        queryRes,
+        query,
+        undefined,
+        false,
+        (endTime - startTime).toString(),
+      );
     } else {
+      const startTime = Date.now();
       const queryRes = await ext.connection.executeQuery(query, context, true);
-      writeQueryResultsToConsole(queryRes, query);
+      const endTime = Date.now();
+      writeQueryResultsToConsole(
+        queryRes,
+        query,
+        undefined,
+        false,
+        (endTime - startTime).toString(),
+      );
     }
   } else {
     const isConnected = ext.connection
@@ -965,6 +981,7 @@ export function writeQueryResultsToConsole(
   query: string,
   dataSourceType?: string,
   isPython?: boolean,
+  duration?: string,
 ): void {
   const queryConsole = ExecutionConsole.start();
   const res = Array.isArray(result)
@@ -980,15 +997,18 @@ export function writeQueryResultsToConsole(
       ext.connectionNode?.label ? ext.connectionNode.label : "",
       dataSourceType,
       isPython,
+      duration,
     );
   } else {
-    if (checkIfIsDatasource(dataSourceType)) {
+    if (!checkIfIsDatasource(dataSourceType)) {
       queryConsole.appendQueryError(
         query,
         res.substring(queryConstants.error.length),
         !!ext.connection,
         ext.connectionNode?.label ? ext.connectionNode.label : "",
         isPython,
+        undefined,
+        duration,
       );
     }
   }
@@ -999,6 +1019,7 @@ export function writeQueryResultsToView(
   query: string,
   dataSourceType?: string,
   isPython?: boolean,
+  duration?: string,
 ): void {
   commands.executeCommand("kdb.resultsPanel.update", result, dataSourceType);
   const connectionType: ServerType =
@@ -1012,6 +1033,9 @@ export function writeQueryResultsToView(
       connectionType,
       true,
       isPython,
+      undefined,
+      undefined,
+      duration,
     );
   }
 }
