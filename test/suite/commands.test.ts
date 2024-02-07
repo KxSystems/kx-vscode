@@ -41,6 +41,7 @@ import * as coreUtils from "../../src/utils/core";
 import * as dataSourceUtils from "../../src/utils/dataSource";
 import { ExecutionConsole } from "../../src/utils/executionConsole";
 import * as queryUtils from "../../src/utils/queryUtils";
+import { Connection } from "../../src/models/connection";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const srvCommand = require("../../src/commands/serverCommand");
@@ -889,6 +890,16 @@ describe("installTools", () => {
   installTools.installTools();
 });
 describe("serverCommand", () => {
+  const insightsNode = new InsightsNode(
+    [],
+    "insightsnode1",
+    {
+      server: "https://insightsservername.com/",
+      alias: "insightsserveralias",
+      auth: true,
+    },
+    TreeItemCollapsibleState.None,
+  );
   it("Should call new connection but not create kdb or insights", async () => {
     const qpStub = sinon.stub(window, "showQuickPick").returns(undefined);
 
@@ -1522,17 +1533,6 @@ describe("serverCommand", () => {
       },
     };
 
-    const insightsNode = new InsightsNode(
-      [],
-      "insightsnode1",
-      {
-        server: "https://insightsservername.com/",
-        alias: "insightsserveralias",
-        auth: true,
-      },
-      TreeItemCollapsibleState.None,
-    );
-
     let getQueryContextStub,
       activeTextEditorStub,
       executeQueryStub: sinon.SinonStub;
@@ -1610,6 +1610,44 @@ describe("serverCommand", () => {
       ext.connectionNode = insightsNode;
       const result = serverCommand.runQuery(ExecutionTypes.PythonQueryFile);
       assert.equal(result, undefined);
+    });
+  });
+
+  describe("executeQuery", () => {
+    let isVisibleStub,
+      executeQueryStub,
+      writeResultsViewStub,
+      writeResultsConsoleStub,
+      isConnected: sinon.SinonStub;
+    beforeEach(() => {
+      ext.connection = new Connection("localhost:5001");
+      isConnected = sinon.stub(ext.connection, "connected").returns(true);
+      isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
+      executeQueryStub = sinon.stub(ext.connection, "executeQuery");
+      writeResultsViewStub = sinon.stub(
+        serverCommand,
+        "writeQueryResultsToView",
+      );
+      writeResultsConsoleStub = sinon.stub(
+        serverCommand,
+        "writeQueryResultsToConsole",
+      );
+    });
+    afterEach(() => {
+      ext.connection = undefined;
+      sinon.restore();
+    });
+    it("should execute query and write results to view", async () => {
+      isVisibleStub.returns(true);
+      executeQueryStub.resolves({ data: "data" });
+      await serverCommand.executeQuery("SELECT * FROM table");
+      sinon.assert.notCalled(writeResultsConsoleStub);
+    });
+    it("should execute query and write results to console", async () => {
+      isVisibleStub.returns(false);
+      executeQueryStub.resolves({ data: "data" });
+      await serverCommand.executeQuery("SELECT * FROM table");
+      sinon.assert.notCalled(writeResultsViewStub);
     });
   });
 });

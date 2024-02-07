@@ -245,6 +245,7 @@ export function addKdbConnection(): void {
     validateInput: (value: string | undefined) => validateServerPort(value),
   };
 
+  // TODO: this is obsolete? this code is not used anywhere
   // const connectionTls: InputBoxOptions = {
   //   prompt: connnectionTls.prompt,
   //   placeHolder: connnectionTls.placeholder,
