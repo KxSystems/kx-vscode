@@ -44,9 +44,6 @@ import * as queryUtils from "../../src/utils/queryUtils";
 import { Connection } from "../../src/models/connection";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const srvCommand = require("../../src/commands/serverCommand");
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
 const dsCmd = require("../../src/commands/dataSourceCommand");
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -458,7 +455,7 @@ describe("dataSourceCommand2", () => {
         dataSourceUtils,
         "checkIfTimeParamIsCorrect",
       );
-      getDataInsightsStub = sinon.stub(srvCommand, "getDataInsights");
+      getDataInsightsStub = sinon.stub(serverCommand, "getDataInsights");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableRes = sinon.stub(
         queryUtils,
@@ -520,7 +517,7 @@ describe("dataSourceCommand2", () => {
     let handleScratchpadTableRes: sinon.SinonStub;
 
     beforeEach(() => {
-      getDataInsightsStub = sinon.stub(srvCommand, "getDataInsights");
+      getDataInsightsStub = sinon.stub(serverCommand, "getDataInsights");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableRes = sinon.stub(
         queryUtils,
@@ -564,7 +561,7 @@ describe("dataSourceCommand2", () => {
     let handleScratchpadTableRes: sinon.SinonStub;
 
     beforeEach(() => {
-      getDataInsightsStub = sinon.stub(srvCommand, "getDataInsights");
+      getDataInsightsStub = sinon.stub(serverCommand, "getDataInsights");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableRes = sinon.stub(
         queryUtils,
@@ -746,7 +743,7 @@ describe("dataSourceCommand2", () => {
     ext.outputChannel = vscode.window.createOutputChannel("kdb");
 
     beforeEach(() => {
-      getMetaStub = sinon.stub(srvCommand, "getMeta");
+      getMetaStub = sinon.stub(serverCommand, "getMeta");
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
       handleWSResultsStub = sinon
         .stub(queryUtils, "handleWSResults")
@@ -754,13 +751,13 @@ describe("dataSourceCommand2", () => {
       handleScratchpadTableRes = sinon
         .stub(queryUtils, "handleScratchpadTableRes")
         .returns("dummy results");
-      getDataInsightsStub = sinon.stub(srvCommand, "getDataInsights");
+      getDataInsightsStub = sinon.stub(serverCommand, "getDataInsights");
       writeQueryResultsToViewStub = sinon.stub(
-        srvCommand,
+        serverCommand,
         "writeQueryResultsToView",
       );
       writeQueryResultsToConsoleStub = sinon.stub(
-        srvCommand,
+        serverCommand,
         "writeQueryResultsToConsole",
       );
     });
@@ -904,9 +901,9 @@ describe("serverCommand", () => {
     const qpStub = sinon.stub(window, "showQuickPick").returns(undefined);
 
     const spy = sinon.spy();
-    const kdbMock = sinon.mock(srvCommand);
+    const kdbMock = sinon.mock(serverCommand);
     kdbMock.expects("addKdbConnection").never();
-    const insMock = sinon.mock(srvCommand);
+    const insMock = sinon.mock(serverCommand);
     insMock.expects("addInsightsConnection").never();
 
     await serverCommand.addNewConnection();
@@ -930,7 +927,7 @@ describe("serverCommand", () => {
 
     const qpStub = sinon.stub(window, "showQuickPick").resolves(qpItem);
     const kdbStub = sinon
-      .stub(srvCommand, "addKdbConnection")
+      .stub(serverCommand, "addKdbConnection")
       .returns(undefined);
 
     await serverCommand.addNewConnection();
@@ -965,7 +962,7 @@ describe("serverCommand", () => {
 
     const qpStub = sinon.stub(window, "showQuickPick").resolves(qpItem);
     const insStub = sinon
-      .stub(srvCommand, "addInsightsConnection")
+      .stub(serverCommand, "addInsightsConnection")
       .returns(undefined);
 
     await serverCommand.addNewConnection();
@@ -990,7 +987,7 @@ describe("serverCommand", () => {
       .onSecondCall()
       .resolves("https://insights.test");
     const insStub = sinon
-      .stub(srvCommand, "addInsightsConnection")
+      .stub(serverCommand, "addInsightsConnection")
       .returns(undefined);
 
     await serverCommand.addNewConnection();
@@ -1016,7 +1013,7 @@ describe("serverCommand", () => {
       .onSecondCall()
       .resolves("https://insights.test");
     const insStub = sinon
-      .stub(srvCommand, "addInsightsConnection")
+      .stub(serverCommand, "addInsightsConnection")
       .returns(undefined);
 
     await serverCommand.addNewConnection();
@@ -1042,7 +1039,7 @@ describe("serverCommand", () => {
       .onSecondCall()
       .resolves("https://insights.test");
     const insStub = sinon
-      .stub(srvCommand, "addInsightsConnection")
+      .stub(serverCommand, "addInsightsConnection")
       .returns(undefined);
     const getInsightsStub = sinon
       .stub(insModule, "getInsights")
@@ -1076,7 +1073,7 @@ describe("serverCommand", () => {
       .onSecondCall()
       .resolves("https://insights.test");
     const insStub = sinon
-      .stub(srvCommand, "addInsightsConnection")
+      .stub(serverCommand, "addInsightsConnection")
       .returns(undefined);
     const getInsightsStub = sinon
       .stub(insModule, "getInsights")
@@ -1114,7 +1111,7 @@ describe("serverCommand", () => {
       .onSecondCall()
       .resolves("https://insights.test");
     const insStub = sinon
-      .stub(srvCommand, "addInsightsConnection")
+      .stub(serverCommand, "addInsightsConnection")
       .returns(undefined);
     const getInsightsStub = sinon
       .stub(insModule, "getInsights")
@@ -1168,7 +1165,7 @@ describe("serverCommand", () => {
       ext.openSslVersion = null;
       showErrorMessageStub.resolves("More Info");
 
-      await srvCommand.enableTLS("test");
+      await serverCommand.enableTLS("test");
 
       sinon.assert.calledOnce(showErrorMessageStub);
       sinon.assert.calledWith(
@@ -1184,7 +1181,7 @@ describe("serverCommand", () => {
       ext.openSslVersion = "1.0.2";
       getServersStub.returns({});
 
-      await srvCommand.enableTLS("test");
+      await serverCommand.enableTLS("test");
 
       sinon.assert.calledOnce(showErrorMessageStub);
       sinon.assert.calledWith(
@@ -1226,7 +1223,7 @@ describe("serverCommand", () => {
           managed: false,
         },
       });
-      await srvCommand.enableTLS("test");
+      await serverCommand.enableTLS("test");
       sinon.assert.calledOnce(updateServersStub);
     });
   });
@@ -1258,11 +1255,11 @@ describe("serverCommand", () => {
         "appendQueryError",
       );
       writeQueryResultsToViewStub = sinon.stub(
-        srvCommand,
+        serverCommand,
         "writeQueryResultsToView",
       );
       writeQueryResultsToConsoleStub = sinon.stub(
-        srvCommand,
+        serverCommand,
         "writeQueryResultsToConsole",
       );
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
@@ -1275,7 +1272,7 @@ describe("serverCommand", () => {
     it("should write appendQueryError", () => {
       scratchpadResult.error = true;
       scratchpadResult.errorMsg = "error";
-      srvCommand.writeScratchpadResult(scratchpadResult, "dummy query");
+      serverCommand.writeScratchpadResult(scratchpadResult, "dummy query");
       sinon.assert.notCalled(writeQueryResultsToViewStub);
       sinon.assert.notCalled(writeQueryResultsToConsoleStub);
     });
@@ -1283,7 +1280,7 @@ describe("serverCommand", () => {
     it("should write to view", () => {
       scratchpadResult.data = "data";
       isVisibleStub.returns(true);
-      srvCommand.writeScratchpadResult(scratchpadResult, "dummy query");
+      serverCommand.writeScratchpadResult(scratchpadResult, "dummy query");
       sinon.assert.notCalled(writeQueryResultsToConsoleStub);
       sinon.assert.notCalled(queryConsoleErrorStub);
     });
@@ -1291,7 +1288,7 @@ describe("serverCommand", () => {
     it("should write to console", () => {
       scratchpadResult.data = "data";
       isVisibleStub.returns(false);
-      srvCommand.writeScratchpadResult(scratchpadResult, "dummy query");
+      serverCommand.writeScratchpadResult(scratchpadResult, "dummy query");
       sinon.assert.notCalled(writeQueryResultsToViewStub);
     });
   });
