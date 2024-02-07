@@ -11,13 +11,16 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { DataSourceFiles, DataSourceTypes } from "./dataSource";
 import { ServerType } from "./server";
 
 export interface QueryHistory {
   connectionName: string;
   connectionType: ServerType;
-  query: string;
+  query: string | DataSourceFiles;
   time: string;
   success: boolean;
   language?: string;
+  isDatasource?: boolean;
+  datasourceType?: DataSourceTypes;
 }

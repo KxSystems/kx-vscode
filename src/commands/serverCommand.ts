@@ -24,7 +24,6 @@ import {
   QuickPickOptions,
   Range,
   commands,
-  env,
   window,
 } from "vscode";
 import { ext } from "../extensionVariables";
@@ -40,7 +39,6 @@ import {
   connectionPasswordInput,
   connectionPortInput,
   connectionUsernameInput,
-  connnectionTls,
   insightsAliasInput,
   insightsUrlInput,
   kdbEndpoint,
@@ -70,27 +68,30 @@ import {
 } from "../utils/core";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { decodeQUTF } from "../utils/decode";
-import { ExecutionConsole, addQueryHistory } from "../utils/executionConsole";
+import { ExecutionConsole } from "../utils/executionConsole";
 import { openUrl } from "../utils/openUrl";
 import {
   handleScratchpadTableRes,
   handleWSResults,
   sanitizeQuery,
+  checkIfIsDatasource,
+  addQueryHistory,
 } from "../utils/queryUtils";
 import {
   validateServerAlias,
   validateServerName,
   validateServerPort,
   validateServerUsername,
-  validateTls,
 } from "../validators/kdbValidator";
+import { QueryHistory } from "../models/queryHistory";
+import { runDataSource } from "./dataSourceCommand";
 
 export async function addNewConnection(): Promise<void> {
   const options: QuickPickOptions = { placeHolder: serverEndpointPlaceHolder };
 
   const resultType: QuickPickItem | undefined = await window.showQuickPick(
     serverEndpoints,
-    options
+    options,
   );
   if (resultType !== undefined && resultType!.label === kdbEndpoint) {
     addKdbConnection();
@@ -122,7 +123,7 @@ export async function addInsightsConnection() {
       let insights: Insights | undefined = getInsights();
       if (insights != undefined && insights[getHash(insights_url!)]) {
         await window.showErrorMessage(
-          `Insights instance named ${insights_url} already exists.`
+          `Insights instance named ${insights_url} already exists.`,
         );
       } else {
         const key = getHash(insights_url!);
@@ -180,7 +181,7 @@ export function addAuthConnection(serverKey: string): void {
             servers[serverKey].auth = true;
             ext.secretSettings.storeAuthData(
               serverKey,
-              `${username}:${password}`
+              `${username}:${password}`,
             );
             await updateServers(servers);
             const newServers = getServers();
@@ -203,7 +204,7 @@ export async function enableTLS(serverKey: string): Promise<void> {
       .showErrorMessage(
         "OpenSSL not found, please ensure this is installed",
         "More Info",
-        "Cancel"
+        "Cancel",
       )
       .then(async (result) => {
         if (result === "More Info") {
@@ -223,7 +224,7 @@ export async function enableTLS(serverKey: string): Promise<void> {
   }
   window.showErrorMessage(
     "Server not found, please ensure this is a correct server",
-    "Cancel"
+    "Cancel",
   );
 }
 
@@ -244,11 +245,11 @@ export function addKdbConnection(): void {
     validateInput: (value: string | undefined) => validateServerPort(value),
   };
 
-  const connectionTls: InputBoxOptions = {
-    prompt: connnectionTls.prompt,
-    placeHolder: connnectionTls.placeholder,
-    validateInput: (value: string | undefined) => validateTls(value),
-  };
+  // const connectionTls: InputBoxOptions = {
+  //   prompt: connnectionTls.prompt,
+  //   placeHolder: connnectionTls.placeholder,
+  //   validateInput: (value: string | undefined) => validateTls(value),
+  // };
 
   window.showInputBox(connectionAlias).then(async (alias) => {
     window.showInputBox(connectionHostname).then(async (hostname) => {
@@ -262,7 +263,7 @@ export function addKdbConnection(): void {
               servers[getHash(`${hostname}:${port}`)]
             ) {
               await window.showErrorMessage(
-                `Server ${hostname}:${port} already exists.`
+                `Server ${hostname}:${port} already exists.`,
               );
             } else {
               const key =
@@ -320,7 +321,7 @@ export async function removeConnection(viewItem: KdbNode): Promise<void> {
   const key =
     viewItem.details.serverAlias != ""
       ? getHash(
-          `${viewItem.details.serverName}${viewItem.details.serverPort}${viewItem.details.serverAlias}`
+          `${viewItem.details.serverName}${viewItem.details.serverPort}${viewItem.details.serverAlias}`,
         )
       : getHash(`${viewItem.details.serverName}${viewItem.details.serverPort}`);
   if (servers != undefined && servers[key]) {
@@ -346,7 +347,7 @@ export async function connectInsights(viewItem: InsightsNode): Promise<void> {
   await getCurrentToken(viewItem.details.server, viewItem.details.alias);
 
   ext.outputChannel.appendLine(
-    `Connection established successfully to: ${viewItem.details.server}`
+    `Connection established successfully to: ${viewItem.details.server}`,
   );
 
   commands.executeCommand("setContext", "kdb.connected", [
@@ -360,7 +361,7 @@ export async function connectInsights(viewItem: InsightsNode): Promise<void> {
     commands.executeCommand(
       "setContext",
       "kdb.insightsNodes",
-      ext.kdbinsightsNodes
+      ext.kdbinsightsNodes,
     );
   }
 
@@ -373,17 +374,17 @@ export async function getMeta(): Promise<MetaObjectPayload | undefined> {
   if (ext.connectionNode instanceof InsightsNode) {
     const metaUrl = new url.URL(
       ext.insightsServiceGatewayUrls.meta,
-      ext.connectionNode.details.server
+      ext.connectionNode.details.server,
     );
 
     const token = await getCurrentToken(
       ext.connectionNode.details.server,
-      ext.connectionNode.details.alias
+      ext.connectionNode.details.alias,
     );
 
     if (token === undefined) {
       ext.outputChannel.appendLine(
-        "Error retrieving access token for insights."
+        "Error retrieving access token for insights.",
       );
       window.showErrorMessage("Failed to retrieve access token for insights");
       return undefined;
@@ -402,22 +403,22 @@ export async function getMeta(): Promise<MetaObjectPayload | undefined> {
 
 export async function getDataInsights(
   targetUrl: string,
-  body: string
+  body: string,
 ): Promise<GetDataObjectPayload | undefined> {
   if (ext.connectionNode instanceof InsightsNode) {
     const requestUrl = new url.URL(
       targetUrl,
-      ext.connectionNode.details.server
+      ext.connectionNode.details.server,
     ).toString();
 
     const token = await getCurrentToken(
       ext.connectionNode.details.server,
-      ext.connectionNode.details.alias
+      ext.connectionNode.details.alias,
     );
 
     if (token === undefined) {
       ext.outputChannel.appendLine(
-        "Error retrieving access token for insights."
+        "Error retrieving access token for insights.",
       );
       window.showErrorMessage("Failed to retrieve access token for insights");
       return undefined;
@@ -467,7 +468,7 @@ export async function getDataInsights(
               arrayBuffer: undefined,
             };
           });
-      }
+      },
     );
     return results;
   }
@@ -477,7 +478,7 @@ export async function getDataInsights(
 export async function importScratchpad(
   variableName: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params: DataSourceFiles
+  params: DataSourceFiles,
 ): Promise<void> {
   if (ext.connectionNode instanceof InsightsNode) {
     let queryParams, coreUrl: string;
@@ -509,17 +510,17 @@ export async function importScratchpad(
 
     const scratchpadURL = new url.URL(
       coreUrl!,
-      ext.connectionNode.details.server
+      ext.connectionNode.details.server,
     );
 
     const token = await getCurrentToken(
       ext.connectionNode.details.server,
-      ext.connectionNode.details.alias
+      ext.connectionNode.details.alias,
     );
 
     if (token === undefined) {
       ext.outputChannel.appendLine(
-        "Error retrieving access token for insights."
+        "Error retrieving access token for insights.",
       );
       window.showErrorMessage("Failed to retrieve access token for insights");
       return undefined;
@@ -528,7 +529,7 @@ export async function importScratchpad(
     const username = jwtDecode<JwtUser>(token.accessToken);
     if (username === undefined || username.preferred_username === "") {
       ext.outputChannel.appendLine(
-        "JWT did not contain a valid preferred username"
+        "JWT did not contain a valid preferred username",
       );
     }
     const headers = {
@@ -559,17 +560,17 @@ export async function importScratchpad(
         const scratchpadResponse = await axios.post(
           scratchpadURL.toString(),
           body,
-          headers
+          headers,
         );
 
         ext.outputChannel.append(JSON.stringify(scratchpadResponse.data));
         window.showInformationMessage(
-          `Executed successfully, stored in ${variableName}`
+          `Executed successfully, stored in ${variableName}`,
         );
 
         const p = new Promise<void>((resolve) => resolve());
         return p;
-      }
+      },
     );
   }
 }
@@ -577,21 +578,21 @@ export async function importScratchpad(
 export async function getScratchpadQuery(
   query: string,
   context?: string,
-  isPython?: boolean
+  isPython?: boolean,
 ): Promise<any | undefined> {
   if (ext.connectionNode instanceof InsightsNode) {
     const isTableView = ext.resultsViewProvider.isVisible();
     const scratchpadURL = new url.URL(
       ext.insightsAuthUrls.scratchpadURL,
-      ext.connectionNode.details.server
+      ext.connectionNode.details.server,
     );
     const token = await getCurrentToken(
       ext.connectionNode.details.server,
-      ext.connectionNode.details.alias
+      ext.connectionNode.details.alias,
     );
     if (token === undefined) {
       ext.outputChannel.appendLine(
-        "Error retrieving access token for insights."
+        "Error retrieving access token for insights.",
       );
       window.showErrorMessage("Failed to retrieve access token for insights");
       return undefined;
@@ -599,7 +600,7 @@ export async function getScratchpadQuery(
     const username = jwtDecode<JwtUser>(token.accessToken);
     if (username === undefined || username.preferred_username === "") {
       ext.outputChannel.appendLine(
-        "JWT did not contain a valid preferred username"
+        "JWT did not contain a valid preferred username",
       );
     }
     const body = {
@@ -632,7 +633,7 @@ export async function getScratchpadQuery(
           .then((response: any) => {
             if (isTableView && !response.data.error) {
               const buffer = new Uint8Array(
-                response.data.data.map((x: string) => parseInt(x, 16))
+                response.data.data.map((x: string) => parseInt(x, 16)),
               ).buffer;
 
               response.data.data = handleWSResults(buffer);
@@ -641,7 +642,7 @@ export async function getScratchpadQuery(
             return response.data;
           });
         return spRes;
-      }
+      },
     );
     return spReponse;
   }
@@ -649,7 +650,7 @@ export async function getScratchpadQuery(
 }
 
 export async function removeInsightsConnection(
-  viewItem: InsightsNode
+  viewItem: InsightsNode,
 ): Promise<void> {
   if (viewItem.label.indexOf("connected") !== -1) {
     await disconnect();
@@ -676,7 +677,7 @@ export async function removeInsightsConnection(
 export async function connect(viewItem: KdbNode): Promise<void> {
   commands.executeCommand("kdb-results.focus");
   await commands.executeCommand("setContext", "kdb.insightsConnected", false);
-  const queryConsole = ExecutionConsole.start();
+  ExecutionConsole.start();
   // handle cleaning up existing connection
   if (
     ext.connectionNode !== undefined &&
@@ -697,7 +698,7 @@ export async function connect(viewItem: KdbNode): Promise<void> {
         .showInformationMessage(
           "TLS support requires OpenSSL to be installed.",
           "More Info",
-          "Cancel"
+          "Cancel",
         )
         .then(async (result) => {
           if (result === "More Info") {
@@ -721,7 +722,7 @@ export async function connect(viewItem: KdbNode): Promise<void> {
   const key =
     viewItem.details.serverAlias != ""
       ? getHash(
-          `${viewItem.details.serverName}${viewItem.details.serverPort}${viewItem.details.serverAlias}`
+          `${viewItem.details.serverName}${viewItem.details.serverPort}${viewItem.details.serverAlias}`,
         )
       : getHash(`${viewItem.details.serverName}${viewItem.details.serverPort}`);
   const connection = `${servers[key].serverName}:${servers[key].serverPort}`;
@@ -731,13 +732,13 @@ export async function connect(viewItem: KdbNode): Promise<void> {
     ext.connection = new Connection(
       connection,
       creds,
-      viewItem.details.tls ?? false
+      viewItem.details.tls ?? false,
     );
   } else {
     ext.connection = new Connection(
       connection,
       undefined,
-      viewItem.details.tls ?? false
+      viewItem.details.tls ?? false,
     );
   }
 
@@ -754,7 +755,7 @@ export async function connect(viewItem: KdbNode): Promise<void> {
 
     if (conn) {
       ext.outputChannel.appendLine(
-        `Connection established successfully to: ${viewItem.details.serverName}`
+        `Connection established successfully to: ${viewItem.details.serverName}`,
       );
 
       commands.executeCommand("setContext", "kdb.connected", [
@@ -781,7 +782,7 @@ export async function disconnect(): Promise<void> {
 export async function executeQuery(
   query: string,
   context?: string,
-  isPython?: boolean
+  isPython?: boolean,
 ): Promise<void> {
   const queryConsole = ExecutionConsole.start();
 
@@ -792,7 +793,7 @@ export async function executeQuery(
   const insightsNode = ext.kdbinsightsNodes.find((n) =>
     ext.connectionNode instanceof InsightsNode
       ? n === ext.connectionNode?.details.alias + " (connected)"
-      : false
+      : false,
   );
 
   // set context for root nodes
@@ -818,7 +819,7 @@ export async function executeQuery(
       query,
       "Query is empty",
       isConnected,
-      ext.connectionNode?.label ? ext.connectionNode.label : ""
+      ext.connectionNode?.label ? ext.connectionNode.label : "",
     );
     return undefined;
   }
@@ -840,8 +841,8 @@ export function getQueryContext(lineNum?: number): string {
       text = editor.document.getText(
         new Range(
           new Position(0, 0),
-          new Position(lineNum, line.range.end.character)
-        )
+          new Position(lineNum, line.range.end.character),
+        ),
       );
     }
 
@@ -859,6 +860,19 @@ export function getQueryContext(lineNum?: number): string {
   return context;
 }
 
+export function getConextForRerunQuery(query: string): string {
+  let context = ".";
+  // matches '\d .foo' or 'system "d .foo"'
+  const pattern = /^(system\s*"d|\\d)\s+([^\s"]+)/gm;
+  const matches = [...query.matchAll(pattern)];
+  if (matches.length) {
+    // fullText should use first defined context
+    // a selection should use the last defined context
+    context = query ? matches[0][2] : matches[matches.length - 1][2];
+  }
+  return context;
+}
+
 export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
   const editor = window.activeTextEditor;
   if (!editor) {
@@ -870,7 +884,7 @@ export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
   const insightsNode = ext.kdbinsightsNodes.find((n) =>
     ext.connectionNode instanceof InsightsNode
       ? n === ext.connectionNode?.details.alias + " (connected)"
-      : false
+      : false,
   );
   switch (type) {
     case ExecutionTypes.QuerySelection:
@@ -900,17 +914,38 @@ export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
   executeQuery(query, context, isPython);
 }
 
+export function rerunQuery(rerunQueryElement: QueryHistory) {
+  if (
+    !rerunQueryElement.isDatasource &&
+    typeof rerunQueryElement.query === "string"
+  ) {
+    const context = getConextForRerunQuery(rerunQueryElement.query);
+    executeQuery(
+      rerunQueryElement.query,
+      context,
+      rerunQueryElement.language !== "q",
+    );
+  } else if (
+    rerunQueryElement.datasourceType &&
+    rerunQueryElement.isDatasource
+  ) {
+    const dsFile = rerunQueryElement.query as DataSourceFiles;
+    runDataSource(dsFile);
+  }
+  console.log(rerunQueryElement);
+}
+
 export async function loadServerObjects(): Promise<ServerObject[]> {
   // check for valid connection
   if (ext.connection === undefined || ext.connection.connected === false) {
     window.showInformationMessage(
-      "Please connect to a KDB instance to view the objects"
+      "Please connect to a KDB instance to view the objects",
     );
     return new Array<ServerObject>();
   }
 
   const script = readFileSync(
-    ext.context.asAbsolutePath(join("resources", "list_mem.q"))
+    ext.context.asAbsolutePath(join("resources", "list_mem.q")),
   ).toString();
   const cc = "\n" + script + "(::)";
   const result = await ext.connection?.executeQueryRaw(cc);
@@ -929,7 +964,7 @@ export function writeQueryResultsToConsole(
   result: string | string[],
   query: string,
   dataSourceType?: string,
-  isPython?: boolean
+  isPython?: boolean,
 ): void {
   const queryConsole = ExecutionConsole.start();
   const res = Array.isArray(result)
@@ -944,16 +979,18 @@ export function writeQueryResultsToConsole(
       query,
       ext.connectionNode?.label ? ext.connectionNode.label : "",
       dataSourceType,
-      isPython
+      isPython,
     );
   } else {
-    queryConsole.appendQueryError(
-      query,
-      res.substring(queryConstants.error.length),
-      !!ext.connection,
-      ext.connectionNode?.label ? ext.connectionNode.label : "",
-      isPython
-    );
+    if (checkIfIsDatasource(dataSourceType)) {
+      queryConsole.appendQueryError(
+        query,
+        res.substring(queryConstants.error.length),
+        !!ext.connection,
+        ext.connectionNode?.label ? ext.connectionNode.label : "",
+        isPython,
+      );
+    }
   }
 }
 
@@ -961,26 +998,28 @@ export function writeQueryResultsToView(
   result: any,
   query: string,
   dataSourceType?: string,
-  isPython?: boolean
+  isPython?: boolean,
 ): void {
   commands.executeCommand("kdb.resultsPanel.update", result, dataSourceType);
   const connectionType: ServerType =
     ext.connectionNode instanceof KdbNode
       ? ServerType.KDB
       : ServerType.INSIGHTS;
-  addQueryHistory(
-    query,
-    ext.connectionNode?.label ? ext.connectionNode.label : "",
-    connectionType,
-    true,
-    isPython
-  );
+  if (!checkIfIsDatasource(dataSourceType)) {
+    addQueryHistory(
+      query,
+      ext.connectionNode?.label ? ext.connectionNode.label : "",
+      connectionType,
+      true,
+      isPython,
+    );
+  }
 }
 
 export function writeScratchpadResult(
   result: ScratchpadResult,
   query: string,
-  isPython?: boolean
+  isPython?: boolean,
 ): void {
   const queryConsole = ExecutionConsole.start();
 
@@ -989,7 +1028,7 @@ export function writeScratchpadResult(
       query,
       result.errorMsg,
       true,
-      ext.connectionNode?.label ? ext.connectionNode.label : ""
+      ext.connectionNode?.label ? ext.connectionNode.label : "",
     );
   } else {
     if (ext.resultsViewProvider.isVisible()) {
