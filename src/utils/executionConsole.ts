@@ -97,18 +97,18 @@ export class ExecutionConsole {
       ext.connectionNode instanceof KdbNode
         ? ServerType.KDB
         : ServerType.INSIGHTS;
-    checkIfIsDatasource(dataSourceType)
-      ? null
-      : addQueryHistory(
-          query,
-          serverName,
-          connectionType,
-          true,
-          isPhython,
-          undefined,
-          undefined,
-          duration,
-        );
+    if (!checkIfIsDatasource(dataSourceType)) {
+      addQueryHistory(
+        query,
+        serverName,
+        connectionType,
+        true,
+        isPhython,
+        undefined,
+        undefined,
+        duration,
+      );
+    }
 
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
