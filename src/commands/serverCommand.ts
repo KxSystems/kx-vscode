@@ -942,14 +942,10 @@ export function rerunQuery(rerunQueryElement: QueryHistory) {
       context,
       rerunQueryElement.language !== "q",
     );
-  } else if (
-    rerunQueryElement.datasourceType &&
-    rerunQueryElement.isDatasource
-  ) {
+  } else {
     const dsFile = rerunQueryElement.query as DataSourceFiles;
     runDataSource(dsFile);
   }
-  console.log(rerunQueryElement);
 }
 
 export async function loadServerObjects(): Promise<ServerObject[]> {

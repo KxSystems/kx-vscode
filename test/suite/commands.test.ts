@@ -43,6 +43,8 @@ import * as dataSourceUtils from "../../src/utils/dataSource";
 import { ExecutionConsole } from "../../src/utils/executionConsole";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { Connection } from "../../src/models/connection";
+import { QueryHistory } from "../../src/models/queryHistory";
+import { ServerType } from "../../src/models/server";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const dsCmd = require("../../src/commands/dataSourceCommand");
@@ -1687,6 +1689,51 @@ describe("serverCommand", () => {
         serverCommand.getConextForRerunQuery("\\d .foo\n\\d .bar"),
         ".foo",
       );
+    });
+  });
+
+  describe("rerunQuery", function () {
+    let executeQueryStub, runDataSourceStub: sinon.SinonStub;
+    beforeEach(() => {
+      runDataSourceStub = sinon
+        .stub(dataSourceCommand, "runDataSource")
+        .resolves();
+
+      executeQueryStub = sinon.stub(serverCommand, "executeQuery").resolves();
+    });
+    this.afterEach(() => {
+      sinon.restore();
+    });
+    it("should execute query for non-datasource query", async function () {
+      const rerunQueryElement: QueryHistory = {
+        isDatasource: false,
+        query: "SELECT * FROM table",
+        language: "q",
+        time: "",
+        success: true,
+        connectionName: "",
+        connectionType: ServerType.KDB,
+      };
+
+      serverCommand.rerunQuery(rerunQueryElement);
+      sinon.assert.notCalled(runDataSourceStub);
+    });
+
+    it("should run datasource for datasource query", async function () {
+      const ds = createDefaultDataSourceFile();
+      const rerunQueryElement: QueryHistory = {
+        isDatasource: true,
+        datasourceType: DataSourceTypes.QSQL,
+        query: ds,
+        connectionName: "",
+        connectionType: ServerType.INSIGHTS,
+        time: "",
+        success: false,
+      };
+
+      await serverCommand.rerunQuery(rerunQueryElement);
+
+      sinon.assert.notCalled(executeQueryStub);
     });
   });
 });
