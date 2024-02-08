@@ -34,6 +34,7 @@ import { KdbDataSourceTreeItem } from "../../src/services/dataSourceTreeProvider
 import * as codeFlowLogin from "../../src/services/kdbInsights/codeFlowLogin";
 import {
   InsightsNode,
+  KdbNode,
   KdbTreeProvider,
 } from "../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
@@ -887,6 +888,16 @@ describe("installTools", () => {
   installTools.installTools();
 });
 describe("serverCommand", () => {
+  const servers = {
+    testServer: {
+      serverAlias: "testServerAlias",
+      serverName: "testServerName",
+      serverPort: "5001",
+      tls: false,
+      auth: false,
+      managed: false,
+    },
+  };
   const insightsNode = new InsightsNode(
     [],
     "insightsnode1",
@@ -895,6 +906,13 @@ describe("serverCommand", () => {
       alias: "insightsserveralias",
       auth: true,
     },
+    TreeItemCollapsibleState.None,
+  );
+
+  const kdbNode = new KdbNode(
+    ["child1"],
+    "testElement",
+    servers["testServer"],
     TreeItemCollapsibleState.None,
   );
   it("Should call new connection but not create kdb or insights", async () => {
@@ -1610,15 +1628,15 @@ describe("serverCommand", () => {
     });
   });
 
-  describe("executeQuery", () => {
+  describe.only("executeQuery", () => {
     let isVisibleStub,
       executeQueryStub,
       writeResultsViewStub,
-      writeResultsConsoleStub,
-      isConnected: sinon.SinonStub;
+      writeResultsConsoleStub: sinon.SinonStub;
     beforeEach(() => {
       ext.connection = new Connection("localhost:5001");
-      isConnected = sinon.stub(ext.connection, "connected").returns(true);
+      ext.connection.connected = true;
+      ext.connectionNode = kdbNode;
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
       executeQueryStub = sinon.stub(ext.connection, "executeQuery");
       writeResultsViewStub = sinon.stub(
@@ -1642,7 +1660,7 @@ describe("serverCommand", () => {
     });
     it("should execute query and write results to console", async () => {
       isVisibleStub.returns(false);
-      executeQueryStub.resolves({ data: "data" });
+      executeQueryStub.resolves("dummy test");
       await serverCommand.executeQuery("SELECT * FROM table");
       sinon.assert.notCalled(writeResultsViewStub);
     });
