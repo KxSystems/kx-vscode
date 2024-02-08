@@ -13,7 +13,7 @@
 
 import * as fs from "fs";
 import path from "path";
-import { InputBoxOptions, Uri, window, commands } from "vscode";
+import { InputBoxOptions, Uri, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { GetDataError, getDataBodyPayload } from "../models/data";
 import {
@@ -31,6 +31,7 @@ import {
   getConnectedInsightsNode,
 } from "../utils/dataSource";
 import {
+  addQueryHistory,
   handleScratchpadTableRes,
   handleWSError,
   handleWSResults,
@@ -43,6 +44,7 @@ import {
   writeQueryResultsToConsole,
   writeQueryResultsToView,
 } from "./serverCommand";
+import { ServerType } from "../models/server";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -252,13 +254,16 @@ export async function runDataSource(
     ext.isDatasourceExecution = false;
     if (res.error) {
       window.showErrorMessage(res.error);
+      addDStoQueryHistory(dataSourceForm, false);
     } else if (ext.resultsViewProvider.isVisible()) {
+      addDStoQueryHistory(dataSourceForm, true);
       writeQueryResultsToView(
         res,
         getQuery(fileContent, selectedType),
         selectedType,
       );
     } else {
+      addDStoQueryHistory(dataSourceForm, true);
       writeQueryResultsToConsole(
         res,
         getQuery(fileContent, selectedType),
@@ -268,6 +273,21 @@ export async function runDataSource(
   } finally {
     DataSourcesPanel.running = false;
   }
+}
+
+export function addDStoQueryHistory(
+  dataSourceForm: DataSourceFiles,
+  success: boolean,
+) {
+  addQueryHistory(
+    dataSourceForm,
+    ext.connectionNode?.label ? ext.connectionNode.label : "",
+    ServerType.INSIGHTS,
+    success,
+    false,
+    true,
+    dataSourceForm.dataSource.selectedType,
+  );
 }
 
 export function getSelectedType(fileContent: DataSourceFiles): string {

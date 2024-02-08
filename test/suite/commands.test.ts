@@ -34,6 +34,7 @@ import { KdbDataSourceTreeItem } from "../../src/services/dataSourceTreeProvider
 import * as codeFlowLogin from "../../src/services/kdbInsights/codeFlowLogin";
 import {
   InsightsNode,
+  KdbNode,
   KdbTreeProvider,
 } from "../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
@@ -41,9 +42,9 @@ import * as coreUtils from "../../src/utils/core";
 import * as dataSourceUtils from "../../src/utils/dataSource";
 import { ExecutionConsole } from "../../src/utils/executionConsole";
 import * as queryUtils from "../../src/utils/queryUtils";
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const srvCommand = require("../../src/commands/serverCommand");
+import { Connection } from "../../src/models/connection";
+import { QueryHistory } from "../../src/models/queryHistory";
+import { ServerType } from "../../src/models/server";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const dsCmd = require("../../src/commands/dataSourceCommand");
@@ -457,7 +458,7 @@ describe("dataSourceCommand2", () => {
         dataSourceUtils,
         "checkIfTimeParamIsCorrect",
       );
-      getDataInsightsStub = sinon.stub(srvCommand, "getDataInsights");
+      getDataInsightsStub = sinon.stub(serverCommand, "getDataInsights");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableRes = sinon.stub(
         queryUtils,
@@ -519,7 +520,7 @@ describe("dataSourceCommand2", () => {
     let handleScratchpadTableRes: sinon.SinonStub;
 
     beforeEach(() => {
-      getDataInsightsStub = sinon.stub(srvCommand, "getDataInsights");
+      getDataInsightsStub = sinon.stub(serverCommand, "getDataInsights");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableRes = sinon.stub(
         queryUtils,
@@ -563,7 +564,7 @@ describe("dataSourceCommand2", () => {
     let handleScratchpadTableRes: sinon.SinonStub;
 
     beforeEach(() => {
-      getDataInsightsStub = sinon.stub(srvCommand, "getDataInsights");
+      getDataInsightsStub = sinon.stub(serverCommand, "getDataInsights");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableRes = sinon.stub(
         queryUtils,
@@ -745,7 +746,7 @@ describe("dataSourceCommand2", () => {
     ext.outputChannel = vscode.window.createOutputChannel("kdb");
 
     beforeEach(() => {
-      getMetaStub = sinon.stub(srvCommand, "getMeta");
+      getMetaStub = sinon.stub(serverCommand, "getMeta");
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
       handleWSResultsStub = sinon
         .stub(queryUtils, "handleWSResults")
@@ -753,13 +754,13 @@ describe("dataSourceCommand2", () => {
       handleScratchpadTableRes = sinon
         .stub(queryUtils, "handleScratchpadTableRes")
         .returns("dummy results");
-      getDataInsightsStub = sinon.stub(srvCommand, "getDataInsights");
+      getDataInsightsStub = sinon.stub(serverCommand, "getDataInsights");
       writeQueryResultsToViewStub = sinon.stub(
-        srvCommand,
+        serverCommand,
         "writeQueryResultsToView",
       );
       writeQueryResultsToConsoleStub = sinon.stub(
-        srvCommand,
+        serverCommand,
         "writeQueryResultsToConsole",
       );
     });
@@ -889,13 +890,40 @@ describe("installTools", () => {
   installTools.installTools();
 });
 describe("serverCommand", () => {
+  const servers = {
+    testServer: {
+      serverAlias: "testServerAlias",
+      serverName: "testServerName",
+      serverPort: "5001",
+      tls: false,
+      auth: false,
+      managed: false,
+    },
+  };
+  const insightsNode = new InsightsNode(
+    [],
+    "insightsnode1",
+    {
+      server: "https://insightsservername.com/",
+      alias: "insightsserveralias",
+      auth: true,
+    },
+    TreeItemCollapsibleState.None,
+  );
+
+  const kdbNode = new KdbNode(
+    ["child1"],
+    "testElement",
+    servers["testServer"],
+    TreeItemCollapsibleState.None,
+  );
   it("Should call new connection but not create kdb or insights", async () => {
     const qpStub = sinon.stub(window, "showQuickPick").returns(undefined);
 
     const spy = sinon.spy();
-    const kdbMock = sinon.mock(srvCommand);
+    const kdbMock = sinon.mock(serverCommand);
     kdbMock.expects("addKdbConnection").never();
-    const insMock = sinon.mock(srvCommand);
+    const insMock = sinon.mock(serverCommand);
     insMock.expects("addInsightsConnection").never();
 
     await serverCommand.addNewConnection();
@@ -919,7 +947,7 @@ describe("serverCommand", () => {
 
     const qpStub = sinon.stub(window, "showQuickPick").resolves(qpItem);
     const kdbStub = sinon
-      .stub(srvCommand, "addKdbConnection")
+      .stub(serverCommand, "addKdbConnection")
       .returns(undefined);
 
     await serverCommand.addNewConnection();
@@ -954,7 +982,7 @@ describe("serverCommand", () => {
 
     const qpStub = sinon.stub(window, "showQuickPick").resolves(qpItem);
     const insStub = sinon
-      .stub(srvCommand, "addInsightsConnection")
+      .stub(serverCommand, "addInsightsConnection")
       .returns(undefined);
 
     await serverCommand.addNewConnection();
@@ -979,7 +1007,7 @@ describe("serverCommand", () => {
       .onSecondCall()
       .resolves("https://insights.test");
     const insStub = sinon
-      .stub(srvCommand, "addInsightsConnection")
+      .stub(serverCommand, "addInsightsConnection")
       .returns(undefined);
 
     await serverCommand.addNewConnection();
@@ -1005,7 +1033,7 @@ describe("serverCommand", () => {
       .onSecondCall()
       .resolves("https://insights.test");
     const insStub = sinon
-      .stub(srvCommand, "addInsightsConnection")
+      .stub(serverCommand, "addInsightsConnection")
       .returns(undefined);
 
     await serverCommand.addNewConnection();
@@ -1031,7 +1059,7 @@ describe("serverCommand", () => {
       .onSecondCall()
       .resolves("https://insights.test");
     const insStub = sinon
-      .stub(srvCommand, "addInsightsConnection")
+      .stub(serverCommand, "addInsightsConnection")
       .returns(undefined);
     const getInsightsStub = sinon
       .stub(insModule, "getInsights")
@@ -1065,7 +1093,7 @@ describe("serverCommand", () => {
       .onSecondCall()
       .resolves("https://insights.test");
     const insStub = sinon
-      .stub(srvCommand, "addInsightsConnection")
+      .stub(serverCommand, "addInsightsConnection")
       .returns(undefined);
     const getInsightsStub = sinon
       .stub(insModule, "getInsights")
@@ -1103,7 +1131,7 @@ describe("serverCommand", () => {
       .onSecondCall()
       .resolves("https://insights.test");
     const insStub = sinon
-      .stub(srvCommand, "addInsightsConnection")
+      .stub(serverCommand, "addInsightsConnection")
       .returns(undefined);
     const getInsightsStub = sinon
       .stub(insModule, "getInsights")
@@ -1157,7 +1185,7 @@ describe("serverCommand", () => {
       ext.openSslVersion = null;
       showErrorMessageStub.resolves("More Info");
 
-      await srvCommand.enableTLS("test");
+      await serverCommand.enableTLS("test");
 
       sinon.assert.calledOnce(showErrorMessageStub);
       sinon.assert.calledWith(
@@ -1173,7 +1201,7 @@ describe("serverCommand", () => {
       ext.openSslVersion = "1.0.2";
       getServersStub.returns({});
 
-      await srvCommand.enableTLS("test");
+      await serverCommand.enableTLS("test");
 
       sinon.assert.calledOnce(showErrorMessageStub);
       sinon.assert.calledWith(
@@ -1215,7 +1243,7 @@ describe("serverCommand", () => {
           managed: false,
         },
       });
-      await srvCommand.enableTLS("test");
+      await serverCommand.enableTLS("test");
       sinon.assert.calledOnce(updateServersStub);
     });
   });
@@ -1247,11 +1275,11 @@ describe("serverCommand", () => {
         "appendQueryError",
       );
       writeQueryResultsToViewStub = sinon.stub(
-        srvCommand,
+        serverCommand,
         "writeQueryResultsToView",
       );
       writeQueryResultsToConsoleStub = sinon.stub(
-        srvCommand,
+        serverCommand,
         "writeQueryResultsToConsole",
       );
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
@@ -1264,7 +1292,7 @@ describe("serverCommand", () => {
     it("should write appendQueryError", () => {
       scratchpadResult.error = true;
       scratchpadResult.errorMsg = "error";
-      srvCommand.writeScratchpadResult(scratchpadResult, "dummy query");
+      serverCommand.writeScratchpadResult(scratchpadResult, "dummy query");
       sinon.assert.notCalled(writeQueryResultsToViewStub);
       sinon.assert.notCalled(writeQueryResultsToConsoleStub);
     });
@@ -1272,7 +1300,7 @@ describe("serverCommand", () => {
     it("should write to view", () => {
       scratchpadResult.data = "data";
       isVisibleStub.returns(true);
-      srvCommand.writeScratchpadResult(scratchpadResult, "dummy query");
+      serverCommand.writeScratchpadResult(scratchpadResult, "dummy query");
       sinon.assert.notCalled(writeQueryResultsToConsoleStub);
       sinon.assert.notCalled(queryConsoleErrorStub);
     });
@@ -1280,7 +1308,7 @@ describe("serverCommand", () => {
     it("should write to console", () => {
       scratchpadResult.data = "data";
       isVisibleStub.returns(false);
-      srvCommand.writeScratchpadResult(scratchpadResult, "dummy query");
+      serverCommand.writeScratchpadResult(scratchpadResult, "dummy query");
       sinon.assert.notCalled(writeQueryResultsToViewStub);
     });
   });
@@ -1522,17 +1550,6 @@ describe("serverCommand", () => {
       },
     };
 
-    const insightsNode = new InsightsNode(
-      [],
-      "insightsnode1",
-      {
-        server: "https://insightsservername.com/",
-        alias: "insightsserveralias",
-        auth: true,
-      },
-      TreeItemCollapsibleState.None,
-    );
-
     let getQueryContextStub,
       activeTextEditorStub,
       executeQueryStub: sinon.SinonStub;
@@ -1610,6 +1627,113 @@ describe("serverCommand", () => {
       ext.connectionNode = insightsNode;
       const result = serverCommand.runQuery(ExecutionTypes.PythonQueryFile);
       assert.equal(result, undefined);
+    });
+  });
+
+  describe("executeQuery", () => {
+    let isVisibleStub,
+      executeQueryStub,
+      writeResultsViewStub,
+      writeResultsConsoleStub: sinon.SinonStub;
+    beforeEach(() => {
+      ext.connection = new Connection("localhost:5001");
+      ext.connection.connected = true;
+      ext.connectionNode = kdbNode;
+      isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
+      executeQueryStub = sinon.stub(ext.connection, "executeQuery");
+      writeResultsViewStub = sinon.stub(
+        serverCommand,
+        "writeQueryResultsToView",
+      );
+      writeResultsConsoleStub = sinon.stub(
+        serverCommand,
+        "writeQueryResultsToConsole",
+      );
+    });
+    afterEach(() => {
+      ext.connection = undefined;
+      sinon.restore();
+    });
+    it("should execute query and write results to view", async () => {
+      isVisibleStub.returns(true);
+      executeQueryStub.resolves({ data: "data" });
+      await serverCommand.executeQuery("SELECT * FROM table");
+      sinon.assert.notCalled(writeResultsConsoleStub);
+    });
+    it("should execute query and write results to console", async () => {
+      isVisibleStub.returns(false);
+      executeQueryStub.resolves("dummy test");
+      await serverCommand.executeQuery("SELECT * FROM table");
+      sinon.assert.notCalled(writeResultsViewStub);
+    });
+  });
+
+  describe("getConextForRerunQuery", function () {
+    it("should return correct context for given input", function () {
+      assert.equal(serverCommand.getConextForRerunQuery("\\d .foo"), ".foo");
+      assert.equal(
+        serverCommand.getConextForRerunQuery('system "d .bar'),
+        ".bar",
+      );
+    });
+
+    it("should return default context for input without context", function () {
+      assert.equal(
+        serverCommand.getConextForRerunQuery("no context here"),
+        ".",
+      );
+    });
+
+    it("should return last context for input with multiple contexts", function () {
+      assert.equal(
+        serverCommand.getConextForRerunQuery("\\d .foo\n\\d .bar"),
+        ".foo",
+      );
+    });
+  });
+
+  describe("rerunQuery", function () {
+    let executeQueryStub, runDataSourceStub: sinon.SinonStub;
+    beforeEach(() => {
+      runDataSourceStub = sinon
+        .stub(dataSourceCommand, "runDataSource")
+        .resolves();
+
+      executeQueryStub = sinon.stub(serverCommand, "executeQuery").resolves();
+    });
+    this.afterEach(() => {
+      sinon.restore();
+    });
+    it("should execute query for non-datasource query", async function () {
+      const rerunQueryElement: QueryHistory = {
+        isDatasource: false,
+        query: "SELECT * FROM table",
+        language: "q",
+        time: "",
+        success: true,
+        connectionName: "",
+        connectionType: ServerType.KDB,
+      };
+
+      serverCommand.rerunQuery(rerunQueryElement);
+      sinon.assert.notCalled(runDataSourceStub);
+    });
+
+    it("should run datasource for datasource query", async function () {
+      const ds = createDefaultDataSourceFile();
+      const rerunQueryElement: QueryHistory = {
+        isDatasource: true,
+        datasourceType: DataSourceTypes.QSQL,
+        query: ds,
+        connectionName: "",
+        connectionType: ServerType.INSIGHTS,
+        time: "",
+        success: false,
+      };
+
+      await serverCommand.rerunQuery(rerunQueryElement);
+
+      sinon.assert.notCalled(executeQueryStub);
     });
   });
 });

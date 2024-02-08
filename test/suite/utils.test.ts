@@ -46,6 +46,7 @@ import {
   DDateTimeClass,
   DTimestampClass,
 } from "../../src/ipc/cClasses";
+import { DataSourceTypes } from "../../src/models/dataSource";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;
@@ -492,7 +493,7 @@ describe("Utils", () => {
 
         ext.connectionNode = kdbNode;
 
-        queryConsole.appendQueryError(query, output, true, serverName);
+        queryConsole.appendQueryError(query, output, true, serverName, true);
         assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
         assert.strictEqual(
@@ -541,13 +542,37 @@ describe("Utils", () => {
 
       ext.kdbQueryHistoryList.length = 0;
 
-      executionConsoleUtils.addQueryHistory(
+      queryUtils.addQueryHistory(query, connectionName, connectionType, true);
+      assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+    });
+
+    it("addQueryHistory in python", () => {
+      const query = "SELECT * FROM table";
+      const connectionName = "test";
+      const connectionType = ServerType.KDB;
+
+      ext.kdbQueryHistoryList.length = 0;
+
+      queryUtils.addQueryHistory(
         query,
         connectionName,
         connectionType,
         true,
+        true,
       );
       assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+    });
+  });
+
+  describe("selectDSType", () => {
+    it("should return correct DataSourceTypes for given input", function () {
+      assert.equal(queryUtils.selectDSType("API"), DataSourceTypes.API);
+      assert.equal(queryUtils.selectDSType("QSQL"), DataSourceTypes.QSQL);
+      assert.equal(queryUtils.selectDSType("SQL"), DataSourceTypes.SQL);
+    });
+
+    it("should return undefined for unknown input", function () {
+      assert.equal(queryUtils.selectDSType("unknown"), undefined);
     });
   });
 

@@ -19,6 +19,8 @@ import { Parse } from "../ipc/parse.qlist";
 import { ServerType } from "../models/server";
 import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
 import { TypeBase } from "../ipc/typeBase";
+import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
+import { QueryHistory } from "../models/queryHistory";
 
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {
@@ -287,4 +289,52 @@ export function getConnectionType(type: ServerType): string {
     default:
       return "undefined";
   }
+}
+
+export function checkIfIsDatasource(
+  dataSourceType: string | undefined,
+): boolean {
+  if (dataSourceType === undefined) {
+    return false;
+  }
+  const validTypes = ["API", "QSQL", "SQL"];
+  return validTypes.includes(dataSourceType);
+}
+
+export function selectDSType(
+  dataSourceType: string,
+): DataSourceTypes | undefined {
+  const typeMapping: { [key: string]: DataSourceTypes } = {
+    API: DataSourceTypes.API,
+    QSQL: DataSourceTypes.QSQL,
+    SQL: DataSourceTypes.SQL,
+  };
+  return typeMapping[dataSourceType] || undefined;
+}
+
+export function addQueryHistory(
+  query: string | DataSourceFiles,
+  connectionName: string,
+  connectionType: ServerType,
+  success: boolean,
+  isPython?: boolean,
+  isDatasource?: boolean,
+  datasourceType?: DataSourceTypes,
+  duration?: string,
+) {
+  const newQueryHistory: QueryHistory = {
+    query: query,
+    time: new Date().toLocaleString(),
+    success,
+    connectionName,
+    connectionType,
+    language: isPython ? "python" : "q",
+    isDatasource,
+    datasourceType,
+    duration,
+  };
+
+  ext.kdbQueryHistoryList.unshift(newQueryHistory);
+
+  ext.queryHistoryProvider.refresh();
 }
