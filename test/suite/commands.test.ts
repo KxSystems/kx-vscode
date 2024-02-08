@@ -1665,6 +1665,30 @@ describe("serverCommand", () => {
       sinon.assert.notCalled(writeResultsViewStub);
     });
   });
+
+  describe("getConextForRerunQuery", function () {
+    it("should return correct context for given input", function () {
+      assert.equal(serverCommand.getConextForRerunQuery("\\d .foo"), ".foo");
+      assert.equal(
+        serverCommand.getConextForRerunQuery('system "d .bar'),
+        ".bar",
+      );
+    });
+
+    it("should return default context for input without context", function () {
+      assert.equal(
+        serverCommand.getConextForRerunQuery("no context here"),
+        ".",
+      );
+    });
+
+    it("should return last context for input with multiple contexts", function () {
+      assert.equal(
+        serverCommand.getConextForRerunQuery("\\d .foo\n\\d .bar"),
+        ".foo",
+      );
+    });
+  });
 });
 
 describe("walkthroughCommand", () => {
