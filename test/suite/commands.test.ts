@@ -1628,7 +1628,7 @@ describe("serverCommand", () => {
     });
   });
 
-  describe.only("executeQuery", () => {
+  describe("executeQuery", () => {
     let isVisibleStub,
       executeQueryStub,
       writeResultsViewStub,
