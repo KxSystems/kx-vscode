@@ -175,8 +175,8 @@ export class ExecutionConsole {
         );
       }
     } else {
-      window.showErrorMessage(`Please connect to a kdb+ server`);
-      this._console.appendLine(`Please connect to a kdb+ server`);
+      window.showErrorMessage(`Please connect to a KDB or Insights server`);
+      this._console.appendLine(`Please connect to a KDB or Insights server`);
       commands.executeCommand("kdb.disconnect");
       addQueryHistory(
         query,
