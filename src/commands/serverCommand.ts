@@ -786,6 +786,12 @@ export async function executeQuery(
   isPython?: boolean,
 ): Promise<void> {
   const queryConsole = ExecutionConsole.start();
+  if (ext.connection === undefined) {
+    window.showInformationMessage(
+      "Please connect to a KDB instance or Insights Instance to execute a query",
+    );
+    return undefined;
+  }
 
   if (query.length === 0) {
     return undefined;
