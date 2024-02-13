@@ -55,7 +55,7 @@ jobs:
 
   app-sec:
     needs: test
-    if: " github.event.pull_request.head.repo.fork "
+    if: "! github.event.pull_request.head.repo.fork "
     uses: ./.github/workflows/app-sec-template.yml
     with:
       github_ref: ${{ github.ref_name }}
