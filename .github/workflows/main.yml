@@ -9,10 +9,6 @@ on:
       - main
     paths-ignore: ["**/*.md"]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number}}
-  cancel-in-progress: true
-
 jobs:
   test:
     strategy:
@@ -59,6 +55,7 @@ jobs:
 
   app-sec:
     needs: test
+    if: " github.event.pull_request.head.repo.fork "
     uses: ./.github/workflows/app-sec-template.yml
     with:
       github_ref: ${{ github.ref_name }}
