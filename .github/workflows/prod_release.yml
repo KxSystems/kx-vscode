@@ -3,7 +3,7 @@ name: KX VS Code Production Release Workflow
 on:
   push:
     tags:
-      - "v[129].[0-9]+.[0-9]+"
+      - "v[0-9].[0-9]+.[0-9]+"
 
 env:
   NODE_ENV: production
@@ -13,13 +13,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Install Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: 16.x
+          node-version: 20.x
       - name: Install dependencies
         run: npm ci --include=dev
       - name: Build VSIX file
@@ -58,7 +58,7 @@ jobs:
           VERSION=${{ github.ref_name }}
           echo "run_tag=$(echo ${VERSION:1})" >> $GITHUB_OUTPUT
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Download VSIX file from build job
@@ -88,13 +88,13 @@ jobs:
           asset_name: kdb-${{ steps.vars.outputs.run_tag }}.vsix
           asset_content_type: application/octet-stream
 
-  manual-approve:
+  manual-approval:
     needs: release
     environment:
       name: manual-approval
     runs-on: ubuntu-latest
     steps:
-      - name: Manual Approve
+      - name: Manual Approval
         run: echo "Manually approved"
 
   publish:
@@ -102,11 +102,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - name: Install Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20.x
       - name: Install dependencies
