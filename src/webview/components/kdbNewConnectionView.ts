@@ -145,7 +145,7 @@ export class KdbNewConnectionView extends LitElement {
   private renderServerName(serverType: ServerType, bundled?: boolean) {
     return html`
       <div class="row">${this.renderServerNameField(serverType, bundled)}</div>
-      <div class="row option-description">
+      <div class="row option-description  option-help">
         ${this.renderServerNameDesc(bundled)}
       </div>
     `;
@@ -180,7 +180,7 @@ export class KdbNewConnectionView extends LitElement {
           >Define connection address</vscode-text-field
         >
       </div>
-      <div class="row option-description">
+      <div class="row option-description  option-help">
         ${this.renderConnAddDesc(serverType)}
       </div>
     `;
@@ -201,12 +201,14 @@ export class KdbNewConnectionView extends LitElement {
                 kdb VS Code extension.</span
               >
               </div>
+              <br />
               <div class="row option-description"><span>
                 If you are familiar with q and are running a remote q process,
                 then use <b>“My q”</b>. Please ensure your remote q process is running
                 before connecting it to the kdb VS Code extension otherwise you
                 will get a connection error.</span>
               </div>
+              <br />
               <div class="row option-description"><span>
                 If you are an Insights user, then use an <b>“Insights connection”.</b>
                 You will be required to authenticate the connection prior to its
@@ -250,7 +252,7 @@ export class KdbNewConnectionView extends LitElement {
                             >Set port number</vscode-text-field
                           >
                         </div>
-                        <div class="row option-description">
+                        <div class="row option-description option-help">
                           <span>Ensure <b>Set port number</b> matches the assigned port of
                           your q process, and doesn’t conflict with another
                           port.</span>
@@ -285,7 +287,7 @@ export class KdbNewConnectionView extends LitElement {
                             >Password</vscode-text-field
                           >
                         </div>
-                        <div class="row option-description">
+                        <div class="row option-description  option-help">
                           Add required authentication to get access to the
                           server connection if enabled.
                         </div>

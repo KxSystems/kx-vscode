@@ -117,10 +117,15 @@ export const newConnectionStyles = css`
     line-height: 16px;
   }
 
+  .option-help {
+    opacity: 0.75;
+  }
+
   .content-wrapper {
     display: flex;
     align-content: center;
     justify-content: center;
+    font-family: var(--vscode-font-family);
   }
 
   .form-wrapper {
