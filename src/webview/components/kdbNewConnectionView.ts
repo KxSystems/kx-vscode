@@ -43,7 +43,7 @@ export class KdbNewConnectionView extends LitElement {
     this.insightsServer = {
       alias: "",
       server: "",
-      auth: false,
+      auth: true,
     };
     this.bundledServer = {
       serverName: "127.0.0.1",
@@ -61,6 +61,10 @@ export class KdbNewConnectionView extends LitElement {
         return this.insightsServer;
       case ServerType.KDB:
       default:
+        this.kdbServer.username = this.kdbServer.username!.trim();
+        this.kdbServer.password = this.kdbServer.password!.trim();
+        this.kdbServer.auth =
+          this.kdbServer.username !== "" && this.kdbServer.password !== "";
         return this.kdbServer;
     }
   }
@@ -89,8 +93,8 @@ export class KdbNewConnectionView extends LitElement {
     }
   }
 
-  private changeKdbAuth() {
-    this.kdbServer.auth = !this.kdbServer.auth;
+  private changeTLS() {
+    this.kdbServer.tls = !this.kdbServer.tls;
   }
 
   private renderServerNameDesc(bundled?: boolean) {
@@ -243,7 +247,7 @@ export class KdbNewConnectionView extends LitElement {
                               (this.kdbServer.serverPort = (
                                 event.target as HTMLSelectElement
                               ).value)}"
-                            >Set port name</vscode-text-field
+                            >Set port number</vscode-text-field
                           >
                         </div>
                         <div class="row option-description">
@@ -295,10 +299,7 @@ export class KdbNewConnectionView extends LitElement {
                         <div class="row">
                           <vscode-checkbox
                             value="${this.kdbServer.tls}"
-                            @input="${(event: Event) =>
-                              (this.kdbServer.tls = (
-                                event.target as HTMLInputElement
-                              ).checked)}"
+                            @click="${() => this.changeTLS()}"
                             >Enable TLS Encryption on the kdb
                             connection</vscode-checkbox
                           >

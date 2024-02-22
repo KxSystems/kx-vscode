@@ -32,25 +32,16 @@ import { Connection } from "../models/connection";
 import { GetDataObjectPayload } from "../models/data";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
-import { Insights } from "../models/insights";
+import { InsightDetails, Insights } from "../models/insights";
 import {
-  connectionAliasInput,
-  connectionHostnameInput,
   connectionPasswordInput,
-  connectionPortInput,
   connectionUsernameInput,
-  insightsAliasInput,
-  insightsUrlInput,
-  kdbEndpoint,
-  kdbInsightsEndpoint,
-  serverEndpointPlaceHolder,
-  serverEndpoints,
 } from "../models/items/server";
 import { JwtUser } from "../models/jwt_user";
 import { MetaObject, MetaObjectPayload } from "../models/meta";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
-import { Server, ServerType } from "../models/server";
+import { Server, ServerDetails, ServerType } from "../models/server";
 import { ServerObject } from "../models/serverObject";
 import { DataSourcesPanel } from "../panels/datasource";
 import { getCurrentToken } from "../services/kdbInsights/codeFlowLogin";
@@ -105,96 +96,87 @@ export async function addNewConnection(): Promise<void> {
   // }
 }
 
-export async function addInsightsConnection() {
-  const insightsAlias: InputBoxOptions = {
-    prompt: insightsAliasInput.prompt,
-    placeHolder: insightsAliasInput.placeholder,
-    validateInput: (value: string | undefined) => validateServerAlias(value),
-  };
-  const insightsUrl: InputBoxOptions = {
-    prompt: insightsUrlInput.prompt,
-    placeHolder: insightsUrlInput.placeholder,
-  };
-  window.showInputBox(insightsAlias).then(async (insights_alias) => {
-    window.showInputBox(insightsUrl).then(async (insights_url) => {
-      if (insights_alias === undefined || insights_alias === "") {
-        const host = new url.URL(insights_url!);
-        insights_alias = host.host;
-      }
+export async function addInsightsConnection(insightsData: InsightDetails) {
+  const aliasValidation = validateServerAlias(insightsData.alias, false);
+  if (aliasValidation) {
+    window.showErrorMessage(aliasValidation);
+    return;
+  }
+  if (insightsData.alias === undefined || insightsData.alias === "") {
+    const host = new url.URL(insightsData.server!);
+    insightsData.alias = host.host;
+  }
 
-      let insights: Insights | undefined = getInsights();
-      if (insights != undefined && insights[getHash(insights_url!)]) {
-        await window.showErrorMessage(
-          `Insights instance named ${insights_url} already exists.`,
-        );
-      } else {
-        const key = getHash(insights_url!);
-        if (insights === undefined) {
-          insights = {
-            key: {
-              auth: true,
-              alias: insights_alias,
-              server: insights_url!,
-            },
-          };
-        } else {
-          insights[key] = {
-            auth: true,
-            alias: insights_alias,
-            server: insights_url!,
-          };
-        }
+  let insights: Insights | undefined = getInsights();
+  if (insights != undefined && insights[getHash(insightsData.server!)]) {
+    await window.showErrorMessage(
+      `Insights instance named ${insightsData.alias} already exists.`,
+    );
+    return;
+  } else {
+    const key = getHash(insightsData.server!);
+    if (insights === undefined) {
+      insights = {
+        key: {
+          auth: true,
+          alias: insightsData.alias,
+          server: insightsData.server!,
+        },
+      };
+    } else {
+      insights[key] = {
+        auth: true,
+        alias: insightsData.alias,
+        server: insightsData.server!,
+      };
+    }
 
-        await updateInsights(insights);
-        const newInsights = getInsights();
-        if (newInsights != undefined) {
-          ext.serverProvider.refreshInsights(newInsights);
-        }
-      }
-    });
-  });
+    await updateInsights(insights);
+    const newInsights = getInsights();
+    if (newInsights != undefined) {
+      ext.serverProvider.refreshInsights(newInsights);
+    }
+    window.showInformationMessage(
+      `Added Insights connection: ${insightsData.alias}`,
+    );
+    NewConnectionPannel.close();
+  }
 }
 
 // Not possible to test secrets
 /* istanbul ignore next */
-export function addAuthConnection(serverKey: string): void {
-  const connectionUsername: InputBoxOptions = {
-    prompt: connectionUsernameInput.prompt,
-    placeHolder: connectionUsernameInput.placeholder,
-    validateInput: (value: string | undefined) => validateServerUsername(value),
-  };
-  const connectionPassword: InputBoxOptions = {
-    prompt: connectionPasswordInput.prompt,
-    placeHolder: connectionPasswordInput.placeholder,
-    password: true,
-  };
-  window.showInputBox(connectionUsername).then(async (username) => {
-    if (username?.trim()?.length) {
-      window.showInputBox(connectionPassword).then(async (password) => {
-        if (password?.trim()?.length) {
-          const servers: Server | undefined = getServers();
-          // store secrets
-          if (
-            (username != undefined || username != "") &&
-            (password != undefined || password != "") &&
-            servers &&
-            servers[serverKey]
-          ) {
-            servers[serverKey].auth = true;
-            ext.secretSettings.storeAuthData(
-              serverKey,
-              `${username}:${password}`,
-            );
-            await updateServers(servers);
-            const newServers = getServers();
-            if (newServers != undefined) {
-              ext.serverProvider.refresh(newServers);
-            }
-          }
-        }
-      });
+export async function addAuthConnection(
+  serverKey: string,
+  username: string,
+  password: string,
+): void {
+  const validUsername = validateServerUsername(username);
+  if (validUsername) {
+    window.showErrorMessage(validUsername);
+    return;
+  }
+  if (password === undefined || password === "") {
+    window.showErrorMessage("Password cannot be empty");
+    return;
+  }
+  if (password?.trim()?.length) {
+    const servers: Server | undefined = getServers();
+    // store secrets
+    if (
+      (username != undefined || username != "") &&
+      (password != undefined || password != "") &&
+      servers &&
+      servers[serverKey]
+    ) {
+      servers[serverKey].auth = true;
+      ext.secretSettings.storeAuthData(serverKey, `${username}:${password}`);
+      await updateServers(servers);
+      const newServers = getServers();
+      if (newServers != undefined) {
+        ext.serverProvider.refresh(newServers);
+      }
     }
-  });
+  }
 }
 
 export async function enableTLS(serverKey: string): Promise<void> {
@@ -230,88 +212,86 @@ export async function enableTLS(serverKey: string): Promise<void> {
   );
 }
 
-export function addKdbConnection(): void {
-  const connectionAlias: InputBoxOptions = {
-    prompt: connectionAliasInput.prompt,
-    placeHolder: connectionAliasInput.placeholder,
-    validateInput: (value: string | undefined) => validateServerAlias(value),
-  };
-  const connectionHostname: InputBoxOptions = {
-    prompt: connectionHostnameInput.prompt,
-    placeHolder: connectionHostnameInput.placeholder,
-    validateInput: (value: string | undefined) => validateServerName(value),
-  };
-  const connectionPort: InputBoxOptions = {
-    prompt: connectionPortInput.prompt,
-    placeHolder: connectionPortInput.placeholder,
-    validateInput: (value: string | undefined) => validateServerPort(value),
-  };
+export async function addKdbConnection(
+  kdbData: ServerDetails,
+  isLocal?: boolean,
+): void {
+  const aliasValidation = validateServerAlias(kdbData.serverAlias, isLocal!);
+  const hostnameValidation = validateServerName(kdbData.serverName);
+  const portValidation = validateServerPort(kdbData.serverPort);
+  if (aliasValidation) {
+    window.showErrorMessage(aliasValidation);
+    return;
+  }
+  if (hostnameValidation) {
+    window.showErrorMessage(hostnameValidation);
+    return;
+  }
+  if (portValidation) {
+    window.showErrorMessage(portValidation);
+    return;
+  }
+  if (kdbData.serverName) {
+    if (kdbData.serverPort) {
+      let servers: Server | undefined = getServers();
 
-  // TODO: this is obsolete? this code is not used anywhere
-  // const connectionTls: InputBoxOptions = {
-  //   prompt: connnectionTls.prompt,
-  //   placeHolder: connnectionTls.placeholder,
-  //   validateInput: (value: string | undefined) => validateTls(value),
-  // };
-
-  window.showInputBox(connectionAlias).then(async (alias) => {
-    window.showInputBox(connectionHostname).then(async (hostname) => {
-      if (hostname) {
-        window.showInputBox(connectionPort).then(async (port) => {
-          if (port) {
-            let servers: Server | undefined = getServers();
-
-            if (
-              servers != undefined &&
-              servers[getHash(`${hostname}:${port}`)]
-            ) {
-              await window.showErrorMessage(
-                `Server ${hostname}:${port} already exists.`,
-              );
-            } else {
-              const key =
-                alias != undefined
-                  ? getHash(`${hostname}${port}${alias}`)
-                  : getHash(`${hostname}${port}`);
-              if (servers === undefined) {
-                servers = {
-                  key: {
-                    auth: false,
-                    serverName: hostname,
-                    serverPort: port,
-                    serverAlias: alias,
-                    managed: alias === "local" ? true : false,
-                    tls: false,
-                  },
-                };
-                if (servers[0].managed) {
-                  await addLocalConnectionContexts(getServerName(servers[0]));
-                }
-              } else {
-                servers[key] = {
-                  auth: false,
-                  serverName: hostname,
-                  serverPort: port,
-                  serverAlias: alias,
-                  managed: alias === "local" ? true : false,
-                  tls: false,
-                };
-                if (servers[key].managed) {
-                  await addLocalConnectionContexts(getServerName(servers[key]));
-                }
-              }
-
-              await updateServers(servers);
-              const newServers = getServers();
-              if (newServers != undefined) {
-                ext.serverProvider.refresh(newServers);
-              }
-            }
+      if (
+        servers != undefined &&
+        servers[getHash(`${kdbData.serverName}:${kdbData.serverPort}`)]
+      ) {
+        await window.showErrorMessage(
+          `Server ${kdbData.serverName}:${kdbData.serverPort} already exists.`,
+        );
+      } else {
+        const key =
+          kdbData.serverAlias != undefined
+            ? getHash(
+                `${kdbData.serverName}${kdbData.serverPort}${kdbData.serverAlias}`,
+              )
+            : getHash(`${kdbData.serverName}${kdbData.serverPort}`);
+        if (servers === undefined) {
+          servers = {
+            key: {
+              auth: kdbData.auth,
+              serverName: kdbData.serverName,
+              serverPort: kdbData.serverPort,
+              serverAlias: kdbData.serverAlias,
+              managed: kdbData.serverAlias === "local" ? true : false,
+              tls: kdbData.tls,
+            },
+          };
+          if (servers[0].managed) {
+            await addLocalConnectionContexts(getServerName(servers[0]));
           }
-        });
+        } else {
+          servers[key] = {
+            auth: kdbData.auth,
+            serverName: kdbData.serverName,
+            serverPort: kdbData.serverPort,
+            serverAlias: kdbData.serverAlias,
+            managed: kdbData.serverAlias === "local" ? true : false,
+            tls: kdbData.tls,
+          };
+          if (servers[key].managed) {
+            await addLocalConnectionContexts(getServerName(servers[key]));
+          }
+        }
+
+        await updateServers(servers);
+        const newServers = getServers();
+        if (newServers != undefined) {
+          ext.serverProvider.refresh(newServers);
+        }
+        if (kdbData.auth) {
+          addAuthConnection(key, kdbData.username!, kdbData.password!);
+        }
+        window.showInformationMessage(
+          `Added kdb connection: ${kdbData.serverAlias}`,
+        );
+        NewConnectionPannel.close();
       }
-    });
-  });
+    }
+  }
 }
 
 export async function removeConnection(viewItem: KdbNode): Promise<void> {

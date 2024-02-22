@@ -30,9 +30,15 @@ export class NewConnectionPannel {
       extensionUri,
     );
     this._panel.webview.onDidReceiveMessage((message) => {
-      if (message.command === "kdb.newConnection.saveConnection") {
+      if (message.command === "kdb.newConnection.createNewInsightConnection") {
         vscode.commands.executeCommand(
-          "kdb.newConnection.saveConnection",
+          "kdb.newConnection.createNewInsightConnection",
+          message.data,
+        );
+      }
+      if (message.command === "kdb.newConnection.createNewConnection") {
+        vscode.commands.executeCommand(
+          "kdb.newConnection.createNewConnection",
           message.data,
         );
       }

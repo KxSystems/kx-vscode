@@ -33,6 +33,8 @@
   "activationEvents": [
     "onCommand:kdb.installTools",
     "onCommand:kdb.addConnection",
+    "onCommand:kdb.newConnection.createNewInsightConnection",
+    "onCommand:kdb.newConnection.createNewConnection",
     "onCommand:kdb.removeConnection",
     "onCommand:kdb.connect",
     "onCommand:kdb.disconnect",
