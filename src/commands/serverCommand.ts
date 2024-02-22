@@ -85,22 +85,24 @@ import {
 } from "../validators/kdbValidator";
 import { QueryHistory } from "../models/queryHistory";
 import { runDataSource } from "./dataSourceCommand";
+import { NewConnectionPannel } from "../panels/newConnection";
 
 export async function addNewConnection(): Promise<void> {
-  const options: QuickPickOptions = { placeHolder: serverEndpointPlaceHolder };
+  NewConnectionPannel.render(ext.context.extensionUri);
+  // const options: QuickPickOptions = { placeHolder: serverEndpointPlaceHolder };
 
-  const resultType: QuickPickItem | undefined = await window.showQuickPick(
-    serverEndpoints,
-    options,
-  );
-  if (resultType !== undefined && resultType!.label === kdbEndpoint) {
-    addKdbConnection();
-  } else if (
-    resultType !== undefined &&
-    resultType!.label === kdbInsightsEndpoint
-  ) {
-    await addInsightsConnection();
-  }
+  // const resultType: QuickPickItem | undefined = await window.showQuickPick(
+  //   serverEndpoints,
+  //   options,
+  // );
+  // if (resultType !== undefined && resultType!.label === kdbEndpoint) {
+  //   addKdbConnection();
+  // } else if (
+  //   resultType !== undefined &&
+  //   resultType!.label === kdbInsightsEndpoint
+  // ) {
+  //   await addInsightsConnection();
+  // }
 }
 
 export async function addInsightsConnection() {
