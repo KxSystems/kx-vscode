@@ -28,7 +28,7 @@ import {
   createDefaultDataSourceFile,
 } from "../../src/models/dataSource";
 import { ExecutionTypes } from "../../src/models/execution";
-import { Insights } from "../../src/models/insights";
+import { InsightDetails, Insights } from "../../src/models/insights";
 import { ScratchpadResult } from "../../src/models/scratchpadResult";
 import { KdbDataSourceTreeItem } from "../../src/services/dataSourceTreeProvider";
 import * as codeFlowLogin from "../../src/services/kdbInsights/codeFlowLogin";
@@ -44,7 +44,8 @@ import { ExecutionConsole } from "../../src/utils/executionConsole";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { Connection } from "../../src/models/connection";
 import { QueryHistory } from "../../src/models/queryHistory";
-import { ServerType } from "../../src/models/server";
+import { Server, ServerDetails, ServerType } from "../../src/models/server";
+import { NewConnectionPannel } from "../../src/panels/newConnection";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const dsCmd = require("../../src/commands/dataSourceCommand");
@@ -917,234 +918,162 @@ describe("serverCommand", () => {
     servers["testServer"],
     TreeItemCollapsibleState.None,
   );
-  it("Should call new connection but not create kdb or insights", async () => {
-    const qpStub = sinon.stub(window, "showQuickPick").returns(undefined);
+  const insights = {
+    testInsight: {
+      alias: "testInsightsAlias",
+      server: "testInsightsName",
+      auth: false,
+    },
+  };
+  ext.serverProvider = new KdbTreeProvider(servers, insights);
 
-    const spy = sinon.spy();
-    const kdbMock = sinon.mock(serverCommand);
-    kdbMock.expects("addKdbConnection").never();
-    const insMock = sinon.mock(serverCommand);
-    insMock.expects("addInsightsConnection").never();
-
-    await serverCommand.addNewConnection();
-    kdbMock.verify();
-    insMock.verify();
-
-    assert(spy.notCalled);
-
-    spy.resetHistory();
-    insMock.restore();
-    kdbMock.restore();
-    qpStub.restore();
+  after(() => {
+    ext.serverProvider = undefined;
   });
 
-  it("Should add new kdb connection successfully", async () => {
-    const qpItem: QuickPickItem = {
-      label: "Enter a kdb endpoint",
-      detail:
-        "Enter the url, ip address, and port to connect to a kdb instance",
-    };
+  it("should call the New Connection Panel Renderer", () => {
+    const newConnectionPanelStub = sinon.stub(NewConnectionPannel, "render");
 
-    const qpStub = sinon.stub(window, "showQuickPick").resolves(qpItem);
-    const kdbStub = sinon
-      .stub(serverCommand, "addKdbConnection")
-      .returns(undefined);
-
-    await serverCommand.addNewConnection();
-
-    assert(kdbStub.notCalled);
-
-    kdbStub.restore();
-    qpStub.restore();
+    serverCommand.addNewConnection();
+    sinon.assert.calledOnce(newConnectionPanelStub);
+    sinon.restore();
   });
 
-  it("Should add new kdb connection without existing connection", async () => {
-    const qpItem: QuickPickItem = {
-      label: "Enter a kdb endpoint",
-      detail:
-        "Enter the url, ip address, and port to connect to a kdb instance",
-    };
-
-    const qpStub = sinon.stub(window, "showQuickPick").resolves(qpItem);
-
-    await serverCommand.addKdbConnection();
-
-    assert.strictEqual(true, true);
-
-    qpStub.restore();
+  describe("addInsightsConnection", () => {
+    let insightsData: InsightDetails;
+    let updateInsightsStub, getInsightsStub: sinon.SinonStub;
+    let windowMock: sinon.SinonMock;
+    beforeEach(() => {
+      insightsData = {
+        server: "https://insightsservername.com/",
+        alias: "insightsserveralias",
+        auth: true,
+      };
+      windowMock = sinon.mock(vscode.window);
+      updateInsightsStub = sinon.stub(coreUtils, "updateInsights");
+      getInsightsStub = sinon.stub(coreUtils, "getInsights");
+    });
+    afterEach(() => {
+      sinon.restore();
+      windowMock.restore();
+    });
+    it("should add new Insights connection", async () => {
+      getInsightsStub.returns({});
+      await serverCommand.addInsightsConnection(insightsData);
+      sinon.assert.calledOnce(updateInsightsStub);
+      windowMock
+        .expects("showInformationMessage")
+        .once()
+        .withArgs("Insights connection added successfully");
+    });
+    it("should show error message if Insights connection already exists", async () => {
+      getInsightsStub.returns(insights);
+      await serverCommand.addInsightsConnection(insightsData);
+      windowMock
+        .expects("showErrorMessage")
+        .once()
+        .withArgs("Insights connection already exists");
+    });
+    it("should show error message if Insights connection is invalid", async () => {
+      insightsData.server = "invalid";
+      await serverCommand.addInsightsConnection(insightsData);
+      windowMock
+        .expects("showErrorMessage")
+        .once()
+        .withArgs("Invalid Insights connection");
+    });
+    it("should add connection where alias is not provided", async () => {
+      insightsData.alias = "";
+      getInsightsStub.returns({});
+      await serverCommand.addInsightsConnection(insightsData);
+      sinon.assert.calledOnce(updateInsightsStub);
+      windowMock
+        .expects("showInformationMessage")
+        .once()
+        .withArgs("Insights connection added successfully");
+    });
   });
 
-  it("Should add new insights connection successfully", async () => {
-    const qpItem: QuickPickItem = {
-      label: "Connect to kdb Insights Enterprise",
-      detail: "Enter instance details",
-    };
-
-    const qpStub = sinon.stub(window, "showQuickPick").resolves(qpItem);
-    const insStub = sinon
-      .stub(serverCommand, "addInsightsConnection")
-      .returns(undefined);
-
-    await serverCommand.addNewConnection();
-
-    assert(insStub.notCalled);
-
-    insStub.restore();
-    qpStub.restore();
-  });
-
-  it("Should add new insights connection successfully", async () => {
-    const qpItem: QuickPickItem = {
-      label: "Connect to kdb Insights Enterprise",
-      detail: "Enter instance details",
-    };
-
-    const qpStub = sinon.stub(window, "showQuickPick").resolves(qpItem);
-    const inpStub = sinon
-      .stub(window, "showInputBox")
-      .onFirstCall()
-      .resolves(undefined)
-      .onSecondCall()
-      .resolves("https://insights.test");
-    const insStub = sinon
-      .stub(serverCommand, "addInsightsConnection")
-      .returns(undefined);
-
-    await serverCommand.addNewConnection();
-
-    assert(insStub.notCalled);
-
-    insStub.restore();
-    inpStub.restore();
-    qpStub.restore();
-  });
-
-  it("Should add new insights connection successfully", async () => {
-    const qpItem: QuickPickItem = {
-      label: "Connect to kdb Insights Enterprise",
-      detail: "Enter instance details",
-    };
-
-    const qpStub = sinon.stub(window, "showQuickPick").resolves(qpItem);
-    const inpStub = sinon
-      .stub(window, "showInputBox")
-      .onFirstCall()
-      .resolves("")
-      .onSecondCall()
-      .resolves("https://insights.test");
-    const insStub = sinon
-      .stub(serverCommand, "addInsightsConnection")
-      .returns(undefined);
-
-    await serverCommand.addNewConnection();
-
-    assert(insStub.notCalled);
-
-    insStub.restore();
-    inpStub.restore();
-    qpStub.restore();
-  });
-
-  it("Should add new insights connection successfully", async () => {
-    const qpItem: QuickPickItem = {
-      label: "Connect to kdb Insights Enterprise",
-      detail: "Enter instance details",
-    };
-
-    const qpStub = sinon.stub(window, "showQuickPick").resolves(qpItem);
-    const inpStub = sinon
-      .stub(window, "showInputBox")
-      .onFirstCall()
-      .resolves("")
-      .onSecondCall()
-      .resolves("https://insights.test");
-    const insStub = sinon
-      .stub(serverCommand, "addInsightsConnection")
-      .returns(undefined);
-    const getInsightsStub = sinon
-      .stub(insModule, "getInsights")
-      .returns(undefined);
-
-    await serverCommand.addNewConnection();
-
-    assert(insStub.notCalled);
-
-    getInsightsStub.restore();
-    insStub.restore();
-    inpStub.restore();
-    qpStub.restore();
-  });
-
-  it("Should add new insights connection with no existing connection", async () => {
-    const qpItem: QuickPickItem = {
-      label: "Connect to kdb Insights Enterprise",
-      detail: "Enter instance details",
-    };
-
-    const insTest: Insights = {
-      test: { alias: "testalias", auth: false, server: "testserver" },
-    };
-
-    const qpStub = sinon.stub(window, "showQuickPick").resolves(qpItem);
-    const inpStub = sinon
-      .stub(window, "showInputBox")
-      .onFirstCall()
-      .resolves("test")
-      .onSecondCall()
-      .resolves("https://insights.test");
-    const insStub = sinon
-      .stub(serverCommand, "addInsightsConnection")
-      .returns(undefined);
-    const getInsightsStub = sinon
-      .stub(insModule, "getInsights")
-      .returns(insTest);
-
-    await serverCommand.addNewConnection();
-
-    assert(insStub.notCalled);
-
-    getInsightsStub.restore();
-    insStub.restore();
-    inpStub.restore();
-    qpStub.restore();
-  });
-
-  it("Should add new insights connection with exiting connection", async () => {
-    const qpItem: QuickPickItem = {
-      label: "Connect to kdb Insights Enterprise",
-      detail: "Enter instance details",
-    };
-
-    const insTest: Insights = {
-      test: {
-        alias: "testalias",
+  describe("addKdbConnection", () => {
+    let kdbData: ServerDetails;
+    let windowMock: sinon.SinonMock;
+    let updateServersStub, getServersStub: sinon.SinonStub;
+    beforeEach(() => {
+      kdbData = {
+        serverName: "testServer",
+        serverAlias: "testServerAlias",
         auth: false,
-        server: "https://insights.test",
-      },
-    };
+        managed: false,
+        serverPort: "5001",
+        tls: false,
+      };
+      windowMock = sinon.mock(vscode.window);
+      updateServersStub = sinon.stub(coreUtils, "updateServers");
+      getServersStub = sinon.stub(coreUtils, "getServers");
+    });
 
-    const qpStub = sinon.stub(window, "showQuickPick").resolves(qpItem);
-    const inpStub = sinon
-      .stub(window, "showInputBox")
-      .onFirstCall()
-      .resolves("test")
-      .onSecondCall()
-      .resolves("https://insights.test");
-    const insStub = sinon
-      .stub(serverCommand, "addInsightsConnection")
-      .returns(undefined);
-    const getInsightsStub = sinon
-      .stub(insModule, "getInsights")
-      .returns(insTest);
+    afterEach(() => {
+      sinon.restore();
+      windowMock.restore();
+    });
 
-    await serverCommand.addNewConnection();
+    it("should add new Kdb connection", async () => {
+      getServersStub.returns({});
+      await serverCommand.addKdbConnection(kdbData);
+      sinon.assert.calledOnce(updateServersStub);
+      windowMock
+        .expects("showInformationMessage")
+        .once()
+        .withArgs("Kdb connection added successfully");
+    });
+    it("should show error message if Kdb connection already exists", async () => {
+      getServersStub.returns(servers);
+      await serverCommand.addKdbConnection(kdbData);
+      windowMock
+        .expects("showErrorMessage")
+        .once()
+        .withArgs("Kdb connection already exists");
+    });
+    it("should show error message if Kdb connection is invalid", async () => {
+      kdbData.serverPort = "invalid";
+      await serverCommand.addKdbConnection(kdbData);
+      windowMock
+        .expects("showErrorMessage")
+        .once()
+        .withArgs("Invalid Kdb connection");
+    });
+    it("should add connection where alias is not provided", async () => {
+      kdbData.serverAlias = "";
+      getServersStub.returns({});
+      await serverCommand.addKdbConnection(kdbData);
+      sinon.assert.calledOnce(updateServersStub);
+      windowMock
+        .expects("showInformationMessage")
+        .once()
+        .withArgs("Kdb connection added successfully");
+    });
+    it("should give error if alias is local and isLocal is false", async () => {
+      kdbData.serverAlias = "local";
+      kdbData.managed = true;
+      await serverCommand.addKdbConnection(kdbData);
+      windowMock
+        .expects("showErrorMessage")
+        .once()
+        .withArgs("Invalid Kdb connection");
+    });
 
-    assert(insStub.notCalled);
-
-    getInsightsStub.restore();
-    insStub.restore();
-    inpStub.restore();
-    qpStub.restore();
+    it("should add authentication to the connection", async () => {
+      kdbData.auth = true;
+      kdbData.password = "password";
+      kdbData.username = "username";
+      getServersStub.returns({});
+      await serverCommand.addKdbConnection(kdbData);
+      sinon.assert.calledOnce(updateServersStub);
+      windowMock
+        .expects("showInformationMessage")
+        .once()
+        .withArgs("Kdb connection added successfully");
+    });
   });
 
   describe("writeQueryResultsToView", () => {

@@ -135,7 +135,7 @@ export async function addAuthConnection(
   serverKey: string,
   username: string,
   password: string,
-): void {
+): Promise<void> {
   const validUsername = validateServerUsername(username);
   if (validUsername) {
     window.showErrorMessage(validUsername);
@@ -201,7 +201,7 @@ export async function enableTLS(serverKey: string): Promise<void> {
 export async function addKdbConnection(
   kdbData: ServerDetails,
   isLocal?: boolean,
-): void {
+): Promise<void> {
   const aliasValidation = validateServerAlias(kdbData.serverAlias, isLocal!);
   const hostnameValidation = validateServerName(kdbData.serverName);
   const portValidation = validateServerPort(kdbData.serverPort);

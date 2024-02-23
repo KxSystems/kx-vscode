@@ -33,7 +33,7 @@ export function validateServerAlias(
       return "Input value using restricted keywords of Insights Enterprise";
     }
 
-    if (!isLocal && input === "Local") {
+    if (!isLocal && input.toLowerCase() === "local") {
       return "Input value using restricted keywords of Local for Bundle q Server";
     }
   }
