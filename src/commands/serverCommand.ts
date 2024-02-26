@@ -217,66 +217,62 @@ export async function addKdbConnection(
     window.showErrorMessage(portValidation);
     return;
   }
-  if (kdbData.serverName) {
-    if (kdbData.serverPort) {
-      let servers: Server | undefined = getServers();
+  let servers: Server | undefined = getServers();
 
-      if (
-        servers != undefined &&
-        servers[getHash(`${kdbData.serverName}:${kdbData.serverPort}`)]
-      ) {
-        await window.showErrorMessage(
-          `Server ${kdbData.serverName}:${kdbData.serverPort} already exists.`,
-        );
-      } else {
-        const key =
-          kdbData.serverAlias != undefined
-            ? getHash(
-                `${kdbData.serverName}${kdbData.serverPort}${kdbData.serverAlias}`,
-              )
-            : getHash(`${kdbData.serverName}${kdbData.serverPort}`);
-        if (servers === undefined) {
-          servers = {
-            key: {
-              auth: kdbData.auth,
-              serverName: kdbData.serverName,
-              serverPort: kdbData.serverPort,
-              serverAlias: kdbData.serverAlias,
-              managed: kdbData.serverAlias === "local" ? true : false,
-              tls: kdbData.tls,
-            },
-          };
-          if (servers[0].managed) {
-            await addLocalConnectionContexts(getServerName(servers[0]));
-          }
-        } else {
-          servers[key] = {
-            auth: kdbData.auth,
-            serverName: kdbData.serverName,
-            serverPort: kdbData.serverPort,
-            serverAlias: kdbData.serverAlias,
-            managed: kdbData.serverAlias === "local" ? true : false,
-            tls: kdbData.tls,
-          };
-          if (servers[key].managed) {
-            await addLocalConnectionContexts(getServerName(servers[key]));
-          }
-        }
-
-        await updateServers(servers);
-        const newServers = getServers();
-        if (newServers != undefined) {
-          ext.serverProvider.refresh(newServers);
-        }
-        if (kdbData.auth) {
-          addAuthConnection(key, kdbData.username!, kdbData.password!);
-        }
-        window.showInformationMessage(
-          `Added kdb connection: ${kdbData.serverAlias}`,
-        );
-        NewConnectionPannel.close();
+  if (
+    servers != undefined &&
+    servers[getHash(`${kdbData.serverName}:${kdbData.serverPort}`)]
+  ) {
+    await window.showErrorMessage(
+      `Server ${kdbData.serverName}:${kdbData.serverPort} already exists.`,
+    );
+  } else {
+    const key =
+      kdbData.serverAlias != undefined
+        ? getHash(
+            `${kdbData.serverName}${kdbData.serverPort}${kdbData.serverAlias}`,
+          )
+        : getHash(`${kdbData.serverName}${kdbData.serverPort}`);
+    if (servers === undefined) {
+      servers = {
+        key: {
+          auth: kdbData.auth,
+          serverName: kdbData.serverName,
+          serverPort: kdbData.serverPort,
+          serverAlias: kdbData.serverAlias,
+          managed: kdbData.serverAlias === "local" ? true : false,
+          tls: kdbData.tls,
+        },
+      };
+      if (servers[0].managed) {
+        await addLocalConnectionContexts(getServerName(servers[0]));
+      }
+    } else {
+      servers[key] = {
+        auth: kdbData.auth,
+        serverName: kdbData.serverName,
+        serverPort: kdbData.serverPort,
+        serverAlias: kdbData.serverAlias,
+        managed: kdbData.serverAlias === "local" ? true : false,
+        tls: kdbData.tls,
+      };
+      if (servers[key].managed) {
+        await addLocalConnectionContexts(getServerName(servers[key]));
       }
     }
+
+    await updateServers(servers);
+    const newServers = getServers();
+    if (newServers != undefined) {
+      ext.serverProvider.refresh(newServers);
+    }
+    if (kdbData.auth) {
+      addAuthConnection(key, kdbData.username!, kdbData.password!);
+    }
+    window.showInformationMessage(
+      `Added kdb connection: ${kdbData.serverAlias}`,
+    );
+    NewConnectionPannel.close();
   }
 }
 

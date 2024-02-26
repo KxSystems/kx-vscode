@@ -119,6 +119,7 @@ export const newConnectionStyles = css`
 
   .option-help {
     opacity: 0.75;
+    margin-top: 4px;
   }
 
   .content-wrapper {
@@ -129,7 +130,7 @@ export const newConnectionStyles = css`
   }
 
   .form-wrapper {
-    width: 500px;
+    width: 600px;
   }
 
   .text-field.x-larger {
@@ -144,11 +145,13 @@ export const newConnectionStyles = css`
     padding: 10px calc((var(4) + 2) * 1px);
   }
 
-  h3 {
+  h2 {
+    font-weight: 400;
+    margin-top: 0;
+    margin-bottom: 5px;
+    font-size: 1.5em;
+    line-height: normal;
     color: var(--vscode-foreground);
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 16px;
     letter-spacing: 0.46px;
     word-wrap: break-word;
   }

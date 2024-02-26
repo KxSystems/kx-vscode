@@ -1074,6 +1074,24 @@ describe("serverCommand", () => {
         .once()
         .withArgs("Kdb connection added successfully");
     });
+
+    it("should return error when the servername with an invalid length", async () => {
+      kdbData.serverName = "";
+      await serverCommand.addKdbConnection(kdbData);
+      windowMock
+        .expects("showErrorMessage")
+        .once()
+        .withArgs("Invalid Kdb connection");
+    });
+
+    it("should return error when the servername with an invalid length", async () => {
+      kdbData.serverName = "a".repeat(256);
+      await serverCommand.addKdbConnection(kdbData);
+      windowMock
+        .expects("showErrorMessage")
+        .once()
+        .withArgs("Invalid Kdb connection");
+    });
   });
 
   describe("writeQueryResultsToView", () => {

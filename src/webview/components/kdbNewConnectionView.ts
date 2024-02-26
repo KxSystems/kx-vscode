@@ -192,7 +192,7 @@ export class KdbNewConnectionView extends LitElement {
         <div class="col form-wrapper">
           <div class="header-text-wrapper">
             <div class="row">
-              <h3>Add a New Connection</h3>
+              <h2>Add a New Connection</h2>
             </div>
             <div class="row option-description">
               <span
