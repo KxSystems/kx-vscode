@@ -30,8 +30,8 @@ export class NewConnectionPannel {
       this._panel.webview,
       extensionUri,
     );
+    /* istanbul ignore next */
     this._panel.webview.onDidReceiveMessage((message) => {
-      /* instanbul ignore next */
       if (message.command === "kdb.newConnection.createNewBundledConnection") {
         if (ext.isBundleQCreated) {
           vscode.window.showErrorMessage(
@@ -44,14 +44,12 @@ export class NewConnectionPannel {
           );
         }
       }
-      /* instanbul ignore next */
       if (message.command === "kdb.newConnection.createNewInsightConnection") {
         vscode.commands.executeCommand(
           "kdb.newConnection.createNewInsightConnection",
           message.data,
         );
       }
-      /* instanbul ignore next */
       if (message.command === "kdb.newConnection.createNewConnection") {
         vscode.commands.executeCommand(
           "kdb.newConnection.createNewConnection",
