@@ -28,6 +28,7 @@ import {
 } from "../../src/models/dataSource";
 import { KdbDataSourceView } from "../../src/webview/components/kdbDataSourceView";
 import { KdbNewConnectionView } from "../../src/webview/components/kdbNewConnectionView";
+import { ServerType } from "../../src/models/server";
 
 describe("KdbDataSourceView", () => {
   let view: KdbDataSourceView;
@@ -372,22 +373,141 @@ describe("KdbDataSourceView", () => {
       view = new KdbNewConnectionView();
     });
 
-    it("should render correctly", () => {
-      const renderServerNameStub = sinon.stub(view, "renderServerName");
-      const renderConnAddressStub = sinon.stub(view, "renderConnAddress");
-      const saveStub = sinon.stub(view, "save");
-      const changeTLSStub = sinon.stub(view, "changeTLS");
+    describe("selectConnection", () => {
+      it("should return tab-2", () => {
+        view.serverType = ServerType.INSIGHTS;
+        assert.strictEqual(view["selectConnection"], "tab-2");
+      });
 
-      view.render();
+      it("should return tab-1", () => {
+        view.serverType = ServerType.KDB;
+        assert.strictEqual(view["selectConnection"], "tab-1");
+      });
+    });
 
-      assert.equal(renderServerNameStub.calledTwice, true);
-      assert.equal(renderConnAddressStub.calledTwice, true);
-      assert.equal(saveStub.called, false);
-      assert.equal(changeTLSStub.called, false);
-      renderServerNameStub.restore();
-      renderConnAddressStub.restore();
-      saveStub.restore();
-      changeTLSStub.restore();
+    describe("changeTLS", () => {
+      it("should update state", () => {
+        view.changeTLS();
+        assert.strictEqual(view.kdbServer.tls, true);
+        view.changeTLS();
+        assert.strictEqual(view.kdbServer.tls, false);
+      });
+    });
+
+    describe("renderServerNameDesc", () => {
+      it("should render bundled server name desc", () => {
+        const result = view.renderServerNameDesc(true);
+        assert.strictEqual(
+          result.strings[0].includes("<b>Bundled q.</b>"),
+          true,
+        );
+      });
+
+      it("should render normal server name desc", () => {
+        const result = view.renderServerNameDesc(false);
+        assert.strictEqual(
+          result.strings[0].includes("<b>Bundled q.</b>"),
+          false,
+        );
+      });
+    });
+
+    describe("renderServerNameField", () => {
+      it("should render server name field for bundled q", () => {
+        const result = view.renderServerNameField(ServerType.KDB, true);
+        assert.strictEqual(result.strings[0].includes("Server 1"), false);
+      });
+
+      it("should render server name field for KDB", () => {
+        const result = view.renderServerNameField(ServerType.KDB, false);
+        assert.strictEqual(result.strings[0].includes("Server 1"), true);
+      });
+
+      it("should render server name field for Insights", () => {
+        const result = view.renderServerNameField(ServerType.INSIGHTS, false);
+        assert.strictEqual(result.strings[0].includes("Insights 1"), true);
+      });
+    });
+
+    describe("renderServerName", () => {
+      it("should render server name", () => {
+        const result = view.renderServerName(ServerType.INSIGHTS, false);
+        assert.strictEqual(
+          result.strings[1].includes("row option-description  option-help"),
+          true,
+        );
+      });
+    });
+
+    describe("renderConnAddDesc", () => {
+      it("should render connection address for KDB", () => {
+        const result = view.renderConnAddDesc(ServerType.KDB);
+        assert.strictEqual(
+          result.strings[0].includes(
+            "Set the IP of your kdb+ database connection.",
+          ),
+          true,
+        );
+      });
+
+      it("should render connection address for Insights", () => {
+        const result = view.renderConnAddDesc(ServerType.INSIGHTS);
+        assert.strictEqual(result.strings[0].includes("your Insights"), true);
+      });
+    });
+
+    describe("renderConnAddress", () => {
+      it("should render connection address", () => {
+        const result = view.renderConnAddress(ServerType.KDB);
+        assert.strictEqual(
+          JSON.stringify(result).includes("127.0.0.1 or localhost"),
+          true,
+        );
+      });
+
+      it("should render connection address for Insights", () => {
+        const result = view.renderConnAddress(ServerType.INSIGHTS);
+        assert.strictEqual(
+          JSON.stringify(result).includes("myinsights.clouddeploy.com"),
+          true,
+        );
+      });
+    });
+
+    describe("render()", () => {
+      let renderServerNameStub,
+        renderConnAddressStub,
+        saveStub,
+        changeTLSStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        renderServerNameStub = sinon.stub(view, "renderServerName");
+        renderConnAddressStub = sinon.stub(view, "renderConnAddress");
+        saveStub = sinon.stub(view, "save");
+        changeTLSStub = sinon.stub(view, "changeTLS");
+      });
+
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("should render correctly", () => {
+        view.render();
+
+        assert.equal(renderServerNameStub.calledTwice, true);
+        assert.equal(renderConnAddressStub.calledTwice, true);
+        assert.equal(saveStub.called, false);
+        assert.equal(changeTLSStub.called, false);
+      });
+
+      it("should render tab-2", () => {
+        view.serverType = ServerType.INSIGHTS;
+        view.render();
+        assert.equal(renderServerNameStub.calledTwice, true);
+        assert.equal(renderConnAddressStub.calledTwice, true);
+        assert.equal(saveStub.called, false);
+        assert.equal(changeTLSStub.called, false);
+      });
     });
   });
 });

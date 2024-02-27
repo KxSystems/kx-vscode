@@ -55,21 +55,7 @@ export class KdbNewConnectionView extends LitElement {
     };
   }
 
-  private get data(): ServerDetails | InsightDetails {
-    switch (this.serverType) {
-      case ServerType.INSIGHTS:
-        return this.insightsServer;
-      case ServerType.KDB:
-      default:
-        this.kdbServer.username = this.kdbServer.username!.trim();
-        this.kdbServer.password = this.kdbServer.password!.trim();
-        this.kdbServer.auth =
-          this.kdbServer.username !== "" && this.kdbServer.password !== "";
-        return this.kdbServer;
-    }
-  }
-
-  private get selectConnection() {
+  get selectConnection(): string {
     switch (this.serverType) {
       case ServerType.INSIGHTS:
         return "tab-2";
@@ -79,25 +65,11 @@ export class KdbNewConnectionView extends LitElement {
     }
   }
 
-  private save() {
-    if (this.serverType === ServerType.INSIGHTS) {
-      this.vscode.postMessage({
-        command: "kdb.newConnection.createNewInsightConnection",
-        data: this.data,
-      });
-    } else {
-      this.vscode.postMessage({
-        command: "kdb.newConnection.createNewConnection",
-        data: this.data,
-      });
-    }
-  }
-
-  private changeTLS() {
+  changeTLS() {
     this.kdbServer.tls = !this.kdbServer.tls;
   }
 
-  private renderServerNameDesc(bundled?: boolean) {
+  renderServerNameDesc(bundled?: boolean) {
     return bundled
       ? html`<span
           >Name your server "local"; this name has been reserved for use by the
@@ -111,7 +83,7 @@ export class KdbNewConnectionView extends LitElement {
         >`;
   }
 
-  private renderServerNameField(serverType: ServerType, bundled?: boolean) {
+  renderServerNameField(serverType: ServerType, bundled?: boolean) {
     return serverType === ServerType.KDB && bundled
       ? html`<vscode-text-field
           class="text-field larger option-title"
@@ -142,7 +114,7 @@ export class KdbNewConnectionView extends LitElement {
           </vscode-text-field>`;
   }
 
-  private renderServerName(serverType: ServerType, bundled?: boolean) {
+  renderServerName(serverType: ServerType, bundled?: boolean) {
     return html`
       <div class="row">${this.renderServerNameField(serverType, bundled)}</div>
       <div class="row option-description  option-help">
@@ -151,14 +123,14 @@ export class KdbNewConnectionView extends LitElement {
     `;
   }
 
-  private renderConnAddDesc(serverType: ServerType) {
+  renderConnAddDesc(serverType: ServerType) {
     return serverType === ServerType.KDB
       ? html`Set the IP of your kdb+ database connection.`
       : html`Set the IP of your kdb+ database connection, your Insights
         connection must be deployed for kdb VS Code to access.`;
   }
 
-  private renderConnAddress(serverType: ServerType) {
+  renderConnAddress(serverType: ServerType) {
     return html`
       <div class="row">
         <vscode-text-field
@@ -337,6 +309,34 @@ export class KdbNewConnectionView extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  private get data(): ServerDetails | InsightDetails {
+    switch (this.serverType) {
+      case ServerType.INSIGHTS:
+        return this.insightsServer;
+      case ServerType.KDB:
+      default:
+        this.kdbServer.username = this.kdbServer.username!.trim();
+        this.kdbServer.password = this.kdbServer.password!.trim();
+        this.kdbServer.auth =
+          this.kdbServer.username !== "" && this.kdbServer.password !== "";
+        return this.kdbServer;
+    }
+  }
+
+  private save() {
+    if (this.serverType === ServerType.INSIGHTS) {
+      this.vscode.postMessage({
+        command: "kdb.newConnection.createNewInsightConnection",
+        data: this.data,
+      });
+    } else {
+      this.vscode.postMessage({
+        command: "kdb.newConnection.createNewConnection",
+        data: this.data,
+      });
+    }
   }
 }
 
