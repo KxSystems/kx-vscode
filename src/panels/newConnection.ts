@@ -97,7 +97,6 @@ export class NewConnectionPannel {
       if (x) {
         x.dispose();
       }
-      70;
     }
   }
 
