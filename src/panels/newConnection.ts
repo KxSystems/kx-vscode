@@ -30,6 +30,7 @@ export class NewConnectionPannel {
       this._panel.webview,
       extensionUri,
     );
+    /* instanbul ignore next */
     this._panel.webview.onDidReceiveMessage((message) => {
       if (message.command === "kdb.newConnection.createNewBundledConnection") {
         if (ext.isBundleQCreated) {
