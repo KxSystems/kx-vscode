@@ -155,4 +155,9 @@ export const newConnectionStyles = css`
     letter-spacing: 0.46px;
     word-wrap: break-word;
   }
+
+  .dropdown.larger,
+  .text-field.larger {
+    width: 20em;
+  }
 `;

@@ -41,13 +41,17 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     KdbNode | InsightsNode | undefined | void
   > = this._onDidChangeTreeData.event;
 
-  constructor(private serverList: Server, private insightList: Insights) {}
+  constructor(
+    private serverList: Server,
+    private insightList: Insights,
+  ) {}
 
   reload(): void {
     this._onDidChangeTreeData.fire();
   }
 
   refresh(serverList: Server): void {
+    ext.isBundleQCreated = false;
     this.serverList = serverList;
     this._onDidChangeTreeData.fire();
   }
@@ -58,6 +62,13 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   }
 
   getTreeItem(element: KdbNode | InsightsNode): TreeItem {
+    if (
+      element instanceof KdbNode &&
+      element.details.managed &&
+      element.details.serverAlias === "local"
+    ) {
+      ext.isBundleQCreated = true;
+    }
     return element;
   }
 
@@ -80,8 +91,8 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
       return Promise.resolve(
         this.getCategories(
           (element as QNamespaceNode).details?.toString(),
-          ext.qObjectCategories
-        )
+          ext.qObjectCategories,
+        ),
       );
     } else {
       return Promise.resolve(this.getServerObjects(element));
@@ -113,8 +124,8 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
           x.name,
           "",
           TreeItemCollapsibleState.Collapsed,
-          x.fname
-        )
+          x.fname,
+        ),
     );
     if (result !== undefined) {
       return result;
@@ -125,7 +136,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
 
   private async getCategories(
     ns: string | undefined,
-    objectCategories: string[]
+    objectCategories: string[],
   ): Promise<QCategoryNode[]> {
     // filter out views for non-default namespaces
     let filteredCategories;
@@ -143,14 +154,14 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
           x,
           "",
           ns ?? "",
-          TreeItemCollapsibleState.Collapsed
-        )
+          TreeItemCollapsibleState.Collapsed,
+        ),
     );
     return result;
   }
 
   private async getServerObjects(
-    serverType: TreeItem
+    serverType: TreeItem,
   ): Promise<QServerNode[] | QNamespaceNode[]> {
     if (serverType === undefined) return new Array<QServerNode>();
     const ns = serverType.contextValue ?? "";
@@ -164,8 +175,8 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
             TreeItemCollapsibleState.None,
-            "p-dictionary"
-          )
+            "p-dictionary",
+          ),
       );
       if (result !== undefined) {
         return result;
@@ -182,8 +193,8 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
             TreeItemCollapsibleState.None,
-            "p-function"
-          )
+            "p-function",
+          ),
       );
       if (result !== undefined) {
         return result;
@@ -200,8 +211,8 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
             TreeItemCollapsibleState.None,
-            "p-table"
-          )
+            "p-table",
+          ),
       );
       if (result !== undefined) {
         return result;
@@ -218,8 +229,8 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             `${ns === "." ? "." : ""}${x.name}`,
             "",
             TreeItemCollapsibleState.None,
-            "p-var"
-          )
+            "p-var",
+          ),
       );
       if (result !== undefined) {
         return result;
@@ -236,8 +247,8 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             `${ns === "." ? "" : "."}${x}`,
             "",
             TreeItemCollapsibleState.None,
-            "p-view"
-          )
+            "p-view",
+          ),
       );
       if (result !== undefined) {
         return result;
@@ -254,8 +265,8 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             x.fname,
             "",
             TreeItemCollapsibleState.Collapsed,
-            x.fname
-          )
+            x.fname,
+          ),
       );
       if (result !== undefined) {
         return result;
@@ -276,8 +287,8 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
           servers[x],
           ext.connectionNode?.label === getServerName(servers[x])
             ? TreeItemCollapsibleState.Collapsed
-            : TreeItemCollapsibleState.None
-        )
+            : TreeItemCollapsibleState.None,
+        ),
     );
   }
 
@@ -289,8 +300,8 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
           [],
           insights[x].alias,
           insights[x],
-          TreeItemCollapsibleState.None
-        )
+          TreeItemCollapsibleState.None,
+        ),
     );
   }
 }
@@ -300,7 +311,7 @@ export class KdbNode extends TreeItem {
     public readonly children: string[],
     public readonly label: string,
     public readonly details: ServerDetails,
-    public readonly collapsibleState: TreeItemCollapsibleState
+    public readonly collapsibleState: TreeItemCollapsibleState,
   ) {
     if (details.serverAlias != "") {
       label = label + ` [${details.serverAlias}]`;
@@ -323,7 +334,7 @@ export class KdbNode extends TreeItem {
         commands.executeCommand(
           "setContext",
           "kdb.kdbNodesWithoutAuth",
-          ext.kdbNodesWithoutAuth
+          ext.kdbNodesWithoutAuth,
         );
       }
     } else {
@@ -333,7 +344,7 @@ export class KdbNode extends TreeItem {
         commands.executeCommand(
           "setContext",
           "kdb.kdbNodesWithoutAuth",
-          ext.kdbNodesWithoutAuth
+          ext.kdbNodesWithoutAuth,
         );
       }
     }
@@ -345,7 +356,7 @@ export class KdbNode extends TreeItem {
         commands.executeCommand(
           "setContext",
           "kdb.kdbNodesWithoutTls",
-          ext.kdbNodesWithoutTls
+          ext.kdbNodesWithoutTls,
         );
       }
     } else {
@@ -355,7 +366,7 @@ export class KdbNode extends TreeItem {
         commands.executeCommand(
           "setContext",
           "kdb.kdbNodesWithoutTls",
-          ext.kdbNodesWithoutTls
+          ext.kdbNodesWithoutTls,
         );
       }
     }
@@ -381,7 +392,7 @@ export class KdbNode extends TreeItem {
       ext.connectionNode != undefined &&
         this.label === ext.connectionNode.label + " (connected)"
         ? "p-data.svg"
-        : "p-data.svg"
+        : "p-data.svg",
     ),
     dark: path.join(
       __filename,
@@ -392,7 +403,7 @@ export class KdbNode extends TreeItem {
       ext.connectionNode != undefined &&
         this.label === ext.connectionNode.label + " (connected)"
         ? "p-data.svg"
-        : "p-data.svg"
+        : "p-data.svg",
     ),
   };
 
@@ -404,7 +415,7 @@ export class InsightsNode extends TreeItem {
     public readonly children: string[],
     public readonly label: string,
     public readonly details: InsightDetails,
-    public readonly collapsibleState: TreeItemCollapsibleState
+    public readonly collapsibleState: TreeItemCollapsibleState,
   ) {
     let auxLabel = label;
     if (ext.connectionNode != undefined && label === ext.connectionNode.label) {
@@ -423,7 +434,7 @@ export class InsightsNode extends TreeItem {
       commands.executeCommand(
         "setContext",
         "kdb.insightsNodes",
-        ext.kdbinsightsNodes
+        ext.kdbinsightsNodes,
       );
     }
 
@@ -449,7 +460,7 @@ export class InsightsNode extends TreeItem {
       ext.connectionNode != undefined &&
         this.label === ext.connectionNode.label + " (connected)"
         ? "p-insights.svg"
-        : "p-insights.svg"
+        : "p-insights.svg",
     ),
     dark: path.join(
       __filename,
@@ -460,7 +471,7 @@ export class InsightsNode extends TreeItem {
       ext.connectionNode != undefined &&
         this.label === ext.connectionNode.label + " (connected)"
         ? "p-insights.svg"
-        : "p-insights.svg"
+        : "p-insights.svg",
     ),
   };
 
@@ -473,7 +484,7 @@ export class QNamespaceNode extends TreeItem {
     public readonly label: string,
     public readonly details: string,
     public readonly collapsibleState: TreeItemCollapsibleState,
-    public readonly fullName: string
+    public readonly fullName: string,
   ) {
     details = fullName;
     super(label, collapsibleState);
@@ -491,7 +502,7 @@ export class QNamespaceNode extends TreeItem {
       "..",
       "resources",
       "light",
-      "p-file.svg"
+      "p-file.svg",
     ),
     dark: path.join(__filename, "..", "..", "resources", "dark", "p-file.svg"),
   };
@@ -504,7 +515,7 @@ export class QCategoryNode extends TreeItem {
     public readonly label: string,
     public readonly details: string,
     public readonly ns: string,
-    public readonly collapsibleState: TreeItemCollapsibleState
+    public readonly collapsibleState: TreeItemCollapsibleState,
   ) {
     details = "";
     super(label, collapsibleState);
@@ -522,7 +533,7 @@ export class QCategoryNode extends TreeItem {
       "..",
       "resources",
       "light",
-      "p-folder.svg"
+      "p-folder.svg",
     ),
     dark: path.join(
       __filename,
@@ -530,7 +541,7 @@ export class QCategoryNode extends TreeItem {
       "..",
       "resources",
       "dark",
-      "p-folder.svg"
+      "p-folder.svg",
     ),
   };
   contextValue = this.ns; // "category";
@@ -542,7 +553,7 @@ export class QServerNode extends TreeItem {
     public readonly label: string,
     public readonly details: string,
     public readonly collapsibleState: TreeItemCollapsibleState,
-    public readonly coreIcon: string
+    public readonly coreIcon: string,
   ) {
     details = "";
     super(label, collapsibleState);
@@ -560,7 +571,7 @@ export class QServerNode extends TreeItem {
       "..",
       "resources",
       "light",
-      `${this.coreIcon}.svg`
+      `${this.coreIcon}.svg`,
     ),
     dark: path.join(
       __filename,
@@ -568,7 +579,7 @@ export class QServerNode extends TreeItem {
       "..",
       "resources",
       "dark",
-      `${this.coreIcon}.svg`
+      `${this.coreIcon}.svg`,
     ),
   };
   contextValue = this.label;

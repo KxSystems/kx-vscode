@@ -35,6 +35,7 @@
     "onCommand:kdb.addConnection",
     "onCommand:kdb.newConnection.createNewInsightConnection",
     "onCommand:kdb.newConnection.createNewConnection",
+    "onCommand:kdb.newConnection.createNewBundledConnection",
     "onCommand:kdb.removeConnection",
     "onCommand:kdb.connect",
     "onCommand:kdb.disconnect",

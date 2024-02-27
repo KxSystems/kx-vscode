@@ -14,6 +14,7 @@
 import * as vscode from "vscode";
 import { getUri } from "../utils/getUri";
 import { getNonce } from "../utils/getNonce";
+import { ext } from "../extensionVariables";
 
 export class NewConnectionPannel {
   public static currentPanel: NewConnectionPannel | undefined;
@@ -30,6 +31,18 @@ export class NewConnectionPannel {
       extensionUri,
     );
     this._panel.webview.onDidReceiveMessage((message) => {
+      if (message.command === "kdb.newConnection.createNewBundledConnection") {
+        if (ext.isBundleQCreated) {
+          vscode.window.showErrorMessage(
+            "Bundle Q is already created, please remove it first",
+          );
+        } else {
+          vscode.commands.executeCommand(
+            "kdb.newConnection.createNewBundledConnection",
+            message.data,
+          );
+        }
+      }
       if (message.command === "kdb.newConnection.createNewInsightConnection") {
         vscode.commands.executeCommand(
           "kdb.newConnection.createNewInsightConnection",
@@ -83,6 +96,7 @@ export class NewConnectionPannel {
       if (x) {
         x.dispose();
       }
+      70;
     }
   }
 

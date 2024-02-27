@@ -25,10 +25,18 @@ export class KdbNewConnectionView extends LitElement {
   @state() declare bundledServer: ServerDetails;
   @state() declare insightsServer: InsightDetails;
   @state() declare serverType: ServerType;
+  @state() declare isBundledQ: boolean;
   private readonly vscode = acquireVsCodeApi();
+  private tabConfig = {
+    1: { isBundledQ: true, serverType: ServerType.KDB },
+    2: { isBundledQ: false, serverType: ServerType.KDB },
+    3: { isBundledQ: false, serverType: ServerType.INSIGHTS },
+    default: { isBundledQ: true, serverType: ServerType.KDB },
+  };
 
   constructor() {
     super();
+    this.isBundledQ = true;
     this.serverType = ServerType.KDB;
     this.kdbServer = {
       serverName: "",
@@ -56,12 +64,15 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   get selectConnection(): string {
+    if (this.isBundledQ) {
+      return "tab-1";
+    }
     switch (this.serverType) {
       case ServerType.INSIGHTS:
-        return "tab-2";
+        return "tab-3";
       case ServerType.KDB:
       default:
-        return "tab-1";
+        return "tab-2";
     }
   }
 
@@ -69,8 +80,8 @@ export class KdbNewConnectionView extends LitElement {
     this.kdbServer.tls = !this.kdbServer.tls;
   }
 
-  renderServerNameDesc(bundled?: boolean) {
-    return bundled
+  renderServerNameDesc() {
+    return this.isBundledQ
       ? html`<span
           >Name your server "local"; this name has been reserved for use by the
           packaged q in the kdb VS Code extension and must be used to access
@@ -83,8 +94,8 @@ export class KdbNewConnectionView extends LitElement {
         >`;
   }
 
-  renderServerNameField(serverType: ServerType, bundled?: boolean) {
-    return serverType === ServerType.KDB && bundled
+  renderServerNameField(serverType: ServerType) {
+    return this.isBundledQ
       ? html`<vscode-text-field
           class="text-field larger option-title"
           value="${this.bundledServer.serverAlias}"
@@ -114,48 +125,99 @@ export class KdbNewConnectionView extends LitElement {
           </vscode-text-field>`;
   }
 
-  renderServerName(serverType: ServerType, bundled?: boolean) {
+  renderServerName(serverType: ServerType) {
     return html`
-      <div class="row">${this.renderServerNameField(serverType, bundled)}</div>
+      <div class="row">${this.renderServerNameField(serverType)}</div>
       <div class="row option-description  option-help">
-        ${this.renderServerNameDesc(bundled)}
+        ${this.renderServerNameDesc()}
+      </div>
+    `;
+  }
+
+  renderPortNumber() {
+    return html`
+      <div class="row">
+        <vscode-text-field
+          class="text-field larger option-title"
+          value="${this.isBundledQ
+            ? this.bundledServer.serverPort
+            : this.kdbServer.serverPort}"
+          @input="${(event: Event) => {
+            const value = (event.target as HTMLSelectElement).value;
+            this.isBundledQ
+              ? (this.bundledServer.serverPort = value)
+              : (this.kdbServer.serverPort = value);
+          }}"
+          >Set port number</vscode-text-field
+        >
+      </div>
+      <div class="row option-description option-help">
+        <span
+          >${this.isBundledQ
+            ? "Ensure the port number you use does not conflict with another port."
+            : "Ensure <b>Set port number</b> matches the assigned port of your q process, and doesn’t conflict with another port."}</span
+        >
       </div>
     `;
   }
 
   renderConnAddDesc(serverType: ServerType) {
-    return serverType === ServerType.KDB
-      ? html`Set the IP of your kdb+ database connection.`
-      : html`Set the IP of your kdb+ database connection, your Insights
-        connection must be deployed for kdb VS Code to access.`;
+    return this.isBundledQ
+      ? html`The localhost connection is already set up for you.`
+      : serverType === ServerType.KDB
+        ? html`Set the IP of your kdb+ database connection.`
+        : html`Set the IP of your kdb+ database connection, your Insights
+          connection must be deployed for kdb VS Code to access.`;
   }
 
   renderConnAddress(serverType: ServerType) {
-    return html`
-      <div class="row">
-        <vscode-text-field
-          class="text-field larger option-title"
-          placeholder="${serverType === ServerType.KDB
-            ? "127.0.0.1 or localhost"
-            : `myinsights.clouddeploy.com`}"
-          value="${serverType === ServerType.KDB
-            ? this.kdbServer.serverName
-            : this.insightsServer.server}"
-          @input="${(event: Event) => {
-            const value = (event.target as HTMLSelectElement).value;
-            if (serverType === ServerType.KDB) {
-              this.kdbServer.serverName = value;
-            } else {
-              this.insightsServer.server = value;
-            }
-          }}"
-          >Define connection address</vscode-text-field
-        >
-      </div>
-      <div class="row option-description  option-help">
-        ${this.renderConnAddDesc(serverType)}
-      </div>
-    `;
+    return this.isBundledQ
+      ? html`
+          <div class="row">
+            <vscode-text-field
+              class="text-field larger option-title"
+              value="${this.bundledServer.serverName}"
+              readonly
+              >Define connection address</vscode-text-field
+            >
+          </div>
+          <div class="row option-description  option-help">
+            ${this.renderConnAddDesc(serverType)}
+          </div>
+        `
+      : html`
+          <div class="row">
+            <vscode-text-field
+              class="text-field larger option-title"
+              placeholder="${serverType === ServerType.KDB
+                ? "127.0.0.1 or localhost"
+                : `myinsights.clouddeploy.com`}"
+              value="${serverType === ServerType.KDB
+                ? this.kdbServer.serverName
+                : this.insightsServer.server}"
+              @input="${(event: Event) => {
+                const value = (event.target as HTMLSelectElement).value;
+                if (serverType === ServerType.KDB) {
+                  this.kdbServer.serverName = value;
+                } else {
+                  this.insightsServer.server = value;
+                }
+              }}"
+              >Define connection address</vscode-text-field
+            >
+          </div>
+          <div class="row option-description  option-help">
+            ${this.renderConnAddDesc(serverType)}
+          </div>
+        `;
+  }
+
+  tabClickAction(tabNumber: number) {
+    const config =
+      this.tabConfig[tabNumber as keyof typeof this.tabConfig] ||
+      this.tabConfig.default;
+    this.isBundledQ = config.isBundledQ;
+    this.serverType = config.serverType;
   }
 
   render() {
@@ -189,17 +251,41 @@ export class KdbNewConnectionView extends LitElement {
             </div>          
             <div class="row">
               <vscode-panels activeid="${this.selectConnection}">
-                <vscode-panel-tab
+              <vscode-panel-tab
                   id="tab-1"
-                  @click="${() => (this.serverType = ServerType.KDB)}"
-                  >My q</vscode-panel-tab
+                  @click="${() => this.tabClickAction(1)}"
+                  >Bundle q</vscode-panel-tab
                 >
                 <vscode-panel-tab
                   id="tab-2"
-                  @click="${() => (this.serverType = ServerType.INSIGHTS)}"
+                  @click="${() => this.tabClickAction(2)}"
+                  >My q</vscode-panel-tab
+                >
+                <vscode-panel-tab
+                  id="tab-3"
+                  @click="${() => this.tabClickAction(3)}"
                   >Insights connection</vscode-panel-tab
                 >
-                <vscode-panel-view class="panel">
+                <vscode-panel-view id="view-1" class="panel">
+                <div class="col">
+                  <div class="row">
+                    <div class="col gap-0">
+                      ${this.renderServerName(ServerType.KDB)}
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col gap-0">
+                      ${this.renderConnAddress(ServerType.KDB)}
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col gap-0">
+                      ${this.renderPortNumber()}
+                    </div>
+                  </div>
+                </div>
+                </vscode-panel-view>
+                <vscode-panel-view id="view-2" class="panel">
                   <div class="col">
                     <div class="row">
                       <div class="col gap-0">
@@ -213,22 +299,7 @@ export class KdbNewConnectionView extends LitElement {
                     </div>
                     <div class="row">
                       <div class="col gap-0">
-                        <div class="row">
-                          <vscode-text-field
-                            class="text-field larger option-title"
-                            value="${this.kdbServer.serverPort}"
-                            @input="${(event: Event) =>
-                              (this.kdbServer.serverPort = (
-                                event.target as HTMLSelectElement
-                              ).value)}"
-                            >Set port number</vscode-text-field
-                          >
-                        </div>
-                        <div class="row option-description option-help">
-                          <span>Ensure <b>Set port number</b> matches the assigned port of
-                          your q process, and doesn’t conflict with another
-                          port.</span>
-                        </div>
+                        ${this.renderPortNumber()}
                       </div>
                     </div>
                     <div class="row option-title">
@@ -282,7 +353,7 @@ export class KdbNewConnectionView extends LitElement {
                     </div>
                   </div>
                 </vscode-panel-view>
-                <vscode-panel-view class="panel">
+                <vscode-panel-view id="view-3" class="panel">
                   <div class="col">
                     <div class="row">
                       <div class="col gap-0">
@@ -326,7 +397,12 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   private save() {
-    if (this.serverType === ServerType.INSIGHTS) {
+    if (this.isBundledQ) {
+      this.vscode.postMessage({
+        command: "kdb.newConnection.createNewBundledConnection",
+        data: this.bundledServer,
+      });
+    } else if (this.serverType === ServerType.INSIGHTS) {
       this.vscode.postMessage({
         command: "kdb.newConnection.createNewInsightConnection",
         data: this.data,

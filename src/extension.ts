@@ -101,6 +101,7 @@ export async function activate(context: ExtensionContext) {
   ext.context = context;
   ext.outputChannel = window.createOutputChannel("kdb");
   ext.openSslVersion = await checkOpenSslInstalled();
+  ext.isBundleQCreated = false;
 
   const servers: Server | undefined = getServers();
   const insights: Insights | undefined = getInsights();
@@ -197,6 +198,12 @@ export async function activate(context: ExtensionContext) {
       "kdb.newConnection.createNewConnection",
       async (kdbData: ServerDetails) => {
         await addKdbConnection(kdbData, false);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.newConnection.createNewBundledConnection",
+      async (kdbData: ServerDetails) => {
+        await addKdbConnection(kdbData, true);
       },
     ),
     commands.registerCommand(
