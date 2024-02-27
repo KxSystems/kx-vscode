@@ -27,6 +27,7 @@ import {
   createSort,
 } from "../../src/models/dataSource";
 import { KdbDataSourceView } from "../../src/webview/components/kdbDataSourceView";
+import { KdbNewConnectionView } from "../../src/webview/components/kdbNewConnectionView";
 
 describe("KdbDataSourceView", () => {
   let view: KdbDataSourceView;
@@ -361,6 +362,32 @@ describe("KdbDataSourceView", () => {
       assert.strictEqual(view.selectedType, "QSQL");
       (result.values[5] as any)();
       assert.strictEqual(view.selectedType, "SQL");
+    });
+  });
+
+  describe("KdbNewConnectionView", () => {
+    let view;
+
+    beforeEach(() => {
+      view = new KdbNewConnectionView();
+    });
+
+    it("should render correctly", () => {
+      const renderServerNameStub = sinon.stub(view, "renderServerName");
+      const renderConnAddressStub = sinon.stub(view, "renderConnAddress");
+      const saveStub = sinon.stub(view, "save");
+      const changeTLSStub = sinon.stub(view, "changeTLS");
+
+      view.render();
+
+      assert.equal(renderServerNameStub.calledTwice, true);
+      assert.equal(renderConnAddressStub.calledTwice, true);
+      assert.equal(saveStub.called, false);
+      assert.equal(changeTLSStub.called, false);
+      renderServerNameStub.restore();
+      renderConnAddressStub.restore();
+      saveStub.restore();
+      changeTLSStub.restore();
     });
   });
 });
