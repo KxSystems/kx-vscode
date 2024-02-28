@@ -19,7 +19,7 @@ import { ext } from "../../src/extensionVariables";
 import * as QTable from "../../src/ipc/QTable";
 import { CancellationEvent } from "../../src/models/cancellationEvent";
 import { QueryResultType } from "../../src/models/queryResult";
-import { ServerType } from "../../src/models/server";
+import { ServerDetails, ServerType } from "../../src/models/server";
 import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import { QueryHistoryProvider } from "../../src/services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
@@ -47,6 +47,7 @@ import {
   DTimestampClass,
 } from "../../src/ipc/cClasses";
 import { DataSourceTypes } from "../../src/models/dataSource";
+import { InsightDetails } from "../../src/models/insights";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;
@@ -104,6 +105,49 @@ describe("Utils", () => {
 
       afterEach(() => {
         getConfigurationStub.restore();
+      });
+
+      describe("server alias", () => {
+        beforeEach(() => {
+          ext.kdbConnectionAliasList.length = 0;
+        });
+
+        afterEach(() => {
+          ext.kdbConnectionAliasList.length = 0;
+        });
+
+        it("should add insights alias to the list getInsightsAlias", () => {
+          const insightsDetail: InsightDetails = {
+            alias: "test",
+            server: "test",
+            auth: true,
+          };
+          coreUtils.getInsightsAlias([insightsDetail]);
+          assert.strictEqual(ext.kdbConnectionAliasList.length, 1);
+        });
+
+        it("should add alias only from kdb server that have alias using getServerAlias", () => {
+          const serverList: ServerDetails[] = [
+            {
+              serverName: "test",
+              serverAlias: "test",
+              serverPort: "5001",
+              managed: false,
+              auth: false,
+              tls: false,
+            },
+            {
+              serverName: "test2",
+              serverAlias: undefined,
+              serverPort: "5001",
+              managed: false,
+              auth: false,
+              tls: false,
+            },
+          ];
+          coreUtils.getServerAlias(serverList);
+          assert.strictEqual(ext.kdbConnectionAliasList.length, 1);
+        });
       });
 
       it("should update configuration and set hideDetailedConsoleQueryOutput to true when setting is undefined", async () => {
