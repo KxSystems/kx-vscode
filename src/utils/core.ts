@@ -242,8 +242,10 @@ export function getServerName(server: ServerDetails): string {
 }
 
 export function getServerAlias(serverList: ServerDetails[]): void {
-  serverList.forEach((x) => {
-    x.serverAlias ? ext.kdbConnectionAliasList.push(x.serverAlias) : null;
+  serverList.forEach(({ serverAlias }) => {
+    if (serverAlias) {
+      ext.kdbConnectionAliasList.push(serverAlias);
+    }
   });
 }
 
