@@ -58,19 +58,20 @@ export class ExecutionConsole {
     output: string | string[],
     query: string,
   ): string | string[] {
-    if (!output) {
+    if (output.length === 0) {
       return "No results found.";
     }
     if (Array.isArray(output)) {
       return output;
     }
-    if (
-      output.trim().startsWith("{") &&
-      output.trim().endsWith("}") &&
-      query.trim().includes(":")
-    ) {
-      return "No results found.";
-    }
+    // TODO: understand why that was necessary and if it is still necessary
+    // if (
+    //   output.trim().startsWith("{") &&
+    //   output.trim().endsWith("}") &&
+    //   query.trim().includes(":")
+    // ) {
+    //   return "No results found.";
+    // }
     return output;
   }
 

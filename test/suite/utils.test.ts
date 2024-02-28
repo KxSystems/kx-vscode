@@ -425,6 +425,28 @@ describe("Utils", () => {
         ext.kdbQueryHistoryList.length = 0;
       });
 
+      describe("checkOutput", () => {
+        it("should return the input string if the input is not an array", () => {
+          const result = queryConsole.checkOutput("test", "test");
+          assert.strictEqual(result, "test");
+        });
+
+        it("should return No results found if the input is an empty array", () => {
+          const result = queryConsole.checkOutput([], "test");
+          assert.strictEqual(result, "No results found.");
+        });
+
+        it("should return No results found if the input is an empty string", () => {
+          const result = queryConsole.checkOutput("", "test");
+          assert.strictEqual(result, "No results found.");
+        });
+
+        it("should return the input array if the input is an array with multiple strings", () => {
+          const result = queryConsole.checkOutput(["test", "test"], "test");
+          assert.deepStrictEqual(result, ["test", "test"]);
+        });
+      });
+
       it("should append and add queryHistory with kdbNode without details", () => {
         getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
         getConfigurationStub.returns({
