@@ -14,7 +14,8 @@
 import { validateUtils } from "../utils/validateUtils";
 
 export function validateServerAlias(
-  input: string | undefined
+  input: string | undefined,
+  isLocal: boolean,
 ): string | undefined {
   // server alias is not required, but should be validated if entered
   if (input !== undefined && input !== "") {
@@ -31,12 +32,16 @@ export function validateServerAlias(
     if (input === "InsightsEnterprise") {
       return "Input value using restricted keywords of Insights Enterprise";
     }
+
+    if (!isLocal && input.toLowerCase() === "local") {
+      return "Input value using restricted keywords of Local for Bundle q Server";
+    }
   }
   return undefined;
 }
 
 export function validateServerName(
-  input: string | undefined
+  input: string | undefined,
 ): string | undefined {
   if (input !== undefined) {
     if (!validateUtils.isValidLength(input, 1, 64)) {
@@ -47,7 +52,7 @@ export function validateServerName(
 }
 
 export function validateServerPort(
-  input: string | undefined
+  input: string | undefined,
 ): string | undefined {
   if (input !== undefined) {
     if (!validateUtils.isNumber(input)) {
@@ -62,7 +67,7 @@ export function validateServerPort(
 }
 
 export function validateServerUsername(
-  input: string | undefined
+  input: string | undefined,
 ): string | undefined {
   if (input !== undefined && input !== "") {
     if (!validateUtils.isValidLength(input, 1, 64)) {
@@ -73,7 +78,7 @@ export function validateServerUsername(
 }
 
 export function validateServerPassword(
-  input: string | undefined
+  input: string | undefined,
 ): string | undefined {
   if (input !== undefined) {
     if (!validateUtils.isValidLength(input, 1, 64)) {

@@ -51,6 +51,8 @@ import {
 } from "./commands/installTools";
 import {
   addAuthConnection,
+  addInsightsConnection,
+  addKdbConnection,
   addNewConnection,
   connect,
   connectInsights,
@@ -65,9 +67,9 @@ import {
 import { showInstallationDetails } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
 import { ExecutionTypes } from "./models/execution";
-import { Insights } from "./models/insights";
+import { InsightDetails, Insights } from "./models/insights";
 import { QueryResult } from "./models/queryResult";
-import { Server } from "./models/server";
+import { Server, ServerDetails } from "./models/server";
 import {
   KdbDataSourceProvider,
   KdbDataSourceTreeItem,
@@ -99,6 +101,7 @@ export async function activate(context: ExtensionContext) {
   ext.context = context;
   ext.outputChannel = window.createOutputChannel("kdb");
   ext.openSslVersion = await checkOpenSslInstalled();
+  ext.isBundleQCreated = false;
 
   const servers: Server | undefined = getServers();
   const insights: Insights | undefined = getInsights();
@@ -163,13 +166,6 @@ export async function activate(context: ExtensionContext) {
       await connect(viewItem);
     }),
 
-    commands.registerCommand(
-      "kdb.addAuthentication",
-      async (viewItem: KdbNode) => {
-        addAuthConnection(viewItem.children[0]);
-      },
-    ),
-
     commands.registerCommand("kdb.enableTLS", async (viewItem: KdbNode) => {
       await enableTLS(viewItem.children[0]);
     }),
@@ -192,6 +188,24 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.addConnection", async () => {
       await addNewConnection();
     }),
+    commands.registerCommand(
+      "kdb.newConnection.createNewInsightConnection",
+      async (insightsData: InsightDetails) => {
+        await addInsightsConnection(insightsData);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.newConnection.createNewConnection",
+      async (kdbData: ServerDetails) => {
+        await addKdbConnection(kdbData, false);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.newConnection.createNewBundledConnection",
+      async (kdbData: ServerDetails) => {
+        await addKdbConnection(kdbData, true);
+      },
+    ),
     commands.registerCommand(
       "kdb.removeConnection",
       async (viewItem: KdbNode) => {

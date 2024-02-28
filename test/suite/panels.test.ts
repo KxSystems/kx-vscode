@@ -19,8 +19,9 @@ import { createDefaultDataSourceFile } from "../../src/models/dataSource";
 import { DataSourcesPanel } from "../../src/panels/datasource";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as utils from "../../src/utils/execution";
-import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
+import { InsightsNode } from "../../src/services/kdbTreeProvider";
 import { TreeItemCollapsibleState } from "vscode";
+import { NewConnectionPannel } from "../../src/panels/newConnection";
 
 describe("WebPanels", () => {
   describe("DataSourcesPanel", () => {
@@ -435,6 +436,43 @@ describe("WebPanels", () => {
         assert.strictEqual(typeof actualOutput, "string");
         assert.ok(actualOutput.includes(expectedOutput));
       });
+    });
+  });
+
+  describe("kdbNewConnectionPanel", () => {
+    const uriTest: vscode.Uri = vscode.Uri.parse("test");
+
+    beforeEach(() => {
+      NewConnectionPannel.render(uriTest);
+    });
+
+    afterEach(() => {
+      NewConnectionPannel.close();
+    });
+
+    it("should create a new panel", () => {
+      assert.ok(
+        NewConnectionPannel.currentPanel,
+        "NewConnectionPannel.currentPanel should be truthy",
+      );
+    });
+
+    it("should close", () => {
+      NewConnectionPannel.close();
+      assert.strictEqual(
+        NewConnectionPannel.currentPanel,
+        undefined,
+        "NewConnectionPannel.currentPanel should be undefined",
+      );
+    });
+
+    it("should make sure the Create New Connection panel is rendered, check if the web component exists", () => {
+      const expectedHtml = `<kdb-new-connection-view/>`;
+      const actualHtml = NewConnectionPannel.currentPanel._panel.webview.html;
+      assert.ok(
+        actualHtml.indexOf(expectedHtml) !== -1,
+        "Panel HTML should include expected web component",
+      );
     });
   });
 });
