@@ -29,67 +29,86 @@ describe("Interface validation tests", () => {
     assert.strictEqual(
       result,
       undefined,
-      "Correct input value should return success."
+      "Correct input value should return success.",
     );
   });
 
   it("Should return failed validation with invalid scratchpad variable output name", () => {
     const result = validateScratchpadOutputVariableName(
-      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
     );
     assert.strictEqual(
       result,
       "Input value must be between 1 and 64 alphanumeric characters in length.",
-      "Invalid input value should return fail."
+      "Invalid input value should return fail.",
     );
   });
 });
 
 describe("kdbValidator", () => {
   it("Should return fail for server alias that is blank or undefined", () => {
-    const result = validateServerAlias(undefined);
+    const result = validateServerAlias(undefined, false);
     assert.strictEqual(
       result,
       undefined,
-      "Server alias that is undefined should validate as undefined"
+      "Server alias that is undefined should validate as undefined",
     );
   });
 
   it("Should return fail for server alias that starts with a space", () => {
-    const result = validateServerAlias(" test");
+    const result = validateServerAlias(" test", false);
     assert.strictEqual(
       result,
       "Input value cannot start with a space.",
-      "Input started with a space and should fail validation."
+      "Input started with a space and should fail validation.",
     );
   });
 
   it("Should return fail for server alias that is outside the size limits", () => {
     const result = validateServerAlias(
-      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+      false,
     );
     assert.strictEqual(
       result,
       "Input value must be between 1 and 64 alphanumeric characters in length.",
-      "Input was outside the size limits."
+      "Input was outside the size limits.",
     );
   });
 
   it("Should return fail for server alias should not contain special chars", () => {
-    const result = validateServerAlias("test!");
+    const result = validateServerAlias("test!", false);
     assert.strictEqual(
       result,
       "Input value must contain only alphanumeric characters and hypens only",
-      "Input contained special chars"
+      "Input contained special chars",
     );
   });
 
   it("Should return fail if using restricted keyword", () => {
-    const result = validateServerAlias("InsightsEnterprise");
+    const result = validateServerAlias("InsightsEnterprise", false);
     assert.strictEqual(
       result,
       "Input value using restricted keywords of Insights Enterprise",
-      "Input contained restricted keyword."
+      "Input contained restricted keyword.",
+    );
+  });
+
+  it("Should return fail if using restricted keyword", () => {
+    const result = validateServerAlias("local", false);
+    assert.strictEqual(
+      result,
+      "Input value using restricted keywords of Local for Bundle q Server",
+      "Input contained restricted keyword.",
+    );
+  });
+
+  it("Should return fail if using restricted keyword", () => {
+    const result = validateServerAlias("local", false);
+    assert.strictEqual(
+      result,
+      "Input value using restricted keywords of Local for Bundle q Server",
+      "Input contained restricted keyword.",
     );
   });
 
@@ -98,18 +117,18 @@ describe("kdbValidator", () => {
     assert.strictEqual(
       result,
       undefined,
-      "Server name that is undefined should validate as undefined"
+      "Server name that is undefined should validate as undefined",
     );
   });
 
   it("Should return fail for server name that is outside the size limits", () => {
     const result = validateServerName(
-      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
     );
     assert.strictEqual(
       result,
       "Input value must be between 1 and 64 alphanumeric characters in length.",
-      "Input was outside the size limits."
+      "Input was outside the size limits.",
     );
   });
 
@@ -118,7 +137,7 @@ describe("kdbValidator", () => {
     assert.strictEqual(
       result,
       undefined,
-      "Server port that is undefined should validate as undefined"
+      "Server port that is undefined should validate as undefined",
     );
   });
 
@@ -127,7 +146,7 @@ describe("kdbValidator", () => {
     assert.strictEqual(
       result,
       "Input value must be a number.",
-      "Input was not a number for server port."
+      "Input was not a number for server port.",
     );
   });
 
@@ -136,7 +155,7 @@ describe("kdbValidator", () => {
     assert.strictEqual(
       result,
       "Invalid port number, valid range is 1-65536",
-      "input was not in valid port range"
+      "input was not in valid port range",
     );
   });
 
@@ -150,18 +169,18 @@ describe("kdbValidator", () => {
     assert.strictEqual(
       result,
       undefined,
-      "Server username that is undefined should validate as undefined."
+      "Server username that is undefined should validate as undefined.",
     );
   });
 
   it("Should return fail for server username that is outside the size limits", () => {
     const result = validateServerUsername(
-      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
     );
     assert.strictEqual(
       result,
       "Input value must be between 1 and 64 alphanumeric characters in length.",
-      "Input was outside the size limits."
+      "Input was outside the size limits.",
     );
   });
 
@@ -170,18 +189,18 @@ describe("kdbValidator", () => {
     assert.strictEqual(
       result,
       undefined,
-      "Server password that is undefined should validate as undefined."
+      "Server password that is undefined should validate as undefined.",
     );
   });
 
   it("Should return fail for server password that is outside the size limits", () => {
     const result = validateServerPassword(
-      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt"
+      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
     );
     assert.strictEqual(
       result,
       "Input value must be between 1 and 64 alphanumeric characters in length.",
-      "Input was outside the size limits."
+      "Input was outside the size limits.",
     );
   });
 
@@ -190,7 +209,7 @@ describe("kdbValidator", () => {
     assert.strictEqual(
       result,
       undefined,
-      "Server tls that is undefined should validate as undefined."
+      "Server tls that is undefined should validate as undefined.",
     );
   });
 
@@ -199,7 +218,7 @@ describe("kdbValidator", () => {
     assert.strictEqual(
       result,
       "Input value must be a boolean (true or false)",
-      "Server tls should be boolean"
+      "Server tls should be boolean",
     );
   });
 
@@ -216,7 +235,7 @@ describe("Validation functions", () => {
     assert.strictEqual(
       result.getErrors(),
       "Value cannot be empty.",
-      "Empty value should return validation error"
+      "Empty value should return validation error",
     );
   });
 
@@ -226,7 +245,7 @@ describe("Validation functions", () => {
     assert.strictEqual(
       result.getErrors(),
       null,
-      "String passed contains the special chars and didn't pass validation."
+      "String passed contains the special chars and didn't pass validation.",
     );
   });
 
@@ -236,7 +255,7 @@ describe("Validation functions", () => {
     assert.strictEqual(
       result.getErrors(),
       "Password must have 1 special character.",
-      "String passed does not contain the special chars and should not pass."
+      "String passed does not contain the special chars and should not pass.",
     );
   });
 
@@ -244,12 +263,12 @@ describe("Validation functions", () => {
     const vTest = new Validator("t*est");
     const result = vTest.hasNoForbiddenChar(
       new RegExp("\\!"),
-      "Forbidden char found"
+      "Forbidden char found",
     );
     assert.strictEqual(
       result.getErrors(),
       null,
-      "String passsed does not contain forbidden characters"
+      "String passsed does not contain forbidden characters",
     );
   });
 
@@ -257,12 +276,12 @@ describe("Validation functions", () => {
     const vTest = new Validator("t*est");
     const result = vTest.hasNoForbiddenChar(
       new RegExp("\\*"),
-      "Forbidden char found"
+      "Forbidden char found",
     );
     assert.strictEqual(
       result.getErrors(),
       "Forbidden char found",
-      "String passsed does not contain forbidden characters"
+      "String passsed does not contain forbidden characters",
     );
   });
 
@@ -272,7 +291,7 @@ describe("Validation functions", () => {
     assert.strictEqual(
       result.getErrors(),
       null,
-      "Length of string is in range"
+      "Length of string is in range",
     );
   });
 
@@ -282,7 +301,7 @@ describe("Validation functions", () => {
     assert.strictEqual(
       result.getErrors(),
       "Length must be between 1 and 3 characters",
-      "Length of string is not in range"
+      "Length of string is not in range",
     );
   });
 
@@ -292,7 +311,7 @@ describe("Validation functions", () => {
     assert.strictEqual(
       result.getErrors(),
       null,
-      `String contains at least one lower case char: ${result.getErrors()}`
+      `String contains at least one lower case char: ${result.getErrors()}`,
     );
   });
 
@@ -302,7 +321,7 @@ describe("Validation functions", () => {
     assert.strictEqual(
       result.getErrors(),
       "Password should have at least one lowercase letter from a to z.",
-      "String contains both cases"
+      "String contains both cases",
     );
   });
 });
