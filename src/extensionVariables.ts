@@ -57,6 +57,7 @@ export namespace ext {
   export const kdbinsightsNodes: string[] = [];
   export const kdbNodesWithoutAuth: string[] = [];
   export const kdbNodesWithoutTls: string[] = [];
+  export const kdbConnectionAliasList: string[] = [];
   export const maxRetryCount = 5;
 
   export let secretSettings: AuthSettings;

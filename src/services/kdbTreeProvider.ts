@@ -31,7 +31,7 @@ import {
   loadVariables,
   loadViews,
 } from "../models/serverObject";
-import { getServerName } from "../utils/core";
+import { getInsightsAlias, getServerAlias, getServerName } from "../utils/core";
 
 export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: EventEmitter<
@@ -102,6 +102,9 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   private getMergedElements(_element?: TreeItem): TreeItem[] {
     const servers = this.getChildElements(_element);
     const insights = this.getInsightsChildElements();
+    ext.kdbConnectionAliasList.length = 0;
+    getServerAlias(servers.map((x) => x.details));
+    getInsightsAlias(insights.map((x) => x.details));
     return [...servers, ...insights];
   }
 
