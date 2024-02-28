@@ -786,7 +786,7 @@ export async function executeQuery(
   isPython?: boolean,
 ): Promise<void> {
   const queryConsole = ExecutionConsole.start();
-  if (ext.connection === undefined) {
+  if (ext.connection === undefined && ext.connectionNode === undefined) {
     window.showInformationMessage(
       "Please connect to a KDB instance or Insights Instance to execute a query",
     );
