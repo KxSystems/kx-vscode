@@ -13,15 +13,11 @@
 
 import assert from "assert";
 import { validateScratchpadOutputVariableName } from "../../src/validators/interfaceValidator";
-import {
-  validateServerAlias,
-  validateServerName,
-  validateServerPassword,
-  validateServerPort,
-  validateServerUsername,
-  validateTls,
-} from "../../src/validators/kdbValidator";
+import * as kdbValidators from "../../src/validators/kdbValidator";
+
 import { Validator } from "../../src/validators/validator";
+import * as sinon from "sinon";
+import { ext } from "../../src/extensionVariables";
 
 describe("Interface validation tests", () => {
   it("Should return successful scratchpad variable output name", () => {
@@ -47,7 +43,7 @@ describe("Interface validation tests", () => {
 
 describe("kdbValidator", () => {
   it("Should return fail for server alias that is blank or undefined", () => {
-    const result = validateServerAlias(undefined, false);
+    const result = kdbValidators.validateServerAlias(undefined, false);
     assert.strictEqual(
       result,
       undefined,
@@ -55,8 +51,20 @@ describe("kdbValidator", () => {
     );
   });
 
+  it("Should fail if the Alias already exist", () => {
+    sinon.stub(kdbValidators, "isAliasInUse").returns(true);
+    ext.kdbConnectionAliasList.push("teste");
+    const result = kdbValidators.validateServerAlias("teste", false);
+    assert.strictEqual(
+      result,
+      "Server Name is already in use. Please use a different name.",
+    );
+    sinon.restore();
+    ext.kdbConnectionAliasList.pop();
+  });
+
   it("Should return fail for server alias that starts with a space", () => {
-    const result = validateServerAlias(" test", false);
+    const result = kdbValidators.validateServerAlias(" test", false);
     assert.strictEqual(
       result,
       "Input value cannot start with a space.",
@@ -65,7 +73,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail for server alias that is outside the size limits", () => {
-    const result = validateServerAlias(
+    const result = kdbValidators.validateServerAlias(
       "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
       false,
     );
@@ -77,7 +85,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail for server alias should not contain special chars", () => {
-    const result = validateServerAlias("test!", false);
+    const result = kdbValidators.validateServerAlias("test!", false);
     assert.strictEqual(
       result,
       "Input value must contain only alphanumeric characters and hypens only",
@@ -86,7 +94,10 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail if using restricted keyword", () => {
-    const result = validateServerAlias("InsightsEnterprise", false);
+    const result = kdbValidators.validateServerAlias(
+      "InsightsEnterprise",
+      false,
+    );
     assert.strictEqual(
       result,
       "Input value using restricted keywords of Insights Enterprise",
@@ -95,7 +106,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail if using restricted keyword", () => {
-    const result = validateServerAlias("local", false);
+    const result = kdbValidators.validateServerAlias("local", false);
     assert.strictEqual(
       result,
       "Input value using restricted keywords of Local for Bundle q Server",
@@ -104,7 +115,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail if using restricted keyword", () => {
-    const result = validateServerAlias("local", false);
+    const result = kdbValidators.validateServerAlias("local", false);
     assert.strictEqual(
       result,
       "Input value using restricted keywords of Local for Bundle q Server",
@@ -113,7 +124,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail for server name that is blank or undefined", () => {
-    const result = validateServerName(undefined);
+    const result = kdbValidators.validateServerName(undefined);
     assert.strictEqual(
       result,
       undefined,
@@ -122,7 +133,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail for server name that is outside the size limits", () => {
-    const result = validateServerName(
+    const result = kdbValidators.validateServerName(
       "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
     );
     assert.strictEqual(
@@ -133,7 +144,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail for server port that is blank or undefined", () => {
-    const result = validateServerPort(undefined);
+    const result = kdbValidators.validateServerPort(undefined);
     assert.strictEqual(
       result,
       undefined,
@@ -142,7 +153,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail for server port that is not a number", () => {
-    const result = validateServerPort("test");
+    const result = kdbValidators.validateServerPort("test");
     assert.strictEqual(
       result,
       "Input value must be a number.",
@@ -151,7 +162,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail for server port that is outside of range", () => {
-    const result = validateServerPort("65537");
+    const result = kdbValidators.validateServerPort("65537");
     assert.strictEqual(
       result,
       "Invalid port number, valid range is 1-65536",
@@ -160,12 +171,12 @@ describe("kdbValidator", () => {
   });
 
   it("Should return success for server port that is valid", () => {
-    const result = validateServerPort("5001");
+    const result = kdbValidators.validateServerPort("5001");
     assert.strictEqual(result, undefined, "Server port was valid");
   });
 
   it("Should return fail for server username that is blank or undefined", () => {
-    const result = validateServerUsername(undefined);
+    const result = kdbValidators.validateServerUsername(undefined);
     assert.strictEqual(
       result,
       undefined,
@@ -174,7 +185,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail for server username that is outside the size limits", () => {
-    const result = validateServerUsername(
+    const result = kdbValidators.validateServerUsername(
       "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
     );
     assert.strictEqual(
@@ -185,7 +196,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail for server password that is blank or undefined", () => {
-    const result = validateServerPassword(undefined);
+    const result = kdbValidators.validateServerPassword(undefined);
     assert.strictEqual(
       result,
       undefined,
@@ -194,7 +205,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail for server password that is outside the size limits", () => {
-    const result = validateServerPassword(
+    const result = kdbValidators.validateServerPassword(
       "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
     );
     assert.strictEqual(
@@ -205,7 +216,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail for server tls that is blank or undefined", () => {
-    const result = validateTls(undefined);
+    const result = kdbValidators.validateTls(undefined);
     assert.strictEqual(
       result,
       undefined,
@@ -214,7 +225,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail for server tls that is not true or false", () => {
-    const result = validateTls("test");
+    const result = kdbValidators.validateTls("test");
     assert.strictEqual(
       result,
       "Input value must be a boolean (true or false)",
@@ -223,7 +234,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return success for server tls that is true", () => {
-    const result = validateTls("true");
+    const result = kdbValidators.validateTls("true");
     assert.strictEqual(result, undefined, "Server tls is valid boolean");
   });
 });

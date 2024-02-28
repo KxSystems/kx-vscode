@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { ext } from "../extensionVariables";
 import { validateUtils } from "../utils/validateUtils";
 
 export function validateServerAlias(
@@ -19,6 +20,9 @@ export function validateServerAlias(
 ): string | undefined {
   // server alias is not required, but should be validated if entered
   if (input !== undefined && input !== "") {
+    if (isAliasInUse(input)) {
+      return "Server Name is already in use. Please use a different name.";
+    }
     if (input[0] === " ") {
       return "Input value cannot start with a space.";
     }
@@ -95,4 +99,8 @@ export function validateTls(input: string | undefined): string | undefined {
     }
   }
   return undefined;
+}
+
+export function isAliasInUse(alias: string): boolean {
+  return ext.kdbConnectionAliasList.includes(alias);
 }
