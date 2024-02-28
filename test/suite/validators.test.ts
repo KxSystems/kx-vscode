@@ -22,6 +22,7 @@ import {
   validateTls,
 } from "../../src/validators/kdbValidator";
 import { Validator } from "../../src/validators/validator";
+import { ext } from "../../src/extensionVariables";
 
 describe("Interface validation tests", () => {
   it("Should return successful scratchpad variable output name", () => {
@@ -52,6 +53,17 @@ describe("kdbValidator", () => {
       result,
       undefined,
       "Server alias that is undefined should validate as undefined",
+    );
+  });
+
+  it("Should fail if the Alias already exist", () => {
+    ext.kdbConnectionAliasList.push("test");
+    const result = validateServerAlias("teste", false);
+    ext.kdbConnectionAliasList.length = 0;
+    assert.strictEqual(
+      result,
+      undefined,
+      "Server Name is already in use. Please use a different name.",
     );
   });
 
