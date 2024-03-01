@@ -429,7 +429,7 @@ export async function getDataInsights(
           })
           .catch((error: any) => {
             return {
-              error: error.response.data,
+              error: { buffer: error.response.data },
               arrayBuffer: undefined,
             };
           });
