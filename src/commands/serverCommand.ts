@@ -16,16 +16,7 @@ import { readFileSync } from "fs-extra";
 import { jwtDecode } from "jwt-decode";
 import { join } from "path";
 import * as url from "url";
-import {
-  InputBoxOptions,
-  Position,
-  ProgressLocation,
-  QuickPickItem,
-  QuickPickOptions,
-  Range,
-  commands,
-  window,
-} from "vscode";
+import { Position, ProgressLocation, Range, commands, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { isCompressed, uncompress } from "../ipc/c";
 import { Connection } from "../models/connection";
@@ -33,10 +24,6 @@ import { GetDataObjectPayload } from "../models/data";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
 import { InsightDetails, Insights } from "../models/insights";
-import {
-  connectionPasswordInput,
-  connectionUsernameInput,
-} from "../models/items/server";
 import { JwtUser } from "../models/jwt_user";
 import { MetaObject, MetaObjectPayload } from "../models/meta";
 import { queryConstants } from "../models/queryResult";
@@ -77,6 +64,7 @@ import {
 import { QueryHistory } from "../models/queryHistory";
 import { runDataSource } from "./dataSourceCommand";
 import { NewConnectionPannel } from "../panels/newConnection";
+import { Telemetry } from "../utils/telemetryClient";
 
 export async function addNewConnection(): Promise<void> {
   NewConnectionPannel.render(ext.context.extensionUri);
@@ -121,6 +109,7 @@ export async function addInsightsConnection(insightsData: InsightDetails) {
     const newInsights = getInsights();
     if (newInsights != undefined) {
       ext.serverProvider.refreshInsights(newInsights);
+      Telemetry.sendEvent("Connection.Created.Insights");
     }
     window.showInformationMessage(
       `Added Insights connection: ${insightsData.alias}`,
@@ -264,6 +253,7 @@ export async function addKdbConnection(
     await updateServers(servers);
     const newServers = getServers();
     if (newServers != undefined) {
+      Telemetry.sendEvent("Connection.Created.QProcess");
       ext.serverProvider.refresh(newServers);
     }
     if (kdbData.auth) {
@@ -328,6 +318,7 @@ export async function connectInsights(viewItem: InsightsNode): Promise<void> {
       "kdb.insightsNodes",
       ext.kdbinsightsNodes,
     );
+    Telemetry.sendEvent("Connection.Connected.Insights");
   }
 
   ext.connectionNode = viewItem;
@@ -445,6 +436,7 @@ export async function importScratchpad(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   params: DataSourceFiles,
 ): Promise<void> {
+  let dsTypeString = "";
   if (ext.connectionNode instanceof InsightsNode) {
     let queryParams, coreUrl: string;
     switch (params.dataSource.selectedType) {
@@ -455,10 +447,12 @@ export async function importScratchpad(
           endTS: params.dataSource.api.endTS,
         };
         coreUrl = ext.insightsScratchpadUrls.import;
+        dsTypeString = "API";
         break;
       case DataSourceTypes.SQL:
         queryParams = { query: params.dataSource.sql.query };
         coreUrl = ext.insightsScratchpadUrls.importSql;
+        dsTypeString = "SQL";
         break;
       case DataSourceTypes.QSQL:
         const assemblyParts = params.dataSource.qsql.selectedTarget.split(" ");
@@ -468,6 +462,7 @@ export async function importScratchpad(
           query: params.dataSource.qsql.query,
         };
         coreUrl = ext.insightsScratchpadUrls.importQsql;
+        dsTypeString = "QSQL";
         break;
       default:
         break;
@@ -531,6 +526,9 @@ export async function importScratchpad(
         ext.outputChannel.append(JSON.stringify(scratchpadResponse.data));
         window.showInformationMessage(
           `Executed successfully, stored in ${variableName}`,
+        );
+        Telemetry.sendEvent(
+          "Datasource." + dsTypeString + ".Scratchpad.Populated",
         );
 
         const p = new Promise<void>((resolve) => resolve());
@@ -727,6 +725,7 @@ export async function connect(viewItem: KdbNode): Promise<void> {
         `${getServerName(viewItem.details)}` + " (connected)",
       ]);
       ext.connectionNode = viewItem;
+      Telemetry.sendEvent("Connection.Connected.QProcess");
       ext.serverProvider.reload();
     }
   });

@@ -45,6 +45,7 @@ import {
   writeQueryResultsToView,
 } from "./serverCommand";
 import { ServerType } from "../models/server";
+import { Telemetry } from "../utils/telemetryClient";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -68,6 +69,7 @@ export async function addDataSource(): Promise<void> {
   window.showInformationMessage(
     `Created ${fileName} in ${kdbDataSourcesFolderPath}.`,
   );
+  Telemetry.sendEvent("Datasource.Created");
 }
 
 export async function renameDataSource(
@@ -238,6 +240,7 @@ export async function runDataSource(
     let res: any;
     const selectedType = getSelectedType(fileContent);
     ext.isDatasourceExecution = true;
+    Telemetry.sendEvent("Datasource." + selectedType + ".Run");
     switch (selectedType) {
       case "API":
         res = await runApiDataSource(fileContent);
