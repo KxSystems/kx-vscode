@@ -23,7 +23,7 @@ export function invalidAssign({ assign }: QAst): Token[] {
 
 export function unusedParam({ script, assign }: QAst): Token[] {
   assign = assign.filter(
-    (token) => token.type === TokenType.IDENTIFIER && token.tag === "ARGUMENT"
+    (token) => token.type === TokenType.IDENTIFIER && token.tag === "ARGUMENT",
   );
 
   script = script.filter(
@@ -31,15 +31,15 @@ export function unusedParam({ script, assign }: QAst): Token[] {
       token.tag !== "ASSIGNED" &&
       token.tag !== "ARGUMENT" &&
       token.type === TokenType.IDENTIFIER &&
-      assign.find((symbol) => symbol.image === token.image)
+      assign.find((symbol) => symbol.image === token.image),
   );
 
   assign = assign.filter(
     (token) =>
       !script.find(
         (symbol) =>
-          symbol.image === token.image && scope(symbol) === scope(token)
-      )
+          symbol.image === token.image && scope(symbol) === scope(token),
+      ),
   );
 
   return assign;
@@ -47,11 +47,11 @@ export function unusedParam({ script, assign }: QAst): Token[] {
 
 export function unusedVar({ script, assign }: QAst): Token[] {
   const locals = assign.filter(
-    (token) => token.type === TokenType.IDENTIFIER && scope(token)
+    (token) => token.type === TokenType.IDENTIFIER && scope(token),
   );
 
   assign = assign.filter(
-    (token) => token.type === TokenType.IDENTIFIER && token.tag === "ASSIGNED"
+    (token) => token.type === TokenType.IDENTIFIER && token.tag === "ASSIGNED",
   );
 
   script = script.filter(
@@ -59,7 +59,7 @@ export function unusedVar({ script, assign }: QAst): Token[] {
       token.tag !== "ASSIGNED" &&
       token.tag !== "ARGUMENT" &&
       token.type === TokenType.IDENTIFIER &&
-      assign.find((symbol) => symbol.image === token.image)
+      assign.find((symbol) => symbol.image === token.image),
   );
 
   assign = assign.filter(
@@ -71,9 +71,9 @@ export function unusedVar({ script, assign }: QAst): Token[] {
             (!scope(token) &&
               !locals.find(
                 (local) =>
-                  local.image === token.image && scope(local) === scope(symbol)
-              )))
-      )
+                  local.image === token.image && scope(local) === scope(symbol),
+              ))),
+      ),
   );
 
   return assign;
@@ -88,14 +88,16 @@ export function declaredAfterUse({ script, assign }: QAst): Token[] {
           entity.type === TokenType.IDENTIFIER &&
           entity.tag !== "ASSIGNED" &&
           entity.image === token.image &&
-          !scope(entity)
+          !scope(entity),
       );
-      const reverse = !!scope(token, [TokenType.GROUP]);
-      return (
-        found &&
-        (reverse
+
+      if (found) {
+        const group = scope(found, [TokenType.GROUP]);
+        return group && group === scope(token, [TokenType.GROUP])
           ? found.statement > token.statement
-          : found.statement < token.statement)
-      );
+          : found.statement < token.statement;
+      }
+
+      return false;
     });
 }
