@@ -39,8 +39,6 @@ export interface DataSourceFiles {
       optional?: {
         filled: boolean;
         temporal: boolean;
-        startTS: string;
-        endTS: string;
         filters: Filter[];
         labels: Label[];
         sorts: Sort[];

@@ -332,8 +332,6 @@ describe("dataSourceCommand2", () => {
       api.optional = {
         filled: true,
         temporal: true,
-        startTS: "",
-        endTS: "",
         filters: [],
         sorts: [],
         groups: [],
@@ -368,8 +366,6 @@ describe("dataSourceCommand2", () => {
       api.optional = {
         filled: false,
         temporal: true,
-        startTS: "10:00",
-        endTS: "11:00",
         filters: [],
         sorts: [],
         groups: [],
@@ -397,8 +393,6 @@ describe("dataSourceCommand2", () => {
       api.optional = {
         filled: true,
         temporal: true,
-        startTS: "10:00",
-        endTS: "11:00",
         filters: [
           { active: true, column: "bid", operator: ">", values: "100" },
         ],

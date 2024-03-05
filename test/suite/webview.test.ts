@@ -58,8 +58,6 @@ describe("KdbDataSourceView", () => {
       dataSourceFile.dataSource.api.optional = {
         filled: false,
         temporal: false,
-        startTS: "",
-        endTS: "",
         filters: [],
         labels: [],
         sorts: [],

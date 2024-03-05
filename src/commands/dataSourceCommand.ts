@@ -355,18 +355,6 @@ export function getApiBody(
     }
     if (optional.temporal) {
       apiBody.temporality = api.temporality;
-      if (api.temporality === "slice") {
-        const start = api.startTS.split("T");
-        if (start.length === 2) {
-          start[1] = optional.startTS;
-          const end = api.endTS.split("T");
-          if (end.length === 2) {
-            end[1] = optional.endTS;
-            apiBody.startTS = convertTimeToTimestamp(start.join("T"));
-            apiBody.endTS = convertTimeToTimestamp(end.join("T"));
-          }
-        }
-      }
     }
 
     const labels = optional.labels.filter((label) => label.active);
