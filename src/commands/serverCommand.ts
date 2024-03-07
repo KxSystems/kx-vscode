@@ -408,6 +408,7 @@ export async function getDataInsights(
 
         return await axios(options)
           .then((response: any) => {
+            ext.outputChannel.appendLine(`request status: ${response.status}`);
             if (isCompressed(response.data)) {
               response.data = uncompress(response.data);
             }
@@ -419,6 +420,9 @@ export async function getDataInsights(
             };
           })
           .catch((error: any) => {
+            ext.outputChannel.appendLine(
+              `request status: ${error.response.status}`,
+            );
             return {
               error: { buffer: error.response.data },
               arrayBuffer: undefined,
