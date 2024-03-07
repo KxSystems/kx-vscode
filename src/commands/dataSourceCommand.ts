@@ -237,6 +237,7 @@ export async function runDataSource(
     dataSourceForm.insightsNode = getConnectedInsightsNode();
     const fileContent = dataSourceForm;
 
+    ext.outputChannel.appendLine(`Running ${fileContent.name} datasource...`);
     let res: any;
     const selectedType = getSelectedType(fileContent);
     ext.isDatasourceExecution = true;
@@ -259,6 +260,9 @@ export async function runDataSource(
       window.showErrorMessage(res.error);
       addDStoQueryHistory(dataSourceForm, false);
     } else if (ext.resultsViewProvider.isVisible()) {
+      ext.outputChannel.appendLine(
+        `Results: ${typeof res === "string" ? "0" : res.rows.length} rows`,
+      );
       addDStoQueryHistory(dataSourceForm, true);
       writeQueryResultsToView(
         res,
@@ -266,6 +270,9 @@ export async function runDataSource(
         selectedType,
       );
     } else {
+      ext.outputChannel.appendLine(
+        `Results is a string with length: ${res.length}`,
+      );
       addDStoQueryHistory(dataSourceForm, true);
       writeQueryResultsToConsole(
         res,
@@ -477,6 +484,7 @@ function parseError(error: GetDataError) {
   if (error instanceof Object && error.buffer) {
     return handleWSError(error.buffer);
   } else {
+    ext.outputChannel.appendLine(`Error: ${error}`);
     return {
       error,
     };
