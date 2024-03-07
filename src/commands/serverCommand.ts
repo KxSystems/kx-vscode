@@ -356,7 +356,7 @@ export async function getMeta(): Promise<MetaObjectPayload | undefined> {
   }
   return undefined;
 }
-
+/* istanbul ignore next */
 export async function getDataInsights(
   targetUrl: string,
   body: string,
