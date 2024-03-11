@@ -74,12 +74,12 @@ describe("kdbValidator", () => {
 
   it("Should return fail for server alias that is outside the size limits", () => {
     const result = kdbValidators.validateServerAlias(
-      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+      "t".repeat(kdbValidators.MAX_STR_LEN + 1),
       false,
     );
     assert.strictEqual(
       result,
-      "Input value must be between 1 and 64 alphanumeric characters in length.",
+      `Input value must be between 1 and ${kdbValidators.MAX_STR_LEN} alphanumeric characters in length.`,
       "Input was outside the size limits.",
     );
   });
@@ -134,11 +134,11 @@ describe("kdbValidator", () => {
 
   it("Should return fail for server name that is outside the size limits", () => {
     const result = kdbValidators.validateServerName(
-      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+      "t".repeat(kdbValidators.MAX_STR_LEN + 1),
     );
     assert.strictEqual(
       result,
-      "Input value must be between 1 and 64 alphanumeric characters in length.",
+      `Input value must be between 1 and ${kdbValidators.MAX_STR_LEN} alphanumeric characters in length.`,
       "Input was outside the size limits.",
     );
   });
@@ -186,11 +186,11 @@ describe("kdbValidator", () => {
 
   it("Should return fail for server username that is outside the size limits", () => {
     const result = kdbValidators.validateServerUsername(
-      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+      "t".repeat(kdbValidators.MAX_STR_LEN + 1),
     );
     assert.strictEqual(
       result,
-      "Input value must be between 1 and 64 alphanumeric characters in length.",
+      `Input value must be between 1 and ${kdbValidators.MAX_STR_LEN} alphanumeric characters in length.`,
       "Input was outside the size limits.",
     );
   });
@@ -206,11 +206,11 @@ describe("kdbValidator", () => {
 
   it("Should return fail for server password that is outside the size limits", () => {
     const result = kdbValidators.validateServerPassword(
-      "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
+      "t".repeat(kdbValidators.MAX_STR_LEN + 1),
     );
     assert.strictEqual(
       result,
-      "Input value must be between 1 and 64 alphanumeric characters in length.",
+      `Input value must be between 1 and ${kdbValidators.MAX_STR_LEN} alphanumeric characters in length.`,
       "Input was outside the size limits.",
     );
   });

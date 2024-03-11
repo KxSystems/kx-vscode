@@ -46,6 +46,7 @@ import { Connection } from "../../src/models/connection";
 import { QueryHistory } from "../../src/models/queryHistory";
 import { Server, ServerDetails, ServerType } from "../../src/models/server";
 import { NewConnectionPannel } from "../../src/panels/newConnection";
+import { MAX_STR_LEN } from "../../src/validators/kdbValidator";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const dsCmd = require("../../src/commands/dataSourceCommand");
@@ -1079,7 +1080,7 @@ describe("serverCommand", () => {
     });
 
     it("should return error when the servername with an invalid length", async () => {
-      kdbData.serverName = "a".repeat(256);
+      kdbData.serverName = "a".repeat(MAX_STR_LEN + 1);
       await serverCommand.addKdbConnection(kdbData);
       windowMock
         .expects("showErrorMessage")
