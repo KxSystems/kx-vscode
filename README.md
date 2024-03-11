@@ -91,9 +91,9 @@ To finish, a prompt is offered with an opt-in to receive a newsletter.
 
 ## Connections
 
-The kdb VS Code extension allows you to connect VS Code to a q process; this can be remote, referred to as an [**unmanaged q session**](#unmanaged-q-session) or a [**managed q session**](#managed-q-session), which uses the q installed as part of the kdb VS Code extension installation. It runs a child q process from within the extension and is fully managed by the extension. Only one connection can be active at any given time.
+The kdb VS Code extension allows you to connect VS Code to a q process; this can be remote, referred to as an [**unmanaged q session**](#my-q) or a [**managed q session**](#bundle-q), which uses the q installed as part of the kdb VS Code extension installation. It runs a child q process from within the extension and is fully managed by the extension. Only one connection can be active at any given time.
 
-### Unmanaged q session
+### My q
 
 **Step 1**: Identify the remote location of a running process. The hostname and port will be required along with any authentication information.
 
@@ -101,33 +101,27 @@ The kdb VS Code extension allows you to connect VS Code to a q process; this can
 
 ![connecttoakdbserver](https://github.com/KxSystems/kx-vscode/blob/main/img/connecttoakdbserver.png?raw=true)
 
-**Step 3**: When prompted to select the kdb type, choose **Enter a kdb endpoint**.
+**Step 3**: A new window will open with the type of connection you desire to add, **Select My q**.
 
-![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/step1connecttoakdbserver.jpg?raw=true)
+![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/myq.png?raw=true)
 
-**Step 4**: Assign a _server name / alias_. The server name selected **cannot be `local` or `insights`**, as these are reserved for use by [managed q sessions](#managed-q-session) and [kdb Insights Enterprise connections](#kdb-insights-enterprise); e.g. _dev_
+**Step 4**: Assign a _server name / alias_. The server name selected **cannot be `local` or `insights`**, as these are reserved for use by [managed q sessions](#bundle-q) and [kdb Insights Enterprise connections](#insights-connection); e.g. _dev_
 
-**Step 5**: Set the _hostname_ or ip address of the kdb server; e.g. _localhost_.
+**Step 5**: Set the _connection address_ or ip address of the kdb server; e.g. _localhost_.
 
 **Step 6**: Set the _port_ used by the kdb server; e.g. _5001_.
 
 - I want to learn more about [setting a q port](https://code.kx.com/q/basics/ipc/)
 
-Upon completion, the localhost connection appears under _KX:CONNECTIONS_ in the left hand panel.
+**Step 7**: If authentication is needed, fill the field _username_ and _password_, otherwise, left this field in **blank**
 
-![localkdbconnection](https://github.com/KxSystems/kx-vscode/blob/main/img/localkdbconnection.jpg?raw=true)
-
-**Step 7**: Right-click the connection to _connect kdb server_. Ensure the q process is running.
-
-![localkdbconnection](https://github.com/KxSystems/kx-vscode/blob/main/img/connectserver.jpg?raw=true)
-
-If authentication is required to access the connection, from the connection dropdown menu, add the required _username_ and the _password_, clicking Enter to move between the two.
-
-From the connection dropdown menu there is also an option to enable TLS encryption; the default is _false_.
+**Step 8**: If TLS is enabled, check the checkbox.
 
 - I want to learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).
 
-### Managed q session
+Upon completion, the localhost connection appears under _KX:CONNECTIONS_ in the left hand panel.
+
+### Bundle q
 
 This runs a q session using the existing kdb installed as part of the kdb VS Code extension.
 
@@ -135,27 +129,29 @@ This runs a q session using the existing kdb installed as part of the kdb VS Cod
 
 ![connecttoakdbserver](https://github.com/KxSystems/kx-vscode/blob/main/img/connecttoakdbserver.png?raw=true)
 
-**Step 2**: When prompted to select the kdb type, choose **Enter a kdb endpoint**.
+**Step 2**: A new window will open with the type of connection you desire to add, **Select Bundle q**.
 
-![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/step1connecttoakdbserver.jpg?raw=true)
+![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/bundleqform.png?raw=true)
 
-**Step 3**: Set the _server name / alias_ to `local`.
+**Step 3**: The _server name / alias_ will already be setted as `local`.
 
-**Step 4**: Set the _hostname_; e.g. _localhost_
+**Step 4**: The _connection address_ will be already be setted as `127.0.0.1` that corresponds to your _localhost_
 
 **Step 5**: Set the _port_ for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. _5002_
 
 - I want to learn more about [setting a q port](https://code.kx.com/q/basics/ipc/)
 
-**Step 6**: Right-click the managed q process listed under _KX:CONNECTIONS_, and click _Start q process_.
+**Step 6**: Click in **Create connection** to end the _connection creation_
+
+**Step 7**: Right-click the managed q process listed under _KX:CONNECTIONS_, and click _Start q process_.
 
 ![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/managedqprocess.jpg?raw=true)
 
-**Step 7**: From the same right-click menu, click _Connect kdb server_. This connects to the child q process running inside the kdb VS Code extension.
+**Step 8**: From the same right-click menu, click _Connect kdb server_. This connects to the child q process running inside the kdb VS Code extension.
 
 If you close the extension, the connection to the child q process also closes.
 
-### kdb Insights Enterprise
+### Insights Connection
 
 For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb process. Unlike for a **managed q session**, you must have [kdb Insights Enterprise Personal Edition](https://trykdb.kx.com/kx/signup) running before using these connections.
 
@@ -163,11 +159,11 @@ For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb pro
 
 ![connecttoakdbserver](https://github.com/KxSystems/kx-vscode/blob/main/img/connecttoakdbserver.png?raw=true)
 
-**Step 2**: When prompted to select a kdb type, choose _Connect to kdb insights_
+**Step 2**: A new window will open with the type of connection you desire to add, **Select Insights connection**.
 
-![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/connecttoinsights.jpg?raw=true)
+![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsconnection.png?raw=true)
 
-**Step 3**: Create a _server name / alias_; this can be any name, aside from `local`, which is used by the [managed q session](#managed-q-session).
+**Step 3**: Create a _server name / alias_; this can be any name, aside from `local`, which is used by the [managed q session](#bundle-q).
 
 **Step 4**: Set the _hostname_. This is the remote address of your kdb Insights Enterprise deployment: e.g `https://mykdbinsights.cloudapp.azure.com`
 
