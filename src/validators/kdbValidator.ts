@@ -14,6 +14,8 @@
 import { ext } from "../extensionVariables";
 import { validateUtils } from "../utils/validateUtils";
 
+export const MAX_STR_LEN = 1024;
+
 export function validateServerAlias(
   input: string | undefined,
   isLocal: boolean,
@@ -26,8 +28,8 @@ export function validateServerAlias(
     if (input[0] === " ") {
       return "Input value cannot start with a space.";
     }
-    if (!validateUtils.isValidLength(input, 1, 64)) {
-      return "Input value must be between 1 and 64 alphanumeric characters in length.";
+    if (!validateUtils.isValidLength(input, 1, MAX_STR_LEN)) {
+      return `Input value must be between 1 and ${MAX_STR_LEN} alphanumeric characters in length.`;
     }
     if (!validateUtils.isAlphanumericWithHypens(input)) {
       return "Input value must contain only alphanumeric characters and hypens only";
@@ -48,8 +50,8 @@ export function validateServerName(
   input: string | undefined,
 ): string | undefined {
   if (input !== undefined) {
-    if (!validateUtils.isValidLength(input, 1, 64)) {
-      return "Input value must be between 1 and 64 alphanumeric characters in length.";
+    if (!validateUtils.isValidLength(input, 1, MAX_STR_LEN)) {
+      return `Input value must be between 1 and ${MAX_STR_LEN} alphanumeric characters in length.`;
     }
   }
   return undefined;
@@ -74,8 +76,8 @@ export function validateServerUsername(
   input: string | undefined,
 ): string | undefined {
   if (input !== undefined && input !== "") {
-    if (!validateUtils.isValidLength(input, 1, 64)) {
-      return "Input value must be between 1 and 64 alphanumeric characters in length.";
+    if (!validateUtils.isValidLength(input, 1, MAX_STR_LEN)) {
+      return `Input value must be between 1 and ${MAX_STR_LEN} alphanumeric characters in length.`;
     }
   }
   return undefined;
@@ -85,8 +87,8 @@ export function validateServerPassword(
   input: string | undefined,
 ): string | undefined {
   if (input !== undefined) {
-    if (!validateUtils.isValidLength(input, 1, 64)) {
-      return "Input value must be between 1 and 64 alphanumeric characters in length.";
+    if (!validateUtils.isValidLength(input, 1, MAX_STR_LEN)) {
+      return `Input value must be between 1 and ${MAX_STR_LEN} alphanumeric characters in length.`;
     }
   }
   return undefined;
