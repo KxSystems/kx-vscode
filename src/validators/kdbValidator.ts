@@ -14,7 +14,7 @@
 import { ext } from "../extensionVariables";
 import { validateUtils } from "../utils/validateUtils";
 
-export const MAX_STR_LEN = 1024;
+export const MAX_STR_LEN = 2048;
 
 export function validateServerAlias(
   input: string | undefined,
