@@ -6,9 +6,23 @@ All notable changes to the kdb extension will be documented in this file.
 
 ### Enhancements
 
-- Changed the workflow of how to add new connections (added a new Webview with form)
+- Improved guided walkthrough - to assist in orientation of new users using the VS Code Extension and encourage them to take advantage of the native child q process.
 
 ### Fixes
+
+- When trying to running code, but have no active q connection, nothing happened but an error message is now displayed.
+- Executing a scan operation nolonger triggers a table view in the KDB results tab that is empty. 
+- When stepping through code you can now select variables to display by double clicking them and the whole variable is selected.
+- Using the query panel to re-run the query should will show the new results
+- Linter was saying suggesting a parameter was declared then never used, which was incorrect.
+- Ensure connections have unique names.
+- Linter was incorrectly defining variables that were declared but not used as parameters
+- Unprojected functions were incorrectly displaying a 'No results found.' error instead of the function.
+- Remove the limitation of 64 characters for the server name.
+- Handle changes to the "temporality" parameter of getData API in kdb Insights.
+- Fix the shortcuts given on the main page for the kdb extension on macOS.
+- Issues with the colorization of comments have been fixed
+
 
 # v1.3.0
 
