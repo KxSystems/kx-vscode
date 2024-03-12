@@ -6,21 +6,19 @@ All notable changes to the kdb extension will be documented in this file.
 
 ### Enhancements
 
-- Changed the workflow of how to add new connections to improve the experience of new users.
+- Changed the workflow of adding new connections to improve the experience of new users
 
 ### Fixes
 
-- When trying to running code, but have no active q connection, nothing happened but an error message is now displayed.
-- Executing a scan operation nolonger triggers a table view in the KDB results tab that is empty. 
-- When stepping through code you can now select variables to display by double clicking them and the whole variable is selected.
-- Using the query panel to re-run the query should will show the new results
-- Linter was saying suggesting a parameter was declared then never used, which was incorrect.
-- Ensure connections have unique names.
-- Linter was incorrectly defining variables that were declared but not used as parameters
-- Unprojected functions were incorrectly displaying a 'No results found.' error instead of the function.
-- Remove the limitation of 64 characters for the server name.
-- Handle changes to the "temporality" parameter of getData API in kdb Insights.
-- Fix the shortcuts given on the main page for the kdb extension on macOS.
+- Previously when running code without an active q connection nothing took place, now an error message is displayed
+- KDB Results tab now supports display the result of a scan operation
+- Using the query panel to re-run the query will now show the new results
+- Corrected issues with linter warnings about undeclared variables, and declared variables not being used as parameters
+- Connections must now have unique names
+- Unprojected function assignments are now displayed in output
+- The limitation of 64 characters for the server name has been increased to 2048
+- "temporality" parameter of getData API in kdb Insights has been updated
+- MacOS keyboard shortcut documentation has been updated
 - Issues with the colorization of comments have been fixed
 
 
