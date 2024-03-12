@@ -4,6 +4,12 @@ All notable changes to the kdb extension will be documented in this file.
 
 # v1.4.0
 
+### Enhancements
+
+- Changed the workflow of how to add new connections (added a new Webview with form)
+
+### Fixes
+
 # v1.3.0
 
 ### Enhancements
