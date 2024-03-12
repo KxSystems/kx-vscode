@@ -135,7 +135,7 @@ If you close the extension, the connection to the child q process also closes.
 
 ![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/myq.png?raw=true)
 
-**Step 4**: Assign a _server name / alias_. The server name selected **cannot be `local` or `insights`**, as these are reserved for use by [Bundled q sessions](#bundled-q) and [Insights connections](#insights-connection); e.g. _dev_
+**Step 4**: Assign a _server name / alias_. The server name selected **cannot be `local` or `insights`**, as these are reserved for use by [Bundled q connections](#bundled-q) and [Insights connections](#insights-connection); e.g. dev
 
 **Step 5**: Set the _connection address_ or ip address of the kdb server; e.g. _localhost_.
 
@@ -165,7 +165,7 @@ For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb pro
 
 ![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsconnection.png?raw=true)
 
-**Step 3**: Create a _server name / alias_; this can be any name, aside from local`, which is used by [Bundled q connection](#bundled-q).
+**Step 3**: Create a _server name / alias_; this can be any name, aside from `local`, which is used by [Bundled q connection](#bundled-q).
 
 **Step 4**: Set the _hostname_. This is the remote address of your kdb Insights Enterprise deployment: e.g `https://mykdbinsights.cloudapp.azure.com`
 
