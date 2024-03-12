@@ -135,7 +135,7 @@ If you close the extension, the connection to the child q process also closes.
 
 ![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/myq.png?raw=true)
 
-**Step 4**: Assign a _server name / alias_. The server name selected **cannot be `local` or `insights`**, as these are reserved for use by [Bundled q connections](#bundled-q) and [Insights connections](#insights-connection); e.g. dev
+**Step 4**: Assign a _server name / alias_. The server name selected **cannot be `local` or `insights`**, as these are reserved for use by [Bundled q connections](#bundled-q) and [Insights connections](#insights-connection), respectively; e.g. dev
 
 **Step 5**: Set the _connection address_ or ip address of the kdb server; e.g. _localhost_.
 
