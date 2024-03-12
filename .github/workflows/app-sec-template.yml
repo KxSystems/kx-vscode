@@ -66,7 +66,7 @@ jobs:
 
       - name: Snyk Monitor
         uses: snyk/actions/node@master
-        if: ${{ (inputs.github_ref == 'ref/head/dev') || (inputs.github_ref == 'ref/head/main') }}
+        if: ${{ (inputs.github_ref == 'dev') || (inputs.github_ref == 'main') }}
         env:
           SNYK_TOKEN: ${{ secrets.pink_snyk_api_key }}
         with:

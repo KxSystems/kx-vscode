@@ -24,6 +24,8 @@ export interface ServerDetails {
   serverAlias: string | undefined;
   managed: boolean;
   tls: boolean;
+  username?: string;
+  password?: string;
 }
 
 export interface Server {

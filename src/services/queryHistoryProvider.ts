@@ -48,7 +48,7 @@ export class QueryHistoryProvider implements TreeDataProvider<TreeItem> {
   }
 
   getChildren(
-    element?: QueryHistoryTreeItem
+    element?: QueryHistoryTreeItem,
   ): ProviderResult<QueryHistoryTreeItem[]> {
     if (!element) {
       return this.getQueryHistoryList();
@@ -64,9 +64,9 @@ export class QueryHistoryProvider implements TreeDataProvider<TreeItem> {
         return new QueryHistoryTreeItem(
           label,
           query,
-          TreeItemCollapsibleState.None
+          TreeItemCollapsibleState.None,
         );
-      })
+      }),
     );
   }
 }
@@ -75,7 +75,7 @@ export class QueryHistoryTreeItem extends TreeItem {
   constructor(
     public label: string,
     public readonly details: QueryHistory,
-    public readonly collapsibleState: TreeItemCollapsibleState
+    public readonly collapsibleState: TreeItemCollapsibleState,
   ) {
     super(label, collapsibleState);
     if (ext.kdbQueryHistoryNodes.indexOf(label) === -1) {
@@ -83,7 +83,7 @@ export class QueryHistoryTreeItem extends TreeItem {
       commands.executeCommand(
         "setContext",
         "kdb.kdbQueryHistoryList",
-        ext.kdbQueryHistoryList
+        ext.kdbQueryHistoryList,
       );
     }
     this.iconPath = new ThemeIcon(this.defineQueryIcon(details.success));
@@ -97,14 +97,28 @@ export class QueryHistoryTreeItem extends TreeItem {
   getTooltip(): MarkdownString {
     const connType = getConnectionType(this.details.connectionType);
     const tooltipMd = new MarkdownString();
+    const codeType = this.details.language === "python" ? "python" : "q";
     tooltipMd.appendMarkdown("### Query History Details\n");
     tooltipMd.appendMarkdown(
-      "- Connection Name: **" + this.details.connectionName + "** \n"
+      "- Connection Name: **" + this.details.connectionName + "** \n",
     );
     tooltipMd.appendMarkdown("- Connection Type: **" + connType + "** \n");
     tooltipMd.appendMarkdown("- Time: **" + this.details.time + "** \n");
-    tooltipMd.appendMarkdown("- Query:");
-    tooltipMd.appendCodeblock(this.details.query, "q");
+    if (typeof this.details.query === "string") {
+      tooltipMd.appendMarkdown("- Query:");
+      tooltipMd.appendCodeblock(this.details.query, codeType);
+    } else {
+      tooltipMd.appendMarkdown("- Data Source: ");
+      tooltipMd.appendMarkdown("**" + this.details.query.name + "**  \n");
+      tooltipMd.appendMarkdown(
+        "- Data Source Type: **" + this.details.datasourceType + "** \n",
+      );
+    }
+    if (this.details.duration) {
+      tooltipMd.appendMarkdown(
+        "- Duration: **" + this.details.duration + "ms** \n",
+      );
+    }
     return tooltipMd;
   }
 }

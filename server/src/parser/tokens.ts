@@ -34,6 +34,12 @@ export const LineComment = createToken({
   group: Lexer.SKIPPED,
 });
 
+export const Command = createToken({
+  name: "Command",
+  pattern:
+    /\\(?:cd|ts|[abBcCdefglopPrsStTuvwWxz12_\\])[\s\S]*?(?:(?<!;[ \t]*)\r?\n(?![ \t])|;)/,
+});
+
 export const SemiColon = createToken({
   name: "SemiColon",
   pattern: /(?:(?<!;[ \t]*)\r?\n(?![ \t])|;)/,
@@ -44,11 +50,6 @@ export const WhiteSpace = createToken({
   name: "WhiteSpace",
   pattern: /[ \t]+/,
   group: Lexer.SKIPPED,
-});
-
-export const Command = createToken({
-  name: "Command",
-  pattern: /\\(?:cd|ts|[abBcCdefglopPrsStTuvwWxz12_\\])/,
 });
 
 export const Iterator = createToken({

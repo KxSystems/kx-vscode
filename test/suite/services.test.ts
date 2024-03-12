@@ -37,6 +37,7 @@ import {
   QueryHistoryProvider,
   QueryHistoryTreeItem,
 } from "../../src/services/queryHistoryProvider";
+import { createDefaultDataSourceFile } from "../../src/models/dataSource";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -585,6 +586,7 @@ describe("Code flow login service tests", () => {
 });
 
 describe("queryHistoryProvider", () => {
+  const dummyDS = createDefaultDataSourceFile();
   const dummyQueryHistory: QueryHistory[] = [
     {
       connectionName: "testConnectionName",
@@ -599,11 +601,12 @@ describe("queryHistoryProvider", () => {
       query: "testQuery2",
       success: true,
       connectionType: ServerType.KDB,
+      duration: "500",
     },
     {
       connectionName: "testConnectionName3",
       time: "testTime3",
-      query: "testQuery3",
+      query: dummyDS,
       success: false,
       connectionType: ServerType.undefined,
     },

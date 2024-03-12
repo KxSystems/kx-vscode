@@ -51,6 +51,8 @@ import {
 } from "./commands/installTools";
 import {
   addAuthConnection,
+  addInsightsConnection,
+  addKdbConnection,
   addNewConnection,
   connect,
   connectInsights,
@@ -59,14 +61,15 @@ import {
   executeQuery,
   removeConnection,
   removeInsightsConnection,
+  rerunQuery,
   runQuery,
 } from "./commands/serverCommand";
 import { showInstallationDetails } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
 import { ExecutionTypes } from "./models/execution";
-import { Insights } from "./models/insights";
+import { InsightDetails, Insights } from "./models/insights";
 import { QueryResult } from "./models/queryResult";
-import { Server } from "./models/server";
+import { Server, ServerDetails } from "./models/server";
 import {
   KdbDataSourceProvider,
   KdbDataSourceTreeItem,
@@ -98,6 +101,7 @@ export async function activate(context: ExtensionContext) {
   ext.context = context;
   ext.outputChannel = window.createOutputChannel("kdb");
   ext.openSslVersion = await checkOpenSslInstalled();
+  ext.isBundleQCreated = false;
 
   const servers: Server | undefined = getServers();
   const insights: Insights | undefined = getInsights();
@@ -106,7 +110,7 @@ export async function activate(context: ExtensionContext) {
   ext.dataSourceProvider = new KdbDataSourceProvider();
   ext.queryHistoryProvider = new QueryHistoryProvider();
   ext.resultsViewProvider = new KdbResultsViewProvider(
-    ext.context.extensionUri
+    ext.context.extensionUri,
   );
 
   commands.executeCommand("setContext", "kdb.QHOME", env.QHOME);
@@ -114,11 +118,11 @@ export async function activate(context: ExtensionContext) {
   window.registerTreeDataProvider("kdb-servers", ext.serverProvider);
   window.registerTreeDataProvider(
     "kdb-datasources-explorer",
-    ext.dataSourceProvider
+    ext.dataSourceProvider,
   );
   window.registerTreeDataProvider(
     "kdb-query-history",
-    ext.queryHistoryProvider
+    ext.queryHistoryProvider,
   );
 
   // initialize local servers
@@ -144,13 +148,13 @@ export async function activate(context: ExtensionContext) {
     window.registerWebviewViewProvider(
       KdbResultsViewProvider.viewType,
       ext.resultsViewProvider,
-      { webviewOptions: { retainContextWhenHidden: true } }
+      { webviewOptions: { retainContextWhenHidden: true } },
     ),
     commands.registerCommand(
       "kdb.resultsPanel.update",
       (results: string, dataSourceType?: string) => {
         ext.resultsViewProvider.updateResults(results, dataSourceType);
-      }
+      },
     ),
     commands.registerCommand("kdb.resultsPanel.clear", () => {
       ext.resultsViewProvider.updateResults("");
@@ -162,13 +166,6 @@ export async function activate(context: ExtensionContext) {
       await connect(viewItem);
     }),
 
-    commands.registerCommand(
-      "kdb.addAuthentication",
-      async (viewItem: KdbNode) => {
-        addAuthConnection(viewItem.children[0]);
-      }
-    ),
-
     commands.registerCommand("kdb.enableTLS", async (viewItem: KdbNode) => {
       await enableTLS(viewItem.children[0]);
     }),
@@ -177,13 +174,13 @@ export async function activate(context: ExtensionContext) {
       "kdb.insightsConnect",
       async (viewItem: InsightsNode) => {
         await connectInsights(viewItem);
-      }
+      },
     ),
     commands.registerCommand(
       "kdb.insightsRemove",
       async (viewItem: InsightsNode) => {
         await removeInsightsConnection(viewItem);
-      }
+      },
     ),
     commands.registerCommand("kdb.disconnect", async () => {
       await disconnect();
@@ -192,10 +189,28 @@ export async function activate(context: ExtensionContext) {
       await addNewConnection();
     }),
     commands.registerCommand(
+      "kdb.newConnection.createNewInsightConnection",
+      async (insightsData: InsightDetails) => {
+        await addInsightsConnection(insightsData);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.newConnection.createNewConnection",
+      async (kdbData: ServerDetails) => {
+        await addKdbConnection(kdbData, false);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.newConnection.createNewBundledConnection",
+      async (kdbData: ServerDetails) => {
+        await addKdbConnection(kdbData, true);
+      },
+    ),
+    commands.registerCommand(
       "kdb.removeConnection",
       async (viewItem: KdbNode) => {
         await removeConnection(viewItem);
-      }
+      },
     ),
     commands.registerCommand("kdb.refreshServerObjects", () => {
       ext.serverProvider.reload();
@@ -204,8 +219,8 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand(
       "kdb.queryHistory.rerun",
       (viewItem: QueryHistoryTreeItem) => {
-        runQuery(ExecutionTypes.ReRunQuery, viewItem.details.query);
-      }
+        rerunQuery(viewItem.details);
+      },
     ),
     commands.registerCommand("kdb.queryHistory.clear", () => {
       ext.kdbQueryHistoryList.length = 0;
@@ -219,19 +234,19 @@ export async function activate(context: ExtensionContext) {
       "kdb.dataSource.populateScratchpad",
       async (dataSourceForm: any) => {
         await populateScratchpad(dataSourceForm);
-      }
+      },
     ),
     commands.registerCommand(
       "kdb.dataSource.saveDataSource",
       async (dataSourceForm: any) => {
         await saveDataSource(dataSourceForm);
-      }
+      },
     ),
     commands.registerCommand(
       "kdb.dataSource.runDataSource",
       async (dataSourceForm: any) => {
         await runDataSource(dataSourceForm);
-      }
+      },
     ),
     commands.registerCommand(
       "kdb.dataSource.renameDataSource",
@@ -243,19 +258,19 @@ export async function activate(context: ExtensionContext) {
               await renameDataSource(viewItem.label, newName);
             }
           });
-      }
+      },
     ),
     commands.registerCommand(
       "kdb.dataSource.deleteDataSource",
       async (viewItem: KdbDataSourceTreeItem) => {
         await deleteDataSource(viewItem);
-      }
+      },
     ),
     commands.registerCommand(
       "kdb.dataSource.openDataSource",
       async (viewItem: KdbDataSourceTreeItem) => {
         await openDataSource(viewItem, context.extensionUri);
-      }
+      },
     ),
     commands.registerCommand("kdb.showInstallationDetails", async () => {
       await showInstallationDetails();
@@ -267,13 +282,13 @@ export async function activate(context: ExtensionContext) {
       "kdb.startLocalProcess",
       async (viewItem: KdbNode) => {
         await startLocalProcess(viewItem);
-      }
+      },
     ),
     commands.registerCommand(
       "kdb.stopLocalProcess",
       async (viewItem: KdbNode) => {
         await stopLocalProcess(viewItem);
-      }
+      },
     ),
     commands.registerCommand("kdb.terminal.run", () => {
       const filename = window.activeTextEditor?.document.fileName;
@@ -303,7 +318,7 @@ export async function activate(context: ExtensionContext) {
       async () => {
         runQuery(ExecutionTypes.PythonQueryFile);
         ext.connection?.update();
-      }
+      },
     ),
     commands.registerCommand("kdb.execute.entireFile", async (uri: Uri) => {
       if (!uri) {
@@ -315,7 +330,7 @@ export async function activate(context: ExtensionContext) {
         const query = content.toString();
         await executeQuery(query, undefined, isPython);
       }
-    })
+    }),
   );
 
   const lastResult: QueryResult | undefined = undefined;
@@ -332,7 +347,7 @@ export async function activate(context: ExtensionContext) {
   })();
 
   context.subscriptions.push(
-    workspace.registerTextDocumentContentProvider(resultSchema, resultProvider)
+    workspace.registerTextDocumentContentProvider(resultSchema, resultProvider),
   );
 
   context.subscriptions.push(
@@ -340,33 +355,33 @@ export async function activate(context: ExtensionContext) {
       provideCompletionItems(
         document: TextDocument,
         _position: Position,
-        _token: CancellationToken
+        _token: CancellationToken,
       ) {
         const items: CompletionItem[] = [];
 
         ext.keywords.forEach((x) =>
-          items.push({ label: x, kind: CompletionItemKind.Keyword })
+          items.push({ label: x, kind: CompletionItemKind.Keyword }),
         );
         ext.functions.forEach((x) =>
           items.push({
             label: x,
             insertText: x,
             kind: CompletionItemKind.Function,
-          })
+          }),
         );
         ext.tables.forEach((x) =>
           items.push({
             label: x,
             insertText: x,
             kind: CompletionItemKind.Value,
-          })
+          }),
         );
         ext.variables.forEach((x) =>
           items.push({
             label: x,
             insertText: x,
             kind: CompletionItemKind.Variable,
-          })
+          }),
         );
 
         const text = document.getText();
@@ -386,7 +401,7 @@ export async function activate(context: ExtensionContext) {
 
         return items;
       },
-    })
+    }),
   );
 
   //q language server
@@ -411,19 +426,19 @@ export async function activate(context: ExtensionContext) {
     "kdb LangServer",
     "kdb Language Server",
     serverOptions,
-    clientOptions
+    clientOptions,
   );
 
   context.subscriptions.push(
     commands.registerCommand("kdb.sendServerCache", (code) => {
       client.sendNotification("analyzeServerCache", code);
-    })
+    }),
   );
 
   context.subscriptions.push(
     commands.registerCommand("kdb.sendOnHover", (hoverItems) => {
       client.sendNotification("prepareOnHover", hoverItems);
-    })
+    }),
   );
 
   client.start().then(() => {

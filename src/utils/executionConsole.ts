@@ -13,14 +13,17 @@
 
 import { OutputChannel, commands, window } from "vscode";
 import { ext } from "../extensionVariables";
-import { QueryHistory } from "../models/queryHistory";
 import { ServerType } from "../models/server";
 import { KdbNode } from "../services/kdbTreeProvider";
 import {
   getHideDetailedConsoleQueryOutput,
   setOutputWordWrapper,
 } from "./core";
-import { convertRowsToConsole } from "./queryUtils";
+import {
+  addQueryHistory,
+  checkIfIsDatasource,
+  convertRowsToConsole,
+} from "./queryUtils";
 
 export class ExecutionConsole {
   public static current: ExecutionConsole | undefined;
@@ -53,21 +56,22 @@ export class ExecutionConsole {
 
   public checkOutput(
     output: string | string[],
-    query: string
+    query: string,
   ): string | string[] {
-    if (!output) {
+    if (output.length === 0) {
       return "No results found.";
     }
     if (Array.isArray(output)) {
       return output;
     }
-    if (
-      output.trim().startsWith("{") &&
-      output.trim().endsWith("}") &&
-      query.trim().includes(":")
-    ) {
-      return "No results found.";
-    }
+    // TODO: understand why that was necessary and if it is still necessary
+    // if (
+    //   output.trim().startsWith("{") &&
+    //   output.trim().endsWith("}") &&
+    //   query.trim().includes(":")
+    // ) {
+    //   return "No results found.";
+    // }
     return output;
   }
 
@@ -76,7 +80,8 @@ export class ExecutionConsole {
     query = "",
     serverName: string,
     dataSourceType?: string,
-    isPhython?: boolean
+    isPhython?: boolean,
+    duration?: string,
   ): void {
     getHideDetailedConsoleQueryOutput();
     const hideDetails = ext.hideDetailedConsoleQueryOutput;
@@ -93,13 +98,24 @@ export class ExecutionConsole {
       ext.connectionNode instanceof KdbNode
         ? ServerType.KDB
         : ServerType.INSIGHTS;
-    addQueryHistory(query, serverName, connectionType, true, isPhython);
+    if (!checkIfIsDatasource(dataSourceType)) {
+      addQueryHistory(
+        query,
+        serverName,
+        connectionType,
+        true,
+        isPhython,
+        undefined,
+        undefined,
+        duration,
+      );
+    }
 
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
     if (!hideDetails) {
       this._console.appendLine(
-        `>>> ${serverName}  @ ${date.toLocaleTimeString()} <<<`
+        `>>> ${serverName}  @ ${date.toLocaleTimeString()} <<<`,
       );
       this.appendQuery(query);
     }
@@ -122,7 +138,9 @@ export class ExecutionConsole {
     result: string,
     isConnected: boolean,
     serverName: string,
-    isPython?: boolean
+    isPython?: boolean,
+    isDatasource?: boolean,
+    duration?: string,
   ): void {
     getHideDetailedConsoleQueryOutput();
     const hideDetails = ext.hideDetailedConsoleQueryOutput;
@@ -131,7 +149,7 @@ export class ExecutionConsole {
     const date = new Date();
     if (!hideDetails) {
       this._console.appendLine(
-        `<<< ERROR -  ${serverName}  @ ${date.toLocaleTimeString()} >>>`
+        `<<< ERROR -  ${serverName}  @ ${date.toLocaleTimeString()} >>>`,
       );
     }
     if (isConnected) {
@@ -145,17 +163,28 @@ export class ExecutionConsole {
       } else {
         this._console.appendLine(`Error: ${result}`);
       }
-      addQueryHistory(query, serverName, connectionType, false, isPython);
+      if (!isDatasource) {
+        addQueryHistory(
+          query,
+          serverName,
+          connectionType,
+          false,
+          isPython,
+          undefined,
+          undefined,
+          duration,
+        );
+      }
     } else {
-      window.showErrorMessage(`Please connect to a kdb+ server`);
-      this._console.appendLine(`Please connect to a kdb+ server`);
+      window.showErrorMessage(`Please connect to a KDB or Insights server`);
+      this._console.appendLine(`Please connect to a KDB or Insights server`);
       commands.executeCommand("kdb.disconnect");
       addQueryHistory(
         query,
         "No connection",
         ServerType.undefined,
         false,
-        isPython
+        isPython,
       );
     }
     if (!hideDetails) {
@@ -167,25 +196,4 @@ export class ExecutionConsole {
   public appendQueryDebug(msg: string) {
     this._console.appendLine(msg);
   }
-}
-
-export function addQueryHistory(
-  query: string,
-  connectionName: string,
-  connectionType: ServerType,
-  success: boolean,
-  isPython?: boolean
-) {
-  const newQueryHistory: QueryHistory = {
-    query: query,
-    time: new Date().toLocaleString(),
-    success,
-    connectionName,
-    connectionType,
-    language: isPython ? "python" : "q",
-  };
-
-  ext.kdbQueryHistoryList.unshift(newQueryHistory);
-
-  ext.queryHistoryProvider.refresh();
 }
