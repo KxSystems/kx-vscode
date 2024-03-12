@@ -107,13 +107,13 @@ This runs a q session using the existing kdb installed as part of the kdb VS Cod
 
 **Step 3**: The _server name / alias_ will already be set as `local`.
 
-**Step 4**: The _connection address_ will be already be setted as `127.0.0.1` that corresponds to your _localhost_
+**Step 4**: The _connection address_ will be already be set as `127.0.0.1` which corresponds to your _localhost_
 
 **Step 5**: Set the _port_ for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. _5002_
 
 - I want to learn more about [setting a q port](https://code.kx.com/q/basics/ipc/)
 
-**Step 6**: Click **Create connection** to end the _connection creation_
+**Step 6**: Click **Create connection** to confirm the _connection creation_
 
 **Step 7**: Right-click the q bundled process listed under _KX:CONNECTIONS_, and click _Start q process_.”
 
@@ -149,7 +149,7 @@ If you close the extension, the connection to the child q process also closes.
 
 - I want to learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).
 
-**Step 9**: Click **Create connection** to end the _connection creation_
+**Step 9**: Click **Create connection** to confirm the _connection creation_
 
 Upon completion, the localhost connection appears under _KX:CONNECTIONS_ in the left hand panel.
 
@@ -169,11 +169,13 @@ For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb pro
 
 **Step 4**: Set the _hostname_. This is the remote address of your kdb Insights Enterprise deployment: e.g `https://mykdbinsights.cloudapp.azure.com`
 
-**Step 5**: The kdb Insights Enterprise connection is listed under _KX:Connections_, with its own icon. Right-click the connection and _Connect to Insights_
+**Step 5**: Click **Create connection** to confirm the _connection creation_
+
+**Step 6**: The kdb Insights Enterprise connection is listed under _KX:Connections_, with its own icon. Right-click the connection and _Connect to Insights_
 
 ![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/kdbinsightsconnection.jpg?raw=true)
 
-**Step 6**: The kdb VS Code extension runs an authentication step with the remote kdb Insights Enterprise process; sign-in to kdb Insights Enterprise.
+**Step 7**: The kdb VS Code extension runs an authentication step with the remote kdb Insights Enterprise process; sign-in to kdb Insights Enterprise.
 
 ![authenticateinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsauthenticate.jpg?raw=true)
 
