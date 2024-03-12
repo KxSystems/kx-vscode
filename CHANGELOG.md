@@ -6,7 +6,7 @@ All notable changes to the kdb extension will be documented in this file.
 
 ### Enhancements
 
-- Improved guided walkthrough - to assist in orientation of new users using the VS Code Extension and encourage them to take advantage of the native child q process.
+- Changed the workflow of how to add new connections to improve the experience of new users.
 
 ### Fixes
 
