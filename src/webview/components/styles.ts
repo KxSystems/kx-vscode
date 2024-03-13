@@ -69,6 +69,10 @@ export const kdbStyles = css`
     gap: 4px;
   }
 
+  .gap-0 {
+    gap: 0px;
+  }
+
   .grow {
     flex-grow: 1;
   }
@@ -93,5 +97,67 @@ export const kdbStyles = css`
   .dropdown.larger,
   .text-field.larger {
     width: 14.5em;
+  }
+`;
+
+export const newConnectionStyles = css`
+  .option-title {
+    color: var(--vscode-foreground);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 16px;
+    letter-spacing: 0.46px;
+    word-wrap: break-word;
+  }
+
+  .option-description {
+    color: var(--vscode-foreground);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+  }
+
+  .option-help {
+    opacity: 0.75;
+    margin-top: 4px;
+  }
+
+  .content-wrapper {
+    display: flex;
+    align-content: center;
+    justify-content: center;
+    font-family: var(--vscode-font-family);
+  }
+
+  .form-wrapper {
+    width: 600px;
+  }
+
+  .text-field.x-larger {
+    width: 36.5em;
+  }
+
+  .header-text-wrapper {
+    color: var(--vscode-foreground);
+    width: 100%;
+    border: solid 1px transparent;
+    box-sizing: border-box;
+    padding: 10px calc((var(4) + 2) * 1px);
+  }
+
+  h2 {
+    font-weight: 400;
+    margin-top: 0;
+    margin-bottom: 5px;
+    font-size: 1.5em;
+    line-height: normal;
+    color: var(--vscode-foreground);
+    letter-spacing: 0.46px;
+    word-wrap: break-word;
+  }
+
+  .dropdown.larger,
+  .text-field.larger {
+    width: 20em;
   }
 `;

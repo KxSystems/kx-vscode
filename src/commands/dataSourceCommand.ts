@@ -13,7 +13,7 @@
 
 import * as fs from "fs";
 import path from "path";
-import { InputBoxOptions, Uri, window, commands } from "vscode";
+import { InputBoxOptions, Uri, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { GetDataError, getDataBodyPayload } from "../models/data";
 import {
@@ -31,6 +31,7 @@ import {
   getConnectedInsightsNode,
 } from "../utils/dataSource";
 import {
+  addQueryHistory,
   handleScratchpadTableRes,
   handleWSError,
   handleWSResults,
@@ -43,6 +44,8 @@ import {
   writeQueryResultsToConsole,
   writeQueryResultsToView,
 } from "./serverCommand";
+import { ServerType } from "../models/server";
+import { Telemetry } from "../utils/telemetryClient";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -66,6 +69,7 @@ export async function addDataSource(): Promise<void> {
   window.showInformationMessage(
     `Created ${fileName} in ${kdbDataSourcesFolderPath}.`,
   );
+  Telemetry.sendEvent("Datasource.Created");
 }
 
 export async function renameDataSource(
@@ -233,9 +237,11 @@ export async function runDataSource(
     dataSourceForm.insightsNode = getConnectedInsightsNode();
     const fileContent = dataSourceForm;
 
+    ext.outputChannel.appendLine(`Running ${fileContent.name} datasource...`);
     let res: any;
     const selectedType = getSelectedType(fileContent);
     ext.isDatasourceExecution = true;
+    Telemetry.sendEvent("Datasource." + selectedType + ".Run");
     switch (selectedType) {
       case "API":
         res = await runApiDataSource(fileContent);
@@ -252,13 +258,22 @@ export async function runDataSource(
     ext.isDatasourceExecution = false;
     if (res.error) {
       window.showErrorMessage(res.error);
+      addDStoQueryHistory(dataSourceForm, false);
     } else if (ext.resultsViewProvider.isVisible()) {
+      ext.outputChannel.appendLine(
+        `Results: ${typeof res === "string" ? "0" : res.rows.length} rows`,
+      );
+      addDStoQueryHistory(dataSourceForm, true);
       writeQueryResultsToView(
         res,
         getQuery(fileContent, selectedType),
         selectedType,
       );
     } else {
+      ext.outputChannel.appendLine(
+        `Results is a string with length: ${res.length}`,
+      );
+      addDStoQueryHistory(dataSourceForm, true);
       writeQueryResultsToConsole(
         res,
         getQuery(fileContent, selectedType),
@@ -268,6 +283,21 @@ export async function runDataSource(
   } finally {
     DataSourcesPanel.running = false;
   }
+}
+
+export function addDStoQueryHistory(
+  dataSourceForm: DataSourceFiles,
+  success: boolean,
+) {
+  addQueryHistory(
+    dataSourceForm,
+    ext.connectionNode?.label ? ext.connectionNode.label : "",
+    ServerType.INSIGHTS,
+    success,
+    false,
+    true,
+    dataSourceForm.dataSource.selectedType,
+  );
 }
 
 export function getSelectedType(fileContent: DataSourceFiles): string {
@@ -332,18 +362,6 @@ export function getApiBody(
     }
     if (optional.temporal) {
       apiBody.temporality = api.temporality;
-      if (api.temporality === "slice") {
-        const start = api.startTS.split("T");
-        if (start.length === 2) {
-          start[1] = optional.startTS;
-          const end = api.endTS.split("T");
-          if (end.length === 2) {
-            end[1] = optional.endTS;
-            apiBody.startTS = convertTimeToTimestamp(start.join("T"));
-            apiBody.endTS = convertTimeToTimestamp(end.join("T"));
-          }
-        }
-      }
     }
 
     const labels = optional.labels.filter((label) => label.active);
@@ -466,6 +484,7 @@ function parseError(error: GetDataError) {
   if (error instanceof Object && error.buffer) {
     return handleWSError(error.buffer);
   } else {
+    ext.outputChannel.appendLine(`Error: ${error}`);
     return {
       error,
     };

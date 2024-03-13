@@ -19,7 +19,7 @@ import { ext } from "../../src/extensionVariables";
 import * as QTable from "../../src/ipc/QTable";
 import { CancellationEvent } from "../../src/models/cancellationEvent";
 import { QueryResultType } from "../../src/models/queryResult";
-import { ServerType } from "../../src/models/server";
+import { ServerDetails, ServerType } from "../../src/models/server";
 import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import { QueryHistoryProvider } from "../../src/services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
@@ -46,6 +46,9 @@ import {
   DDateTimeClass,
   DTimestampClass,
 } from "../../src/ipc/cClasses";
+import { DataSourceTypes } from "../../src/models/dataSource";
+import { InsightDetails } from "../../src/models/insights";
+import { Parse } from "../../src/ipc/parse.qlist";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;
@@ -103,6 +106,49 @@ describe("Utils", () => {
 
       afterEach(() => {
         getConfigurationStub.restore();
+      });
+
+      describe("server alias", () => {
+        beforeEach(() => {
+          ext.kdbConnectionAliasList.length = 0;
+        });
+
+        afterEach(() => {
+          ext.kdbConnectionAliasList.length = 0;
+        });
+
+        it("should add insights alias to the list getInsightsAlias", () => {
+          const insightsDetail: InsightDetails = {
+            alias: "test",
+            server: "test",
+            auth: true,
+          };
+          coreUtils.getInsightsAlias([insightsDetail]);
+          assert.strictEqual(ext.kdbConnectionAliasList.length, 1);
+        });
+
+        it("should add alias only from kdb server that have alias using getServerAlias", () => {
+          const serverList: ServerDetails[] = [
+            {
+              serverName: "test",
+              serverAlias: "test",
+              serverPort: "5001",
+              managed: false,
+              auth: false,
+              tls: false,
+            },
+            {
+              serverName: "test2",
+              serverAlias: undefined,
+              serverPort: "5001",
+              managed: false,
+              auth: false,
+              tls: false,
+            },
+          ];
+          coreUtils.getServerAlias(serverList);
+          assert.strictEqual(ext.kdbConnectionAliasList.length, 1);
+        });
       });
 
       it("should update configuration and set hideDetailedConsoleQueryOutput to true when setting is undefined", async () => {
@@ -424,6 +470,28 @@ describe("Utils", () => {
         ext.kdbQueryHistoryList.length = 0;
       });
 
+      describe("checkOutput", () => {
+        it("should return the input string if the input is not an array", () => {
+          const result = queryConsole.checkOutput("test", "test");
+          assert.strictEqual(result, "test");
+        });
+
+        it("should return No results found if the input is an empty array", () => {
+          const result = queryConsole.checkOutput([], "test");
+          assert.strictEqual(result, "No results found.");
+        });
+
+        it("should return No results found if the input is an empty string", () => {
+          const result = queryConsole.checkOutput("", "test");
+          assert.strictEqual(result, "No results found.");
+        });
+
+        it("should return the input array if the input is an array with multiple strings", () => {
+          const result = queryConsole.checkOutput(["test", "test"], "test");
+          assert.deepStrictEqual(result, ["test", "test"]);
+        });
+      });
+
       it("should append and add queryHistory with kdbNode without details", () => {
         getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
         getConfigurationStub.returns({
@@ -492,7 +560,7 @@ describe("Utils", () => {
 
         ext.connectionNode = kdbNode;
 
-        queryConsole.appendQueryError(query, output, true, serverName);
+        queryConsole.appendQueryError(query, output, true, serverName, true);
         assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
         assert.strictEqual(
@@ -541,13 +609,37 @@ describe("Utils", () => {
 
       ext.kdbQueryHistoryList.length = 0;
 
-      executionConsoleUtils.addQueryHistory(
+      queryUtils.addQueryHistory(query, connectionName, connectionType, true);
+      assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+    });
+
+    it("addQueryHistory in python", () => {
+      const query = "SELECT * FROM table";
+      const connectionName = "test";
+      const connectionType = ServerType.KDB;
+
+      ext.kdbQueryHistoryList.length = 0;
+
+      queryUtils.addQueryHistory(
         query,
         connectionName,
         connectionType,
         true,
+        true,
       );
       assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+    });
+  });
+
+  describe("selectDSType", () => {
+    it("should return correct DataSourceTypes for given input", function () {
+      assert.equal(queryUtils.selectDSType("API"), DataSourceTypes.API);
+      assert.equal(queryUtils.selectDSType("QSQL"), DataSourceTypes.QSQL);
+      assert.equal(queryUtils.selectDSType("SQL"), DataSourceTypes.SQL);
+    });
+
+    it("should return undefined for unknown input", function () {
+      assert.equal(queryUtils.selectDSType("unknown"), undefined);
     });
   });
 
@@ -878,7 +970,30 @@ describe("Utils", () => {
 
     describe("handleWSError", () => {
       let sandbox: sinon.SinonSandbox;
-
+      const abTest = new Uint8Array([
+        1, 2, 0, 0, 114, 1, 0, 0, 0, 0, 2, 0, 0, 0, 99, 11, 0, 17, 0, 0, 0, 0,
+        114, 99, 118, 84, 83, 0, 99, 111, 114, 114, 0, 112, 114, 111, 116, 111,
+        99, 111, 108, 0, 108, 111, 103, 67, 111, 114, 114, 0, 99, 108, 105, 101,
+        110, 116, 0, 104, 116, 116, 112, 0, 97, 112, 105, 0, 117, 115, 101, 114,
+        78, 97, 109, 101, 0, 117, 115, 101, 114, 73, 68, 0, 116, 105, 109, 101,
+        111, 117, 116, 0, 116, 111, 0, 112, 118, 86, 101, 114, 0, 114, 101, 102,
+        86, 105, 110, 116, 97, 103, 101, 0, 114, 99, 0, 97, 99, 0, 97, 105, 0,
+        0, 0, 17, 0, 0, 0, 101, 0, 244, 0, 168, 200, 104, 217, 55, 151, 10, 254,
+        148, 230, 16, 238, 61, 245, 76, 4, 178, 72, 184, 185, 138, 80, 65, 216,
+        245, 103, 119, 0, 10, 0, 36, 0, 0, 0, 57, 52, 101, 54, 49, 48, 101, 101,
+        45, 51, 100, 102, 53, 45, 52, 99, 48, 52, 45, 98, 50, 52, 56, 45, 98,
+        56, 98, 57, 56, 97, 53, 48, 52, 49, 100, 56, 245, 58, 49, 48, 46, 57,
+        46, 49, 51, 56, 46, 49, 57, 50, 58, 53, 48, 53, 48, 0, 245, 111, 99,
+        116, 101, 116, 115, 116, 114, 101, 97, 109, 0, 245, 46, 107, 120, 105,
+        46, 113, 115, 113, 108, 0, 245, 0, 254, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 249, 96, 234, 0, 0, 0, 0, 0, 0, 244, 0, 0, 16, 97, 231,
+        55, 151, 10, 249, 134, 0, 0, 0, 0, 0, 0, 0, 249, 1, 0, 0, 0, 0, 0, 0,
+        128, 251, 10, 0, 251, 10, 0, 10, 0, 54, 0, 0, 0, 85, 110, 101, 120, 112,
+        101, 99, 116, 101, 100, 32, 101, 114, 114, 111, 114, 32, 40, 110, 49,
+        48, 41, 32, 101, 110, 99, 111, 117, 110, 116, 101, 114, 101, 100, 32,
+        101, 120, 101, 99, 117, 116, 105, 110, 103, 32, 46, 107, 120, 105, 46,
+        113, 115, 113, 108, 0, 0, 0, 0, 0, 0,
+      ]);
       beforeEach(() => {
         sandbox = sinon.createSandbox();
       });
@@ -907,6 +1022,14 @@ describe("Utils", () => {
 
         // Assert the result
         assert.deepStrictEqual(result, { error: "Query error" });
+      });
+
+      it("should handle qe/sql error", () => {
+        const result = queryUtils.handleWSError(abTest);
+        assert.deepStrictEqual(result, {
+          error:
+            "\u00006\u0000\u0000\u0000Unexpected error (n10) encountered executing .kxi.qsql\u0000\u0000\u0000\u0000\u0000",
+        });
       });
     });
   });

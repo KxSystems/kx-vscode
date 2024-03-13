@@ -19,6 +19,8 @@ import { Parse } from "../ipc/parse.qlist";
 import { ServerType } from "../models/server";
 import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
 import { TypeBase } from "../ipc/typeBase";
+import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
+import { QueryHistory } from "../models/queryHistory";
 
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {
@@ -59,21 +61,36 @@ export function handleWSError(ab: ArrayBuffer): any {
       // last char is string terminator
       raw[raw.byteLength - 1] === 0 &&
       // error message size, message can be clipped (always less than 256 chars)
-      raw[5] * 256 + raw[4] === raw.byteLength &&
-      // 128 - start of string/error ?
-      raw.subarray(6, 9).toString() === "0,0,128"
+      raw[5] * 256 + raw[4] === raw.byteLength
+      // TODO: need to check if this is needed
+      // &&
+      // // 128 - start of string/error ?
+      // raw.subarray(6, 9).toString() === "0,0,128"
     ) {
-      errorString = {
-        // eslint-disable-next-line prefer-spread
-        ipc: String.fromCharCode.apply(
+      // eslint-disable-next-line prefer-spread
+      const translated = String.fromCharCode
+        .apply(
           String,
           raw.subarray(9, raw.byteLength - 1) as unknown as number[],
-        ),
-      };
+        )
+        .split("\n")
+        .slice(-1);
+      errorString = translated.join("").trim();
+
+      // TODO: need to check if this is needed
+      // errorString = {
+      //   // eslint-disable-next-line prefer-spread
+      //   ipc: String.fromCharCode.apply(
+      //     String,
+      //     raw.subarray(9, raw.byteLength - 1) as unknown as number[],
+      //   ),
+      // };
     } else {
       errorString = "Query error";
     }
   }
+
+  ext.outputChannel.appendLine(`Error : ${errorString}`);
 
   return { error: errorString };
 }
@@ -287,4 +304,52 @@ export function getConnectionType(type: ServerType): string {
     default:
       return "undefined";
   }
+}
+
+export function checkIfIsDatasource(
+  dataSourceType: string | undefined,
+): boolean {
+  if (dataSourceType === undefined) {
+    return false;
+  }
+  const validTypes = ["API", "QSQL", "SQL"];
+  return validTypes.includes(dataSourceType);
+}
+
+export function selectDSType(
+  dataSourceType: string,
+): DataSourceTypes | undefined {
+  const typeMapping: { [key: string]: DataSourceTypes } = {
+    API: DataSourceTypes.API,
+    QSQL: DataSourceTypes.QSQL,
+    SQL: DataSourceTypes.SQL,
+  };
+  return typeMapping[dataSourceType] || undefined;
+}
+
+export function addQueryHistory(
+  query: string | DataSourceFiles,
+  connectionName: string,
+  connectionType: ServerType,
+  success: boolean,
+  isPython?: boolean,
+  isDatasource?: boolean,
+  datasourceType?: DataSourceTypes,
+  duration?: string,
+) {
+  const newQueryHistory: QueryHistory = {
+    query: query,
+    time: new Date().toLocaleString(),
+    success,
+    connectionName,
+    connectionType,
+    language: isPython ? "python" : "q",
+    isDatasource,
+    datasourceType,
+    duration,
+  };
+
+  ext.kdbQueryHistoryList.unshift(newQueryHistory);
+
+  ext.queryHistoryProvider.refresh();
 }
