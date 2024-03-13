@@ -7,6 +7,7 @@ All notable changes to the kdb extension will be documented in this file.
 ### Enhancements
 
 - Changed the workflow of adding new connections to improve the experience of new users
+- Some change
 
 ### Fixes
 
