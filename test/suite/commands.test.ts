@@ -47,6 +47,7 @@ import { ServerDetails, ServerType } from "../../src/models/server";
 import { NewConnectionPannel } from "../../src/panels/newConnection";
 import { MAX_STR_LEN } from "../../src/validators/kdbValidator";
 import { LocalConnection } from "../../src/classes/localConnection";
+import { ConnectionManagementService } from "../../src/services/connectionManagerService";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const dsCmd = require("../../src/commands/dataSourceCommand");
@@ -1577,12 +1578,12 @@ describe("serverCommand", () => {
       executeQueryStub,
       writeResultsViewStub,
       writeResultsConsoleStub: sinon.SinonStub;
+    const connMangService = new ConnectionManagementService();
     beforeEach(() => {
       ext.connection = new LocalConnection("localhost:5001", "server1");
-      ext.connection.connected = true;
       ext.connectionNode = kdbNode;
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
-      executeQueryStub = sinon.stub(ext.connection, "executeQuery");
+      executeQueryStub = sinon.stub(connMangService, "executeQuery");
       writeResultsViewStub = sinon.stub(
         serverCommand,
         "writeQueryResultsToView",

@@ -322,7 +322,7 @@ describe("kdbTreeProvider", () => {
 
     assert.strictEqual(
       kdbNode1.label,
-      "kdbnode1 [kdbserveralias] (connected)",
+      "kdbnode1 [kdbserveralias]",
       "KdbNode node creation failed",
     );
   });
