@@ -267,7 +267,7 @@ describe("Models", () => {
   });
 
   it("Should return sorted views", async () => {
-    ext.connection = new LocalConnection("localhost:5001");
+    ext.connection = new LocalConnection("localhost:5001", "server1");
     sinon.stub(ext.connection, "executeQuery").resolves(["vw1", "vw2"]);
     const result = await loadViews();
     assert.strictEqual(result[0], "vw1", "Should return the first view");
@@ -275,7 +275,7 @@ describe("Models", () => {
   });
 
   it("Should return sorted views (reverse order)", async () => {
-    ext.connection = new LocalConnection("localhost:5001");
+    ext.connection = new LocalConnection("localhost:5001", "server1");
     sinon.stub(ext.connection, "executeQuery").resolves(["vw1", "vw2"]);
     const result = await loadViews();
     assert.strictEqual(result[0], "vw1", "Should return the first view");
@@ -283,7 +283,7 @@ describe("Models", () => {
   });
 
   it("Should create a new connection object", () => {
-    const conn = new LocalConnection("server:5001");
+    const conn = new LocalConnection("server:5001", "server1");
     assert.strictEqual(
       conn.connected,
       false,
@@ -294,6 +294,7 @@ describe("Models", () => {
   it("Should create a new connection object (full options)", () => {
     const conn = new LocalConnection(
       "server:5001",
+      "server1",
       ["username", "password"],
       true,
     );
@@ -305,7 +306,7 @@ describe("Models", () => {
   });
 
   it("Should create a new connection object", () => {
-    const conn = new LocalConnection("server:5001");
+    const conn = new LocalConnection("server:5001", "server1");
     conn.disconnect();
     assert.strictEqual(
       conn.connected,

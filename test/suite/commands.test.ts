@@ -1578,7 +1578,7 @@ describe("serverCommand", () => {
       writeResultsViewStub,
       writeResultsConsoleStub: sinon.SinonStub;
     beforeEach(() => {
-      ext.connection = new LocalConnection("localhost:5001");
+      ext.connection = new LocalConnection("localhost:5001", "server1");
       ext.connection.connected = true;
       ext.connectionNode = kdbNode;
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
