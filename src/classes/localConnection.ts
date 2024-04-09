@@ -18,7 +18,6 @@ import { delay } from "../utils/core";
 import { convertStringToArray, handleQueryResults } from "../utils/execution";
 import { queryWrapper } from "../utils/queryUtils";
 import { QueryResult, QueryResultType } from "../models/queryResult";
-import { Connection } from "node-q";
 
 export class LocalConnection {
   public connected: boolean;
@@ -66,11 +65,11 @@ export class LocalConnection {
     this.connected = false;
   }
 
-  public getConnection(): Connection | undefined {
+  public getConnection(): nodeq.Connection | undefined {
     return this.connection;
   }
 
-  public connect(callback: nodeq.AsyncValueCallback<Connection>): void {
+  public connect(callback: nodeq.AsyncValueCallback<LocalConnection>): void {
     nodeq.connect(this.options, (err, conn) => {
       if (err || !conn) {
         ext.serverProvider.reload();
@@ -316,13 +315,12 @@ export class LocalConnection {
   private onConnect(
     err: Error | undefined,
     conn: nodeq.Connection,
-    callback: nodeq.AsyncValueCallback<Connection>,
+    callback: nodeq.AsyncValueCallback<LocalConnection>,
   ): void {
     this.connected = true;
     this.connection = conn;
 
     this.update();
-
     callback(err, this);
   }
 }
