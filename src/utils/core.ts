@@ -255,6 +255,17 @@ export function getInsightsAlias(insightsList: InsightDetails[]): void {
   });
 }
 
+export function getServerIconState(label: string): string {
+  if (ext.activeConnection?.connLabel === label) {
+    return "-active";
+  } else if (
+    ext.connectedConnectionList?.some((conn) => conn.connLabel === label)
+  ) {
+    return "-connected";
+  }
+  return "";
+}
+
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

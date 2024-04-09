@@ -50,7 +50,6 @@ import {
   stopLocalProcessByServerName,
 } from "./commands/installTools";
 import {
-  addAuthConnection,
   addInsightsConnection,
   addKdbConnection,
   addNewConnection,
@@ -182,9 +181,12 @@ export async function activate(context: ExtensionContext) {
         await removeInsightsConnection(viewItem);
       },
     ),
-    commands.registerCommand("kdb.disconnect", async () => {
-      await disconnect();
-    }),
+    commands.registerCommand(
+      "kdb.disconnect",
+      async (viewItem: InsightsNode | KdbNode) => {
+        await disconnect(viewItem.label);
+      },
+    ),
     commands.registerCommand("kdb.addConnection", async () => {
       await addNewConnection();
     }),

@@ -31,7 +31,12 @@ import {
   loadVariables,
   loadViews,
 } from "../models/serverObject";
-import { getInsightsAlias, getServerAlias, getServerName } from "../utils/core";
+import {
+  getInsightsAlias,
+  getServerAlias,
+  getServerIconState,
+  getServerName,
+} from "../utils/core";
 
 export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: EventEmitter<
@@ -100,8 +105,10 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   }
 
   private getMergedElements(_element?: TreeItem): TreeItem[] {
+    ext.connectionsList.length = 0;
     const servers = this.getChildElements(_element);
     const insights = this.getInsightsChildElements();
+    ext.connectionsList.push(...servers, ...insights);
     ext.kdbConnectionAliasList.length = 0;
     getServerAlias(servers.map((x) => x.details));
     getInsightsAlias(insights.map((x) => x.details));
@@ -320,9 +327,9 @@ export class KdbNode extends TreeItem {
       label = label + ` [${details.serverAlias}]`;
     }
 
-    if (ext.connectionNode != undefined && label === ext.connectionNode.label) {
-      label = label + " (connected)";
-    }
+    // if (ext.connectionNode != undefined && label === ext.connectionNode.label) {
+    //   label = label + " (connected)";
+    // }
 
     // set context for root nodes
     if (ext.kdbrootNodes.indexOf(label) === -1) {
@@ -392,10 +399,7 @@ export class KdbNode extends TreeItem {
       "..",
       "resources",
       "light",
-      ext.connectionNode != undefined &&
-        this.label === ext.connectionNode.label + " (connected)"
-        ? "p-data.svg"
-        : "p-data.svg",
+      "p-data" + getServerIconState(this.label) + ".svg",
     ),
     dark: path.join(
       __filename,
@@ -403,10 +407,7 @@ export class KdbNode extends TreeItem {
       "..",
       "resources",
       "dark",
-      ext.connectionNode != undefined &&
-        this.label === ext.connectionNode.label + " (connected)"
-        ? "p-data.svg"
-        : "p-data.svg",
+      "p-data" + getServerIconState(this.label) + ".svg",
     ),
   };
 
@@ -460,10 +461,7 @@ export class InsightsNode extends TreeItem {
       "..",
       "resources",
       "light",
-      ext.connectionNode != undefined &&
-        this.label === ext.connectionNode.label + " (connected)"
-        ? "p-insights.svg"
-        : "p-insights.svg",
+      "p-insights" + getServerIconState(this.label) + ".svg",
     ),
     dark: path.join(
       __filename,
@@ -471,10 +469,7 @@ export class InsightsNode extends TreeItem {
       "..",
       "resources",
       "dark",
-      ext.connectionNode != undefined &&
-        this.label === ext.connectionNode.label + " (connected)"
-        ? "p-insights.svg"
-        : "p-insights.svg",
+      "p-insights" + getServerIconState(this.label) + ".svg",
     ),
   };
 

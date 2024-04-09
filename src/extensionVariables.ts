@@ -13,7 +13,6 @@
 
 import { ExtensionContext, extensions, OutputChannel } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
-import { Connection } from "./models/connection";
 import { LocalProcess } from "./models/localProcess";
 import { MetaObjectPayload } from "./models/meta";
 import { QueryHistory } from "./models/queryHistory";
@@ -27,6 +26,7 @@ import {
 import { QueryHistoryProvider } from "./services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import AuthSettings from "./utils/secretStorage";
+import { LocalConnection } from "./classes/localConnection";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
@@ -44,7 +44,10 @@ export namespace ext {
   export let isBundleQCreated: boolean;
   export const rowLimit = 150000000;
 
-  export let connection: Connection | undefined;
+  export let connection: LocalConnection | undefined;
+  export let activeConnection: LocalConnection | undefined;
+  export const connectedConnectionList: Array<LocalConnection> = [];
+  export const connectionsList: Array<KdbNode | InsightsNode> = [];
   export let hideDetailedConsoleQueryOutput: boolean;
   export let connectionNode: KdbNode | InsightsNode | undefined;
   export const kdbDataSourceFolder = ".kdb-datasources";

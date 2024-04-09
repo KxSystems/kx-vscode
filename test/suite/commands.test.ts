@@ -42,11 +42,11 @@ import * as coreUtils from "../../src/utils/core";
 import * as dataSourceUtils from "../../src/utils/dataSource";
 import { ExecutionConsole } from "../../src/utils/executionConsole";
 import * as queryUtils from "../../src/utils/queryUtils";
-import { Connection } from "../../src/models/connection";
 import { QueryHistory } from "../../src/models/queryHistory";
-import { Server, ServerDetails, ServerType } from "../../src/models/server";
+import { ServerDetails, ServerType } from "../../src/models/server";
 import { NewConnectionPannel } from "../../src/panels/newConnection";
 import { MAX_STR_LEN } from "../../src/validators/kdbValidator";
+import { LocalConnection } from "../../src/classes/localConnection";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const dsCmd = require("../../src/commands/dataSourceCommand");
@@ -1578,7 +1578,7 @@ describe("serverCommand", () => {
       writeResultsViewStub,
       writeResultsConsoleStub: sinon.SinonStub;
     beforeEach(() => {
-      ext.connection = new Connection("localhost:5001");
+      ext.connection = new LocalConnection("localhost:5001");
       ext.connection.connected = true;
       ext.connectionNode = kdbNode;
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
