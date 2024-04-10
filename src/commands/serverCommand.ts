@@ -687,6 +687,13 @@ export async function connect(viewItem: KdbNode): Promise<void> {
   ext.serverProvider.reload();
 }
 
+export function activeConnection(viewItem: KdbNode | InsightsNode): void {
+  const connMngService = new ConnectionManagementService();
+  connMngService.setActiveConnection(viewItem);
+  refreshDataSourcesPanel();
+  ext.serverProvider.reload();
+}
+
 export async function disconnect(connLabel?: string): Promise<void> {
   const insightsNode = ext.kdbinsightsNodes.find((n) =>
     ext.connectionNode instanceof InsightsNode

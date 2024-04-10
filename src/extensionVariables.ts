@@ -47,6 +47,7 @@ export namespace ext {
   export let connection: LocalConnection | undefined;
   export let activeConnection: LocalConnection | undefined;
   export const connectedConnectionList: Array<LocalConnection> = [];
+  export const connectedContextStrings: Array<string> = [];
   export const connectionsList: Array<KdbNode | InsightsNode> = [];
   export let hideDetailedConsoleQueryOutput: boolean;
   export let connectionNode: KdbNode | InsightsNode | undefined;

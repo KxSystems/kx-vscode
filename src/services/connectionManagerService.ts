@@ -46,6 +46,13 @@ export class ConnectionManagementService {
     return connection.details.serverName + ":" + connection.details.serverPort;
   }
 
+  public removeConnectionFromContextString(connLabel: string): void {
+    const index = ext.connectedContextStrings.indexOf(connLabel);
+    if (index > -1) {
+      ext.connectedContextStrings.splice(index, 1);
+    }
+  }
+
   public async connect(connLabel: string): Promise<void> {
     // check if connection exists
     const connection = this.retrieveConnection(connLabel);
@@ -64,7 +71,7 @@ export class ConnectionManagementService {
         authCredentials ? authCredentials.split(":") : undefined,
         connection.details.tls,
       );
-      await localConnection.connect((err, conn) => {
+      localConnection.connect((err, conn) => {
         if (err) {
           window.showErrorMessage(err.message);
           return;
@@ -75,31 +82,35 @@ export class ConnectionManagementService {
             `Connection established successfully to: ${connLabel}`,
           );
 
-          commands.executeCommand("setContext", "kdb.connected", [
-            `${connLabel}` + " (connected)",
-          ]);
+          ext.connectedContextStrings.push(connLabel);
+
+          commands.executeCommand(
+            "setContext",
+            "kdb.connected",
+            ext.connectedContextStrings,
+          );
 
           ext.connectionNode = connection;
           Telemetry.sendEvent("Connection.Connected.QProcess");
           ext.serverProvider.reload();
 
-          this.setActiveConnection(connLabel);
+          this.setActiveConnection(connection);
+          ext.connectedConnectionList.push(localConnection);
+          ext.activeConnection = localConnection;
         }
       });
-      ext.connectedConnectionList.push(localConnection);
-      ext.activeConnection = localConnection;
     } else {
       //   work with Insights nodes
     }
   }
 
-  public setActiveConnection(connLabel: string): void {
-    const connection = this.retrieveConnectedConnection(connLabel);
+  public setActiveConnection(node: KdbNode | InsightsNode): void {
+    const connection = this.retrieveConnectedConnection(node.label);
     if (!connection) {
       return;
     }
     commands.executeCommand("setContext", "kdb.connected.active", [
-      `${connLabel}` + " (active)",
+      `${node.label}`,
     ]);
     Telemetry.sendEvent("Connection.Connected.Active");
     ext.activeConnection = connection;
@@ -108,11 +119,12 @@ export class ConnectionManagementService {
 
   public disconnect(connLabel: string): void {
     const connection = this.retrieveConnectedConnection(connLabel);
+    const connectionNode = this.retrieveConnection(connLabel);
     if (!connection) {
       return;
     }
     const isLocal = this.isLocalConnection();
-    if (isLocal) {
+    if (isLocal && connectionNode) {
       connection.getConnection()?.close(() => {
         ext.connectedConnectionList.splice(
           ext.connectedConnectionList.indexOf(connection),
@@ -120,7 +132,12 @@ export class ConnectionManagementService {
         );
         ext.activeConnection = undefined;
         ext.connectionNode = undefined;
-        commands.executeCommand("setContext", "kdb.connected", false);
+        this.removeConnectionFromContext(connectionNode);
+        commands.executeCommand(
+          "setContext",
+          "kdb.connected",
+          ext.connectedContextStrings,
+        );
         commands.executeCommand("setContext", "kdb.connected.active", false);
         Telemetry.sendEvent("Connection.Disconnected");
         ext.outputChannel.appendLine(
