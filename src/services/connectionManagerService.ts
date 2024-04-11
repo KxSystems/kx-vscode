@@ -96,7 +96,6 @@ export class ConnectionManagementService {
 
           this.setActiveConnection(connection);
           ext.connectedConnectionList.push(localConnection);
-          ext.activeConnection = localConnection;
         }
       });
     } else {

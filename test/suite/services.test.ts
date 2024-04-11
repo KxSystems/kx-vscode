@@ -38,6 +38,8 @@ import {
   QueryHistoryTreeItem,
 } from "../../src/services/queryHistoryProvider";
 import { createDefaultDataSourceFile } from "../../src/models/dataSource";
+import { ConnectionManagementService } from "../../src/services/connectionManagerService";
+import { LocalConnection } from "../../src/classes/localConnection";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -703,6 +705,238 @@ describe("queryHistoryProvider", () => {
         failIcon,
         "QueryHistoryTreeItem defineQueryIcon failed",
       );
+    });
+  });
+});
+
+describe("connectionManagerService", () => {
+  const connectionManagerService = new ConnectionManagementService();
+  const servers = {
+    testServer: {
+      serverAlias: "testLabel",
+      serverName: "127.0.0.1",
+      serverPort: "5001",
+      tls: false,
+      auth: false,
+      managed: false,
+    },
+  };
+  const insights = {
+    testInsight: {
+      alias: "testInsightsAlias",
+      server: "testInsightsName",
+      auth: false,
+    },
+  };
+  const kdbNode = new KdbNode(
+    ["child1"],
+    "testLabel",
+    servers["testServer"],
+    TreeItemCollapsibleState.None,
+  );
+  const insightNode = new InsightsNode(
+    ["child1"],
+    "testLabel",
+    insights["testInsight"],
+    TreeItemCollapsibleState.None,
+  );
+  describe("retrieveConnection", () => {
+    afterEach(() => {
+      ext.connectionsList.length = 0;
+    });
+    it("Should return undefined when connection is not found", () => {
+      const result = connectionManagerService.retrieveConnection("testLabel");
+      assert.strictEqual(result, undefined);
+    });
+
+    it("Should return the connection when found", () => {
+      ext.connectionsList.push(kdbNode);
+      const result = connectionManagerService.retrieveConnection(kdbNode.label);
+      assert.strictEqual(result, kdbNode);
+    });
+  });
+
+  describe("retrieveConnectedConnection", () => {
+    const localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
+    afterEach(() => {
+      ext.connectedConnectionList.length = 0;
+    });
+    it("Should return undefined when connection is not found", () => {
+      const result =
+        connectionManagerService.retrieveConnectedConnection("testLabel");
+      assert.strictEqual(result, undefined);
+    });
+
+    it("Should return the connection when found", () => {
+      ext.connectedConnectionList.push(localConn);
+      const result =
+        connectionManagerService.retrieveConnectedConnection("testLabel");
+      assert.strictEqual(result, localConn);
+    });
+  });
+
+  describe("isKdbConnection", () => {
+    it("Should return true for KDB connection", () => {
+      const result = connectionManagerService.isKdbConnection(kdbNode);
+      assert.strictEqual(result, true);
+    });
+
+    it("Should return false for Insights connection", () => {
+      const result = connectionManagerService.isKdbConnection(insightNode);
+      assert.strictEqual(result, false);
+    });
+  });
+
+  describe("isLocalConnection", () => {
+    it("Should return true for Local connection", () => {
+      ext.activeConnection = new LocalConnection("127.0.0.1:5001", "testLabel");
+      const result = connectionManagerService.isLocalConnection();
+      assert.strictEqual(result, true);
+    });
+
+    it("Should return false for undefined connection", () => {
+      ext.activeConnection = undefined;
+      const result = connectionManagerService.isLocalConnection();
+      assert.strictEqual(result, false);
+    });
+  });
+
+  describe("retrieveLocalConnectionString", () => {
+    it("Should return the connection string", () => {
+      const result =
+        connectionManagerService.retrieveLocalConnectionString(kdbNode);
+      assert.strictEqual(result, "127.0.0.1:5001");
+    });
+  });
+
+  describe("removeConnectionFromContextString", () => {
+    it("Should remove the connection from context string", () => {
+      ext.connectedContextStrings.push("testLabel");
+      connectionManagerService.removeConnectionFromContextString("testLabel");
+      assert.strictEqual(ext.connectedContextStrings.length, 0);
+      ext.connectedContextStrings.length = 0;
+    });
+  });
+
+  describe("connect", () => {
+    afterEach(() => {
+      ext.connectedContextStrings.length = 0;
+      ext.connectionNode = undefined;
+      ext.connectedConnectionList.length = 0;
+      sinon.restore();
+    });
+    it("Should not connect if connection does not exist", async () => {
+      const result = await connectionManagerService.connect("testLabel");
+      assert.strictEqual(result, undefined);
+    });
+  });
+
+  describe("setActiveConnection", () => {
+    const localConn = new LocalConnection(
+      kdbNode.details.serverName + ":" + kdbNode.details.serverPort,
+      kdbNode.label,
+    );
+
+    afterEach(() => {
+      ext.connection = undefined;
+      ext.connectionNode = undefined;
+      sinon.restore();
+    });
+    it("Should not set active connection if connection does not exist", () => {
+      connectionManagerService.setActiveConnection(kdbNode);
+      assert.strictEqual(ext.activeConnection, undefined);
+    });
+
+    it("Should set active connection", () => {
+      sinon
+        .stub(connectionManagerService, "retrieveConnectedConnection")
+        .returns(localConn);
+      connectionManagerService.setActiveConnection(kdbNode);
+      assert.strictEqual(ext.activeConnection, localConn);
+    });
+  });
+
+  describe("disconnect", () => {
+    const localConn = new LocalConnection(
+      kdbNode.details.serverName + ":" + kdbNode.details.serverPort,
+      kdbNode.label,
+    );
+    let retrieveConnectionStub, retrieveConnectedConnectionStub;
+    beforeEach(() => {
+      retrieveConnectionStub = sinon.stub(
+        connectionManagerService,
+        "retrieveConnection",
+      );
+      retrieveConnectedConnectionStub = sinon.stub(
+        connectionManagerService,
+        "retrieveConnectedConnection",
+      );
+    });
+    afterEach(() => {
+      ext.connectedContextStrings.length = 0;
+      ext.connectionNode = undefined;
+      ext.connectedConnectionList.length = 0;
+      sinon.restore();
+    });
+    it("Should not disconnect if connection does not exist", async () => {
+      retrieveConnectedConnectionStub.returns(undefined);
+      retrieveConnectionStub.returns(undefined);
+      const result = await connectionManagerService.disconnect("testLabel");
+      assert.strictEqual(result, undefined);
+    });
+  });
+
+  describe("executeQuery", () => {
+    const localConn = new LocalConnection(
+      kdbNode.details.serverName + ":" + kdbNode.details.serverPort,
+      kdbNode.label,
+    );
+    const command = "testCommand";
+    const context = "testContext";
+    const stringfy = true;
+    let executeQueryStub, isLocalConnectionStub;
+    beforeEach(() => {
+      executeQueryStub = sinon.stub(localConn, "executeQuery");
+      isLocalConnectionStub = sinon.stub(
+        connectionManagerService,
+        "isLocalConnection",
+      );
+    });
+    afterEach(() => {
+      ext.activeConnection = undefined;
+      sinon.restore();
+    });
+    it("Should not execute query if connection does not exist", async () => {
+      ext.activeConnection = undefined;
+      const result = await connectionManagerService.executeQuery(
+        command,
+        context,
+        stringfy,
+      );
+      assert.strictEqual(result, undefined);
+    });
+
+    it("Should execute query from kdbNode", async () => {
+      ext.activeConnection = localConn;
+      executeQueryStub.returns("test results");
+      isLocalConnectionStub.returns(true);
+      const result = await connectionManagerService.executeQuery(
+        command,
+        context,
+        stringfy,
+      );
+      assert.strictEqual(result, "test results");
+    });
+
+    it("Should execute query from InsightsNode", async () => {
+      ext.activeConnection = localConn;
+      isLocalConnectionStub.returns(false);
+      const result = await connectionManagerService.executeQuery(
+        command,
+        context,
+        stringfy,
+      );
+      assert.strictEqual(result, undefined);
     });
   });
 });
