@@ -132,7 +132,7 @@ export class ConnectionManagementService {
         );
         ext.activeConnection = undefined;
         ext.connectionNode = undefined;
-        this.removeConnectionFromContext(connectionNode);
+        this.removeConnectionFromContextString(connection.connLabel);
         commands.executeCommand(
           "setContext",
           "kdb.connected",
