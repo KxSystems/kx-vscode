@@ -267,7 +267,7 @@ export async function addKdbConnection(
 }
 
 export async function removeConnection(viewItem: KdbNode): Promise<void> {
-  if (viewItem.label.indexOf("connected") !== -1) {
+  if (ext.connectedContextStrings.indexOf(viewItem.label) !== -1) {
     await disconnect(viewItem.label);
   }
 
