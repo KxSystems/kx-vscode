@@ -709,7 +709,7 @@ export async function disconnect(connLabel?: string): Promise<void> {
     ext.serverProvider.reload();
   } else {
     const connMngService = new ConnectionManagementService();
-    await connMngService.disconnect(connLabel ? connLabel : "");
+    connMngService.disconnect(connLabel ? connLabel : "");
   }
 }
 

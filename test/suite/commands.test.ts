@@ -20,6 +20,8 @@ import { QuickPickItem, TreeItemCollapsibleState, window } from "vscode";
 import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
 import * as installTools from "../../src/commands/installTools";
 import * as serverCommand from "../../src/commands/serverCommand";
+import * as dsUtils from "../../src/utils/dataSource";
+import * as dsPannel from "../../src/panels/datasource";
 import * as walkthroughCommand from "../../src/commands/walkthroughCommand";
 import { ext } from "../../src/extensionVariables";
 import {
@@ -28,7 +30,7 @@ import {
   createDefaultDataSourceFile,
 } from "../../src/models/dataSource";
 import { ExecutionTypes } from "../../src/models/execution";
-import { InsightDetails, Insights } from "../../src/models/insights";
+import { InsightDetails } from "../../src/models/insights";
 import { ScratchpadResult } from "../../src/models/scratchpadResult";
 import { KdbDataSourceTreeItem } from "../../src/services/dataSourceTreeProvider";
 import * as codeFlowLogin from "../../src/services/kdbInsights/codeFlowLogin";
@@ -1677,6 +1679,61 @@ describe("serverCommand", () => {
       await serverCommand.rerunQuery(rerunQueryElement);
 
       sinon.assert.notCalled(executeQueryStub);
+    });
+  });
+
+  describe("activeConnection", () => {
+    let setActiveConnectionStub,
+      refreshDataSourcesPanelStub,
+      reloadStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      setActiveConnectionStub = sinon.stub(
+        ConnectionManagementService.prototype,
+        "setActiveConnection",
+      );
+      refreshDataSourcesPanelStub = sinon.stub(
+        dsUtils,
+        "refreshDataSourcesPanel",
+      );
+      reloadStub = sinon.stub(ext.serverProvider, "reload");
+    });
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should set active connection and refresh panel", () => {
+      serverCommand.activeConnection(kdbNode);
+
+      assert.ok(setActiveConnectionStub.calledWith(kdbNode));
+      assert.ok(refreshDataSourcesPanelStub.calledOnce);
+      assert.ok(reloadStub.calledOnce);
+    });
+  });
+
+  describe("disconnect", () => {
+    let findStub: sinon.SinonStub;
+    let disconnectStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      findStub = sinon.stub(ext.kdbinsightsNodes, "find");
+      disconnectStub = sinon.stub(
+        ConnectionManagementService.prototype,
+        "disconnect",
+      );
+    });
+
+    afterEach(() => {
+      findStub.restore();
+      disconnectStub.restore();
+    });
+
+    it("should disconnect when ext.connectionNode is not an instance of InsightsNode", async () => {
+      findStub.returns(undefined);
+
+      await serverCommand.disconnect("testLabel");
+
+      assert.ok(disconnectStub.calledWith("testLabel"));
     });
   });
 });

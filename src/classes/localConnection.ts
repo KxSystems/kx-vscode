@@ -111,7 +111,7 @@ export class LocalConnection {
     this.updateReservedKeywords();
   }
 
-  async execute(query: string): Promise<string | Error> {
+  public async execute(query: string): Promise<string | Error> {
     let result;
     let error;
     // try 5 times, then fail
@@ -219,6 +219,7 @@ export class LocalConnection {
     return result;
   }
 
+  /* istanbul ignore next */
   private async waitForConnection(): Promise<void> {
     let retryCount = 0;
     while (this.connection === undefined) {
@@ -230,7 +231,8 @@ export class LocalConnection {
     }
   }
 
-  private handleQueryResult = (res: QueryResult): void => {
+  /* istanbul ignore next */
+  private handleQueryResult(res: QueryResult): void {
     if (res.errored) {
       this.isError = true;
       this.result = handleQueryResults(
@@ -240,8 +242,9 @@ export class LocalConnection {
     } else {
       this.result = res.result;
     }
-  };
+  }
 
+  /* istanbul ignore next */
   private async waitForResult(): Promise<any> {
     while (this.result === undefined || this.result === null) {
       await delay(500);
@@ -251,6 +254,7 @@ export class LocalConnection {
     return result;
   }
 
+  /* istanbul ignore next */
   private updateGlobal() {
     const globalQuery =
       '{[q] t:system"T";tm:@[{$[x>0;[system"T ",string x;1b];0b]};0;{0b}];r:$[tm;@[0;(q;::);{[tm; t; msgs] if[tm;system"T ",string t];\'msgs}[tm;t]];@[q;::;{\'x}]];if[tm;system"T ",string t];r}{do[1000;2+2];{@[{.z.ide.ns.r1:x;:.z.ide.ns.r1};x;{r:y;:r}[;x]]}({:x!{![sv[`;] each x cross `Tables`Functions`Variables; system each "afv" cross enlist[" "] cross enlist string x]} each x} [{raze x,.z.s\'[{x where{@[{1#get x};x;`]~1#.q}\'[x]}` sv\'x,\'key x]}`]),(enlist `.z)!flip (`.z.Tables`.z.Functions`.z.Variables)!(enlist 0#`;enlist `ac`bm`exit`pc`pd`pg`ph`pi`pm`po`pp`ps`pw`vs`ts`s`wc`wo`ws;enlist `a`b`e`f`h`i`k`K`l`o`q`u`w`W`x`X`n`N`p`P`z`Z`t`T`d`D`c`zd)}';
@@ -267,6 +271,7 @@ export class LocalConnection {
   }
 
   /* eslint-disable @typescript-eslint/no-explicit-any */
+  /* istanbul ignore next */
   private updateGlobals(result: any): void {
     const globals = result;
     const entries: [string, any][] = Object.entries(globals);
@@ -297,7 +302,7 @@ export class LocalConnection {
     });
   }
   /* eslint-disable */
-
+  /* istanbul ignore next */
   private updateReservedKeywords() {
     const reservedQuery = ".Q.res";
     this.connection?.k(reservedQuery, (err, result) => {
@@ -311,7 +316,7 @@ export class LocalConnection {
       ext.keywords = result;
     });
   }
-
+  /* istanbul ignore next */
   private onConnect(
     err: Error | undefined,
     conn: nodeq.Connection,

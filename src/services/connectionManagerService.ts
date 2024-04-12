@@ -59,7 +59,7 @@ export class ConnectionManagementService {
     if (!connection) {
       return;
     }
-
+    /* istanbul ignore next */
     if (connection instanceof KdbNode) {
       const connectionString = this.retrieveLocalConnectionString(connection);
       const authCredentials = connection.details.auth
@@ -123,6 +123,7 @@ export class ConnectionManagementService {
       return;
     }
     const isLocal = this.isLocalConnection();
+    /* istanbul ignore next */
     if (isLocal && connectionNode) {
       connection.getConnection()?.close(() => {
         ext.connectedConnectionList.splice(

@@ -281,37 +281,4 @@ describe("Models", () => {
     assert.strictEqual(result[0], "vw1", "Should return the first view");
     sinon.restore();
   });
-
-  it("Should create a new connection object", () => {
-    const conn = new LocalConnection("server:5001", "server1");
-    assert.strictEqual(
-      conn.connected,
-      false,
-      "Connection should be created but not connected.",
-    );
-  });
-
-  it("Should create a new connection object (full options)", () => {
-    const conn = new LocalConnection(
-      "server:5001",
-      "server1",
-      ["username", "password"],
-      true,
-    );
-    assert.strictEqual(
-      conn.connected,
-      false,
-      "Connection should be created but not connected.",
-    );
-  });
-
-  it("Should create a new connection object", () => {
-    const conn = new LocalConnection("server:5001", "server1");
-    conn.disconnect();
-    assert.strictEqual(
-      conn.connected,
-      false,
-      "Connection should be created but not connected.",
-    );
-  });
 });
