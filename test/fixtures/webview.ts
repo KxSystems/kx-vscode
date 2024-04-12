@@ -42,3 +42,4 @@ export function css(strings: any, ...values: unknown[]) {
 }
 export function customElement() {}
 export function state() {}
+export function repeat() {}
