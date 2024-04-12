@@ -21,7 +21,6 @@ import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
 import * as installTools from "../../src/commands/installTools";
 import * as serverCommand from "../../src/commands/serverCommand";
 import * as dsUtils from "../../src/utils/dataSource";
-import * as dsPannel from "../../src/panels/datasource";
 import * as walkthroughCommand from "../../src/commands/walkthroughCommand";
 import { ext } from "../../src/extensionVariables";
 import {
@@ -1734,6 +1733,74 @@ describe("serverCommand", () => {
       await serverCommand.disconnect("testLabel");
 
       assert.ok(disconnectStub.calledWith("testLabel"));
+    });
+
+    it("should disconnect from Insights", async () => {
+      findStub.returns(insightsNode);
+
+      await serverCommand.disconnect();
+
+      assert.ok(disconnectStub.notCalled);
+    });
+  });
+
+  describe("removeConnection", () => {
+    let indexOfStub: sinon.SinonStub;
+    let disconnectStub: sinon.SinonStub;
+    let getServersStub: sinon.SinonStub;
+    let getHashStub: sinon.SinonStub;
+    let removeLocalConnectionContextStub: sinon.SinonStub;
+    let updateServersStub: sinon.SinonStub;
+    let refreshStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      indexOfStub = sinon.stub(ext.connectedContextStrings, "indexOf");
+      disconnectStub = sinon.stub(serverCommand, "disconnect");
+      getServersStub = sinon.stub(coreUtils, "getServers");
+      getHashStub = sinon.stub(coreUtils, "getHash");
+      removeLocalConnectionContextStub = sinon.stub(
+        coreUtils,
+        "removeLocalConnectionContext",
+      );
+      updateServersStub = sinon.stub(coreUtils, "updateServers");
+      refreshStub = sinon.stub(ext.serverProvider, "refresh");
+    });
+
+    afterEach(() => {
+      indexOfStub.restore();
+      disconnectStub.restore();
+      getServersStub.restore();
+      getHashStub.restore();
+      removeLocalConnectionContextStub.restore();
+      updateServersStub.restore();
+      refreshStub.restore();
+      ext.connectedContextStrings.length = 0;
+    });
+
+    it("should remove connection and refresh server provider", async () => {
+      indexOfStub.returns(1);
+      getServersStub.returns({ testKey: {} });
+      getHashStub.returns("testKey");
+
+      await serverCommand.removeConnection(kdbNode);
+
+      assert.ok(
+        removeLocalConnectionContextStub.calledWith(
+          coreUtils.getServerName(kdbNode.details),
+        ),
+      );
+      assert.ok(updateServersStub.calledOnce);
+      assert.ok(refreshStub.calledOnce);
+    });
+
+    it("should remove connection, but disconnect it before", async () => {
+      ext.connectedContextStrings.push(kdbNode.label);
+      indexOfStub.returns(1);
+      getServersStub.returns({ testKey: {} });
+      getHashStub.returns("testKey");
+
+      await serverCommand.removeConnection(kdbNode);
+      assert.ok(updateServersStub.calledOnce);
     });
   });
 });
