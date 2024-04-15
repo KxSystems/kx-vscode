@@ -48,7 +48,7 @@ import {
 } from "../../src/ipc/cClasses";
 import { DataSourceTypes } from "../../src/models/dataSource";
 import { InsightDetails } from "../../src/models/insights";
-import { Parse } from "../../src/ipc/parse.qlist";
+import { LocalConnection } from "../../src/classes/localConnection";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;
@@ -173,6 +173,33 @@ describe("Utils", () => {
 
         sinon.assert.calledOnce(getConfigurationStub);
         assert.strictEqual(ext.hideDetailedConsoleQueryOutput, false);
+      });
+    });
+
+    describe("getServerIconState", () => {
+      const localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
+      afterEach(() => {
+        ext.activeConnection = undefined;
+        ext.connectedConnectionList.length = 0;
+      });
+
+      it("should return connected state", () => {
+        ext.activeConnection = undefined;
+        ext.connectedConnectionList.push(localConn);
+        const result = coreUtils.getServerIconState(localConn.connLabel);
+        assert.strictEqual(result, "-connected");
+      });
+
+      it("should return active state", () => {
+        ext.activeConnection = localConn;
+        const result = coreUtils.getServerIconState(localConn.connLabel);
+        assert.strictEqual(result, "-active");
+      });
+
+      it("should return disconnected state", () => {
+        ext.activeConnection = undefined;
+        const result = coreUtils.getServerIconState(localConn.connLabel);
+        assert.strictEqual(result, "");
       });
     });
   });

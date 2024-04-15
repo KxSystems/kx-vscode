@@ -38,6 +38,7 @@
     "onCommand:kdb.newConnection.createNewBundledConnection",
     "onCommand:kdb.removeConnection",
     "onCommand:kdb.connect",
+    "onCommand:kdb.active.connection",
     "onCommand:kdb.disconnect",
     "onCommand:kdb.addAuthentication",
     "onCommand:kdb.enableTLS",
@@ -218,6 +219,10 @@
       {
         "command": "kdb.connect",
         "title": "Connect server"
+      },
+      {
+        "command": "kdb.active.connection",
+        "title": "Active connection"
       },
       {
         "command": "kdb.addAuthentication",
@@ -471,6 +476,10 @@
           "when": "false"
         },
         {
+          "command": "kdb.active.connection",
+          "when": "false"
+        },
+        {
           "command": "kdb.disconnect",
           "when": "false"
         },
@@ -530,6 +539,11 @@
         {
           "command": "kdb.connect",
           "when": "view == kdb-servers && viewItem not in kdb.connected && viewItem in kdb.rootNodes",
+          "group": "connection@1"
+        },
+        {
+          "command": "kdb.active.connection",
+          "when": "view == kdb-servers && viewItem in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection@1"
         },
         {
@@ -736,7 +750,7 @@
     "moment-duration-format": "^2.3.2",
     "moment-timezone": "^0.5.44",
     "node-fetch": "^2.6.6",
-    "node-q": "^2.6.1",
+    "node-q": "^2.7.0",
     "pick-port": "^2.0.1",
     "picomatch": "^3.0.1",
     "semver": "^7.5.3",

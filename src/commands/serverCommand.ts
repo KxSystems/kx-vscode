@@ -19,7 +19,6 @@ import * as url from "url";
 import { Position, ProgressLocation, Range, commands, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { isCompressed, uncompress } from "../ipc/c";
-import { Connection } from "../models/connection";
 import { GetDataObjectPayload } from "../models/data";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
@@ -65,6 +64,7 @@ import { QueryHistory } from "../models/queryHistory";
 import { runDataSource } from "./dataSourceCommand";
 import { NewConnectionPannel } from "../panels/newConnection";
 import { Telemetry } from "../utils/telemetryClient";
+import { ConnectionManagementService } from "../services/connectionManagerService";
 
 export async function addNewConnection(): Promise<void> {
   NewConnectionPannel.render(ext.context.extensionUri);
@@ -267,8 +267,8 @@ export async function addKdbConnection(
 }
 
 export async function removeConnection(viewItem: KdbNode): Promise<void> {
-  if (viewItem.label.indexOf("connected") !== -1) {
-    await disconnect();
+  if (ext.connectedContextStrings.indexOf(viewItem.label) !== -1) {
+    await disconnect(viewItem.label);
   }
 
   const servers: Server | undefined = getServers();
@@ -321,6 +321,7 @@ export async function connectInsights(viewItem: InsightsNode): Promise<void> {
     Telemetry.sendEvent("Connection.Connected.Insights");
   }
 
+  ext.activeConnection = undefined;
   ext.connectionNode = viewItem;
   ext.serverProvider.reload();
   refreshDataSourcesPanel();
@@ -642,6 +643,7 @@ export async function removeInsightsConnection(
 }
 
 export async function connect(viewItem: KdbNode): Promise<void> {
+  const connMngService = new ConnectionManagementService();
   commands.executeCommand("kdb-results.focus");
   await commands.executeCommand("setContext", "kdb.insightsConnected", false);
   ExecutionConsole.start();
@@ -675,76 +677,40 @@ export async function connect(viewItem: KdbNode): Promise<void> {
     }
   }
 
-  // check for auth
-  const authCredentials = viewItem.details.auth
-    ? await ext.secretSettings.getAuthData(viewItem.children[0])
-    : undefined;
-
-  const servers: Server | undefined = getServers();
-  if (servers === undefined) {
-    window.showErrorMessage("Server not found.");
-    return;
-  }
-
-  const key =
-    viewItem.details.serverAlias != ""
-      ? getHash(
-          `${viewItem.details.serverName}${viewItem.details.serverPort}${viewItem.details.serverAlias}`,
-        )
-      : getHash(`${viewItem.details.serverName}${viewItem.details.serverPort}`);
-  const connection = `${servers[key].serverName}:${servers[key].serverPort}`;
-
-  if (authCredentials != undefined) {
-    const creds = authCredentials.split(":");
-    ext.connection = new Connection(
-      connection,
-      creds,
-      viewItem.details.tls ?? false,
-    );
-  } else {
-    ext.connection = new Connection(
-      connection,
-      undefined,
-      viewItem.details.tls ?? false,
-    );
-  }
+  await connMngService.connect(viewItem.label);
 
   if (viewItem.details.tls) {
     process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  ext.connection.connect((err, conn) => {
-    if (err) {
-      window.showErrorMessage(err.message);
-      return;
-    }
-
-    if (conn) {
-      ext.outputChannel.appendLine(
-        `Connection established successfully to: ${viewItem.details.serverName}`,
-      );
-
-      commands.executeCommand("setContext", "kdb.connected", [
-        `${getServerName(viewItem.details)}` + " (connected)",
-      ]);
-      ext.connectionNode = viewItem;
-      Telemetry.sendEvent("Connection.Connected.QProcess");
-      ext.serverProvider.reload();
-    }
-  });
   refreshDataSourcesPanel();
+  ext.serverProvider.reload();
 }
 
-export async function disconnect(): Promise<void> {
-  ext.connection?.disconnect();
-  await commands.executeCommand("setContext", "kdb.connected", false);
-  commands.executeCommand("setContext", "kdb.insightsConnected", false);
-  ext.connectionNode = undefined;
-  const queryConsole = ExecutionConsole.start();
-  queryConsole.dispose();
-  DataSourcesPanel.close();
+export function activeConnection(viewItem: KdbNode | InsightsNode): void {
+  const connMngService = new ConnectionManagementService();
+  connMngService.setActiveConnection(viewItem);
+  refreshDataSourcesPanel();
   ext.serverProvider.reload();
+}
+
+export async function disconnect(connLabel?: string): Promise<void> {
+  const insightsNode = ext.kdbinsightsNodes.find((n) =>
+    ext.connectionNode instanceof InsightsNode
+      ? n === ext.connectionNode?.details.alias + " (connected)"
+      : false,
+  );
+  if (insightsNode) {
+    commands.executeCommand("setContext", "kdb.insightsConnected", false);
+    ext.connectionNode = undefined;
+    const queryConsole = ExecutionConsole.start();
+    queryConsole.dispose();
+    DataSourcesPanel.close();
+    ext.serverProvider.reload();
+  } else {
+    const connMngService = new ConnectionManagementService();
+    connMngService.disconnect(connLabel ? connLabel : "");
+  }
 }
 
 export async function executeQuery(
@@ -752,6 +718,7 @@ export async function executeQuery(
   context?: string,
   isPython?: boolean,
 ): Promise<void> {
+  const connMngService = new ConnectionManagementService();
   const queryConsole = ExecutionConsole.start();
   if (ext.connection === undefined && ext.connectionNode === undefined) {
     window.showInformationMessage(
@@ -791,7 +758,7 @@ export async function executeQuery(
       );
     } else {
       const startTime = Date.now();
-      const queryRes = await ext.connection.executeQuery(query, context, true);
+      const queryRes = await connMngService.executeQuery(query, context, true);
       const endTime = Date.now();
       writeQueryResultsToConsole(
         queryRes,

@@ -14,7 +14,6 @@
 import assert from "assert";
 import sinon from "sinon";
 import { ext } from "../../src/extensionVariables";
-import { Connection } from "../../src/models/connection";
 import {
   ServerObject,
   loadDictionaries,
@@ -24,6 +23,7 @@ import {
   loadVariables,
   loadViews,
 } from "../../src/models/serverObject";
+import { LocalConnection } from "../../src/classes/localConnection";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const so = require("../../src/commands/serverCommand");
@@ -66,7 +66,7 @@ describe("Models", () => {
     assert.strictEqual(
       result[0],
       testObject[0],
-      "Single server object that is a namespace should be returned."
+      "Single server object that is a namespace should be returned.",
     );
     sinon.restore();
   });
@@ -99,7 +99,7 @@ describe("Models", () => {
     assert.strictEqual(
       result[0],
       testObject0[0],
-      "Single server object that is a namespace should be returned."
+      "Single server object that is a namespace should be returned.",
     );
     sinon.restore();
   });
@@ -123,8 +123,8 @@ describe("Models", () => {
       result[0],
       testObject2[0],
       `Single server object that is a namespace should be returned: ${JSON.stringify(
-        result
-      )}`
+        result,
+      )}`,
     );
     sinon.restore();
   });
@@ -135,7 +135,7 @@ describe("Models", () => {
     assert.strictEqual(
       result.length,
       0,
-      "ServerObjects returned should be zero."
+      "ServerObjects returned should be zero.",
     );
     sinon.restore();
   });
@@ -158,7 +158,7 @@ describe("Models", () => {
     assert.strictEqual(
       result[0],
       testObject[0],
-      "Single server object that is a namespace should be returned."
+      "Single server object that is a namespace should be returned.",
     );
     sinon.restore();
   });
@@ -169,7 +169,7 @@ describe("Models", () => {
     assert.strictEqual(
       result.length,
       0,
-      "ServerObjects returned should be zero."
+      "ServerObjects returned should be zero.",
     );
     sinon.restore();
   });
@@ -192,7 +192,7 @@ describe("Models", () => {
     assert.strictEqual(
       result[0],
       testObject[0],
-      "Single server object that is a namespace should be returned."
+      "Single server object that is a namespace should be returned.",
     );
     sinon.restore();
   });
@@ -203,7 +203,7 @@ describe("Models", () => {
     assert.strictEqual(
       result.length,
       0,
-      "ServerObjects returned should be zero."
+      "ServerObjects returned should be zero.",
     );
     sinon.restore();
   });
@@ -226,7 +226,7 @@ describe("Models", () => {
     assert.strictEqual(
       result[0],
       testObject[0],
-      "Single server object that is a namespace should be returned."
+      "Single server object that is a namespace should be returned.",
     );
     sinon.restore();
   });
@@ -237,7 +237,7 @@ describe("Models", () => {
     assert.strictEqual(
       result.length,
       0,
-      "ServerObjects returned should be zero."
+      "ServerObjects returned should be zero.",
     );
     sinon.restore();
   });
@@ -261,13 +261,13 @@ describe("Models", () => {
     assert.strictEqual(
       result[0],
       testObject[0],
-      "Single server object that is a namespace should be returned."
+      "Single server object that is a namespace should be returned.",
     );
     sinon.restore();
   });
 
   it("Should return sorted views", async () => {
-    ext.connection = new Connection("localhost:5001");
+    ext.connection = new LocalConnection("localhost:5001", "server1");
     sinon.stub(ext.connection, "executeQuery").resolves(["vw1", "vw2"]);
     const result = await loadViews();
     assert.strictEqual(result[0], "vw1", "Should return the first view");
@@ -275,38 +275,10 @@ describe("Models", () => {
   });
 
   it("Should return sorted views (reverse order)", async () => {
-    ext.connection = new Connection("localhost:5001");
+    ext.connection = new LocalConnection("localhost:5001", "server1");
     sinon.stub(ext.connection, "executeQuery").resolves(["vw1", "vw2"]);
     const result = await loadViews();
     assert.strictEqual(result[0], "vw1", "Should return the first view");
     sinon.restore();
-  });
-
-  it("Should create a new connection object", () => {
-    const conn = new Connection("server:5001");
-    assert.strictEqual(
-      conn.connected,
-      false,
-      "Connection should be created but not connected."
-    );
-  });
-
-  it("Should create a new connection object (full options)", () => {
-    const conn = new Connection("server:5001", ["username", "password"], true);
-    assert.strictEqual(
-      conn.connected,
-      false,
-      "Connection should be created but not connected."
-    );
-  });
-
-  it("Should create a new connection object", () => {
-    const conn = new Connection("server:5001");
-    conn.disconnect();
-    assert.strictEqual(
-      conn.connected,
-      false,
-      "Connection should be created but not connected."
-    );
   });
 });
