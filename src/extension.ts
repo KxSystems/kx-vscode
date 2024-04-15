@@ -99,10 +99,7 @@ import {
 import { runQFileTerminal } from "./utils/execution";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
-import {
-  DataSourceEditorProvider,
-  updateJsonDocument,
-} from "./services/dataSourceEditorProvider";
+import { DataSourceEditorProvider } from "./services/dataSourceEditorProvider";
 import {
   addWorkspaceFile,
   FileTreeItem,
