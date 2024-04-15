@@ -15,6 +15,7 @@ import { env } from "node:process";
 import path from "path";
 import {
   CancellationToken,
+  Command,
   commands,
   CompletionItem,
   CompletionItemKind,
@@ -22,11 +23,16 @@ import {
   ExtensionContext,
   languages,
   Position,
+  Range,
+  StatusBarAlignment,
   TextDocument,
   TextDocumentContentProvider,
+  TextEditor,
+  ThemeColor,
   Uri,
   window,
   workspace,
+  WorkspaceEdit,
 } from "vscode";
 import {
   LanguageClient,
@@ -50,7 +56,6 @@ import {
   stopLocalProcessByServerName,
 } from "./commands/installTools";
 import {
-  addAuthConnection,
   addInsightsConnection,
   addKdbConnection,
   addNewConnection,
@@ -94,6 +99,20 @@ import {
 import { runQFileTerminal } from "./utils/execution";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
+import {
+  DataSourceEditorProvider,
+  updateJsonDocument,
+} from "./services/dataSourceEditorProvider";
+import {
+  addWorkspaceFile,
+  FileTreeItem,
+  WorkspaceTreeProvider,
+} from "./services/workspaceTreeProvider";
+import {
+  activeEditorChanged,
+  runScratchpad,
+} from "./commands/scratchpadCommand";
+import { createDefaultDataSourceFile } from "./models/dataSource";
 
 let client: LanguageClient;
 
@@ -112,6 +131,8 @@ export async function activate(context: ExtensionContext) {
   ext.resultsViewProvider = new KdbResultsViewProvider(
     ext.context.extensionUri,
   );
+  ext.scratchpadTreeProvider = new WorkspaceTreeProvider("**/*.kdb.{q,py}");
+  ext.dataSourceTreeProvider = new WorkspaceTreeProvider("**/*.kdb.json");
 
   commands.executeCommand("setContext", "kdb.QHOME", env.QHOME);
 
@@ -123,6 +144,14 @@ export async function activate(context: ExtensionContext) {
   window.registerTreeDataProvider(
     "kdb-query-history",
     ext.queryHistoryProvider,
+  );
+  window.registerTreeDataProvider(
+    "kdb-scratchpad-explorer",
+    ext.scratchpadTreeProvider,
+  );
+  window.registerTreeDataProvider(
+    "kdb-datasource-explorer",
+    ext.dataSourceTreeProvider,
   );
 
   // initialize local servers
@@ -331,6 +360,50 @@ export async function activate(context: ExtensionContext) {
         await executeQuery(query, undefined, isPython);
       }
     }),
+    commands.registerCommand(
+      "kdb.createDataSource",
+      async (item: FileTreeItem) => {
+        const uri = await addWorkspaceFile(item, "datasource", ".kdb.json");
+
+        if (uri) {
+          const edit = new WorkspaceEdit();
+
+          edit.replace(
+            uri,
+            new Range(0, 0, 1, 0),
+            JSON.stringify(createDefaultDataSourceFile(), null, 2),
+          );
+
+          workspace.applyEdit(edit);
+
+          await commands.executeCommand(
+            "vscode.openWith",
+            uri,
+            DataSourceEditorProvider.viewType,
+          );
+        }
+      },
+    ),
+    commands.registerCommand("kdb.refreshDataSourceExplorer", () => {
+      ext.dataSourceTreeProvider.refresh();
+    }),
+    commands.registerCommand(
+      "kdb.createScratchpad",
+      async (item: FileTreeItem) => {
+        const uri = await addWorkspaceFile(item, "scratchpad", ".kdb.q");
+        if (uri) {
+          await window.showTextDocument(uri);
+        }
+      },
+    ),
+    commands.registerCommand("kdb.refreshScratchpadExplorer", () => {
+      ext.scratchpadTreeProvider.refresh();
+    }),
+    commands.registerCommand("kdb.runScratchpad", async () => {
+      await runScratchpad(window.activeTextEditor);
+    }),
+
+    DataSourceEditorProvider.register(context),
   );
 
   const lastResult: QueryResult | undefined = undefined;
@@ -403,6 +476,31 @@ export async function activate(context: ExtensionContext) {
       },
     }),
   );
+
+  workspace.onDidChangeWorkspaceFolders(() => {
+    ext.dataSourceTreeProvider.refresh();
+    ext.scratchpadTreeProvider.refresh();
+  });
+
+  ext.runScratchpadItem = window.createStatusBarItem(
+    StatusBarAlignment.Right,
+    10000,
+  );
+
+  ext.runScratchpadItem.backgroundColor = new ThemeColor(
+    "statusBarItem.warningBackground",
+  );
+  ext.runScratchpadItem.command = <Command>{
+    title: "",
+    command: "kdb.runScratchpad",
+    arguments: [],
+  };
+
+  window.onDidChangeActiveTextEditor((editor?: TextEditor) => {
+    activeEditorChanged(editor);
+  });
+
+  activeEditorChanged(window.activeTextEditor);
 
   //q language server
   const serverModule = path.join(context.extensionPath, "out", "server.js");

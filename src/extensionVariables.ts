@@ -11,7 +11,12 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { ExtensionContext, extensions, OutputChannel } from "vscode";
+import {
+  ExtensionContext,
+  extensions,
+  OutputChannel,
+  StatusBarItem,
+} from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { Connection } from "./models/connection";
 import { LocalProcess } from "./models/localProcess";
@@ -27,6 +32,7 @@ import {
 import { QueryHistoryProvider } from "./services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import AuthSettings from "./utils/secretStorage";
+import { WorkspaceTreeProvider } from "./services/workspaceTreeProvider";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
@@ -37,6 +43,9 @@ export namespace ext {
   export let dataSourceProvider: KdbDataSourceProvider;
   export let queryHistoryProvider: QueryHistoryProvider;
   export let resultsViewProvider: KdbResultsViewProvider;
+  export let scratchpadTreeProvider: WorkspaceTreeProvider;
+  export let dataSourceTreeProvider: WorkspaceTreeProvider;
+  export let runScratchpadItem: StatusBarItem;
   export let serverObjects: ServerObject;
   export let openSslVersion: string | null;
   export let resultPanelCSV: string;
