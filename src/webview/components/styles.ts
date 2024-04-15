@@ -30,6 +30,11 @@ export const vscodeStyles = css`
     line-height: normal;
     margin-bottom: 2px;
   }
+
+  vscode-dropdown::part(listbox) {
+    width: unset !important;
+    min-width: 12em;
+  }
 `;
 
 export const kdbStyles = css`
