@@ -27,7 +27,6 @@ import {
   StatusBarAlignment,
   TextDocument,
   TextDocumentContentProvider,
-  TextEditor,
   ThemeColor,
   Uri,
   window,
@@ -108,6 +107,7 @@ import {
 import {
   activeEditorChanged,
   runScratchpad,
+  workspaceFoldersChanged,
 } from "./commands/scratchpadCommand";
 import { createDefaultDataSourceFile } from "./models/dataSource";
 
@@ -474,15 +474,17 @@ export async function activate(context: ExtensionContext) {
     }),
   );
 
-  workspace.onDidChangeWorkspaceFolders(() => {
-    ext.dataSourceTreeProvider.refresh();
-    ext.scratchpadTreeProvider.refresh();
-  });
+  const watcher = workspace.createFileSystemWatcher("**/*.kdb.{json,q,py}");
+  watcher.onDidCreate(workspaceFoldersChanged);
+  watcher.onDidDelete(workspaceFoldersChanged);
+  workspace.onDidChangeWorkspaceFolders(workspaceFoldersChanged);
 
   ext.runScratchpadItem = window.createStatusBarItem(
     StatusBarAlignment.Right,
     10000,
   );
+
+  ext.runScratchpadItem.tooltip = "Run scratchpad";
 
   ext.runScratchpadItem.backgroundColor = new ThemeColor(
     "statusBarItem.warningBackground",
@@ -493,9 +495,7 @@ export async function activate(context: ExtensionContext) {
     arguments: [],
   };
 
-  window.onDidChangeActiveTextEditor((editor?: TextEditor) => {
-    activeEditorChanged(editor);
-  });
+  window.onDidChangeActiveTextEditor(activeEditorChanged);
 
   activeEditorChanged(window.activeTextEditor);
 

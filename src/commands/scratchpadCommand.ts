@@ -18,7 +18,12 @@ function setRunScratchpadItemText(text: string) {
   ext.runScratchpadItem.text = `$(notebook-execute) ${text}`;
 }
 
-export function activeEditorChanged(editor?: TextEditor) {
+export function workspaceFoldersChanged() {
+  ext.dataSourceTreeProvider.refresh();
+  ext.scratchpadTreeProvider.refresh();
+}
+
+export function activeEditorChanged(editor?: TextEditor | undefined) {
   const item = ext.runScratchpadItem;
   if (editor) {
     const uri = editor.document.uri;

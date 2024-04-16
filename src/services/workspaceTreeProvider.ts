@@ -74,7 +74,9 @@ export class FileTreeItem extends TreeItem {
   async getChildren(): Promise<FileTreeItem[]> {
     if (this.pattern) {
       const files = await workspace.findFiles(this.pattern);
-      return files.map((file) => new FileTreeItem(file));
+      return files
+        .sort((a, b) => a.path.localeCompare(b.path))
+        .map((file) => new FileTreeItem(file));
     }
     return [];
   }
