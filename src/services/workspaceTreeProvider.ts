@@ -23,13 +23,13 @@ import {
 } from "vscode";
 
 export class WorkspaceTreeProvider implements TreeDataProvider<FileTreeItem> {
-  private _onDidChangeTreeData = new EventEmitter<undefined>();
+  private _onDidChangeTreeData = new EventEmitter<void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
   constructor(private readonly glob: string) {}
 
   refresh() {
-    this._onDidChangeTreeData.fire(undefined);
+    this._onDidChangeTreeData.fire();
   }
 
   getChildren(element?: FileTreeItem) {
@@ -60,7 +60,7 @@ export class FileTreeItem extends TreeItem {
       const folder = workspace.getWorkspaceFolder(resourceUri);
       if (folder) {
         this.pattern = new RelativePattern(folder, glob);
-        this.collapsibleState = TreeItemCollapsibleState.Collapsed;
+        this.collapsibleState = TreeItemCollapsibleState.Expanded;
       }
     } else {
       this.command = <Command>{

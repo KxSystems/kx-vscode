@@ -11,11 +11,49 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { TextEditor, window, workspace } from "vscode";
+import {
+  CodeLens,
+  CodeLensProvider,
+  ProviderResult,
+  Range,
+  TextDocument,
+  TextEditor,
+  Uri,
+  window,
+  workspace,
+} from "vscode";
 import { ext } from "../extensionVariables";
 
 function setRunScratchpadItemText(text: string) {
   ext.runScratchpadItem.text = `$(notebook-execute) ${text}`;
+}
+
+function getServers() {
+  const conf = workspace.getConfiguration("kdb");
+  const servers = conf.get<{ [key: string]: { serverName: string } }>(
+    "servers",
+    {},
+  );
+  return Object.keys(servers).map((key) => servers[key].serverName);
+}
+
+function getServerForScratchpad(uri: Uri) {
+  const conf = workspace.getConfiguration("kdb", uri);
+  const scratchpads = conf.get<{ [key: string]: string | undefined }>(
+    "scratchpads",
+    {},
+  );
+  return scratchpads[uri.path];
+}
+
+async function setServerForScratchpad(uri: Uri, server: string | undefined) {
+  const conf = workspace.getConfiguration("kdb", uri);
+  const scratchpads = conf.get<{ [key: string]: string | undefined }>(
+    "scratchpads",
+    {},
+  );
+  scratchpads[uri.path] = server;
+  await conf.update("scratchpads", scratchpads);
 }
 
 export function workspaceFoldersChanged() {
@@ -29,18 +67,8 @@ export function activeEditorChanged(editor?: TextEditor | undefined) {
     const uri = editor.document.uri;
     const path = uri.path;
     if (path.endsWith("kdb.q") || path.endsWith("kdb.py")) {
-      const conf = workspace.getConfiguration("kdb", uri);
-      const map = conf.get<{ [key: string]: string }>("scratchpads", {});
-
-      if (path in map) {
-        const servers = conf.get<{ [key: string]: { serverName: string } }>(
-          "servers",
-          {},
-        );
-        setRunScratchpadItemText(servers[map[path]].serverName);
-      } else {
-        setRunScratchpadItemText("Run");
-      }
+      const server = getServerForScratchpad(uri);
+      setRunScratchpadItemText(server || "Run");
       item.show();
     } else {
       item.hide();
@@ -50,56 +78,52 @@ export function activeEditorChanged(editor?: TextEditor | undefined) {
   }
 }
 
-export async function runScratchpad(editor?: TextEditor) {
-  if (!editor) {
-    return;
-  }
+export async function pickConnection(uri: Uri) {
+  const server = getServerForScratchpad(uri);
 
-  const uri = editor.document.uri;
-  const path = uri.path;
+  let picked = await window.showQuickPick(["(none)", ...getServers()], {
+    title: "Choose a connection",
+    placeHolder: server,
+  });
 
-  if (!path.endsWith("kdb.q") && !path.endsWith("kdb.py")) {
-    return;
-  }
-
-  const conf = workspace.getConfiguration("kdb", uri);
-  const map = conf.get<{ [key: string]: string }>("scratchpads", {});
-
-  let server = "";
-
-  if (path in map) {
-    server = map[path];
-  } else {
-    const servers = conf.get<{ [key: string]: { serverName: string } }>(
-      "servers",
-      {},
-    );
-
-    const picked = await window.showQuickPick(
-      Object.keys(servers).map((key) => servers[key].serverName),
-      {
-        title: "Choose a connection",
-      },
-    );
-
-    if (picked) {
-      const key = Object.keys(servers).find(
-        (key) => servers[key].serverName === picked,
-      );
-
-      if (key) {
-        setRunScratchpadItemText(picked);
-        server = key;
-        map[path] = server;
-        await conf.update("scratchpads", map);
-      }
+  if (picked) {
+    if (picked === "(none)") {
+      picked = undefined;
     }
+    await setServerForScratchpad(uri, picked);
+    setRunScratchpadItemText(picked || "Run");
+  }
+
+  return picked;
+}
+
+export async function runScratchpad(uri: Uri) {
+  let server = getServerForScratchpad(uri);
+
+  if (!server) {
+    server = await pickConnection(uri);
   }
 
   if (server) {
-    // TODO
-    window.showInformationMessage(
-      `Scratchpad is sent for running on associated connection (${server})`,
-    );
+    window.showInformationMessage(`Running scratchpad on ${server}`);
+  }
+}
+
+export class ConnectionLensProvider implements CodeLensProvider {
+  provideCodeLenses(document: TextDocument): ProviderResult<CodeLens[]> {
+    const uri = document.uri;
+    const server = getServerForScratchpad(uri);
+    const top = new Range(0, 0, 0, 0);
+    const runScratchpad = new CodeLens(top, {
+      command: "kdb.runScratchpad",
+      title: server ? `Run on ${server}` : "Run",
+      arguments: [uri],
+    });
+    const pickConnection = new CodeLens(top, {
+      command: "kdb.pickConnection",
+      title: "Choose Connection",
+      arguments: [uri],
+    });
+    return [runScratchpad, pickConnection];
   }
 }

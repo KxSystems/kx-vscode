@@ -219,6 +219,10 @@
         "title": "Run scratchpad"
       },
       {
+        "command": "kdb.pickConnection",
+        "title": "Pick connection"
+      },
+      {
         "command": "kdb.startLocalProcess",
         "title": "Start q process"
       },

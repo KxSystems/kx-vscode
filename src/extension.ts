@@ -106,6 +106,8 @@ import {
 } from "./services/workspaceTreeProvider";
 import {
   activeEditorChanged,
+  ConnectionLensProvider,
+  pickConnection,
   runScratchpad,
   workspaceFoldersChanged,
 } from "./commands/scratchpadCommand";
@@ -396,11 +398,25 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.refreshScratchpadExplorer", () => {
       ext.scratchpadTreeProvider.refresh();
     }),
+    commands.registerCommand("kdb.pickConnection", async () => {
+      const editor = window.activeTextEditor;
+      if (editor) {
+        await pickConnection(editor.document.uri);
+      }
+    }),
     commands.registerCommand("kdb.runScratchpad", async () => {
-      await runScratchpad(window.activeTextEditor);
+      const editor = window.activeTextEditor;
+      if (editor) {
+        await runScratchpad(editor.document.uri);
+      }
     }),
 
     DataSourceEditorProvider.register(context),
+
+    languages.registerCodeLensProvider(
+      { pattern: "**/*.kdb.{q,py}" },
+      new ConnectionLensProvider(),
+    ),
   );
 
   const lastResult: QueryResult | undefined = undefined;
@@ -474,11 +490,6 @@ export async function activate(context: ExtensionContext) {
     }),
   );
 
-  const watcher = workspace.createFileSystemWatcher("**/*.kdb.{json,q,py}");
-  watcher.onDidCreate(workspaceFoldersChanged);
-  watcher.onDidDelete(workspaceFoldersChanged);
-  workspace.onDidChangeWorkspaceFolders(workspaceFoldersChanged);
-
   ext.runScratchpadItem = window.createStatusBarItem(
     StatusBarAlignment.Right,
     10000,
@@ -495,8 +506,11 @@ export async function activate(context: ExtensionContext) {
     arguments: [],
   };
 
+  const watcher = workspace.createFileSystemWatcher("**/*.kdb.{json,q,py}");
+  watcher.onDidCreate(workspaceFoldersChanged);
+  watcher.onDidDelete(workspaceFoldersChanged);
+  workspace.onDidChangeWorkspaceFolders(workspaceFoldersChanged);
   window.onDidChangeActiveTextEditor(activeEditorChanged);
-
   activeEditorChanged(window.activeTextEditor);
 
   //q language server
