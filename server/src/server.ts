@@ -17,8 +17,10 @@ import QLangServer from "./qLangServer";
 
 const connection: Connection = createConnection(ProposedFeatures.all);
 
+let server: QLangServer;
+
 connection.onInitialize((params) => {
-  const server = new QLangServer(connection, params);
+  server = new QLangServer(connection, params);
   return {
     capabilities: server.capabilities(),
   };

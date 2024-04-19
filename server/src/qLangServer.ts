@@ -42,6 +42,7 @@ export default class QLangServer {
     this.documents.listen(this.connection);
     this.connection.onCompletion(this.onCompletion.bind(this));
     this.connection.onDefinition(this.onDefinition.bind(this));
+    this.connection.onReferences(this.onReferences.bind(this));
     this.connection.onRenameRequest(this.onRenameRequest.bind(this));
   }
 
@@ -50,6 +51,7 @@ export default class QLangServer {
       textDocumentSync: TextDocumentSyncKind.Full,
       completionProvider: { resolveProvider: false },
       definitionProvider: true,
+      referencesProvider: true,
       renameProvider: true,
     };
   }
@@ -59,6 +61,10 @@ export default class QLangServer {
   }
 
   private onDefinition(): Location[] {
+    return [];
+  }
+
+  private onReferences(): Location[] {
     return [];
   }
 

@@ -26,27 +26,27 @@ export class CompletionProvider implements CompletionItemProvider {
   > {
     const items: CompletionItem[] = [];
 
-    ext.keywords.forEach((x) =>
-      items.push({ label: x, kind: CompletionItemKind.Keyword }),
+    ext.keywords.forEach((item) =>
+      items.push({ label: item, kind: CompletionItemKind.Keyword }),
     );
-    ext.functions.forEach((x) =>
+    ext.functions.forEach((item) =>
       items.push({
-        label: x,
-        insertText: x,
+        label: item,
+        insertText: item,
         kind: CompletionItemKind.Function,
       }),
     );
-    ext.tables.forEach((x) =>
+    ext.tables.forEach((item) =>
       items.push({
-        label: x,
-        insertText: x,
+        label: item,
+        insertText: item,
         kind: CompletionItemKind.Value,
       }),
     );
-    ext.variables.forEach((x) =>
+    ext.variables.forEach((item) =>
       items.push({
-        label: x,
-        insertText: x,
+        label: item,
+        insertText: item,
         kind: CompletionItemKind.Variable,
       }),
     );
