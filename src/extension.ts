@@ -14,15 +14,10 @@
 import { env } from "node:process";
 import path from "path";
 import {
-  CancellationToken,
   commands,
-  CompletionItem,
-  CompletionItemKind,
   EventEmitter,
   ExtensionContext,
   languages,
-  Position,
-  TextDocument,
   TextDocumentContentProvider,
   Uri,
   window,
@@ -92,6 +87,8 @@ import {
 import { runQFileTerminal } from "./utils/execution";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
+import { lint, updateLintng } from "./commands/buildToolsCommand";
+import { CompletionProvider } from "./services/completionProvider";
 
 let client: LanguageClient;
 
@@ -317,7 +314,26 @@ export async function activate(context: ExtensionContext) {
         await executeQuery(query, undefined, isPython);
       }
     }),
+    commands.registerCommand("kdb.qlint", async () => {
+      const editor = window.activeTextEditor;
+      if (editor) {
+        await lint(editor.document.uri);
+      }
+    }),
+    ext.diagnosticCollection,
   );
+
+  workspace.onDidSaveTextDocument(updateLintng);
+  workspace.onDidOpenTextDocument(updateLintng);
+  workspace.onDidCloseTextDocument((document) =>
+    ext.diagnosticCollection.delete(document.uri),
+  );
+  workspace.onDidChangeTextDocument((event) =>
+    ext.diagnosticCollection.delete(event.document.uri),
+  );
+  if (window.activeTextEditor) {
+    updateLintng(window.activeTextEditor.document);
+  }
 
   const lastResult: QueryResult | undefined = undefined;
   const resultSchema = "vscode-kdb-q";
@@ -337,57 +353,10 @@ export async function activate(context: ExtensionContext) {
   );
 
   context.subscriptions.push(
-    languages.registerCompletionItemProvider("q", {
-      provideCompletionItems(
-        document: TextDocument,
-        _position: Position,
-        _token: CancellationToken,
-      ) {
-        const items: CompletionItem[] = [];
-
-        ext.keywords.forEach((x) =>
-          items.push({ label: x, kind: CompletionItemKind.Keyword }),
-        );
-        ext.functions.forEach((x) =>
-          items.push({
-            label: x,
-            insertText: x,
-            kind: CompletionItemKind.Function,
-          }),
-        );
-        ext.tables.forEach((x) =>
-          items.push({
-            label: x,
-            insertText: x,
-            kind: CompletionItemKind.Value,
-          }),
-        );
-        ext.variables.forEach((x) =>
-          items.push({
-            label: x,
-            insertText: x,
-            kind: CompletionItemKind.Variable,
-          }),
-        );
-
-        const text = document.getText();
-        const regex = /([.\w]+)[ \t]*:/gm;
-        let match;
-        while ((match = regex.exec(text))) {
-          const name = match[1];
-          const found = items.find((item) => item.label === name);
-          if (!found) {
-            items.push({
-              label: name,
-              insertText: name,
-              kind: CompletionItemKind.Variable,
-            });
-          }
-        }
-
-        return items;
-      },
-    }),
+    languages.registerCompletionItemProvider(
+      { language: "q" },
+      new CompletionProvider(),
+    ),
   );
 
   //q language server
@@ -404,7 +373,7 @@ export async function activate(context: ExtensionContext) {
   const clientOptions: LanguageClientOptions = {
     documentSelector: [{ scheme: "file", language: "q" }],
     synchronize: {
-      fileEvents: workspace.createFileSystemWatcher("**/*.q"),
+      fileEvents: workspace.createFileSystemWatcher("**/*.{q,quke}"),
     },
   };
 
@@ -415,25 +384,7 @@ export async function activate(context: ExtensionContext) {
     clientOptions,
   );
 
-  context.subscriptions.push(
-    commands.registerCommand("kdb.sendServerCache", (code) => {
-      client.sendNotification("analyzeServerCache", code);
-    }),
-  );
-
-  context.subscriptions.push(
-    commands.registerCommand("kdb.sendOnHover", (hoverItems) => {
-      client.sendNotification("prepareOnHover", hoverItems);
-    }),
-  );
-
-  client.start().then(() => {
-    const configuration = workspace.getConfiguration("kdb.sourceFiles");
-    client.sendNotification("analyzeSourceCode", {
-      globsPattern: configuration.get("globsPattern"),
-      ignorePattern: configuration.get("ignorePattern"),
-    });
-  });
+  await client.start();
 
   Telemetry.sendEvent("Extension.Activated");
 }

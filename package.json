@@ -183,7 +183,7 @@
         "kdb.linting": {
           "type": "boolean",
           "description": "Enable linting for q files",
-          "default": true
+          "default": false
         }
       }
     },
@@ -317,6 +317,10 @@
       {
         "command": "kdb.execute.entireFile",
         "title": "Execute Entire File"
+      },
+      {
+        "command": "kdb.qlint",
+        "title": "Lint File"
       }
     ],
     "keybindings": [
