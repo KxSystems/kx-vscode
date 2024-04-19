@@ -398,16 +398,14 @@ export class KdbNode extends TreeItem {
       "..",
       "..",
       "resources",
-      "light",
-      "p-data" + getServerIconState(this.label) + ".svg",
+      "p-q-connection" + getServerIconState(this.label) + ".svg",
     ),
     dark: path.join(
       __filename,
       "..",
       "..",
       "resources",
-      "dark",
-      "p-data" + getServerIconState(this.label) + ".svg",
+      "p-q-connection" + getServerIconState(this.label) + ".svg",
     ),
   };
 
@@ -421,16 +419,9 @@ export class InsightsNode extends TreeItem {
     public readonly details: InsightDetails,
     public readonly collapsibleState: TreeItemCollapsibleState,
   ) {
-    let auxLabel = label;
-    if (ext.connectionNode != undefined && label === ext.connectionNode.label) {
-      auxLabel = label;
-      label = label + " (connected)";
-    } else {
-      auxLabel = label + " (connected)";
-    }
     // set context for root nodes
     if (ext.kdbinsightsNodes.indexOf(label) === -1) {
-      const indexOriginalLabel = ext.kdbinsightsNodes.indexOf(auxLabel);
+      const indexOriginalLabel = ext.kdbinsightsNodes.indexOf(label);
       if (indexOriginalLabel !== -1) {
         ext.kdbinsightsNodes.splice(indexOriginalLabel, 1);
       }
@@ -460,7 +451,6 @@ export class InsightsNode extends TreeItem {
       "..",
       "..",
       "resources",
-      "light",
       "p-insights" + getServerIconState(this.label) + ".svg",
     ),
     dark: path.join(
@@ -468,7 +458,6 @@ export class InsightsNode extends TreeItem {
       "..",
       "..",
       "resources",
-      "dark",
       "p-insights" + getServerIconState(this.label) + ".svg",
     ),
   };
