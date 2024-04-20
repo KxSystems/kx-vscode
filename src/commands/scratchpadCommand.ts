@@ -25,7 +25,7 @@ import {
 import { ext } from "../extensionVariables";
 
 function setRunScratchpadItemText(text: string) {
-  ext.runScratchpadItem.text = `$(notebook-execute) ${text}`;
+  ext.runScratchpadItem.text = `$(run) ${text}`;
 }
 
 function getServers() {
@@ -111,18 +111,15 @@ export async function runScratchpad(uri: Uri) {
 
 export class ConnectionLensProvider implements CodeLensProvider {
   provideCodeLenses(document: TextDocument): ProviderResult<CodeLens[]> {
-    const uri = document.uri;
-    const server = getServerForScratchpad(uri);
+    const server = getServerForScratchpad(document.uri);
     const top = new Range(0, 0, 0, 0);
     const runScratchpad = new CodeLens(top, {
       command: "kdb.runScratchpad",
       title: server ? `Run on ${server}` : "Run",
-      arguments: [uri],
     });
     const pickConnection = new CodeLens(top, {
       command: "kdb.pickConnection",
       title: "Choose Connection",
-      arguments: [uri],
     });
     return [runScratchpad, pickConnection];
   }

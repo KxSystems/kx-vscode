@@ -185,34 +185,22 @@
       {
         "command": "kdb.createDataSource",
         "title": "Add a new data source",
-        "icon": {
-          "light": "resources/light/plus.svg",
-          "dark": "resources/dark/plus.svg"
-        }
+        "icon": "$(add)"
       },
       {
         "command": "kdb.refreshDataSourceExplorer",
         "title": "Refresh data sources",
-        "icon": {
-          "light": "resources/light/refresh.svg",
-          "dark": "resources/dark/refresh.svg"
-        }
+        "icon": "$(refresh)"
       },
       {
         "command": "kdb.createScratchpad",
         "title": "Add a new scratchpad",
-        "icon": {
-          "light": "resources/light/plus.svg",
-          "dark": "resources/dark/plus.svg"
-        }
+        "icon": "$(add)"
       },
       {
         "command": "kdb.refreshScratchpadExplorer",
         "title": "Refresh scratchpads",
-        "icon": {
-          "light": "resources/light/refresh.svg",
-          "dark": "resources/dark/refresh.svg"
-        }
+        "icon": "$(refresh)"
       },
       {
         "command": "kdb.runScratchpad",
