@@ -139,19 +139,20 @@ function lint(document: TextDocument) {
     { title: "Linting", location: ProgressLocation.Window, cancellable: false },
     async () => {
       try {
-        return (await getLinterResults(document.uri)).map(
-          (result) =>
-            new Diagnostic(
-              new Range(
-                result.startLine - 1,
-                result.startCol - 1,
-                result.endLine - 1,
-                result.endCol,
-              ),
-              `${result.label}: ${result.description}`,
-              severity[result.errorClass],
+        return (await getLinterResults(document.uri)).map((result) => {
+          const diagnostic = new Diagnostic(
+            new Range(
+              result.startLine - 1,
+              result.startCol - 1,
+              result.endLine - 1,
+              result.endCol,
             ),
-        );
+            result.description,
+            severity[result.errorClass],
+          );
+          diagnostic.code = result.label;
+          return diagnostic;
+        });
       } catch (error) {
         window.showErrorMessage(`Linting Failed ${error}`);
         return [];

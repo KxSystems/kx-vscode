@@ -89,6 +89,7 @@ import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { CompletionProvider } from "./services/completionProvider";
+import { QuickFixProvider } from "./services/quickFixProvider";
 
 let client: LanguageClient;
 
@@ -320,6 +321,10 @@ export async function activate(context: ExtensionContext) {
         await lintCommand(editor.document);
       }
     }),
+    languages.registerCodeActionsProvider(
+      { language: "q" },
+      new QuickFixProvider(),
+    ),
     ext.diagnosticCollection,
   );
 
