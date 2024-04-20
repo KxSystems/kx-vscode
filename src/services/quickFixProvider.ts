@@ -29,20 +29,21 @@ export class QuickFixProvider implements CodeActionProvider {
     document: TextDocument,
     range: Range,
   ): ProviderResult<(CodeAction | Command)[]> {
-    const action = new CodeAction(
-      "Disable qlint warning",
-      CodeActionKind.QuickFix,
-    );
     const diagnostics = ext.diagnosticCollection.get(document.uri) || [];
-    const diagnostic = diagnostics.find((item) => item.range.isEqual(range));
-
+    const diagnostic = diagnostics.find(
+      (item) => item.source === "qlint" && item.range.isEqual(range),
+    );
     if (diagnostic) {
+      const action = new CodeAction(
+        `Suppress ${diagnostic.code}`,
+        CodeActionKind.QuickFix,
+      );
       action.diagnostics = [diagnostic];
       action.edit = new WorkspaceEdit();
       action.edit.insert(
         document.uri,
         new Position(range.start.line, 0),
-        `// @qlintsuppress ${diagnostic.code}\n`,
+        `// @qlintsuppress ${diagnostic.code}(1)\n`,
       );
       return [action];
     }

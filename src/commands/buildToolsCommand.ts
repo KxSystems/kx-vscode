@@ -150,6 +150,7 @@ function lint(document: TextDocument) {
             result.description,
             severity[result.errorClass],
           );
+          diagnostic.source = "qlint";
           diagnostic.code = result.label;
           return diagnostic;
         });
