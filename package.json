@@ -320,7 +320,7 @@
       },
       {
         "command": "kdb.qlint",
-        "title": "Lint File"
+        "title": "q: Lint File"
       }
     ],
     "keybindings": [

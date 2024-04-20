@@ -87,7 +87,7 @@ import {
 import { runQFileTerminal } from "./utils/execution";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
-import { lint, updateLintng } from "./commands/buildToolsCommand";
+import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { CompletionProvider } from "./services/completionProvider";
 
 let client: LanguageClient;
@@ -317,23 +317,11 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.qlint", async () => {
       const editor = window.activeTextEditor;
       if (editor) {
-        await lint(editor.document.uri);
+        await lintCommand(editor.document);
       }
     }),
     ext.diagnosticCollection,
   );
-
-  workspace.onDidSaveTextDocument(updateLintng);
-  workspace.onDidOpenTextDocument(updateLintng);
-  workspace.onDidCloseTextDocument((document) =>
-    ext.diagnosticCollection.delete(document.uri),
-  );
-  workspace.onDidChangeTextDocument((event) =>
-    ext.diagnosticCollection.delete(event.document.uri),
-  );
-  if (window.activeTextEditor) {
-    updateLintng(window.activeTextEditor.document);
-  }
 
   const lastResult: QueryResult | undefined = undefined;
   const resultSchema = "vscode-kdb-q";
@@ -385,6 +373,7 @@ export async function activate(context: ExtensionContext) {
   );
 
   await client.start();
+  await connectBuildTools();
 
   Telemetry.sendEvent("Extension.Activated");
 }

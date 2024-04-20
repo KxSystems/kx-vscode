@@ -11,6 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import Path from "path";
+import fs from "fs";
 import {
   Diagnostic,
   DiagnosticSeverity,
@@ -21,16 +23,16 @@ import {
   window,
   workspace,
 } from "vscode";
-import { spawn } from "child_process";
+import { spawn, exec } from "child_process";
 import { tmpdir, platform, arch } from "os";
-import fs from "fs";
-import Path from "path";
 import { ext } from "../extensionVariables";
 
+const cache = new Map<string, Thenable<Diagnostic[]>>();
+
 const enum LinterErrorClass {
-  INFO = "info",
-  WARNING = "warning",
   ERROR = "error",
+  WARNING = "warning",
+  INFO = "info",
 }
 
 interface LinterResult {
@@ -48,91 +50,163 @@ interface LinterResult {
   fname: string;
 }
 
-function getLinter(args: string[]) {
+function initBuildTools() {
+  return new Promise<void>((resolve, reject) => {
+    if (!process.env.QHOME) {
+      return reject(new Error("QHOME is not set"));
+    }
+    if (!process.env.AXLIBRARIES_HOME) {
+      return reject(new Error("AXLIBRARIES_HOME is not set"));
+    }
+    if (platform() === "darwin") {
+      const xattr = exec(
+        "xattr -dr com.apple.quarantine $AXLIBRARIES_HOME/ws/lib/*.{so,dylib}",
+      );
+      xattr.on("exit", () => resolve());
+      xattr.on("error", (error) => reject(error));
+    } else {
+      resolve();
+    }
+  });
+}
+
+function getTool(args: string[]) {
   if (platform() === "darwin" && arch() === "arm64") {
     return spawn("arch", ["-x86_64", "q", ...args]);
   }
   return spawn("q", args);
 }
 
+function isLintingSupported(document: TextDocument) {
+  const path = document.uri.path;
+  return path.endsWith(".q") || path.endsWith(".quke");
+}
+
+function isAutoLintingEnabled(document: TextDocument) {
+  return workspace
+    .getConfiguration("kdb", document)
+    .get<boolean>("linting", false);
+}
+
+function isAutoLintingSupported(document: TextDocument) {
+  return isLintingSupported(document) && isAutoLintingEnabled(document);
+}
+
 function getLinterResults(uri: Uri) {
   return new Promise<LinterResult[]>((resolve, reject) => {
-    if (!process.env.QHOME) {
-      reject(new Error("QHOME is not set"));
-    }
-    if (!process.env.AXLIBRARIES_HOME) {
-      reject(new Error("AXLIBRARIES_HOME is not set"));
-    }
-    const results = Path.join(
-      tmpdir(),
-      `kdb-qlint-${new Date().getTime()}.json`,
-    );
-    const linter = getLinter([
-      `${process.env.AXLIBRARIES_HOME}/ws/qlint.q_`,
-      "-src",
-      uri.path,
-      "-out",
-      results,
-    ]);
-    linter.on("exit", () => {
-      fs.readFile(results, "utf8", (error, data) => {
-        if (error) {
-          reject(error);
-        } else {
-          try {
-            const parsed = JSON.parse(data);
-            resolve(parsed);
-          } catch (error) {
-            reject(error);
-          }
-        }
-      });
-    });
-    linter.on("error", (error) => reject(error));
+    initBuildTools()
+      .then(() => {
+        const results = Path.join(
+          tmpdir(),
+          `kdb-qlint-${new Date().getTime()}.json`,
+        );
+        const linter = getTool([
+          `${process.env.AXLIBRARIES_HOME}/ws/qlint.q_`,
+          "-src",
+          uri.path,
+          "-out",
+          results,
+          "-quiet",
+        ]);
+        linter.on("exit", () => {
+          fs.readFile(results, "utf8", (error, data) => {
+            if (error) {
+              reject(error);
+            } else {
+              try {
+                const parsed = JSON.parse(data);
+                resolve(parsed);
+              } catch (error) {
+                reject(error);
+              }
+            }
+          });
+        });
+        linter.on("error", (error) => reject(error));
+      })
+      .catch(reject);
   });
 }
 
-function createDiagnosticFromResult(result: LinterResult) {
-  return new Diagnostic(
-    new Range(
-      result.startLine - 1,
-      result.startCol - 1,
-      result.endLine - 1,
-      result.endCol,
-    ),
-    result.description,
-    result.errorClass === LinterErrorClass.WARNING
-      ? DiagnosticSeverity.Warning
-      : result.errorClass === LinterErrorClass.ERROR
-        ? DiagnosticSeverity.Error
-        : result.errorClass === LinterErrorClass.INFO
-          ? DiagnosticSeverity.Information
-          : DiagnosticSeverity.Hint,
-  );
-}
+const severity: { [key: string]: DiagnosticSeverity } = {
+  [LinterErrorClass.ERROR]: DiagnosticSeverity.Error,
+  [LinterErrorClass.WARNING]: DiagnosticSeverity.Warning,
+  [LinterErrorClass.INFO]: DiagnosticSeverity.Information,
+};
 
-export async function lint(uri: Uri) {
-  if (!uri.path.endsWith(".q") && !uri.path.endsWith(".quke")) {
-    return;
-  }
-  await window.withProgress(
+function lint(document: TextDocument) {
+  return window.withProgress(
     { title: "Linting", location: ProgressLocation.Window, cancellable: false },
     async () => {
-      const results = await getLinterResults(uri);
-      ext.diagnosticCollection.set(
-        uri,
-        results.map(createDiagnosticFromResult),
-      );
+      try {
+        return (await getLinterResults(document.uri)).map(
+          (result) =>
+            new Diagnostic(
+              new Range(
+                result.startLine - 1,
+                result.startCol - 1,
+                result.endLine - 1,
+                result.endCol,
+              ),
+              `${result.label}: ${result.description}`,
+              severity[result.errorClass],
+            ),
+        );
+      } catch (error) {
+        window.showErrorMessage(`Linting Failed ${error}`);
+        return [];
+      }
     },
   );
 }
 
-export async function updateLintng(document: TextDocument) {
-  const linting = workspace
-    .getConfiguration("kdb", document)
-    .get<boolean>("linting", false);
+async function setDiagnostics(document: TextDocument) {
+  let diagnostics = cache.get(document.uri.path);
+  if (!diagnostics) {
+    diagnostics = lint(document);
+    cache.set(document.uri.path, diagnostics);
+  }
+  ext.diagnosticCollection.set(document.uri, await diagnostics);
+}
 
-  if (linting) {
-    await lint(document.uri);
+export async function lintCommand(document: TextDocument) {
+  if (isLintingSupported(document)) {
+    await setDiagnostics(document);
+  }
+}
+
+export async function connectBuildTools() {
+  workspace.onDidSaveTextDocument(async (document) => {
+    if (isAutoLintingSupported(document)) {
+      await setDiagnostics(document);
+    }
+  });
+
+  workspace.onDidOpenTextDocument(async (document) => {
+    if (isAutoLintingSupported(document)) {
+      await setDiagnostics(document);
+    }
+  });
+
+  workspace.onDidCloseTextDocument((document) => {
+    if (isLintingSupported(document)) {
+      ext.diagnosticCollection.delete(document.uri);
+    }
+  });
+
+  workspace.onDidChangeTextDocument((event) => {
+    if (isLintingSupported(event.document)) {
+      if (event.contentChanges.length > 0) {
+        cache.delete(event.document.uri.path);
+        ext.diagnosticCollection.delete(event.document.uri);
+      }
+    }
+  });
+
+  if (window.activeTextEditor) {
+    const document = window.activeTextEditor.document;
+    if (isAutoLintingSupported(document)) {
+      await setDiagnostics(document);
+    }
   }
 }
