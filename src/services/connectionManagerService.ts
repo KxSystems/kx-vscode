@@ -258,7 +258,6 @@ export class ConnectionManagementService {
     context?: string,
     stringfy?: boolean,
   ): Promise<any> {
-    ext.activeConnection;
     if (!ext.activeConnection) {
       return;
     }
