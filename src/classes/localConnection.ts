@@ -116,7 +116,6 @@ export class LocalConnection {
   public async execute(query: string): Promise<string | Error> {
     let result;
     let error;
-    // try 5 times, then fail
     let retryCount = 0;
     while (this.connection === undefined) {
       if (retryCount > ext.maxRetryCount) {
