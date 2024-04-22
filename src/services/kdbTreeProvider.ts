@@ -15,6 +15,7 @@ import * as path from "path";
 import {
   Event,
   EventEmitter,
+  MarkdownString,
   TreeDataProvider,
   TreeItem,
   TreeItemCollapsibleState,
@@ -36,6 +37,7 @@ import {
   getServerAlias,
   getServerIconState,
   getServerName,
+  getStatus,
 } from "../utils/core";
 
 export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
@@ -383,6 +385,17 @@ export class KdbNode extends TreeItem {
 
     super(label, collapsibleState);
     this.description = this.getDescription();
+    this.tooltip = this.getTooltip();
+  }
+
+  getTooltip(): MarkdownString {
+    const tooltipMd = new MarkdownString();
+    const title = `${this.details.serverAlias} ${getStatus(this.label)}`;
+    tooltipMd.appendMarkdown(`### ${title}\n`);
+    tooltipMd.appendMarkdown(
+      `${this.details.serverName}:${this.details.serverPort}`,
+    );
+    return tooltipMd;
   }
 
   getDescription(): string {
@@ -434,8 +447,18 @@ export class InsightsNode extends TreeItem {
     }
 
     super(label, collapsibleState);
-    this.tooltip = details.server;
+    this.tooltip = this.getTooltip();
     this.description = this.getDescription();
+  }
+
+  getTooltip(): MarkdownString {
+    const tooltipMd = new MarkdownString();
+    const title = `${this.label} ${getStatus(this.label)}`;
+    tooltipMd.appendMarkdown(`### ${title}\n`);
+    tooltipMd.appendMarkdown(
+      `${this.details.server.replace(/:\/\//g, "&#65279;://")}`,
+    );
+    return tooltipMd;
   }
 
   getDescription(): string {

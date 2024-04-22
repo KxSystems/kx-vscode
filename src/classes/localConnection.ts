@@ -69,8 +69,10 @@ export class LocalConnection {
     return this.connection;
   }
 
-  public connect(callback: nodeq.AsyncValueCallback<LocalConnection>): void {
-    nodeq.connect(this.options, (err, conn) => {
+  public async connect(
+    callback: nodeq.AsyncValueCallback<LocalConnection>,
+  ): Promise<void> {
+    await nodeq.connect(this.options, (err, conn) => {
       if (err || !conn) {
         ext.serverProvider.reload();
 
@@ -156,7 +158,8 @@ export class LocalConnection {
       return "timeout";
     }
     const wrapper = queryWrapper();
-    this.connection.k(
+    let result;
+    await this.connection.k(
       wrapper,
       context ?? ".",
       command,
@@ -175,17 +178,17 @@ export class LocalConnection {
       },
     );
 
-    const result = await this.waitForResult();
+    await this.waitForResult();
 
     if (ext.resultsViewProvider.isVisible() && stringify) {
       if (this.isError) {
         this.isError = false;
         return result;
       }
-      return convertStringToArray(result);
+      return convertStringToArray(this.result ? this.result : "");
     }
 
-    return result;
+    return this.result;
   }
 
   public async executeQueryRaw(command: string): Promise<string> {
