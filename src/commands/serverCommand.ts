@@ -317,7 +317,7 @@ export function activeConnection(viewItem: KdbNode | InsightsNode): void {
   ext.serverProvider.reload();
 }
 
-export async function disconnect(connLabel?: string): Promise<void> {
+export async function disconnect(connLabel: string): Promise<void> {
   const connMngService = new ConnectionManagementService();
   connMngService.disconnect(connLabel ? connLabel : "");
 
