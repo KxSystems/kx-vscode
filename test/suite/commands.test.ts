@@ -1904,6 +1904,15 @@ describe("serverCommand", () => {
       await serverCommand.removeConnection(kdbNode);
       assert.ok(updateServersStub.calledOnce);
     });
+    it("should remove connection Insights, but disconnect it before", async () => {
+      ext.connectedContextStrings.push(insightsNode.label);
+      indexOfStub.returns(1);
+      getServersStub.returns({ testKey: {} });
+      getHashStub.returns("testKey");
+
+      await serverCommand.removeConnection(insightsNode);
+      assert.ok(updateServersStub.notCalled);
+    });
   });
 });
 

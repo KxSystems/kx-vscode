@@ -262,7 +262,7 @@ export class ConnectionManagementService {
     }
     command = sanitizeQuery(command);
     if (ext.activeConnection instanceof LocalConnection) {
-      return await ext.activeConnection?.executeQuery(
+      return await ext.activeConnection.executeQuery(
         command,
         context,
         stringfy,

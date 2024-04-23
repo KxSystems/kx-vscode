@@ -41,6 +41,7 @@ import { createDefaultDataSourceFile } from "../../src/models/dataSource";
 import { ConnectionManagementService } from "../../src/services/connectionManagerService";
 import { LocalConnection } from "../../src/classes/localConnection";
 import { Telemetry } from "../../src/utils/telemetryClient";
+import { InsightsConnection } from "../../src/classes/insightsConnection";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -882,12 +883,14 @@ describe("connectionManagerService", () => {
       kdbNode.details.serverName + ":" + kdbNode.details.serverPort,
       kdbNode.label,
     );
+    const insightsConn = new InsightsConnection(insightNode.label, insightNode);
     const command = "testCommand";
     const context = "testContext";
     const stringfy = true;
-    let executeQueryStub;
+    let executeQueryStub, getScratchpadQueryStub;
     beforeEach(() => {
       executeQueryStub = sinon.stub(localConn, "executeQuery");
+      getScratchpadQueryStub = sinon.stub(insightsConn, "getScratchpadQuery");
     });
     afterEach(() => {
       ext.activeConnection = undefined;
@@ -915,13 +918,14 @@ describe("connectionManagerService", () => {
     });
 
     it("Should execute query from InsightsNode", async () => {
-      ext.activeConnection = localConn;
+      ext.activeConnection = insightsConn;
+      getScratchpadQueryStub.returns("test query");
       const result = await connectionManagerService.executeQuery(
         command,
         context,
         stringfy,
       );
-      assert.strictEqual(result, undefined);
+      assert.strictEqual(result, "test query");
     });
   });
 
