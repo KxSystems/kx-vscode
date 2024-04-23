@@ -72,7 +72,7 @@ export class LocalConnection {
   public async connect(
     callback: nodeq.AsyncValueCallback<LocalConnection>,
   ): Promise<void> {
-    await nodeq.connect(this.options, (err, conn) => {
+    nodeq.connect(this.options, (err, conn) => {
       if (err || !conn) {
         ext.serverProvider.reload();
 
