@@ -312,7 +312,8 @@
         "category": "KX",
         "command": "kdb.terminal.run",
         "title": "Run q file in a new q instance",
-        "icon": "$(run)"
+        "icon": "$(run)",
+        "enablement": "(kdb.QHOME || config.kdb.qHomeDirectory)"
       },
       {
         "category": "KX",
@@ -328,7 +329,8 @@
         "category": "KX",
         "command": "kdb.execute.fileQuery",
         "title": "Execute Entire File",
-        "icon": "$(run)"
+        "icon": "$(run)",
+        "enablement": "kdb.connected && editorFocus"
       },
       {
         "category": "KX",
@@ -339,7 +341,8 @@
         "category": "KX",
         "command": "kdb.execute.pythonFileScratchpadQuery",
         "title": "Execute Entire File in Insights Scratchpad",
-        "icon": "$(run)"
+        "icon": "$(run)",
+        "enablement": "kdb.insightsConnected"
       },
       {
         "category": "KX",
@@ -625,18 +628,18 @@
       ],
       "editor/title/run": [
         {
-          "command": "kdb.terminal.run",
-          "group": "navigation@0",
-          "when": "resourceLangId == q && (kdb.QHOME || config.kdb.qHomeDirectory)"
+          "command": "kdb.execute.fileQuery",
+          "group": "q@0",
+          "when": "resourceLangId == q"
         },
         {
-          "command": "kdb.execute.fileQuery",
-          "group": "navigation@0",
-          "when": "resourceLangId == q && kdb.connected && editorFocus"
+          "command": "kdb.terminal.run",
+          "group": "q@1",
+          "when": "resourceLangId == q"
         },
         {
           "command": "kdb.execute.pythonFileScratchpadQuery",
-          "group": "navigation@0",
+          "group": "q@0",
           "when": "editorLangId == python && kdb.insightsConnected"
         }
       ],

@@ -34,18 +34,27 @@ export class QuickFixProvider implements CodeActionProvider {
       (item) => item.source === "qlint" && item.range.isEqual(range),
     );
     if (diagnostic) {
-      const action = new CodeAction(
-        `Suppress ${diagnostic.code}`,
-        CodeActionKind.QuickFix,
-      );
-      action.diagnostics = [diagnostic];
-      action.edit = new WorkspaceEdit();
-      action.edit.insert(
+      const once = new CodeAction("Suppress warning", CodeActionKind.QuickFix);
+      once.diagnostics = [diagnostic];
+      once.edit = new WorkspaceEdit();
+      once.edit.insert(
         document.uri,
         new Position(range.start.line, 0),
-        `// @qlintsuppress ${diagnostic.code}(1)\n`,
+        `//@qlintsuppress ${diagnostic.code}(1)\n`,
       );
-      return [action];
+      const always = new CodeAction(
+        `Suppress all warnings (${diagnostic.code})`,
+        CodeActionKind.QuickFix,
+      );
+      always.diagnostics = [diagnostic];
+      always.edit = new WorkspaceEdit();
+      always.edit.insert(
+        document.uri,
+        new Position(0, 0),
+        `//@qlintsuppress ${diagnostic.code}\n`,
+      );
+
+      return [once, always];
     }
   }
 }

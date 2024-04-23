@@ -23,8 +23,8 @@ import {
   window,
   workspace,
 } from "vscode";
-import { spawn, exec } from "child_process";
-import { tmpdir, platform, arch } from "os";
+import { spawn } from "child_process";
+import { tmpdir } from "os";
 import { ext } from "../extensionVariables";
 
 const cache = new Map<string, Thenable<Diagnostic[]>>();
@@ -50,31 +50,77 @@ interface LinterResult {
   fname: string;
 }
 
-function initBuildTools() {
-  return new Promise<void>((resolve, reject) => {
-    if (!process.env.QHOME) {
-      return reject(new Error("QHOME is not set"));
-    }
-    if (!process.env.AXLIBRARIES_HOME) {
-      return reject(new Error("AXLIBRARIES_HOME is not set"));
-    }
-    if (platform() === "darwin") {
-      const xattr = exec(
-        "xattr -dr com.apple.quarantine $AXLIBRARIES_HOME/ws/lib/*.{so,dylib}",
-      );
-      xattr.on("exit", () => resolve());
-      xattr.on("error", (error) => reject(error));
-    } else {
-      resolve();
-    }
-  });
+const prefix: { [key: string]: string } = {
+  win32: Path.join("w64", "q.exe"),
+  darwin: Path.join("m64", "q"),
+  linux: Path.join("l64", "q"),
+  l64arm: Path.join("l64arm", "q"),
+};
+
+function getRuntime() {
+  const home = workspace
+    .getConfiguration()
+    .get<string>("kdb.qHomeDirectory", `${process.env.QHOME || ""}`);
+
+  if (!home) {
+    throw new Error("kdb q runtime not found");
+  }
+
+  const platform =
+    process.platform === "linux" && process.arch === "arm64"
+      ? "l64arm"
+      : process.platform;
+
+  const target = prefix[platform];
+
+  if (!target) {
+    throw new Error(`Build Tools not supported on ${platform}`);
+  }
+
+  return Path.join(home, target);
 }
 
 function getTool(args: string[]) {
-  if (platform() === "darwin" && arch() === "arm64") {
-    return spawn("arch", ["-x86_64", "q", ...args]);
+  if (process.platform === "darwin" && process.arch === "arm64") {
+    return spawn("/usr/bin/arch", ["-x86_64", getRuntime(), ...args]);
   }
-  return spawn("q", args);
+  return spawn(getRuntime(), args);
+}
+
+function getLinter() {
+  if (process.env.AXLIBRARIES_HOME) {
+    return Path.join(process.env.AXLIBRARIES_HOME, "ws", "qlint.q_");
+  }
+  throw new Error("AXLIBRARIES_HOME is not set");
+}
+
+function initBuildTools() {
+  return new Promise<void>((resolve, reject) => {
+    if (process.env.AXLIBRARIES_HOME) {
+      if (process.platform === "darwin") {
+        const xattr = spawn(
+          "/usr/bin/xattr",
+          [
+            "-d",
+            "com.apple.quarantine",
+            Path.join(
+              process.env.AXLIBRARIES_HOME,
+              "ws",
+              "lib",
+              "*.{so,dylib}",
+            ),
+          ],
+          { shell: true },
+        );
+        xattr.on("exit", () => resolve());
+        xattr.on("error", (error) => reject(error));
+      } else {
+        resolve();
+      }
+    } else {
+      reject(new Error("AXLIBRARIES_HOME is not set"));
+    }
+  });
 }
 
 function isLintingSupported(document: TextDocument) {
@@ -101,7 +147,7 @@ function getLinterResults(uri: Uri) {
           `kdb-qlint-${new Date().getTime()}.json`,
         );
         const linter = getTool([
-          `${process.env.AXLIBRARIES_HOME}/ws/qlint.q_`,
+          getLinter(),
           "-src",
           uri.path,
           "-out",
@@ -114,8 +160,7 @@ function getLinterResults(uri: Uri) {
               reject(error);
             } else {
               try {
-                const parsed = JSON.parse(data);
-                resolve(parsed);
+                resolve(JSON.parse(data));
               } catch (error) {
                 reject(error);
               }
@@ -136,10 +181,19 @@ const severity: { [key: string]: DiagnosticSeverity } = {
 
 function lint(document: TextDocument) {
   return window.withProgress(
-    { title: "Linting", location: ProgressLocation.Window, cancellable: false },
-    async () => {
+    {
+      title: "Linting",
+      location: ProgressLocation.Window,
+      cancellable: true,
+    },
+    async (_progress, token) => {
       try {
-        return (await getLinterResults(document.uri)).map((result) => {
+        const results = await getLinterResults(document.uri);
+        if (token.isCancellationRequested) {
+          cache.delete(document.uri.path);
+          return [];
+        }
+        return results.map((result) => {
           const diagnostic = new Diagnostic(
             new Range(
               result.startLine - 1,

@@ -13,8 +13,7 @@
 
 import { createToken } from "chevrotain";
 
-export const IdentifierPattern =
-  /(?:(?:\.[a-zA-Z_0-9]+)+|[a-zA-Z][a-zA-Z_0-9]*)/;
+export const IdentifierPattern = /\.?[a-zA-Z][a-zA-Z0-9_]*(?:\.[a-zA-Z0-9_]+)*/;
 
 export const Identifier = createToken({
   name: "Identifier",

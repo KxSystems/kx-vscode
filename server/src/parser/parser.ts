@@ -11,201 +11,131 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { CstParser } from "chevrotain";
-import { QLexer, QTokens } from "./lexer";
-import {
-  BinaryLiteral,
-  ByteLiteral,
-  CharLiteral,
-  DateLiteral,
-  DateTimeLiteral,
-  FileLiteral,
-  InfinityLiteral,
-  MonthLiteral,
-  NumberLiteral,
-  SymbolLiteral,
-  TimeLiteral,
-  TimeStampLiteral,
-} from "./literals";
+import { IToken } from "chevrotain";
+import { QLexer } from "./lexer";
 import {
   Colon,
   Command,
-  Iterator,
+  DoubleColon,
   LBracket,
   LCurly,
   LParen,
-  Operator,
   RBracket,
   RCurly,
   RParen,
-  SemiColon,
 } from "./tokens";
-import { RSql, Identifier, Keyword, LSql, Reserved } from "./keywords";
+import { Identifier, LSql, RSql } from "./keywords";
 
-class Parser extends CstParser {
-  constructor() {
-    super(QTokens, { maxLookahead: 3 });
-    this.performSelfAnalysis();
-  }
-
-  public script = this.RULE("script", () => {
-    this.MANY(() => this.SUBRULE(this.expression));
-  });
-
-  private expression = this.RULE("expression", () => {
-    this.OR([
-      { ALT: () => this.SUBRULE(this.iterator) },
-      { ALT: () => this.SUBRULE(this.assignment) },
-      { ALT: () => this.SUBRULE(this.group) },
-      { ALT: () => this.SUBRULE(this.lambda) },
-      { ALT: () => this.SUBRULE(this.bracket) },
-      { ALT: () => this.SUBRULE(this.sql) },
-      { ALT: () => this.SUBRULE(this.symbol) },
-      { ALT: () => this.SUBRULE(this.command) },
-      { ALT: () => this.SUBRULE(this.operator) },
-      { ALT: () => this.SUBRULE(this.semiColon) },
-    ]);
-  });
-
-  private iterator = this.RULE("iterator", () => {
-    this.CONSUME(Iterator);
-  });
-
-  private assignment = this.RULE("assignment", () => {
-    this.OPTION(() => this.SUBRULE(this.operator));
-    this.AT_LEAST_ONE(() => this.CONSUME(Colon));
-    this.OPTION1(() => this.SUBRULE(this.expression));
-  });
-
-  private group = this.RULE("group", () => {
-    this.CONSUME(LParen);
-    this.OPTION(() => this.SUBRULE(this.bracket));
-    this.MANY(() => this.SUBRULE(this.expression));
-    this.CONSUME(RParen);
-  });
-
-  private lambda = this.RULE("lambda", () => {
-    this.CONSUME(LCurly);
-    this.OPTION(() => this.SUBRULE(this.bracket));
-    this.MANY(() => this.SUBRULE(this.expression));
-    this.CONSUME(RCurly);
-  });
-
-  private bracket = this.RULE("bracket", () => {
-    this.CONSUME(LBracket);
-    this.MANY(() => this.SUBRULE(this.expression));
-    this.CONSUME(RBracket);
-  });
-
-  private sql = this.RULE("sql", () => {
-    this.CONSUME(LSql);
-    this.MANY(() => this.SUBRULE(this.expression));
-    this.CONSUME(RSql);
-  });
-
-  private symbol = this.RULE("symbol", () => {
-    this.OR([
-      { ALT: () => this.SUBRULE(this.literal) },
-      { ALT: () => this.SUBRULE(this.reserved) },
-      { ALT: () => this.SUBRULE(this.keyword) },
-      { ALT: () => this.SUBRULE(this.identifier) },
-    ]);
-  });
-
-  private literal = this.RULE("literal", () => {
-    this.OR([
-      { ALT: () => this.SUBRULE(this.charLiteral) },
-      { ALT: () => this.SUBRULE(this.symbolLiteral) },
-      { ALT: () => this.SUBRULE(this.dateTimeLiteral) },
-      { ALT: () => this.SUBRULE(this.timeStampLiteral) },
-      { ALT: () => this.SUBRULE(this.dateLiteral) },
-      { ALT: () => this.SUBRULE(this.monthLiteral) },
-      { ALT: () => this.SUBRULE(this.timeLiteral) },
-      { ALT: () => this.SUBRULE(this.fileLiteral) },
-      { ALT: () => this.SUBRULE(this.infinityLiteral) },
-      { ALT: () => this.SUBRULE(this.binaryLiteral) },
-      { ALT: () => this.SUBRULE(this.byteLiteral) },
-      { ALT: () => this.SUBRULE(this.numberLiteral) },
-    ]);
-  });
-
-  private charLiteral = this.RULE("charLiteral", () => {
-    this.CONSUME(CharLiteral);
-  });
-
-  private symbolLiteral = this.RULE("symbolLiteral", () => {
-    this.CONSUME(SymbolLiteral);
-  });
-
-  private dateTimeLiteral = this.RULE("dateTimeLiteral", () => {
-    this.CONSUME(DateTimeLiteral);
-  });
-
-  private timeStampLiteral = this.RULE("timeStampLiteral", () => {
-    this.CONSUME(TimeStampLiteral);
-  });
-
-  private dateLiteral = this.RULE("dateLiteral", () => {
-    this.CONSUME(DateLiteral);
-  });
-
-  private monthLiteral = this.RULE("monthLiteral", () => {
-    this.CONSUME(MonthLiteral);
-  });
-
-  private timeLiteral = this.RULE("timeLiteral", () => {
-    this.CONSUME(TimeLiteral);
-  });
-
-  private fileLiteral = this.RULE("fileLiteral", () => {
-    this.CONSUME(FileLiteral);
-  });
-
-  private infinityLiteral = this.RULE("infinityLiteral", () => {
-    this.CONSUME(InfinityLiteral);
-  });
-
-  private binaryLiteral = this.RULE("binaryLiteral", () => {
-    this.CONSUME(BinaryLiteral);
-  });
-
-  private byteLiteral = this.RULE("byteLiteral", () => {
-    this.CONSUME(ByteLiteral);
-  });
-
-  private numberLiteral = this.RULE("numberLiteral", () => {
-    this.CONSUME(NumberLiteral);
-  });
-
-  private reserved = this.RULE("reserved", () => {
-    this.CONSUME(Reserved);
-  });
-
-  private keyword = this.RULE("keyword", () => {
-    this.CONSUME(Keyword);
-  });
-
-  private identifier = this.RULE("identifier", () => {
-    this.CONSUME(Identifier);
-  });
-
-  private command = this.RULE("command", () => {
-    this.CONSUME(Command);
-  });
-
-  private operator = this.RULE("operator", () => {
-    this.CONSUME(Operator);
-  });
-
-  private semiColon = this.RULE("semiColon", () => {
-    this.CONSUME(SemiColon);
-  });
-
-  public parse(script: string) {
-    const lexed = QLexer.tokenize(script);
-    this.input = lexed.tokens;
-    return this.script();
-  }
+function setQualified(token: Token, namespace: string) {
+  token.identifier =
+    token.scope || !namespace ? token.image : `${namespace}.${token.image}`;
 }
 
-export const QParser = new Parser();
+export const enum TokenKind {
+  Identifier,
+  Assignment,
+}
+
+export interface Token extends IToken {
+  kind?: TokenKind;
+  scope?: Token;
+  lambda?: Token;
+  argument?: boolean;
+  identifier?: string;
+}
+
+export function parse(text: string): Token[] {
+  const result = QLexer.tokenize(text);
+  const tokens = result.tokens as Token[];
+  const scopes: Token[] = [];
+
+  let namespace = "";
+  let sql = 0;
+  let table = 0;
+  let argument = 0;
+  let token, prev, next: IToken;
+
+  for (let i = 0; i < tokens.length; i++) {
+    token = tokens[i];
+    switch (token.tokenType) {
+      case Identifier:
+        if (argument) {
+          token.kind = TokenKind.Assignment;
+          token.argument = true;
+          token.scope = scopes[scopes.length - 1];
+          token.identifier = token.image;
+        } else {
+          token.kind = TokenKind.Identifier;
+          if (!token.image.includes(".")) {
+            token.scope = scopes[scopes.length - 1];
+          }
+          setQualified(token, namespace);
+        }
+        break;
+      case Colon:
+      case DoubleColon:
+        if (!sql && !table) {
+          prev = tokens[i - 1];
+          if (prev?.kind === TokenKind.Identifier) {
+            prev.kind = TokenKind.Assignment;
+            if (token.tokenType === DoubleColon) {
+              prev.scope = undefined;
+            }
+            setQualified(prev, namespace);
+          }
+        }
+        break;
+      case LCurly:
+        prev = tokens[i - 2];
+        if (prev?.kind === TokenKind.Assignment) {
+          prev.lambda = token;
+        }
+        next = tokens[i + 1];
+        if (next?.tokenType === LBracket) {
+          argument++;
+        }
+        scopes.push(token);
+        break;
+      case RBracket:
+        if (argument) {
+          argument--;
+        }
+        break;
+      case RCurly:
+        scopes.pop();
+        break;
+      case LSql:
+        sql++;
+        break;
+      case RSql:
+        sql--;
+        break;
+      case LParen:
+        if (table) {
+          table++;
+        }
+        next = tokens[i + 1];
+        if (next?.tokenType === LBracket) {
+          table++;
+        }
+        break;
+      case RParen:
+        if (table) {
+          table--;
+        }
+        break;
+      case Command:
+        const [cmd, arg] = token.image.split(/\s+/, 2);
+        switch (cmd) {
+          case "\\d":
+            if (arg) {
+              namespace = arg === "." ? "" : arg;
+            }
+            break;
+        }
+        break;
+    }
+  }
+
+  return tokens;
+}
