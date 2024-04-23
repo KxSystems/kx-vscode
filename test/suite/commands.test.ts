@@ -51,15 +51,6 @@ import { LocalConnection } from "../../src/classes/localConnection";
 import { ConnectionManagementService } from "../../src/services/connectionManagerService";
 import { InsightsConnection } from "../../src/classes/insightsConnection";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const dsCmd = require("../../src/commands/dataSourceCommand");
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const insModule = require("../../src/utils/core");
-
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const valModule = require("../../src/validators/kdbValidator");
-
 describe("dataSourceCommand", () => {
   afterEach(() => {
     sinon.restore();
@@ -177,6 +168,49 @@ describe("dataSourceCommand", () => {
   });
 
   it("should open a data source", async () => {
+    mock({
+      "/temp": {
+        ".kdb-datasources": {
+          "datasource-0.ds": '{"name": "datasource-0"}',
+        },
+      },
+    });
+
+    ext.context = {} as vscode.ExtensionContext;
+    sinon.stub(ext, "context").value({
+      globalStorageUri: {
+        fsPath: "/temp/",
+      },
+    });
+
+    const item = new KdbDataSourceTreeItem(
+      "datasource-0",
+      vscode.TreeItemCollapsibleState.Collapsed,
+      [],
+    );
+
+    const uri = vscode.Uri.file("/temp/.kdb-datasources/datasource-0.ds");
+
+    await assert.doesNotReject(dataSourceCommand.openDataSource(item, uri));
+  });
+
+  it("should open datasource", async () => {
+    const insightsNode = new InsightsNode(
+      [],
+      "insightsnode1",
+      {
+        server: "https://insightsservername.com/",
+        alias: "insightsserveralias",
+        auth: true,
+      },
+      TreeItemCollapsibleState.None,
+    );
+
+    ext.activeConnection = new InsightsConnection(
+      insightsNode.label,
+      insightsNode,
+    );
+
     mock({
       "/temp": {
         ".kdb-datasources": {
