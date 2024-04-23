@@ -1847,18 +1847,20 @@ describe("serverCommand", () => {
   });
 
   describe("removeConnection", () => {
-    let indexOfStub: sinon.SinonStub;
-    let disconnectStub: sinon.SinonStub;
-    let getServersStub: sinon.SinonStub;
-    let getHashStub: sinon.SinonStub;
-    let removeLocalConnectionContextStub: sinon.SinonStub;
-    let updateServersStub: sinon.SinonStub;
-    let refreshStub: sinon.SinonStub;
+    let indexOfStub,
+      disconnectStub,
+      getServersStub,
+      getHashStub,
+      getInsightsStub,
+      removeLocalConnectionContextStub,
+      updateServersStub,
+      refreshStub: sinon.SinonStub;
 
     beforeEach(() => {
       indexOfStub = sinon.stub(ext.connectedContextStrings, "indexOf");
       disconnectStub = sinon.stub(serverCommand, "disconnect");
       getServersStub = sinon.stub(coreUtils, "getServers");
+      getInsightsStub = sinon.stub(coreUtils, "getInsights");
       getHashStub = sinon.stub(coreUtils, "getHash");
       removeLocalConnectionContextStub = sinon.stub(
         coreUtils,
@@ -1869,13 +1871,7 @@ describe("serverCommand", () => {
     });
 
     afterEach(() => {
-      indexOfStub.restore();
-      disconnectStub.restore();
-      getServersStub.restore();
-      getHashStub.restore();
-      removeLocalConnectionContextStub.restore();
-      updateServersStub.restore();
-      refreshStub.restore();
+      sinon.restore();
       ext.connectedContextStrings.length = 0;
     });
 
@@ -1907,7 +1903,7 @@ describe("serverCommand", () => {
     it("should remove connection Insights, but disconnect it before", async () => {
       ext.connectedContextStrings.push(insightsNode.label);
       indexOfStub.returns(1);
-      getServersStub.returns({ testKey: {} });
+      getInsightsStub.returns({ testKey: {} });
       getHashStub.returns("testKey");
 
       await serverCommand.removeConnection(insightsNode);

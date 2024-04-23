@@ -171,9 +171,9 @@ export class ConnectionManagementService {
       this.disconnect(connNode.label);
     }
     if (connNode instanceof InsightsNode) {
-      const insights: Insights | undefined = getInsights();
+      const insights = getInsights();
       const key = getHash(connNode.details.server);
-      if (insights != undefined && insights[key]) {
+      if (insights && insights[key]) {
         const uInsights = Object.keys(insights).filter((insight) => {
           return insight !== key;
         });
