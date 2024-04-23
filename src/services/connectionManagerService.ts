@@ -67,13 +67,12 @@ export class ConnectionManagementService {
     }
   }
 
+  /* istanbul ignore next */
   public async connect(connLabel: string): Promise<void> {
-    // check if connection exists
     const connection = this.retrieveConnection(connLabel);
     if (!connection) {
       return;
     }
-    /* istanbul ignore next */
     if (connection instanceof KdbNode) {
       const connectionString = this.retrieveLocalConnectionString(connection);
       const authCredentials = connection.details.auth

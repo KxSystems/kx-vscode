@@ -14,7 +14,7 @@
 import axios from "axios";
 import assert from "node:assert";
 import sinon from "sinon";
-import { TreeItemCollapsibleState, env } from "vscode";
+import { TreeItemCollapsibleState, commands, env, window } from "vscode";
 import { ext } from "../../src/extensionVariables";
 import { Insights } from "../../src/models/insights";
 import { QueryHistory } from "../../src/models/queryHistory";
@@ -40,6 +40,7 @@ import {
 import { createDefaultDataSourceFile } from "../../src/models/dataSource";
 import { ConnectionManagementService } from "../../src/services/connectionManagerService";
 import { LocalConnection } from "../../src/classes/localConnection";
+import { Telemetry } from "../../src/utils/telemetryClient";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -921,6 +922,64 @@ describe("connectionManagerService", () => {
         stringfy,
       );
       assert.strictEqual(result, undefined);
+    });
+  });
+
+  describe("behaviour methods", () => {
+    beforeEach(() => {
+      ext.serverProvider = new KdbTreeProvider(servers, insights);
+    });
+    afterEach(() => {
+      sinon.restore();
+      ext.connectedConnectionList.length = 0;
+      ext.activeConnection = undefined;
+
+      ext.serverProvider = undefined;
+    });
+    it("isConnectedBehaviour", () => {
+      const setActiveConnectionStub = sinon.stub(
+        connectionManagerService,
+        "setActiveConnection",
+      );
+      const executeCommandStub = sinon.stub(commands, "executeCommand");
+      const reloadStub = sinon.stub(ext.serverProvider, "reload");
+
+      connectionManagerService.isConnectedBehaviour(insightNode);
+
+      sinon.assert.calledOnce(setActiveConnectionStub);
+      sinon.assert.calledOnce(reloadStub);
+      sinon.assert.calledWith(
+        executeCommandStub,
+        "setContext",
+        "kdb.connected",
+        [insightNode.label],
+      );
+    });
+
+    it("isNotConnectedBehaviour", () => {
+      const showErrorMessageStub = sinon.stub(window, "showErrorMessage");
+      const sendEventStub = sinon.stub(Telemetry, "sendEvent");
+
+      const testLabel = "testLabel";
+
+      connectionManagerService.isNotConnectedBehaviour(testLabel);
+
+      sinon.assert.calledWith(
+        showErrorMessageStub,
+        `Connection failed to: ${testLabel}`,
+      );
+      sinon.assert.calledWith(sendEventStub, "Connection.Failed");
+    });
+
+    it("disconnectBehaviour", () => {
+      const testConnection = new LocalConnection("localhost:5001", "server1");
+      ext.connectedConnectionList.push(testConnection);
+      ext.activeConnection = testConnection;
+
+      connectionManagerService.disconnectBehaviour(testConnection);
+      assert.equal(ext.connectedConnectionList.length, 0);
+      assert.equal(ext.activeConnection, undefined);
+      assert.equal(ext.connectionNode, undefined);
     });
   });
 });
