@@ -88,7 +88,7 @@ describe("kdbValidator", () => {
     const result = kdbValidators.validateServerAlias("test!", false);
     assert.strictEqual(
       result,
-      "Input value must contain only alphanumeric characters and hypens only",
+      "Input value must contain only alphanumeric characters and hypens",
       "Input contained special chars",
     );
   });
@@ -109,7 +109,7 @@ describe("kdbValidator", () => {
     const result = kdbValidators.validateServerAlias("local", false);
     assert.strictEqual(
       result,
-      "Input value using restricted keywords of Local for Bundle q Server",
+      "The server name “local” is reserved for connections to the Bundled q process",
       "Input contained restricted keyword.",
     );
   });
@@ -118,7 +118,7 @@ describe("kdbValidator", () => {
     const result = kdbValidators.validateServerAlias("local", false);
     assert.strictEqual(
       result,
-      "Input value using restricted keywords of Local for Bundle q Server",
+      "The server name “local” is reserved for connections to the Bundled q process",
       "Input contained restricted keyword.",
     );
   });
