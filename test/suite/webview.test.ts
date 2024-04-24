@@ -447,12 +447,33 @@ describe("KdbNewConnectionView", () => {
     });
   });
 
+  describe("renderPortNumberDesc", () => {
+    it("should render port number desc for bundled q", () => {
+      view.isBundledQ = true;
+      const result = view.renderPortNumberDesc(ServerType.KDB);
+      assert.strictEqual(
+        JSON.stringify(result).includes(
+          "Ensure the port number you use does not conflict with another",
+        ),
+        true,
+      );
+    });
+
+    it("should render port number desc for KDB server", () => {
+      view.isBundledQ = false;
+      const result = view.renderPortNumberDesc(ServerType.KDB);
+      assert.strictEqual(
+        JSON.stringify(result).includes("<b>Set port number</b>"),
+        true,
+      );
+    });
+  });
   describe("renderPortNumber", () => {
-    it("should render port number for bundle q", () => {
+    it("should render port number for bundled q", () => {
       const result = view.renderPortNumber(ServerType.KDB);
       assert.strictEqual(
         JSON.stringify(result).includes(
-          "Ensure the port number you use does not conflict with another port.",
+          "Ensure the port number you use does not conflict with another",
         ),
         true,
       );

@@ -88,9 +88,9 @@ export class KdbNewConnectionView extends LitElement {
           <b>Bundled q.</b></span
         >`
       : html`<span
-          >Name the server,<u>but do not use "local";</u> "local" has been
+          >Name the server, <u>but do not use "local";</u> "local" has been
           reserved for use by the pre-packaged q in the kdb VS Code
-          extension</span
+          extension.</span
         >`;
   }
 
@@ -134,6 +134,18 @@ export class KdbNewConnectionView extends LitElement {
     `;
   }
 
+  renderPortNumberDesc() {
+    return this.isBundledQ
+      ? html`<span
+          >Ensure the port number you use does not conflict with another
+          port.</span
+        >`
+      : html`<span
+          >Ensure <b>Set port number</b> matches the assigned port of your q
+          process, and doesn’t conflict with another port.</span
+        >`;
+  }
+
   renderPortNumber() {
     return html`
       <div class="row">
@@ -152,11 +164,7 @@ export class KdbNewConnectionView extends LitElement {
         >
       </div>
       <div class="row option-description option-help">
-        <span
-          >${this.isBundledQ
-            ? "Ensure the port number you use does not conflict with another port."
-            : "Ensure <b>Set port number</b> matches the assigned port of your q process, and doesn’t conflict with another port."}</span
-        >
+        ${this.renderPortNumberDesc()}
       </div>
     `;
   }
@@ -254,7 +262,7 @@ export class KdbNewConnectionView extends LitElement {
               <vscode-panel-tab
                   id="tab-1"
                   @click="${() => this.tabClickAction(1)}"
-                  >Bundle q</vscode-panel-tab
+                  >Bundled q</vscode-panel-tab
                 >
                 <vscode-panel-tab
                   id="tab-2"
@@ -310,7 +318,11 @@ export class KdbNewConnectionView extends LitElement {
                         <div class="row">
                           <vscode-text-field
                             class="text-field larger option-title"
-                            value="${this.kdbServer.username}"
+                            value="${
+                              this.kdbServer.username
+                                ? this.kdbServer.username
+                                : ""
+                            }"   
                             @input="${(event: Event) =>
                               (this.kdbServer.username = (
                                 event.target as HTMLSelectElement
@@ -322,7 +334,11 @@ export class KdbNewConnectionView extends LitElement {
                           <vscode-text-field
                             type="password"
                             class="text-field larger option-title"
-                            value="${this.kdbServer.password}"
+                            value="${
+                              this.kdbServer.password
+                                ? this.kdbServer.password
+                                : ""
+                            }"
                             @input="${(event: Event) =>
                               (this.kdbServer.password = (
                                 event.target as HTMLSelectElement

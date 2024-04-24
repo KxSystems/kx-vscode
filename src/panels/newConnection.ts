@@ -35,7 +35,7 @@ export class NewConnectionPannel {
       if (message.command === "kdb.newConnection.createNewBundledConnection") {
         if (ext.isBundleQCreated) {
           vscode.window.showErrorMessage(
-            "Bundle Q is already created, please remove it first",
+            "Bundled Q is already created, please remove it first",
           );
         } else {
           vscode.commands.executeCommand(
