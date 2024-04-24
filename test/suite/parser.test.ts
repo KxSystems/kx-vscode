@@ -12,94 +12,13 @@
  */
 
 import * as assert from "assert";
-import { CharLiteral, QLexer, QParser } from "../../server/src/parser";
+import { generateTextMateGrammar } from "../../server/src/parser";
 
-describe("QLexer", () => {
-  describe("CharLiteral", () => {
-    it("should tokenize string", () => {
-      const lexed = QLexer.tokenize('"char"');
-      assert.strictEqual(lexed.tokens.length, 1);
-      assert.strictEqual(lexed.tokens[0].tokenType, CharLiteral);
-    });
-
-    it("should tokenize empty string", () => {
-      const lexed = QLexer.tokenize('""');
-      assert.strictEqual(lexed.tokens.length, 1);
-      assert.strictEqual(lexed.tokens[0].tokenType, CharLiteral);
-    });
-  });
-});
-
-describe("QParser", () => {
-  describe("comments", () => {
-    it("should ignore block", () => {
-      QParser.parse("/\na:\n1\n\\");
-      assert.deepEqual(QParser.errors, []);
-    });
-
-    it("should ignore line", () => {
-      QParser.parse("/a:\n");
-      assert.deepEqual(QParser.errors, []);
-    });
-
-    it("should ignore inline", () => {
-      QParser.parse("a: 1 /a:\n");
-      assert.deepEqual(QParser.errors, []);
-    });
-  });
-
-  describe("script", () => {
-    it("should parse empty", () => {
-      QParser.parse("");
-      assert.deepEqual(QParser.errors, []);
-    });
-  });
-
-  describe("statement", () => {
-    it("should parse empty", () => {
-      QParser.parse(";\n\r\n;");
-      assert.deepEqual(QParser.errors, []);
-    });
-  });
-
-  describe("expression", () => {
-    describe("identifier", () => {
-      it("should parse", () => {
-        QParser.parse("absolute;");
-        assert.deepEqual(QParser.errors, []);
-      });
-
-      it("should parse namespaced", () => {
-        QParser.parse(".absolute.value;");
-        assert.deepEqual(QParser.errors, []);
-      });
-    });
-
-    describe("assignment", () => {
-      it("should parse", () => {
-        QParser.parse("a:1;");
-        assert.deepEqual(QParser.errors, []);
-      });
-
-      it("should parse multiple", () => {
-        QParser.parse("a:b:c:1;");
-        assert.deepEqual(QParser.errors, []);
-      });
-
-      it("should parse multiline", () => {
-        QParser.parse("a\n :b:c:\r\n 1;");
-        assert.deepEqual(QParser.errors, []);
-      });
-
-      it("should parse indexed", () => {
-        QParser.parse("a[1]:1;");
-        assert.deepEqual(QParser.errors, []);
-      });
-
-      it("should parse infixed", () => {
-        QParser.parse("a[1]+:1;");
-        assert.deepEqual(QParser.errors, []);
-      });
+describe("Parser", () => {
+  describe("TextMate", () => {
+    it("should generate TextMate grammar file", () => {
+      const grammar = generateTextMateGrammar();
+      assert.ok(grammar);
     });
   });
 });

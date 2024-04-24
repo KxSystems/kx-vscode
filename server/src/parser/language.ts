@@ -27,6 +27,8 @@ import {
 import { Identifier, Keyword, Reserved } from "./keywords";
 import { Command, Iterator, LineComment, Operator } from "./tokens";
 import { TokenType } from "chevrotain";
+import { writeFileSync } from "fs";
+import { resolve } from "path";
 
 function _(token: TokenType | RegExp) {
   return ("PATTERN" in token ? `${token.PATTERN}` : `${token}`).slice(1, -1);
@@ -108,7 +110,7 @@ const BlockComment = [/^\/\s*$/, /^\\\s*$/];
 const StringLiteral = [/"/, /\\["\\]/];
 const ControlKeyword = /[$!?#@'^]/;
 
-export const language = {
+const language = {
   name: "q",
   scopeName: "source.q",
   patterns: [
@@ -277,3 +279,9 @@ export const language = {
     },
   },
 };
+
+export function generateTextMateGrammar() {
+  const grammar = JSON.stringify(language, null, 2);
+  writeFileSync(resolve("syntaxes", "q.tmLanguage.json"), grammar);
+  return grammar;
+}
