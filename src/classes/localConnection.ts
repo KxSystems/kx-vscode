@@ -69,7 +69,9 @@ export class LocalConnection {
     return this.connection;
   }
 
-  public connect(callback: nodeq.AsyncValueCallback<LocalConnection>): void {
+  public async connect(
+    callback: nodeq.AsyncValueCallback<LocalConnection>,
+  ): Promise<void> {
     nodeq.connect(this.options, (err, conn) => {
       if (err || !conn) {
         ext.serverProvider.reload();
@@ -114,7 +116,6 @@ export class LocalConnection {
   public async execute(query: string): Promise<string | Error> {
     let result;
     let error;
-    // try 5 times, then fail
     let retryCount = 0;
     while (this.connection === undefined) {
       if (retryCount > ext.maxRetryCount) {
@@ -150,6 +151,7 @@ export class LocalConnection {
     context?: string,
     stringify?: boolean,
   ): Promise<any> {
+    let result;
     await this.waitForConnection();
 
     if (!this.connection) {
@@ -164,25 +166,30 @@ export class LocalConnection {
       (err: Error, res: QueryResult) => {
         if (err) {
           this.isError = true;
-          this.result = handleQueryResults(
-            err.toString(),
+          result = handleQueryResults(err.toString(), QueryResultType.Error);
+        }
+        if (res.errored) {
+          this.isError = true;
+          result = handleQueryResults(
+            res.error + (res.backtrace ? "\n" + res.backtrace : ""),
             QueryResultType.Error,
           );
-        }
-        if (res) {
-          this.handleQueryResult(res);
+        } else {
+          result = res.result === null ? "" : res.result;
         }
       },
     );
 
-    const result = await this.waitForResult();
+    while (result === undefined || result === null) {
+      await delay(500);
+    }
 
     if (ext.resultsViewProvider.isVisible() && stringify) {
       if (this.isError) {
         this.isError = false;
         return result;
       }
-      return convertStringToArray(result);
+      return convertStringToArray(result ? result : "");
     }
 
     return result;

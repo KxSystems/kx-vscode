@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { LocalConnection } from "../classes/localConnection";
 import { loadServerObjects } from "../commands/serverCommand";
 import { ext } from "../extensionVariables";
 
@@ -97,19 +98,22 @@ export async function loadVariables(ns: string): Promise<ServerObject[]> {
 }
 
 export async function loadViews(): Promise<string[]> {
-  const rawViewArray = await ext.connection?.executeQuery("views`");
-  const views = rawViewArray?.filter((item: any) => {
-    return item !== "s#" && item !== "" && item !== ",";
-  });
-  const sorted = views?.sort((object1: any, object2: any) => {
-    if (object1 < object2) {
-      return -1;
-    } else if (object1 > object2) {
-      return 1;
-    }
-    return 0;
-  });
-  return sorted ?? new Array<string>();
+  if (ext.activeConnection instanceof LocalConnection) {
+    const rawViewArray = await ext.activeConnection?.executeQuery("views`");
+    const views = rawViewArray?.filter((item: any) => {
+      return item !== "s#" && item !== "" && item !== ",";
+    });
+    const sorted = views?.sort((object1: any, object2: any) => {
+      if (object1 < object2) {
+        return -1;
+      } else if (object1 > object2) {
+        return 1;
+      }
+      return 0;
+    });
+    return sorted ?? new Array<string>();
+  }
+  return new Array<string>();
 }
 
 function getNamespaces(input: ServerObject[], root = "."): ServerObject[] {

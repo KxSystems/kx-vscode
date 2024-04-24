@@ -27,6 +27,7 @@ import { QueryHistoryProvider } from "./services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import AuthSettings from "./utils/secretStorage";
 import { LocalConnection } from "./classes/localConnection";
+import { InsightsConnection } from "./classes/insightsConnection";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
@@ -44,9 +45,10 @@ export namespace ext {
   export let isBundleQCreated: boolean;
   export const rowLimit = 150000000;
 
-  export let connection: LocalConnection | undefined;
-  export let activeConnection: LocalConnection | undefined;
-  export const connectedConnectionList: Array<LocalConnection> = [];
+  export let activeConnection: LocalConnection | InsightsConnection | undefined;
+  export const connectedConnectionList: Array<
+    LocalConnection | InsightsConnection
+  > = [];
   export const connectedContextStrings: Array<string> = [];
   export const connectionsList: Array<KdbNode | InsightsNode> = [];
   export let hideDetailedConsoleQueryOutput: boolean;

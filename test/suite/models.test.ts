@@ -267,16 +267,16 @@ describe("Models", () => {
   });
 
   it("Should return sorted views", async () => {
-    ext.connection = new LocalConnection("localhost:5001", "server1");
-    sinon.stub(ext.connection, "executeQuery").resolves(["vw1", "vw2"]);
+    ext.activeConnection = new LocalConnection("localhost:5001", "server1");
+    sinon.stub(ext.activeConnection, "executeQuery").resolves(["vw1", "vw2"]);
     const result = await loadViews();
     assert.strictEqual(result[0], "vw1", "Should return the first view");
     sinon.restore();
   });
 
   it("Should return sorted views (reverse order)", async () => {
-    ext.connection = new LocalConnection("localhost:5001", "server1");
-    sinon.stub(ext.connection, "executeQuery").resolves(["vw1", "vw2"]);
+    ext.activeConnection = new LocalConnection("localhost:5001", "server1");
+    sinon.stub(ext.activeConnection, "executeQuery").resolves(["vw1", "vw2"]);
     const result = await loadViews();
     assert.strictEqual(result[0], "vw1", "Should return the first view");
     sinon.restore();

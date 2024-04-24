@@ -202,6 +202,34 @@ describe("Utils", () => {
         assert.strictEqual(result, "");
       });
     });
+
+    describe("getStatus", () => {
+      const localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
+
+      afterEach(() => {
+        ext.activeConnection = undefined;
+        ext.connectedConnectionList.length = 0;
+      });
+
+      it("should return connected state", () => {
+        ext.activeConnection = undefined;
+        ext.connectedConnectionList.push(localConn);
+        const result = coreUtils.getStatus(localConn.connLabel);
+        assert.strictEqual(result, "- connected");
+      });
+
+      it("should return active state", () => {
+        ext.activeConnection = localConn;
+        const result = coreUtils.getStatus(localConn.connLabel);
+        assert.strictEqual(result, "- active");
+      });
+
+      it("should return disconnected state", () => {
+        ext.activeConnection = undefined;
+        const result = coreUtils.getStatus(localConn.connLabel);
+        assert.strictEqual(result, "- disconnected");
+      });
+    });
   });
 
   describe("dataSource", () => {
@@ -1168,13 +1196,9 @@ describe("Utils", () => {
 
   describe("userInteraction", () => {
     let windowMock: sinon.SinonMock;
-    // let getConfigurationMock: any;
-    // let withProgressMock: any;
 
     beforeEach(() => {
       windowMock = sinon.mock(vscode.window);
-      // getConfigurationMock = sinon.stub(workspace, 'getConfiguration');
-      // withProgressMock = sinon.stub(window, 'withProgress');
     });
 
     afterEach(() => {

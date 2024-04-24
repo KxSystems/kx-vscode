@@ -14,7 +14,7 @@
 import axios from "axios";
 import assert from "node:assert";
 import sinon from "sinon";
-import { TreeItemCollapsibleState, env } from "vscode";
+import { TreeItemCollapsibleState, commands, env, window } from "vscode";
 import { ext } from "../../src/extensionVariables";
 import { Insights } from "../../src/models/insights";
 import { QueryHistory } from "../../src/models/queryHistory";
@@ -40,6 +40,8 @@ import {
 import { createDefaultDataSourceFile } from "../../src/models/dataSource";
 import { ConnectionManagementService } from "../../src/services/connectionManagerService";
 import { LocalConnection } from "../../src/classes/localConnection";
+import { Telemetry } from "../../src/utils/telemetryClient";
+import { InsightsConnection } from "../../src/classes/insightsConnection";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -475,7 +477,7 @@ describe("kdbTreeProvider", () => {
 
     assert.strictEqual(
       insightsNode1.label,
-      "insightsnode1 (connected)",
+      "insightsnode1",
       "InsightsNode node creation failed",
     );
   });
@@ -740,6 +742,7 @@ describe("connectionManagerService", () => {
     insights["testInsight"],
     TreeItemCollapsibleState.None,
   );
+  ext.serverProvider = new KdbTreeProvider(servers, insights);
   describe("retrieveConnection", () => {
     afterEach(() => {
       ext.connectionsList.length = 0;
@@ -787,20 +790,6 @@ describe("connectionManagerService", () => {
     });
   });
 
-  describe("isLocalConnection", () => {
-    it("Should return true for Local connection", () => {
-      ext.activeConnection = new LocalConnection("127.0.0.1:5001", "testLabel");
-      const result = connectionManagerService.isLocalConnection();
-      assert.strictEqual(result, true);
-    });
-
-    it("Should return false for undefined connection", () => {
-      ext.activeConnection = undefined;
-      const result = connectionManagerService.isLocalConnection();
-      assert.strictEqual(result, false);
-    });
-  });
-
   describe("retrieveLocalConnectionString", () => {
     it("Should return the connection string", () => {
       const result =
@@ -836,9 +825,11 @@ describe("connectionManagerService", () => {
       kdbNode.details.serverName + ":" + kdbNode.details.serverPort,
       kdbNode.label,
     );
+    beforeEach(() => {
+      ext.activeConnection = undefined;
+    });
 
     afterEach(() => {
-      ext.connection = undefined;
       ext.connectionNode = undefined;
       sinon.restore();
     });
@@ -848,6 +839,7 @@ describe("connectionManagerService", () => {
     });
 
     it("Should set active connection", () => {
+      ext.serverProvider = new KdbTreeProvider(servers, insights);
       sinon
         .stub(connectionManagerService, "retrieveConnectedConnection")
         .returns(localConn);
@@ -891,16 +883,14 @@ describe("connectionManagerService", () => {
       kdbNode.details.serverName + ":" + kdbNode.details.serverPort,
       kdbNode.label,
     );
+    const insightsConn = new InsightsConnection(insightNode.label, insightNode);
     const command = "testCommand";
     const context = "testContext";
     const stringfy = true;
-    let executeQueryStub, isLocalConnectionStub;
+    let executeQueryStub, getScratchpadQueryStub;
     beforeEach(() => {
       executeQueryStub = sinon.stub(localConn, "executeQuery");
-      isLocalConnectionStub = sinon.stub(
-        connectionManagerService,
-        "isLocalConnection",
-      );
+      getScratchpadQueryStub = sinon.stub(insightsConn, "getScratchpadQuery");
     });
     afterEach(() => {
       ext.activeConnection = undefined;
@@ -919,7 +909,6 @@ describe("connectionManagerService", () => {
     it("Should execute query from kdbNode", async () => {
       ext.activeConnection = localConn;
       executeQueryStub.returns("test results");
-      isLocalConnectionStub.returns(true);
       const result = await connectionManagerService.executeQuery(
         command,
         context,
@@ -929,14 +918,72 @@ describe("connectionManagerService", () => {
     });
 
     it("Should execute query from InsightsNode", async () => {
-      ext.activeConnection = localConn;
-      isLocalConnectionStub.returns(false);
+      ext.activeConnection = insightsConn;
+      getScratchpadQueryStub.returns("test query");
       const result = await connectionManagerService.executeQuery(
         command,
         context,
         stringfy,
       );
-      assert.strictEqual(result, undefined);
+      assert.strictEqual(result, "test query");
+    });
+  });
+
+  describe("behaviour methods", () => {
+    beforeEach(() => {
+      ext.serverProvider = new KdbTreeProvider(servers, insights);
+    });
+    afterEach(() => {
+      sinon.restore();
+      ext.connectedConnectionList.length = 0;
+      ext.activeConnection = undefined;
+
+      ext.serverProvider = undefined;
+    });
+    it("isConnectedBehaviour", () => {
+      const setActiveConnectionStub = sinon.stub(
+        connectionManagerService,
+        "setActiveConnection",
+      );
+      const executeCommandStub = sinon.stub(commands, "executeCommand");
+      const reloadStub = sinon.stub(ext.serverProvider, "reload");
+
+      connectionManagerService.isConnectedBehaviour(insightNode);
+
+      sinon.assert.calledOnce(setActiveConnectionStub);
+      sinon.assert.calledOnce(reloadStub);
+      sinon.assert.calledWith(
+        executeCommandStub,
+        "setContext",
+        "kdb.connected",
+        [insightNode.label],
+      );
+    });
+
+    it("isNotConnectedBehaviour", () => {
+      const showErrorMessageStub = sinon.stub(window, "showErrorMessage");
+      const sendEventStub = sinon.stub(Telemetry, "sendEvent");
+
+      const testLabel = "testLabel";
+
+      connectionManagerService.isNotConnectedBehaviour(testLabel);
+
+      sinon.assert.calledWith(
+        showErrorMessageStub,
+        `Connection failed to: ${testLabel}`,
+      );
+      sinon.assert.calledWith(sendEventStub, "Connection.Failed");
+    });
+
+    it("disconnectBehaviour", () => {
+      const testConnection = new LocalConnection("localhost:5001", "server1");
+      ext.connectedConnectionList.push(testConnection);
+      ext.activeConnection = testConnection;
+
+      connectionManagerService.disconnectBehaviour(testConnection);
+      assert.equal(ext.connectedConnectionList.length, 0);
+      assert.equal(ext.activeConnection, undefined);
+      assert.equal(ext.connectionNode, undefined);
     });
   });
 });
