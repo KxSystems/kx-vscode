@@ -1168,13 +1168,9 @@ describe("Utils", () => {
 
   describe("userInteraction", () => {
     let windowMock: sinon.SinonMock;
-    // let getConfigurationMock: any;
-    // let withProgressMock: any;
 
     beforeEach(() => {
       windowMock = sinon.mock(vscode.window);
-      // getConfigurationMock = sinon.stub(workspace, 'getConfiguration');
-      // withProgressMock = sinon.stub(window, 'withProgress');
     });
 
     afterEach(() => {
