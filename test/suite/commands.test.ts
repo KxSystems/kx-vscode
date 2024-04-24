@@ -2030,6 +2030,8 @@ describe("serverCommand", () => {
     });
 
     afterEach(() => {
+      ext.activeConnection = undefined;
+      ext.connectionNode = undefined;
       sinon.restore();
       ext.connectedContextStrings.length = 0;
     });
