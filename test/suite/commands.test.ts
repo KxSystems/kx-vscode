@@ -1688,11 +1688,15 @@ describe("serverCommand", () => {
     let isVisibleStub,
       executeQueryStub,
       writeResultsViewStub,
-      writeResultsConsoleStub: sinon.SinonStub;
+      writeResultsConsoleStub,
+      consoleErrorStub: sinon.SinonStub;
+    const _console = vscode.window.createOutputChannel("q Console Output");
+    const executionConsole = new ExecutionConsole(_console);
     const connMangService = new ConnectionManagementService();
     beforeEach(() => {
       ext.activeConnection = new LocalConnection("localhost:5001", "server1");
       ext.connectionNode = kdbNode;
+      consoleErrorStub = sinon.stub(executionConsole, "appendQueryError");
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
       executeQueryStub = sinon.stub(connMangService, "executeQuery");
       writeResultsViewStub = sinon.stub(
@@ -1719,6 +1723,10 @@ describe("serverCommand", () => {
       executeQueryStub.resolves("dummy test");
       serverCommand.executeQuery("SELECT * FROM table");
       sinon.assert.notCalled(writeResultsViewStub);
+    });
+    it("should get error", async () => {
+      const res = await serverCommand.executeQuery("");
+      assert.equal(res, undefined);
     });
   });
 

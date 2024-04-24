@@ -319,9 +319,8 @@ export function activeConnection(viewItem: KdbNode | InsightsNode): void {
 
 export async function disconnect(connLabel: string): Promise<void> {
   const connMngService = new ConnectionManagementService();
-  connMngService.disconnect(connLabel ? connLabel : "");
+  connMngService.disconnect(connLabel);
 
-  // commands.executeCommand("setContext", "kdb.insightsConnected", false);
   if (ext.connectedConnectionList.length === 0) {
     const queryConsole = ExecutionConsole.start();
     queryConsole.dispose();
