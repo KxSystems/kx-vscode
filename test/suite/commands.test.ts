@@ -240,6 +240,7 @@ describe("dataSourceCommand", () => {
 
 describe("dataSourceCommand2", () => {
   let dummyDataSourceFiles: DataSourceFiles;
+  const localConn = new LocalConnection("localhost:5001", "test");
   const uriTest: vscode.Uri = vscode.Uri.parse("test");
   let resultsPanel: KdbResultsViewProvider;
   ext.outputChannel = vscode.window.createOutputChannel("kdb");
@@ -479,6 +480,7 @@ describe("dataSourceCommand2", () => {
   });
 
   describe("runApiDataSource", () => {
+    let windowMock: sinon.SinonMock;
     let getApiBodyStub: sinon.SinonStub;
     let checkIfTimeParamIsCorrectStub: sinon.SinonStub;
     let getDataInsightsStub: sinon.SinonStub;
@@ -496,6 +498,7 @@ describe("dataSourceCommand2", () => {
     );
 
     beforeEach(() => {
+      windowMock = sinon.mock(vscode.window);
       ext.activeConnection = new InsightsConnection(
         insightsNode.label,
         insightsNode,
@@ -516,6 +519,30 @@ describe("dataSourceCommand2", () => {
     afterEach(() => {
       ext.activeConnection = undefined;
       sinon.restore();
+    });
+
+    it("should show an error message if not active connection is undefined", async () => {
+      ext.activeConnection = undefined;
+      await dataSourceCommand.runApiDataSource(dummyDataSourceFiles);
+      windowMock
+        .expects("showErrorMessage")
+        .once()
+        .withArgs("No Insights active connection found");
+      sinon.assert.notCalled(getApiBodyStub);
+      sinon.assert.notCalled(getDataInsightsStub);
+      sinon.assert.notCalled(handleWSResultsStub);
+    });
+
+    it("should show an error message if not active to an Insights server", async () => {
+      ext.activeConnection = localConn;
+      await dataSourceCommand.runApiDataSource(dummyDataSourceFiles);
+      windowMock
+        .expects("showErrorMessage")
+        .once()
+        .withArgs("No Insights active connection found");
+      sinon.assert.notCalled(getApiBodyStub);
+      sinon.assert.notCalled(getDataInsightsStub);
+      sinon.assert.notCalled(handleWSResultsStub);
     });
 
     it("should show an error message if the time parameters are incorrect", async () => {
@@ -563,6 +590,7 @@ describe("dataSourceCommand2", () => {
   });
 
   describe("runQsqlDataSource", () => {
+    let windowMock: sinon.SinonMock;
     let getDataInsightsStub: sinon.SinonStub;
     let handleWSResultsStub: sinon.SinonStub;
     let handleScratchpadTableRes: sinon.SinonStub;
@@ -578,6 +606,7 @@ describe("dataSourceCommand2", () => {
     );
 
     beforeEach(() => {
+      windowMock = sinon.mock(vscode.window);
       ext.activeConnection = new InsightsConnection(
         insightsNode.label,
         insightsNode,
@@ -593,6 +622,24 @@ describe("dataSourceCommand2", () => {
     afterEach(() => {
       ext.activeConnection = undefined;
       sinon.restore();
+    });
+
+    it("should show an error message if active connection is undefined", async () => {
+      ext.activeConnection = undefined;
+      await dataSourceCommand.runQsqlDataSource(dummyDataSourceFiles);
+      windowMock
+        .expects("showErrorMessage")
+        .once()
+        .withArgs("No Insights active connection found");
+    });
+
+    it("should show an error message if not active to an Insights server", async () => {
+      ext.activeConnection = localConn;
+      await dataSourceCommand.runQsqlDataSource(dummyDataSourceFiles);
+      windowMock
+        .expects("showErrorMessage")
+        .once()
+        .withArgs("No Insights active connection found");
     });
 
     it("should call the API and handle the results", async () => {
@@ -622,6 +669,7 @@ describe("dataSourceCommand2", () => {
   });
 
   describe("runSqlDataSource", () => {
+    let windowMock: sinon.SinonMock;
     let getDataInsightsStub: sinon.SinonStub;
     let handleWSResultsStub: sinon.SinonStub;
     let handleScratchpadTableRes: sinon.SinonStub;
@@ -637,6 +685,7 @@ describe("dataSourceCommand2", () => {
     );
 
     beforeEach(() => {
+      windowMock = sinon.mock(vscode.window);
       ext.activeConnection = new InsightsConnection(
         insightsNode.label,
         insightsNode,
@@ -652,6 +701,24 @@ describe("dataSourceCommand2", () => {
     afterEach(() => {
       ext.activeConnection = undefined;
       sinon.restore();
+    });
+
+    it("should show an error message if active connection is undefined", async () => {
+      ext.activeConnection = undefined;
+      await dataSourceCommand.runSqlDataSource(dummyDataSourceFiles);
+      windowMock
+        .expects("showErrorMessage")
+        .once()
+        .withArgs("No Insights active connection found");
+    });
+
+    it("should show an error message if not active to an Insights server", async () => {
+      ext.activeConnection = localConn;
+      await dataSourceCommand.runSqlDataSource(dummyDataSourceFiles);
+      windowMock
+        .expects("showErrorMessage")
+        .once()
+        .withArgs("No Insights active connection found");
     });
 
     it("should call the API and handle the results", async () => {
@@ -820,6 +887,7 @@ describe("dataSourceCommand2", () => {
       getDataInsightsStub,
       writeQueryResultsToViewStub,
       writeQueryResultsToConsoleStub: sinon.SinonStub;
+    let windowMock: sinon.SinonMock;
     const insightsNode = new InsightsNode(
       [],
       "insightsnode1",
@@ -834,6 +902,7 @@ describe("dataSourceCommand2", () => {
     ext.outputChannel = vscode.window.createOutputChannel("kdb");
 
     beforeEach(() => {
+      windowMock = sinon.mock(vscode.window);
       ext.activeConnection = new InsightsConnection(
         insightsNode.label,
         insightsNode,
@@ -863,9 +932,23 @@ describe("dataSourceCommand2", () => {
     });
 
     it("should show an error message if not connected to an Insights server", async () => {
+      ext.activeConnection = undefined;
       getMetaStub.resolves({});
       await dataSourceCommand.runDataSource({} as DataSourceFiles);
-      sinon.assert.notCalled(isVisibleStub);
+      windowMock
+        .expects("showErrorMessage")
+        .once()
+        .withArgs("No Insights active connection found");
+    });
+
+    it("should show an error message if not active to an Insights server", async () => {
+      ext.activeConnection = localConn;
+      getMetaStub.resolves({});
+      await dataSourceCommand.runDataSource({} as DataSourceFiles);
+      windowMock
+        .expects("showErrorMessage")
+        .once()
+        .withArgs("No Insights active connection found");
     });
 
     it("should return QSQL results", async () => {
@@ -973,6 +1056,53 @@ describe("dataSourceCommand2", () => {
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+    });
+  });
+
+  describe("populateScratchpad", async () => {
+    const dummyFileContent: DataSourceFiles = {
+      name: "dummy-DS",
+      dataSource: {
+        selectedType: DataSourceTypes.QSQL,
+        api: {
+          selectedApi: "getData",
+          table: "dummyTbl",
+          startTS: "2023-09-10T09:30",
+          endTS: "2023-09-19T12:30",
+          fill: "",
+          temporality: "",
+          filter: [],
+          groupBy: [],
+          agg: [],
+          sortCols: [],
+          slice: [],
+          labels: [],
+        },
+        qsql: {
+          query:
+            "n:10;\n([] date:n?(reverse .z.d-1+til 10); instance:n?`inst1`inst2`inst3`inst4; sym:n?`USD`EUR`GBP`JPY; cnt:n?10; lists:{x?10}@/:1+n?10)\n",
+          selectedTarget: "dummy-target",
+        },
+        sql: { query: "test query" },
+      },
+      insightsNode: "dummyNode",
+    };
+    let windowMock: sinon.SinonMock;
+
+    beforeEach(() => {
+      windowMock = sinon.mock(vscode.window);
+    });
+    afterEach(() => {
+      ext.activeConnection = undefined;
+      sinon.restore();
+    });
+    it("should show error msg", async () => {
+      ext.activeConnection = localConn;
+      await dataSourceCommand.populateScratchpad(dummyFileContent);
+      windowMock
+        .expects("showErrorMessage")
+        .once()
+        .withArgs("Please connect to an Insights server");
     });
   });
 });
@@ -1689,14 +1819,14 @@ describe("serverCommand", () => {
       executeQueryStub,
       writeResultsViewStub,
       writeResultsConsoleStub,
-      consoleErrorStub: sinon.SinonStub;
-    const _console = vscode.window.createOutputChannel("q Console Output");
-    const executionConsole = new ExecutionConsole(_console);
+      writeScratchpadResultStub: sinon.SinonStub;
     const connMangService = new ConnectionManagementService();
+    const insightsConn = new InsightsConnection(
+      insightsNode.label,
+      insightsNode,
+    );
+    const localConn = new LocalConnection("localhost:5001", "server1");
     beforeEach(() => {
-      ext.activeConnection = new LocalConnection("localhost:5001", "server1");
-      ext.connectionNode = kdbNode;
-      consoleErrorStub = sinon.stub(executionConsole, "appendQueryError");
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
       executeQueryStub = sinon.stub(connMangService, "executeQuery");
       writeResultsViewStub = sinon.stub(
@@ -1707,24 +1837,45 @@ describe("serverCommand", () => {
         serverCommand,
         "writeQueryResultsToConsole",
       );
+      writeScratchpadResultStub = sinon.stub(
+        serverCommand,
+        "writeScratchpadResult",
+      );
     });
     afterEach(() => {
       ext.activeConnection = undefined;
       sinon.restore();
     });
     it("should execute query and write results to view", async () => {
+      ext.activeConnection = localConn;
+      ext.connectionNode = kdbNode;
       isVisibleStub.returns(true);
       executeQueryStub.resolves({ data: "data" });
       serverCommand.executeQuery("SELECT * FROM table");
       sinon.assert.notCalled(writeResultsConsoleStub);
+      sinon.assert.notCalled(writeScratchpadResultStub);
     });
     it("should execute query and write results to console", async () => {
+      ext.activeConnection = localConn;
+      ext.connectionNode = kdbNode;
       isVisibleStub.returns(false);
       executeQueryStub.resolves("dummy test");
       serverCommand.executeQuery("SELECT * FROM table");
       sinon.assert.notCalled(writeResultsViewStub);
+      sinon.assert.notCalled(writeScratchpadResultStub);
     });
+    it("should execute query and write error to console", async () => {
+      ext.activeConnection = insightsConn;
+      ext.connectionNode = insightsNode;
+      isVisibleStub.returns(true);
+      executeQueryStub.resolves("dummy test");
+      serverCommand.executeQuery("SELECT * FROM table");
+      sinon.assert.notCalled(writeResultsConsoleStub);
+    });
+
     it("should get error", async () => {
+      ext.activeConnection = localConn;
+      ext.connectionNode = kdbNode;
       const res = await serverCommand.executeQuery("");
       assert.equal(res, undefined);
     });
