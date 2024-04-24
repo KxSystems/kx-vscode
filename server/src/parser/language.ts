@@ -25,7 +25,15 @@ import {
   TimeStampLiteral,
 } from "./literals";
 import { Identifier, Keyword, Reserved } from "./keywords";
-import { Command, Iterator, LineComment, Operator } from "./tokens";
+import {
+  Colon,
+  Command,
+  DoubleColon,
+  Iterator,
+  LineComment,
+  Operator,
+  SemiColon,
+} from "./tokens";
 import { TokenType } from "chevrotain";
 import { writeFileSync } from "fs";
 import { resolve } from "path";
@@ -111,6 +119,7 @@ const StringLiteral = [/"/, /\\["\\]/];
 const ControlKeyword = /[$!?#@'^]/;
 
 const language = {
+  description: "This file is auto generated DO NOT EDIT",
   name: "q",
   scopeName: "source.q",
   patterns: [
@@ -269,11 +278,15 @@ const language = {
         },
         {
           name: "punctuation.assignment.q",
-          match: ":",
+          match: _(Colon),
+        },
+        {
+          name: "punctuation.assignment.q",
+          match: _(DoubleColon),
         },
         {
           name: "punctuation.terminator.statement.q",
-          match: ";",
+          match: _(SemiColon),
         },
       ],
     },

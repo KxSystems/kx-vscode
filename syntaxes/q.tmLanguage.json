@@ -1,4 +1,5 @@
 {
+  "description": "This file is auto generated DO NOT EDIT",
   "name": "q",
   "scopeName": "source.q",
   "patterns": [
@@ -224,6 +225,10 @@
         {
           "name": "punctuation.assignment.q",
           "match": ":"
+        },
+        {
+          "name": "punctuation.assignment.q",
+          "match": "::"
         },
         {
           "name": "punctuation.terminator.statement.q",
