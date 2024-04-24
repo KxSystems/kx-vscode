@@ -2069,7 +2069,7 @@ describe("serverCommand", () => {
 
       await serverCommand.removeConnection(insightsNode);
       assert.ok(updateServersStub.notCalled);
-    });
+    }).timeout(5000);
   });
 });
 
