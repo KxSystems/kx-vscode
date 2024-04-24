@@ -14,6 +14,8 @@
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   CompletionItem,
+  CompletionItemKind,
+  CompletionParams,
   Connection,
   DefinitionParams,
   DocumentSymbol,
@@ -26,16 +28,15 @@ import {
   RenameParams,
   ServerCapabilities,
   SymbolKind,
-  TextDocumentPositionParams,
+  TextDocumentIdentifier,
   TextDocumentSyncKind,
   TextDocuments,
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver/node";
 import { Identifier, Token, TokenKind, parse } from "./parser";
-import { IToken } from "chevrotain";
 
-function rangeFromToken(token: IToken): Range {
+function rangeFromToken(token: Token): Range {
   return Range.create(
     (token.startLine || 1) - 1,
     (token.startColumn || 1) - 1,
@@ -54,6 +55,13 @@ function hasPosition(token: Token, position: Position) {
   );
 }
 
+const enum FindKind {
+  Reference,
+  Definition,
+  Rename,
+  Completion,
+}
+
 export default class QLangServer {
   private declare connection: Connection;
   private declare params: InitializeParams;
@@ -64,80 +72,30 @@ export default class QLangServer {
     this.params = params;
     this.documents = new TextDocuments(TextDocument);
     this.documents.listen(this.connection);
+    this.connection.onDocumentSymbol(this.onDocumentSymbol.bind(this));
     this.connection.onReferences(this.onReferences.bind(this));
     this.connection.onDefinition(this.onDefinition.bind(this));
-    this.connection.onDocumentSymbol(this.onDocumentSymbol.bind(this));
-    this.connection.onCompletion(this.onCompletion.bind(this));
     this.connection.onRenameRequest(this.onRenameRequest.bind(this));
+    this.connection.onCompletion(this.onCompletion.bind(this));
   }
 
   public capabilities(): ServerCapabilities {
     return {
       textDocumentSync: TextDocumentSyncKind.Full,
+      documentSymbolProvider: true,
       referencesProvider: true,
       definitionProvider: true,
-      documentSymbolProvider: true,
-      completionProvider: { resolveProvider: false },
       renameProvider: true,
+      completionProvider: { resolveProvider: false },
     };
-  }
-
-  public onReferences({
-    textDocument,
-    position,
-  }: ReferenceParams): Location[] | undefined {
-    return this.findReferences({ textDocument, position }).map((token) =>
-      Location.create(textDocument.uri, rangeFromToken(token)),
-    );
-  }
-
-  public onDefinition({
-    textDocument,
-    position,
-  }: DefinitionParams): Location[] | undefined {
-    const document = this.documents.get(textDocument.uri);
-    if (!document) {
-      return;
-    }
-
-    const tokens = parse(document.getText());
-    const source = tokens.find((token) => hasPosition(token, position));
-
-    if (!source || source.tokenType !== Identifier) {
-      return;
-    }
-
-    let target: Token[] = [];
-
-    if (source.scope) {
-      target = tokens.filter(
-        (token) =>
-          token.scope === source.scope &&
-          token.kind === TokenKind.Assignment &&
-          token.identifier === source.identifier,
-      );
-    }
-
-    if (target.length === 0) {
-      target = tokens.filter(
-        (token) =>
-          !token.scope &&
-          token.kind === TokenKind.Assignment &&
-          token.identifier === source.identifier,
-      );
-    }
-
-    return target.map((token) =>
-      Location.create(textDocument.uri, rangeFromToken(token)),
-    );
   }
 
   public onDocumentSymbol({
     textDocument,
-  }: DocumentSymbolParams): DocumentSymbol[] | undefined {
+  }: DocumentSymbolParams): DocumentSymbol[] {
     const document = this.documents.get(textDocument.uri);
     if (!document) {
-      return;
+      return [];
     }
 
     const tokens = parse(document.getText());
@@ -171,8 +129,21 @@ export default class QLangServer {
       );
   }
 
-  public onCompletion(): CompletionItem[] {
-    return [];
+  public onReferences({ textDocument, position }: ReferenceParams): Location[] {
+    return this.findIdentifiers(FindKind.Reference, textDocument, position).map(
+      (token) => Location.create(textDocument.uri, rangeFromToken(token)),
+    );
+  }
+
+  public onDefinition({
+    textDocument,
+    position,
+  }: DefinitionParams): Location[] {
+    return this.findIdentifiers(
+      FindKind.Definition,
+      textDocument,
+      position,
+    ).map((token) => Location.create(textDocument.uri, rangeFromToken(token)));
   }
 
   public onRenameRequest({
@@ -180,55 +151,96 @@ export default class QLangServer {
     position,
     newName,
   }: RenameParams): WorkspaceEdit | null {
-    const edits = this.findReferences({ textDocument, position }).map((token) =>
-      TextEdit.replace(rangeFromToken(token), newName),
-    );
-    if (edits.length > 0) {
-      return {
-        changes: {
-          [textDocument.uri]: edits,
-        },
-      };
-    }
-    return null;
+    const edits = this.findIdentifiers(
+      FindKind.Rename,
+      textDocument,
+      position,
+    ).map((token) => TextEdit.replace(rangeFromToken(token), newName));
+    return edits.length === 0
+      ? null
+      : {
+          changes: {
+            [textDocument.uri]: edits,
+          },
+        };
   }
 
-  private findReferences({
+  public onCompletion({
     textDocument,
     position,
-  }: TextDocumentPositionParams): Token[] {
-    let target: Token[] = [];
+  }: CompletionParams): CompletionItem[] {
+    return this.findIdentifiers(
+      FindKind.Completion,
+      textDocument,
+      position,
+    ).map((token) => ({
+      label: token.identifier || token.image,
+      kind: token.lambda
+        ? CompletionItemKind.Function
+        : CompletionItemKind.Variable,
+    }));
+  }
 
+  private findIdentifiers(
+    kind: FindKind,
+    textDocument: TextDocumentIdentifier,
+    position: Position,
+  ): Token[] {
     const document = this.documents.get(textDocument.uri);
     if (!document) {
-      return target;
+      return [];
     }
-
     const tokens = parse(document.getText());
     const source = tokens.find((token) => hasPosition(token, position));
-
-    if (!source || source.tokenType !== Identifier) {
-      return target;
+    if (!source) {
+      return [];
     }
 
-    if (source.scope) {
-      target = tokens.filter(
+    const isLocal = (source: Token) =>
+      source.scope &&
+      tokens.find(
         (token) =>
           token.scope === source.scope &&
-          token.tokenType === Identifier &&
+          token.kind === TokenKind.Assignment &&
           token.identifier === source.identifier,
       );
-    }
 
-    if (target.length === 0) {
-      target = tokens.filter(
-        (token) =>
-          !token.scope &&
-          token.tokenType === Identifier &&
-          token.identifier === source.identifier,
-      );
+    switch (kind) {
+      case FindKind.Rename:
+      case FindKind.Reference:
+        return isLocal(source)
+          ? tokens.filter(
+              (token) =>
+                token.tokenType === Identifier &&
+                token.identifier === source.identifier &&
+                token.scope === source.scope,
+            )
+          : tokens.filter(
+              (token) =>
+                token.tokenType === Identifier &&
+                token.identifier === source.identifier &&
+                !isLocal(token),
+            );
+      case FindKind.Definition:
+        return isLocal(source)
+          ? tokens.filter(
+              (token) =>
+                token.kind === TokenKind.Assignment &&
+                token.identifier === source.identifier &&
+                token.scope === source.scope,
+            )
+          : tokens.filter(
+              (token) =>
+                token.kind === TokenKind.Assignment &&
+                token.identifier === source.identifier &&
+                !isLocal(token),
+            );
+      case FindKind.Completion:
+        return tokens.filter(
+          (token) =>
+            token.kind === TokenKind.Assignment &&
+            (!token.scope || token.scope === source.scope),
+        );
     }
-
-    return target;
   }
 }
