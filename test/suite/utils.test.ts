@@ -49,6 +49,7 @@ import {
 import { DataSourceTypes } from "../../src/models/dataSource";
 import { InsightDetails } from "../../src/models/insights";
 import { Parse } from "../../src/ipc/parse.qlist";
+import { ScratchpadFile } from "../../src/models/scratchpad";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;
@@ -173,6 +174,37 @@ describe("Utils", () => {
 
         sinon.assert.calledOnce(getConfigurationStub);
         assert.strictEqual(ext.hideDetailedConsoleQueryOutput, false);
+      });
+    });
+
+    describe("getScratchpadStatusIcon", () => {
+      const scratchpadDummy: ScratchpadFile = {
+        name: "test",
+        code: "",
+      };
+      beforeEach(() => {
+        ext.activeScratchPadList.length = 0;
+        ext.connectedScratchPadList.length = 0;
+      });
+      afterEach(() => {
+        ext.activeScratchPadList.length = 0;
+        ext.connectedScratchPadList.length = 0;
+      });
+      it("should return active if scratchpad label is on the active list", () => {
+        ext.activeScratchPadList.push(scratchpadDummy);
+        ext.connectedScratchPadList.push(scratchpadDummy);
+        const result = coreUtils.getScratchpadStatusIcon("test");
+        assert.strictEqual(result, "-active");
+      });
+      it("should return connected if scratchpad label is on the connected list", () => {
+        ext.connectedScratchPadList.push(scratchpadDummy);
+        const result = coreUtils.getScratchpadStatusIcon("test");
+        assert.strictEqual(result, "-connected");
+      });
+
+      it("should return empty string if scratchpad label is not on the active or connected list", () => {
+        const result = coreUtils.getScratchpadStatusIcon("test");
+        assert.strictEqual(result, "");
       });
     });
   });

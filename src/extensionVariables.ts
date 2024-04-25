@@ -33,6 +33,7 @@ import { QueryHistoryProvider } from "./services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import AuthSettings from "./utils/secretStorage";
 import { WorkspaceTreeProvider } from "./services/workspaceTreeProvider";
+import { ScratchpadFile } from "./models/scratchpad";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
@@ -46,6 +47,8 @@ export namespace ext {
   export let scratchpadTreeProvider: WorkspaceTreeProvider;
   export let dataSourceTreeProvider: WorkspaceTreeProvider;
   export let runScratchpadItem: StatusBarItem;
+  export const activeScratchPadList: Array<ScratchpadFile> = [];
+  export const connectedScratchPadList: Array<ScratchpadFile> = [];
   export let serverObjects: ServerObject;
   export let openSslVersion: string | null;
   export let resultPanelCSV: string;
