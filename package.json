@@ -559,22 +559,22 @@
         {
           "command": "kdb.insightsConnect",
           "when": "view == kdb-servers && viewItem not in kdb.connected && viewItem in kdb.insightsNodes",
-          "group": "connection"
+          "group": "connection@0"
         },
         {
           "command": "kdb.insightsRemove",
           "when": "view == kdb-servers && viewItem in kdb.insightsNodes",
-          "group": "connection"
+          "group": "connection@5"
         },
         {
           "command": "kdb.disconnect",
           "when": "view == kdb-servers && viewItem in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
-          "group": "connection"
+          "group": "connection@4"
         },
         {
           "command": "kdb.removeConnection",
           "when": "view == kdb-servers && viewItem in kdb.rootNodes",
-          "group": "connection@2"
+          "group": "connection@5"
         },
         {
           "command": "kdb.startLocalProcess",

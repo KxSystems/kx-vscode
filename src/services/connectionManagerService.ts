@@ -144,19 +144,7 @@ export class ConnectionManagementService {
     /* istanbul ignore next */
     if (isLocal && connectionNode) {
       connection.getConnection()?.close(() => {
-        ext.connectedConnectionList.splice(
-          ext.connectedConnectionList.indexOf(connection),
-          1,
-        );
-        ext.activeConnection = undefined;
-        ext.connectionNode = undefined;
-
-        commands.executeCommand("setContext", "kdb.connected.active", false);
-        Telemetry.sendEvent("Connection.Disconnected");
-        ext.outputChannel.appendLine(
-          `Connection stopped from ${connection.connLabel}`,
-        );
-        ext.serverProvider.reload();
+        this.disconnectBehaviour(connection);
       });
     } else {
       connection.disconnect();
