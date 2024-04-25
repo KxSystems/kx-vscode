@@ -15,7 +15,7 @@ import * as assert from "assert";
 import { generateTextMateGrammar } from "../../server/src/parser";
 
 describe("Parser", () => {
-  describe("TextMate", () => {
+  describe("language", () => {
     it("should generate TextMate grammar file", () => {
       const grammar = generateTextMateGrammar();
       assert.ok(grammar);

@@ -46,12 +46,21 @@ import {
   SemiColon,
   WhiteSpace,
 } from "./tokens";
+import {
+  After,
+  Before,
+  Description,
+  Expect,
+  Feature,
+  Quke,
+  Should,
+  ToMatch,
+} from "./quke";
 
-export const QTokens = [
-  BlockComment,
-  LastComment,
-  LineComment,
-  CharLiteral,
+const Prelude = [BlockComment, LastComment, LineComment, CharLiteral];
+
+const QTokens = [
+  Quke,
   Command,
   SymbolLiteral,
   DateTimeLiteral,
@@ -84,4 +93,23 @@ export const QTokens = [
   RCurly,
 ];
 
-export const QLexer = new Lexer(QTokens, { safeMode: true });
+const QukeTokens = [
+  Description,
+  Feature,
+  Before,
+  After,
+  Should,
+  Expect,
+  ToMatch,
+];
+
+export const QLexer = new Lexer(
+  {
+    defaultMode: "q_mode",
+    modes: {
+      q_mode: [...Prelude, ...QTokens],
+      quke_mode: [...Prelude, ...QukeTokens, ...QTokens],
+    },
+  },
+  { safeMode: true },
+);

@@ -34,7 +34,14 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver/node";
-import { Identifier, Token, TokenKind, parse } from "./parser";
+import { Identifier, IdentifierKind, Token, TokenKind, parse } from "./parser";
+
+const enum FindKind {
+  Reference,
+  Definition,
+  Rename,
+  Completion,
+}
 
 function rangeFromToken(token: Token): Range {
   return Range.create(
@@ -42,6 +49,18 @@ function rangeFromToken(token: Token): Range {
     (token.startColumn || 1) - 1,
     (token.endLine || 1) - 1,
     token.endColumn || 1,
+  );
+}
+
+function isLocal(source: Token, tokens: Token[]) {
+  return (
+    source.scope &&
+    tokens.find(
+      (token) =>
+        token.scope === source.scope &&
+        token.kind === TokenKind.Assignment &&
+        token.identifier === source.identifier,
+    )
   );
 }
 
@@ -55,11 +74,11 @@ function hasPosition(token: Token, position: Position) {
   );
 }
 
-const enum FindKind {
-  Reference,
-  Definition,
-  Rename,
-  Completion,
+function isAssignable(token: Token) {
+  return (
+    token.identifierKind !== IdentifierKind.Sql &&
+    token.identifierKind !== IdentifierKind.Table
+  );
 }
 
 export default class QLangServer {
@@ -120,7 +139,9 @@ export default class QLangServer {
               DocumentSymbol.create(
                 token.image,
                 undefined,
-                token.argument ? SymbolKind.Array : SymbolKind.Variable,
+                token.identifierKind === IdentifierKind.Argument
+                  ? SymbolKind.Array
+                  : SymbolKind.Variable,
                 rangeFromToken(token),
                 rangeFromToken(token),
               ),
@@ -192,55 +213,60 @@ export default class QLangServer {
     }
     const tokens = parse(document.getText());
     const source = tokens.find((token) => hasPosition(token, position));
-    if (!source) {
+    if (!source || !isAssignable(source)) {
       return [];
     }
-
-    const isLocal = (source: Token) =>
-      source.scope &&
-      tokens.find(
-        (token) =>
-          token.scope === source.scope &&
-          token.kind === TokenKind.Assignment &&
-          token.identifier === source.identifier,
-      );
 
     switch (kind) {
       case FindKind.Rename:
       case FindKind.Reference:
-        return isLocal(source)
+        return isLocal(source, tokens)
           ? tokens.filter(
               (token) =>
                 token.tokenType === Identifier &&
                 token.identifier === source.identifier &&
-                token.scope === source.scope,
+                token.scope === source.scope &&
+                isAssignable(token),
             )
           : tokens.filter(
               (token) =>
                 token.tokenType === Identifier &&
                 token.identifier === source.identifier &&
-                !isLocal(token),
+                !isLocal(token, tokens) &&
+                isAssignable(token),
             );
       case FindKind.Definition:
-        return isLocal(source)
+        return isLocal(source, tokens)
           ? tokens.filter(
               (token) =>
                 token.kind === TokenKind.Assignment &&
                 token.identifier === source.identifier &&
-                token.scope === source.scope,
+                token.scope === source.scope &&
+                isAssignable(token),
             )
           : tokens.filter(
               (token) =>
                 token.kind === TokenKind.Assignment &&
                 token.identifier === source.identifier &&
-                !isLocal(token),
+                !isLocal(token, tokens) &&
+                isAssignable(token),
             );
       case FindKind.Completion:
-        return tokens.filter(
-          (token) =>
-            token.kind === TokenKind.Assignment &&
-            (!token.scope || token.scope === source.scope),
-        );
+        const completions: Token[] = [];
+        tokens
+          .filter(
+            (token) =>
+              token.kind === TokenKind.Assignment &&
+              (!token.scope || token.scope === source.scope) &&
+              isAssignable(token),
+          )
+          .forEach(
+            (token) =>
+              !completions.find(
+                (item) => item.identifier === token.identifier,
+              ) && completions.push(token),
+          );
+        return completions;
     }
   }
 }

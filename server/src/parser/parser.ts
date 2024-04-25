@@ -24,11 +24,26 @@ import {
   RCurly,
   RParen,
 } from "./tokens";
-import { Identifier, LSql, RSql } from "./keywords";
+import { Identifier, IdentifierPattern, LSql, RSql } from "./keywords";
+import { After, Before, Expect, Feature, Quke, Should, ToMatch } from "./quke";
 
-function setQualified(token: Token, namespace: string) {
+function args(image: string, count: number): string[] {
+  return image.split(/\s+/, count);
+}
+
+function isIdentifier(image: string): boolean {
+  const matches = IdentifierPattern.exec(image);
+  return !matches || matches[0] === image;
+}
+
+function setQualified(token: Token, namespace: string): void {
   token.identifier =
-    token.scope || !namespace ? token.image : `${namespace}.${token.image}`;
+    !namespace ||
+    !namespace.startsWith(".") ||
+    token.scope ||
+    token.image.startsWith(".")
+      ? token.image
+      : `${namespace}.${token.image}`;
 }
 
 export const enum TokenKind {
@@ -36,12 +51,18 @@ export const enum TokenKind {
   Assignment,
 }
 
+export const enum IdentifierKind {
+  Argument,
+  Table,
+  Sql,
+}
+
 export interface Token extends IToken {
   kind?: TokenKind;
+  identifier?: string;
+  identifierKind?: IdentifierKind;
   scope?: Token;
   lambda?: Token;
-  argument?: boolean;
-  identifier?: string;
 }
 
 export function parse(text: string): Token[] {
@@ -61,7 +82,7 @@ export function parse(text: string): Token[] {
       case Identifier:
         if (argument) {
           token.kind = TokenKind.Assignment;
-          token.argument = true;
+          token.identifierKind = IdentifierKind.Argument;
           token.scope = scopes[scopes.length - 1];
           token.identifier = token.image;
         } else {
@@ -74,9 +95,13 @@ export function parse(text: string): Token[] {
         break;
       case Colon:
       case DoubleColon:
-        if (!sql && !table) {
-          prev = tokens[i - 1];
-          if (prev?.kind === TokenKind.Identifier) {
+        prev = tokens[i - 1];
+        if (prev?.kind === TokenKind.Identifier) {
+          if (sql) {
+            prev.identifierKind = IdentifierKind.Sql;
+          } else if (table) {
+            prev.identifierKind = IdentifierKind.Table;
+          } else {
             prev.kind = TokenKind.Assignment;
             if (token.tokenType === DoubleColon) {
               prev.scope = undefined;
@@ -125,14 +150,32 @@ export function parse(text: string): Token[] {
         }
         break;
       case Command:
-        const [cmd, arg] = token.image.split(/\s+/, 2);
+        const [cmd, arg] = args(token.image, 2);
         switch (cmd) {
           case "\\d":
-            if (arg) {
+            if (arg && arg.startsWith(".") && isIdentifier(arg)) {
               namespace = arg === "." ? "" : arg;
             }
             break;
         }
+        break;
+      case Quke:
+      case Feature:
+      case Should:
+        if (scopes[scopes.length - 1]) {
+          scopes.pop();
+        }
+        break;
+      case Before:
+      case After:
+      case ToMatch:
+      case Expect:
+        if (scopes[scopes.length - 1]) {
+          scopes.pop();
+        }
+        token.kind = TokenKind.Assignment;
+        token.lambda = token;
+        scopes.push(token);
         break;
     }
   }
