@@ -4,13 +4,13 @@
   "scopeName": "source.q",
   "patterns": [
     {
+      "include": "#quke"
+    },
+    {
       "include": "#comments"
     },
     {
       "include": "#strings"
-    },
-    {
-      "include": "#qtest"
     },
     {
       "include": "#literals"
@@ -32,6 +32,198 @@
     "comments": {
       "patterns": [
         {
+          "patterns": [
+            {
+              "begin": "(?<!.)\\s*x?feature\\b",
+              "patterns": [
+                {
+                  "match": "\\b(x?feature)\\b(.*)",
+                  "captures": {
+                    "1": {
+                      "name": "support.function.q"
+                    },
+                    "2": {
+                      "name": "string.quoted.q"
+                    }
+                  }
+                },
+                {
+                  "match": "\\b(x?should)\\b(.*)",
+                  "captures": {
+                    "1": {
+                      "name": "support.function.q"
+                    },
+                    "2": {
+                      "name": "string.quoted.q"
+                    }
+                  }
+                },
+                {
+                  "match": "\\b(x?expect)\\b(.*)",
+                  "captures": {
+                    "1": {
+                      "name": "support.function.q"
+                    },
+                    "2": {
+                      "name": "string.quoted.q"
+                    }
+                  }
+                },
+                {
+                  "match": "\\b(x?to match)\\b(.*)",
+                  "captures": {
+                    "1": {
+                      "name": "support.function.q"
+                    },
+                    "2": {
+                      "name": "string.quoted.q"
+                    }
+                  }
+                },
+                {
+                  "match": "\\b(x?behaviour)\\b(.*)",
+                  "captures": {
+                    "1": {
+                      "name": "support.function.q"
+                    },
+                    "2": {
+                      "name": "string.quoted.q"
+                    }
+                  }
+                },
+                {
+                  "match": "\\b(x?baseline)\\b(.*)",
+                  "captures": {
+                    "1": {
+                      "name": "support.function.q"
+                    },
+                    "2": {
+                      "name": "string.quoted.q"
+                    }
+                  }
+                },
+                {
+                  "match": "\\b(x?bench)\\b(.*)",
+                  "captures": {
+                    "1": {
+                      "name": "support.function.q"
+                    },
+                    "2": {
+                      "name": "string.quoted.q"
+                    }
+                  }
+                },
+                {
+                  "match": "\\b(x?property)\\b(.*)",
+                  "captures": {
+                    "1": {
+                      "name": "support.function.q"
+                    },
+                    "2": {
+                      "name": "string.quoted.q"
+                    }
+                  }
+                },
+                {
+                  "name": "support.function.q",
+                  "match": "\\bx?after\\b"
+                },
+                {
+                  "name": "support.function.q",
+                  "match": "\\bx?after each\\b"
+                },
+                {
+                  "name": "support.function.q",
+                  "match": "\\bx?before\\b"
+                },
+                {
+                  "name": "support.function.q",
+                  "match": "\\bx?before each\\b"
+                },
+                {
+                  "name": "support.function.q",
+                  "match": "\\bx?setup\\b"
+                },
+                {
+                  "name": "support.function.q",
+                  "match": "\\bx?teardown\\b"
+                },
+                {
+                  "name": "support.function.q",
+                  "match": "\\bx?skip if\\b"
+                },
+                {
+                  "name": "support.function.q",
+                  "match": "\\bx?timelimit\\b"
+                },
+                {
+                  "name": "support.function.q",
+                  "match": "\\bx?tolerance\\b"
+                },
+                {
+                  "name": "support.function.q",
+                  "match": "\\bx?replicate\\b"
+                },
+                {
+                  "include": "#comments"
+                },
+                {
+                  "include": "#strings"
+                },
+                {
+                  "include": "#literals"
+                },
+                {
+                  "include": "#keywords"
+                },
+                {
+                  "include": "#identifiers"
+                },
+                {
+                  "include": "#commands"
+                },
+                {
+                  "include": "#operators"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "patterns": [
+            {
+              "name": "comment.qdoc",
+              "begin": "(?:(?<=\\r?\\n|[ \\t])|(?<!.))\\/\\/",
+              "end": "\\r?\\n",
+              "patterns": [
+                {
+                  "name": "storage.type.qdoc",
+                  "match": "@\\b(?:author|category|deprecated|doctest|end|example|fileoverview|kind|name|private|see|subcategory|throws|todo|default-category|default-subcategory|typedef|fileOverview|param|desc|return[s]?|overview)\\b"
+                },
+                {
+                  "name": "keyword.control.qdoc",
+                  "begin": "{",
+                  "end": "}",
+                  "patterns": [
+                    {
+                      "name": "entity.name.type.qdoc",
+                      "match": "\\b(type|atom|anything|dict|enum|function|hsym|option|string|table|tuple|typedef|vector|bool|boolean|byte|char|character|date|datetime|float|guid|int|integer|long|minute|month|real|second|short|string|symbol|time|timespan|timestamp)\\b"
+                    }
+                  ]
+                },
+                {
+                  "name": "variable.other.qdoc",
+                  "match": "[\\w.]+?(?=\\s*{.+})"
+                },
+                {
+                  "name": "variable.other.qdoc",
+                  "match": "\\s\\.[\\w.]+?\\s"
+                }
+              ]
+            }
+          ]
+        },
+        {
           "name": "comment.block.q",
           "begin": "^\\/\\s*$",
           "end": "^\\\\\\s*$"
@@ -49,40 +241,6 @@
         }
       ]
     },
-    "qdoc": {
-      "patterns": [
-        {
-          "name": "comment.qdoc",
-          "begin": "(?:(?<=\\r?\\n|[ \\t])|(?<!.))\\/\\/",
-          "end": "\\r?\\n",
-          "patterns": [
-            {
-              "name": "storage.type.qdoc",
-              "match": "@\\b(?:author|category|deprecated|doctest|end|example|fileoverview|kind|name|private|see|subcategory|throws|todo|default-category|default-subcategory|typedef|fileOverview|param|desc|return[s]?|overview)\\b"
-            },
-            {
-              "name": "keyword.control.qdoc",
-              "begin": "{",
-              "end": "}",
-              "patterns": [
-                {
-                  "name": "entity.name.type.qdoc",
-                  "match": "\\b(type|atom|anything|dict|enum|function|hsym|option|string|table|tuple|typedef|vector|bool|boolean|byte|char|character|date|datetime|float|guid|int|integer|long|minute|month|real|second|short|string|symbol|time|timespan|timestamp)\\b"
-                }
-              ]
-            },
-            {
-              "name": "variable.other.qdoc",
-              "match": "[\\w.]+?(?=\\s*{.+})"
-            },
-            {
-              "name": "variable.other.qdoc",
-              "match": "\\s\\.[\\w.]+?\\s"
-            }
-          ]
-        }
-      ]
-    },
     "strings": {
       "patterns": [
         {
@@ -95,40 +253,6 @@
               "match": "\\\\[\"\\\\]"
             }
           ]
-        }
-      ]
-    },
-    "qtest": {
-      "patterns": [
-        {
-          "name": "comment.feature.q",
-          "begin": "\\b[x]feature\\b",
-          "end": "^(?=\\S)"
-        },
-        {
-          "name": "comment.should.q",
-          "begin": "\\b[x]should\\b",
-          "end": "^((?=\\S)|\\s+(?=[x]?should))\\b"
-        },
-        {
-          "name": "comment.other.q",
-          "begin": "\\b[x](expect|bench|property)\\b",
-          "end": "^((?=\\S)|\\s+(?=[x]?(should|expect|bench|property)))\\b"
-        },
-        {
-          "name": "support.function.q",
-          "match": "\\b(before|after|skip)\\b"
-        },
-        {
-          "match": "\\b(feature|should|expect|bench|property)\\b\\s+(.*)",
-          "captures": {
-            "1": {
-              "name": "support.function.q"
-            },
-            "2": {
-              "name": "string.quoted.q"
-            }
-          }
         }
       ]
     },

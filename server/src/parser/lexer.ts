@@ -48,19 +48,29 @@ import {
 } from "./tokens";
 import {
   After,
+  AfterEach,
+  Baseline,
   Before,
-  Description,
+  BeforeEach,
+  Behaviour,
+  Bench,
   Expect,
   Feature,
+  Property,
   Quke,
+  Replicate,
+  Setup,
   Should,
+  SkipIf,
+  Teardown,
+  TimeLimit,
   ToMatch,
+  Tolerance,
 } from "./quke";
 
 const Prelude = [BlockComment, LastComment, LineComment, CharLiteral];
 
 const QTokens = [
-  Quke,
   Command,
   SymbolLiteral,
   DateTimeLiteral,
@@ -94,12 +104,23 @@ const QTokens = [
 ];
 
 const QukeTokens = [
-  Description,
-  Feature,
-  Before,
   After,
-  Should,
+  AfterEach,
+  Baseline,
+  Before,
+  BeforeEach,
+  Behaviour,
+  Bench,
   Expect,
+  Feature,
+  Property,
+  Replicate,
+  Setup,
+  Should,
+  SkipIf,
+  Teardown,
+  TimeLimit,
+  Tolerance,
   ToMatch,
 ];
 
@@ -107,7 +128,7 @@ export const QLexer = new Lexer(
   {
     defaultMode: "q_mode",
     modes: {
-      q_mode: [...Prelude, ...QTokens],
+      q_mode: [...Prelude, Quke, ...QTokens],
       quke_mode: [...Prelude, ...QukeTokens, ...QTokens],
     },
   },

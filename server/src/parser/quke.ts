@@ -21,12 +21,42 @@ export const Quke = createToken({
 
 export const Feature = createToken({
   name: "Feature",
-  pattern: /\bx?feature\b/,
+  pattern: /\b(x?feature)\b(.*)/,
 });
 
-export const Before = createToken({
-  name: "Before",
-  pattern: /\bx?before\b/,
+export const Should = createToken({
+  name: "Should",
+  pattern: /\b(x?should)\b(.*)/,
+});
+
+export const Expect = createToken({
+  name: "Expect",
+  pattern: /\b(x?expect)\b(.*)/,
+});
+
+export const ToMatch = createToken({
+  name: "ToMatch",
+  pattern: /\b(x?to match)\b(.*)/,
+});
+
+export const Behaviour = createToken({
+  name: "Behaviour",
+  pattern: /\b(x?behaviour)\b(.*)/,
+});
+
+export const Baseline = createToken({
+  name: "Baseline",
+  pattern: /\b(x?baseline)\b(.*)/,
+});
+
+export const Bench = createToken({
+  name: "Bench",
+  pattern: /\b(x?bench)\b(.*)/,
+});
+
+export const Property = createToken({
+  name: "Property",
+  pattern: /\b(x?property)\b(.*)/,
 });
 
 export const After = createToken({
@@ -34,22 +64,71 @@ export const After = createToken({
   pattern: /\bx?after\b/,
 });
 
-export const Should = createToken({
-  name: "Should",
-  pattern: /\bx?should\b/,
+export const AfterEach = createToken({
+  name: "AfterEach",
+  pattern: /\bx?after each\b/,
 });
 
-export const Expect = createToken({
-  name: "Expect",
-  pattern: /\bx?expect\b/,
+export const Before = createToken({
+  name: "Before",
+  pattern: /\bx?before\b/,
 });
 
-export const ToMatch = createToken({
-  name: "ToMatch",
-  pattern: /\bx?to match\b/,
+export const BeforeEach = createToken({
+  name: "BeforeEach",
+  pattern: /\bx?before each\b/,
 });
 
-export const Description = createToken({
-  name: "Description",
-  pattern: /(?<=\bx?(?:feature|should|expect|to match)\b)[^\r\n]*/,
+export const Setup = createToken({
+  name: "Setup",
+  pattern: /\bx?setup\b/,
 });
+
+export const Teardown = createToken({
+  name: "Teardown",
+  pattern: /\bx?teardown\b/,
+});
+
+export const SkipIf = createToken({
+  name: "SkipIf",
+  pattern: /\bx?skip if\b/,
+});
+
+export const TimeLimit = createToken({
+  name: "TimeLimit",
+  pattern: /\bx?timelimit\b/,
+});
+
+export const Tolerance = createToken({
+  name: "Tolerance",
+  pattern: /\bx?tolerance\b/,
+});
+
+export const Replicate = createToken({
+  name: "Replicate",
+  pattern: /\bx?replicate\b/,
+});
+
+export const qukeWithDescription = [
+  Feature,
+  Should,
+  Expect,
+  ToMatch,
+  Behaviour,
+  Baseline,
+  Bench,
+  Property,
+];
+
+export const qukeNoDescription = [
+  After,
+  AfterEach,
+  Before,
+  BeforeEach,
+  Setup,
+  Teardown,
+  SkipIf,
+  TimeLimit,
+  Tolerance,
+  Replicate,
+];

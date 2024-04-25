@@ -37,10 +37,35 @@ import {
 import { TokenType } from "chevrotain";
 import { writeFileSync } from "fs";
 import { resolve } from "path";
+import { Quke, qukeNoDescription, qukeWithDescription } from "./quke";
 
 function _(token: TokenType | RegExp) {
   return ("PATTERN" in token ? `${token.PATTERN}` : `${token}`).slice(1, -1);
 }
+
+const includes = [
+  {
+    include: "#comments",
+  },
+  {
+    include: "#strings",
+  },
+  {
+    include: "#literals",
+  },
+  {
+    include: "#keywords",
+  },
+  {
+    include: "#identifiers",
+  },
+  {
+    include: "#commands",
+  },
+  {
+    include: "#operators",
+  },
+];
 
 const qdoc = {
   patterns: [
@@ -79,37 +104,28 @@ const qdoc = {
   ],
 };
 
-const qtest = {
+const quke = {
   patterns: [
     {
-      name: "comment.feature.q",
-      begin: "\\b[x]feature\\b",
-      end: "^(?=\\S)",
-    },
-    {
-      name: "comment.should.q",
-      begin: "\\b[x]should\\b",
-      end: "^((?=\\S)|\\s+(?=[x]?should))\\b",
-    },
-    {
-      name: "comment.other.q",
-      begin: "\\b[x](expect|bench|property)\\b",
-      end: "^((?=\\S)|\\s+(?=[x]?(should|expect|bench|property)))\\b",
-    },
-    {
-      name: "support.function.q",
-      match: "\\b(before|after|skip)\\b",
-    },
-    {
-      match: "\\b(feature|should|expect|bench|property)\\b\\s+(.*)",
-      captures: {
-        1: {
+      begin: _(Quke),
+      patterns: [
+        ...qukeWithDescription.map((item) => ({
+          match: _(item),
+          captures: {
+            1: {
+              name: "support.function.q",
+            },
+            2: {
+              name: "string.quoted.q",
+            },
+          },
+        })),
+        ...qukeNoDescription.map((item) => ({
           name: "support.function.q",
-        },
-        2: {
-          name: "string.quoted.q",
-        },
-      },
+          match: _(item),
+        })),
+        ...includes,
+      ],
     },
   ],
 };
@@ -124,33 +140,15 @@ const language = {
   scopeName: "source.q",
   patterns: [
     {
-      include: "#comments",
+      include: "#quke",
     },
-    {
-      include: "#strings",
-    },
-    {
-      include: "#qtest",
-    },
-    {
-      include: "#literals",
-    },
-    {
-      include: "#keywords",
-    },
-    {
-      include: "#identifiers",
-    },
-    {
-      include: "#commands",
-    },
-    {
-      include: "#operators",
-    },
+    ...includes,
   ],
   repository: {
     comments: {
       patterns: [
+        quke,
+        qdoc,
         {
           name: "comment.block.q",
           begin: _(BlockComment[0]),
@@ -169,7 +167,6 @@ const language = {
         },
       ],
     },
-    qdoc,
     strings: {
       patterns: [
         {
@@ -185,7 +182,6 @@ const language = {
         },
       ],
     },
-    qtest,
     literals: {
       patterns: [
         {

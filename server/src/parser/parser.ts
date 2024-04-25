@@ -25,7 +25,26 @@ import {
   RParen,
 } from "./tokens";
 import { Identifier, IdentifierPattern, LSql, RSql } from "./keywords";
-import { After, Before, Expect, Feature, Quke, Should, ToMatch } from "./quke";
+import {
+  After,
+  AfterEach,
+  Baseline,
+  Before,
+  BeforeEach,
+  Behaviour,
+  Bench,
+  Expect,
+  Feature,
+  Property,
+  Replicate,
+  Setup,
+  Should,
+  SkipIf,
+  Teardown,
+  TimeLimit,
+  ToMatch,
+  Tolerance,
+} from "./quke";
 
 function args(image: string, count: number): string[] {
   return image.split(/\s+/, count);
@@ -55,6 +74,7 @@ export const enum IdentifierKind {
   Argument,
   Table,
   Sql,
+  Quke,
 }
 
 export interface Token extends IToken {
@@ -63,6 +83,7 @@ export interface Token extends IToken {
   identifierKind?: IdentifierKind;
   scope?: Token;
   lambda?: Token;
+  description?: string;
 }
 
 export function parse(text: string): Token[] {
@@ -112,7 +133,7 @@ export function parse(text: string): Token[] {
         break;
       case LCurly:
         prev = tokens[i - 2];
-        if (prev?.kind === TokenKind.Assignment) {
+        if (prev?.kind === TokenKind.Assignment && !prev.lambda) {
           prev.lambda = token;
         }
         next = tokens[i + 1];
@@ -136,11 +157,8 @@ export function parse(text: string): Token[] {
         sql--;
         break;
       case LParen:
-        if (table) {
-          table++;
-        }
         next = tokens[i + 1];
-        if (next?.tokenType === LBracket) {
+        if (table || next?.tokenType === LBracket) {
           table++;
         }
         break;
@@ -159,21 +177,30 @@ export function parse(text: string): Token[] {
             break;
         }
         break;
-      case Quke:
+      case Bench:
       case Feature:
+      case Replicate:
       case Should:
-        if (scopes[scopes.length - 1]) {
-          scopes.pop();
-        }
+      case TimeLimit:
+      case Tolerance:
+        token.identifierKind = IdentifierKind.Quke;
+        scopes.pop();
         break;
-      case Before:
       case After:
-      case ToMatch:
+      case AfterEach:
+      case Baseline:
+      case Before:
+      case BeforeEach:
+      case Behaviour:
       case Expect:
-        if (scopes[scopes.length - 1]) {
-          scopes.pop();
-        }
+      case Property:
+      case Setup:
+      case SkipIf:
+      case Teardown:
+      case ToMatch:
+        scopes.pop();
         token.kind = TokenKind.Assignment;
+        token.identifierKind = IdentifierKind.Quke;
         token.lambda = token;
         scopes.push(token);
         break;
