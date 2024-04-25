@@ -131,6 +131,11 @@ export class ConnectionManagementService {
     ]);
     Telemetry.sendEvent("Connection.Connected.Active");
     ext.activeConnection = connection;
+    if (node instanceof InsightsNode) {
+      commands.executeCommand("setContext", "kdb.insightsConnected", true);
+    } else {
+      commands.executeCommand("setContext", "kdb.insightsConnected", false);
+    }
     ext.serverProvider.reload();
   }
 
