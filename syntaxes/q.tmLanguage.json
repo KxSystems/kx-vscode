@@ -34,7 +34,15 @@
         {
           "patterns": [
             {
-              "begin": "(?<!.)\\s*x?feature\\b",
+              "begin": "(?<!.)\\s*(x?feature)\\b(.*)",
+              "captures": {
+                "1": {
+                  "name": "support.function.q"
+                },
+                "2": {
+                  "name": "string.quoted.q"
+                }
+              },
               "patterns": [
                 {
                   "match": "\\b(x?feature)\\b(.*)",
@@ -126,19 +134,19 @@
                 },
                 {
                   "name": "support.function.q",
-                  "match": "\\bx?after\\b"
-                },
-                {
-                  "name": "support.function.q",
                   "match": "\\bx?after each\\b"
                 },
                 {
                   "name": "support.function.q",
-                  "match": "\\bx?before\\b"
+                  "match": "\\bx?after\\b"
                 },
                 {
                   "name": "support.function.q",
                   "match": "\\bx?before each\\b"
+                },
+                {
+                  "name": "support.function.q",
+                  "match": "\\bx?before\\b"
                 },
                 {
                   "name": "support.function.q",

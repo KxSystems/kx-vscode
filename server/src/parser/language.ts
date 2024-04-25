@@ -108,6 +108,14 @@ const quke = {
   patterns: [
     {
       begin: _(Quke),
+      captures: {
+        1: {
+          name: "support.function.q",
+        },
+        2: {
+          name: "string.quoted.q",
+        },
+      },
       patterns: [
         ...qukeWithDescription.map((item) => ({
           match: _(item),

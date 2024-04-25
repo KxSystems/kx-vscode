@@ -104,11 +104,11 @@ const QTokens = [
 ];
 
 const QukeTokens = [
-  After,
   AfterEach,
+  After,
   Baseline,
-  Before,
   BeforeEach,
+  Before,
   Behaviour,
   Bench,
   Expect,

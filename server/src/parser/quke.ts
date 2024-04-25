@@ -15,7 +15,7 @@ import { createToken } from "chevrotain";
 
 export const Quke = createToken({
   name: "Quke",
-  pattern: /(?<!.)\s*x?feature\b/,
+  pattern: /(?<!.)\s*(x?feature)\b(.*)/,
   push_mode: "quke_mode",
 });
 
@@ -121,10 +121,10 @@ export const qukeWithDescription = [
 ];
 
 export const qukeNoDescription = [
-  After,
   AfterEach,
-  Before,
+  After,
   BeforeEach,
+  Before,
   Setup,
   Teardown,
   SkipIf,
