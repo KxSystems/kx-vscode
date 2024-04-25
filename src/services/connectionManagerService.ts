@@ -29,6 +29,7 @@ import {
 } from "../utils/core";
 import { Insights } from "../models/insights";
 import { Server } from "../models/server";
+import { refreshDataSourcesPanel } from "../utils/dataSource";
 
 export class ConnectionManagementService {
   public retrieveConnection(
@@ -116,6 +117,7 @@ export class ConnectionManagementService {
       } else {
         this.isNotConnectedBehaviour(connLabel);
       }
+      refreshDataSourcesPanel();
     }
   }
 
@@ -239,6 +241,15 @@ export class ConnectionManagementService {
     ext.connectedConnectionList.splice(
       ext.connectedConnectionList.indexOf(connection),
       1,
+    );
+    ext.connectedContextStrings.splice(
+      ext.connectedContextStrings.indexOf(connection.connLabel),
+      1,
+    );
+    commands.executeCommand(
+      "setContext",
+      "kdb.connected",
+      ext.connectedContextStrings,
     );
     if (ext.activeConnection === connection) {
       ext.activeConnection = undefined;
