@@ -46,7 +46,7 @@ export class KdbDataSourceProvider implements TreeDataProvider<TreeItem> {
     this.refresh();
     const datasourceFolder = createKdbDataSourcesFolder();
     this.watcher = workspace.createFileSystemWatcher(
-      new RelativePattern(datasourceFolder, ext.kdbDataSourceFileGlob)
+      new RelativePattern(datasourceFolder, ext.kdbDataSourceFileGlob),
     );
     // watch updates in the folder
     this.watcher.onDidChange(() => this.refresh());
@@ -59,7 +59,7 @@ export class KdbDataSourceProvider implements TreeDataProvider<TreeItem> {
   }
 
   getChildren(
-    element?: KdbDataSourceTreeItem
+    element?: KdbDataSourceTreeItem,
   ): Promise<KdbDataSourceTreeItem[]> {
     if (!element) {
       return this.getDsFiles();
@@ -84,7 +84,7 @@ export class KdbDataSourceProvider implements TreeDataProvider<TreeItem> {
       const files = fs.readdirSync(kdbDataSourcesFolderPath);
       const dsFiles = files.filter((file) => {
         const isFromInsightsNode = checkFileFromInsightsNode(
-          path.join(kdbDataSourcesFolderPath, file)
+          path.join(kdbDataSourcesFolderPath, file),
         );
         return (
           path.extname(file) === ext.kdbDataSourceFileExtension &&
@@ -97,9 +97,9 @@ export class KdbDataSourceProvider implements TreeDataProvider<TreeItem> {
           return new KdbDataSourceTreeItem(
             newLabel,
             TreeItemCollapsibleState.None,
-            [Uri.file(path.join(kdbDataSourcesFolderPath, file))]
+            [Uri.file(path.join(kdbDataSourcesFolderPath, file))],
           );
-        })
+        }),
       );
     } else {
       return Promise.resolve([]);
@@ -111,7 +111,7 @@ export class KdbDataSourceTreeItem extends TreeItem {
   constructor(
     public readonly label: string,
     public readonly collapsibleState: TreeItemCollapsibleState,
-    public readonly files: Uri[]
+    public readonly files: Uri[],
   ) {
     super(label, collapsibleState);
     this.iconPath = new ThemeIcon("file");
@@ -125,7 +125,7 @@ export class KdbDataSourceTreeItem extends TreeItem {
       commands.executeCommand(
         "setContext",
         "kdb.dataSourceTreeNodes",
-        ext.kdbDataSourceRootNodes
+        ext.kdbDataSourceRootNodes,
       );
     }
   }
