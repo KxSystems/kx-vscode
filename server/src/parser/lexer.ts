@@ -68,7 +68,7 @@ import {
   Tolerance,
 } from "./quke";
 
-const Prelude = [BlockComment, LastComment, LineComment, CharLiteral];
+const MultiLine = [BlockComment, LastComment, LineComment, CharLiteral];
 
 const QTokens = [
   Command,
@@ -128,8 +128,8 @@ export const QLexer = new Lexer(
   {
     defaultMode: "q_mode",
     modes: {
-      q_mode: [...Prelude, Quke, ...QTokens],
-      quke_mode: [...Prelude, ...QukeTokens, ...QTokens],
+      q_mode: [...MultiLine, Quke, ...QTokens],
+      quke_mode: [...MultiLine, ...QukeTokens, ...QTokens],
     },
   },
   { safeMode: true },

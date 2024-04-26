@@ -83,7 +83,6 @@ export interface Token extends IToken {
   identifierKind?: IdentifierKind;
   scope?: Token;
   lambda?: Token;
-  description?: string;
 }
 
 export function parse(text: string): Token[] {
@@ -171,7 +170,7 @@ export function parse(text: string): Token[] {
         const [cmd, arg] = args(token.image, 2);
         switch (cmd) {
           case "\\d":
-            if (arg && arg.startsWith(".") && isIdentifier(arg)) {
+            if (arg?.startsWith(".") && isIdentifier(arg)) {
               namespace = arg === "." ? "" : arg;
             }
             break;

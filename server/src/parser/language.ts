@@ -28,6 +28,7 @@ import { Identifier, Keyword, Reserved } from "./keywords";
 import {
   Colon,
   Command,
+  Comparator,
   DoubleColon,
   Iterator,
   LineComment,
@@ -45,10 +46,7 @@ function _(token: TokenType | RegExp) {
 
 const includes = [
   {
-    include: "#comments",
-  },
-  {
-    include: "#strings",
+    include: "#multiline",
   },
   {
     include: "#literals",
@@ -57,13 +55,7 @@ const includes = [
     include: "#keywords",
   },
   {
-    include: "#identifiers",
-  },
-  {
-    include: "#commands",
-  },
-  {
-    include: "#operators",
+    include: "#tokens",
   },
 ];
 
@@ -140,7 +132,138 @@ const quke = {
 
 const BlockComment = [/^\/\s*$/, /^\\\s*$/];
 const StringLiteral = [/"/, /\\["\\]/];
-const ControlKeyword = /[$!?#@'^]/;
+
+const repository = {
+  quke,
+  qdoc,
+  multiline: {
+    patterns: [
+      {
+        name: "comment.block.q",
+        begin: _(BlockComment[0]),
+        end: _(BlockComment[1]),
+      },
+      {
+        name: "comment.last.q",
+        begin: _(BlockComment[1]),
+      },
+      {
+        include: "#qdoc",
+      },
+      {
+        name: "comment.line.q",
+        match: _(LineComment),
+      },
+      {
+        name: "string.quoted.q",
+        begin: _(StringLiteral[0]),
+        end: _(StringLiteral[0]),
+        patterns: [
+          {
+            name: "constant.character.escape.q",
+            match: _(StringLiteral[1]),
+          },
+        ],
+      },
+    ],
+  },
+  literals: {
+    patterns: [
+      {
+        name: "support.type.symbol.q",
+        match: _(SymbolLiteral),
+      },
+      {
+        name: "constant.numeric.datetime.q",
+        match: _(DateTimeLiteral),
+      },
+      {
+        name: "constant.numeric.timestamp.q",
+        match: _(TimeStampLiteral),
+      },
+      {
+        name: "constant.numeric.date.q",
+        match: _(DateLiteral),
+      },
+      {
+        name: "constant.numeric.month.q",
+        match: _(MonthLiteral),
+      },
+      {
+        name: "constant.numeric.time.q",
+        match: _(TimeLiteral),
+      },
+      {
+        name: "constant.numeric.file.q",
+        match: _(FileLiteral),
+      },
+      {
+        name: "constant.language.infinity.q",
+        match: _(InfinityLiteral),
+      },
+      {
+        name: "constant.numeric.binary.q",
+        match: _(BinaryLiteral),
+      },
+      {
+        name: "constant.numeric.byte.q",
+        match: _(ByteLiteral),
+      },
+      {
+        name: "constant.numeric.number.q",
+        match: _(NumberLiteral),
+      },
+    ],
+  },
+  keywords: {
+    patterns: [
+      {
+        name: "keyword.other.reserved.q",
+        match: `${_(Reserved)}\\b`,
+      },
+      {
+        name: "keyword.other.q",
+        match: `\\b${_(Keyword)}\\b`,
+      },
+      {
+        name: "variable.other.q",
+        match: `${_(Identifier)}\\b`,
+      },
+    ],
+  },
+  tokens: {
+    patterns: [
+      {
+        name: "constant.character.q",
+        match: _(Command),
+      },
+      {
+        name: "keyword.other.iterator.q",
+        match: _(Iterator),
+      },
+      {
+        name: "punctuation.assignment.q",
+        match: _(DoubleColon),
+      },
+      {
+        name: "keyword.operator.arithmetic.q",
+        match: _(Operator),
+      },
+      {
+        name: "keyword.operator.arithmetic.q",
+        match: _(Comparator),
+      },
+      {
+        name: "punctuation.assignment.q",
+        match: _(Colon),
+      },
+      {
+        name: "punctuation.terminator.statement.q",
+        match: _(SemiColon),
+      },
+    ],
+  },
+};
 
 const language = {
   description: "This file is auto generated DO NOT EDIT",
@@ -152,149 +275,7 @@ const language = {
     },
     ...includes,
   ],
-  repository: {
-    comments: {
-      patterns: [
-        quke,
-        qdoc,
-        {
-          name: "comment.block.q",
-          begin: _(BlockComment[0]),
-          end: _(BlockComment[1]),
-        },
-        {
-          name: "comment.last.q",
-          begin: _(BlockComment[1]),
-        },
-        {
-          include: "#qdoc",
-        },
-        {
-          name: "comment.line.q",
-          match: _(LineComment),
-        },
-      ],
-    },
-    strings: {
-      patterns: [
-        {
-          name: "string.quoted.q",
-          begin: _(StringLiteral[0]),
-          end: _(StringLiteral[0]),
-          patterns: [
-            {
-              name: "constant.character.escape.q",
-              match: _(StringLiteral[1]),
-            },
-          ],
-        },
-      ],
-    },
-    literals: {
-      patterns: [
-        {
-          name: "support.type.symbol.q",
-          match: _(SymbolLiteral),
-        },
-        {
-          name: "constant.numeric.datetime.q",
-          match: _(DateTimeLiteral),
-        },
-        {
-          name: "constant.numeric.timestamp.q",
-          match: _(TimeStampLiteral),
-        },
-        {
-          name: "constant.numeric.date.q",
-          match: _(DateLiteral),
-        },
-        {
-          name: "constant.numeric.month.q",
-          match: _(MonthLiteral),
-        },
-        {
-          name: "constant.numeric.time.q",
-          match: _(TimeLiteral),
-        },
-        {
-          name: "constant.numeric.file.q",
-          match: _(FileLiteral),
-        },
-        {
-          name: "constant.language.infinity.q",
-          match: _(InfinityLiteral),
-        },
-        {
-          name: "constant.numeric.binary.q",
-          match: _(BinaryLiteral),
-        },
-        {
-          name: "constant.numeric.byte.q",
-          match: _(ByteLiteral),
-        },
-        {
-          name: "constant.numeric.number.q",
-          match: _(NumberLiteral),
-        },
-      ],
-    },
-    keywords: {
-      patterns: [
-        {
-          name: "keyword.other.reserved.q",
-          match: `${_(Reserved)}\\b`,
-        },
-        {
-          name: "keyword.other.q",
-          match: `\\b${_(Keyword)}\\b`,
-        },
-      ],
-    },
-    identifiers: {
-      patterns: [
-        {
-          name: "variable.other.q",
-          match: `${_(Identifier)}\\b`,
-        },
-      ],
-    },
-    commands: {
-      patterns: [
-        {
-          name: "constant.character.q",
-          match: _(Command),
-        },
-      ],
-    },
-    operators: {
-      patterns: [
-        {
-          name: "keyword.other.iterator.q",
-          match: _(Iterator),
-        },
-        {
-          name: "keyword.other.control.q",
-          match: _(ControlKeyword),
-        },
-        {
-          name: "keyword.operator.arithmetic.q",
-          match: _(Operator),
-        },
-        {
-          name: "punctuation.assignment.q",
-          match: _(Colon),
-        },
-        {
-          name: "punctuation.assignment.q",
-          match: _(DoubleColon),
-        },
-        {
-          name: "punctuation.terminator.statement.q",
-          match: _(SemiColon),
-        },
-      ],
-    },
-  },
+  repository,
 };
 
 export function generateTextMateGrammar() {
