@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "engines": {
     "vscode": "^1.75.0"
   },
@@ -33,8 +33,12 @@
   "activationEvents": [
     "onCommand:kdb.installTools",
     "onCommand:kdb.addConnection",
+    "onCommand:kdb.newConnection.createNewInsightConnection",
+    "onCommand:kdb.newConnection.createNewConnection",
+    "onCommand:kdb.newConnection.createNewBundledConnection",
     "onCommand:kdb.removeConnection",
     "onCommand:kdb.connect",
+    "onCommand:kdb.active.connection",
     "onCommand:kdb.disconnect",
     "onCommand:kdb.addAuthentication",
     "onCommand:kdb.enableTLS",
@@ -223,7 +227,10 @@
         "title": "Connect server"
       },
       {
-        "category": "KX",
+        "command": "kdb.active.connection",
+        "title": "Active connection"
+      },
+      {
         "command": "kdb.addAuthentication",
         "title": "Add Authentication",
         "position": "end"
@@ -504,6 +511,10 @@
           "when": "false"
         },
         {
+          "command": "kdb.active.connection",
+          "when": "false"
+        },
+        {
           "command": "kdb.disconnect",
           "when": "false"
         },
@@ -566,6 +577,11 @@
           "group": "connection@1"
         },
         {
+          "command": "kdb.active.connection",
+          "when": "view == kdb-servers && viewItem in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
+          "group": "connection@1"
+        },
+        {
           "command": "kdb.addAuthentication",
           "when": "view == kdb-servers && viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutAuth",
           "group": "connection@3"
@@ -578,22 +594,22 @@
         {
           "command": "kdb.insightsConnect",
           "when": "view == kdb-servers && viewItem not in kdb.connected && viewItem in kdb.insightsNodes",
-          "group": "connection"
+          "group": "connection@0"
         },
         {
           "command": "kdb.insightsRemove",
           "when": "view == kdb-servers && viewItem in kdb.insightsNodes",
-          "group": "connection"
+          "group": "connection@5"
         },
         {
           "command": "kdb.disconnect",
           "when": "view == kdb-servers && viewItem in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
-          "group": "connection"
+          "group": "connection@4"
         },
         {
           "command": "kdb.removeConnection",
           "when": "view == kdb-servers && viewItem in kdb.rootNodes",
-          "group": "connection@2"
+          "group": "connection@5"
         },
         {
           "command": "kdb.startLocalProcess",
@@ -756,7 +772,7 @@
     "ag-grid-community": "^31.0.1",
     "antlr4-runtime": "^4.13.0",
     "antlr4ts": "^0.5.0-alpha.4",
-    "axios": "^1.6.5",
+    "axios": "^1.6.8",
     "chevrotain": "^10.5.0",
     "csv-parser": "^3.0.0",
     "esbuild-plugin-copy": "^2.1.1",
@@ -769,7 +785,7 @@
     "moment-duration-format": "^2.3.2",
     "moment-timezone": "^0.5.44",
     "node-fetch": "^2.6.6",
-    "node-q": "^2.6.1",
+    "node-q": "^2.7.0",
     "pick-port": "^2.0.1",
     "picomatch": "^3.0.1",
     "semver": "^7.5.3",

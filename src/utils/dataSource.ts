@@ -16,19 +16,20 @@ import path from "path";
 import { ext } from "../extensionVariables";
 import { DataSourceFiles } from "../models/dataSource";
 import { DataSourcesPanel } from "../panels/datasource";
+import { InsightsConnection } from "../classes/insightsConnection";
 
 export function createKdbDataSourcesFolder(): string {
   const rootPath = ext.context.globalStorageUri.fsPath;
   const kdbDataSourcesFolderPath = path.join(rootPath, ext.kdbDataSourceFolder);
   if (!fs.existsSync(rootPath)) {
     ext.outputChannel.appendLine(
-      `Directory created to the extension folder: ${rootPath}`
+      `Directory created to the extension folder: ${rootPath}`,
     );
     fs.mkdirSync(rootPath);
   }
   if (!fs.existsSync(kdbDataSourcesFolderPath)) {
     ext.outputChannel.appendLine(
-      `Directory created to the extension folder: ${kdbDataSourcesFolderPath}`
+      `Directory created to the extension folder: ${kdbDataSourcesFolderPath}`,
     );
     fs.mkdirSync(kdbDataSourcesFolderPath);
   }
@@ -45,21 +46,16 @@ export function convertTimeToTimestamp(time: string): string {
     return `${datePart}.${timePart}`;
   } catch (error) {
     console.error(
-      `The string param is in an incorrect format. Param: ${time} Error: ${error}`
+      `The string param is in an incorrect format. Param: ${time} Error: ${error}`,
     );
     return "";
   }
 }
 
 export function getConnectedInsightsNode(): string {
-  const connectedNode = ext.kdbinsightsNodes.find((node) =>
-    node.endsWith(" (connected)")
-  );
-  if (connectedNode) {
-    return connectedNode.replace(" (connected)", "");
-  } else {
-    return "";
-  }
+  return ext.activeConnection instanceof InsightsConnection
+    ? ext.activeConnection.connLabel
+    : "";
 }
 
 export function checkFileFromInsightsNode(filePath: string): boolean {
@@ -78,7 +74,7 @@ export function checkFileFromInsightsNode(filePath: string): boolean {
 
 export function checkIfTimeParamIsCorrect(
   startTS: string,
-  endTS: string
+  endTS: string,
 ): boolean {
   try {
     const startDate = new Date(startTS);
@@ -86,7 +82,7 @@ export function checkIfTimeParamIsCorrect(
     return startDate < endDate;
   } catch (error) {
     console.error(
-      `The string params are in an incorrect format. startTS: ${startTS}, endTS: ${endTS}, Error: ${error}`
+      `The string params are in an incorrect format. startTS: ${startTS}, endTS: ${endTS}, Error: ${error}`,
     );
     return false;
   }
@@ -99,7 +95,7 @@ export function refreshDataSourcesPanel(): void {
 }
 
 export function convertDataSourceFormToDataSourceFile(
-  form: any
+  form: any,
 ): DataSourceFiles {
   return form as DataSourceFiles;
 }

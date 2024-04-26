@@ -22,7 +22,7 @@ import * as semver from "semver";
 import { commands, ConfigurationTarget, Uri, window, workspace } from "vscode";
 import { installTools } from "../commands/installTools";
 import { ext } from "../extensionVariables";
-import { Insights } from "../models/insights";
+import { InsightDetails, Insights } from "../models/insights";
 import { QueryResult } from "../models/queryResult";
 import { Server, ServerDetails } from "../models/server";
 import { tryExecuteCommand } from "./cpUtils";
@@ -39,14 +39,14 @@ export async function checkOpenSslInstalled(): Promise<string | null> {
       undefined,
       "openSsl",
       log,
-      "version"
+      "version",
     );
     if (result.code === 0) {
       const matcher = /(\d+.\d+.\d+)/;
       const installedVersion = result.cmdOutput.match(matcher);
 
       ext.outputChannel.appendLine(
-        `Detected version ${installedVersion} of OpenSSL installed.`
+        `Detected version ${installedVersion} of OpenSSL installed.`,
       );
 
       return semver.clean(installedVersion ? installedVersion[1] : "");
@@ -71,62 +71,62 @@ export function initializeLocalServers(servers: Server): void {
 }
 
 export async function addLocalConnectionStatus(
-  serverName: string
+  serverName: string,
 ): Promise<void> {
   ext.localConnectionStatus.push(serverName);
   await commands.executeCommand(
     "setContext",
     "kdb.running",
-    ext.localConnectionStatus
+    ext.localConnectionStatus,
   );
 }
 
 export async function removeLocalConnectionStatus(
-  serverName: string
+  serverName: string,
 ): Promise<void> {
   const result = ext.localConnectionStatus.filter(
-    (connection) => connection !== serverName
+    (connection) => connection !== serverName,
   );
   ext.localConnectionStatus = result;
   await commands.executeCommand(
     "setContext",
     "kdb.running",
-    ext.localConnectionStatus
+    ext.localConnectionStatus,
   );
 }
 
 export async function addLocalConnectionContexts(
-  serverName: string
+  serverName: string,
 ): Promise<void> {
   ext.localConnectionContexts.push(serverName);
   await commands.executeCommand(
     "setContext",
     "kdb.local",
-    ext.localConnectionContexts
+    ext.localConnectionContexts,
   );
 }
 
 export async function removeLocalConnectionContext(
-  serverName: string
+  serverName: string,
 ): Promise<void> {
   const result = ext.localConnectionContexts.filter(
-    (connection) => connection !== serverName
+    (connection) => connection !== serverName,
   );
   ext.localConnectionContexts = result;
   await commands.executeCommand(
     "setContext",
     "kdb.local",
-    ext.localConnectionContexts
+    ext.localConnectionContexts,
   );
 }
 
 export function saveLocalProcessObj(
   childProcess: ChildProcess,
-  args: string[]
+  args: string[],
 ): void {
   window.showInformationMessage("q process started successfully!");
   ext.outputChannel.appendLine(
-    `Child process id ${childProcess.pid!} saved in cache.`
+    `Child process id ${childProcess.pid!} saved in cache.`,
   );
   ext.localProcessObjects[args[2]] = childProcess;
 }
@@ -155,7 +155,7 @@ export function getPlatformFolder(platform: string): string | undefined {
 }
 
 export async function getWorkspaceFolder(
-  corePath: string
+  corePath: string,
 ): Promise<string | undefined> {
   if (await pathExists(join(corePath, "q"))) {
     return corePath;
@@ -181,7 +181,7 @@ export function getHideDetailedConsoleQueryOutput(): void {
       .update(
         "kdb.hideDetailedConsoleQueryOutput",
         true,
-        ConfigurationTarget.Global
+        ConfigurationTarget.Global,
       );
     ext.hideDetailedConsoleQueryOutput = true;
   } else {
@@ -203,7 +203,7 @@ export function setOutputWordWrapper(): void {
       .update(
         "[Log]",
         { "editor.wordWrap": "off" },
-        ConfigurationTarget.Global
+        ConfigurationTarget.Global,
       );
   }
 }
@@ -211,7 +211,7 @@ export function setOutputWordWrapper(): void {
 export function getInsights(): Insights | undefined {
   const configuration = workspace.getConfiguration();
   const insights = configuration.get<Insights>(
-    "kdb.insightsEnterpriseConnections"
+    "kdb.insightsEnterpriseConnections",
   );
 
   return insights && Object.keys(insights).length > 0
@@ -231,7 +231,7 @@ export async function updateInsights(insights: Insights): Promise<void> {
     .update(
       "kdb.insightsEnterpriseConnections",
       insights,
-      ConfigurationTarget.Global
+      ConfigurationTarget.Global,
     );
 }
 
@@ -239,6 +239,42 @@ export function getServerName(server: ServerDetails): string {
   return server.serverAlias != ""
     ? `${server.serverName}:${server.serverPort} [${server.serverAlias}]`
     : `${server.serverName}:${server.serverPort}`;
+}
+
+export function getServerAlias(serverList: ServerDetails[]): void {
+  serverList.forEach(({ serverAlias }) => {
+    if (serverAlias) {
+      ext.kdbConnectionAliasList.push(serverAlias);
+    }
+  });
+}
+
+export function getInsightsAlias(insightsList: InsightDetails[]): void {
+  insightsList.forEach((x) => {
+    ext.kdbConnectionAliasList.push(x.alias);
+  });
+}
+
+export function getServerIconState(label: string): string {
+  if (ext.activeConnection?.connLabel === label) {
+    return "-active";
+  } else if (
+    ext.connectedConnectionList?.some((conn) => conn.connLabel === label)
+  ) {
+    return "-connected";
+  }
+  return "";
+}
+
+export function getStatus(label: string): string {
+  if (ext.activeConnection?.connLabel === label) {
+    return "- active";
+  } else if (
+    ext.connectedConnectionList?.some((conn) => conn.connLabel === label)
+  ) {
+    return "- connected";
+  }
+  return "- disconnected";
 }
 
 export function delay(ms: number) {
@@ -254,7 +290,7 @@ export async function checkLocalInstall(): Promise<void> {
     }
     await writeFile(
       join(__dirname, "qinstall.md"),
-      `# q runtime installed location: \n### ${env.QHOME}`
+      `# q runtime installed location: \n### ${env.QHOME}`,
     );
 
     // persist the QHOME to global settings
@@ -271,7 +307,7 @@ export async function checkLocalInstall(): Promise<void> {
       .get<boolean>("kdb.hideInstallationNotification");
     if (!hideNotification) {
       window.showInformationMessage(
-        `Installation of q found here: ${env.QHOME}`
+        `Installation of q found here: ${env.QHOME}`,
       );
     }
 
@@ -281,7 +317,7 @@ export async function checkLocalInstall(): Promise<void> {
       .update(
         "kdb.hideInstallationNotification",
         true,
-        ConfigurationTarget.Global
+        ConfigurationTarget.Global,
       );
 
     return;
@@ -294,7 +330,7 @@ export async function checkLocalInstall(): Promise<void> {
     .showInformationMessage(
       "Local q installation not found!",
       "Install new instance",
-      "Cancel"
+      "Cancel",
     )
     .then(async (installResult) => {
       if (installResult === "Install new instance") {
@@ -307,7 +343,7 @@ export async function checkLocalInstall(): Promise<void> {
 
 export async function convertBase64License(
   encodedLicense: string,
-  tempDir: string = tmpdir()
+  tempDir: string = tmpdir(),
 ): Promise<Uri> {
   const decodedLicense = Buffer.from(encodedLicense, "base64");
   await writeFile(join(tempDir, "kc.lic"), decodedLicense);
@@ -364,7 +400,7 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
       });
       return acc;
     },
-    []
+    [],
   );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -400,7 +436,7 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
       return acc;
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    headers_.map((x: any) => x.length)
+    headers_.map((x: any) => x.length),
   );
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

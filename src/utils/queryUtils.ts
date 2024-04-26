@@ -61,21 +61,36 @@ export function handleWSError(ab: ArrayBuffer): any {
       // last char is string terminator
       raw[raw.byteLength - 1] === 0 &&
       // error message size, message can be clipped (always less than 256 chars)
-      raw[5] * 256 + raw[4] === raw.byteLength &&
-      // 128 - start of string/error ?
-      raw.subarray(6, 9).toString() === "0,0,128"
+      raw[5] * 256 + raw[4] === raw.byteLength
+      // TODO: need to check if this is needed
+      // &&
+      // // 128 - start of string/error ?
+      // raw.subarray(6, 9).toString() === "0,0,128"
     ) {
-      errorString = {
-        // eslint-disable-next-line prefer-spread
-        ipc: String.fromCharCode.apply(
+      // eslint-disable-next-line prefer-spread
+      const translated = String.fromCharCode
+        .apply(
           String,
           raw.subarray(9, raw.byteLength - 1) as unknown as number[],
-        ),
-      };
+        )
+        .split("\n")
+        .slice(-1);
+      errorString = translated.join("").trim();
+
+      // TODO: need to check if this is needed
+      // errorString = {
+      //   // eslint-disable-next-line prefer-spread
+      //   ipc: String.fromCharCode.apply(
+      //     String,
+      //     raw.subarray(9, raw.byteLength - 1) as unknown as number[],
+      //   ),
+      // };
     } else {
       errorString = "Query error";
     }
   }
+
+  ext.outputChannel.appendLine(`Error : ${errorString}`);
 
   return { error: errorString };
 }

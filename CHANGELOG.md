@@ -2,6 +2,26 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
+# v1.4.0
+
+### Enhancements
+
+- Changed the workflow of adding new connections to improve the experience of new users
+
+### Fixes
+
+- Previously when running code without an active q connection nothing took place, now an error message is displayed
+- KDB Results tab now supports display the result of a scan operation
+- Using the query panel to re-run the query will now show the new results
+- Corrected issues with linter warnings about undeclared variables, and declared variables not being used as parameters
+- Connections must now have unique names
+- Unprojected function assignments are now displayed in output
+- The limitation of 64 characters for the server name has been increased to 2048
+- "temporality" parameter of getData API in kdb Insights has been updated
+- MacOS keyboard shortcut documentation has been updated
+- Issues with the colorization of comments have been fixed
+
+
 # v1.3.0
 
 ### Enhancements

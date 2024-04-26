@@ -13,7 +13,6 @@
 
 import { ExtensionContext, extensions, languages, OutputChannel } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
-import { Connection } from "./models/connection";
 import { LocalProcess } from "./models/localProcess";
 import { MetaObjectPayload } from "./models/meta";
 import { QueryHistory } from "./models/queryHistory";
@@ -27,6 +26,8 @@ import {
 import { QueryHistoryProvider } from "./services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import AuthSettings from "./utils/secretStorage";
+import { LocalConnection } from "./classes/localConnection";
+import { InsightsConnection } from "./classes/insightsConnection";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
@@ -41,9 +42,15 @@ export namespace ext {
   export let openSslVersion: string | null;
   export let resultPanelCSV: string;
   export let isDatasourceExecution: boolean;
+  export let isBundleQCreated: boolean;
   export const rowLimit = 150000000;
 
-  export let connection: Connection | undefined;
+  export let activeConnection: LocalConnection | InsightsConnection | undefined;
+  export const connectedConnectionList: Array<
+    LocalConnection | InsightsConnection
+  > = [];
+  export const connectedContextStrings: Array<string> = [];
+  export const connectionsList: Array<KdbNode | InsightsNode> = [];
   export let hideDetailedConsoleQueryOutput: boolean;
   export let connectionNode: KdbNode | InsightsNode | undefined;
   export const kdbDataSourceFolder = ".kdb-datasources";
@@ -56,6 +63,7 @@ export namespace ext {
   export const kdbinsightsNodes: string[] = [];
   export const kdbNodesWithoutAuth: string[] = [];
   export const kdbNodesWithoutTls: string[] = [];
+  export const kdbConnectionAliasList: string[] = [];
   export const maxRetryCount = 5;
 
   export let secretSettings: AuthSettings;

@@ -12,6 +12,7 @@
  */
 
 import { LitElement, html } from "lit";
+import { repeat } from "lit/directives/repeat.js";
 import { customElement, state } from "lit/decorators.js";
 import {
   Agg,
@@ -54,8 +55,6 @@ export class KdbDataSourceView extends LitElement {
   @state() declare filled: boolean;
   @state() declare temporality: string;
   @state() declare temporal: boolean;
-  @state() declare sliceStartTS: string;
-  @state() declare sliceEndTS: string;
   @state() declare filters: Filter[];
   @state() declare labels: Label[];
   @state() declare sorts: Sort[];
@@ -82,8 +81,6 @@ export class KdbDataSourceView extends LitElement {
     this.filled = false;
     this.temporality = "";
     this.temporal = false;
-    this.sliceStartTS = "";
-    this.sliceEndTS = "";
     this.filters = [createFilter()];
     this.labels = [createLabel()];
     this.sorts = [createSort()];
@@ -131,8 +128,6 @@ export class KdbDataSourceView extends LitElement {
     if (optional) {
       this.filled = optional.filled;
       this.temporal = optional.temporal;
-      this.sliceStartTS = optional.startTS;
-      this.sliceEndTS = optional.endTS;
       this.filters = optional.filters;
       this.labels = optional.labels;
       this.sorts = optional.sorts;
@@ -163,8 +158,6 @@ export class KdbDataSourceView extends LitElement {
           optional: {
             filled: this.filled,
             temporal: this.temporal,
-            startTS: this.sliceStartTS,
-            endTS: this.sliceEndTS,
             filters: this.filters,
             labels: this.labels,
             sorts: this.sorts,
@@ -223,7 +216,7 @@ export class KdbDataSourceView extends LitElement {
     if (this.isInsights && this.isMetaLoaded) {
       return this.insightsMeta.api
         .filter(
-          (api) => api.api === ".kxi.getData" //|| !api.api.startsWith(".kxi.")
+          (api) => api.api === ".kxi.getData", //|| !api.api.startsWith(".kxi.")
         )
         .map((api) => {
           const value =
@@ -338,7 +331,7 @@ export class KdbDataSourceView extends LitElement {
                   value="${operator}"
                   ?selected="${operator === filter.operator}"
                   >${operator}</vscode-option
-                >`
+                >`,
             )}
           </vscode-dropdown>
         </div>
@@ -356,14 +349,8 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.filters.length < MAX_RULES) {
                 const index = this.filters.indexOf(filter);
-                const value = this.filters;
-                this.filters = [];
+                this.filters.splice(index + 1, 0, createFilter());
                 this.requestUpdate();
-                queueMicrotask(() => {
-                  value.splice(index + 1, 0, createFilter());
-                  this.filters = value;
-                  this.requestUpdate();
-                });
               }
             }}"
             >+</vscode-button
@@ -374,17 +361,11 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.filters.length > 0) {
                 const index = this.filters.indexOf(filter);
-                const value = this.filters;
-                this.filters = [];
+                this.filters.splice(index, 1);
+                if (this.filters.length === 0) {
+                  this.filters.push(createFilter());
+                }
                 this.requestUpdate();
-                queueMicrotask(() => {
-                  value.splice(index, 1);
-                  if (value.length === 0) {
-                    value.push(createFilter());
-                  }
-                  this.filters = value;
-                  this.requestUpdate();
-                });
               }
             }}"
             >-</vscode-button
@@ -426,14 +407,8 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.labels.length < MAX_RULES) {
                 const index = this.labels.indexOf(label);
-                const value = this.labels;
-                this.labels = [];
+                this.labels.splice(index + 1, 0, createLabel());
                 this.requestUpdate();
-                queueMicrotask(() => {
-                  value.splice(index + 1, 0, createLabel());
-                  this.labels = value;
-                  this.requestUpdate();
-                });
               }
             }}"
             >+</vscode-button
@@ -444,17 +419,11 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.labels.length > 0) {
                 const index = this.labels.indexOf(label);
-                const value = this.labels;
-                this.labels = [];
+                this.labels.splice(index, 1);
+                if (this.labels.length === 0) {
+                  this.labels.push(createLabel());
+                }
                 this.requestUpdate();
-                queueMicrotask(() => {
-                  value.splice(index, 1);
-                  if (value.length === 0) {
-                    value.push(createLabel());
-                  }
-                  this.labels = value;
-                  this.requestUpdate();
-                });
               }
             }}"
             >-</vscode-button
@@ -489,14 +458,8 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.sorts.length < MAX_RULES) {
                 const index = this.sorts.indexOf(sort);
-                const value = this.sorts;
-                this.sorts = [];
+                this.sorts.splice(index + 1, 0, createSort());
                 this.requestUpdate();
-                queueMicrotask(() => {
-                  value.splice(index + 1, 0, createSort());
-                  this.sorts = value;
-                  this.requestUpdate();
-                });
               }
             }}"
             >+</vscode-button
@@ -507,17 +470,11 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.sorts.length > 0) {
                 const index = this.sorts.indexOf(sort);
-                const value = this.sorts;
-                this.sorts = [];
+                this.sorts.splice(index, 1);
+                if (this.sorts.length === 0) {
+                  this.sorts.push(createSort());
+                }
                 this.requestUpdate();
-                queueMicrotask(() => {
-                  value.splice(index, 1);
-                  if (value.length === 0) {
-                    value.push(createSort());
-                  }
-                  this.sorts = value;
-                  this.requestUpdate();
-                });
               }
             }}"
             >-</vscode-button
@@ -559,7 +516,7 @@ export class KdbDataSourceView extends LitElement {
                   value="${operator}"
                   ?selected="${operator === agg.operator}"
                   >${operator}</vscode-option
-                >`
+                >`,
             )}
           </vscode-dropdown>
         </div>
@@ -579,14 +536,8 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.aggs.length < MAX_RULES) {
                 const index = this.aggs.indexOf(agg);
-                const value = this.aggs;
-                this.aggs = [];
+                this.aggs.splice(index + 1, 0, createAgg());
                 this.requestUpdate();
-                queueMicrotask(() => {
-                  value.splice(index + 1, 0, createAgg());
-                  this.aggs = value;
-                  this.requestUpdate();
-                });
               }
             }}"
             >+</vscode-button
@@ -597,17 +548,11 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.aggs.length > 0) {
                 const index = this.aggs.indexOf(agg);
-                const value = this.aggs;
-                this.aggs = [];
+                this.aggs.splice(index, 1);
+                if (this.aggs.length === 0) {
+                  this.aggs.push(createAgg());
+                }
                 this.requestUpdate();
-                queueMicrotask(() => {
-                  value.splice(index, 1);
-                  if (value.length === 0) {
-                    value.push(createAgg());
-                  }
-                  this.aggs = value;
-                  this.requestUpdate();
-                });
               }
             }}"
             >-</vscode-button
@@ -646,14 +591,8 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.groups.length < MAX_RULES) {
                 const index = this.groups.indexOf(group);
-                const value = this.groups;
-                this.groups = [];
+                this.groups.splice(index + 1, 0, createGroup());
                 this.requestUpdate();
-                queueMicrotask(() => {
-                  value.splice(index + 1, 0, createGroup());
-                  this.groups = value;
-                  this.requestUpdate();
-                });
               }
             }}"
             >+</vscode-button
@@ -664,17 +603,11 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.groups.length > 0) {
                 const index = this.groups.indexOf(group);
-                const value = this.groups;
-                this.groups = [];
+                this.groups.splice(index, 1);
+                if (this.groups.length === 0) {
+                  this.groups.push(createGroup());
+                }
                 this.requestUpdate();
-                queueMicrotask(() => {
-                  value.splice(index, 1);
-                  if (value.length === 0) {
-                    value.push(createGroup());
-                  }
-                  this.groups = value;
-                  this.requestUpdate();
-                });
               }
             }}"
             >-</vscode-button
@@ -832,44 +765,42 @@ export class KdbDataSourceView extends LitElement {
                         >
                       </vscode-dropdown>
                     </div>
-                    <vscode-text-field
-                      type="time"
-                      class="text-field"
-                      value="${this.sliceStartTS}"
-                      @input="${(event: Event) =>
-                        (this.sliceStartTS = (
-                          event.target as HTMLSelectElement
-                        ).value)}"
-                      ?hidden="${this.temporality !== "slice"}"
-                      >Start Time</vscode-text-field
-                    >
-                    <vscode-text-field
-                      type="time"
-                      class="text-field"
-                      value="${this.sliceEndTS}"
-                      @input="${(event: Event) =>
-                        (this.sliceEndTS = (
-                          event.target as HTMLSelectElement
-                        ).value)}"
-                      ?hidden="${this.temporality !== "slice"}"
-                      >End Time</vscode-text-field
-                    >
                   </div>
 
                   <div class="col">
-                    ${this.filters.map((filter) => this.renderFilter(filter))}
+                    ${repeat(
+                      this.filters,
+                      (filter) => filter,
+                      (filter) => this.renderFilter(filter),
+                    )}
                   </div>
                   <div class="col">
-                    ${this.labels.map((label) => this.renderLabel(label))}
+                    ${repeat(
+                      this.labels,
+                      (label) => label,
+                      (label) => this.renderLabel(label),
+                    )}
                   </div>
                   <div class="col">
-                    ${this.sorts.map((sort) => this.renderSort(sort))}
+                    ${repeat(
+                      this.sorts,
+                      (sort) => sort,
+                      (sort) => this.renderSort(sort),
+                    )}
                   </div>
                   <div class="col">
-                    ${this.aggs.map((agg) => this.renderAgg(agg))}
+                    ${repeat(
+                      this.aggs,
+                      (agg) => agg,
+                      (agg) => this.renderAgg(agg),
+                    )}
                   </div>
                   <div class="col">
-                    ${this.groups.map((group) => this.renderGroup(group))}
+                    ${repeat(
+                      this.groups,
+                      (group) => group,
+                      (group) => this.renderGroup(group),
+                    )}
                   </div>
                 </div>
               </vscode-panel-view>
@@ -887,7 +818,7 @@ export class KdbDataSourceView extends LitElement {
                             event.target as HTMLSelectElement
                           ).value)}">
                         ${this.renderTargetOptions(
-                          this.qsqlTarget
+                          this.qsqlTarget,
                         )}</vscode-dropdown
                       >
                     </div>

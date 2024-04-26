@@ -45,24 +45,24 @@ import {
   stopLocalProcessByServerName,
 } from "./commands/installTools";
 import {
-  addAuthConnection,
+  activeConnection,
+  addInsightsConnection,
+  addKdbConnection,
   addNewConnection,
   connect,
-  connectInsights,
   disconnect,
   enableTLS,
   executeQuery,
   removeConnection,
-  removeInsightsConnection,
   rerunQuery,
   runQuery,
 } from "./commands/serverCommand";
 import { showInstallationDetails } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
 import { ExecutionTypes } from "./models/execution";
-import { Insights } from "./models/insights";
+import { InsightDetails, Insights } from "./models/insights";
 import { QueryResult } from "./models/queryResult";
-import { Server } from "./models/server";
+import { Server, ServerDetails } from "./models/server";
 import {
   KdbDataSourceProvider,
   KdbDataSourceTreeItem,
@@ -97,6 +97,7 @@ export async function activate(context: ExtensionContext) {
   ext.context = context;
   ext.outputChannel = window.createOutputChannel("kdb");
   ext.openSslVersion = await checkOpenSslInstalled();
+  ext.isBundleQCreated = false;
 
   const servers: Server | undefined = getServers();
   const insights: Insights | undefined = getInsights();
@@ -160,36 +161,54 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.connect", async (viewItem: KdbNode) => {
       await connect(viewItem);
     }),
-
     commands.registerCommand(
-      "kdb.addAuthentication",
+      "kdb.active.connection",
       async (viewItem: KdbNode) => {
-        addAuthConnection(viewItem.children[0]);
+        activeConnection(viewItem);
       },
     ),
-
     commands.registerCommand("kdb.enableTLS", async (viewItem: KdbNode) => {
       await enableTLS(viewItem.children[0]);
     }),
-
     commands.registerCommand(
       "kdb.insightsConnect",
       async (viewItem: InsightsNode) => {
-        await connectInsights(viewItem);
+        await connect(viewItem);
       },
     ),
     commands.registerCommand(
       "kdb.insightsRemove",
       async (viewItem: InsightsNode) => {
-        await removeInsightsConnection(viewItem);
+        await removeConnection(viewItem);
       },
     ),
-    commands.registerCommand("kdb.disconnect", async () => {
-      await disconnect();
-    }),
+    commands.registerCommand(
+      "kdb.disconnect",
+      async (viewItem: InsightsNode | KdbNode) => {
+        await disconnect(viewItem.label);
+      },
+    ),
     commands.registerCommand("kdb.addConnection", async () => {
       await addNewConnection();
     }),
+    commands.registerCommand(
+      "kdb.newConnection.createNewInsightConnection",
+      async (insightsData: InsightDetails) => {
+        await addInsightsConnection(insightsData);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.newConnection.createNewConnection",
+      async (kdbData: ServerDetails) => {
+        await addKdbConnection(kdbData, false);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.newConnection.createNewBundledConnection",
+      async (kdbData: ServerDetails) => {
+        await addKdbConnection(kdbData, true);
+      },
+    ),
     commands.registerCommand(
       "kdb.removeConnection",
       async (viewItem: KdbNode) => {
@@ -198,7 +217,7 @@ export async function activate(context: ExtensionContext) {
     ),
     commands.registerCommand("kdb.refreshServerObjects", () => {
       ext.serverProvider.reload();
-      ext.connection?.update();
+      ext.activeConnection?.update();
     }),
     commands.registerCommand(
       "kdb.queryHistory.rerun",
@@ -287,21 +306,21 @@ export async function activate(context: ExtensionContext) {
     }),
     commands.registerCommand("kdb.execute.selectedQuery", async () => {
       runQuery(ExecutionTypes.QuerySelection);
-      ext.connection?.update();
+      ext.activeConnection?.update();
     }),
     commands.registerCommand("kdb.execute.fileQuery", async () => {
       runQuery(ExecutionTypes.QueryFile);
-      ext.connection?.update();
+      ext.activeConnection?.update();
     }),
     commands.registerCommand("kdb.execute.pythonScratchpadQuery", async () => {
       runQuery(ExecutionTypes.PythonQuerySelection);
-      ext.connection?.update();
+      ext.activeConnection?.update();
     }),
     commands.registerCommand(
       "kdb.execute.pythonFileScratchpadQuery",
       async () => {
         runQuery(ExecutionTypes.PythonQueryFile);
-        ext.connection?.update();
+        ext.activeConnection?.update();
       },
     ),
     commands.registerCommand("kdb.execute.entireFile", async (uri: Uri) => {

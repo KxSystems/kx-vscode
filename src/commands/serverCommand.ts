@@ -16,41 +16,18 @@ import { readFileSync } from "fs-extra";
 import { jwtDecode } from "jwt-decode";
 import { join } from "path";
 import * as url from "url";
-import {
-  InputBoxOptions,
-  Position,
-  ProgressLocation,
-  QuickPickItem,
-  QuickPickOptions,
-  Range,
-  commands,
-  window,
-} from "vscode";
+import { Position, ProgressLocation, Range, commands, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { isCompressed, uncompress } from "../ipc/c";
-import { Connection } from "../models/connection";
 import { GetDataObjectPayload } from "../models/data";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
-import { Insights } from "../models/insights";
-import {
-  connectionAliasInput,
-  connectionHostnameInput,
-  connectionPasswordInput,
-  connectionPortInput,
-  connectionUsernameInput,
-  insightsAliasInput,
-  insightsUrlInput,
-  kdbEndpoint,
-  kdbInsightsEndpoint,
-  serverEndpointPlaceHolder,
-  serverEndpoints,
-} from "../models/items/server";
+import { InsightDetails, Insights } from "../models/insights";
 import { JwtUser } from "../models/jwt_user";
 import { MetaObject, MetaObjectPayload } from "../models/meta";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
-import { Server, ServerType } from "../models/server";
+import { Server, ServerDetails, ServerType } from "../models/server";
 import { ServerObject } from "../models/serverObject";
 import { DataSourcesPanel } from "../panels/datasource";
 import { getCurrentToken } from "../services/kdbInsights/codeFlowLogin";
@@ -62,7 +39,6 @@ import {
   getInsights,
   getServerName,
   getServers,
-  removeLocalConnectionContext,
   updateInsights,
   updateServers,
 } from "../utils/core";
@@ -73,7 +49,6 @@ import { openUrl } from "../utils/openUrl";
 import {
   handleScratchpadTableRes,
   handleWSResults,
-  sanitizeQuery,
   checkIfIsDatasource,
   addQueryHistory,
 } from "../utils/queryUtils";
@@ -85,114 +60,97 @@ import {
 } from "../validators/kdbValidator";
 import { QueryHistory } from "../models/queryHistory";
 import { runDataSource } from "./dataSourceCommand";
+import { NewConnectionPannel } from "../panels/newConnection";
+import { Telemetry } from "../utils/telemetryClient";
+import { ConnectionManagementService } from "../services/connectionManagerService";
+import { InsightsConnection } from "../classes/insightsConnection";
 
 export async function addNewConnection(): Promise<void> {
-  const options: QuickPickOptions = { placeHolder: serverEndpointPlaceHolder };
-
-  const resultType: QuickPickItem | undefined = await window.showQuickPick(
-    serverEndpoints,
-    options,
-  );
-  if (resultType !== undefined && resultType!.label === kdbEndpoint) {
-    addKdbConnection();
-  } else if (
-    resultType !== undefined &&
-    resultType!.label === kdbInsightsEndpoint
-  ) {
-    await addInsightsConnection();
-  }
+  NewConnectionPannel.render(ext.context.extensionUri);
 }
 
-export async function addInsightsConnection() {
-  const insightsAlias: InputBoxOptions = {
-    prompt: insightsAliasInput.prompt,
-    placeHolder: insightsAliasInput.placeholder,
-    validateInput: (value: string | undefined) => validateServerAlias(value),
-  };
-  const insightsUrl: InputBoxOptions = {
-    prompt: insightsUrlInput.prompt,
-    placeHolder: insightsUrlInput.placeholder,
-  };
-  window.showInputBox(insightsAlias).then(async (insights_alias) => {
-    window.showInputBox(insightsUrl).then(async (insights_url) => {
-      if (insights_alias === undefined || insights_alias === "") {
-        const host = new url.URL(insights_url!);
-        insights_alias = host.host;
-      }
+export async function addInsightsConnection(insightsData: InsightDetails) {
+  const aliasValidation = validateServerAlias(insightsData.alias, false);
+  if (aliasValidation) {
+    window.showErrorMessage(aliasValidation);
+    return;
+  }
+  if (insightsData.alias === undefined || insightsData.alias === "") {
+    const host = new url.URL(insightsData.server!);
+    insightsData.alias = host.host;
+  }
 
-      let insights: Insights | undefined = getInsights();
-      if (insights != undefined && insights[getHash(insights_url!)]) {
-        await window.showErrorMessage(
-          `Insights instance named ${insights_url} already exists.`,
-        );
-      } else {
-        const key = getHash(insights_url!);
-        if (insights === undefined) {
-          insights = {
-            key: {
-              auth: true,
-              alias: insights_alias,
-              server: insights_url!,
-            },
-          };
-        } else {
-          insights[key] = {
-            auth: true,
-            alias: insights_alias,
-            server: insights_url!,
-          };
-        }
+  let insights: Insights | undefined = getInsights();
+  if (insights != undefined && insights[getHash(insightsData.server!)]) {
+    await window.showErrorMessage(
+      `Insights instance named ${insightsData.alias} already exists.`,
+    );
+    return;
+  } else {
+    const key = getHash(insightsData.server!);
+    if (insights === undefined) {
+      insights = {
+        key: {
+          auth: true,
+          alias: insightsData.alias,
+          server: insightsData.server!,
+        },
+      };
+    } else {
+      insights[key] = {
+        auth: true,
+        alias: insightsData.alias,
+        server: insightsData.server!,
+      };
+    }
 
-        await updateInsights(insights);
-        const newInsights = getInsights();
-        if (newInsights != undefined) {
-          ext.serverProvider.refreshInsights(newInsights);
-        }
-      }
-    });
-  });
+    await updateInsights(insights);
+    const newInsights = getInsights();
+    if (newInsights != undefined) {
+      ext.serverProvider.refreshInsights(newInsights);
+      Telemetry.sendEvent("Connection.Created.Insights");
+    }
+    window.showInformationMessage(
+      `Added Insights connection: ${insightsData.alias}`,
+    );
+    NewConnectionPannel.close();
+  }
 }
 
 // Not possible to test secrets
 /* istanbul ignore next */
-export function addAuthConnection(serverKey: string): void {
-  const connectionUsername: InputBoxOptions = {
-    prompt: connectionUsernameInput.prompt,
-    placeHolder: connectionUsernameInput.placeholder,
-    validateInput: (value: string | undefined) => validateServerUsername(value),
-  };
-  const connectionPassword: InputBoxOptions = {
-    prompt: connectionPasswordInput.prompt,
-    placeHolder: connectionPasswordInput.placeholder,
-    password: true,
-  };
-  window.showInputBox(connectionUsername).then(async (username) => {
-    if (username?.trim()?.length) {
-      window.showInputBox(connectionPassword).then(async (password) => {
-        if (password?.trim()?.length) {
-          const servers: Server | undefined = getServers();
-          // store secrets
-          if (
-            (username != undefined || username != "") &&
-            (password != undefined || password != "") &&
-            servers &&
-            servers[serverKey]
-          ) {
-            servers[serverKey].auth = true;
-            ext.secretSettings.storeAuthData(
-              serverKey,
-              `${username}:${password}`,
-            );
-            await updateServers(servers);
-            const newServers = getServers();
-            if (newServers != undefined) {
-              ext.serverProvider.refresh(newServers);
-            }
-          }
-        }
-      });
+export async function addAuthConnection(
+  serverKey: string,
+  username: string,
+  password: string,
+): Promise<void> {
+  const validUsername = validateServerUsername(username);
+  if (validUsername) {
+    window.showErrorMessage(validUsername);
+    return;
+  }
+  if (password === undefined || password === "") {
+    window.showErrorMessage("Password cannot be empty");
+    return;
+  }
+  if (password?.trim()?.length) {
+    const servers: Server | undefined = getServers();
+    // store secrets
+    if (
+      (username != undefined || username != "") &&
+      (password != undefined || password != "") &&
+      servers &&
+      servers[serverKey]
+    ) {
+      servers[serverKey].auth = true;
+      ext.secretSettings.storeAuthData(serverKey, `${username}:${password}`);
+      await updateServers(servers);
+      const newServers = getServers();
+      if (newServers != undefined) {
+        ext.serverProvider.refresh(newServers);
+      }
     }
-  });
+  }
 }
 
 export async function enableTLS(serverKey: string): Promise<void> {
@@ -228,556 +186,146 @@ export async function enableTLS(serverKey: string): Promise<void> {
   );
 }
 
-export function addKdbConnection(): void {
-  const connectionAlias: InputBoxOptions = {
-    prompt: connectionAliasInput.prompt,
-    placeHolder: connectionAliasInput.placeholder,
-    validateInput: (value: string | undefined) => validateServerAlias(value),
-  };
-  const connectionHostname: InputBoxOptions = {
-    prompt: connectionHostnameInput.prompt,
-    placeHolder: connectionHostnameInput.placeholder,
-    validateInput: (value: string | undefined) => validateServerName(value),
-  };
-  const connectionPort: InputBoxOptions = {
-    prompt: connectionPortInput.prompt,
-    placeHolder: connectionPortInput.placeholder,
-    validateInput: (value: string | undefined) => validateServerPort(value),
-  };
-
-  // TODO: this is obsolete? this code is not used anywhere
-  // const connectionTls: InputBoxOptions = {
-  //   prompt: connnectionTls.prompt,
-  //   placeHolder: connnectionTls.placeholder,
-  //   validateInput: (value: string | undefined) => validateTls(value),
-  // };
-
-  window.showInputBox(connectionAlias).then(async (alias) => {
-    window.showInputBox(connectionHostname).then(async (hostname) => {
-      if (hostname) {
-        window.showInputBox(connectionPort).then(async (port) => {
-          if (port) {
-            let servers: Server | undefined = getServers();
-
-            if (
-              servers != undefined &&
-              servers[getHash(`${hostname}:${port}`)]
-            ) {
-              await window.showErrorMessage(
-                `Server ${hostname}:${port} already exists.`,
-              );
-            } else {
-              const key =
-                alias != undefined
-                  ? getHash(`${hostname}${port}${alias}`)
-                  : getHash(`${hostname}${port}`);
-              if (servers === undefined) {
-                servers = {
-                  key: {
-                    auth: false,
-                    serverName: hostname,
-                    serverPort: port,
-                    serverAlias: alias,
-                    managed: alias === "local" ? true : false,
-                    tls: false,
-                  },
-                };
-                if (servers[0].managed) {
-                  await addLocalConnectionContexts(getServerName(servers[0]));
-                }
-              } else {
-                servers[key] = {
-                  auth: false,
-                  serverName: hostname,
-                  serverPort: port,
-                  serverAlias: alias,
-                  managed: alias === "local" ? true : false,
-                  tls: false,
-                };
-                if (servers[key].managed) {
-                  await addLocalConnectionContexts(getServerName(servers[key]));
-                }
-              }
-
-              await updateServers(servers);
-              const newServers = getServers();
-              if (newServers != undefined) {
-                ext.serverProvider.refresh(newServers);
-              }
-            }
-          }
-        });
-      }
-    });
-  });
-}
-
-export async function removeConnection(viewItem: KdbNode): Promise<void> {
-  if (viewItem.label.indexOf("connected") !== -1) {
-    await disconnect();
-  }
-
-  const servers: Server | undefined = getServers();
-
-  const key =
-    viewItem.details.serverAlias != ""
-      ? getHash(
-          `${viewItem.details.serverName}${viewItem.details.serverPort}${viewItem.details.serverAlias}`,
-        )
-      : getHash(`${viewItem.details.serverName}${viewItem.details.serverPort}`);
-  if (servers != undefined && servers[key]) {
-    const uServers = Object.keys(servers).filter((server) => {
-      return server !== key;
-    });
-
-    const updatedServers: Server = {};
-    uServers.forEach((server) => {
-      updatedServers[server] = servers[server];
-    });
-
-    removeLocalConnectionContext(getServerName(viewItem.details));
-
-    await updateServers(updatedServers);
-    ext.serverProvider.refresh(updatedServers);
-  }
-}
-
-export async function connectInsights(viewItem: InsightsNode): Promise<void> {
-  commands.executeCommand("kdb-results.focus");
-  ext.context.secrets.delete(viewItem.details.alias);
-  await getCurrentToken(viewItem.details.server, viewItem.details.alias);
-
-  ext.outputChannel.appendLine(
-    `Connection established successfully to: ${viewItem.details.server}`,
-  );
-
-  commands.executeCommand("setContext", "kdb.connected", [
-    viewItem.label + " (connected)",
-  ]);
-
-  commands.executeCommand("setContext", "kdb.insightsConnected", true);
-
-  if (ext.kdbinsightsNodes.indexOf(viewItem.label + " (connected)") === -1) {
-    ext.kdbinsightsNodes.push(viewItem.label + " (connected)");
-    commands.executeCommand(
-      "setContext",
-      "kdb.insightsNodes",
-      ext.kdbinsightsNodes,
-    );
-  }
-
-  ext.connectionNode = viewItem;
-  ext.serverProvider.reload();
-  refreshDataSourcesPanel();
-}
-
-export async function getMeta(): Promise<MetaObjectPayload | undefined> {
-  if (ext.connectionNode instanceof InsightsNode) {
-    const metaUrl = new url.URL(
-      ext.insightsServiceGatewayUrls.meta,
-      ext.connectionNode.details.server,
-    );
-
-    const token = await getCurrentToken(
-      ext.connectionNode.details.server,
-      ext.connectionNode.details.alias,
-    );
-
-    if (token === undefined) {
-      ext.outputChannel.appendLine(
-        "Error retrieving access token for insights.",
-      );
-      window.showErrorMessage("Failed to retrieve access token for insights");
-      return undefined;
-    }
-
-    const options = {
-      headers: { Authorization: `Bearer ${token.accessToken}` },
-    };
-
-    const metaResponse = await axios.post(metaUrl.toString(), {}, options);
-    const meta: MetaObject = metaResponse.data;
-    return meta.payload;
-  }
-  return undefined;
-}
-
-export async function getDataInsights(
-  targetUrl: string,
-  body: string,
-): Promise<GetDataObjectPayload | undefined> {
-  if (ext.connectionNode instanceof InsightsNode) {
-    const requestUrl = new url.URL(
-      targetUrl,
-      ext.connectionNode.details.server,
-    ).toString();
-
-    const token = await getCurrentToken(
-      ext.connectionNode.details.server,
-      ext.connectionNode.details.alias,
-    );
-
-    if (token === undefined) {
-      ext.outputChannel.appendLine(
-        "Error retrieving access token for insights.",
-      );
-      window.showErrorMessage("Failed to retrieve access token for insights");
-      return undefined;
-    }
-
-    const headers = {
-      Authorization: `Bearer ${token.accessToken}`,
-      Accept: "application/octet-stream",
-      "Content-Type": "application/json",
-    };
-
-    const options: AxiosRequestConfig = {
-      method: "post",
-      url: requestUrl,
-      data: body,
-      headers: headers,
-      responseType: "arraybuffer",
-    };
-
-    const results = await window.withProgress(
-      {
-        location: ProgressLocation.Notification,
-        cancellable: false,
-      },
-      async (progress, token) => {
-        token.onCancellationRequested(() => {
-          ext.outputChannel.appendLine("User cancelled the installation.");
-        });
-
-        progress.report({ message: "Query executing..." });
-
-        return await axios(options)
-          .then((response: any) => {
-            if (isCompressed(response.data)) {
-              response.data = uncompress(response.data);
-            }
-            return {
-              error: "",
-              arrayBuffer: response.data.buffer
-                ? response.data.buffer
-                : response.data,
-            };
-          })
-          .catch((error: any) => {
-            return {
-              error: error.response.data,
-              arrayBuffer: undefined,
-            };
-          });
-      },
-    );
-    return results;
-  }
-  return undefined;
-}
-
-export async function importScratchpad(
-  variableName: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params: DataSourceFiles,
+export async function addKdbConnection(
+  kdbData: ServerDetails,
+  isLocal?: boolean,
 ): Promise<void> {
-  if (ext.connectionNode instanceof InsightsNode) {
-    let queryParams, coreUrl: string;
-    switch (params.dataSource.selectedType) {
-      case DataSourceTypes.API:
-        queryParams = {
-          table: params.dataSource.api.table,
-          startTS: params.dataSource.api.startTS,
-          endTS: params.dataSource.api.endTS,
-        };
-        coreUrl = ext.insightsScratchpadUrls.import;
-        break;
-      case DataSourceTypes.SQL:
-        queryParams = { query: params.dataSource.sql.query };
-        coreUrl = ext.insightsScratchpadUrls.importSql;
-        break;
-      case DataSourceTypes.QSQL:
-        const assemblyParts = params.dataSource.qsql.selectedTarget.split(" ");
-        queryParams = {
-          assembly: assemblyParts[0],
-          target: assemblyParts[1],
-          query: params.dataSource.qsql.query,
-        };
-        coreUrl = ext.insightsScratchpadUrls.importQsql;
-        break;
-      default:
-        break;
-    }
-
-    const scratchpadURL = new url.URL(
-      coreUrl!,
-      ext.connectionNode.details.server,
-    );
-
-    const token = await getCurrentToken(
-      ext.connectionNode.details.server,
-      ext.connectionNode.details.alias,
-    );
-
-    if (token === undefined) {
-      ext.outputChannel.appendLine(
-        "Error retrieving access token for insights.",
-      );
-      window.showErrorMessage("Failed to retrieve access token for insights");
-      return undefined;
-    }
-
-    const username = jwtDecode<JwtUser>(token.accessToken);
-    if (username === undefined || username.preferred_username === "") {
-      ext.outputChannel.appendLine(
-        "JWT did not contain a valid preferred username",
-      );
-    }
-    const headers = {
-      headers: {
-        Authorization: `Bearer ${token.accessToken}`,
-        username: username.preferred_username!,
-
-        json: true,
-      },
-    };
-    const body = {
-      output: variableName,
-      isTableView: false,
-      params: queryParams,
-    };
-    window.withProgress(
-      {
-        location: ProgressLocation.Notification,
-        cancellable: false,
-      },
-      async (progress, token) => {
-        token.onCancellationRequested(() => {
-          ext.outputChannel.appendLine("User cancelled the installation.");
-        });
-
-        progress.report({ message: "Query executing..." });
-
-        const scratchpadResponse = await axios.post(
-          scratchpadURL.toString(),
-          body,
-          headers,
-        );
-
-        ext.outputChannel.append(JSON.stringify(scratchpadResponse.data));
-        window.showInformationMessage(
-          `Executed successfully, stored in ${variableName}`,
-        );
-
-        const p = new Promise<void>((resolve) => resolve());
-        return p;
-      },
-    );
-  }
-}
-
-export async function getScratchpadQuery(
-  query: string,
-  context?: string,
-  isPython?: boolean,
-): Promise<any | undefined> {
-  if (ext.connectionNode instanceof InsightsNode) {
-    const isTableView = ext.resultsViewProvider.isVisible();
-    const scratchpadURL = new url.URL(
-      ext.insightsAuthUrls.scratchpadURL,
-      ext.connectionNode.details.server,
-    );
-    const token = await getCurrentToken(
-      ext.connectionNode.details.server,
-      ext.connectionNode.details.alias,
-    );
-    if (token === undefined) {
-      ext.outputChannel.appendLine(
-        "Error retrieving access token for insights.",
-      );
-      window.showErrorMessage("Failed to retrieve access token for insights");
-      return undefined;
-    }
-    const username = jwtDecode<JwtUser>(token.accessToken);
-    if (username === undefined || username.preferred_username === "") {
-      ext.outputChannel.appendLine(
-        "JWT did not contain a valid preferred username",
-      );
-    }
-    const body = {
-      expression: query,
-      isTableView,
-      language: !isPython ? "q" : "python",
-      context: context || ".",
-      sampleFn: "first",
-      sampleSize: 10000,
-    };
-    const headers = {
-      Authorization: `Bearer ${token.accessToken}`,
-      Username: username.preferred_username,
-      "Content-Type": "application/json",
-    };
-
-    const spReponse = await window.withProgress(
-      {
-        location: ProgressLocation.Notification,
-        cancellable: false,
-      },
-      async (progress, token) => {
-        token.onCancellationRequested(() => {
-          ext.outputChannel.appendLine("User cancelled the installation.");
-        });
-
-        progress.report({ message: "Query is executing..." });
-        const spRes = await axios
-          .post(scratchpadURL.toString(), body, { headers })
-          .then((response: any) => {
-            if (isTableView && !response.data.error) {
-              const buffer = new Uint8Array(
-                response.data.data.map((x: string) => parseInt(x, 16)),
-              ).buffer;
-
-              response.data.data = handleWSResults(buffer);
-              response.data.data = handleScratchpadTableRes(response.data.data);
-            }
-            return response.data;
-          });
-        return spRes;
-      },
-    );
-    return spReponse;
-  }
-  return undefined;
-}
-
-export async function removeInsightsConnection(
-  viewItem: InsightsNode,
-): Promise<void> {
-  if (viewItem.label.indexOf("connected") !== -1) {
-    await disconnect();
-  }
-
-  const insights: Insights | undefined = getInsights();
-
-  const key = getHash(viewItem.details.server);
-  if (insights != undefined && insights[key]) {
-    const uInsights = Object.keys(insights).filter((insight) => {
-      return insight !== key;
-    });
-
-    const updatedInsights: Insights = {};
-    uInsights.forEach((insight) => {
-      updatedInsights[insight] = insights[insight];
-    });
-
-    await updateInsights(updatedInsights);
-    ext.serverProvider.refreshInsights(updatedInsights);
-  }
-}
-
-export async function connect(viewItem: KdbNode): Promise<void> {
-  commands.executeCommand("kdb-results.focus");
-  await commands.executeCommand("setContext", "kdb.insightsConnected", false);
-  ExecutionConsole.start();
-  // handle cleaning up existing connection
-  if (
-    ext.connectionNode !== undefined &&
-    ext.connectionNode.label === viewItem.label
-  ) {
-    ext.connectionNode = undefined;
-    if (ext.connection !== undefined) {
-      ext.connection.disconnect();
-      ext.connection = undefined;
-      DataSourcesPanel.close();
-    }
-  }
-
-  // check for TLS support
-  if (viewItem.details.tls) {
-    if (!(await checkOpenSslInstalled())) {
-      window
-        .showInformationMessage(
-          "TLS support requires OpenSSL to be installed.",
-          "More Info",
-          "Cancel",
-        )
-        .then(async (result) => {
-          if (result === "More Info") {
-            await openUrl("https://code.kx.com/q/kb/ssl/");
-          }
-        });
-    }
-  }
-
-  // check for auth
-  const authCredentials = viewItem.details.auth
-    ? await ext.secretSettings.getAuthData(viewItem.children[0])
-    : undefined;
-
-  const servers: Server | undefined = getServers();
-  if (servers === undefined) {
-    window.showErrorMessage("Server not found.");
+  const aliasValidation = validateServerAlias(kdbData.serverAlias, isLocal!);
+  const hostnameValidation = validateServerName(kdbData.serverName);
+  const portValidation = validateServerPort(kdbData.serverPort);
+  if (aliasValidation) {
+    window.showErrorMessage(aliasValidation);
     return;
   }
+  if (hostnameValidation) {
+    window.showErrorMessage(hostnameValidation);
+    return;
+  }
+  if (portValidation) {
+    window.showErrorMessage(portValidation);
+    return;
+  }
+  let servers: Server | undefined = getServers();
 
-  const key =
-    viewItem.details.serverAlias != ""
-      ? getHash(
-          `${viewItem.details.serverName}${viewItem.details.serverPort}${viewItem.details.serverAlias}`,
-        )
-      : getHash(`${viewItem.details.serverName}${viewItem.details.serverPort}`);
-  const connection = `${servers[key].serverName}:${servers[key].serverPort}`;
-
-  if (authCredentials != undefined) {
-    const creds = authCredentials.split(":");
-    ext.connection = new Connection(
-      connection,
-      creds,
-      viewItem.details.tls ?? false,
+  if (
+    servers != undefined &&
+    servers[getHash(`${kdbData.serverName}:${kdbData.serverPort}`)]
+  ) {
+    await window.showErrorMessage(
+      `Server ${kdbData.serverName}:${kdbData.serverPort} already exists.`,
     );
   } else {
-    ext.connection = new Connection(
-      connection,
-      undefined,
-      viewItem.details.tls ?? false,
+    const key =
+      kdbData.serverAlias != undefined
+        ? getHash(
+            `${kdbData.serverName}${kdbData.serverPort}${kdbData.serverAlias}`,
+          )
+        : getHash(`${kdbData.serverName}${kdbData.serverPort}`);
+    if (servers === undefined) {
+      servers = {
+        key: {
+          auth: kdbData.auth,
+          serverName: kdbData.serverName,
+          serverPort: kdbData.serverPort,
+          serverAlias: kdbData.serverAlias,
+          managed: kdbData.serverAlias === "local" ? true : false,
+          tls: kdbData.tls,
+        },
+      };
+      if (servers[0].managed) {
+        await addLocalConnectionContexts(getServerName(servers[0]));
+      }
+    } else {
+      servers[key] = {
+        auth: kdbData.auth,
+        serverName: kdbData.serverName,
+        serverPort: kdbData.serverPort,
+        serverAlias: kdbData.serverAlias,
+        managed: kdbData.serverAlias === "local" ? true : false,
+        tls: kdbData.tls,
+      };
+      if (servers[key].managed) {
+        await addLocalConnectionContexts(getServerName(servers[key]));
+      }
+    }
+
+    await updateServers(servers);
+    const newServers = getServers();
+    if (newServers != undefined) {
+      Telemetry.sendEvent("Connection.Created.QProcess");
+      ext.serverProvider.refresh(newServers);
+    }
+    if (kdbData.auth) {
+      addAuthConnection(key, kdbData.username!, kdbData.password!);
+    }
+    window.showInformationMessage(
+      `Added kdb connection: ${kdbData.serverAlias}`,
     );
+    NewConnectionPannel.close();
+  }
+}
+
+export async function removeConnection(viewItem: KdbNode | InsightsNode) {
+  const connMngService = new ConnectionManagementService();
+  await connMngService.removeConnection(viewItem);
+}
+
+export async function connect(viewItem: KdbNode | InsightsNode): Promise<void> {
+  const connMngService = new ConnectionManagementService();
+  commands.executeCommand("kdb-results.focus");
+  ExecutionConsole.start();
+  // handle cleaning up existing connection
+  if (ext.activeConnection !== undefined) {
+    DataSourcesPanel.close();
   }
 
-  if (viewItem.details.tls) {
+  const isKdbNode = viewItem instanceof KdbNode;
+  if (isKdbNode) {
+    // check for TLS support
+    if (viewItem.details.tls) {
+      if (!(await checkOpenSslInstalled())) {
+        window
+          .showInformationMessage(
+            "TLS support requires OpenSSL to be installed.",
+            "More Info",
+            "Cancel",
+          )
+          .then(async (result) => {
+            if (result === "More Info") {
+              await openUrl("https://code.kx.com/q/kb/ssl/");
+            }
+          });
+      }
+    }
+  }
+
+  await connMngService.connect(viewItem.label);
+
+  if (isKdbNode && viewItem.details.tls) {
     process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
-  ext.connection.connect((err, conn) => {
-    if (err) {
-      window.showErrorMessage(err.message);
-      return;
-    }
-
-    if (conn) {
-      ext.outputChannel.appendLine(
-        `Connection established successfully to: ${viewItem.details.serverName}`,
-      );
-
-      commands.executeCommand("setContext", "kdb.connected", [
-        `${getServerName(viewItem.details)}` + " (connected)",
-      ]);
-      ext.connectionNode = viewItem;
-      ext.serverProvider.reload();
-    }
-  });
   refreshDataSourcesPanel();
+  ext.serverProvider.reload();
 }
 
-export async function disconnect(): Promise<void> {
-  ext.connection?.disconnect();
-  await commands.executeCommand("setContext", "kdb.connected", false);
-  commands.executeCommand("setContext", "kdb.insightsConnected", false);
-  ext.connectionNode = undefined;
-  const queryConsole = ExecutionConsole.start();
-  queryConsole.dispose();
-  DataSourcesPanel.close();
+export function activeConnection(viewItem: KdbNode | InsightsNode): void {
+  const connMngService = new ConnectionManagementService();
+  connMngService.setActiveConnection(viewItem);
+  refreshDataSourcesPanel();
   ext.serverProvider.reload();
+}
+
+export async function disconnect(connLabel: string): Promise<void> {
+  const connMngService = new ConnectionManagementService();
+  connMngService.disconnect(connLabel);
+
+  if (ext.connectedConnectionList.length === 0) {
+    const queryConsole = ExecutionConsole.start();
+    queryConsole.dispose();
+    DataSourcesPanel.close();
+    ext.serverProvider.reload();
+  }
 }
 
 export async function executeQuery(
@@ -785,8 +333,9 @@ export async function executeQuery(
   context?: string,
   isPython?: boolean,
 ): Promise<void> {
+  const connMngService = new ConnectionManagementService();
   const queryConsole = ExecutionConsole.start();
-  if (ext.connection === undefined) {
+  if (ext.activeConnection === undefined && ext.connectionNode === undefined) {
     window.showInformationMessage(
       "Please connect to a KDB instance or Insights Instance to execute a query",
     );
@@ -794,50 +343,9 @@ export async function executeQuery(
   }
 
   if (query.length === 0) {
-    return undefined;
-  }
-
-  const insightsNode = ext.kdbinsightsNodes.find((n) =>
-    ext.connectionNode instanceof InsightsNode
-      ? n === ext.connectionNode?.details.alias + " (connected)"
-      : false,
-  );
-
-  // set context for root nodes
-  if (insightsNode) {
-    query = sanitizeQuery(query);
-    const queryRes = await getScratchpadQuery(query, context, isPython);
-    writeScratchpadResult(queryRes, query, isPython);
-  } else if (ext.connection !== undefined && ext.connection.connected) {
-    query = sanitizeQuery(query);
-
-    if (ext.resultsViewProvider.isVisible()) {
-      const startTime = Date.now();
-      const queryRes = await ext.connection.executeQuery(query, context, true);
-      const endTime = Date.now();
-      writeQueryResultsToView(
-        queryRes,
-        query,
-        undefined,
-        false,
-        (endTime - startTime).toString(),
-      );
-    } else {
-      const startTime = Date.now();
-      const queryRes = await ext.connection.executeQuery(query, context, true);
-      const endTime = Date.now();
-      writeQueryResultsToConsole(
-        queryRes,
-        query,
-        undefined,
-        false,
-        (endTime - startTime).toString(),
-      );
-    }
-  } else {
-    const isConnected = ext.connection
-      ? ext.connection.connected
-      : !!ext.connection;
+    const isConnected = ext.activeConnection
+      ? ext.activeConnection.connected
+      : !!ext.activeConnection;
     queryConsole.appendQueryError(
       query,
       "Query is empty",
@@ -845,6 +353,21 @@ export async function executeQuery(
       ext.connectionNode?.label ? ext.connectionNode.label : "",
     );
     return undefined;
+  }
+  const startTime = Date.now();
+  const results = await connMngService.executeQuery(query, context, isPython);
+  const endTime = Date.now();
+  const duration = (endTime - startTime).toString();
+
+  // set context for root nodes
+  if (ext.activeConnection instanceof InsightsConnection) {
+    writeScratchpadResult(results, query, duration, isPython);
+  } else {
+    if (ext.resultsViewProvider.isVisible()) {
+      writeQueryResultsToView(results, query, undefined, false, duration);
+    } else {
+      writeQueryResultsToConsole(results, query, undefined, false, duration);
+    }
   }
 }
 
@@ -956,7 +479,11 @@ export function rerunQuery(rerunQueryElement: QueryHistory) {
 
 export async function loadServerObjects(): Promise<ServerObject[]> {
   // check for valid connection
-  if (ext.connection === undefined || ext.connection.connected === false) {
+  if (
+    ext.activeConnection === undefined ||
+    ext.activeConnection.connected === false ||
+    ext.activeConnection instanceof InsightsConnection
+  ) {
     window.showInformationMessage(
       "Please connect to a KDB instance to view the objects",
     );
@@ -967,7 +494,7 @@ export async function loadServerObjects(): Promise<ServerObject[]> {
     ext.context.asAbsolutePath(join("resources", "list_mem.q")),
   ).toString();
   const cc = "\n" + script + "(::)";
-  const result = await ext.connection?.executeQueryRaw(cc);
+  const result = await ext.activeConnection?.executeQueryRaw(cc);
   if (result !== undefined) {
     const result2: ServerObject[] = (0, eval)(result); // eval(result);
     const result3: ServerObject[] = result2.filter((item) => {
@@ -991,7 +518,7 @@ export function writeQueryResultsToConsole(
     ? decodeQUTF(result[0])
     : decodeQUTF(result);
   if (
-    (ext.connection || ext.connectionNode) &&
+    (ext.activeConnection || ext.connectionNode) &&
     !res.startsWith(queryConstants.error)
   ) {
     queryConsole.append(
@@ -1007,7 +534,7 @@ export function writeQueryResultsToConsole(
       queryConsole.appendQueryError(
         query,
         res.substring(queryConstants.error.length),
-        !!ext.connection,
+        !!ext.activeConnection,
         ext.connectionNode?.label ? ext.connectionNode.label : "",
         isPython,
         undefined,
@@ -1046,6 +573,7 @@ export function writeQueryResultsToView(
 export function writeScratchpadResult(
   result: ScratchpadResult,
   query: string,
+  duration: string,
   isPython?: boolean,
 ): void {
   const queryConsole = ExecutionConsole.start();
@@ -1059,9 +587,21 @@ export function writeScratchpadResult(
     );
   } else {
     if (ext.resultsViewProvider.isVisible()) {
-      writeQueryResultsToView(result.data, query, "SCRATCHPAD", isPython);
+      writeQueryResultsToView(
+        result.data,
+        query,
+        "SCRATCHPAD",
+        isPython,
+        duration,
+      );
     } else {
-      writeQueryResultsToConsole(result.data, query, undefined, isPython);
+      writeQueryResultsToConsole(
+        result.data,
+        query,
+        undefined,
+        isPython,
+        duration,
+      );
     }
   }
 }

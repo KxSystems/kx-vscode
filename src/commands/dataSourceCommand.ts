@@ -38,13 +38,12 @@ import {
 } from "../utils/queryUtils";
 import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
 import {
-  getDataInsights,
-  getMeta,
-  importScratchpad,
   writeQueryResultsToConsole,
   writeQueryResultsToView,
 } from "./serverCommand";
 import { ServerType } from "../models/server";
+import { Telemetry } from "../utils/telemetryClient";
+import { LocalConnection } from "../classes/localConnection";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -68,6 +67,7 @@ export async function addDataSource(): Promise<void> {
   window.showInformationMessage(
     `Created ${fileName} in ${kdbDataSourcesFolderPath}.`,
   );
+  Telemetry.sendEvent("Datasource.Created");
 }
 
 export async function renameDataSource(
@@ -127,7 +127,15 @@ export async function openDataSource(
   uri: Uri,
 ): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
-  Object.assign(ext.insightsMeta, await getMeta());
+  if (
+    ext.activeConnection instanceof LocalConnection ||
+    !ext.activeConnection
+  ) {
+    window.showErrorMessage("No Insights active connection found");
+    DataSourcesPanel.running = false;
+    return;
+  }
+  Object.assign(ext.insightsMeta, await ext.activeConnection.getMeta());
   if (!ext.insightsMeta.assembly) {
     ext.outputChannel.appendLine(
       `To edit or run a datasource you need to be connected to an Insights server`,
@@ -203,7 +211,18 @@ export async function populateScratchpad(
 
   window.showInputBox(scratchpadVariable).then(async (outputVariable) => {
     if (outputVariable !== undefined && outputVariable !== "") {
-      await importScratchpad(outputVariable!, dataSourceForm!);
+      if (
+        ext.activeConnection instanceof LocalConnection ||
+        !ext.activeConnection
+      ) {
+        window.showErrorMessage("No Insights active connection found");
+        DataSourcesPanel.running = false;
+        return;
+      }
+      await ext.activeConnection.importScratchpad(
+        outputVariable!,
+        dataSourceForm!,
+      );
     } else {
       ext.outputChannel.appendLine(
         `Invalid scratchpad output variable name: ${outputVariable}`,
@@ -220,8 +239,17 @@ export async function runDataSource(
   }
   DataSourcesPanel.running = true;
 
+  if (
+    ext.activeConnection instanceof LocalConnection ||
+    !ext.activeConnection
+  ) {
+    window.showErrorMessage("No Insights active connection found");
+    DataSourcesPanel.running = false;
+    return;
+  }
+
   try {
-    Object.assign(ext.insightsMeta, await getMeta());
+    Object.assign(ext.insightsMeta, await ext.activeConnection.getMeta());
     if (!ext.insightsMeta.assembly) {
       ext.outputChannel.appendLine(
         `To run a datasource you need to be connected to an Insights server`,
@@ -235,9 +263,11 @@ export async function runDataSource(
     dataSourceForm.insightsNode = getConnectedInsightsNode();
     const fileContent = dataSourceForm;
 
+    ext.outputChannel.appendLine(`Running ${fileContent.name} datasource...`);
     let res: any;
     const selectedType = getSelectedType(fileContent);
     ext.isDatasourceExecution = true;
+    Telemetry.sendEvent("Datasource." + selectedType + ".Run");
     switch (selectedType) {
       case "API":
         res = await runApiDataSource(fileContent);
@@ -256,6 +286,9 @@ export async function runDataSource(
       window.showErrorMessage(res.error);
       addDStoQueryHistory(dataSourceForm, false);
     } else if (ext.resultsViewProvider.isVisible()) {
+      ext.outputChannel.appendLine(
+        `Results: ${typeof res === "string" ? "0" : res.rows.length} rows`,
+      );
       addDStoQueryHistory(dataSourceForm, true);
       writeQueryResultsToView(
         res,
@@ -263,6 +296,9 @@ export async function runDataSource(
         selectedType,
       );
     } else {
+      ext.outputChannel.appendLine(
+        `Results is a string with length: ${res.length}`,
+      );
       addDStoQueryHistory(dataSourceForm, true);
       writeQueryResultsToConsole(
         res,
@@ -307,6 +343,14 @@ export function getSelectedType(fileContent: DataSourceFiles): string {
 export async function runApiDataSource(
   fileContent: DataSourceFiles,
 ): Promise<any> {
+  if (
+    ext.activeConnection instanceof LocalConnection ||
+    !ext.activeConnection
+  ) {
+    window.showErrorMessage("No Insights active connection found");
+    DataSourcesPanel.running = false;
+    return;
+  }
   const isTimeCorrect = checkIfTimeParamIsCorrect(
     fileContent.dataSource.api.startTS,
     fileContent.dataSource.api.endTS,
@@ -318,7 +362,7 @@ export async function runApiDataSource(
     return;
   }
   const apiBody = getApiBody(fileContent);
-  const apiCall = await getDataInsights(
+  const apiCall = await ext.activeConnection.getDataInsights(
     ext.insightsServiceGatewayUrls.data,
     JSON.stringify(apiBody),
   );
@@ -352,18 +396,6 @@ export function getApiBody(
     }
     if (optional.temporal) {
       apiBody.temporality = api.temporality;
-      if (api.temporality === "slice") {
-        const start = api.startTS.split("T");
-        if (start.length === 2) {
-          start[1] = optional.startTS;
-          const end = api.endTS.split("T");
-          if (end.length === 2) {
-            end[1] = optional.endTS;
-            apiBody.startTS = convertTimeToTimestamp(start.join("T"));
-            apiBody.endTS = convertTimeToTimestamp(end.join("T"));
-          }
-        }
-      }
     }
 
     const labels = optional.labels.filter((label) => label.active);
@@ -424,6 +456,14 @@ export function getApiBody(
 export async function runQsqlDataSource(
   fileContent: DataSourceFiles,
 ): Promise<any> {
+  if (
+    ext.activeConnection instanceof LocalConnection ||
+    !ext.activeConnection
+  ) {
+    window.showErrorMessage("No Insights active connection found");
+    DataSourcesPanel.running = false;
+    return;
+  }
   const assembly = fileContent.dataSource.qsql.selectedTarget.slice(0, -4);
   const target = fileContent.dataSource.qsql.selectedTarget.slice(-3);
   const qsqlBody = {
@@ -431,7 +471,7 @@ export async function runQsqlDataSource(
     target: target,
     query: fileContent.dataSource.qsql.query,
   };
-  const qsqlCall = await getDataInsights(
+  const qsqlCall = await ext.activeConnection.getDataInsights(
     ext.insightsServiceGatewayUrls.qsql,
     JSON.stringify(qsqlBody),
   );
@@ -449,10 +489,18 @@ export async function runQsqlDataSource(
 export async function runSqlDataSource(
   fileContent: DataSourceFiles,
 ): Promise<any> {
+  if (
+    ext.activeConnection instanceof LocalConnection ||
+    !ext.activeConnection
+  ) {
+    window.showErrorMessage("No Insights active connection found");
+    DataSourcesPanel.running = false;
+    return;
+  }
   const sqlBody = {
     query: fileContent.dataSource.sql.query,
   };
-  const sqlCall = await getDataInsights(
+  const sqlCall = await ext.activeConnection.getDataInsights(
     ext.insightsServiceGatewayUrls.sql,
     JSON.stringify(sqlBody),
   );
@@ -486,6 +534,7 @@ function parseError(error: GetDataError) {
   if (error instanceof Object && error.buffer) {
     return handleWSError(error.buffer);
   } else {
+    ext.outputChannel.appendLine(`Error: ${error}`);
     return {
       error,
     };
