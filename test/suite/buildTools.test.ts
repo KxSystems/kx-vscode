@@ -12,11 +12,23 @@
  */
 
 import * as assert from "assert";
+import * as tools from "../../src/commands/buildToolsCommand";
+import { workspace } from "vscode";
 
-describe("Parser", () => {
-  describe("Feature", () => {
-    it("should", () => {
-      assert.strictEqual(1, 1);
+describe("buildTools", () => {
+  describe("connectBuildTools", () => {
+    it("should connect build tools", async () => {
+      await assert.doesNotReject(async () => tools.connectBuildTools());
+    });
+  });
+
+  describe("lintCommand", () => {
+    it("should lint", async () => {
+      const document = await workspace.openTextDocument({
+        language: "q",
+        content: "a;a:1",
+      });
+      await assert.doesNotReject(async () => tools.lintCommand(document));
     });
   });
 });

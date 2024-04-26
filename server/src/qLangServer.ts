@@ -84,7 +84,7 @@ function isAssignable(token: Token) {
 export default class QLangServer {
   private declare connection: Connection;
   private declare params: InitializeParams;
-  private declare documents: TextDocuments<TextDocument>;
+  public declare documents: TextDocuments<TextDocument>;
 
   constructor(connection: Connection, params: InitializeParams) {
     this.connection = connection;

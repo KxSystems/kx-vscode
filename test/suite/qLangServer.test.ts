@@ -11,13 +11,19 @@
  * specific language governing permissions and limitations under the License.
  */
 
-/* eslint @typescript-eslint/no-explicit-any: 0 */
 /* eslint @typescript-eslint/no-empty-function: 0 */
 
 import * as assert from "assert";
 import * as sinon from "sinon";
-import { Connection, InitializeParams } from "vscode-languageserver";
+import {
+  Connection,
+  InitializeParams,
+  Position,
+  Range,
+  TextDocumentIdentifier,
+} from "vscode-languageserver";
 import QLangServer from "../../server/src/qLangServer";
+import { TextDocument } from "vscode-languageserver-textdocument";
 
 describe("qLangServer", () => {
   let server: QLangServer;
@@ -58,6 +64,103 @@ describe("qLangServer", () => {
       assert.ok(capabilities.definitionProvider);
       assert.ok(capabilities.renameProvider);
       assert.ok(capabilities.completionProvider);
+    });
+  });
+
+  describe("onDocumentSymbol", () => {
+    it("should return golobals", () => {
+      const textDocument = TextDocumentIdentifier.create("test.q");
+      sinon
+        .stub(server.documents, "get")
+        .value(() => TextDocument.create("test.q", "q", 1, "a:1"));
+      const result = server.onDocumentSymbol({ textDocument });
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].name, "a");
+    });
+  });
+
+  describe("onReferences", () => {
+    it("should return golobal references", () => {
+      const position = Position.create(0, 5);
+      const context = {
+        includeDeclaration: true,
+      };
+      const textDocument = TextDocumentIdentifier.create("test.q");
+      sinon
+        .stub(server.documents, "get")
+        .value(() => TextDocument.create("test.q", "q", 1, "a:1;a"));
+      const result = server.onReferences({
+        textDocument,
+        position,
+        context,
+      });
+      assert.strictEqual(result.length, 2);
+      assert.deepStrictEqual(result[0].range, Range.create(0, 0, 0, 1));
+      assert.deepStrictEqual(result[1].range, Range.create(0, 4, 0, 5));
+    });
+  });
+
+  describe("onDefinition", () => {
+    it("should return golobal definition", () => {
+      const position = Position.create(0, 5);
+      const textDocument = TextDocumentIdentifier.create("test.q");
+      sinon
+        .stub(server.documents, "get")
+        .value(() => TextDocument.create("test.q", "q", 1, "a:1;a"));
+      const result = server.onDefinition({
+        textDocument,
+        position,
+      });
+      assert.strictEqual(result.length, 1);
+      assert.deepStrictEqual(result[0].range, Range.create(0, 0, 0, 1));
+    });
+  });
+
+  describe("onRenameRequest", () => {
+    it("should rename golobal identifiers", () => {
+      const position = Position.create(0, 5);
+      const newName = "b";
+      const textDocument = TextDocumentIdentifier.create("test.q");
+      sinon
+        .stub(server.documents, "get")
+        .value(() => TextDocument.create("test.q", "q", 1, "a:1;a"));
+      const result = server.onRenameRequest({
+        textDocument,
+        position,
+        newName,
+      });
+      assert.ok(result);
+      assert.strictEqual(result.changes[textDocument.uri].length, 2);
+    });
+  });
+
+  describe("onCompletion", () => {
+    it("should complete golobal identifiers", () => {
+      const position = Position.create(0, 5);
+      const textDocument = TextDocumentIdentifier.create("test.q");
+      sinon
+        .stub(server.documents, "get")
+        .value(() => TextDocument.create("test.q", "q", 1, "a:1;a"));
+      const result = server.onCompletion({
+        textDocument,
+        position,
+      });
+      assert.strictEqual(result.length, 1);
+    });
+  });
+
+  describe("onCompletion", () => {
+    it("should complete golobal variables", () => {
+      const position = Position.create(0, 5);
+      const textDocument = TextDocumentIdentifier.create("test.q");
+      sinon
+        .stub(server.documents, "get")
+        .value(() => TextDocument.create("test.q", "q", 1, "a:1;a"));
+      const result = server.onCompletion({
+        textDocument,
+        position,
+      });
+      assert.strictEqual(result.length, 1);
     });
   });
 });
