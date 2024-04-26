@@ -40,10 +40,6 @@ import { writeFileSync } from "fs";
 import { resolve } from "path";
 import { Quke, qukeNoDescription, qukeWithDescription } from "./quke";
 
-function _(token: TokenType | RegExp) {
-  return ("PATTERN" in token ? `${token.PATTERN}` : `${token}`).slice(1, -1);
-}
-
 const includes = [
   {
     include: "#multiline",
@@ -82,14 +78,6 @@ const qdoc = {
                 "\\b(type|atom|anything|dict|enum|function|hsym|option|string|table|tuple|typedef|vector|bool|boolean|byte|char|character|date|datetime|float|guid|int|integer|long|minute|month|real|second|short|string|symbol|time|timespan|timestamp)\\b",
             },
           ],
-        },
-        {
-          name: "variable.other.qdoc",
-          match: "[\\w.]+?(?=\\s*{.+})",
-        },
-        {
-          name: "variable.other.qdoc",
-          match: "\\s\\.[\\w.]+?\\s",
         },
       ],
     },
@@ -277,6 +265,10 @@ const language = {
   ],
   repository,
 };
+
+function _(token: TokenType | RegExp) {
+  return ("PATTERN" in token ? `${token.PATTERN}` : `${token}`).slice(1, -1);
+}
 
 export function generateTextMateGrammar() {
   const grammar = JSON.stringify(language, null, 2);

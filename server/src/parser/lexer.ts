@@ -12,7 +12,7 @@
  */
 
 import { Lexer } from "chevrotain";
-import { RSql, Identifier, Keyword, LSql, Reserved } from "./keywords";
+import { RSql, Identifier, Keyword, LSql, Reserved, System } from "./keywords";
 import {
   BinaryLiteral,
   ByteLiteral,
@@ -83,6 +83,7 @@ const QTokens = [
   BinaryLiteral,
   ByteLiteral,
   NumberLiteral,
+  System,
   LSql,
   RSql,
   Keyword,

@@ -24,7 +24,7 @@ import {
   RCurly,
   RParen,
 } from "./tokens";
-import { Identifier, IdentifierPattern, LSql, RSql } from "./keywords";
+import { Identifier, IdentifierPattern, LSql, RSql, System } from "./keywords";
 import {
   After,
   AfterEach,
@@ -45,6 +45,7 @@ import {
   ToMatch,
   Tolerance,
 } from "./quke";
+import { CharLiteral } from "./literals";
 
 function args(image: string, count: number): string[] {
   return image.split(/\s+/, count);
@@ -95,6 +96,12 @@ export function parse(text: string): Token[] {
   let table = 0;
   let argument = 0;
   let token, prev, next: IToken;
+
+  const _namespace = (arg: string) => {
+    if (arg?.startsWith(".") && isIdentifier(arg)) {
+      namespace = arg === "." ? "" : arg;
+    }
+  };
 
   for (let i = 0; i < tokens.length; i++) {
     token = tokens[i];
@@ -170,10 +177,21 @@ export function parse(text: string): Token[] {
         const [cmd, arg] = args(token.image, 2);
         switch (cmd) {
           case "\\d":
-            if (arg?.startsWith(".") && isIdentifier(arg)) {
-              namespace = arg === "." ? "" : arg;
-            }
+            _namespace(arg);
             break;
+        }
+        break;
+      case System:
+        next = tokens[i + 1];
+        if (next?.tokenType === CharLiteral) {
+          const [cmd, arg] = args(next.image.slice(1, -1), 2);
+          switch (cmd) {
+            case "d":
+              if (token.startColumn === 1) {
+                _namespace(arg);
+              }
+              break;
+          }
         }
         break;
       case Bench:

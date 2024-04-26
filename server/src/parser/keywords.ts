@@ -20,6 +20,12 @@ export const Identifier = createToken({
   pattern: IdentifierPattern,
 });
 
+export const System = createToken({
+  name: "System",
+  pattern: /system/,
+  longer_alt: Identifier,
+});
+
 export const LSql = createToken({
   name: "LSql",
   pattern: /(?:select|exec|update|delete)/,

@@ -198,14 +198,6 @@
                   "match": "\\b(type|atom|anything|dict|enum|function|hsym|option|string|table|tuple|typedef|vector|bool|boolean|byte|char|character|date|datetime|float|guid|int|integer|long|minute|month|real|second|short|string|symbol|time|timespan|timestamp)\\b"
                 }
               ]
-            },
-            {
-              "name": "variable.other.qdoc",
-              "match": "[\\w.]+?(?=\\s*{.+})"
-            },
-            {
-              "name": "variable.other.qdoc",
-              "match": "\\s\\.[\\w.]+?\\s"
             }
           ]
         }
