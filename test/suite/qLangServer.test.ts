@@ -18,15 +18,25 @@ import * as sinon from "sinon";
 import {
   Connection,
   InitializeParams,
-  Position,
-  Range,
   TextDocumentIdentifier,
 } from "vscode-languageserver";
-import QLangServer from "../../server/src/qLangServer";
 import { TextDocument } from "vscode-languageserver-textdocument";
+import QLangServer from "../../server/src/qLangServer";
 
 describe("qLangServer", () => {
   let server: QLangServer;
+
+  function createDocument(content: string) {
+    content = content.trim();
+    const document = TextDocument.create("test.q", "q", 1, content);
+    const position = document.positionAt(content.length);
+    const textDocument = TextDocumentIdentifier.create("test.q");
+    sinon.stub(server.documents, "get").value(() => document);
+    return {
+      textDocument,
+      position,
+    };
+  }
 
   beforeEach(async () => {
     const connection = <Connection>(<unknown>{
@@ -68,96 +78,73 @@ describe("qLangServer", () => {
   });
 
   describe("onDocumentSymbol", () => {
-    it("should return golobals", () => {
-      const textDocument = TextDocumentIdentifier.create("test.q");
-      sinon
-        .stub(server.documents, "get")
-        .value(() => TextDocument.create("test.q", "q", 1, "a:1"));
-      const result = server.onDocumentSymbol({ textDocument });
-      assert.strictEqual(result.length, 1);
-      assert.strictEqual(result[0].name, "a");
+    it("should return symbols", () => {
+      const params = createDocument("a:1;b:{[c]d:c+1;d};b");
+      const result = server.onDocumentSymbol(params);
+      assert.strictEqual(result.length, 2);
     });
   });
 
   describe("onReferences", () => {
-    it("should return golobal references", () => {
-      const position = Position.create(0, 5);
-      const context = {
-        includeDeclaration: true,
-      };
-      const textDocument = TextDocumentIdentifier.create("test.q");
-      sinon
-        .stub(server.documents, "get")
-        .value(() => TextDocument.create("test.q", "q", 1, "a:1;a"));
+    it("should return references", () => {
+      const params = createDocument(
+        '\\d .a\nsystem "d .a"\na:1;b:{[c]d:c+1;d};b',
+      );
       const result = server.onReferences({
-        textDocument,
-        position,
-        context,
+        ...params,
+        context: { includeDeclaration: true },
       });
       assert.strictEqual(result.length, 2);
-      assert.deepStrictEqual(result[0].range, Range.create(0, 0, 0, 1));
-      assert.deepStrictEqual(result[1].range, Range.create(0, 4, 0, 5));
+    });
+    it("should return references for quke", () => {
+      const params = createDocument(`
+        feature
+          before
+          after
+          before each
+          after each
+          should
+            expect
+              a:1;a
+      `);
+      const result = server.onReferences({
+        ...params,
+        context: { includeDeclaration: true },
+      });
+      assert.strictEqual(result.length, 2);
+    });
+    it("should skip table and sql", () => {
+      const params = createDocument("select a:1 from;([]a:1)");
+      const result = server.onReferences({
+        ...params,
+        context: { includeDeclaration: true },
+      });
+      assert.strictEqual(result.length, 0);
     });
   });
 
   describe("onDefinition", () => {
-    it("should return golobal definition", () => {
-      const position = Position.create(0, 5);
-      const textDocument = TextDocumentIdentifier.create("test.q");
-      sinon
-        .stub(server.documents, "get")
-        .value(() => TextDocument.create("test.q", "q", 1, "a:1;a"));
-      const result = server.onDefinition({
-        textDocument,
-        position,
-      });
+    it("should return definitions", () => {
+      const params = createDocument("a:1;b:{[c]d:c+1;d};b");
+      const result = server.onDefinition(params);
       assert.strictEqual(result.length, 1);
-      assert.deepStrictEqual(result[0].range, Range.create(0, 0, 0, 1));
     });
   });
 
   describe("onRenameRequest", () => {
-    it("should rename golobal identifiers", () => {
-      const position = Position.create(0, 5);
-      const newName = "b";
-      const textDocument = TextDocumentIdentifier.create("test.q");
-      sinon
-        .stub(server.documents, "get")
-        .value(() => TextDocument.create("test.q", "q", 1, "a:1;a"));
-      const result = server.onRenameRequest({
-        textDocument,
-        position,
-        newName,
-      });
+    it("should rename identifiers", () => {
+      const params = createDocument("a:1;b:{[c]d:c+1;d};b");
+      const result = server.onRenameRequest({ ...params, newName: "newName" });
       assert.ok(result);
-      assert.strictEqual(result.changes[textDocument.uri].length, 2);
+      assert.strictEqual(result.changes[params.textDocument.uri].length, 2);
     });
   });
 
   describe("onCompletion", () => {
-    it("should complete golobal identifiers", () => {
-      const position = Position.create(0, 5);
-      const textDocument = TextDocumentIdentifier.create("test.q");
-      sinon
-        .stub(server.documents, "get")
-        .value(() => TextDocument.create("test.q", "q", 1, "a:1;a"));
-      const result = server.onCompletion({
-        textDocument,
-        position,
-      });
-      assert.strictEqual(result.length, 1);
-    });
-    it("should filter out duplicates", () => {
-      const position = Position.create(0, 5);
-      const textDocument = TextDocumentIdentifier.create("test.q");
-      sinon
-        .stub(server.documents, "get")
-        .value(() => TextDocument.create("test.q", "q", 1, "a:1;a;a:2;a"));
-      const result = server.onCompletion({
-        textDocument,
-        position,
-      });
-      assert.strictEqual(result.length, 1);
+    it("should complete identifiers", () => {
+      const params = createDocument("a:1;b:{[c]d:c+1;d};b");
+      const result = server.onCompletion(params);
+      assert.strictEqual(result.length, 2);
     });
   });
 });

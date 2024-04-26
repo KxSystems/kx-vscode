@@ -64,21 +64,29 @@ function isLocal(source: Token, tokens: Token[]) {
   );
 }
 
-function hasPosition(token: Token, position: Position) {
-  const { start, end } = rangeFromToken(token);
-  return (
-    start.line <= position.line &&
-    end.line >= position.line &&
-    start.character <= position.character &&
-    end.character >= position.character
-  );
-}
-
 function isAssignable(token: Token) {
   return (
     token.identifierKind !== IdentifierKind.Sql &&
     token.identifierKind !== IdentifierKind.Table
   );
+}
+
+function positionToToken(position: Position, tokens: Token[]) {
+  return tokens.find((token) => {
+    const { start, end } = rangeFromToken(token);
+    return (
+      start.line <= position.line &&
+      end.line >= position.line &&
+      start.character <= position.character &&
+      end.character >= position.character
+    );
+  });
+}
+
+function getLabel(token: Token, source?: Token): string {
+  return !token.identifier || source?.namespace === token.namespace
+    ? token.image
+    : token.identifier;
 }
 
 export default class QLangServer {
@@ -112,18 +120,12 @@ export default class QLangServer {
   public onDocumentSymbol({
     textDocument,
   }: DocumentSymbolParams): DocumentSymbol[] {
-    const document = this.documents.get(textDocument.uri);
-    if (!document) {
-      return [];
-    }
-
-    const tokens = parse(document.getText());
-
+    const tokens = this.parse(textDocument);
     return tokens
       .filter((token) => token.kind === TokenKind.Assignment && !token.scope)
       .map((token) =>
         DocumentSymbol.create(
-          token.identifier || token.image,
+          getLabel(token),
           undefined,
           token.lambda ? SymbolKind.Object : SymbolKind.Variable,
           rangeFromToken(token),
@@ -151,7 +153,9 @@ export default class QLangServer {
   }
 
   public onReferences({ textDocument, position }: ReferenceParams): Location[] {
-    return this.findIdentifiers(FindKind.Reference, textDocument, position).map(
+    const tokens = this.parse(textDocument);
+    const source = positionToToken(position, tokens);
+    return this.findIdentifiers(FindKind.Reference, tokens, source).map(
       (token) => Location.create(textDocument.uri, rangeFromToken(token)),
     );
   }
@@ -160,11 +164,11 @@ export default class QLangServer {
     textDocument,
     position,
   }: DefinitionParams): Location[] {
-    return this.findIdentifiers(
-      FindKind.Definition,
-      textDocument,
-      position,
-    ).map((token) => Location.create(textDocument.uri, rangeFromToken(token)));
+    const tokens = this.parse(textDocument);
+    const source = positionToToken(position, tokens);
+    return this.findIdentifiers(FindKind.Definition, tokens, source).map(
+      (token) => Location.create(textDocument.uri, rangeFromToken(token)),
+    );
   }
 
   public onRenameRequest({
@@ -172,11 +176,11 @@ export default class QLangServer {
     position,
     newName,
   }: RenameParams): WorkspaceEdit | null {
-    const edits = this.findIdentifiers(
-      FindKind.Rename,
-      textDocument,
-      position,
-    ).map((token) => TextEdit.replace(rangeFromToken(token), newName));
+    const tokens = this.parse(textDocument);
+    const source = positionToToken(position, tokens);
+    const edits = this.findIdentifiers(FindKind.Rename, tokens, source).map(
+      (token) => TextEdit.replace(rangeFromToken(token), newName),
+    );
     return edits.length === 0
       ? null
       : {
@@ -190,33 +194,34 @@ export default class QLangServer {
     textDocument,
     position,
   }: CompletionParams): CompletionItem[] {
-    return this.findIdentifiers(
-      FindKind.Completion,
-      textDocument,
-      position,
-    ).map((token) => ({
-      label: token.identifier || token.image,
-      kind: token.lambda
-        ? CompletionItemKind.Function
-        : CompletionItemKind.Variable,
-    }));
+    const tokens = this.parse(textDocument);
+    const source = positionToToken(position, tokens);
+    return this.findIdentifiers(FindKind.Completion, tokens, source).map(
+      (token) => ({
+        label: getLabel(token, source),
+        kind: token.lambda
+          ? CompletionItemKind.Function
+          : CompletionItemKind.Variable,
+      }),
+    );
   }
 
-  private findIdentifiers(
-    kind: FindKind,
-    textDocument: TextDocumentIdentifier,
-    position: Position,
-  ): Token[] {
+  private parse(textDocument: TextDocumentIdentifier): Token[] {
     const document = this.documents.get(textDocument.uri);
     if (!document) {
       return [];
     }
-    const tokens = parse(document.getText());
-    const source = tokens.find((token) => hasPosition(token, position));
-    if (!source || !isAssignable(source)) {
+    return parse(document.getText());
+  }
+
+  private findIdentifiers(
+    kind: FindKind,
+    tokens: Token[],
+    source?: Token,
+  ): Token[] {
+    if (!source) {
       return [];
     }
-
     switch (kind) {
       case FindKind.Rename:
       case FindKind.Reference:
