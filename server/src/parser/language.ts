@@ -272,6 +272,9 @@ function _(token: TokenType | RegExp) {
 
 export function generateTextMateGrammar() {
   const grammar = JSON.stringify(language, null, 2);
-  writeFileSync(resolve("syntaxes", "q.tmLanguage.json"), grammar);
+  writeFileSync(
+    resolve(__dirname, "../".repeat(4), "syntaxes", "q.tmLanguage.json"),
+    grammar,
+  );
   return grammar;
 }
