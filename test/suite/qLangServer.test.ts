@@ -147,15 +147,12 @@ describe("qLangServer", () => {
       });
       assert.strictEqual(result.length, 1);
     });
-  });
-
-  describe("onCompletion", () => {
-    it("should complete golobal variables", () => {
+    it("should filter out duplicates", () => {
       const position = Position.create(0, 5);
       const textDocument = TextDocumentIdentifier.create("test.q");
       sinon
         .stub(server.documents, "get")
-        .value(() => TextDocument.create("test.q", "q", 1, "a:1;a"));
+        .value(() => TextDocument.create("test.q", "q", 1, "a:1;a;a:2;a"));
       const result = server.onCompletion({
         textDocument,
         position,
