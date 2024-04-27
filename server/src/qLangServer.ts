@@ -84,9 +84,15 @@ function positionToToken(position: Position, tokens: Token[]) {
 }
 
 function getLabel(token: Token, source?: Token): string {
-  return !token.identifier || source?.namespace === token.namespace
-    ? token.image
-    : token.identifier;
+  if (!token.identifier) {
+    return token.image;
+  }
+  if (source?.namespace) {
+    if (token.identifier.startsWith(source.namespace)) {
+      return token.identifier.replace(`${source.namespace}.`, "");
+    }
+  }
+  return token.identifier;
 }
 
 export default class QLangServer {

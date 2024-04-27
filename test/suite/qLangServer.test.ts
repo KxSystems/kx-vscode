@@ -79,17 +79,20 @@ describe("qLangServer", () => {
 
   describe("onDocumentSymbol", () => {
     it("should return symbols", () => {
-      const params = createDocument("a:1;b:{[c]d:c+1;d};b");
+      const params = createDocument("a:1;b:{[c]d:c+1;e::1;d};b");
       const result = server.onDocumentSymbol(params);
-      assert.strictEqual(result.length, 2);
+      assert.strictEqual(result.length, 3);
+    });
+    it("should skip table and sql", () => {
+      const params = createDocument("select a:1 from;([]a:1);a");
+      const result = server.onDocumentSymbol(params);
+      assert.strictEqual(result.length, 0);
     });
   });
 
   describe("onReferences", () => {
     it("should return references", () => {
-      const params = createDocument(
-        '\\d .a\nsystem "d .a"\na:1;b:{[c]d:c+1;d};b',
-      );
+      const params = createDocument("a:1;b:{[c]d:c+1;d};b");
       const result = server.onReferences({
         ...params,
         context: { includeDeclaration: true },
@@ -98,13 +101,16 @@ describe("qLangServer", () => {
     });
     it("should return references for quke", () => {
       const params = createDocument(`
-        feature
+      feature
+      bench
+      replicate
+      FEATURE
           before
           after
           before each
           after each
           should
-            expect
+            EXPECT
               a:1;a
       `);
       const result = server.onReferences({
@@ -113,19 +119,16 @@ describe("qLangServer", () => {
       });
       assert.strictEqual(result.length, 2);
     });
-    it("should skip table and sql", () => {
-      const params = createDocument("select a:1 from;([]a:1)");
-      const result = server.onReferences({
-        ...params,
-        context: { includeDeclaration: true },
-      });
-      assert.strictEqual(result.length, 0);
-    });
   });
 
   describe("onDefinition", () => {
     it("should return definitions", () => {
       const params = createDocument("a:1;b:{[c]d:c+1;d};b");
+      const result = server.onDefinition(params);
+      assert.strictEqual(result.length, 1);
+    });
+    it("should return local definitions", () => {
+      const params = createDocument("a:1;b:{[c]d:1;d");
       const result = server.onDefinition(params);
       assert.strictEqual(result.length, 1);
     });
@@ -142,7 +145,9 @@ describe("qLangServer", () => {
 
   describe("onCompletion", () => {
     it("should complete identifiers", () => {
-      const params = createDocument("a:1;b:{[c]d:c+1;d};b");
+      const params = createDocument(
+        '\\d .a\nsystem "d .a"\na:1;b:{[c]d:c+1;d};b',
+      );
       const result = server.onCompletion(params);
       assert.strictEqual(result.length, 2);
     });

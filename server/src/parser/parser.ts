@@ -24,7 +24,7 @@ import {
   RCurly,
   RParen,
 } from "./tokens";
-import { Identifier, IdentifierPattern, LSql, RSql, System } from "./keywords";
+import { Identifier, LSql, RSql, System } from "./keywords";
 import {
   After,
   AfterEach,
@@ -49,11 +49,6 @@ import { CharLiteral } from "./literals";
 
 function args(image: string, count: number): string[] {
   return image.split(/\s+/, count);
-}
-
-function isIdentifier(image: string): boolean {
-  const matches = IdentifierPattern.exec(image);
-  return !matches || matches[0] === image;
 }
 
 function setQualified(token: Token, namespace: string): void {
@@ -100,8 +95,8 @@ export function parse(text: string): Token[] {
   let token, prev, next: IToken;
 
   const _namespace = (arg: string) => {
-    if (arg?.startsWith(".") && isIdentifier(arg)) {
-      namespace = arg === "." ? "" : arg;
+    if (arg) {
+      namespace = `.${arg.split(/\./, 2)[1]}`;
     }
   };
 

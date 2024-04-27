@@ -23,7 +23,7 @@
     "quke": {
       "patterns": [
         {
-          "begin": "(?<!.)\\s*(x?feature)\\b(.*)",
+          "begin": "(?i)(?<!.)\\s*(x?feature)\\b(.*)",
           "captures": {
             "1": {
               "name": "support.function.q"
@@ -34,7 +34,7 @@
           },
           "patterns": [
             {
-              "match": "\\b(x?feature)\\b(.*)",
+              "match": "(?i)\\b(x?feature)\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -45,7 +45,7 @@
               }
             },
             {
-              "match": "\\b(x?should)\\b(.*)",
+              "match": "(?i)\\b(x?should)\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -56,7 +56,7 @@
               }
             },
             {
-              "match": "\\b(x?expect)\\b(.*)",
+              "match": "(?i)\\b(x?expect)\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -67,7 +67,7 @@
               }
             },
             {
-              "match": "\\b(x?to match)\\b(.*)",
+              "match": "(?i)\\b(x?to match)\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -78,7 +78,7 @@
               }
             },
             {
-              "match": "\\b(x?behaviour)\\b(.*)",
+              "match": "(?i)\\b(x?behaviour)\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -89,7 +89,7 @@
               }
             },
             {
-              "match": "\\b(x?baseline)\\b(.*)",
+              "match": "(?i)\\b(x?baseline)\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -100,7 +100,7 @@
               }
             },
             {
-              "match": "\\b(x?bench)\\b(.*)",
+              "match": "(?i)\\b(x?bench)\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -111,7 +111,7 @@
               }
             },
             {
-              "match": "\\b(x?property)\\b(.*)",
+              "match": "(?i)\\b(x?property)\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -123,43 +123,43 @@
             },
             {
               "name": "support.function.q",
-              "match": "\\bx?after each\\b"
+              "match": "(?i)\\bx?after each\\b"
             },
             {
               "name": "support.function.q",
-              "match": "\\bx?after\\b"
+              "match": "(?i)\\bx?after\\b"
             },
             {
               "name": "support.function.q",
-              "match": "\\bx?before each\\b"
+              "match": "(?i)\\bx?before each\\b"
             },
             {
               "name": "support.function.q",
-              "match": "\\bx?before\\b"
+              "match": "(?i)\\bx?before\\b"
             },
             {
               "name": "support.function.q",
-              "match": "\\bx?setup\\b"
+              "match": "(?i)\\bx?setup\\b"
             },
             {
               "name": "support.function.q",
-              "match": "\\bx?teardown\\b"
+              "match": "(?i)\\bx?teardown\\b"
             },
             {
               "name": "support.function.q",
-              "match": "\\bx?skip if\\b"
+              "match": "(?i)\\bx?skip if\\b"
             },
             {
               "name": "support.function.q",
-              "match": "\\bx?timelimit\\b"
+              "match": "(?i)\\bx?timelimit\\b"
             },
             {
               "name": "support.function.q",
-              "match": "\\bx?tolerance\\b"
+              "match": "(?i)\\bx?tolerance\\b"
             },
             {
               "name": "support.function.q",
-              "match": "\\bx?replicate\\b"
+              "match": "(?i)\\bx?replicate\\b"
             },
             {
               "include": "#multiline"

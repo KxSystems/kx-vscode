@@ -267,7 +267,11 @@ const language = {
 };
 
 function _(token: TokenType | RegExp) {
-  return ("PATTERN" in token ? `${token.PATTERN}` : `${token}`).slice(1, -1);
+  const pattern = "PATTERN" in token ? `${token.PATTERN}` : `${token}`;
+  const index = pattern.lastIndexOf("/");
+  const options = pattern.slice(index + 1);
+  const result = pattern.slice(1, index);
+  return options ? `(?${options})${result}` : result;
 }
 
 export function generateTextMateGrammar() {
