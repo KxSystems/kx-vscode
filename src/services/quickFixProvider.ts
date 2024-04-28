@@ -53,7 +53,6 @@ export class QuickFixProvider implements CodeActionProvider {
         new Position(0, 0),
         `//@qlintsuppress ${diagnostic.code}\n`,
       );
-
       return [once, always];
     }
   }

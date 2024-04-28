@@ -15,10 +15,13 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import Path from "path";
 import mock from "mock-fs";
-import { Uri, workspace } from "vscode";
+import { Range, Uri, workspace } from "vscode";
 import * as tools from "../../src/commands/buildToolsCommand";
+import { QuickFixProvider } from "../../src/services/quickFixProvider";
 
 describe("buildTools", () => {
+  const quickFix = new QuickFixProvider();
+
   function setQHome(path: string) {
     sinon
       .stub(workspace, "getConfiguration")
@@ -72,6 +75,14 @@ describe("buildTools", () => {
       setAxHome("");
       const document = await openTextDocument("lint.q");
       await assert.rejects(() => tools.lintCommand(document));
+    });
+    it("should provide no QuickFix for empty diagnostics", async () => {
+      const document = await openTextDocument("lint.q");
+      const result = await quickFix.provideCodeActions(
+        document,
+        new Range(0, 0, 0, 0),
+      );
+      assert.ok(!result);
     });
   });
 });
