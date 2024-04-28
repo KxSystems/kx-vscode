@@ -19,13 +19,13 @@ import { Uri, workspace } from "vscode";
 import * as tools from "../../src/commands/buildToolsCommand";
 
 describe("buildTools", () => {
-  function setQHome(path?: string) {
+  function setQHome(path: string) {
     sinon
       .stub(workspace, "getConfiguration")
       .value(() => ({ get: () => path }));
   }
 
-  function setAxHome(path?: string) {
+  function setAxHome(path: string) {
     sinon.stub(process.env, "AXLIBRARIES_HOME").value(path);
   }
 
@@ -36,6 +36,10 @@ describe("buildTools", () => {
       }),
     );
   }
+
+  before(() => {
+    process.env.AXLIBRARIES_HOME = "";
+  });
 
   beforeEach(() => {
     mock({
@@ -58,14 +62,14 @@ describe("buildTools", () => {
 
   describe("lintCommand", () => {
     it("should reject if q home directory is not set", async () => {
-      setQHome();
+      setQHome("");
       setAxHome("/ax");
       const document = await openTextDocument("lint.q");
       await assert.rejects(() => tools.lintCommand(document));
     });
     it("should reject if ax home directory is not set", async () => {
-      setAxHome();
       setQHome("/q");
+      setAxHome("");
       const document = await openTextDocument("lint.q");
       await assert.rejects(() => tools.lintCommand(document));
     });
