@@ -86,15 +86,15 @@ function positionToToken(tokens: Token[], position: Position) {
 }
 
 function getLabel(token: Token, source?: Token): string {
-  if (!token.identifier) {
-    return token.image;
-  }
+  const label = token.identifier || token.image;
+
   if (source?.namespace) {
-    if (token.identifier.startsWith(source.namespace)) {
-      return token.identifier.replace(`${source.namespace}.`, "");
+    if (label.startsWith(source.namespace)) {
+      return label.replace(`${source.namespace}.`, "");
     }
   }
-  return token.identifier;
+
+  return label;
 }
 
 export default class QLangServer {
@@ -271,6 +271,8 @@ export default class QLangServer {
             (token) =>
               token.kind === TokenKind.Assignment &&
               token.identifierKind !== IdentifierKind.Unassignable &&
+              (token.identifier?.startsWith(".") ||
+                token.namespace === source.namespace) &&
               (!token.scope || token.scope === source.scope),
           )
           .forEach(

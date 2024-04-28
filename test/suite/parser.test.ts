@@ -12,13 +12,12 @@
  */
 
 import * as assert from "assert";
-import * as parser from "../../server/src/parser";
+import { generateTextMateGrammar } from "../../server/src/parser";
 
 describe("QParser", () => {
   describe("language", () => {
     it("should generate TextMate grammar file", () => {
-      const grammar = parser.generateTextMateGrammar();
-      assert.ok(grammar);
+      assert.ok(generateTextMateGrammar());
     });
   });
 });

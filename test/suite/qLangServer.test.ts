@@ -23,6 +23,8 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 import QLangServer from "../../server/src/qLangServer";
 
+const context = { includeDeclaration: true };
+
 describe("qLangServer", () => {
   let server: QLangServer;
 
@@ -79,44 +81,98 @@ describe("qLangServer", () => {
 
   describe("onDocumentSymbol", () => {
     it("should return symbols", () => {
-      const params = createDocument("a:1;b:{[c]d:c+1;e::1;d};b");
+      const params = createDocument("a:1;b:{[c]d:c+1;e::1;d}");
       const result = server.onDocumentSymbol(params);
       assert.strictEqual(result.length, 2);
     });
     it("should skip table and sql", () => {
-      const params = createDocument("select a:1 from;([]a:1);a");
+      const params = createDocument(")([]a:1;b:2);select a:1 from(");
       const result = server.onDocumentSymbol(params);
       assert.strictEqual(result.length, 0);
+    });
+    it("should account for \\d can be only one level deep", () => {
+      const params = createDocument("\\d .foo.bar\na:1");
+      const result = server.onDocumentSymbol(params);
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].name, ".foo.a");
+    });
+    it("should account for bogus \\d", () => {
+      const params = createDocument("\\d\na:1");
+      const result = server.onDocumentSymbol(params);
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].name, "a");
+    });
+    it("should account for bogus \\d foo", () => {
+      const params = createDocument("\\d foo\na:1");
+      const result = server.onDocumentSymbol(params);
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].name, "a");
+    });
+    it('should account for bogus system"d', () => {
+      const params = createDocument('system"d";a:1');
+      const result = server.onDocumentSymbol(params);
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].name, "a");
+    });
+    it('should account for bogus system"d', () => {
+      const params = createDocument("a:1;system");
+      const result = server.onDocumentSymbol(params);
+      assert.strictEqual(result.length, 1);
+    });
+    it('should account for only static system"d', () => {
+      const params = createDocument('a:1;system"d .foo";b:1');
+      const result = server.onDocumentSymbol(params);
+      assert.strictEqual(result.length, 2);
+      assert.strictEqual(result[1].name, "b");
     });
   });
 
   describe("onReferences", () => {
-    it("should return references", () => {
-      const params = createDocument("a:1;b:{[c]d:c+1;d};b");
-      const result = server.onReferences({
-        ...params,
-        context: { includeDeclaration: true },
-      });
+    it("should return empty array for no text", () => {
+      const params = createDocument("");
+      const result = server.onReferences({ ...params, context });
+      assert.strictEqual(result.length, 0);
+    });
+    it("should return empty array for bogus assignment", () => {
+      const params = createDocument(":");
+      const result = server.onReferences({ ...params, context });
+      assert.strictEqual(result.length, 0);
+    });
+    it("should return empty array for bogus function", () => {
+      const params = createDocument("{");
+      const result = server.onReferences({ ...params, context });
+      assert.strictEqual(result.length, 0);
+    });
+    it("should return references in anonymous functions", () => {
+      const params = createDocument("{a:1;a");
+      const result = server.onReferences({ ...params, context });
       assert.strictEqual(result.length, 2);
     });
+    it("should support imlplicit arguments", () => {
+      const params = createDocument("x:1;y:1;z:1;{x+y+z};x");
+      const result = server.onReferences({ ...params, context });
+      assert.strictEqual(result.length, 2);
+    });
+    it("should find globals in functions", () => {
+      const params = createDocument("a:1;{a");
+      const result = server.onReferences({ ...params, context });
+      assert.strictEqual(result.length, 2);
+    });
+    it("should find locals in functions", () => {
+      const params = createDocument("a:1;{a:2;a");
+      const result = server.onReferences({ ...params, context });
+      assert.strictEqual(result.length, 2);
+    });
+    it("should apply namespace to globals in functions", () => {
+      const params = createDocument(
+        "\\d .foo\na:1;f:{a::2};\\d .\n.foo.f[];.foo.a",
+      );
+      const result = server.onReferences({ ...params, context });
+      assert.strictEqual(result.length, 3);
+    });
     it("should return references for quke", () => {
-      const params = createDocument(`
-      feature
-      bench
-      replicate
-      FEATURE
-          before
-          after
-          before each
-          after each
-          should
-            EXPECT
-              a:1;a
-      `);
-      const result = server.onReferences({
-        ...params,
-        context: { includeDeclaration: true },
-      });
+      const params = createDocument("FEATURE\nfeature\nshould\nEXPECT\na:1;a");
+      const result = server.onReferences({ ...params, context });
       assert.strictEqual(result.length, 2);
     });
   });
@@ -145,11 +201,16 @@ describe("qLangServer", () => {
 
   describe("onCompletion", () => {
     it("should complete identifiers", () => {
-      const params = createDocument(
-        '\\d .a\nsystem "d .a"\na:1;b:{[c]d:c+1;d};b',
-      );
+      const params = createDocument("a:1;b:{[c]d:c+1;d};b");
       const result = server.onCompletion(params);
       assert.strictEqual(result.length, 2);
+    });
+    it("should complete according to namespace context", () => {
+      const params = createDocument("a:1\n\\d .foo\na:1\n\\d .bar\na:1;a");
+      const result = server.onCompletion(params);
+      assert.strictEqual(result.length, 2);
+      assert.strictEqual(result[0].label, ".foo.a");
+      assert.strictEqual(result[1].label, "a");
     });
   });
 });
