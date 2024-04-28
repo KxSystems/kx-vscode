@@ -18,10 +18,9 @@ import mock from "mock-fs";
 import { Range, Uri, workspace } from "vscode";
 import * as tools from "../../src/commands/buildToolsCommand";
 import { QuickFixProvider } from "../../src/services/quickFixProvider";
+import { CompletionProvider } from "../../src/services/completionProvider";
 
 describe("buildTools", () => {
-  const quickFix = new QuickFixProvider();
-
   function setQHome(path: string) {
     sinon
       .stub(workspace, "getConfiguration")
@@ -77,12 +76,21 @@ describe("buildTools", () => {
       await assert.rejects(() => tools.lintCommand(document));
     });
     it("should provide no QuickFix for empty diagnostics", async () => {
+      const quickFix = new QuickFixProvider();
       const document = await openTextDocument("lint.q");
       const result = await quickFix.provideCodeActions(
         document,
         new Range(0, 0, 0, 0),
       );
       assert.ok(!result);
+    });
+  });
+
+  describe("CompletionProvider", () => {
+    it("should provide global completions", async () => {
+      const comletion = new CompletionProvider();
+      const result = await comletion.provideCompletionItems();
+      assert.ok(Array.isArray(result));
     });
   });
 });
