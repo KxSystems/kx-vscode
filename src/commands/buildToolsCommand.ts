@@ -57,10 +57,14 @@ const prefix: { [key: string]: string } = {
   l64arm: Path.join("l64arm", "q"),
 };
 
+function getBuidToolsHome() {
+  return process.env.AXLIBRARIES_HOME;
+}
+
 function getRuntime() {
   const home = workspace
-    .getConfiguration()
-    .get<string>("kdb.qHomeDirectory", `${process.env.QHOME || ""}`);
+    .getConfiguration("kdb")
+    .get<string>("qHomeDirectory", "");
 
   if (!home) {
     throw new Error("kdb q runtime not found");
@@ -88,27 +92,24 @@ function getTool(args: string[]) {
 }
 
 function getLinter() {
-  if (process.env.AXLIBRARIES_HOME) {
-    return Path.join(process.env.AXLIBRARIES_HOME, "ws", "qlint.q_");
+  const home = getBuidToolsHome();
+  if (home) {
+    return Path.join(home, "ws", "qlint.q_");
   }
   throw new Error("AXLIBRARIES_HOME is not set");
 }
 
 function initBuildTools() {
   return new Promise<void>((resolve, reject) => {
-    if (process.env.AXLIBRARIES_HOME) {
+    const home = getBuidToolsHome();
+    if (home) {
       if (process.platform === "darwin") {
         const xattr = spawn(
           "/usr/bin/xattr",
           [
             "-d",
             "com.apple.quarantine",
-            Path.join(
-              process.env.AXLIBRARIES_HOME,
-              "ws",
-              "lib",
-              "*.{so,dylib}",
-            ),
+            Path.join(home, "ws", "lib", "*.{so,dylib}"),
           ],
           { shell: true },
         );
@@ -209,8 +210,7 @@ function lint(document: TextDocument) {
           return diagnostic;
         });
       } catch (error) {
-        window.showErrorMessage(`Linting Failed ${error}`);
-        return [];
+        throw new Error(`Linting Failed ${error}`);
       }
     },
   );

@@ -24,6 +24,7 @@ import {
   RCurly,
   RParen,
 } from "./tokens";
+import { CharLiteral } from "./literals";
 import { Identifier, LSql, RSql, System } from "./keywords";
 import {
   After,
@@ -45,7 +46,6 @@ import {
   ToMatch,
   Tolerance,
 } from "./quke";
-import { CharLiteral } from "./literals";
 
 function args(image: string, count: number): string[] {
   return image.split(/\s+/, count);
@@ -53,6 +53,7 @@ function args(image: string, count: number): string[] {
 
 function setQualified(token: Token, namespace: string): void {
   token.identifier =
+    token.identifierKind === IdentifierKind.Unassignable ||
     !namespace ||
     !namespace.startsWith(".") ||
     token.scope ||
@@ -68,19 +69,18 @@ export const enum TokenKind {
 
 export const enum IdentifierKind {
   Argument,
-  Table,
-  Sql,
+  Unassignable,
   Quke,
 }
 
 export interface Token extends IToken {
   kind?: TokenKind;
+  namespace?: string;
   identifier?: string;
   identifierKind?: IdentifierKind;
   scope?: Token;
   lambda?: Token;
-  source?: Token;
-  namespace?: string;
+  nullary?: boolean;
 }
 
 export function parse(text: string): Token[] {
@@ -96,7 +96,8 @@ export function parse(text: string): Token[] {
 
   const _namespace = (arg: string) => {
     if (arg) {
-      namespace = `.${arg.split(/\./, 2)[1]}`;
+      const args = arg.split(/\.+/, 2);
+      namespace = args[1] ? `.${args[1]}` : "";
     }
   };
 
@@ -110,26 +111,26 @@ export function parse(text: string): Token[] {
           token.identifierKind = IdentifierKind.Argument;
           token.scope = scopes[scopes.length - 1];
           token.identifier = token.image;
-        } else {
-          token.kind = TokenKind.Identifier;
-          if (!token.image.includes(".")) {
-            token.scope = scopes[scopes.length - 1];
-          }
-          setQualified(token, namespace);
+          break;
         }
+        token.kind = TokenKind.Identifier;
+        if (sql || table) {
+          token.identifierKind = IdentifierKind.Unassignable;
+        }
+        if (!token.image.includes(".")) {
+          token.scope = scopes[scopes.length - 1];
+        }
+        setQualified(token, namespace);
         break;
       case Colon:
       case DoubleColon:
         prev = tokens[i - 1];
         if (prev?.kind === TokenKind.Identifier) {
-          if (sql) {
-            prev.identifierKind = IdentifierKind.Sql;
-          } else if (table) {
-            prev.identifierKind = IdentifierKind.Table;
-          } else {
+          if (prev.identifierKind !== IdentifierKind.Unassignable) {
             prev.kind = TokenKind.Assignment;
             if (token.tokenType === DoubleColon) {
               prev.scope = undefined;
+              prev.kind = TokenKind.Identifier;
             }
             setQualified(prev, namespace);
           }
@@ -140,8 +141,10 @@ export function parse(text: string): Token[] {
         if (prev?.kind === TokenKind.Assignment && !prev.lambda) {
           prev.lambda = token;
         }
+        token.nullary = true;
         next = tokens[i + 1];
         if (next?.tokenType === LBracket) {
+          token.nullary = false;
           argument++;
         }
         scopes.push(token);
@@ -192,27 +195,27 @@ export function parse(text: string): Token[] {
           }
         }
         break;
-      case Bench:
       case Feature:
-      case Replicate:
       case Should:
+      case Bench:
+      case Replicate:
       case TimeLimit:
       case Tolerance:
         token.identifierKind = IdentifierKind.Quke;
         scopes.pop();
         break;
+      case Expect:
+      case ToMatch:
+      case Property:
       case After:
       case AfterEach:
-      case Baseline:
       case Before:
       case BeforeEach:
-      case Behaviour:
-      case Expect:
-      case Property:
-      case Setup:
       case SkipIf:
+      case Baseline:
+      case Behaviour:
+      case Setup:
       case Teardown:
-      case ToMatch:
         scopes.pop();
         token.kind = TokenKind.Assignment;
         token.identifierKind = IdentifierKind.Quke;

@@ -12,23 +12,62 @@
  */
 
 import * as assert from "assert";
+import * as sinon from "sinon";
+import Path from "path";
+import mock from "mock-fs";
+import { Uri, workspace } from "vscode";
 import * as tools from "../../src/commands/buildToolsCommand";
-import { workspace } from "vscode";
 
 describe("buildTools", () => {
+  function setQHome(path?: string) {
+    sinon
+      .stub(workspace, "getConfiguration")
+      .value(() => ({ get: () => path }));
+  }
+
+  function setAxHome(path?: string) {
+    sinon.stub(process.env, "AXLIBRARIES_HOME").value(path);
+  }
+
+  function openTextDocument(path: string) {
+    return workspace.openTextDocument(
+      Uri.file(Path.resolve("/workspace", path)).with({
+        scheme: "untitled",
+      }),
+    );
+  }
+
+  beforeEach(() => {
+    mock({
+      "/workspace": {
+        "lint.q": "a;a:1",
+      },
+    });
+  });
+
+  afterEach(() => {
+    mock.restore();
+    sinon.restore();
+  });
+
   describe("connectBuildTools", () => {
     it("should connect build tools", async () => {
-      await assert.doesNotReject(async () => tools.connectBuildTools());
+      await assert.doesNotReject(() => tools.connectBuildTools());
     });
   });
 
   describe("lintCommand", () => {
-    it("should lint", async () => {
-      const document = await workspace.openTextDocument({
-        language: "q",
-        content: "a;a:1",
-      });
-      await assert.doesNotReject(async () => tools.lintCommand(document));
+    it("should reject if q home directory is not set", async () => {
+      setQHome();
+      setAxHome("/ax");
+      const document = await openTextDocument("lint.q");
+      await assert.rejects(() => tools.lintCommand(document));
+    });
+    it("should reject if ax home directory is not set", async () => {
+      setAxHome();
+      setQHome("/q");
+      const document = await openTextDocument("lint.q");
+      await assert.rejects(() => tools.lintCommand(document));
     });
   });
 });

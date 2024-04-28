@@ -63,21 +63,9 @@ const qdoc = {
       end: "\\r?\\n",
       patterns: [
         {
-          name: "storage.type.qdoc",
-          match:
-            "@\\b(?:author|category|deprecated|doctest|end|example|fileoverview|kind|name|private|see|subcategory|throws|todo|default-category|default-subcategory|typedef|fileOverview|param|desc|return[s]?|overview)\\b",
-        },
-        {
           name: "keyword.control.qdoc",
-          begin: "{",
-          end: "}",
-          patterns: [
-            {
-              name: "entity.name.type.qdoc",
-              match:
-                "\\b(type|atom|anything|dict|enum|function|hsym|option|string|table|tuple|typedef|vector|bool|boolean|byte|char|character|date|datetime|float|guid|int|integer|long|minute|month|real|second|short|string|symbol|time|timespan|timestamp)\\b",
-            },
-          ],
+          match:
+            "@\\b(?:default-subcategory|default-category|file[oO]verview|subcategory|deprecated|overview|category|doctest|example|private|typedef|returns?|throws|author|param|kind|name|todo|desc|see|end)\\b",
         },
       ],
     },
@@ -119,7 +107,7 @@ const quke = {
 };
 
 const BlockComment = [/^\/\s*$/, /^\\\s*$/];
-const StringLiteral = [/"/, /\\["\\]/];
+const CharLiteral = [/"/, /\\["\\]/];
 
 const repository = {
   quke,
@@ -144,12 +132,12 @@ const repository = {
       },
       {
         name: "string.quoted.q",
-        begin: _(StringLiteral[0]),
-        end: _(StringLiteral[0]),
+        begin: _(CharLiteral[0]),
+        end: _(CharLiteral[0]),
         patterns: [
           {
             name: "constant.character.escape.q",
-            match: _(StringLiteral[1]),
+            match: _(CharLiteral[1]),
           },
         ],
       },
