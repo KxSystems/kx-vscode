@@ -399,7 +399,8 @@ export class InsightsConnection {
 
           const res = await axios
             .post(scratchpadURL.toString(), null, headers)
-            .then((_res: any) => {
+            .then((response: any) => {
+              console.log(response);
               ext.outputChannel.append("Scratchpad.Reseted");
               window.showInformationMessage(
                 `Executed successfully, scratchpad reseted at ${this.connLabel} connection`,
@@ -407,9 +408,10 @@ export class InsightsConnection {
               Telemetry.sendEvent("Scratchpad.Reseted");
               return true;
             })
-            .catch((_error: any) => {
+            .catch((error: any) => {
+              console.log(error);
               window.showErrorMessage(
-                "Error ocurried while reseting scratchpad, try again or contact support.",
+                "Error ocurried while reseting scratchpad, try again.",
               );
               return false;
             });
