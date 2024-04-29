@@ -13,6 +13,12 @@
 
 import { Lexer, createToken } from "chevrotain";
 
+export const WhiteSpace = createToken({
+  name: "WhiteSpace",
+  pattern: /\s+/,
+  group: Lexer.SKIPPED,
+});
+
 export const BlockComment = createToken({
   name: "BlockComment",
   pattern: /(?<!.)\/(?!.)[\s\S]*?(?<!.)\\(?!.)/,
@@ -36,20 +42,7 @@ export const LineComment = createToken({
 
 export const Command = createToken({
   name: "Command",
-  pattern:
-    /\\(?:cd|ts|[abBcCdefglopPrsStTuvwWxz12_\\])[\s\S]*?(?:(?<!;[ \t]*)\r?\n(?![ \t])|;)/,
-});
-
-export const SemiColon = createToken({
-  name: "SemiColon",
-  pattern: /(?:(?<!;[ \t]*)\r?\n(?![ \t])|;)/,
-  line_breaks: true,
-});
-
-export const WhiteSpace = createToken({
-  name: "WhiteSpace",
-  pattern: /[ \t]+/,
-  group: Lexer.SKIPPED,
+  pattern: /(?<!.)\\(?:cd|ts|[abBcCdefglopPrsStTuvwWxz12_\\]).*/,
 });
 
 export const Iterator = createToken({
@@ -57,14 +50,29 @@ export const Iterator = createToken({
   pattern: /[\\'/]:/,
 });
 
+export const DoubleColon = createToken({
+  name: "DoubleColon",
+  pattern: /::/,
+});
+
 export const Operator = createToken({
   name: "Operator",
-  pattern: /[_.,'^<=>?!#@$&~|%*+-]/,
+  pattern: /[_,.'^?!#@$&|%*+-]/,
+});
+
+export const Comparator = createToken({
+  name: "Comparator",
+  pattern: /[~<=>]/,
 });
 
 export const Colon = createToken({
   name: "Colon",
   pattern: /:/,
+});
+
+export const SemiColon = createToken({
+  name: "SemiColon",
+  pattern: /;/,
 });
 
 export const LParen = createToken({

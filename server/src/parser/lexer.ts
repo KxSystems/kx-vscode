@@ -12,7 +12,7 @@
  */
 
 import { Lexer } from "chevrotain";
-import { RSql, Identifier, Keyword, LSql, Reserved } from "./keywords";
+import { RSql, Identifier, Keyword, LSql, Reserved, System } from "./keywords";
 import {
   BinaryLiteral,
   ByteLiteral,
@@ -31,6 +31,8 @@ import {
   BlockComment,
   Colon,
   Command,
+  Comparator,
+  DoubleColon,
   Iterator,
   LastComment,
   LBracket,
@@ -44,12 +46,31 @@ import {
   SemiColon,
   WhiteSpace,
 } from "./tokens";
+import {
+  After,
+  AfterEach,
+  Baseline,
+  Before,
+  BeforeEach,
+  Behaviour,
+  Bench,
+  Expect,
+  Feature,
+  Property,
+  Quke,
+  Replicate,
+  Setup,
+  Should,
+  SkipIf,
+  Teardown,
+  TimeLimit,
+  ToMatch,
+  Tolerance,
+} from "./quke";
 
-export const QTokens = [
-  BlockComment,
-  LastComment,
-  LineComment,
-  CharLiteral,
+const MultiLine = [BlockComment, LastComment, LineComment, CharLiteral];
+
+const QTokens = [
   Command,
   SymbolLiteral,
   DateTimeLiteral,
@@ -62,16 +83,19 @@ export const QTokens = [
   BinaryLiteral,
   ByteLiteral,
   NumberLiteral,
+  System,
   LSql,
   RSql,
   Keyword,
   Reserved,
   Identifier,
-  SemiColon,
   WhiteSpace,
   Iterator,
+  DoubleColon,
   Operator,
+  Comparator,
   Colon,
+  SemiColon,
   LParen,
   RParen,
   LBracket,
@@ -80,4 +104,34 @@ export const QTokens = [
   RCurly,
 ];
 
-export const QLexer = new Lexer(QTokens, { safeMode: true });
+const QukeTokens = [
+  AfterEach,
+  After,
+  Baseline,
+  BeforeEach,
+  Before,
+  Behaviour,
+  Bench,
+  Expect,
+  Feature,
+  Property,
+  Replicate,
+  Setup,
+  Should,
+  SkipIf,
+  Teardown,
+  TimeLimit,
+  Tolerance,
+  ToMatch,
+];
+
+export const QLexer = new Lexer(
+  {
+    defaultMode: "q_mode",
+    modes: {
+      q_mode: [...MultiLine, Quke, ...QTokens],
+      quke_mode: [...MultiLine, ...QukeTokens, ...QTokens],
+    },
+  },
+  { safeMode: true },
+);
