@@ -14,16 +14,13 @@
 import { env } from "node:process";
 import path from "path";
 import {
-  CancellationToken,
   Command,
   commands,
   EventEmitter,
   ExtensionContext,
   languages,
-  Position,
   Range,
   StatusBarAlignment,
-  TextDocument,
   TextDocumentContentProvider,
   ThemeColor,
   Uri,

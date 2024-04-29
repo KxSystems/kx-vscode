@@ -32,30 +32,11 @@
   ],
   "activationEvents": [
     "onCommand:kdb.installTools",
-    "onCommand:kdb.addConnection",
     "onCommand:kdb.newConnection.createNewInsightConnection",
     "onCommand:kdb.newConnection.createNewConnection",
     "onCommand:kdb.newConnection.createNewBundledConnection",
-    "onCommand:kdb.removeConnection",
-    "onCommand:kdb.connect",
-    "onCommand:kdb.active.connection",
-    "onCommand:kdb.disconnect",
-    "onCommand:kdb.addAuthentication",
-    "onCommand:kdb.enableTLS",
-    "onCommand:kdb.dataSource.addDataSource",
-    "onCommand:kdb.dataSource.saveDataSource",
-    "onCommand:kdb.dataSource.runDataSource",
-    "onCommand:kdb.dataSource.renameDataSource",
-    "onCommand:kdb.dataSource.deleteDataSource",
-    "onCommand:kdb.dataSource.openDataSource",
-    "onCommand:kdb.resultsPanel.update",
-    "onCommand:kdb.resultsPanel.clear",
-    "onCommand:kdb.resultsPanel.export.csv",
-    "onView:kdb-servers",
-    "onView:kdb-query-history",
-    "onView:kdb-datasources-explorer",
-    "onView:kdb-results",
-    "onTerminalProfile:kdb.q-terminal"
+    "onTerminalProfile:kdb.q-terminal",
+    "onLanguage:python"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -214,53 +195,64 @@
         "icon": "$(add)"
       },
       {
+        "category": "KX",
         "command": "kdb.refreshDataSourceExplorer",
         "title": "Refresh data sources",
         "icon": "$(refresh)"
       },
       {
+        "category": "KX",
         "command": "kdb.createScratchpad",
         "title": "Add a new scratchpad",
         "icon": "$(add)"
       },
       {
+        "category": "KX",
         "command": "kdb.refreshScratchpadExplorer",
         "title": "Refresh scratchpads",
         "icon": "$(refresh)"
       },
       {
+        "category": "KX",
         "command": "kdb.runScratchpad",
         "title": "Run scratchpad"
       },
       {
+        "category": "KX",
         "command": "kdb.pickConnection",
         "title": "Pick connection"
       },
       {
+        "category": "KX",
         "command": "kdb.createDataSource",
         "title": "Add a new data source",
         "icon": "$(add)"
       },
       {
+        "category": "KX",
         "command": "kdb.refreshDataSourceExplorer",
         "title": "Refresh data sources",
         "icon": "$(refresh)"
       },
       {
+        "category": "KX",
         "command": "kdb.createScratchpad",
         "title": "Add a new scratchpad",
         "icon": "$(add)"
       },
       {
+        "category": "KX",
         "command": "kdb.refreshScratchpadExplorer",
         "title": "Refresh scratchpads",
         "icon": "$(refresh)"
       },
       {
+        "category": "KX",
         "command": "kdb.runScratchpad",
         "title": "Run scratchpad"
       },
       {
+        "category": "KX",
         "command": "kdb.pickConnection",
         "title": "Pick connection"
       },
@@ -290,10 +282,12 @@
         "title": "Connect server"
       },
       {
+        "category": "KX",
         "command": "kdb.active.connection",
         "title": "Active connection"
       },
       {
+        "category": "KX",
         "command": "kdb.addAuthentication",
         "title": "Add Authentication",
         "position": "end"
