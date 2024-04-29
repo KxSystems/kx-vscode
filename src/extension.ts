@@ -55,6 +55,7 @@ import {
   executeQuery,
   removeConnection,
   rerunQuery,
+  resetScratchPad,
   runQuery,
 } from "./commands/serverCommand";
 import { showInstallationDetails } from "./commands/walkthroughCommand";
@@ -315,6 +316,9 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.execute.pythonScratchpadQuery", async () => {
       runQuery(ExecutionTypes.PythonQuerySelection);
       ext.activeConnection?.update();
+    }),
+    commands.registerCommand("kdb.scratchpad.reset", async () => {
+      await resetScratchPad();
     }),
     commands.registerCommand(
       "kdb.execute.pythonFileScratchpadQuery",

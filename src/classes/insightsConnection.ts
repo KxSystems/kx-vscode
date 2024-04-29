@@ -233,7 +233,6 @@ export class InsightsConnection {
         headers: {
           Authorization: `Bearer ${token.accessToken}`,
           username: username.preferred_username!,
-
           json: true,
         },
       };
@@ -349,5 +348,79 @@ export class InsightsConnection {
       return spReponse;
     }
     return undefined;
+  }
+
+  public async resetScratchpad(): Promise<boolean> {
+    if (this.connected) {
+      const scratchpadURL = new url.URL(
+        ext.insightsScratchpadUrls.reset!,
+        this.node.details.server,
+      );
+
+      const token = await getCurrentToken(
+        this.node.details.server,
+        this.node.details.alias,
+      );
+
+      if (token === undefined) {
+        ext.outputChannel.appendLine(
+          "Error retrieving access token for insights.",
+        );
+        window.showErrorMessage("Failed to retrieve access token for insights");
+        return false;
+      }
+
+      const username = jwtDecode<JwtUser>(token.accessToken);
+      if (username === undefined || username.preferred_username === "") {
+        ext.outputChannel.appendLine(
+          "JWT did not contain a valid preferred username",
+        );
+        return false;
+      }
+      const headers = {
+        headers: {
+          Authorization: `Bearer ${token.accessToken}`,
+          username: username.preferred_username!,
+          json: true,
+        },
+      };
+      return await window.withProgress(
+        {
+          location: ProgressLocation.Notification,
+          cancellable: false,
+        },
+        async (progress, token) => {
+          token.onCancellationRequested(() => {
+            ext.outputChannel.appendLine("User cancelled the installation.");
+            return false;
+          });
+
+          progress.report({ message: "Reseting scratchpad..." });
+
+          const res = await axios
+            .post(scratchpadURL.toString(), null, headers)
+            .then((response: any) => {
+              console.log(response);
+              ext.outputChannel.append("Scratchpad.Reseted");
+              window.showInformationMessage(
+                `Executed successfully, scratchpad reseted at ${this.connLabel} connection`,
+              );
+              Telemetry.sendEvent("Scratchpad.Reseted");
+              return true;
+            })
+            .catch((error: any) => {
+              console.log(error);
+              window.showErrorMessage(
+                "Error ocurried while reseting scratchpad, try again.",
+              );
+              return false;
+            });
+
+          return res;
+        },
+      );
+    } else {
+      return false;
+    }
   }
 }

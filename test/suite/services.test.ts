@@ -743,6 +743,10 @@ describe("connectionManagerService", () => {
     TreeItemCollapsibleState.None,
   );
   ext.serverProvider = new KdbTreeProvider(servers, insights);
+
+  const localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
+
+  const insightsConn = new InsightsConnection(insightNode.label, insightNode);
   describe("retrieveConnection", () => {
     afterEach(() => {
       ext.connectionsList.length = 0;
@@ -760,7 +764,6 @@ describe("connectionManagerService", () => {
   });
 
   describe("retrieveConnectedConnection", () => {
-    const localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
     afterEach(() => {
       ext.connectedConnectionList.length = 0;
     });
@@ -821,10 +824,6 @@ describe("connectionManagerService", () => {
   });
 
   describe("setActiveConnection", () => {
-    const localConn = new LocalConnection(
-      kdbNode.details.serverName + ":" + kdbNode.details.serverPort,
-      kdbNode.label,
-    );
     beforeEach(() => {
       ext.activeConnection = undefined;
     });
@@ -849,10 +848,6 @@ describe("connectionManagerService", () => {
   });
 
   describe("disconnect", () => {
-    const localConn = new LocalConnection(
-      kdbNode.details.serverName + ":" + kdbNode.details.serverPort,
-      kdbNode.label,
-    );
     let retrieveConnectionStub, retrieveConnectedConnectionStub;
     beforeEach(() => {
       retrieveConnectionStub = sinon.stub(
@@ -879,11 +874,6 @@ describe("connectionManagerService", () => {
   });
 
   describe("executeQuery", () => {
-    const localConn = new LocalConnection(
-      kdbNode.details.serverName + ":" + kdbNode.details.serverPort,
-      kdbNode.label,
-    );
-    const insightsConn = new InsightsConnection(insightNode.label, insightNode);
     const command = "testCommand";
     const context = "testContext";
     const stringfy = true;
@@ -984,6 +974,40 @@ describe("connectionManagerService", () => {
       assert.equal(ext.connectedConnectionList.length, 0);
       assert.equal(ext.activeConnection, undefined);
       assert.equal(ext.connectionNode, undefined);
+    });
+  });
+
+  describe("resetScratchpad", () => {
+    let connMngService: ConnectionManagementService;
+    let showErrorMessageStub: sinon.SinonStub;
+    let showInformationMessageStub: sinon.SinonStub;
+    let resetScratchpadStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      connMngService = new ConnectionManagementService();
+      showErrorMessageStub = sinon.stub(window, "showErrorMessage");
+      showInformationMessageStub = sinon.stub(window, "showInformationMessage");
+      ext.activeConnection = insightsConn;
+      resetScratchpadStub = sinon.stub(ext.activeConnection, "resetScratchpad");
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should call resetScratchpad on activeConnection if selection is Yes and activeConnection is an instance of InsightsConnection", async () => {
+      showInformationMessageStub.resolves("Yes");
+      await connMngService.resetScratchpad();
+      sinon.assert.calledOnce(resetScratchpadStub);
+      sinon.assert.notCalled(showErrorMessageStub);
+    });
+
+    it("should show error message if activeConnection is not an instance of InsightsConnection", async () => {
+      showInformationMessageStub.resolves("Yes");
+      ext.activeConnection = undefined;
+      await connMngService.resetScratchpad();
+      sinon.assert.calledOnce(showErrorMessageStub);
+      sinon.assert.notCalled(resetScratchpadStub);
     });
   });
 });
