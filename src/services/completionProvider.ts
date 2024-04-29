@@ -11,9 +11,51 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { CompletionItem } from "vscode-languageserver/node";
+import {
+  CompletionItem,
+  CompletionItemKind,
+  CompletionItemProvider,
+  CompletionList,
+  ProviderResult,
+} from "vscode";
+import { ext } from "../extensionVariables";
 
-export const qLangParserItems: CompletionItem[] = [
+export class CompletionProvider implements CompletionItemProvider {
+  provideCompletionItems(): ProviderResult<
+    CompletionItem[] | CompletionList<CompletionItem>
+  > {
+    const items: CompletionItem[] = [];
+
+    ext.keywords.forEach((item) =>
+      items.push({ label: item, kind: CompletionItemKind.Keyword }),
+    );
+    ext.functions.forEach((item) =>
+      items.push({
+        label: item,
+        insertText: item,
+        kind: CompletionItemKind.Function,
+      }),
+    );
+    ext.tables.forEach((item) =>
+      items.push({
+        label: item,
+        insertText: item,
+        kind: CompletionItemKind.Value,
+      }),
+    );
+    ext.variables.forEach((item) =>
+      items.push({
+        label: item,
+        insertText: item,
+        kind: CompletionItemKind.Variable,
+      }),
+    );
+
+    return [...items, ...qLangParserItems];
+  }
+}
+
+const qLangParserItems: CompletionItem[] = [
   {
     label: "abs",
     detail: "absolute value",

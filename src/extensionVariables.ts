@@ -14,11 +14,11 @@
 import {
   ExtensionContext,
   extensions,
+  languages,
   OutputChannel,
   StatusBarItem,
 } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
-import { Connection } from "./models/connection";
 import { LocalProcess } from "./models/localProcess";
 import { MetaObjectPayload } from "./models/meta";
 import { QueryHistory } from "./models/queryHistory";
@@ -34,6 +34,8 @@ import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import AuthSettings from "./utils/secretStorage";
 import { WorkspaceTreeProvider } from "./services/workspaceTreeProvider";
 import { ScratchpadFile } from "./models/scratchpad";
+import { LocalConnection } from "./classes/localConnection";
+import { InsightsConnection } from "./classes/insightsConnection";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
@@ -56,7 +58,12 @@ export namespace ext {
   export let isBundleQCreated: boolean;
   export const rowLimit = 150000000;
 
-  export let connection: Connection | undefined;
+  export let activeConnection: LocalConnection | InsightsConnection | undefined;
+  export const connectedConnectionList: Array<
+    LocalConnection | InsightsConnection
+  > = [];
+  export const connectedContextStrings: Array<string> = [];
+  export const connectionsList: Array<KdbNode | InsightsNode> = [];
   export let hideDetailedConsoleQueryOutput: boolean;
   export let connectionNode: KdbNode | InsightsNode | undefined;
   export const kdbDataSourceFolder = ".kdb-datasources";
@@ -286,4 +293,7 @@ export namespace ext {
     minutes: 1000 * 60,
     seconds: 1000,
   };
+
+  export const diagnosticCollection =
+    languages.createDiagnosticCollection("kdb");
 }

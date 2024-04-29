@@ -61,16 +61,10 @@ export async function signIn(insightsUrl: string) {
 
     authorizationUrl.search = queryString(authParams);
 
-    const opened = await env.openExternal(
-      Uri.parse(authorizationUrl.toString()),
-    );
+    await env.openExternal(Uri.parse(authorizationUrl.toString()));
 
-    if (opened) {
-      const code = await codePromise;
-      return await getToken(insightsUrl, code);
-    }
-
-    throw new Error("Error opening url");
+    const code = await codePromise;
+    return await getToken(insightsUrl, code);
   } finally {
     setImmediate(() => server.close());
   }

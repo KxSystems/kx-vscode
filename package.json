@@ -31,7 +31,31 @@
     "kdb Insights"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onCommand:kdb.installTools",
+    "onCommand:kdb.addConnection",
+    "onCommand:kdb.newConnection.createNewInsightConnection",
+    "onCommand:kdb.newConnection.createNewConnection",
+    "onCommand:kdb.newConnection.createNewBundledConnection",
+    "onCommand:kdb.removeConnection",
+    "onCommand:kdb.connect",
+    "onCommand:kdb.active.connection",
+    "onCommand:kdb.disconnect",
+    "onCommand:kdb.addAuthentication",
+    "onCommand:kdb.enableTLS",
+    "onCommand:kdb.dataSource.addDataSource",
+    "onCommand:kdb.dataSource.saveDataSource",
+    "onCommand:kdb.dataSource.runDataSource",
+    "onCommand:kdb.dataSource.renameDataSource",
+    "onCommand:kdb.dataSource.deleteDataSource",
+    "onCommand:kdb.dataSource.openDataSource",
+    "onCommand:kdb.resultsPanel.update",
+    "onCommand:kdb.resultsPanel.clear",
+    "onCommand:kdb.resultsPanel.export.csv",
+    "onView:kdb-servers",
+    "onView:kdb-query-history",
+    "onView:kdb-datasources-explorer",
+    "onView:kdb-results",
+    "onTerminalProfile:kdb.q-terminal"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -163,7 +187,7 @@
         "kdb.linting": {
           "type": "boolean",
           "description": "Enable linting for q files",
-          "default": true
+          "default": false
         },
         "kdb.scratchpads": {
           "type": "object",
@@ -175,12 +199,42 @@
     },
     "commands": [
       {
+        "category": "KX",
         "command": "kdb.refreshServerObjects",
         "title": "Refresh server objects",
         "icon": {
           "light": "resources/light/refresh.svg",
           "dark": "resources/dark/refresh.svg"
         }
+      },
+      {
+        "category": "KX",
+        "command": "kdb.createDataSource",
+        "title": "Add a new data source",
+        "icon": "$(add)"
+      },
+      {
+        "command": "kdb.refreshDataSourceExplorer",
+        "title": "Refresh data sources",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "kdb.createScratchpad",
+        "title": "Add a new scratchpad",
+        "icon": "$(add)"
+      },
+      {
+        "command": "kdb.refreshScratchpadExplorer",
+        "title": "Refresh scratchpads",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "kdb.runScratchpad",
+        "title": "Run scratchpad"
+      },
+      {
+        "command": "kdb.pickConnection",
+        "title": "Pick connection"
       },
       {
         "command": "kdb.createDataSource",
@@ -211,24 +265,33 @@
         "title": "Pick connection"
       },
       {
+        "category": "KX",
         "command": "kdb.startLocalProcess",
         "title": "Start q process"
       },
       {
+        "category": "KX",
         "command": "kdb.stopLocalProcess",
         "title": "Stop q process"
       },
       {
+        "category": "KX",
         "command": "kdb.addConnection",
         "title": "Add new connection"
       },
       {
+        "category": "KX",
         "command": "kdb.removeConnection",
         "title": "Remove connection"
       },
       {
+        "category": "KX",
         "command": "kdb.connect",
         "title": "Connect server"
+      },
+      {
+        "command": "kdb.active.connection",
+        "title": "Active connection"
       },
       {
         "command": "kdb.addAuthentication",
@@ -236,101 +299,130 @@
         "position": "end"
       },
       {
+        "category": "KX",
         "command": "kdb.enableTLS",
         "title": "Enable TLS"
       },
       {
+        "category": "KX",
         "command": "kdb.insightsConnect",
         "title": "Connect to Insights"
       },
       {
+        "category": "KX",
         "command": "kdb.insightsRemove",
         "title": "Remove connection"
       },
       {
+        "category": "KX",
         "command": "kdb.disconnect",
         "title": "Disconnect"
       },
       {
+        "category": "KX",
         "command": "kdb.queryHistory.rerun",
         "title": "Rerun query"
       },
       {
+        "category": "KX",
         "command": "kdb.queryHistory.clear",
         "title": "Clear query history"
       },
       {
+        "category": "KX",
         "command": "kdb.dataSource.addDataSource",
         "title": "Add new DataSource"
       },
       {
+        "category": "KX",
         "command": "kdb.dataSource.populateScratchpad",
         "title": "Populate a new scratchpad"
       },
       {
+        "category": "KX",
         "command": "kdb.dataSource.saveDataSource",
         "title": "Save changes in the DataSource"
       },
       {
+        "category": "KX",
         "command": "kdb.dataSource.runDataSource",
         "title": "Execute DataSource at Inisghts Instance"
       },
       {
+        "category": "KX",
         "command": "kdb.dataSource.renameDataSource",
         "title": "Rename DataSource"
       },
       {
+        "category": "KX",
         "command": "kdb.dataSource.deleteDataSource",
         "title": "Delete DataSource"
       },
       {
+        "category": "KX",
         "command": "kdb.dataSource.openDataSource",
         "title": "Open DataSource"
       },
       {
+        "category": "KX",
         "command": "kdb.resultsPanel.update",
         "title": "Update Results View"
       },
       {
+        "category": "KX",
         "command": "kdb.resultsPanel.clear",
         "title": "Clear Results View"
       },
       {
+        "category": "KX",
         "command": "kdb.resultsPanel.export.csv",
         "title": "Export to CSV"
       },
       {
+        "category": "KX",
         "command": "kdb.terminal.run",
         "title": "Run q file in a new q instance",
-        "when": "kdb.QHOME || config.kdb.qHomeDirectory"
+        "icon": "$(run)",
+        "enablement": "(kdb.QHOME || config.kdb.qHomeDirectory)"
       },
       {
+        "category": "KX",
         "command": "kdb.terminal.start",
-        "title": "q: Start REPL"
+        "title": "Start REPL"
       },
       {
+        "category": "KX",
         "command": "kdb.execute.selectedQuery",
-        "title": "Execute Current Selection",
-        "when": "kdb.connected"
+        "title": "Execute Current Selection"
       },
       {
+        "category": "KX",
         "command": "kdb.execute.fileQuery",
         "title": "Execute Entire File",
-        "when": "kdb.connected"
+        "icon": "$(run)",
+        "enablement": "kdb.connected && editorFocus"
       },
       {
+        "category": "KX",
         "command": "kdb.execute.pythonScratchpadQuery",
-        "title": "Execute Current Selection in Insights Scratchpad",
-        "when": "kdb.connected"
+        "title": "Execute Current Selection in Insights Scratchpad"
       },
       {
+        "category": "KX",
         "command": "kdb.execute.pythonFileScratchpadQuery",
         "title": "Execute Entire File in Insights Scratchpad",
-        "when": "kdb.connected"
+        "icon": "$(run)",
+        "enablement": "kdb.insightsConnected"
       },
       {
+        "category": "KX",
         "command": "kdb.execute.entireFile",
         "title": "Execute Entire File"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.qlint",
+        "title": "Lint q source file"
       }
     ],
     "keybindings": [
@@ -492,6 +584,10 @@
           "when": "false"
         },
         {
+          "command": "kdb.active.connection",
+          "when": "false"
+        },
+        {
           "command": "kdb.disconnect",
           "when": "false"
         },
@@ -574,6 +670,11 @@
           "group": "connection@1"
         },
         {
+          "command": "kdb.active.connection",
+          "when": "view == kdb-servers && viewItem in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
+          "group": "connection@1"
+        },
+        {
           "command": "kdb.addAuthentication",
           "when": "view == kdb-servers && viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutAuth",
           "group": "connection@3"
@@ -586,22 +687,22 @@
         {
           "command": "kdb.insightsConnect",
           "when": "view == kdb-servers && viewItem not in kdb.connected && viewItem in kdb.insightsNodes",
-          "group": "connection"
+          "group": "connection@0"
         },
         {
           "command": "kdb.insightsRemove",
           "when": "view == kdb-servers && viewItem in kdb.insightsNodes",
-          "group": "connection"
+          "group": "connection@5"
         },
         {
           "command": "kdb.disconnect",
           "when": "view == kdb-servers && viewItem in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
-          "group": "connection"
+          "group": "connection@4"
         },
         {
           "command": "kdb.removeConnection",
           "when": "view == kdb-servers && viewItem in kdb.rootNodes",
-          "group": "connection@2"
+          "group": "connection@5"
         },
         {
           "command": "kdb.startLocalProcess",
@@ -634,20 +735,20 @@
           "group": "dataSourceFiles"
         }
       ],
-      "editor/title": [
-        {
-          "command": "kdb.terminal.run",
-          "when": "resourceLangId ==  q && (kdb.QHOME || config.kdb.qHomeDirectory)",
-          "group": "navigation"
-        },
+      "editor/title/run": [
         {
           "command": "kdb.execute.fileQuery",
-          "when": "resourceLangId ==  q  && kdb.connected && editorFocus",
-          "group": "navigation"
+          "group": "q@0",
+          "when": "resourceLangId == q"
+        },
+        {
+          "command": "kdb.terminal.run",
+          "group": "q@1",
+          "when": "resourceLangId == q"
         },
         {
           "command": "kdb.execute.pythonFileScratchpadQuery",
-          "group": "navigation",
+          "group": "q@0",
           "when": "editorLangId == python && kdb.insightsConnected"
         }
       ],
@@ -776,7 +877,7 @@
     "ag-grid-community": "^31.0.1",
     "antlr4-runtime": "^4.13.0",
     "antlr4ts": "^0.5.0-alpha.4",
-    "axios": "^1.6.7",
+    "axios": "^1.6.8",
     "chevrotain": "^10.5.0",
     "csv-parser": "^3.0.0",
     "esbuild-plugin-copy": "^2.1.1",
@@ -789,7 +890,7 @@
     "moment-duration-format": "^2.3.2",
     "moment-timezone": "^0.5.44",
     "node-fetch": "^2.6.6",
-    "node-q": "^2.6.1",
+    "node-q": "^2.7.0",
     "pick-port": "^2.0.1",
     "picomatch": "^3.0.1",
     "semver": "^7.5.3",

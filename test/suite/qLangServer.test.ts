@@ -11,32 +11,34 @@
  * specific language governing permissions and limitations under the License.
  */
 
-/* eslint @typescript-eslint/no-explicit-any: 0 */
 /* eslint @typescript-eslint/no-empty-function: 0 */
 
 import * as assert from "assert";
 import * as sinon from "sinon";
 import {
-  CallHierarchyIncomingCallsParams,
-  CallHierarchyItem,
-  CompletionItem,
   Connection,
-  DocumentSymbolParams,
   InitializeParams,
-  Position,
-  PublishDiagnosticsParams,
-  ReferenceParams,
-  RenameParams,
-  SemanticTokensParams,
-  SignatureHelpParams,
   TextDocumentIdentifier,
-  TextDocumentPositionParams,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import QLangServer from "../../server/src/qLangServer";
 
+const context = { includeDeclaration: true };
+
 describe("qLangServer", () => {
   let server: QLangServer;
+
+  function createDocument(content: string) {
+    content = content.trim();
+    const document = TextDocument.create("test.q", "q", 1, content);
+    const position = document.positionAt(content.length);
+    const textDocument = TextDocumentIdentifier.create("test.q");
+    sinon.stub(server.documents, "get").value(() => document);
+    return {
+      textDocument,
+      position,
+    };
+  }
 
   beforeEach(async () => {
     const connection = <Connection>(<unknown>{
@@ -47,42 +49,18 @@ describe("qLangServer", () => {
       onWillSaveTextDocument() {},
       onWillSaveTextDocumentWaitUntil() {},
       onDidSaveTextDocument() {},
-      onNotification() {},
-      onCompletion() {},
-      onCompletionResolve() {},
-      onHover() {},
-      onDocumentHighlight() {},
-      onDefinition() {},
       onDocumentSymbol() {},
       onReferences() {},
+      onDefinition() {},
       onRenameRequest() {},
-      onDidChangeConfiguration() {},
-      sendDiagnostics() {},
-      languages: {
-        semanticTokens: {
-          on() {},
-        },
-        callHierarchy: {
-          onPrepare() {},
-          onIncomingCalls() {},
-          onOutgoingCalls() {},
-        },
-      },
-      console: {
-        error() {},
-        warn() {},
-        info() {},
-      },
-      workspace: {
-        getConfiguration() {},
-      },
+      onCompletion() {},
     });
 
     const params = <InitializeParams>{
       workspaceFolders: null,
     };
 
-    server = await QLangServer.initialize(connection, params);
+    server = new QLangServer(connection, params);
   });
 
   afterEach(() => {
@@ -90,576 +68,149 @@ describe("qLangServer", () => {
   });
 
   describe("capabilities", () => {
-    it("should return a value", () => {
-      assert.ok(server.capabilities());
-    });
-  });
-
-  describe("debugWithLogs", () => {
-    it("should log a warning message", () => {
-      const warnStub = sinon.stub(server.connection.console, "warn");
-      let ok = false;
-      warnStub.value(() => (ok = true));
-      server.debugWithLogs("request", "msg");
-      assert.ok(ok);
-    });
-  });
-
-  describe("writeConsoleMsg", () => {
-    it("should log an error message", () => {
-      const errorStub = sinon.stub(server.connection.console, "error");
-      let ok = false;
-      errorStub.value(() => (ok = true));
-      server.writeConsoleMsg("msg", "error");
-      assert.ok(ok);
-    });
-
-    it("should log an info message", () => {
-      const infoStub = sinon.stub(server.connection.console, "info");
-      let ok = false;
-      infoStub.value(() => (ok = true));
-      server.writeConsoleMsg("msg", "info");
-      assert.ok(ok);
-    });
-  });
-
-  describe("onCompletion", () => {
-    it("should return an empty array", () => {
-      const getKeywordStub = sinon.stub(server, <any>"getKeyword");
-      getKeywordStub.value(() => undefined);
-      const result = server["onCompletion"](<TextDocumentPositionParams>{
-        textDocument: TextDocumentIdentifier.create("/test/test.q"),
-        position: Position.create(0, 0),
-      });
-      assert.strictEqual(result.length, 0);
-    });
-
-    it("should return a value", () => {
-      const doc = TextDocument.create("/test/test.q", "q", 1, "aco");
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(0, 3);
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const result = server["onCompletion"](<TextDocumentPositionParams>{
-        textDocument,
-        position,
-      });
-      assert.ok(result.length > 0);
-    });
-  });
-
-  describe("onCompletionResolve", () => {
-    it("should return a value", async () => {
-      const item = <CompletionItem>{ label: "test" };
-      const result = await server["onCompletionResolve"](item);
-      assert.strictEqual(result, item);
-    });
-  });
-
-  describe("onHover", () => {
-    it("onHover should return null", async () => {
-      const getKeywordStub = sinon.stub(server, <any>"getEntireKeyword");
-      getKeywordStub.value(() => undefined);
-      const result = await server["onHover"](<TextDocumentPositionParams>{
-        textDocument: TextDocumentIdentifier.create("/test/test.q"),
-        position: Position.create(0, 0),
-      });
-      assert.strictEqual(result, null);
-    });
-
-    it("onHover should return a value", async () => {
-      const doc = TextDocument.create("/test/test.q", "q", 1, "acos");
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(0, 1);
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const result = await server["onHover"](<TextDocumentPositionParams>{
-        textDocument,
-        position,
-      });
-      // TODO
-      assert.ok(result);
-    });
-  });
-
-  describe("onDocumentHighlight", () => {
-    it("should return an empty array", () => {
-      const result = server["onDocumentHighlight"](<TextDocumentPositionParams>{
-        textDocument: TextDocumentIdentifier.create("/test/test.q"),
-        position: Position.create(0, 0),
-      });
-      assert.strictEqual(result.length, 0);
-    });
-  });
-
-  describe("onDefinition", () => {
-    it("should return an empty array", () => {
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => undefined);
-      const result = server["onDefinition"](<TextDocumentPositionParams>{
-        textDocument: TextDocumentIdentifier.create("/test/test.q"),
-        position: Position.create(0, 0),
-      });
-      assert.strictEqual(result.length, 0);
-    });
-
-    it("should return a value", () => {
-      const doc = TextDocument.create(
-        "/test/test.q",
-        "q",
-        1,
-        "test_func: {[x] x*x};\ntest_func[2];"
-      );
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(1, 1);
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const valuesStub = sinon.stub(
-        server.analyzer["uriToTextDocument"],
-        "values"
-      );
-      valuesStub.value(() => [doc]);
-      const result = server["onDefinition"](<TextDocumentPositionParams>{
-        textDocument,
-        position,
-      });
-      assert.ok(result.length > 0);
-    });
-
-    it("should return an empty array", () => {
-      const doc = TextDocument.create(
-        "/test/test.q",
-        "q",
-        1,
-        "test_func: {[x] x*x};\ntest_func[2];"
-      );
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(1, 1);
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const valuesStub = sinon.stub(
-        server.analyzer["uriToTextDocument"],
-        "values"
-      );
-      valuesStub.value(() => [doc]);
-      const getWordRangeAtPositionStub = sinon.stub(
-        server.analyzer,
-        "getWordRangeAtPosition"
-      );
-      getWordRangeAtPositionStub.value(() => undefined);
-      const result = server["onDefinition"](<TextDocumentPositionParams>{
-        textDocument,
-        position,
-      });
-      assert.strictEqual(result.length, 0);
-    });
-
-    it("should return an empty array", () => {
-      const doc = TextDocument.create(
-        "/test/test.q",
-        "q",
-        1,
-        "test_func: {[x] x*x};\ntest_func[2];"
-      );
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(1, 1);
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const valuesStub = sinon.stub(
-        server.analyzer["uriToTextDocument"],
-        "values"
-      );
-      valuesStub.value(() => [doc]);
-      const getDefinitionsStub = sinon.stub(server.analyzer, "getDefinitions");
-      getDefinitionsStub.value(() => undefined);
-      const result = server["onDefinition"](<TextDocumentPositionParams>{
-        textDocument,
-        position,
-      });
-      assert.strictEqual(result.length, 0);
+    it("should support desired features", () => {
+      const capabilities = server.capabilities();
+      assert.ok(capabilities.textDocumentSync);
+      assert.ok(capabilities.documentSymbolProvider);
+      assert.ok(capabilities.referencesProvider);
+      assert.ok(capabilities.definitionProvider);
+      assert.ok(capabilities.renameProvider);
+      assert.ok(capabilities.completionProvider);
     });
   });
 
   describe("onDocumentSymbol", () => {
-    it("should return an empty array", () => {
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => undefined);
-      const result = server["onDocumentSymbol"](<TextDocumentPositionParams>{
-        textDocument: TextDocumentIdentifier.create("/test/test.q"),
-        position: Position.create(0, 0),
-      });
+    it("should return symbols", () => {
+      const params = createDocument("a:1;b:{[c]d:c+1;e::1;d}");
+      const result = server.onDocumentSymbol(params);
+      assert.strictEqual(result.length, 2);
+    });
+    it("should skip table and sql", () => {
+      const params = createDocument(")([]a:1;b:2);select a:1 from(");
+      const result = server.onDocumentSymbol(params);
       assert.strictEqual(result.length, 0);
     });
-
-    it("should return a value", () => {
-      const doc = TextDocument.create("/test/test.q", "q", 1, "a:1; b:2;");
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(0, 3);
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const result = server["onDocumentSymbol"](<DocumentSymbolParams>{
-        textDocument,
-        position,
-      });
-      // TODO PR-103
-      assert.strictEqual(result.length, 0);
+    it("should account for \\d can be only one level deep", () => {
+      const params = createDocument("\\d .foo.bar\na:1");
+      const result = server.onDocumentSymbol(params);
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].name, ".foo.a");
     });
-  });
-
-  describe("onPrepareCallHierarchy", () => {
-    it("should return an empty array", () => {
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => undefined);
-      const result = server["onPrepareCallHierarchy"](<
-        TextDocumentPositionParams
-      >{
-        textDocument: TextDocumentIdentifier.create("/test/test.q"),
-        position: Position.create(0, 0),
-      });
-      assert.strictEqual(result.length, 0);
+    it("should account for bogus \\d", () => {
+      const params = createDocument("\\d\na:1");
+      const result = server.onDocumentSymbol(params);
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].name, "a");
     });
-
-    it("should return a value", () => {
-      const doc = TextDocument.create("/test/test.q", "q", 1, "a:1; b:2;");
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(0, 3);
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const result = server["onPrepareCallHierarchy"](<
-        TextDocumentPositionParams
-      >{
-        textDocument,
-        position,
-      });
-      // TODO
-      assert.strictEqual(result.length, 0);
+    it("should account for bogus \\d foo", () => {
+      const params = createDocument("\\d foo\na:1");
+      const result = server.onDocumentSymbol(params);
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].name, "a");
     });
-  });
-
-  describe("onIncomingCallsCallHierarchy", () => {
-    it("should return an empty array", () => {
-      const result = server.onIncomingCallsCallHierarchy(<
-        CallHierarchyIncomingCallsParams
-      >{
-        item: { name: undefined },
-      });
-      assert.strictEqual(result.length, 0);
+    it('should account for bogus system"d', () => {
+      const params = createDocument('system"d";a:1');
+      const result = server.onDocumentSymbol(params);
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].name, "a");
     });
-  });
-
-  describe("onOutgoingCallsCallHierarchy", () => {
-    it("should return a value", () => {
-      const result = server.onOutgoingCallsCallHierarchy({
-        item: <CallHierarchyItem>{ uri: "test", name: "test" },
-      });
-      // TODO
-      assert.ok(result);
+    it('should account for bogus system"d', () => {
+      const params = createDocument("a:1;system");
+      const result = server.onDocumentSymbol(params);
+      assert.strictEqual(result.length, 1);
+    });
+    it('should account for only static system"d', () => {
+      const params = createDocument('a:1;system"d .foo";b:1');
+      const result = server.onDocumentSymbol(params);
+      assert.strictEqual(result.length, 2);
+      assert.strictEqual(result[1].name, "b");
     });
   });
 
   describe("onReferences", () => {
-    it("should return an empty array", () => {
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(0, 0);
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => undefined);
-      const result = server["onReferences"](<ReferenceParams>{
-        textDocument,
-        position,
-      });
+    it("should return empty array for no text", () => {
+      const params = createDocument("");
+      const result = server.onReferences({ ...params, context });
       assert.strictEqual(result.length, 0);
     });
+    it("should return empty array for bogus assignment", () => {
+      const params = createDocument(":");
+      const result = server.onReferences({ ...params, context });
+      assert.strictEqual(result.length, 0);
+    });
+    it("should return empty array for bogus function", () => {
+      const params = createDocument("{");
+      const result = server.onReferences({ ...params, context });
+      assert.strictEqual(result.length, 0);
+    });
+    it("should return references in anonymous functions", () => {
+      const params = createDocument("{a:1;a");
+      const result = server.onReferences({ ...params, context });
+      assert.strictEqual(result.length, 2);
+    });
+    it("should support imlplicit arguments", () => {
+      const params = createDocument("x:1;y:1;z:1;{x+y+z};x");
+      const result = server.onReferences({ ...params, context });
+      assert.strictEqual(result.length, 2);
+    });
+    it("should find globals in functions", () => {
+      const params = createDocument("a:1;{a");
+      const result = server.onReferences({ ...params, context });
+      assert.strictEqual(result.length, 2);
+    });
+    it("should find locals in functions", () => {
+      const params = createDocument("a:1;{a:2;a");
+      const result = server.onReferences({ ...params, context });
+      assert.strictEqual(result.length, 2);
+    });
+    it("should apply namespace to globals in functions", () => {
+      const params = createDocument(
+        "\\d .foo\na:1;f:{a::2};\\d .\n.foo.f[];.foo.a",
+      );
+      const result = server.onReferences({ ...params, context });
+      assert.strictEqual(result.length, 3);
+    });
+    it("should return references for quke", () => {
+      const params = createDocument("FEATURE\nfeature\nshould\nEXPECT\na:1;a");
+      const result = server.onReferences({ ...params, context });
+      assert.strictEqual(result.length, 2);
+    });
+  });
 
-    it("should return a value", () => {
-      const doc = TextDocument.create(
-        "/test/test.q",
-        "q",
-        1,
-        "test_func: {[x] x*x};\ntest_func[2];"
-      );
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(1, 1);
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const valuesStub = sinon.stub(
-        server.analyzer["uriToTextDocument"],
-        "values"
-      );
-      valuesStub.value(() => [doc]);
-      const result = server["onReferences"](<ReferenceParams>{
-        textDocument,
-        position,
-      });
-      assert.ok(result.length > 0);
+  describe("onDefinition", () => {
+    it("should return definitions", () => {
+      const params = createDocument("a:1;b:{[c]d:c+1;d};b");
+      const result = server.onDefinition(params);
+      assert.strictEqual(result.length, 1);
+    });
+    it("should return local definitions", () => {
+      const params = createDocument("a:1;b:{[c]d:1;d");
+      const result = server.onDefinition(params);
+      assert.strictEqual(result.length, 1);
     });
   });
 
   describe("onRenameRequest", () => {
-    it("should return a value", () => {
-      const doc = TextDocument.create("/test/test.q", "q", 1, "SOMEVAR:1");
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(0, 1);
-      const newName = "CHANGEDVAR";
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const result = server["onRenameRequest"](<RenameParams>{
-        textDocument,
-        position,
-        newName,
-      });
-      assert.deepEqual(result, {
-        changes: {
-          "/test/test.q": [
-            {
-              newText: "CHANGEDVAR",
-              range: {
-                end: {
-                  character: 7,
-                  line: 0,
-                },
-                start: {
-                  character: 0,
-                  line: 0,
-                },
-              },
-            },
-          ],
-        },
-      });
-    });
-
-    it("should not rename if new name is assigned", () => {
-      const script = "a:1;b:2;";
-      const doc = TextDocument.create("/test/test.q", "q", 1, script);
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(0, 1);
-      const newName = "b";
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const result = server["onRenameRequest"](<RenameParams>{
-        textDocument,
-        position,
-        newName,
-      });
-      assert.strictEqual(result, null);
-    });
-
-    it("should not rename if new name is not assigned", () => {
-      const script = "a:1;{b:2};";
-      const uri = "/test/test.q";
-      const doc = TextDocument.create(uri, "q", 1, script);
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(0, 1);
-      const newName = "b";
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const result = server["onRenameRequest"](<RenameParams>{
-        textDocument,
-        position,
-        newName,
-      });
-      assert.strictEqual(result.changes[uri].length, 1);
-    });
-
-    it("should respect name scope", () => {
-      const script = "a:1;{a:2};";
-      const uri = "/test/test.q";
-      const doc = TextDocument.create(uri, "q", 1, script);
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(0, 1);
-      const newName = "b";
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const result = server["onRenameRequest"](<RenameParams>{
-        textDocument,
-        position,
-        newName,
-      });
-      assert.strictEqual(result.changes[uri].length, 1);
-    });
-
-    it("should not rename keywords", () => {
-      const script = "til:1;";
-      const uri = "/test/test.q";
-      const doc = TextDocument.create(uri, "q", 1, script);
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(0, 1);
-      const newName = "b";
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const result = server["onRenameRequest"](<RenameParams>{
-        textDocument,
-        position,
-        newName,
-      });
-      assert.strictEqual(result, null);
-    });
-
-    it("should not rename to a keyword", () => {
-      const script = "a:1;";
-      const uri = "/test/test.q";
-      const doc = TextDocument.create(uri, "q", 1, script);
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(0, 1);
-      const newName = "til";
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const result = server["onRenameRequest"](<RenameParams>{
-        textDocument,
-        position,
-        newName,
-      });
-      assert.strictEqual(result, null);
-    });
-
-    it("should not rename to a none identifier", () => {
-      const script = "a:1;";
-      const uri = "/test/test.q";
-      const doc = TextDocument.create(uri, "q", 1, script);
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(0, 1);
-      const newName = "1";
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const result = server["onRenameRequest"](<RenameParams>{
-        textDocument,
-        position,
-        newName,
-      });
-      assert.strictEqual(result, null);
-    });
-
-    it("should not rename to a none identifier 2", () => {
-      const script = "a:1;";
-      const uri = "/test/test.q";
-      const doc = TextDocument.create(uri, "q", 1, script);
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(0, 1);
-      const newName = "1somename";
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const result = server["onRenameRequest"](<RenameParams>{
-        textDocument,
-        position,
-        newName,
-      });
-      assert.strictEqual(result, null);
-    });
-
-    it("should rename locals", () => {
-      const script = "a:1;{a:1}";
-      const uri = "/test/test.q";
-      const doc = TextDocument.create(uri, "q", 1, script);
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(0, 6);
-      const newName = "b";
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const result = server["onRenameRequest"](<RenameParams>{
-        textDocument,
-        position,
-        newName,
-      });
-      assert.strictEqual(result.changes[uri].length, 1);
-    });
-
-    it("should rename global assign", () => {
-      const script = "a:1;{a::1}";
-      const uri = "/test/test.q";
-      const doc = TextDocument.create(uri, "q", 1, script);
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(0, 6);
-      const newName = "b";
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const result = server["onRenameRequest"](<RenameParams>{
-        textDocument,
-        position,
-        newName,
-      });
-      assert.strictEqual(result.changes[uri].length, 2);
+    it("should rename identifiers", () => {
+      const params = createDocument("a:1;b:{[c]d:c+1;d};b");
+      const result = server.onRenameRequest({ ...params, newName: "newName" });
+      assert.ok(result);
+      assert.strictEqual(result.changes[params.textDocument.uri].length, 2);
     });
   });
 
-  describe("onSignatureHelp", () => {
-    it("should return a value", () => {
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const position = Position.create(0, 0);
-      const result = server["onSignatureHelp"](<SignatureHelpParams>{
-        textDocument,
-        position,
-      });
-      // TODO
-      assert.strictEqual(result, undefined);
+  describe("onCompletion", () => {
+    it("should complete identifiers", () => {
+      const params = createDocument("a:1;b:{[c]d:c+1;d};b");
+      const result = server.onCompletion(params);
+      assert.strictEqual(result.length, 2);
     });
-  });
-
-  describe("onSemanticsTokens", () => {
-    it("should return a value", () => {
-      const doc = TextDocument.create("/test/test.q", "q", 1, "TOKEN:1");
-      const textDocument = TextDocumentIdentifier.create("/test/test.q");
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => doc);
-      const result = server["onSemanticsTokens"](<SemanticTokensParams>{
-        textDocument,
-      });
-      // TODO
-      assert.strictEqual(result.data.length, 0);
-    });
-  });
-
-  describe("validateTextDocument", () => {
-    it("should publish a diagnostic", async () => {
-      const sendDiagnosticsStub = sinon.stub(
-        server.connection,
-        "sendDiagnostics"
-      );
-      let result: PublishDiagnosticsParams;
-      sendDiagnosticsStub.value(
-        async (params: PublishDiagnosticsParams) => (result = params)
-      );
-      const doc = TextDocument.create(
-        "/test/test.q",
-        "q",
-        1,
-        "2000.01.01T12:00:00.000"
-      );
-      await server["validateTextDocument"](doc);
-      assert.strictEqual(result.diagnostics.length, 1);
-    });
-  });
-
-  describe("getKeyword", () => {
-    it("should return undefimed", async () => {
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => undefined);
-      const result = server["getKeyword"](<TextDocumentPositionParams>{
-        textDocument: TextDocumentIdentifier.create("/test/test.q"),
-        position: Position.create(0, 0),
-      });
-      assert.strictEqual(result, undefined);
-    });
-  });
-
-  describe("getEntireKeyword", () => {
-    it("should return undefimed", async () => {
-      const getStub = sinon.stub(server.documents, "get");
-      getStub.value(() => undefined);
-      const result = server["getEntireKeyword"](<TextDocumentPositionParams>{
-        textDocument: TextDocumentIdentifier.create("/test/test.q"),
-        position: Position.create(0, 0),
-      });
-      assert.strictEqual(result, undefined);
-    });
-  });
-
-  describe("getCurrentWordRange", () => {
-    it("should return undefimed", async () => {
-      const result = server["getCurrentWordRange"](
-        Position.create(0, 0),
-        TextDocument.create("/test/test.q", "q", 1, "")
-      );
-      assert.strictEqual(result, undefined);
+    it("should complete according to namespace context", () => {
+      const params = createDocument("a:1\n\\d .foo\na:1\n\\d .bar\na:1;a");
+      const result = server.onCompletion(params);
+      assert.strictEqual(result.length, 2);
+      assert.strictEqual(result[0].label, ".foo.a");
+      assert.strictEqual(result[1].label, "a");
     });
   });
 });

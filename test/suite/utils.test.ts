@@ -48,7 +48,7 @@ import {
 } from "../../src/ipc/cClasses";
 import { DataSourceTypes } from "../../src/models/dataSource";
 import { InsightDetails } from "../../src/models/insights";
-import { Parse } from "../../src/ipc/parse.qlist";
+import { LocalConnection } from "../../src/classes/localConnection";
 import { ScratchpadFile } from "../../src/models/scratchpad";
 
 interface ITestItem extends vscode.QuickPickItem {
@@ -101,7 +101,7 @@ describe("Utils", () => {
       beforeEach(() => {
         getConfigurationStub = sinon.stub(
           vscode.workspace,
-          "getConfiguration",
+          "getConfiguration"
         ) as sinon.SinonStub;
       });
 
@@ -207,6 +207,61 @@ describe("Utils", () => {
         assert.strictEqual(result, "");
       });
     });
+
+    describe("getServerIconState", () => {
+      const localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
+      afterEach(() => {
+        ext.activeConnection = undefined;
+        ext.connectedConnectionList.length = 0;
+      });
+
+      it("should return connected state", () => {
+        ext.activeConnection = undefined;
+        ext.connectedConnectionList.push(localConn);
+        const result = coreUtils.getServerIconState(localConn.connLabel);
+        assert.strictEqual(result, "-connected");
+      });
+
+      it("should return active state", () => {
+        ext.activeConnection = localConn;
+        const result = coreUtils.getServerIconState(localConn.connLabel);
+        assert.strictEqual(result, "-active");
+      });
+
+      it("should return disconnected state", () => {
+        ext.activeConnection = undefined;
+        const result = coreUtils.getServerIconState(localConn.connLabel);
+        assert.strictEqual(result, "");
+      });
+    });
+
+    describe("getStatus", () => {
+      const localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
+
+      afterEach(() => {
+        ext.activeConnection = undefined;
+        ext.connectedConnectionList.length = 0;
+      });
+
+      it("should return connected state", () => {
+        ext.activeConnection = undefined;
+        ext.connectedConnectionList.push(localConn);
+        const result = coreUtils.getStatus(localConn.connLabel);
+        assert.strictEqual(result, "- connected");
+      });
+
+      it("should return active state", () => {
+        ext.activeConnection = localConn;
+        const result = coreUtils.getStatus(localConn.connLabel);
+        assert.strictEqual(result, "- active");
+      });
+
+      it("should return disconnected state", () => {
+        ext.activeConnection = undefined;
+        const result = coreUtils.getStatus(localConn.connLabel);
+        assert.strictEqual(result, "- disconnected");
+      });
+    });
   });
 
   describe("dataSource", () => {
@@ -238,12 +293,12 @@ describe("Utils", () => {
     it("checkIfTimeParamIsCorrect", () => {
       const result = dataSourceUtils.checkIfTimeParamIsCorrect(
         "2021-01-01",
-        "2021-01-02",
+        "2021-01-02"
       );
       assert.strictEqual(result, true);
       const result2 = dataSourceUtils.checkIfTimeParamIsCorrect(
         "2021-01-02",
-        "2021-01-01",
+        "2021-01-01"
       );
       assert.strictEqual(result2, false);
     });
@@ -482,7 +537,7 @@ describe("Utils", () => {
           auth: false,
           tls: false,
         },
-        TreeItemCollapsibleState.None,
+        TreeItemCollapsibleState.None
       );
 
       const insightsNode = new InsightsNode(
@@ -493,7 +548,7 @@ describe("Utils", () => {
           alias: "insightsserveralias",
           auth: true,
         },
-        TreeItemCollapsibleState.None,
+        TreeItemCollapsibleState.None
       );
 
       beforeEach(() => {
@@ -541,7 +596,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.KDB,
+          ServerType.KDB
         );
 
         getConfigurationStub.restore();
@@ -564,7 +619,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.KDB,
+          ServerType.KDB
         );
         getConfigurationStub.restore();
       });
@@ -581,7 +636,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.INSIGHTS,
+          ServerType.INSIGHTS
         );
       });
 
@@ -597,7 +652,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.KDB,
+          ServerType.KDB
         );
       });
 
@@ -613,7 +668,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.INSIGHTS,
+          ServerType.INSIGHTS
         );
       });
 
@@ -629,7 +684,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.undefined,
+          ServerType.undefined
         );
       });
     });
@@ -657,7 +712,7 @@ describe("Utils", () => {
         connectionName,
         connectionType,
         true,
-        true,
+        true
       );
       assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
     });
@@ -694,7 +749,7 @@ describe("Utils", () => {
         "testPanel",
         "Test Panel",
         vscode.ViewColumn.One,
-        {},
+        {}
       );
       const webview = panel.webview;
       const extensionUri = vscode.Uri.parse("file:///path/to/extension");
@@ -708,7 +763,7 @@ describe("Utils", () => {
         "testPanel",
         "Test Panel",
         vscode.ViewColumn.One,
-        {},
+        {}
       );
       const webview = panel.webview;
       const extensionUri = vscode.Uri.parse("file:///path/to/extension");
@@ -1074,7 +1129,7 @@ describe("Utils", () => {
       getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
       showInformationMessageStub = sinon.stub(
         vscode.window,
-        "showInformationMessage",
+        "showInformationMessage"
       ) as sinon.SinonStub<
         [
           message: string,
@@ -1173,13 +1228,9 @@ describe("Utils", () => {
 
   describe("userInteraction", () => {
     let windowMock: sinon.SinonMock;
-    // let getConfigurationMock: any;
-    // let withProgressMock: any;
 
     beforeEach(() => {
       windowMock = sinon.mock(vscode.window);
-      // getConfigurationMock = sinon.stub(workspace, 'getConfiguration');
-      // withProgressMock = sinon.stub(window, 'withProgress');
     });
 
     afterEach(() => {

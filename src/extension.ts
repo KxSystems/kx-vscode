@@ -17,8 +17,6 @@ import {
   CancellationToken,
   Command,
   commands,
-  CompletionItem,
-  CompletionItemKind,
   EventEmitter,
   ExtensionContext,
   languages,
@@ -55,16 +53,15 @@ import {
   stopLocalProcessByServerName,
 } from "./commands/installTools";
 import {
+  activeConnection,
   addInsightsConnection,
   addKdbConnection,
   addNewConnection,
   connect,
-  connectInsights,
   disconnect,
   enableTLS,
   executeQuery,
   removeConnection,
-  removeInsightsConnection,
   rerunQuery,
   runQuery,
 } from "./commands/serverCommand";
@@ -112,6 +109,9 @@ import {
   workspaceFoldersChanged,
 } from "./commands/scratchpadCommand";
 import { createDefaultDataSourceFile } from "./models/dataSource";
+import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
+import { CompletionProvider } from "./services/completionProvider";
+import { QuickFixProvider } from "./services/quickFixProvider";
 
 let client: LanguageClient;
 
@@ -193,26 +193,33 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.connect", async (viewItem: KdbNode) => {
       await connect(viewItem);
     }),
-
+    commands.registerCommand(
+      "kdb.active.connection",
+      async (viewItem: KdbNode) => {
+        activeConnection(viewItem);
+      },
+    ),
     commands.registerCommand("kdb.enableTLS", async (viewItem: KdbNode) => {
       await enableTLS(viewItem.children[0]);
     }),
-
     commands.registerCommand(
       "kdb.insightsConnect",
       async (viewItem: InsightsNode) => {
-        await connectInsights(viewItem);
+        await connect(viewItem);
       },
     ),
     commands.registerCommand(
       "kdb.insightsRemove",
       async (viewItem: InsightsNode) => {
-        await removeInsightsConnection(viewItem);
+        await removeConnection(viewItem);
       },
     ),
-    commands.registerCommand("kdb.disconnect", async () => {
-      await disconnect();
-    }),
+    commands.registerCommand(
+      "kdb.disconnect",
+      async (viewItem: InsightsNode | KdbNode) => {
+        await disconnect(viewItem.label);
+      },
+    ),
     commands.registerCommand("kdb.addConnection", async () => {
       await addNewConnection();
     }),
@@ -242,7 +249,7 @@ export async function activate(context: ExtensionContext) {
     ),
     commands.registerCommand("kdb.refreshServerObjects", () => {
       ext.serverProvider.reload();
-      ext.connection?.update();
+      ext.activeConnection?.update();
     }),
     commands.registerCommand(
       "kdb.queryHistory.rerun",
@@ -331,21 +338,21 @@ export async function activate(context: ExtensionContext) {
     }),
     commands.registerCommand("kdb.execute.selectedQuery", async () => {
       runQuery(ExecutionTypes.QuerySelection);
-      ext.connection?.update();
+      ext.activeConnection?.update();
     }),
     commands.registerCommand("kdb.execute.fileQuery", async () => {
       runQuery(ExecutionTypes.QueryFile);
-      ext.connection?.update();
+      ext.activeConnection?.update();
     }),
     commands.registerCommand("kdb.execute.pythonScratchpadQuery", async () => {
       runQuery(ExecutionTypes.PythonQuerySelection);
-      ext.connection?.update();
+      ext.activeConnection?.update();
     }),
     commands.registerCommand(
       "kdb.execute.pythonFileScratchpadQuery",
       async () => {
         runQuery(ExecutionTypes.PythonQueryFile);
-        ext.connection?.update();
+        ext.activeConnection?.update();
       },
     ),
     commands.registerCommand("kdb.execute.entireFile", async (uri: Uri) => {
@@ -417,6 +424,17 @@ export async function activate(context: ExtensionContext) {
       { pattern: "**/*.kdb.{q,py}" },
       new ConnectionLensProvider(),
     ),
+    commands.registerCommand("kdb.qlint", async () => {
+      const editor = window.activeTextEditor;
+      if (editor) {
+        await lintCommand(editor.document);
+      }
+    }),
+    languages.registerCodeActionsProvider(
+      { language: "q" },
+      new QuickFixProvider(),
+    ),
+    ext.diagnosticCollection,
   );
 
   const lastResult: QueryResult | undefined = undefined;
@@ -437,57 +455,10 @@ export async function activate(context: ExtensionContext) {
   );
 
   context.subscriptions.push(
-    languages.registerCompletionItemProvider("q", {
-      provideCompletionItems(
-        document: TextDocument,
-        _position: Position,
-        _token: CancellationToken,
-      ) {
-        const items: CompletionItem[] = [];
-
-        ext.keywords.forEach((x) =>
-          items.push({ label: x, kind: CompletionItemKind.Keyword }),
-        );
-        ext.functions.forEach((x) =>
-          items.push({
-            label: x,
-            insertText: x,
-            kind: CompletionItemKind.Function,
-          }),
-        );
-        ext.tables.forEach((x) =>
-          items.push({
-            label: x,
-            insertText: x,
-            kind: CompletionItemKind.Value,
-          }),
-        );
-        ext.variables.forEach((x) =>
-          items.push({
-            label: x,
-            insertText: x,
-            kind: CompletionItemKind.Variable,
-          }),
-        );
-
-        const text = document.getText();
-        const regex = /([.\w]+)[ \t]*:/gm;
-        let match;
-        while ((match = regex.exec(text))) {
-          const name = match[1];
-          const found = items.find((item) => item.label === name);
-          if (!found) {
-            items.push({
-              label: name,
-              insertText: name,
-              kind: CompletionItemKind.Variable,
-            });
-          }
-        }
-
-        return items;
-      },
-    }),
+    languages.registerCompletionItemProvider(
+      { language: "q" },
+      new CompletionProvider(),
+    ),
   );
 
   ext.runScratchpadItem = window.createStatusBarItem(
@@ -527,7 +498,7 @@ export async function activate(context: ExtensionContext) {
   const clientOptions: LanguageClientOptions = {
     documentSelector: [{ scheme: "file", language: "q" }],
     synchronize: {
-      fileEvents: workspace.createFileSystemWatcher("**/*.q"),
+      fileEvents: workspace.createFileSystemWatcher("**/*.{q,quke}"),
     },
   };
 
@@ -538,25 +509,8 @@ export async function activate(context: ExtensionContext) {
     clientOptions,
   );
 
-  context.subscriptions.push(
-    commands.registerCommand("kdb.sendServerCache", (code) => {
-      client.sendNotification("analyzeServerCache", code);
-    }),
-  );
-
-  context.subscriptions.push(
-    commands.registerCommand("kdb.sendOnHover", (hoverItems) => {
-      client.sendNotification("prepareOnHover", hoverItems);
-    }),
-  );
-
-  client.start().then(() => {
-    const configuration = workspace.getConfiguration("kdb.sourceFiles");
-    client.sendNotification("analyzeSourceCode", {
-      globsPattern: configuration.get("globsPattern"),
-      ignorePattern: configuration.get("ignorePattern"),
-    });
-  });
+  await client.start();
+  await connectBuildTools();
 
   Telemetry.sendEvent("Extension.Activated");
 }

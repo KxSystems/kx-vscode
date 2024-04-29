@@ -15,6 +15,7 @@ import * as path from "path";
 import {
   Event,
   EventEmitter,
+  MarkdownString,
   TreeDataProvider,
   TreeItem,
   TreeItemCollapsibleState,
@@ -31,7 +32,13 @@ import {
   loadVariables,
   loadViews,
 } from "../models/serverObject";
-import { getInsightsAlias, getServerAlias, getServerName } from "../utils/core";
+import {
+  getInsightsAlias,
+  getServerAlias,
+  getServerIconState,
+  getServerName,
+  getStatus,
+} from "../utils/core";
 
 export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: EventEmitter<
@@ -100,8 +107,10 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   }
 
   private getMergedElements(_element?: TreeItem): TreeItem[] {
+    ext.connectionsList.length = 0;
     const servers = this.getChildElements(_element);
     const insights = this.getInsightsChildElements();
+    ext.connectionsList.push(...servers, ...insights);
     ext.kdbConnectionAliasList.length = 0;
     getServerAlias(servers.map((x) => x.details));
     getInsightsAlias(insights.map((x) => x.details));
@@ -320,9 +329,9 @@ export class KdbNode extends TreeItem {
       label = label + ` [${details.serverAlias}]`;
     }
 
-    if (ext.connectionNode != undefined && label === ext.connectionNode.label) {
-      label = label + " (connected)";
-    }
+    // if (ext.connectionNode != undefined && label === ext.connectionNode.label) {
+    //   label = label + " (connected)";
+    // }
 
     // set context for root nodes
     if (ext.kdbrootNodes.indexOf(label) === -1) {
@@ -376,6 +385,17 @@ export class KdbNode extends TreeItem {
 
     super(label, collapsibleState);
     this.description = this.getDescription();
+    this.tooltip = this.getTooltip();
+  }
+
+  getTooltip(): MarkdownString {
+    const tooltipMd = new MarkdownString();
+    const title = `${this.details.serverAlias} ${getStatus(this.label)}`;
+    tooltipMd.appendMarkdown(`### ${title}\n`);
+    tooltipMd.appendMarkdown(
+      `${this.details.serverName}:${this.details.serverPort}`,
+    );
+    return tooltipMd;
   }
 
   getDescription(): string {
@@ -391,22 +411,14 @@ export class KdbNode extends TreeItem {
       "..",
       "..",
       "resources",
-      "light",
-      ext.connectionNode != undefined &&
-        this.label === ext.connectionNode.label + " (connected)"
-        ? "p-data.svg"
-        : "p-data.svg",
+      "p-q-connection" + getServerIconState(this.label) + ".svg",
     ),
     dark: path.join(
       __filename,
       "..",
       "..",
       "resources",
-      "dark",
-      ext.connectionNode != undefined &&
-        this.label === ext.connectionNode.label + " (connected)"
-        ? "p-data.svg"
-        : "p-data.svg",
+      "p-q-connection" + getServerIconState(this.label) + ".svg",
     ),
   };
 
@@ -420,16 +432,9 @@ export class InsightsNode extends TreeItem {
     public readonly details: InsightDetails,
     public readonly collapsibleState: TreeItemCollapsibleState,
   ) {
-    let auxLabel = label;
-    if (ext.connectionNode != undefined && label === ext.connectionNode.label) {
-      auxLabel = label;
-      label = label + " (connected)";
-    } else {
-      auxLabel = label + " (connected)";
-    }
     // set context for root nodes
     if (ext.kdbinsightsNodes.indexOf(label) === -1) {
-      const indexOriginalLabel = ext.kdbinsightsNodes.indexOf(auxLabel);
+      const indexOriginalLabel = ext.kdbinsightsNodes.indexOf(label);
       if (indexOriginalLabel !== -1) {
         ext.kdbinsightsNodes.splice(indexOriginalLabel, 1);
       }
@@ -442,8 +447,18 @@ export class InsightsNode extends TreeItem {
     }
 
     super(label, collapsibleState);
-    this.tooltip = details.server;
+    this.tooltip = this.getTooltip();
     this.description = this.getDescription();
+  }
+
+  getTooltip(): MarkdownString {
+    const tooltipMd = new MarkdownString();
+    const title = `${this.label} ${getStatus(this.label)}`;
+    tooltipMd.appendMarkdown(`### ${title}\n`);
+    tooltipMd.appendMarkdown(
+      `${this.details.server.replace(/:\/\//g, "&#65279;://")}`,
+    );
+    return tooltipMd;
   }
 
   getDescription(): string {
@@ -459,22 +474,14 @@ export class InsightsNode extends TreeItem {
       "..",
       "..",
       "resources",
-      "light",
-      ext.connectionNode != undefined &&
-        this.label === ext.connectionNode.label + " (connected)"
-        ? "p-insights.svg"
-        : "p-insights.svg",
+      "p-insights" + getServerIconState(this.label) + ".svg",
     ),
     dark: path.join(
       __filename,
       "..",
       "..",
       "resources",
-      "dark",
-      ext.connectionNode != undefined &&
-        this.label === ext.connectionNode.label + " (connected)"
-        ? "p-insights.svg"
-        : "p-insights.svg",
+      "p-insights" + getServerIconState(this.label) + ".svg",
     ),
   };
 

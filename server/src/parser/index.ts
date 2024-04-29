@@ -17,4 +17,3 @@ export * from "./lexer";
 export * from "./literals";
 export * from "./parser";
 export * from "./tokens";
-export * from "./visitor";

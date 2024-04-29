@@ -15,7 +15,7 @@ import { createToken } from "chevrotain";
 
 export const CharLiteral = createToken({
   name: "CharLiteral",
-  pattern: /"(?:\\.|(?:(?!\r?\n\S)[^"]))*"/,
+  pattern: /"(?:\\.|[^"])*"/,
 });
 
 export const SymbolLiteral = createToken({
