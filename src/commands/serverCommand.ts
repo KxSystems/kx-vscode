@@ -11,26 +11,19 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import axios, { AxiosRequestConfig } from "axios";
 import { readFileSync } from "fs-extra";
-import { jwtDecode } from "jwt-decode";
 import { join } from "path";
 import * as url from "url";
-import { Position, ProgressLocation, Range, commands, window } from "vscode";
+import { Position, Range, commands, window } from "vscode";
 import { ext } from "../extensionVariables";
-import { isCompressed, uncompress } from "../ipc/c";
-import { GetDataObjectPayload } from "../models/data";
-import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
+import { DataSourceFiles } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
 import { InsightDetails, Insights } from "../models/insights";
-import { JwtUser } from "../models/jwt_user";
-import { MetaObject, MetaObjectPayload } from "../models/meta";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
 import { Server, ServerDetails, ServerType } from "../models/server";
 import { ServerObject } from "../models/serverObject";
 import { DataSourcesPanel } from "../panels/datasource";
-import { getCurrentToken } from "../services/kdbInsights/codeFlowLogin";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import {
   addLocalConnectionContexts,
@@ -46,12 +39,7 @@ import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { decodeQUTF } from "../utils/decode";
 import { ExecutionConsole } from "../utils/executionConsole";
 import { openUrl } from "../utils/openUrl";
-import {
-  handleScratchpadTableRes,
-  handleWSResults,
-  checkIfIsDatasource,
-  addQueryHistory,
-} from "../utils/queryUtils";
+import { checkIfIsDatasource, addQueryHistory } from "../utils/queryUtils";
 import {
   validateServerAlias,
   validateServerName,
@@ -314,6 +302,11 @@ export function activeConnection(viewItem: KdbNode | InsightsNode): void {
   connMngService.setActiveConnection(viewItem);
   refreshDataSourcesPanel();
   ext.serverProvider.reload();
+}
+
+export async function resetScratchPad(): Promise<void> {
+  const connMngService = new ConnectionManagementService();
+  await connMngService.resetScratchpad();
 }
 
 export async function disconnect(connLabel: string): Promise<void> {

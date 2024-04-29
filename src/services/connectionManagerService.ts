@@ -275,4 +275,44 @@ export class ConnectionManagementService {
       return await ext.activeConnection.getScratchpadQuery(command);
     }
   }
+
+  public async resetScratchpad(): Promise<void> {
+    let error = true;
+    if (!ext.activeConnection) {
+      window.showErrorMessage(
+        "Please active an Insights connection to use this feature.",
+      );
+      return;
+    }
+    const confirmationPromt = {
+      prompt:
+        "Are you sure you want to reset the scratchpad from the connecttion " +
+        ext.activeConnection.connLabel +
+        "?",
+      option1: "Yes",
+      option2: "No",
+    };
+    await window
+      .showInformationMessage(
+        confirmationPromt.prompt,
+        confirmationPromt.option1,
+        confirmationPromt.option2,
+      )
+      .then(async (selection) => {
+        if (selection === confirmationPromt.option1) {
+          if (ext.activeConnection instanceof InsightsConnection) {
+            error = false;
+            return await ext.activeConnection.resetScratchpad();
+          } else {
+            return;
+          }
+        }
+      });
+
+    if (error) {
+      window.showErrorMessage(
+        "This feature is only available for Insights connections.",
+      );
+    }
+  }
 }
