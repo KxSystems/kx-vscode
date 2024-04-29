@@ -188,12 +188,13 @@
         "kdb.linting": {
           "type": "boolean",
           "description": "Enable linting for q files",
-          "default": true
+          "default": false
         }
       }
     },
     "commands": [
       {
+        "category": "KX",
         "command": "kdb.refreshServerObjects",
         "title": "Refresh server objects",
         "icon": {
@@ -202,22 +203,27 @@
         }
       },
       {
+        "category": "KX",
         "command": "kdb.startLocalProcess",
         "title": "Start q process"
       },
       {
+        "category": "KX",
         "command": "kdb.stopLocalProcess",
         "title": "Stop q process"
       },
       {
+        "category": "KX",
         "command": "kdb.addConnection",
         "title": "Add new connection"
       },
       {
+        "category": "KX",
         "command": "kdb.removeConnection",
         "title": "Remove connection"
       },
       {
+        "category": "KX",
         "command": "kdb.connect",
         "title": "Connect server"
       },
@@ -231,99 +237,123 @@
         "position": "end"
       },
       {
+        "category": "KX",
         "command": "kdb.enableTLS",
         "title": "Enable TLS"
       },
       {
+        "category": "KX",
         "command": "kdb.insightsConnect",
         "title": "Connect to Insights"
       },
       {
+        "category": "KX",
         "command": "kdb.insightsRemove",
         "title": "Remove connection"
       },
       {
+        "category": "KX",
         "command": "kdb.disconnect",
         "title": "Disconnect"
       },
       {
+        "category": "KX",
         "command": "kdb.queryHistory.rerun",
         "title": "Rerun query"
       },
       {
+        "category": "KX",
         "command": "kdb.queryHistory.clear",
         "title": "Clear query history"
       },
       {
+        "category": "KX",
         "command": "kdb.dataSource.addDataSource",
         "title": "Add new DataSource"
       },
       {
+        "category": "KX",
         "command": "kdb.dataSource.populateScratchpad",
         "title": "Populate a new scratchpad"
       },
       {
+        "category": "KX",
         "command": "kdb.dataSource.saveDataSource",
         "title": "Save changes in the DataSource"
       },
       {
+        "category": "KX",
         "command": "kdb.dataSource.runDataSource",
         "title": "Execute DataSource at Inisghts Instance"
       },
       {
+        "category": "KX",
         "command": "kdb.dataSource.renameDataSource",
         "title": "Rename DataSource"
       },
       {
+        "category": "KX",
         "command": "kdb.dataSource.deleteDataSource",
         "title": "Delete DataSource"
       },
       {
+        "category": "KX",
         "command": "kdb.dataSource.openDataSource",
         "title": "Open DataSource"
       },
       {
+        "category": "KX",
         "command": "kdb.resultsPanel.update",
         "title": "Update Results View"
       },
       {
+        "category": "KX",
         "command": "kdb.resultsPanel.clear",
         "title": "Clear Results View"
       },
       {
+        "category": "KX",
         "command": "kdb.resultsPanel.export.csv",
         "title": "Export to CSV"
       },
       {
+        "category": "KX",
         "command": "kdb.terminal.run",
         "title": "Run q file in a new q instance",
-        "when": "kdb.QHOME || config.kdb.qHomeDirectory"
+        "icon": "$(run)",
+        "enablement": "(kdb.QHOME || config.kdb.qHomeDirectory)"
       },
       {
+        "category": "KX",
         "command": "kdb.terminal.start",
-        "title": "q: Start REPL"
+        "title": "Start REPL"
       },
       {
+        "category": "KX",
         "command": "kdb.execute.selectedQuery",
-        "title": "Execute Current Selection",
-        "when": "kdb.connected"
+        "title": "Execute Current Selection"
       },
       {
+        "category": "KX",
         "command": "kdb.execute.fileQuery",
         "title": "Execute Entire File",
-        "when": "kdb.connected"
+        "icon": "$(run)",
+        "enablement": "kdb.connected && editorFocus"
       },
       {
+        "category": "KX",
         "command": "kdb.execute.pythonScratchpadQuery",
-        "title": "Execute Current Selection in Insights Scratchpad",
-        "when": "kdb.connected"
+        "title": "Execute Current Selection in Insights Scratchpad"
       },
       {
+        "category": "KX",
         "command": "kdb.execute.pythonFileScratchpadQuery",
         "title": "Execute Entire File in Insights Scratchpad",
-        "when": "kdb.connected"
+        "icon": "$(run)",
+        "enablement": "kdb.insightsConnected"
       },
       {
+        "category": "KX",
         "command": "kdb.execute.entireFile",
         "title": "Execute Entire File"
       },
@@ -331,6 +361,11 @@
         "command": "kdb.scratchpad.reset",
         "title": "Reset Scratchpad",
         "when": "kdb.insightsConnected"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.qlint",
+        "title": "Lint q source file"
       }
     ],
     "keybindings": [
@@ -619,20 +654,20 @@
           "group": "dataSourceFiles"
         }
       ],
-      "editor/title": [
-        {
-          "command": "kdb.terminal.run",
-          "when": "resourceLangId ==  q && (kdb.QHOME || config.kdb.qHomeDirectory)",
-          "group": "navigation"
-        },
+      "editor/title/run": [
         {
           "command": "kdb.execute.fileQuery",
-          "when": "resourceLangId ==  q  && kdb.connected && editorFocus",
-          "group": "navigation"
+          "group": "q@0",
+          "when": "resourceLangId == q"
+        },
+        {
+          "command": "kdb.terminal.run",
+          "group": "q@1",
+          "when": "resourceLangId == q"
         },
         {
           "command": "kdb.execute.pythonFileScratchpadQuery",
-          "group": "navigation",
+          "group": "q@0",
           "when": "editorLangId == python && kdb.insightsConnected"
         }
       ],

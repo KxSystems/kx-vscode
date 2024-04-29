@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { ExtensionContext, extensions, OutputChannel } from "vscode";
+import { ExtensionContext, extensions, languages, OutputChannel } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { LocalProcess } from "./models/localProcess";
 import { MetaObjectPayload } from "./models/meta";
@@ -281,4 +281,7 @@ export namespace ext {
     minutes: 1000 * 60,
     seconds: 1000,
   };
+
+  export const diagnosticCollection =
+    languages.createDiagnosticCollection("kdb");
 }
