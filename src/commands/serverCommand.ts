@@ -16,7 +16,14 @@ import { readFileSync } from "fs-extra";
 import { jwtDecode } from "jwt-decode";
 import { join } from "path";
 import * as url from "url";
-import { Position, ProgressLocation, Range, commands, window } from "vscode";
+import {
+  Position,
+  ProgressLocation,
+  Range,
+  commands,
+  window,
+  workspace,
+} from "vscode";
 import { ext } from "../extensionVariables";
 import { isCompressed, uncompress } from "../ipc/c";
 import { GetDataObjectPayload } from "../models/data";
@@ -272,7 +279,7 @@ export async function removeConnection(viewItem: KdbNode | InsightsNode) {
 
 export async function connect(viewItem: KdbNode | InsightsNode): Promise<void> {
   const connMngService = new ConnectionManagementService();
-  commands.executeCommand("kdb-results.focus");
+  await commands.executeCommand("kdb-results.focus");
   ExecutionConsole.start();
   // handle cleaning up existing connection
   if (ext.activeConnection !== undefined) {
@@ -284,17 +291,14 @@ export async function connect(viewItem: KdbNode | InsightsNode): Promise<void> {
     // check for TLS support
     if (viewItem.details.tls) {
       if (!(await checkOpenSslInstalled())) {
-        window
-          .showInformationMessage(
-            "TLS support requires OpenSSL to be installed.",
-            "More Info",
-            "Cancel",
-          )
-          .then(async (result) => {
-            if (result === "More Info") {
-              await openUrl("https://code.kx.com/q/kb/ssl/");
-            }
-          });
+        const result = await window.showInformationMessage(
+          "TLS support requires OpenSSL to be installed.",
+          "More Info",
+          "Cancel",
+        );
+        if (result === "More Info") {
+          openUrl("https://code.kx.com/q/kb/ssl/");
+        }
       }
     }
   }
@@ -328,6 +332,7 @@ export async function disconnect(connLabel: string): Promise<void> {
   }
 }
 
+// TODO MS kdb.execute.entireFile -> kdb.execute.fileQuery
 export async function executeQuery(
   query: string,
   context?: string,
@@ -419,8 +424,9 @@ export function getConextForRerunQuery(query: string): string {
   return context;
 }
 
-export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
-  const editor = window.activeTextEditor;
+// TODO MS
+export async function runQuery(type: ExecutionTypes, rerunQuery?: string) {
+  const editor = ext.activeTextEditor;
   if (!editor) {
     return false;
   }
@@ -457,7 +463,7 @@ export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
       }
       break;
   }
-  executeQuery(query, context, isPython);
+  await executeQuery(query, context, isPython);
 }
 
 export function rerunQuery(rerunQueryElement: QueryHistory) {

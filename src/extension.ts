@@ -334,24 +334,25 @@ export async function activate(context: ExtensionContext) {
       }
     }),
     commands.registerCommand("kdb.execute.selectedQuery", async () => {
-      runQuery(ExecutionTypes.QuerySelection);
+      await runQuery(ExecutionTypes.QuerySelection);
       ext.activeConnection?.update();
     }),
     commands.registerCommand("kdb.execute.fileQuery", async () => {
-      runQuery(ExecutionTypes.QueryFile);
+      await runQuery(ExecutionTypes.QueryFile);
       ext.activeConnection?.update();
     }),
     commands.registerCommand("kdb.execute.pythonScratchpadQuery", async () => {
-      runQuery(ExecutionTypes.PythonQuerySelection);
+      await runQuery(ExecutionTypes.PythonQuerySelection);
       ext.activeConnection?.update();
     }),
     commands.registerCommand(
       "kdb.execute.pythonFileScratchpadQuery",
       async () => {
-        runQuery(ExecutionTypes.PythonQueryFile);
+        await runQuery(ExecutionTypes.PythonQueryFile);
         ext.activeConnection?.update();
       },
     ),
+    // TODO MS REMOVE
     commands.registerCommand("kdb.execute.entireFile", async (uri: Uri) => {
       if (!uri) {
         return;
@@ -403,13 +404,13 @@ export async function activate(context: ExtensionContext) {
       ext.scratchpadTreeProvider.refresh();
     }),
     commands.registerCommand("kdb.pickConnection", async () => {
-      const editor = window.activeTextEditor;
+      const editor = ext.activeTextEditor;
       if (editor) {
         await pickConnection(editor.document.uri);
       }
     }),
     commands.registerCommand("kdb.runScratchpad", async () => {
-      const editor = window.activeTextEditor;
+      const editor = ext.activeTextEditor;
       if (editor) {
         await runScratchpad(editor.document.uri);
       }

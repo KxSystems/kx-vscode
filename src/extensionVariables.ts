@@ -17,6 +17,7 @@ import {
   languages,
   OutputChannel,
   StatusBarItem,
+  TextEditor,
 } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { LocalProcess } from "./models/localProcess";
@@ -39,6 +40,7 @@ import { InsightsConnection } from "./classes/insightsConnection";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
+  export let activeTextEditor: TextEditor | undefined;
   export let context: ExtensionContext;
   export let outputChannel: OutputChannel;
   export let consolePanel: OutputChannel;

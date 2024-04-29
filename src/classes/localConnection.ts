@@ -69,6 +69,7 @@ export class LocalConnection {
     return this.connection;
   }
 
+  // TODO MS This function is not async
   public async connect(
     callback: nodeq.AsyncValueCallback<LocalConnection>,
   ): Promise<void> {

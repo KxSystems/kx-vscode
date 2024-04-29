@@ -183,10 +183,7 @@
         "category": "KX",
         "command": "kdb.refreshServerObjects",
         "title": "Refresh server objects",
-        "icon": {
-          "light": "resources/light/refresh.svg",
-          "dark": "resources/dark/refresh.svg"
-        }
+        "icon": "$(refresh)"
       },
       {
         "category": "KX",
@@ -269,7 +266,8 @@
       {
         "category": "KX",
         "command": "kdb.addConnection",
-        "title": "Add new connection"
+        "title": "Add new connection",
+        "icon": "$(add)"
       },
       {
         "category": "KX",
@@ -320,7 +318,8 @@
       {
         "category": "KX",
         "command": "kdb.queryHistory.clear",
-        "title": "Clear query history"
+        "title": "Clear query history",
+        "icon": "$(clear-all)"
       },
       {
         "category": "KX",
@@ -394,7 +393,7 @@
         "command": "kdb.execute.fileQuery",
         "title": "Execute Entire File",
         "icon": "$(run)",
-        "enablement": "kdb.connected && editorFocus"
+        "enablement": "kdb.connected"
       },
       {
         "category": "KX",
@@ -436,7 +435,7 @@
         "command": "kdb.execute.pythonScratchpadQuery",
         "key": "ctrl+d",
         "mac": "cmd+d",
-        "when": "editorLangId == python  && kdb.insightsConnected"
+        "when": "editorLangId == python && kdb.insightsConnected"
       },
       {
         "command": "kdb.execute.pythonFileScratchpadQuery",
@@ -609,17 +608,38 @@
       "view/title": [
         {
           "command": "kdb.addConnection",
-          "when": "view == kdb-servers"
+          "when": "view == kdb-servers",
+          "group": "navigation@1"
         },
         {
           "command": "kdb.refreshServerObjects",
           "when": "view == kdb-servers",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
-          "command": "kdb.dataSource.addDataSource",
-          "when": "view == kdb-datasources-explorer",
-          "group": "dataSourceFiles"
+          "command": "kdb.createDataSource",
+          "when": "view == kdb-datasource-explorer",
+          "group": "navigation@1"
+        },
+        {
+          "command": "kdb.refreshDataSourceExplorer",
+          "when": "view == kdb-datasource-explorer",
+          "group": "navigation@2"
+        },
+        {
+          "command": "kdb.createScratchpad",
+          "when": "view == kdb-scratchpad-explorer",
+          "group": "navigation@1"
+        },
+        {
+          "command": "kdb.refreshScratchpadExplorer",
+          "when": "view == kdb-scratchpad-explorer",
+          "group": "navigation@2"
+        },
+        {
+          "command": "kdb.queryHistory.clear",
+          "when": "view == kdb-query-history",
+          "group": "navigation@1"
         },
         {
           "command": "kdb.resultsPanel.clear",
@@ -627,34 +647,14 @@
           "group": "resultsPanel"
         },
         {
-          "command": "kdb.queryHistory.clear",
-          "when": "view == kdb-query-history",
-          "group": "queryHistory"
-        },
-        {
           "command": "kdb.resultsPanel.export.csv",
           "when": "view == kdb-results",
           "group": "resultsPanel"
         },
         {
-          "command": "kdb.createDataSource",
-          "when": "view == kdb-datasource-explorer",
-          "group": "navigation"
-        },
-        {
-          "command": "kdb.refreshDataSourceExplorer",
-          "when": "view == kdb-datasource-explorer",
-          "group": "navigation"
-        },
-        {
-          "command": "kdb.createScratchpad",
-          "when": "view == kdb-scratchpad-explorer",
-          "group": "navigation"
-        },
-        {
-          "command": "kdb.refreshScratchpadExplorer",
-          "when": "view == kdb-scratchpad-explorer",
-          "group": "navigation"
+          "command": "kdb.dataSource.addDataSource",
+          "when": "view == kdb-datasources-explorer",
+          "group": "dataSourceFiles"
         }
       ],
       "view/item/context": [
@@ -760,7 +760,7 @@
         {
           "command": "kdb.execute.fileQuery",
           "group": "q",
-          "when": "editorLangId == q  && kdb.connected"
+          "when": "editorLangId == q && kdb.connected"
         },
         {
           "command": "kdb.execute.pythonScratchpadQuery",

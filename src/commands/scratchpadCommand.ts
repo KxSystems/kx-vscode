@@ -23,6 +23,10 @@ import {
   workspace,
 } from "vscode";
 import { ext } from "../extensionVariables";
+import { ConnectionManagementService } from "../services/connectionManagerService";
+import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
+import { activeConnection, connect, runQuery } from "./serverCommand";
+import { ExecutionTypes } from "../models/execution";
 
 function setRunScratchpadItemText(text: string) {
   ext.runScratchpadItem.text = `$(run) ${text}`;
@@ -30,11 +34,19 @@ function setRunScratchpadItemText(text: string) {
 
 function getServers() {
   const conf = workspace.getConfiguration("kdb");
-  const servers = conf.get<{ [key: string]: { serverName: string } }>(
+  const servers = conf.get<{ [key: string]: { serverAlias: string } }>(
     "servers",
     {},
   );
-  return Object.keys(servers).map((key) => servers[key].serverName);
+  const insights = conf.get<{ [key: string]: { alias: string } }>(
+    "insightsEnterpriseConnections",
+    {},
+  );
+
+  return [
+    ...Object.keys(servers).map((key) => servers[key].serverAlias),
+    ...Object.keys(insights).map((key) => insights[key].alias),
+  ];
 }
 
 function getServerForScratchpad(uri: Uri) {
@@ -61,10 +73,22 @@ export function workspaceFoldersChanged() {
   ext.scratchpadTreeProvider.refresh();
 }
 
-export function activeEditorChanged(editor?: TextEditor | undefined) {
-  const item = ext.runScratchpadItem;
+function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   if (editor) {
-    const uri = editor.document.uri;
+    const scheme = editor.document.uri.scheme;
+    if (scheme === "file") {
+      ext.activeTextEditor = editor;
+    }
+  } else {
+    ext.activeTextEditor = undefined;
+  }
+}
+
+export function activeEditorChanged(editor?: TextEditor | undefined) {
+  setRealActiveTextEditor(editor);
+  const item = ext.runScratchpadItem;
+  if (ext.activeTextEditor) {
+    const uri = ext.activeTextEditor.document.uri;
     const path = uri.path;
     if (path.endsWith("kdb.q") || path.endsWith("kdb.py")) {
       const server = getServerForScratchpad(uri);
@@ -105,7 +129,42 @@ export async function runScratchpad(uri: Uri) {
   }
 
   if (server) {
-    window.showInformationMessage(`Running scratchpad on ${server}`);
+    const servers = await ext.serverProvider.getChildren();
+    const found = servers.find((item) => {
+      if (item instanceof InsightsNode) {
+        return item.details.alias === server;
+      } else if (item instanceof KdbNode) {
+        return item.details.serverAlias === server;
+      }
+      return false;
+    });
+
+    const node = found as KdbNode;
+    if (found) {
+      const cms = new ConnectionManagementService();
+      if (!cms.isConnected(node.label)) {
+        const action = await window.showWarningMessage(
+          `${node.label} not connected`,
+          "Connect",
+        );
+        if (action === "Connect") {
+          await connect(node);
+        } else {
+          return;
+        }
+      }
+
+      activeConnection(node);
+
+      const isPython = uri.path.endsWith(".py");
+      const type = isPython
+        ? ExecutionTypes.PythonQueryFile
+        : ExecutionTypes.QueryFile;
+      await runQuery(type);
+      ext.activeConnection?.update();
+    } else {
+      window.showErrorMessage(`${node.label} not found`);
+    }
   }
 }
 
