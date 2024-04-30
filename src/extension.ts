@@ -463,9 +463,6 @@ export async function activate(context: ExtensionContext) {
     StatusBarAlignment.Right,
     10000,
   );
-
-  ext.runScratchpadItem.tooltip = "Run scratchpad";
-
   ext.runScratchpadItem.backgroundColor = new ThemeColor(
     "statusBarItem.warningBackground",
   );

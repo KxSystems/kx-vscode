@@ -28,6 +28,8 @@ import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import { activeConnection, connect, runQuery } from "./serverCommand";
 import { ExecutionTypes } from "../models/execution";
 
+const connectionService = new ConnectionManagementService();
+
 function setRunScratchpadItemText(text: string) {
   ext.runScratchpadItem.text = `$(run) ${text}`;
 }
@@ -66,6 +68,27 @@ async function setServerForScratchpad(uri: Uri, server: string | undefined) {
   );
   scratchpads[uri.path] = server;
   await conf.update("scratchpads", scratchpads);
+}
+
+async function waitForConnection(name: string) {
+  return new Promise<void>((resolve, reject) => {
+    let count = 0;
+    const retry = () => {
+      count++;
+      setTimeout(() => {
+        if (connectionService.isConnected(name)) {
+          resolve();
+        } else {
+          if (count < 5) {
+            retry();
+          } else {
+            reject(`Can not connect to ${name}`);
+          }
+        }
+      }, 50);
+    };
+    retry();
+  });
 }
 
 export function workspaceFoldersChanged() {
@@ -141,19 +164,18 @@ export async function runScratchpad(uri: Uri) {
 
     const node = found as KdbNode;
     if (found) {
-      const cms = new ConnectionManagementService();
-      if (!cms.isConnected(node.label)) {
+      if (!connectionService.isConnected(node.label)) {
         const action = await window.showWarningMessage(
           `${node.label} not connected`,
           "Connect",
         );
         if (action === "Connect") {
           await connect(node);
+          await waitForConnection(node.label);
         } else {
           return;
         }
       }
-
       activeConnection(node);
 
       const isPython = uri.path.endsWith(".py");
@@ -161,7 +183,6 @@ export async function runScratchpad(uri: Uri) {
         ? ExecutionTypes.PythonQueryFile
         : ExecutionTypes.QueryFile;
       await runQuery(type);
-      ext.activeConnection?.update();
     } else {
       window.showErrorMessage(`${node.label} not found`);
     }
