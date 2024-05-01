@@ -190,9 +190,9 @@
           "description": "Enable linting for q files",
           "default": false
         },
-        "kdb.scratchpads": {
+        "kdb.connectionMap": {
           "type": "object",
-          "description": "Scratchpads",
+          "description": "Connection map for workspace files",
           "default": {},
           "scope": "resource"
         }
@@ -390,7 +390,7 @@
         "category": "KX",
         "command": "kdb.terminal.run",
         "title": "Run q file in a new q instance",
-        "icon": "$(run)"
+        "icon": "$(debug-alt)"
       },
       {
         "category": "KX",
@@ -401,7 +401,7 @@
         "category": "KX",
         "command": "kdb.execute.selectedQuery",
         "title": "Execute Current Selection",
-        "icon": "$(run)"
+        "icon": "$(run-below)"
       },
       {
         "category": "KX",
@@ -412,7 +412,8 @@
       {
         "category": "KX",
         "command": "kdb.execute.pythonScratchpadQuery",
-        "title": "Execute Current Selection in Insights Scratchpad"
+        "title": "Execute Current Selection in Insights Scratchpad",
+        "icon": "$(run-below)"
       },
       {
         "category": "KX",

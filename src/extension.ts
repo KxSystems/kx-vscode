@@ -59,7 +59,6 @@ import {
   connect,
   disconnect,
   enableTLS,
-  executeQuery,
   removeConnection,
   rerunQuery,
   resetScratchPad,
@@ -104,7 +103,7 @@ import {
   activeEditorChanged,
   ConnectionLensProvider,
   pickConnection,
-  runScratchpad,
+  runActiveEditor,
   workspaceFoldersChanged,
 } from "./commands/scratchpadCommand";
 import { createDefaultDataSourceFile } from "./models/dataSource";
@@ -254,7 +253,6 @@ export async function activate(context: ExtensionContext) {
     ),
     commands.registerCommand("kdb.refreshServerObjects", () => {
       ext.serverProvider.reload();
-      ext.activeConnection?.update();
     }),
     commands.registerCommand(
       "kdb.queryHistory.rerun",
@@ -342,27 +340,16 @@ export async function activate(context: ExtensionContext) {
       }
     }),
     commands.registerCommand("kdb.runScratchpad", async () => {
-      if (ext.activeTextEditor) {
-        const path = ext.activeTextEditor.document.uri.path;
-        await runScratchpad(
-          path.endsWith(".kdb.py")
-            ? ExecutionTypes.PythonQueryFile
-            : ExecutionTypes.QuerySelection,
-        );
-        ext.activeConnection?.update();
-      }
+      await runActiveEditor();
     }),
     commands.registerCommand("kdb.execute.selectedQuery", async () => {
-      await runScratchpad(ExecutionTypes.QuerySelection);
-      ext.activeConnection?.update();
+      await runActiveEditor(ExecutionTypes.QuerySelection);
     }),
     commands.registerCommand("kdb.execute.fileQuery", async () => {
-      await runScratchpad(ExecutionTypes.QueryFile);
-      ext.activeConnection?.update();
+      await runActiveEditor(ExecutionTypes.QueryFile);
     }),
     commands.registerCommand("kdb.execute.pythonScratchpadQuery", async () => {
-      await runScratchpad(ExecutionTypes.PythonQuerySelection);
-      ext.activeConnection?.update();
+      await runActiveEditor(ExecutionTypes.PythonQuerySelection);
     }),
     commands.registerCommand("kdb.scratchpad.reset", async () => {
       await resetScratchPad();
@@ -370,8 +357,7 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand(
       "kdb.execute.pythonFileScratchpadQuery",
       async () => {
-        await runScratchpad(ExecutionTypes.PythonQueryFile);
-        ext.activeConnection?.update();
+        await runActiveEditor(ExecutionTypes.PythonQueryFile);
       },
     ),
     commands.registerCommand(

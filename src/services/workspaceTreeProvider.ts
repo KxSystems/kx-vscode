@@ -24,6 +24,7 @@ import {
 import Path from "path";
 import { getServerIconState } from "../utils/core";
 import { getConnectionForUri } from "../commands/scratchpadCommand";
+import { ext } from "../extensionVariables";
 
 export class WorkspaceTreeProvider implements TreeDataProvider<FileTreeItem> {
   private _onDidChangeTreeData = new EventEmitter<void>();
@@ -32,7 +33,9 @@ export class WorkspaceTreeProvider implements TreeDataProvider<FileTreeItem> {
   constructor(
     private readonly glob: string,
     private readonly baseIcon: string,
-  ) {}
+  ) {
+    ext.serverProvider.onDidChangeTreeData(() => this.reload());
+  }
 
   reload() {
     this._onDidChangeTreeData.fire();
