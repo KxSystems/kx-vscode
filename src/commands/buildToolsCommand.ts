@@ -103,21 +103,21 @@ function initBuildTools() {
   return new Promise<void>((resolve, reject) => {
     const home = getBuidToolsHome();
     if (home) {
-      if (process.platform === "darwin") {
-        const xattr = spawn(
-          "/usr/bin/xattr",
-          [
-            "-d",
-            "com.apple.quarantine",
-            Path.join(home, "ws", "lib", "*.{so,dylib}"),
-          ],
-          { shell: true },
-        );
-        xattr.on("exit", () => resolve());
-        xattr.on("error", (error) => reject(error));
-      } else {
-        resolve();
-      }
+      // if (process.platform === "darwin") {
+      //   const xattr = spawn(
+      //     "/usr/bin/xattr",
+      //     [
+      //       "-d",
+      //       "com.apple.quarantine",
+      //       Path.join(home, "ws", "lib", "*.{so,dylib}"),
+      //     ],
+      //     { shell: true },
+      //   );
+      //   xattr.on("exit", () => resolve());
+      //   xattr.on("error", (error) => reject(error));
+      // } else {
+      resolve();
+      // }
     } else {
       reject(new Error("AXLIBRARIES_HOME is not set"));
     }
