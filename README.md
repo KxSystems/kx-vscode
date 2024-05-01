@@ -35,7 +35,7 @@ After installing the extension, if you have an existing q installation, you will
 
 If you do not have an existing q installation, and wish to [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/) follow [Integrating VS Code with q](#integrate-vs-code-with-q), where the VS Code Extension guides you through the steps to register, install q and add your license file. 
 
-#### Registering for other kdb versions
+### Registering for other kdb versions
 
 If you wish to use a version other than [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/) you must register for that version and install q before continuing.
 
@@ -49,16 +49,14 @@ The table below describes the different versions and their support for different
 
 Contact licadmin@kx.com for commercial kdb licensing.
 
-After registering for your chosen version, you will receive an email with a link to download an installation file and a `k4.lic` or `kc.lic` license file. 
-
-Follow the instructions [here](https://code.kx.com/q/learn/install) for Linux, macOS and Windows to install q and a license file before proceeding.
+After registering for your chosen version, you will receive an email with a link to download an installation file and a `k4.lic` or `kc.lic` license file. Follow the instructions [here](https://code.kx.com/q/learn/install) for Linux, macOS and Windows to install q and a license file before proceeding.
 
 
-#### Integrate VS Code with q 
+### Integrate VS Code with q 
 
 To integrate VS Code with q take the following steps:
 
-**Step 1**: Click `Install new instance` from the prompt. If the prompt is not visible click on the kdb extension icon again, if that does not dsplya the prompt then close and re-open VS Code.
+**Step 1**: Click `Install new instance` from the prompt. If the prompt is not visible ensure the kdb extension is selected in the Activity bar on the left, if that does not display the prompt, close and re-open VS Code.
 
   ![installnewinstance](https://github.com/KxSystems/kx-vscode/blob/main/img/installnewinstance.jpg?raw=true)
 
@@ -66,7 +64,9 @@ To integrate VS Code with q take the following steps:
 
   ![findlicense](https://github.com/KxSystems/kx-vscode/blob/main/img/findlicense.jpg?raw=true)
 
-**Step 3**: With the license secured, you can then link this to VS Code by either `pasting license string` or `selecting license file` from your PC; the latter method is recommended for new users.
+  Once registered you will receive an email with you license details.
+
+**Step 3**: With the license secured, you can link this to VS Code by either `pasting license string` or `selecting license file` from your PC; the latter method is recommended for new users.
 
   ![findlicense](https://github.com/KxSystems/kx-vscode/blob/main/img/pastelicense.jpg?raw=true)
 
@@ -257,7 +257,7 @@ There are three options available from the right-click menu for executing code:
 
 kdb Insights Enterprise offers enhanced connectivity and enterprise level API endpoints, providing additional means to query data and interact with kdb Insights Enterprise that are not available with standard kdb processes. You must have an instance of kdb Insights Enterprise running, and have created a [connection](#connections) within the kdb VS Code extension.
 
-Similarly, you can execute arbitrary code against kdb Insights Enterprise. The code is executed on a user-specific scratchpad process within the kdb Insights Enterprise deploy. The scratchpad is instanciated upon the first request to execute code when connected to a kdb Insights Enterprise connection. It remains active until timed out, you shose to reset the scratchpad or until you log out.
+Similarly, you can execute arbitrary code against kdb Insights Enterprise. The code is executed on a user-specific scratchpad process within the kdb Insights Enterprise deploy. The scratchpad is instanciated upon the first request to execute code when connected to a kdb Insights Enterprise connection. It remains active until timed out, until you log out or when you chose to [reset the scratchpad](#reset-scratchpad).
 
 #### Data sources
 
@@ -289,9 +289,9 @@ To do this:
 
 ![Populate Scratchpad](https://github.com/KxSystems/kx-vscode/blob/main/img/populate-scratchpad.png?raw=true)
 
-#### Reset scratchpad
+##### Reset scratchpad
 
-When you have a connected Insights connection you can clear your scratchpad memory removing all data and reseting all variables in it
+You can clear the memory of an active scratchpad removing all data and reseting all variables in it
 
 This can be done by either:
 
