@@ -408,6 +408,7 @@ export async function activate(context: ExtensionContext) {
   Telemetry.sendEvent("Extension.Activated");
   const yamlExtension = extensions.getExtension("redhat.vscode-yaml");
   if (yamlExtension) {
+    const actualSchema = await workspace.getConfiguration().get("yaml.schemas");
     const schemaJSON = {
       "https://code.kx.com/insights/enterprise/packaging/schemas/pipeline.json":
         "*pipelines/*.yaml",
@@ -420,10 +421,11 @@ export async function activate(context: ExtensionContext) {
       "https://code.kx.com/insights/enterprise/packaging/schemas/shard.json":
         "*shard.yaml",
     };
+    Object.assign(actualSchema, schemaJSON);
     await yamlExtension.activate().then(() => {
       workspace
         .getConfiguration()
-        .update("yaml.schemas", schemaJSON, ConfigurationTarget.Global);
+        .update("yaml.schemas", actualSchema, ConfigurationTarget.Global);
     });
   }
 }
