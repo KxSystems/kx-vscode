@@ -311,6 +311,8 @@ export async function connect(viewItem: KdbNode | InsightsNode): Promise<void> {
 
   refreshDataSourcesPanel();
   ext.serverProvider.reload();
+  ext.dataSourceProvider.refresh();
+  ext.scratchpadTreeProvider.reload();
 }
 
 export function activeConnection(viewItem: KdbNode | InsightsNode): void {
@@ -318,6 +320,8 @@ export function activeConnection(viewItem: KdbNode | InsightsNode): void {
   connMngService.setActiveConnection(viewItem);
   refreshDataSourcesPanel();
   ext.serverProvider.reload();
+  ext.dataSourceProvider.refresh();
+  ext.scratchpadTreeProvider.reload();
 }
 
 export async function disconnect(connLabel: string): Promise<void> {
@@ -329,6 +333,8 @@ export async function disconnect(connLabel: string): Promise<void> {
     queryConsole.dispose();
     DataSourcesPanel.close();
     ext.serverProvider.reload();
+    ext.dataSourceProvider.refresh();
+    ext.scratchpadTreeProvider.reload();
   }
 }
 

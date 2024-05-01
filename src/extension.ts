@@ -127,8 +127,14 @@ export async function activate(context: ExtensionContext) {
   ext.resultsViewProvider = new KdbResultsViewProvider(
     ext.context.extensionUri,
   );
-  ext.scratchpadTreeProvider = new WorkspaceTreeProvider("**/*.kdb.{q,py}");
-  ext.dataSourceTreeProvider = new WorkspaceTreeProvider("**/*.kdb.json");
+  ext.scratchpadTreeProvider = new WorkspaceTreeProvider(
+    "**/*.kdb.{q,py}",
+    "scratchpad",
+  );
+  ext.dataSourceTreeProvider = new WorkspaceTreeProvider(
+    "**/*.kdb.json",
+    "p-q-connection",
+  );
 
   commands.executeCommand("setContext", "kdb.QHOME", env.QHOME);
 
@@ -246,6 +252,8 @@ export async function activate(context: ExtensionContext) {
     ),
     commands.registerCommand("kdb.refreshServerObjects", () => {
       ext.serverProvider.reload();
+      ext.dataSourceProvider.refresh();
+      ext.scratchpadTreeProvider.reload();
       ext.activeConnection?.update();
     }),
     commands.registerCommand(
@@ -389,7 +397,7 @@ export async function activate(context: ExtensionContext) {
       },
     ),
     commands.registerCommand("kdb.refreshDataSourceExplorer", () => {
-      ext.dataSourceTreeProvider.refresh();
+      ext.dataSourceTreeProvider.reload();
     }),
     commands.registerCommand(
       "kdb.createScratchpad",
@@ -401,7 +409,7 @@ export async function activate(context: ExtensionContext) {
       },
     ),
     commands.registerCommand("kdb.refreshScratchpadExplorer", () => {
-      ext.scratchpadTreeProvider.refresh();
+      ext.scratchpadTreeProvider.reload();
     }),
     commands.registerCommand("kdb.pickConnection", async () => {
       const editor = ext.activeTextEditor;

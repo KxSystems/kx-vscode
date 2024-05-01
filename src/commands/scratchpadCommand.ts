@@ -51,15 +51,6 @@ function getServers() {
   ];
 }
 
-function getServerForScratchpad(uri: Uri) {
-  const conf = workspace.getConfiguration("kdb", uri);
-  const scratchpads = conf.get<{ [key: string]: string | undefined }>(
-    "scratchpads",
-    {},
-  );
-  return scratchpads[uri.path];
-}
-
 async function setServerForScratchpad(uri: Uri, server: string | undefined) {
   const conf = workspace.getConfiguration("kdb", uri);
   const scratchpads = conf.get<{ [key: string]: string | undefined }>(
@@ -89,9 +80,46 @@ async function waitForConnection(name: string) {
   });
 }
 
+async function getConnectionForServer(server: string) {
+  if (server) {
+    const servers = await ext.serverProvider.getChildren();
+    return servers.find((item) => {
+      if (item instanceof InsightsNode) {
+        return item.details.alias === server;
+      } else if (item instanceof KdbNode) {
+        return item.details.serverAlias === server;
+      }
+      return false;
+    }) as KdbNode | InsightsNode;
+  }
+}
+
+export function getServerForUri(uri: Uri) {
+  const conf = workspace.getConfiguration("kdb", uri);
+  const scratchpads = conf.get<{ [key: string]: string | undefined }>(
+    "scratchpads",
+    {},
+  );
+  return scratchpads[uri.path];
+}
+
+export function getConnectionForUri(uri: Uri) {
+  const server = getServerForUri(uri);
+  if (server) {
+    return ext.connectionsList.find((item) => {
+      if (item instanceof InsightsNode) {
+        return item.details.alias === server;
+      } else if (item instanceof KdbNode) {
+        return item.details.serverAlias === server;
+      }
+      return false;
+    }) as KdbNode | InsightsNode;
+  }
+}
+
 export function workspaceFoldersChanged() {
-  ext.dataSourceTreeProvider.refresh();
-  ext.scratchpadTreeProvider.refresh();
+  ext.dataSourceTreeProvider.reload();
+  ext.scratchpadTreeProvider.reload();
 }
 
 function setRealActiveTextEditor(editor?: TextEditor | undefined) {
@@ -111,8 +139,8 @@ export function activeEditorChanged(editor?: TextEditor | undefined) {
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
     const path = uri.path;
-    if (path.endsWith("kdb.q") || path.endsWith("kdb.py")) {
-      const server = getServerForScratchpad(uri);
+    if (path.endsWith(".kdb.q") || path.endsWith(".kdb.py")) {
+      const server = getServerForUri(uri);
       setRunScratchpadItemText(server || "Run");
       item.show();
     } else {
@@ -124,7 +152,7 @@ export function activeEditorChanged(editor?: TextEditor | undefined) {
 }
 
 export async function pickConnection(uri: Uri) {
-  const server = getServerForScratchpad(uri);
+  const server = getServerForUri(uri);
 
   let picked = await window.showQuickPick(["(none)", ...getServers()], {
     title: "Choose a connection",
@@ -143,28 +171,18 @@ export async function pickConnection(uri: Uri) {
 }
 
 export async function runScratchpad(uri: Uri) {
-  let server = getServerForScratchpad(uri);
+  let server = getServerForUri(uri);
 
   if (!server) {
     server = await pickConnection(uri);
   }
 
   if (server) {
-    const servers = await ext.serverProvider.getChildren();
-    // ext.connectionsList is not used, we can hit from workspace
-    const connection = servers.find((item) => {
-      if (item instanceof InsightsNode) {
-        return item.details.alias === server;
-      } else if (item instanceof KdbNode) {
-        return item.details.serverAlias === server;
-      }
-      return false;
-    }) as KdbNode | InsightsNode;
-
+    const connection = await getConnectionForServer(server);
     if (connection) {
       if (!connectionService.isConnected(connection.label)) {
         const action = await window.showWarningMessage(
-          `${connection.label} not connected`,
+          `${connection.label} is not connected`,
           "Connect",
         );
         if (action === "Connect") {
@@ -176,20 +194,20 @@ export async function runScratchpad(uri: Uri) {
       }
       connectionService.setActiveConnection(connection);
 
-      const isPython = uri.path.endsWith(".py");
-      const type = isPython
-        ? ExecutionTypes.PythonQueryFile
-        : ExecutionTypes.QueryFile;
-      await runQuery(type);
+      await runQuery(
+        uri.path.endsWith(".py")
+          ? ExecutionTypes.PythonQueryFile
+          : ExecutionTypes.QueryFile,
+      );
     } else {
-      window.showErrorMessage(`${server} not found`);
+      window.showErrorMessage(`${server} is not found`);
     }
   }
 }
 
 export class ConnectionLensProvider implements CodeLensProvider {
   provideCodeLenses(document: TextDocument): ProviderResult<CodeLens[]> {
-    const server = getServerForScratchpad(document.uri);
+    const server = getServerForUri(document.uri);
     const top = new Range(0, 0, 0, 0);
     const runScratchpad = new CodeLens(top, {
       command: "kdb.runScratchpad",

@@ -21,14 +21,20 @@ import {
   Uri,
   workspace,
 } from "vscode";
+import Path from "path";
+import { getServerIconState } from "../utils/core";
+import { getConnectionForUri } from "../commands/scratchpadCommand";
 
 export class WorkspaceTreeProvider implements TreeDataProvider<FileTreeItem> {
   private _onDidChangeTreeData = new EventEmitter<void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  constructor(private readonly glob: string) {}
+  constructor(
+    private readonly glob: string,
+    private readonly baseIcon: string,
+  ) {}
 
-  refresh() {
+  reload() {
     this._onDidChangeTreeData.fire();
   }
 
@@ -39,7 +45,9 @@ export class WorkspaceTreeProvider implements TreeDataProvider<FileTreeItem> {
     const folders = workspace.workspaceFolders;
     if (folders) {
       return Promise.resolve(
-        folders.map((folder) => new FileTreeItem(folder.uri, this.glob)),
+        folders.map(
+          (folder) => new FileTreeItem(folder.uri, this.baseIcon, this.glob),
+        ),
       );
     }
     return Promise.resolve([]);
@@ -53,7 +61,11 @@ export class WorkspaceTreeProvider implements TreeDataProvider<FileTreeItem> {
 export class FileTreeItem extends TreeItem {
   private declare pattern?: RelativePattern;
 
-  constructor(resourceUri: Uri, glob?: string) {
+  constructor(
+    resourceUri: Uri,
+    private readonly baseIcon: string,
+    glob?: string,
+  ) {
     super(resourceUri);
     this.id = resourceUri.toString();
     if (glob) {
@@ -71,12 +83,32 @@ export class FileTreeItem extends TreeItem {
     }
   }
 
+  private updateIconPath() {
+    let state = "";
+    if (this.resourceUri) {
+      const connection = getConnectionForUri(this.resourceUri);
+      if (connection) {
+        state = getServerIconState(connection.label);
+      }
+    }
+    this.iconPath = Path.join(
+      __filename,
+      "../".repeat(2),
+      "resources",
+      this.baseIcon + state + ".svg",
+    );
+  }
+
   async getChildren(): Promise<FileTreeItem[]> {
     if (this.pattern) {
       const files = await workspace.findFiles(this.pattern);
       return files
         .sort((a, b) => a.path.localeCompare(b.path))
-        .map((file) => new FileTreeItem(file));
+        .map((file) => {
+          const item = new FileTreeItem(file, this.baseIcon);
+          item.updateIconPath();
+          return item;
+        });
     }
     return [];
   }
