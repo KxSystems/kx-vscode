@@ -15,8 +15,10 @@ import { env } from "node:process";
 import path from "path";
 import {
   commands,
+  ConfigurationTarget,
   EventEmitter,
   ExtensionContext,
+  extensions,
   languages,
   TextDocumentContentProvider,
   Uri,
@@ -404,6 +406,26 @@ export async function activate(context: ExtensionContext) {
   await connectBuildTools();
 
   Telemetry.sendEvent("Extension.Activated");
+  const yamlExtension = extensions.getExtension("redhat.vscode-yaml");
+  if (yamlExtension) {
+    const schemaJSON = {
+      "https://code.kx.com/insights/enterprise/packaging/schemas/pipeline.json":
+        "*pipelines/*.yaml",
+      "https://code.kx.com/insights/enterprise/packaging/schemas/table.json":
+        "tables/*.yaml",
+      "https://code.kx.com/insights/enterprise/packaging/schemas/deploymentconfig.json":
+        "deployment_config.yaml",
+      "https://code.kx.com/insights/enterprise/packaging/schemas/router.json":
+        "router.yaml",
+      "https://code.kx.com/insights/enterprise/packaging/schemas/shard.json":
+        "*shard.yaml",
+    };
+    await yamlExtension.activate().then(() => {
+      workspace
+        .getConfiguration()
+        .update("yaml.schemas", schemaJSON, ConfigurationTarget.Global);
+    });
+  }
 }
 
 export async function deactivate(): Promise<void> {
