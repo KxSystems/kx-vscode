@@ -63,7 +63,6 @@ import {
   removeConnection,
   rerunQuery,
   resetScratchPad,
-  runQuery,
 } from "./commands/serverCommand";
 import { showInstallationDetails } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
@@ -342,37 +341,39 @@ export async function activate(context: ExtensionContext) {
         checkLocalInstall();
       }
     }),
-    commands.registerCommand("kdb.execute.selectedQuery", () => {
-      runQuery(ExecutionTypes.QuerySelection);
+    commands.registerCommand("kdb.runScratchpad", async () => {
+      if (ext.activeTextEditor) {
+        const path = ext.activeTextEditor.document.uri.path;
+        await runScratchpad(
+          path.endsWith(".kdb.py")
+            ? ExecutionTypes.PythonQueryFile
+            : ExecutionTypes.QuerySelection,
+        );
+        ext.activeConnection?.update();
+      }
+    }),
+    commands.registerCommand("kdb.execute.selectedQuery", async () => {
+      await runScratchpad(ExecutionTypes.QuerySelection);
       ext.activeConnection?.update();
     }),
-    commands.registerCommand("kdb.execute.fileQuery", () => {
-      runQuery(ExecutionTypes.QueryFile);
+    commands.registerCommand("kdb.execute.fileQuery", async () => {
+      await runScratchpad(ExecutionTypes.QueryFile);
       ext.activeConnection?.update();
     }),
-    commands.registerCommand("kdb.execute.pythonScratchpadQuery", () => {
-      runQuery(ExecutionTypes.PythonQuerySelection);
+    commands.registerCommand("kdb.execute.pythonScratchpadQuery", async () => {
+      await runScratchpad(ExecutionTypes.PythonQuerySelection);
       ext.activeConnection?.update();
     }),
     commands.registerCommand("kdb.scratchpad.reset", async () => {
       await resetScratchPad();
     }),
-    commands.registerCommand("kdb.execute.pythonFileScratchpadQuery", () => {
-      runQuery(ExecutionTypes.PythonQueryFile);
-      ext.activeConnection?.update();
-    }),
-    // TODO MS REMOVE
-    commands.registerCommand("kdb.execute.entireFile", async (uri: Uri) => {
-      if (!uri) {
-        return;
-      }
-      const isPython = uri.fsPath.endsWith(".py");
-      if (uri.fsPath.endsWith(".q") || isPython) {
-        const content = await workspace.fs.readFile(uri);
-        const query = content.toString();
-        await executeQuery(query, undefined, isPython);
-      }
-    }),
+    commands.registerCommand(
+      "kdb.execute.pythonFileScratchpadQuery",
+      async () => {
+        await runScratchpad(ExecutionTypes.PythonQueryFile);
+        ext.activeConnection?.update();
+      },
+    ),
     commands.registerCommand(
       "kdb.createDataSource",
       async (item: FileTreeItem) => {
@@ -416,12 +417,6 @@ export async function activate(context: ExtensionContext) {
       const editor = ext.activeTextEditor;
       if (editor) {
         await pickConnection(editor.document.uri);
-      }
-    }),
-    commands.registerCommand("kdb.runScratchpad", async () => {
-      const editor = ext.activeTextEditor;
-      if (editor) {
-        await runScratchpad(editor.document.uri);
       }
     }),
 

@@ -170,38 +170,45 @@ export async function pickConnection(uri: Uri) {
   return picked;
 }
 
-export async function runScratchpad(uri: Uri) {
-  let server = getServerForUri(uri);
+function isPython(uri: Uri) {
+  return uri.path.endsWith(".py");
+}
 
-  if (!server) {
-    server = await pickConnection(uri);
-  }
+function isScratchpad(uri: Uri) {
+  return uri.path.endsWith(".kdb.q") || uri.path.endsWith(".kdb.py");
+}
 
-  if (server) {
-    const connection = await getConnectionForServer(server);
-    if (connection) {
-      if (!connectionService.isConnected(connection.label)) {
-        const action = await window.showWarningMessage(
-          `${connection.label} is not connected`,
-          "Connect",
-        );
-        if (action === "Connect") {
-          await connectionService.connect(connection.label);
-          await waitForConnection(connection.label);
+export async function runScratchpad(type: ExecutionTypes) {
+  if (ext.activeTextEditor) {
+    const uri = ext.activeTextEditor.document.uri;
+    if (isScratchpad(uri)) {
+      let server = getServerForUri(uri);
+      if (!server) {
+        server = await pickConnection(uri);
+      }
+
+      if (server) {
+        const connection = await getConnectionForServer(server);
+        if (connection) {
+          if (!connectionService.isConnected(connection.label)) {
+            const action = await window.showWarningMessage(
+              `${connection.label} is not connected`,
+              "Connect",
+            );
+            if (action === "Connect") {
+              await connectionService.connect(connection.label);
+              await waitForConnection(connection.label);
+            } else {
+              return;
+            }
+          }
+          connectionService.setActiveConnection(connection);
         } else {
-          return;
+          window.showErrorMessage(`${server} is not found`);
         }
       }
-      connectionService.setActiveConnection(connection);
-
-      runQuery(
-        uri.path.endsWith(".py")
-          ? ExecutionTypes.PythonQueryFile
-          : ExecutionTypes.QueryFile,
-      );
-    } else {
-      window.showErrorMessage(`${server} is not found`);
     }
+    runQuery(type);
   }
 }
 
@@ -210,7 +217,9 @@ export class ConnectionLensProvider implements CodeLensProvider {
     const server = getServerForUri(document.uri);
     const top = new Range(0, 0, 0, 0);
     const runScratchpad = new CodeLens(top, {
-      command: "kdb.runScratchpad",
+      command: isPython(document.uri)
+        ? "kdb.execute.pythonFileScratchpadQuery"
+        : "kdb.execute.fileQuery",
       title: server ? `Run on ${server}` : "Run",
     });
     const pickConnection = new CodeLens(top, {
