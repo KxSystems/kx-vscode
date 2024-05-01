@@ -104,7 +104,7 @@ This runs a q session using the existing kdb installed as part of the kdb VS Cod
 
 **Step 3**: The _server name / alias_ will already be set as `local`.
 
-**Step 4**: The _connection address_ will be already be set as `127.0.0.1` which corresponds to your _localhost_
+**Step 4**: The _connection address_ will already be set as `127.0.0.1` which corresponds to your _localhost_
 
 **Step 5**: Set the _port_ for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. _5002_
 
@@ -164,7 +164,7 @@ For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb pro
 
 **Step 3**: Create a _server name / alias_; this can be any name, aside from `local`, which is used by [Bundled q connection](#bundled-q).
 
-**Step 4**: Set the _hostname_. This is the remote address of your kdb Insights Enterprise deployment: e.g `https://mykdbinsights.cloudapp.azure.com`
+**Step 4**: Set the _hostname_. This is the remote address of your kdb Insights Enterprise deployment: e.g. `https://mykdbinsights.cloudapp.azure.com`
 
 **Step 5**: Click **Create connection** to confirm the _connection creation_
 
@@ -257,7 +257,7 @@ There are three options available from the right-click menu for executing code:
 
 kdb Insights Enterprise offers enhanced connectivity and enterprise level API endpoints, providing additional means to query data and interact with kdb Insights Enterprise that are not available with standard kdb processes. You must have an instance of kdb Insights Enterprise running, and have created a [connection](#connections) within the kdb VS Code extension.
 
-Similarly, you can execute arbitrary code against kdb Insights Enterprise. The code is executed on a user-specific scratchpad process within the kdb Insights Enterprise deploy. The scratchpad is instanciated upon the first request to execute code when connected to a kdb Insights Enterprise connection. It remains active until timed out, until you log out or when you chose to [reset the scratchpad](#reset-scratchpad).
+Similarly, you can execute arbitrary code against kdb Insights Enterprise. The code is executed on a user-specific scratchpad process within the kdb Insights Enterprise deploy. The scratchpad is instantiated upon the first request to execute code when connected to a kdb Insights Enterprise connection. It remains active until timed out, until you log out or when you chose to [reset the scratchpad](#reset-scratchpad).
 
 #### Data sources
 
@@ -291,13 +291,11 @@ To do this:
 
 ##### Reset scratchpad
 
-You can clear the memory of an active scratchpad removing all data and reseting all variables in it
-
-This can be done by either:
+You can clear the memory of an active scratchpad which will remove all data and reset all variables in it. This can be done by either:
 
 - Right-clicking inside a scratchpad and choosing Reset from the menu
 
-- Open a VSCode command prompt (CMD+SHIFT+P) and type in 'reset scratchpad'
+- Open a VS Code command prompt (CMD+SHIFT+P) and type in 'reset scratchpad'
 
 
 ## View results
@@ -314,7 +312,7 @@ All query executions happen remotely from the kdb VS Code extension either again
 
   ![Output autoscrolling](https://github.com/KxSystems/kx-vscode/blob/main/img/auto-scrolling.png?raw=true)
 
-  **Note** You can hide or show the full details in the console output. Go to settings of the vscode, search for kdb, check the option "Hide Detailed Console Query Output" (this option is checked by default)
+  **Note** You can hide or show the full details in the console output. Go to settings of the VS Code, search for kdb, check the option "Hide Detailed Console Query Output" (this option is checked by default)
 
   ![Hide Detailed Console Query Output](https://github.com/KxSystems/kx-vscode/blob/main/img/hide-detailed-console-query.png?raw=true)
 
