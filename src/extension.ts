@@ -255,8 +255,6 @@ export async function activate(context: ExtensionContext) {
     ),
     commands.registerCommand("kdb.refreshServerObjects", () => {
       ext.serverProvider.reload();
-      ext.dataSourceProvider.refresh();
-      ext.scratchpadTreeProvider.reload();
       ext.activeConnection?.update();
     }),
     commands.registerCommand(
@@ -344,28 +342,25 @@ export async function activate(context: ExtensionContext) {
         checkLocalInstall();
       }
     }),
-    commands.registerCommand("kdb.execute.selectedQuery", async () => {
-      await runQuery(ExecutionTypes.QuerySelection);
+    commands.registerCommand("kdb.execute.selectedQuery", () => {
+      runQuery(ExecutionTypes.QuerySelection);
       ext.activeConnection?.update();
     }),
-    commands.registerCommand("kdb.execute.fileQuery", async () => {
-      await runQuery(ExecutionTypes.QueryFile);
+    commands.registerCommand("kdb.execute.fileQuery", () => {
+      runQuery(ExecutionTypes.QueryFile);
       ext.activeConnection?.update();
     }),
-    commands.registerCommand("kdb.execute.pythonScratchpadQuery", async () => {
-      await runQuery(ExecutionTypes.PythonQuerySelection);
+    commands.registerCommand("kdb.execute.pythonScratchpadQuery", () => {
+      runQuery(ExecutionTypes.PythonQuerySelection);
       ext.activeConnection?.update();
     }),
     commands.registerCommand("kdb.scratchpad.reset", async () => {
       await resetScratchPad();
     }),
-    commands.registerCommand(
-      "kdb.execute.pythonFileScratchpadQuery",
-      async () => {
-        await runQuery(ExecutionTypes.PythonQueryFile);
-        ext.activeConnection?.update();
-      },
-    ),
+    commands.registerCommand("kdb.execute.pythonFileScratchpadQuery", () => {
+      runQuery(ExecutionTypes.PythonQueryFile);
+      ext.activeConnection?.update();
+    }),
     // TODO MS REMOVE
     commands.registerCommand("kdb.execute.entireFile", async (uri: Uri) => {
       if (!uri) {
@@ -418,13 +413,13 @@ export async function activate(context: ExtensionContext) {
       ext.scratchpadTreeProvider.reload();
     }),
     commands.registerCommand("kdb.pickConnection", async () => {
-      const editor = ext.activeTextEditor;
+      const editor = window.activeTextEditor;
       if (editor) {
         await pickConnection(editor.document.uri);
       }
     }),
     commands.registerCommand("kdb.runScratchpad", async () => {
-      const editor = ext.activeTextEditor;
+      const editor = window.activeTextEditor;
       if (editor) {
         await runScratchpad(editor.document.uri);
       }

@@ -134,10 +134,10 @@ function setRealActiveTextEditor(editor?: TextEditor | undefined) {
 }
 
 export function activeEditorChanged(editor?: TextEditor | undefined) {
-  setRealActiveTextEditor(editor);
+  //setRealActiveTextEditor(editor);
   const item = ext.runScratchpadItem;
-  if (ext.activeTextEditor) {
-    const uri = ext.activeTextEditor.document.uri;
+  if (editor) {
+    const uri = editor.document.uri;
     const path = uri.path;
     if (path.endsWith(".kdb.q") || path.endsWith(".kdb.py")) {
       const server = getServerForUri(uri);
@@ -194,7 +194,7 @@ export async function runScratchpad(uri: Uri) {
       }
       connectionService.setActiveConnection(connection);
 
-      await runQuery(
+      runQuery(
         uri.path.endsWith(".py")
           ? ExecutionTypes.PythonQueryFile
           : ExecutionTypes.QueryFile,

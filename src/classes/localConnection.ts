@@ -76,8 +76,6 @@ export class LocalConnection {
     nodeq.connect(this.options, (err, conn) => {
       if (err || !conn) {
         ext.serverProvider.reload();
-        ext.dataSourceProvider.refresh();
-        ext.scratchpadTreeProvider.reload();
 
         window.showErrorMessage(
           `Connection to server ${this.options.host}:${this.options.port} failed!  Details: ${err?.message}`,

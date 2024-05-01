@@ -137,8 +137,6 @@ export class ConnectionManagementService {
       commands.executeCommand("setContext", "kdb.insightsConnected", false);
     }
     ext.serverProvider.reload();
-    ext.dataSourceProvider.refresh();
-    ext.scratchpadTreeProvider.reload();
   }
 
   public disconnect(connLabel: string): void {
@@ -222,8 +220,6 @@ export class ConnectionManagementService {
     this.setActiveConnection(connNode);
     ext.connectionNode = connNode;
     ext.serverProvider.reload();
-    ext.dataSourceProvider.refresh();
-    ext.scratchpadTreeProvider.reload();
   }
 
   public isNotConnectedBehaviour(connLabel: string): void {
@@ -258,8 +254,6 @@ export class ConnectionManagementService {
       `Connection stopped from ${connection.connLabel}`,
     );
     ext.serverProvider.reload();
-    ext.dataSourceProvider.refresh();
-    ext.scratchpadTreeProvider.reload();
   }
 
   public async executeQuery(
