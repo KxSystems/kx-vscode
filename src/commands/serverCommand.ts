@@ -11,33 +11,19 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import axios, { AxiosRequestConfig } from "axios";
 import { readFileSync } from "fs-extra";
-import { jwtDecode } from "jwt-decode";
 import { join } from "path";
 import * as url from "url";
-import {
-  Position,
-  ProgressLocation,
-  Range,
-  commands,
-  window,
-  workspace,
-} from "vscode";
+import { Position, Range, commands, window } from "vscode";
 import { ext } from "../extensionVariables";
-import { isCompressed, uncompress } from "../ipc/c";
-import { GetDataObjectPayload } from "../models/data";
-import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
+import { DataSourceFiles } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
 import { InsightDetails, Insights } from "../models/insights";
-import { JwtUser } from "../models/jwt_user";
-import { MetaObject, MetaObjectPayload } from "../models/meta";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
 import { Server, ServerDetails, ServerType } from "../models/server";
 import { ServerObject } from "../models/serverObject";
 import { DataSourcesPanel } from "../panels/datasource";
-import { getCurrentToken } from "../services/kdbInsights/codeFlowLogin";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import {
   addLocalConnectionContexts,
@@ -53,12 +39,7 @@ import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { decodeQUTF } from "../utils/decode";
 import { ExecutionConsole } from "../utils/executionConsole";
 import { openUrl } from "../utils/openUrl";
-import {
-  handleScratchpadTableRes,
-  handleWSResults,
-  checkIfIsDatasource,
-  addQueryHistory,
-} from "../utils/queryUtils";
+import { checkIfIsDatasource, addQueryHistory } from "../utils/queryUtils";
 import {
   validateServerAlias,
   validateServerName,
@@ -90,7 +71,7 @@ export async function addInsightsConnection(insightsData: InsightDetails) {
   let insights: Insights | undefined = getInsights();
   if (insights != undefined && insights[getHash(insightsData.server!)]) {
     await window.showErrorMessage(
-      `Insights instance named ${insightsData.alias} already exists.`,
+      `Insights instance named ${insightsData.alias} already exists.`
     );
     return;
   } else {
@@ -118,7 +99,7 @@ export async function addInsightsConnection(insightsData: InsightDetails) {
       Telemetry.sendEvent("Connection.Created.Insights");
     }
     window.showInformationMessage(
-      `Added Insights connection: ${insightsData.alias}`,
+      `Added Insights connection: ${insightsData.alias}`
     );
     NewConnectionPannel.close();
   }
@@ -129,7 +110,7 @@ export async function addInsightsConnection(insightsData: InsightDetails) {
 export async function addAuthConnection(
   serverKey: string,
   username: string,
-  password: string,
+  password: string
 ): Promise<void> {
   const validUsername = validateServerUsername(username);
   if (validUsername) {
@@ -169,7 +150,7 @@ export async function enableTLS(serverKey: string): Promise<void> {
       .showErrorMessage(
         "OpenSSL not found, please ensure this is installed",
         "More Info",
-        "Cancel",
+        "Cancel"
       )
       .then(async (result) => {
         if (result === "More Info") {
@@ -189,13 +170,13 @@ export async function enableTLS(serverKey: string): Promise<void> {
   }
   window.showErrorMessage(
     "Server not found, please ensure this is a correct server",
-    "Cancel",
+    "Cancel"
   );
 }
 
 export async function addKdbConnection(
   kdbData: ServerDetails,
-  isLocal?: boolean,
+  isLocal?: boolean
 ): Promise<void> {
   const aliasValidation = validateServerAlias(kdbData.serverAlias, isLocal!);
   const hostnameValidation = validateServerName(kdbData.serverName);
@@ -219,13 +200,13 @@ export async function addKdbConnection(
     servers[getHash(`${kdbData.serverName}:${kdbData.serverPort}`)]
   ) {
     await window.showErrorMessage(
-      `Server ${kdbData.serverName}:${kdbData.serverPort} already exists.`,
+      `Server ${kdbData.serverName}:${kdbData.serverPort} already exists.`
     );
   } else {
     const key =
       kdbData.serverAlias != undefined
         ? getHash(
-            `${kdbData.serverName}${kdbData.serverPort}${kdbData.serverAlias}`,
+            `${kdbData.serverName}${kdbData.serverPort}${kdbData.serverAlias}`
           )
         : getHash(`${kdbData.serverName}${kdbData.serverPort}`);
     if (servers === undefined) {
@@ -266,7 +247,7 @@ export async function addKdbConnection(
       addAuthConnection(key, kdbData.username!, kdbData.password!);
     }
     window.showInformationMessage(
-      `Added kdb connection: ${kdbData.serverAlias}`,
+      `Added kdb connection: ${kdbData.serverAlias}`
     );
     NewConnectionPannel.close();
   }
@@ -294,7 +275,7 @@ export async function connect(viewItem: KdbNode | InsightsNode): Promise<void> {
         const result = await window.showInformationMessage(
           "TLS support requires OpenSSL to be installed.",
           "More Info",
-          "Cancel",
+          "Cancel"
         );
         if (result === "More Info") {
           openUrl("https://code.kx.com/q/kb/ssl/");
@@ -324,6 +305,11 @@ export function activeConnection(viewItem: KdbNode | InsightsNode): void {
   ext.scratchpadTreeProvider.reload();
 }
 
+export async function resetScratchPad(): Promise<void> {
+  const connMngService = new ConnectionManagementService();
+  await connMngService.resetScratchpad();
+}
+
 export async function disconnect(connLabel: string): Promise<void> {
   const connMngService = new ConnectionManagementService();
   connMngService.disconnect(connLabel);
@@ -342,13 +328,13 @@ export async function disconnect(connLabel: string): Promise<void> {
 export async function executeQuery(
   query: string,
   context?: string,
-  isPython?: boolean,
+  isPython?: boolean
 ): Promise<void> {
   const connMngService = new ConnectionManagementService();
   const queryConsole = ExecutionConsole.start();
   if (ext.activeConnection === undefined && ext.connectionNode === undefined) {
     window.showInformationMessage(
-      "Please connect to a KDB instance or Insights Instance to execute a query",
+      "Please connect to a KDB instance or Insights Instance to execute a query"
     );
     return undefined;
   }
@@ -361,7 +347,7 @@ export async function executeQuery(
       query,
       "Query is empty",
       isConnected,
-      ext.connectionNode?.label ? ext.connectionNode.label : "",
+      ext.connectionNode?.label ? ext.connectionNode.label : ""
     );
     return undefined;
   }
@@ -398,8 +384,8 @@ export function getQueryContext(lineNum?: number): string {
       text = editor.document.getText(
         new Range(
           new Position(0, 0),
-          new Position(lineNum, line.range.end.character),
-        ),
+          new Position(lineNum, line.range.end.character)
+        )
       );
     }
 
@@ -442,7 +428,7 @@ export async function runQuery(type: ExecutionTypes, rerunQuery?: string) {
   const insightsNode = ext.kdbinsightsNodes.find((n) =>
     ext.connectionNode instanceof InsightsNode
       ? n === ext.connectionNode?.details.alias + " (connected)"
-      : false,
+      : false
   );
   switch (type) {
     case ExecutionTypes.QuerySelection:
@@ -481,7 +467,7 @@ export function rerunQuery(rerunQueryElement: QueryHistory) {
     executeQuery(
       rerunQueryElement.query,
       context,
-      rerunQueryElement.language !== "q",
+      rerunQueryElement.language !== "q"
     );
   } else {
     const dsFile = rerunQueryElement.query as DataSourceFiles;
@@ -497,13 +483,13 @@ export async function loadServerObjects(): Promise<ServerObject[]> {
     ext.activeConnection instanceof InsightsConnection
   ) {
     window.showInformationMessage(
-      "Please connect to a KDB instance to view the objects",
+      "Please connect to a KDB instance to view the objects"
     );
     return new Array<ServerObject>();
   }
 
   const script = readFileSync(
-    ext.context.asAbsolutePath(join("resources", "list_mem.q")),
+    ext.context.asAbsolutePath(join("resources", "list_mem.q"))
   ).toString();
   const cc = "\n" + script + "(::)";
   const result = await ext.activeConnection?.executeQueryRaw(cc);
@@ -523,7 +509,7 @@ export function writeQueryResultsToConsole(
   query: string,
   dataSourceType?: string,
   isPython?: boolean,
-  duration?: string,
+  duration?: string
 ): void {
   const queryConsole = ExecutionConsole.start();
   const res = Array.isArray(result)
@@ -539,7 +525,7 @@ export function writeQueryResultsToConsole(
       ext.connectionNode?.label ? ext.connectionNode.label : "",
       dataSourceType,
       isPython,
-      duration,
+      duration
     );
   } else {
     if (!checkIfIsDatasource(dataSourceType)) {
@@ -550,7 +536,7 @@ export function writeQueryResultsToConsole(
         ext.connectionNode?.label ? ext.connectionNode.label : "",
         isPython,
         undefined,
-        duration,
+        duration
       );
     }
   }
@@ -561,7 +547,7 @@ export function writeQueryResultsToView(
   query: string,
   dataSourceType?: string,
   isPython?: boolean,
-  duration?: string,
+  duration?: string
 ): void {
   commands.executeCommand("kdb.resultsPanel.update", result, dataSourceType);
   const connectionType: ServerType =
@@ -577,7 +563,7 @@ export function writeQueryResultsToView(
       isPython,
       undefined,
       undefined,
-      duration,
+      duration
     );
   }
 }
@@ -586,7 +572,7 @@ export function writeScratchpadResult(
   result: ScratchpadResult,
   query: string,
   duration: string,
-  isPython?: boolean,
+  isPython?: boolean
 ): void {
   const queryConsole = ExecutionConsole.start();
 
@@ -595,7 +581,7 @@ export function writeScratchpadResult(
       query,
       result.errorMsg,
       true,
-      ext.connectionNode?.label ? ext.connectionNode.label : "",
+      ext.connectionNode?.label ? ext.connectionNode.label : ""
     );
   } else {
     if (ext.resultsViewProvider.isVisible()) {
@@ -604,7 +590,7 @@ export function writeScratchpadResult(
         query,
         "SCRATCHPAD",
         isPython,
-        duration,
+        duration
       );
     } else {
       writeQueryResultsToConsole(
@@ -612,7 +598,7 @@ export function writeScratchpadResult(
         query,
         undefined,
         isPython,
-        duration,
+        duration
       );
     }
   }

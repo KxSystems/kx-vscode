@@ -16,8 +16,10 @@ import path from "path";
 import {
   Command,
   commands,
+  ConfigurationTarget,
   EventEmitter,
   ExtensionContext,
+  extensions,
   languages,
   Range,
   StatusBarAlignment,
@@ -60,6 +62,7 @@ import {
   executeQuery,
   removeConnection,
   rerunQuery,
+  resetScratchPad,
   runQuery,
 } from "./commands/serverCommand";
 import { showInstallationDetails } from "./commands/walkthroughCommand";
@@ -353,6 +356,9 @@ export async function activate(context: ExtensionContext) {
       await runQuery(ExecutionTypes.PythonQuerySelection);
       ext.activeConnection?.update();
     }),
+    commands.registerCommand("kdb.scratchpad.reset", async () => {
+      await resetScratchPad();
+    }),
     commands.registerCommand(
       "kdb.execute.pythonFileScratchpadQuery",
       async () => {
@@ -516,6 +522,28 @@ export async function activate(context: ExtensionContext) {
   await connectBuildTools();
 
   Telemetry.sendEvent("Extension.Activated");
+  const yamlExtension = extensions.getExtension("redhat.vscode-yaml");
+  if (yamlExtension) {
+    const actualSchema = await workspace.getConfiguration().get("yaml.schemas");
+    const schemaJSON = {
+      "https://code.kx.com/insights/enterprise/packaging/schemas/pipeline.json":
+        "*pipelines/*.yaml",
+      "https://code.kx.com/insights/enterprise/packaging/schemas/table.json":
+        "tables/*.yaml",
+      "https://code.kx.com/insights/enterprise/packaging/schemas/deploymentconfig.json":
+        "deployment_config.yaml",
+      "https://code.kx.com/insights/enterprise/packaging/schemas/router.json":
+        "router.yaml",
+      "https://code.kx.com/insights/enterprise/packaging/schemas/shard.json":
+        "*shard.yaml",
+    };
+    Object.assign(actualSchema, schemaJSON);
+    await yamlExtension.activate().then(() => {
+      workspace
+        .getConfiguration()
+        .update("yaml.schemas", actualSchema, ConfigurationTarget.Global);
+    });
+  }
 }
 
 export async function deactivate(): Promise<void> {

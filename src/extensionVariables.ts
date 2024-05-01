@@ -135,6 +135,7 @@ export namespace ext {
     import: "servicebroker/scratchpad/import/data",
     importSql: "servicebroker/scratchpad/import/sql",
     importQsql: "servicebroker/scratchpad/import/qsql",
+    reset: "servicebroker/scratchpad/reset",
   };
 
   export const insightsServiceGatewayUrls = {
