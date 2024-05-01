@@ -25,7 +25,7 @@ import {
 import { ext } from "../extensionVariables";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
-import { activeConnection, connect, runQuery } from "./serverCommand";
+import { runQuery } from "./serverCommand";
 import { ExecutionTypes } from "../models/execution";
 
 const connectionService = new ConnectionManagementService();
@@ -78,12 +78,10 @@ async function waitForConnection(name: string) {
       setTimeout(() => {
         if (connectionService.isConnected(name)) {
           resolve();
+        } else if (count < 5) {
+          retry();
         } else {
-          if (count < 5) {
-            retry();
-          } else {
-            reject(`Can not connect to ${name}`);
-          }
+          reject(`Can not connect to ${name}`);
         }
       }, 50);
     };
@@ -153,30 +151,30 @@ export async function runScratchpad(uri: Uri) {
 
   if (server) {
     const servers = await ext.serverProvider.getChildren();
-    const found = servers.find((item) => {
+    // ext.connectionsList is not used, we can hit from workspace
+    const connection = servers.find((item) => {
       if (item instanceof InsightsNode) {
         return item.details.alias === server;
       } else if (item instanceof KdbNode) {
         return item.details.serverAlias === server;
       }
       return false;
-    });
+    }) as KdbNode | InsightsNode;
 
-    const node = found as KdbNode;
-    if (found) {
-      if (!connectionService.isConnected(node.label)) {
+    if (connection) {
+      if (!connectionService.isConnected(connection.label)) {
         const action = await window.showWarningMessage(
-          `${node.label} not connected`,
+          `${connection.label} not connected`,
           "Connect",
         );
         if (action === "Connect") {
-          await connect(node);
-          await waitForConnection(node.label);
+          await connectionService.connect(connection.label);
+          await waitForConnection(connection.label);
         } else {
           return;
         }
       }
-      activeConnection(node);
+      connectionService.setActiveConnection(connection);
 
       const isPython = uri.path.endsWith(".py");
       const type = isPython
@@ -184,7 +182,7 @@ export async function runScratchpad(uri: Uri) {
         : ExecutionTypes.QueryFile;
       await runQuery(type);
     } else {
-      window.showErrorMessage(`${node.label} not found`);
+      window.showErrorMessage(`${server} not found`);
     }
   }
 }
