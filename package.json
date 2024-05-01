@@ -55,7 +55,8 @@
     "onView:kdb-query-history",
     "onView:kdb-datasources-explorer",
     "onView:kdb-results",
-    "onTerminalProfile:kdb.q-terminal"
+    "onTerminalProfile:kdb.q-terminal",
+    "onLanguage:python"
   ],
   "main": "./out/extension.js",
   "contributes": {

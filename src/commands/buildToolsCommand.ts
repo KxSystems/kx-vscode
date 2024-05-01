@@ -259,8 +259,8 @@ export async function connectBuildTools() {
     }
   });
 
-  if (window.activeTextEditor) {
-    const document = window.activeTextEditor.document;
+  if (ext.activeTextEditor) {
+    const document = ext.activeTextEditor.document;
     if (isAutoLintingSupported(document)) {
       await setDiagnostics(document);
     }

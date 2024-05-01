@@ -1507,7 +1507,7 @@ describe("serverCommand", () => {
   });
 
   describe("runQuery", () => {
-    const editor = {
+    const editor = <vscode.TextEditor>(<unknown>{
       selection: {
         isEmpty: false,
         active: { line: 5 },
@@ -1517,16 +1517,12 @@ describe("serverCommand", () => {
         lineAt: sinon.stub().returns({ text: "SELECT * FROM table" }),
         getText: sinon.stub().returns("SELECT * FROM table"),
       },
-    };
+    });
 
-    let getQueryContextStub,
-      activeTextEditorStub,
-      executeQueryStub: sinon.SinonStub;
+    let getQueryContextStub, executeQueryStub: sinon.SinonStub;
 
     beforeEach(() => {
-      activeTextEditorStub = sinon
-        .stub(vscode.window, "activeTextEditor")
-        .value(editor);
+      ext.activeTextEditor = editor;
       getQueryContextStub = sinon
         .stub(serverCommand, "getQueryContext")
         .returns(".");
@@ -1537,14 +1533,14 @@ describe("serverCommand", () => {
     });
 
     afterEach(() => {
-      activeTextEditorStub.restore();
+      ext.activeTextEditor = undefined;
       getQueryContextStub.restore();
       executeQueryStub.restore();
       ext.kdbinsightsNodes.pop();
     });
 
     it("runQuery with undefined editor ", () => {
-      activeTextEditorStub.value(undefined);
+      ext.activeTextEditor = undefined;
       const result = serverCommand.runQuery(ExecutionTypes.PythonQueryFile);
       assert.equal(result, false);
     });

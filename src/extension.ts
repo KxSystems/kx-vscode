@@ -332,7 +332,7 @@ export async function activate(context: ExtensionContext) {
       },
     ),
     commands.registerCommand("kdb.terminal.run", () => {
-      const filename = window.activeTextEditor?.document.fileName;
+      const filename = ext.activeTextEditor?.document.fileName;
       if (filename) runQFileTerminal(filename);
     }),
     commands.registerCommand("kdb.terminal.start", () => {
@@ -413,13 +413,13 @@ export async function activate(context: ExtensionContext) {
       ext.scratchpadTreeProvider.reload();
     }),
     commands.registerCommand("kdb.pickConnection", async () => {
-      const editor = window.activeTextEditor;
+      const editor = ext.activeTextEditor;
       if (editor) {
         await pickConnection(editor.document.uri);
       }
     }),
     commands.registerCommand("kdb.runScratchpad", async () => {
-      const editor = window.activeTextEditor;
+      const editor = ext.activeTextEditor;
       if (editor) {
         await runScratchpad(editor.document.uri);
       }
@@ -432,7 +432,7 @@ export async function activate(context: ExtensionContext) {
       new ConnectionLensProvider(),
     ),
     commands.registerCommand("kdb.qlint", async () => {
-      const editor = window.activeTextEditor;
+      const editor = ext.activeTextEditor;
       if (editor) {
         await lintCommand(editor.document);
       }
