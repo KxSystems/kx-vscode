@@ -323,7 +323,9 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            ext.outputChannel.appendLine("User cancelled the installation.");
+            ext.outputChannel.appendLine(
+              "User cancelled the scratchpad execution.",
+            );
           });
 
           progress.report({ message: "Query is executing..." });
@@ -391,7 +393,9 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            ext.outputChannel.appendLine("User cancelled the installation.");
+            ext.outputChannel.appendLine(
+              "User cancelled the scratchpad reset.",
+            );
             return false;
           });
 
