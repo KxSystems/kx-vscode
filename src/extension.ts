@@ -130,7 +130,7 @@ export async function activate(context: ExtensionContext) {
   );
   ext.dataSourceTreeProvider = new WorkspaceTreeProvider(
     "**/*.kdb.json",
-    "p-q-connection",
+    "datasource",
   );
 
   commands.executeCommand("setContext", "kdb.QHOME", env.QHOME);

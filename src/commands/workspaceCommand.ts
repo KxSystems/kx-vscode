@@ -15,6 +15,7 @@ import {
   CodeLens,
   CodeLensProvider,
   Command,
+  ConfigurationTarget,
   ProviderResult,
   Range,
   StatusBarAlignment,
@@ -41,7 +42,7 @@ function workspaceFoldersChanged() {
 function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   if (editor) {
     const scheme = editor.document.uri.scheme;
-    if (scheme === "file") {
+    if (scheme !== "output") {
       ext.activeTextEditor = editor;
     }
   } else {
@@ -120,23 +121,29 @@ async function waitForConnection(name: string) {
   });
 }
 
+function relativePath(uri: Uri) {
+  return workspace.asRelativePath(uri, false);
+}
+
 async function setServerForUri(uri: Uri, server: string | undefined) {
+  uri = Uri.file(uri.path);
   const conf = workspace.getConfiguration("kdb", uri);
   const map = conf.get<{ [key: string]: string | undefined }>(
     "connectionMap",
     {},
   );
-  map[workspace.asRelativePath(uri)] = server;
+  map[relativePath(uri)] = server;
   await conf.update("connectionMap", map);
 }
 
 export function getServerForUri(uri: Uri) {
+  uri = Uri.file(uri.path);
   const conf = workspace.getConfiguration("kdb", uri);
-  const scratchpads = conf.get<{ [key: string]: string | undefined }>(
+  const map = conf.get<{ [key: string]: string | undefined }>(
     "connectionMap",
     {},
   );
-  return scratchpads[workspace.asRelativePath(uri)];
+  return map[relativePath(uri)];
 }
 
 export function getConnectionForUri(uri: Uri) {
@@ -170,6 +177,10 @@ export async function pickConnection(uri: Uri) {
   }
 
   return picked;
+}
+
+function isDataSource(uri: Uri) {
+  return uri.path.endsWith(".kdb.json");
 }
 
 function isPython(uri: Uri) {

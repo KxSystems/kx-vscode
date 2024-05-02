@@ -124,11 +124,11 @@ export async function addWorkspaceFile(
 ) {
   const folders = workspace.workspaceFolders;
   if (folders) {
-    const ws =
+    const folder =
       item && item.resourceUri
         ? workspace.getWorkspaceFolder(item.resourceUri)
         : folders[0];
-    if (ws) {
+    if (folder) {
       let i = 1;
       while (true) {
         const files = await workspace.findFiles(`${name}-${i}${ext}`);
@@ -137,7 +137,7 @@ export async function addWorkspaceFile(
         }
         i++;
       }
-      const uri = Uri.joinPath(ws.uri, `${name}-${i}${ext}`).with({
+      const uri = Uri.joinPath(folder.uri, `${name}-${i}${ext}`).with({
         scheme: "untitled",
       });
       await workspace.openTextDocument(uri);
