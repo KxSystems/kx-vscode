@@ -421,7 +421,7 @@ export async function activate(context: ExtensionContext) {
       "https://code.kx.com/insights/enterprise/packaging/schemas/shard.json":
         "*shard.yaml",
     };
-    Object.assign(actualSchema, schemaJSON);
+    Object.assign(actualSchema ? actualSchema : {}, schemaJSON);
     await yamlExtension.activate().then(() => {
       workspace
         .getConfiguration()
