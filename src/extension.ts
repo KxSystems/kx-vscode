@@ -319,9 +319,10 @@ export async function activate(context: ExtensionContext) {
       runQuery(ExecutionTypes.PythonQuerySelection);
       ext.activeConnection?.update();
     }),
-    commands.registerCommand("kdb.scratchpad.reset", async () => {
-      await resetScratchPad();
-    }),
+    // TODO renable it when the scratchpad reset API is fixed
+    // commands.registerCommand("kdb.scratchpad.reset", async () => {
+    //   await resetScratchPad();
+    // }),
     commands.registerCommand(
       "kdb.execute.pythonFileScratchpadQuery",
       async () => {

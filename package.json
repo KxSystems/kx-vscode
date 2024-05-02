@@ -51,7 +51,6 @@
     "onCommand:kdb.resultsPanel.update",
     "onCommand:kdb.resultsPanel.clear",
     "onCommand:kdb.resultsPanel.export.csv",
-    "onCommand:kdb.scratchpad.reset",
     "onView:kdb-servers",
     "onView:kdb-query-history",
     "onView:kdb-datasources-explorer",
@@ -358,11 +357,6 @@
         "title": "Execute Entire File"
       },
       {
-        "command": "kdb.scratchpad.reset",
-        "title": "Reset Scratchpad",
-        "when": "kdb.insightsConnected"
-      },
-      {
         "category": "KX",
         "command": "kdb.qlint",
         "title": "Lint q source file"
@@ -398,12 +392,6 @@
         "key": "ctrl+shift+r",
         "mac": "cmd+shift+r",
         "when": "editorLangId == q && (kdb.QHOME || config.kdb.qHomeDirectory)"
-      },
-      {
-        "command": "kdb.scratchpad.reset",
-        "key": "ctrl+shift+delete",
-        "mac": "cmd+shift+delete",
-        "when": "kdb.insightsConnected"
       }
     ],
     "snippets": [
