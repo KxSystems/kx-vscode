@@ -46,7 +46,7 @@ import {
   DDateTimeClass,
   DTimestampClass,
 } from "../../src/ipc/cClasses";
-import { DataSourceTypes } from "../../src/models/dataSource";
+import { DataSourceFiles, DataSourceTypes } from "../../src/models/dataSource";
 import { InsightDetails } from "../../src/models/insights";
 import { LocalConnection } from "../../src/classes/localConnection";
 import { ScratchpadFile } from "../../src/models/scratchpad";
@@ -101,7 +101,7 @@ describe("Utils", () => {
       beforeEach(() => {
         getConfigurationStub = sinon.stub(
           vscode.workspace,
-          "getConfiguration"
+          "getConfiguration",
         ) as sinon.SinonStub;
       });
 
@@ -208,6 +208,60 @@ describe("Utils", () => {
       });
     });
 
+    describe("getDatasourceStatusIcon", () => {
+      const dsFileDummy: DataSourceFiles = {
+        name: "test",
+        dataSource: {
+          selectedType: DataSourceTypes.API,
+          api: {
+            selectedApi: "",
+            table: "",
+            startTS: "",
+            endTS: "",
+            fill: "zero",
+            temporality: "snapshot",
+            filter: [],
+            groupBy: [],
+            agg: [],
+            sortCols: [],
+            slice: [],
+            labels: [],
+          },
+          qsql: {
+            query: "",
+            selectedTarget: "",
+          },
+          sql: {
+            query: "",
+          },
+        },
+      };
+      beforeEach(() => {
+        ext.activeDatasourceList.length = 0;
+        ext.connectedDatasourceList.length = 0;
+      });
+      afterEach(() => {
+        ext.activeDatasourceList.length = 0;
+        ext.connectedDatasourceList.length = 0;
+      });
+      it("should return active if scratchpad label is on the active list", () => {
+        ext.activeDatasourceList.push(dsFileDummy);
+        ext.connectedDatasourceList.push(dsFileDummy);
+        const result = coreUtils.getDatasourceStatusIcon("test");
+        assert.strictEqual(result, "-active");
+      });
+      it("should return connected if scratchpad label is on the connected list", () => {
+        ext.connectedDatasourceList.push(dsFileDummy);
+        const result = coreUtils.getDatasourceStatusIcon("test");
+        assert.strictEqual(result, "-connected");
+      });
+
+      it("should return empty string if scratchpad label is not on the active or connected list", () => {
+        const result = coreUtils.getDatasourceStatusIcon("test");
+        assert.strictEqual(result, "");
+      });
+    });
+
     describe("getServerIconState", () => {
       const localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
       afterEach(() => {
@@ -293,12 +347,12 @@ describe("Utils", () => {
     it("checkIfTimeParamIsCorrect", () => {
       const result = dataSourceUtils.checkIfTimeParamIsCorrect(
         "2021-01-01",
-        "2021-01-02"
+        "2021-01-02",
       );
       assert.strictEqual(result, true);
       const result2 = dataSourceUtils.checkIfTimeParamIsCorrect(
         "2021-01-02",
-        "2021-01-01"
+        "2021-01-01",
       );
       assert.strictEqual(result2, false);
     });
@@ -537,7 +591,7 @@ describe("Utils", () => {
           auth: false,
           tls: false,
         },
-        TreeItemCollapsibleState.None
+        TreeItemCollapsibleState.None,
       );
 
       const insightsNode = new InsightsNode(
@@ -548,7 +602,7 @@ describe("Utils", () => {
           alias: "insightsserveralias",
           auth: true,
         },
-        TreeItemCollapsibleState.None
+        TreeItemCollapsibleState.None,
       );
 
       beforeEach(() => {
@@ -596,7 +650,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.KDB
+          ServerType.KDB,
         );
 
         getConfigurationStub.restore();
@@ -619,7 +673,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.KDB
+          ServerType.KDB,
         );
         getConfigurationStub.restore();
       });
@@ -636,7 +690,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.INSIGHTS
+          ServerType.INSIGHTS,
         );
       });
 
@@ -652,7 +706,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.KDB
+          ServerType.KDB,
         );
       });
 
@@ -668,7 +722,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.INSIGHTS
+          ServerType.INSIGHTS,
         );
       });
 
@@ -684,7 +738,7 @@ describe("Utils", () => {
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
         assert.strictEqual(
           ext.kdbQueryHistoryList[0].connectionType,
-          ServerType.undefined
+          ServerType.undefined,
         );
       });
     });
@@ -712,7 +766,7 @@ describe("Utils", () => {
         connectionName,
         connectionType,
         true,
-        true
+        true,
       );
       assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
     });
@@ -749,7 +803,7 @@ describe("Utils", () => {
         "testPanel",
         "Test Panel",
         vscode.ViewColumn.One,
-        {}
+        {},
       );
       const webview = panel.webview;
       const extensionUri = vscode.Uri.parse("file:///path/to/extension");
@@ -763,7 +817,7 @@ describe("Utils", () => {
         "testPanel",
         "Test Panel",
         vscode.ViewColumn.One,
-        {}
+        {},
       );
       const webview = panel.webview;
       const extensionUri = vscode.Uri.parse("file:///path/to/extension");
@@ -1129,7 +1183,7 @@ describe("Utils", () => {
       getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
       showInformationMessageStub = sinon.stub(
         vscode.window,
-        "showInformationMessage"
+        "showInformationMessage",
       ) as sinon.SinonStub<
         [
           message: string,

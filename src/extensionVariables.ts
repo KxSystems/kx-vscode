@@ -37,6 +37,7 @@ import { WorkspaceTreeProvider } from "./services/workspaceTreeProvider";
 import { ScratchpadFile } from "./models/scratchpad";
 import { LocalConnection } from "./classes/localConnection";
 import { InsightsConnection } from "./classes/insightsConnection";
+import { DataSourceFiles } from "./models/dataSource";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
@@ -53,6 +54,8 @@ export namespace ext {
   export let runScratchpadItem: StatusBarItem;
   export const activeScratchPadList: Array<ScratchpadFile> = [];
   export const connectedScratchPadList: Array<ScratchpadFile> = [];
+  export const activeDatasourceList: Array<DataSourceFiles> = [];
+  export const connectedDatasourceList: Array<DataSourceFiles> = [];
   export let serverObjects: ServerObject;
   export let openSslVersion: string | null;
   export let resultPanelCSV: string;
