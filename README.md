@@ -76,7 +76,7 @@ To integrate VS Code with q take the following steps:
 
   The `k4.lic` or `kc.lic` license file can be downloaded to your PC using the link also found in the welcome email.
 
-**Step 4**: If you wish to use q outside of VSCode, set a [`QHOME` environment variable](https://code.kx.com/q/learn/install/#step-5-edit-your-profile) to the location used by the kdb VS Code install. A notification dialog displays the location of q, as do the extension [settings](#settings). T
+**Step 4**: If you wish to use q outside of VS Code, set a [`QHOME` environment variable](https://code.kx.com/q/learn/install/#step-5-edit-your-profile) to the location used by the kdb VS Code install. A notification dialog displays the location of q, as do the extension [settings](#settings). T
 
   ![qfound](https://github.com/KxSystems/kx-vscode/blob/main/img/installationofqfound.jpg?raw=true)
 
