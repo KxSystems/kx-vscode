@@ -14,10 +14,13 @@
 import {
   CodeLens,
   CodeLensProvider,
+  Command,
   ProviderResult,
   Range,
+  StatusBarAlignment,
   TextDocument,
   TextEditor,
+  ThemeColor,
   Uri,
   window,
   workspace,
@@ -30,13 +33,41 @@ import { ExecutionTypes } from "../models/execution";
 
 const connectionService = new ConnectionManagementService();
 
-function setRunScratchpadItemText(text: string) {
-  ext.runScratchpadItem.text = `$(run) ${text}`;
-}
-
-export function workspaceFoldersChanged() {
+function workspaceFoldersChanged() {
   ext.dataSourceTreeProvider.reload();
   ext.scratchpadTreeProvider.reload();
+}
+
+function setRealActiveTextEditor(editor?: TextEditor | undefined) {
+  if (editor) {
+    const scheme = editor.document.uri.scheme;
+    if (scheme === "file") {
+      ext.activeTextEditor = editor;
+    }
+  } else {
+    ext.activeTextEditor = undefined;
+  }
+}
+
+function activeEditorChanged(editor?: TextEditor | undefined) {
+  setRealActiveTextEditor(editor);
+  const item = ext.runScratchpadItem;
+  if (ext.activeTextEditor) {
+    const uri = ext.activeTextEditor.document.uri;
+    if (isScratchpad(uri)) {
+      const server = getServerForUri(uri);
+      setRunScratchpadItemText(server || "Run");
+      item.show();
+    } else {
+      item.hide();
+    }
+  } else {
+    item.hide();
+  }
+}
+
+function setRunScratchpadItemText(text: string) {
+  ext.runScratchpadItem.text = `$(run) ${text}`;
 }
 
 function getServers() {
@@ -54,39 +85,6 @@ function getServers() {
     ...Object.keys(servers).map((key) => servers[key].serverAlias),
     ...Object.keys(insights).map((key) => insights[key].alias),
   ];
-}
-
-export function getServerForUri(uri: Uri) {
-  const conf = workspace.getConfiguration("kdb", uri);
-  const scratchpads = conf.get<{ [key: string]: string | undefined }>(
-    "connectionMap",
-    {},
-  );
-  return scratchpads[workspace.asRelativePath(uri)];
-}
-
-async function setServerForUri(uri: Uri, server: string | undefined) {
-  const conf = workspace.getConfiguration("kdb", uri);
-  const map = conf.get<{ [key: string]: string | undefined }>(
-    "connectionMap",
-    {},
-  );
-  map[workspace.asRelativePath(uri)] = server;
-  await conf.update("connectionMap", map);
-}
-
-export function getConnectionForUri(uri: Uri) {
-  const server = getServerForUri(uri);
-  if (server) {
-    return ext.connectionsList.find((item) => {
-      if (item instanceof InsightsNode) {
-        return item.details.alias === server;
-      } else if (item instanceof KdbNode) {
-        return item.details.serverAlias === server;
-      }
-      return false;
-    }) as KdbNode | InsightsNode;
-  }
 }
 
 async function getConnectionForServer(server: string) {
@@ -122,31 +120,36 @@ async function waitForConnection(name: string) {
   });
 }
 
-function setRealActiveTextEditor(editor?: TextEditor | undefined) {
-  if (editor) {
-    const scheme = editor.document.uri.scheme;
-    if (scheme === "file") {
-      ext.activeTextEditor = editor;
-    }
-  } else {
-    ext.activeTextEditor = undefined;
-  }
+async function setServerForUri(uri: Uri, server: string | undefined) {
+  const conf = workspace.getConfiguration("kdb", uri);
+  const map = conf.get<{ [key: string]: string | undefined }>(
+    "connectionMap",
+    {},
+  );
+  map[workspace.asRelativePath(uri)] = server;
+  await conf.update("connectionMap", map);
 }
 
-export function activeEditorChanged(editor?: TextEditor | undefined) {
-  setRealActiveTextEditor(editor);
-  const item = ext.runScratchpadItem;
-  if (ext.activeTextEditor) {
-    const uri = ext.activeTextEditor.document.uri;
-    if (isScratchpad(uri)) {
-      const server = getServerForUri(uri);
-      setRunScratchpadItemText(server || "Run");
-      item.show();
-    } else {
-      item.hide();
-    }
-  } else {
-    item.hide();
+export function getServerForUri(uri: Uri) {
+  const conf = workspace.getConfiguration("kdb", uri);
+  const scratchpads = conf.get<{ [key: string]: string | undefined }>(
+    "connectionMap",
+    {},
+  );
+  return scratchpads[workspace.asRelativePath(uri)];
+}
+
+export function getConnectionForUri(uri: Uri) {
+  const server = getServerForUri(uri);
+  if (server) {
+    return ext.connectionsList.find((item) => {
+      if (item instanceof InsightsNode) {
+        return item.details.alias === server;
+      } else if (item instanceof KdbNode) {
+        return item.details.serverAlias === server;
+      }
+      return false;
+    }) as KdbNode | InsightsNode;
   }
 }
 
@@ -209,9 +212,11 @@ export async function runActiveEditor(type?: ExecutionTypes) {
     }
 
     runQuery(
-      type || isPython(uri)
-        ? ExecutionTypes.PythonQueryFile
-        : ExecutionTypes.QueryFile,
+      type === undefined
+        ? isPython(uri)
+          ? ExecutionTypes.PythonQueryFile
+          : ExecutionTypes.QueryFile
+        : type,
     );
   }
 }
@@ -232,4 +237,26 @@ export class ConnectionLensProvider implements CodeLensProvider {
     });
     return [runScratchpad, pickConnection];
   }
+}
+
+export function connectWorkspaceCommsnds() {
+  ext.runScratchpadItem = window.createStatusBarItem(
+    StatusBarAlignment.Right,
+    10000,
+  );
+  ext.runScratchpadItem.backgroundColor = new ThemeColor(
+    "statusBarItem.warningBackground",
+  );
+  ext.runScratchpadItem.command = <Command>{
+    title: "",
+    command: "kdb.runScratchpad",
+    arguments: [],
+  };
+
+  const watcher = workspace.createFileSystemWatcher("**/*.kdb.{json,q,py}");
+  watcher.onDidCreate(workspaceFoldersChanged);
+  watcher.onDidDelete(workspaceFoldersChanged);
+  workspace.onDidChangeWorkspaceFolders(workspaceFoldersChanged);
+  window.onDidChangeActiveTextEditor(activeEditorChanged);
+  activeEditorChanged(window.activeTextEditor);
 }

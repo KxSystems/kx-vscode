@@ -14,7 +14,6 @@
 import { env } from "node:process";
 import path from "path";
 import {
-  Command,
   commands,
   ConfigurationTarget,
   EventEmitter,
@@ -22,9 +21,7 @@ import {
   extensions,
   languages,
   Range,
-  StatusBarAlignment,
   TextDocumentContentProvider,
-  ThemeColor,
   Uri,
   window,
   workspace,
@@ -100,12 +97,11 @@ import {
   WorkspaceTreeProvider,
 } from "./services/workspaceTreeProvider";
 import {
-  activeEditorChanged,
   ConnectionLensProvider,
+  connectWorkspaceCommsnds,
   pickConnection,
   runActiveEditor,
-  workspaceFoldersChanged,
-} from "./commands/scratchpadCommand";
+} from "./commands/workspaceCommand";
 import { createDefaultDataSourceFile } from "./models/dataSource";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { CompletionProvider } from "./services/completionProvider";
@@ -423,6 +419,12 @@ export async function activate(context: ExtensionContext) {
       new QuickFixProvider(),
     ),
     ext.diagnosticCollection,
+    workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("kdb.connectionMap")) {
+        ext.dataSourceTreeProvider.reload();
+        ext.scratchpadTreeProvider.reload();
+      }
+    }),
   );
 
   const lastResult: QueryResult | undefined = undefined;
@@ -449,25 +451,8 @@ export async function activate(context: ExtensionContext) {
     ),
   );
 
-  ext.runScratchpadItem = window.createStatusBarItem(
-    StatusBarAlignment.Right,
-    10000,
-  );
-  ext.runScratchpadItem.backgroundColor = new ThemeColor(
-    "statusBarItem.warningBackground",
-  );
-  ext.runScratchpadItem.command = <Command>{
-    title: "",
-    command: "kdb.runScratchpad",
-    arguments: [],
-  };
-
-  const watcher = workspace.createFileSystemWatcher("**/*.kdb.{json,q,py}");
-  watcher.onDidCreate(workspaceFoldersChanged);
-  watcher.onDidDelete(workspaceFoldersChanged);
-  workspace.onDidChangeWorkspaceFolders(workspaceFoldersChanged);
-  window.onDidChangeActiveTextEditor(activeEditorChanged);
-  activeEditorChanged(window.activeTextEditor);
+  connectWorkspaceCommsnds();
+  await connectBuildTools();
 
   //q language server
   const serverModule = path.join(context.extensionPath, "out", "server.js");
@@ -495,7 +480,6 @@ export async function activate(context: ExtensionContext) {
   );
 
   await client.start();
-  await connectBuildTools();
 
   Telemetry.sendEvent("Extension.Activated");
   const yamlExtension = extensions.getExtension("redhat.vscode-yaml");

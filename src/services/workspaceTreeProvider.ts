@@ -23,7 +23,7 @@ import {
 } from "vscode";
 import Path from "path";
 import { getServerIconState } from "../utils/core";
-import { getConnectionForUri } from "../commands/scratchpadCommand";
+import { getConnectionForUri } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
 
 export class WorkspaceTreeProvider implements TreeDataProvider<FileTreeItem> {
