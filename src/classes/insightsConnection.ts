@@ -12,7 +12,7 @@
  */
 
 import { ext } from "../extensionVariables";
-import axios, { AxiosHeaders, AxiosRequestConfig } from "axios";
+import axios, { AxiosRequestConfig } from "axios";
 import { ProgressLocation, window } from "vscode";
 import * as url from "url";
 import { MetaObject, MetaObjectPayload } from "../models/meta";

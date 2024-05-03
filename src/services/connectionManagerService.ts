@@ -31,7 +31,6 @@ import {
 import { Insights } from "../models/insights";
 import { Server } from "../models/server";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
-import { promises } from "dns";
 
 export class ConnectionManagementService {
   public retrieveConnection(
