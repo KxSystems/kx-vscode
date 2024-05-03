@@ -15,7 +15,6 @@ import {
   CodeLens,
   CodeLensProvider,
   Command,
-  ConfigurationTarget,
   ProviderResult,
   Range,
   StatusBarAlignment,
@@ -71,20 +70,26 @@ function setRunScratchpadItemText(text: string) {
   ext.runScratchpadItem.text = `$(run) ${text}`;
 }
 
+export function getInsightsServers() {
+  const conf = workspace.getConfiguration("kdb");
+  const servers = conf.get<{ [key: string]: { alias: string } }>(
+    "insightsEnterpriseConnections",
+    {},
+  );
+
+  return Object.keys(servers).map((key) => servers[key].alias);
+}
+
 function getServers() {
   const conf = workspace.getConfiguration("kdb");
   const servers = conf.get<{ [key: string]: { serverAlias: string } }>(
     "servers",
     {},
   );
-  const insights = conf.get<{ [key: string]: { alias: string } }>(
-    "insightsEnterpriseConnections",
-    {},
-  );
 
   return [
     ...Object.keys(servers).map((key) => servers[key].serverAlias),
-    ...Object.keys(insights).map((key) => insights[key].alias),
+    ...getInsightsServers(),
   ];
 }
 
@@ -125,7 +130,7 @@ function relativePath(uri: Uri) {
   return workspace.asRelativePath(uri, false);
 }
 
-async function setServerForUri(uri: Uri, server: string | undefined) {
+export async function setServerForUri(uri: Uri, server: string | undefined) {
   uri = Uri.file(uri.path);
   const conf = workspace.getConfiguration("kdb", uri);
   const map = conf.get<{ [key: string]: string | undefined }>(
@@ -177,10 +182,6 @@ export async function pickConnection(uri: Uri) {
   }
 
   return picked;
-}
-
-function isDataSource(uri: Uri) {
-  return uri.path.endsWith(".kdb.json");
 }
 
 function isPython(uri: Uri) {

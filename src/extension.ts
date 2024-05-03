@@ -136,10 +136,7 @@ export async function activate(context: ExtensionContext) {
   commands.executeCommand("setContext", "kdb.QHOME", env.QHOME);
 
   window.registerTreeDataProvider("kdb-servers", ext.serverProvider);
-  window.registerTreeDataProvider(
-    "kdb-datasources-explorer",
-    ext.dataSourceProvider,
-  );
+
   window.registerTreeDataProvider(
     "kdb-query-history",
     ext.queryHistoryProvider,

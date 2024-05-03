@@ -20,11 +20,22 @@ import {
   Webview,
   WebviewPanel,
   WorkspaceEdit,
+  commands,
   window,
   workspace,
 } from "vscode";
 import { getUri } from "../utils/getUri";
 import { getNonce } from "../utils/getNonce";
+import { ConnectionManagementService } from "./connectionManagerService";
+import { ext } from "../extensionVariables";
+import { InsightsNode } from "./kdbTreeProvider";
+import {
+  getInsightsServers,
+  getServerForUri,
+  setServerForUri,
+} from "../commands/workspaceCommand";
+import { InsightsConnection } from "../classes/insightsConnection";
+import { DataSourceCommand, DataSourceMessage2 } from "../models/messages";
 
 export class DataSourceEditorProvider implements CustomTextEditorProvider {
   static readonly viewType = "kdb.dataSourceEditor";
@@ -37,22 +48,32 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     );
   }
 
+  private connectionService = new ConnectionManagementService();
+
   constructor(private readonly context: ExtensionContext) {}
 
-  resolveCustomTextEditor(
+  async resolveCustomTextEditor(
     document: TextDocument,
     webviewPanel: WebviewPanel,
-  ): void | Thenable<void> {
+  ): Promise<void> {
     const webview = webviewPanel.webview;
     webview.options = { enableScripts: true };
     webview.html = this.getWebviewContent(webview);
 
-    function updateWebview() {
-      webview.postMessage({
-        type: "update",
-        text: document.getText(),
-      });
+    if (ext.activeConnection instanceof InsightsConnection) {
+      Object.assign(ext.insightsMeta, await ext.activeConnection.getMeta());
     }
+
+    const updateWebview = () => {
+      webview.postMessage({
+        command: DataSourceCommand.Update,
+        isInsights: ext.connectionNode instanceof InsightsNode,
+        insightsMeta: ext.insightsMeta,
+        dataSourceFile: this.getDocumentAsJson(document),
+        servers: getInsightsServers(),
+        selectedServer: getServerForUri(document.uri) || "",
+      } as DataSourceMessage2);
+    };
 
     const changeDocumentSubscription = workspace.onDidChangeTextDocument(
       (event) => {
@@ -62,16 +83,36 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       },
     );
 
+    webviewPanel.onDidChangeViewState(() => {
+      if (webviewPanel.active) {
+        updateWebview();
+      }
+    });
+
     webviewPanel.onDidDispose(() => {
       changeDocumentSubscription.dispose();
     });
 
-    webview.onDidReceiveMessage((event) => {
-      switch (event.type) {
-        case "add":
+    webview.onDidReceiveMessage((msg: DataSourceMessage2) => {
+      switch (msg.command) {
+        case DataSourceCommand.Save:
+          this.updateTextDocument(document, msg.dataSourceFile);
+          commands.executeCommand("workbench.action.files.save", document);
           break;
-
-        case "delete":
+        case DataSourceCommand.Run:
+          commands.executeCommand(
+            "kdb.dataSource.runDataSource",
+            msg.dataSourceFile,
+          );
+          break;
+        case DataSourceCommand.Populate:
+          commands.executeCommand(
+            "kdb.dataSource.populateScratchpad",
+            msg.dataSourceFile,
+          );
+          break;
+        case DataSourceCommand.Server:
+          setServerForUri(document.uri, msg.selectedServer);
           break;
       }
     });

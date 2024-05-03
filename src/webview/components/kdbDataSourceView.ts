@@ -16,7 +16,6 @@ import { repeat } from "lit/directives/repeat.js";
 import { customElement, state } from "lit/decorators.js";
 import {
   Agg,
-  ColumnProvider,
   DataSourceFiles,
   DataSourceTypes,
   Filter,
@@ -31,9 +30,9 @@ import {
   createSort,
   filterOperators,
 } from "../../models/dataSource";
-import { DataSourceMessage } from "../../models/messages";
 import { MetaObjectPayload } from "../../models/meta";
 import { kdbStyles, vscodeStyles } from "./styles";
+import { DataSourceCommand, DataSourceMessage2 } from "../../models/messages";
 
 const MAX_RULES = 32;
 
@@ -41,56 +40,29 @@ const MAX_RULES = 32;
 export class KdbDataSourceView extends LitElement {
   static styles = [vscodeStyles, kdbStyles];
 
-  @state() declare isInsights: boolean;
-  @state() declare isMetaLoaded: boolean;
-  @state() declare insightsMeta: MetaObjectPayload;
-  @state() declare originalName: string;
-  @state() declare name: string;
-  @state() declare selectedType: DataSourceTypes;
-  @state() declare selectedApi: string;
-  @state() declare selectedTable: string;
-  @state() declare startTS: string;
-  @state() declare endTS: string;
-  @state() declare fill: string;
-  @state() declare filled: boolean;
-  @state() declare temporality: string;
-  @state() declare temporal: boolean;
-  @state() declare filters: Filter[];
-  @state() declare labels: Label[];
-  @state() declare sorts: Sort[];
-  @state() declare aggs: Agg[];
-  @state() declare groups: Group[];
-  @state() declare qsqlTarget: string;
-  @state() declare qsql: string;
-  @state() declare sql: string;
-  @state() declare running: boolean;
-
-  constructor() {
-    super();
-    this.isInsights = false;
-    this.isMetaLoaded = false;
-    this.insightsMeta = {} as MetaObjectPayload;
-    this.originalName = "";
-    this.name = "";
-    this.selectedType = DataSourceTypes.API;
-    this.selectedApi = "";
-    this.selectedTable = "";
-    this.startTS = "";
-    this.endTS = "";
-    this.fill = "";
-    this.filled = false;
-    this.temporality = "";
-    this.temporal = false;
-    this.filters = [createFilter()];
-    this.labels = [createLabel()];
-    this.sorts = [createSort()];
-    this.aggs = [createAgg()];
-    this.groups = [createGroup()];
-    this.qsqlTarget = "";
-    this.qsql = "";
-    this.sql = "";
-    this.running = false;
-  }
+  @state() isInsights = false;
+  @state() isMetaLoaded = false;
+  @state() insightsMeta = {} as MetaObjectPayload;
+  @state() selectedType = DataSourceTypes.API;
+  @state() selectedApi = "";
+  @state() selectedTable = "";
+  @state() startTS = "";
+  @state() endTS = "";
+  @state() fill = "";
+  @state() filled = false;
+  @state() temporality = "";
+  @state() temporal = false;
+  @state() filters = [createFilter()];
+  @state() labels = [createLabel()];
+  @state() sorts = [createSort()];
+  @state() aggs = [createAgg()];
+  @state() groups = [createGroup()];
+  @state() qsqlTarget = "";
+  @state() qsql = "";
+  @state() sql = "";
+  @state() running = false;
+  @state() servers: string[] = [];
+  @state() selectedServer = "";
 
   connectedCallback() {
     super.connectedCallback();
@@ -102,44 +74,44 @@ export class KdbDataSourceView extends LitElement {
     super.disconnectedCallback();
   }
 
-  private message = (event: MessageEvent<DataSourceMessage>) => {
-    const params = event.data;
-    if (params.running !== undefined) {
-      this.running = params.running;
-      return;
-    }
-    const ds = params.dataSourceFile;
-    this.isInsights = params.isInsights;
-    this.isMetaLoaded = !!params.insightsMeta.dap;
-    this.insightsMeta = params.insightsMeta;
-    this.originalName = params.dataSourceName;
-    this.name = params.dataSourceName;
-    this.selectedType = ds.dataSource.selectedType;
-    this.selectedApi = ds.dataSource.api.selectedApi;
-    this.selectedTable = ds.dataSource.api.table;
-    this.startTS = ds.dataSource.api.startTS;
-    this.endTS = ds.dataSource.api.endTS;
-    this.fill = ds.dataSource.api.fill;
-    this.temporality = ds.dataSource.api.temporality;
-    this.qsqlTarget = ds.dataSource.qsql.selectedTarget;
-    this.qsql = ds.dataSource.qsql.query;
-    this.sql = ds.dataSource.sql.query;
-    const optional = ds.dataSource.api.optional;
-    if (optional) {
-      this.filled = optional.filled;
-      this.temporal = optional.temporal;
-      this.filters = optional.filters;
-      this.labels = optional.labels;
-      this.sorts = optional.sorts;
-      this.aggs = optional.aggs;
-      this.groups = optional.groups;
+  private message = (event: MessageEvent<DataSourceMessage2>) => {
+    const msg = event.data;
+    switch (msg.command) {
+      case DataSourceCommand.Update:
+        this.servers = msg.servers;
+        this.selectedServer = msg.selectedServer;
+        const ds = msg.dataSourceFile;
+        this.isInsights = msg.isInsights;
+        this.isMetaLoaded = !!msg.insightsMeta.dap;
+        this.insightsMeta = msg.insightsMeta;
+        this.selectedType = ds.dataSource.selectedType;
+        this.selectedApi = ds.dataSource.api.selectedApi;
+        this.selectedTable = ds.dataSource.api.table;
+        this.startTS = ds.dataSource.api.startTS;
+        this.endTS = ds.dataSource.api.endTS;
+        this.fill = ds.dataSource.api.fill;
+        this.temporality = ds.dataSource.api.temporality;
+        this.qsqlTarget = ds.dataSource.qsql.selectedTarget;
+        this.qsql = ds.dataSource.qsql.query;
+        this.sql = ds.dataSource.sql.query;
+        const optional = ds.dataSource.api.optional;
+        if (optional) {
+          this.filled = optional.filled;
+          this.temporal = optional.temporal;
+          this.filters = optional.filters;
+          this.labels = optional.labels;
+          this.sorts = optional.sorts;
+          this.aggs = optional.aggs;
+          this.groups = optional.groups;
+        }
+        break;
     }
   };
 
   private get data(): DataSourceFiles {
     return {
-      name: this.name,
-      originalName: this.originalName,
+      name: "",
+      originalName: "",
       dataSource: {
         selectedType: this.selectedType,
         api: {
@@ -193,26 +165,26 @@ export class KdbDataSourceView extends LitElement {
 
   private save() {
     this.vscode.postMessage({
-      command: "kdb.dataSource.saveDataSource",
-      data: this.data,
-    });
+      command: DataSourceCommand.Save,
+      dataSourceFile: this.data,
+    } as DataSourceMessage2);
   }
 
   private run() {
     this.vscode.postMessage({
-      command: "kdb.dataSource.runDataSource",
-      data: this.data,
-    });
+      command: DataSourceCommand.Run,
+      dataSourceFile: this.data,
+    } as DataSourceMessage2);
   }
 
   private populateScratchpad() {
     this.vscode.postMessage({
-      command: "kdb.dataSource.populateScratchpad",
-      data: this.data,
-    });
+      command: DataSourceCommand.Populate,
+      dataSourceFile: this.data,
+    } as DataSourceMessage2);
   }
 
-  private renderApiOptions(selected: string) {
+  private renderApiOptions() {
     if (this.isInsights && this.isMetaLoaded) {
       return this.insightsMeta.api
         .filter(
@@ -221,55 +193,38 @@ export class KdbDataSourceView extends LitElement {
         .map((api) => {
           const value =
             api.api === ".kxi.getData" ? api.api.replace(".kxi.", "") : api.api;
-          if (!this.selectedApi) {
-            this.selectedApi = value;
-          }
           return html`
-            <vscode-option value="${value}" ?selected="${value === selected}"
-              >${value}</vscode-option
-            >
+            <vscode-option value="${value}">${value}</vscode-option>
           `;
         });
     }
     return [];
   }
 
-  private renderTableOptions(selected: string) {
+  private renderTableOptions() {
     if (this.isInsights && this.isMetaLoaded) {
-      return this.insightsMeta.assembly.flatMap((assembly) => {
-        return assembly.tbls.map((value) => {
-          if (!this.selectedTable) {
-            this.selectedTable = value;
-          }
-          return html`
-            <vscode-option value="${value}" ?selected="${value === selected}"
-              >${value}</vscode-option
-            >
-          `;
-        });
-      });
+      return this.insightsMeta.assembly.flatMap((assembly) =>
+        assembly.tbls.map(
+          (value) => html`
+            <vscode-option value="${value}">${value}</vscode-option>
+          `,
+        ),
+      );
     }
     return [];
   }
 
-  private renderColumnOptions(selected: ColumnProvider) {
+  private renderColumnOptions() {
     if (this.isInsights && this.isMetaLoaded) {
       const schema = this.insightsMeta.schema;
       if (schema) {
         const found = schema.find((item) => item.table === this.selectedTable);
         if (found) {
-          return found.columns.map(({ column }) => {
-            if (!selected.column) {
-              selected.column = column;
-            }
-            return html`
-              <vscode-option
-                value="${column}"
-                ?selected="${column === selected.column}"
-                >${column}</vscode-option
-              >
-            `;
-          });
+          return found.columns.map(
+            ({ column }) => html`
+              <vscode-option value="${column}">${column}</vscode-option>
+            `,
+          );
         }
       }
     }
@@ -311,8 +266,12 @@ export class KdbDataSourceView extends LitElement {
           <vscode-dropdown
             class="dropdown"
             @change="${(event: Event) =>
-              (filter.column = (event.target as HTMLInputElement).value)}"
-            >${this.renderColumnOptions(filter)}
+              (filter.column = (event.target as HTMLInputElement).value)}">
+            <vscode-option value="${filter.column}" selected
+              >${filter.column}</vscode-option
+            >
+            <optgroup label="-"></optgroup>
+            ${this.renderColumnOptions()}
           </vscode-dropdown>
         </div>
         <div class="dropdown-container">
@@ -448,7 +407,11 @@ export class KdbDataSourceView extends LitElement {
             class="dropdown"
             @change="${(event: Event) =>
               (sort.column = (event.target as HTMLInputElement).value)}">
-            ${this.renderColumnOptions(sort)}
+            <vscode-option value="${sort.column}" selected
+              >${sort.column}</vscode-option
+            >
+            <optgroup label="-"></optgroup>
+            ${this.renderColumnOptions()}
           </vscode-dropdown>
         </div>
         <div class="row gap-1 align-end">
@@ -526,7 +489,11 @@ export class KdbDataSourceView extends LitElement {
             class="dropdown"
             @change="${(event: Event) =>
               (agg.column = (event.target as HTMLInputElement).value)}">
-            ${this.renderColumnOptions(agg)}
+            <vscode-option value="${agg.column}" selected
+              >${agg.column}</vscode-option
+            >
+            <optgroup label="-"></optgroup>
+            ${this.renderColumnOptions()}
           </vscode-dropdown>
         </div>
         <div class="row gap-1 align-end">
@@ -581,7 +548,11 @@ export class KdbDataSourceView extends LitElement {
             class="dropdown"
             @change="${(event: Event) =>
               (group.column = (event.target as HTMLInputElement).value)}">
-            ${this.renderColumnOptions(group)}
+            <vscode-option value="${group.column}" selected
+              >${group.column}</vscode-option
+            >
+            <optgroup label="-"></optgroup>
+            ${this.renderColumnOptions()}
           </vscode-dropdown>
         </div>
         <div class="row gap-1 align-end">
@@ -622,17 +593,6 @@ export class KdbDataSourceView extends LitElement {
       <div class="row mt-1 mb-1">
         <div class="col">
           <div class="row">
-            <vscode-text-field
-              class="w-full"
-              placeholder="Data Source Name"
-              value="${this.name}"
-              @input="${(event: Event) =>
-                (this.name = (event.target as HTMLInputElement).value)}"
-              >Data Source Name</vscode-text-field
-            >
-          </div>
-
-          <div class="row">
             <vscode-panels activeid="${this.selectedTab}">
               <vscode-panel-tab
                 id="tab-1"
@@ -649,7 +609,7 @@ export class KdbDataSourceView extends LitElement {
                 @click="${() => (this.selectedType = DataSourceTypes.SQL)}"
                 >SQL</vscode-panel-tab
               >
-              <vscode-panel-view>
+              <vscode-panel-view class="panel">
                 <div class="col">
                   <div class="row">
                     <div class="dropdown-container">
@@ -661,12 +621,14 @@ export class KdbDataSourceView extends LitElement {
                           (this.selectedApi = (
                             event.target as HTMLInputElement
                           ).value)}">
-                        ${this.renderApiOptions(this.selectedApi)}
+                        <vscode-option value="${this.selectedApi}" selected
+                          >${this.selectedApi}</vscode-option
+                        >
+                        <optgroup label="-"></optgroup>
+                        ${this.renderApiOptions()}
                       </vscode-dropdown>
                     </div>
-                  </div>
 
-                  <div class="row">
                     <div class="dropdown-container">
                       <label for="selectedTable">Table</label>
                       <vscode-dropdown
@@ -676,7 +638,11 @@ export class KdbDataSourceView extends LitElement {
                           (this.selectedTable = (
                             event.target as HTMLSelectElement
                           ).value)}">
-                        ${this.renderTableOptions(this.selectedTable)}
+                        <vscode-option value="${this.selectedTable}" selected
+                          >${this.selectedTable}</vscode-option
+                        >
+                        <optgroup label="-"></optgroup>
+                        ${this.renderTableOptions()}
                       </vscode-dropdown>
                     </div>
                   </div>
@@ -692,9 +658,7 @@ export class KdbDataSourceView extends LitElement {
                         ).value)}"
                       >Start Time</vscode-text-field
                     >
-                  </div>
 
-                  <div class="row">
                     <vscode-text-field
                       type="datetime-local"
                       class="text-field larger"
@@ -805,7 +769,7 @@ export class KdbDataSourceView extends LitElement {
                 </div>
               </vscode-panel-view>
 
-              <vscode-panel-view>
+              <vscode-panel-view class="panel">
                 <div class="col">
                   <div class="row">
                     <div class="dropdown-container">
@@ -825,8 +789,7 @@ export class KdbDataSourceView extends LitElement {
                   </div>
                   <div class="row">
                     <vscode-text-area
-                      cols="64"
-                      rows="16"
+                      rows="20"
                       value="${this.qsql}"
                       @input="${(event: Event) =>
                         (this.qsql = (
@@ -842,8 +805,7 @@ export class KdbDataSourceView extends LitElement {
                 <div class="col">
                   <div class="row">
                     <vscode-text-area
-                      cols="64"
-                      rows="16"
+                      rows="20"
                       value="${this.sql}"
                       @input="${(event: Event) =>
                         (this.sql = (event.target as HTMLSelectElement).value)}"
@@ -856,7 +818,7 @@ export class KdbDataSourceView extends LitElement {
           </div>
         </div>
         <div class="col">
-          <div class="row mt-6">
+          <div class="row mt-1">
             <vscode-button
               appearance="primary"
               class="grow"
@@ -876,6 +838,30 @@ export class KdbDataSourceView extends LitElement {
             @click="${this.populateScratchpad}"
             >Populate Scratchpad</vscode-button
           >
+          <vscode-button
+            appearance="secondary"
+            @click="${this.populateScratchpad}"
+            >Refresh</vscode-button
+          >
+          <vscode-dropdown
+            class="dropdown"
+            @change="${(event: Event) => {
+              this.selectedServer = (event.target as HTMLSelectElement).value;
+              this.vscode.postMessage({
+                command: DataSourceCommand.Server,
+                selectedServer: this.selectedServer,
+              } as DataSourceMessage2);
+            }}">
+            <vscode-option value="${this.selectedServer}" selected
+              >${this.selectedServer}</vscode-option
+            >
+            <optgroup label="-"></optgroup>
+            ${this.servers.map(
+              (server) => html`
+                <vscode-option value="${server}">${server}</vscode-option>
+              `,
+            )}
+          </vscode-dropdown>
         </div>
       </div>
     `;

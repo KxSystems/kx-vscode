@@ -442,8 +442,7 @@
       {
         "command": "kdb.execute.fileQuery",
         "key": "ctrl+shift+d",
-        "mac": "cmd+shift+d",
-        "when": "editorLangId == q"
+        "mac": "cmd+shift+d"
       },
       {
         "command": "kdb.execute.pythonScratchpadQuery",
@@ -540,12 +539,6 @@
           "name": "Query History",
           "contextualTitle": "Query History",
           "icon": "resources/history.svg"
-        },
-        {
-          "id": "kdb-datasources-explorer",
-          "name": "Data Sources",
-          "contextualTitle": "Data Sources",
-          "when": "kdb.insightsConnected"
         }
       ],
       "kdb-results": [
