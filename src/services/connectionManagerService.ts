@@ -12,6 +12,7 @@
  */
 
 import { LocalConnection } from "../classes/localConnection";
+import * as os from "os";
 import { window, commands } from "vscode";
 import { ext } from "../extensionVariables";
 import { InsightsNode, KdbNode } from "./kdbTreeProvider";
@@ -30,6 +31,7 @@ import {
 import { Insights } from "../models/insights";
 import { Server } from "../models/server";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
+import { promises } from "dns";
 
 export class ConnectionManagementService {
   public retrieveConnection(
@@ -97,6 +99,9 @@ export class ConnectionManagementService {
           );
 
           Telemetry.sendEvent("Connection.Connected.QProcess");
+          if (ext.connectedConnectionList.length === 0) {
+            this.startMonitoringConn();
+          }
 
           ext.connectedConnectionList.push(localConnection);
 
@@ -112,6 +117,9 @@ export class ConnectionManagementService {
       await insightsConn.connect();
       if (insightsConn.connected) {
         Telemetry.sendEvent("Connection.Connected.Insights");
+        if (ext.connectedConnectionList.length === 0) {
+          this.startMonitoringConn();
+        }
         ext.connectedConnectionList.push(insightsConn);
         this.isConnectedBehaviour(connection);
       } else {
@@ -314,5 +322,34 @@ export class ConnectionManagementService {
         "This feature is only available for Insights connections.",
       );
     }
+  }
+
+  public async checkInsightsConnectionIsAlive(): Promise<void> {
+    for (const connection of ext.connectedConnectionList) {
+      if (connection instanceof InsightsConnection) {
+        const res = await connection.pingInsights();
+        if (res === false) {
+          this.disconnect(connection.connLabel);
+        }
+      }
+    }
+  }
+
+  /* istanbul ignore next */
+  public async startMonitoringConn() {
+    let previousNetworkState = os.networkInterfaces();
+    const intervalId = setInterval(async () => {
+      const currentNetworkState = os.networkInterfaces();
+      if (
+        JSON.stringify(previousNetworkState) !==
+        JSON.stringify(currentNetworkState)
+      ) {
+        previousNetworkState = currentNetworkState;
+        await this.checkInsightsConnectionIsAlive();
+      }
+      if (ext.connectedConnectionList.length === 0) {
+        clearInterval(intervalId);
+      }
+    }, 15000);
   }
 }
