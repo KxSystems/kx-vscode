@@ -29,12 +29,18 @@ import { getNonce } from "../utils/getNonce";
 import { ext } from "../extensionVariables";
 import { InsightsNode } from "./kdbTreeProvider";
 import {
+  activateConnectionForServer,
   getInsightsServers,
   getServerForUri,
   setServerForUri,
 } from "../commands/workspaceCommand";
 import { DataSourceCommand, DataSourceMessage2 } from "../models/messages";
 import { isDeepStrictEqual } from "util";
+import {
+  populateScratchpad,
+  refreshDataSource,
+  runDataSource,
+} from "../commands/dataSourceCommand";
 
 export class DataSourceEditorProvider implements CustomTextEditorProvider {
   static readonly viewType = "kdb.dataSourceEditor";
@@ -86,10 +92,10 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       changeDocumentSubscription.dispose();
     });
 
-    webview.onDidReceiveMessage((msg: DataSourceMessage2) => {
+    webview.onDidReceiveMessage(async (msg: DataSourceMessage2) => {
       switch (msg.command) {
         case DataSourceCommand.Server:
-          setServerForUri(document.uri, msg.selectedServer);
+          await setServerForUri(document.uri, msg.selectedServer);
           break;
         case DataSourceCommand.Change:
           const changed = msg.dataSourceFile;
@@ -100,25 +106,22 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           this.updateTextDocument(document, changed);
           break;
         case DataSourceCommand.Save:
-          commands.executeCommand("workbench.action.files.save", document);
+          await commands.executeCommand(
+            "workbench.action.files.save",
+            document,
+          );
           break;
         case DataSourceCommand.Run:
-          commands.executeCommand(
-            "kdb.dataSource.runDataSource",
-            msg.dataSourceFile,
-          );
+          await activateConnectionForServer(msg.selectedServer);
+          await runDataSource(msg.dataSourceFile);
           break;
         case DataSourceCommand.Populate:
-          commands.executeCommand(
-            "kdb.dataSource.populateScratchpad",
-            msg.dataSourceFile,
-          );
+          await activateConnectionForServer(msg.selectedServer);
+          await populateScratchpad(msg.dataSourceFile);
           break;
         case DataSourceCommand.Refresh:
-          commands.executeCommand(
-            "kdb.dataSource.refreshDataSource",
-            msg.selectedServer,
-          );
+          await activateConnectionForServer(msg.selectedServer);
+          await refreshDataSource();
           break;
       }
     });

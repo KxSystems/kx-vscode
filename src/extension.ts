@@ -393,6 +393,15 @@ export async function activate(context: ExtensionContext) {
         }
       },
     ),
+    commands.registerCommand(
+      "kdb.createPythonScratchpad",
+      async (item: FileTreeItem) => {
+        const uri = await addWorkspaceFile(item, "scratchpad", ".kdb.py");
+        if (uri) {
+          await window.showTextDocument(uri);
+        }
+      },
+    ),
     commands.registerCommand("kdb.refreshScratchpadExplorer", () => {
       ext.scratchpadTreeProvider.reload();
     }),

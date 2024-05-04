@@ -107,18 +107,18 @@ async function getConnectionForServer(server: string) {
   }
 }
 
-async function waitForConnection(name: string) {
+async function waitForConnection(label: string) {
   return new Promise<void>((resolve, reject) => {
     let count = 0;
     const retry = () => {
       count++;
       setTimeout(() => {
-        if (connectionService.isConnected(name)) {
+        if (connectionService.isConnected(label)) {
           resolve();
         } else if (count < 5) {
           retry();
         } else {
-          reject(`Can not connect to ${name}`);
+          reject(`Can not connect to ${label}`);
         }
       }, 50);
     };
@@ -192,6 +192,27 @@ function isScratchpad(uri: Uri) {
   return uri.path.endsWith(".kdb.q") || uri.path.endsWith(".kdb.py");
 }
 
+export async function activateConnectionForServer(server: string) {
+  const connection = await getConnectionForServer(server);
+  if (connection) {
+    if (!connectionService.isConnected(connection.label)) {
+      const action = await window.showWarningMessage(
+        `${connection.label} is not connected`,
+        "Connect",
+      );
+      if (action === "Connect") {
+        await connectionService.connect(connection.label);
+        await waitForConnection(connection.label);
+      } else {
+        throw new Error(`${connection.label} is not connected`);
+      }
+    }
+    connectionService.setActiveConnection(connection);
+  } else {
+    throw new Error(`${server} is not found`);
+  }
+}
+
 export async function runActiveEditor(type?: ExecutionTypes) {
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
@@ -200,29 +221,10 @@ export async function runActiveEditor(type?: ExecutionTypes) {
       if (!server) {
         server = await pickConnection(uri);
       }
-
       if (server) {
-        const connection = await getConnectionForServer(server);
-        if (connection) {
-          if (!connectionService.isConnected(connection.label)) {
-            const action = await window.showWarningMessage(
-              `${connection.label} is not connected`,
-              "Connect",
-            );
-            if (action === "Connect") {
-              await connectionService.connect(connection.label);
-              await waitForConnection(connection.label);
-            } else {
-              return;
-            }
-          }
-          connectionService.setActiveConnection(connection);
-        } else {
-          window.showErrorMessage(`${server} is not found`);
-        }
+        await activateConnectionForServer(server);
       }
     }
-
     runQuery(
       type === undefined
         ? isPython(uri)

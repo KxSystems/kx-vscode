@@ -225,6 +225,12 @@
       },
       {
         "category": "KX",
+        "command": "kdb.createPythonScratchpad",
+        "title": "Add a new Python scratchpad",
+        "icon": "$(file-add)"
+      },
+      {
+        "category": "KX",
         "command": "kdb.refreshScratchpadExplorer",
         "title": "Refresh scratchpads",
         "icon": "$(refresh)"
@@ -233,40 +239,11 @@
         "category": "KX",
         "command": "kdb.pickConnection",
         "title": "Pick connection"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.createDataSource",
-        "title": "Add a new data source",
-        "icon": "$(add)"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.refreshDataSourceExplorer",
-        "title": "Refresh data sources",
-        "icon": "$(refresh)"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.createScratchpad",
-        "title": "Add a new scratchpad",
-        "icon": "$(add)"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.refreshScratchpadExplorer",
-        "title": "Refresh scratchpads",
-        "icon": "$(refresh)"
       },
       {
         "category": "KX",
         "command": "kdb.runScratchpad",
         "title": "Run scratchpad"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.pickConnection",
-        "title": "Pick connection"
       },
       {
         "category": "KX",
@@ -618,6 +595,7 @@
           "group": "resultsPanel"
         }
       ],
+      "view/title/create": [],
       "view/title": [
         {
           "command": "kdb.addConnection",
@@ -645,9 +623,14 @@
           "group": "navigation@1"
         },
         {
-          "command": "kdb.refreshScratchpadExplorer",
+          "command": "kdb.createPythonScratchpad",
           "when": "view == kdb-scratchpad-explorer",
           "group": "navigation@2"
+        },
+        {
+          "command": "kdb.refreshScratchpadExplorer",
+          "when": "view == kdb-scratchpad-explorer",
+          "group": "navigation@3"
         },
         {
           "command": "kdb.queryHistory.clear",

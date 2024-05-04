@@ -49,6 +49,7 @@ export class KdbDataSourceView extends LitElement {
 
       .panel {
         width: 50em;
+        margin-top: 0.5em;
       }
     `,
   ];
@@ -172,9 +173,17 @@ export class KdbDataSourceView extends LitElement {
     } as DataSourceMessage2);
   }
 
+  private refresh() {
+    this.vscode.postMessage({
+      command: DataSourceCommand.Refresh,
+      selectedServer: this.selectedServer,
+    } as DataSourceMessage2);
+  }
+
   private run() {
     this.vscode.postMessage({
       command: DataSourceCommand.Run,
+      selectedServer: this.selectedServer,
       dataSourceFile: this.data,
     } as DataSourceMessage2);
   }
@@ -182,13 +191,8 @@ export class KdbDataSourceView extends LitElement {
   private populateScratchpad() {
     this.vscode.postMessage({
       command: DataSourceCommand.Populate,
+      selectedServer: this.selectedServer,
       dataSourceFile: this.data,
-    } as DataSourceMessage2);
-  }
-
-  private refresh() {
-    this.vscode.postMessage({
-      command: DataSourceCommand.Refresh,
     } as DataSourceMessage2);
   }
 
@@ -905,21 +909,20 @@ export class KdbDataSourceView extends LitElement {
               @click="${this.save}"
               >Save</vscode-button
             >
-            <vscode-button
-              appearance="secondary"
-              class="grow"
-              @click="${this.run}"
-              ?disabled="${this.running}"
-              >Run</vscode-button
+            <vscode-button appearance="secondary" @click="${this.refresh}"
+              >Refresh</vscode-button
             >
           </div>
           <vscode-button
             appearance="secondary"
+            @click="${this.run}"
+            ?disabled="${this.running}"
+            >Run</vscode-button
+          >
+          <vscode-button
+            appearance="secondary"
             @click="${this.populateScratchpad}"
             >Populate Scratchpad</vscode-button
-          >
-          <vscode-button appearance="secondary" @click="${this.refresh}"
-            >Refresh</vscode-button
           >
         </div>
       </div>
