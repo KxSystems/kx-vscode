@@ -38,6 +38,7 @@ import {
   deleteDataSource,
   openDataSource,
   populateScratchpad,
+  refreshDataSource,
   renameDataSource,
   runDataSource,
   saveDataSource,
@@ -279,6 +280,9 @@ export async function activate(context: ExtensionContext) {
         await runDataSource(dataSourceForm);
       },
     ),
+    commands.registerCommand("kdb.dataSource.refreshDataSource", async () => {
+      await refreshDataSource();
+    }),
     commands.registerCommand(
       "kdb.dataSource.renameDataSource",
       async (viewItem: KdbDataSourceTreeItem) => {

@@ -26,7 +26,6 @@ import {
 } from "vscode";
 import { getUri } from "../utils/getUri";
 import { getNonce } from "../utils/getNonce";
-import { ConnectionManagementService } from "./connectionManagerService";
 import { ext } from "../extensionVariables";
 import { InsightsNode } from "./kdbTreeProvider";
 import {
@@ -34,8 +33,8 @@ import {
   getServerForUri,
   setServerForUri,
 } from "../commands/workspaceCommand";
-import { InsightsConnection } from "../classes/insightsConnection";
 import { DataSourceCommand, DataSourceMessage2 } from "../models/messages";
+import { isDeepStrictEqual } from "util";
 
 export class DataSourceEditorProvider implements CustomTextEditorProvider {
   static readonly viewType = "kdb.dataSourceEditor";
@@ -48,8 +47,6 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     );
   }
 
-  private connectionService = new ConnectionManagementService();
-
   constructor(private readonly context: ExtensionContext) {}
 
   async resolveCustomTextEditor(
@@ -60,18 +57,14 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     webview.options = { enableScripts: true };
     webview.html = this.getWebviewContent(webview);
 
-    if (ext.activeConnection instanceof InsightsConnection) {
-      Object.assign(ext.insightsMeta, await ext.activeConnection.getMeta());
-    }
-
     const updateWebview = () => {
       webview.postMessage({
         command: DataSourceCommand.Update,
+        servers: getInsightsServers(),
+        selectedServer: getServerForUri(document.uri) || "",
         isInsights: ext.connectionNode instanceof InsightsNode,
         insightsMeta: ext.insightsMeta,
         dataSourceFile: this.getDocumentAsJson(document),
-        servers: getInsightsServers(),
-        selectedServer: getServerForUri(document.uri) || "",
       } as DataSourceMessage2);
     };
 
@@ -95,8 +88,18 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
 
     webview.onDidReceiveMessage((msg: DataSourceMessage2) => {
       switch (msg.command) {
+        case DataSourceCommand.Server:
+          setServerForUri(document.uri, msg.selectedServer);
+          break;
+        case DataSourceCommand.Change:
+          const changed = msg.dataSourceFile;
+          const current = this.getDocumentAsJson(document);
+          if (isDeepStrictEqual(current, changed)) {
+            break;
+          }
+          this.updateTextDocument(document, changed);
+          break;
         case DataSourceCommand.Save:
-          this.updateTextDocument(document, msg.dataSourceFile);
           commands.executeCommand("workbench.action.files.save", document);
           break;
         case DataSourceCommand.Run:
@@ -111,8 +114,11 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
             msg.dataSourceFile,
           );
           break;
-        case DataSourceCommand.Server:
-          setServerForUri(document.uri, msg.selectedServer);
+        case DataSourceCommand.Refresh:
+          commands.executeCommand(
+            "kdb.dataSource.refreshDataSource",
+            msg.selectedServer,
+          );
           break;
       }
     });

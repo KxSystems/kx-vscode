@@ -231,6 +231,17 @@ export async function populateScratchpad(
   });
 }
 
+export async function refreshDataSource(): Promise<void> {
+  if (
+    ext.activeConnection instanceof LocalConnection ||
+    !ext.activeConnection
+  ) {
+    window.showErrorMessage("No Insights active connection found");
+    return;
+  }
+  Object.assign(ext.insightsMeta, await ext.activeConnection.getMeta());
+}
+
 export async function runDataSource(
   dataSourceForm: DataSourceFiles,
 ): Promise<void> {

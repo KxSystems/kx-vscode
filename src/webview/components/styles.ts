@@ -35,15 +35,11 @@ export const vscodeStyles = css`
     width: unset !important;
     min-width: 12em;
   }
-
-  vscode-text-area::part(control) {
-    width: 48em !important;
-  }
 `;
 
 export const kdbStyles = css`
-  .panel {
-    width: 50em;
+  .w-full {
+    min-width: 50em;
   }
 
   .col {
@@ -92,6 +88,10 @@ export const kdbStyles = css`
 
   .mb-1 {
     margin-bottom: 1em;
+  }
+
+  .mt-6 {
+    margin-top: 6em;
   }
 
   .dropdown,

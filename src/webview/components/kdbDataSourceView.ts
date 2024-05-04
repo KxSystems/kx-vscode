@@ -13,7 +13,8 @@
 
 import { LitElement, html } from "lit";
 import { repeat } from "lit/directives/repeat.js";
-import { customElement, state } from "lit/decorators.js";
+import { customElement } from "lit/decorators.js";
+import { css } from "lit";
 import {
   Agg,
   DataSourceFiles,
@@ -38,31 +39,44 @@ const MAX_RULES = 32;
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {
-  static styles = [vscodeStyles, kdbStyles];
+  static styles = [
+    vscodeStyles,
+    kdbStyles,
+    css`
+      vscode-text-area::part(control) {
+        width: 48em !important;
+      }
 
-  @state() isInsights = false;
-  @state() isMetaLoaded = false;
-  @state() insightsMeta = {} as MetaObjectPayload;
-  @state() selectedType = DataSourceTypes.API;
-  @state() selectedApi = "";
-  @state() selectedTable = "";
-  @state() startTS = "";
-  @state() endTS = "";
-  @state() fill = "";
-  @state() filled = false;
-  @state() temporality = "";
-  @state() temporal = false;
-  @state() filters = [createFilter()];
-  @state() labels = [createLabel()];
-  @state() sorts = [createSort()];
-  @state() aggs = [createAgg()];
-  @state() groups = [createGroup()];
-  @state() qsqlTarget = "";
-  @state() qsql = "";
-  @state() sql = "";
-  @state() running = false;
-  @state() servers: string[] = [];
-  @state() selectedServer = "";
+      .panel {
+        width: 50em;
+      }
+    `,
+  ];
+
+  private isInsights = false;
+  private isMetaLoaded = false;
+  private insightsMeta = {} as MetaObjectPayload;
+  private selectedType = DataSourceTypes.API;
+  private selectedApi = "";
+  private selectedTable = "";
+  private startTS = "";
+  private endTS = "";
+  private fill = "";
+  private filled = false;
+  private temporality = "";
+  private temporal = false;
+  private filters = [createFilter()];
+  private labels = [createLabel()];
+  private sorts = [createSort()];
+  private aggs = [createAgg()];
+  private groups = [createGroup()];
+  private qsqlTarget = "";
+  private qsql = "";
+  private sql = "";
+  private running = false;
+  private servers: string[] = [];
+  private selectedServer = "";
+  private updating = 0;
 
   connectedCallback() {
     super.connectedCallback();
@@ -80,10 +94,10 @@ export class KdbDataSourceView extends LitElement {
       case DataSourceCommand.Update:
         this.servers = msg.servers;
         this.selectedServer = msg.selectedServer;
-        const ds = msg.dataSourceFile;
         this.isInsights = msg.isInsights;
         this.isMetaLoaded = !!msg.insightsMeta.dap;
         this.insightsMeta = msg.insightsMeta;
+        const ds = msg.dataSourceFile;
         this.selectedType = ds.dataSource.selectedType;
         this.selectedApi = ds.dataSource.api.selectedApi;
         this.selectedTable = ds.dataSource.api.table;
@@ -104,6 +118,7 @@ export class KdbDataSourceView extends LitElement {
           this.aggs = optional.aggs;
           this.groups = optional.groups;
         }
+        this.requestUpdate();
         break;
     }
   };
@@ -150,19 +165,6 @@ export class KdbDataSourceView extends LitElement {
 
   private readonly vscode = acquireVsCodeApi();
 
-  private get selectedTab() {
-    switch (this.selectedType) {
-      case DataSourceTypes.API:
-        return "tab-1";
-      case DataSourceTypes.QSQL:
-        return "tab-2";
-      case DataSourceTypes.SQL:
-        return "tab-3";
-      default:
-        return "tab-1";
-    }
-  }
-
   private save() {
     this.vscode.postMessage({
       command: DataSourceCommand.Save,
@@ -181,6 +183,29 @@ export class KdbDataSourceView extends LitElement {
     this.vscode.postMessage({
       command: DataSourceCommand.Populate,
       dataSourceFile: this.data,
+    } as DataSourceMessage2);
+  }
+
+  private refresh() {
+    this.vscode.postMessage({
+      command: DataSourceCommand.Refresh,
+    } as DataSourceMessage2);
+  }
+
+  private requestChange() {
+    this.requestUpdate();
+    this.vscode.postMessage({
+      command: DataSourceCommand.Change,
+      dataSourceFile: this.data,
+    } as DataSourceMessage2);
+  }
+
+  private requestServerChange(event: Event) {
+    this.selectedServer = (event.target as HTMLSelectElement).value;
+    this.requestUpdate();
+    this.vscode.postMessage({
+      command: DataSourceCommand.Server,
+      selectedServer: this.selectedServer,
     } as DataSourceMessage2);
   }
 
@@ -231,18 +256,14 @@ export class KdbDataSourceView extends LitElement {
     return [];
   }
 
-  private renderTargetOptions(selected: string) {
+  private renderTargetOptions() {
     if (this.isInsights && this.isMetaLoaded) {
       return this.insightsMeta.dap.map((dap) => {
         const value = `${dap.assembly}-qe ${dap.instance}`;
         if (!this.qsqlTarget) {
           this.qsqlTarget = value;
         }
-        return html`
-          <vscode-option value="${value}" ?selected="${value === selected}"
-            >${value}</vscode-option
-          >
-        `;
+        return html` <vscode-option value="${value}">${value}</vscode-option> `;
       });
     }
     return [];
@@ -253,10 +274,10 @@ export class KdbDataSourceView extends LitElement {
       <div class="row align-bottom">
         <vscode-checkbox
           ?checked="${filter.active}"
-          @change="${(event: Event) =>
-            (filter.active = (
-              event.target as HTMLInputElement
-            ).checked)}"></vscode-checkbox>
+          @change="${(event: Event) => {
+            filter.active = (event.target as HTMLInputElement).checked;
+            this.requestChange();
+          }}"></vscode-checkbox>
         <div class="dropdown-container">
           <label
             >${this.filters.indexOf(filter) === 0
@@ -265,12 +286,14 @@ export class KdbDataSourceView extends LitElement {
           >
           <vscode-dropdown
             class="dropdown"
-            @change="${(event: Event) =>
-              (filter.column = (event.target as HTMLInputElement).value)}">
+            @change="${(event: Event) => {
+              filter.column = (event.target as HTMLInputElement).value;
+              this.requestChange();
+            }}">
             <vscode-option value="${filter.column}" selected
               >${filter.column}</vscode-option
             >
-            <optgroup label="-"></optgroup>
+            <vscode-tag>Options</vscode-tag>
             ${this.renderColumnOptions()}
           </vscode-dropdown>
         </div>
@@ -282,13 +305,17 @@ export class KdbDataSourceView extends LitElement {
           >
           <vscode-dropdown
             class="dropdown"
-            @change="${(event: Event) =>
-              (filter.operator = (event.target as HTMLInputElement).value)}">
+            @change="${(event: Event) => {
+              filter.operator = (event.target as HTMLInputElement).value;
+              this.requestChange();
+            }}">
+            <vscode-option value=${filter.operator} selected
+              >${filter.operator}</vscode-option
+            >
+            <vscode-tag>Options</vscode-tag>
             ${filterOperators.map(
               (operator) =>
-                html` <vscode-option
-                  value="${operator}"
-                  ?selected="${operator === filter.operator}"
+                html`<vscode-option value="${operator}"
                   >${operator}</vscode-option
                 >`,
             )}
@@ -297,8 +324,10 @@ export class KdbDataSourceView extends LitElement {
         <vscode-text-field
           class="text-field"
           value="${filter.values}"
-          @input="${(event: Event) =>
-            (filter.values = (event.target as HTMLInputElement).value)}"
+          @change="${(event: Event) => {
+            filter.values = (event.target as HTMLInputElement).value;
+            this.requestChange();
+          }}"
           >${this.filters.indexOf(filter) === 0 ? "Set Parameter" : ""}
         </vscode-text-field>
         <div class="row gap-1 align-end">
@@ -309,7 +338,7 @@ export class KdbDataSourceView extends LitElement {
               if (this.filters.length < MAX_RULES) {
                 const index = this.filters.indexOf(filter);
                 this.filters.splice(index + 1, 0, createFilter());
-                this.requestUpdate();
+                this.requestChange();
               }
             }}"
             >+</vscode-button
@@ -324,7 +353,7 @@ export class KdbDataSourceView extends LitElement {
                 if (this.filters.length === 0) {
                   this.filters.push(createFilter());
                 }
-                this.requestUpdate();
+                this.requestChange();
               }
             }}"
             >-</vscode-button
@@ -339,15 +368,17 @@ export class KdbDataSourceView extends LitElement {
       <div class="row align-bottom">
         <vscode-checkbox
           ?checked="${label.active}"
-          @change="${(event: Event) =>
-            (label.active = (
-              event.target as HTMLInputElement
-            ).checked)}"></vscode-checkbox>
+          @change="${(event: Event) => {
+            label.active = (event.target as HTMLInputElement).checked;
+            this.requestChange();
+          }}"></vscode-checkbox>
         <vscode-text-field
           class="text-field"
           value="${label.key}"
-          @input="${(event: Event) =>
-            (label.key = (event.target as HTMLInputElement).value)}"
+          @change="${(event: Event) => {
+            label.key = (event.target as HTMLInputElement).value;
+            this.requestChange();
+          }}"
           >${this.labels.indexOf(label) === 0
             ? "Filter By Label"
             : ""}</vscode-text-field
@@ -355,8 +386,10 @@ export class KdbDataSourceView extends LitElement {
         <vscode-text-field
           class="text-field"
           value="${label.value}"
-          @input="${(event: Event) =>
-            (label.value = (event.target as HTMLInputElement).value)}"
+          @change="${(event: Event) => {
+            label.value = (event.target as HTMLInputElement).value;
+            this.requestChange();
+          }}"
           >${this.labels.indexOf(label) === 0 ? "Value" : ""}</vscode-text-field
         >
         <div class="row gap-1 align-end">
@@ -367,7 +400,7 @@ export class KdbDataSourceView extends LitElement {
               if (this.labels.length < MAX_RULES) {
                 const index = this.labels.indexOf(label);
                 this.labels.splice(index + 1, 0, createLabel());
-                this.requestUpdate();
+                this.requestChange();
               }
             }}"
             >+</vscode-button
@@ -382,7 +415,7 @@ export class KdbDataSourceView extends LitElement {
                 if (this.labels.length === 0) {
                   this.labels.push(createLabel());
                 }
-                this.requestUpdate();
+                this.requestChange();
               }
             }}"
             >-</vscode-button
@@ -397,20 +430,22 @@ export class KdbDataSourceView extends LitElement {
       <div class="row align-bottom">
         <vscode-checkbox
           ?checked="${sort.active}"
-          @change="${(event: Event) =>
-            (sort.active = (
-              event.target as HTMLInputElement
-            ).checked)}"></vscode-checkbox>
+          @change="${(event: Event) => {
+            sort.active = (event.target as HTMLInputElement).checked;
+            this.requestChange();
+          }}"></vscode-checkbox>
         <div class="dropdown-container">
           <label>${this.sorts.indexOf(sort) === 0 ? "Sort By" : ""}</label>
           <vscode-dropdown
             class="dropdown"
-            @change="${(event: Event) =>
-              (sort.column = (event.target as HTMLInputElement).value)}">
+            @change="${(event: Event) => {
+              sort.column = (event.target as HTMLInputElement).value;
+              this.requestChange();
+            }}">
             <vscode-option value="${sort.column}" selected
               >${sort.column}</vscode-option
             >
-            <optgroup label="-"></optgroup>
+            <vscode-tag>Options</vscode-tag>
             ${this.renderColumnOptions()}
           </vscode-dropdown>
         </div>
@@ -422,7 +457,7 @@ export class KdbDataSourceView extends LitElement {
               if (this.sorts.length < MAX_RULES) {
                 const index = this.sorts.indexOf(sort);
                 this.sorts.splice(index + 1, 0, createSort());
-                this.requestUpdate();
+                this.requestChange();
               }
             }}"
             >+</vscode-button
@@ -437,7 +472,7 @@ export class KdbDataSourceView extends LitElement {
                 if (this.sorts.length === 0) {
                   this.sorts.push(createSort());
                 }
-                this.requestUpdate();
+                this.requestChange();
               }
             }}"
             >-</vscode-button
@@ -452,15 +487,17 @@ export class KdbDataSourceView extends LitElement {
       <div class="row align-bottom">
         <vscode-checkbox
           ?checked="${agg.active}"
-          @change="${(event: Event) =>
-            (agg.active = (
-              event.target as HTMLInputElement
-            ).checked)}"></vscode-checkbox>
+          @change="${(event: Event) => {
+            agg.active = (event.target as HTMLInputElement).checked;
+            this.requestChange();
+          }}"></vscode-checkbox>
         <vscode-text-field
           class="text-field"
           value="${agg.key}"
-          @input="${(event: Event) =>
-            (agg.key = (event.target as HTMLInputElement).value)}"
+          @change="${(event: Event) => {
+            agg.key = (event.target as HTMLInputElement).value;
+            this.requestChange();
+          }}"
           >${this.aggs.indexOf(agg) === 0
             ? "Define Output Aggregate"
             : ""}</vscode-text-field
@@ -471,13 +508,17 @@ export class KdbDataSourceView extends LitElement {
           >
           <vscode-dropdown
             class="dropdown"
-            @change="${(event: Event) =>
-              (agg.operator = (event.target as HTMLInputElement).value)}">
+            @change="${(event: Event) => {
+              agg.operator = (event.target as HTMLInputElement).value;
+              this.requestChange();
+            }}">
+            <vscode-option value="${agg.operator}" selected
+              >${agg.operator}</vscode-option
+            >
+            <vscode-tag>Options</vscode-tag>
             ${aggOperators.map(
               (operator) =>
-                html`<vscode-option
-                  value="${operator}"
-                  ?selected="${operator === agg.operator}"
+                html`<vscode-option value="${operator}"
                   >${operator}</vscode-option
                 >`,
             )}
@@ -487,12 +528,14 @@ export class KdbDataSourceView extends LitElement {
           <label>${this.aggs.indexOf(agg) === 0 ? "By Column" : ""}</label>
           <vscode-dropdown
             class="dropdown"
-            @change="${(event: Event) =>
-              (agg.column = (event.target as HTMLInputElement).value)}">
+            @change="${(event: Event) => {
+              agg.column = (event.target as HTMLInputElement).value;
+              this.requestChange();
+            }}">
             <vscode-option value="${agg.column}" selected
               >${agg.column}</vscode-option
             >
-            <optgroup label="-"></optgroup>
+            <vscode-tag>Options</vscode-tag>
             ${this.renderColumnOptions()}
           </vscode-dropdown>
         </div>
@@ -504,7 +547,7 @@ export class KdbDataSourceView extends LitElement {
               if (this.aggs.length < MAX_RULES) {
                 const index = this.aggs.indexOf(agg);
                 this.aggs.splice(index + 1, 0, createAgg());
-                this.requestUpdate();
+                this.requestChange();
               }
             }}"
             >+</vscode-button
@@ -519,7 +562,7 @@ export class KdbDataSourceView extends LitElement {
                 if (this.aggs.length === 0) {
                   this.aggs.push(createAgg());
                 }
-                this.requestUpdate();
+                this.requestChange();
               }
             }}"
             >-</vscode-button
@@ -534,10 +577,10 @@ export class KdbDataSourceView extends LitElement {
       <div class="row align-bottom">
         <vscode-checkbox
           ?checked="${group.active}"
-          @change="${(event: Event) =>
-            (group.active = (
-              event.target as HTMLInputElement
-            ).checked)}"></vscode-checkbox>
+          @change="${(event: Event) => {
+            group.active = (event.target as HTMLInputElement).checked;
+            this.requestChange();
+          }}"></vscode-checkbox>
         <div class="dropdown-container">
           <label
             >${this.groups.indexOf(group) === 0
@@ -546,12 +589,14 @@ export class KdbDataSourceView extends LitElement {
           >
           <vscode-dropdown
             class="dropdown"
-            @change="${(event: Event) =>
-              (group.column = (event.target as HTMLInputElement).value)}">
+            @change="${(event: Event) => {
+              group.column = (event.target as HTMLInputElement).value;
+              this.requestChange();
+            }}">
             <vscode-option value="${group.column}" selected
               >${group.column}</vscode-option
             >
-            <optgroup label="-"></optgroup>
+            <vscode-tag>Options</vscode-tag>
             ${this.renderColumnOptions()}
           </vscode-dropdown>
         </div>
@@ -563,7 +608,7 @@ export class KdbDataSourceView extends LitElement {
               if (this.groups.length < MAX_RULES) {
                 const index = this.groups.indexOf(group);
                 this.groups.splice(index + 1, 0, createGroup());
-                this.requestUpdate();
+                this.requestChange();
               }
             }}"
             >+</vscode-button
@@ -578,7 +623,7 @@ export class KdbDataSourceView extends LitElement {
                 if (this.groups.length === 0) {
                   this.groups.push(createGroup());
                 }
-                this.requestUpdate();
+                this.requestChange();
               }
             }}"
             >-</vscode-button
@@ -593,20 +638,29 @@ export class KdbDataSourceView extends LitElement {
       <div class="row mt-1 mb-1">
         <div class="col">
           <div class="row">
-            <vscode-panels activeid="${this.selectedTab}">
+            <vscode-panels activeid="${this.selectedType}">
               <vscode-panel-tab
-                id="tab-1"
-                @click="${() => (this.selectedType = DataSourceTypes.API)}"
+                id="${DataSourceTypes.API}"
+                @click="${() => {
+                  this.selectedType = DataSourceTypes.API;
+                  this.requestChange();
+                }}"
                 >API</vscode-panel-tab
               >
               <vscode-panel-tab
-                id="tab-2"
-                @click="${() => (this.selectedType = DataSourceTypes.QSQL)}"
+                id="${DataSourceTypes.QSQL}"
+                @click="${() => {
+                  this.selectedType = DataSourceTypes.QSQL;
+                  this.requestChange();
+                }}"
                 >QSQL</vscode-panel-tab
               >
               <vscode-panel-tab
-                id="tab-3"
-                @click="${() => (this.selectedType = DataSourceTypes.SQL)}"
+                id="${DataSourceTypes.SQL}"
+                @click="${() => {
+                  this.selectedType = DataSourceTypes.SQL;
+                  this.requestChange();
+                }}"
                 >SQL</vscode-panel-tab
               >
               <vscode-panel-view class="panel">
@@ -617,14 +671,16 @@ export class KdbDataSourceView extends LitElement {
                       <vscode-dropdown
                         id="selectedApi"
                         class="dropdown larger"
-                        @change="${(event: Event) =>
-                          (this.selectedApi = (
+                        @change="${(event: Event) => {
+                          this.selectedApi = (
                             event.target as HTMLInputElement
-                          ).value)}">
+                          ).value;
+                          this.requestChange();
+                        }}">
                         <vscode-option value="${this.selectedApi}" selected
                           >${this.selectedApi}</vscode-option
                         >
-                        <optgroup label="-"></optgroup>
+                        <vscode-tag>Options</vscode-tag>
                         ${this.renderApiOptions()}
                       </vscode-dropdown>
                     </div>
@@ -634,14 +690,16 @@ export class KdbDataSourceView extends LitElement {
                       <vscode-dropdown
                         id="selectedTable"
                         class="dropdown larger"
-                        @change="${(event: Event) =>
-                          (this.selectedTable = (
+                        @change="${(event: Event) => {
+                          this.selectedTable = (
                             event.target as HTMLSelectElement
-                          ).value)}">
+                          ).value;
+                          this.requestChange();
+                        }}">
                         <vscode-option value="${this.selectedTable}" selected
                           >${this.selectedTable}</vscode-option
                         >
-                        <optgroup label="-"></optgroup>
+                        <vscode-tag>Options</vscode-tag>
                         ${this.renderTableOptions()}
                       </vscode-dropdown>
                     </div>
@@ -652,10 +710,12 @@ export class KdbDataSourceView extends LitElement {
                       type="datetime-local"
                       class="text-field larger"
                       value="${this.startTS}"
-                      @input="${(event: Event) =>
-                        (this.startTS = (
+                      @change="${(event: Event) => {
+                        this.startTS = (
                           event.target as HTMLSelectElement
-                        ).value)}"
+                        ).value;
+                        this.requestChange();
+                      }}"
                       >Start Time</vscode-text-field
                     >
 
@@ -663,10 +723,10 @@ export class KdbDataSourceView extends LitElement {
                       type="datetime-local"
                       class="text-field larger"
                       value="${this.endTS}"
-                      @input="${(event: Event) =>
-                        (this.endTS = (
-                          event.target as HTMLSelectElement
-                        ).value)}"
+                      @change="${(event: Event) => {
+                        this.endTS = (event.target as HTMLSelectElement).value;
+                        this.requestChange();
+                      }}"
                       >End Time</vscode-text-field
                     >
                   </div>
@@ -674,29 +734,27 @@ export class KdbDataSourceView extends LitElement {
                   <div class="row align-bottom">
                     <vscode-checkbox
                       ?checked="${this.filled}"
-                      @change="${(event: Event) =>
-                        (this.filled = (
+                      @change="${(event: Event) => {
+                        this.filled = (
                           event.target as HTMLInputElement
-                        ).checked)}"></vscode-checkbox>
+                        ).checked;
+                        this.requestChange();
+                      }}"></vscode-checkbox>
                     <div class="dropdown-container">
                       <label for="fill">Fill</label>
                       <vscode-dropdown
                         id="fill"
                         class="dropdown"
-                        @change="${(event: Event) =>
-                          (this.fill = (
-                            event.target as HTMLSelectElement
-                          ).value)}">
-                        <vscode-option
-                          value="zero"
-                          ?selected="${this.fill === "zero"}"
-                          >zero</vscode-option
+                        @change="${(event: Event) => {
+                          this.fill = (event.target as HTMLSelectElement).value;
+                          this.requestChange();
+                        }}">
+                        <vscode-option value="${this.fill}" selected
+                          >${this.fill}</vscode-option
                         >
-                        <vscode-option
-                          value="forward"
-                          ?selected="${this.fill === "forward"}"
-                          >forward</vscode-option
-                        >
+                        <vscode-tag>Options</vscode-tag>
+                        <vscode-option value="zero">zero</vscode-option>
+                        <vscode-option value="forward">forward</vscode-option>
                       </vscode-dropdown>
                     </div>
                   </div>
@@ -704,29 +762,29 @@ export class KdbDataSourceView extends LitElement {
                   <div class="row align-bottom">
                     <vscode-checkbox
                       ?checked="${this.temporal}"
-                      @change="${(event: Event) =>
-                        (this.temporal = (
+                      @change="${(event: Event) => {
+                        this.temporal = (
                           event.target as HTMLInputElement
-                        ).checked)}"></vscode-checkbox>
+                        ).checked;
+                        this.requestChange();
+                      }}"></vscode-checkbox>
                     <div class="dropdown-container">
                       <label for="temporality">Temporality</label>
                       <vscode-dropdown
                         id="temporality"
                         class="dropdown"
-                        @change="${(event: Event) =>
-                          (this.temporality = (
+                        @change="${(event: Event) => {
+                          this.temporality = (
                             event.target as HTMLSelectElement
-                          ).value)}">
-                        <vscode-option
-                          value="snapshot"
-                          ?selected="${this.temporality === "snapshot"}"
-                          >snapshot</vscode-option
+                          ).value;
+                          this.requestChange();
+                        }}">
+                        <vscode-option value="${this.temporality}" selected
+                          >${this.temporality}</vscode-option
                         >
-                        <vscode-option
-                          value="slice"
-                          ?selected="${this.temporality === "slice"}"
-                          >slice</vscode-option
-                        >
+                        <vscode-tag>Options</vscode-tag>
+                        <vscode-option value="snapshot">snapshot</vscode-option>
+                        <vscode-option value="slice">slice</vscode-option>
                       </vscode-dropdown>
                     </div>
                   </div>
@@ -777,13 +835,17 @@ export class KdbDataSourceView extends LitElement {
                       <vscode-dropdown
                         id="selectedTarget"
                         class="dropdown larger"
-                        @change="${(event: Event) =>
-                          (this.qsqlTarget = (
+                        @change="${(event: Event) => {
+                          this.qsqlTarget = (
                             event.target as HTMLSelectElement
-                          ).value)}">
-                        ${this.renderTargetOptions(
-                          this.qsqlTarget,
-                        )}</vscode-dropdown
+                          ).value;
+                          this.requestChange();
+                        }}">
+                        <vscode-option value="${this.qsqlTarget}" selected
+                          >${this.qsqlTarget}</vscode-option
+                        >
+                        <vscode-tag>Options</vscode-tag>
+                        ${this.renderTargetOptions()}</vscode-dropdown
                       >
                     </div>
                   </div>
@@ -791,10 +853,10 @@ export class KdbDataSourceView extends LitElement {
                     <vscode-text-area
                       rows="20"
                       value="${this.qsql}"
-                      @input="${(event: Event) =>
-                        (this.qsql = (
-                          event.target as HTMLSelectElement
-                        ).value)}"
+                      @change="${(event: Event) => {
+                        this.qsql = (event.target as HTMLSelectElement).value;
+                        this.requestChange();
+                      }}"
                       >Query</vscode-text-area
                     >
                   </div>
@@ -807,8 +869,10 @@ export class KdbDataSourceView extends LitElement {
                     <vscode-text-area
                       rows="20"
                       value="${this.sql}"
-                      @input="${(event: Event) =>
-                        (this.sql = (event.target as HTMLSelectElement).value)}"
+                      @change="${(event: Event) => {
+                        this.sql = (event.target as HTMLSelectElement).value;
+                        this.requestChange();
+                      }}"
                       >Query</vscode-text-area
                     >
                   </div>
@@ -818,7 +882,23 @@ export class KdbDataSourceView extends LitElement {
           </div>
         </div>
         <div class="col">
-          <div class="row mt-1">
+          <div class="dropdown-container mb-1">
+            <label for="selectedTable">Connection</label>
+            <vscode-dropdown
+              class="dropdown"
+              @change="${this.requestServerChange}">
+              <vscode-option value="${this.selectedServer}" selected
+                >${this.selectedServer}</vscode-option
+              >
+              <vscode-tag>Options</vscode-tag>
+              ${this.servers.map(
+                (server) => html`
+                  <vscode-option value="${server}">${server}</vscode-option>
+                `,
+              )}
+            </vscode-dropdown>
+          </div>
+          <div class="row">
             <vscode-button
               appearance="primary"
               class="grow"
@@ -838,30 +918,9 @@ export class KdbDataSourceView extends LitElement {
             @click="${this.populateScratchpad}"
             >Populate Scratchpad</vscode-button
           >
-          <vscode-button
-            appearance="secondary"
-            @click="${this.populateScratchpad}"
+          <vscode-button appearance="secondary" @click="${this.refresh}"
             >Refresh</vscode-button
           >
-          <vscode-dropdown
-            class="dropdown"
-            @change="${(event: Event) => {
-              this.selectedServer = (event.target as HTMLSelectElement).value;
-              this.vscode.postMessage({
-                command: DataSourceCommand.Server,
-                selectedServer: this.selectedServer,
-              } as DataSourceMessage2);
-            }}">
-            <vscode-option value="${this.selectedServer}" selected
-              >${this.selectedServer}</vscode-option
-            >
-            <optgroup label="-"></optgroup>
-            ${this.servers.map(
-              (server) => html`
-                <vscode-option value="${server}">${server}</vscode-option>
-              `,
-            )}
-          </vscode-dropdown>
         </div>
       </div>
     `;

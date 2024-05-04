@@ -26,18 +26,19 @@ export type DataSourceMessage = {
 
 export const enum DataSourceCommand {
   Update,
+  Change,
+  Server,
   Save,
   Run,
   Populate,
   Refresh,
-  Server,
 }
 
 export interface DataSourceMessage2 {
   command: DataSourceCommand;
+  servers: string[];
+  selectedServer: string;
   isInsights: boolean;
   insightsMeta: MetaObjectPayload;
   dataSourceFile: DataSourceFiles;
-  servers: string[];
-  selectedServer: string;
 }
