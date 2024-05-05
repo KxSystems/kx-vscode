@@ -227,7 +227,7 @@
       "patterns": [
         {
           "name": "support.type.symbol.q",
-          "match": "`[.:\\w]*"
+          "match": "`[/.:\\w]*"
         },
         {
           "name": "constant.numeric.datetime.q",
