@@ -260,7 +260,7 @@ export async function removeConnection(viewItem: KdbNode | InsightsNode) {
 
 export async function connect(viewItem: KdbNode | InsightsNode): Promise<void> {
   const connMngService = new ConnectionManagementService();
-  await commands.executeCommand("kdb-results.focus");
+  commands.executeCommand("kdb-results.focus");
   ExecutionConsole.start();
   // handle cleaning up existing connection
   if (ext.activeConnection !== undefined) {
@@ -272,14 +272,17 @@ export async function connect(viewItem: KdbNode | InsightsNode): Promise<void> {
     // check for TLS support
     if (viewItem.details.tls) {
       if (!(await checkOpenSslInstalled())) {
-        const result = await window.showInformationMessage(
-          "TLS support requires OpenSSL to be installed.",
-          "More Info",
-          "Cancel",
-        );
-        if (result === "More Info") {
-          openUrl("https://code.kx.com/q/kb/ssl/");
-        }
+        window
+          .showInformationMessage(
+            "TLS support requires OpenSSL to be installed.",
+            "More Info",
+            "Cancel",
+          )
+          .then(async (result) => {
+            if (result === "More Info") {
+              await openUrl("https://code.kx.com/q/kb/ssl/");
+            }
+          });
       }
     }
   }
