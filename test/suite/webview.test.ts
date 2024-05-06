@@ -157,7 +157,7 @@ describe("KdbDataSourceView", () => {
 
   describe("renderApiOptions", () => {
     it("should render empty array", () => {
-      const result = view["renderApiOptions"]("");
+      const result = view["renderApiOptions"]();
       assert.deepEqual(result, []);
     });
 
@@ -167,22 +167,22 @@ describe("KdbDataSourceView", () => {
       sinon
         .stub(view, "insightsMeta")
         .value({ api: [{ api: ".kxi.getData" }] });
-      const result = view["renderApiOptions"]("getData");
+      const result = view["renderApiOptions"]();
       assert.deepEqual(result[0].values, ["getData", true, "getData"]);
     });
 
-    it.skip("should render other api", () => {
+    it("should render other api", () => {
       sinon.stub(view, "isInsights").value(true);
       sinon.stub(view, "isMetaLoaded").value(true);
       sinon.stub(view, "insightsMeta").value({ api: [{ api: "other" }] });
-      const result = view["renderApiOptions"]("other");
+      const result = view["renderApiOptions"]();
       assert.deepEqual(result[0].values, ["other", true, "other"]);
     });
   });
 
   describe("renderTableOptions", () => {
     it("should render empty array", () => {
-      const result = view["renderTableOptions"]("");
+      const result = view["renderTableOptions"]();
       assert.deepEqual(result, []);
     });
 
@@ -192,14 +192,14 @@ describe("KdbDataSourceView", () => {
       sinon
         .stub(view, "insightsMeta")
         .value({ assembly: [{ tbls: ["table"] }] });
-      const result = view["renderTableOptions"]("table");
+      const result = view["renderTableOptions"]();
       assert.deepEqual(result[0].values, ["table", true, "table"]);
     });
   });
 
   describe("renderColumnOptions", () => {
     it("should render empty array", () => {
-      const result = view["renderColumnOptions"]({ column: "" });
+      const result = view["renderColumnOptions"]();
       assert.deepEqual(result, []);
     });
 
@@ -211,7 +211,7 @@ describe("KdbDataSourceView", () => {
       sinon
         .stub(view, "insightsMeta")
         .value({ schema: [{ table: "table", columns: [{ column: "id" }] }] });
-      const result = view["renderColumnOptions"](provider);
+      const result = view["renderColumnOptions"]();
       assert.strictEqual(provider.column, "id");
       assert.deepEqual(result[0].values, ["id", true, "id"]);
     });
@@ -219,7 +219,7 @@ describe("KdbDataSourceView", () => {
 
   describe("renderTargetOptions", () => {
     it("should render empty array", () => {
-      const result = view["renderTargetOptions"]("");
+      const result = view["renderTargetOptions"]();
       assert.deepEqual(result, []);
     });
 
@@ -229,7 +229,7 @@ describe("KdbDataSourceView", () => {
       sinon
         .stub(view, "insightsMeta")
         .value({ dap: [{ assembly: "assembly", instance: "instance" }] });
-      const result = view["renderTargetOptions"]("assembly-qe instance");
+      const result = view["renderTargetOptions"]();
       assert.deepEqual(result[0].values, [
         "assembly-qe instance",
         true,
@@ -340,7 +340,7 @@ describe("KdbDataSourceView", () => {
   });
 
   describe("render", () => {
-    it.skip("should update state for tab selection", () => {
+    it("should update state for tab selection", () => {
       const result = view["render"]();
       (result.values[3] as any)();
       assert.strictEqual(view.selectedType, "API");

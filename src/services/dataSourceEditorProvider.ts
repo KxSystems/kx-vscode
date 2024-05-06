@@ -111,6 +111,11 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
             document,
           );
           break;
+        case DataSourceCommand.Refresh:
+          await activateConnectionForServer(msg.selectedServer);
+          await refreshDataSource();
+          updateWebview();
+          break;
         case DataSourceCommand.Run:
           await activateConnectionForServer(msg.selectedServer);
           await runDataSource(msg.dataSourceFile);
@@ -119,12 +124,6 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
         case DataSourceCommand.Populate:
           await activateConnectionForServer(msg.selectedServer);
           await populateScratchpad(msg.dataSourceFile);
-          updateWebview();
-          break;
-        case DataSourceCommand.Refresh:
-          await activateConnectionForServer(msg.selectedServer);
-          await refreshDataSource();
-          updateWebview();
           break;
       }
     });
