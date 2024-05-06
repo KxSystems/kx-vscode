@@ -348,9 +348,10 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.execute.pythonScratchpadQuery", async () => {
       await runActiveEditor(ExecutionTypes.PythonQuerySelection);
     }),
-    commands.registerCommand("kdb.scratchpad.reset", async () => {
-      await resetScratchPad();
-    }),
+    // TODO renable it when the scratchpad reset API is fixed
+    // commands.registerCommand("kdb.scratchpad.reset", async () => {
+    //   await resetScratchPad();
+    // }),
     commands.registerCommand(
       "kdb.execute.pythonFileScratchpadQuery",
       async () => {
@@ -507,7 +508,7 @@ export async function activate(context: ExtensionContext) {
       "https://code.kx.com/insights/enterprise/packaging/schemas/shard.json":
         "*shard.yaml",
     };
-    Object.assign(actualSchema, schemaJSON);
+    Object.assign(actualSchema ? actualSchema : {}, schemaJSON);
     await yamlExtension.activate().then(() => {
       workspace
         .getConfiguration()

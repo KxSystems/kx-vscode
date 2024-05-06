@@ -20,7 +20,7 @@ export const CharLiteral = createToken({
 
 export const SymbolLiteral = createToken({
   name: "SymbolLiteral",
-  pattern: /`[.:\w]*/,
+  pattern: /`[/.:\w]*/,
 });
 
 export const DateTimeLiteral = createToken({

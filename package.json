@@ -50,7 +50,6 @@
     "onCommand:kdb.resultsPanel.update",
     "onCommand:kdb.resultsPanel.clear",
     "onCommand:kdb.resultsPanel.export.csv",
-    "onCommand:kdb.scratchpad.reset",
     "onView:kdb-servers",
     "onView:kdb-query-history",
     "onView:kdb-datasources-explorer",

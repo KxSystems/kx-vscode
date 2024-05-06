@@ -146,6 +146,7 @@ export namespace ext {
     data: "servicegateway/data",
     sql: "servicegateway/qe/sql",
     qsql: "servicegateway/qe/qsql",
+    ping: "servicegateway/kxi/ping",
   };
 
   export const insightsGrantType = {

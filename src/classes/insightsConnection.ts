@@ -323,7 +323,9 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            ext.outputChannel.appendLine("User cancelled the installation.");
+            ext.outputChannel.appendLine(
+              "User cancelled the scratchpad execution.",
+            );
           });
 
           progress.report({ message: "Query is executing..." });
@@ -391,7 +393,9 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            ext.outputChannel.appendLine("User cancelled the installation.");
+            ext.outputChannel.appendLine(
+              "User cancelled the scratchpad reset.",
+            );
             return false;
           });
 
@@ -412,6 +416,72 @@ export class InsightsConnection {
               console.log(error);
               window.showErrorMessage(
                 "Error ocurried while reseting scratchpad, try again.",
+              );
+              return false;
+            });
+
+          return res;
+        },
+      );
+    } else {
+      return false;
+    }
+  }
+
+  public async pingInsights(): Promise<boolean> {
+    if (this.connected) {
+      const pingURL = new url.URL(
+        ext.insightsServiceGatewayUrls.ping,
+        this.node.details.server,
+      );
+
+      const userToken = await getCurrentToken(
+        this.node.details.server,
+        this.node.details.alias,
+      );
+
+      if (userToken === undefined) {
+        ext.outputChannel.appendLine(
+          "Error retrieving access token for insights.",
+        );
+        window.showErrorMessage("Failed to retrieve access token for insights");
+        return false;
+      }
+
+      const body = {
+        labels: {},
+      };
+
+      return await window.withProgress(
+        {
+          location: ProgressLocation.Notification,
+          cancellable: false,
+        },
+        async (progress, token) => {
+          token.onCancellationRequested(() => {
+            ext.outputChannel.appendLine("User cancelled the ping request.");
+            return false;
+          });
+
+          progress.report({ message: "Pinging insights..." });
+
+          const res = await axios
+            .request({
+              method: "post",
+              url: pingURL.toString(),
+              data: body,
+              headers: { Authorization: `Bearer ${userToken.accessToken}` },
+              timeout: 1500,
+            })
+            .then((response: any) => {
+              console.log(response);
+              Telemetry.sendEvent("Insights.Pinged");
+              return true;
+            })
+            .catch((error: any) => {
+              console.log(error);
+              window.showErrorMessage(
+                `Error ocurried while pinging insights connection:  ${this.connLabel}, the connection disconnected.`,
               );
               return false;
             });
