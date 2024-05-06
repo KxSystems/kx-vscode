@@ -50,6 +50,7 @@ import { MAX_STR_LEN } from "../../src/validators/kdbValidator";
 import { LocalConnection } from "../../src/classes/localConnection";
 import { ConnectionManagementService } from "../../src/services/connectionManagerService";
 import { InsightsConnection } from "../../src/classes/insightsConnection";
+import * as workspaceCommand from "../../src/commands/workspaceCommand";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
@@ -1858,4 +1859,29 @@ describe("walkthroughCommand", () => {
   //write tests for src/commands/walkthroughCommand.ts
   //function to be deleted after write the tests
   walkthroughCommand.showInstallationDetails();
+});
+
+describe("workspaceCommand", () => {
+  beforeEach(() => {
+    sinon.stub(vscode.workspace, "getConfiguration").value(() => {
+      return {
+        get(key: string) {
+          switch (key) {
+            case "insightsEnterpriseConnections":
+              return [{ alias: "connection1" }];
+          }
+          return {};
+        },
+      };
+    });
+  });
+  afterEach(() => {
+    sinon.restore();
+  });
+  describe("getInsightsServers", () => {
+    it("should return insights server aliases as array", () => {
+      const result = workspaceCommand.getInsightsServers();
+      assert.strictEqual(result[0], "connection1");
+    });
+  });
 });

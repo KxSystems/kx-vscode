@@ -166,6 +166,7 @@ export class KdbDataSourceView extends LitElement {
     };
   }
 
+  /* istanbul ignore next */
   postMessage(msg: Partial<DataSourceMessage2>) {
     this.vscode.postMessage(msg);
   }
@@ -185,7 +186,7 @@ export class KdbDataSourceView extends LitElement {
   }
 
   run() {
-    this.vscode.postMessage({
+    this.postMessage({
       command: DataSourceCommand.Run,
       selectedServer: this.selectedServer,
       dataSourceFile: this.data,
@@ -193,7 +194,7 @@ export class KdbDataSourceView extends LitElement {
   }
 
   populateScratchpad() {
-    this.vscode.postMessage({
+    this.postMessage({
       command: DataSourceCommand.Populate,
       selectedServer: this.selectedServer,
       dataSourceFile: this.data,
@@ -202,7 +203,7 @@ export class KdbDataSourceView extends LitElement {
 
   requestChange() {
     this.requestUpdate();
-    this.vscode.postMessage({
+    this.postMessage({
       command: DataSourceCommand.Change,
       dataSourceFile: this.data,
     });
@@ -211,7 +212,7 @@ export class KdbDataSourceView extends LitElement {
   requestServerChange(event: Event) {
     this.selectedServer = (event.target as HTMLSelectElement).value;
     this.requestUpdate();
-    this.vscode.postMessage({
+    this.postMessage({
       command: DataSourceCommand.Server,
       selectedServer: this.selectedServer,
     });

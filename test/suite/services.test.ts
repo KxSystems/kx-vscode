@@ -14,7 +14,13 @@
 import axios from "axios";
 import assert from "node:assert";
 import sinon from "sinon";
-import { TreeItemCollapsibleState, commands, env, window } from "vscode";
+import {
+  ExtensionContext,
+  TreeItemCollapsibleState,
+  commands,
+  env,
+  window,
+} from "vscode";
 import { ext } from "../../src/extensionVariables";
 import { Insights } from "../../src/models/insights";
 import { QueryHistory } from "../../src/models/queryHistory";
@@ -42,6 +48,8 @@ import { ConnectionManagementService } from "../../src/services/connectionManage
 import { LocalConnection } from "../../src/classes/localConnection";
 import { Telemetry } from "../../src/utils/telemetryClient";
 import { InsightsConnection } from "../../src/classes/insightsConnection";
+import { DataSourceEditorProvider } from "../../src/services/dataSourceEditorProvider";
+import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -1008,6 +1016,49 @@ describe("connectionManagerService", () => {
       await connMngService.resetScratchpad();
       sinon.assert.calledOnce(showErrorMessageStub);
       sinon.assert.notCalled(resetScratchpadStub);
+    });
+  });
+});
+
+describe("dataSourceEditorProvider", () => {
+  let context: ExtensionContext;
+
+  beforeEach(() => {
+    context = <ExtensionContext>{};
+  });
+
+  afterEach(() => {
+    sinon.restore();
+  });
+
+  describe("register", () => {
+    it("should register the provider", () => {
+      let result = undefined;
+      sinon
+        .stub(window, "registerCustomEditorProvider")
+        .value(() => (result = true));
+      DataSourceEditorProvider.register(context);
+      assert.ok(result);
+    });
+  });
+});
+
+describe("workspaceTreeProvider", () => {
+  let provider: WorkspaceTreeProvider;
+
+  beforeEach(() => {
+    sinon.stub(ext, "serverProvider").value({ onDidChangeTreeData() {} });
+    provider = new WorkspaceTreeProvider("*.*", "icon");
+  });
+
+  afterEach(() => {
+    sinon.restore();
+  });
+
+  describe("getChildren", () => {
+    it("should return empty array", async () => {
+      const result = await provider.getChildren();
+      assert.strictEqual(result.length, 0);
     });
   });
 });

@@ -64,14 +64,14 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     webview.html = this.getWebviewContent(webview);
 
     const updateWebview = () => {
-      webview.postMessage({
+      webview.postMessage(<DataSourceMessage2>{
         command: DataSourceCommand.Update,
         servers: getInsightsServers(),
         selectedServer: getServerForUri(document.uri) || "",
         isInsights: ext.connectionNode instanceof InsightsNode,
         insightsMeta: ext.insightsMeta,
         dataSourceFile: this.getDocumentAsJson(document),
-      } as DataSourceMessage2);
+      });
     };
 
     const changeDocumentSubscription = workspace.onDidChangeTextDocument(
