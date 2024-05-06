@@ -191,20 +191,29 @@ Once connected to a q process, go to [execute code](#execute-code).
 
 A kdb language server is bundled with the kdb VS Code extension. It offers various common features to aid in the development of kdb code within VS Code, including:
 
-- [Syntax highlighting and linting](#syntax-highlighting)
+- [Syntax highlighting](#syntax-highlighting)
+- [Syntax highlighting](#linting)
 - [Code navigation](#code-navigation)
 - [Code completion](#code-completion)
 - [Rename symbol](#rename-symbol)
 
 ### Syntax highlighting
 
-The extension provides keyword syntax highlighting, comments and linting help.
+The extension provides syntax highlighting for q and quke files.
 
-![Syntax Highlighting and Linting](https://github.com/KxSystems/kx-vscode/blob/main/img/syntax-highlighting.png?raw=true)
+![Syntax Highlighting](https://github.com/KxSystems/kx-vscode/blob/main/img/syntax-highlighting.png?raw=true)
 
-![Linting](https://github.com/KxSystems/kx-vscode/blob/main/img/linting.png?raw=true)
+### Linting
 
-Linting is supported for assignment to reserved words and literals, unused arguments and variables, line length, deprecated date time, too many globals, locals and constants. More linter rules will be supported for future releases.
+For linting [AxLibraries](https://code.kx.com/developer/libraries/) should be installed following the [official installation instructions](https://code.kx.com/developer/libraries/#installation).
+
+For macOS the following additional command should be entered in terminal after installation:
+
+```sh
+xattr -d com.apple.quarantine $AXLIBRARIES_HOME/ws/lib/*.{so,dylib}
+```
+
+After installation, `Lint q source file` command can be used to lint q and quke files. Auto linting can be enabled in extension setting and when enabled q and quke files will be linted when changed or saved.
 
 ### Code navigation
 
