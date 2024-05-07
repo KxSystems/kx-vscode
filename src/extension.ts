@@ -339,7 +339,7 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand(
       "kdb.createScratchpad",
       async (item: FileTreeItem) => {
-        const uri = await addWorkspaceFile(item, "scratchpad", ".kdb.q");
+        const uri = await addWorkspaceFile(item, "workbook", ".kdb.q");
         if (uri) {
           await window.showTextDocument(uri);
         }
@@ -348,7 +348,7 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand(
       "kdb.createPythonScratchpad",
       async (item: FileTreeItem) => {
-        const uri = await addWorkspaceFile(item, "scratchpad", ".kdb.py");
+        const uri = await addWorkspaceFile(item, "workbook", ".kdb.py");
         if (uri) {
           await window.showTextDocument(uri);
         }

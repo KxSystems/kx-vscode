@@ -213,19 +213,18 @@
       {
         "category": "KX",
         "command": "kdb.createScratchpad",
-        "title": "Add a new scratchpad",
+        "title": "Add a new q workbook",
         "icon": "$(add)"
       },
       {
         "category": "KX",
         "command": "kdb.createPythonScratchpad",
-        "title": "Add a new Python scratchpad",
-        "icon": "$(file-add)"
+        "title": "Add a new Python workbook"
       },
       {
         "category": "KX",
         "command": "kdb.refreshScratchpadExplorer",
-        "title": "Refresh scratchpads",
+        "title": "Refresh workbooks",
         "icon": "$(refresh)"
       },
       {
@@ -236,7 +235,7 @@
       {
         "category": "KX",
         "command": "kdb.runScratchpad",
-        "title": "Run scratchpad"
+        "title": "Run workbook"
       },
       {
         "category": "KX",
@@ -455,7 +454,7 @@
         },
         {
           "id": "kdb-scratchpad-explorer",
-          "name": "Scratchpads",
+          "name": "Workbooks",
           "icon": "resources/server.svg"
         },
         {
@@ -566,9 +565,14 @@
           "group": "navigation@1"
         },
         {
+          "command": "kdb.createScratchpad",
+          "when": "view == kdb-scratchpad-explorer",
+          "group": "q@1"
+        },
+        {
           "command": "kdb.createPythonScratchpad",
           "when": "view == kdb-scratchpad-explorer",
-          "group": "navigation@2"
+          "group": "q@2"
         },
         {
           "command": "kdb.refreshScratchpadExplorer",
