@@ -1878,10 +1878,40 @@ describe("workspaceCommand", () => {
   afterEach(() => {
     sinon.restore();
   });
+  describe("connectWorkspaceCommands", () => {
+    it("should connect listeners", () => {
+      workspaceCommand.connectWorkspaceCommands();
+    });
+  });
+  describe("activateConnectionForServer", () => {
+    it("should not activate connection", async () => {
+      sinon.stub(ext, "serverProvider").value({
+        getChildren() {
+          return [];
+        },
+      });
+      await assert.rejects(() =>
+        workspaceCommand.activateConnectionForServer("test"),
+      );
+    });
+  });
   describe("getInsightsServers", () => {
     it("should return insights server aliases as array", () => {
       const result = workspaceCommand.getInsightsServers();
       assert.strictEqual(result[0], "connection1");
+    });
+  });
+  describe("ConnectionLensProvider", () => {
+    describe("provideCodeLenses", () => {
+      it("should return lenses", async () => {
+        const document = await vscode.workspace.openTextDocument({
+          language: "q",
+          content: "a:1",
+        });
+        const provider = new workspaceCommand.ConnectionLensProvider();
+        const result = await provider.provideCodeLenses(document);
+        assert.strictEqual(result.length, 2);
+      });
     });
   });
 });

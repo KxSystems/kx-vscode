@@ -253,7 +253,7 @@ export class ConnectionLensProvider implements CodeLensProvider {
   }
 }
 
-export function connectWorkspaceCommsnds() {
+export function connectWorkspaceCommands() {
   ext.runScratchpadItem = window.createStatusBarItem(
     StatusBarAlignment.Right,
     10000,

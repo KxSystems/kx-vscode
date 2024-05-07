@@ -27,7 +27,6 @@ import {
 import { getUri } from "../utils/getUri";
 import { getNonce } from "../utils/getNonce";
 import { ext } from "../extensionVariables";
-import { InsightsNode } from "./kdbTreeProvider";
 import {
   activateConnectionForServer,
   getInsightsServers,
@@ -40,8 +39,8 @@ import {
   populateScratchpad,
   runDataSource,
 } from "../commands/dataSourceCommand";
-import { LocalConnection } from "../classes/localConnection";
 import { InsightsConnection } from "../classes/insightsConnection";
+import { MetaObjectPayload } from "../models/meta";
 
 export class DataSourceEditorProvider implements CustomTextEditorProvider {
   static readonly viewType = "kdb.dataSourceEditor";
@@ -54,7 +53,22 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     );
   }
 
+  private cache = new Map<string, Promise<MetaObjectPayload | undefined>>();
+
   constructor(private readonly context: ExtensionContext) {}
+
+  getMeta(alias: string) {
+    let meta = this.cache.get(alias);
+    if (!meta) {
+      if (ext.activeConnection instanceof InsightsConnection) {
+        if (ext.activeConnection.node.details.alias === alias) {
+          meta = ext.activeConnection.getMeta();
+          this.cache.set(alias, meta);
+        }
+      }
+    }
+    return meta || Promise.resolve(<MetaObjectPayload>{});
+  }
 
   async resolveCustomTextEditor(
     document: TextDocument,
@@ -64,23 +78,15 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     webview.options = { enableScripts: true };
     webview.html = this.getWebviewContent(webview);
 
-    const refreshDataSource = async () => {
-      // TODO ECMEL
-      if (ext.activeConnection instanceof InsightsConnection) {
-        Object.assign(ext.insightsMeta, await ext.activeConnection.getMeta());
-      }
-    };
-
-    await refreshDataSource();
-
-    const updateWebview = () => {
+    const updateWebview = async () => {
+      const selectedServer = getServerForUri(document.uri) || "";
       webview.postMessage(<DataSourceMessage2>{
         command: DataSourceCommand.Update,
+        selectedServer,
         servers: getInsightsServers(),
-        selectedServer: getServerForUri(document.uri) || "",
-        isInsights: ext.connectionNode instanceof InsightsNode,
-        insightsMeta: ext.insightsMeta,
         dataSourceFile: this.getDocumentAsJson(document),
+        insightsMeta: await this.getMeta(selectedServer),
+        isInsights: true,
       });
     };
 
@@ -106,6 +112,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       switch (msg.command) {
         case DataSourceCommand.Server:
           await setServerForUri(document.uri, msg.selectedServer);
+          updateWebview();
           break;
         case DataSourceCommand.Change:
           const changed = msg.dataSourceFile;
@@ -123,7 +130,8 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           break;
         case DataSourceCommand.Refresh:
           await activateConnectionForServer(msg.selectedServer);
-          await refreshDataSource();
+          const selectedServer = getServerForUri(document.uri) || "";
+          this.cache.delete(selectedServer);
           updateWebview();
           break;
         case DataSourceCommand.Run:

@@ -58,7 +58,7 @@ export class KdbDataSourceView extends LitElement {
 
   isInsights = false;
   isMetaLoaded = false;
-  insightsMeta = {} as MetaObjectPayload;
+  insightsMeta = <MetaObjectPayload>{};
   selectedType = DataSourceTypes.API;
   selectedApi = "";
   selectedTable = "";

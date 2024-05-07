@@ -98,7 +98,7 @@ import {
 } from "./services/workspaceTreeProvider";
 import {
   ConnectionLensProvider,
-  connectWorkspaceCommsnds,
+  connectWorkspaceCommands,
   pickConnection,
   runActiveEditor,
 } from "./commands/workspaceCommand";
@@ -413,7 +413,7 @@ export async function activate(context: ExtensionContext) {
     ),
   );
 
-  connectWorkspaceCommsnds();
+  connectWorkspaceCommands();
   await connectBuildTools();
 
   //q language server
