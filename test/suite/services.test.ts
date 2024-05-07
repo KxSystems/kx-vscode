@@ -17,9 +17,13 @@ import sinon from "sinon";
 import {
   ExtensionContext,
   TreeItemCollapsibleState,
+  Uri,
+  WebviewPanel,
+  WebviewPanelOnDidChangeViewStateEvent,
   commands,
   env,
   window,
+  workspace,
 } from "vscode";
 import { ext } from "../../src/extensionVariables";
 import { Insights } from "../../src/models/insights";
@@ -49,7 +53,12 @@ import { LocalConnection } from "../../src/classes/localConnection";
 import { Telemetry } from "../../src/utils/telemetryClient";
 import { InsightsConnection } from "../../src/classes/insightsConnection";
 import { DataSourceEditorProvider } from "../../src/services/dataSourceEditorProvider";
-import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider";
+import {
+  WorkspaceTreeProvider,
+  addWorkspaceFile,
+} from "../../src/services/workspaceTreeProvider";
+import Path from "path";
+import * as utils from "../../src/utils/getUri";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -1064,6 +1073,35 @@ describe("connectionManagerService", () => {
 describe("dataSourceEditorProvider", () => {
   let context: ExtensionContext;
 
+  function createPanel() {
+    const listeners = {
+      onDidReceiveMessage: undefined,
+      postMessage: undefined,
+      onDidChangeViewState: undefined,
+      onDidDispose: undefined,
+    };
+    const panel = <WebviewPanel>{
+      webview: {
+        onDidReceiveMessage(e) {
+          listeners.onDidReceiveMessage = e;
+        },
+        postMessage(e) {
+          listeners.postMessage = e;
+        },
+      },
+      onDidChangeViewState(e) {
+        listeners.onDidChangeViewState = e;
+      },
+      onDidDispose(e) {
+        listeners.onDidDispose = e;
+      },
+    };
+    return {
+      panel,
+      listeners,
+    };
+  }
+
   beforeEach(() => {
     context = <ExtensionContext>{};
   });
@@ -1082,14 +1120,44 @@ describe("dataSourceEditorProvider", () => {
       assert.ok(result);
     });
   });
+
+  describe("resolveCustomTextEditor", () => {
+    it("should resolve ", async () => {
+      const provider = new DataSourceEditorProvider(context);
+      const document = await workspace.openTextDocument({
+        language: "q",
+        content: "{}",
+      });
+      sinon.stub(utils, "getUri").value(() => "");
+      const panel = createPanel();
+      await assert.doesNotReject(() =>
+        provider.resolveCustomTextEditor(document, panel.panel),
+      );
+      panel.listeners.onDidReceiveMessage({});
+      panel.listeners.onDidChangeViewState();
+      panel.listeners.onDidDispose();
+    });
+  });
 });
 
 describe("workspaceTreeProvider", () => {
   let provider: WorkspaceTreeProvider;
 
+  function stubWorkspaceFile(path: string) {
+    const parsed = Path.parse(path);
+    sinon
+      .stub(workspace, "workspaceFolders")
+      .value([{ uri: Uri.file(parsed.dir) }]);
+    sinon
+      .stub(workspace, "getWorkspaceFolder")
+      .value(() => Uri.file(parsed.dir));
+    sinon.stub(workspace, "findFiles").value(async () => [Uri.file(path)]);
+    sinon.stub(workspace, "openTextDocument").value(async (uri: Uri) => uri);
+  }
+
   beforeEach(() => {
     sinon.stub(ext, "serverProvider").value({ onDidChangeTreeData() {} });
-    provider = new WorkspaceTreeProvider("*.*", "icon");
+    provider = new WorkspaceTreeProvider("**/*.kdb.q", "scratchpad");
   });
 
   afterEach(() => {
@@ -1097,9 +1165,19 @@ describe("workspaceTreeProvider", () => {
   });
 
   describe("getChildren", () => {
-    it("should return empty array", async () => {
-      const result = await provider.getChildren();
-      assert.strictEqual(result.length, 0);
+    it("should return workspace items", async () => {
+      stubWorkspaceFile("/workspace/test.kdb.q");
+      let result = await provider.getChildren();
+      assert.strictEqual(result.length, 1);
+      result = await provider.getChildren(provider.getTreeItem(result[0]));
+      assert.strictEqual(result.length, 1);
+    });
+  });
+
+  describe("addWorkspaceFile", () => {
+    it("should break after try", async () => {
+      stubWorkspaceFile("/workspace/test.kdb.q");
+      await assert.rejects(() => addWorkspaceFile(undefined, "test", ".kdb.q"));
     });
   });
 });

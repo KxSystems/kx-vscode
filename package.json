@@ -41,12 +41,6 @@
     "onCommand:kdb.disconnect",
     "onCommand:kdb.addAuthentication",
     "onCommand:kdb.enableTLS",
-    "onCommand:kdb.dataSource.addDataSource",
-    "onCommand:kdb.dataSource.saveDataSource",
-    "onCommand:kdb.dataSource.runDataSource",
-    "onCommand:kdb.dataSource.renameDataSource",
-    "onCommand:kdb.dataSource.deleteDataSource",
-    "onCommand:kdb.dataSource.openDataSource",
     "onCommand:kdb.resultsPanel.update",
     "onCommand:kdb.resultsPanel.clear",
     "onCommand:kdb.resultsPanel.export.csv",
@@ -314,41 +308,6 @@
       },
       {
         "category": "KX",
-        "command": "kdb.dataSource.addDataSource",
-        "title": "Add new DataSource"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.dataSource.populateScratchpad",
-        "title": "Populate a new scratchpad"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.dataSource.saveDataSource",
-        "title": "Save changes in the DataSource"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.dataSource.runDataSource",
-        "title": "Execute DataSource at Inisghts Instance"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.dataSource.renameDataSource",
-        "title": "Rename DataSource"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.dataSource.deleteDataSource",
-        "title": "Delete DataSource"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.dataSource.openDataSource",
-        "title": "Open DataSource"
-      },
-      {
-        "category": "KX",
         "command": "kdb.resultsPanel.update",
         "title": "Update Results View"
       },
@@ -518,10 +477,6 @@
       {
         "view": "kdb-servers",
         "contents": "No connections registered.\n[Add Connection](command:kdb.addConnection)"
-      },
-      {
-        "view": "kdb-datasources-explorer",
-        "contents": "No data sources registered.\n[Add Data Source](command:kdb.dataSource.addDataSource)"
       }
     ],
     "menus": {
@@ -634,11 +589,6 @@
           "command": "kdb.resultsPanel.export.csv",
           "when": "view == kdb-results",
           "group": "resultsPanel"
-        },
-        {
-          "command": "kdb.dataSource.addDataSource",
-          "when": "view == kdb-datasources-explorer",
-          "group": "dataSourceFiles"
         }
       ],
       "view/item/context": [
@@ -696,21 +646,6 @@
           "command": "kdb.queryHistory.rerun",
           "when": "view == kdb-query-history",
           "group": "queryHistory"
-        },
-        {
-          "command": "kdb.dataSource.openDataSource",
-          "when": "view == kdb-datasources-explorer && viewItem in kdb.dataSourceTreeNodes",
-          "group": "dataSourceFiles"
-        },
-        {
-          "command": "kdb.dataSource.renameDataSource",
-          "when": "view == kdb-datasources-explorer && viewItem in kdb.dataSourceTreeNodes",
-          "group": "dataSourceFiles"
-        },
-        {
-          "command": "kdb.dataSource.deleteDataSource",
-          "when": "view == kdb-datasources-explorer && viewItem in kdb.dataSourceTreeNodes",
-          "group": "dataSourceFiles"
         }
       ],
       "editor/title/run": [

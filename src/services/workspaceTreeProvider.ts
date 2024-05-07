@@ -136,6 +136,9 @@ export async function addWorkspaceFile(
           break;
         }
         i++;
+        if (i > 100) {
+          throw new Error("No available file name found");
+        }
       }
       const uri = Uri.joinPath(folder.uri, `${name}-${i}${ext}`).with({
         scheme: "untitled",

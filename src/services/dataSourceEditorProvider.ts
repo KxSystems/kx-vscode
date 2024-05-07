@@ -38,9 +38,10 @@ import { DataSourceCommand, DataSourceMessage2 } from "../models/messages";
 import { isDeepStrictEqual } from "util";
 import {
   populateScratchpad,
-  refreshDataSource,
   runDataSource,
 } from "../commands/dataSourceCommand";
+import { LocalConnection } from "../classes/localConnection";
+import { InsightsConnection } from "../classes/insightsConnection";
 
 export class DataSourceEditorProvider implements CustomTextEditorProvider {
   static readonly viewType = "kdb.dataSourceEditor";
@@ -62,6 +63,15 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     const webview = webviewPanel.webview;
     webview.options = { enableScripts: true };
     webview.html = this.getWebviewContent(webview);
+
+    const refreshDataSource = async () => {
+      // TODO ECMEL
+      if (ext.activeConnection instanceof InsightsConnection) {
+        Object.assign(ext.insightsMeta, await ext.activeConnection.getMeta());
+      }
+    };
+
+    await refreshDataSource();
 
     const updateWebview = () => {
       webview.postMessage(<DataSourceMessage2>{

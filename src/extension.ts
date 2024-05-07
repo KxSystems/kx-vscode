@@ -38,7 +38,6 @@ import {
   deleteDataSource,
   openDataSource,
   populateScratchpad,
-  refreshDataSource,
   renameDataSource,
   runDataSource,
   saveDataSource,
@@ -259,54 +258,6 @@ export async function activate(context: ExtensionContext) {
       ext.kdbQueryHistoryNodes.length = 0;
       ext.queryHistoryProvider.refresh();
     }),
-    commands.registerCommand("kdb.dataSource.addDataSource", async () => {
-      await addDataSource();
-    }),
-    commands.registerCommand(
-      "kdb.dataSource.populateScratchpad",
-      async (dataSourceForm: any) => {
-        await populateScratchpad(dataSourceForm);
-      },
-    ),
-    commands.registerCommand(
-      "kdb.dataSource.saveDataSource",
-      async (dataSourceForm: any) => {
-        await saveDataSource(dataSourceForm);
-      },
-    ),
-    commands.registerCommand(
-      "kdb.dataSource.runDataSource",
-      async (dataSourceForm: any) => {
-        await runDataSource(dataSourceForm);
-      },
-    ),
-    commands.registerCommand("kdb.dataSource.refreshDataSource", async () => {
-      await refreshDataSource();
-    }),
-    commands.registerCommand(
-      "kdb.dataSource.renameDataSource",
-      async (viewItem: KdbDataSourceTreeItem) => {
-        window
-          .showInputBox({ prompt: "Enter new name for the DataSource" })
-          .then(async (newName) => {
-            if (newName) {
-              await renameDataSource(viewItem.label, newName);
-            }
-          });
-      },
-    ),
-    commands.registerCommand(
-      "kdb.dataSource.deleteDataSource",
-      async (viewItem: KdbDataSourceTreeItem) => {
-        await deleteDataSource(viewItem);
-      },
-    ),
-    commands.registerCommand(
-      "kdb.dataSource.openDataSource",
-      async (viewItem: KdbDataSourceTreeItem) => {
-        await openDataSource(viewItem, context.extensionUri);
-      },
-    ),
     commands.registerCommand("kdb.showInstallationDetails", async () => {
       await showInstallationDetails();
     }),
