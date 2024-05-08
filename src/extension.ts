@@ -20,10 +20,12 @@ import {
   ExtensionContext,
   extensions,
   languages,
+  Range,
   TextDocumentContentProvider,
   Uri,
   window,
   workspace,
+  WorkspaceEdit,
 } from "vscode";
 import {
   LanguageClient,
@@ -54,11 +56,9 @@ import {
   connect,
   disconnect,
   enableTLS,
-  executeQuery,
   removeConnection,
   rerunQuery,
   resetScratchPad,
-  runQuery,
 } from "./commands/serverCommand";
 import { showInstallationDetails } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
@@ -90,6 +90,19 @@ import {
 import { runQFileTerminal } from "./utils/execution";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
+import { DataSourceEditorProvider } from "./services/dataSourceEditorProvider";
+import {
+  addWorkspaceFile,
+  FileTreeItem,
+  WorkspaceTreeProvider,
+} from "./services/workspaceTreeProvider";
+import {
+  ConnectionLensProvider,
+  connectWorkspaceCommands,
+  pickConnection,
+  runActiveEditor,
+} from "./commands/workspaceCommand";
+import { createDefaultDataSourceFile } from "./models/dataSource";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { CompletionProvider } from "./services/completionProvider";
 import { QuickFixProvider } from "./services/quickFixProvider";
@@ -111,17 +124,30 @@ export async function activate(context: ExtensionContext) {
   ext.resultsViewProvider = new KdbResultsViewProvider(
     ext.context.extensionUri,
   );
+  ext.scratchpadTreeProvider = new WorkspaceTreeProvider(
+    "**/*.kdb.{q,py}",
+    "scratchpad",
+  );
+  ext.dataSourceTreeProvider = new WorkspaceTreeProvider(
+    "**/*.kdb.json",
+    "datasource",
+  );
 
   commands.executeCommand("setContext", "kdb.QHOME", env.QHOME);
 
   window.registerTreeDataProvider("kdb-servers", ext.serverProvider);
-  window.registerTreeDataProvider(
-    "kdb-datasources-explorer",
-    ext.dataSourceProvider,
-  );
+
   window.registerTreeDataProvider(
     "kdb-query-history",
     ext.queryHistoryProvider,
+  );
+  window.registerTreeDataProvider(
+    "kdb-scratchpad-explorer",
+    ext.scratchpadTreeProvider,
+  );
+  window.registerTreeDataProvider(
+    "kdb-datasource-explorer",
+    ext.dataSourceTreeProvider,
   );
 
   // initialize local servers
@@ -220,7 +246,6 @@ export async function activate(context: ExtensionContext) {
     ),
     commands.registerCommand("kdb.refreshServerObjects", () => {
       ext.serverProvider.reload();
-      ext.activeConnection?.update();
     }),
     commands.registerCommand(
       "kdb.queryHistory.rerun",
@@ -233,51 +258,6 @@ export async function activate(context: ExtensionContext) {
       ext.kdbQueryHistoryNodes.length = 0;
       ext.queryHistoryProvider.refresh();
     }),
-    commands.registerCommand("kdb.dataSource.addDataSource", async () => {
-      await addDataSource();
-    }),
-    commands.registerCommand(
-      "kdb.dataSource.populateScratchpad",
-      async (dataSourceForm: any) => {
-        await populateScratchpad(dataSourceForm);
-      },
-    ),
-    commands.registerCommand(
-      "kdb.dataSource.saveDataSource",
-      async (dataSourceForm: any) => {
-        await saveDataSource(dataSourceForm);
-      },
-    ),
-    commands.registerCommand(
-      "kdb.dataSource.runDataSource",
-      async (dataSourceForm: any) => {
-        await runDataSource(dataSourceForm);
-      },
-    ),
-    commands.registerCommand(
-      "kdb.dataSource.renameDataSource",
-      async (viewItem: KdbDataSourceTreeItem) => {
-        window
-          .showInputBox({ prompt: "Enter new name for the DataSource" })
-          .then(async (newName) => {
-            if (newName) {
-              await renameDataSource(viewItem.label, newName);
-            }
-          });
-      },
-    ),
-    commands.registerCommand(
-      "kdb.dataSource.deleteDataSource",
-      async (viewItem: KdbDataSourceTreeItem) => {
-        await deleteDataSource(viewItem);
-      },
-    ),
-    commands.registerCommand(
-      "kdb.dataSource.openDataSource",
-      async (viewItem: KdbDataSourceTreeItem) => {
-        await openDataSource(viewItem, context.extensionUri);
-      },
-    ),
     commands.registerCommand("kdb.showInstallationDetails", async () => {
       await showInstallationDetails();
     }),
@@ -297,7 +277,7 @@ export async function activate(context: ExtensionContext) {
       },
     ),
     commands.registerCommand("kdb.terminal.run", () => {
-      const filename = window.activeTextEditor?.document.fileName;
+      const filename = ext.activeTextEditor?.document.fileName;
       if (filename) runQFileTerminal(filename);
     }),
     commands.registerCommand("kdb.terminal.start", () => {
@@ -307,17 +287,17 @@ export async function activate(context: ExtensionContext) {
         checkLocalInstall();
       }
     }),
+    commands.registerCommand("kdb.runScratchpad", async () => {
+      await runActiveEditor();
+    }),
     commands.registerCommand("kdb.execute.selectedQuery", async () => {
-      runQuery(ExecutionTypes.QuerySelection);
-      ext.activeConnection?.update();
+      await runActiveEditor(ExecutionTypes.QuerySelection);
     }),
     commands.registerCommand("kdb.execute.fileQuery", async () => {
-      runQuery(ExecutionTypes.QueryFile);
-      ext.activeConnection?.update();
+      await runActiveEditor(ExecutionTypes.QueryFile);
     }),
     commands.registerCommand("kdb.execute.pythonScratchpadQuery", async () => {
-      runQuery(ExecutionTypes.PythonQuerySelection);
-      ext.activeConnection?.update();
+      await runActiveEditor(ExecutionTypes.PythonQuerySelection);
     }),
     // TODO renable it when the scratchpad reset API is fixed
     // commands.registerCommand("kdb.scratchpad.reset", async () => {
@@ -326,23 +306,88 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand(
       "kdb.execute.pythonFileScratchpadQuery",
       async () => {
-        runQuery(ExecutionTypes.PythonQueryFile);
-        ext.activeConnection?.update();
+        await runActiveEditor(ExecutionTypes.PythonQueryFile);
       },
     ),
-    commands.registerCommand("kdb.execute.entireFile", async (uri: Uri) => {
-      if (!uri) {
-        return;
-      }
-      const isPython = uri.fsPath.endsWith(".py");
-      if (uri.fsPath.endsWith(".q") || isPython) {
-        const content = await workspace.fs.readFile(uri);
-        const query = content.toString();
-        await executeQuery(query, undefined, isPython);
+    commands.registerCommand(
+      "kdb.createDataSource",
+      async (item: FileTreeItem) => {
+        const uri = await addWorkspaceFile(item, "datasource", ".kdb.json");
+
+        if (uri) {
+          const edit = new WorkspaceEdit();
+
+          edit.replace(
+            uri,
+            new Range(0, 0, 1, 0),
+            JSON.stringify(createDefaultDataSourceFile(), null, 2),
+          );
+
+          workspace.applyEdit(edit);
+
+          await commands.executeCommand(
+            "vscode.openWith",
+            uri,
+            DataSourceEditorProvider.viewType,
+          );
+        }
+      },
+    ),
+    commands.registerCommand("kdb.refreshDataSourceExplorer", () => {
+      ext.dataSourceTreeProvider.reload();
+    }),
+    commands.registerCommand(
+      "kdb.createScratchpad",
+      async (item: FileTreeItem) => {
+        const uri = await addWorkspaceFile(item, "workbook", ".kdb.q");
+        if (uri) {
+          await window.showTextDocument(uri);
+        }
+      },
+    ),
+    commands.registerCommand(
+      "kdb.createPythonScratchpad",
+      async (item: FileTreeItem) => {
+        const uri = await addWorkspaceFile(item, "workbook", ".kdb.py");
+        if (uri) {
+          await window.showTextDocument(uri);
+        }
+      },
+    ),
+    commands.registerCommand("kdb.refreshScratchpadExplorer", () => {
+      ext.scratchpadTreeProvider.reload();
+    }),
+    commands.registerCommand("kdb.pickConnection", async () => {
+      const editor = ext.activeTextEditor;
+      if (editor) {
+        await pickConnection(editor.document.uri);
       }
     }),
+    commands.registerCommand("kdb.renameFile", async (item: FileTreeItem) => {
+      if (item && item.resourceUri) {
+        const document = await workspace.openTextDocument(item.resourceUri);
+        await window.showTextDocument(document);
+        await commands.executeCommand("revealInExplorer");
+        await commands.executeCommand("renameFile");
+      }
+    }),
+    commands.registerCommand("kdb.deleteFile", async (item: FileTreeItem) => {
+      if (item && item.resourceUri) {
+        const document = await workspace.openTextDocument(item.resourceUri);
+        await window.showTextDocument(document);
+        await commands.executeCommand("revealInExplorer");
+        await commands.executeCommand("deleteFile");
+      }
+    }),
+
+    DataSourceEditorProvider.register(context),
+
+    languages.registerCodeLensProvider(
+      { pattern: "**/*.kdb.{q,py}" },
+      new ConnectionLensProvider(),
+    ),
     commands.registerCommand("kdb.qlint", async () => {
-      const editor = window.activeTextEditor;
+      const editor = ext.activeTextEditor;
       if (editor) {
         await lintCommand(editor.document);
       }
@@ -352,6 +397,12 @@ export async function activate(context: ExtensionContext) {
       new QuickFixProvider(),
     ),
     ext.diagnosticCollection,
+    workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("kdb.connectionMap")) {
+        ext.dataSourceTreeProvider.reload();
+        ext.scratchpadTreeProvider.reload();
+      }
+    }),
   );
 
   const lastResult: QueryResult | undefined = undefined;
@@ -377,6 +428,9 @@ export async function activate(context: ExtensionContext) {
       new CompletionProvider(),
     ),
   );
+
+  connectWorkspaceCommands();
+  await connectBuildTools();
 
   //q language server
   const serverModule = path.join(context.extensionPath, "out", "server.js");
@@ -404,7 +458,6 @@ export async function activate(context: ExtensionContext) {
   );
 
   await client.start();
-  await connectBuildTools();
 
   Telemetry.sendEvent("Extension.Activated");
   const yamlExtension = extensions.getExtension("redhat.vscode-yaml");

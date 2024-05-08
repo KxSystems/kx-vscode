@@ -32,7 +32,6 @@
   ],
   "activationEvents": [
     "onCommand:kdb.installTools",
-    "onCommand:kdb.addConnection",
     "onCommand:kdb.newConnection.createNewInsightConnection",
     "onCommand:kdb.newConnection.createNewConnection",
     "onCommand:kdb.newConnection.createNewBundledConnection",
@@ -42,12 +41,6 @@
     "onCommand:kdb.disconnect",
     "onCommand:kdb.addAuthentication",
     "onCommand:kdb.enableTLS",
-    "onCommand:kdb.dataSource.addDataSource",
-    "onCommand:kdb.dataSource.saveDataSource",
-    "onCommand:kdb.dataSource.runDataSource",
-    "onCommand:kdb.dataSource.renameDataSource",
-    "onCommand:kdb.dataSource.deleteDataSource",
-    "onCommand:kdb.dataSource.openDataSource",
     "onCommand:kdb.resultsPanel.update",
     "onCommand:kdb.resultsPanel.clear",
     "onCommand:kdb.resultsPanel.export.csv",
@@ -55,7 +48,8 @@
     "onView:kdb-query-history",
     "onView:kdb-datasources-explorer",
     "onView:kdb-results",
-    "onTerminalProfile:kdb.q-terminal"
+    "onTerminalProfile:kdb.q-terminal",
+    "onLanguage:python"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -188,6 +182,12 @@
           "type": "boolean",
           "description": "Enable linting for q files",
           "default": false
+        },
+        "kdb.connectionMap": {
+          "type": "object",
+          "description": "Connection map for workspace files",
+          "default": {},
+          "scope": "resource"
         }
       }
     },
@@ -196,10 +196,46 @@
         "category": "KX",
         "command": "kdb.refreshServerObjects",
         "title": "Refresh server objects",
-        "icon": {
-          "light": "resources/light/refresh.svg",
-          "dark": "resources/dark/refresh.svg"
-        }
+        "icon": "$(refresh)"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.createDataSource",
+        "title": "Add a new data source",
+        "icon": "$(add)"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.refreshDataSourceExplorer",
+        "title": "Refresh data sources",
+        "icon": "$(refresh)"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.createScratchpad",
+        "title": "Add a new q workbook",
+        "icon": "$(add)"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.createPythonScratchpad",
+        "title": "Add a new Python workbook"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.refreshScratchpadExplorer",
+        "title": "Refresh workbooks",
+        "icon": "$(refresh)"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.pickConnection",
+        "title": "Pick connection"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.runScratchpad",
+        "title": "Run workbook"
       },
       {
         "category": "KX",
@@ -214,7 +250,8 @@
       {
         "category": "KX",
         "command": "kdb.addConnection",
-        "title": "Add new connection"
+        "title": "Add new connection",
+        "icon": "$(add)"
       },
       {
         "category": "KX",
@@ -227,10 +264,12 @@
         "title": "Connect server"
       },
       {
+        "category": "KX",
         "command": "kdb.active.connection",
         "title": "Active connection"
       },
       {
+        "category": "KX",
         "command": "kdb.addAuthentication",
         "title": "Add Authentication",
         "position": "end"
@@ -263,42 +302,8 @@
       {
         "category": "KX",
         "command": "kdb.queryHistory.clear",
-        "title": "Clear query history"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.dataSource.addDataSource",
-        "title": "Add new DataSource"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.dataSource.populateScratchpad",
-        "title": "Populate a new scratchpad"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.dataSource.saveDataSource",
-        "title": "Save changes in the DataSource"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.dataSource.runDataSource",
-        "title": "Execute DataSource at Inisghts Instance"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.dataSource.renameDataSource",
-        "title": "Rename DataSource"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.dataSource.deleteDataSource",
-        "title": "Delete DataSource"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.dataSource.openDataSource",
-        "title": "Open DataSource"
+        "title": "Clear query history",
+        "icon": "$(clear-all)"
       },
       {
         "category": "KX",
@@ -319,8 +324,7 @@
         "category": "KX",
         "command": "kdb.terminal.run",
         "title": "Run q file in a new q instance",
-        "icon": "$(run)",
-        "enablement": "(kdb.QHOME || config.kdb.qHomeDirectory)"
+        "icon": "$(debug-alt)"
       },
       {
         "category": "KX",
@@ -330,36 +334,41 @@
       {
         "category": "KX",
         "command": "kdb.execute.selectedQuery",
-        "title": "Execute Current Selection"
+        "title": "Execute Current Selection",
+        "icon": "$(run-below)"
       },
       {
         "category": "KX",
         "command": "kdb.execute.fileQuery",
         "title": "Execute Entire File",
-        "icon": "$(run)",
-        "enablement": "kdb.connected && editorFocus"
+        "icon": "$(run)"
       },
       {
         "category": "KX",
         "command": "kdb.execute.pythonScratchpadQuery",
-        "title": "Execute Current Selection in Insights Scratchpad"
+        "title": "Execute Current Selection in Insights Scratchpad",
+        "icon": "$(run-below)"
       },
       {
         "category": "KX",
         "command": "kdb.execute.pythonFileScratchpadQuery",
         "title": "Execute Entire File in Insights Scratchpad",
-        "icon": "$(run)",
-        "enablement": "kdb.insightsConnected"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.execute.entireFile",
-        "title": "Execute Entire File"
+        "icon": "$(run)"
       },
       {
         "category": "KX",
         "command": "kdb.qlint",
         "title": "Lint q source file"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.renameFile",
+        "title": "Rename"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.deleteFile",
+        "title": "Delete"
       }
     ],
     "keybindings": [
@@ -367,31 +376,30 @@
         "command": "kdb.execute.selectedQuery",
         "key": "ctrl+d",
         "mac": "cmd+d",
-        "when": "editorLangId == q  && kdb.connected"
+        "when": "editorLangId == q"
       },
       {
         "command": "kdb.execute.fileQuery",
         "key": "ctrl+shift+d",
-        "mac": "cmd+shift+d",
-        "when": "editorLangId == q && kdb.connected"
+        "mac": "cmd+shift+d"
       },
       {
         "command": "kdb.execute.pythonScratchpadQuery",
         "key": "ctrl+d",
         "mac": "cmd+d",
-        "when": "editorLangId == python  && kdb.insightsConnected"
+        "when": "editorLangId == python"
       },
       {
         "command": "kdb.execute.pythonFileScratchpadQuery",
         "key": "ctrl+shift+d",
         "mac": "cmd+shift+d",
-        "when": "editorLangId == python && kdb.insightsConnected"
+        "when": "editorLangId == python"
       },
       {
         "command": "kdb.terminal.run",
         "key": "ctrl+shift+r",
         "mac": "cmd+shift+r",
-        "when": "editorLangId == q && (kdb.QHOME || config.kdb.qHomeDirectory)"
+        "when": "editorLangId == q"
       }
     ],
     "snippets": [
@@ -450,16 +458,20 @@
           "icon": "resources/server.svg"
         },
         {
+          "id": "kdb-datasource-explorer",
+          "name": "Datasources",
+          "icon": "resources/server.svg"
+        },
+        {
+          "id": "kdb-scratchpad-explorer",
+          "name": "Workbooks",
+          "icon": "resources/server.svg"
+        },
+        {
           "id": "kdb-query-history",
           "name": "Query History",
           "contextualTitle": "Query History",
           "icon": "resources/history.svg"
-        },
-        {
-          "id": "kdb-datasources-explorer",
-          "name": "Data Sources",
-          "contextualTitle": "Data Sources",
-          "when": "kdb.insightsConnected"
         }
       ],
       "kdb-results": [
@@ -474,10 +486,6 @@
       {
         "view": "kdb-servers",
         "contents": "No connections registered.\n[Add Connection](command:kdb.addConnection)"
-      },
-      {
-        "view": "kdb-datasources-explorer",
-        "contents": "No data sources registered.\n[Add Data Source](command:kdb.dataSource.addDataSource)"
       }
     ],
     "menus": {
@@ -539,30 +547,57 @@
           "group": "resultsPanel"
         }
       ],
+      "view/title/create": [],
       "view/title": [
         {
           "command": "kdb.addConnection",
-          "when": "view == kdb-servers"
+          "when": "view == kdb-servers",
+          "group": "navigation@1"
         },
         {
           "command": "kdb.refreshServerObjects",
           "when": "view == kdb-servers",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
-          "command": "kdb.dataSource.addDataSource",
-          "when": "view == kdb-datasources-explorer",
-          "group": "dataSourceFiles"
+          "command": "kdb.createDataSource",
+          "when": "view == kdb-datasource-explorer",
+          "group": "navigation@1"
+        },
+        {
+          "command": "kdb.refreshDataSourceExplorer",
+          "when": "view == kdb-datasource-explorer",
+          "group": "navigation@2"
+        },
+        {
+          "command": "kdb.createScratchpad",
+          "when": "view == kdb-scratchpad-explorer",
+          "group": "navigation@1"
+        },
+        {
+          "command": "kdb.createScratchpad",
+          "when": "view == kdb-scratchpad-explorer",
+          "group": "q@1"
+        },
+        {
+          "command": "kdb.createPythonScratchpad",
+          "when": "view == kdb-scratchpad-explorer",
+          "group": "q@2"
+        },
+        {
+          "command": "kdb.refreshScratchpadExplorer",
+          "when": "view == kdb-scratchpad-explorer",
+          "group": "navigation@3"
+        },
+        {
+          "command": "kdb.queryHistory.clear",
+          "when": "view == kdb-query-history",
+          "group": "navigation@1"
         },
         {
           "command": "kdb.resultsPanel.clear",
           "when": "view == kdb-results",
           "group": "resultsPanel"
-        },
-        {
-          "command": "kdb.queryHistory.clear",
-          "when": "view == kdb-query-history",
-          "group": "queryHistory"
         },
         {
           "command": "kdb.resultsPanel.export.csv",
@@ -627,73 +662,83 @@
           "group": "queryHistory"
         },
         {
-          "command": "kdb.dataSource.openDataSource",
-          "when": "view == kdb-datasources-explorer && viewItem in kdb.dataSourceTreeNodes",
-          "group": "dataSourceFiles"
+          "command": "kdb.renameFile",
+          "when": "(view == kdb-datasource-explorer || view == kdb-scratchpad-explorer) && viewItem == artifact",
+          "group": "kdbWorkspace@1"
         },
         {
-          "command": "kdb.dataSource.renameDataSource",
-          "when": "view == kdb-datasources-explorer && viewItem in kdb.dataSourceTreeNodes",
-          "group": "dataSourceFiles"
-        },
-        {
-          "command": "kdb.dataSource.deleteDataSource",
-          "when": "view == kdb-datasources-explorer && viewItem in kdb.dataSourceTreeNodes",
-          "group": "dataSourceFiles"
+          "command": "kdb.deleteFile",
+          "when": "(view == kdb-datasource-explorer || view == kdb-scratchpad-explorer) && viewItem == artifact",
+          "group": "kdbWorkspace@2"
         }
       ],
       "editor/title/run": [
         {
           "command": "kdb.execute.fileQuery",
           "group": "q@0",
-          "when": "resourceLangId == q"
+          "when": "editorLangId == q"
+        },
+        {
+          "command": "kdb.execute.selectedQuery",
+          "group": "q@1",
+          "when": "editorLangId == q"
         },
         {
           "command": "kdb.terminal.run",
-          "group": "q@1",
-          "when": "resourceLangId == q"
+          "group": "q@2",
+          "when": "editorLangId == q"
         },
         {
           "command": "kdb.execute.pythonFileScratchpadQuery",
           "group": "q@0",
-          "when": "editorLangId == python && kdb.insightsConnected"
+          "when": "editorLangId == python"
+        },
+        {
+          "command": "kdb.execute.pythonScratchpadQuery",
+          "group": "q@1",
+          "when": "editorLangId == python"
         }
       ],
       "editor/context": [
         {
-          "command": "kdb.terminal.run",
-          "when": "resourceLangId == q && (kdb.QHOME || config.kdb.qHomeDirectory)",
-          "group": "q"
+          "command": "kdb.execute.fileQuery",
+          "group": "q@0",
+          "when": "editorLangId == q"
         },
         {
           "command": "kdb.execute.selectedQuery",
-          "group": "q",
-          "when": "editorLangId == q  && kdb.connected"
+          "group": "q@1",
+          "when": "editorLangId == q"
         },
         {
-          "command": "kdb.execute.fileQuery",
-          "group": "q",
-          "when": "editorLangId == q  && kdb.connected"
-        },
-        {
-          "command": "kdb.execute.pythonScratchpadQuery",
-          "group": "q",
-          "when": "editorLangId == python && kdb.insightsConnected"
+          "command": "kdb.terminal.run",
+          "group": "q@2",
+          "when": "editorLangId == q"
         },
         {
           "command": "kdb.execute.pythonFileScratchpadQuery",
-          "group": "q",
-          "when": "editorLangId == python && kdb.insightsConnected"
-        }
-      ],
-      "explorer/context": [
+          "group": "q@0",
+          "when": "editorLangId == python"
+        },
         {
-          "command": "kdb.execute.entireFile",
-          "group": "q",
-          "when": "(resourceExtname == .q && (kdb.connected || kdb.insightsConnected)) || (resourceExtname == .py && kdb.insightsConnected)"
+          "command": "kdb.execute.pythonScratchpadQuery",
+          "group": "q@1",
+          "when": "editorLangId == python"
         }
       ]
-    }
+    },
+    "customEditors": [
+      {
+        "viewType": "kdb.dataSourceEditor",
+        "displayName": "Data Source Editor",
+        "selector": [
+          {
+            "filenamePattern": "*.kdb.json"
+          }
+        ],
+        "priority": "default"
+      }
+    ]
   },
   "license": "MIT",
   "bugs": {

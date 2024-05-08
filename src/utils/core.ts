@@ -281,6 +281,30 @@ export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+export function getScratchpadStatusIcon(label: string) {
+  if (
+    ext.activeScratchPadList?.some((scratchpad) => scratchpad.name === label)
+  ) {
+    return "-active";
+  } else if (
+    ext.connectedScratchPadList?.some((scratchpad) => scratchpad.name === label)
+  ) {
+    return "-connected";
+  } else {
+    return "";
+  }
+}
+
+export function getDatasourceStatusIcon(label: string) {
+  if (ext.activeDatasourceList?.some((ds) => ds.name === label)) {
+    return "-active";
+  } else if (ext.connectedDatasourceList?.some((ds) => ds.name === label)) {
+    return "-connected";
+  } else {
+    return "";
+  }
+}
+
 export async function checkLocalInstall(): Promise<void> {
   const QHOME = workspace.getConfiguration().get<string>("kdb.qHomeDirectory");
   if (QHOME || env.QHOME) {

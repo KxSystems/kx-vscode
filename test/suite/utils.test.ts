@@ -46,9 +46,10 @@ import {
   DDateTimeClass,
   DTimestampClass,
 } from "../../src/ipc/cClasses";
-import { DataSourceTypes } from "../../src/models/dataSource";
+import { DataSourceFiles, DataSourceTypes } from "../../src/models/dataSource";
 import { InsightDetails } from "../../src/models/insights";
 import { LocalConnection } from "../../src/classes/localConnection";
+import { ScratchpadFile } from "../../src/models/scratchpad";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;
@@ -173,6 +174,91 @@ describe("Utils", () => {
 
         sinon.assert.calledOnce(getConfigurationStub);
         assert.strictEqual(ext.hideDetailedConsoleQueryOutput, false);
+      });
+    });
+
+    describe("getScratchpadStatusIcon", () => {
+      const scratchpadDummy: ScratchpadFile = {
+        name: "test",
+        code: "",
+      };
+      beforeEach(() => {
+        ext.activeScratchPadList.length = 0;
+        ext.connectedScratchPadList.length = 0;
+      });
+      afterEach(() => {
+        ext.activeScratchPadList.length = 0;
+        ext.connectedScratchPadList.length = 0;
+      });
+      it("should return active if scratchpad label is on the active list", () => {
+        ext.activeScratchPadList.push(scratchpadDummy);
+        ext.connectedScratchPadList.push(scratchpadDummy);
+        const result = coreUtils.getScratchpadStatusIcon("test");
+        assert.strictEqual(result, "-active");
+      });
+      it("should return connected if scratchpad label is on the connected list", () => {
+        ext.connectedScratchPadList.push(scratchpadDummy);
+        const result = coreUtils.getScratchpadStatusIcon("test");
+        assert.strictEqual(result, "-connected");
+      });
+
+      it("should return empty string if scratchpad label is not on the active or connected list", () => {
+        const result = coreUtils.getScratchpadStatusIcon("test");
+        assert.strictEqual(result, "");
+      });
+    });
+
+    describe("getDatasourceStatusIcon", () => {
+      const dsFileDummy: DataSourceFiles = {
+        name: "test",
+        dataSource: {
+          selectedType: DataSourceTypes.API,
+          api: {
+            selectedApi: "",
+            table: "",
+            startTS: "",
+            endTS: "",
+            fill: "zero",
+            temporality: "snapshot",
+            filter: [],
+            groupBy: [],
+            agg: [],
+            sortCols: [],
+            slice: [],
+            labels: [],
+          },
+          qsql: {
+            query: "",
+            selectedTarget: "",
+          },
+          sql: {
+            query: "",
+          },
+        },
+      };
+      beforeEach(() => {
+        ext.activeDatasourceList.length = 0;
+        ext.connectedDatasourceList.length = 0;
+      });
+      afterEach(() => {
+        ext.activeDatasourceList.length = 0;
+        ext.connectedDatasourceList.length = 0;
+      });
+      it("should return active if scratchpad label is on the active list", () => {
+        ext.activeDatasourceList.push(dsFileDummy);
+        ext.connectedDatasourceList.push(dsFileDummy);
+        const result = coreUtils.getDatasourceStatusIcon("test");
+        assert.strictEqual(result, "-active");
+      });
+      it("should return connected if scratchpad label is on the connected list", () => {
+        ext.connectedDatasourceList.push(dsFileDummy);
+        const result = coreUtils.getDatasourceStatusIcon("test");
+        assert.strictEqual(result, "-connected");
+      });
+
+      it("should return empty string if scratchpad label is not on the active or connected list", () => {
+        const result = coreUtils.getDatasourceStatusIcon("test");
+        assert.strictEqual(result, "");
       });
     });
 

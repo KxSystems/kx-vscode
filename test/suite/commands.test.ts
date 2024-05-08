@@ -50,6 +50,7 @@ import { MAX_STR_LEN } from "../../src/validators/kdbValidator";
 import { LocalConnection } from "../../src/classes/localConnection";
 import { ConnectionManagementService } from "../../src/services/connectionManagerService";
 import { InsightsConnection } from "../../src/classes/insightsConnection";
+import * as workspaceCommand from "../../src/commands/workspaceCommand";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
@@ -1507,7 +1508,7 @@ describe("serverCommand", () => {
   });
 
   describe("runQuery", () => {
-    const editor = {
+    const editor = <vscode.TextEditor>(<unknown>{
       selection: {
         isEmpty: false,
         active: { line: 5 },
@@ -1517,16 +1518,12 @@ describe("serverCommand", () => {
         lineAt: sinon.stub().returns({ text: "SELECT * FROM table" }),
         getText: sinon.stub().returns("SELECT * FROM table"),
       },
-    };
+    });
 
-    let getQueryContextStub,
-      activeTextEditorStub,
-      executeQueryStub: sinon.SinonStub;
+    let getQueryContextStub, executeQueryStub: sinon.SinonStub;
 
     beforeEach(() => {
-      activeTextEditorStub = sinon
-        .stub(vscode.window, "activeTextEditor")
-        .value(editor);
+      ext.activeTextEditor = editor;
       getQueryContextStub = sinon
         .stub(serverCommand, "getQueryContext")
         .returns(".");
@@ -1537,14 +1534,14 @@ describe("serverCommand", () => {
     });
 
     afterEach(() => {
-      activeTextEditorStub.restore();
+      ext.activeTextEditor = undefined;
       getQueryContextStub.restore();
       executeQueryStub.restore();
       ext.kdbinsightsNodes.pop();
     });
 
     it("runQuery with undefined editor ", () => {
-      activeTextEditorStub.value(undefined);
+      ext.activeTextEditor = undefined;
       const result = serverCommand.runQuery(ExecutionTypes.PythonQueryFile);
       assert.equal(result, false);
     });
@@ -1862,4 +1859,87 @@ describe("walkthroughCommand", () => {
   //write tests for src/commands/walkthroughCommand.ts
   //function to be deleted after write the tests
   walkthroughCommand.showInstallationDetails();
+});
+
+describe("workspaceCommand", () => {
+  beforeEach(() => {
+    sinon.stub(vscode.workspace, "getConfiguration").value(() => {
+      return {
+        get(key: string) {
+          switch (key) {
+            case "insightsEnterpriseConnections":
+              return [{ alias: "connection1" }];
+          }
+          return {};
+        },
+        update() {},
+      };
+    });
+  });
+  afterEach(() => {
+    sinon.restore();
+  });
+  describe("connectWorkspaceCommands", () => {
+    it("should connect listeners", () => {
+      workspaceCommand.connectWorkspaceCommands();
+    });
+  });
+  describe("activateConnectionForServer", () => {
+    it("should not activate connection", async () => {
+      sinon.stub(ext, "serverProvider").value({
+        getChildren() {
+          return [];
+        },
+      });
+      await assert.rejects(() =>
+        workspaceCommand.activateConnectionForServer("test"),
+      );
+    });
+  });
+  describe("getInsightsServers", () => {
+    it("should return insights server aliases as array", () => {
+      const result = workspaceCommand.getInsightsServers();
+      assert.strictEqual(result[0], "connection1");
+    });
+  });
+  describe("setServerForUri", () => {
+    it("should associate a server with an uri", async () => {
+      await assert.doesNotReject(() =>
+        workspaceCommand.setServerForUri(
+          vscode.Uri.file("test.kdb.q"),
+          "connection1",
+        ),
+      );
+    });
+  });
+  describe("pickConnection", () => {
+    it("should pick from available servers", async () => {
+      sinon.stub(window, "showQuickPick").value(async () => "test");
+      const result = await workspaceCommand.pickConnection(
+        vscode.Uri.file("test.kdb.q"),
+      );
+      assert.strictEqual(result, "test");
+    });
+    it("should return undefined from (none)", async () => {
+      sinon.stub(window, "showQuickPick").value(async () => "(none)");
+      const result = await workspaceCommand.pickConnection(
+        vscode.Uri.file("test.kdb.q"),
+      );
+      assert.strictEqual(result, undefined);
+    });
+  });
+
+  describe("ConnectionLensProvider", () => {
+    describe("provideCodeLenses", () => {
+      it("should return lenses", async () => {
+        const document = await vscode.workspace.openTextDocument({
+          language: "q",
+          content: "a:1",
+        });
+        const provider = new workspaceCommand.ConnectionLensProvider();
+        const result = await provider.provideCodeLenses(document);
+        assert.strictEqual(result.length, 2);
+      });
+    });
+  });
 });

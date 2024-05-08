@@ -366,7 +366,7 @@ export async function executeQuery(
 
 export function getQueryContext(lineNum?: number): string {
   let context = ".";
-  const editor = window.activeTextEditor;
+  const editor = ext.activeTextEditor;
   const fullText = typeof lineNum !== "number";
 
   if (editor) {
@@ -413,7 +413,7 @@ export function getConextForRerunQuery(query: string): string {
 }
 
 export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
-  const editor = window.activeTextEditor;
+  const editor = ext.activeTextEditor;
   if (!editor) {
     return false;
   }

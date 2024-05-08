@@ -1,0 +1,286 @@
+/*
+ * Copyright (c) 1998-2023 Kx Systems Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
+import {
+  CodeLens,
+  CodeLensProvider,
+  Command,
+  ProviderResult,
+  Range,
+  StatusBarAlignment,
+  TextDocument,
+  TextEditor,
+  ThemeColor,
+  Uri,
+  window,
+  workspace,
+} from "vscode";
+import { ext } from "../extensionVariables";
+import { ConnectionManagementService } from "../services/connectionManagerService";
+import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
+import { runQuery } from "./serverCommand";
+import { ExecutionTypes } from "../models/execution";
+
+const connectionService = new ConnectionManagementService();
+
+/* istanbul ignore next */
+function workspaceFoldersChanged() {
+  ext.dataSourceTreeProvider.reload();
+  ext.scratchpadTreeProvider.reload();
+}
+
+/* istanbul ignore next */
+function setRealActiveTextEditor(editor?: TextEditor | undefined) {
+  if (editor) {
+    const scheme = editor.document.uri.scheme;
+    if (scheme !== "output") {
+      ext.activeTextEditor = editor;
+    }
+  } else {
+    ext.activeTextEditor = undefined;
+  }
+}
+
+/* istanbul ignore next */
+function activeEditorChanged(editor?: TextEditor | undefined) {
+  setRealActiveTextEditor(editor);
+  const item = ext.runScratchpadItem;
+  if (ext.activeTextEditor) {
+    const uri = ext.activeTextEditor.document.uri;
+    if (isScratchpad(uri)) {
+      const server = getServerForUri(uri);
+      setRunScratchpadItemText(server || "Run");
+      item.show();
+    } else {
+      item.hide();
+    }
+  } else {
+    item.hide();
+  }
+}
+
+/* istanbul ignore next */
+function setRunScratchpadItemText(text: string) {
+  ext.runScratchpadItem.text = `$(run) ${text}`;
+}
+
+export function getInsightsServers() {
+  const conf = workspace.getConfiguration("kdb");
+  const servers = conf.get<{ [key: string]: { alias: string } }>(
+    "insightsEnterpriseConnections",
+    {},
+  );
+
+  return Object.keys(servers).map((key) => servers[key].alias);
+}
+
+function getServers() {
+  const conf = workspace.getConfiguration("kdb");
+  const servers = conf.get<{ [key: string]: { serverAlias: string } }>(
+    "servers",
+    {},
+  );
+
+  return [
+    ...Object.keys(servers).map((key) => servers[key].serverAlias),
+    ...getInsightsServers(),
+  ];
+}
+
+/* istanbul ignore next */
+async function getConnectionForServer(server: string) {
+  if (server) {
+    const servers = await ext.serverProvider.getChildren();
+    return servers.find((item) => {
+      if (item instanceof InsightsNode) {
+        return item.details.alias === server;
+      } else if (item instanceof KdbNode) {
+        return item.details.serverAlias === server;
+      }
+      return false;
+    }) as KdbNode | InsightsNode;
+  }
+}
+
+/* istanbul ignore next */
+async function waitForConnection(label: string) {
+  return new Promise<void>((resolve, reject) => {
+    let count = 0;
+    const retry = () => {
+      count++;
+      setTimeout(() => {
+        if (connectionService.isConnected(label)) {
+          resolve();
+        } else if (count < 5) {
+          retry();
+        } else {
+          reject(new Error(`Can not connect to ${label}`));
+        }
+      }, 50);
+    };
+    retry();
+  });
+}
+
+/* istanbul ignore next */
+function relativePath(uri: Uri) {
+  return workspace.asRelativePath(uri, false);
+}
+
+export async function setServerForUri(uri: Uri, server: string | undefined) {
+  uri = Uri.file(uri.path);
+  const conf = workspace.getConfiguration("kdb", uri);
+  const map = conf.get<{ [key: string]: string | undefined }>(
+    "connectionMap",
+    {},
+  );
+  map[relativePath(uri)] = server;
+  await conf.update("connectionMap", map);
+}
+
+export function getServerForUri(uri: Uri) {
+  uri = Uri.file(uri.path);
+  const conf = workspace.getConfiguration("kdb", uri);
+  const map = conf.get<{ [key: string]: string | undefined }>(
+    "connectionMap",
+    {},
+  );
+  return map[relativePath(uri)];
+}
+
+/* istanbul ignore next */
+export function getConnectionForUri(uri: Uri) {
+  const server = getServerForUri(uri);
+  if (server) {
+    return ext.connectionsList.find((item) => {
+      if (item instanceof InsightsNode) {
+        return item.details.alias === server;
+      } else if (item instanceof KdbNode) {
+        return item.details.serverAlias === server;
+      }
+      return false;
+    }) as KdbNode | InsightsNode;
+  }
+}
+
+export async function pickConnection(uri: Uri) {
+  const server = getServerForUri(uri);
+
+  let picked = await window.showQuickPick(["(none)", ...getServers()], {
+    title: "Choose a connection",
+    placeHolder: server,
+  });
+
+  if (picked) {
+    if (picked === "(none)") {
+      picked = undefined;
+    }
+    await setServerForUri(uri, picked);
+    setRunScratchpadItemText(picked || "Run");
+  }
+
+  return picked;
+}
+
+function isPython(uri: Uri) {
+  return uri.path.endsWith(".py");
+}
+
+function isScratchpad(uri: Uri) {
+  return uri.path.endsWith(".kdb.q") || uri.path.endsWith(".kdb.py");
+}
+
+/* istanbul ignore next */
+export async function activateConnectionForServer(server: string) {
+  const connection = await getConnectionForServer(server);
+  if (connection) {
+    if (!connectionService.isConnected(connection.label)) {
+      const action = await window.showWarningMessage(
+        `${connection.label} is not connected`,
+        "Connect",
+      );
+      if (action === "Connect") {
+        await connectionService.connect(connection.label);
+        await waitForConnection(connection.label);
+      } else {
+        throw new Error(`${connection.label} is not connected`);
+      }
+    }
+    connectionService.setActiveConnection(connection);
+  } else {
+    throw new Error(`${server} is not found`);
+  }
+}
+
+/* istanbul ignore next */
+export async function runActiveEditor(type?: ExecutionTypes) {
+  if (ext.activeTextEditor) {
+    const uri = ext.activeTextEditor.document.uri;
+    if (isScratchpad(uri)) {
+      let server = getServerForUri(uri);
+      if (!server) {
+        server = await pickConnection(uri);
+      }
+      if (server) {
+        await activateConnectionForServer(server);
+      }
+    }
+    runQuery(
+      type === undefined
+        ? isPython(uri)
+          ? ExecutionTypes.PythonQueryFile
+          : ExecutionTypes.QueryFile
+        : type,
+    );
+  }
+}
+
+export class ConnectionLensProvider implements CodeLensProvider {
+  provideCodeLenses(document: TextDocument): ProviderResult<CodeLens[]> {
+    const server = getServerForUri(document.uri);
+    const top = new Range(0, 0, 0, 0);
+    const runScratchpad = new CodeLens(top, {
+      command: isPython(document.uri)
+        ? "kdb.execute.pythonFileScratchpadQuery"
+        : "kdb.execute.fileQuery",
+      title: server ? `Run on ${server}` : "Run",
+    });
+    const pickConnection = new CodeLens(top, {
+      command: "kdb.pickConnection",
+      title: "Choose Connection",
+    });
+    return [runScratchpad, pickConnection];
+  }
+}
+
+export function connectWorkspaceCommands() {
+  ext.runScratchpadItem = window.createStatusBarItem(
+    StatusBarAlignment.Right,
+    10000,
+  );
+  ext.runScratchpadItem.backgroundColor = new ThemeColor(
+    "statusBarItem.warningBackground",
+  );
+  ext.runScratchpadItem.command = <Command>{
+    title: "",
+    command: "kdb.runScratchpad",
+    arguments: [],
+  };
+
+  const watcher = workspace.createFileSystemWatcher("**/*.kdb.{json,q,py}");
+  watcher.onDidCreate(workspaceFoldersChanged);
+  watcher.onDidDelete(workspaceFoldersChanged);
+  workspace.onDidChangeWorkspaceFolders(workspaceFoldersChanged);
+  window.onDidChangeActiveTextEditor(activeEditorChanged);
+  activeEditorChanged(window.activeTextEditor);
+}

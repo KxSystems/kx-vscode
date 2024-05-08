@@ -11,7 +11,14 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { ExtensionContext, extensions, languages, OutputChannel } from "vscode";
+import {
+  ExtensionContext,
+  extensions,
+  languages,
+  OutputChannel,
+  StatusBarItem,
+  TextEditor,
+} from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 import { LocalProcess } from "./models/localProcess";
 import { MetaObjectPayload } from "./models/meta";
@@ -26,11 +33,15 @@ import {
 import { QueryHistoryProvider } from "./services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import AuthSettings from "./utils/secretStorage";
+import { WorkspaceTreeProvider } from "./services/workspaceTreeProvider";
+import { ScratchpadFile } from "./models/scratchpad";
 import { LocalConnection } from "./classes/localConnection";
 import { InsightsConnection } from "./classes/insightsConnection";
+import { DataSourceFiles } from "./models/dataSource";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
+  export let activeTextEditor: TextEditor | undefined;
   export let context: ExtensionContext;
   export let outputChannel: OutputChannel;
   export let consolePanel: OutputChannel;
@@ -38,6 +49,13 @@ export namespace ext {
   export let dataSourceProvider: KdbDataSourceProvider;
   export let queryHistoryProvider: QueryHistoryProvider;
   export let resultsViewProvider: KdbResultsViewProvider;
+  export let scratchpadTreeProvider: WorkspaceTreeProvider;
+  export let dataSourceTreeProvider: WorkspaceTreeProvider;
+  export let runScratchpadItem: StatusBarItem;
+  export const activeScratchPadList: Array<ScratchpadFile> = [];
+  export const connectedScratchPadList: Array<ScratchpadFile> = [];
+  export const activeDatasourceList: Array<DataSourceFiles> = [];
+  export const connectedDatasourceList: Array<DataSourceFiles> = [];
   export let serverObjects: ServerObject;
   export let openSslVersion: string | null;
   export let resultPanelCSV: string;
