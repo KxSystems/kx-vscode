@@ -359,6 +359,16 @@
         "category": "KX",
         "command": "kdb.qlint",
         "title": "Lint q source file"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.renameFile",
+        "title": "Rename"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.deleteFile",
+        "title": "Delete"
       }
     ],
     "keybindings": [
@@ -650,6 +660,16 @@
           "command": "kdb.queryHistory.rerun",
           "when": "view == kdb-query-history",
           "group": "queryHistory"
+        },
+        {
+          "command": "kdb.renameFile",
+          "when": "(view == kdb-datasource-explorer || view == kdb-scratchpad-explorer) && viewItem == artifact",
+          "group": "kdbWorkspace@1"
+        },
+        {
+          "command": "kdb.deleteFile",
+          "when": "(view == kdb-datasource-explorer || view == kdb-scratchpad-explorer) && viewItem == artifact",
+          "group": "kdbWorkspace@2"
         }
       ],
       "editor/title/run": [

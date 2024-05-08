@@ -78,6 +78,7 @@ export class FileTreeItem extends TreeItem {
         this.collapsibleState = TreeItemCollapsibleState.Expanded;
       }
     } else {
+      this.contextValue = "artifact";
       this.command = <Command>{
         title: "",
         command: "vscode.open",
