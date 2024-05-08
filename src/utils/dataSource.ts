@@ -123,6 +123,7 @@ export async function importOldDsFiles(): Promise<void> {
     await addDSToLocalFolder(fileContent);
     // remove old DS
     fs.unlinkSync(path.join(kdbDataSourcesFolderPath, file));
+    return Promise.resolve();
   });
   ext.oldDSformatExists = false;
 }
