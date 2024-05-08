@@ -44,6 +44,7 @@
     "onCommand:kdb.resultsPanel.update",
     "onCommand:kdb.resultsPanel.clear",
     "onCommand:kdb.resultsPanel.export.csv",
+    "onCommand:kdb.datasource.import.ds",
     "onView:kdb-servers",
     "onView:kdb-query-history",
     "onView:kdb-datasources-explorer",
@@ -319,6 +320,11 @@
         "category": "KX",
         "command": "kdb.resultsPanel.export.csv",
         "title": "Export to CSV"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.datasource.import.ds",
+        "title": "Import Datasource from old format"
       },
       {
         "category": "KX",

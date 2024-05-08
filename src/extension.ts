@@ -34,15 +34,6 @@ import {
   TransportKind,
 } from "vscode-languageclient/node";
 import {
-  addDataSource,
-  deleteDataSource,
-  openDataSource,
-  populateScratchpad,
-  renameDataSource,
-  runDataSource,
-  saveDataSource,
-} from "./commands/dataSourceCommand";
-import {
   installTools,
   startLocalProcess,
   stopLocalProcess,
@@ -58,7 +49,6 @@ import {
   enableTLS,
   removeConnection,
   rerunQuery,
-  resetScratchPad,
 } from "./commands/serverCommand";
 import { showInstallationDetails } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
@@ -66,10 +56,7 @@ import { ExecutionTypes } from "./models/execution";
 import { InsightDetails, Insights } from "./models/insights";
 import { QueryResult } from "./models/queryResult";
 import { Server, ServerDetails } from "./models/server";
-import {
-  KdbDataSourceProvider,
-  KdbDataSourceTreeItem,
-} from "./services/dataSourceTreeProvider";
+import { KdbDataSourceProvider } from "./services/dataSourceTreeProvider";
 import {
   InsightsNode,
   KdbNode,
@@ -97,8 +84,10 @@ import {
   WorkspaceTreeProvider,
 } from "./services/workspaceTreeProvider";
 import {
+  checkOldDatasourceFiles,
   ConnectionLensProvider,
   connectWorkspaceCommands,
+  importOldDSFiles,
   pickConnection,
   runActiveEditor,
 } from "./commands/workspaceCommand";
@@ -186,6 +175,9 @@ export async function activate(context: ExtensionContext) {
     }),
     commands.registerCommand("kdb.resultsPanel.export.csv", () => {
       ext.resultsViewProvider.exportToCsv();
+    }),
+    commands.registerCommand("kdb.datasource.import.ds", async () => {
+      await importOldDSFiles();
     }),
     commands.registerCommand("kdb.connect", async (viewItem: KdbNode) => {
       await connect(viewItem);
@@ -388,6 +380,8 @@ export async function activate(context: ExtensionContext) {
       }
     }),
   );
+
+  checkOldDatasourceFiles();
 
   const lastResult: QueryResult | undefined = undefined;
   const resultSchema = "vscode-kdb-q";

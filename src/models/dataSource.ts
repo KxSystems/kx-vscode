@@ -18,7 +18,7 @@ export enum DataSourceTypes {
 }
 
 export interface DataSourceFiles {
-  name: string;
+  name?: string;
   originalName?: string;
   insightsNode?: string;
   dataSource: {

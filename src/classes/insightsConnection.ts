@@ -135,7 +135,7 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            ext.outputChannel.appendLine("User cancelled the installation.");
+            ext.outputChannel.appendLine("User cancelled the execution.");
           });
 
           progress.report({ message: "Query executing..." });
@@ -248,10 +248,12 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            ext.outputChannel.appendLine("User cancelled the installation.");
+            ext.outputChannel.appendLine(
+              "User cancelled the scratchpad import.",
+            );
           });
 
-          progress.report({ message: "Query executing..." });
+          progress.report({ message: "Importing scratchpad..." });
 
           const scratchpadResponse = await axios.post(
             scratchpadURL.toString(),
