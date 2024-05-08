@@ -132,7 +132,7 @@ async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
   if (folders) {
     const folder = folders[0];
     let i = 1;
-    let fileName = `datasource-${length}.kdb.json`;
+    let fileName = `datasource-${i}.kdb.json`;
     let filePath = path.join(folder.uri.path, fileName);
     while (fs.existsSync(filePath)) {
       i++;
