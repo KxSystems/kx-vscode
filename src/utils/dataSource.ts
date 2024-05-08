@@ -112,7 +112,7 @@ export async function importOldDsFiles(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
   const files = fs.readdirSync(kdbDataSourcesFolderPath);
 
-  files.forEach(async (file) => {
+  for (const file of files) {
     const fileData = fs.readFileSync(path.join(kdbDataSourcesFolderPath, file));
     const fileContent: DataSourceFiles = JSON.parse(fileData.toString());
     //remove fields that will became deprecated in the future
@@ -123,8 +123,7 @@ export async function importOldDsFiles(): Promise<void> {
     await addDSToLocalFolder(fileContent);
     // remove old DS
     fs.unlinkSync(path.join(kdbDataSourcesFolderPath, file));
-    return Promise.resolve();
-  });
+  }
   ext.oldDSformatExists = false;
 }
 
