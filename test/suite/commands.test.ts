@@ -1872,6 +1872,7 @@ describe("workspaceCommand", () => {
           }
           return {};
         },
+        update() {},
       };
     });
   });
@@ -1901,6 +1902,33 @@ describe("workspaceCommand", () => {
       assert.strictEqual(result[0], "connection1");
     });
   });
+  describe("setServerForUri", () => {
+    it("should associate a server with an uri", async () => {
+      await assert.doesNotReject(() =>
+        workspaceCommand.setServerForUri(
+          vscode.Uri.file("test.kdb.q"),
+          "connection1",
+        ),
+      );
+    });
+  });
+  describe("pickConnection", () => {
+    it("should pick from available servers", async () => {
+      sinon.stub(window, "showQuickPick").value(async () => "test");
+      const result = await workspaceCommand.pickConnection(
+        vscode.Uri.file("test.kdb.q"),
+      );
+      assert.strictEqual(result, "test");
+    });
+    it("should return undefined from (none)", async () => {
+      sinon.stub(window, "showQuickPick").value(async () => "(none)");
+      const result = await workspaceCommand.pickConnection(
+        vscode.Uri.file("test.kdb.q"),
+      );
+      assert.strictEqual(result, undefined);
+    });
+  });
+
   describe("ConnectionLensProvider", () => {
     describe("provideCodeLenses", () => {
       it("should return lenses", async () => {

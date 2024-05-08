@@ -137,7 +137,6 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
         case DataSourceCommand.Run:
           await activateConnectionForServer(msg.selectedServer);
           await runDataSource(msg.dataSourceFile);
-          updateWebview();
           break;
         case DataSourceCommand.Populate:
           await activateConnectionForServer(msg.selectedServer);

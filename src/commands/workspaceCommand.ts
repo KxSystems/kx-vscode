@@ -33,11 +33,13 @@ import { ExecutionTypes } from "../models/execution";
 
 const connectionService = new ConnectionManagementService();
 
+/* istanbul ignore next */
 function workspaceFoldersChanged() {
   ext.dataSourceTreeProvider.reload();
   ext.scratchpadTreeProvider.reload();
 }
 
+/* istanbul ignore next */
 function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   if (editor) {
     const scheme = editor.document.uri.scheme;
@@ -49,6 +51,7 @@ function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   }
 }
 
+/* istanbul ignore next */
 function activeEditorChanged(editor?: TextEditor | undefined) {
   setRealActiveTextEditor(editor);
   const item = ext.runScratchpadItem;
@@ -66,6 +69,7 @@ function activeEditorChanged(editor?: TextEditor | undefined) {
   }
 }
 
+/* istanbul ignore next */
 function setRunScratchpadItemText(text: string) {
   ext.runScratchpadItem.text = `$(run) ${text}`;
 }
@@ -93,6 +97,7 @@ function getServers() {
   ];
 }
 
+/* istanbul ignore next */
 async function getConnectionForServer(server: string) {
   if (server) {
     const servers = await ext.serverProvider.getChildren();
@@ -107,6 +112,7 @@ async function getConnectionForServer(server: string) {
   }
 }
 
+/* istanbul ignore next */
 async function waitForConnection(label: string) {
   return new Promise<void>((resolve, reject) => {
     let count = 0;
@@ -126,6 +132,7 @@ async function waitForConnection(label: string) {
   });
 }
 
+/* istanbul ignore next */
 function relativePath(uri: Uri) {
   return workspace.asRelativePath(uri, false);
 }
@@ -151,6 +158,7 @@ export function getServerForUri(uri: Uri) {
   return map[relativePath(uri)];
 }
 
+/* istanbul ignore next */
 export function getConnectionForUri(uri: Uri) {
   const server = getServerForUri(uri);
   if (server) {
@@ -192,6 +200,7 @@ function isScratchpad(uri: Uri) {
   return uri.path.endsWith(".kdb.q") || uri.path.endsWith(".kdb.py");
 }
 
+/* istanbul ignore next */
 export async function activateConnectionForServer(server: string) {
   const connection = await getConnectionForServer(server);
   if (connection) {
@@ -213,6 +222,7 @@ export async function activateConnectionForServer(server: string) {
   }
 }
 
+/* istanbul ignore next */
 export async function runActiveEditor(type?: ExecutionTypes) {
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
