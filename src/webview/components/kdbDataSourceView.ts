@@ -11,10 +11,9 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { LitElement, html } from "lit";
+import { LitElement, html, css } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 import { customElement } from "lit/decorators.js";
-import { css } from "lit";
 import {
   Agg,
   DataSourceFiles,
@@ -93,37 +92,35 @@ export class KdbDataSourceView extends LitElement {
 
   message = (event: MessageEvent<DataSourceMessage2>) => {
     const msg = event.data;
-    switch (msg.command) {
-      case DataSourceCommand.Update:
-        this.servers = msg.servers;
-        this.selectedServer = msg.selectedServer;
-        this.isInsights = msg.isInsights;
-        this.isMetaLoaded = !!msg.insightsMeta.dap;
-        this.insightsMeta = msg.insightsMeta;
-        const ds = msg.dataSourceFile;
-        this.selectedType = ds.dataSource.selectedType;
-        this.selectedApi = ds.dataSource.api.selectedApi;
-        this.selectedTable = ds.dataSource.api.table;
-        this.startTS = ds.dataSource.api.startTS;
-        this.endTS = ds.dataSource.api.endTS;
-        this.fill = ds.dataSource.api.fill;
-        this.temporality = ds.dataSource.api.temporality;
-        this.qsqlTarget = ds.dataSource.qsql.selectedTarget;
-        this.qsql = ds.dataSource.qsql.query;
-        this.sql = ds.dataSource.sql.query;
-        const optional = ds.dataSource.api.optional;
-        if (optional) {
-          this.filled = optional.filled;
-          this.temporal = optional.temporal;
-          this.filters = optional.filters;
-          this.labels = optional.labels;
-          this.sorts = optional.sorts;
-          this.aggs = optional.aggs;
-          this.groups = optional.groups;
-        }
-        break;
+    if (msg.command === DataSourceCommand.Update) {
+      this.servers = msg.servers;
+      this.selectedServer = msg.selectedServer;
+      this.isInsights = msg.isInsights;
+      this.isMetaLoaded = !!msg.insightsMeta.dap;
+      this.insightsMeta = msg.insightsMeta;
+      const ds = msg.dataSourceFile;
+      this.selectedType = ds.dataSource.selectedType;
+      this.selectedApi = ds.dataSource.api.selectedApi;
+      this.selectedTable = ds.dataSource.api.table;
+      this.startTS = ds.dataSource.api.startTS;
+      this.endTS = ds.dataSource.api.endTS;
+      this.fill = ds.dataSource.api.fill;
+      this.temporality = ds.dataSource.api.temporality;
+      this.qsqlTarget = ds.dataSource.qsql.selectedTarget;
+      this.qsql = ds.dataSource.qsql.query;
+      this.sql = ds.dataSource.sql.query;
+      const optional = ds.dataSource.api.optional;
+      if (optional) {
+        this.filled = optional.filled;
+        this.temporal = optional.temporal;
+        this.filters = optional.filters;
+        this.labels = optional.labels;
+        this.sorts = optional.sorts;
+        this.aggs = optional.aggs;
+        this.groups = optional.groups;
+      }
+      this.requestUpdate();
     }
-    this.requestUpdate();
   };
 
   get data(): DataSourceFiles {

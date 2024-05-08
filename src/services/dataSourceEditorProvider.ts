@@ -153,12 +153,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     if (text.trim().length === 0) {
       return {};
     }
-
-    try {
-      return JSON.parse(text);
-    } catch (error) {
-      throw error;
-    }
+    return JSON.parse(text);
   }
 
   private updateTextDocument(document: TextDocument, json: unknown) {

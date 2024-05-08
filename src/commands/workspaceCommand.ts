@@ -124,7 +124,7 @@ async function waitForConnection(label: string) {
         } else if (count < 5) {
           retry();
         } else {
-          reject(`Can not connect to ${label}`);
+          reject(new Error(`Can not connect to ${label}`));
         }
       }, 50);
     };
