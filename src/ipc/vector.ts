@@ -28,7 +28,7 @@ export default abstract class Vector extends TypeBase {
     offset: number,
     qtype: number,
     dataView: DataView,
-    size: number
+    size: number,
   ) {
     super(length, offset, qtype);
     this.dataView = dataView;
@@ -54,9 +54,9 @@ export default abstract class Vector extends TypeBase {
     new Uint8Array(
       this.dataView.buffer,
       this.offset,
-      arg.length * this.size
+      arg.length * this.size,
     ).set(
-      new Uint8Array(arg.dataView.buffer, arg.offset, arg.length * this.size)
+      new Uint8Array(arg.dataView.buffer, arg.offset, arg.length * this.size),
     );
   }
 
@@ -79,12 +79,12 @@ export default abstract class Vector extends TypeBase {
     if (this.size !== 8 || [9, 15].indexOf(this.qtype) !== -1) {
       const compareFn = (x: number, y: number): number =>
         x - (this.hash(y) as number);
-      // @ts-ignore
+      // @ts-expect-error
       return Tools.binarySearch2(Number(value), this.index, compareFn);
     } else {
       const compareFn = (x: bigint, y: number): number =>
         Number(x - (this.hash(y) as bigint));
-      // @ts-ignore
+      // @ts-expect-error
       return Tools.binarySearch2(BigInt(value), this.index, compareFn);
     }
   }
@@ -92,7 +92,7 @@ export default abstract class Vector extends TypeBase {
   public mergeKeyedPrimary(
     arg: Vector,
     maxRows: number,
-    insertIndices: Array<number>
+    insertIndices: Array<number>,
   ): number {
     this.resetRangeCache();
     this.index = this.index ? this.index : this.generateIndex();
@@ -121,13 +121,13 @@ export default abstract class Vector extends TypeBase {
         new Uint8Array(
           this.dataView.buffer,
           this.offset + targetIndex * this.size,
-          this.size
+          this.size,
         ).set(
           new Uint8Array(
             arg.dataView.buffer,
             arg.offset + i * this.size,
-            this.size
-          )
+            this.size,
+          ),
         );
         insertIndices.push(targetIndex);
       } else {
@@ -142,7 +142,7 @@ export default abstract class Vector extends TypeBase {
     arg: Vector,
     indices: Array<number>,
     indexOffset: number,
-    maxRows: number
+    maxRows: number,
   ): void {
     this.resetRangeCache();
     for (let i = 0; i < indices.length; i++) {
@@ -159,13 +159,13 @@ export default abstract class Vector extends TypeBase {
       new Uint8Array(
         this.dataView.buffer,
         this.offset + targetIndex * this.size,
-        this.size
+        this.size,
       ).set(
         new Uint8Array(
           arg.dataView.buffer,
           arg.offset + i * this.size,
-          this.size
-        )
+          this.size,
+        ),
       );
     }
 
@@ -176,7 +176,11 @@ export default abstract class Vector extends TypeBase {
     this.bufferLength = extLength || this.bufferLength;
     const buffer = new ArrayBuffer(this.bufferLength * this.size);
     new Uint8Array(buffer, 0, this.length * this.size).set(
-      new Uint8Array(this.dataView.buffer, this.offset, this.length * this.size)
+      new Uint8Array(
+        this.dataView.buffer,
+        this.offset,
+        this.length * this.size,
+      ),
     );
 
     this.dataView = new DataView(buffer);
@@ -212,18 +216,18 @@ export default abstract class Vector extends TypeBase {
     const typedArray = new TA(this.length);
 
     typedArray.set(
-      // @ts-ignore
+      // @ts-expect-error
       new TA(
         this.dataView.buffer,
         this.indexOffset * this.size,
-        this.length - this.indexOffset
-      )
+        this.length - this.indexOffset,
+      ),
     );
 
     typedArray.set(
-      // @ts-ignore
+      // @ts-expect-error
       new TA(this.dataView.buffer, 0, this.indexOffset),
-      this.length - this.indexOffset
+      this.length - this.indexOffset,
     );
 
     return typedArray;
@@ -252,7 +256,7 @@ export default abstract class Vector extends TypeBase {
       index.sort((a, b) => (this.hash(a) as number) - (this.hash(b) as number));
     } else {
       index.sort((a, b) =>
-        Number((this.hash(a) as bigint) - (this.hash(b) as bigint))
+        Number((this.hash(a) as bigint) - (this.hash(b) as bigint)),
       );
     }
 
