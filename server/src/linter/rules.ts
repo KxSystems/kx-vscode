@@ -38,7 +38,7 @@ const CondEvenArgsRule: LinterRule = {
 const DeclaredAfterUseRule: LinterRule = {
   code: "DECLARED_AFTER_USE",
   message: "The variable was declared after being used",
-  severity: DiagnosticSeverity.Warning,
+  severity: DiagnosticSeverity.Error,
   check: checks.declaredAfterUse,
 };
 

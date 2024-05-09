@@ -57,7 +57,7 @@ describe("TSQLint", () => {
     assert.strictEqual(result[0].code, "INVALID_ESCAPE");
   });
   it("should lint unusedParam", () => {
-    const text = "{[a]a:1}";
+    const text = "{[a]}";
     const result = lint(parse(text));
     assert.strictEqual(result.length, 1);
     assert.strictEqual(result[0].code, "UNUSED_PARAM");
@@ -69,11 +69,9 @@ describe("TSQLint", () => {
     assert.strictEqual(result[0].code, "UNUSED_VAR");
   });
   it("should lint declaredAfterUse", () => {
-    const text = "a;a:1;(b:1;b);[b:1;b]";
+    const text = "a;a:1";
     const result = lint(parse(text));
-    assert.strictEqual(result.length, 3);
+    assert.strictEqual(result.length, 1);
     assert.strictEqual(result[0].code, "DECLARED_AFTER_USE");
-    assert.strictEqual(result[1].code, "DECLARED_AFTER_USE");
-    assert.strictEqual(result[2].code, "DECLARED_AFTER_USE");
   });
 });

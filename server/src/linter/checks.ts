@@ -26,6 +26,7 @@ import {
   Token,
   TokenKind,
 } from "../parser";
+import { isLocal } from "../util";
 
 function seek(tokens: Token[], token: Token, count = 1) {
   if (token.index !== undefined) {
@@ -122,9 +123,49 @@ export function unusedParam(tokens: Token[]): Token[] {
 }
 
 export function unusedVar(tokens: Token[]): Token[] {
-  return [];
+  return tokens
+    .filter(
+      (token) =>
+        token.kind === TokenKind.Assignment &&
+        token.identifierKind !== IdentifierKind.Argument,
+    )
+    .filter((token) => {
+      if (isLocal(tokens, token)) {
+        return !tokens.find(
+          (target) =>
+            target !== token &&
+            target.identifier === token.identifier &&
+            target.tokenType === Identifier &&
+            target.kind !== TokenKind.Assignment &&
+            target.scope === token.scope,
+        );
+      }
+      return !tokens.find(
+        (target) =>
+          target !== token &&
+          target.identifier === token.identifier &&
+          target.tokenType === Identifier &&
+          target.kind !== TokenKind.Assignment &&
+          !isLocal(tokens, target),
+      );
+    });
 }
 
 export function declaredAfterUse(tokens: Token[]): Token[] {
-  return [];
+  return tokens
+    .filter(
+      (token) =>
+        !token.scope && !token.reverse && token.kind === TokenKind.Assignment,
+    )
+    .filter((token) =>
+      tokens.find(
+        (target) =>
+          target !== token &&
+          target.identifier === token.identifier &&
+          target.tokenType === Identifier &&
+          target.kind !== TokenKind.Assignment &&
+          target.scope === token.scope &&
+          target.index! < token.index!,
+      ),
+    );
 }

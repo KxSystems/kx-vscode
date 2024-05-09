@@ -81,6 +81,7 @@ export interface Token extends IToken {
   scope?: Token;
   lambda?: Token;
   nullary?: boolean;
+  reverse?: number;
   index?: number;
 }
 
@@ -92,6 +93,7 @@ export function parse(text: string): Token[] {
   let namespace = "";
   let sql = 0;
   let table = 0;
+  let reverse = 0;
   let argument = 0;
   let token, prev, next: IToken;
 
@@ -105,6 +107,7 @@ export function parse(text: string): Token[] {
   for (let i = 0; i < tokens.length; i++) {
     token = tokens[i];
     token.index = i;
+    token.reverse = reverse;
     token.namespace = namespace;
     switch (token.tokenType) {
       case Identifier:
@@ -151,10 +154,14 @@ export function parse(text: string): Token[] {
         }
         scopes.push(token);
         break;
+      case LBracket:
+        reverse++;
+        break;
       case RBracket:
         if (argument) {
           argument--;
         }
+        reverse--;
         break;
       case RCurly:
         scopes.pop();
@@ -170,11 +177,13 @@ export function parse(text: string): Token[] {
         if (table || next?.tokenType === LBracket) {
           table++;
         }
+        reverse++;
         break;
       case RParen:
         if (table) {
           table--;
         }
+        reverse--;
         break;
       case Command:
         const [cmd, arg] = args(token.image, 2);

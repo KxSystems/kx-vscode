@@ -64,8 +64,8 @@ export default class QLangServer {
     this.settings = defaultSettings;
     this.documents = new TextDocuments(TextDocument);
     this.documents.listen(this.connection);
-    this.documents.onDidChangeContent(this.onDidChangeContent.bind(this));
     this.documents.onDidClose(this.onDidClose.bind(this));
+    this.documents.onDidChangeContent(this.onDidChangeContent.bind(this));
     this.connection.onDocumentSymbol(this.onDocumentSymbol_Debug.bind(this));
     this.connection.onReferences(this.onReferences.bind(this));
     this.connection.onDefinition(this.onDefinition.bind(this));
@@ -91,8 +91,12 @@ export default class QLangServer {
     this.settings = settings;
   }
 
-  public onDidChangeConfiguration(change: DidChangeConfigurationParams) {
-    this.setSettings(change.settings?.kdb || defaultSettings);
+  public onDidChangeConfiguration({ settings }: DidChangeConfigurationParams) {
+    if ("kdb" in settings) {
+      if ("linting" in settings.kdb) {
+        this.setSettings({ linting: settings.kdb.linting });
+      }
+    }
   }
 
   public onDidClose({ document }: TextDocumentChangeEvent<TextDocument>) {
@@ -115,7 +119,7 @@ export default class QLangServer {
     return this.parse(textDocument).map((token) =>
       DocumentSymbol.create(
         token.image,
-        `${token.tokenType.name} (${token.index})`,
+        `${token.tokenType.name} (${token.reverse})`,
         SymbolKind.Variable,
         rangeFromToken(token),
         rangeFromToken(token),
