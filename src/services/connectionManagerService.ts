@@ -336,7 +336,7 @@ export class ConnectionManagementService {
   /* istanbul ignore next */
   public async startMonitoringConn() {
     let previousNetworkState = os.networkInterfaces();
-    const intervalId = setInterval(async () => {
+    const intervalId = setInterval(() => {
       const currentNetworkState = os.networkInterfaces();
       if (
         JSON.stringify(previousNetworkState) !==
@@ -344,7 +344,7 @@ export class ConnectionManagementService {
       ) {
         clearInterval(intervalId);
         previousNetworkState = currentNetworkState;
-        await this.checkInsightsConnectionIsAlive();
+        this.checkInsightsConnectionIsAlive();
       }
       if (ext.connectedConnectionList.length === 0) {
         clearInterval(intervalId);
