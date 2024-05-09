@@ -81,6 +81,7 @@ export interface Token extends IToken {
   scope?: Token;
   lambda?: Token;
   nullary?: boolean;
+  index?: number;
 }
 
 export function parse(text: string): Token[] {
@@ -103,6 +104,7 @@ export function parse(text: string): Token[] {
 
   for (let i = 0; i < tokens.length; i++) {
     token = tokens[i];
+    token.index = i;
     token.namespace = namespace;
     switch (token.tokenType) {
       case Identifier:

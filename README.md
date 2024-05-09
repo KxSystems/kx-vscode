@@ -204,7 +204,7 @@ The extension provides keyword syntax highlighting, comments and linting help.
 
 ![Linting](https://github.com/KxSystems/kx-vscode/blob/main/img/linting.png?raw=true)
 
-Linting is supported for assignment to reserved words and literals, unused arguments and variables, line length, deprecated date time, too many globals, locals and constants. More linter rules will be supported for future releases.
+Linting can be enabled by checking `Enable linting for q and quke files` in extension settings.
 
 ### Code navigation
 

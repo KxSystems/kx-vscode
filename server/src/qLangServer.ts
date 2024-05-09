@@ -18,16 +18,17 @@ import {
   CompletionParams,
   Connection,
   DefinitionParams,
+  DidChangeConfigurationParams,
   DocumentSymbol,
   DocumentSymbolParams,
   InitializeParams,
+  LSPAny,
   Location,
-  Position,
-  Range,
   ReferenceParams,
   RenameParams,
   ServerCapabilities,
   SymbolKind,
+  TextDocumentChangeEvent,
   TextDocumentIdentifier,
   TextDocumentSyncKind,
   TextDocuments,
@@ -35,6 +36,8 @@ import {
   WorkspaceEdit,
 } from "vscode-languageserver/node";
 import { Identifier, IdentifierKind, Token, TokenKind, parse } from "./parser";
+import { getLabel, isLocal, positionToToken, rangeFromToken } from "./util";
+import { lint } from "./linter";
 
 const enum FindKind {
   Reference,
@@ -43,75 +46,34 @@ const enum FindKind {
   Completion,
 }
 
-function rangeFromToken(token: Token): Range {
-  return Range.create(
-    (token.startLine || 1) - 1,
-    (token.startColumn || 1) - 1,
-    (token.endLine || 1) - 1,
-    token.endColumn || 1,
-  );
+interface Settings {
+  linting: boolean;
 }
 
-function isLocal(tokens: Token[], target: Token) {
-  if (!target.scope) {
-    return false;
-  }
-  if (target.scope.nullary) {
-    if (
-      target.identifier === "x" ||
-      target.identifier === "y" ||
-      target.identifier === "z"
-    ) {
-      return true;
-    }
-  }
-  return !!tokens.find(
-    (token) =>
-      token.kind === TokenKind.Assignment &&
-      token.scope === target.scope &&
-      token.identifier === target.identifier,
-  );
-}
-
-function positionToToken(tokens: Token[], position: Position) {
-  return tokens.find((token) => {
-    const { start, end } = rangeFromToken(token);
-    return (
-      start.line <= position.line &&
-      end.line >= position.line &&
-      start.character <= position.character &&
-      end.character >= position.character
-    );
-  });
-}
-
-function getLabel(token: Token, source?: Token): string {
-  const label = token.identifier || token.image;
-
-  if (source?.namespace) {
-    if (label.startsWith(source.namespace)) {
-      return label.replace(`${source.namespace}.`, "");
-    }
-  }
-
-  return label;
-}
+const defaultSettings: Settings = { linting: false };
 
 export default class QLangServer {
   private declare connection: Connection;
   private declare params: InitializeParams;
+  private declare settings: Settings;
   public declare documents: TextDocuments<TextDocument>;
 
   constructor(connection: Connection, params: InitializeParams) {
     this.connection = connection;
     this.params = params;
+    this.settings = defaultSettings;
     this.documents = new TextDocuments(TextDocument);
     this.documents.listen(this.connection);
-    this.connection.onDocumentSymbol(this.onDocumentSymbol.bind(this));
+    this.documents.onDidChangeContent(this.onDidChangeContent.bind(this));
+    this.documents.onDidClose(this.onDidClose.bind(this));
+    this.connection.onDocumentSymbol(this.onDocumentSymbol_Debug.bind(this));
     this.connection.onReferences(this.onReferences.bind(this));
     this.connection.onDefinition(this.onDefinition.bind(this));
     this.connection.onRenameRequest(this.onRenameRequest.bind(this));
     this.connection.onCompletion(this.onCompletion.bind(this));
+    this.connection.onDidChangeConfiguration(
+      this.onDidChangeConfiguration.bind(this),
+    );
   }
 
   public capabilities(): ServerCapabilities {
@@ -123,6 +85,42 @@ export default class QLangServer {
       renameProvider: true,
       completionProvider: { resolveProvider: false },
     };
+  }
+
+  public setSettings(settings: LSPAny) {
+    this.settings = settings;
+  }
+
+  public onDidChangeConfiguration(change: DidChangeConfigurationParams) {
+    this.setSettings(change.settings?.kdb || defaultSettings);
+  }
+
+  public onDidClose({ document }: TextDocumentChangeEvent<TextDocument>) {
+    this.connection.sendDiagnostics({ uri: document.uri, diagnostics: [] });
+  }
+
+  public onDidChangeContent({
+    document,
+  }: TextDocumentChangeEvent<TextDocument>) {
+    if (this.settings.linting) {
+      const uri = document.uri;
+      const diagnostics = lint(this.parse(document));
+      this.connection.sendDiagnostics({ uri, diagnostics });
+    }
+  }
+
+  public onDocumentSymbol_Debug({
+    textDocument,
+  }: DocumentSymbolParams): DocumentSymbol[] {
+    return this.parse(textDocument).map((token) =>
+      DocumentSymbol.create(
+        token.image,
+        `${token.tokenType.name} (${token.index})`,
+        SymbolKind.Variable,
+        rangeFromToken(token),
+        rangeFromToken(token),
+      ),
+    );
   }
 
   public onDocumentSymbol({
