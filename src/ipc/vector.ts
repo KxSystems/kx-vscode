@@ -216,7 +216,7 @@ export default abstract class Vector extends TypeBase {
     const typedArray = new TA(this.length);
 
     typedArray.set(
-      // @ts-expect-error
+      // @ts-ignore
       new TA(
         this.dataView.buffer,
         this.indexOffset * this.size,
@@ -225,7 +225,7 @@ export default abstract class Vector extends TypeBase {
     );
 
     typedArray.set(
-      // @ts-expect-error
+      // @ts-ignore
       new TA(this.dataView.buffer, 0, this.indexOffset),
       this.length - this.indexOffset,
     );

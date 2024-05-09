@@ -30,14 +30,14 @@ export default abstract class I64 extends Vector {
   calcRange(): bigint[] {
     let xMax = this.getScalar(0);
     let xMin = xMax;
-    // @ts-expect-error TS2304
+    // TS2304
     for (let i = 1; i < this.length; i++) {
       const x = this.getScalar(i);
-      // @ts-expect-error TS2304
+      // TS2304
       if (xMax === I64.nullValue || (x > xMax && x !== I64.nullValue)) {
         xMax = x;
       }
-      // @ts-expect-error TS2304
+      // TS2304
       if (xMin === I64.nullValue || (x < xMin && x !== I64.nullValue)) {
         xMin = x;
       }
