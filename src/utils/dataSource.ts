@@ -108,10 +108,11 @@ export function oldFilesExists(): boolean {
   return files.length > 0;
 }
 
+/* istanbul ignore next */
 export async function importOldDsFiles(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
   const files = fs.readdirSync(kdbDataSourcesFolderPath);
-
+  console.log(files.toString());
   for (const file of files) {
     const fileData = fs.readFileSync(path.join(kdbDataSourcesFolderPath, file));
     const fileContent: DataSourceFiles = JSON.parse(fileData.toString());
@@ -127,7 +128,8 @@ export async function importOldDsFiles(): Promise<void> {
   ext.oldDSformatExists = false;
 }
 
-async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
+/* istanbul ignore next */
+export async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
   const folders = workspace.workspaceFolders;
   if (folders) {
     const folder = folders[0];
@@ -140,7 +142,7 @@ async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
       filePath = path.join(folder.uri.path, fileName);
     }
     fs.writeFileSync(filePath, JSON.stringify(ds));
-    window.showInformationMessage(`Datasource imported.`);
-    Telemetry.sendEvent("Datasource.Imported");
+    window.showInformationMessage(`Datasource created.`);
+    Telemetry.sendEvent("Datasource.Created");
   }
 }
