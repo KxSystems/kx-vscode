@@ -88,7 +88,14 @@ To integrate VS Code with q take the following steps:
 
 ## Connections
 
-The kdb VS Code extension allows you to connect VS Code to a q process; this can be remote, referred to as an [**unmanaged q session**](#my-q) or a [**managed q session**](#bundled-q), which uses the q installed as part of the kdb VS Code extension installation. It runs a child q process from within the extension and is fully managed by the extension. Only one connection can be active at any given time.
+The kdb VS Code extension allows you to connect VS Code to one or more q processes; these can be:
+
+- [Bundled q](#bundled-q): referred to as a **managed q session**, which uses the q installed as part of the kdb VS Code extension installation. It runs a child q process from within the extension and is fully managed by the extension. Only one connection can be active at any given time.
+
+- [My q](#my-q): is a remote q process referred to as an **unmanaged q session**.
+
+- [Insights](#insights-connection): access to kdb Insights Enterprise API endpoints and a user-specific scratchpad process within the kdb Insights Enterprise deploy.
+
 
 ### Bundled q
 
@@ -176,11 +183,8 @@ For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb pro
 
 ![authenticateinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsauthenticate.jpg?raw=true)
 
-After a successful connection to a kdb Insights Enterprise process, a new _DATA SOURCES_ panel will become available in the kdb VS Code extension.
 
-![insightsdatasources](https://github.com/KxSystems/kx-vscode/blob/main/img/datasources.jpg?raw=true)
-
-Once connected to a q process, go to [execute code](#execute-code).
+Once connected, go to [execute code](#execute-code).
 
 [//]: # "In what context is the reserved alias name `insights` used? - BMA - the context is used on build the connection tree; different icon; different connection process. - DF - Is this connection process currently supported in kdb VS Code extension; if so, do we need to document it here?"
 
@@ -275,27 +279,34 @@ To run a data source, click 'Run' and the results populate the output and kdb re
 
 In addition to [API queries](https://code.kx.com/insights/api/database/query/get-data.html), if the query environment is enabled on the deployed instance of kdb Insights Enterprise, qSQL and SQL queries can be used within a data source with the appropriate parameterization.
 
+
+
 #### Populate scratchpad
 
-You can use a data source to populate a scratchpad with a dataset, allowing you to build complex APIs and pipelines within VS Code and kdb Insights Enterprise.
+You can use a data source to populate a scratchpad process running in a kdb Insights Enterprise instance with a dataset, allowing you to build complex APIs and pipelines within VS Code and kdb Insights Enterprise.
 
 To do this:
 
 1. Create a data source and execute it using the 'Populate Scratchpad' button.
-   The scratchpad is populated.
-1. At the prompt, provide a variable to populate your own scratchpad instance with the data.
+   The scratchpad process is populated.
+1. At the prompt, provide a variable to populate your own scratchpad instance running in the connected kdb Insights Enterprise with the data.
 
-1. Return to VS Code and execute q code against the data in your scratchpad.
+1. Return to VS Code and execute q or python code against the data in your scratchpad using the variable you provided.
 
 ![Populate Scratchpad](https://github.com/KxSystems/kx-vscode/blob/main/img/populate-scratchpad.png?raw=true)
 
-##### Reset scratchpad
+#### Workspaces
 
-You can clear the memory of an active scratchpad which will remove all data and reset all variables in it. This can be done by either:
+kdb Insights Workspaces are the most convenient way to prototype and execute q and python code against an active connection.
 
-- Right-clicking inside a scratchpad and choosing Reset from the menu
+kdb Insights Enterprise connections support the use of q and python workspace files against the scratchpad process running in a kdb Insights Enterprise instance. They can use the variables populated into the scratchpad by data sources. 
 
-- Open a VS Code command prompt (CMD+SHIFT+P) and type in 'reset scratchpad'
+To create a workspace file:
+
+1. In the Workspace view, click one of the '+' buttons to create a 'q' or 'python' workspace.
+1. Choose which connection 
+
+To run code in the file, click 'Run' and the results populate the output and kdb results windows.
 
 
 ## View results
@@ -340,7 +351,7 @@ To update kdb VS Code settings, search for `kdb` from _Preferences_ > _Settings_
 | QHOME directory for q runtime                              | Display location path of q installation                             |
 | Servers                                                    | [edit JSON settings](#servers)                                      |
 
-### Insights Enterprise Connections for Explorer
+### kdb Insights Enterprise Connections for Explorer
 
 ```JSON
 {
