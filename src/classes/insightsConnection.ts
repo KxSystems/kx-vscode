@@ -473,7 +473,7 @@ export class InsightsConnection {
               url: pingURL.toString(),
               data: body,
               headers: { Authorization: `Bearer ${userToken.accessToken}` },
-              timeout: 1500,
+              timeout: 1000,
             })
             .then((response: any) => {
               console.log(response);
@@ -483,7 +483,7 @@ export class InsightsConnection {
             .catch((error: any) => {
               console.log(error);
               window.showErrorMessage(
-                `Error ocurried while pinging insights connection:  ${this.connLabel}, the connection disconnected.`,
+                `The Insights connection: ${this.connLabel} cannot be reached, the connection closed.`,
               );
               return false;
             });

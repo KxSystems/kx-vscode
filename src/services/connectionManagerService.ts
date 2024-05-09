@@ -98,9 +98,6 @@ export class ConnectionManagementService {
           );
 
           Telemetry.sendEvent("Connection.Connected.QProcess");
-          if (ext.connectedConnectionList.length === 0) {
-            this.startMonitoringConn();
-          }
 
           ext.connectedConnectionList.push(localConnection);
 
@@ -116,15 +113,15 @@ export class ConnectionManagementService {
       await insightsConn.connect();
       if (insightsConn.connected) {
         Telemetry.sendEvent("Connection.Connected.Insights");
-        if (ext.connectedConnectionList.length === 0) {
-          this.startMonitoringConn();
-        }
         ext.connectedConnectionList.push(insightsConn);
         this.isConnectedBehaviour(connection);
       } else {
         this.isNotConnectedBehaviour(connLabel);
       }
       refreshDataSourcesPanel();
+    }
+    if (ext.connectedConnectionList.length === 1) {
+      this.startMonitoringConn();
     }
   }
 
@@ -324,31 +321,34 @@ export class ConnectionManagementService {
   }
 
   public async checkInsightsConnectionIsAlive(): Promise<void> {
-    for (const connection of ext.connectedConnectionList) {
+    const checks = ext.connectedConnectionList.map(async (connection) => {
       if (connection instanceof InsightsConnection) {
         const res = await connection.pingInsights();
-        if (res === false) {
+        if (!res) {
           this.disconnect(connection.connLabel);
         }
       }
-    }
+    });
+    await Promise.all(checks);
+    this.startMonitoringConn();
   }
 
   /* istanbul ignore next */
   public async startMonitoringConn() {
     let previousNetworkState = os.networkInterfaces();
-    const intervalId = setInterval(async () => {
+    const intervalId = setInterval(() => {
       const currentNetworkState = os.networkInterfaces();
       if (
         JSON.stringify(previousNetworkState) !==
         JSON.stringify(currentNetworkState)
       ) {
+        clearInterval(intervalId);
         previousNetworkState = currentNetworkState;
-        await this.checkInsightsConnectionIsAlive();
+        this.checkInsightsConnectionIsAlive();
       }
       if (ext.connectedConnectionList.length === 0) {
         clearInterval(intervalId);
       }
-    }, 15000);
+    }, 2000);
   }
 }
