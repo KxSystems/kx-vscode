@@ -17,7 +17,7 @@ import { ext } from "../extensionVariables";
 import { DataSourceFiles } from "../models/dataSource";
 import { DataSourcesPanel } from "../panels/datasource";
 import { InsightsConnection } from "../classes/insightsConnection";
-import { Uri, workspace, window } from "vscode";
+import { workspace, window } from "vscode";
 import { Telemetry } from "./telemetryClient";
 
 export function createKdbDataSourcesFolder(): string {

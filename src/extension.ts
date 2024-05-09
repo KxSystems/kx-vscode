@@ -14,18 +14,18 @@
 import { env } from "node:process";
 import path from "path";
 import {
-  commands,
   ConfigurationTarget,
   EventEmitter,
   ExtensionContext,
-  extensions,
-  languages,
   Range,
   TextDocumentContentProvider,
   Uri,
+  WorkspaceEdit,
+  commands,
+  extensions,
+  languages,
   window,
   workspace,
-  WorkspaceEdit,
 } from "vscode";
 import {
   LanguageClient,
@@ -79,13 +79,13 @@ import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
 import { DataSourceEditorProvider } from "./services/dataSourceEditorProvider";
 import {
-  addWorkspaceFile,
   FileTreeItem,
   WorkspaceTreeProvider,
+  addWorkspaceFile,
 } from "./services/workspaceTreeProvider";
 import {
-  checkOldDatasourceFiles,
   ConnectionLensProvider,
+  checkOldDatasourceFiles,
   connectWorkspaceCommands,
   importOldDSFiles,
   pickConnection,
