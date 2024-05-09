@@ -44,6 +44,7 @@
     "onCommand:kdb.resultsPanel.update",
     "onCommand:kdb.resultsPanel.clear",
     "onCommand:kdb.resultsPanel.export.csv",
+    "onCommand:kdb.datasource.import.ds",
     "onView:kdb-servers",
     "onView:kdb-query-history",
     "onView:kdb-datasources-explorer",
@@ -214,12 +215,19 @@
         "category": "KX",
         "command": "kdb.createScratchpad",
         "title": "Add a new q workbook",
-        "icon": "$(add)"
+        "icon": {
+          "dark": "./resources/dark/add-scratchpad.svg",
+          "light": "./resources/light/add-scratchpad.svg"
+        }
       },
       {
         "category": "KX",
         "command": "kdb.createPythonScratchpad",
-        "title": "Add a new Python workbook"
+        "title": "Add a new Python workbook",
+        "icon": {
+          "dark": "./resources/dark/add-scratchpad-python.svg",
+          "light": "./resources/light/add-scratchpad-python.svg"
+        }
       },
       {
         "category": "KX",
@@ -319,6 +327,11 @@
         "category": "KX",
         "command": "kdb.resultsPanel.export.csv",
         "title": "Export to CSV"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.datasource.import.ds",
+        "title": "Import Datasource from old format"
       },
       {
         "category": "KX",
@@ -578,6 +591,11 @@
           "command": "kdb.createScratchpad",
           "when": "view == kdb-scratchpad-explorer",
           "group": "q@1"
+        },
+        {
+          "command": "kdb.createPythonScratchpad",
+          "when": "view == kdb-scratchpad-explorer",
+          "group": "navigation@2"
         },
         {
           "command": "kdb.createPythonScratchpad",

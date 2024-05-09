@@ -74,6 +74,7 @@ export namespace ext {
   export const kdbDataSourceFolder = ".kdb-datasources";
   export const kdbDataSourceFileExtension = ".ds";
   export const kdbDataSourceFileGlob = "*.ds";
+  export let oldDSformatExists: boolean;
   export const kdbDataSourceRootNodes: string[] = [];
   export const kdbQueryHistoryNodes: string[] = [];
   export const kdbQueryHistoryList: QueryHistory[] = [];

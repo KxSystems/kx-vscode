@@ -19,7 +19,6 @@ import {
   TreeItemCollapsibleState,
   Uri,
   WebviewPanel,
-  WebviewPanelOnDidChangeViewStateEvent,
   commands,
   env,
   window,
@@ -1165,8 +1164,24 @@ describe("workspaceTreeProvider", () => {
   });
 
   describe("getChildren", () => {
-    it("should return workspace items", async () => {
+    it("should return workspace scratchpad items", async () => {
       stubWorkspaceFile("/workspace/test.kdb.q");
+      let result = await provider.getChildren();
+      assert.strictEqual(result.length, 1);
+      result = await provider.getChildren(provider.getTreeItem(result[0]));
+      assert.strictEqual(result.length, 1);
+    });
+
+    it("should return workspace python items", async () => {
+      stubWorkspaceFile("/workspace/test.kdb.py");
+      let result = await provider.getChildren();
+      assert.strictEqual(result.length, 1);
+      result = await provider.getChildren(provider.getTreeItem(result[0]));
+      assert.strictEqual(result.length, 1);
+    });
+
+    it("should return workspace datasource items", async () => {
+      stubWorkspaceFile("/workspace/test.kdb.json");
       let result = await provider.getChildren();
       assert.strictEqual(result.length, 1);
       result = await provider.getChildren(provider.getTreeItem(result[0]));
