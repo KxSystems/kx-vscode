@@ -34,7 +34,7 @@ import { ExecutionTypes } from "../models/execution";
 const connectionService = new ConnectionManagementService();
 
 /* istanbul ignore next */
-function workspaceFoldersChanged() {
+function updateViews() {
   ext.dataSourceTreeProvider.reload();
   ext.scratchpadTreeProvider.reload();
 }
@@ -278,9 +278,11 @@ export function connectWorkspaceCommands() {
   };
 
   const watcher = workspace.createFileSystemWatcher("**/*.kdb.{json,q,py}");
-  watcher.onDidCreate(workspaceFoldersChanged);
-  watcher.onDidDelete(workspaceFoldersChanged);
-  workspace.onDidChangeWorkspaceFolders(workspaceFoldersChanged);
+  watcher.onDidDelete((uri) =>
+    setServerForUri(uri, undefined).then(() => updateViews()),
+  );
+  watcher.onDidCreate(updateViews);
+  workspace.onDidChangeWorkspaceFolders(updateViews);
   window.onDidChangeActiveTextEditor(activeEditorChanged);
   activeEditorChanged(window.activeTextEditor);
 }
