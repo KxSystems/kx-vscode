@@ -434,8 +434,8 @@
           ".quke"
         ],
         "icon": {
-          "dark": "./resources/dark/kx_logo.png",
-          "light": "./resources/light/kx_logo.png"
+          "dark": "./resources/scratchpad.svg",
+          "light": "./resources/scratchpad.svg"
         },
         "configuration": "./language-configuration.json"
       }
