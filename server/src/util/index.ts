@@ -12,7 +12,7 @@
  */
 
 import { Position, Range } from "vscode-languageserver";
-import { Token, TokenKind } from "../parser";
+import { Identifier, IdentifierKind, Token, TokenKind } from "../parser";
 
 export function rangeFromToken(token: Token): Range {
   return Range.create(
@@ -66,4 +66,73 @@ export function getLabel(token: Token, source?: Token): string {
   }
 
   return label;
+}
+
+export const enum FindKind {
+  Reference,
+  Definition,
+  Rename,
+  Completion,
+}
+
+export function findIdentifiers(
+  kind: FindKind,
+  tokens: Token[],
+  source?: Token,
+): Token[] {
+  if (!source || source.identifierKind === IdentifierKind.Unassignable) {
+    return [];
+  }
+  switch (kind) {
+    case FindKind.Rename:
+    case FindKind.Reference:
+      return isLocal(tokens, source)
+        ? tokens.filter(
+            (token) =>
+              token.tokenType === Identifier &&
+              token.identifierKind !== IdentifierKind.Unassignable &&
+              token.identifier === source.identifier &&
+              token.scope === source.scope,
+          )
+        : tokens.filter(
+            (token) =>
+              token.tokenType === Identifier &&
+              token.identifierKind !== IdentifierKind.Unassignable &&
+              token.identifier === source.identifier &&
+              !isLocal(tokens, token),
+          );
+    case FindKind.Definition:
+      return isLocal(tokens, source)
+        ? tokens.filter(
+            (token) =>
+              token.kind === TokenKind.Assignment &&
+              token.identifierKind !== IdentifierKind.Unassignable &&
+              token.identifier === source.identifier &&
+              token.scope === source.scope,
+          )
+        : tokens.filter(
+            (token) =>
+              token.kind === TokenKind.Assignment &&
+              token.identifierKind !== IdentifierKind.Unassignable &&
+              token.identifier === source.identifier &&
+              !isLocal(tokens, token),
+          );
+    case FindKind.Completion:
+      const completions: Token[] = [];
+      tokens
+        .filter(
+          (token) =>
+            token.kind === TokenKind.Assignment &&
+            token.identifierKind !== IdentifierKind.Unassignable &&
+            (token.identifier?.startsWith(".") ||
+              token.namespace === source.namespace) &&
+            (!token.scope || token.scope === source.scope),
+        )
+        .forEach(
+          (token) =>
+            !completions.find((item) => item.identifier === token.identifier) &&
+            completions.push(token),
+        );
+      return completions;
+  }
 }

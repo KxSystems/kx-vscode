@@ -15,7 +15,6 @@ import {
   CharLiteral,
   Colon,
   DateTimeLiteral,
-  DoubleColon,
   Identifier,
   IdentifierKind,
   InfinityLiteral,
@@ -41,7 +40,7 @@ function seek(tokens: Token[], token: Token, count = 1) {
 function isNextAssignment(tokens: Token[], token: Token) {
   const next = seek(tokens, token);
   if (next) {
-    if (next.tokenType === Colon || next.tokenType === DoubleColon) {
+    if (next.tokenType === Colon) {
       return true;
     }
   }
@@ -87,11 +86,11 @@ export function fixedSeed(tokens: Token[]): Token[] {
 }
 
 export function invalidEscape(tokens: Token[]): Token[] {
-  const valid = ["n", "r", "t", "/", "\\"];
+  const valid = ["n", "r", "t", "\\", "/", '"'];
   return tokens
     .filter((token) => token.tokenType === CharLiteral)
     .filter((token) => {
-      const escapes = /\\(\S*)/g;
+      const escapes = /\\([0-9]{3}|.{1})/g;
       let match, value;
       while ((match = escapes.exec(token.image))) {
         if (valid.indexOf(match[1]) !== -1) {

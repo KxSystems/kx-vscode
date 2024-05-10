@@ -35,16 +35,15 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver/node";
-import { Identifier, IdentifierKind, Token, TokenKind, parse } from "./parser";
-import { getLabel, isLocal, positionToToken, rangeFromToken } from "./util";
+import { IdentifierKind, Token, TokenKind, parse } from "./parser";
+import {
+  FindKind,
+  findIdentifiers,
+  getLabel,
+  positionToToken,
+  rangeFromToken,
+} from "./util";
 import { lint } from "./linter";
-
-const enum FindKind {
-  Reference,
-  Definition,
-  Rename,
-  Completion,
-}
 
 interface Settings {
   linting: boolean;
@@ -118,7 +117,7 @@ export default class QLangServer {
   }: DocumentSymbolParams): DocumentSymbol[] {
     return this.parse(textDocument).map((token) =>
       DocumentSymbol.create(
-        token.image,
+        token.identifier || token.image,
         `${token.tokenType.name} (${token.reverse})`,
         SymbolKind.Variable,
         rangeFromToken(token),
@@ -165,8 +164,8 @@ export default class QLangServer {
   public onReferences({ textDocument, position }: ReferenceParams): Location[] {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
-    return this.findIdentifiers(FindKind.Reference, tokens, source).map(
-      (token) => Location.create(textDocument.uri, rangeFromToken(token)),
+    return findIdentifiers(FindKind.Reference, tokens, source).map((token) =>
+      Location.create(textDocument.uri, rangeFromToken(token)),
     );
   }
 
@@ -176,8 +175,8 @@ export default class QLangServer {
   }: DefinitionParams): Location[] {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
-    return this.findIdentifiers(FindKind.Definition, tokens, source).map(
-      (token) => Location.create(textDocument.uri, rangeFromToken(token)),
+    return findIdentifiers(FindKind.Definition, tokens, source).map((token) =>
+      Location.create(textDocument.uri, rangeFromToken(token)),
     );
   }
 
@@ -188,7 +187,7 @@ export default class QLangServer {
   }: RenameParams): WorkspaceEdit | null {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
-    const edits = this.findIdentifiers(FindKind.Rename, tokens, source).map(
+    const edits = findIdentifiers(FindKind.Rename, tokens, source).map(
       (token) => TextEdit.replace(rangeFromToken(token), newName),
     );
     return edits.length === 0
@@ -206,7 +205,7 @@ export default class QLangServer {
   }: CompletionParams): CompletionItem[] {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
-    return this.findIdentifiers(FindKind.Completion, tokens, source).map(
+    return findIdentifiers(FindKind.Completion, tokens, source).map(
       (token) => ({
         label: getLabel(token, source),
         kind: token.lambda
@@ -222,68 +221,5 @@ export default class QLangServer {
       return [];
     }
     return parse(document.getText());
-  }
-
-  private findIdentifiers(
-    kind: FindKind,
-    tokens: Token[],
-    source?: Token,
-  ): Token[] {
-    if (!source || source.identifierKind === IdentifierKind.Unassignable) {
-      return [];
-    }
-    switch (kind) {
-      case FindKind.Rename:
-      case FindKind.Reference:
-        return isLocal(tokens, source)
-          ? tokens.filter(
-              (token) =>
-                token.tokenType === Identifier &&
-                token.identifierKind !== IdentifierKind.Unassignable &&
-                token.identifier === source.identifier &&
-                token.scope === source.scope,
-            )
-          : tokens.filter(
-              (token) =>
-                token.tokenType === Identifier &&
-                token.identifierKind !== IdentifierKind.Unassignable &&
-                token.identifier === source.identifier &&
-                !isLocal(tokens, token),
-            );
-      case FindKind.Definition:
-        return isLocal(tokens, source)
-          ? tokens.filter(
-              (token) =>
-                token.kind === TokenKind.Assignment &&
-                token.identifierKind !== IdentifierKind.Unassignable &&
-                token.identifier === source.identifier &&
-                token.scope === source.scope,
-            )
-          : tokens.filter(
-              (token) =>
-                token.kind === TokenKind.Assignment &&
-                token.identifierKind !== IdentifierKind.Unassignable &&
-                token.identifier === source.identifier &&
-                !isLocal(tokens, token),
-            );
-      case FindKind.Completion:
-        const completions: Token[] = [];
-        tokens
-          .filter(
-            (token) =>
-              token.kind === TokenKind.Assignment &&
-              token.identifierKind !== IdentifierKind.Unassignable &&
-              (token.identifier?.startsWith(".") ||
-                token.namespace === source.namespace) &&
-              (!token.scope || token.scope === source.scope),
-          )
-          .forEach(
-            (token) =>
-              !completions.find(
-                (item) => item.identifier === token.identifier,
-              ) && completions.push(token),
-          );
-        return completions;
-    }
   }
 }
