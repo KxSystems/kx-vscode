@@ -181,7 +181,7 @@
         },
         "kdb.linting": {
           "type": "boolean",
-          "description": "Enable linting for q files",
+          "description": "Enable linting for q and quke files",
           "default": false
         },
         "kdb.connectionMap": {
@@ -371,7 +371,7 @@
       {
         "category": "KX",
         "command": "kdb.qlint",
-        "title": "Lint q source file"
+        "title": "Lint file with qlint"
       },
       {
         "category": "KX",

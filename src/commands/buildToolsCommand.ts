@@ -232,37 +232,40 @@ export async function lintCommand(document: TextDocument) {
 }
 
 export async function connectBuildTools() {
-  workspace.onDidSaveTextDocument(async (document) => {
-    if (isAutoLintingSupported(document)) {
-      await setDiagnostics(document);
-    }
-  });
-
-  workspace.onDidOpenTextDocument(async (document) => {
-    if (isAutoLintingSupported(document)) {
-      await setDiagnostics(document);
-    }
-  });
-
-  workspace.onDidCloseTextDocument((document) => {
-    if (isLintingSupported(document)) {
-      ext.diagnosticCollection.delete(document.uri);
-    }
-  });
-
-  workspace.onDidChangeTextDocument((event) => {
-    if (isLintingSupported(event.document)) {
-      if (event.contentChanges.length > 0) {
-        cache.delete(event.document.uri.path);
-        ext.diagnosticCollection.delete(event.document.uri);
+  const home = getBuidToolsHome();
+  if (home) {
+    workspace.onDidSaveTextDocument(async (document) => {
+      if (isAutoLintingSupported(document)) {
+        await setDiagnostics(document);
       }
-    }
-  });
+    });
 
-  if (ext.activeTextEditor) {
-    const document = ext.activeTextEditor.document;
-    if (isAutoLintingSupported(document)) {
-      await setDiagnostics(document);
+    workspace.onDidOpenTextDocument(async (document) => {
+      if (isAutoLintingSupported(document)) {
+        await setDiagnostics(document);
+      }
+    });
+
+    workspace.onDidCloseTextDocument((document) => {
+      if (isLintingSupported(document)) {
+        ext.diagnosticCollection.delete(document.uri);
+      }
+    });
+
+    workspace.onDidChangeTextDocument((event) => {
+      if (isLintingSupported(event.document)) {
+        if (event.contentChanges.length > 0) {
+          cache.delete(event.document.uri.path);
+          ext.diagnosticCollection.delete(event.document.uri);
+        }
+      }
+    });
+
+    if (ext.activeTextEditor) {
+      const document = ext.activeTextEditor.document;
+      if (isAutoLintingSupported(document)) {
+        await setDiagnostics(document);
+      }
     }
   }
 }
