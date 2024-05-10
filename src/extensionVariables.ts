@@ -24,7 +24,6 @@ import { LocalProcess } from "./models/localProcess";
 import { MetaObjectPayload } from "./models/meta";
 import { QueryHistory } from "./models/queryHistory";
 import { ServerObject } from "./models/serverObject";
-import { KdbDataSourceProvider } from "./services/dataSourceTreeProvider";
 import {
   InsightsNode,
   KdbNode,
@@ -46,7 +45,6 @@ export namespace ext {
   export let outputChannel: OutputChannel;
   export let consolePanel: OutputChannel;
   export let serverProvider: KdbTreeProvider;
-  export let dataSourceProvider: KdbDataSourceProvider;
   export let queryHistoryProvider: QueryHistoryProvider;
   export let resultsViewProvider: KdbResultsViewProvider;
   export let scratchpadTreeProvider: WorkspaceTreeProvider;
@@ -74,6 +72,7 @@ export namespace ext {
   export const kdbDataSourceFolder = ".kdb-datasources";
   export const kdbDataSourceFileExtension = ".ds";
   export const kdbDataSourceFileGlob = "*.ds";
+  export let oldDSformatExists: boolean;
   export const kdbDataSourceRootNodes: string[] = [];
   export const kdbQueryHistoryNodes: string[] = [];
   export const kdbQueryHistoryList: QueryHistory[] = [];

@@ -17,6 +17,8 @@ import { ext } from "../extensionVariables";
 import { DataSourceFiles } from "../models/dataSource";
 import { DataSourcesPanel } from "../panels/datasource";
 import { InsightsConnection } from "../classes/insightsConnection";
+import { workspace, window } from "vscode";
+import { Telemetry } from "./telemetryClient";
 
 export function createKdbDataSourcesFolder(): string {
   const rootPath = ext.context.globalStorageUri.fsPath;
@@ -98,4 +100,49 @@ export function convertDataSourceFormToDataSourceFile(
   form: any,
 ): DataSourceFiles {
   return form as DataSourceFiles;
+}
+
+export function oldFilesExists(): boolean {
+  const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
+  const files = fs.readdirSync(kdbDataSourcesFolderPath);
+  return files.length > 0;
+}
+
+/* istanbul ignore next */
+export async function importOldDsFiles(): Promise<void> {
+  const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
+  const files = fs.readdirSync(kdbDataSourcesFolderPath);
+  console.log(files.toString());
+  for (const file of files) {
+    const fileData = fs.readFileSync(path.join(kdbDataSourcesFolderPath, file));
+    const fileContent: DataSourceFiles = JSON.parse(fileData.toString());
+    //remove fields that will became deprecated in the future
+    fileContent.name = undefined;
+    fileContent.originalName = undefined;
+    fileContent.insightsNode = undefined;
+    // import DS
+    await addDSToLocalFolder(fileContent);
+    // remove old DS
+    fs.unlinkSync(path.join(kdbDataSourcesFolderPath, file));
+  }
+  ext.oldDSformatExists = false;
+}
+
+/* istanbul ignore next */
+export async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
+  const folders = workspace.workspaceFolders;
+  if (folders) {
+    const folder = folders[0];
+    let i = 1;
+    let fileName = `datasource-${i}.kdb.json`;
+    let filePath = path.join(folder.uri.path, fileName);
+    while (fs.existsSync(filePath)) {
+      i++;
+      fileName = `datasource-${i}.kdb.json`;
+      filePath = path.join(folder.uri.path, fileName);
+    }
+    fs.writeFileSync(filePath, JSON.stringify(ds));
+    window.showInformationMessage(`Datasource created.`);
+    Telemetry.sendEvent("Datasource.Created");
+  }
 }

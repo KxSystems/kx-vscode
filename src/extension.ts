@@ -14,18 +14,18 @@
 import { env } from "node:process";
 import path from "path";
 import {
-  commands,
   ConfigurationTarget,
   EventEmitter,
   ExtensionContext,
-  extensions,
-  languages,
   Range,
   TextDocumentContentProvider,
   Uri,
+  WorkspaceEdit,
+  commands,
+  extensions,
+  languages,
   window,
   workspace,
-  WorkspaceEdit,
 } from "vscode";
 import {
   LanguageClient,
@@ -33,15 +33,6 @@ import {
   ServerOptions,
   TransportKind,
 } from "vscode-languageclient/node";
-import {
-  addDataSource,
-  deleteDataSource,
-  openDataSource,
-  populateScratchpad,
-  renameDataSource,
-  runDataSource,
-  saveDataSource,
-} from "./commands/dataSourceCommand";
 import {
   installTools,
   startLocalProcess,
@@ -58,7 +49,6 @@ import {
   enableTLS,
   removeConnection,
   rerunQuery,
-  resetScratchPad,
 } from "./commands/serverCommand";
 import { showInstallationDetails } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
@@ -66,10 +56,6 @@ import { ExecutionTypes } from "./models/execution";
 import { InsightDetails, Insights } from "./models/insights";
 import { QueryResult } from "./models/queryResult";
 import { Server, ServerDetails } from "./models/server";
-import {
-  KdbDataSourceProvider,
-  KdbDataSourceTreeItem,
-} from "./services/dataSourceTreeProvider";
 import {
   InsightsNode,
   KdbNode,
@@ -92,13 +78,15 @@ import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
 import { DataSourceEditorProvider } from "./services/dataSourceEditorProvider";
 import {
-  addWorkspaceFile,
   FileTreeItem,
   WorkspaceTreeProvider,
+  addWorkspaceFile,
 } from "./services/workspaceTreeProvider";
 import {
   ConnectionLensProvider,
+  checkOldDatasourceFiles,
   connectWorkspaceCommands,
+  importOldDSFiles,
   pickConnection,
   runActiveEditor,
 } from "./commands/workspaceCommand";
@@ -119,7 +107,6 @@ export async function activate(context: ExtensionContext) {
   const insights: Insights | undefined = getInsights();
 
   ext.serverProvider = new KdbTreeProvider(servers!, insights!);
-  ext.dataSourceProvider = new KdbDataSourceProvider();
   ext.queryHistoryProvider = new QueryHistoryProvider();
   ext.resultsViewProvider = new KdbResultsViewProvider(
     ext.context.extensionUri,
@@ -186,6 +173,9 @@ export async function activate(context: ExtensionContext) {
     }),
     commands.registerCommand("kdb.resultsPanel.export.csv", () => {
       ext.resultsViewProvider.exportToCsv();
+    }),
+    commands.registerCommand("kdb.datasource.import.ds", async () => {
+      await importOldDSFiles();
     }),
     commands.registerCommand("kdb.connect", async (viewItem: KdbNode) => {
       await connect(viewItem);
@@ -405,6 +395,8 @@ export async function activate(context: ExtensionContext) {
     }),
   );
 
+  checkOldDatasourceFiles();
+
   const lastResult: QueryResult | undefined = undefined;
   const resultSchema = "vscode-kdb-q";
   const resultProvider = new (class implements TextDocumentContentProvider {
@@ -486,9 +478,6 @@ export async function activate(context: ExtensionContext) {
 
 export async function deactivate(): Promise<void> {
   await Telemetry.dispose();
-  if (ext.dataSourceProvider) {
-    ext.dataSourceProvider.dispose();
-  }
 
   // cleanup of local q instance processes
   Object.keys(ext.localProcessObjects).forEach((index) => {

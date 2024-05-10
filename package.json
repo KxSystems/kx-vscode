@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "engines": {
     "vscode": "^1.75.0"
   },
@@ -44,6 +44,7 @@
     "onCommand:kdb.resultsPanel.update",
     "onCommand:kdb.resultsPanel.clear",
     "onCommand:kdb.resultsPanel.export.csv",
+    "onCommand:kdb.datasource.import.ds",
     "onView:kdb-servers",
     "onView:kdb-query-history",
     "onView:kdb-datasources-explorer",
@@ -180,7 +181,7 @@
         },
         "kdb.linting": {
           "type": "boolean",
-          "description": "Enable linting for q files",
+          "description": "Enable linting for q and quke files",
           "default": false
         },
         "kdb.connectionMap": {
@@ -214,12 +215,19 @@
         "category": "KX",
         "command": "kdb.createScratchpad",
         "title": "Add a new q workbook",
-        "icon": "$(add)"
+        "icon": {
+          "dark": "./resources/dark/add-scratchpad.svg",
+          "light": "./resources/light/add-scratchpad.svg"
+        }
       },
       {
         "category": "KX",
         "command": "kdb.createPythonScratchpad",
-        "title": "Add a new Python workbook"
+        "title": "Add a new Python workbook",
+        "icon": {
+          "dark": "./resources/dark/add-scratchpad-python.svg",
+          "light": "./resources/light/add-scratchpad-python.svg"
+        }
       },
       {
         "category": "KX",
@@ -322,6 +330,11 @@
       },
       {
         "category": "KX",
+        "command": "kdb.datasource.import.ds",
+        "title": "Import Datasource from old format"
+      },
+      {
+        "category": "KX",
         "command": "kdb.terminal.run",
         "title": "Run q file in a new q instance",
         "icon": "$(debug-alt)"
@@ -358,7 +371,7 @@
       {
         "category": "KX",
         "command": "kdb.qlint",
-        "title": "Lint q source file"
+        "title": "Lint file with qlint"
       },
       {
         "category": "KX",
@@ -582,6 +595,11 @@
         {
           "command": "kdb.createPythonScratchpad",
           "when": "view == kdb-scratchpad-explorer",
+          "group": "navigation@2"
+        },
+        {
+          "command": "kdb.createPythonScratchpad",
+          "when": "view == kdb-scratchpad-explorer",
           "group": "q@2"
         },
         {
@@ -755,7 +773,8 @@
     "coverage": "tsc -p ./test && node ./out/test/runTest.js --coverage",
     "package": "npx vsce package",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
-    "publish": "npx vsce publish"
+    "publish": "npx vsce publish",
+    "lint": "eslint 'src/**' --fix"
   },
   "prettier": {
     "printWidth": 80,
@@ -786,6 +805,7 @@
     "eslint": "^8.56.0",
     "eslint-plugin-header": "^3.1.1",
     "eslint-plugin-license-header": "^0.6.0",
+    "eslint-plugin-unused-imports": "^3.2.0",
     "glob": "^8.1.0",
     "istanbul-lib-coverage": "^3.2.2",
     "istanbul-lib-instrument": "^3.3.0",

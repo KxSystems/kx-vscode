@@ -15,6 +15,7 @@ import {
   CodeLens,
   CodeLensProvider,
   Command,
+  ProgressLocation,
   ProviderResult,
   Range,
   StatusBarAlignment,
@@ -30,6 +31,7 @@ import { ConnectionManagementService } from "../services/connectionManagerServic
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import { runQuery } from "./serverCommand";
 import { ExecutionTypes } from "../models/execution";
+import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
 
 const connectionService = new ConnectionManagementService();
 
@@ -285,4 +287,42 @@ export function connectWorkspaceCommands() {
   workspace.onDidChangeWorkspaceFolders(updateViews);
   window.onDidChangeActiveTextEditor(activeEditorChanged);
   activeEditorChanged(window.activeTextEditor);
+}
+
+export function checkOldDatasourceFiles() {
+  ext.oldDSformatExists = oldFilesExists();
+}
+
+export async function importOldDSFiles() {
+  if (ext.oldDSformatExists) {
+    const folders = workspace.workspaceFolders;
+    if (!folders) {
+      window.showErrorMessage(
+        "No workspace folder found. Please open a workspace folder.",
+      );
+      return;
+    }
+    return await window.withProgress(
+      {
+        location: ProgressLocation.Notification,
+        cancellable: false,
+      },
+      async (progress, token) => {
+        token.onCancellationRequested(() => {
+          ext.outputChannel.appendLine(
+            "User cancelled the old DS files import.",
+          );
+          return false;
+        });
+
+        progress.report({ message: "Importing old DS files..." });
+        await importOldDsFiles();
+        return;
+      },
+    );
+  } else {
+    window.showInformationMessage(
+      "No old Datasource files found on your VSCODE.",
+    );
+  }
 }

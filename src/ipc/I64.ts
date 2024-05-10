@@ -22,7 +22,7 @@ export default abstract class I64 extends Vector {
     length: number,
     offset: number,
     qtype: number,
-    dataView: DataView
+    dataView: DataView,
   ) {
     super(length, offset, qtype, dataView, 8);
   }
@@ -30,14 +30,14 @@ export default abstract class I64 extends Vector {
   calcRange(): bigint[] {
     let xMax = this.getScalar(0);
     let xMin = xMax;
-    // @ts-ignore TS2304
+    // TS2304
     for (let i = 1; i < this.length; i++) {
       const x = this.getScalar(i);
-      // @ts-ignore TS2304
+      // TS2304
       if (xMax === I64.nullValue || (x > xMax && x !== I64.nullValue)) {
         xMax = x;
       }
-      // @ts-ignore TS2304
+      // TS2304
       if (xMin === I64.nullValue || (x < xMin && x !== I64.nullValue)) {
         xMin = x;
       }
@@ -50,7 +50,7 @@ export default abstract class I64 extends Vector {
    */
   public deserializeScalar<DType>(
     scalar: bigint,
-    deserialize: (scalar: bigint) => DType
+    deserialize: (scalar: bigint) => DType,
   ): DType | number | null {
     if (scalar === I64.nullValue) {
       return null;
@@ -68,7 +68,7 @@ export default abstract class I64 extends Vector {
    */
   public deserializeScalarAt<DType>(
     index: number,
-    deserialize: (scalar: bigint) => DType
+    deserialize: (scalar: bigint) => DType,
   ): DType | number | null {
     const s = this.getScalar(index);
     return this.deserializeScalar(s, deserialize);

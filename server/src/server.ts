@@ -11,7 +11,11 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Connection, ProposedFeatures } from "vscode-languageserver";
+import {
+  Connection,
+  DidChangeConfigurationNotification,
+  ProposedFeatures,
+} from "vscode-languageserver";
 import { createConnection } from "vscode-languageserver/node";
 import QLangServer from "./qLangServer";
 
@@ -24,6 +28,20 @@ connection.onInitialize((params) => {
   return {
     capabilities: server.capabilities(),
   };
+});
+
+connection.onInitialized(() => {
+  connection.client.register(DidChangeConfigurationNotification.type, {
+    section: "kdb",
+  });
+
+  if (connection.workspace) {
+    connection.workspace.getConfiguration("kdb").then((settings) => {
+      if (server) {
+        server.setSettings(settings);
+      }
+    });
+  }
 });
 
 connection.listen();

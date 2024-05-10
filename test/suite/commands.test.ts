@@ -12,11 +12,10 @@
  */
 
 import assert from "assert";
-import axios from "axios";
 import mock from "mock-fs";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { QuickPickItem, TreeItemCollapsibleState, window } from "vscode";
+import { TreeItemCollapsibleState, window } from "vscode";
 import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
 import * as installTools from "../../src/commands/installTools";
 import * as serverCommand from "../../src/commands/serverCommand";
@@ -32,7 +31,6 @@ import { ExecutionTypes } from "../../src/models/execution";
 import { InsightDetails } from "../../src/models/insights";
 import { ScratchpadResult } from "../../src/models/scratchpadResult";
 import { KdbDataSourceTreeItem } from "../../src/services/dataSourceTreeProvider";
-import * as codeFlowLogin from "../../src/services/kdbInsights/codeFlowLogin";
 import {
   InsightsNode,
   KdbNode,
@@ -1928,7 +1926,6 @@ describe("workspaceCommand", () => {
       assert.strictEqual(result, undefined);
     });
   });
-
   describe("ConnectionLensProvider", () => {
     describe("provideCodeLenses", () => {
       it("should return lenses", async () => {
@@ -1940,6 +1937,61 @@ describe("workspaceCommand", () => {
         const result = await provider.provideCodeLenses(document);
         assert.strictEqual(result.length, 2);
       });
+    });
+  });
+  describe("checkOldDatasourceFiles", () => {
+    let oldFilesExistsStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      oldFilesExistsStub = sinon.stub(dataSourceUtils, "oldFilesExists");
+    });
+    afterEach(() => {
+      oldFilesExistsStub.restore();
+    });
+    it("should check for old datasource files", async () => {
+      oldFilesExistsStub.returns(true);
+      await workspaceCommand.checkOldDatasourceFiles();
+      sinon.assert.calledOnce(oldFilesExistsStub);
+    });
+  });
+  describe("importOldDSFiles", () => {
+    let windowErrorStub,
+      windowWithProgressStub,
+      windowShowInfo,
+      workspaceFolderStub: sinon.SinonStub;
+    beforeEach(() => {
+      windowErrorStub = sinon.stub(vscode.window, "showErrorMessage");
+      windowWithProgressStub = sinon.stub(vscode.window, "withProgress");
+      windowShowInfo = sinon.stub(vscode.window, "showInformationMessage");
+      workspaceFolderStub = sinon.stub(vscode.workspace, "workspaceFolders");
+    });
+    afterEach(() => {
+      windowErrorStub.restore();
+      windowWithProgressStub.restore();
+      windowShowInfo.restore();
+    });
+    it("should show info message if old files do not exist", async () => {
+      ext.oldDSformatExists = false;
+      await workspaceCommand.importOldDSFiles();
+      sinon.assert.calledOnce(windowShowInfo);
+    });
+    it("should show error message if workspace do not exist", async () => {
+      ext.oldDSformatExists = true;
+      await workspaceCommand.importOldDSFiles();
+      sinon.assert.calledOnce(windowErrorStub);
+    });
+    it("should show not show error or info message if workspace do exist", async () => {
+      ext.oldDSformatExists = true;
+      workspaceFolderStub.get(() => [
+        {
+          uri: { fsPath: "path/to/workspace" },
+          name: "workspace",
+          index: 0,
+        },
+      ]);
+      await workspaceCommand.importOldDSFiles();
+      sinon.assert.notCalled(windowErrorStub);
+      sinon.assert.notCalled(windowShowInfo);
     });
   });
 });

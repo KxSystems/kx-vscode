@@ -66,7 +66,7 @@ export class FileTreeItem extends TreeItem {
 
   constructor(
     resourceUri: Uri,
-    private readonly baseIcon: string,
+    private baseIcon: string,
     glob?: string,
   ) {
     super(resourceUri);
@@ -103,12 +103,23 @@ export class FileTreeItem extends TreeItem {
     );
   }
 
+  private getFileIconType(fileName: string) {
+    if (fileName.endsWith(".kdb.json")) {
+      this.baseIcon = "datasource";
+    } else if (fileName.endsWith(".kdb.q")) {
+      this.baseIcon = "scratchpad";
+    } else {
+      this.baseIcon = "python";
+    }
+  }
+
   async getChildren(): Promise<FileTreeItem[]> {
     if (this.pattern) {
       const files = await workspace.findFiles(this.pattern);
       return files
         .sort((a, b) => a.path.localeCompare(b.path))
         .map((file) => {
+          this.getFileIconType(file.toString());
           const item = new FileTreeItem(file, this.baseIcon);
           item.updateIconPath();
           return item;
