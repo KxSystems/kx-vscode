@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "engines": {
     "vscode": "^1.75.0"
   },
@@ -773,7 +773,8 @@
     "coverage": "tsc -p ./test && node ./out/test/runTest.js --coverage",
     "package": "npx vsce package",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
-    "publish": "npx vsce publish"
+    "publish": "npx vsce publish",
+    "lint": "eslint 'src/**' --fix"
   },
   "prettier": {
     "printWidth": 80,
@@ -804,6 +805,7 @@
     "eslint": "^8.56.0",
     "eslint-plugin-header": "^3.1.1",
     "eslint-plugin-license-header": "^0.6.0",
+    "eslint-plugin-unused-imports": "^3.2.0",
     "glob": "^8.1.0",
     "istanbul-lib-coverage": "^3.2.2",
     "istanbul-lib-instrument": "^3.3.0",

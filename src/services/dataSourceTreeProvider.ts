@@ -32,6 +32,7 @@ import {
   createKdbDataSourcesFolder,
 } from "../utils/dataSource";
 
+// TODO: DEPRECATED THIS DS PROVIDER WILL BE REMOVED IN VERSION 1.6.0
 export class KdbDataSourceProvider implements TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: EventEmitter<
     KdbDataSourceTreeItem | undefined | void
