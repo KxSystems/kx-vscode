@@ -264,6 +264,7 @@ export class ConnectionManagementService {
     command: string,
     context?: string,
     stringfy?: boolean,
+    isPython?: boolean,
   ): Promise<any> {
     if (!ext.activeConnection) {
       return;
@@ -276,7 +277,11 @@ export class ConnectionManagementService {
         stringfy,
       );
     } else {
-      return await ext.activeConnection.getScratchpadQuery(command);
+      return await ext.activeConnection.getScratchpadQuery(
+        command,
+        context,
+        isPython,
+      );
     }
   }
 

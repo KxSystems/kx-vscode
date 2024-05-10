@@ -348,7 +348,12 @@ export async function executeQuery(
     return undefined;
   }
   const startTime = Date.now();
-  const results = await connMngService.executeQuery(query, context, isPython);
+  const results = await connMngService.executeQuery(
+    query,
+    context,
+    false,
+    isPython,
+  );
   const endTime = Date.now();
   const duration = (endTime - startTime).toString();
 
@@ -420,11 +425,6 @@ export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
   let context;
   let query;
   let isPython = false;
-  const insightsNode = ext.kdbinsightsNodes.find((n) =>
-    ext.connectionNode instanceof InsightsNode
-      ? n === ext.connectionNode?.details.alias + " (connected)"
-      : false,
-  );
   switch (type) {
     case ExecutionTypes.QuerySelection:
     case ExecutionTypes.PythonQuerySelection:
@@ -433,7 +433,7 @@ export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
         ? editor.document.lineAt(selection.active.line).text
         : editor.document.getText(selection);
       context = getQueryContext(selection.end.line);
-      if (type === ExecutionTypes.PythonQuerySelection && insightsNode) {
+      if (type === ExecutionTypes.PythonQuerySelection) {
         isPython = true;
       }
       break;
@@ -445,7 +445,7 @@ export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
       query = rerunQuery || editor.document.getText();
       context = getQueryContext();
 
-      if (type === ExecutionTypes.PythonQueryFile && insightsNode) {
+      if (type === ExecutionTypes.PythonQueryFile) {
         isPython = true;
       }
       break;
