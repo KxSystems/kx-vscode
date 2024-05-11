@@ -253,7 +253,7 @@ export class InsightsConnection {
             );
           });
 
-          progress.report({ message: "Importing scratchpad..." });
+          progress.report({ message: "Populating scratchpad..." });
 
           const scratchpadResponse = await axios.post(
             scratchpadURL.toString(),
