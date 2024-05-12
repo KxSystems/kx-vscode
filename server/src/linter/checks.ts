@@ -12,16 +12,13 @@
  */
 
 import {
-  CharLiteral,
-  Colon,
   DateTimeLiteral,
   Identifier,
   IdentifierKind,
   InfinityLiteral,
-  Keyword,
   NumberLiteral,
   Operator,
-  SymbolLiteral,
+  StringEscape,
   Token,
   TokenKind,
 } from "../parser";
@@ -37,34 +34,16 @@ function seek(tokens: Token[], token: Token, count = 1) {
   return undefined;
 }
 
-function isNextAssignment(tokens: Token[], token: Token) {
-  const next = seek(tokens, token);
-  if (next) {
-    if (next.tokenType === Colon) {
-      return true;
-    }
-  }
-  return false;
-}
-
 export function deprecatedDatetime(tokens: Token[]): Token[] {
   return tokens.filter((token) => token.tokenType === DateTimeLiteral);
 }
 
 export function assignReservedWord(tokens: Token[]): Token[] {
-  return tokens.filter(
-    (token) => token.tokenType === Keyword && isNextAssignment(tokens, token),
-  );
+  return tokens.filter((token) => token.image === "assignReservedWord");
 }
 
 export function invalidAssign(tokens: Token[]): Token[] {
-  return tokens.filter(
-    (token) =>
-      isNextAssignment(tokens, token) &&
-      (token.tokenType === CharLiteral ||
-        token.tokenType === SymbolLiteral ||
-        token.tokenType === NumberLiteral),
-  );
+  return tokens.filter((token) => token.image === "invalidAssign");
 }
 
 export function fixedSeed(tokens: Token[]): Token[] {
@@ -88,7 +67,7 @@ export function fixedSeed(tokens: Token[]): Token[] {
 export function invalidEscape(tokens: Token[]): Token[] {
   const valid = ["n", "r", "t", "\\", "/", '"'];
   return tokens
-    .filter((token) => token.tokenType === CharLiteral)
+    .filter((token) => token.tokenType === StringEscape)
     .filter((token) => {
       const escapes = /\\([0-9]{3}|.{1})/g;
       let match, value;

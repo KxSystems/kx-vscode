@@ -13,12 +13,6 @@
 
 import { createToken } from "chevrotain";
 
-export const Quke = createToken({
-  name: "Quke",
-  pattern: /(?<!.)\s*(x?feature)\b(.*)/i,
-  push_mode: "quke_mode",
-});
-
 export const Feature = createToken({
   name: "Feature",
   pattern: /\b(x?feature)\b(.*)/i,

@@ -65,7 +65,7 @@ export default class QLangServer {
     this.documents.listen(this.connection);
     this.documents.onDidClose(this.onDidClose.bind(this));
     this.documents.onDidChangeContent(this.onDidChangeContent.bind(this));
-    this.connection.onDocumentSymbol(this.onDocumentSymbol.bind(this));
+    this.connection.onDocumentSymbol(this.onDocumentSymbol_Debug.bind(this));
     this.connection.onReferences(this.onReferences.bind(this));
     this.connection.onDefinition(this.onDefinition.bind(this));
     this.connection.onRenameRequest(this.onRenameRequest.bind(this));
@@ -118,7 +118,7 @@ export default class QLangServer {
     return this.parse(textDocument).map((token) =>
       DocumentSymbol.create(
         token.identifier || token.image,
-        `${token.tokenType.name} (${token.reverse})`,
+        `${token.tokenType.name} (${token.statement})`,
         SymbolKind.Variable,
         rangeFromToken(token),
         rangeFromToken(token),

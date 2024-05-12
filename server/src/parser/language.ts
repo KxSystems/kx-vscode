@@ -16,7 +16,6 @@ import {
   ByteLiteral,
   DateLiteral,
   DateTimeLiteral,
-  FileLiteral,
   InfinityLiteral,
   MonthLiteral,
   NumberLiteral,
@@ -33,16 +32,26 @@ import {
   Iterator,
   LineComment,
   Operator,
+  Documentation,
   SemiColon,
+  StringEscape,
 } from "./tokens";
 import { TokenType } from "chevrotain";
 import { writeFileSync } from "fs";
 import { resolve } from "path";
-import { Quke, qukeNoDescription, qukeWithDescription } from "./quke";
+import { qukeNoDescription, qukeWithDescription } from "./quke";
+import {
+  CommentEnd,
+  ExitCommentBegin,
+  CommentBegin,
+  StringEnd,
+  StringBegin,
+  QukeBegin,
+} from "./ranges";
 
 const includes = [
   {
-    include: "#multiline",
+    include: "#ranges",
   },
   {
     include: "#literals",
@@ -55,27 +64,10 @@ const includes = [
   },
 ];
 
-const qdoc = {
-  patterns: [
-    {
-      name: "comment.qdoc",
-      begin: "(?:(?<=\\r?\\n|[ \\t])|(?<!.))\\/\\/",
-      end: "\\r?\\n",
-      patterns: [
-        {
-          name: "keyword.control.qdoc",
-          match:
-            "@\\b(?:default-subcategory|default-category|file[oO]verview|subcategory|deprecated|overview|category|doctest|example|private|typedef|returns?|throws|author|param|kind|name|todo|desc|see|end)\\b",
-        },
-      ],
-    },
-  ],
-};
-
 const quke = {
   patterns: [
     {
-      begin: _(Quke),
+      begin: _(QukeBegin),
       captures: {
         1: {
           name: "support.function.q",
@@ -106,25 +98,27 @@ const quke = {
   ],
 };
 
-const BlockComment = [/^\/\s*$/, /^\\\s*$/];
-const CharLiteral = [/"/, /\\["\\]/];
-
 const repository = {
   quke,
-  qdoc,
-  multiline: {
+  ranges: {
     patterns: [
       {
         name: "comment.block.q",
-        begin: _(BlockComment[0]),
-        end: _(BlockComment[1]),
+        begin: _(CommentBegin),
+        end: _(CommentEnd),
       },
       {
-        name: "comment.last.q",
-        begin: _(BlockComment[1]),
+        name: "comment.exit.q",
+        begin: _(ExitCommentBegin),
       },
       {
-        include: "#qdoc",
+        name: "comment.line.q",
+        match: _(Documentation),
+        captures: {
+          1: {
+            name: "keyword.control.qdoc",
+          },
+        },
       },
       {
         name: "comment.line.q",
@@ -132,12 +126,12 @@ const repository = {
       },
       {
         name: "string.quoted.q",
-        begin: _(CharLiteral[0]),
-        end: _(CharLiteral[0]),
+        begin: _(StringBegin),
+        end: _(StringEnd),
         patterns: [
           {
             name: "constant.character.escape.q",
-            match: _(CharLiteral[1]),
+            match: _(StringEscape),
           },
         ],
       },
@@ -168,10 +162,6 @@ const repository = {
       {
         name: "constant.numeric.time.q",
         match: _(TimeLiteral),
-      },
-      {
-        name: "constant.numeric.file.q",
-        match: _(FileLiteral),
       },
       {
         name: "constant.language.infinity.q",
@@ -242,7 +232,8 @@ const repository = {
 };
 
 const language = {
-  description: "This file is auto generated DO NOT EDIT",
+  description:
+    "TextMate grammar for q, quke and qdoc. This file is auto generated DO NOT EDIT",
   name: "q",
   scopeName: "source.q",
   patterns: [

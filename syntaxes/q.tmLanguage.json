@@ -1,5 +1,5 @@
 {
-  "description": "This file is auto generated DO NOT EDIT",
+  "description": "TextMate grammar for q, quke and qdoc. This file is auto generated DO NOT EDIT",
   "name": "q",
   "scopeName": "source.q",
   "patterns": [
@@ -7,7 +7,7 @@
       "include": "#quke"
     },
     {
-      "include": "#multiline"
+      "include": "#ranges"
     },
     {
       "include": "#literals"
@@ -162,7 +162,7 @@
               "match": "(?i)\\bx?replicate\\b"
             },
             {
-              "include": "#multiline"
+              "include": "#ranges"
             },
             {
               "include": "#literals"
@@ -177,34 +177,25 @@
         }
       ]
     },
-    "qdoc": {
-      "patterns": [
-        {
-          "name": "comment.qdoc",
-          "begin": "(?:(?<=\\r?\\n|[ \\t])|(?<!.))\\/\\/",
-          "end": "\\r?\\n",
-          "patterns": [
-            {
-              "name": "keyword.control.qdoc",
-              "match": "@\\b(?:default-subcategory|default-category|file[oO]verview|subcategory|deprecated|overview|category|doctest|example|private|typedef|returns?|throws|author|param|kind|name|todo|desc|see|end)\\b"
-            }
-          ]
-        }
-      ]
-    },
-    "multiline": {
+    "ranges": {
       "patterns": [
         {
           "name": "comment.block.q",
-          "begin": "^\\/\\s*$",
-          "end": "^\\\\\\s*$"
+          "begin": "(?<!.)\\/[ \\t]*(?!.)",
+          "end": "(?<!.)\\\\[ \\t]*(?!.)"
         },
         {
-          "name": "comment.last.q",
-          "begin": "^\\\\\\s*$"
+          "name": "comment.exit.q",
+          "begin": "(?<!.)\\\\[ \\t]*(?!.)"
         },
         {
-          "include": "#qdoc"
+          "name": "comment.line.q",
+          "match": "(?:(?<=[ \\t])|(?<!.))\\/{1,2}[ \\t]*(@(?:default-subcategory|default-category|file[oO]verview|subcategory|deprecated|overview|category|doctest|example|private|typedef|returns?|throws|author|param|kind|name|todo|desc|see|end))\\b",
+          "captures": {
+            "1": {
+              "name": "keyword.control.qdoc"
+            }
+          }
         },
         {
           "name": "comment.line.q",
@@ -217,7 +208,7 @@
           "patterns": [
             {
               "name": "constant.character.escape.q",
-              "match": "\\\\[\"\\\\]"
+              "match": "\\\\([0-9]{3}|.{1})"
             }
           ]
         }
@@ -248,10 +239,6 @@
         {
           "name": "constant.numeric.time.q",
           "match": "(?:0D)?(?:\\d{2}:){1,2}\\d{2}\\.?\\d*"
-        },
-        {
-          "name": "constant.numeric.file.q",
-          "match": "[012]:"
         },
         {
           "name": "constant.language.infinity.q",
@@ -303,7 +290,7 @@
         },
         {
           "name": "keyword.operator.arithmetic.q",
-          "match": "[_,.'^?!#@$&|%*+-]"
+          "match": "[\\\\_,.'^?!#@$&|%*+-]"
         },
         {
           "name": "keyword.operator.arithmetic.q",

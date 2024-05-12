@@ -15,7 +15,7 @@ import { createToken } from "chevrotain";
 
 export const CharLiteral = createToken({
   name: "CharLiteral",
-  pattern: /"(?:\\.|[^"])*"/,
+  pattern: /\S/,
 });
 
 export const SymbolLiteral = createToken({
@@ -46,11 +46,6 @@ export const MonthLiteral = createToken({
 export const TimeLiteral = createToken({
   name: "TimeLiteral",
   pattern: /(?:0D)?(?:\d{2}:){1,2}\d{2}\.?\d*/,
-});
-
-export const FileLiteral = createToken({
-  name: "FileLiteral",
-  pattern: /[012]:/,
 });
 
 export const InfinityLiteral = createToken({

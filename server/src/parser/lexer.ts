@@ -19,7 +19,6 @@ import {
   CharLiteral,
   DateLiteral,
   DateTimeLiteral,
-  FileLiteral,
   InfinityLiteral,
   MonthLiteral,
   NumberLiteral,
@@ -28,23 +27,25 @@ import {
   TimeStampLiteral,
 } from "./literals";
 import {
-  BlockComment,
   Colon,
   Command,
   Comparator,
   DoubleColon,
+  EndOfLine,
   Iterator,
-  LastComment,
   LBracket,
   LCurly,
-  LineComment,
   LParen,
+  LineComment,
   Operator,
+  Documentation,
   RBracket,
   RCurly,
   RParen,
   SemiColon,
   WhiteSpace,
+  Comment,
+  StringEscape,
 } from "./tokens";
 import {
   After,
@@ -57,7 +58,6 @@ import {
   Expect,
   Feature,
   Property,
-  Quke,
   Replicate,
   Setup,
   Should,
@@ -67,18 +67,33 @@ import {
   ToMatch,
   Tolerance,
 } from "./quke";
+import {
+  CommentEnd,
+  ExitCommentBegin,
+  CommentBegin,
+  StringEnd,
+  StringBegin,
+  QukeBegin,
+} from "./ranges";
 
-const MultiLine = [BlockComment, LastComment, LineComment, CharLiteral];
+const Ranges = [
+  CommentBegin,
+  ExitCommentBegin,
+  Documentation,
+  LineComment,
+  StringBegin,
+];
 
-const QTokens = [
+const Language = [
   Command,
+  EndOfLine,
+  WhiteSpace,
   SymbolLiteral,
   DateTimeLiteral,
   TimeStampLiteral,
   DateLiteral,
   MonthLiteral,
   TimeLiteral,
-  FileLiteral,
   InfinityLiteral,
   BinaryLiteral,
   ByteLiteral,
@@ -89,7 +104,6 @@ const QTokens = [
   Keyword,
   Reserved,
   Identifier,
-  WhiteSpace,
   Iterator,
   DoubleColon,
   Operator,
@@ -104,7 +118,7 @@ const QTokens = [
   RCurly,
 ];
 
-const QukeTokens = [
+const Quke = [
   AfterEach,
   After,
   Baseline,
@@ -129,8 +143,17 @@ export const QLexer = new Lexer(
   {
     defaultMode: "q_mode",
     modes: {
-      q_mode: [...MultiLine, Quke, ...QTokens],
-      quke_mode: [...MultiLine, ...QukeTokens, ...QTokens],
+      comment_mode: [CommentEnd, Comment],
+      exit_comment_mode: [Comment],
+      string_mode: [
+        StringEscape,
+        EndOfLine,
+        WhiteSpace,
+        StringEnd,
+        CharLiteral,
+      ],
+      q_mode: [...Ranges, QukeBegin, ...Language],
+      quke_mode: [...Ranges, ...Quke, ...Language],
     },
   },
   { safeMode: true },

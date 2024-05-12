@@ -17,14 +17,16 @@ import {
   Colon,
   Command,
   DoubleColon,
+  EndOfLine,
   LBracket,
   LCurly,
   LParen,
   RBracket,
   RCurly,
   RParen,
+  SemiColon,
+  WhiteSpace,
 } from "./tokens";
-import { CharLiteral } from "./literals";
 import { Identifier, LSql, RSql, System } from "./keywords";
 import {
   After,
@@ -83,6 +85,7 @@ export interface Token extends IToken {
   nullary?: boolean;
   reverse?: number;
   index?: number;
+  statement?: number;
 }
 
 export function parse(text: string): Token[] {
@@ -91,6 +94,7 @@ export function parse(text: string): Token[] {
   const scopes: Token[] = [];
 
   let namespace = "";
+  let statement = 0;
   let sql = 0;
   let table = 0;
   let reverse = 0;
@@ -107,6 +111,7 @@ export function parse(text: string): Token[] {
   for (let i = 0; i < tokens.length; i++) {
     token = tokens[i];
     token.index = i;
+    token.statement = statement;
     token.reverse = reverse;
     token.namespace = namespace;
     switch (token.tokenType) {
@@ -139,6 +144,17 @@ export function parse(text: string): Token[] {
             }
             setQualified(prev, namespace);
           }
+        }
+        break;
+      case EndOfLine:
+        next = tokens[i + 1];
+        if (next?.tokenType !== WhiteSpace) {
+          statement++;
+        }
+        break;
+      case SemiColon:
+        if (!reverse) {
+          statement++;
         }
         break;
       case LCurly:
@@ -194,17 +210,6 @@ export function parse(text: string): Token[] {
         }
         break;
       case System:
-        next = tokens[i + 1];
-        if (next?.tokenType === CharLiteral) {
-          const [cmd, arg] = args(next.image.slice(1, -1), 2);
-          switch (cmd) {
-            case "d":
-              if (token.startColumn === 1) {
-                _namespace(arg);
-              }
-              break;
-          }
-        }
         break;
       case Feature:
       case Should:
