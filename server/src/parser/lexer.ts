@@ -44,7 +44,6 @@ import {
   RParen,
   SemiColon,
   WhiteSpace,
-  Comment,
   StringEscape,
 } from "./tokens";
 import {
@@ -75,14 +74,6 @@ import {
   StringBegin,
   QukeBegin,
 } from "./ranges";
-
-const Ranges = [
-  CommentBegin,
-  ExitCommentBegin,
-  Documentation,
-  LineComment,
-  StringBegin,
-];
 
 const Language = [
   Command,
@@ -143,17 +134,33 @@ export const QLexer = new Lexer(
   {
     defaultMode: "q_mode",
     modes: {
-      comment_mode: [CommentEnd, Comment],
-      exit_comment_mode: [Comment],
+      q_mode: [
+        CommentBegin,
+        ExitCommentBegin,
+        Documentation,
+        LineComment,
+        StringBegin,
+        QukeBegin,
+        ...Language,
+      ],
+      quke_mode: [
+        CommentBegin,
+        ExitCommentBegin,
+        Documentation,
+        LineComment,
+        StringBegin,
+        ...Quke,
+        ...Language,
+      ],
       string_mode: [
         StringEscape,
+        StringEnd,
         EndOfLine,
         WhiteSpace,
-        StringEnd,
         CharLiteral,
       ],
-      q_mode: [...Ranges, QukeBegin, ...Language],
-      quke_mode: [...Ranges, ...Quke, ...Language],
+      comment_mode: [CommentEnd, EndOfLine, WhiteSpace, CharLiteral],
+      exit_comment_mode: [EndOfLine, WhiteSpace, CharLiteral],
     },
   },
   { safeMode: true },

@@ -23,7 +23,7 @@
     "quke": {
       "patterns": [
         {
-          "begin": "(?i)(?<!.)\\s*(x?feature)\\b(.*)",
+          "begin": "(?i)(?<!.)[ \\t]*(x?feature)\\b(.*)",
           "captures": {
             "1": {
               "name": "support.function.q"
@@ -34,7 +34,7 @@
           },
           "patterns": [
             {
-              "match": "(?i)\\b(x?feature)\\b(.*)",
+              "match": "(?i)(?<!.)[ \\t]*(x?feature)\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -45,7 +45,7 @@
               }
             },
             {
-              "match": "(?i)\\b(x?should)\\b(.*)",
+              "match": "(?i)(?<!.)[ \\t]*(x?should)\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -56,7 +56,7 @@
               }
             },
             {
-              "match": "(?i)\\b(x?expect)\\b(.*)",
+              "match": "(?i)(?<!.)[ \\t]*(x?expect)\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -67,7 +67,7 @@
               }
             },
             {
-              "match": "(?i)\\b(x?to match)\\b(.*)",
+              "match": "(?i)(?<!.)[ \\t]*(x?to match)\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -78,7 +78,7 @@
               }
             },
             {
-              "match": "(?i)\\b(x?behaviour)\\b(.*)",
+              "match": "(?i)(?<!.)[ \\t]*(x?behaviour)\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -89,7 +89,7 @@
               }
             },
             {
-              "match": "(?i)\\b(x?baseline)\\b(.*)",
+              "match": "(?i)(?<!.)[ \\t]*(x?baseline)\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -100,7 +100,7 @@
               }
             },
             {
-              "match": "(?i)\\b(x?bench)\\b(.*)",
+              "match": "(?i)(?<!.)[ \\t]*(x?bench)\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -111,7 +111,7 @@
               }
             },
             {
-              "match": "(?i)\\b(x?property)\\b(.*)",
+              "match": "(?i)(?<!.)[ \\t]*(x?property)\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -123,43 +123,43 @@
             },
             {
               "name": "support.function.q",
-              "match": "(?i)\\bx?after each\\b"
+              "match": "(?i)(?<!.)[ \\t]*x?after each\\b"
             },
             {
               "name": "support.function.q",
-              "match": "(?i)\\bx?after\\b"
+              "match": "(?i)(?<!.)[ \\t]*x?after\\b"
             },
             {
               "name": "support.function.q",
-              "match": "(?i)\\bx?before each\\b"
+              "match": "(?i)(?<!.)[ \\t]*x?before each\\b"
             },
             {
               "name": "support.function.q",
-              "match": "(?i)\\bx?before\\b"
+              "match": "(?i)(?<!.)[ \\t]*x?before\\b"
             },
             {
               "name": "support.function.q",
-              "match": "(?i)\\bx?setup\\b"
+              "match": "(?i)(?<!.)[ \\t]*x?setup\\b"
             },
             {
               "name": "support.function.q",
-              "match": "(?i)\\bx?teardown\\b"
+              "match": "(?i)(?<!.)[ \\t]*x?teardown\\b"
             },
             {
               "name": "support.function.q",
-              "match": "(?i)\\bx?skip if\\b"
+              "match": "(?i)(?<!.)[ \\t]*x?skip if\\b"
             },
             {
               "name": "support.function.q",
-              "match": "(?i)\\bx?timelimit\\b"
+              "match": "(?i)(?<!.)[ \\t]*x?timelimit\\b"
             },
             {
               "name": "support.function.q",
-              "match": "(?i)\\bx?tolerance\\b"
+              "match": "(?i)(?<!.)[ \\t]*x?tolerance\\b"
             },
             {
               "name": "support.function.q",
-              "match": "(?i)\\bx?replicate\\b"
+              "match": "(?i)(?<!.)[ \\t]*x?replicate\\b"
             },
             {
               "include": "#ranges"

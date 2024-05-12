@@ -41,12 +41,6 @@ export const EndOfLine = createToken({
   line_breaks: true,
 });
 
-export const Comment = createToken({
-  name: "Comment",
-  pattern: /[\s\S]/,
-  line_breaks: true,
-});
-
 export const StringEscape = createToken({
   name: "StringEscape",
   pattern: /\\([0-9]{3}|.{1})/,
@@ -62,14 +56,14 @@ export const DoubleColon = createToken({
   pattern: /::/,
 });
 
-export const Operator = createToken({
-  name: "Operator",
-  pattern: /[\\_,.'^?!#@$&|%*+-]/,
-});
-
 export const Comparator = createToken({
   name: "Comparator",
-  pattern: /[~<=>]/,
+  pattern: /(?:<=|>=|<>|[>=<~])/,
+});
+
+export const Operator = createToken({
+  name: "Operator",
+  pattern: /[\\.,'|^?!#@$&_%*+-]/,
 });
 
 export const Colon = createToken({

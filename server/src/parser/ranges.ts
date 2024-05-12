@@ -45,6 +45,6 @@ export const StringEnd = createToken({
 
 export const QukeBegin = createToken({
   name: "QukeBegin",
-  pattern: /(?<!.)\s*(x?feature)\b(.*)/i,
+  pattern: /(?<!.)[ \t]*(x?feature)\b(.*)/i,
   push_mode: "quke_mode",
 });

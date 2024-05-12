@@ -107,8 +107,8 @@ export default class QLangServer {
   }: TextDocumentChangeEvent<TextDocument>) {
     if (this.settings.linting) {
       const uri = document.uri;
-      const diagnostics = lint(this.parse(document));
-      this.connection.sendDiagnostics({ uri, diagnostics });
+      //const diagnostics = lint(this.parse(document));
+      //this.connection.sendDiagnostics({ uri, diagnostics });
     }
   }
 

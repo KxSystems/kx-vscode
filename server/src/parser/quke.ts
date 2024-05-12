@@ -15,92 +15,92 @@ import { createToken } from "chevrotain";
 
 export const Feature = createToken({
   name: "Feature",
-  pattern: /\b(x?feature)\b(.*)/i,
+  pattern: /(?<!.)[ \t]*(x?feature)\b(.*)/i,
 });
 
 export const Should = createToken({
   name: "Should",
-  pattern: /\b(x?should)\b(.*)/i,
+  pattern: /(?<!.)[ \t]*(x?should)\b(.*)/i,
 });
 
 export const Expect = createToken({
   name: "Expect",
-  pattern: /\b(x?expect)\b(.*)/i,
+  pattern: /(?<!.)[ \t]*(x?expect)\b(.*)/i,
 });
 
 export const ToMatch = createToken({
   name: "ToMatch",
-  pattern: /\b(x?to match)\b(.*)/i,
+  pattern: /(?<!.)[ \t]*(x?to match)\b(.*)/i,
 });
 
 export const Behaviour = createToken({
   name: "Behaviour",
-  pattern: /\b(x?behaviour)\b(.*)/i,
+  pattern: /(?<!.)[ \t]*(x?behaviour)\b(.*)/i,
 });
 
 export const Baseline = createToken({
   name: "Baseline",
-  pattern: /\b(x?baseline)\b(.*)/i,
+  pattern: /(?<!.)[ \t]*(x?baseline)\b(.*)/i,
 });
 
 export const Bench = createToken({
   name: "Bench",
-  pattern: /\b(x?bench)\b(.*)/i,
+  pattern: /(?<!.)[ \t]*(x?bench)\b(.*)/i,
 });
 
 export const Property = createToken({
   name: "Property",
-  pattern: /\b(x?property)\b(.*)/i,
+  pattern: /(?<!.)[ \t]*(x?property)\b(.*)/i,
 });
 
 export const After = createToken({
   name: "After",
-  pattern: /\bx?after\b/i,
+  pattern: /(?<!.)[ \t]*x?after\b/i,
 });
 
 export const AfterEach = createToken({
   name: "AfterEach",
-  pattern: /\bx?after each\b/i,
+  pattern: /(?<!.)[ \t]*x?after each\b/i,
 });
 
 export const Before = createToken({
   name: "Before",
-  pattern: /\bx?before\b/i,
+  pattern: /(?<!.)[ \t]*x?before\b/i,
 });
 
 export const BeforeEach = createToken({
   name: "BeforeEach",
-  pattern: /\bx?before each\b/i,
+  pattern: /(?<!.)[ \t]*x?before each\b/i,
 });
 
 export const Setup = createToken({
   name: "Setup",
-  pattern: /\bx?setup\b/i,
+  pattern: /(?<!.)[ \t]*x?setup\b/i,
 });
 
 export const Teardown = createToken({
   name: "Teardown",
-  pattern: /\bx?teardown\b/i,
+  pattern: /(?<!.)[ \t]*x?teardown\b/i,
 });
 
 export const SkipIf = createToken({
   name: "SkipIf",
-  pattern: /\bx?skip if\b/i,
+  pattern: /(?<!.)[ \t]*x?skip if\b/i,
 });
 
 export const TimeLimit = createToken({
   name: "TimeLimit",
-  pattern: /\bx?timelimit\b/i,
+  pattern: /(?<!.)[ \t]*x?timelimit\b/i,
 });
 
 export const Tolerance = createToken({
   name: "Tolerance",
-  pattern: /\bx?tolerance\b/i,
+  pattern: /(?<!.)[ \t]*x?tolerance\b/i,
 });
 
 export const Replicate = createToken({
   name: "Replicate",
-  pattern: /\bx?replicate\b/i,
+  pattern: /(?<!.)[ \t]*x?replicate\b/i,
 });
 
 export const qukeWithDescription = [
