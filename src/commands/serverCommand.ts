@@ -347,11 +347,12 @@ export async function executeQuery(
     );
     return undefined;
   }
+  const isStringfy = !ext.resultsViewProvider.isVisible();
   const startTime = Date.now();
   const results = await connMngService.executeQuery(
     query,
     context,
-    false,
+    isStringfy,
     isPython,
   );
   const endTime = Date.now();
