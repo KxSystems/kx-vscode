@@ -45,38 +45,22 @@ import {
   SemiColon,
   WhiteSpace,
   StringEscape,
+  TestBlock,
+  TestLambdaBlock,
+  Table,
 } from "./tokens";
-import {
-  After,
-  AfterEach,
-  Baseline,
-  Before,
-  BeforeEach,
-  Behaviour,
-  Bench,
-  Expect,
-  Feature,
-  Property,
-  Replicate,
-  Setup,
-  Should,
-  SkipIf,
-  Teardown,
-  TimeLimit,
-  ToMatch,
-  Tolerance,
-} from "./quke";
 import {
   CommentEnd,
   ExitCommentBegin,
   CommentBegin,
   StringEnd,
   StringBegin,
-  QukeBegin,
+  TestBegin,
 } from "./ranges";
 
 const Language = [
   Command,
+  Table,
   EndOfLine,
   WhiteSpace,
   SymbolLiteral,
@@ -109,47 +93,27 @@ const Language = [
   RCurly,
 ];
 
-const Quke = [
-  AfterEach,
-  After,
-  Baseline,
-  BeforeEach,
-  Before,
-  Behaviour,
-  Bench,
-  Expect,
-  Feature,
-  Property,
-  Replicate,
-  Setup,
-  Should,
-  SkipIf,
-  Teardown,
-  TimeLimit,
-  Tolerance,
-  ToMatch,
-];
-
 export const QLexer = new Lexer(
   {
     defaultMode: "q_mode",
     modes: {
+      test_mode: [
+        CommentBegin,
+        ExitCommentBegin,
+        Documentation,
+        LineComment,
+        StringBegin,
+        TestBlock,
+        TestLambdaBlock,
+        ...Language,
+      ],
       q_mode: [
         CommentBegin,
         ExitCommentBegin,
         Documentation,
         LineComment,
         StringBegin,
-        QukeBegin,
-        ...Language,
-      ],
-      quke_mode: [
-        CommentBegin,
-        ExitCommentBegin,
-        Documentation,
-        LineComment,
-        StringBegin,
-        ...Quke,
+        TestBegin,
         ...Language,
       ],
       string_mode: [

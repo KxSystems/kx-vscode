@@ -16,38 +16,31 @@ import { QLexer } from "./lexer";
 import {
   Colon,
   Command,
+  Documentation,
   DoubleColon,
   EndOfLine,
   LBracket,
   LCurly,
   LParen,
+  LineComment,
   RBracket,
   RCurly,
   RParen,
   SemiColon,
+  StringEscape,
+  Table,
+  TestBlock,
+  TestLambdaBlock,
   WhiteSpace,
 } from "./tokens";
 import { Identifier, LSql, RSql, System } from "./keywords";
 import {
-  After,
-  AfterEach,
-  Baseline,
-  Before,
-  BeforeEach,
-  Behaviour,
-  Bench,
-  Expect,
-  Feature,
-  Property,
-  Replicate,
-  Setup,
-  Should,
-  SkipIf,
-  Teardown,
-  TimeLimit,
-  ToMatch,
-  Tolerance,
-} from "./quke";
+  CommentBegin,
+  CommentEnd,
+  ExitCommentBegin,
+  TestBegin,
+} from "./ranges";
+import { CharLiteral } from "./literals";
 
 function args(image: string, count: number): string[] {
   return image.split(/\s+/, count);
@@ -86,6 +79,177 @@ export interface Token extends IToken {
   reverse?: number;
   index?: number;
   statement?: number;
+}
+
+export interface Token2 extends IToken {
+  index?: number;
+  order?: number;
+  consumed?: boolean;
+  scope?: Token2;
+  assignable?: boolean;
+  assignment?: Token2;
+}
+
+export function parse2(text: string): Token2[] {
+  const result = QLexer.tokenize(text);
+  const tokens = result.tokens as Token2[];
+  const stack: Token2[] = [];
+  const scope: Token2[] = [];
+
+  let table = 0;
+  let paren = 0;
+  let bracket = 0;
+  let curly = 0;
+  let ignore = 0;
+  let order = 0;
+  let token, next, current;
+  let expressions: Token2[] = [];
+
+  const consume = () => {
+    let done = false;
+    let sql = 0;
+    let peek;
+
+    while (!done && (current = stack.pop())) {
+      switch (current.tokenType) {
+        case Table:
+        case LParen:
+        case LBracket:
+        case LCurly:
+          if (current.consumed) {
+            expressions.push(current);
+            current.order = order;
+          } else {
+            stack.push(current);
+            order++;
+            done = true;
+          }
+          break;
+        case SemiColon:
+          order++;
+          break;
+        case Identifier:
+          peek = expressions[expressions.length - 1];
+          if (peek?.tokenType === Colon || peek?.tokenType === DoubleColon) {
+            expressions.pop();
+            current.assignment = expressions.pop();
+            expressions = [];
+            if (peek.tokenType === DoubleColon) {
+              current.scope = undefined;
+            }
+          }
+          expressions.push(current);
+          current.order = order;
+          current.assignable = !sql && !table;
+          break;
+        case RSql:
+          sql++;
+          expressions.push(current);
+          current.order = order;
+          break;
+        case LSql:
+          if (sql) {
+            sql--;
+          }
+          expressions.push(current);
+          current.order = order;
+          break;
+        default:
+          expressions.push(current);
+          current.order = order;
+          break;
+      }
+      current.consumed = true;
+    }
+  };
+
+  for (let i = 0; i < tokens.length; i++) {
+    token = tokens[i];
+    token.index = i;
+    token.order = order;
+    token.scope = scope[scope.length - 1];
+
+    switch (token.tokenType) {
+      case Table:
+        stack.push(token);
+        paren++;
+        table++;
+        break;
+      case LParen:
+        stack.push(token);
+        paren++;
+        break;
+      case RParen:
+        if (paren) {
+          paren--;
+          consume();
+          if (table && paren === 0) {
+            table--;
+          }
+        }
+        break;
+      case LBracket:
+        stack.push(token);
+        bracket++;
+        break;
+      case RBracket:
+        if (bracket) {
+          bracket--;
+          consume();
+        }
+        break;
+      case LCurly:
+        stack.push(token);
+        scope.push(token);
+        curly++;
+        break;
+      case RCurly:
+        if (curly) {
+          curly--;
+          consume();
+          scope.pop();
+        }
+        break;
+      case EndOfLine:
+        if (!ignore) {
+          next = tokens[i + 1];
+          if (next?.tokenType !== WhiteSpace) {
+            consume();
+            order++;
+          }
+        }
+        break;
+      case SemiColon:
+        if (paren || bracket || curly) {
+          stack.push(token);
+        } else {
+          consume();
+          order++;
+        }
+        break;
+      case Documentation:
+      case LineComment:
+      case TestBegin:
+      case WhiteSpace:
+      case CharLiteral:
+      case StringEscape:
+        break;
+      case CommentBegin:
+      case ExitCommentBegin:
+        ignore++;
+        break;
+      case CommentEnd:
+        if (ignore) {
+          ignore--;
+        }
+        break;
+      default:
+        !ignore && stack.push(token);
+        break;
+    }
+  }
+  consume();
+  return tokens;
 }
 
 export function parse(text: string): Token[] {
@@ -211,27 +375,11 @@ export function parse(text: string): Token[] {
         break;
       case System:
         break;
-      case Feature:
-      case Should:
-      case Bench:
-      case Replicate:
-      case TimeLimit:
-      case Tolerance:
+      case TestBlock:
         token.identifierKind = IdentifierKind.Quke;
         scopes.pop();
         break;
-      case Expect:
-      case ToMatch:
-      case Property:
-      case After:
-      case AfterEach:
-      case Before:
-      case BeforeEach:
-      case SkipIf:
-      case Baseline:
-      case Behaviour:
-      case Setup:
-      case Teardown:
+      case TestLambdaBlock:
         scopes.pop();
         token.kind = TokenKind.Assignment;
         token.identifierKind = IdentifierKind.Quke;

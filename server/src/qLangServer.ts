@@ -35,7 +35,14 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver/node";
-import { IdentifierKind, Token, TokenKind, parse } from "./parser";
+import {
+  IdentifierKind,
+  Token,
+  Token2,
+  TokenKind,
+  parse,
+  parse2,
+} from "./parser";
 import {
   FindKind,
   findIdentifiers,
@@ -115,10 +122,12 @@ export default class QLangServer {
   public onDocumentSymbol_Debug({
     textDocument,
   }: DocumentSymbolParams): DocumentSymbol[] {
-    return this.parse(textDocument).map((token) =>
+    return this.parse2(textDocument).map((token) =>
       DocumentSymbol.create(
-        token.identifier || token.image,
-        `${token.tokenType.name} (${token.statement})`,
+        token.image,
+        `${token.tokenType.name} (${token.order}) ${
+          token.scope ? "(scoped)" : ""
+        } ${token.assignment ? "(assigned)" : ""}`,
         SymbolKind.Variable,
         rangeFromToken(token),
         rangeFromToken(token),
@@ -221,5 +230,13 @@ export default class QLangServer {
       return [];
     }
     return parse(document.getText());
+  }
+
+  private parse2(textDocument: TextDocumentIdentifier): Token2[] {
+    const document = this.documents.get(textDocument.uri);
+    if (!document) {
+      return [];
+    }
+    return parse2(document.getText());
   }
 }

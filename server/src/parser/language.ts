@@ -35,18 +35,19 @@ import {
   Documentation,
   SemiColon,
   StringEscape,
+  TestBlock,
+  TestLambdaBlock,
 } from "./tokens";
 import { TokenType } from "chevrotain";
 import { writeFileSync } from "fs";
 import { resolve } from "path";
-import { qukeNoDescription, qukeWithDescription } from "./quke";
 import {
   CommentEnd,
   ExitCommentBegin,
   CommentBegin,
   StringEnd,
   StringBegin,
-  QukeBegin,
+  TestBegin,
 } from "./ranges";
 
 const includes = [
@@ -67,7 +68,7 @@ const includes = [
 const quke = {
   patterns: [
     {
-      begin: _(QukeBegin),
+      begin: _(TestBegin),
       captures: {
         1: {
           name: "support.function.q",
@@ -77,7 +78,7 @@ const quke = {
         },
       },
       patterns: [
-        ...qukeWithDescription.map((item) => ({
+        ...[TestBlock, TestLambdaBlock].map((item) => ({
           match: _(item),
           captures: {
             1: {
@@ -87,10 +88,6 @@ const quke = {
               name: "string.quoted.q",
             },
           },
-        })),
-        ...qukeNoDescription.map((item) => ({
-          name: "support.function.q",
-          match: _(item),
         })),
         ...includes,
       ],

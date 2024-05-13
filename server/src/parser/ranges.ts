@@ -43,8 +43,8 @@ export const StringEnd = createToken({
   pop_mode: true,
 });
 
-export const QukeBegin = createToken({
-  name: "QukeBegin",
+export const TestBegin = createToken({
+  name: "TestBegin",
   pattern: /(?<!.)[ \t]*(x?feature)\b(.*)/i,
-  push_mode: "quke_mode",
+  push_mode: "test_mode",
 });

@@ -34,7 +34,7 @@
           },
           "patterns": [
             {
-              "match": "(?i)(?<!.)[ \\t]*(x?feature)\\b(.*)",
+              "match": "(?i)(?<!.)[ \\t]*(x?(?:replicate|timelimit|tolerance|feature|should|bench))\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -45,7 +45,7 @@
               }
             },
             {
-              "match": "(?i)(?<!.)[ \\t]*(x?should)\\b(.*)",
+              "match": "(?i)(?<!.)[ \\t]*(x?(?:before each|after each|behaviour|baseline|teardown|property|to match|skip if|expect|before|after|setup))\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"
@@ -54,112 +54,6 @@
                   "name": "string.quoted.q"
                 }
               }
-            },
-            {
-              "match": "(?i)(?<!.)[ \\t]*(x?expect)\\b(.*)",
-              "captures": {
-                "1": {
-                  "name": "support.function.q"
-                },
-                "2": {
-                  "name": "string.quoted.q"
-                }
-              }
-            },
-            {
-              "match": "(?i)(?<!.)[ \\t]*(x?to match)\\b(.*)",
-              "captures": {
-                "1": {
-                  "name": "support.function.q"
-                },
-                "2": {
-                  "name": "string.quoted.q"
-                }
-              }
-            },
-            {
-              "match": "(?i)(?<!.)[ \\t]*(x?behaviour)\\b(.*)",
-              "captures": {
-                "1": {
-                  "name": "support.function.q"
-                },
-                "2": {
-                  "name": "string.quoted.q"
-                }
-              }
-            },
-            {
-              "match": "(?i)(?<!.)[ \\t]*(x?baseline)\\b(.*)",
-              "captures": {
-                "1": {
-                  "name": "support.function.q"
-                },
-                "2": {
-                  "name": "string.quoted.q"
-                }
-              }
-            },
-            {
-              "match": "(?i)(?<!.)[ \\t]*(x?bench)\\b(.*)",
-              "captures": {
-                "1": {
-                  "name": "support.function.q"
-                },
-                "2": {
-                  "name": "string.quoted.q"
-                }
-              }
-            },
-            {
-              "match": "(?i)(?<!.)[ \\t]*(x?property)\\b(.*)",
-              "captures": {
-                "1": {
-                  "name": "support.function.q"
-                },
-                "2": {
-                  "name": "string.quoted.q"
-                }
-              }
-            },
-            {
-              "name": "support.function.q",
-              "match": "(?i)(?<!.)[ \\t]*x?after each\\b"
-            },
-            {
-              "name": "support.function.q",
-              "match": "(?i)(?<!.)[ \\t]*x?after\\b"
-            },
-            {
-              "name": "support.function.q",
-              "match": "(?i)(?<!.)[ \\t]*x?before each\\b"
-            },
-            {
-              "name": "support.function.q",
-              "match": "(?i)(?<!.)[ \\t]*x?before\\b"
-            },
-            {
-              "name": "support.function.q",
-              "match": "(?i)(?<!.)[ \\t]*x?setup\\b"
-            },
-            {
-              "name": "support.function.q",
-              "match": "(?i)(?<!.)[ \\t]*x?teardown\\b"
-            },
-            {
-              "name": "support.function.q",
-              "match": "(?i)(?<!.)[ \\t]*x?skip if\\b"
-            },
-            {
-              "name": "support.function.q",
-              "match": "(?i)(?<!.)[ \\t]*x?timelimit\\b"
-            },
-            {
-              "name": "support.function.q",
-              "match": "(?i)(?<!.)[ \\t]*x?tolerance\\b"
-            },
-            {
-              "name": "support.function.q",
-              "match": "(?i)(?<!.)[ \\t]*x?replicate\\b"
             },
             {
               "include": "#ranges"
@@ -190,7 +84,7 @@
         },
         {
           "name": "comment.line.q",
-          "match": "(?:(?<=[ \\t])|(?<!.))\\/{1,2}[ \\t]*(@(?:default-subcategory|default-category|file[oO]verview|subcategory|deprecated|overview|category|doctest|example|private|typedef|returns?|throws|author|param|kind|name|todo|desc|see|end))\\b",
+          "match": "(?:(?<=[ \\t])|(?<!.))\\/{1,2}[ \\t]*(@(?:default-subcategory|default-category|file[oO]verview|subcategory|deprecated|overview|category|doctest|example|private|typedef|returns?|throws|author|param|kind|name|todo|desc|see|end))\\b.*",
           "captures": {
             "1": {
               "name": "keyword.control.qdoc"
@@ -290,11 +184,11 @@
         },
         {
           "name": "keyword.operator.arithmetic.q",
-          "match": "[\\\\_,.'^?!#@$&|%*+-]"
+          "match": "[\\\\.,'|^?!#@$&_%*+-]"
         },
         {
           "name": "keyword.operator.arithmetic.q",
-          "match": "[~<=>]"
+          "match": "(?:<=|>=|<>|[>=<~])"
         },
         {
           "name": "punctuation.assignment.q",

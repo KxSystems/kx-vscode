@@ -13,10 +13,22 @@
 
 import { createToken } from "chevrotain";
 
+export const TestBlock = createToken({
+  name: "TestBlock",
+  pattern:
+    /(?<!.)[ \t]*(x?(?:replicate|timelimit|tolerance|feature|should|bench))\b(.*)/i,
+});
+
+export const TestLambdaBlock = createToken({
+  name: "TestLambdaBlock",
+  pattern:
+    /(?<!.)[ \t]*(x?(?:before each|after each|behaviour|baseline|teardown|property|to match|skip if|expect|before|after|setup))\b(.*)/i,
+});
+
 export const Documentation = createToken({
   name: "Documentation",
   pattern:
-    /(?:(?<=[ \t])|(?<!.))\/{1,2}[ \t]*(@(?:default-subcategory|default-category|file[oO]verview|subcategory|deprecated|overview|category|doctest|example|private|typedef|returns?|throws|author|param|kind|name|todo|desc|see|end))\b/,
+    /(?:(?<=[ \t])|(?<!.))\/{1,2}[ \t]*(@(?:default-subcategory|default-category|file[oO]verview|subcategory|deprecated|overview|category|doctest|example|private|typedef|returns?|throws|author|param|kind|name|todo|desc|see|end))\b.*/,
 });
 
 export const LineComment = createToken({
@@ -38,6 +50,12 @@ export const WhiteSpace = createToken({
 export const EndOfLine = createToken({
   name: "EndOfLine",
   pattern: /(?:\r?\n)+/,
+  line_breaks: true,
+});
+
+export const Table = createToken({
+  name: "Table",
+  pattern: /\(\s*\[\s*\]/,
   line_breaks: true,
 });
 
