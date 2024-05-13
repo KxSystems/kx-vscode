@@ -202,19 +202,19 @@
       {
         "category": "KX",
         "command": "kdb.createDataSource",
-        "title": "Add a new data source",
+        "title": "New Datasource...",
         "icon": "$(add)"
       },
       {
         "category": "KX",
         "command": "kdb.refreshDataSourceExplorer",
-        "title": "Refresh data sources",
+        "title": "Refresh datasources",
         "icon": "$(refresh)"
       },
       {
         "category": "KX",
         "command": "kdb.createScratchpad",
-        "title": "Add a new q workbook",
+        "title": "New q workbook...",
         "icon": {
           "dark": "./resources/dark/add-scratchpad.svg",
           "light": "./resources/light/add-scratchpad.svg"
@@ -223,7 +223,7 @@
       {
         "category": "KX",
         "command": "kdb.createPythonScratchpad",
-        "title": "Add a new Python workbook",
+        "title": "New Python workbook...",
         "icon": {
           "dark": "./resources/dark/add-scratchpad-python.svg",
           "light": "./resources/light/add-scratchpad-python.svg"
@@ -258,7 +258,7 @@
       {
         "category": "KX",
         "command": "kdb.addConnection",
-        "title": "Add new connection",
+        "title": "New connection...",
         "icon": "$(add)"
       },
       {
@@ -434,8 +434,8 @@
           ".quke"
         ],
         "icon": {
-          "dark": "./resources/dark/kx_logo.png",
-          "light": "./resources/light/kx_logo.png"
+          "dark": "./resources/scratchpad.svg",
+          "light": "./resources/scratchpad.svg"
         },
         "configuration": "./language-configuration.json"
       }
@@ -588,19 +588,9 @@
           "group": "navigation@1"
         },
         {
-          "command": "kdb.createScratchpad",
-          "when": "view == kdb-scratchpad-explorer",
-          "group": "q@1"
-        },
-        {
           "command": "kdb.createPythonScratchpad",
           "when": "view == kdb-scratchpad-explorer",
           "group": "navigation@2"
-        },
-        {
-          "command": "kdb.createPythonScratchpad",
-          "when": "view == kdb-scratchpad-explorer",
-          "group": "q@2"
         },
         {
           "command": "kdb.refreshScratchpadExplorer",
@@ -748,7 +738,7 @@
     "customEditors": [
       {
         "viewType": "kdb.dataSourceEditor",
-        "displayName": "Data Source Editor",
+        "displayName": "Datasource Editor",
         "selector": [
           {
             "filenamePattern": "*.kdb.json"
