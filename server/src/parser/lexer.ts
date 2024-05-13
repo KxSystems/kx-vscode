@@ -46,7 +46,6 @@ import {
   WhiteSpace,
   StringEscape,
   TestBlock,
-  TestLambdaBlock,
   Table,
 } from "./tokens";
 import {
@@ -104,7 +103,6 @@ export const QLexer = new Lexer(
         LineComment,
         StringBegin,
         TestBlock,
-        TestLambdaBlock,
         ...Language,
       ],
       q_mode: [

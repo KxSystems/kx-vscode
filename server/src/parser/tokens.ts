@@ -16,13 +16,7 @@ import { createToken } from "chevrotain";
 export const TestBlock = createToken({
   name: "TestBlock",
   pattern:
-    /(?<!.)[ \t]*(x?(?:replicate|timelimit|tolerance|feature|should|bench))\b(.*)/i,
-});
-
-export const TestLambdaBlock = createToken({
-  name: "TestLambdaBlock",
-  pattern:
-    /(?<!.)[ \t]*(x?(?:before each|after each|behaviour|baseline|teardown|property|to match|skip if|expect|before|after|setup))\b(.*)/i,
+    /(?<!.)[ \t]*(x?(?:before each|after each|behaviour|baseline|teardown|property|to match|skip if|expect|before|after|setup|replicate|timelimit|tolerance|feature|should|bench))\b(.*)/i,
 });
 
 export const Documentation = createToken({

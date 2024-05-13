@@ -34,18 +34,7 @@
           },
           "patterns": [
             {
-              "match": "(?i)(?<!.)[ \\t]*(x?(?:replicate|timelimit|tolerance|feature|should|bench))\\b(.*)",
-              "captures": {
-                "1": {
-                  "name": "support.function.q"
-                },
-                "2": {
-                  "name": "string.quoted.q"
-                }
-              }
-            },
-            {
-              "match": "(?i)(?<!.)[ \\t]*(x?(?:before each|after each|behaviour|baseline|teardown|property|to match|skip if|expect|before|after|setup))\\b(.*)",
+              "match": "(?i)(?<!.)[ \\t]*(x?(?:before each|after each|behaviour|baseline|teardown|property|to match|skip if|expect|before|after|setup|replicate|timelimit|tolerance|feature|should|bench))\\b(.*)",
               "captures": {
                 "1": {
                   "name": "support.function.q"

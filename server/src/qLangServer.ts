@@ -35,18 +35,10 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver/node";
-import {
-  IdentifierKind,
-  Token,
-  Token2,
-  TokenKind,
-  parse,
-  parse2,
-} from "./parser";
+import { LCurly, Token, parse } from "./parser";
 import {
   FindKind,
   findIdentifiers,
-  getLabel,
   positionToToken,
   rangeFromToken,
 } from "./util";
@@ -114,20 +106,20 @@ export default class QLangServer {
   }: TextDocumentChangeEvent<TextDocument>) {
     if (this.settings.linting) {
       const uri = document.uri;
-      //const diagnostics = lint(this.parse(document));
-      //this.connection.sendDiagnostics({ uri, diagnostics });
+      const diagnostics = lint(this.parse(document));
+      this.connection.sendDiagnostics({ uri, diagnostics });
     }
   }
 
   public onDocumentSymbol_Debug({
     textDocument,
   }: DocumentSymbolParams): DocumentSymbol[] {
-    return this.parse2(textDocument).map((token) =>
+    return this.parse(textDocument).map((token) =>
       DocumentSymbol.create(
         token.image,
         `${token.tokenType.name} (${token.order}) ${
           token.scope ? "(scoped)" : ""
-        } ${token.assignment ? "(assigned)" : ""}`,
+        } ${token.assignment ? "(assigned)" : ""} ${token.argument || ""}`,
         SymbolKind.Variable,
         rangeFromToken(token),
         rangeFromToken(token),
@@ -140,28 +132,29 @@ export default class QLangServer {
   }: DocumentSymbolParams): DocumentSymbol[] {
     const tokens = this.parse(textDocument);
     return tokens
-      .filter((token) => token.kind === TokenKind.Assignment && !token.scope)
+      .filter((token) => token.assignable && token.assignment && !token.scope)
       .map((token) =>
         DocumentSymbol.create(
-          getLabel(token),
+          token.image,
           undefined,
-          token.lambda ? SymbolKind.Object : SymbolKind.Variable,
+          token.assignment?.tokenType === LCurly
+            ? SymbolKind.Object
+            : SymbolKind.Variable,
           rangeFromToken(token),
           rangeFromToken(token),
           tokens
             .filter(
               (child) =>
                 child.scope &&
-                child.scope === token.lambda &&
-                child.kind === TokenKind.Assignment,
+                child.scope === token.assignment &&
+                child.assignable &&
+                child.assignment,
             )
             .map((token) =>
               DocumentSymbol.create(
                 token.image,
                 undefined,
-                token.identifierKind === IdentifierKind.Argument
-                  ? SymbolKind.Array
-                  : SymbolKind.Variable,
+                token.argument ? SymbolKind.Array : SymbolKind.Variable,
                 rangeFromToken(token),
                 rangeFromToken(token),
               ),
@@ -216,10 +209,11 @@ export default class QLangServer {
     const source = positionToToken(tokens, position);
     return findIdentifiers(FindKind.Completion, tokens, source).map(
       (token) => ({
-        label: getLabel(token, source),
-        kind: token.lambda
-          ? CompletionItemKind.Function
-          : CompletionItemKind.Variable,
+        label: token.image,
+        kind:
+          token.assignment?.tokenType === LCurly
+            ? CompletionItemKind.Function
+            : CompletionItemKind.Variable,
       }),
     );
   }
@@ -230,13 +224,5 @@ export default class QLangServer {
       return [];
     }
     return parse(document.getText());
-  }
-
-  private parse2(textDocument: TextDocumentIdentifier): Token2[] {
-    const document = this.documents.get(textDocument.uri);
-    if (!document) {
-      return [];
-    }
-    return parse2(document.getText());
   }
 }

@@ -14,13 +14,11 @@
 import {
   DateTimeLiteral,
   Identifier,
-  IdentifierKind,
   InfinityLiteral,
   NumberLiteral,
   Operator,
   StringEscape,
   Token,
-  TokenKind,
 } from "../parser";
 import { isLocal } from "../util";
 
@@ -87,63 +85,44 @@ export function invalidEscape(tokens: Token[]): Token[] {
 
 export function unusedParam(tokens: Token[]): Token[] {
   return tokens
-    .filter((token) => token.identifierKind === IdentifierKind.Argument)
+    .filter((token) => token.argument)
     .filter((arg) => {
       return !tokens.find(
         (token) =>
           token !== arg &&
-          token.kind !== TokenKind.Assignment &&
+          token.assignment &&
           token.tokenType === Identifier &&
           token.scope === arg.scope &&
-          token.identifier === arg.identifier,
+          token.image === arg.image,
       );
     });
 }
 
 export function unusedVar(tokens: Token[]): Token[] {
   return tokens
-    .filter(
-      (token) =>
-        token.kind === TokenKind.Assignment &&
-        token.identifierKind !== IdentifierKind.Argument,
-    )
+    .filter((token) => token.assignment && !token.argument)
     .filter((token) => {
       if (isLocal(tokens, token)) {
         return !tokens.find(
           (target) =>
             target !== token &&
-            target.identifier === token.identifier &&
+            target.image === token.image &&
             target.tokenType === Identifier &&
-            target.kind !== TokenKind.Assignment &&
+            !target.assignment &&
             target.scope === token.scope,
         );
       }
       return !tokens.find(
         (target) =>
           target !== token &&
-          target.identifier === token.identifier &&
+          target.image === token.image &&
           target.tokenType === Identifier &&
-          target.kind !== TokenKind.Assignment &&
+          !target.assignment &&
           !isLocal(tokens, target),
       );
     });
 }
 
 export function declaredAfterUse(tokens: Token[]): Token[] {
-  return tokens
-    .filter(
-      (token) =>
-        !token.scope && !token.reverse && token.kind === TokenKind.Assignment,
-    )
-    .filter((token) =>
-      tokens.find(
-        (target) =>
-          target !== token &&
-          target.identifier === token.identifier &&
-          target.tokenType === Identifier &&
-          target.kind !== TokenKind.Assignment &&
-          target.scope === token.scope &&
-          target.index! < token.index!,
-      ),
-    );
+  return tokens.filter((token) => token.image === "declaredAfterUse");
 }

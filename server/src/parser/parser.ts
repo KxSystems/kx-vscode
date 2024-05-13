@@ -30,10 +30,9 @@ import {
   StringEscape,
   Table,
   TestBlock,
-  TestLambdaBlock,
   WhiteSpace,
 } from "./tokens";
-import { Identifier, LSql, RSql, System } from "./keywords";
+import { Identifier, Keyword, LSql, RSql } from "./keywords";
 import {
   CommentBegin,
   CommentEnd,
@@ -42,59 +41,22 @@ import {
 } from "./ranges";
 import { CharLiteral } from "./literals";
 
-function args(image: string, count: number): string[] {
-  return image.split(/\s+/, count);
-}
-
-function setQualified(token: Token, namespace: string): void {
-  token.identifier =
-    token.identifierKind === IdentifierKind.Unassignable ||
-    !namespace ||
-    !namespace.startsWith(".") ||
-    token.scope ||
-    token.image.startsWith(".")
-      ? token.image
-      : `${namespace}.${token.image}`;
-}
-
-export const enum TokenKind {
-  Identifier,
-  Assignment,
-}
-
-export const enum IdentifierKind {
-  Argument,
-  Unassignable,
-  Quke,
-}
-
 export interface Token extends IToken {
-  kind?: TokenKind;
-  namespace?: string;
-  identifier?: string;
-  identifierKind?: IdentifierKind;
-  scope?: Token;
-  lambda?: Token;
-  nullary?: boolean;
-  reverse?: number;
-  index?: number;
-  statement?: number;
-}
-
-export interface Token2 extends IToken {
   index?: number;
   order?: number;
   consumed?: boolean;
-  scope?: Token2;
+  namespace?: string;
+  scope?: Token;
+  argument?: boolean;
   assignable?: boolean;
-  assignment?: Token2;
+  assignment?: Token;
 }
 
-export function parse2(text: string): Token2[] {
+export function parse(text: string): Token[] {
   const result = QLexer.tokenize(text);
-  const tokens = result.tokens as Token2[];
-  const stack: Token2[] = [];
-  const scope: Token2[] = [];
+  const tokens = result.tokens as Token[];
+  const stack: Token[] = [];
+  const scope: Token[] = [];
 
   let table = 0;
   let paren = 0;
@@ -102,13 +64,21 @@ export function parse2(text: string): Token2[] {
   let curly = 0;
   let ignore = 0;
   let order = 0;
-  let token, next, current;
-  let expressions: Token2[] = [];
+  let argument = false;
+  let namespace = "";
+  let token, next, prev;
 
   const consume = () => {
     let done = false;
     let sql = 0;
-    let peek;
+    let current: Token | undefined;
+    let peek: Token | undefined;
+    let expressions: Token[] = [];
+
+    const push = (token: Token) => {
+      expressions.push(token);
+      token.order = order;
+    };
 
     while (!done && (current = stack.pop())) {
       switch (current.tokenType) {
@@ -117,8 +87,7 @@ export function parse2(text: string): Token2[] {
         case LBracket:
         case LCurly:
           if (current.consumed) {
-            expressions.push(current);
-            current.order = order;
+            push(current);
           } else {
             stack.push(current);
             order++;
@@ -126,37 +95,42 @@ export function parse2(text: string): Token2[] {
           }
           break;
         case SemiColon:
+          expressions = [];
           order++;
           break;
+        case Keyword:
         case Identifier:
-          peek = expressions[expressions.length - 1];
-          if (peek?.tokenType === Colon || peek?.tokenType === DoubleColon) {
-            expressions.pop();
-            current.assignment = expressions.pop();
-            expressions = [];
-            if (peek.tokenType === DoubleColon) {
-              current.scope = undefined;
+          if (argument) {
+            current.argument = true;
+            current.assignment = current;
+          } else {
+            peek = expressions[expressions.length - 1];
+            if (peek) {
+              if (peek.tokenType === Colon || peek.tokenType === DoubleColon) {
+                expressions.pop();
+                current.assignment = expressions.pop();
+                expressions = [];
+                if (peek.tokenType === DoubleColon) {
+                  current.scope = undefined;
+                }
+              }
             }
           }
-          expressions.push(current);
-          current.order = order;
           current.assignable = !sql && !table;
+          push(current);
           break;
         case RSql:
           sql++;
-          expressions.push(current);
-          current.order = order;
+          push(current);
           break;
         case LSql:
           if (sql) {
             sql--;
           }
-          expressions.push(current);
-          current.order = order;
+          push(current);
           break;
         default:
-          expressions.push(current);
-          current.order = order;
+          push(current);
           break;
       }
       current.consumed = true;
@@ -167,6 +141,7 @@ export function parse2(text: string): Token2[] {
     token = tokens[i];
     token.index = i;
     token.order = order;
+    token.namespace = namespace;
     token.scope = scope[scope.length - 1];
 
     switch (token.tokenType) {
@@ -189,6 +164,17 @@ export function parse2(text: string): Token2[] {
         }
         break;
       case LBracket:
+        prev = scope[scope.length - 1];
+        if (prev) {
+          argument = true;
+          for (let index = prev.index! + 1; index < i; index++) {
+            next = tokens[index].tokenType;
+            if (next !== WhiteSpace && next !== EndOfLine) {
+              argument = false;
+              break;
+            }
+          }
+        }
         stack.push(token);
         bracket++;
         break;
@@ -196,6 +182,7 @@ export function parse2(text: string): Token2[] {
         if (bracket) {
           bracket--;
           consume();
+          argument = false;
         }
         break;
       case LCurly:
@@ -243,151 +230,27 @@ export function parse2(text: string): Token2[] {
           ignore--;
         }
         break;
+      case Command:
+        const [cmd, arg] = token.image.split(/\s+/, 2);
+        switch (cmd) {
+          case "\\d":
+            if (arg) {
+              namespace = arg.split(/\.+/, 2)[1] || "";
+            }
+            break;
+        }
+        break;
+      case TestBlock:
+        scope.pop();
+        scope.push(token);
+        break;
       default:
-        !ignore && stack.push(token);
+        if (!ignore) {
+          stack.push(token);
+        }
         break;
     }
   }
   consume();
-  return tokens;
-}
-
-export function parse(text: string): Token[] {
-  const result = QLexer.tokenize(text);
-  const tokens = result.tokens as Token[];
-  const scopes: Token[] = [];
-
-  let namespace = "";
-  let statement = 0;
-  let sql = 0;
-  let table = 0;
-  let reverse = 0;
-  let argument = 0;
-  let token, prev, next: IToken;
-
-  const _namespace = (arg: string) => {
-    if (arg) {
-      const args = arg.split(/\.+/, 2);
-      namespace = args[1] ? `.${args[1]}` : "";
-    }
-  };
-
-  for (let i = 0; i < tokens.length; i++) {
-    token = tokens[i];
-    token.index = i;
-    token.statement = statement;
-    token.reverse = reverse;
-    token.namespace = namespace;
-    switch (token.tokenType) {
-      case Identifier:
-        if (argument) {
-          token.kind = TokenKind.Assignment;
-          token.identifierKind = IdentifierKind.Argument;
-          token.scope = scopes[scopes.length - 1];
-          token.identifier = token.image;
-          break;
-        }
-        token.kind = TokenKind.Identifier;
-        if (sql || table) {
-          token.identifierKind = IdentifierKind.Unassignable;
-        }
-        if (!token.image.includes(".")) {
-          token.scope = scopes[scopes.length - 1];
-        }
-        setQualified(token, namespace);
-        break;
-      case Colon:
-      case DoubleColon:
-        prev = tokens[i - 1];
-        if (prev?.kind === TokenKind.Identifier) {
-          if (prev.identifierKind !== IdentifierKind.Unassignable) {
-            prev.kind = TokenKind.Assignment;
-            if (token.tokenType === DoubleColon) {
-              prev.scope = undefined;
-              prev.kind = TokenKind.Identifier;
-            }
-            setQualified(prev, namespace);
-          }
-        }
-        break;
-      case EndOfLine:
-        next = tokens[i + 1];
-        if (next?.tokenType !== WhiteSpace) {
-          statement++;
-        }
-        break;
-      case SemiColon:
-        if (!reverse) {
-          statement++;
-        }
-        break;
-      case LCurly:
-        prev = tokens[i - 2];
-        if (prev?.kind === TokenKind.Assignment && !prev.lambda) {
-          prev.lambda = token;
-        }
-        token.nullary = true;
-        next = tokens[i + 1];
-        if (next?.tokenType === LBracket) {
-          token.nullary = false;
-          argument++;
-        }
-        scopes.push(token);
-        break;
-      case LBracket:
-        reverse++;
-        break;
-      case RBracket:
-        if (argument) {
-          argument--;
-        }
-        reverse--;
-        break;
-      case RCurly:
-        scopes.pop();
-        break;
-      case LSql:
-        sql++;
-        break;
-      case RSql:
-        sql--;
-        break;
-      case LParen:
-        next = tokens[i + 1];
-        if (table || next?.tokenType === LBracket) {
-          table++;
-        }
-        reverse++;
-        break;
-      case RParen:
-        if (table) {
-          table--;
-        }
-        reverse--;
-        break;
-      case Command:
-        const [cmd, arg] = args(token.image, 2);
-        switch (cmd) {
-          case "\\d":
-            _namespace(arg);
-            break;
-        }
-        break;
-      case System:
-        break;
-      case TestBlock:
-        token.identifierKind = IdentifierKind.Quke;
-        scopes.pop();
-        break;
-      case TestLambdaBlock:
-        scopes.pop();
-        token.kind = TokenKind.Assignment;
-        token.identifierKind = IdentifierKind.Quke;
-        token.lambda = token;
-        scopes.push(token);
-        break;
-    }
-  }
-
   return tokens;
 }

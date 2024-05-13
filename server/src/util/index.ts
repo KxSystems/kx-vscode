@@ -12,7 +12,7 @@
  */
 
 import { Position, Range } from "vscode-languageserver";
-import { Identifier, IdentifierKind, Token, TokenKind } from "../parser";
+import { Identifier, Token } from "../parser";
 
 export function rangeFromToken(token: Token): Range {
   return Range.create(
@@ -20,27 +20,6 @@ export function rangeFromToken(token: Token): Range {
     (token.startColumn || 1) - 1,
     (token.endLine || 1) - 1,
     token.endColumn || 1,
-  );
-}
-
-export function isLocal(tokens: Token[], target: Token) {
-  if (!target.scope) {
-    return false;
-  }
-  if (target.scope.nullary) {
-    if (
-      target.identifier === "x" ||
-      target.identifier === "y" ||
-      target.identifier === "z"
-    ) {
-      return true;
-    }
-  }
-  return !!tokens.find(
-    (token) =>
-      token.kind === TokenKind.Assignment &&
-      token.scope === target.scope &&
-      token.identifier === target.identifier,
   );
 }
 
@@ -56,16 +35,28 @@ export function positionToToken(tokens: Token[], position: Position) {
   });
 }
 
-export function getLabel(token: Token, source?: Token): string {
-  const label = token.identifier || token.image;
-
-  if (source?.namespace) {
-    if (label.startsWith(source.namespace)) {
-      return label.replace(`${source.namespace}.`, "");
+export function isLocal(tokens: Token[], target: Token) {
+  if (!target.scope) {
+    return false;
+  }
+  /*
+  if (target.scope.nullary) {
+    if (
+      target.identifier === "x" ||
+      target.identifier === "y" ||
+      target.identifier === "z"
+    ) {
+      return true;
     }
   }
-
-  return label;
+  */
+  return !!tokens.find(
+    (token) =>
+      token.assignment &&
+      token.assignable &&
+      token.scope === target.scope &&
+      token.image === target.image,
+  );
 }
 
 export const enum FindKind {
@@ -80,7 +71,7 @@ export function findIdentifiers(
   tokens: Token[],
   source?: Token,
 ): Token[] {
-  if (!source || source.identifierKind === IdentifierKind.Unassignable) {
+  if (!source || !source.assignable) {
     return [];
   }
   switch (kind) {
@@ -90,31 +81,31 @@ export function findIdentifiers(
         ? tokens.filter(
             (token) =>
               token.tokenType === Identifier &&
-              token.identifierKind !== IdentifierKind.Unassignable &&
-              token.identifier === source.identifier &&
+              token.assignable &&
+              token.image === source.image &&
               token.scope === source.scope,
           )
         : tokens.filter(
             (token) =>
               token.tokenType === Identifier &&
-              token.identifierKind !== IdentifierKind.Unassignable &&
-              token.identifier === source.identifier &&
+              token.assignable &&
+              token.image === source.image &&
               !isLocal(tokens, token),
           );
     case FindKind.Definition:
       return isLocal(tokens, source)
         ? tokens.filter(
             (token) =>
-              token.kind === TokenKind.Assignment &&
-              token.identifierKind !== IdentifierKind.Unassignable &&
-              token.identifier === source.identifier &&
+              token.assignment &&
+              token.assignable &&
+              token.image === source.image &&
               token.scope === source.scope,
           )
         : tokens.filter(
             (token) =>
-              token.kind === TokenKind.Assignment &&
-              token.identifierKind !== IdentifierKind.Unassignable &&
-              token.identifier === source.identifier &&
+              token.assignment &&
+              token.assignable &&
+              token.image === source.image &&
               !isLocal(tokens, token),
           );
     case FindKind.Completion:
@@ -122,15 +113,15 @@ export function findIdentifiers(
       tokens
         .filter(
           (token) =>
-            token.kind === TokenKind.Assignment &&
-            token.identifierKind !== IdentifierKind.Unassignable &&
-            (token.identifier?.startsWith(".") ||
+            token.assignment &&
+            token.assignable &&
+            (token.image.startsWith(".") ||
               token.namespace === source.namespace) &&
             (!token.scope || token.scope === source.scope),
         )
         .forEach(
           (token) =>
-            !completions.find((item) => item.identifier === token.identifier) &&
+            !completions.find((item) => item.image === token.image) &&
             completions.push(token),
         );
       return completions;
