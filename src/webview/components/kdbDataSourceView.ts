@@ -299,10 +299,14 @@ export class KdbDataSourceView extends LitElement {
               filter.column = (event.target as HTMLInputElement).value;
               this.requestChange();
             }}">
-            <vscode-option value="${filter.column}" selected
-              >${filter.column}</vscode-option
+            <vscode-option .value="${filter.column}" .selected="${true}"
+              >${filter.column || "(none)"}</vscode-option
             >
-            <vscode-tag>Columns</vscode-tag>
+            <vscode-tag
+              >${this.isMetaLoaded
+                ? "Meta Columns"
+                : "Meta Not Loaded"}</vscode-tag
+            >
             ${this.renderColumnOptions()}
           </vscode-dropdown>
         </div>
@@ -319,8 +323,8 @@ export class KdbDataSourceView extends LitElement {
               filter.operator = (event.target as HTMLInputElement).value;
               this.requestChange();
             }}">
-            <vscode-option value=${filter.operator} selected
-              >${filter.operator}</vscode-option
+            <vscode-option .value=${filter.operator} .selected="${true}"
+              >${filter.operator || "(none)"}</vscode-option
             >
             <vscode-tag>Operators</vscode-tag>
             ${filterOperators.map(
@@ -455,10 +459,14 @@ export class KdbDataSourceView extends LitElement {
               sort.column = (event.target as HTMLInputElement).value;
               this.requestChange();
             }}">
-            <vscode-option value="${sort.column}" selected
-              >${sort.column}</vscode-option
+            <vscode-option .value="${sort.column}" .selected="${true}"
+              >${sort.column || "(none)"}</vscode-option
             >
-            <vscode-tag>Columns</vscode-tag>
+            <vscode-tag
+              >${this.isMetaLoaded
+                ? "Meta Columns"
+                : "Meta Not Loaded"}</vscode-tag
+            >
             ${this.renderColumnOptions()}
           </vscode-dropdown>
         </div>
@@ -526,8 +534,8 @@ export class KdbDataSourceView extends LitElement {
               agg.operator = (event.target as HTMLInputElement).value;
               this.requestChange();
             }}">
-            <vscode-option value="${agg.operator}" selected
-              >${agg.operator}</vscode-option
+            <vscode-option .value="${agg.operator}" .selected="${true}"
+              >${agg.operator || "(none)"}</vscode-option
             >
             <vscode-tag>Operators</vscode-tag>
             ${aggOperators.map(
@@ -549,10 +557,14 @@ export class KdbDataSourceView extends LitElement {
               agg.column = (event.target as HTMLInputElement).value;
               this.requestChange();
             }}">
-            <vscode-option value="${agg.column}" selected
-              >${agg.column}</vscode-option
+            <vscode-option .value="${agg.column}" .selected="${true}"
+              >${agg.column || "(none)"}</vscode-option
             >
-            <vscode-tag>Columns</vscode-tag>
+            <vscode-tag
+              >${this.isMetaLoaded
+                ? "Meta Columns"
+                : "Meta Not Loaded"}</vscode-tag
+            >
             ${this.renderColumnOptions()}
           </vscode-dropdown>
         </div>
@@ -611,10 +623,14 @@ export class KdbDataSourceView extends LitElement {
               group.column = (event.target as HTMLInputElement).value;
               this.requestChange();
             }}">
-            <vscode-option value="${group.column}" selected
-              >${group.column}</vscode-option
+            <vscode-option .value="${group.column}" .selected="${true}"
+              >${group.column || "(none)"}</vscode-option
             >
-            <vscode-tag>Columns</vscode-tag>
+            <vscode-tag
+              >${this.isMetaLoaded
+                ? "Meta Columns"
+                : "Meta Not Loaded"}</vscode-tag
+            >
             ${this.renderColumnOptions()}
           </vscode-dropdown>
         </div>
@@ -695,10 +711,16 @@ export class KdbDataSourceView extends LitElement {
                           ).value;
                           this.requestChange();
                         }}">
-                        <vscode-option value="${this.selectedApi}" selected
-                          >${this.selectedApi}</vscode-option
+                        <vscode-option
+                          .value="${this.selectedApi}"
+                          .selected="${true}"
+                          >${this.selectedApi || "(none)"}</vscode-option
                         >
-                        <vscode-tag>APIs</vscode-tag>
+                        <vscode-tag
+                          >${this.isMetaLoaded
+                            ? "Meta APIs"
+                            : "Meta Not Loaded"}</vscode-tag
+                        >
                         ${this.renderApiOptions()}
                       </vscode-dropdown>
                     </div>
@@ -714,10 +736,16 @@ export class KdbDataSourceView extends LitElement {
                           ).value;
                           this.requestChange();
                         }}">
-                        <vscode-option value="${this.selectedTable}" selected
-                          >${this.selectedTable}</vscode-option
+                        <vscode-option
+                          .value="${this.selectedTable}"
+                          .selected="${true}"
+                          >${this.selectedTable || "(none)"}</vscode-option
                         >
-                        <vscode-tag>Tables</vscode-tag>
+                        <vscode-tag
+                          >${this.isMetaLoaded
+                            ? "Meta Tables"
+                            : "Meta Not Loaded"}</vscode-tag
+                        >
                         ${this.renderTableOptions()}
                       </vscode-dropdown>
                     </div>
@@ -767,8 +795,8 @@ export class KdbDataSourceView extends LitElement {
                           this.fill = (event.target as HTMLSelectElement).value;
                           this.requestChange();
                         }}">
-                        <vscode-option value="${this.fill}" selected
-                          >${this.fill}</vscode-option
+                        <vscode-option .value="${this.fill}" .selected="${true}"
+                          >${this.fill || "(none)"}</vscode-option
                         >
                         <vscode-tag>Options</vscode-tag>
                         <vscode-option value="zero">zero</vscode-option>
@@ -797,8 +825,10 @@ export class KdbDataSourceView extends LitElement {
                           ).value;
                           this.requestChange();
                         }}">
-                        <vscode-option value="${this.temporality}" selected
-                          >${this.temporality}</vscode-option
+                        <vscode-option
+                          .value="${this.temporality}"
+                          .selected="${true}"
+                          >${this.temporality || "(none)"}</vscode-option
                         >
                         <vscode-tag>Options</vscode-tag>
                         <vscode-option value="snapshot">snapshot</vscode-option>
@@ -859,10 +889,16 @@ export class KdbDataSourceView extends LitElement {
                           ).value;
                           this.requestChange();
                         }}">
-                        <vscode-option value="${this.qsqlTarget}" selected
-                          >${this.qsqlTarget}</vscode-option
+                        <vscode-option
+                          .value="${this.qsqlTarget}"
+                          .selected="${true}"
+                          >${this.qsqlTarget || "(none)"}</vscode-option
                         >
-                        <vscode-tag>Targets</vscode-tag>
+                        <vscode-tag
+                          >${this.isMetaLoaded
+                            ? "Meta Targets"
+                            : "Meta Not Loaded"}</vscode-tag
+                        >
                         ${this.renderTargetOptions()}</vscode-dropdown
                       >
                     </div>
@@ -907,8 +943,8 @@ export class KdbDataSourceView extends LitElement {
               class="dropdown"
               @change="${this.requestServerChange}"
               ?disabled="${this.running}">
-              <vscode-option value="${this.selectedServer}" selected
-                >${this.selectedServer}</vscode-option
+              <vscode-option .value="${this.selectedServer}" .selected="${true}"
+                >${this.selectedServer || "(none)"}</vscode-option
               >
               <vscode-tag>Connections</vscode-tag>
               ${this.servers.map(
