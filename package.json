@@ -335,12 +335,6 @@
       },
       {
         "category": "KX",
-        "command": "kdb.terminal.run",
-        "title": "Run q file in a new q instance",
-        "icon": "$(debug-alt)"
-      },
-      {
-        "category": "KX",
         "command": "kdb.terminal.start",
         "title": "Start REPL"
       },
@@ -438,6 +432,19 @@
           "light": "./resources/scratchpad.svg"
         },
         "configuration": "./language-configuration.json"
+      },
+      {
+        "id": "json",
+        "aliases": [
+          "json"
+        ],
+        "extensions": [
+          ".kdb.json"
+        ],
+        "icon": {
+          "dark": "./resources/datasource.svg",
+          "light": "./resources/datasource.svg"
+        }
       }
     ],
     "grammars": [

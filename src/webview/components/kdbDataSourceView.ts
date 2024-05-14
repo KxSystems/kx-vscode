@@ -13,6 +13,7 @@
 
 import { LitElement, html, css } from "lit";
 import { repeat } from "lit/directives/repeat.js";
+import { live } from "lit/directives/live.js";
 import { customElement } from "lit/decorators.js";
 import {
   Agg,
@@ -299,7 +300,9 @@ export class KdbDataSourceView extends LitElement {
               filter.column = (event.target as HTMLInputElement).value;
               this.requestChange();
             }}">
-            <vscode-option .value="${filter.column}" .selected="${true}"
+            <vscode-option
+              .value="${live(filter.column)}"
+              .selected="${live(true)}"
               >${filter.column || "(none)"}</vscode-option
             >
             <vscode-tag
@@ -323,7 +326,9 @@ export class KdbDataSourceView extends LitElement {
               filter.operator = (event.target as HTMLInputElement).value;
               this.requestChange();
             }}">
-            <vscode-option .value=${filter.operator} .selected="${true}"
+            <vscode-option
+              .value=${live(filter.operator)}
+              .selected="${live(true)}"
               >${filter.operator || "(none)"}</vscode-option
             >
             <vscode-tag>Operators</vscode-tag>
@@ -337,7 +342,7 @@ export class KdbDataSourceView extends LitElement {
         </div>
         <vscode-text-field
           class="text-field"
-          .value="${filter.values}"
+          .value="${live(filter.values)}"
           @change="${(event: Event) => {
             filter.values = (event.target as HTMLInputElement).value;
             this.requestChange();
@@ -388,7 +393,7 @@ export class KdbDataSourceView extends LitElement {
           }}"></vscode-checkbox>
         <vscode-text-field
           class="text-field"
-          .value="${label.key}"
+          .value="${live(label.key)}"
           @change="${(event: Event) => {
             label.key = (event.target as HTMLInputElement).value;
             this.requestChange();
@@ -399,7 +404,7 @@ export class KdbDataSourceView extends LitElement {
         >
         <vscode-text-field
           class="text-field"
-          .value="${label.value}"
+          .value="${live(label.value)}"
           @change="${(event: Event) => {
             label.value = (event.target as HTMLInputElement).value;
             this.requestChange();
@@ -459,7 +464,9 @@ export class KdbDataSourceView extends LitElement {
               sort.column = (event.target as HTMLInputElement).value;
               this.requestChange();
             }}">
-            <vscode-option .value="${sort.column}" .selected="${true}"
+            <vscode-option
+              .value="${live(sort.column)}"
+              .selected="${live(true)}"
               >${sort.column || "(none)"}</vscode-option
             >
             <vscode-tag
@@ -514,7 +521,7 @@ export class KdbDataSourceView extends LitElement {
           }}"></vscode-checkbox>
         <vscode-text-field
           class="text-field"
-          .value="${agg.key}"
+          .value="${live(agg.key)}"
           @change="${(event: Event) => {
             agg.key = (event.target as HTMLInputElement).value;
             this.requestChange();
@@ -534,7 +541,9 @@ export class KdbDataSourceView extends LitElement {
               agg.operator = (event.target as HTMLInputElement).value;
               this.requestChange();
             }}">
-            <vscode-option .value="${agg.operator}" .selected="${true}"
+            <vscode-option
+              .value="${live(agg.operator)}"
+              .selected="${live(true)}"
               >${agg.operator || "(none)"}</vscode-option
             >
             <vscode-tag>Operators</vscode-tag>
@@ -557,7 +566,9 @@ export class KdbDataSourceView extends LitElement {
               agg.column = (event.target as HTMLInputElement).value;
               this.requestChange();
             }}">
-            <vscode-option .value="${agg.column}" .selected="${true}"
+            <vscode-option
+              .value="${live(agg.column)}"
+              .selected="${live(true)}"
               >${agg.column || "(none)"}</vscode-option
             >
             <vscode-tag
@@ -623,7 +634,9 @@ export class KdbDataSourceView extends LitElement {
               group.column = (event.target as HTMLInputElement).value;
               this.requestChange();
             }}">
-            <vscode-option .value="${group.column}" .selected="${true}"
+            <vscode-option
+              .value="${live(group.column)}"
+              .selected="${live(true)}"
               >${group.column || "(none)"}</vscode-option
             >
             <vscode-tag
@@ -712,8 +725,8 @@ export class KdbDataSourceView extends LitElement {
                           this.requestChange();
                         }}">
                         <vscode-option
-                          .value="${this.selectedApi}"
-                          .selected="${true}"
+                          .value="${live(this.selectedApi)}"
+                          .selected="${live(true)}"
                           >${this.selectedApi || "(none)"}</vscode-option
                         >
                         <vscode-tag
@@ -737,8 +750,8 @@ export class KdbDataSourceView extends LitElement {
                           this.requestChange();
                         }}">
                         <vscode-option
-                          .value="${this.selectedTable}"
-                          .selected="${true}"
+                          .value="${live(this.selectedTable)}"
+                          .selected="${live(true)}"
                           >${this.selectedTable || "(none)"}</vscode-option
                         >
                         <vscode-tag
@@ -755,7 +768,7 @@ export class KdbDataSourceView extends LitElement {
                     <vscode-text-field
                       type="datetime-local"
                       class="text-field larger"
-                      .value="${this.startTS}"
+                      .value="${live(this.startTS)}"
                       @change="${(event: Event) => {
                         this.startTS = (
                           event.target as HTMLSelectElement
@@ -768,7 +781,7 @@ export class KdbDataSourceView extends LitElement {
                     <vscode-text-field
                       type="datetime-local"
                       class="text-field larger"
-                      .value="${this.endTS}"
+                      .value="${live(this.endTS)}"
                       @change="${(event: Event) => {
                         this.endTS = (event.target as HTMLSelectElement).value;
                         this.requestChange();
@@ -795,7 +808,9 @@ export class KdbDataSourceView extends LitElement {
                           this.fill = (event.target as HTMLSelectElement).value;
                           this.requestChange();
                         }}">
-                        <vscode-option .value="${this.fill}" .selected="${true}"
+                        <vscode-option
+                          .value="${live(this.fill)}"
+                          .selected="${live(true)}"
                           >${this.fill || "(none)"}</vscode-option
                         >
                         <vscode-tag>Options</vscode-tag>
@@ -826,8 +841,8 @@ export class KdbDataSourceView extends LitElement {
                           this.requestChange();
                         }}">
                         <vscode-option
-                          .value="${this.temporality}"
-                          .selected="${true}"
+                          .value="${live(this.temporality)}"
+                          .selected="${live(true)}"
                           >${this.temporality || "(none)"}</vscode-option
                         >
                         <vscode-tag>Options</vscode-tag>
@@ -890,8 +905,8 @@ export class KdbDataSourceView extends LitElement {
                           this.requestChange();
                         }}">
                         <vscode-option
-                          .value="${this.qsqlTarget}"
-                          .selected="${true}"
+                          .value="${live(this.qsqlTarget)}"
+                          .selected="${live(true)}"
                           >${this.qsqlTarget || "(none)"}</vscode-option
                         >
                         <vscode-tag
@@ -906,7 +921,7 @@ export class KdbDataSourceView extends LitElement {
                   <div class="row">
                     <vscode-text-area
                       rows="20"
-                      .value="${this.qsql}"
+                      .value="${live(this.qsql)}"
                       @change="${(event: Event) => {
                         this.qsql = (event.target as HTMLSelectElement).value;
                         this.requestChange();
@@ -922,7 +937,7 @@ export class KdbDataSourceView extends LitElement {
                   <div class="row">
                     <vscode-text-area
                       rows="20"
-                      .value="${this.sql}"
+                      .value="${live(this.sql)}"
                       @change="${(event: Event) => {
                         this.sql = (event.target as HTMLSelectElement).value;
                         this.requestChange();
@@ -943,7 +958,9 @@ export class KdbDataSourceView extends LitElement {
               class="dropdown"
               @change="${this.requestServerChange}"
               ?disabled="${this.running}">
-              <vscode-option .value="${this.selectedServer}" .selected="${true}"
+              <vscode-option
+                .value="${live(this.selectedServer)}"
+                .selected="${live(true)}"
                 >${this.selectedServer || "(none)"}</vscode-option
               >
               <vscode-tag>Connections</vscode-tag>
