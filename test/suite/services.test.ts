@@ -1042,19 +1042,25 @@ describe("connectionManagerService", () => {
 
     it("should not call pingInsights if connection is not an instance of InsightsConnection", async () => {
       ext.connectedConnectionList.push(localConn);
-      await connectionManagerService.checkInsightsConnectionIsAlive();
+      await connectionManagerService.checkInsightsConnectionIsAlive(
+        "networkMonitoring",
+      );
       sinon.assert.notCalled(pingInsightsStub);
     });
 
     it("should not call pingInsights if there is no connection connected", async () => {
-      await connectionManagerService.checkInsightsConnectionIsAlive();
+      await connectionManagerService.checkInsightsConnectionIsAlive(
+        "networkMonitoring",
+      );
       sinon.assert.notCalled(pingInsightsStub);
     });
 
     it("should call pingInsights if connection is an instance of InsightsConnection", async () => {
       ext.connectedConnectionList.push(insightsConn);
       pingInsightsStub.resolves(true);
-      await connectionManagerService.checkInsightsConnectionIsAlive();
+      await connectionManagerService.checkInsightsConnectionIsAlive(
+        "rehidrateConn",
+      );
       sinon.assert.calledOnce(pingInsightsStub);
       sinon.assert.notCalled(disconnectStub);
     });
@@ -1062,7 +1068,9 @@ describe("connectionManagerService", () => {
     it("should call disconnect if pingInsights returns false", async () => {
       ext.connectedConnectionList.push(insightsConn);
       pingInsightsStub.resolves(false);
-      await connectionManagerService.checkInsightsConnectionIsAlive();
+      await connectionManagerService.checkInsightsConnectionIsAlive(
+        "networkMonitoring",
+      );
       sinon.assert.calledOnce(pingInsightsStub);
       sinon.assert.calledOnce(disconnectStub);
     });
