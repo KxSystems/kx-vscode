@@ -11,49 +11,66 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Position, Range } from "vscode-languageserver";
-import { Identifier, Token } from "../parser";
+import { IToken } from "chevrotain";
+import { TestBegin } from "./ranges";
+import { EndOfLine, LCurly, TestBlock, WhiteSpace } from "./tokens";
+import { Identifier } from "./keywords";
 
-export function rangeFromToken(token: Token): Range {
-  return Range.create(
-    (token.startLine || 1) - 1,
-    (token.startColumn || 1) - 1,
-    (token.endLine || 1) - 1,
-    token.endColumn || 1,
+export interface Token extends IToken {
+  index?: number;
+  order?: number;
+  scope?: Token;
+  argument?: Token;
+  namespace?: string;
+  assignable?: boolean;
+  assignment?: Token;
+}
+
+export function isLambda(token: Token | undefined): boolean {
+  return (
+    !token ||
+    token.tokenType === LCurly ||
+    token.tokenType === TestBegin ||
+    token.tokenType === TestBlock
   );
 }
 
-export function positionToToken(tokens: Token[], position: Position) {
-  return tokens.find((token) => {
-    const { start, end } = rangeFromToken(token);
-    return (
-      start.line <= position.line &&
-      end.line >= position.line &&
-      start.character <= position.character &&
-      end.character >= position.character
-    );
-  });
+export function lookAround(
+  tokens: Token[],
+  token: Token,
+  delta: number,
+): Token | undefined {
+  let count = 0;
+  let index = delta < 0 ? token.index! - 1 : token.index! + 1;
+  let current: Token | undefined;
+  while (count < Math.abs(delta) && (current = tokens[index])) {
+    index = delta < 0 ? index - 1 : index + 1;
+    if (current.tokenType === WhiteSpace || current.tokenType === EndOfLine) {
+      continue;
+    }
+    count++;
+  }
+  return current;
+}
+
+export function isFullyQualified(token: Token) {
+  return token.image.startsWith(".");
 }
 
 export function isLocal(tokens: Token[], target: Token) {
   if (!target.scope) {
     return false;
   }
-  /*
-  if (target.scope.nullary) {
-    if (
-      target.identifier === "x" ||
-      target.identifier === "y" ||
-      target.identifier === "z"
-    ) {
+  if (!target.scope.argument) {
+    if (target.image === "x" || target.image === "y" || target.image === "z") {
       return true;
     }
   }
-  */
   return !!tokens.find(
     (token) =>
-      token.assignment &&
+      !isFullyQualified(token) &&
       token.assignable &&
+      token.assignment &&
       token.scope === target.scope &&
       token.image === target.image,
   );

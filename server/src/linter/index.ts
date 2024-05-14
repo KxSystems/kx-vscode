@@ -11,9 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Diagnostic } from "vscode-languageserver";
 import { Token } from "../parser";
-import { rangeFromToken } from "../util";
 import { Rules } from "./rules";
 
 const enabled = [
@@ -27,21 +25,27 @@ const enabled = [
   "DECLARED_AFTER_USE",
 ];
 
-export function lint(tokens: Token[]): Diagnostic[] {
-  const diagnostics: Diagnostic[] = [];
+export interface LinterDiagnostic {
+  token: Token;
+  message: string;
+  severity: number;
+  code: string;
+  source: string;
+}
+
+export function lint(tokens: Token[]): LinterDiagnostic[] {
+  const diagnostics: LinterDiagnostic[] = [];
   Rules.filter(
     (rule) => rule.check && enabled.indexOf(rule.code) !== -1,
   ).forEach((rule) =>
     rule.check!(tokens).forEach((token) =>
-      diagnostics.push(
-        Diagnostic.create(
-          rangeFromToken(token),
-          rule.message,
-          rule.severity,
-          rule.code,
-          "tsqlint",
-        ),
-      ),
+      diagnostics.push({
+        token,
+        message: rule.message,
+        severity: rule.severity,
+        code: rule.code,
+        source: "tsqlint",
+      }),
     ),
   );
   return diagnostics;

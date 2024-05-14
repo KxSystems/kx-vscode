@@ -20,11 +20,12 @@ import {
   StringEscape,
   SymbolLiteral,
   Token,
+  isFullyQualified,
   lookAround,
 } from "../parser";
 import { StringEnd } from "../parser/ranges";
 
-const validEscapes = ["n", "r", "t", "\\", "/", '"'];
+const ValidEscapes = ["n", "r", "t", "\\", "/", '"'];
 
 export function deprecatedDatetime(tokens: Token[]): Token[] {
   return tokens.filter((token) => token.tokenType === DateTimeLiteral);
@@ -78,7 +79,7 @@ export function invalidEscape(tokens: Token[]): Token[] {
       const escapes = /\\([0-9]{3}|.{1})/g;
       let match, value;
       while ((match = escapes.exec(token.image))) {
-        if (validEscapes.indexOf(match[1]) !== -1) {
+        if (ValidEscapes.indexOf(match[1]) !== -1) {
           continue;
         }
         value = parseInt(match[1]);
@@ -92,13 +93,29 @@ export function invalidEscape(tokens: Token[]): Token[] {
 }
 
 export function unusedParam(tokens: Token[]): Token[] {
-  return [];
+  return tokens
+    .filter(
+      (token) =>
+        !isFullyQualified(token) &&
+        token.assignable &&
+        token.scope &&
+        token.assignment === token,
+    )
+    .filter(
+      (token) =>
+        !tokens.find(
+          (target) =>
+            !target.assignment &&
+            target.scope === token.scope &&
+            target.image === token.image,
+        ),
+    );
 }
 
 export function unusedVar(tokens: Token[]): Token[] {
-  return [];
+  return tokens.filter((token) => {});
 }
 
 export function declaredAfterUse(tokens: Token[]): Token[] {
-  return [];
+  return tokens.filter((token) => {});
 }

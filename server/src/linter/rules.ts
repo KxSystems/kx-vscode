@@ -11,9 +11,15 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { DiagnosticSeverity } from "vscode-languageserver";
 import { Token } from "../parser";
 import * as checks from "./checks";
+
+const enum DiagnosticSeverity {
+  Error = 1,
+  Warning = 2,
+  Information = 3,
+  Hint = 4,
+}
 
 export interface LinterRule {
   code: string;

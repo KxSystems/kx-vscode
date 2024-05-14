@@ -11,19 +11,22 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { TextDocument } from "vscode-languageserver-textdocument";
+import { Position, TextDocument } from "vscode-languageserver-textdocument";
 import {
   CompletionItem,
   CompletionItemKind,
   CompletionParams,
   Connection,
   DefinitionParams,
+  Diagnostic,
+  DiagnosticSeverity,
   DidChangeConfigurationParams,
   DocumentSymbol,
   DocumentSymbolParams,
   InitializeParams,
   LSPAny,
   Location,
+  Range,
   ReferenceParams,
   RenameParams,
   ServerCapabilities,
@@ -35,13 +38,14 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver/node";
-import { LCurly, Token, isLambda, parse } from "./parser";
 import {
   FindKind,
+  LCurly,
+  Token,
   findIdentifiers,
-  positionToToken,
-  rangeFromToken,
-} from "./util";
+  isLambda,
+  parse,
+} from "./parser";
 import { lint } from "./linter";
 
 interface Settings {
@@ -109,7 +113,15 @@ export default class QLangServer {
   }: TextDocumentChangeEvent<TextDocument>) {
     if (this.settings.linting) {
       const uri = document.uri;
-      const diagnostics = lint(this.parse(document));
+      const diagnostics = lint(this.parse(document)).map((item) =>
+        Diagnostic.create(
+          rangeFromToken(item.token),
+          item.message,
+          item.severity as DiagnosticSeverity,
+          item.code,
+          item.source,
+        ),
+      );
       this.connection.sendDiagnostics({ uri, diagnostics });
     }
   }
@@ -227,4 +239,25 @@ export default class QLangServer {
     }
     return parse(document.getText());
   }
+}
+
+function rangeFromToken(token: Token): Range {
+  return Range.create(
+    (token.startLine || 1) - 1,
+    (token.startColumn || 1) - 1,
+    (token.endLine || 1) - 1,
+    token.endColumn || 1,
+  );
+}
+
+function positionToToken(tokens: Token[], position: Position) {
+  return tokens.find((token) => {
+    const { start, end } = rangeFromToken(token);
+    return (
+      start.line <= position.line &&
+      end.line >= position.line &&
+      start.character <= position.character &&
+      end.character >= position.character
+    );
+  });
 }

@@ -11,7 +11,6 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { IToken } from "chevrotain";
 import { QLexer } from "./lexer";
 import {
   Colon,
@@ -47,42 +46,7 @@ import {
   NumberLiteral,
   SymbolLiteral,
 } from "./literals";
-
-export interface Token extends IToken {
-  index?: number;
-  order?: number;
-  scope?: Token;
-  namespace?: string;
-  assignable?: boolean;
-  assignment?: Token;
-}
-
-export function isLambda(token: Token | undefined): boolean {
-  return (
-    !token ||
-    token.tokenType === LCurly ||
-    token.tokenType === TestBegin ||
-    token.tokenType === TestBlock
-  );
-}
-
-export function lookAround(
-  tokens: Token[],
-  token: Token,
-  delta: number,
-): Token | undefined {
-  let count = 0;
-  let index = delta < 0 ? token.index! - 1 : token.index! + 1;
-  let current: Token | undefined;
-  while (count < Math.abs(delta) && (current = tokens[index])) {
-    index = delta < 0 ? index - 1 : index + 1;
-    if (current.tokenType === WhiteSpace || current.tokenType === EndOfLine) {
-      continue;
-    }
-    count++;
-  }
-  return current;
-}
+import { Token, lookAround } from "./utils";
 
 export function parse(text: string): Token[] {
   const result = QLexer.tokenize(text);
@@ -202,6 +166,9 @@ export function parse(text: string): Token[] {
         prev = peek(scope);
         if (prev) {
           argument = lookAround(tokens, token, -1) === prev;
+          if (argument) {
+            prev.argument = token;
+          }
         }
         stack.push(token);
         bracket++;
