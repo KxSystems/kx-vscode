@@ -335,12 +335,6 @@
       },
       {
         "category": "KX",
-        "command": "kdb.terminal.run",
-        "title": "Run q file in a new q instance",
-        "icon": "$(debug-alt)"
-      },
-      {
-        "category": "KX",
         "command": "kdb.terminal.start",
         "title": "Start REPL"
       },
