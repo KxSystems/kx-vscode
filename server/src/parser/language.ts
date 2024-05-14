@@ -36,6 +36,7 @@ import {
   SemiColon,
   StringEscape,
   TestBlock,
+  TestLambdaBlock,
 } from "./tokens";
 import { TokenType } from "chevrotain";
 import { writeFileSync } from "fs";
@@ -77,8 +78,8 @@ const quke = {
         },
       },
       patterns: [
-        {
-          match: _(TestBlock),
+        ...[TestBlock, TestLambdaBlock].map((block) => ({
+          match: _(block),
           captures: {
             1: {
               name: "support.function.q",
@@ -87,7 +88,7 @@ const quke = {
               name: "string.quoted.q",
             },
           },
-        },
+        })),
         ...includes,
       ],
     },

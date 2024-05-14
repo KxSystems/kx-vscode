@@ -131,50 +131,11 @@ export default class QLangServer {
   }: DocumentSymbolParams): DocumentSymbol[] {
     const tokens = this.parse(textDocument);
     if (this.settings.debug) {
-      return tokens.map((token) =>
-        DocumentSymbol.create(
-          token.image,
-          `${token.tokenType.name} (${token.order}) ${token.namespace} ${
-            token.scope ? "(scoped)" : ""
-          } ${token.assignment ? "(assigned)" : ""} ${
-            token.assignment === token ? "(arg)" : ""
-          }`,
-          SymbolKind.Variable,
-          rangeFromToken(token),
-          rangeFromToken(token),
-        ),
-      );
+      return tokens.map((token) => createDebugSymbol(token));
     }
     return tokens
       .filter((token) => token.assignable && token.assignment && !token.scope)
-      .map((token) =>
-        DocumentSymbol.create(
-          token.image.trim(),
-          undefined,
-          isLambda(token.assignment) ? SymbolKind.Object : SymbolKind.Variable,
-          rangeFromToken(token),
-          rangeFromToken(token),
-          tokens
-            .filter(
-              (child) =>
-                child.scope &&
-                child.scope === token.assignment &&
-                child.assignable &&
-                child.assignment,
-            )
-            .map((token) =>
-              DocumentSymbol.create(
-                token.image,
-                undefined,
-                token.assignment === token
-                  ? SymbolKind.Array
-                  : SymbolKind.Variable,
-                rangeFromToken(token),
-                rangeFromToken(token),
-              ),
-            ),
-        ),
-      );
+      .map((token) => createSymbol(token));
   }
 
   public onReferences({ textDocument, position }: ReferenceParams): Location[] {
@@ -260,4 +221,29 @@ function positionToToken(tokens: Token[], position: Position) {
       end.character >= position.character
     );
   });
+}
+
+function createSymbol(token: Token): DocumentSymbol {
+  return DocumentSymbol.create(
+    token.image.trim(),
+    undefined,
+    isLambda(token.assignment) ? SymbolKind.Object : SymbolKind.Variable,
+    rangeFromToken(token),
+    rangeFromToken(token),
+    token.assignment?.children?.map((child) => createSymbol(child)),
+  );
+}
+
+function createDebugSymbol(token: Token): DocumentSymbol {
+  return DocumentSymbol.create(
+    token.image,
+    `${token.tokenType.name} (${token.order}) ${token.namespace} ${
+      token.scope ? "(scoped)" : ""
+    } ${token.assignment ? "(assigned)" : ""} ${
+      token.assignment === token ? "(arg)" : ""
+    }`,
+    SymbolKind.Variable,
+    rangeFromToken(token),
+    rangeFromToken(token),
+  );
 }

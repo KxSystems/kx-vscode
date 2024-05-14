@@ -24,6 +24,15 @@ export interface Token extends IToken {
   namespace?: string;
   assignable?: boolean;
   assignment?: Token;
+  children?: Token[];
+  consumed?: boolean;
+}
+
+export function children(token: Token) {
+  if (!token.children) {
+    token.children = [];
+  }
+  return token.children;
 }
 
 export function isLambda(token: Token | undefined): boolean {

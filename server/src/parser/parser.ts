@@ -31,6 +31,7 @@ import {
   TestBlock,
   WhiteSpace,
   CommentEol,
+  TestLambdaBlock,
 } from "./tokens";
 import { Identifier, Keyword, LSql, RSql } from "./keywords";
 import {
@@ -46,7 +47,7 @@ import {
   NumberLiteral,
   SymbolLiteral,
 } from "./literals";
-import { Token, lookAround } from "./utils";
+import { Token, children, isFullyQualified, lookAround } from "./utils";
 
 export function parse(text: string): Token[] {
   const result = QLexer.tokenize(text);
@@ -89,9 +90,14 @@ export function parse(text: string): Token[] {
         case LParen:
         case LBracket:
         case LTable:
-          done = true;
-          pop(true);
-          order++;
+          if (current.consumed) {
+            push(current);
+          } else {
+            stack.push(current);
+            done = true;
+            pop(true);
+            order++;
+          }
           break;
         case SemiColon:
           pop(true);
@@ -102,6 +108,9 @@ export function parse(text: string): Token[] {
         case SymbolLiteral:
         case NumberLiteral:
         case StringEnd:
+        case TestBegin:
+        case TestBlock:
+        case TestLambdaBlock:
           if (argument) {
             current.assignment = current;
           } else {
@@ -117,6 +126,14 @@ export function parse(text: string): Token[] {
             }
           }
           current.assignable = !sql && !table;
+          if (
+            current.scope &&
+            current.assignable &&
+            current.assignment &&
+            !isFullyQualified(current)
+          ) {
+            children(current.scope).push(current);
+          }
           push(current);
           break;
         case RSql:
@@ -133,6 +150,7 @@ export function parse(text: string): Token[] {
           push(current);
           break;
       }
+      current.consumed = true;
     }
   };
 
@@ -141,7 +159,7 @@ export function parse(text: string): Token[] {
     token.index = i;
     token.order = -1;
     token.namespace = namespace;
-    token.scope = scope[scope.length - 1];
+    token.scope = peek(scope);
 
     switch (token.tokenType) {
       case LTable:
@@ -219,6 +237,7 @@ export function parse(text: string): Token[] {
         break;
       case TestBegin:
       case TestBlock:
+      case TestLambdaBlock:
         scope.pop();
         scope.push(token);
         stack.push(token);

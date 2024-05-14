@@ -49,6 +49,7 @@ import {
   TestBlock,
   LTable,
   CommentEol,
+  TestLambdaBlock,
 } from "./tokens";
 import {
   CommentEnd,
@@ -105,6 +106,7 @@ export const QLexer = new Lexer(
         LineComment,
         StringBegin,
         TestBlock,
+        TestLambdaBlock,
         ...Language,
       ],
       q_mode: [
