@@ -48,3 +48,6 @@ export function repeat(items: Iterable<any>, keyFn: any, template: any) {
     template && template(item);
   }
 }
+export function live(param: any) {
+  return param;
+}
