@@ -25,6 +25,7 @@ Module._resolveFilename = function (specifier: string, parent: string) {
     case "lit":
     case "lit/decorators.js":
     case "lit/directives/repeat.js":
+    case "lit/directives/live.js":
       specifier = path.resolve(__dirname, "webview.js");
       break;
   }
