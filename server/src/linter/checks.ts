@@ -13,43 +13,52 @@
 
 import {
   DateTimeLiteral,
-  Identifier,
   InfinityLiteral,
+  Keyword,
   NumberLiteral,
   Operator,
   StringEscape,
+  SymbolLiteral,
   Token,
+  lookAround,
 } from "../parser";
-import { isLocal } from "../util";
+import { StringEnd } from "../parser/ranges";
 
-function seek(tokens: Token[], token: Token, count = 1) {
-  if (token.index !== undefined) {
-    const result = tokens[token.index + count];
-    if (result) {
-      return result;
-    }
-  }
-  return undefined;
-}
+const validEscapes = ["n", "r", "t", "\\", "/", '"'];
 
 export function deprecatedDatetime(tokens: Token[]): Token[] {
   return tokens.filter((token) => token.tokenType === DateTimeLiteral);
 }
 
 export function assignReservedWord(tokens: Token[]): Token[] {
-  return tokens.filter((token) => token.image === "assignReservedWord");
+  return tokens.filter(
+    (token) =>
+      token.assignable && token.assignment && token.tokenType === Keyword,
+  );
 }
 
 export function invalidAssign(tokens: Token[]): Token[] {
-  return tokens.filter((token) => token.image === "invalidAssign");
+  return tokens.filter((token) => {
+    if (token.assignable && token.assignment) {
+      switch (token.tokenType) {
+        case StringEnd:
+        case SymbolLiteral:
+          return true;
+        case NumberLiteral:
+          const value = parseFloat(token.image);
+          return value < 0 || value > 2;
+      }
+    }
+    return false;
+  });
 }
 
 export function fixedSeed(tokens: Token[]): Token[] {
   return tokens.filter((token) => {
     if (token.tokenType === InfinityLiteral) {
-      let prev = seek(tokens, token, -1);
+      let prev = lookAround(tokens, token, -1);
       if (prev?.tokenType === Operator && prev.image === "?") {
-        prev = seek(tokens, token, -2);
+        prev = lookAround(tokens, prev, -1);
         if (prev?.tokenType === NumberLiteral) {
           const value = parseFloat(prev.image);
           if (value >= 0) {
@@ -63,14 +72,13 @@ export function fixedSeed(tokens: Token[]): Token[] {
 }
 
 export function invalidEscape(tokens: Token[]): Token[] {
-  const valid = ["n", "r", "t", "\\", "/", '"'];
   return tokens
     .filter((token) => token.tokenType === StringEscape)
     .filter((token) => {
       const escapes = /\\([0-9]{3}|.{1})/g;
       let match, value;
       while ((match = escapes.exec(token.image))) {
-        if (valid.indexOf(match[1]) !== -1) {
+        if (validEscapes.indexOf(match[1]) !== -1) {
           continue;
         }
         value = parseInt(match[1]);
@@ -84,45 +92,13 @@ export function invalidEscape(tokens: Token[]): Token[] {
 }
 
 export function unusedParam(tokens: Token[]): Token[] {
-  return tokens
-    .filter((token) => token.argument)
-    .filter((arg) => {
-      return !tokens.find(
-        (token) =>
-          token !== arg &&
-          token.assignment &&
-          token.tokenType === Identifier &&
-          token.scope === arg.scope &&
-          token.image === arg.image,
-      );
-    });
+  return [];
 }
 
 export function unusedVar(tokens: Token[]): Token[] {
-  return tokens
-    .filter((token) => token.assignment && !token.argument)
-    .filter((token) => {
-      if (isLocal(tokens, token)) {
-        return !tokens.find(
-          (target) =>
-            target !== token &&
-            target.image === token.image &&
-            target.tokenType === Identifier &&
-            !target.assignment &&
-            target.scope === token.scope,
-        );
-      }
-      return !tokens.find(
-        (target) =>
-          target !== token &&
-          target.image === token.image &&
-          target.tokenType === Identifier &&
-          !target.assignment &&
-          !isLocal(tokens, target),
-      );
-    });
+  return [];
 }
 
 export function declaredAfterUse(tokens: Token[]): Token[] {
-  return tokens.filter((token) => token.image === "declaredAfterUse");
+  return [];
 }

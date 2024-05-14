@@ -17,6 +17,7 @@ import {
   BinaryLiteral,
   ByteLiteral,
   CharLiteral,
+  CommentLiteral,
   DateLiteral,
   DateTimeLiteral,
   InfinityLiteral,
@@ -46,7 +47,8 @@ import {
   WhiteSpace,
   StringEscape,
   TestBlock,
-  Table,
+  LTable,
+  CommentEol,
 } from "./tokens";
 import {
   CommentEnd,
@@ -59,7 +61,7 @@ import {
 
 const Language = [
   Command,
-  Table,
+  LTable,
   EndOfLine,
   WhiteSpace,
   SymbolLiteral,
@@ -121,8 +123,8 @@ export const QLexer = new Lexer(
         WhiteSpace,
         CharLiteral,
       ],
-      comment_mode: [CommentEnd, EndOfLine, WhiteSpace, CharLiteral],
-      exit_comment_mode: [EndOfLine, WhiteSpace, CharLiteral],
+      comment_mode: [CommentEnd, CommentEol, WhiteSpace, CommentLiteral],
+      exit_comment_mode: [CommentEol, WhiteSpace, CommentLiteral],
     },
   },
   { safeMode: true },

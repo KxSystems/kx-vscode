@@ -67,3 +67,8 @@ export const CharLiteral = createToken({
   name: "CharLiteral",
   pattern: /\S/,
 });
+
+export const CommentLiteral = createToken({
+  name: "CommentLiteral",
+  pattern: /\S/,
+});

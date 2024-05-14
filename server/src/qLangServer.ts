@@ -35,7 +35,7 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver/node";
-import { LCurly, Token, parse } from "./parser";
+import { LCurly, Token, isLambda, parse } from "./parser";
 import {
   FindKind,
   findIdentifiers,
@@ -45,10 +45,11 @@ import {
 import { lint } from "./linter";
 
 interface Settings {
+  debug: boolean;
   linting: boolean;
 }
 
-const defaultSettings: Settings = { linting: false };
+const defaultSettings: Settings = { debug: false, linting: false };
 
 export default class QLangServer {
   private declare connection: Connection;
@@ -64,7 +65,7 @@ export default class QLangServer {
     this.documents.listen(this.connection);
     this.documents.onDidClose(this.onDidClose.bind(this));
     this.documents.onDidChangeContent(this.onDidChangeContent.bind(this));
-    this.connection.onDocumentSymbol(this.onDocumentSymbol_Debug.bind(this));
+    this.connection.onDocumentSymbol(this.onDocumentSymbol.bind(this));
     this.connection.onReferences(this.onReferences.bind(this));
     this.connection.onDefinition(this.onDefinition.bind(this));
     this.connection.onRenameRequest(this.onRenameRequest.bind(this));
@@ -91,9 +92,11 @@ export default class QLangServer {
 
   public onDidChangeConfiguration({ settings }: DidChangeConfigurationParams) {
     if ("kdb" in settings) {
-      if ("linting" in settings.kdb) {
-        this.setSettings({ linting: settings.kdb.linting });
-      }
+      const kdb = settings.kdb;
+      this.setSettings({
+        debug: kdb.debug || false,
+        linting: kdb.linting || false,
+      });
     }
   }
 
@@ -111,35 +114,32 @@ export default class QLangServer {
     }
   }
 
-  public onDocumentSymbol_Debug({
-    textDocument,
-  }: DocumentSymbolParams): DocumentSymbol[] {
-    return this.parse(textDocument).map((token) =>
-      DocumentSymbol.create(
-        token.image,
-        `${token.tokenType.name} (${token.order}) ${
-          token.scope ? "(scoped)" : ""
-        } ${token.assignment ? "(assigned)" : ""} ${token.argument || ""}`,
-        SymbolKind.Variable,
-        rangeFromToken(token),
-        rangeFromToken(token),
-      ),
-    );
-  }
-
   public onDocumentSymbol({
     textDocument,
   }: DocumentSymbolParams): DocumentSymbol[] {
     const tokens = this.parse(textDocument);
+    if (this.settings.debug) {
+      return tokens.map((token) =>
+        DocumentSymbol.create(
+          token.image,
+          `${token.tokenType.name} (${token.order}) ${token.namespace} ${
+            token.scope ? "(scoped)" : ""
+          } ${token.assignment ? "(assigned)" : ""} ${
+            token.assignment === token ? "(arg)" : ""
+          }`,
+          SymbolKind.Variable,
+          rangeFromToken(token),
+          rangeFromToken(token),
+        ),
+      );
+    }
     return tokens
       .filter((token) => token.assignable && token.assignment && !token.scope)
       .map((token) =>
         DocumentSymbol.create(
-          token.image,
+          token.image.trim(),
           undefined,
-          token.assignment?.tokenType === LCurly
-            ? SymbolKind.Object
-            : SymbolKind.Variable,
+          isLambda(token.assignment) ? SymbolKind.Object : SymbolKind.Variable,
           rangeFromToken(token),
           rangeFromToken(token),
           tokens
@@ -154,7 +154,9 @@ export default class QLangServer {
               DocumentSymbol.create(
                 token.image,
                 undefined,
-                token.argument ? SymbolKind.Array : SymbolKind.Variable,
+                token.assignment === token
+                  ? SymbolKind.Array
+                  : SymbolKind.Variable,
                 rangeFromToken(token),
                 rangeFromToken(token),
               ),

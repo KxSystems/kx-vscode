@@ -28,28 +28,60 @@ import {
   RParen,
   SemiColon,
   StringEscape,
-  Table,
+  LTable,
   TestBlock,
   WhiteSpace,
+  CommentEol,
 } from "./tokens";
 import { Identifier, Keyword, LSql, RSql } from "./keywords";
 import {
   CommentBegin,
   CommentEnd,
   ExitCommentBegin,
+  StringEnd,
   TestBegin,
 } from "./ranges";
-import { CharLiteral } from "./literals";
+import {
+  CharLiteral,
+  CommentLiteral,
+  NumberLiteral,
+  SymbolLiteral,
+} from "./literals";
 
 export interface Token extends IToken {
   index?: number;
   order?: number;
-  consumed?: boolean;
-  namespace?: string;
   scope?: Token;
-  argument?: boolean;
+  namespace?: string;
   assignable?: boolean;
   assignment?: Token;
+}
+
+export function isLambda(token: Token | undefined): boolean {
+  return (
+    !token ||
+    token.tokenType === LCurly ||
+    token.tokenType === TestBegin ||
+    token.tokenType === TestBlock
+  );
+}
+
+export function lookAround(
+  tokens: Token[],
+  token: Token,
+  delta: number,
+): Token | undefined {
+  let count = 0;
+  let index = delta < 0 ? token.index! - 1 : token.index! + 1;
+  let current: Token | undefined;
+  while (count < Math.abs(delta) && (current = tokens[index])) {
+    index = delta < 0 ? index - 1 : index + 1;
+    if (current.tokenType === WhiteSpace || current.tokenType === EndOfLine) {
+      continue;
+    }
+    count++;
+  }
+  return current;
 }
 
 export function parse(text: string): Token[] {
@@ -58,59 +90,63 @@ export function parse(text: string): Token[] {
   const stack: Token[] = [];
   const scope: Token[] = [];
 
-  let table = 0;
   let paren = 0;
   let bracket = 0;
+  let table = 0;
   let curly = 0;
-  let ignore = 0;
   let order = 0;
   let argument = false;
   let namespace = "";
-  let token, next, prev;
+  let token: Token, prev: Token;
+
+  const peek = (tokens: Token[]) => tokens[tokens.length - 1];
 
   const consume = () => {
     let done = false;
     let sql = 0;
-    let current: Token | undefined;
-    let peek: Token | undefined;
     let expressions: Token[] = [];
+    let current;
 
     const push = (token: Token) => {
       expressions.push(token);
       token.order = order;
     };
 
+    const pop = (reset = false) => {
+      const popped = expressions.pop();
+      if (reset) {
+        expressions = [];
+      }
+      return popped;
+    };
+
     while (!done && (current = stack.pop())) {
       switch (current.tokenType) {
-        case Table:
         case LParen:
         case LBracket:
-        case LCurly:
-          if (current.consumed) {
-            push(current);
-          } else {
-            stack.push(current);
-            order++;
-            done = true;
-          }
-          break;
-        case SemiColon:
-          expressions = [];
+        case LTable:
+          done = true;
+          pop(true);
           order++;
           break;
-        case Keyword:
+        case SemiColon:
+          pop(true);
+          order++;
+          break;
         case Identifier:
+        case Keyword:
+        case SymbolLiteral:
+        case NumberLiteral:
+        case StringEnd:
           if (argument) {
-            current.argument = true;
             current.assignment = current;
           } else {
-            peek = expressions[expressions.length - 1];
-            if (peek) {
-              if (peek.tokenType === Colon || peek.tokenType === DoubleColon) {
-                expressions.pop();
-                current.assignment = expressions.pop();
-                expressions = [];
-                if (peek.tokenType === DoubleColon) {
+            prev = peek(expressions);
+            if (prev) {
+              if (prev.tokenType === Colon || prev.tokenType === DoubleColon) {
+                pop();
+                current.assignment = pop(true);
+                if (current.assignment && prev.tokenType === DoubleColon) {
                   current.scope = undefined;
                 }
               }
@@ -133,19 +169,18 @@ export function parse(text: string): Token[] {
           push(current);
           break;
       }
-      current.consumed = true;
     }
   };
 
   for (let i = 0; i < tokens.length; i++) {
     token = tokens[i];
     token.index = i;
-    token.order = order;
+    token.order = -1;
     token.namespace = namespace;
     token.scope = scope[scope.length - 1];
 
     switch (token.tokenType) {
-      case Table:
+      case LTable:
         stack.push(token);
         paren++;
         table++;
@@ -156,32 +191,25 @@ export function parse(text: string): Token[] {
         break;
       case RParen:
         if (paren) {
-          paren--;
           consume();
+          paren--;
           if (table && paren === 0) {
             table--;
           }
         }
         break;
       case LBracket:
-        prev = scope[scope.length - 1];
+        prev = peek(scope);
         if (prev) {
-          argument = true;
-          for (let index = prev.index! + 1; index < i; index++) {
-            next = tokens[index].tokenType;
-            if (next !== WhiteSpace && next !== EndOfLine) {
-              argument = false;
-              break;
-            }
-          }
+          argument = lookAround(tokens, token, -1) === prev;
         }
         stack.push(token);
         bracket++;
         break;
       case RBracket:
         if (bracket) {
-          bracket--;
           consume();
+          bracket--;
           argument = false;
         }
         break;
@@ -189,45 +217,27 @@ export function parse(text: string): Token[] {
         stack.push(token);
         scope.push(token);
         curly++;
+        consume();
+        order++;
         break;
       case RCurly:
         if (curly) {
           curly--;
-          consume();
           scope.pop();
         }
         break;
-      case EndOfLine:
-        if (!ignore) {
-          next = tokens[i + 1];
-          if (next?.tokenType !== WhiteSpace) {
-            consume();
-            order++;
-          }
-        }
-        break;
       case SemiColon:
-        if (paren || bracket || curly) {
+        if (paren || bracket || table) {
           stack.push(token);
         } else {
           consume();
           order++;
         }
         break;
-      case Documentation:
-      case LineComment:
-      case TestBegin:
-      case WhiteSpace:
-      case CharLiteral:
-      case StringEscape:
-        break;
-      case CommentBegin:
-      case ExitCommentBegin:
-        ignore++;
-        break;
-      case CommentEnd:
-        if (ignore) {
-          ignore--;
+      case EndOfLine:
+        if (tokens[i + 1]?.tokenType !== WhiteSpace) {
+          consume();
+          order++;
         }
         break;
       case Command:
@@ -240,14 +250,27 @@ export function parse(text: string): Token[] {
             break;
         }
         break;
+      case TestBegin:
       case TestBlock:
         scope.pop();
         scope.push(token);
+        stack.push(token);
+        consume();
+        order++;
+        break;
+      case CommentBegin:
+      case CommentLiteral:
+      case CommentEol:
+      case CommentEnd:
+      case ExitCommentBegin:
+      case Documentation:
+      case LineComment:
+      case CharLiteral:
+      case StringEscape:
+      case WhiteSpace:
         break;
       default:
-        if (!ignore) {
-          stack.push(token);
-        }
+        stack.push(token);
         break;
     }
   }

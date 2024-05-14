@@ -47,9 +47,9 @@ export const EndOfLine = createToken({
   line_breaks: true,
 });
 
-export const Table = createToken({
-  name: "Table",
-  pattern: /\(\s*\[\s*\]/,
+export const CommentEol = createToken({
+  name: "CommentEol",
+  pattern: /(?:\r?\n)+/,
   line_breaks: true,
 });
 
@@ -86,6 +86,12 @@ export const Colon = createToken({
 export const SemiColon = createToken({
   name: "SemiColon",
   pattern: /;/,
+});
+
+export const LTable = createToken({
+  name: "LTable",
+  pattern: /\(\s*\[\s*\]/,
+  line_breaks: true,
 });
 
 export const LParen = createToken({
