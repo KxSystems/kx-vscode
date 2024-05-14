@@ -5,10 +5,6 @@
   "editor.codeActionsOnSave": {
     "source.organizeImports": "never"
   },
-  "cSpell.words": ["klaw", "picomatch"],
-  "[antlr]": {
-    "editor.defaultFormatter": "mike-lischke.vscode-antlr4"
-  },
   "[xml]": {
     "editor.defaultFormatter": "redhat.vscode-xml"
   }
