@@ -1,5 +1,14 @@
 const { build } = require("esbuild");
-const { copy } = require("esbuild-plugin-copy");
+const fs = require("fs");
+const path = require("path");
+const glob = require("glob");
+
+function copyFiles(srcPattern, destDir) {
+  glob.sync(srcPattern).forEach((file) => {
+    const destFile = path.join(destDir, path.basename(file));
+    fs.copyFileSync(file, destFile);
+  });
+}
 
 const baseConfig = {
   bundle: true,
@@ -32,33 +41,6 @@ const webviewConfig = {
   entryPoints: ["./src/webview/main.ts"],
   external: ["vscode"],
   outfile: "./out/webview.js",
-  plugins: [
-    copy({
-      resolveFrom: "cwd",
-      assets: [
-        {
-          from: ["src/webview/styles/*.css"],
-          to: ["./out"],
-        },
-        {
-          from: ["node_modules/ag-grid-community/styles/ag-grid.min.css"],
-          to: ["./out"],
-        },
-        {
-          from: [
-            "node_modules/ag-grid-community/styles/ag-theme-alpine.min.css",
-          ],
-          to: ["./out"],
-        },
-        {
-          from: [
-            "node_modules/ag-grid-community/dist/ag-grid-community.min.js",
-          ],
-          to: ["./out"],
-        },
-      ],
-    }),
-  ],
 };
 
 (async () => {
@@ -68,6 +50,16 @@ const webviewConfig = {
     await build(serverConfig);
     console.log("server build complete");
     await build(webviewConfig);
+    copyFiles("src/webview/styles/*.css", "./out");
+    copyFiles("node_modules/ag-grid-community/styles/ag-grid.min.css", "./out");
+    copyFiles(
+      "node_modules/ag-grid-community/styles/ag-theme-alpine.min.css",
+      "./out",
+    );
+    copyFiles(
+      "node_modules/ag-grid-community/dist/ag-grid-community.min.js",
+      "./out",
+    );
     console.log("build complete");
   } catch (err) {
     process.stderr.write(err.stderr);

@@ -335,31 +335,37 @@
       },
       {
         "category": "KX",
+        "command": "kdb.terminal.run",
+        "title": "Run q file in a new q instance",
+        "icon": "$(debug-alt)"
+      },
+      {
+        "category": "KX",
         "command": "kdb.terminal.start",
         "title": "Start REPL"
       },
       {
         "category": "KX",
         "command": "kdb.execute.selectedQuery",
-        "title": "Execute Current Selection",
+        "title": "KX: Execute Current Selection",
         "icon": "$(run-below)"
       },
       {
         "category": "KX",
         "command": "kdb.execute.fileQuery",
-        "title": "Execute Entire File",
+        "title": "KX: Execute Entire File",
         "icon": "$(run)"
       },
       {
         "category": "KX",
         "command": "kdb.execute.pythonScratchpadQuery",
-        "title": "Execute Current Selection in Insights Scratchpad",
+        "title": "KX: Execute Current Python Selection",
         "icon": "$(run-below)"
       },
       {
         "category": "KX",
         "command": "kdb.execute.pythonFileScratchpadQuery",
-        "title": "Execute Entire File in Insights Scratchpad",
+        "title": "KX: Execute Entire Python File",
         "icon": "$(run)"
       },
       {
@@ -394,19 +400,19 @@
         "command": "kdb.execute.pythonScratchpadQuery",
         "key": "ctrl+d",
         "mac": "cmd+d",
-        "when": "editorLangId == python"
+        "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
       },
       {
         "command": "kdb.execute.pythonFileScratchpadQuery",
         "key": "ctrl+shift+d",
         "mac": "cmd+shift+d",
-        "when": "editorLangId == python"
+        "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
       },
       {
         "command": "kdb.terminal.run",
         "key": "ctrl+shift+r",
         "mac": "cmd+shift+r",
-        "when": "editorLangId == q"
+        "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
       }
     ],
     "snippets": [
@@ -701,17 +707,17 @@
         {
           "command": "kdb.terminal.run",
           "group": "q@2",
-          "when": "editorLangId == q"
+          "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
         },
         {
           "command": "kdb.execute.pythonFileScratchpadQuery",
           "group": "q@0",
-          "when": "editorLangId == python"
+          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
         },
         {
           "command": "kdb.execute.pythonScratchpadQuery",
           "group": "q@1",
-          "when": "editorLangId == python"
+          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
         }
       ],
       "editor/context": [
@@ -728,17 +734,17 @@
         {
           "command": "kdb.terminal.run",
           "group": "q@2",
-          "when": "editorLangId == q"
+          "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
         },
         {
           "command": "kdb.execute.pythonFileScratchpadQuery",
           "group": "q@0",
-          "when": "editorLangId == python"
+          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
         },
         {
           "command": "kdb.execute.pythonScratchpadQuery",
           "group": "q@1",
-          "when": "editorLangId == python"
+          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
         }
       ]
     },
@@ -829,7 +835,6 @@
     "axios": "^1.6.8",
     "chevrotain": "^10.5.0",
     "csv-parser": "^3.0.0",
-    "esbuild-plugin-copy": "^2.1.1",
     "extract-zip": "^2.0.1",
     "fs-extra": "^11.2.0",
     "fuse.js": "^7.0.0",
