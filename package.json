@@ -336,7 +336,7 @@
       {
         "category": "KX",
         "command": "kdb.terminal.run",
-        "title": "Run q file in a new q instance",
+        "title": "KX: Run q file in a new q instance",
         "icon": "$(debug-alt)"
       },
       {
@@ -347,13 +347,13 @@
       {
         "category": "KX",
         "command": "kdb.execute.selectedQuery",
-        "title": "KX: Execute Current Selection",
+        "title": "KX: Execute Current q Selection",
         "icon": "$(run-below)"
       },
       {
         "category": "KX",
         "command": "kdb.execute.fileQuery",
-        "title": "KX: Execute Entire File",
+        "title": "KX: Execute Entire q File",
         "icon": "$(run)"
       },
       {
