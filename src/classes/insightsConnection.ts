@@ -430,7 +430,7 @@ export class InsightsConnection {
     }
   }
 
-  public async pingInsights(): Promise<boolean> {
+  public async pingInsights(): Promise<boolean | undefined> {
     if (this.connected) {
       const pingURL = new url.URL(
         ext.insightsServiceGatewayUrls.ping,
@@ -454,45 +454,24 @@ export class InsightsConnection {
         labels: {},
       };
 
-      return await window.withProgress(
-        {
-          location: ProgressLocation.Notification,
-          cancellable: false,
-        },
-        async (progress, token) => {
-          token.onCancellationRequested(() => {
-            ext.outputChannel.appendLine("User cancelled the ping request.");
-            return false;
-          });
-
-          progress.report({ message: "Pinging insights..." });
-
-          const res = await axios
-            .request({
-              method: "post",
-              url: pingURL.toString(),
-              data: body,
-              headers: { Authorization: `Bearer ${userToken.accessToken}` },
-              timeout: 1000,
-            })
-            .then((response: any) => {
-              console.log(response);
-              Telemetry.sendEvent("Insights.Pinged");
-              return true;
-            })
-            .catch((error: any) => {
-              console.log(error);
-              window.showErrorMessage(
-                `The Insights connection: ${this.connLabel} cannot be reached, the connection closed.`,
-              );
-              return false;
-            });
-
-          return res;
-        },
-      );
-    } else {
-      return false;
+      return await axios
+        .request({
+          method: "post",
+          url: pingURL.toString(),
+          data: body,
+          headers: { Authorization: `Bearer ${userToken.accessToken}` },
+          timeout: 1000,
+        })
+        .then((_response: any) => {
+          Telemetry.sendEvent("Insights.Pinged");
+          return true;
+        })
+        .catch((_error: any) => {
+          window.showErrorMessage(
+            `The Insights connection: ${this.connLabel} cannot be reached, the connection closed.`,
+          );
+          return false;
+        });
     }
   }
 }

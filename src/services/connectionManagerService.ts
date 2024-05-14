@@ -121,7 +121,8 @@ export class ConnectionManagementService {
       refreshDataSourcesPanel();
     }
     if (ext.connectedConnectionList.length === 1) {
-      this.startMonitoringConn();
+      this.startMonitoringNetworkConn();
+      this.rehidrateInsightsConnections();
     }
   }
 
@@ -325,7 +326,9 @@ export class ConnectionManagementService {
     }
   }
 
-  public async checkInsightsConnectionIsAlive(): Promise<void> {
+  public async checkInsightsConnectionIsAlive(
+    whoTriggered: string,
+  ): Promise<void> {
     const checks = ext.connectedConnectionList.map(async (connection) => {
       if (connection instanceof InsightsConnection) {
         const res = await connection.pingInsights();
@@ -335,11 +338,15 @@ export class ConnectionManagementService {
       }
     });
     await Promise.all(checks);
-    this.startMonitoringConn();
+    if (whoTriggered === "networkMonitoring") {
+      this.startMonitoringNetworkConn();
+    } else {
+      this.rehidrateInsightsConnections();
+    }
   }
 
   /* istanbul ignore next */
-  public async startMonitoringConn() {
+  public async startMonitoringNetworkConn(): Promise<void> {
     let previousNetworkState = os.networkInterfaces();
     const intervalId = setInterval(() => {
       const currentNetworkState = os.networkInterfaces();
@@ -349,11 +356,23 @@ export class ConnectionManagementService {
       ) {
         clearInterval(intervalId);
         previousNetworkState = currentNetworkState;
-        this.checkInsightsConnectionIsAlive();
+        this.checkInsightsConnectionIsAlive("networkMonitoring");
       }
       if (ext.connectedConnectionList.length === 0) {
         clearInterval(intervalId);
       }
     }, 2000);
+  }
+
+  /* istanbul ignore next */
+  public async rehidrateInsightsConnections(): Promise<void> {
+    const intervalConns = setInterval(() => {
+      if (ext.connectedConnectionList.length > 0) {
+        clearInterval(intervalConns);
+        this.checkInsightsConnectionIsAlive("rehidrateConnections");
+      } else {
+        clearInterval(intervalConns);
+      }
+    }, 60000);
   }
 }
