@@ -50,6 +50,7 @@ import {
   LTable,
   CommentEol,
   TestLambdaBlock,
+  Control,
 } from "./tokens";
 import {
   CommentEnd,
@@ -62,7 +63,6 @@ import {
 
 const Language = [
   Command,
-  LTable,
   EndOfLine,
   WhiteSpace,
   SymbolLiteral,
@@ -75,6 +75,7 @@ const Language = [
   BinaryLiteral,
   ByteLiteral,
   NumberLiteral,
+  Control,
   System,
   LSql,
   RSql,
@@ -87,6 +88,7 @@ const Language = [
   Comparator,
   Colon,
   SemiColon,
+  LTable,
   LParen,
   RParen,
   LBracket,

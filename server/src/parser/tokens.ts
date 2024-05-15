@@ -64,6 +64,11 @@ export const StringEscape = createToken({
   pattern: /\\([0-9]{3}|.{1})/,
 });
 
+export const Control = createToken({
+  name: "Control",
+  pattern: /(?:while|if|do|\$)/,
+});
+
 export const Iterator = createToken({
   name: "Iterator",
   pattern: /[\\'/]:/,
@@ -81,7 +86,7 @@ export const Comparator = createToken({
 
 export const Operator = createToken({
   name: "Operator",
-  pattern: /[\\.,'|^?!#@$&_%*+-]/,
+  pattern: /[\\.,'|^?!#@&_%*+-]/,
 });
 
 export const Colon = createToken({

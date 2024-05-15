@@ -238,7 +238,7 @@ function createSymbol(token: Token): DocumentSymbol {
 
 function createDebugSymbol(token: Token): DocumentSymbol {
   return DocumentSymbol.create(
-    (token.image.replace(/^[ \t]/, "") || " ").slice(0, 10),
+    (token.image.trim() || " ").slice(0, 10),
     `${token.tokenType.name}  ${token.order || ""}  ${
       token.namespace ? "N" : ""
     }${token.assignable ? "V" : ""}${token.assignment ? "A" : ""}${

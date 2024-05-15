@@ -37,6 +37,7 @@ import {
   StringEscape,
   TestBlock,
   TestLambdaBlock,
+  Control,
 } from "./tokens";
 import { TokenType } from "chevrotain";
 import { writeFileSync } from "fs";
@@ -113,7 +114,7 @@ const repository = {
         match: _(Documentation),
         captures: {
           1: {
-            name: "keyword.control.qdoc",
+            name: "keyword.other.qdoc",
           },
         },
       },
@@ -180,6 +181,10 @@ const repository = {
   },
   keywords: {
     patterns: [
+      {
+        name: "keyword.control.q",
+        match: _(Control),
+      },
       {
         name: "keyword.other.reserved.q",
         match: `${_(Reserved)}\\b`,
