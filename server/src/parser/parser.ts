@@ -94,7 +94,6 @@ export function parse(text: string): Token[] {
     while (!done && (current = statements.pop())) {
       switch (current.tokenType) {
         case LParen:
-        case LBracket:
         case LTable:
           if (current.order) {
             done = true;
@@ -220,6 +219,8 @@ export function parse(text: string): Token[] {
         }
         statements.push(token);
         bracket++;
+        consume();
+        order++;
         break;
       case RBracket:
         if (bracket) {
@@ -242,7 +243,7 @@ export function parse(text: string): Token[] {
         }
         break;
       case SemiColon:
-        if (paren || bracket || table) {
+        if (paren || table) {
           statements.push(token);
         } else {
           consume();
