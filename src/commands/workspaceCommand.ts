@@ -177,8 +177,9 @@ export function getConnectionForUri(uri: Uri) {
 
 export async function pickConnection(uri: Uri) {
   const server = getServerForUri(uri);
+  const servers = isPython(uri) ? getInsightsServers() : getServers();
 
-  let picked = await window.showQuickPick(["(none)", ...getServers()], {
+  let picked = await window.showQuickPick(["(none)", ...servers], {
     title: "Choose a connection",
     placeHolder: server,
   });
