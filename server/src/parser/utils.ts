@@ -13,8 +13,20 @@
 
 import { IToken } from "chevrotain";
 import { TestBegin } from "./ranges";
-import { EndOfLine, LCurly, TestBlock, WhiteSpace } from "./tokens";
+import {
+  EndOfLine,
+  LCurly,
+  TestBlock,
+  TestLambdaBlock,
+  WhiteSpace,
+} from "./tokens";
 import { Identifier } from "./keywords";
+
+export const enum SyntaxError {
+  AssignedToKeyword,
+  AssignedToLiteral,
+  InvalidEscape,
+}
 
 export interface Token extends IToken {
   index?: number;
@@ -24,8 +36,9 @@ export interface Token extends IToken {
   namespace?: string;
   assignable?: boolean;
   assignment?: Token;
+  local?: boolean;
   children?: Token[];
-  consumed?: boolean;
+  error?: SyntaxError;
 }
 
 export function children(token: Token) {
@@ -40,7 +53,8 @@ export function isLambda(token: Token | undefined): boolean {
     !token ||
     token.tokenType === LCurly ||
     token.tokenType === TestBegin ||
-    token.tokenType === TestBlock
+    token.tokenType === TestBlock ||
+    token.tokenType === TestLambdaBlock
   );
 }
 
@@ -66,7 +80,7 @@ export function isFullyQualified(token: Token) {
   return token.image.startsWith(".");
 }
 
-export function isLocal(tokens: Token[], target: Token) {
+export function isLocal(target: Token) {
   if (!target.scope) {
     return false;
   }
@@ -75,14 +89,7 @@ export function isLocal(tokens: Token[], target: Token) {
       return true;
     }
   }
-  return !!tokens.find(
-    (token) =>
-      !isFullyQualified(token) &&
-      token.assignable &&
-      token.assignment &&
-      token.scope === target.scope &&
-      token.image === target.image,
-  );
+  return !!target.local;
 }
 
 export const enum FindKind {
@@ -103,7 +110,7 @@ export function findIdentifiers(
   switch (kind) {
     case FindKind.Rename:
     case FindKind.Reference:
-      return isLocal(tokens, source)
+      return isLocal(source)
         ? tokens.filter(
             (token) =>
               token.tokenType === Identifier &&
@@ -116,10 +123,10 @@ export function findIdentifiers(
               token.tokenType === Identifier &&
               token.assignable &&
               token.image === source.image &&
-              !isLocal(tokens, token),
+              !isLocal(token),
           );
     case FindKind.Definition:
-      return isLocal(tokens, source)
+      return isLocal(source)
         ? tokens.filter(
             (token) =>
               token.assignment &&
@@ -132,7 +139,7 @@ export function findIdentifiers(
               token.assignment &&
               token.assignable &&
               token.image === source.image &&
-              !isLocal(tokens, token),
+              !isLocal(token),
           );
     case FindKind.Completion:
       const completions: Token[] = [];

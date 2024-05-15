@@ -44,12 +44,6 @@ describe("TSQLint", () => {
     assert.strictEqual(result[1].code, "INVALID_ASSIGN");
     assert.strictEqual(result[2].code, "INVALID_ASSIGN");
   });
-  it("should lint fixedSeed", () => {
-    const text = "1?0Ng";
-    const result = lint(parse(text));
-    assert.strictEqual(result.length, 1);
-    assert.strictEqual(result[0].code, "FIXED_SEED");
-  });
   it("should lint invalidEscape", () => {
     const text = '"\\378"';
     const result = lint(parse(text));
@@ -63,7 +57,7 @@ describe("TSQLint", () => {
     assert.strictEqual(result[0].code, "UNUSED_PARAM");
   });
   it("should lint unusedVar", () => {
-    const text = "a:1";
+    const text = "{a:1}";
     const result = lint(parse(text));
     assert.strictEqual(result.length, 1);
     assert.strictEqual(result[0].code, "UNUSED_VAR");

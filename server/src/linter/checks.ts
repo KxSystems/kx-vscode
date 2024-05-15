@@ -11,21 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import {
-  DateTimeLiteral,
-  InfinityLiteral,
-  Keyword,
-  NumberLiteral,
-  Operator,
-  StringEscape,
-  SymbolLiteral,
-  Token,
-  isFullyQualified,
-  lookAround,
-} from "../parser";
-import { StringEnd } from "../parser/ranges";
-
-const ValidEscapes = ["n", "r", "t", "\\", "/", '"'];
+import { DateTimeLiteral, SyntaxError, Token } from "../parser";
 
 export function deprecatedDatetime(tokens: Token[]): Token[] {
   return tokens.filter((token) => token.tokenType === DateTimeLiteral);
@@ -33,89 +19,54 @@ export function deprecatedDatetime(tokens: Token[]): Token[] {
 
 export function assignReservedWord(tokens: Token[]): Token[] {
   return tokens.filter(
-    (token) =>
-      token.assignable && token.assignment && token.tokenType === Keyword,
+    (token) => token.error === SyntaxError.AssignedToKeyword,
   );
 }
 
 export function invalidAssign(tokens: Token[]): Token[] {
-  return tokens.filter((token) => {
-    if (token.assignable && token.assignment) {
-      switch (token.tokenType) {
-        case StringEnd:
-        case SymbolLiteral:
-          return true;
-        case NumberLiteral:
-          const value = parseFloat(token.image);
-          return value < 0 || value > 2;
-      }
-    }
-    return false;
-  });
-}
-
-export function fixedSeed(tokens: Token[]): Token[] {
-  return tokens.filter((token) => {
-    if (token.tokenType === InfinityLiteral) {
-      let prev = lookAround(tokens, token, -1);
-      if (prev?.tokenType === Operator && prev.image === "?") {
-        prev = lookAround(tokens, prev, -1);
-        if (prev?.tokenType === NumberLiteral) {
-          const value = parseFloat(prev.image);
-          if (value >= 0) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  });
+  return tokens.filter(
+    (token) => token.error === SyntaxError.AssignedToLiteral,
+  );
 }
 
 export function invalidEscape(tokens: Token[]): Token[] {
-  return tokens
-    .filter((token) => token.tokenType === StringEscape)
-    .filter((token) => {
-      const escapes = /\\([0-9]{3}|.{1})/g;
-      let match, value;
-      while ((match = escapes.exec(token.image))) {
-        if (ValidEscapes.indexOf(match[1]) !== -1) {
-          continue;
-        }
-        value = parseInt(match[1]);
-        if (value && value >= 100 && value <= 377) {
-          continue;
-        }
-        return true;
-      }
-      return false;
-    });
+  return tokens.filter((token) => token.error === SyntaxError.InvalidEscape);
+}
+
+function unusedLocal(tokens: Token[]): Token[] {
+  return tokens.filter(
+    (token) =>
+      token.local &&
+      token.assignable &&
+      token.assignment &&
+      !token.scope?.children?.find(
+        (child) => child.local && child != token && child.image === token.image,
+      ),
+  );
 }
 
 export function unusedParam(tokens: Token[]): Token[] {
-  return tokens
-    .filter(
-      (token) =>
-        !isFullyQualified(token) &&
-        token.assignable &&
-        token.scope &&
-        token.assignment === token,
-    )
-    .filter(
-      (token) =>
-        !tokens.find(
-          (target) =>
-            !target.assignment &&
-            target.scope === token.scope &&
-            target.image === token.image,
-        ),
-    );
+  return unusedLocal(tokens).filter((token) => token.assignment === token);
 }
 
 export function unusedVar(tokens: Token[]): Token[] {
-  return tokens.filter((token) => {});
+  return unusedLocal(tokens).filter((token) => token.assignment !== token);
 }
 
 export function declaredAfterUse(tokens: Token[]): Token[] {
-  return tokens.filter((token) => {});
+  return tokens
+    .filter((token) => token.assignable && token.assignment)
+    .filter((token) => {
+      if (token.local) {
+        return token.scope?.children?.find(
+          (child) =>
+            child.assignable &&
+            !child.assignment &&
+            child.order! < token.order! &&
+            child.scope === token.scope &&
+            child.image === token.image,
+        );
+      }
+      return false;
+    });
 }

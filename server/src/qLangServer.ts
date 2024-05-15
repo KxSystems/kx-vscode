@@ -230,18 +230,22 @@ function createSymbol(token: Token): DocumentSymbol {
     isLambda(token.assignment) ? SymbolKind.Object : SymbolKind.Variable,
     rangeFromToken(token),
     rangeFromToken(token),
-    token.assignment?.children?.map((child) => createSymbol(child)),
+    token.assignment?.children
+      ?.filter((child) => child.assignable && child.assignment)
+      .map((child) => createSymbol(child)),
   );
 }
 
 function createDebugSymbol(token: Token): DocumentSymbol {
   return DocumentSymbol.create(
-    token.image,
-    `${token.tokenType.name} (${token.order}) ${token.namespace} ${
-      token.scope ? "(scoped)" : ""
-    } ${token.assignment ? "(assigned)" : ""} ${
-      token.assignment === token ? "(arg)" : ""
-    }`,
+    (token.image.replace(/^[ \t]/, "") || " ").slice(0, 10),
+    `${token.tokenType.name}  ${token.order || ""}  ${
+      token.namespace ? "N" : ""
+    }${token.assignable ? "V" : ""}${token.assignment ? "A" : ""}${
+      token.assignment === token ? "P" : ""
+    }${token.argument ? "B" : ""}${token.local ? "L" : ""}${
+      token.scope ? "S" : ""
+    }${token.children ? "C" : ""}${token.error ? "E" : ""}`,
     SymbolKind.Variable,
     rangeFromToken(token),
     rangeFromToken(token),

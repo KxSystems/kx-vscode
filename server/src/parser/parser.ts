@@ -47,19 +47,25 @@ import {
   NumberLiteral,
   SymbolLiteral,
 } from "./literals";
-import { Token, children, isFullyQualified, lookAround } from "./utils";
+import {
+  SyntaxError,
+  Token,
+  children,
+  isFullyQualified,
+  lookAround,
+} from "./utils";
 
 export function parse(text: string): Token[] {
   const result = QLexer.tokenize(text);
   const tokens = result.tokens as Token[];
-  const stack: Token[] = [];
-  const scope: Token[] = [];
+  const statements: Token[] = [];
+  const scopes: Token[] = [];
 
+  let order = 1;
   let paren = 0;
   let bracket = 0;
   let table = 0;
   let curly = 0;
-  let order = 0;
   let argument = false;
   let namespace = "";
   let token: Token, prev: Token;
@@ -69,34 +75,34 @@ export function parse(text: string): Token[] {
   const consume = () => {
     let done = false;
     let sql = 0;
-    let expressions: Token[] = [];
+    let stack: Token[] = [];
     let current;
 
     const push = (token: Token) => {
-      expressions.push(token);
+      stack.push(token);
       token.order = order;
     };
 
     const pop = (reset = false) => {
-      const popped = expressions.pop();
+      const popped = stack.pop();
       if (reset) {
-        expressions = [];
+        stack = [];
       }
       return popped;
     };
 
-    while (!done && (current = stack.pop())) {
+    while (!done && (current = statements.pop())) {
       switch (current.tokenType) {
         case LParen:
         case LBracket:
         case LTable:
-          if (current.consumed) {
-            push(current);
-          } else {
-            stack.push(current);
+          if (current.order) {
             done = true;
             pop(true);
             order++;
+            statements.push(current);
+          } else {
+            push(current);
           }
           break;
         case SemiColon:
@@ -104,34 +110,60 @@ export function parse(text: string): Token[] {
           order++;
           break;
         case Identifier:
+        case TestBegin:
+        case TestBlock:
+        case TestLambdaBlock:
         case Keyword:
         case SymbolLiteral:
         case NumberLiteral:
         case StringEnd:
-        case TestBegin:
-        case TestBlock:
-        case TestLambdaBlock:
           if (argument) {
             current.assignment = current;
+            current.local = true;
           } else {
-            prev = peek(expressions);
+            prev = peek(stack);
             if (prev) {
               if (prev.tokenType === Colon || prev.tokenType === DoubleColon) {
                 pop();
                 current.assignment = pop(true);
-                if (current.assignment && prev.tokenType === DoubleColon) {
-                  current.scope = undefined;
-                }
+                current.local =
+                  !isFullyQualified(current) &&
+                  current.scope &&
+                  current.assignment &&
+                  prev.tokenType !== DoubleColon;
               }
             }
           }
+
           current.assignable = !sql && !table;
-          if (
-            current.scope &&
-            current.assignable &&
-            current.assignment &&
-            !isFullyQualified(current)
-          ) {
+
+          if (current.assignable && current.assignment) {
+            switch (current.tokenType) {
+              case SymbolLiteral:
+              case StringEnd:
+                current.error = SyntaxError.AssignedToLiteral;
+                break;
+              case NumberLiteral:
+                const value = parseFloat(current.image);
+                if (value < 0 || value > 2) {
+                  current.error = SyntaxError.AssignedToLiteral;
+                }
+                break;
+              case Keyword:
+                current.error = SyntaxError.AssignedToKeyword;
+                break;
+            }
+          }
+
+          if (current.scope && !isFullyQualified(current)) {
+            if (current.local === undefined) {
+              current.local = !!children(current.scope).find(
+                (child) =>
+                  child.local &&
+                  child.assignable &&
+                  child.image === current!.image,
+              );
+            }
             children(current.scope).push(current);
           }
           push(current);
@@ -150,25 +182,23 @@ export function parse(text: string): Token[] {
           push(current);
           break;
       }
-      current.consumed = true;
     }
   };
 
   for (let i = 0; i < tokens.length; i++) {
     token = tokens[i];
     token.index = i;
-    token.order = -1;
     token.namespace = namespace;
-    token.scope = peek(scope);
+    token.scope = peek(scopes);
 
     switch (token.tokenType) {
       case LTable:
-        stack.push(token);
+        statements.push(token);
         paren++;
         table++;
         break;
       case LParen:
-        stack.push(token);
+        statements.push(token);
         paren++;
         break;
       case RParen:
@@ -181,14 +211,14 @@ export function parse(text: string): Token[] {
         }
         break;
       case LBracket:
-        prev = peek(scope);
+        prev = peek(scopes);
         if (prev) {
           argument = lookAround(tokens, token, -1) === prev;
           if (argument) {
             prev.argument = token;
           }
         }
-        stack.push(token);
+        statements.push(token);
         bracket++;
         break;
       case RBracket:
@@ -199,8 +229,8 @@ export function parse(text: string): Token[] {
         }
         break;
       case LCurly:
-        stack.push(token);
-        scope.push(token);
+        statements.push(token);
+        scopes.push(token);
         curly++;
         consume();
         order++;
@@ -208,12 +238,12 @@ export function parse(text: string): Token[] {
       case RCurly:
         if (curly) {
           curly--;
-          scope.pop();
+          scopes.pop();
         }
         break;
       case SemiColon:
         if (paren || bracket || table) {
-          stack.push(token);
+          statements.push(token);
         } else {
           consume();
           order++;
@@ -238,9 +268,9 @@ export function parse(text: string): Token[] {
       case TestBegin:
       case TestBlock:
       case TestLambdaBlock:
-        scope.pop();
-        scope.push(token);
-        stack.push(token);
+        scopes.pop();
+        scopes.push(token);
+        statements.push(token);
         consume();
         order++;
         break;
@@ -252,11 +282,27 @@ export function parse(text: string): Token[] {
       case Documentation:
       case LineComment:
       case CharLiteral:
-      case StringEscape:
       case WhiteSpace:
         break;
+      case StringEscape:
+        switch (token.image.slice(1)) {
+          case "n":
+          case "r":
+          case "t":
+          case "\\":
+          case "/":
+          case '"':
+            break;
+          default:
+            const value = parseInt(token.image.slice(1));
+            if (!value || value < 100 || value > 377) {
+              token.error = SyntaxError.InvalidEscape;
+            }
+            break;
+        }
+        break;
       default:
-        stack.push(token);
+        statements.push(token);
         break;
     }
   }

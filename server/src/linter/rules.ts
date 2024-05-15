@@ -181,7 +181,6 @@ const FixedSeed: LinterRule = {
   message:
     "Inputting a positive number into ?0Ng will result in the same sequence every run",
   severity: DiagnosticSeverity.Warning,
-  check: checks.fixedSeed,
 };
 
 const FunctionStart: LinterRule = {
