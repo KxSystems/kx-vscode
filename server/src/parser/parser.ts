@@ -56,11 +56,9 @@ function consume(token: Token, stack: Token[]) {
         stack.pop();
         token.assignable = true;
         token.assignment = stack.pop();
-        if (token.scope) {
-          children(token.scope).push(token);
-        }
         stack.length = 0;
       }
+      children(token.scope).push(token);
       stack.push(token);
       break;
     case Colon:
@@ -83,19 +81,16 @@ function statement(tokens: Token[]) {
   const stack: Token[] = [];
   const scope: Token[] = [];
 
-  let order = 1;
   let token, top;
 
   while ((token = tokens.pop())) {
-    token.scope = peek(scope);
-
     switch (token.tokenType) {
       case LParen:
         top = scope.pop();
         if (top) {
           statement(scopped(top));
+          consume(top, stack);
         }
-        stack.push(token);
         break;
       case RParen:
         scope.push(token);
@@ -104,8 +99,8 @@ function statement(tokens: Token[]) {
         top = scope.pop();
         if (top) {
           statement(scopped(top));
+          consume(top, stack);
         }
-        stack.push(token);
         break;
       case RBracket:
         scope.push(token);
@@ -114,8 +109,8 @@ function statement(tokens: Token[]) {
         top = scope.pop();
         if (top) {
           statement(scopped(top));
+          consume(top, stack);
         }
-        stack.push(token);
         break;
       case RCurly:
         scope.push(token);
@@ -123,9 +118,9 @@ function statement(tokens: Token[]) {
       default:
         top = peek(scope);
         if (top) {
+          token.scope = top;
           scopped(top).unshift(token);
         } else {
-          token.order = order++;
           consume(token, stack);
         }
         break;

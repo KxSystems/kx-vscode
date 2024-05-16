@@ -13,7 +13,7 @@
 
 import { IToken } from "chevrotain";
 import { TestBegin } from "./ranges";
-import { LCurly, TestBlock, TestLambdaBlock } from "./tokens";
+import { LCurly, RCurly, TestBlock, TestLambdaBlock } from "./tokens";
 import { Identifier } from "./keywords";
 
 export const enum SyntaxError {
@@ -34,7 +34,10 @@ export interface Token extends IToken {
   error?: SyntaxError;
 }
 
-export function children(token: Token) {
+export function children(token?: Token) {
+  if (!token) {
+    return [];
+  }
   if (!token.children) {
     token.children = [];
   }
@@ -42,6 +45,9 @@ export function children(token: Token) {
 }
 
 export function scopped(token: Token) {
+  if (!token) {
+    return [];
+  }
   if (!token.scopped) {
     token.scopped = [];
   }
@@ -56,6 +62,17 @@ export function isLambda(token: Token | undefined): boolean {
     token.tokenType === TestBlock ||
     token.tokenType === TestLambdaBlock
   );
+}
+
+export function lambdaScope(token: Token): Token | undefined {
+  let scope;
+  while ((scope = token.scope)) {
+    if (scope.tokenType === RCurly) {
+      return scope;
+    }
+    token = scope;
+  }
+  return undefined;
 }
 
 export function isFullyQualified(token: Token) {

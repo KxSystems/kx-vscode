@@ -42,8 +42,10 @@ import {
   FindKind,
   LCurly,
   Token,
+  children,
   findIdentifiers,
   isLambda,
+  lambdaScope,
   parse,
 } from "./parser";
 import { lint } from "./linter";
@@ -230,8 +232,8 @@ function createSymbol(token: Token): DocumentSymbol {
     isLambda(token.assignment) ? SymbolKind.Object : SymbolKind.Variable,
     rangeFromToken(token),
     rangeFromToken(token),
-    token.assignment?.children
-      ?.filter((child) => child.assignable && child.assignment)
+    children(token.assignment)
+      .filter((child) => child.assignable && child.assignment)
       .map((child) => createSymbol(child)),
   );
 }
@@ -239,13 +241,13 @@ function createSymbol(token: Token): DocumentSymbol {
 function createDebugSymbol(token: Token): DocumentSymbol {
   return DocumentSymbol.create(
     (token.image.trim() || " ").slice(0, 10),
-    `${token.tokenType.name}  ${token.order || ""}  ${
-      token.namespace ? "N" : ""
-    }${token.assignable ? "V" : ""}${token.assignment ? "A" : ""}${
-      token.assignment === token ? "P" : ""
-    }${token.argument ? "B" : ""}${token.local ? "L" : ""}${
-      token.scope ? "S" : ""
-    }${token.children ? "C" : ""}${token.error ? "E" : ""}`,
+    `${token.tokenType.name} (${token.index}) ${token.namespace ? "N" : ""}${
+      token.assignable ? "V" : ""
+    }${token.assignment ? "A" : ""}${token.assignment === token ? "P" : ""}${
+      token.argument ? "B" : ""
+    }${token.local ? "L" : ""}${token.scope ? "S" : ""}${
+      token.children ? "C" : ""
+    }${token.error ? "E" : ""}`,
     SymbolKind.Variable,
     rangeFromToken(token),
     rangeFromToken(token),
