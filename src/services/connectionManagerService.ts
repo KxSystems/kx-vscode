@@ -253,6 +253,9 @@ export class ConnectionManagementService {
       ext.activeConnection = undefined;
       ext.connectionNode = undefined;
       commands.executeCommand("setContext", "kdb.connected.active", false);
+      if (connType === "Insights") {
+        commands.executeCommand("setContext", "kdb.insightsConnected", false);
+      }
     }
     Telemetry.sendEvent("Connection.Disconnected." + connType);
     ext.outputChannel.appendLine(
