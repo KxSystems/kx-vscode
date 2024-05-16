@@ -13,6 +13,7 @@ This release requires at least version 1.86.0 of VS Code
 - New DATASOURCES and WORKBOOKS views in KX tab which lists workbook and data source files per workspace
 - Multiple logged in connections support, active connection can be selected among logged in connections
 - Improved data source editor visual design
+- New OUTLINE view suppport for q files
 - Grouped all extension commands under KX prefix
 - Improved syntax highlighting for q and quke files
 - Ping connections for network monitoring
