@@ -32,7 +32,6 @@ const AssignReservedWord: LinterRule = {
   code: "ASSIGN_RESERVED_WORD",
   message: "Assignment to a reserved word",
   severity: DiagnosticSeverity.Error,
-  check: checks.assignReservedWord,
 };
 
 const CondEvenArgs: LinterRule = {
@@ -64,7 +63,6 @@ const InvalidAssign: LinterRule = {
   code: "INVALID_ASSIGN",
   message: "Attempt to assign to a string, symbol, or number",
   severity: DiagnosticSeverity.Error,
-  check: checks.invalidAssign,
 };
 
 const InvalidEscape: LinterRule = {

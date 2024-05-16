@@ -99,12 +99,6 @@ export const SemiColon = createToken({
   pattern: /;/,
 });
 
-export const LTable = createToken({
-  name: "LTable",
-  pattern: /\(\s*\[\s*\]/,
-  line_breaks: true,
-});
-
 export const LParen = createToken({
   name: "LParen",
   pattern: /\(/,

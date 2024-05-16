@@ -16,8 +16,6 @@ import { Rules } from "./rules";
 
 const enabled = [
   "DEPRECATED_DATETIME",
-  "ASSIGN_RESERVED_WORD",
-  "INVALID_ASSIGN",
   "INVALID_ESCAPE",
   "UNUSED_PARAM",
   "UNUSED_VAR",

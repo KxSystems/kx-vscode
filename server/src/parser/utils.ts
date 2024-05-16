@@ -13,18 +13,10 @@
 
 import { IToken } from "chevrotain";
 import { TestBegin } from "./ranges";
-import {
-  EndOfLine,
-  LCurly,
-  TestBlock,
-  TestLambdaBlock,
-  WhiteSpace,
-} from "./tokens";
+import { LCurly, TestBlock, TestLambdaBlock } from "./tokens";
 import { Identifier } from "./keywords";
 
 export const enum SyntaxError {
-  AssignedToKeyword,
-  AssignedToLiteral,
   InvalidEscape,
 }
 
@@ -32,6 +24,7 @@ export interface Token extends IToken {
   index?: number;
   order?: number;
   scope?: Token;
+  scopped?: Token[];
   argument?: Token;
   namespace?: string;
   assignable?: boolean;
@@ -48,6 +41,13 @@ export function children(token: Token) {
   return token.children;
 }
 
+export function scopped(token: Token) {
+  if (!token.scopped) {
+    token.scopped = [];
+  }
+  return token.scopped;
+}
+
 export function isLambda(token: Token | undefined): boolean {
   return (
     !token ||
@@ -56,24 +56,6 @@ export function isLambda(token: Token | undefined): boolean {
     token.tokenType === TestBlock ||
     token.tokenType === TestLambdaBlock
   );
-}
-
-export function lookAround(
-  tokens: Token[],
-  token: Token,
-  delta: number,
-): Token | undefined {
-  let count = 0;
-  let index = delta < 0 ? token.index! - 1 : token.index! + 1;
-  let current: Token | undefined;
-  while (count < Math.abs(delta) && (current = tokens[index])) {
-    index = delta < 0 ? index - 1 : index + 1;
-    if (current.tokenType === WhiteSpace || current.tokenType === EndOfLine) {
-      continue;
-    }
-    count++;
-  }
-  return current;
 }
 
 export function isFullyQualified(token: Token) {

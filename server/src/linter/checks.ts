@@ -17,56 +17,18 @@ export function deprecatedDatetime(tokens: Token[]): Token[] {
   return tokens.filter((token) => token.tokenType === DateTimeLiteral);
 }
 
-export function assignReservedWord(tokens: Token[]): Token[] {
-  return tokens.filter(
-    (token) => token.error === SyntaxError.AssignedToKeyword,
-  );
-}
-
-export function invalidAssign(tokens: Token[]): Token[] {
-  return tokens.filter(
-    (token) => token.error === SyntaxError.AssignedToLiteral,
-  );
-}
-
 export function invalidEscape(tokens: Token[]): Token[] {
   return tokens.filter((token) => token.error === SyntaxError.InvalidEscape);
 }
 
-function unusedLocal(tokens: Token[]): Token[] {
-  return tokens.filter(
-    (token) =>
-      token.local &&
-      token.assignable &&
-      token.assignment &&
-      !token.scope?.children?.find(
-        (child) => child.local && child != token && child.image === token.image,
-      ),
-  );
-}
-
 export function unusedParam(tokens: Token[]): Token[] {
-  return unusedLocal(tokens).filter((token) => token.assignment === token);
+  return [];
 }
 
 export function unusedVar(tokens: Token[]): Token[] {
-  return unusedLocal(tokens).filter((token) => token.assignment !== token);
+  return [];
 }
 
 export function declaredAfterUse(tokens: Token[]): Token[] {
-  return tokens
-    .filter((token) => token.assignable && token.assignment)
-    .filter((token) => {
-      if (token.local) {
-        return token.scope?.children?.find(
-          (child) =>
-            child.assignable &&
-            !child.assignment &&
-            child.order! < token.order! &&
-            child.scope === token.scope &&
-            child.image === token.image,
-        );
-      }
-      return false;
-    });
+  return [];
 }
