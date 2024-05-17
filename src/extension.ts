@@ -102,6 +102,10 @@ export async function activate(context: ExtensionContext) {
   ext.outputChannel = window.createOutputChannel("kdb");
   ext.openSslVersion = await checkOpenSslInstalled();
   ext.isBundleQCreated = false;
+  // clear necessary contexts
+  commands.executeCommand("setContext", "kdb.connected.active", false);
+  commands.executeCommand("setContext", "kdb.insightsConnected", false);
+  commands.executeCommand("setContext", "kdb.connected", []);
 
   const servers: Server | undefined = getServers();
   const insights: Insights | undefined = getInsights();
