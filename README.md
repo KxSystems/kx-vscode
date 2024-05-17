@@ -314,22 +314,31 @@ To create a Workbook:
 
 1. Save the file to add it to the Workbook files stored in the workspace folder.
 
+
 To run the code in the workbook file:
 
 1. Ensure the workbook is the active file.
 1. Run the code from one of the following locations:
 
   1. Click 'Run' from above the first line of code in the workbook file.
+    ![workbook links](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookrunlink.png)
+
   1. Select 'Run' from the the upper right of the editor. Using the dropdown next to the button you can choose to 'KX: Execute Entire File' or 'KX Execute Current Selection'.
+      ![play dropdown](https://github.com/KxSystems/kx-vscode/blob/main/img/wortkbookplaydropdown.png)
+
   1. Click the 'Run' buttom on the right hand side of the status bar.
-  1. Right click and choose to 'KX: Execute Entire File' or 'KX: Execute Current Selection'
+      ![status bar run ](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookstatusbarrun.png)
+
+  1. Right click and choose 'KX: Execute Entire File' or 'KX: Execute Current Selection' from the menu.
 
 1. If you have not yet chosen a connection to associated with the workbook you will be asked to choose a connection before the code is executed.
+      ![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookconnectionlink.png)
 
 
 The results populate the output and kdb results windows.
 
 You can also change the connection associated with a workbook at any time by clicking on 'Choose Connection' from above the first line of code in the workbook file.
+  ![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/wortkbookplaydropdown.png)
 
 ## View results
 
