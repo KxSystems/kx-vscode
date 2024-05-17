@@ -23,7 +23,6 @@ export const enum SyntaxError {
 export interface Token extends IToken {
   index?: number;
   order?: number;
-  expression?: number;
   scope?: Token;
   scopped?: Token[];
   namespace?: string;
