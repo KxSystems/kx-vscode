@@ -8,15 +8,15 @@ This release requires at least version 1.86.0 of VS Code
 
 ### Enhancements
 
-- New `Workbook`files concept with extension `*.kdb.q` (for q) or `*.kdb.py` (for Python) with selectable connection
-- Data sources are created in current workspace folder as `*.kdb.json` files and associated connection can be selected
-- New DATASOURCES and WORKBOOKS views in KX tab which lists workbook and data source files per workspace
-- Multiple logged in connections support, active connection can be selected among logged in connections
+- Ability to have more than one connection open simultaneously. q and Python files run against the active connection which can be chosen from the open connections.
+- There is a new concept of Workbook files with extension `*.kdb.q` (for q) or `*.kdb.py` (for Python) created in the current workspace folder, that can be associated with a specific connection rather than just running against the active connection.
+- Data sources are created in current workspace folder as `\*.kdb.json` files and can be associated with a specific connection rather than just running against the active connection.
+- New DATASOURCES and WORKBOOKS views in KX tab which lists workbook and data source files per workspace.
 - Improved data source editor visual design
 - New OUTLINE view suppport for q files
 - Grouped all extension commands under KX prefix
 - Improved syntax highlighting for q and quke files
-- Ping connections for network monitoring
+- Ping connections for network changes and update connection status
 - New icon for q files
 
 ### Fixes
