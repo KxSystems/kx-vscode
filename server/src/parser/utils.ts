@@ -44,16 +44,6 @@ export function children(token?: Token) {
   return token.children;
 }
 
-export function scopped(token: Token) {
-  if (!token) {
-    return [];
-  }
-  if (!token.scopped) {
-    token.scopped = [];
-  }
-  return token.scopped;
-}
-
 export function isLambda(token: Token | undefined): boolean {
   return (
     !token ||
