@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { IToken } from "chevrotain";
+import { IToken, TokenType } from "chevrotain";
 import { TestBegin } from "./ranges";
 import { LCurly, RCurly, TestBlock, TestLambdaBlock } from "./tokens";
 import { Identifier } from "./keywords";
@@ -27,10 +27,11 @@ export interface Token extends IToken {
   scopped?: Token[];
   namespace?: string;
   assignment?: Token;
+  local?: Token;
+  entangled?: Token;
   error?: SyntaxError;
   children?: Token[]; // depreceated
   assignable?: boolean; // depreceated
-  local?: boolean; // depreceated
   argument?: Token; // depreceated
 }
 
@@ -54,10 +55,13 @@ export function isLambda(token: Token | undefined): boolean {
   );
 }
 
-export function lambdaScope(token: Token): Token | undefined {
+export function findScope(
+  token: Token,
+  type: TokenType = RCurly,
+): Token | undefined {
   let scope;
   while ((scope = token.scope)) {
-    if (scope.tokenType === RCurly) {
+    if (scope.tokenType === type) {
       return scope;
     }
     token = scope;
@@ -70,14 +74,15 @@ export function isFullyQualified(token: Token) {
 }
 
 export function isLocal(target: Token) {
-  if (!target.scope) {
+  const scope = findScope(target);
+  if (!scope) {
     return false;
   }
-  if (!target.scope.argument) {
-    if (target.image === "x" || target.image === "y" || target.image === "z") {
-      return true;
-    }
-  }
+  // if (!target.scope.argument) {
+  //   if (target.image === "x" || target.image === "y" || target.image === "z") {
+  //     return true;
+  //   }
+  // }
   return !!target.local;
 }
 

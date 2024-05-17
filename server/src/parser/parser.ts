@@ -39,8 +39,8 @@ import {
   TestBegin,
 } from "./ranges";
 import { CharLiteral, CommentLiteral } from "./literals";
-import { SyntaxError, Token } from "./utils";
-import { Identifier } from "./keywords";
+import { SyntaxError, Token, isFullyQualified, findScope } from "./utils";
+import { Identifier, LSql, RSql } from "./keywords";
 
 interface State {
   index: number;
@@ -56,6 +56,10 @@ function scopped(token: Token) {
   return token.scopped;
 }
 
+function discard(tokens: Token[]) {
+  while (tokens.pop());
+}
+
 function peek(tokens: Token[]): Token | undefined {
   return tokens[tokens.length - 1];
 }
@@ -68,21 +72,20 @@ function consume(state: State, token: Token) {
       top = peek(stack);
       if (top?.tokenType === Colon || top?.tokenType === DoubleColon) {
         stack.pop();
-        token.assignable = true;
         token.assignment = stack.pop();
-        stack.length = 0;
+        if (
+          token.assignment &&
+          top.tokenType === Colon &&
+          !isFullyQualified(token)
+        ) {
+          token.local = findScope(token);
+        }
+        discard(stack);
       }
       stack.push(token);
       break;
-    case Colon:
-    case DoubleColon:
-      top = peek(stack);
-      if (top) {
-        stack.push(token);
-      }
-      break;
     case SemiColon:
-      stack.length = 0;
+      discard(stack);
       break;
     default:
       stack.push(token);
@@ -99,6 +102,13 @@ function statement(state: State, tokens: Token[]) {
   while ((token = tokens.shift())) {
     switch (token.tokenType) {
       case LParen:
+        top = tokens[0];
+        if (top?.tokenType === LBracket) {
+          token.entangled = top;
+        }
+        scope.push(token);
+        cache.push(token);
+        break;
       case LBracket:
       case LCurly:
         scope.push(token);
@@ -120,20 +130,25 @@ function statement(state: State, tokens: Token[]) {
         break;
       default:
         cache.push(token);
+        break;
     }
   }
   expression(state, cache);
 }
 
 function expression(state: State, cache: Token[]) {
-  const { scope } = state;
+  const { scope, stack } = state;
   let token, top;
   while ((token = cache.pop())) {
     switch (token.tokenType) {
       case LParen:
         top = scope.pop();
         if (top) {
-          expression(state, scopped(top));
+          if (token.entangled?.tokenType === LBracket) {
+            discard(scopped(top));
+          } else {
+            expression(state, scopped(top));
+          }
           consume(state, top);
         }
         break;
@@ -160,16 +175,28 @@ function expression(state: State, cache: Token[]) {
       case RCurly:
         scope.push(token);
         break;
+      case LSql:
+        top = scope.pop();
+        if (top) {
+          discard(scopped(top));
+          consume(state, top);
+        }
+        break;
+      case RSql:
+        scope.push(token);
+        break;
       default:
         top = peek(scope);
         if (top) {
           scopped(top).unshift(token);
+          token.scope = top;
         } else {
           consume(state, token);
         }
         break;
     }
   }
+  discard(stack);
 }
 
 export function parse(text: string): Token[] {

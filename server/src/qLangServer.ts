@@ -240,11 +240,11 @@ function createSymbol(token: Token): DocumentSymbol {
 function createDebugSymbol(token: Token): DocumentSymbol {
   return DocumentSymbol.create(
     (token.image.trim() || " ").slice(0, 10),
-    `${token.tokenType.name} ${token.order || ""} ${
-      token.namespace ? "N" : ""
-    }${token.assignment ? "A" : ""}${token.scope ? "S" : ""}${
-      token.error ? "E" : ""
-    }`,
+    `${token.tokenType.name} ${token.namespace ? `(${token.namespace})` : ""} ${
+      token.order || ""
+    } ${token.assignment ? "A" : ""}${token.local ? "L" : ""}${
+      token.scope ? "S" : ""
+    }${token.error ? "E" : ""}`,
     SymbolKind.Variable,
     rangeFromToken(token),
     rangeFromToken(token),
