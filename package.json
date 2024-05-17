@@ -639,12 +639,12 @@
         },
         {
           "command": "kdb.addAuthentication",
-          "when": "view == kdb-servers && viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutAuth",
+          "when": "view == kdb-servers && viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutAuth && viewItem not in kdb.local",
           "group": "connection@3"
         },
         {
           "command": "kdb.enableTLS",
-          "when": "view == kdb-servers && viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutTls",
+          "when": "view == kdb-servers && viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutTls && viewItem not in kdb.local",
           "group": "connection@4"
         },
         {
