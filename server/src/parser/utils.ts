@@ -23,15 +23,16 @@ export const enum SyntaxError {
 export interface Token extends IToken {
   index?: number;
   order?: number;
+  expression?: number;
   scope?: Token;
   scopped?: Token[];
-  argument?: Token;
   namespace?: string;
-  assignable?: boolean;
   assignment?: Token;
-  local?: boolean;
-  children?: Token[];
   error?: SyntaxError;
+  children?: Token[]; // depreceated
+  assignable?: boolean; // depreceated
+  local?: boolean; // depreceated
+  argument?: Token; // depreceated
 }
 
 export function children(token?: Token) {
