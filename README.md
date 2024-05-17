@@ -273,10 +273,9 @@ kdb Insights Enterprise supports the use of data sources, where you can build a 
 To create a data source:
 
 1. In the Datasources view, click the '+'' button.
-1. Click Save to persist the data source to the VS Code workspace.
 1. Select a Connection from the Connections dropdown.
 1. Choose getData from the Select API dropdown.
-1. Choose the table you wish to query
+1. Choose the table you wish to query.
 1. Choose a Start and End Time.
 1. You can choose from the additional parameters if you wish.
 
@@ -284,7 +283,7 @@ To create a data source:
 
 To run a data source, click 'Run' and the results populate the output and kdb results windows.
 
-To save these sessions for later use click 'Save'.
+Save the file to add it to the data source files stored in the workspace folder.
 
 In addition to [API queries](https://code.kx.com/insights/api/database/query/get-data.html), if the query environment is enabled on the deployed instance of kdb Insights Enterprise, qSQL and SQL queries can be used within a data source with the appropriate parameterization.
 
@@ -308,22 +307,25 @@ Workbooks are the most convenient way to prototype and execute q and python code
 
 kdb Insights Enterprise connections support the use of q and python workbook files executing against the scratchpad process running in a kdb Insights Enterprise instance. They can use the [variables](#populate-scratchpad) populated into the scratchpad by data sources. 
 
-To create a file:
+To create a Workbook:
 
-1. In the Workspace view, click one of the '+' buttons to create a 'q' or 'python' workbook.
-1. Save the file to make it visible in the Datasources panel and the Explorer panel
+1. In the Workbook view, click one of the '+' buttons to create a 'q' or 'python' workbook.
+  ![new workbook](https://github.com/KxSystems/kx-vscode/blob/main/img/addnewworkbook.png?raw=true)
+
+1. Save the file to add it to the Workbook files stored in the workspace folder.
 
 To run the code in the workbook file:
 
 1. Ensure the workbook is the active file.
-1. Choose to run the code from one of the following locations:
+1. Run the code from one of the following locations:
 
   1. Click 'Run' from above the first line of code in the workbook file.
   1. Select 'Run' from the the upper right of the editor. Using the dropdown next to the button you can choose to 'KX: Execute Entire File' or 'KX Execute Current Selection'.
   1. Click the 'Run' buttom on the right hand side of the status bar.
   1. Right click and choose to 'KX: Execute Entire File' or 'KX: Execute Current Selection'
 
-1. If you have not yet chosen a connection to assoicated with the workbook you will be asked to choose a connection before the code is executed.
+1. If you have not yet chosen a connection to associated with the workbook you will be asked to choose a connection before the code is executed.
+
 
 The results populate the output and kdb results windows.
 
