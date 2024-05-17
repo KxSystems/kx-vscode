@@ -259,7 +259,7 @@ export class ConnectionManagementService {
     }
     Telemetry.sendEvent("Connection.Disconnected." + connType);
     ext.outputChannel.appendLine(
-      `Connection stopped from ${connection.connLabel}`,
+      `[${new Date().toLocaleTimeString()}] Connection disconnected: ${connection.connLabel}`,
     );
     ext.serverProvider.reload();
   }
@@ -376,6 +376,6 @@ export class ConnectionManagementService {
       } else {
         clearInterval(intervalConns);
       }
-    }, 60000);
+    }, 120000);
   }
 }

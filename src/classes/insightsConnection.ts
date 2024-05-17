@@ -453,6 +453,7 @@ export class InsightsConnection {
       const body = {
         labels: {},
       };
+      const startTime = Date.now();
 
       return await axios
         .request({
@@ -460,15 +461,22 @@ export class InsightsConnection {
           url: pingURL.toString(),
           data: body,
           headers: { Authorization: `Bearer ${userToken.accessToken}` },
-          timeout: 1000,
+          timeout: 2000,
         })
         .then((_response: any) => {
           Telemetry.sendEvent("Insights.Pinged");
           return true;
         })
         .catch((_error: any) => {
+          const endTime = Date.now();
+          const timeString = new Date().toLocaleTimeString();
+          const timeDiff = endTime - startTime;
+          ext.outputChannel.appendLine(
+            `[${timeString}] Connection keep alive error: ${this.connLabel}. Ping failed. ${_error.code}: status code ${_error.response.status}. Time Elapsed ${timeDiff}ms`,
+          );
+
           window.showErrorMessage(
-            `The Insights connection: ${this.connLabel} cannot be reached, the connection closed.`,
+            `Error in connection: ${this.connLabel}, check kdb OUTPUT for more info.`,
           );
           return false;
         });
