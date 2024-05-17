@@ -98,7 +98,7 @@ jobs:
         run: echo "Manually approved"
 
   publish:
-    needs: manual-approve
+    needs: manual-approval
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
