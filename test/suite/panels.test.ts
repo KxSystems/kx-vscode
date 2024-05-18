@@ -22,6 +22,7 @@ import * as utils from "../../src/utils/execution";
 import { InsightsNode } from "../../src/services/kdbTreeProvider";
 import { TreeItemCollapsibleState } from "vscode";
 import { NewConnectionPannel } from "../../src/panels/newConnection";
+import { InsightsConnection } from "../../src/classes/insightsConnection";
 
 describe("WebPanels", () => {
   describe("DataSourcesPanel", () => {
@@ -77,6 +78,10 @@ describe("WebPanels", () => {
       TreeItemCollapsibleState.None,
     );
 
+    const insightsConn = new InsightsConnection(
+      "insightsservername",
+      insightsNode,
+    );
     beforeEach(() => {
       resultsPanel = new KdbResultsViewProvider(uriTest);
     });
@@ -218,8 +223,8 @@ describe("WebPanels", () => {
         });
 
         // Mock ext.connectionNode
-        const stub = sinon.stub(ext, "connectionNode");
-        stub.get(() => insightsNode);
+        const stub = sinon.stub(ext, "activeConnection");
+        stub.get(() => insightsConn);
 
         const output = resultsPanel.convertToGrid(results);
         assert.equal(output, expectedOutput);
@@ -268,8 +273,8 @@ describe("WebPanels", () => {
         });
 
         // Mock ext.connectionNode
-        const stub = sinon.stub(ext, "connectionNode");
-        stub.get(() => insightsNode);
+        const stub = sinon.stub(ext, "activeConnection");
+        stub.get(() => insightsConn);
 
         const output = resultsPanel.convertToGrid(results);
         assert.equal(output, expectedOutput);

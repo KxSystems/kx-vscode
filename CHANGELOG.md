@@ -2,6 +2,36 @@
 
 All notable changes to the kdb extension will be documented in this file.
 
+# v1.5.0
+
+This release requires at least version 1.86.0 of VS Code
+
+### Enhancements
+
+- Ability to have more than one connection open simultaneously. q and Python files run against the active connection which can be chosen from the open connections.
+- There is a new concept of Workbook files with extension `*.kdb.q` (for q) or `*.kdb.py` (for Python) created in the current workspace folder, that can be associated with a specific connection rather than just running against the active connection.
+- Data sources are created in current workspace folder as `*.kdb.json` files and can be associated with a specific connection rather than just running against the active connection.
+- New DATASOURCES and WORKBOOKS views in KX tab which lists workbook and data source files per workspace.
+- Improved data source editor visual design
+- New OUTLINE view suppport for q files
+- Grouped all extension commands under KX prefix
+- Improved syntax highlighting for q and quke files
+- Ping connections for network changes and update connection status
+- New icon for q files
+
+### Fixes
+
+- Fixed inconsistent command descriptions
+- Fixed execute entire file button only works when code editor is selected
+- Language server, parser and linter improvements
+- Updated dependencies
+
+### Internal Improvements
+
+- Corrected parser inconsistencies
+- Language server support for quke files
+- Improved query execution for Insights connections
+
 # v1.4.0
 
 ### Enhancements
@@ -20,7 +50,6 @@ All notable changes to the kdb extension will be documented in this file.
 - "temporality" parameter of getData API in kdb Insights has been updated
 - MacOS keyboard shortcut documentation has been updated
 - Issues with the colorization of comments have been fixed
-
 
 # v1.3.0
 

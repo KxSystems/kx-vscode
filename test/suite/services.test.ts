@@ -991,6 +991,24 @@ describe("connectionManagerService", () => {
       assert.equal(ext.activeConnection, undefined);
       assert.equal(ext.connectionNode, undefined);
     });
+
+    it("disconnectBehaviour with IOnsights connection", () => {
+      ext.connectedConnectionList.push(insightsConn);
+      ext.activeConnection = insightsConn;
+
+      connectionManagerService.disconnectBehaviour(insightsConn);
+      assert.equal(ext.connectedConnectionList.length, 0);
+      assert.equal(ext.activeConnection, undefined);
+      assert.equal(ext.connectionNode, undefined);
+    });
+
+    it("disconnectBehaviour with no active connection", () => {
+      ext.connectedConnectionList.push(insightsConn);
+
+      connectionManagerService.disconnectBehaviour(insightsConn);
+      assert.equal(ext.connectedConnectionList.length, 0);
+      assert.equal(ext.activeConnection, undefined);
+    });
   });
 
   describe("resetScratchpad", () => {

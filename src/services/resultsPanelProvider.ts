@@ -23,7 +23,7 @@ import { ext } from "../extensionVariables";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
-import { InsightsNode } from "./kdbTreeProvider";
+import { InsightsConnection } from "../classes/insightsConnection";
 
 export class KdbResultsViewProvider implements WebviewViewProvider {
   public static readonly viewType = "kdb-results";
@@ -165,7 +165,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   }
 
   convertToGrid(results: any): string {
-    const isInsights = ext.connectionNode instanceof InsightsNode;
+    const isInsights = ext.activeConnection instanceof InsightsConnection;
     const queryResult = isInsights ? results.rows : results;
 
     const columnDefs = this.generateCoumnDefs(results, isInsights);
