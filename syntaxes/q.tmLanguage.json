@@ -156,7 +156,7 @@
       "patterns": [
         {
           "name": "keyword.control.q",
-          "match": "(?:while|if|do|\\$)"
+          "match": "(?:while|if|do)"
         },
         {
           "name": "keyword.other.reserved.q",
@@ -188,7 +188,7 @@
         },
         {
           "name": "keyword.operator.arithmetic.q",
-          "match": "[\\\\.,'|^?!#@&_%*+-]"
+          "match": "[\\\\.,'|^$?!#@&_%*+-]"
         },
         {
           "name": "keyword.operator.arithmetic.q",

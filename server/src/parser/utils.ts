@@ -12,8 +12,8 @@
  */
 
 import { IToken, TokenType } from "chevrotain";
-import { LBracket, RCurly } from "./tokens";
-import { Identifier } from "./keywords";
+import { DoubleColon, LBracket, RCurly, RParen } from "./tokens";
+import { RSql } from "./keywords";
 
 export const enum SyntaxError {
   InvalidEscape,
@@ -24,17 +24,13 @@ export interface Token extends IToken {
   order?: number;
   scope?: Token;
   scopped?: Token[];
+  tangled?: Token;
   namespace?: string;
   assignment?: Token[];
-  local?: Token;
-  entangled?: Token;
   error?: SyntaxError;
 }
 
-export function findScope(
-  token: Token,
-  type: TokenType = RCurly,
-): Token | undefined {
+export function inScope(token: Token, type: TokenType): Token | undefined {
   let scope;
   while ((scope = token.scope)) {
     if (scope.tokenType === type) {
@@ -45,21 +41,42 @@ export function findScope(
   return undefined;
 }
 
-export function isFullyQualified(token: Token) {
+export function inLambda(token: Token) {
+  return inScope(token, RCurly);
+}
+
+export function inSql(token: Token) {
+  return inScope(token, RSql);
+}
+
+export function inTable(token: Token) {
+  const scope = inScope(token, RParen);
+  return scope && scope.tangled?.tokenType === LBracket;
+}
+
+export function isQualified(token: Token) {
   return token.image.startsWith(".");
 }
 
-export function isLocal(target: Token) {
-  const scope = findScope(target);
-  if (!scope) {
-    return false;
+export function isAmend(token: Token) {
+  return token.assignment && token.assignment[0].tokenType === DoubleColon;
+}
+
+export const enum AssignmentType {
+  None,
+  Lambda,
+  Variable,
+}
+
+export function assignmentType(token: Token): AssignmentType {
+  if (!token.assignment) {
+    return AssignmentType.None;
   }
-  if (target.entangled?.tokenType !== LBracket) {
-    if (target.image === "x" || target.image === "y" || target.image === "z") {
-      return true;
-    }
+  const assigned = token.assignment[1]?.tokenType;
+  if (!assigned) {
+    return AssignmentType.None;
   }
-  return !!target.local;
+  return assigned === RCurly ? AssignmentType.Lambda : AssignmentType.Variable;
 }
 
 export function tokenId(token: Token) {
@@ -84,48 +101,11 @@ export function findIdentifiers(
   switch (kind) {
     case FindKind.Rename:
     case FindKind.Reference:
-      return isLocal(source)
-        ? tokens.filter(
-            (token) =>
-              token.tokenType === Identifier &&
-              token.image === source.image &&
-              token.scope === source.scope,
-          )
-        : tokens.filter(
-            (token) =>
-              token.tokenType === Identifier &&
-              token.image === source.image &&
-              !isLocal(token),
-          );
+      return [];
     case FindKind.Definition:
-      return isLocal(source)
-        ? tokens.filter(
-            (token) =>
-              token.assignment &&
-              token.image === source.image &&
-              token.scope === source.scope,
-          )
-        : tokens.filter(
-            (token) =>
-              token.assignment &&
-              token.image === source.image &&
-              !isLocal(token),
-          );
+      return [];
     case FindKind.Completion:
       const completions: Token[] = [];
-      tokens
-        .filter(
-          (token) =>
-            token.assignment &&
-            (token.image.startsWith(".") ||
-              token.namespace === source.namespace) &&
-            (!token.scope || token.scope === source.scope),
-        )
-        .forEach(
-          (token) =>
-            !completions.find((item) => item.image === token.image) &&
-            completions.push(token),
-        );
       return completions;
   }
 }

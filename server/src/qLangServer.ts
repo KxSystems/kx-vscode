@@ -39,10 +39,15 @@ import {
   WorkspaceEdit,
 } from "vscode-languageserver/node";
 import {
+  AssignmentType,
   FindKind,
   Token,
+  assignmentType,
   findIdentifiers,
-  findScope,
+  inLambda,
+  inSql,
+  inTable,
+  isAmend,
   parse,
   tokenId,
 } from "./parser";
@@ -134,7 +139,13 @@ export default class QLangServer {
       return tokens.map((token) => createDebugSymbol(token));
     }
     return tokens
-      .filter((token) => token.assignment && !findScope(token))
+      .filter(
+        (token) =>
+          assignmentType(token) &&
+          !inLambda(token) &&
+          !inSql(token) &&
+          !inTable(token),
+      )
       .map((token) => createSymbol(token));
   }
 
@@ -221,31 +232,33 @@ function positionToToken(tokens: Token[], position: Position) {
 }
 
 function createSymbol(token: Token): DocumentSymbol {
+  const range = rangeFromToken(token);
   return DocumentSymbol.create(
     token.image.trim(),
-    undefined,
-    SymbolKind.Variable,
-    rangeFromToken(token),
-    rangeFromToken(token),
+    isAmend(token) ? "Amend" : undefined,
+    assignmentType(token) === AssignmentType.Lambda
+      ? SymbolKind.Object
+      : SymbolKind.Variable,
+    range,
+    range,
   );
 }
 
 function createDebugSymbol(token: Token): DocumentSymbol {
+  const range = rangeFromToken(token);
   return DocumentSymbol.create(
     tokenId(token),
-    `${token.tokenType.name} ${token.order || ""} ${
-      token.error !== undefined ? `E ${token.error}` : ""
-    } ${token.namespace ? "N" : ""} ${
-      token.entangled ? `T ${tokenId(token.entangled)}` : ""
-    } ${token.scope ? `S ${tokenId(token.scope)}` : ""} ${
-      token.local ? `L ${tokenId(token.local)}` : ""
-    } ${
+    `${token.tokenType.name} ${token.namespace ? `(${token.namespace})` : ""} ${
+      token.error !== undefined ? `E=${token.error}` : ""
+    } ${token.order ? `O=${token.order}` : ""} ${
+      token.tangled ? `T=${tokenId(token.tangled)}` : ""
+    } ${token.scope ? `S=${tokenId(token.scope)}` : ""} ${
       token.assignment
-        ? `A ${token.assignment.map((token) => tokenId(token)).join(" ")}`
+        ? `A=${token.assignment.map((token) => tokenId(token)).join(" ")}`
         : ""
     }`,
     SymbolKind.Variable,
-    rangeFromToken(token),
-    rangeFromToken(token),
+    range,
+    range,
   );
 }

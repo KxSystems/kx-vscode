@@ -19,7 +19,6 @@ const enabled = [
   "INVALID_ESCAPE",
   "UNUSED_PARAM",
   "UNUSED_VAR",
-  "DECLARED_AFTER_USE",
 ];
 
 export interface LinterDiagnostic {

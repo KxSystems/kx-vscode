@@ -39,7 +39,7 @@ import {
   TestBegin,
 } from "./ranges";
 import { CharLiteral, CommentLiteral } from "./literals";
-import { Token, isFullyQualified, findScope } from "./utils";
+import { Token } from "./utils";
 import { Identifier, LSql, RSql } from "./keywords";
 import { checkEscape } from "./checks";
 
@@ -48,6 +48,21 @@ interface State {
   order: number;
   scope: Token[];
   stack: Token[];
+}
+
+function isExpression(token: Token) {
+  switch (token.tokenType) {
+    case CommentBegin:
+    case CommentLiteral:
+    case CommentEndOfLine:
+    case CommentEnd:
+    case Documentation:
+    case LineComment:
+    case WhiteSpace:
+    case ExitCommentBegin:
+      return false;
+  }
+  return true;
 }
 
 function scopped(token: Token) {
@@ -80,15 +95,7 @@ function consume(state: State, token: Token) {
     case Identifier:
       top = peek(stack);
       if (top?.tokenType === Colon || top?.tokenType === DoubleColon) {
-        stack.pop();
         token.assignment = collapse(stack);
-        if (
-          token.assignment &&
-          top.tokenType === Colon &&
-          !isFullyQualified(token)
-        ) {
-          token.local = findScope(token);
-        }
       }
       stack.push(token);
       break;
@@ -98,6 +105,69 @@ function consume(state: State, token: Token) {
     default:
       stack.push(token);
       break;
+  }
+  token.order = state.order++;
+}
+
+function expression(state: State, cache: Token[]) {
+  const { scope } = state;
+  let token, top;
+  while ((token = cache.pop())) {
+    switch (token.tokenType) {
+      case LParen:
+        top = scope.pop();
+        if (top) {
+          top.tangled = token.tangled;
+          expression(state, scopped(top));
+          consume(state, top);
+        }
+        break;
+      case RParen:
+        scope.push(token);
+        break;
+      case LBracket:
+        top = scope.pop();
+        if (top) {
+          top.tangled = token.tangled;
+          expression(state, scopped(top));
+          consume(state, top);
+        }
+        break;
+      case RBracket:
+        scope.push(token);
+        break;
+      case LCurly:
+        top = scope.pop();
+        if (top) {
+          top.tangled = token.tangled;
+          statement(state, scopped(top));
+          consume(state, top);
+        }
+        break;
+      case RCurly:
+        scope.push(token);
+        break;
+      case LSql:
+        top = scope.pop();
+        if (top) {
+          top.tangled = token.tangled;
+          expression(state, scopped(top));
+          consume(state, top);
+        }
+        break;
+      case RSql:
+        scope.push(token);
+        break;
+      default:
+        top = peek(scope);
+        if (top) {
+          scopped(top).unshift(token);
+          token.scope = top;
+        } else {
+          consume(state, token);
+        }
+        break;
+    }
   }
 }
 
@@ -112,7 +182,7 @@ function statement(state: State, tokens: Token[]) {
       case LParen:
         top = tokens[0];
         if (top?.tokenType === LBracket) {
-          token.entangled = top;
+          token.tangled = top;
         }
         scope.push(token);
         cache.push(token);
@@ -121,7 +191,7 @@ function statement(state: State, tokens: Token[]) {
       case LCurly:
         top = tokens[0];
         if (top?.tokenType === LBracket) {
-          token.entangled = top;
+          token.tangled = top;
         }
         scope.push(token);
         cache.push(token);
@@ -149,83 +219,6 @@ function statement(state: State, tokens: Token[]) {
   expression(state, cache);
 }
 
-function expression(state: State, cache: Token[]) {
-  const { scope } = state;
-  let token, top;
-  while ((token = cache.pop())) {
-    switch (token.tokenType) {
-      case LParen:
-        top = scope.pop();
-        if (top) {
-          top.entangled = token.entangled;
-          expression(state, scopped(top));
-          consume(state, top);
-        }
-        break;
-      case RParen:
-        scope.push(token);
-        break;
-      case LBracket:
-        top = scope.pop();
-        if (top) {
-          top.entangled = token.entangled;
-          expression(state, scopped(top));
-          consume(state, top);
-        }
-        break;
-      case RBracket:
-        scope.push(token);
-        break;
-      case LCurly:
-        top = scope.pop();
-        if (top) {
-          top.entangled = token.entangled;
-          statement(state, scopped(top));
-          consume(state, top);
-        }
-        break;
-      case RCurly:
-        scope.push(token);
-        break;
-      case LSql:
-        top = scope.pop();
-        if (top) {
-          top.entangled = token.entangled;
-          expression(state, scopped(top));
-          consume(state, top);
-        }
-        break;
-      case RSql:
-        scope.push(token);
-        break;
-      default:
-        top = peek(scope);
-        if (top) {
-          scopped(top).unshift(token);
-          token.scope = top;
-        } else {
-          consume(state, token);
-        }
-        break;
-    }
-  }
-}
-
-function isSkipped(token: Token) {
-  switch (token.tokenType) {
-    case CommentBegin:
-    case CommentLiteral:
-    case CommentEndOfLine:
-    case CommentEnd:
-    case Documentation:
-    case LineComment:
-    case WhiteSpace:
-    case ExitCommentBegin:
-      return true;
-  }
-  return false;
-}
-
 export function parse(text: string): Token[] {
   const result = QLexer.tokenize(text);
   const tokens = result.tokens as Token[];
@@ -239,7 +232,7 @@ export function parse(text: string): Token[] {
   };
 
   let namespace = "";
-  let token, next, cmd, arg;
+  let token, next;
 
   for (let i = 0; i < tokens.length; i++) {
     token = tokens[i];
@@ -250,7 +243,7 @@ export function parse(text: string): Token[] {
     switch (token.tokenType) {
       case EndOfLine:
         next = tokens[i + 1];
-        if (next && !isSkipped(next)) {
+        if (next && isExpression(next)) {
           statement(state, cache);
         }
         break;
@@ -275,7 +268,7 @@ export function parse(text: string): Token[] {
       case TestLambdaBlock:
         break;
       default:
-        if (!isSkipped(token)) {
+        if (isExpression(token)) {
           cache.push(token);
         }
         break;

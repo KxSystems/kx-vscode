@@ -12,7 +12,15 @@
  */
 
 import { Lexer } from "chevrotain";
-import { Identifier, Keyword, LSql, RSql, Reserved, System } from "./keywords";
+import {
+  Control,
+  Identifier,
+  Keyword,
+  LSql,
+  RSql,
+  Reserved,
+  System,
+} from "./keywords";
 import {
   BinaryLiteral,
   ByteLiteral,
@@ -49,7 +57,6 @@ import {
   TestBlock,
   CommentEndOfLine,
   TestLambdaBlock,
-  Control,
 } from "./tokens";
 import {
   CommentEnd,
@@ -74,8 +81,8 @@ const Language = [
   BinaryLiteral,
   ByteLiteral,
   NumberLiteral,
-  Control,
   System,
+  Control,
   LSql,
   RSql,
   Keyword,

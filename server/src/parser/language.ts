@@ -23,7 +23,7 @@ import {
   TimeLiteral,
   TimeStampLiteral,
 } from "./literals";
-import { Identifier, Keyword, Reserved } from "./keywords";
+import { Control, Identifier, Keyword, Reserved } from "./keywords";
 import {
   Colon,
   Command,
@@ -37,7 +37,6 @@ import {
   StringEscape,
   TestBlock,
   TestLambdaBlock,
-  Control,
 } from "./tokens";
 import { TokenType } from "chevrotain";
 import { writeFileSync } from "fs";
