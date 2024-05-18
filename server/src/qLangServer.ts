@@ -38,15 +38,7 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver/node";
-import {
-  FindKind,
-  LCurly,
-  Token,
-  children,
-  findIdentifiers,
-  isLambda,
-  parse,
-} from "./parser";
+import { FindKind, Token, findIdentifiers, findScope, parse } from "./parser";
 import { lint } from "./linter";
 
 interface Settings {
@@ -135,7 +127,7 @@ export default class QLangServer {
       return tokens.map((token) => createDebugSymbol(token));
     }
     return tokens
-      .filter((token) => token.assignable && token.assignment && !token.scope)
+      .filter((token) => token.assignment && !findScope(token))
       .map((token) => createSymbol(token));
   }
 
@@ -186,10 +178,7 @@ export default class QLangServer {
     return findIdentifiers(FindKind.Completion, tokens, source).map(
       (token) => ({
         label: token.image,
-        kind:
-          token.assignment?.tokenType === LCurly
-            ? CompletionItemKind.Function
-            : CompletionItemKind.Variable,
+        kind: CompletionItemKind.Variable,
       }),
     );
   }
@@ -228,23 +217,26 @@ function createSymbol(token: Token): DocumentSymbol {
   return DocumentSymbol.create(
     token.image.trim(),
     undefined,
-    isLambda(token.assignment) ? SymbolKind.Object : SymbolKind.Variable,
+    SymbolKind.Variable,
     rangeFromToken(token),
     rangeFromToken(token),
-    children(token.assignment)
-      .filter((child) => child.assignable && child.assignment)
-      .map((child) => createSymbol(child)),
   );
 }
 
 function createDebugSymbol(token: Token): DocumentSymbol {
   return DocumentSymbol.create(
     (token.image.trim() || " ").slice(0, 10),
-    `${token.tokenType.name} ${token.namespace ? `(${token.namespace})` : ""} ${
-      token.order || ""
-    } ${token.assignment ? "A" : ""}${token.local ? "L" : ""}${
-      token.scope ? "S" : ""
-    }${token.error ? "E" : ""}`,
+    `${token.tokenType.tokenTypeIdx} ${token.tokenType.name} ${
+      token.namespace ? `(${token.namespace})` : ""
+    } ${token.order || ""} ${token.error ? "E" : ""}${token.scope ? "S" : ""}${
+      token.local ? "L" : ""
+    }${token.assignment ? "A" : ""}${token.assignment?.length || ""} ${
+      token.assignment
+        ? token.assignment
+            .map((token) => token.tokenType.tokenTypeIdx)
+            .join(" ")
+        : ""
+    }`,
     SymbolKind.Variable,
     rangeFromToken(token),
     rangeFromToken(token),

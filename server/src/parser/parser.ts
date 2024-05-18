@@ -27,7 +27,7 @@ import {
   StringEscape,
   TestBlock,
   WhiteSpace,
-  CommentEol,
+  CommentEndOfLine,
   TestLambdaBlock,
   Colon,
   DoubleColon,
@@ -56,8 +56,16 @@ function scopped(token: Token) {
   return token.scopped;
 }
 
-function discard(tokens: Token[]) {
-  while (tokens.pop());
+function collapse(tokens: Token[]) {
+  if (tokens.length === 0) {
+    return undefined;
+  }
+  const collapsed: Token[] = [];
+  let token;
+  while ((token = tokens.pop())) {
+    collapsed.push(token);
+  }
+  return collapsed;
 }
 
 function peek(tokens: Token[]): Token | undefined {
@@ -72,7 +80,7 @@ function consume(state: State, token: Token) {
       top = peek(stack);
       if (top?.tokenType === Colon || top?.tokenType === DoubleColon) {
         stack.pop();
-        token.assignment = stack.pop();
+        token.assignment = collapse(stack);
         if (
           token.assignment &&
           top.tokenType === Colon &&
@@ -80,12 +88,11 @@ function consume(state: State, token: Token) {
         ) {
           token.local = findScope(token);
         }
-        discard(stack);
       }
       stack.push(token);
       break;
     case SemiColon:
-      discard(stack);
+      collapse(stack);
       break;
     default:
       stack.push(token);
@@ -111,6 +118,10 @@ function statement(state: State, tokens: Token[]) {
         break;
       case LBracket:
       case LCurly:
+        top = tokens[0];
+        if (top?.tokenType === LBracket) {
+          token.entangled = top;
+        }
         scope.push(token);
         cache.push(token);
         break;
@@ -126,6 +137,7 @@ function statement(state: State, tokens: Token[]) {
           cache.push(token);
         } else {
           expression(state, cache);
+          consume(state, token);
         }
         break;
       default:
@@ -137,7 +149,7 @@ function statement(state: State, tokens: Token[]) {
 }
 
 function expression(state: State, cache: Token[]) {
-  const { scope, stack } = state;
+  const { scope } = state;
   let token, top;
   while ((token = cache.pop())) {
     switch (token.tokenType) {
@@ -145,7 +157,7 @@ function expression(state: State, cache: Token[]) {
         top = scope.pop();
         if (top) {
           if (token.entangled?.tokenType === LBracket) {
-            discard(scopped(top));
+            collapse(scopped(top));
           } else {
             expression(state, scopped(top));
           }
@@ -168,6 +180,9 @@ function expression(state: State, cache: Token[]) {
       case LCurly:
         top = scope.pop();
         if (top) {
+          if (token.entangled?.tokenType === LBracket) {
+            // TODO PARAMETERS
+          }
           statement(state, scopped(top));
           consume(state, top);
         }
@@ -178,7 +193,7 @@ function expression(state: State, cache: Token[]) {
       case LSql:
         top = scope.pop();
         if (top) {
-          discard(scopped(top));
+          collapse(scopped(top));
           consume(state, top);
         }
         break;
@@ -196,7 +211,20 @@ function expression(state: State, cache: Token[]) {
         break;
     }
   }
-  discard(stack);
+}
+
+function isSkipped(token: Token) {
+  switch (token.tokenType) {
+    case CommentBegin:
+    case CommentLiteral:
+    case CommentEndOfLine:
+    case CommentEnd:
+    case Documentation:
+    case LineComment:
+    case WhiteSpace:
+      return true;
+  }
+  return false;
 }
 
 export function parse(text: string): Token[] {
@@ -212,7 +240,7 @@ export function parse(text: string): Token[] {
   };
 
   let namespace = "";
-  let token;
+  let token, next;
 
   for (let i = 0; i < tokens.length; i++) {
     token = tokens[i];
@@ -222,7 +250,8 @@ export function parse(text: string): Token[] {
 
     switch (token.tokenType) {
       case EndOfLine:
-        if (tokens[i + 1]?.tokenType !== WhiteSpace) {
+        next = tokens[i + 1];
+        if (next && !isSkipped(next)) {
           statement(state, cache);
         }
         break;
@@ -255,13 +284,13 @@ export function parse(text: string): Token[] {
         break;
       case CommentBegin:
       case CommentLiteral:
-      case CommentEol:
+      case CommentEndOfLine:
       case CommentEnd:
       case ExitCommentBegin:
       case Documentation:
       case LineComment:
-      case CharLiteral:
       case WhiteSpace:
+      case CharLiteral:
       case TestBegin:
       case TestBlock:
       case TestLambdaBlock:

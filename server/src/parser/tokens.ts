@@ -53,8 +53,8 @@ export const EndOfLine = createToken({
   line_breaks: true,
 });
 
-export const CommentEol = createToken({
-  name: "CommentEol",
+export const CommentEndOfLine = createToken({
+  name: "CommentEndOfLine",
   pattern: /(?:\r?\n)+/,
   line_breaks: true,
 });

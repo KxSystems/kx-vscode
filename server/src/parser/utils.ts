@@ -12,8 +12,7 @@
  */
 
 import { IToken, TokenType } from "chevrotain";
-import { TestBegin } from "./ranges";
-import { LCurly, RCurly, TestBlock, TestLambdaBlock } from "./tokens";
+import { RCurly } from "./tokens";
 import { Identifier } from "./keywords";
 
 export const enum SyntaxError {
@@ -26,33 +25,10 @@ export interface Token extends IToken {
   scope?: Token;
   scopped?: Token[];
   namespace?: string;
-  assignment?: Token;
+  assignment?: Token[];
   local?: Token;
   entangled?: Token;
   error?: SyntaxError;
-  children?: Token[]; // depreceated
-  assignable?: boolean; // depreceated
-  argument?: Token; // depreceated
-}
-
-export function children(token?: Token) {
-  if (!token) {
-    return [];
-  }
-  if (!token.children) {
-    token.children = [];
-  }
-  return token.children;
-}
-
-export function isLambda(token: Token | undefined): boolean {
-  return (
-    !token ||
-    token.tokenType === LCurly ||
-    token.tokenType === TestBegin ||
-    token.tokenType === TestBlock ||
-    token.tokenType === TestLambdaBlock
-  );
 }
 
 export function findScope(
@@ -98,7 +74,7 @@ export function findIdentifiers(
   tokens: Token[],
   source?: Token,
 ): Token[] {
-  if (!source || !source.assignable) {
+  if (!source) {
     return [];
   }
   switch (kind) {
@@ -108,14 +84,12 @@ export function findIdentifiers(
         ? tokens.filter(
             (token) =>
               token.tokenType === Identifier &&
-              token.assignable &&
               token.image === source.image &&
               token.scope === source.scope,
           )
         : tokens.filter(
             (token) =>
               token.tokenType === Identifier &&
-              token.assignable &&
               token.image === source.image &&
               !isLocal(token),
           );
@@ -124,14 +98,12 @@ export function findIdentifiers(
         ? tokens.filter(
             (token) =>
               token.assignment &&
-              token.assignable &&
               token.image === source.image &&
               token.scope === source.scope,
           )
         : tokens.filter(
             (token) =>
               token.assignment &&
-              token.assignable &&
               token.image === source.image &&
               !isLocal(token),
           );
@@ -141,7 +113,6 @@ export function findIdentifiers(
         .filter(
           (token) =>
             token.assignment &&
-            token.assignable &&
             (token.image.startsWith(".") ||
               token.namespace === source.namespace) &&
             (!token.scope || token.scope === source.scope),
