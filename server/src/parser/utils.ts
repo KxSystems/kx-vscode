@@ -12,7 +12,7 @@
  */
 
 import { IToken, TokenType } from "chevrotain";
-import { RCurly } from "./tokens";
+import { LBracket, RCurly } from "./tokens";
 import { Identifier } from "./keywords";
 
 export const enum SyntaxError {
@@ -54,12 +54,16 @@ export function isLocal(target: Token) {
   if (!scope) {
     return false;
   }
-  // if (!target.scope.argument) {
-  //   if (target.image === "x" || target.image === "y" || target.image === "z") {
-  //     return true;
-  //   }
-  // }
+  if (target.entangled?.tokenType !== LBracket) {
+    if (target.image === "x" || target.image === "y" || target.image === "z") {
+      return true;
+    }
+  }
   return !!target.local;
+}
+
+export function tokenId(token: Token) {
+  return (token.tokenType.tokenTypeIdx?.toString(16) || "").padStart(2, "0");
 }
 
 export const enum FindKind {

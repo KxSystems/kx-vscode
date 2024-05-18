@@ -38,7 +38,14 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver/node";
-import { FindKind, Token, findIdentifiers, findScope, parse } from "./parser";
+import {
+  FindKind,
+  Token,
+  findIdentifiers,
+  findScope,
+  parse,
+  tokenId,
+} from "./parser";
 import { lint } from "./linter";
 
 interface Settings {
@@ -225,16 +232,16 @@ function createSymbol(token: Token): DocumentSymbol {
 
 function createDebugSymbol(token: Token): DocumentSymbol {
   return DocumentSymbol.create(
-    (token.image.trim() || " ").slice(0, 10),
-    `${token.tokenType.tokenTypeIdx} ${token.tokenType.name} ${
-      token.namespace ? `(${token.namespace})` : ""
-    } ${token.order || ""} ${token.error ? "E" : ""}${token.scope ? "S" : ""}${
-      token.local ? "L" : ""
-    }${token.assignment ? "A" : ""}${token.assignment?.length || ""} ${
+    tokenId(token),
+    `${token.tokenType.name} ${token.order || ""} ${
+      token.error !== undefined ? `E ${token.error}` : ""
+    } ${token.namespace ? "N" : ""} ${
+      token.entangled ? `T ${tokenId(token.entangled)}` : ""
+    } ${token.scope ? `S ${tokenId(token.scope)}` : ""} ${
+      token.local ? `L ${tokenId(token.local)}` : ""
+    } ${
       token.assignment
-        ? token.assignment
-            .map((token) => token.tokenType.tokenTypeIdx)
-            .join(" ")
+        ? `A ${token.assignment.map((token) => tokenId(token)).join(" ")}`
         : ""
     }`,
     SymbolKind.Variable,

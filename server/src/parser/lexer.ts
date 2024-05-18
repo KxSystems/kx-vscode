@@ -12,7 +12,7 @@
  */
 
 import { Lexer } from "chevrotain";
-import { RSql, Identifier, Keyword, LSql, Reserved, System } from "./keywords";
+import { Identifier, Keyword, LSql, RSql, Reserved, System } from "./keywords";
 import {
   BinaryLiteral,
   ByteLiteral,

@@ -39,8 +39,9 @@ import {
   TestBegin,
 } from "./ranges";
 import { CharLiteral, CommentLiteral } from "./literals";
-import { SyntaxError, Token, isFullyQualified, findScope } from "./utils";
+import { Token, isFullyQualified, findScope } from "./utils";
 import { Identifier, LSql, RSql } from "./keywords";
+import { checkEscape } from "./checks";
 
 interface State {
   index: number;
@@ -156,11 +157,8 @@ function expression(state: State, cache: Token[]) {
       case LParen:
         top = scope.pop();
         if (top) {
-          if (token.entangled?.tokenType === LBracket) {
-            collapse(scopped(top));
-          } else {
-            expression(state, scopped(top));
-          }
+          top.entangled = token.entangled;
+          expression(state, scopped(top));
           consume(state, top);
         }
         break;
@@ -170,6 +168,7 @@ function expression(state: State, cache: Token[]) {
       case LBracket:
         top = scope.pop();
         if (top) {
+          top.entangled = token.entangled;
           expression(state, scopped(top));
           consume(state, top);
         }
@@ -180,9 +179,7 @@ function expression(state: State, cache: Token[]) {
       case LCurly:
         top = scope.pop();
         if (top) {
-          if (token.entangled?.tokenType === LBracket) {
-            // TODO PARAMETERS
-          }
+          top.entangled = token.entangled;
           statement(state, scopped(top));
           consume(state, top);
         }
@@ -193,7 +190,8 @@ function expression(state: State, cache: Token[]) {
       case LSql:
         top = scope.pop();
         if (top) {
-          collapse(scopped(top));
+          top.entangled = token.entangled;
+          expression(state, scopped(top));
           consume(state, top);
         }
         break;
@@ -222,6 +220,7 @@ function isSkipped(token: Token) {
     case Documentation:
     case LineComment:
     case WhiteSpace:
+    case ExitCommentBegin:
       return true;
   }
   return false;
@@ -240,7 +239,7 @@ export function parse(text: string): Token[] {
   };
 
   let namespace = "";
-  let token, next;
+  let token, next, cmd, arg;
 
   for (let i = 0; i < tokens.length; i++) {
     token = tokens[i];
@@ -256,47 +255,29 @@ export function parse(text: string): Token[] {
         }
         break;
       case Command:
-        const [cmd, arg] = token.image.split(/\s+/, 2);
-        switch (cmd) {
-          case "\\d":
-            if (arg) {
-              namespace = arg.split(/\.+/, 2)[1] || "";
-            }
-            break;
+        {
+          const [cmd, arg] = token.image.split(/\s+/, 2);
+          switch (cmd) {
+            case "\\d":
+              if (arg) {
+                namespace = arg.split(/\.+/, 2)[1] || "";
+              }
+              break;
+          }
         }
         break;
       case StringEscape:
-        switch (token.image.slice(1)) {
-          case "n":
-          case "r":
-          case "t":
-          case "\\":
-          case "/":
-          case '"':
-            break;
-          default:
-            const value = parseInt(token.image.slice(1));
-            if (!value || value < 100 || value > 377) {
-              token.error = SyntaxError.InvalidEscape;
-            }
-            break;
-        }
+        checkEscape(token);
         break;
-      case CommentBegin:
-      case CommentLiteral:
-      case CommentEndOfLine:
-      case CommentEnd:
-      case ExitCommentBegin:
-      case Documentation:
-      case LineComment:
-      case WhiteSpace:
       case CharLiteral:
       case TestBegin:
       case TestBlock:
       case TestLambdaBlock:
         break;
       default:
-        cache.push(token);
+        if (!isSkipped(token)) {
+          cache.push(token);
+        }
         break;
     }
   }
