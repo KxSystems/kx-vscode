@@ -49,7 +49,7 @@ import {
   inTable,
   isAmend,
   parse,
-  qualified,
+  identifier,
   tokenId,
 } from "./parser";
 import { lint } from "./linter";
@@ -104,8 +104,8 @@ export default class QLangServer {
     if ("kdb" in settings) {
       const kdb = settings.kdb;
       this.setSettings({
-        debug: kdb.debug || false,
-        linting: kdb.linting || false,
+        debug: kdb.debug_parser === true || false,
+        linting: kdb.linting === true || false,
       });
     }
   }
@@ -235,7 +235,7 @@ function positionToToken(tokens: Token[], position: Position) {
 function createSymbol(token: Token): DocumentSymbol {
   const range = rangeFromToken(token);
   return DocumentSymbol.create(
-    qualified(token),
+    identifier(token),
     (isAmend(token) && "Amend") || undefined,
     assignedType(token) === RCurly ? SymbolKind.Object : SymbolKind.Variable,
     range,

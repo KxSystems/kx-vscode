@@ -44,9 +44,7 @@ import { Control, Identifier, LSql, RSql } from "./keywords";
 import { checkEscape } from "./checks";
 
 interface State {
-  index: number;
   order: number;
-  scope: Token[];
   stack: Token[];
 }
 
@@ -90,11 +88,13 @@ function peek(tokens: Token[]): Token | undefined {
 
 function consume(state: State, token: Token) {
   const { stack } = state;
+
   let top;
+
   switch (token.tokenType) {
     case Identifier:
       if (inParam(token)) {
-        token.assignment = [];
+        token.assignment = [token];
       } else {
         top = peek(stack);
         if (top?.tokenType === Colon || top?.tokenType === DoubleColon) {
@@ -102,6 +102,7 @@ function consume(state: State, token: Token) {
         }
         stack.push(token);
       }
+      token.order = state.order++;
       break;
     case SemiColon:
       collapse(stack);
@@ -110,12 +111,13 @@ function consume(state: State, token: Token) {
       stack.push(token);
       break;
   }
-  token.order = state.order++;
 }
 
 function expression(state: State, cache: Token[]) {
-  const { scope } = state;
+  const scope: Token[] = [];
+
   let token, top, next;
+
   while ((token = cache.pop())) {
     switch (token.tokenType) {
       case LParen:
@@ -126,6 +128,7 @@ function expression(state: State, cache: Token[]) {
         }
         break;
       case RParen:
+        token.scope = peek(scope);
         scope.push(token);
         break;
       case LBracket:
@@ -141,6 +144,7 @@ function expression(state: State, cache: Token[]) {
         }
         break;
       case RBracket:
+        token.scope = peek(scope);
         scope.push(token);
         break;
       case LCurly:
@@ -151,6 +155,7 @@ function expression(state: State, cache: Token[]) {
         }
         break;
       case RCurly:
+        token.scope = peek(scope);
         scope.push(token);
         break;
       case LSql:
@@ -161,6 +166,7 @@ function expression(state: State, cache: Token[]) {
         }
         break;
       case RSql:
+        token.scope = peek(scope);
         scope.push(token);
         break;
       default:
@@ -220,10 +226,8 @@ export function parse(text: string): Token[] {
   const cache: Token[] = [];
 
   const state: State = {
-    index: 0,
     order: 1,
     stack: [],
-    scope: [],
   };
 
   let namespace = "";
@@ -231,9 +235,8 @@ export function parse(text: string): Token[] {
 
   for (let i = 0; i < tokens.length; i++) {
     token = tokens[i];
-    token.namespace = namespace;
     token.index = i;
-    state.index = i;
+    token.namespace = namespace;
 
     switch (token.tokenType) {
       case EndOfLine:

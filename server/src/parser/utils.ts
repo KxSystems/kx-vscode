@@ -13,7 +13,7 @@
 
 import { IToken, TokenType } from "chevrotain";
 import { DoubleColon, LBracket, RBracket, RCurly, RParen } from "./tokens";
-import { RSql } from "./keywords";
+import { Identifier, RSql } from "./keywords";
 
 export const enum SyntaxError {
   InvalidEscape,
@@ -41,12 +41,12 @@ function inScope(token: Token, scopeType: TokenType): Token | undefined {
   return undefined;
 }
 
-export function inLambda(token: Token) {
-  return inScope(token, RCurly);
+function inBracket(token: Token) {
+  return inScope(token, RBracket);
 }
 
-export function inBracket(token: Token) {
-  return inScope(token, RBracket);
+export function inLambda(token: Token) {
+  return inScope(token, RCurly);
 }
 
 export function inSql(token: Token) {
@@ -61,15 +61,19 @@ export function inTable(token: Token) {
 export function inParam(token: Token) {
   const lambda = inLambda(token);
   const bracket = inBracket(token);
-  return lambda && bracket && lambda.tangled?.tangled === bracket.tangled;
+  return (
+    lambda &&
+    bracket &&
+    bracket.tangled &&
+    bracket.tangled === lambda.tangled?.tangled
+  );
 }
 
-export function isQualified(token: Token) {
-  return token.image.startsWith(".");
-}
-
-export function qualified(token: Token) {
-  if (isQualified(token)) {
+export function identifier(token: Token) {
+  if (token.tokenType !== Identifier) {
+    return "";
+  }
+  if (token.image.startsWith(".")) {
     return token.image;
   }
   if (token.namespace) {
