@@ -12,7 +12,7 @@
  */
 
 import { IToken, TokenType } from "chevrotain";
-import { DoubleColon, LBracket, RCurly, RParen } from "./tokens";
+import { DoubleColon, LBracket, RBracket, RCurly, RParen } from "./tokens";
 import { RSql } from "./keywords";
 
 export const enum SyntaxError {
@@ -30,10 +30,10 @@ export interface Token extends IToken {
   error?: SyntaxError;
 }
 
-export function inScope(token: Token, type: TokenType): Token | undefined {
+function inScope(token: Token, scopeType: TokenType): Token | undefined {
   let scope;
   while ((scope = token.scope)) {
-    if (scope.tokenType === type) {
+    if (scope.tokenType === scopeType) {
       return scope;
     }
     token = scope;
@@ -45,38 +45,45 @@ export function inLambda(token: Token) {
   return inScope(token, RCurly);
 }
 
+export function inBracket(token: Token) {
+  return inScope(token, RBracket);
+}
+
 export function inSql(token: Token) {
   return inScope(token, RSql);
 }
 
 export function inTable(token: Token) {
   const scope = inScope(token, RParen);
-  return scope && scope.tangled?.tokenType === LBracket;
+  return scope && scope.tangled?.tangled?.tokenType === LBracket;
+}
+
+export function inParam(token: Token) {
+  const lambda = inLambda(token);
+  const bracket = inBracket(token);
+  return lambda && bracket && lambda.tangled?.tangled === bracket.tangled;
 }
 
 export function isQualified(token: Token) {
   return token.image.startsWith(".");
 }
 
+export function qualified(token: Token) {
+  if (isQualified(token)) {
+    return token.image;
+  }
+  if (token.namespace) {
+    return `.${token.namespace}.${token.image}`;
+  }
+  return token.image;
+}
+
 export function isAmend(token: Token) {
   return token.assignment && token.assignment[0].tokenType === DoubleColon;
 }
 
-export const enum AssignmentType {
-  None,
-  Lambda,
-  Variable,
-}
-
-export function assignmentType(token: Token): AssignmentType {
-  if (!token.assignment) {
-    return AssignmentType.None;
-  }
-  const assigned = token.assignment[1]?.tokenType;
-  if (!assigned) {
-    return AssignmentType.None;
-  }
-  return assigned === RCurly ? AssignmentType.Lambda : AssignmentType.Variable;
+export function assignedType(token: Token) {
+  return token.assignment && token.assignment[1]?.tokenType;
 }
 
 export function tokenId(token: Token) {

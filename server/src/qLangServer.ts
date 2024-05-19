@@ -39,16 +39,17 @@ import {
   WorkspaceEdit,
 } from "vscode-languageserver/node";
 import {
-  AssignmentType,
   FindKind,
+  RCurly,
   Token,
-  assignmentType,
+  assignedType,
   findIdentifiers,
   inLambda,
   inSql,
   inTable,
   isAmend,
   parse,
+  qualified,
   tokenId,
 } from "./parser";
 import { lint } from "./linter";
@@ -141,7 +142,7 @@ export default class QLangServer {
     return tokens
       .filter(
         (token) =>
-          assignmentType(token) &&
+          assignedType(token) &&
           !inLambda(token) &&
           !inSql(token) &&
           !inTable(token),
@@ -234,11 +235,9 @@ function positionToToken(tokens: Token[], position: Position) {
 function createSymbol(token: Token): DocumentSymbol {
   const range = rangeFromToken(token);
   return DocumentSymbol.create(
-    token.image.trim(),
-    isAmend(token) ? "Amend" : undefined,
-    assignmentType(token) === AssignmentType.Lambda
-      ? SymbolKind.Object
-      : SymbolKind.Variable,
+    qualified(token),
+    (isAmend(token) && "Amend") || undefined,
+    assignedType(token) === RCurly ? SymbolKind.Object : SymbolKind.Variable,
     range,
     range,
   );
