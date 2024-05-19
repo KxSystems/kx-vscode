@@ -48,7 +48,7 @@ interface State {
   stack: Token[];
 }
 
-function isStatement(token: Token) {
+function isExpression(token: Token) {
   switch (token.tokenType) {
     case CommentBegin:
     case CommentLiteral:
@@ -61,13 +61,6 @@ function isStatement(token: Token) {
       return false;
   }
   return true;
-}
-
-function scopped(token: Token) {
-  if (!token.scopped) {
-    token.scopped = [];
-  }
-  return token.scopped;
 }
 
 function collapse(tokens: Token[]) {
@@ -86,144 +79,52 @@ function peek(tokens: Token[]): Token | undefined {
   return tokens[tokens.length - 1];
 }
 
-function consume(state: State, token: Token) {
+function expression(state: State, tokens: Token[]) {
   const { stack } = state;
-
-  let top;
-
-  switch (token.tokenType) {
-    case Identifier:
-      if (inParam(token)) {
-        token.assignment = [token];
-      } else {
-        top = peek(stack);
-        if (top?.tokenType === Colon || top?.tokenType === DoubleColon) {
-          token.assignment = collapse(stack);
+  let token, top;
+  while ((token = tokens.pop())) {
+    switch (token.tokenType) {
+      case Identifier:
+        if (inParam(token)) {
+          token.assignment = [token, token];
+        } else {
+          top = peek(stack);
+          if (top?.tokenType === Colon || top?.tokenType === DoubleColon) {
+            token.assignment = collapse(stack);
+          }
+          stack.push(token);
+        }
+        token.order = state.order++;
+        break;
+      case LCurly:
+        if (!token.apply) {
+          stack.push(token);
+        }
+        break;
+      case RCurly:
+        if (token.scope && peek(stack)) {
+          token.scope.apply = true;
         }
         stack.push(token);
-      }
-      token.order = state.order++;
-      break;
-    case SemiColon:
-      collapse(stack);
-      break;
-    default:
-      stack.push(token);
-      break;
-  }
-}
-
-function expression(state: State, cache: Token[]) {
-  const scope: Token[] = [];
-
-  let token, top, next;
-
-  while ((token = cache.pop())) {
-    switch (token.tokenType) {
-      case LParen:
-        top = scope.pop();
-        if (top) {
-          expression(state, scopped(top));
-          consume(state, top);
-        }
-        break;
-      case RParen:
-        token.scope = peek(scope);
-        scope.push(token);
-        break;
-      case LBracket:
-        top = scope.pop();
-        if (top) {
-          next = peek(cache);
-          if (!next || next.tokenType === Control) {
-            statement(state, scopped(top));
-          } else {
-            expression(state, scopped(top));
-          }
-          consume(state, top);
-        }
-        break;
-      case RBracket:
-        token.scope = peek(scope);
-        scope.push(token);
-        break;
-      case LCurly:
-        top = scope.pop();
-        if (top) {
-          statement(state, scopped(top));
-          consume(state, top);
-        }
-        break;
-      case RCurly:
-        token.scope = peek(scope);
-        scope.push(token);
-        break;
-      case LSql:
-        top = scope.pop();
-        if (top) {
-          expression(state, scopped(top));
-          consume(state, top);
-        }
-        break;
-      case RSql:
-        token.scope = peek(scope);
-        scope.push(token);
-        break;
-      default:
-        top = peek(scope);
-        if (top) {
-          scopped(top).unshift(token);
-          token.scope = top;
-        } else {
-          consume(state, token);
-        }
-        break;
-    }
-  }
-}
-
-function statement(state: State, tokens: Token[]) {
-  const cache: Token[] = [];
-  const scope: Token[] = [];
-
-  let token, top;
-
-  while ((token = tokens.shift())) {
-    switch (token.tokenType) {
-      case LParen:
-      case LBracket:
-      case LCurly:
-        token.tangled = tokens[0];
-        scope.push(token);
-        cache.push(token);
-        break;
-      case RParen:
-      case RBracket:
-      case RCurly:
-        token.tangled = scope.pop();
-        cache.push(token);
         break;
       case SemiColon:
-        top = peek(scope);
-        if (top) {
-          cache.push(token);
-        } else {
-          expression(state, cache);
-          consume(state, token);
-        }
+        collapse(stack);
+        break;
+      case LParen:
+      case RParen:
         break;
       default:
-        cache.push(token);
+        stack.push(token);
         break;
     }
   }
-  expression(state, cache);
 }
 
 export function parse(text: string): Token[] {
   const result = QLexer.tokenize(text);
   const tokens = result.tokens as Token[];
   const cache: Token[] = [];
+  const scope: Token[] = [];
 
   const state: State = {
     order: 1,
@@ -235,14 +136,53 @@ export function parse(text: string): Token[] {
 
   for (let i = 0; i < tokens.length; i++) {
     token = tokens[i];
-    token.index = i;
+    token.scope = peek(scope);
     token.namespace = namespace;
 
     switch (token.tokenType) {
+      case LBracket:
+        next = peek(cache);
+        if (next) {
+          next.tangled = token;
+        }
+        scope.push(token);
+        cache.push(token);
+        break;
+      case LParen:
+      case LCurly:
+      case LSql:
+        scope.push(token);
+        cache.push(token);
+        break;
+      case RParen:
+      case RBracket:
+      case RCurly:
+      case RSql:
+        scope.pop();
+        cache.push(token);
+        break;
+      case SemiColon:
+        switch (token.scope?.tokenType) {
+          case LParen:
+            cache.push(token);
+            break;
+          case LBracket:
+            next = cache[cache.indexOf(token.scope) - 1];
+            if (!next || next.tokenType === Control) {
+              expression(state, cache);
+            } else {
+              cache.push(token);
+            }
+            break;
+          default:
+            expression(state, cache);
+            break;
+        }
+        break;
       case EndOfLine:
         next = tokens[i + 1];
-        if (next && isStatement(next)) {
-          statement(state, cache);
+        if (next && isExpression(next)) {
+          expression(state, cache);
         }
         break;
       case Command:
@@ -266,12 +206,12 @@ export function parse(text: string): Token[] {
       case TestLambdaBlock:
         break;
       default:
-        if (isStatement(token)) {
+        if (isExpression(token)) {
           cache.push(token);
         }
         break;
     }
   }
-  statement(state, cache);
+  expression(state, cache);
   return tokens;
 }

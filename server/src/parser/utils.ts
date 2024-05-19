@@ -12,21 +12,20 @@
  */
 
 import { IToken, TokenType } from "chevrotain";
-import { DoubleColon, LBracket, RBracket, RCurly, RParen } from "./tokens";
-import { Identifier, RSql } from "./keywords";
+import { DoubleColon, LBracket, LCurly, LParen } from "./tokens";
+import { Identifier, LSql } from "./keywords";
 
 export const enum SyntaxError {
   InvalidEscape,
 }
 
 export interface Token extends IToken {
-  index?: number;
   order?: number;
   scope?: Token;
-  scopped?: Token[];
   tangled?: Token;
   namespace?: string;
   assignment?: Token[];
+  apply?: boolean;
   error?: SyntaxError;
 }
 
@@ -41,32 +40,31 @@ function inScope(token: Token, scopeType: TokenType): Token | undefined {
   return undefined;
 }
 
-function inBracket(token: Token) {
-  return inScope(token, RBracket);
+export function inList(token: Token) {
+  return inScope(token, LParen);
+}
+
+export function inBracket(token: Token) {
+  return inScope(token, LBracket);
 }
 
 export function inLambda(token: Token) {
-  return inScope(token, RCurly);
+  return inScope(token, LCurly);
 }
 
 export function inSql(token: Token) {
-  return inScope(token, RSql);
+  return inScope(token, LSql);
 }
 
 export function inTable(token: Token) {
-  const scope = inScope(token, RParen);
-  return scope && scope.tangled?.tangled?.tokenType === LBracket;
+  const paren = inList(token);
+  return paren && paren.tangled?.tokenType === LBracket;
 }
 
 export function inParam(token: Token) {
   const lambda = inLambda(token);
   const bracket = inBracket(token);
-  return (
-    lambda &&
-    bracket &&
-    bracket.tangled &&
-    bracket.tangled === lambda.tangled?.tangled
-  );
+  return lambda && bracket && lambda.tangled === bracket;
 }
 
 export function identifier(token: Token) {
@@ -74,6 +72,9 @@ export function identifier(token: Token) {
     return "";
   }
   if (token.image.startsWith(".")) {
+    return token.image;
+  }
+  if (token.assignment && inLambda(token)) {
     return token.image;
   }
   if (token.namespace) {
@@ -86,8 +87,8 @@ export function isAmend(token: Token) {
   return token.assignment && token.assignment[0].tokenType === DoubleColon;
 }
 
-export function assignedType(token: Token) {
-  return token.assignment && token.assignment[1]?.tokenType;
+export function assigned(token: Token) {
+  return token.assignment && token.assignment[1];
 }
 
 export function tokenId(token: Token) {

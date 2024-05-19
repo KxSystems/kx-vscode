@@ -40,9 +40,7 @@ import {
 } from "vscode-languageserver/node";
 import {
   FindKind,
-  RCurly,
   Token,
-  assignedType,
   findIdentifiers,
   inLambda,
   inSql,
@@ -51,6 +49,8 @@ import {
   parse,
   identifier,
   tokenId,
+  LCurly,
+  assigned,
 } from "./parser";
 import { lint } from "./linter";
 
@@ -142,12 +142,12 @@ export default class QLangServer {
     return tokens
       .filter(
         (token) =>
-          assignedType(token) &&
+          assigned(token) &&
           !inLambda(token) &&
           !inSql(token) &&
           !inTable(token),
       )
-      .map((token) => createSymbol(token));
+      .map((token) => createSymbol(token, tokens));
   }
 
   public onReferences({ textDocument, position }: ReferenceParams): Location[] {
@@ -232,14 +232,25 @@ function positionToToken(tokens: Token[], position: Position) {
   });
 }
 
-function createSymbol(token: Token): DocumentSymbol {
+function createSymbol(token: Token, tokens: Token[]): DocumentSymbol {
   const range = rangeFromToken(token);
   return DocumentSymbol.create(
     identifier(token),
     (isAmend(token) && "Amend") || undefined,
-    assignedType(token) === RCurly ? SymbolKind.Object : SymbolKind.Variable,
+    assigned(token)?.tokenType === LCurly
+      ? SymbolKind.Object
+      : SymbolKind.Variable,
     range,
     range,
+    tokens
+      .filter(
+        (child) =>
+          assigned(child) &&
+          !inSql(child) &&
+          !inTable(child) &&
+          assigned(token) === inLambda(child),
+      )
+      .map((child) => createSymbol(child, tokens)),
   );
 }
 
