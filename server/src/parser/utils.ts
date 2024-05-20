@@ -77,8 +77,12 @@ export function inParam(token: Token) {
   return lambda && bracket && lambda.tangled === bracket;
 }
 
+export function isQualified(image: string) {
+  return image.startsWith(".");
+}
+
 export function identifier(token: Token) {
-  return token.image.startsWith(".")
+  return isQualified(token.image)
     ? token.image
     : token.namespace
       ? `.${token.namespace}.${token.image}`

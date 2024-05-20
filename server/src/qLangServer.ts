@@ -50,6 +50,7 @@ import {
   assigned,
   lambda,
   assignable,
+  isQualified,
 } from "./parser";
 import { lint } from "./linter";
 
@@ -172,7 +173,7 @@ export default class QLangServer {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
     const edits = findIdentifiers(FindKind.Rename, tokens, source).map(
-      (token) => TextEdit.replace(rangeFromToken(token), newName),
+      (token) => renameToken(token, newName),
     );
     return edits.length === 0
       ? null
@@ -191,7 +192,7 @@ export default class QLangServer {
     const source = positionToToken(tokens, position);
     return findIdentifiers(FindKind.Completion, tokens, source).map(
       (token) => ({
-        label: token.image,
+        label: identifier(token),
         kind: CompletionItemKind.Variable,
       }),
     );
@@ -225,6 +226,15 @@ function positionToToken(tokens: Token[], position: Position) {
       end.character >= position.character
     );
   });
+}
+
+function renameToken(token: Token, newName: string) {
+  // TODO ECMEL
+  if (!isQualified(newName)) {
+    if (isQualified(token.image)) {
+    }
+  }
+  return TextEdit.replace(rangeFromToken(token), newName);
 }
 
 function createSymbol(token: Token, tokens: Token[]): DocumentSymbol {

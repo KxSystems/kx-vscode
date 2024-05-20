@@ -50,6 +50,7 @@ export function unusedParam(tokens: Token[]): Token[] {
 export function unusedVar(tokens: Token[]): Token[] {
   return tokens.filter(
     (token) =>
+      !inParam(token) &&
       inLambda(token) &&
       assigned(token) &&
       assignable(token) &&
