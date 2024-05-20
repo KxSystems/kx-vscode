@@ -68,6 +68,8 @@ export namespace ext {
   export const connectedContextStrings: Array<string> = [];
   export const connectionsList: Array<KdbNode | InsightsNode> = [];
   export let hideDetailedConsoleQueryOutput: boolean;
+  export let networkChangesWatcher: boolean;
+  export let insightsHydrate: boolean;
   export let connectionNode: KdbNode | InsightsNode | undefined;
   export const kdbDataSourceFolder = ".kdb-datasources";
   export const kdbDataSourceFileExtension = ".ds";

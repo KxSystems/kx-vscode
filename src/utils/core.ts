@@ -188,6 +188,35 @@ export function getHideDetailedConsoleQueryOutput(): void {
     ext.hideDetailedConsoleQueryOutput = setting;
   }
 }
+
+export function getNetworkChangesWatcher(): void {
+  const setting = workspace
+    .getConfiguration()
+    .get<boolean | undefined>("kdb.networkChangesWatcher");
+  if (setting === undefined) {
+    workspace
+      .getConfiguration()
+      .update("kdb.networkChangesWatcher", true, ConfigurationTarget.Global);
+    ext.networkChangesWatcher = true;
+  } else {
+    ext.networkChangesWatcher = setting;
+  }
+}
+
+export function getInsightsHydrate(): void {
+  const setting = workspace
+    .getConfiguration()
+    .get<boolean | undefined>("kdb.insightsHydrate");
+  if (setting === undefined) {
+    workspace
+      .getConfiguration()
+      .update("kdb.insightsHydrate", true, ConfigurationTarget.Global);
+    ext.insightsHydrate = true;
+  } else {
+    ext.insightsHydrate = setting;
+  }
+}
+
 export function setOutputWordWrapper(): void {
   let existWrap = false;
   const logConfig = workspace.getConfiguration("[Log]");

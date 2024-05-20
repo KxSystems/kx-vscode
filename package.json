@@ -170,6 +170,16 @@
           "description": "Hide detailed console query output",
           "default": true
         },
+        "kdb.networkChangesWatcher": {
+          "type": "boolean",
+          "description": "Watch for network changes, if changes are detected, check if the Insights connection is still valid",
+          "default": true
+        },
+        "kdb.insightsHydrate": {
+          "type": "boolean",
+          "description": "Hydrate the insights connection every 1 minute to keep it alive",
+          "default": true
+        },
         "kdb.qHomeDirectory": {
           "type": "string",
           "description": "QHOME directory for q runtime"
@@ -832,7 +842,7 @@
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "@windozer/node-q": "^2.6.0",
     "ag-grid-community": "^31.3.1",
-    "axios": "^1.6.8",
+    "axios": "^1.7.0",
     "chevrotain": "^10.5.0",
     "csv-parser": "^3.0.0",
     "extract-zip": "^2.0.1",
