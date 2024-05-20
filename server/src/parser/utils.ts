@@ -78,16 +78,11 @@ export function inParam(token: Token) {
 }
 
 export function identifier(token: Token) {
-  if (token.image.startsWith(".")) {
-    return token.image;
-  }
-  if (token.assignment && inLambda(token)) {
-    return token.image;
-  }
-  if (token.namespace) {
-    return `.${token.namespace}.${token.image}`;
-  }
-  return token.image;
+  return token.image.startsWith(".")
+    ? token.image
+    : token.namespace
+      ? `.${token.namespace}.${token.image}`
+      : token.image;
 }
 
 export function isLambda(token?: Token) {
@@ -102,6 +97,17 @@ export function isLambda(token?: Token) {
 
 export function isAmend(token: Token) {
   return token.assignment && token.assignment[0].tokenType === DoubleColon;
+}
+
+export function isLocal(target: Token, tokens: Token[]) {
+  return tokens.find(
+    (token) =>
+      assigned(token) &&
+      assignable(token) &&
+      inLambda(target) &&
+      inLambda(target) === inLambda(token) &&
+      identifier(token) === identifier(target),
+  );
 }
 
 export function ordered(token: Token, next: Token) {
@@ -132,13 +138,25 @@ export function findIdentifiers(
   tokens: Token[],
   source?: Token,
 ): Token[] {
-  if (!source) {
+  if (!source || !assignable(source)) {
     return [];
   }
   switch (kind) {
     case FindKind.Rename:
     case FindKind.Reference:
-      return [];
+      return isLocal(source, tokens)
+        ? tokens.filter(
+            (token) =>
+              assignable(token) &&
+              identifier(token) === identifier(source) &&
+              inLambda(token) === inLambda(source),
+          )
+        : tokens.filter(
+            (token) =>
+              assignable(token) &&
+              identifier(token) === identifier(source) &&
+              !isLocal(token, tokens),
+          );
     case FindKind.Definition:
       return [];
     case FindKind.Completion:
