@@ -40,7 +40,7 @@ import {
 } from "./ranges";
 import { CharLiteral, CommentLiteral } from "./literals";
 import { Token, inParam } from "./utils";
-import { Identifier, LSql, RSql } from "./keywords";
+import { Control, Identifier, LSql, RSql } from "./keywords";
 import { checkEscape } from "./checks";
 
 function isExpression(token: Token) {
@@ -66,9 +66,59 @@ function peek(tokens: Token[]): Token | undefined {
   return tokens[tokens.length - 1];
 }
 
-function expression(tokens: Token[]) {
+interface State {
+  order: number;
+}
+
+function block(state: State, tokens: Token[]) {
+  const anchor = tokens.pop();
+  if (!anchor || !anchor.scope) {
+    return;
+  }
+
+  tokens = tokens.splice(tokens.indexOf(anchor.scope) + 1);
+
+  const cache: Token[] = [];
+  const scope: Token[] = [];
+
+  let token;
+
+  for (let i = 0; i < tokens.length; i++) {
+    token = tokens[i];
+
+    switch (token.tokenType) {
+      case LParen:
+      case LBracket:
+      case LCurly:
+        scope.push(token);
+        cache.push(token);
+        break;
+      case RBracket:
+      case RParen:
+      case RCurly:
+        scope.pop();
+        cache.push(token);
+        break;
+      case SemiColon:
+        if (peek(scope)) {
+          cache.push(token);
+        } else {
+          expression(state, cache);
+        }
+        break;
+      default:
+        cache.push(token);
+        break;
+    }
+  }
+  expression(state, cache);
+}
+
+function expression(state: State, tokens: Token[]) {
   const stack: Token[] = [];
+
   let token, top;
+
   while ((token = tokens.pop())) {
     switch (token.tokenType) {
       case Identifier:
@@ -79,19 +129,34 @@ function expression(tokens: Token[]) {
           if (top?.tokenType === Colon || top?.tokenType === DoubleColon) {
             token.assignment = [top];
             stack.pop();
-            top = stack.pop();
+            top = stack.shift();
             if (top) {
               token.assignment.push(top);
+              clear(stack);
             }
           }
           stack.push(token);
         }
+        token.order = state.order++;
         break;
       case SemiColon:
         clear(stack);
         break;
-      case LParen:
+      case RCurly:
+        tokens.push(token);
+        block(state, tokens);
+        break;
+      case RBracket:
+        top = token.scope?.tangled;
+        if (!top || top.tokenType === Control) {
+          tokens.push(token);
+          block(state, tokens);
+        } else {
+          stack.push(token);
+        }
+        break;
       case RParen:
+      case LParen:
         break;
       default:
         stack.push(token);
@@ -106,14 +171,16 @@ export function parse(text: string): Token[] {
   const cache: Token[] = [];
   const scope: Token[] = [];
 
+  const state = {
+    order: 1,
+  };
+
   let namespace = "";
-  let order = 1;
   let token, next;
 
   for (let i = 0; i < tokens.length; i++) {
     token = tokens[i];
     token.index = i;
-    token.order = order;
     token.scope = peek(scope);
     token.namespace = namespace;
 
@@ -141,15 +208,13 @@ export function parse(text: string): Token[] {
         if (token.scope) {
           cache.push(token);
         } else {
-          expression(cache);
-          order++;
+          expression(state, cache);
         }
         break;
       case EndOfLine:
         next = tokens[i + 1];
         if (next && isExpression(next)) {
-          expression(cache);
-          order++;
+          expression(state, cache);
         }
         break;
       case Command:
@@ -184,6 +249,6 @@ export function parse(text: string): Token[] {
         break;
     }
   }
-  expression(cache);
+  expression(state, cache);
   return tokens;
 }

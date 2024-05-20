@@ -260,7 +260,7 @@ const UnusedParam: LinterRule = {
 
 const UnusedVar: LinterRule = {
   code: "UNUSED_VAR",
-  message: "This variable was declared then never used",
+  message: "This local variable was declared then never used",
   severity: DiagnosticSeverity.Warning,
   check: checks.unusedVar,
 };

@@ -43,14 +43,13 @@ import {
   Token,
   findIdentifiers,
   inLambda,
-  inSql,
-  inTable,
   isAmend,
   parse,
   identifier,
   tokenId,
   assigned,
   isLambda,
+  assignable,
 } from "./parser";
 import { lint } from "./linter";
 
@@ -141,11 +140,7 @@ export default class QLangServer {
     }
     return tokens
       .filter(
-        (token) =>
-          assigned(token) &&
-          !inLambda(token) &&
-          !inSql(token) &&
-          !inTable(token),
+        (token) => assignable(token) && assigned(token) && !inLambda(token),
       )
       .map((token) => createSymbol(token, tokens));
   }
@@ -243,10 +238,9 @@ function createSymbol(token: Token, tokens: Token[]): DocumentSymbol {
     tokens
       .filter(
         (child) =>
+          assignable(child) &&
           assigned(child) &&
-          !inSql(child) &&
-          !inTable(child) &&
-          assigned(token) === inLambda(child),
+          inLambda(child) === assigned(token),
       )
       .map((child) => createSymbol(child, tokens)),
   );

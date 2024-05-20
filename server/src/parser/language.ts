@@ -182,7 +182,7 @@ const repository = {
     patterns: [
       {
         name: "keyword.control.q",
-        match: _(Control),
+        match: `${_(Control)}\\b`,
       },
       {
         name: "keyword.other.reserved.q",

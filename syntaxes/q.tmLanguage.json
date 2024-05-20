@@ -156,7 +156,7 @@
       "patterns": [
         {
           "name": "keyword.control.q",
-          "match": "(?:while|if|do)"
+          "match": "(?:while|if|do)\\b"
         },
         {
           "name": "keyword.other.reserved.q",

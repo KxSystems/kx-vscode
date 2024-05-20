@@ -20,7 +20,7 @@ import {
   TestBlock,
   TestLambdaBlock,
 } from "./tokens";
-import { LSql } from "./keywords";
+import { Identifier, LSql } from "./keywords";
 import { TestBegin } from "./ranges";
 
 export const enum SyntaxError {
@@ -104,8 +104,16 @@ export function isAmend(token: Token) {
   return token.assignment && token.assignment[0].tokenType === DoubleColon;
 }
 
+export function ordered(token: Token, next: Token) {
+  return (token.order && next.order && next.order > token.order) || false;
+}
+
 export function assigned(token: Token) {
   return token.assignment && token.assignment[1];
+}
+
+export function assignable(token: Token) {
+  return token.tokenType === Identifier && !inSql(token) && !inTable(token);
 }
 
 export function tokenId(token: Token) {
