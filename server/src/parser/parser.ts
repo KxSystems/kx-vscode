@@ -40,13 +40,8 @@ import {
 } from "./ranges";
 import { CharLiteral, CommentLiteral } from "./literals";
 import { Token, inParam } from "./utils";
-import { Control, Identifier, LSql, RSql } from "./keywords";
+import { Identifier, LSql, RSql } from "./keywords";
 import { checkEscape } from "./checks";
-
-interface State {
-  order: number;
-  stack: Token[];
-}
 
 function isExpression(token: Token) {
   switch (token.tokenType) {
@@ -63,24 +58,16 @@ function isExpression(token: Token) {
   return true;
 }
 
-function collapse(tokens: Token[]) {
-  if (tokens.length === 0) {
-    return undefined;
-  }
-  const collapsed: Token[] = [];
-  let token;
-  while ((token = tokens.pop())) {
-    collapsed.push(token);
-  }
-  return collapsed;
+function clear(tokens: Token[]) {
+  while (tokens.pop()) {}
 }
 
 function peek(tokens: Token[]): Token | undefined {
   return tokens[tokens.length - 1];
 }
 
-function expression(state: State, tokens: Token[]) {
-  const { stack } = state;
+function expression(tokens: Token[]) {
+  const stack: Token[] = [];
   let token, top;
   while ((token = tokens.pop())) {
     switch (token.tokenType) {
@@ -90,25 +77,18 @@ function expression(state: State, tokens: Token[]) {
         } else {
           top = peek(stack);
           if (top?.tokenType === Colon || top?.tokenType === DoubleColon) {
-            token.assignment = collapse(stack);
+            token.assignment = [top];
+            stack.pop();
+            top = stack.pop();
+            if (top) {
+              token.assignment.push(top);
+            }
           }
           stack.push(token);
         }
-        token.order = state.order++;
-        break;
-      case LCurly:
-        if (!token.apply) {
-          stack.push(token);
-        }
-        break;
-      case RCurly:
-        if (token.scope && peek(stack)) {
-          token.scope.apply = true;
-        }
-        stack.push(token);
         break;
       case SemiColon:
-        collapse(stack);
+        clear(stack);
         break;
       case LParen:
       case RParen:
@@ -126,31 +106,27 @@ export function parse(text: string): Token[] {
   const cache: Token[] = [];
   const scope: Token[] = [];
 
-  const state: State = {
-    order: 1,
-    stack: [],
-  };
-
   let namespace = "";
+  let order = 1;
   let token, next;
 
   for (let i = 0; i < tokens.length; i++) {
     token = tokens[i];
+    token.index = i;
+    token.order = order;
     token.scope = peek(scope);
     token.namespace = namespace;
 
     switch (token.tokenType) {
       case LBracket:
-        next = peek(cache);
-        if (next) {
-          next.tangled = token;
-        }
-        scope.push(token);
-        cache.push(token);
-        break;
       case LParen:
       case LCurly:
       case LSql:
+        next = peek(cache);
+        if (next) {
+          next.tangled = token;
+          token.tangled = next;
+        }
         scope.push(token);
         cache.push(token);
         break;
@@ -162,27 +138,18 @@ export function parse(text: string): Token[] {
         cache.push(token);
         break;
       case SemiColon:
-        switch (token.scope?.tokenType) {
-          case LParen:
-            cache.push(token);
-            break;
-          case LBracket:
-            next = cache[cache.indexOf(token.scope) - 1];
-            if (!next || next.tokenType === Control) {
-              expression(state, cache);
-            } else {
-              cache.push(token);
-            }
-            break;
-          default:
-            expression(state, cache);
-            break;
+        if (token.scope) {
+          cache.push(token);
+        } else {
+          expression(cache);
+          order++;
         }
         break;
       case EndOfLine:
         next = tokens[i + 1];
         if (next && isExpression(next)) {
-          expression(state, cache);
+          expression(cache);
+          order++;
         }
         break;
       case Command:
@@ -200,10 +167,15 @@ export function parse(text: string): Token[] {
       case StringEscape:
         checkEscape(token);
         break;
-      case CharLiteral:
       case TestBegin:
       case TestBlock:
       case TestLambdaBlock:
+        scope.pop();
+        token.scope = undefined;
+        scope.push(token);
+        token.assignment = [token, token];
+        break;
+      case CharLiteral:
         break;
       default:
         if (isExpression(token)) {
@@ -212,6 +184,6 @@ export function parse(text: string): Token[] {
         break;
     }
   }
-  expression(state, cache);
+  expression(cache);
   return tokens;
 }

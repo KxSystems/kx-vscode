@@ -28,3 +28,7 @@ export function unusedParam(tokens: Token[]): Token[] {
 export function unusedVar(tokens: Token[]): Token[] {
   return [];
 }
+
+export function declaredAfterUse(tokens: Token[]): Token[] {
+  return [];
+}

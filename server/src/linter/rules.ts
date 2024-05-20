@@ -44,6 +44,7 @@ const DeclaredAfterUse: LinterRule = {
   code: "DECLARED_AFTER_USE",
   message: "The variable was declared after being used",
   severity: DiagnosticSeverity.Error,
+  check: checks.declaredAfterUse,
 };
 
 const GlobalPeach: LinterRule = {

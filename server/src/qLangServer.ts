@@ -49,8 +49,8 @@ import {
   parse,
   identifier,
   tokenId,
-  LCurly,
   assigned,
+  isLambda,
 } from "./parser";
 import { lint } from "./linter";
 
@@ -235,11 +235,9 @@ function positionToToken(tokens: Token[], position: Position) {
 function createSymbol(token: Token, tokens: Token[]): DocumentSymbol {
   const range = rangeFromToken(token);
   return DocumentSymbol.create(
-    identifier(token),
+    identifier(token).trim(),
     (isAmend(token) && "Amend") || undefined,
-    assigned(token)?.tokenType === LCurly
-      ? SymbolKind.Object
-      : SymbolKind.Variable,
+    isLambda(assigned(token)) ? SymbolKind.Object : SymbolKind.Variable,
     range,
     range,
     tokens

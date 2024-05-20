@@ -12,28 +12,38 @@
  */
 
 import { IToken, TokenType } from "chevrotain";
-import { DoubleColon, LBracket, LCurly, LParen } from "./tokens";
-import { Identifier, LSql } from "./keywords";
+import {
+  DoubleColon,
+  LBracket,
+  LCurly,
+  LParen,
+  TestBlock,
+  TestLambdaBlock,
+} from "./tokens";
+import { LSql } from "./keywords";
+import { TestBegin } from "./ranges";
 
 export const enum SyntaxError {
   InvalidEscape,
 }
 
 export interface Token extends IToken {
+  index?: number;
   order?: number;
+  namespace?: string;
   scope?: Token;
   tangled?: Token;
-  namespace?: string;
   assignment?: Token[];
-  apply?: boolean;
   error?: SyntaxError;
 }
 
-function inScope(token: Token, scopeType: TokenType): Token | undefined {
+function inScope(token: Token, ...scopeType: TokenType[]): Token | undefined {
   let scope;
   while ((scope = token.scope)) {
-    if (scope.tokenType === scopeType) {
-      return scope;
+    for (const type of scopeType) {
+      if (scope.tokenType === type) {
+        return scope;
+      }
     }
     token = scope;
   }
@@ -49,7 +59,7 @@ export function inBracket(token: Token) {
 }
 
 export function inLambda(token: Token) {
-  return inScope(token, LCurly);
+  return inScope(token, LCurly, TestBegin, TestBlock, TestLambdaBlock);
 }
 
 export function inSql(token: Token) {
@@ -68,9 +78,6 @@ export function inParam(token: Token) {
 }
 
 export function identifier(token: Token) {
-  if (token.tokenType !== Identifier) {
-    return "";
-  }
   if (token.image.startsWith(".")) {
     return token.image;
   }
@@ -81,6 +88,16 @@ export function identifier(token: Token) {
     return `.${token.namespace}.${token.image}`;
   }
   return token.image;
+}
+
+export function isLambda(token?: Token) {
+  return (
+    token &&
+    (token.tokenType === LCurly ||
+      token.tokenType === TestBegin ||
+      token.tokenType === TestBlock ||
+      token.tokenType === TestLambdaBlock)
+  );
 }
 
 export function isAmend(token: Token) {
