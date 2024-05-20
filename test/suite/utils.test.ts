@@ -111,49 +111,6 @@ describe("Utils", () => {
         getConfigurationStub.restore();
       });
 
-      describe("server alias", () => {
-        beforeEach(() => {
-          ext.kdbConnectionAliasList.length = 0;
-        });
-
-        afterEach(() => {
-          ext.kdbConnectionAliasList.length = 0;
-        });
-
-        it("should add insights alias to the list getInsightsAlias", () => {
-          const insightsDetail: InsightDetails = {
-            alias: "test",
-            server: "test",
-            auth: true,
-          };
-          coreUtils.getInsightsAlias([insightsDetail]);
-          assert.strictEqual(ext.kdbConnectionAliasList.length, 1);
-        });
-
-        it("should add alias only from kdb server that have alias using getServerAlias", () => {
-          const serverList: ServerDetails[] = [
-            {
-              serverName: "test",
-              serverAlias: "test",
-              serverPort: "5001",
-              managed: false,
-              auth: false,
-              tls: false,
-            },
-            {
-              serverName: "test2",
-              serverAlias: undefined,
-              serverPort: "5001",
-              managed: false,
-              auth: false,
-              tls: false,
-            },
-          ];
-          coreUtils.getServerAlias(serverList);
-          assert.strictEqual(ext.kdbConnectionAliasList.length, 1);
-        });
-      });
-
       it("should update configuration and set hideDetailedConsoleQueryOutput to true when setting is undefined", async () => {
         getConfigurationStub.returns({
           get: sinon.stub().returns(undefined),
@@ -176,6 +133,127 @@ describe("Utils", () => {
 
         sinon.assert.calledOnce(getConfigurationStub);
         assert.strictEqual(ext.hideDetailedConsoleQueryOutput, false);
+      });
+    });
+
+    describe("getNetworkChangesWatcher", () => {
+      let getConfigurationStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        getConfigurationStub = sinon.stub(
+          vscode.workspace,
+          "getConfiguration",
+        ) as sinon.SinonStub;
+      });
+
+      afterEach(() => {
+        getConfigurationStub.restore();
+      });
+
+      it("should update configuration and set getNetworkChangesWatcher to true when setting is undefined", async () => {
+        getConfigurationStub.returns({
+          get: sinon.stub().returns(undefined),
+          update: sinon.stub(),
+        });
+
+        await coreUtils.getNetworkChangesWatcher();
+
+        sinon.assert.calledTwice(getConfigurationStub);
+        assert.strictEqual(ext.networkChangesWatcher, true);
+      });
+
+      it("should set getNetworkChangesWatcher to setting when setting is defined", async () => {
+        getConfigurationStub.returns({
+          get: sinon.stub().returns(false),
+          update: sinon.stub(),
+        });
+
+        await coreUtils.getNetworkChangesWatcher();
+
+        sinon.assert.calledOnce(getConfigurationStub);
+        assert.strictEqual(ext.networkChangesWatcher, false);
+      });
+    });
+
+    describe("getInsightsHydrate", () => {
+      let getConfigurationStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        getConfigurationStub = sinon.stub(
+          vscode.workspace,
+          "getConfiguration",
+        ) as sinon.SinonStub;
+      });
+
+      afterEach(() => {
+        getConfigurationStub.restore();
+      });
+
+      it("should update configuration and set getInsightsHydrate to true when setting is undefined", async () => {
+        getConfigurationStub.returns({
+          get: sinon.stub().returns(undefined),
+          update: sinon.stub(),
+        });
+
+        await coreUtils.getInsightsHydrate();
+
+        sinon.assert.calledTwice(getConfigurationStub);
+        assert.strictEqual(ext.insightsHydrate, true);
+      });
+
+      it("should set getInsightsHydrate to setting when setting is defined", async () => {
+        getConfigurationStub.returns({
+          get: sinon.stub().returns(false),
+          update: sinon.stub(),
+        });
+
+        await coreUtils.getInsightsHydrate();
+
+        sinon.assert.calledOnce(getConfigurationStub);
+        assert.strictEqual(ext.insightsHydrate, false);
+      });
+    });
+
+    describe("server alias", () => {
+      beforeEach(() => {
+        ext.kdbConnectionAliasList.length = 0;
+      });
+
+      afterEach(() => {
+        ext.kdbConnectionAliasList.length = 0;
+      });
+
+      it("should add insights alias to the list getInsightsAlias", () => {
+        const insightsDetail: InsightDetails = {
+          alias: "test",
+          server: "test",
+          auth: true,
+        };
+        coreUtils.getInsightsAlias([insightsDetail]);
+        assert.strictEqual(ext.kdbConnectionAliasList.length, 1);
+      });
+
+      it("should add alias only from kdb server that have alias using getServerAlias", () => {
+        const serverList: ServerDetails[] = [
+          {
+            serverName: "test",
+            serverAlias: "test",
+            serverPort: "5001",
+            managed: false,
+            auth: false,
+            tls: false,
+          },
+          {
+            serverName: "test2",
+            serverAlias: undefined,
+            serverPort: "5001",
+            managed: false,
+            auth: false,
+            tls: false,
+          },
+        ];
+        coreUtils.getServerAlias(serverList);
+        assert.strictEqual(ext.kdbConnectionAliasList.length, 1);
       });
     });
 
