@@ -50,7 +50,7 @@ import {
   assigned,
   lambda,
   assignable,
-  isQualified,
+  qualified,
 } from "./parser";
 import { lint } from "./linter";
 
@@ -173,7 +173,7 @@ export default class QLangServer {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
     const edits = findIdentifiers(FindKind.Rename, tokens, source).map(
-      (token) => renameToken(token, newName),
+      (token) => createTextEdit(token, newName),
     );
     return edits.length === 0
       ? null
@@ -190,11 +190,8 @@ export default class QLangServer {
   }: CompletionParams): CompletionItem[] {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
-    return findIdentifiers(FindKind.Completion, tokens, source).map(
-      (token) => ({
-        label: identifier(token),
-        kind: CompletionItemKind.Variable,
-      }),
+    return findIdentifiers(FindKind.Completion, tokens, source).map((token) =>
+      createCompletionItem(token, source),
     );
   }
 
@@ -228,10 +225,34 @@ function positionToToken(tokens: Token[], position: Position) {
   });
 }
 
-function renameToken(token: Token, newName: string) {
-  // TODO ECMEL
-  if (!isQualified(newName)) {
-    if (isQualified(token.image)) {
+function createCompletionItem(token: Token, source: Token | undefined) {
+  return {
+    label: token.image,
+    insertText:
+      token.namespace === source?.namespace || qualified(token)
+        ? token.image
+        : identifier(token),
+    labelDetails: {
+      detail: ` ${identifier(token)}`,
+    },
+    kind: lambda(assigned(token))
+      ? CompletionItemKind.Function
+      : CompletionItemKind.Variable,
+  };
+}
+
+function createTextEdit(token: Token, newName: string) {
+  if (newName.startsWith(".")) {
+    const [_dot, namespace, image] = newName.split(/\.+/g, 3);
+    if (image && !qualified(token) && token.namespace === namespace) {
+      newName = image;
+    }
+  } else {
+    if (qualified(token)) {
+      const [_dot, namespace, image] = token.image.split(/\.+/g, 3);
+      if (image) {
+        newName = `.${namespace}.${newName}`;
+      }
     }
   }
   return TextEdit.replace(rangeFromToken(token), newName);

@@ -77,12 +77,12 @@ export function inParam(token: Token) {
   return lambda && bracket && lambda.tangled === bracket;
 }
 
-export function isQualified(image: string) {
-  return image.startsWith(".");
+export function qualified(token: Token) {
+  return token.image.startsWith(".");
 }
 
 export function identifier(token: Token) {
-  return isQualified(token.image)
+  return qualified(token)
     ? token.image
     : token.namespace
       ? `.${token.namespace}.${token.image}`
@@ -103,15 +103,21 @@ export function amended(token: Token) {
   return token.assignment && token.assignment[0].tokenType === DoubleColon;
 }
 
-export function local(target: Token, tokens: Token[]) {
+export function local(token: Token, tokens: Token[]) {
+  const scope = inLambda(token);
+  if (scope && !scope.tangled) {
+    if (token.image === "x" || token.image === "y" || token.image === "z") {
+      return true;
+    }
+  }
   return tokens.find(
     (token) =>
       assigned(token) &&
       assignable(token) &&
       !amended(token) &&
-      inLambda(target) &&
-      inLambda(target) === inLambda(token) &&
-      identifier(token) === identifier(target),
+      inLambda(token) &&
+      inLambda(token) === inLambda(token) &&
+      identifier(token) === identifier(token),
   );
 }
 
@@ -195,7 +201,9 @@ export function findIdentifiers(
           );
       result.forEach((token) => {
         const found = completions.find(
-          (target) => identifier(target) === identifier(token),
+          (target) =>
+            target.image === token.image &&
+            target.namespace === token.namespace,
         );
         if (!found) {
           completions.push(token);
