@@ -170,6 +170,16 @@
           "description": "Hide detailed console query output",
           "default": true
         },
+        "kdb.networkChangesWatcher": {
+          "type": "boolean",
+          "description": "Watch for network changes, if changes are detected, check if the Insights connection is still valid",
+          "default": true
+        },
+        "kdb.insightsHydrate": {
+          "type": "boolean",
+          "description": "Hydrate the insights connection every 1 minute to keep it alive",
+          "default": true
+        },
         "kdb.qHomeDirectory": {
           "type": "string",
           "description": "QHOME directory for q runtime"

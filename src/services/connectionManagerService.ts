@@ -22,6 +22,8 @@ import { sanitizeQuery } from "../utils/queryUtils";
 import {
   getHash,
   getInsights,
+  getInsightsHydrate,
+  getNetworkChangesWatcher,
   getServerName,
   getServers,
   removeLocalConnectionContext,
@@ -121,6 +123,7 @@ export class ConnectionManagementService {
       refreshDataSourcesPanel();
     }
     if (ext.connectedConnectionList.length === 1) {
+      getNetworkChangesWatcher();
       this.startMonitoringNetworkConn();
       this.rehidrateInsightsConnections();
     }
@@ -341,10 +344,12 @@ export class ConnectionManagementService {
       }
     });
     await Promise.all(checks);
-    if (whoTriggered === "networkMonitoring") {
-      this.startMonitoringNetworkConn();
-    } else {
-      this.rehidrateInsightsConnections();
+    if (ext.connectedConnectionList.length > 0) {
+      if (whoTriggered === "networkMonitoring") {
+        this.startMonitoringNetworkConn();
+      } else {
+        this.rehidrateInsightsConnections();
+      }
     }
   }
 
@@ -357,9 +362,12 @@ export class ConnectionManagementService {
         JSON.stringify(previousNetworkState) !==
         JSON.stringify(currentNetworkState)
       ) {
-        clearInterval(intervalId);
-        previousNetworkState = currentNetworkState;
-        this.checkInsightsConnectionIsAlive("networkMonitoring");
+        getNetworkChangesWatcher();
+        if (ext.networkChangesWatcher) {
+          clearInterval(intervalId);
+          previousNetworkState = currentNetworkState;
+          this.checkInsightsConnectionIsAlive("networkMonitoring");
+        }
       }
       if (ext.connectedConnectionList.length === 0) {
         clearInterval(intervalId);
@@ -370,12 +378,15 @@ export class ConnectionManagementService {
   /* istanbul ignore next */
   public async rehidrateInsightsConnections(): Promise<void> {
     const intervalConns = setInterval(() => {
-      if (ext.connectedConnectionList.length > 0) {
-        clearInterval(intervalConns);
-        this.checkInsightsConnectionIsAlive("rehidrateConnections");
-      } else {
-        clearInterval(intervalConns);
+      getInsightsHydrate();
+      if (ext.insightsHydrate) {
+        if (ext.connectedConnectionList.length > 0) {
+          clearInterval(intervalConns);
+          this.checkInsightsConnectionIsAlive("rehidrateConnections");
+        } else {
+          clearInterval(intervalConns);
+        }
       }
-    }, 120000);
+    }, 60000);
   }
 }
