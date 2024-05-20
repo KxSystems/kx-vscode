@@ -43,12 +43,12 @@ import {
   Token,
   findIdentifiers,
   inLambda,
-  isAmend,
+  amended,
   parse,
   identifier,
   tokenId,
   assigned,
-  isLambda,
+  lambda,
   assignable,
 } from "./parser";
 import { lint } from "./linter";
@@ -231,15 +231,15 @@ function createSymbol(token: Token, tokens: Token[]): DocumentSymbol {
   const range = rangeFromToken(token);
   return DocumentSymbol.create(
     identifier(token).trim(),
-    (isAmend(token) && "Amend") || undefined,
-    isLambda(assigned(token)) ? SymbolKind.Object : SymbolKind.Variable,
+    (amended(token) && "Amend") || undefined,
+    lambda(assigned(token)) ? SymbolKind.Object : SymbolKind.Variable,
     range,
     range,
     tokens
       .filter(
         (child) =>
-          assignable(child) &&
           assigned(child) &&
+          assignable(child) &&
           inLambda(child) === assigned(token),
       )
       .map((child) => createSymbol(child, tokens)),

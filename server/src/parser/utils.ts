@@ -85,7 +85,7 @@ export function identifier(token: Token) {
       : token.image;
 }
 
-export function isLambda(token?: Token) {
+export function lambda(token?: Token) {
   return (
     token &&
     (token.tokenType === LCurly ||
@@ -95,15 +95,16 @@ export function isLambda(token?: Token) {
   );
 }
 
-export function isAmend(token: Token) {
+export function amended(token: Token) {
   return token.assignment && token.assignment[0].tokenType === DoubleColon;
 }
 
-export function isLocal(target: Token, tokens: Token[]) {
+export function local(target: Token, tokens: Token[]) {
   return tokens.find(
     (token) =>
       assigned(token) &&
       assignable(token) &&
+      !amended(token) &&
       inLambda(target) &&
       inLambda(target) === inLambda(token) &&
       identifier(token) === identifier(target),
@@ -144,7 +145,7 @@ export function findIdentifiers(
   switch (kind) {
     case FindKind.Rename:
     case FindKind.Reference:
-      return isLocal(source, tokens)
+      return local(source, tokens)
         ? tokens.filter(
             (token) =>
               assignable(token) &&
@@ -155,12 +156,47 @@ export function findIdentifiers(
             (token) =>
               assignable(token) &&
               identifier(token) === identifier(source) &&
-              !isLocal(token, tokens),
+              !local(token, tokens),
           );
     case FindKind.Definition:
-      return [];
+      return local(source, tokens)
+        ? tokens.filter(
+            (token) =>
+              assigned(token) &&
+              assignable(token) &&
+              identifier(token) === identifier(source) &&
+              inLambda(token) === inLambda(source),
+          )
+        : tokens.filter(
+            (token) =>
+              assigned(token) &&
+              assignable(token) &&
+              identifier(token) === identifier(source) &&
+              !local(token, tokens),
+          );
     case FindKind.Completion:
       const completions: Token[] = [];
+      const result = inLambda(source)
+        ? tokens.filter(
+            (token) =>
+              assignable(token) &&
+              assigned(token) &&
+              (!inLambda(token) || inLambda(token) === inLambda(source)),
+          )
+        : tokens.filter(
+            (token) =>
+              assignable(token) &&
+              assigned(token) &&
+              (amended(token) || !inLambda(token)),
+          );
+      result.forEach((token) => {
+        const found = completions.find(
+          (target) => identifier(target) === identifier(token),
+        );
+        if (!found) {
+          completions.push(token);
+        }
+      });
       return completions;
   }
 }
