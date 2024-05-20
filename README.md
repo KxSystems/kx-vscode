@@ -290,7 +290,7 @@ In addition to [API queries](https://code.kx.com/insights/api/database/query/get
 
 #### Populate scratchpad
 
-You can use a data source to populate a scratchpad process running in a kdb Insights Enterprise instance with a dataset, allowing you to execute q or python code against the data stored in a variable in the scratchpad. This facilitates the generation of complex APIs and pipelines within VS Code and kdb Insights Enterprise.
+You can use a data source to populate a scratchpad process running in a kdb Insights Enterprise instance with a dataset, allowing you to execute q or python code against the data stored in that variable in the scratchpad. This facilitates the generation of complex APIs and pipelines within VS Code and kdb Insights Enterprise.
 
 To do this:
 
@@ -331,7 +331,7 @@ To run the code in the workbook file:
 
   1. Right click and choose 'KX: Execute Entire File' or 'KX: Execute Current Selection' from the menu.
 
-1. If you have not yet chosen a connection to associated with the workbook you will be asked to choose a connection before the code is executed.
+1. If you have not yet chosen a connection to associate with the workbook you will be asked to choose a connection before the code is executed.
       ![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookconnectionlink.png)
 
 
