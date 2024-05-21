@@ -15,6 +15,7 @@ import { DataSourceFiles, DataSourceTypes } from "./dataSource";
 import { ServerType } from "./server";
 
 export interface QueryHistory {
+  executorName: string;
   connectionName: string;
   connectionType: ServerType;
   query: string | DataSourceFiles;
@@ -23,5 +24,6 @@ export interface QueryHistory {
   language?: string;
   isDatasource?: boolean;
   datasourceType?: DataSourceTypes;
+  isWorkbook?: boolean;
   duration?: string;
 }

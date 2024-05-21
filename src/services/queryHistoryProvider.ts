@@ -104,12 +104,22 @@ export class QueryHistoryTreeItem extends TreeItem {
     );
     tooltipMd.appendMarkdown("- Connection Type: **" + connType + "** \n");
     tooltipMd.appendMarkdown("- Time: **" + this.details.time + "** \n");
-    if (typeof this.details.query === "string") {
-      tooltipMd.appendMarkdown("- Query:");
+    if (!this.details.isDatasource && typeof this.details.query === "string") {
+      if (this.details.isWorkbook) {
+        tooltipMd.appendMarkdown(
+          "- Workbook: " + this.details.executorName + " \n",
+        );
+      } else {
+        tooltipMd.appendMarkdown(
+          "- File: " + this.details.executorName + " \n",
+        );
+      }
+      tooltipMd.appendMarkdown("- Query: \n");
       tooltipMd.appendCodeblock(this.details.query, codeType);
     } else {
-      tooltipMd.appendMarkdown("- Data Source: ");
-      tooltipMd.appendMarkdown("**" + this.details.query.name + "**  \n");
+      tooltipMd.appendMarkdown(
+        "- Data Source: **" + this.details.executorName + "**  \n",
+      );
       tooltipMd.appendMarkdown(
         "- Data Source Type: **" + this.details.datasourceType + "** \n",
       );
@@ -122,15 +132,3 @@ export class QueryHistoryTreeItem extends TreeItem {
     return tooltipMd;
   }
 }
-
-// export class QueryHistoryNode extends TreeItem {
-//   constructor(public readonly details: QueryHistory) {
-//     super(path.basename(resourceUri.fsPath));
-//     this.iconPath = new ThemeIcon("circuit-board");
-//     this.command = {
-//       command: "kdb.queryHistory.rerun",
-//       title: "Rerun Query",
-//       arguments: [resourceUri],
-//     };
-//   }
-// }
