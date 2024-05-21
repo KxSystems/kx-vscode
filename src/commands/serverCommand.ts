@@ -300,8 +300,6 @@ export async function connect(viewItem: KdbNode | InsightsNode): Promise<void> {
 export function activeConnection(viewItem: KdbNode | InsightsNode): void {
   const connMngService = new ConnectionManagementService();
   connMngService.setActiveConnection(viewItem);
-  refreshDataSourcesPanel();
-  ext.serverProvider.reload();
 }
 
 export async function resetScratchPad(): Promise<void> {
