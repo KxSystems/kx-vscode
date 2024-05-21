@@ -148,7 +148,7 @@ function expression(state: State, tokens: Token[]) {
         break;
       case RBracket:
         top = token.scope?.tangled;
-        if (!top || top.tokenType === Control) {
+        if (!top || top.tokenType === Control || top.tokenType === SemiColon) {
           tokens.push(token);
           block(state, tokens);
         } else {
@@ -219,11 +219,11 @@ export function parse(text: string): Token[] {
         break;
       case Command:
         {
-          const [cmd, arg] = token.image.split(/\s+/, 2);
+          const [cmd, arg] = token.image.split(/[ \t]+/, 2);
           switch (cmd) {
             case "\\d":
               if (arg) {
-                namespace = arg.split(/\.+/, 2)[1] || "";
+                namespace = (arg.startsWith(".") && arg.split(".", 2)[1]) || "";
               }
               break;
           }

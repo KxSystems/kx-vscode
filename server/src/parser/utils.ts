@@ -77,31 +77,23 @@ export function inParam(token: Token) {
   return lambda && bracket && lambda.tangled === bracket;
 }
 
-export function namespace(token: Token) {
-  const parts = identifier(token).split(".", 3);
-  return (parts.length === 3 && parts[1]) || "";
-}
-
-export function qualified(token: Token) {
-  if (token.image.startsWith(".")) {
-    const parts = token.image.split(".", 3);
-    return parts.length === 3 && !!parts[1];
-  }
-  return false;
-}
-
 export function identifier(token: Token) {
-  return qualified(token)
+  return token.image.startsWith(".")
     ? token.image
     : token.namespace
       ? `.${token.namespace}.${token.image}`
       : token.image;
 }
 
+export function namespace(token: Token) {
+  const id = identifier(token);
+  return (id.startsWith(".") && id.split(".", 3)[1]) || "";
+}
+
 export function relative(token: Token, source: Token | undefined) {
   return source?.namespace
-    ? identifier(token).replace(`.${source.namespace}.`, "")
-    : token.image;
+    ? identifier(token).replace(new RegExp(`^\\.${source.namespace}\\.`), "")
+    : identifier(token);
 }
 
 export function lambda(token?: Token) {
@@ -215,12 +207,9 @@ export function findIdentifiers(
               (amended(token) || !inLambda(token)),
           );
       result.forEach((token) => {
-        const found = completions.find(
+        !completions.find(
           (target) => identifier(token) === identifier(target),
-        );
-        if (!found) {
-          completions.push(token);
-        }
+        ) && completions.push(token);
       });
       return completions;
     }
