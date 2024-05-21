@@ -67,8 +67,8 @@ export function inSql(token: Token) {
 }
 
 export function inTable(token: Token) {
-  const paren = inList(token);
-  return paren && paren.tangled?.tokenType === LBracket;
+  const list = inList(token);
+  return list && list.tangled?.tokenType === LBracket;
 }
 
 export function inParam(token: Token) {

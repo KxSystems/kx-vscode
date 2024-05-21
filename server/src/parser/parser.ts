@@ -186,14 +186,17 @@ export function parse(text: string): Token[] {
 
     switch (token.tokenType) {
       case LBracket:
-      case LParen:
-      case LCurly:
-      case LSql:
         next = peek(cache);
         if (next) {
           next.tangled = token;
           token.tangled = next;
         }
+        scope.push(token);
+        cache.push(token);
+        break;
+      case LParen:
+      case LCurly:
+      case LSql:
         scope.push(token);
         cache.push(token);
         break;

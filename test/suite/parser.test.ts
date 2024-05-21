@@ -54,4 +54,19 @@ describe("TSQLint", () => {
     assert.strictEqual(result.length, 1);
     assert.strictEqual(result[0].code, "DECLARED_AFTER_USE");
   });
+  it("should not lint declaredAfterUse", () => {
+    const text = "a:1;a;a:1";
+    const result = lint(parse(text));
+    assert.strictEqual(result.length, 0);
+  });
+  it("should not lint declaredAfterUse", () => {
+    const text = "a;{a:1;a}";
+    const result = lint(parse(text));
+    assert.strictEqual(result.length, 0);
+  });
+  it("should not lint declaredAfterUse", () => {
+    const text = "[1=1;[a:1;b:1];[a;b]]";
+    const result = lint(parse(text));
+    assert.strictEqual(result.length, 0);
+  });
 });

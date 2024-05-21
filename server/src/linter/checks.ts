@@ -67,6 +67,14 @@ export function unusedVar(tokens: Token[]): Token[] {
 export function declaredAfterUse(tokens: Token[]): Token[] {
   return tokens
     .filter((token) => !inParam(token) && assigned(token) && assignable(token))
+    .sort((a, b) =>
+      identifier(a) < identifier(b)
+        ? -1
+        : identifier(a) > identifier(b)
+          ? 1
+          : (a.order || 0) - (b.order || 0),
+    )
+    .filter((e, i, a) => !a[i - 1] || identifier(e) !== identifier(a[i - 1]))
     .filter((token) =>
       tokens.find(
         (target) =>
