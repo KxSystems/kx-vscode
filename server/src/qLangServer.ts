@@ -225,16 +225,26 @@ function positionToToken(tokens: Token[], position: Position) {
   });
 }
 
+function relative(token: Token, namespace: string | undefined) {
+  if (qualified(token)) {
+    const [_dot, target, image] = token.image.split(/\./g, 3);
+    if (image && target === namespace) {
+      return image;
+    }
+  }
+  if (token.namespace === namespace) {
+    return token.image;
+  }
+  return identifier(token);
+}
+
 function createCompletionItem(token: Token, source: Token | undefined) {
   return {
     label: token.image,
-    insertText:
-      token.namespace === source?.namespace || qualified(token)
-        ? token.image
-        : identifier(token),
     labelDetails: {
       detail: ` ${identifier(token)}`,
     },
+    insertText: relative(token, source?.namespace),
     kind: lambda(assigned(token))
       ? CompletionItemKind.Function
       : CompletionItemKind.Variable,
@@ -242,14 +252,9 @@ function createCompletionItem(token: Token, source: Token | undefined) {
 }
 
 function createTextEdit(token: Token, newName: string) {
-  if (newName.startsWith(".")) {
-    const [_dot, namespace, image] = newName.split(/\.+/g, 3);
-    if (image && !qualified(token) && token.namespace === namespace) {
-      newName = image;
-    }
-  } else {
+  if (!newName.startsWith(".")) {
     if (qualified(token)) {
-      const [_dot, namespace, image] = token.image.split(/\.+/g, 3);
+      const [_dot, namespace, image] = token.image.split(/\./g, 3);
       if (image) {
         newName = `.${namespace}.${newName}`;
       }
