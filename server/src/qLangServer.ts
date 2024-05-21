@@ -51,6 +51,7 @@ import {
   lambda,
   assignable,
   qualified,
+  inParam,
 } from "./parser";
 import { lint } from "./linter";
 
@@ -266,9 +267,16 @@ function createTextEdit(token: Token, newName: string) {
 function createSymbol(token: Token, tokens: Token[]): DocumentSymbol {
   const range = rangeFromToken(token);
   return DocumentSymbol.create(
-    identifier(token).trim(),
+    (inLambda(token) && !amended(token)
+      ? token.image
+      : identifier(token)
+    ).trim(),
     (amended(token) && "Amend") || undefined,
-    lambda(assigned(token)) ? SymbolKind.Object : SymbolKind.Variable,
+    lambda(assigned(token))
+      ? SymbolKind.Object
+      : inParam(token)
+        ? SymbolKind.Array
+        : SymbolKind.Variable,
     range,
     range,
     tokens
