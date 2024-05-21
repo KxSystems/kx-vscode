@@ -77,8 +77,17 @@ export function inParam(token: Token) {
   return lambda && bracket && lambda.tangled === bracket;
 }
 
+export function namespace(token: Token) {
+  const parts = identifier(token).split(".", 3);
+  return (parts.length === 3 && parts[1]) || "";
+}
+
 export function qualified(token: Token) {
-  return token.image.startsWith(".");
+  if (token.image.startsWith(".")) {
+    const parts = token.image.split(".", 3);
+    return parts.length === 3 && !!parts[1];
+  }
+  return false;
 }
 
 export function identifier(token: Token) {
@@ -87,6 +96,12 @@ export function identifier(token: Token) {
     : token.namespace
       ? `.${token.namespace}.${token.image}`
       : token.image;
+}
+
+export function relative(token: Token, source: Token | undefined) {
+  return source?.namespace
+    ? identifier(token).replace(`.${source.namespace}.`, "")
+    : token.image;
 }
 
 export function lambda(token?: Token) {
@@ -201,9 +216,7 @@ export function findIdentifiers(
           );
       result.forEach((token) => {
         const found = completions.find(
-          (target) =>
-            target.image === token.image &&
-            target.namespace === token.namespace,
+          (target) => identifier(token) === identifier(target),
         );
         if (!found) {
           completions.push(token);

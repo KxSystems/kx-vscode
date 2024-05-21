@@ -50,8 +50,9 @@ import {
   assigned,
   lambda,
   assignable,
-  qualified,
   inParam,
+  namespace,
+  relative,
 } from "./parser";
 import { lint } from "./linter";
 
@@ -173,16 +174,22 @@ export default class QLangServer {
   }: RenameParams): WorkspaceEdit | null {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
-    const edits = findIdentifiers(FindKind.Rename, tokens, source).map(
-      (token) => createTextEdit(token, newName),
-    );
-    return edits.length === 0
-      ? null
-      : {
-          changes: {
-            [textDocument.uri]: edits,
-          },
-        };
+    const refs = findIdentifiers(FindKind.Rename, tokens, source);
+    if (refs.length === 0) {
+      return null;
+    }
+    const name = <Token>{
+      image: newName,
+      namespace: source?.namespace,
+    };
+    const edits = refs.map((token) => {
+      return TextEdit.replace(rangeFromToken(token), relative(name, token));
+    });
+    return {
+      changes: {
+        [textDocument.uri]: edits,
+      },
+    };
   }
 
   public onCompletion({
@@ -191,9 +198,18 @@ export default class QLangServer {
   }: CompletionParams): CompletionItem[] {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
-    return findIdentifiers(FindKind.Completion, tokens, source).map((token) =>
-      createCompletionItem(token, source),
-    );
+    return findIdentifiers(FindKind.Completion, tokens, source).map((token) => {
+      return {
+        label: token.image,
+        labelDetails: {
+          detail: ` .${namespace(token)}`,
+        },
+        insertText: relative(token, source),
+        kind: lambda(assigned(token))
+          ? CompletionItemKind.Function
+          : CompletionItemKind.Variable,
+      };
+    });
   }
 
   private parse(textDocument: TextDocumentIdentifier): Token[] {
@@ -224,44 +240,6 @@ function positionToToken(tokens: Token[], position: Position) {
       end.character >= position.character
     );
   });
-}
-
-function relative(token: Token, namespace: string | undefined) {
-  if (qualified(token)) {
-    const [_dot, target, image] = token.image.split(/\./g, 3);
-    if (image && target === namespace) {
-      return image;
-    }
-  }
-  if (token.namespace === namespace) {
-    return token.image;
-  }
-  return identifier(token);
-}
-
-function createCompletionItem(token: Token, source: Token | undefined) {
-  return {
-    label: token.image,
-    labelDetails: {
-      detail: ` ${identifier(token)}`,
-    },
-    insertText: relative(token, source?.namespace),
-    kind: lambda(assigned(token))
-      ? CompletionItemKind.Function
-      : CompletionItemKind.Variable,
-  };
-}
-
-function createTextEdit(token: Token, newName: string) {
-  if (!newName.startsWith(".")) {
-    if (qualified(token)) {
-      const [_dot, namespace, image] = token.image.split(/\./g, 3);
-      if (image) {
-        newName = `.${namespace}.${newName}`;
-      }
-    }
-  }
-  return TextEdit.replace(rangeFromToken(token), newName);
 }
 
 function createSymbol(token: Token, tokens: Token[]): DocumentSymbol {
