@@ -7,8 +7,5 @@
   },
   "[xml]": {
     "editor.defaultFormatter": "redhat.vscode-xml"
-  },
-  "kdb.connectionMap": {
-    "datasource-1.kdb.json": "UAT2"
   }
 }

@@ -111,13 +111,13 @@ export function local(token: Token, tokens: Token[]) {
     }
   }
   return tokens.find(
-    (token) =>
-      assigned(token) &&
-      assignable(token) &&
-      !amended(token) &&
-      inLambda(token) &&
-      inLambda(token) === inLambda(token) &&
-      identifier(token) === identifier(token),
+    (target) =>
+      assigned(target) &&
+      assignable(target) &&
+      !amended(target) &&
+      inLambda(target) &&
+      inLambda(target) === inLambda(token) &&
+      identifier(target) === identifier(token),
   );
 }
 
@@ -184,7 +184,7 @@ export function findIdentifiers(
               identifier(token) === identifier(source) &&
               !local(token, tokens),
           );
-    case FindKind.Completion:
+    case FindKind.Completion: {
       const completions: Token[] = [];
       const result = inLambda(source)
         ? tokens.filter(
@@ -210,5 +210,6 @@ export function findIdentifiers(
         }
       });
       return completions;
+    }
   }
 }
