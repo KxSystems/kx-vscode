@@ -324,6 +324,7 @@ export async function activate(context: ExtensionContext) {
             uri,
             DataSourceEditorProvider.viewType,
           );
+          await commands.executeCommand("workbench.action.files.save", uri);
         }
       },
     ),
@@ -336,6 +337,7 @@ export async function activate(context: ExtensionContext) {
         const uri = await addWorkspaceFile(item, "workbook", ".kdb.q");
         if (uri) {
           await window.showTextDocument(uri);
+          await commands.executeCommand("workbench.action.files.save", uri);
         }
       },
     ),
@@ -345,6 +347,7 @@ export async function activate(context: ExtensionContext) {
         const uri = await addWorkspaceFile(item, "workbook", ".kdb.py");
         if (uri) {
           await window.showTextDocument(uri);
+          await commands.executeCommand("workbench.action.files.save", uri);
         }
       },
     ),

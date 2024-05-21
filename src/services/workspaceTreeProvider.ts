@@ -133,6 +133,7 @@ export async function addWorkspaceFile(
   item: FileTreeItem,
   name: string,
   ext: string,
+  directory = ".kx",
 ) {
   const folders = workspace.workspaceFolders;
   if (folders) {
@@ -143,7 +144,9 @@ export async function addWorkspaceFile(
     if (folder) {
       let i = 1;
       while (true) {
-        const files = await workspace.findFiles(`${name}-${i}${ext}`);
+        const files = await workspace.findFiles(
+          `${directory}/${name}-${i}${ext}`,
+        );
         if (files.length === 0) {
           break;
         }
@@ -152,11 +155,19 @@ export async function addWorkspaceFile(
           throw new Error("No available file name found");
         }
       }
-      const uri = Uri.joinPath(folder.uri, `${name}-${i}${ext}`).with({
+
+      const uri = Uri.joinPath(
+        folder.uri,
+        directory,
+        `${name}-${i}${ext}`,
+      ).with({
         scheme: "untitled",
       });
+
       await workspace.openTextDocument(uri);
       return uri;
     }
+  } else {
+    throw new Error("No workspace has been opened");
   }
 }
