@@ -14,7 +14,6 @@
 import { OutputChannel, commands, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { ServerType } from "../models/server";
-import { KdbNode } from "../services/kdbTreeProvider";
 import {
   getHideDetailedConsoleQueryOutput,
   setOutputWordWrapper,
@@ -56,7 +55,7 @@ export class ExecutionConsole {
 
   public checkOutput(
     output: string | string[],
-    query: string,
+    _query: string,
   ): string | string[] {
     if (output.length === 0) {
       return "No results found.";
@@ -78,8 +77,10 @@ export class ExecutionConsole {
   public append(
     output: string | string[],
     query = "",
-    serverName: string,
-    dataSourceType?: string,
+    executorName: string,
+    connLabel: string,
+    isInsights?: boolean,
+    type?: string,
     isPhython?: boolean,
     duration?: string,
   ): void {
@@ -87,24 +88,22 @@ export class ExecutionConsole {
     const hideDetails = ext.hideDetailedConsoleQueryOutput;
     output = this.checkOutput(output, query);
     let dataSourceRes: string[] = [];
-    if (dataSourceType === undefined) {
+    if (type === undefined) {
       this._console.show(true);
     } else {
       if (Array.isArray(output)) {
         dataSourceRes = convertRowsToConsole(output);
       }
     }
-    const connectionType: ServerType =
-      ext.connectionNode instanceof KdbNode
-        ? ServerType.KDB
-        : ServerType.INSIGHTS;
-    if (!checkIfIsDatasource(dataSourceType)) {
+    if (!checkIfIsDatasource(type)) {
       addQueryHistory(
         query,
-        serverName,
-        connectionType,
+        executorName,
+        connLabel,
+        isInsights ? ServerType.INSIGHTS : ServerType.KDB,
         true,
         isPhython,
+        type === "WORKBOOK",
         undefined,
         undefined,
         duration,
@@ -115,11 +114,11 @@ export class ExecutionConsole {
     const date = new Date();
     if (!hideDetails) {
       this._console.appendLine(
-        `>>> ${serverName}  @ ${date.toLocaleTimeString()} <<<`,
+        `>>> ${connLabel}  @ ${date.toLocaleTimeString()} <<<`,
       );
       this.appendQuery(query);
     }
-    if (Array.isArray(output) && dataSourceType === undefined) {
+    if (Array.isArray(output) && type === undefined) {
       this._console.appendLine(output[0]);
       output.forEach((o) => this._console.appendLine(o));
     } else if (dataSourceRes.length > 0) {
@@ -136,8 +135,11 @@ export class ExecutionConsole {
   public appendQueryError(
     query: string,
     result: string,
+    connLabel: string,
+    executorName: string,
     isConnected: boolean,
-    serverName: string,
+    isInsights?: boolean,
+    type?: string,
     isPython?: boolean,
     isDatasource?: boolean,
     duration?: string,
@@ -149,14 +151,10 @@ export class ExecutionConsole {
     const date = new Date();
     if (!hideDetails) {
       this._console.appendLine(
-        `<<< ERROR -  ${serverName}  @ ${date.toLocaleTimeString()} >>>`,
+        `<<< ERROR -  ${connLabel}  @ ${date.toLocaleTimeString()} >>>`,
       );
     }
     if (isConnected) {
-      const connectionType: ServerType =
-        ext.connectionNode instanceof KdbNode
-          ? ServerType.KDB
-          : ServerType.INSIGHTS;
       if (!hideDetails) {
         this._console.appendLine(`ERROR Query executed: ${query}\n`);
         this._console.appendLine(result);
@@ -166,10 +164,12 @@ export class ExecutionConsole {
       if (!isDatasource) {
         addQueryHistory(
           query,
-          serverName,
-          connectionType,
+          executorName,
+          connLabel,
+          isInsights ? ServerType.INSIGHTS : ServerType.KDB,
           false,
           isPython,
+          type === "WORKBOOK",
           undefined,
           undefined,
           duration,
@@ -181,10 +181,12 @@ export class ExecutionConsole {
       commands.executeCommand("kdb.disconnect");
       addQueryHistory(
         query,
+        executorName,
         "No connection",
         ServerType.undefined,
         false,
         isPython,
+        type === "WORKBOOK",
       );
     }
     if (!hideDetails) {

@@ -323,27 +323,45 @@ export async function disconnect(connLabel: string): Promise<void> {
 
 export async function executeQuery(
   query: string,
-  context?: string,
-  isPython?: boolean,
+  connLabel: string,
+  executorName: string,
+  context: string,
+  isPython: boolean,
+  isWorkbook: boolean,
 ): Promise<void> {
   const connMngService = new ConnectionManagementService();
   const queryConsole = ExecutionConsole.start();
-  if (ext.activeConnection === undefined && ext.connectionNode === undefined) {
-    window.showInformationMessage(
-      "Please connect to a KDB instance or Insights Instance to execute a query",
-    );
+  if (connLabel === "") {
+    if (ext.activeConnection === undefined) {
+      window.showInformationMessage(
+        "No active connection founded. Connect to one connection.",
+      );
+      //TODO ADD ERROR TO CONSOLE HERE
+      return undefined;
+    } else {
+      connLabel = ext.activeConnection.connLabel;
+    }
+  }
+  const isConnected = connMngService.isConnected(connLabel);
+  if (!isConnected) {
+    window.showInformationMessage("The selected connection is not connected.");
+    //TODO ADD ERROR TO CONSOLE HERE
     return undefined;
   }
 
+  const selectedConn = connMngService.retrieveConnectedConnection(connLabel);
+  const isInsights = selectedConn instanceof InsightsConnection;
   if (query.length === 0) {
-    const isConnected = ext.activeConnection
-      ? ext.activeConnection.connected
-      : !!ext.activeConnection;
     queryConsole.appendQueryError(
       query,
       "Query is empty",
+      connLabel,
+      executorName,
       isConnected,
-      ext.connectionNode?.label ? ext.connectionNode.label : "",
+      isInsights,
+      isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+      isPython,
+      false,
     );
     return undefined;
   }
@@ -351,6 +369,7 @@ export async function executeQuery(
   const startTime = Date.now();
   const results = await connMngService.executeQuery(
     query,
+    connLabel,
     context,
     isStringfy,
     isPython,
@@ -359,13 +378,39 @@ export async function executeQuery(
   const duration = (endTime - startTime).toString();
 
   // set context for root nodes
-  if (ext.activeConnection instanceof InsightsConnection) {
-    writeScratchpadResult(results, query, duration, isPython);
+  if (selectedConn instanceof InsightsConnection) {
+    writeScratchpadResult(
+      results,
+      query,
+      connLabel,
+      executorName,
+      isPython,
+      isWorkbook,
+      duration,
+    );
   } else {
     if (ext.resultsViewProvider.isVisible()) {
-      writeQueryResultsToView(results, query, undefined, false, duration);
+      writeQueryResultsToView(
+        results,
+        query,
+        connLabel,
+        executorName,
+        isInsights,
+        isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+        isPython,
+        duration,
+      );
     } else {
-      writeQueryResultsToConsole(results, query, undefined, false, duration);
+      writeQueryResultsToConsole(
+        results,
+        query,
+        connLabel,
+        executorName,
+        isInsights,
+        isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+        isPython,
+        duration,
+      );
     }
   }
 }
@@ -418,7 +463,13 @@ export function getConextForRerunQuery(query: string): string {
   return context;
 }
 
-export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
+export function runQuery(
+  type: ExecutionTypes,
+  connLabel: string,
+  executorName: string,
+  isWorkbook: boolean,
+  rerunQuery?: string,
+) {
   const editor = ext.activeTextEditor;
   if (!editor) {
     return false;
@@ -451,7 +502,7 @@ export function runQuery(type: ExecutionTypes, rerunQuery?: string) {
       }
       break;
   }
-  executeQuery(query, context, isPython);
+  executeQuery(query, connLabel, executorName, context, isPython, isWorkbook);
 }
 
 export function rerunQuery(rerunQueryElement: QueryHistory) {
@@ -462,8 +513,11 @@ export function rerunQuery(rerunQueryElement: QueryHistory) {
     const context = getConextForRerunQuery(rerunQueryElement.query);
     executeQuery(
       rerunQueryElement.query,
+      rerunQueryElement.connectionName,
+      rerunQueryElement.executorName,
       context,
       rerunQueryElement.language !== "q",
+      !!rerunQueryElement.isWorkbook,
     );
   } else {
     const dsFile = rerunQueryElement.query as DataSourceFiles;
@@ -503,7 +557,10 @@ export async function loadServerObjects(): Promise<ServerObject[]> {
 export function writeQueryResultsToConsole(
   result: string | string[],
   query: string,
-  dataSourceType?: string,
+  connLabel: string,
+  executorName: string,
+  isInsights: boolean,
+  type?: string,
   isPython?: boolean,
   duration?: string,
 ): void {
@@ -511,27 +568,29 @@ export function writeQueryResultsToConsole(
   const res = Array.isArray(result)
     ? decodeQUTF(result[0])
     : decodeQUTF(result);
-  if (
-    (ext.activeConnection || ext.connectionNode) &&
-    !res.startsWith(queryConstants.error)
-  ) {
+  if (!res.startsWith(queryConstants.error)) {
     queryConsole.append(
       res,
       query,
-      ext.connectionNode?.label ? ext.connectionNode.label : "",
-      dataSourceType,
+      executorName,
+      connLabel,
+      isInsights,
+      type,
       isPython,
       duration,
     );
   } else {
-    if (!checkIfIsDatasource(dataSourceType)) {
+    if (!checkIfIsDatasource(type)) {
       queryConsole.appendQueryError(
         query,
         res.substring(queryConstants.error.length),
-        !!ext.activeConnection,
-        ext.connectionNode?.label ? ext.connectionNode.label : "",
+        connLabel,
+        executorName,
+        true,
+        isInsights,
+        type,
         isPython,
-        undefined,
+        false,
         duration,
       );
     }
@@ -541,22 +600,23 @@ export function writeQueryResultsToConsole(
 export function writeQueryResultsToView(
   result: any,
   query: string,
-  dataSourceType?: string,
+  connLabel: string,
+  executorName: string,
+  isInsights: boolean,
+  type?: string,
   isPython?: boolean,
   duration?: string,
 ): void {
-  commands.executeCommand("kdb.resultsPanel.update", result, dataSourceType);
-  const connectionType: ServerType =
-    ext.connectionNode instanceof KdbNode
-      ? ServerType.KDB
-      : ServerType.INSIGHTS;
-  if (!checkIfIsDatasource(dataSourceType)) {
+  commands.executeCommand("kdb.resultsPanel.update", result, isInsights, type);
+  if (!checkIfIsDatasource(type)) {
     addQueryHistory(
       query,
-      ext.connectionNode?.label ? ext.connectionNode.label : "",
-      connectionType,
+      executorName,
+      connLabel,
+      isInsights ? ServerType.INSIGHTS : ServerType.KDB,
       true,
       isPython,
+      type === "WORKBOOK",
       undefined,
       undefined,
       duration,
@@ -567,8 +627,11 @@ export function writeQueryResultsToView(
 export function writeScratchpadResult(
   result: ScratchpadResult,
   query: string,
+  connLabel: string,
+  executorName: string,
+  isPython: boolean,
+  isWorkbook: boolean,
   duration: string,
-  isPython?: boolean,
 ): void {
   const queryConsole = ExecutionConsole.start();
 
@@ -576,15 +639,24 @@ export function writeScratchpadResult(
     queryConsole.appendQueryError(
       query,
       result.errorMsg,
+      connLabel,
+      executorName,
       true,
-      ext.connectionNode?.label ? ext.connectionNode.label : "",
+      true,
+      isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+      isPython,
+      false,
+      duration,
     );
   } else {
     if (ext.resultsViewProvider.isVisible()) {
       writeQueryResultsToView(
         result.data,
         query,
-        "SCRATCHPAD",
+        connLabel,
+        executorName,
+        true,
+        isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
         isPython,
         duration,
       );
@@ -592,7 +664,10 @@ export function writeScratchpadResult(
       writeQueryResultsToConsole(
         result.data,
         query,
-        undefined,
+        connLabel,
+        executorName,
+        true,
+        isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
         isPython,
         duration,
       );

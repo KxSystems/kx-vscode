@@ -262,26 +262,28 @@ export class ConnectionManagementService {
 
   public async executeQuery(
     command: string,
+    connLabel?: string,
     context?: string,
     stringfy?: boolean,
     isPython?: boolean,
   ): Promise<any> {
-    if (!ext.activeConnection) {
+    let selectedConn;
+    if (connLabel) {
+      selectedConn = this.retrieveConnectedConnection(connLabel);
+    } else {
+      if (!ext.activeConnection) {
+        return;
+      }
+      selectedConn = ext.activeConnection;
+    }
+    if (!selectedConn) {
       return;
     }
     command = sanitizeQuery(command);
-    if (ext.activeConnection instanceof LocalConnection) {
-      return await ext.activeConnection.executeQuery(
-        command,
-        context,
-        stringfy,
-      );
+    if (selectedConn instanceof LocalConnection) {
+      return await selectedConn.executeQuery(command, context, stringfy);
     } else {
-      return await ext.activeConnection.getScratchpadQuery(
-        command,
-        context,
-        isPython,
-      );
+      return await selectedConn.getScratchpadQuery(command, context, isPython);
     }
   }
 
