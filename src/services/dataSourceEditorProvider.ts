@@ -57,7 +57,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
 
   constructor(private readonly context: ExtensionContext) {}
 
-  getMeta(connLabel: string) {
+  async getMeta(connLabel: string) {
     let meta = this.cache.get(connLabel);
     const connMngService = new ConnectionManagementService();
     const isConnected = connMngService.isConnected(connLabel);
@@ -92,7 +92,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       this.cache.set(connLabel, meta);
       //TODO ADD ERROR TO CONSOLE HERE
     }
-    return meta || Promise.resolve(<MetaObjectPayload>{});
+    return (await meta) || Promise.resolve(<MetaObjectPayload>{});
   }
 
   async resolveCustomTextEditor(
