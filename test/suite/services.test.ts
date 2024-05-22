@@ -609,6 +609,7 @@ describe("queryHistoryProvider", () => {
   const dummyDS = createDefaultDataSourceFile();
   const dummyQueryHistory: QueryHistory[] = [
     {
+      executorName: "testExecutorName",
       connectionName: "testConnectionName",
       time: "testTime",
       query: "testQuery",
@@ -616,6 +617,7 @@ describe("queryHistoryProvider", () => {
       connectionType: ServerType.INSIGHTS,
     },
     {
+      executorName: "testExecutorName2",
       connectionName: "testConnectionName2",
       time: "testTime2",
       query: "testQuery2",
@@ -624,6 +626,7 @@ describe("queryHistoryProvider", () => {
       duration: "500",
     },
     {
+      executorName: "testExecutorName3",
       connectionName: "testConnectionName3",
       time: "testTime3",
       query: dummyDS,
@@ -754,7 +757,7 @@ describe("connectionManagerService", () => {
   );
   const insightNode = new InsightsNode(
     ["child1"],
-    "testLabel",
+    "testInsightsAlias",
     insights["testInsight"],
     TreeItemCollapsibleState.None,
   );
@@ -906,6 +909,7 @@ describe("connectionManagerService", () => {
       ext.activeConnection = undefined;
       const result = await connectionManagerService.executeQuery(
         command,
+        "connTest",
         context,
         stringfy,
       );
@@ -917,6 +921,7 @@ describe("connectionManagerService", () => {
       executeQueryStub.returns("test results");
       const result = await connectionManagerService.executeQuery(
         command,
+        undefined,
         context,
         stringfy,
       );
@@ -928,6 +933,7 @@ describe("connectionManagerService", () => {
       getScratchpadQueryStub.returns("test query");
       const result = await connectionManagerService.executeQuery(
         command,
+        undefined,
         context,
         stringfy,
       );

@@ -12,7 +12,6 @@
  */
 
 import { LocalConnection } from "../classes/localConnection";
-import * as os from "os";
 import { window, commands } from "vscode";
 import { ext } from "../extensionVariables";
 import { InsightsNode, KdbNode } from "./kdbTreeProvider";

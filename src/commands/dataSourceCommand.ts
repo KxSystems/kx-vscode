@@ -127,14 +127,7 @@ export async function runDataSource(
     }
     selectedConnection.getMeta();
     if (!selectedConnection?.meta?.payload.assembly) {
-      ext.outputChannel.appendLine(
-        `To run a datasource you need to be connected to an Insights server`,
-      );
-      window.showErrorMessage(
-        "To run a datasource you need to be connected to an Insights server",
-      );
-
-      return;
+      throw new Error("No database running in the Insights connection");
     }
 
     dataSourceForm.insightsNode = getConnectedInsightsNode();
