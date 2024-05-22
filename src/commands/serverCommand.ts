@@ -333,7 +333,7 @@ export async function executeQuery(
   const queryConsole = ExecutionConsole.start();
   if (connLabel === "") {
     if (ext.activeConnection === undefined) {
-      window.showInformationMessage(
+      window.showErrorMessage(
         "No active connection founded. Connect to one connection.",
       );
       //TODO ADD ERROR TO CONSOLE HERE

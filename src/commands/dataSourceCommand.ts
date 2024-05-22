@@ -81,7 +81,7 @@ export async function populateScratchpad(
     validateInput: (value: string | undefined) =>
       validateScratchpadOutputVariableName(value),
   };
-
+  /* istanbul ignore next */
   window.showInputBox(scratchpadVariable).then(async (outputVariable) => {
     if (outputVariable !== undefined && outputVariable !== "") {
       const connMngService = new ConnectionManagementService();
@@ -123,7 +123,7 @@ export async function runDataSource(
 
   try {
     if (selectedConnection instanceof LocalConnection || !selectedConnection) {
-      throw new Error("No Insights active connection found");
+      throw new Error("The selected Insights Connection is not connected");
     }
     selectedConnection.getMeta();
     if (!selectedConnection?.meta?.payload.assembly) {
