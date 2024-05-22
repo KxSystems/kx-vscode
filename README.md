@@ -69,7 +69,7 @@ To integrate VS Code with q take the following steps:
 
   Once registered you will receive an email with you license details.
 
-1. With the license secured, you can link this to VS Code by either chosing `pasting license string` or `selecting license file` from your PC; the latter method is recommended for new users.
+1. With the license secured, you can link this to VS Code by either choosing `pasting license string` or `selecting license file` from your PC; the latter method is recommended for new users.
 
   ![findlicense](https://github.com/KxSystems/kx-vscode/blob/main/img/pastelicense.jpg?raw=true)
 
@@ -105,59 +105,59 @@ You can have multiple connections open at once, enabling development and testing
 
 This runs a q session using the existing kdb installed as part of the kdb VS Code extension.
 
-**Step 1**: Click _connect to kdb server_ or _Add new connection_ from the _CONNECTIONS_ context menu.
+1. Click _connect to kdb server_ or _Add new connection_ from the _CONNECTIONS_ context menu.
 
   ![connecttoakdbserver](https://github.com/KxSystems/kx-vscode/blob/main/img/connecttoakdbserver.png?raw=true)
 
-**Step 2**: A new window will open with the type of connection you desire to add, **Select Bundled q**.
+1. A new window will open with the type of connection you desire to add, **Select Bundled q**.
 
   ![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/bundleqform.png?raw=true)
 
-**Step 3**: The _server name / alias_ will already be set as `local`.
+1. The _server name / alias_ will already be set as `local`.
 
-**Step 4**: The _connection address_ will already be set as `127.0.0.1` which corresponds to your _localhost_
+1. The _connection address_ will already be set as `127.0.0.1` which corresponds to your _localhost_
 
-**Step 5**: Set the _port_ for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. _5002_
+1. Set the _port_ for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. _5002_
 
-- I want to learn more about [setting a q port](https://code.kx.com/q/basics/ipc/)
+  - I want to learn more about [setting a q port](https://code.kx.com/q/basics/ipc/)
 
-**Step 6**: Click **Create connection** to confirm the _connection creation_
+1. Click **Create connection** to confirm the _connection creation_
 
-**Step 7**: Right-click the q bundled process listed under _KX:CONNECTIONS_, and click _Start q process_.
+1. Right-click the q bundled process listed under _KX:CONNECTIONS_, and click _Start q process_.
 
-![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/managedqprocess.jpg?raw=true)
+  ![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/managedqprocess.jpg?raw=true)
 
-**Step 8**: From the same right-click menu, click _Connect kdb server_. This connects to the child q process running inside the kdb VS Code extension.
+1. From the same right-click menu, click _Connect kdb server_. This connects to the child q process running inside the kdb VS Code extension.
 
 If you close the extension, the connection to the child q process also closes.
 
 ### My q
 
-**Step 1**: Identify the remote location of a running process. The hostname and port will be required along with any authentication information.
+1. Identify the remote location of a running process. The hostname and port will be required along with any authentication information.
 
-**Step 2**: Within the kdb VS Code extension, click _connect to kdb server_, or *Add new connection\*\* from the *CONNECTIONS\* context menu.
+1. Within the kdb VS Code extension, click _connect to kdb server_, or *Add new connection\*\* from the *CONNECTIONS\* context menu.
 
   ![connecttoakdbserver](https://github.com/KxSystems/kx-vscode/blob/main/img/connecttoakdbserver.png?raw=true)
 
-**Step 3**: A new window will open with the type of connection you desire to add, **Select My q**.
+1. A new window will open with the type of connection you desire to add, **Select My q**.
 
   ![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/myq.png?raw=true)
 
-**Step 4**: Assign a _server name / alias_. The server name selected **cannot be `local` or `insights`**, as these are reserved for use by [Bundled q connections](#bundled-q) and [Insights connections](#insights-connection), respectively; e.g. dev
+1. Assign a _server name / alias_. The server name selected **cannot be `local` or `insights`**, as these are reserved for use by [Bundled q connections](#bundled-q) and [Insights connections](#insights-connection), respectively; e.g. dev
 
-**Step 5**: Set the _connection address_ or ip address of the kdb server; e.g. _localhost_.
+1. Set the _connection address_ or ip address of the kdb server; e.g. _localhost_.
 
-**Step 6**: Set the _port_ used by the kdb server; e.g. _5001_.
+1. Set the _port_ used by the kdb server; e.g. _5001_.
 
-- I want to learn more about [setting a q port](https://code.kx.com/q/basics/ipc/)
+  - I want to learn more about [setting a q port](https://code.kx.com/q/basics/ipc/)
 
-**Step 7**: If authentication is needed, fill in the username and password fields, otherwise, leave these fields **blank**
+1. If authentication is needed, fill in the username and password fields, otherwise, leave these fields **blank**
 
-**Step 8**: If TLS is enabled, check the checkbox.
+1. If TLS is enabled, check the checkbox.
 
-- I want to learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).
+  - I want to learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).
 
-**Step 9**: Click **Create connection** to confirm the _connection creation_
+1. Click **Create connection** to confirm the _connection creation_
 
 Upon completion, the localhost connection appears under _KX:CONNECTIONS_ in the left hand panel.
 
@@ -280,7 +280,7 @@ These files allow you to build a query within VS Code, associate it with a conne
 
 To create a data source and run it against a specific connection::
 
-1. Ensure you have at least one folder open in VSCode.
+1. Ensure you have at least one folder open in VS Code.
 1. In the DATASOURCES view, click the '+'' button.
 1. Select a Connection from the Connections dropdown.
 1. Choose getData from the Select API dropdown.
@@ -295,7 +295,7 @@ To create a data source and run it against a specific connection::
 
 1. The results populate the kdb results window if it is active, otherwise it will populate the output window.
 
-When you save a datasource file query paramaters and the connection details are stored. The datasource icon will be green if it is associated with a connection and grey if there is no association.
+When you save a data source file query parameters and the connection details are stored. The data source icon will be green if it is associated with a connection and grey if there is no association.
 
 In addition to [API queries](https://code.kx.com/insights/api/database/query/get-data.html), if the query environment is enabled on the deployed instance of kdb Insights Enterprise, qSQL and SQL queries can be used within a data source with the appropriate parameterization.
 
@@ -321,7 +321,7 @@ Standard `.q` and `.py` files only run on the active connection. Workbook files 
 
 To create a Workbook and run code against a specific connection:
 
-1. Ensure you have at least one folder open in VSCode.
+1. Ensure you have at least one folder open in VS Code.
 1. In the WORKBOOKS view, click one of the '+' buttons to create a q or Python workbook.
   ![new workbook](https://github.com/KxSystems/kx-vscode/blob/main/img/addnewworkbook.png?raw=true)
 
@@ -334,10 +334,10 @@ To create a Workbook and run code against a specific connection:
     1. Click 'Run' from above the first line of code in the workbook file.
       ![workbook links](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookrunlink.png)
 
-    1. Select 'Run' from the the upper right of the editor. Using the dropdown next to the button you can choose to 'KX: Execute Entire File' or 'KX Execute Current Selection'.
+    1. Select 'Run' from the upper right of the editor. Using the dropdown next to the button you can choose to 'KX: Execute Entire File' or 'KX Execute Current Selection'.
         ![play dropdown](https://github.com/KxSystems/kx-vscode/blob/main/img/wortkbookplaydropdown.png)
 
-    1. Click the 'Run' buttom on the right hand side of the status bar.
+    1. Click the 'Run' button on the right hand side of the status bar.
         ![status bar run ](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookstatusbarrun.png)
 
     1. Right click and choose 'KX: Execute Entire File' from the menu.
