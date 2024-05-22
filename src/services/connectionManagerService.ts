@@ -326,4 +326,15 @@ export class ConnectionManagementService {
       );
     }
   }
+
+  public async refreshGetMetas(): Promise<void> {
+    if (ext.connectedConnectionList.length > 0) {
+      const promises = ext.connectedConnectionList.map(async (connection) => {
+        if (connection instanceof InsightsConnection) {
+          await connection.getMeta();
+        }
+      });
+      await Promise.all(promises);
+    }
+  }
 }

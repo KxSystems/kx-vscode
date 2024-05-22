@@ -521,7 +521,7 @@ export function rerunQuery(rerunQueryElement: QueryHistory) {
     );
   } else {
     const dsFile = rerunQueryElement.query as DataSourceFiles;
-    runDataSource(dsFile);
+    runDataSource(dsFile, rerunQueryElement.connectionName);
   }
 }
 

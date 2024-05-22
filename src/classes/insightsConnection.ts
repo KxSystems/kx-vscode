@@ -43,8 +43,11 @@ export class InsightsConnection {
     await getCurrentToken(
       this.node.details.server,
       this.node.details.alias,
-    ).then((token) => {
+    ).then(async (token) => {
       this.connected = token ? true : false;
+      if (token) {
+        await this.getMeta();
+      }
     });
     return this.connected;
   }
