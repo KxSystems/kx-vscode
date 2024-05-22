@@ -23,7 +23,6 @@ import { ext } from "../extensionVariables";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
-import { InsightsConnection } from "../classes/insightsConnection";
 
 export class KdbResultsViewProvider implements WebviewViewProvider {
   public static readonly viewType = "kdb-results";
@@ -55,12 +54,17 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     });
   }
 
-  public updateResults(queryResults: any, dataSourceType?: string) {
+  public updateResults(
+    queryResults: any,
+    isInsights?: boolean,
+    dataSourceType?: string,
+  ) {
     if (this._view) {
       this._view.show?.(true);
       this._view.webview.postMessage(queryResults);
       this._view.webview.html = this._getWebviewContent(
         queryResults,
+        isInsights,
         dataSourceType,
       );
     }
@@ -164,8 +168,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     }
   }
 
-  convertToGrid(results: any): string {
-    const isInsights = ext.activeConnection instanceof InsightsConnection;
+  convertToGrid(results: any, isInsights: boolean): string {
     const queryResult = isInsights ? results.rows : results;
 
     const columnDefs = this.generateCoumnDefs(results, isInsights);
@@ -240,7 +243,11 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       : "";
   }
 
-  private _getWebviewContent(queryResult: any, _dataSourceType?: string) {
+  private _getWebviewContent(
+    queryResult: any,
+    isInsights?: boolean,
+    _dataSourceType?: string,
+  ) {
     ext.resultPanelCSV = "";
     this._results = queryResult;
     const agGridTheme = this.defineAgGridTheme();
@@ -263,7 +270,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
             : "<p>No results to show</p>";
       } else if (queryResult) {
         isGrid = true;
-        gridOptionsString = this.convertToGrid(queryResult);
+        gridOptionsString = this.convertToGrid(queryResult, !!isInsights);
       }
 
       result =

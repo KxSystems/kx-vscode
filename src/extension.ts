@@ -168,8 +168,12 @@ export async function activate(context: ExtensionContext) {
     ),
     commands.registerCommand(
       "kdb.resultsPanel.update",
-      (results: string, dataSourceType?: string) => {
-        ext.resultsViewProvider.updateResults(results, dataSourceType);
+      (results: string, isInsights: boolean, dataSourceType?: string) => {
+        ext.resultsViewProvider.updateResults(
+          results,
+          isInsights,
+          dataSourceType,
+        );
       },
     ),
     commands.registerCommand("kdb.resultsPanel.clear", () => {
@@ -324,6 +328,7 @@ export async function activate(context: ExtensionContext) {
             uri,
             DataSourceEditorProvider.viewType,
           );
+          await commands.executeCommand("workbench.action.files.save", uri);
         }
       },
     ),
@@ -336,6 +341,7 @@ export async function activate(context: ExtensionContext) {
         const uri = await addWorkspaceFile(item, "workbook", ".kdb.q");
         if (uri) {
           await window.showTextDocument(uri);
+          await commands.executeCommand("workbench.action.files.save", uri);
         }
       },
     ),
@@ -345,6 +351,7 @@ export async function activate(context: ExtensionContext) {
         const uri = await addWorkspaceFile(item, "workbook", ".kdb.py");
         if (uri) {
           await window.showTextDocument(uri);
+          await commands.executeCommand("workbench.action.files.save", uri);
         }
       },
     ),

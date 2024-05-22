@@ -229,21 +229,28 @@ export async function activateConnectionForServer(server: string) {
 export async function runActiveEditor(type?: ExecutionTypes) {
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
-    if (isScratchpad(uri)) {
-      let server = getServerForUri(uri);
-      if (!server) {
-        server = await pickConnection(uri);
-      }
-      if (server) {
-        await activateConnectionForServer(server);
-      }
+    const isWorkbook = uri.path.endsWith(".kdb.q");
+
+    let server = getServerForUri(uri);
+    if (!server && isWorkbook) {
+      server = await pickConnection(uri);
     }
+    if (!server) {
+      server = "";
+    }
+    const executorName = ext.activeTextEditor.document.fileName
+      .split("/")
+      .pop();
+
     runQuery(
       type === undefined
         ? isPython(uri)
           ? ExecutionTypes.PythonQueryFile
           : ExecutionTypes.QueryFile
         : type,
+      server,
+      executorName ? executorName : "",
+      isWorkbook,
     );
   }
 }

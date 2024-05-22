@@ -13,7 +13,7 @@
 
 import * as fs from "fs";
 import path from "path";
-import { InputBoxOptions, Uri, window } from "vscode";
+import { InputBoxOptions, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { GetDataError, getDataBodyPayload } from "../models/data";
 import {
@@ -23,7 +23,6 @@ import {
 } from "../models/dataSource";
 import { scratchpadVariableInput } from "../models/items/server";
 import { DataSourcesPanel } from "../panels/datasource";
-import { KdbDataSourceTreeItem } from "../services/dataSourceTreeProvider";
 import {
   checkIfTimeParamIsCorrect,
   convertTimeToTimestamp,
@@ -44,6 +43,8 @@ import {
 import { ServerType } from "../models/server";
 import { Telemetry } from "../utils/telemetryClient";
 import { LocalConnection } from "../classes/localConnection";
+import { ConnectionManagementService } from "../services/connectionManagerService";
+import { InsightsConnection } from "../classes/insightsConnection";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -70,137 +71,9 @@ export async function addDataSource(): Promise<void> {
   Telemetry.sendEvent("Datasource.Created");
 }
 
-export async function renameDataSource(
-  oldName: string,
-  newName: string,
-): Promise<void> {
-  const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
-  if (!kdbDataSourcesFolderPath) {
-    return;
-  }
-
-  const oldFilePath = path.join(
-    kdbDataSourcesFolderPath,
-    `${oldName}${ext.kdbDataSourceFileExtension}`,
-  );
-  const newFilePath = path.join(
-    kdbDataSourcesFolderPath,
-    `${newName}${ext.kdbDataSourceFileExtension}`,
-  );
-
-  const dataSourceContent = fs.readFileSync(oldFilePath, "utf8");
-  const data = JSON.parse(dataSourceContent) as DataSourceFiles;
-  data.name = newName;
-  const newFileContent = JSON.stringify(data);
-  fs.writeFileSync(oldFilePath, newFileContent);
-
-  fs.renameSync(oldFilePath, newFilePath);
-
-  const panel = DataSourcesPanel.currentPanel;
-  if (panel) {
-    panel.reload(data);
-  }
-}
-
-export async function deleteDataSource(
-  dataSource: KdbDataSourceTreeItem,
-): Promise<void> {
-  const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
-  if (!kdbDataSourcesFolderPath) {
-    return;
-  }
-
-  const dataSourceFilePath = path.join(
-    kdbDataSourcesFolderPath,
-    `${dataSource.label}${ext.kdbDataSourceFileExtension}`,
-  );
-  if (fs.existsSync(dataSourceFilePath)) {
-    fs.unlinkSync(dataSourceFilePath);
-    window.showInformationMessage(
-      `Deleted ${dataSource.label} from ${kdbDataSourcesFolderPath}.`,
-    );
-  }
-}
-
-export async function openDataSource(
-  dataSource: KdbDataSourceTreeItem,
-  uri: Uri,
-): Promise<void> {
-  const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
-  if (
-    ext.activeConnection instanceof LocalConnection ||
-    !ext.activeConnection
-  ) {
-    window.showErrorMessage("No Insights active connection found");
-    DataSourcesPanel.running = false;
-    return;
-  }
-  Object.assign(ext.insightsMeta, await ext.activeConnection.getMeta());
-  if (!ext.insightsMeta.assembly) {
-    ext.outputChannel.appendLine(
-      `To edit or run a datasource you need to be connected to an Insights server`,
-    );
-    window.showErrorMessage(
-      "To edit or run a datasource you need to be connected to an Insights server",
-    );
-  }
-  if (!kdbDataSourcesFolderPath) {
-    return;
-  }
-  fs.readFile(
-    path.join(
-      kdbDataSourcesFolderPath,
-      `${dataSource.label}${ext.kdbDataSourceFileExtension}`,
-    ),
-    (err, data) => {
-      if (err) {
-        ext.outputChannel.appendLine(
-          `Error reading the file ${dataSource.label}${ext.kdbDataSourceFileExtension}, this file maybe doesn't exist`,
-        );
-        window.showErrorMessage("Error reading file");
-        return;
-      }
-      if (data) {
-        const datasourceContent: DataSourceFiles = JSON.parse(data.toString());
-        DataSourcesPanel.render(uri, datasourceContent);
-      }
-    },
-  );
-}
-
-export async function saveDataSource(
-  dataSourceForm: DataSourceFiles,
-): Promise<void> {
-  const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
-  if (!kdbDataSourcesFolderPath) {
-    return;
-  }
-
-  if (!dataSourceForm.originalName || dataSourceForm.name === "") {
-    window.showErrorMessage("Name is required");
-    return;
-  }
-
-  if (dataSourceForm.name !== dataSourceForm.originalName) {
-    await renameDataSource(dataSourceForm.originalName, dataSourceForm.name);
-  }
-
-  dataSourceForm.insightsNode = getConnectedInsightsNode();
-  const fileContent = dataSourceForm;
-
-  const dataSourceFilePath = path.join(
-    kdbDataSourcesFolderPath,
-    `${dataSourceForm.name}${ext.kdbDataSourceFileExtension}`,
-  );
-
-  if (fs.existsSync(dataSourceFilePath)) {
-    fs.writeFileSync(dataSourceFilePath, JSON.stringify(fileContent));
-    window.showInformationMessage(`DataSource ${dataSourceForm.name} saved.`);
-  }
-}
-
 export async function populateScratchpad(
   dataSourceForm: DataSourceFiles,
+  connLabel: string,
 ): Promise<void> {
   const scratchpadVariable: InputBoxOptions = {
     prompt: scratchpadVariableInput.prompt,
@@ -208,18 +81,22 @@ export async function populateScratchpad(
     validateInput: (value: string | undefined) =>
       validateScratchpadOutputVariableName(value),
   };
-
+  /* istanbul ignore next */
   window.showInputBox(scratchpadVariable).then(async (outputVariable) => {
     if (outputVariable !== undefined && outputVariable !== "") {
+      const connMngService = new ConnectionManagementService();
+      const selectedConnection =
+        connMngService.retrieveConnectedConnection(connLabel);
+
       if (
-        ext.activeConnection instanceof LocalConnection ||
-        !ext.activeConnection
+        selectedConnection instanceof LocalConnection ||
+        !selectedConnection
       ) {
         window.showErrorMessage("No Insights active connection found");
         DataSourcesPanel.running = false;
         return;
       }
-      await ext.activeConnection.importScratchpad(
+      await selectedConnection.importScratchpad(
         outputVariable!,
         dataSourceForm!,
       );
@@ -233,31 +110,24 @@ export async function populateScratchpad(
 
 export async function runDataSource(
   dataSourceForm: DataSourceFiles,
+  connLabel: string,
+  executorName: string,
 ): Promise<void> {
   if (DataSourcesPanel.running) {
     return;
   }
   DataSourcesPanel.running = true;
-
-  if (
-    ext.activeConnection instanceof LocalConnection ||
-    !ext.activeConnection
-  ) {
-    window.showErrorMessage("No Insights active connection found");
-    DataSourcesPanel.running = false;
-    return;
-  }
+  const connMngService = new ConnectionManagementService();
+  const selectedConnection =
+    connMngService.retrieveConnectedConnection(connLabel);
 
   try {
-    Object.assign(ext.insightsMeta, await ext.activeConnection.getMeta());
-    if (!ext.insightsMeta.assembly) {
-      ext.outputChannel.appendLine(
-        `To run a datasource you need to be connected to an Insights server`,
-      );
-      window.showErrorMessage(
-        "To run a datasource you need to be connected to an Insights server",
-      );
-      return;
+    if (selectedConnection instanceof LocalConnection || !selectedConnection) {
+      throw new Error("The selected Insights Connection is not connected");
+    }
+    selectedConnection.getMeta();
+    if (!selectedConnection?.meta?.payload.assembly) {
+      throw new Error("No database running in the Insights connection");
     }
 
     dataSourceForm.insightsNode = getConnectedInsightsNode();
@@ -270,42 +140,52 @@ export async function runDataSource(
     Telemetry.sendEvent("Datasource." + selectedType + ".Run");
     switch (selectedType) {
       case "API":
-        res = await runApiDataSource(fileContent);
+        res = await runApiDataSource(fileContent, selectedConnection);
         break;
       case "QSQL":
-        res = await runQsqlDataSource(fileContent);
+        res = await runQsqlDataSource(fileContent, selectedConnection);
         break;
       case "SQL":
       default:
-        res = await runSqlDataSource(fileContent);
+        res = await runSqlDataSource(fileContent, selectedConnection);
         break;
     }
 
     ext.isDatasourceExecution = false;
     if (res.error) {
       window.showErrorMessage(res.error);
-      addDStoQueryHistory(dataSourceForm, false);
+      addDStoQueryHistory(dataSourceForm, false, connLabel, executorName);
     } else if (ext.resultsViewProvider.isVisible()) {
       ext.outputChannel.appendLine(
         `Results: ${typeof res === "string" ? "0" : res.rows.length} rows`,
       );
-      addDStoQueryHistory(dataSourceForm, true);
+      addDStoQueryHistory(dataSourceForm, true, connLabel, executorName);
       writeQueryResultsToView(
         res,
         getQuery(fileContent, selectedType),
+        connLabel,
+        executorName,
+        true,
         selectedType,
       );
     } else {
       ext.outputChannel.appendLine(
         `Results is a string with length: ${res.length}`,
       );
-      addDStoQueryHistory(dataSourceForm, true);
+      addDStoQueryHistory(dataSourceForm, true, connLabel, executorName);
       writeQueryResultsToConsole(
         res,
         getQuery(fileContent, selectedType),
+        connLabel,
+        executorName,
+        true,
         selectedType,
       );
     }
+  } catch (error) {
+    window.showErrorMessage((error as Error).message);
+    DataSourcesPanel.running = false;
+    //TODO ADD ERROR TO CONSOLE HERE
   } finally {
     DataSourcesPanel.running = false;
   }
@@ -314,12 +194,16 @@ export async function runDataSource(
 export function addDStoQueryHistory(
   dataSourceForm: DataSourceFiles,
   success: boolean,
+  connLabel: string,
+  executrorName: string,
 ) {
   addQueryHistory(
     dataSourceForm,
-    ext.connectionNode?.label ? ext.connectionNode.label : "",
+    executrorName,
+    connLabel,
     ServerType.INSIGHTS,
     success,
+    false,
     false,
     true,
     dataSourceForm.dataSource.selectedType,
@@ -342,15 +226,8 @@ export function getSelectedType(fileContent: DataSourceFiles): string {
 
 export async function runApiDataSource(
   fileContent: DataSourceFiles,
+  selectedConn: InsightsConnection,
 ): Promise<any> {
-  if (
-    ext.activeConnection instanceof LocalConnection ||
-    !ext.activeConnection
-  ) {
-    window.showErrorMessage("No Insights active connection found");
-    DataSourcesPanel.running = false;
-    return;
-  }
   const isTimeCorrect = checkIfTimeParamIsCorrect(
     fileContent.dataSource.api.startTS,
     fileContent.dataSource.api.endTS,
@@ -362,7 +239,7 @@ export async function runApiDataSource(
     return;
   }
   const apiBody = getApiBody(fileContent);
-  const apiCall = await ext.activeConnection.getDataInsights(
+  const apiCall = await selectedConn.getDataInsights(
     ext.insightsServiceGatewayUrls.data,
     JSON.stringify(apiBody),
   );
@@ -455,15 +332,8 @@ export function getApiBody(
 
 export async function runQsqlDataSource(
   fileContent: DataSourceFiles,
+  selectedConn: InsightsConnection,
 ): Promise<any> {
-  if (
-    ext.activeConnection instanceof LocalConnection ||
-    !ext.activeConnection
-  ) {
-    window.showErrorMessage("No Insights active connection found");
-    DataSourcesPanel.running = false;
-    return;
-  }
   const assembly = fileContent.dataSource.qsql.selectedTarget.slice(0, -4);
   const target = fileContent.dataSource.qsql.selectedTarget.slice(-3);
   const qsqlBody = {
@@ -471,7 +341,7 @@ export async function runQsqlDataSource(
     target: target,
     query: fileContent.dataSource.qsql.query,
   };
-  const qsqlCall = await ext.activeConnection.getDataInsights(
+  const qsqlCall = await selectedConn.getDataInsights(
     ext.insightsServiceGatewayUrls.qsql,
     JSON.stringify(qsqlBody),
   );
@@ -488,19 +358,12 @@ export async function runQsqlDataSource(
 
 export async function runSqlDataSource(
   fileContent: DataSourceFiles,
+  selectedConn: InsightsConnection,
 ): Promise<any> {
-  if (
-    ext.activeConnection instanceof LocalConnection ||
-    !ext.activeConnection
-  ) {
-    window.showErrorMessage("No Insights active connection found");
-    DataSourcesPanel.running = false;
-    return;
-  }
   const sqlBody = {
     query: fileContent.dataSource.sql.query,
   };
-  const sqlCall = await ext.activeConnection.getDataInsights(
+  const sqlCall = await selectedConn.getDataInsights(
     ext.insightsServiceGatewayUrls.sql,
     JSON.stringify(sqlBody),
   );

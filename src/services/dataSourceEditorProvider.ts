@@ -26,9 +26,7 @@ import {
 } from "vscode";
 import { getUri } from "../utils/getUri";
 import { getNonce } from "../utils/getNonce";
-import { ext } from "../extensionVariables";
 import {
-  activateConnectionForServer,
   getInsightsServers,
   getServerForUri,
   setServerForUri,
@@ -41,8 +39,10 @@ import {
 } from "../commands/dataSourceCommand";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { MetaObjectPayload } from "../models/meta";
+import { ConnectionManagementService } from "./connectionManagerService";
 
 export class DataSourceEditorProvider implements CustomTextEditorProvider {
+  public filenname = "";
   static readonly viewType = "kdb.dataSourceEditor";
 
   public static register(context: ExtensionContext): Disposable {
@@ -57,23 +57,49 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
 
   constructor(private readonly context: ExtensionContext) {}
 
-  getMeta(alias: string) {
-    let meta = this.cache.get(alias);
-    if (!meta) {
-      if (ext.activeConnection instanceof InsightsConnection) {
-        if (ext.activeConnection.node.details.alias === alias) {
-          meta = ext.activeConnection.getMeta();
-          this.cache.set(alias, meta);
-        }
-      }
+  async getMeta(connLabel: string) {
+    let meta = this.cache.get(connLabel);
+    const connMngService = new ConnectionManagementService();
+    const isConnected = connMngService.isConnected(connLabel);
+    if (!isConnected) {
+      this.cache.set(connLabel, Promise.resolve(<MetaObjectPayload>{}));
+      return Promise.resolve(<MetaObjectPayload>{});
     }
-    return meta || Promise.resolve(<MetaObjectPayload>{});
+    const selectedConnection =
+      connMngService.retrieveConnectedConnection(connLabel);
+
+    try {
+      if (
+        !(selectedConnection instanceof InsightsConnection) ||
+        !selectedConnection
+      ) {
+        throw new Error("The connection selected is not Insights");
+      }
+      if (
+        !selectedConnection.meta ||
+        selectedConnection.meta.payload.assembly.length === 0
+      ) {
+        throw new Error();
+      }
+      meta = Promise.resolve(selectedConnection?.meta?.payload);
+
+      this.cache.set(connLabel, meta);
+    } catch (error) {
+      window.showErrorMessage(
+        "No database running in this Insights connection.",
+      );
+      meta = Promise.resolve(<MetaObjectPayload>{});
+      this.cache.set(connLabel, meta);
+      //TODO ADD ERROR TO CONSOLE HERE
+    }
+    return (await meta) || Promise.resolve(<MetaObjectPayload>{});
   }
 
   async resolveCustomTextEditor(
     document: TextDocument,
     webviewPanel: WebviewPanel,
   ): Promise<void> {
+    this.filenname = document.fileName.split("/").pop() || "";
     const webview = webviewPanel.webview;
     webview.options = { enableScripts: true };
     webview.html = this.getWebviewContent(webview);
@@ -129,18 +155,21 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           );
           break;
         case DataSourceCommand.Refresh:
-          await activateConnectionForServer(msg.selectedServer);
+          const connMngService = new ConnectionManagementService();
+          await connMngService.refreshGetMetas();
           const selectedServer = getServerForUri(document.uri) || "";
           this.cache.delete(selectedServer);
           updateWebview();
           break;
         case DataSourceCommand.Run:
-          await activateConnectionForServer(msg.selectedServer);
-          await runDataSource(msg.dataSourceFile);
+          await runDataSource(
+            msg.dataSourceFile,
+            msg.selectedServer,
+            this.filenname,
+          );
           break;
         case DataSourceCommand.Populate:
-          await activateConnectionForServer(msg.selectedServer);
-          await populateScratchpad(msg.dataSourceFile);
+          await populateScratchpad(msg.dataSourceFile, msg.selectedServer);
           break;
       }
     });

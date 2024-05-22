@@ -12,7 +12,6 @@
  */
 
 import { LocalConnection } from "../classes/localConnection";
-import * as os from "os";
 import { window, commands } from "vscode";
 import { ext } from "../extensionVariables";
 import { InsightsNode, KdbNode } from "./kdbTreeProvider";
@@ -120,10 +119,6 @@ export class ConnectionManagementService {
       }
       refreshDataSourcesPanel();
     }
-    if (ext.connectedConnectionList.length === 1) {
-      this.startMonitoringNetworkConn();
-      this.rehidrateInsightsConnections();
-    }
   }
 
   public setActiveConnection(node: KdbNode | InsightsNode): void {
@@ -141,6 +136,7 @@ export class ConnectionManagementService {
     } else {
       commands.executeCommand("setContext", "kdb.insightsConnected", false);
     }
+    ext.connectionNode = node;
     ext.serverProvider.reload();
   }
 
@@ -259,33 +255,37 @@ export class ConnectionManagementService {
     }
     Telemetry.sendEvent("Connection.Disconnected." + connType);
     ext.outputChannel.appendLine(
-      `[${new Date().toLocaleTimeString()}] Connection disconnected: ${connection.connLabel}`,
+      `[${new Date().toLocaleTimeString()}] Connection disconnected: ${
+        connection.connLabel
+      }`,
     );
     ext.serverProvider.reload();
   }
 
   public async executeQuery(
     command: string,
+    connLabel?: string,
     context?: string,
     stringfy?: boolean,
     isPython?: boolean,
   ): Promise<any> {
-    if (!ext.activeConnection) {
+    let selectedConn;
+    if (connLabel) {
+      selectedConn = this.retrieveConnectedConnection(connLabel);
+    } else {
+      if (!ext.activeConnection) {
+        return;
+      }
+      selectedConn = ext.activeConnection;
+    }
+    if (!selectedConn) {
       return;
     }
     command = sanitizeQuery(command);
-    if (ext.activeConnection instanceof LocalConnection) {
-      return await ext.activeConnection.executeQuery(
-        command,
-        context,
-        stringfy,
-      );
+    if (selectedConn instanceof LocalConnection) {
+      return await selectedConn.executeQuery(command, context, stringfy);
     } else {
-      return await ext.activeConnection.getScratchpadQuery(
-        command,
-        context,
-        isPython,
-      );
+      return await selectedConn.getScratchpadQuery(command, context, isPython);
     }
   }
 
@@ -329,53 +329,14 @@ export class ConnectionManagementService {
     }
   }
 
-  public async checkInsightsConnectionIsAlive(
-    whoTriggered: string,
-  ): Promise<void> {
-    const checks = ext.connectedConnectionList.map(async (connection) => {
-      if (connection instanceof InsightsConnection) {
-        const res = await connection.pingInsights();
-        if (!res) {
-          this.disconnect(connection.connLabel);
+  public async refreshGetMetas(): Promise<void> {
+    if (ext.connectedConnectionList.length > 0) {
+      const promises = ext.connectedConnectionList.map(async (connection) => {
+        if (connection instanceof InsightsConnection) {
+          await connection.getMeta();
         }
-      }
-    });
-    await Promise.all(checks);
-    if (whoTriggered === "networkMonitoring") {
-      this.startMonitoringNetworkConn();
-    } else {
-      this.rehidrateInsightsConnections();
+      });
+      await Promise.all(promises);
     }
-  }
-
-  /* istanbul ignore next */
-  public async startMonitoringNetworkConn(): Promise<void> {
-    let previousNetworkState = os.networkInterfaces();
-    const intervalId = setInterval(() => {
-      const currentNetworkState = os.networkInterfaces();
-      if (
-        JSON.stringify(previousNetworkState) !==
-        JSON.stringify(currentNetworkState)
-      ) {
-        clearInterval(intervalId);
-        previousNetworkState = currentNetworkState;
-        this.checkInsightsConnectionIsAlive("networkMonitoring");
-      }
-      if (ext.connectedConnectionList.length === 0) {
-        clearInterval(intervalId);
-      }
-    }, 2000);
-  }
-
-  /* istanbul ignore next */
-  public async rehidrateInsightsConnections(): Promise<void> {
-    const intervalConns = setInterval(() => {
-      if (ext.connectedConnectionList.length > 0) {
-        clearInterval(intervalConns);
-        this.checkInsightsConnectionIsAlive("rehidrateConnections");
-      } else {
-        clearInterval(intervalConns);
-      }
-    }, 120000);
   }
 }

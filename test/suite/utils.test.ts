@@ -14,7 +14,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import * as fs from "fs";
 import mock from "mock-fs";
 import { TreeItemCollapsibleState } from "vscode";
 import { ext } from "../../src/extensionVariables";
@@ -48,10 +47,9 @@ import {
   DDateTimeClass,
   DTimestampClass,
 } from "../../src/ipc/cClasses";
-import { DataSourceFiles, DataSourceTypes } from "../../src/models/dataSource";
+import { DataSourceTypes } from "../../src/models/dataSource";
 import { InsightDetails } from "../../src/models/insights";
 import { LocalConnection } from "../../src/classes/localConnection";
-import { ScratchpadFile } from "../../src/models/scratchpad";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;
@@ -111,49 +109,6 @@ describe("Utils", () => {
         getConfigurationStub.restore();
       });
 
-      describe("server alias", () => {
-        beforeEach(() => {
-          ext.kdbConnectionAliasList.length = 0;
-        });
-
-        afterEach(() => {
-          ext.kdbConnectionAliasList.length = 0;
-        });
-
-        it("should add insights alias to the list getInsightsAlias", () => {
-          const insightsDetail: InsightDetails = {
-            alias: "test",
-            server: "test",
-            auth: true,
-          };
-          coreUtils.getInsightsAlias([insightsDetail]);
-          assert.strictEqual(ext.kdbConnectionAliasList.length, 1);
-        });
-
-        it("should add alias only from kdb server that have alias using getServerAlias", () => {
-          const serverList: ServerDetails[] = [
-            {
-              serverName: "test",
-              serverAlias: "test",
-              serverPort: "5001",
-              managed: false,
-              auth: false,
-              tls: false,
-            },
-            {
-              serverName: "test2",
-              serverAlias: undefined,
-              serverPort: "5001",
-              managed: false,
-              auth: false,
-              tls: false,
-            },
-          ];
-          coreUtils.getServerAlias(serverList);
-          assert.strictEqual(ext.kdbConnectionAliasList.length, 1);
-        });
-      });
-
       it("should update configuration and set hideDetailedConsoleQueryOutput to true when setting is undefined", async () => {
         getConfigurationStub.returns({
           get: sinon.stub().returns(undefined),
@@ -179,88 +134,46 @@ describe("Utils", () => {
       });
     });
 
-    describe("getScratchpadStatusIcon", () => {
-      const scratchpadDummy: ScratchpadFile = {
-        name: "test",
-        code: "",
-      };
+    describe("server alias", () => {
       beforeEach(() => {
-        ext.activeScratchPadList.length = 0;
-        ext.connectedScratchPadList.length = 0;
+        ext.kdbConnectionAliasList.length = 0;
       });
+
       afterEach(() => {
-        ext.activeScratchPadList.length = 0;
-        ext.connectedScratchPadList.length = 0;
-      });
-      it("should return active if scratchpad label is on the active list", () => {
-        ext.activeScratchPadList.push(scratchpadDummy);
-        ext.connectedScratchPadList.push(scratchpadDummy);
-        const result = coreUtils.getScratchpadStatusIcon("test");
-        assert.strictEqual(result, "-active");
-      });
-      it("should return connected if scratchpad label is on the connected list", () => {
-        ext.connectedScratchPadList.push(scratchpadDummy);
-        const result = coreUtils.getScratchpadStatusIcon("test");
-        assert.strictEqual(result, "-connected");
+        ext.kdbConnectionAliasList.length = 0;
       });
 
-      it("should return empty string if scratchpad label is not on the active or connected list", () => {
-        const result = coreUtils.getScratchpadStatusIcon("test");
-        assert.strictEqual(result, "");
-      });
-    });
-
-    describe("getDatasourceStatusIcon", () => {
-      const dsFileDummy: DataSourceFiles = {
-        name: "test",
-        dataSource: {
-          selectedType: DataSourceTypes.API,
-          api: {
-            selectedApi: "",
-            table: "",
-            startTS: "",
-            endTS: "",
-            fill: "zero",
-            temporality: "snapshot",
-            filter: [],
-            groupBy: [],
-            agg: [],
-            sortCols: [],
-            slice: [],
-            labels: [],
-          },
-          qsql: {
-            query: "",
-            selectedTarget: "",
-          },
-          sql: {
-            query: "",
-          },
-        },
-      };
-      beforeEach(() => {
-        ext.activeDatasourceList.length = 0;
-        ext.connectedDatasourceList.length = 0;
-      });
-      afterEach(() => {
-        ext.activeDatasourceList.length = 0;
-        ext.connectedDatasourceList.length = 0;
-      });
-      it("should return active if scratchpad label is on the active list", () => {
-        ext.activeDatasourceList.push(dsFileDummy);
-        ext.connectedDatasourceList.push(dsFileDummy);
-        const result = coreUtils.getDatasourceStatusIcon("test");
-        assert.strictEqual(result, "-active");
-      });
-      it("should return connected if scratchpad label is on the connected list", () => {
-        ext.connectedDatasourceList.push(dsFileDummy);
-        const result = coreUtils.getDatasourceStatusIcon("test");
-        assert.strictEqual(result, "-connected");
+      it("should add insights alias to the list getInsightsAlias", () => {
+        const insightsDetail: InsightDetails = {
+          alias: "test",
+          server: "test",
+          auth: true,
+        };
+        coreUtils.getInsightsAlias([insightsDetail]);
+        assert.strictEqual(ext.kdbConnectionAliasList.length, 1);
       });
 
-      it("should return empty string if scratchpad label is not on the active or connected list", () => {
-        const result = coreUtils.getDatasourceStatusIcon("test");
-        assert.strictEqual(result, "");
+      it("should add alias only from kdb server that have alias using getServerAlias", () => {
+        const serverList: ServerDetails[] = [
+          {
+            serverName: "test",
+            serverAlias: "test",
+            serverPort: "5001",
+            managed: false,
+            auth: false,
+            tls: false,
+          },
+          {
+            serverName: "test2",
+            serverAlias: undefined,
+            serverPort: "5001",
+            managed: false,
+            auth: false,
+            tls: false,
+          },
+        ];
+        coreUtils.getServerAlias(serverList);
+        assert.strictEqual(ext.kdbConnectionAliasList.length, 1);
       });
     });
 
@@ -316,6 +229,25 @@ describe("Utils", () => {
         ext.activeConnection = undefined;
         const result = coreUtils.getStatus(localConn.connLabel);
         assert.strictEqual(result, "- disconnected");
+      });
+    });
+
+    describe("getWorkspaceIconsState", () => {
+      const localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
+      afterEach(() => {
+        ext.connectedConnectionList.length = 0;
+      });
+
+      it("should return active state", () => {
+        ext.connectedConnectionList.push(localConn);
+        const result = coreUtils.getWorkspaceIconsState(localConn.connLabel);
+        assert.strictEqual(result, "-active");
+      });
+
+      it("should return disconnected state", () => {
+        ext.activeConnection = undefined;
+        const result = coreUtils.getWorkspaceIconsState(localConn.connLabel);
+        assert.strictEqual(result, "");
       });
     });
   });
@@ -681,7 +613,7 @@ describe("Utils", () => {
 
         ext.connectionNode = kdbNode;
 
-        queryConsole.append(output, query, serverName);
+        queryConsole.append(output, query, "fileName", serverName);
         assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
         assert.strictEqual(
@@ -704,7 +636,7 @@ describe("Utils", () => {
 
         ext.connectionNode = kdbNode;
 
-        queryConsole.append(output, query, serverName);
+        queryConsole.append(output, query, "fileName", serverName);
         assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
         assert.strictEqual(
@@ -721,7 +653,16 @@ describe("Utils", () => {
 
         ext.connectionNode = insightsNode;
 
-        queryConsole.append(output, query, serverName);
+        queryConsole.append(
+          output,
+          query,
+          "fileName",
+          serverName,
+          true,
+          "WORKBOOK",
+          true,
+          "2",
+        );
         assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, true);
         assert.strictEqual(
@@ -737,7 +678,18 @@ describe("Utils", () => {
 
         ext.connectionNode = kdbNode;
 
-        queryConsole.appendQueryError(query, output, true, serverName, true);
+        queryConsole.appendQueryError(
+          query,
+          output,
+          serverName,
+          "fileName",
+          true,
+          false,
+          "WORKBOOK",
+          true,
+          false,
+          "2",
+        );
         assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
         assert.strictEqual(
@@ -751,9 +703,18 @@ describe("Utils", () => {
         const output = "test";
         const serverName = "testServer";
 
-        ext.connectionNode = insightsNode;
-
-        queryConsole.appendQueryError(query, output, true, serverName);
+        queryConsole.appendQueryError(
+          query,
+          output,
+          serverName,
+          "filename",
+          true,
+          true,
+          "WORKBOOK",
+          true,
+          false,
+          "2",
+        );
         assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
         assert.strictEqual(
@@ -769,7 +730,13 @@ describe("Utils", () => {
 
         ext.connectionNode = insightsNode;
 
-        queryConsole.appendQueryError(query, output, false, serverName);
+        queryConsole.appendQueryError(
+          query,
+          output,
+          serverName,
+          "filename",
+          false,
+        );
         assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
         assert.strictEqual(ext.kdbQueryHistoryList[0].success, false);
         assert.strictEqual(
@@ -786,7 +753,13 @@ describe("Utils", () => {
 
       ext.kdbQueryHistoryList.length = 0;
 
-      queryUtils.addQueryHistory(query, connectionName, connectionType, true);
+      queryUtils.addQueryHistory(
+        query,
+        "fileName",
+        connectionName,
+        connectionType,
+        true,
+      );
       assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
     });
 
@@ -800,6 +773,7 @@ describe("Utils", () => {
       queryUtils.addQueryHistory(
         query,
         connectionName,
+        "fileName",
         connectionType,
         true,
         true,
