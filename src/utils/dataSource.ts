@@ -17,7 +17,7 @@ import { ext } from "../extensionVariables";
 import { DataSourceFiles } from "../models/dataSource";
 import { DataSourcesPanel } from "../panels/datasource";
 import { InsightsConnection } from "../classes/insightsConnection";
-import { workspace, window } from "vscode";
+import { workspace, window, Uri } from "vscode";
 import { Telemetry } from "./telemetryClient";
 
 export function createKdbDataSourcesFolder(): string {
@@ -133,13 +133,15 @@ export async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
   const folders = workspace.workspaceFolders;
   if (folders) {
     const folder = folders[0];
+    const importToUri = Uri.joinPath(folder.uri, ".kx");
+    await workspace.fs.createDirectory(importToUri);
     let i = 1;
     let fileName = `datasource-${i}.kdb.json`;
-    let filePath = path.join(folder.uri.path, fileName);
+    let filePath = path.join(importToUri.path, fileName);
     while (fs.existsSync(filePath)) {
       i++;
       fileName = `datasource-${i}.kdb.json`;
-      filePath = path.join(folder.uri.path, fileName);
+      filePath = path.join(importToUri.path, fileName);
     }
     fs.writeFileSync(filePath, JSON.stringify(ds));
     window.showInformationMessage(`Datasource created.`);
