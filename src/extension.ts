@@ -168,8 +168,12 @@ export async function activate(context: ExtensionContext) {
     ),
     commands.registerCommand(
       "kdb.resultsPanel.update",
-      (results: string, dataSourceType?: string) => {
-        ext.resultsViewProvider.updateResults(results, dataSourceType);
+      (results: string, isInsights: boolean, dataSourceType?: string) => {
+        ext.resultsViewProvider.updateResults(
+          results,
+          isInsights,
+          dataSourceType,
+        );
       },
     ),
     commands.registerCommand("kdb.resultsPanel.clear", () => {

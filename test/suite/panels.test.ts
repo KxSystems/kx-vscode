@@ -226,7 +226,7 @@ describe("WebPanels", () => {
         const stub = sinon.stub(ext, "activeConnection");
         stub.get(() => insightsConn);
 
-        const output = resultsPanel.convertToGrid(results);
+        const output = resultsPanel.convertToGrid(results, true);
         assert.equal(output, expectedOutput);
 
         // Restore the stub
@@ -276,7 +276,7 @@ describe("WebPanels", () => {
         const stub = sinon.stub(ext, "activeConnection");
         stub.get(() => insightsConn);
 
-        const output = resultsPanel.convertToGrid(results);
+        const output = resultsPanel.convertToGrid(results, true);
         assert.equal(output, expectedOutput);
 
         // Restore the stub

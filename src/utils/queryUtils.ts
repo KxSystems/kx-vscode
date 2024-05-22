@@ -329,21 +329,25 @@ export function selectDSType(
 
 export function addQueryHistory(
   query: string | DataSourceFiles,
+  executorName: string,
   connectionName: string,
   connectionType: ServerType,
   success: boolean,
   isPython?: boolean,
+  isWorkbook?: boolean,
   isDatasource?: boolean,
   datasourceType?: DataSourceTypes,
   duration?: string,
 ) {
   const newQueryHistory: QueryHistory = {
     query: query,
+    executorName,
     time: new Date().toLocaleString(),
     success,
     connectionName,
     connectionType,
     language: isPython ? "python" : "q",
+    isWorkbook,
     isDatasource,
     datasourceType,
     duration,

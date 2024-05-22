@@ -12,7 +12,6 @@
  */
 
 import { LocalConnection } from "../classes/localConnection";
-import * as os from "os";
 import { window, commands } from "vscode";
 import { ext } from "../extensionVariables";
 import { InsightsNode, KdbNode } from "./kdbTreeProvider";
@@ -22,8 +21,6 @@ import { sanitizeQuery } from "../utils/queryUtils";
 import {
   getHash,
   getInsights,
-  getInsightsHydrate,
-  getNetworkChangesWatcher,
   getServerName,
   getServers,
   removeLocalConnectionContext,
@@ -121,11 +118,6 @@ export class ConnectionManagementService {
         this.isNotConnectedBehaviour(connLabel);
       }
       refreshDataSourcesPanel();
-    }
-    if (ext.connectedConnectionList.length === 1) {
-      getNetworkChangesWatcher();
-      this.startMonitoringNetworkConn();
-      this.rehidrateInsightsConnections();
     }
   }
 
@@ -272,26 +264,28 @@ export class ConnectionManagementService {
 
   public async executeQuery(
     command: string,
+    connLabel?: string,
     context?: string,
     stringfy?: boolean,
     isPython?: boolean,
   ): Promise<any> {
-    if (!ext.activeConnection) {
+    let selectedConn;
+    if (connLabel) {
+      selectedConn = this.retrieveConnectedConnection(connLabel);
+    } else {
+      if (!ext.activeConnection) {
+        return;
+      }
+      selectedConn = ext.activeConnection;
+    }
+    if (!selectedConn) {
       return;
     }
     command = sanitizeQuery(command);
-    if (ext.activeConnection instanceof LocalConnection) {
-      return await ext.activeConnection.executeQuery(
-        command,
-        context,
-        stringfy,
-      );
+    if (selectedConn instanceof LocalConnection) {
+      return await selectedConn.executeQuery(command, context, stringfy);
     } else {
-      return await ext.activeConnection.getScratchpadQuery(
-        command,
-        context,
-        isPython,
-      );
+      return await selectedConn.getScratchpadQuery(command, context, isPython);
     }
   }
 
@@ -335,61 +329,14 @@ export class ConnectionManagementService {
     }
   }
 
-  public async checkInsightsConnectionIsAlive(
-    whoTriggered: string,
-  ): Promise<void> {
-    const checks = ext.connectedConnectionList.map(async (connection) => {
-      if (connection instanceof InsightsConnection) {
-        const res = await connection.pingInsights();
-        if (!res) {
-          this.disconnect(connection.connLabel);
-        }
-      }
-    });
-    await Promise.all(checks);
+  public async refreshGetMetas(): Promise<void> {
     if (ext.connectedConnectionList.length > 0) {
-      if (whoTriggered === "networkMonitoring") {
-        this.startMonitoringNetworkConn();
-      } else {
-        this.rehidrateInsightsConnections();
-      }
+      const promises = ext.connectedConnectionList.map(async (connection) => {
+        if (connection instanceof InsightsConnection) {
+          await connection.getMeta();
+        }
+      });
+      await Promise.all(promises);
     }
-  }
-
-  /* istanbul ignore next */
-  public async startMonitoringNetworkConn(): Promise<void> {
-    let previousNetworkState = os.networkInterfaces();
-    const intervalId = setInterval(() => {
-      const currentNetworkState = os.networkInterfaces();
-      if (
-        JSON.stringify(previousNetworkState) !==
-        JSON.stringify(currentNetworkState)
-      ) {
-        getNetworkChangesWatcher();
-        if (ext.networkChangesWatcher) {
-          clearInterval(intervalId);
-          previousNetworkState = currentNetworkState;
-          this.checkInsightsConnectionIsAlive("networkMonitoring");
-        }
-      }
-      if (ext.connectedConnectionList.length === 0) {
-        clearInterval(intervalId);
-      }
-    }, 2000);
-  }
-
-  /* istanbul ignore next */
-  public async rehidrateInsightsConnections(): Promise<void> {
-    const intervalConns = setInterval(() => {
-      getInsightsHydrate();
-      if (ext.insightsHydrate) {
-        if (ext.connectedConnectionList.length > 0) {
-          clearInterval(intervalConns);
-          this.checkInsightsConnectionIsAlive("rehidrateConnections");
-        } else {
-          clearInterval(intervalConns);
-        }
-      }
-    }, 60000);
   }
 }

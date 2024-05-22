@@ -58,6 +58,7 @@ import {
 } from "../../src/services/workspaceTreeProvider";
 import Path from "path";
 import * as utils from "../../src/utils/getUri";
+import { MetaObject } from "../../src/models/meta";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -609,6 +610,7 @@ describe("queryHistoryProvider", () => {
   const dummyDS = createDefaultDataSourceFile();
   const dummyQueryHistory: QueryHistory[] = [
     {
+      executorName: "testExecutorName",
       connectionName: "testConnectionName",
       time: "testTime",
       query: "testQuery",
@@ -616,14 +618,17 @@ describe("queryHistoryProvider", () => {
       connectionType: ServerType.INSIGHTS,
     },
     {
+      executorName: "testExecutorName2",
       connectionName: "testConnectionName2",
       time: "testTime2",
       query: "testQuery2",
       success: true,
+      isWorkbook: true,
       connectionType: ServerType.KDB,
       duration: "500",
     },
     {
+      executorName: "testExecutorName3",
       connectionName: "testConnectionName3",
       time: "testTime3",
       query: dummyDS,
@@ -754,7 +759,7 @@ describe("connectionManagerService", () => {
   );
   const insightNode = new InsightsNode(
     ["child1"],
-    "testLabel",
+    "testInsightsAlias",
     insights["testInsight"],
     TreeItemCollapsibleState.None,
   );
@@ -906,6 +911,7 @@ describe("connectionManagerService", () => {
       ext.activeConnection = undefined;
       const result = await connectionManagerService.executeQuery(
         command,
+        "connTest",
         context,
         stringfy,
       );
@@ -917,6 +923,7 @@ describe("connectionManagerService", () => {
       executeQueryStub.returns("test results");
       const result = await connectionManagerService.executeQuery(
         command,
+        undefined,
         context,
         stringfy,
       );
@@ -928,6 +935,7 @@ describe("connectionManagerService", () => {
       getScratchpadQueryStub.returns("test query");
       const result = await connectionManagerService.executeQuery(
         command,
+        undefined,
         context,
         stringfy,
       );
@@ -1045,52 +1053,25 @@ describe("connectionManagerService", () => {
     });
   });
 
-  describe("checkInsightsConnectionIsAlive()", () => {
-    let pingInsightsStub, disconnectStub: sinon.SinonStub;
+  describe("refreshGetMetas", () => {
+    let getMetaStub: sinon.SinonStub;
     beforeEach(() => {
-      pingInsightsStub = sinon.stub(insightsConn, "pingInsights");
-      disconnectStub = sinon.stub(connectionManagerService, "disconnect");
-      ext.connectedConnectionList.length = 0;
+      getMetaStub = sinon.stub(insightsConn, "getMeta");
     });
-
     afterEach(() => {
-      ext.connectedConnectionList.length = 0;
       sinon.restore();
+      ext.connectedConnectionList.length = 0;
     });
 
-    it("should not call pingInsights if connection is not an instance of InsightsConnection", async () => {
-      ext.connectedConnectionList.push(localConn);
-      await connectionManagerService.checkInsightsConnectionIsAlive(
-        "networkMonitoring",
-      );
-      sinon.assert.notCalled(pingInsightsStub);
+    it("Should not refresh getMetas if connection is not InsightsConnection", async () => {
+      await connectionManagerService.refreshGetMetas();
+      sinon.assert.notCalled(getMetaStub);
     });
 
-    it("should not call pingInsights if there is no connection connected", async () => {
-      await connectionManagerService.checkInsightsConnectionIsAlive(
-        "networkMonitoring",
-      );
-      sinon.assert.notCalled(pingInsightsStub);
-    });
-
-    it("should call pingInsights if connection is an instance of InsightsConnection", async () => {
+    it("Should refresh getMetas if connection is InsightsConnection", async () => {
       ext.connectedConnectionList.push(insightsConn);
-      pingInsightsStub.resolves(true);
-      await connectionManagerService.checkInsightsConnectionIsAlive(
-        "rehidrateConn",
-      );
-      sinon.assert.calledOnce(pingInsightsStub);
-      sinon.assert.notCalled(disconnectStub);
-    });
-
-    it("should call disconnect if pingInsights returns false", async () => {
-      ext.connectedConnectionList.push(insightsConn);
-      pingInsightsStub.resolves(false);
-      await connectionManagerService.checkInsightsConnectionIsAlive(
-        "networkMonitoring",
-      );
-      sinon.assert.calledOnce(pingInsightsStub);
-      sinon.assert.calledOnce(disconnectStub);
+      await connectionManagerService.refreshGetMetas();
+      sinon.assert.calledOnce(getMetaStub);
     });
   });
 });
@@ -1161,6 +1142,194 @@ describe("dataSourceEditorProvider", () => {
       panel.listeners.onDidReceiveMessage({});
       panel.listeners.onDidChangeViewState();
       panel.listeners.onDidDispose();
+    });
+
+    describe("getMeta", () => {
+      const dummyMeta: MetaObject = {
+        header: {
+          ac: "0",
+          agg: ":127.0.0.1:5070",
+          ai: "",
+          api: ".kxi.getMeta",
+          client: ":127.0.0.1:5050",
+          corr: "CorrHash",
+          http: "json",
+          logCorr: "logCorrHash",
+          protocol: "gw",
+          rc: "0",
+          rcvTS: "2099-05-22T11:06:33.650000000",
+          retryCount: "0",
+          to: "2099-05-22T11:07:33.650000000",
+          userID: "dummyID",
+          userName: "testUser",
+        },
+        payload: {
+          rc: [
+            {
+              api: 3,
+              agg: 1,
+              assembly: 1,
+              schema: 1,
+              rc: "dummy-rc",
+              labels: [{ kxname: "dummy-assembly" }],
+              started: "2023-10-04T17:20:57.659088747",
+            },
+          ],
+          dap: [],
+          api: [],
+          agg: [
+            {
+              aggFn: ".sgagg.aggFnDflt",
+              custom: false,
+              full: true,
+              metadata: {
+                description: "dummy desc.",
+                params: [{ description: "dummy desc." }],
+                return: { description: "dummy desc." },
+                misc: {},
+              },
+              procs: [],
+            },
+          ],
+          assembly: [
+            {
+              assembly: "dummy-assembly",
+              kxname: "dummy-assembly",
+              tbls: ["dummyTbl"],
+            },
+          ],
+          schema: [],
+        },
+      };
+
+      const dummyMetaNoAssembly: MetaObject = {
+        header: {
+          ac: "0",
+          agg: ":127.0.0.1:5070",
+          ai: "",
+          api: ".kxi.getMeta",
+          client: ":127.0.0.1:5050",
+          corr: "CorrHash",
+          http: "json",
+          logCorr: "logCorrHash",
+          protocol: "gw",
+          rc: "0",
+          rcvTS: "2099-05-22T11:06:33.650000000",
+          retryCount: "0",
+          to: "2099-05-22T11:07:33.650000000",
+          userID: "dummyID",
+          userName: "testUser",
+        },
+        payload: {
+          rc: [
+            {
+              api: 3,
+              agg: 1,
+              assembly: 1,
+              schema: 1,
+              rc: "dummy-rc",
+              labels: [{ kxname: "dummy-assembly" }],
+              started: "2023-10-04T17:20:57.659088747",
+            },
+          ],
+          dap: [],
+          api: [],
+          agg: [
+            {
+              aggFn: ".sgagg.aggFnDflt",
+              custom: false,
+              full: true,
+              metadata: {
+                description: "dummy desc.",
+                params: [{ description: "dummy desc." }],
+                return: { description: "dummy desc." },
+                misc: {},
+              },
+              procs: [],
+            },
+          ],
+          assembly: [],
+          schema: [],
+        },
+      };
+      const insightsNode = new InsightsNode(
+        [],
+        "insightsnode1",
+        {
+          server: "https://insightsservername.com/",
+          alias: "insightsserveralias",
+          auth: true,
+        },
+        TreeItemCollapsibleState.None,
+      );
+      const insightsConn = new InsightsConnection(
+        insightsNode.label,
+        insightsNode,
+      );
+      const localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
+      const connMngService = new ConnectionManagementService();
+      let isConnetedStub, retrieveConnectedConnectionStub: sinon.SinonStub;
+      beforeEach(() => {
+        isConnetedStub = sinon.stub(connMngService, "isConnected");
+        retrieveConnectedConnectionStub = sinon.stub(
+          connMngService,
+          "retrieveConnectedConnection",
+        );
+      });
+      afterEach(() => {
+        ext.connectedConnectionList.length = 0;
+        ext.connectedContextStrings.length = 0;
+      });
+
+      it("Should return empty object if the connection selected is not connected", async () => {
+        isConnetedStub.returns(false);
+        const provider = new DataSourceEditorProvider(context);
+        const result = await provider.getMeta(insightsConn.connLabel);
+        assert.deepStrictEqual(result, {});
+      });
+
+      it("Should return empty object if the connection selected is undefined", async () => {
+        ext.connectedContextStrings.push(insightsConn.connLabel);
+        isConnetedStub.resolves(true);
+        const provider = new DataSourceEditorProvider(context);
+        const result = await provider.getMeta(insightsConn.connLabel);
+        assert.deepStrictEqual(result, {});
+      });
+
+      it("Should return empty object if the connection selected is a LocalConnection", async () => {
+        ext.connectedContextStrings.push(localConn.connLabel);
+        ext.connectedConnectionList.push(localConn);
+        isConnetedStub.resolves(true);
+        const provider = new DataSourceEditorProvider(context);
+        const result = await provider.getMeta(localConn.connLabel);
+        assert.deepStrictEqual(result, {});
+      });
+      it("Should return empty object if the meta is undefined", async () => {
+        ext.connectedContextStrings.push(insightsConn.connLabel);
+        ext.connectedConnectionList.push(insightsConn);
+        isConnetedStub.resolves(true);
+        const provider = new DataSourceEditorProvider(context);
+        const result = await provider.getMeta(insightsConn.connLabel);
+        assert.deepStrictEqual(result, {});
+      });
+      it("Should return empty object if the meta has no assembly", async () => {
+        ext.connectedContextStrings.push(insightsConn.connLabel);
+        ext.connectedConnectionList.push(insightsConn);
+        isConnetedStub.resolves(true);
+        insightsConn.meta = dummyMetaNoAssembly;
+        const provider = new DataSourceEditorProvider(context);
+        const result = await provider.getMeta(insightsConn.connLabel);
+        assert.deepStrictEqual(result, {});
+      });
+      it("Should return empty object if the meta has no assembly", async () => {
+        ext.connectedContextStrings.push(insightsConn.connLabel);
+        ext.connectedConnectionList.push(insightsConn);
+        isConnetedStub.resolves(true);
+        insightsConn.meta = dummyMeta;
+        const provider = new DataSourceEditorProvider(context);
+        const result = await provider.getMeta(insightsConn.connLabel);
+        assert.deepStrictEqual(result, dummyMeta.payload);
+      });
     });
   });
 });

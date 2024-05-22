@@ -30,7 +30,6 @@ import {
 import { ExecutionTypes } from "../../src/models/execution";
 import { InsightDetails } from "../../src/models/insights";
 import { ScratchpadResult } from "../../src/models/scratchpadResult";
-import { KdbDataSourceTreeItem } from "../../src/services/dataSourceTreeProvider";
 import {
   InsightsNode,
   KdbNode,
@@ -49,6 +48,7 @@ import { LocalConnection } from "../../src/classes/localConnection";
 import { ConnectionManagementService } from "../../src/services/connectionManagerService";
 import { InsightsConnection } from "../../src/classes/insightsConnection";
 import * as workspaceCommand from "../../src/commands/workspaceCommand";
+import { MetaObject } from "../../src/models/meta";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
@@ -74,172 +74,22 @@ describe("dataSourceCommand", () => {
 
     await assert.doesNotReject(dataSourceCommand.addDataSource());
   });
-
-  it("should rename a data source", async () => {
-    mock({
-      "/temp": {
-        ".kdb-datasources": {
-          "datasource-0.ds": '{"name": "datasource-0"}',
-        },
-      },
-    });
-
-    ext.context = {} as vscode.ExtensionContext;
-    sinon.stub(ext, "context").value({
-      globalStorageUri: {
-        fsPath: "/temp/",
-      },
-    });
-
-    await assert.doesNotReject(
-      dataSourceCommand.renameDataSource("datasource-0", "datasource-1"),
-    );
-  });
-
-  it("should save a data source", async () => {
-    mock({
-      "/temp": {
-        ".kdb-datasources": {
-          "datasource-0.ds": '{"name": "datasource-0"}',
-        },
-      },
-    });
-
-    ext.context = {} as vscode.ExtensionContext;
-    sinon.stub(ext, "context").value({
-      globalStorageUri: {
-        fsPath: "/temp/",
-      },
-    });
-
-    const ds = createDefaultDataSourceFile();
-    ds.name = "datasource-0";
-
-    await assert.doesNotReject(dataSourceCommand.saveDataSource(ds));
-  });
-
-  it("should save a data source with a different name", async () => {
-    mock({
-      "/temp": {
-        ".kdb-datasources": {
-          "datasource-0.ds": '{"name": "datasource-0"}',
-        },
-      },
-    });
-
-    ext.context = {} as vscode.ExtensionContext;
-    sinon.stub(ext, "context").value({
-      globalStorageUri: {
-        fsPath: "/temp/",
-      },
-    });
-
-    const ds = createDefaultDataSourceFile();
-    ds.name = "datasource-1";
-    ds.originalName = "datasource-0";
-
-    await assert.doesNotReject(dataSourceCommand.saveDataSource(ds));
-  });
-
-  it("should delete a data source", async () => {
-    mock({
-      "/temp": {
-        ".kdb-datasources": {
-          "datasource-0.ds": '{"name": "datasource-0"}',
-        },
-      },
-    });
-
-    ext.context = {} as vscode.ExtensionContext;
-    sinon.stub(ext, "context").value({
-      globalStorageUri: {
-        fsPath: "/temp/",
-      },
-    });
-
-    const item = new KdbDataSourceTreeItem(
-      "datasource-0",
-      vscode.TreeItemCollapsibleState.Collapsed,
-      [],
-    );
-
-    await assert.doesNotReject(dataSourceCommand.deleteDataSource(item));
-  });
-
-  it("should open a data source", async () => {
-    mock({
-      "/temp": {
-        ".kdb-datasources": {
-          "datasource-0.ds": '{"name": "datasource-0"}',
-        },
-      },
-    });
-
-    ext.context = {} as vscode.ExtensionContext;
-    sinon.stub(ext, "context").value({
-      globalStorageUri: {
-        fsPath: "/temp/",
-      },
-    });
-
-    const item = new KdbDataSourceTreeItem(
-      "datasource-0",
-      vscode.TreeItemCollapsibleState.Collapsed,
-      [],
-    );
-
-    const uri = vscode.Uri.file("/temp/.kdb-datasources/datasource-0.ds");
-
-    await assert.doesNotReject(dataSourceCommand.openDataSource(item, uri));
-  });
-
-  it("should open datasource", async () => {
-    const insightsNode = new InsightsNode(
-      [],
-      "insightsnode1",
-      {
-        server: "https://insightsservername.com/",
-        alias: "insightsserveralias",
-        auth: true,
-      },
-      TreeItemCollapsibleState.None,
-    );
-
-    ext.activeConnection = new InsightsConnection(
-      insightsNode.label,
-      insightsNode,
-    );
-
-    mock({
-      "/temp": {
-        ".kdb-datasources": {
-          "datasource-0.ds": '{"name": "datasource-0"}',
-        },
-      },
-    });
-
-    ext.context = {} as vscode.ExtensionContext;
-    sinon.stub(ext, "context").value({
-      globalStorageUri: {
-        fsPath: "/temp/",
-      },
-    });
-
-    const item = new KdbDataSourceTreeItem(
-      "datasource-0",
-      vscode.TreeItemCollapsibleState.Collapsed,
-      [],
-    );
-
-    const uri = vscode.Uri.file("/temp/.kdb-datasources/datasource-0.ds");
-
-    await assert.doesNotReject(dataSourceCommand.openDataSource(item, uri));
-  });
 });
 
 describe("dataSourceCommand2", () => {
   let dummyDataSourceFiles: DataSourceFiles;
   const localConn = new LocalConnection("localhost:5001", "test");
+  const insightsNode = new InsightsNode(
+    [],
+    "insightsnode1",
+    {
+      server: "https://insightsservername.com/",
+      alias: "insightsserveralias",
+      auth: true,
+    },
+    TreeItemCollapsibleState.None,
+  );
+  const insightsConn = new InsightsConnection(insightsNode.label, insightsNode);
   const uriTest: vscode.Uri = vscode.Uri.parse("test");
   let resultsPanel: KdbResultsViewProvider;
   ext.outputChannel = vscode.window.createOutputChannel("kdb");
@@ -485,29 +335,15 @@ describe("dataSourceCommand2", () => {
     let getDataInsightsStub: sinon.SinonStub;
     let handleWSResultsStub: sinon.SinonStub;
     let handleScratchpadTableRes: sinon.SinonStub;
-    const insightsNode = new InsightsNode(
-      [],
-      "insightsnode1",
-      {
-        server: "https://insightsservername.com/",
-        alias: "insightsserveralias",
-        auth: true,
-      },
-      TreeItemCollapsibleState.None,
-    );
 
     beforeEach(() => {
       windowMock = sinon.mock(vscode.window);
-      ext.activeConnection = new InsightsConnection(
-        insightsNode.label,
-        insightsNode,
-      );
       getApiBodyStub = sinon.stub(dataSourceCommand, "getApiBody");
       checkIfTimeParamIsCorrectStub = sinon.stub(
         dataSourceUtils,
         "checkIfTimeParamIsCorrect",
       );
-      getDataInsightsStub = sinon.stub(ext.activeConnection, "getDataInsights");
+      getDataInsightsStub = sinon.stub(insightsConn, "getDataInsights");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableRes = sinon.stub(
         queryUtils,
@@ -520,35 +356,14 @@ describe("dataSourceCommand2", () => {
       sinon.restore();
     });
 
-    it("should show an error message if not active connection is undefined", async () => {
-      ext.activeConnection = undefined;
-      await dataSourceCommand.runApiDataSource(dummyDataSourceFiles);
-      windowMock
-        .expects("showErrorMessage")
-        .once()
-        .withArgs("No Insights active connection found");
-      sinon.assert.notCalled(getApiBodyStub);
-      sinon.assert.notCalled(getDataInsightsStub);
-      sinon.assert.notCalled(handleWSResultsStub);
-    });
-
-    it("should show an error message if not active to an Insights server", async () => {
-      ext.activeConnection = localConn;
-      await dataSourceCommand.runApiDataSource(dummyDataSourceFiles);
-      windowMock
-        .expects("showErrorMessage")
-        .once()
-        .withArgs("No Insights active connection found");
-      sinon.assert.notCalled(getApiBodyStub);
-      sinon.assert.notCalled(getDataInsightsStub);
-      sinon.assert.notCalled(handleWSResultsStub);
-    });
-
     it("should show an error message if the time parameters are incorrect", async () => {
       const windowMock = sinon.mock(vscode.window);
       checkIfTimeParamIsCorrectStub.returns(false);
 
-      await dataSourceCommand.runApiDataSource(dummyDataSourceFiles);
+      await dataSourceCommand.runApiDataSource(
+        dummyDataSourceFiles,
+        insightsConn,
+      );
       windowMock
         .expects("showErrorMessage")
         .once()
@@ -575,8 +390,10 @@ describe("dataSourceCommand2", () => {
         { a: "6", b: "9" },
       ]);
 
-      const result =
-        await dataSourceCommand.runApiDataSource(dummyDataSourceFiles);
+      const result = await dataSourceCommand.runApiDataSource(
+        dummyDataSourceFiles,
+        insightsConn,
+      );
 
       sinon.assert.calledOnce(getDataInsightsStub);
       sinon.assert.calledOnce(handleWSResultsStub);
@@ -593,24 +410,10 @@ describe("dataSourceCommand2", () => {
     let getDataInsightsStub: sinon.SinonStub;
     let handleWSResultsStub: sinon.SinonStub;
     let handleScratchpadTableRes: sinon.SinonStub;
-    const insightsNode = new InsightsNode(
-      [],
-      "insightsnode1",
-      {
-        server: "https://insightsservername.com/",
-        alias: "insightsserveralias",
-        auth: true,
-      },
-      TreeItemCollapsibleState.None,
-    );
 
     beforeEach(() => {
       windowMock = sinon.mock(vscode.window);
-      ext.activeConnection = new InsightsConnection(
-        insightsNode.label,
-        insightsNode,
-      );
-      getDataInsightsStub = sinon.stub(ext.activeConnection, "getDataInsights");
+      getDataInsightsStub = sinon.stub(insightsConn, "getDataInsights");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableRes = sinon.stub(
         queryUtils,
@@ -619,26 +422,7 @@ describe("dataSourceCommand2", () => {
     });
 
     afterEach(() => {
-      ext.activeConnection = undefined;
       sinon.restore();
-    });
-
-    it("should show an error message if active connection is undefined", async () => {
-      ext.activeConnection = undefined;
-      await dataSourceCommand.runQsqlDataSource(dummyDataSourceFiles);
-      windowMock
-        .expects("showErrorMessage")
-        .once()
-        .withArgs("No Insights active connection found");
-    });
-
-    it("should show an error message if not active to an Insights server", async () => {
-      ext.activeConnection = localConn;
-      await dataSourceCommand.runQsqlDataSource(dummyDataSourceFiles);
-      windowMock
-        .expects("showErrorMessage")
-        .once()
-        .withArgs("No Insights active connection found");
     });
 
     it("should call the API and handle the results", async () => {
@@ -654,8 +438,10 @@ describe("dataSourceCommand2", () => {
         { a: "6", b: "9" },
       ]);
 
-      const result =
-        await dataSourceCommand.runQsqlDataSource(dummyDataSourceFiles);
+      const result = await dataSourceCommand.runQsqlDataSource(
+        dummyDataSourceFiles,
+        insightsConn,
+      );
 
       sinon.assert.calledOnce(getDataInsightsStub);
       sinon.assert.calledOnce(handleWSResultsStub);
@@ -672,24 +458,10 @@ describe("dataSourceCommand2", () => {
     let getDataInsightsStub: sinon.SinonStub;
     let handleWSResultsStub: sinon.SinonStub;
     let handleScratchpadTableRes: sinon.SinonStub;
-    const insightsNode = new InsightsNode(
-      [],
-      "insightsnode1",
-      {
-        server: "https://insightsservername.com/",
-        alias: "insightsserveralias",
-        auth: true,
-      },
-      TreeItemCollapsibleState.None,
-    );
 
     beforeEach(() => {
       windowMock = sinon.mock(vscode.window);
-      ext.activeConnection = new InsightsConnection(
-        insightsNode.label,
-        insightsNode,
-      );
-      getDataInsightsStub = sinon.stub(ext.activeConnection, "getDataInsights");
+      getDataInsightsStub = sinon.stub(insightsConn, "getDataInsights");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableRes = sinon.stub(
         queryUtils,
@@ -698,26 +470,7 @@ describe("dataSourceCommand2", () => {
     });
 
     afterEach(() => {
-      ext.activeConnection = undefined;
       sinon.restore();
-    });
-
-    it("should show an error message if active connection is undefined", async () => {
-      ext.activeConnection = undefined;
-      await dataSourceCommand.runSqlDataSource(dummyDataSourceFiles);
-      windowMock
-        .expects("showErrorMessage")
-        .once()
-        .withArgs("No Insights active connection found");
-    });
-
-    it("should show an error message if not active to an Insights server", async () => {
-      ext.activeConnection = localConn;
-      await dataSourceCommand.runSqlDataSource(dummyDataSourceFiles);
-      windowMock
-        .expects("showErrorMessage")
-        .once()
-        .withArgs("No Insights active connection found");
     });
 
     it("should call the API and handle the results", async () => {
@@ -733,8 +486,10 @@ describe("dataSourceCommand2", () => {
         { a: "6", b: "9" },
       ]);
 
-      const result =
-        await dataSourceCommand.runSqlDataSource(dummyDataSourceFiles);
+      const result = await dataSourceCommand.runSqlDataSource(
+        dummyDataSourceFiles,
+        insightsConn,
+      );
 
       sinon.assert.calledOnce(getDataInsightsStub);
       sinon.assert.calledOnce(handleWSResultsStub);
@@ -747,107 +502,61 @@ describe("dataSourceCommand2", () => {
   });
 
   describe("runDataSource", () => {
-    const dummyMeta = {
-      rc: [
-        {
-          api: 3,
-          agg: 1,
-          assembly: 1,
-          schema: 1,
-          rc: "dummy-rc",
-          labels: [{ kxname: "dummy-assembly" }],
-          started: "2023-10-04T17:20:57.659088747",
-        },
-      ],
-      dap: [
-        {
-          assembly: "dummy-assembly",
-          instance: "idb",
-          startTS: "2023-10-25T01:40:03.000000000",
-          endTS: "2023-10-25T14:00:03.000000000",
-        },
-      ],
-      api: [
-        {
-          api: ".kxi.getData",
-          kxname: ["dummy-assembly"],
-          aggFn: ".sgagg.getData",
-          custom: false,
-          full: true,
-          metadata: {
-            description: "dummy desc.",
-            params: [
-              {
-                name: "table",
-                type: -11,
-                isReq: true,
-                description: "dummy desc.",
-              },
-            ],
-            return: {
-              type: 0,
-              description: "dummy desc.",
-            },
-            misc: { safe: true },
-            aggReturn: {
-              type: 98,
-              description: "dummy desc.",
-            },
+    const dummyMeta: MetaObject = {
+      header: {
+        ac: "0",
+        agg: ":127.0.0.1:5070",
+        ai: "",
+        api: ".kxi.getMeta",
+        client: ":127.0.0.1:5050",
+        corr: "CorrHash",
+        http: "json",
+        logCorr: "logCorrHash",
+        protocol: "gw",
+        rc: "0",
+        rcvTS: "2099-05-22T11:06:33.650000000",
+        retryCount: "0",
+        to: "2099-05-22T11:07:33.650000000",
+        userID: "dummyID",
+        userName: "testUser",
+      },
+      payload: {
+        rc: [
+          {
+            api: 3,
+            agg: 1,
+            assembly: 1,
+            schema: 1,
+            rc: "dummy-rc",
+            labels: [{ kxname: "dummy-assembly" }],
+            started: "2023-10-04T17:20:57.659088747",
           },
-          procs: [],
-        },
-      ],
-      agg: [
-        {
-          aggFn: ".sgagg.aggFnDflt",
-          custom: false,
-          full: true,
-          metadata: {
-            description: "dummy desc.",
-            params: [{ description: "dummy desc." }],
-            return: { description: "dummy desc." },
-            misc: {},
-          },
-          procs: [],
-        },
-      ],
-      assembly: [
-        {
-          assembly: "dummy-assembly",
-          kxname: "dummy-assembly",
-          tbls: ["dummyTbl"],
-        },
-      ],
-      schema: [
-        {
-          table: "dummyTbl",
-          assembly: ["dummy-assembly"],
-          typ: "partitioned",
-          pkCols: [],
-          prtnCol: "srcTime",
-          sortColsMem: [],
-          sortColsIDisk: [],
-          sortColsDisk: [],
-          isSplayed: true,
-          isPartitioned: true,
-          isSharded: false,
-          columns: [
-            {
-              column: "sym",
-              typ: 10,
+        ],
+        dap: [],
+        api: [],
+        agg: [
+          {
+            aggFn: ".sgagg.aggFnDflt",
+            custom: false,
+            full: true,
+            metadata: {
               description: "dummy desc.",
-              oldName: "",
-              attrMem: "",
-              attrIDisk: "",
-              attrDisk: "",
-              isSerialized: false,
-              foreign: "",
-              anymap: false,
-              backfill: "",
+              params: [{ description: "dummy desc." }],
+              return: { description: "dummy desc." },
+              misc: {},
             },
-          ],
-        },
-      ],
+            procs: [],
+          },
+        ],
+        assembly: [
+          {
+            assembly: "dummy-assembly",
+            kxname: "dummy-assembly",
+            tbls: ["dummyTbl"],
+          },
+        ],
+        schema: [],
+      },
     };
     const dummyFileContent: DataSourceFiles = {
       name: "dummy-DS",
@@ -876,6 +585,7 @@ describe("dataSourceCommand2", () => {
       },
       insightsNode: "dummyNode",
     };
+    const connMngService = new ConnectionManagementService();
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
     const ab = new ArrayBuffer(26);
     ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
@@ -883,30 +593,21 @@ describe("dataSourceCommand2", () => {
       getMetaStub,
       handleWSResultsStub,
       handleScratchpadTableRes,
+      retrieveConnStub,
       getDataInsightsStub,
       writeQueryResultsToViewStub,
       writeQueryResultsToConsoleStub: sinon.SinonStub;
     let windowMock: sinon.SinonMock;
-    const insightsNode = new InsightsNode(
-      [],
-      "insightsnode1",
-      {
-        server: "https://insightsservername.com/",
-        alias: "insightsserveralias",
-        auth: true,
-      },
-      TreeItemCollapsibleState.None,
-    );
 
     ext.outputChannel = vscode.window.createOutputChannel("kdb");
 
     beforeEach(() => {
-      windowMock = sinon.mock(vscode.window);
-      ext.activeConnection = new InsightsConnection(
-        insightsNode.label,
-        insightsNode,
+      retrieveConnStub = sinon.stub(
+        connMngService,
+        "retrieveConnectedConnection",
       );
-      getMetaStub = sinon.stub(ext.activeConnection, "getMeta");
+      windowMock = sinon.mock(vscode.window);
+      getMetaStub = sinon.stub(insightsConn, "getMeta");
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
       handleWSResultsStub = sinon
         .stub(queryUtils, "handleWSResults")
@@ -914,7 +615,7 @@ describe("dataSourceCommand2", () => {
       handleScratchpadTableRes = sinon
         .stub(queryUtils, "handleScratchpadTableRes")
         .returns("dummy results");
-      getDataInsightsStub = sinon.stub(ext.activeConnection, "getDataInsights");
+      getDataInsightsStub = sinon.stub(insightsConn, "getDataInsights");
       writeQueryResultsToViewStub = sinon.stub(
         serverCommand,
         "writeQueryResultsToView",
@@ -926,14 +627,17 @@ describe("dataSourceCommand2", () => {
     });
 
     afterEach(() => {
-      ext.activeConnection = undefined;
       sinon.restore();
     });
 
     it("should show an error message if not connected to an Insights server", async () => {
       ext.activeConnection = undefined;
       getMetaStub.resolves({});
-      await dataSourceCommand.runDataSource({} as DataSourceFiles);
+      await dataSourceCommand.runDataSource(
+        {} as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
+      );
       windowMock
         .expects("showErrorMessage")
         .once()
@@ -943,7 +647,11 @@ describe("dataSourceCommand2", () => {
     it("should show an error message if not active to an Insights server", async () => {
       ext.activeConnection = localConn;
       getMetaStub.resolves({});
-      await dataSourceCommand.runDataSource({} as DataSourceFiles);
+      await dataSourceCommand.runDataSource(
+        {} as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
+      );
       windowMock
         .expects("showErrorMessage")
         .once()
@@ -951,38 +659,59 @@ describe("dataSourceCommand2", () => {
     });
 
     it("should return QSQL results", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = dummyMeta;
       getMetaStub.resolves(dummyMeta);
       getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
       isVisibleStub.returns(true);
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
       );
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
       sinon.assert.calledOnce(writeQueryResultsToViewStub);
+
+      ext.connectedConnectionList.length = 0;
     });
 
     it("should return API results", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = dummyMeta;
       dummyFileContent.dataSource.selectedType = DataSourceTypes.API;
       getMetaStub.resolves(dummyMeta);
       getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
+
+      ext.connectedConnectionList.length = 0;
     });
 
     it("should return SQL results", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = dummyMeta;
       dummyFileContent.dataSource.selectedType = DataSourceTypes.SQL;
       getMetaStub.resolves(dummyMeta);
       getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
+
+      ext.connectedConnectionList.length = 0;
     });
 
     it("should return error message QSQL", async () => {
@@ -992,6 +721,8 @@ describe("dataSourceCommand2", () => {
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
@@ -1004,6 +735,8 @@ describe("dataSourceCommand2", () => {
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
@@ -1016,6 +749,8 @@ describe("dataSourceCommand2", () => {
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
@@ -1028,6 +763,8 @@ describe("dataSourceCommand2", () => {
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
@@ -1040,6 +777,8 @@ describe("dataSourceCommand2", () => {
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
@@ -1052,6 +791,8 @@ describe("dataSourceCommand2", () => {
       isVisibleStub.returns(false);
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
@@ -1096,8 +837,10 @@ describe("dataSourceCommand2", () => {
       sinon.restore();
     });
     it("should show error msg", async () => {
-      ext.activeConnection = localConn;
-      await dataSourceCommand.populateScratchpad(dummyFileContent);
+      await dataSourceCommand.populateScratchpad(
+        dummyFileContent,
+        localConn.connLabel,
+      );
       windowMock
         .expects("showErrorMessage")
         .once()
@@ -1320,13 +1063,23 @@ describe("serverCommand", () => {
       const result = { data: [1, 2, 3] };
       const executeCommandStub = sinon.stub(vscode.commands, "executeCommand");
 
-      serverCommand.writeQueryResultsToView(result, "");
+      serverCommand.writeQueryResultsToView(
+        result,
+        "",
+        "testConn",
+        "testFile.kdb.q",
+        false,
+        "WORKBOOK",
+        false,
+        "2",
+      );
 
       sinon.assert.calledWith(
         executeCommandStub.firstCall,
         "kdb.resultsPanel.update",
         result,
-        undefined,
+        false,
+        "WORKBOOK",
       );
 
       executeCommandStub.restore();
@@ -1463,7 +1216,11 @@ describe("serverCommand", () => {
       serverCommand.writeScratchpadResult(
         scratchpadResult,
         "dummy query",
-        "123",
+        "connLabel",
+        "testFile.kdb.q",
+        false,
+        true,
+        "2",
       );
       sinon.assert.notCalled(writeQueryResultsToViewStub);
       sinon.assert.notCalled(writeQueryResultsToConsoleStub);
@@ -1475,7 +1232,11 @@ describe("serverCommand", () => {
       serverCommand.writeScratchpadResult(
         scratchpadResult,
         "dummy query",
-        "123",
+        "connLabel",
+        "testFile.kdb.py",
+        true,
+        true,
+        "2",
       );
       sinon.assert.notCalled(writeQueryResultsToConsoleStub);
       sinon.assert.notCalled(queryConsoleErrorStub);
@@ -1487,7 +1248,11 @@ describe("serverCommand", () => {
       serverCommand.writeScratchpadResult(
         scratchpadResult,
         "dummy query",
-        "123",
+        "connLabel",
+        "testFile.kdb.py",
+        true,
+        true,
+        "2",
       );
       sinon.assert.notCalled(writeQueryResultsToViewStub);
     });
@@ -1540,13 +1305,23 @@ describe("serverCommand", () => {
 
     it("runQuery with undefined editor ", () => {
       ext.activeTextEditor = undefined;
-      const result = serverCommand.runQuery(ExecutionTypes.PythonQueryFile);
+      const result = serverCommand.runQuery(
+        ExecutionTypes.PythonQueryFile,
+        "",
+        "",
+        false,
+      );
       assert.equal(result, false);
     });
 
     it("runQuery with QuerySelection", () => {
       ext.connectionNode = undefined;
-      const result = serverCommand.runQuery(ExecutionTypes.QuerySelection);
+      const result = serverCommand.runQuery(
+        ExecutionTypes.QuerySelection,
+        "",
+        "",
+        false,
+      );
       assert.equal(result, undefined);
     });
 
@@ -1554,6 +1329,9 @@ describe("serverCommand", () => {
       ext.connectionNode = undefined;
       const result = serverCommand.runQuery(
         ExecutionTypes.PythonQuerySelection,
+        "",
+        "",
+        false,
       );
       assert.equal(result, undefined);
     });
@@ -1562,13 +1340,21 @@ describe("serverCommand", () => {
       ext.connectionNode = insightsNode;
       const result = serverCommand.runQuery(
         ExecutionTypes.PythonQuerySelection,
+        "",
+        "",
+        false,
       );
       assert.equal(result, undefined);
     });
 
     it("runQuery with QueryFile", () => {
       ext.connectionNode = undefined;
-      const result = serverCommand.runQuery(ExecutionTypes.QueryFile);
+      const result = serverCommand.runQuery(
+        ExecutionTypes.QueryFile,
+        "",
+        "",
+        false,
+      );
       assert.equal(result, undefined);
     });
 
@@ -1576,6 +1362,9 @@ describe("serverCommand", () => {
       ext.connectionNode = undefined;
       const result = serverCommand.runQuery(
         ExecutionTypes.ReRunQuery,
+        "",
+        "",
+        false,
         "rerun query",
       );
       assert.equal(result, undefined);
@@ -1583,13 +1372,23 @@ describe("serverCommand", () => {
 
     it("runQuery with PythonQueryFile", () => {
       ext.connectionNode = undefined;
-      const result = serverCommand.runQuery(ExecutionTypes.PythonQueryFile);
+      const result = serverCommand.runQuery(
+        ExecutionTypes.PythonQueryFile,
+        "",
+        "",
+        false,
+      );
       assert.equal(result, undefined);
     });
 
     it("runQuery with PythonQueryFile", () => {
       ext.connectionNode = insightsNode;
-      const result = serverCommand.runQuery(ExecutionTypes.PythonQueryFile);
+      const result = serverCommand.runQuery(
+        ExecutionTypes.PythonQueryFile,
+        "",
+        "",
+        false,
+      );
       assert.equal(result, undefined);
     });
   });
@@ -1624,39 +1423,116 @@ describe("serverCommand", () => {
     });
     afterEach(() => {
       ext.activeConnection = undefined;
+      ext.connectedConnectionList.length = 0;
+      ext.connectedContextStrings.length = 0;
       sinon.restore();
     });
-    it("should execute query and write results to view", async () => {
+    it("should fail if connLabel is empty and activeConnection is undefined", async () => {
+      serverCommand.executeQuery(
+        "SELECT * FROM table",
+        "",
+        "testFile.kdb.q",
+        ".",
+        true,
+        true,
+      );
+      sinon.assert.notCalled(writeResultsConsoleStub);
+      sinon.assert.notCalled(writeResultsViewStub);
+      sinon.assert.notCalled(writeScratchpadResultStub);
+    });
+
+    it("should proceed if connLabel is empty and activeConnection is not undefined", async () => {
       ext.activeConnection = localConn;
-      ext.connectionNode = kdbNode;
+      ext.connectedConnectionList.push(localConn);
+      ext.connectedContextStrings.push(localConn.connLabel);
       isVisibleStub.returns(true);
       executeQueryStub.resolves({ data: "data" });
-      serverCommand.executeQuery("SELECT * FROM table");
+      serverCommand.executeQuery(
+        "SELECT * FROM table",
+        "",
+        "testFile.kdb.q",
+        ".",
+        true,
+        true,
+      );
+      sinon.assert.notCalled(writeResultsConsoleStub);
+      sinon.assert.notCalled(writeScratchpadResultStub);
+    });
+    it("should fail if the connection selected is not connected", async () => {
+      ext.connectedConnectionList.push(localConn);
+      isVisibleStub.returns(true);
+      executeQueryStub.resolves({ data: "data" });
+      serverCommand.executeQuery(
+        "SELECT * FROM table",
+        localConn.connLabel,
+        "testFile.kdb.q",
+        ".",
+        true,
+        true,
+      );
+      sinon.assert.notCalled(writeResultsConsoleStub);
+      sinon.assert.notCalled(writeResultsViewStub);
+      sinon.assert.notCalled(writeScratchpadResultStub);
+    });
+    it("should execute query and write results to view", async () => {
+      ext.connectedConnectionList.push(localConn);
+      ext.connectedContextStrings.push(localConn.connLabel);
+      isVisibleStub.returns(true);
+      executeQueryStub.resolves({ data: "data" });
+      serverCommand.executeQuery(
+        "SELECT * FROM table",
+        localConn.connLabel,
+        "testFile.kdb.q",
+        ".",
+        true,
+        true,
+      );
       sinon.assert.notCalled(writeResultsConsoleStub);
       sinon.assert.notCalled(writeScratchpadResultStub);
     });
     it("should execute query and write results to console", async () => {
-      ext.activeConnection = localConn;
-      ext.connectionNode = kdbNode;
+      ext.connectedConnectionList.push(localConn);
+      ext.connectedContextStrings.push(localConn.connLabel);
       isVisibleStub.returns(false);
       executeQueryStub.resolves("dummy test");
-      serverCommand.executeQuery("SELECT * FROM table");
+      serverCommand.executeQuery(
+        "SELECT * FROM table",
+        localConn.connLabel,
+        "testFile.kdb.q",
+        ".",
+        true,
+        true,
+      );
       sinon.assert.notCalled(writeResultsViewStub);
       sinon.assert.notCalled(writeScratchpadResultStub);
     });
     it("should execute query and write error to console", async () => {
-      ext.activeConnection = insightsConn;
-      ext.connectionNode = insightsNode;
+      ext.connectedConnectionList.push(insightsConn);
+      ext.connectedContextStrings.push(insightsConn.connLabel);
       isVisibleStub.returns(true);
       executeQueryStub.resolves("dummy test");
-      serverCommand.executeQuery("SELECT * FROM table");
+      serverCommand.executeQuery(
+        "SELECT * FROM table",
+        insightsConn.connLabel,
+        "testFile.kdb.q",
+        ".",
+        true,
+        true,
+      );
       sinon.assert.notCalled(writeResultsConsoleStub);
     });
 
     it("should get error", async () => {
       ext.activeConnection = localConn;
       ext.connectionNode = kdbNode;
-      const res = await serverCommand.executeQuery("");
+      const res = await serverCommand.executeQuery(
+        "",
+        "testeConn",
+        "testFile.kdb.q",
+        ".",
+        true,
+        true,
+      );
       assert.equal(res, undefined);
     });
   });
@@ -1699,6 +1575,7 @@ describe("serverCommand", () => {
     });
     it("should execute query for non-datasource query", async function () {
       const rerunQueryElement: QueryHistory = {
+        executorName: "test",
         isDatasource: false,
         query: "SELECT * FROM table",
         language: "q",
@@ -1715,6 +1592,7 @@ describe("serverCommand", () => {
     it("should run datasource for datasource query", async function () {
       const ds = createDefaultDataSourceFile();
       const rerunQueryElement: QueryHistory = {
+        executorName: "test",
         isDatasource: true,
         datasourceType: DataSourceTypes.QSQL,
         query: ds,
