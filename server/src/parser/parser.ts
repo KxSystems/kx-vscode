@@ -68,6 +68,28 @@ function peek(tokens: Token[]): Token | undefined {
 
 interface State {
   order: number;
+  stack: Token[];
+}
+
+function assignment(state: State, token: Token) {
+  const { stack } = state;
+
+  if (inParam(token)) {
+    token.assignment = [token, token];
+  } else {
+    let top = peek(stack);
+    if (top?.tokenType === Colon || top?.tokenType === DoubleColon) {
+      token.assignment = [top];
+      stack.pop();
+      top = stack.shift();
+      if (top) {
+        token.assignment.push(top);
+        clear(stack);
+      }
+    }
+    stack.push(token);
+  }
+  token.order = state.order++;
 }
 
 function block(state: State, tokens: Token[]) {
@@ -115,29 +137,14 @@ function block(state: State, tokens: Token[]) {
 }
 
 function expression(state: State, tokens: Token[]) {
-  const stack: Token[] = [];
+  const { stack } = state;
 
-  let token, top;
+  let token;
 
   while ((token = tokens.pop())) {
     switch (token.tokenType) {
       case Identifier:
-        if (inParam(token)) {
-          token.assignment = [token, token];
-        } else {
-          top = peek(stack);
-          if (top?.tokenType === Colon || top?.tokenType === DoubleColon) {
-            token.assignment = [top];
-            stack.pop();
-            top = stack.shift();
-            if (top) {
-              token.assignment.push(top);
-              clear(stack);
-            }
-          }
-          stack.push(token);
-        }
-        token.order = state.order++;
+        assignment(state, token);
         break;
       case SemiColon:
         clear(stack);
@@ -147,12 +154,21 @@ function expression(state: State, tokens: Token[]) {
         block(state, tokens);
         break;
       case RBracket:
-        top = token.scope?.tangled;
-        if (!top || top.tokenType === Control || top.tokenType === SemiColon) {
-          tokens.push(token);
-          block(state, tokens);
-        } else {
-          stack.push(token);
+        switch (token.scope?.tangled?.tokenType) {
+          case LBracket:
+          case LParen:
+          case LCurly:
+          case Control:
+          case Colon:
+          case DoubleColon:
+          case SemiColon:
+          case undefined:
+            tokens.push(token);
+            block(state, tokens);
+            break;
+          default:
+            stack.push(token);
+            break;
         }
         break;
       case RParen:
@@ -163,6 +179,7 @@ function expression(state: State, tokens: Token[]) {
         break;
     }
   }
+  clear(stack);
 }
 
 export function parse(text: string): Token[] {
@@ -171,8 +188,9 @@ export function parse(text: string): Token[] {
   const cache: Token[] = [];
   const scope: Token[] = [];
 
-  const state = {
+  const state: State = {
     order: 1,
+    stack: [],
   };
 
   let namespace = "";
@@ -220,28 +238,30 @@ export function parse(text: string): Token[] {
           expression(state, cache);
         }
         break;
-      case Command:
-        {
-          const [cmd, arg] = token.image.split(/[ \t]+/, 2);
-          switch (cmd) {
-            case "\\d":
-              if (arg) {
-                namespace = (arg.startsWith(".") && arg.split(".", 2)[1]) || "";
-              }
-              break;
-          }
+      case Command: {
+        const [cmd, arg] = token.image.split(/[ \t]+/, 2);
+        switch (cmd) {
+          case "\\d":
+            if (arg) {
+              namespace = (arg.startsWith(".") && arg.split(".", 2)[1]) || "";
+            }
+            break;
         }
         break;
+      }
       case StringEscape:
         checkEscape(token);
         break;
       case TestBegin:
       case TestBlock:
       case TestLambdaBlock:
+        if (token.scope) {
+          cache.push(token);
+          block(state, cache);
+          token.scope = undefined;
+        }
         scope.pop();
-        token.scope = undefined;
         scope.push(token);
-        token.assignment = [token, token];
         break;
       case CharLiteral:
         break;

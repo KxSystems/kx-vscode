@@ -15,6 +15,7 @@ import {
   DateTimeLiteral,
   SyntaxError,
   Token,
+  amended,
   assignable,
   assigned,
   identifier,
@@ -50,6 +51,7 @@ export function unusedParam(tokens: Token[]): Token[] {
 export function unusedVar(tokens: Token[]): Token[] {
   return tokens.filter(
     (token) =>
+      !amended(token) &&
       !inParam(token) &&
       inLambda(token) &&
       assigned(token) &&
@@ -66,7 +68,13 @@ export function unusedVar(tokens: Token[]): Token[] {
 
 export function declaredAfterUse(tokens: Token[]): Token[] {
   return tokens
-    .filter((token) => !inParam(token) && assigned(token) && assignable(token))
+    .filter(
+      (token) =>
+        !inParam(token) &&
+        !amended(token) &&
+        assigned(token) &&
+        assignable(token),
+    )
     .sort((a, b) =>
       identifier(a) < identifier(b)
         ? -1

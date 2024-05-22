@@ -48,6 +48,11 @@ describe("TSQLint", () => {
     assert.strictEqual(result.length, 1);
     assert.strictEqual(result[0].code, "UNUSED_VAR");
   });
+  it("should not lint unusedVar", () => {
+    const text = "{a::1}";
+    const result = lint(parse(text));
+    assert.strictEqual(result.length, 0);
+  });
   it("should lint declaredAfterUse", () => {
     const text = "a;a:1";
     const result = lint(parse(text));
@@ -66,6 +71,11 @@ describe("TSQLint", () => {
   });
   it("should not lint declaredAfterUse", () => {
     const text = "[1=1;[a:1;b:1];[a;b]]";
+    const result = lint(parse(text));
+    assert.strictEqual(result.length, 0);
+  });
+  it("should not lint declaredAfterUse", () => {
+    const text = "[[a:1;b:1;a;b];c:1;[a;b;c]]";
     const result = lint(parse(text));
     assert.strictEqual(result.length, 0);
   });
