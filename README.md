@@ -85,7 +85,7 @@ To integrate VS Code with q take the following steps:
 
   If q is installed at `C:\q`, then `QHOME` is `C:\q`.
 
-  To finish, a prompt is offered with an opt-in to receive a newsletter.
+1. To finish, a prompt is offered with an opt-in to receive a newsletter.
 
 
 
@@ -94,11 +94,11 @@ To integrate VS Code with q take the following steps:
 The kdb VS Code extension allows you to connect VS Code to one or more q processes; these can be:
 
 - [Bundled q](#bundled-q): referred to as a **managed q session**, which uses the q installed as part of the kdb VS Code extension installation. It runs a child q process from within the extension and is fully managed by the extension. 
-- [My q](#my-q): is a remote q process referred to as an **unmanaged q session**.
+- [My q](#my-q): referred to as an **unmanaged q session** this is a remote q process.
 
 - [Insights](#insights-connection): access to kdb Insights Enterprise API endpoints and a user-specific scratchpad process within a kdb Insights Enterprise deployment.
 
-This allows you to have multiplemore than one connection open at the same time enabling development and testing across different q and insights connections using both q and python.
+You can have multiple connections open at once, enabling development and testing across different q and kdb Insights Enterprise connections using both q and Python.
 
 
 ### Bundled q
@@ -163,29 +163,29 @@ Upon completion, the localhost connection appears under _KX:CONNECTIONS_ in the 
 
 ### Insights Connection
 
-For kdb Insights Enterprise, the kdb VS Code extension is using a shared kdb process. Unlike for a **managed q session**, you must have [kdb Insights Enterprise Personal Edition](https://trykdb.kx.com/kx/signup) running before using these connections.
+For kdb Insights Enterprise, the kdb VS Code extension uses a shared kdb process. Unlike for a **managed q session**, you must have [kdb Insights Enterprise Personal Edition](https://trykdb.kx.com/kx/signup) running before using these connections.
 
-**Step 1**: Click _Add Connection_.
+1. Click _Add Connection_.
 
-![connecttoakdbserver](https://github.com/KxSystems/kx-vscode/blob/main/img/connecttoakdbserver.png?raw=true)
+  ![connecttoakdbserver](https://github.com/KxSystems/kx-vscode/blob/main/img/connecttoakdbserver.png?raw=true)
 
-**Step 2**: A new window will open with the type of connection you desire to add, **Select Insights connection**.
+1. A new window will open with the type of connection you desire to add, **Select Insights connection**.
 
-![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsconnection.png?raw=true)
+  ![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsconnection.png?raw=true)
 
-**Step 3**: Create a _server name / alias_; this can be any name, aside from `local`, which is used by [Bundled q connection](#bundled-q).
+1. Create a _server name / alias_; this can be any name, aside from `local`, which is used by [Bundled q connection](#bundled-q).
 
-**Step 4**: Set the _hostname_. This is the remote address of your kdb Insights Enterprise deployment: e.g. `https://mykdbinsights.cloudapp.azure.com`
+1. Set the _hostname_. This is the remote address of your kdb Insights Enterprise deployment: e.g. `https://mykdbinsights.cloudapp.azure.com`
 
-**Step 5**: Click **Create connection** to confirm the _connection creation_
+1. Click **Create connection** to confirm the _connection creation_
 
-**Step 6**: The kdb Insights Enterprise connection is listed under _KX:Connections_, with its own icon. Right-click the connection and _Connect to Insights_
+1. The kdb Insights Enterprise connection is listed under _KX:Connections_, with its own icon. Right-click the connection and _Connect to Insights_
 
-![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/kdbinsightsconnection.jpg?raw=true)
+  ![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/kdbinsightsconnection.jpg?raw=true)
 
-**Step 7**: The kdb VS Code extension runs an authentication step with the remote kdb Insights Enterprise process; sign-in to kdb Insights Enterprise.
+1. The kdb VS Code extension runs an authentication step with the remote kdb Insights Enterprise process; sign-in to kdb Insights Enterprise.
 
-![authenticateinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsauthenticate.jpg?raw=true)
+  ![authenticateinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsauthenticate.jpg?raw=true)
 
 
 Once connected, go to [execute code](#execute-code).
@@ -245,7 +245,7 @@ Supports renaming symbols in text editor. Right-click and select "Rename Symbol"
 
 Leaning on VS Code's extensive integrations with SCMs, all code is typically stored and loaded into a VS Code workspace. From there, the kdb VS Code extension allows you execute code against both kdb processes, and kdb Insights Enterprise endpoints.
 
-### kdb process executing code
+### kdb process executing q and Python code
 
 For any file with a `.q` or `.py` extension there are additional options available from the right-click menu for executing code:
 
@@ -269,11 +269,18 @@ Similarly, you can execute arbitrary code against kdb Insights Enterprise. The c
 
 #### Data sources
 
-KX Data source files are workspace specific files that can be associated with a connection, have the `kdb.json` extension and are stored in a `.kx` folder at the root of your workspace. These files allow you to build a query within VS Code, associate it with a connection and run it against the [kdb Insights Enterprise API endpoints](https://code.kx.com/insights/api/index.html). The UI helps you to build a query based on the available API on your instance of kdb Insights Enterprise, parameterize it and return the data results to the output or kdb results window.
+KX Data source files are workspace specific files that have the following properties
+
+- Can be associated with a connection
+- Have the `kdb.json` extension
+- Are stored in a `.kx` folder at the root of your open folder
+
+These files allow you to build a query within VS Code, associate it with a connection and run it against the [kdb Insights Enterprise API endpoints](https://code.kx.com/insights/api/index.html). The UI helps you to build a query based on the available API on your instance of kdb Insights Enterprise, parameterize it and return the data results to the output or kdb results window.
 
 
 To create a data source and run it against a specific connection::
 
+1. Ensure you have at least one folder open in VSCode.
 1. In the DATASOURCES view, click the '+'' button.
 1. Select a Connection from the Connections dropdown.
 1. Choose getData from the Select API dropdown.
@@ -314,13 +321,15 @@ Standard `.q` and `.py` files only run on the active connection. Workbook files 
 
 To create a Workbook and run code against a specific connection:
 
-1. In the Workbook view, click one of the '+' buttons to create a 'q' or 'python' workbook.
+1. Ensure you have at least one folder open in VSCode.
+1. In the WORKBOOKS view, click one of the '+' buttons to create a q or Python workbook.
   ![new workbook](https://github.com/KxSystems/kx-vscode/blob/main/img/addnewworkbook.png?raw=true)
 
 1. Write code you wish to execute.
+
 1. Run the code:
 
-  1. To run all the code in the file you can use an of the following methods:
+  1. To run all the code in the file you can use one of the following methods:
 
     1. Click 'Run' from above the first line of code in the workbook file.
       ![workbook links](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookrunlink.png)
@@ -331,14 +340,14 @@ To create a Workbook and run code against a specific connection:
     1. Click the 'Run' buttom on the right hand side of the status bar.
         ![status bar run ](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookstatusbarrun.png)
 
-    1. Right click and choose 'KX: Execute Entire File' or 'KX: Execute Current Selection' from the menu.
+    1. Right click and choose 'KX: Execute Entire File' from the menu.
 
-  1. If you wish to only run the current selection (or current line if nothing is selected), right click and choose 'KX: Execute Entire File' or 'KX: Execute Current Selection' from the menu.
+  1. If you wish to only run the current selection (or current line if nothing is selected), right click and choose 'KX: Execute Current Selection' from the menu.
 
 1. If you have not yet chosen a connection to associate with the workbook you will be asked to choose a connection before the code is executed.
         ![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookconnectionlink.png)
 
-1. The results populate the output and kdb results windows.
+1. The results populate the kdb results window if it is active, otherwise it will populate the output window.
 
 When you save a workbook file the code and the connection details are stored. The workbook icon will be green if it is associated with a connection and grey if there is no association.
 
