@@ -1423,16 +1423,65 @@ describe("serverCommand", () => {
     });
     afterEach(() => {
       ext.activeConnection = undefined;
+      ext.connectedConnectionList.length = 0;
+      ext.connectedContextStrings.length = 0;
       sinon.restore();
     });
-    it("should execute query and write results to view", async () => {
+    it("should fail if connLabel is empty and activeConnection is undefined", async () => {
+      serverCommand.executeQuery(
+        "SELECT * FROM table",
+        "",
+        "testFile.kdb.q",
+        ".",
+        true,
+        true,
+      );
+      sinon.assert.notCalled(writeResultsConsoleStub);
+      sinon.assert.notCalled(writeResultsViewStub);
+      sinon.assert.notCalled(writeScratchpadResultStub);
+    });
+
+    it("should proceed if connLabel is empty and activeConnection is not undefined", async () => {
       ext.activeConnection = localConn;
-      ext.connectionNode = kdbNode;
+      ext.connectedConnectionList.push(localConn);
+      ext.connectedContextStrings.push(localConn.connLabel);
       isVisibleStub.returns(true);
       executeQueryStub.resolves({ data: "data" });
       serverCommand.executeQuery(
         "SELECT * FROM table",
-        "testeConn",
+        "",
+        "testFile.kdb.q",
+        ".",
+        true,
+        true,
+      );
+      sinon.assert.notCalled(writeResultsConsoleStub);
+      sinon.assert.notCalled(writeScratchpadResultStub);
+    });
+    it("should fail if the connection selected is not connected", async () => {
+      ext.connectedConnectionList.push(localConn);
+      isVisibleStub.returns(true);
+      executeQueryStub.resolves({ data: "data" });
+      serverCommand.executeQuery(
+        "SELECT * FROM table",
+        localConn.connLabel,
+        "testFile.kdb.q",
+        ".",
+        true,
+        true,
+      );
+      sinon.assert.notCalled(writeResultsConsoleStub);
+      sinon.assert.notCalled(writeResultsViewStub);
+      sinon.assert.notCalled(writeScratchpadResultStub);
+    });
+    it("should execute query and write results to view", async () => {
+      ext.connectedConnectionList.push(localConn);
+      ext.connectedContextStrings.push(localConn.connLabel);
+      isVisibleStub.returns(true);
+      executeQueryStub.resolves({ data: "data" });
+      serverCommand.executeQuery(
+        "SELECT * FROM table",
+        localConn.connLabel,
         "testFile.kdb.q",
         ".",
         true,
@@ -1442,13 +1491,13 @@ describe("serverCommand", () => {
       sinon.assert.notCalled(writeScratchpadResultStub);
     });
     it("should execute query and write results to console", async () => {
-      ext.activeConnection = localConn;
-      ext.connectionNode = kdbNode;
+      ext.connectedConnectionList.push(localConn);
+      ext.connectedContextStrings.push(localConn.connLabel);
       isVisibleStub.returns(false);
       executeQueryStub.resolves("dummy test");
       serverCommand.executeQuery(
         "SELECT * FROM table",
-        "testeConn",
+        localConn.connLabel,
         "testFile.kdb.q",
         ".",
         true,
@@ -1458,13 +1507,13 @@ describe("serverCommand", () => {
       sinon.assert.notCalled(writeScratchpadResultStub);
     });
     it("should execute query and write error to console", async () => {
-      ext.activeConnection = insightsConn;
-      ext.connectionNode = insightsNode;
+      ext.connectedConnectionList.push(insightsConn);
+      ext.connectedContextStrings.push(insightsConn.connLabel);
       isVisibleStub.returns(true);
       executeQueryStub.resolves("dummy test");
       serverCommand.executeQuery(
         "SELECT * FROM table",
-        "testeConn",
+        insightsConn.connLabel,
         "testFile.kdb.q",
         ".",
         true,
