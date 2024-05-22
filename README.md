@@ -289,7 +289,7 @@ To create a data source and run it against a specific connection::
 1. You can choose from the additional parameters if you wish.
 1. Click Save to store the settings you have chosen, for reuse later.
 
-  ![data Source](https://github.com/KxSystems/kx-vscode/blob/main/img/data-source.png?raw=true)
+    ![data Source](https://github.com/KxSystems/kx-vscode/blob/main/img/data-source.png?raw=true)
 
 1. Click 'Run'.
 
@@ -323,29 +323,29 @@ To create a Workbook and run code against a specific connection:
 
 1. Ensure you have at least one folder open in VS Code.
 1. In the WORKBOOKS view, click one of the '+' buttons to create a q or Python workbook.
-  ![new workbook](https://github.com/KxSystems/kx-vscode/blob/main/img/addnewworkbook.png?raw=true)
+    ![new workbook](https://github.com/KxSystems/kx-vscode/blob/main/img/addnewworkbook.png?raw=true)
 
 1. Write code you wish to execute.
 
 1. Run the code:
 
-  1. To run all the code in the file you can use one of the following methods:
+    1. To run all the code in the file you can use one of the following methods:
 
-    1. Click 'Run' from above the first line of code in the workbook file.
-      ![workbook links](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookrunlink.png)
+        1. Click 'Run' from above the first line of code in the workbook file.
+            ![workbook links](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookrunlink.png)
 
-    1. Select 'Run' from the upper right of the editor. Using the dropdown next to the button you can choose to 'KX: Execute Entire File' or 'KX Execute Current Selection'.
-        ![play dropdown](https://github.com/KxSystems/kx-vscode/blob/main/img/wortkbookplaydropdown.png)
+        1. Select 'Run' from the upper right of the editor. Using the dropdown next to the button you can choose to 'KX: Execute Entire File' or 'KX Execute Current Selection'.
+            ![play dropdown](https://github.com/KxSystems/kx-vscode/blob/main/img/wortkbookplaydropdown.png)
 
-    1. Click the 'Run' button on the right hand side of the status bar.
-        ![status bar run ](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookstatusbarrun.png)
+        1. Click the 'Run' button on the right hand side of the status bar.
+            ![status bar run ](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookstatusbarrun.png)
 
-    1. Right click and choose 'KX: Execute Entire File' from the menu.
+        1. Right click and choose 'KX: Execute Entire File' from the menu.
 
-  1. If you wish to only run the current selection (or current line if nothing is selected), right click and choose 'KX: Execute Current Selection' from the menu.
+    1. If you wish to only run the current selection (or current line if nothing is selected), right click and choose 'KX: Execute Current Selection' from the menu.
 
 1. If you have not yet chosen a connection to associate with the workbook you will be asked to choose a connection before the code is executed.
-        ![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookconnectionlink.png)
+    ![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookconnectionlink.png)
 
 1. The results populate the kdb results window if it is active, otherwise it will populate the output window.
 
