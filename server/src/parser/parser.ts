@@ -39,7 +39,7 @@ import {
   TestBegin,
 } from "./ranges";
 import { CharLiteral, CommentLiteral } from "./literals";
-import { Token, inParam } from "./utils";
+import { Token, inParam, testblock } from "./utils";
 import { Control, Identifier, LSql, RSql } from "./keywords";
 import { checkEscape } from "./checks";
 
@@ -92,13 +92,14 @@ function assignment(state: State, token: Token) {
   token.order = state.order++;
 }
 
-function block(state: State, tokens: Token[]) {
-  const anchor = tokens.pop();
-  if (!anchor || !anchor.scope) {
-    return;
+function block(state: State, tokens: Token[], scopped = true) {
+  if (scopped) {
+    const anchor = peek(tokens);
+    if (anchor && anchor.scope) {
+      tokens.pop();
+      tokens = tokens.splice(tokens.indexOf(anchor.scope) + 1);
+    }
   }
-
-  tokens = tokens.splice(tokens.indexOf(anchor.scope) + 1);
 
   const cache: Token[] = [];
   const scope: Token[] = [];
@@ -233,9 +234,11 @@ export function parse(text: string): Token[] {
         }
         break;
       case EndOfLine:
-        next = tokens[i + 1];
-        if (next && isExpression(next)) {
-          expression(state, cache);
+        if (!testblock(token.scope)) {
+          next = tokens[i + 1];
+          if (next && isExpression(next)) {
+            expression(state, cache);
+          }
         }
         break;
       case Command: {
@@ -255,13 +258,15 @@ export function parse(text: string): Token[] {
       case TestBegin:
       case TestBlock:
       case TestLambdaBlock:
-        if (token.scope) {
-          cache.push(token);
-          block(state, cache);
-          token.scope = undefined;
-        }
         scope.pop();
         scope.push(token);
+        cache.push(token);
+        block(state, cache);
+        if (token.scope) {
+          token.scope.assignment = [token.scope, token.scope];
+          token.scope = undefined;
+        }
+        cache.push(token);
         break;
       case CharLiteral:
         break;
@@ -272,6 +277,15 @@ export function parse(text: string): Token[] {
         break;
     }
   }
-  expression(state, cache);
+
+  token = peek(scope);
+
+  if (testblock(token)) {
+    block(state, cache, false);
+    token!.assignment = [token!, token!];
+  } else {
+    expression(state, cache);
+  }
+
   return tokens;
 }

@@ -106,6 +106,15 @@ export function lambda(token?: Token) {
   );
 }
 
+export function testblock(token?: Token) {
+  return (
+    token &&
+    (token.tokenType === TestBegin ||
+      token.tokenType === TestBlock ||
+      token.tokenType === TestLambdaBlock)
+  );
+}
+
 export function amended(token: Token) {
   return token.assignment && token.assignment[0]?.tokenType === DoubleColon;
 }
@@ -137,7 +146,11 @@ export function assigned(token: Token) {
 }
 
 export function assignable(token: Token) {
-  return token.tokenType === Identifier && !inSql(token) && !inTable(token);
+  return (
+    (token.tokenType === Identifier || token.tokenType === TestLambdaBlock) &&
+    !inSql(token) &&
+    !inTable(token)
+  );
 }
 
 export function tokenId(token: Token) {
