@@ -623,6 +623,7 @@ describe("queryHistoryProvider", () => {
       time: "testTime2",
       query: "testQuery2",
       success: true,
+      isWorkbook: true,
       connectionType: ServerType.KDB,
       duration: "500",
     },
