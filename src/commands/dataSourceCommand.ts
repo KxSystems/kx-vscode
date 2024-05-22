@@ -152,35 +152,37 @@ export async function runDataSource(
     }
 
     ext.isDatasourceExecution = false;
-    if (res.error) {
-      window.showErrorMessage(res.error);
-      addDStoQueryHistory(dataSourceForm, false, connLabel, executorName);
-    } else if (ext.resultsViewProvider.isVisible()) {
-      ext.outputChannel.appendLine(
-        `Results: ${typeof res === "string" ? "0" : res.rows.length} rows`,
-      );
-      addDStoQueryHistory(dataSourceForm, true, connLabel, executorName);
-      writeQueryResultsToView(
-        res,
-        getQuery(fileContent, selectedType),
-        connLabel,
-        executorName,
-        true,
-        selectedType,
-      );
-    } else {
-      ext.outputChannel.appendLine(
-        `Results is a string with length: ${res.length}`,
-      );
-      addDStoQueryHistory(dataSourceForm, true, connLabel, executorName);
-      writeQueryResultsToConsole(
-        res,
-        getQuery(fileContent, selectedType),
-        connLabel,
-        executorName,
-        true,
-        selectedType,
-      );
+    if (res) {
+      if (res.error) {
+        window.showErrorMessage(res.error);
+        addDStoQueryHistory(dataSourceForm, false, connLabel, executorName);
+      } else if (ext.resultsViewProvider.isVisible()) {
+        ext.outputChannel.appendLine(
+          `Results: ${typeof res === "string" ? "0" : res.rows.length} rows`,
+        );
+        addDStoQueryHistory(dataSourceForm, true, connLabel, executorName);
+        writeQueryResultsToView(
+          res,
+          getQuery(fileContent, selectedType),
+          connLabel,
+          executorName,
+          true,
+          selectedType,
+        );
+      } else {
+        ext.outputChannel.appendLine(
+          `Results is a string with length: ${res.length}`,
+        );
+        addDStoQueryHistory(dataSourceForm, true, connLabel, executorName);
+        writeQueryResultsToConsole(
+          res,
+          getQuery(fileContent, selectedType),
+          connLabel,
+          executorName,
+          true,
+          selectedType,
+        );
+      }
     }
   } catch (error) {
     window.showErrorMessage((error as Error).message);
