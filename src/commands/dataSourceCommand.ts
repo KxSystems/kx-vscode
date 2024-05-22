@@ -111,12 +111,12 @@ export async function populateScratchpad(
 export async function runDataSource(
   dataSourceForm: DataSourceFiles,
   connLabel: string,
+  executorName: string,
 ): Promise<void> {
   if (DataSourcesPanel.running) {
     return;
   }
   DataSourcesPanel.running = true;
-  const executorName = ext.activeTextEditor?.document.fileName.split("/").pop();
   const connMngService = new ConnectionManagementService();
   const selectedConnection =
     connMngService.retrieveConnectedConnection(connLabel);
@@ -165,27 +165,17 @@ export async function runDataSource(
     ext.isDatasourceExecution = false;
     if (res.error) {
       window.showErrorMessage(res.error);
-      addDStoQueryHistory(
-        dataSourceForm,
-        false,
-        connLabel,
-        executorName ? executorName : "",
-      );
+      addDStoQueryHistory(dataSourceForm, false, connLabel, executorName);
     } else if (ext.resultsViewProvider.isVisible()) {
       ext.outputChannel.appendLine(
         `Results: ${typeof res === "string" ? "0" : res.rows.length} rows`,
       );
-      addDStoQueryHistory(
-        dataSourceForm,
-        true,
-        connLabel,
-        executorName ? executorName : "",
-      );
+      addDStoQueryHistory(dataSourceForm, true, connLabel, executorName);
       writeQueryResultsToView(
         res,
         getQuery(fileContent, selectedType),
         connLabel,
-        executorName ? executorName : "",
+        executorName,
         true,
         selectedType,
       );
@@ -193,17 +183,12 @@ export async function runDataSource(
       ext.outputChannel.appendLine(
         `Results is a string with length: ${res.length}`,
       );
-      addDStoQueryHistory(
-        dataSourceForm,
-        true,
-        connLabel,
-        executorName ? executorName : "",
-      );
+      addDStoQueryHistory(dataSourceForm, true, connLabel, executorName);
       writeQueryResultsToConsole(
         res,
         getQuery(fileContent, selectedType),
         connLabel,
-        executorName ? executorName : "",
+        executorName,
         true,
         selectedType,
       );

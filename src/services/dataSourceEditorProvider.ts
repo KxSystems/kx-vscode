@@ -42,6 +42,7 @@ import { MetaObjectPayload } from "../models/meta";
 import { ConnectionManagementService } from "./connectionManagerService";
 
 export class DataSourceEditorProvider implements CustomTextEditorProvider {
+  public filenname = "";
   static readonly viewType = "kdb.dataSourceEditor";
 
   public static register(context: ExtensionContext): Disposable {
@@ -97,6 +98,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     document: TextDocument,
     webviewPanel: WebviewPanel,
   ): Promise<void> {
+    this.filenname = document.fileName.split("/").pop() || "";
     const webview = webviewPanel.webview;
     webview.options = { enableScripts: true };
     webview.html = this.getWebviewContent(webview);
@@ -159,7 +161,11 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           updateWebview();
           break;
         case DataSourceCommand.Run:
-          await runDataSource(msg.dataSourceFile, msg.selectedServer);
+          await runDataSource(
+            msg.dataSourceFile,
+            msg.selectedServer,
+            this.filenname,
+          );
           break;
         case DataSourceCommand.Populate:
           await populateScratchpad(msg.dataSourceFile, msg.selectedServer);

@@ -22,7 +22,7 @@ import {
   workspace,
 } from "vscode";
 import Path from "path";
-import { getServerIconState } from "../utils/core";
+import { getWorkspaceIconsState } from "../utils/core";
 import { getConnectionForUri } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
 
@@ -92,7 +92,7 @@ export class FileTreeItem extends TreeItem {
     if (this.resourceUri) {
       const connection = getConnectionForUri(this.resourceUri);
       if (connection) {
-        state = getServerIconState(connection.label);
+        state = getWorkspaceIconsState(connection.label);
       }
     }
     this.iconPath = Path.join(

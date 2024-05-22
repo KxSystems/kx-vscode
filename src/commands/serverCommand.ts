@@ -521,7 +521,11 @@ export function rerunQuery(rerunQueryElement: QueryHistory) {
     );
   } else {
     const dsFile = rerunQueryElement.query as DataSourceFiles;
-    runDataSource(dsFile, rerunQueryElement.connectionName);
+    runDataSource(
+      dsFile,
+      rerunQueryElement.connectionName,
+      rerunQueryElement.executorName,
+    );
   }
 }
 

@@ -256,13 +256,22 @@ export function getInsightsAlias(insightsList: InsightDetails[]): void {
   });
 }
 
-export function getServerIconState(label: string): string {
-  if (ext.activeConnection?.connLabel === label) {
+export function getServerIconState(connLabel: string): string {
+  if (ext.activeConnection?.connLabel === connLabel) {
     return "-active";
   } else if (
-    ext.connectedConnectionList?.some((conn) => conn.connLabel === label)
+    ext.connectedConnectionList?.some((conn) => conn.connLabel === connLabel)
   ) {
     return "-connected";
+  }
+  return "";
+}
+
+export function getWorkspaceIconsState(connLabel: string): string {
+  if (
+    ext.connectedConnectionList?.some((conn) => conn.connLabel === connLabel)
+  ) {
+    return "-active";
   }
   return "";
 }
@@ -280,30 +289,6 @@ export function getStatus(label: string): string {
 
 export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-export function getScratchpadStatusIcon(label: string) {
-  if (
-    ext.activeScratchPadList?.some((scratchpad) => scratchpad.name === label)
-  ) {
-    return "-active";
-  } else if (
-    ext.connectedScratchPadList?.some((scratchpad) => scratchpad.name === label)
-  ) {
-    return "-connected";
-  } else {
-    return "";
-  }
-}
-
-export function getDatasourceStatusIcon(label: string) {
-  if (ext.activeDatasourceList?.some((ds) => ds.name === label)) {
-    return "-active";
-  } else if (ext.connectedDatasourceList?.some((ds) => ds.name === label)) {
-    return "-connected";
-  } else {
-    return "";
-  }
 }
 
 export async function checkLocalInstall(): Promise<void> {
