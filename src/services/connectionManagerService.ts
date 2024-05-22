@@ -144,6 +144,7 @@ export class ConnectionManagementService {
     } else {
       commands.executeCommand("setContext", "kdb.insightsConnected", false);
     }
+    ext.connectionNode = node;
     ext.serverProvider.reload();
   }
 
@@ -262,7 +263,9 @@ export class ConnectionManagementService {
     }
     Telemetry.sendEvent("Connection.Disconnected." + connType);
     ext.outputChannel.appendLine(
-      `[${new Date().toLocaleTimeString()}] Connection disconnected: ${connection.connLabel}`,
+      `[${new Date().toLocaleTimeString()}] Connection disconnected: ${
+        connection.connLabel
+      }`,
     );
     ext.serverProvider.reload();
   }
