@@ -61,29 +61,29 @@ To integrate VS Code with q take the following steps:
 
 1. Click `Install new instance` from the prompt. If the prompt is not visible ensure the kdb extension is selected in the Activity bar on the left, if that does not display the prompt, close and re-open VS Code.
 
-  ![installnewinstance](https://github.com/KxSystems/kx-vscode/blob/main/img/installnewinstance.jpg?raw=true)
+    ![installnewinstance](https://github.com/KxSystems/kx-vscode/blob/main/img/installnewinstance.jpg?raw=true)
 
 1. If you have already registered, then choose `Select/Enter a license`. If you haven't registered, choose `Acquire license`, this will open a dialog with a redirect link to register for [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/).
 
-  ![findlicense](https://github.com/KxSystems/kx-vscode/blob/main/img/findlicense.jpg?raw=true)
+    ![findlicense](https://github.com/KxSystems/kx-vscode/blob/main/img/findlicense.jpg?raw=true)
 
-  Once registered you will receive an email with you license details.
+1. Once registered you will receive an email with you license details.
 
 1. With the license secured, you can link this to VS Code by either choosing `pasting license string` or `selecting license file` from your PC; the latter method is recommended for new users.
 
-  ![findlicense](https://github.com/KxSystems/kx-vscode/blob/main/img/pastelicense.jpg?raw=true)
+    ![findlicense](https://github.com/KxSystems/kx-vscode/blob/main/img/pastelicense.jpg?raw=true)
 
-  The base64 encoded license string can be found in the welcome email received after registration, under the download link for the license file.
+    The base64 encoded license string can be found in the welcome email received after registration, under the download link for the license file.
 
-  ![welcomeemaillicense](https://github.com/KxSystems/kx-vscode/blob/main/img/weclomeemail.jpg?raw=true)
+    ![welcomeemaillicense](https://github.com/KxSystems/kx-vscode/blob/main/img/weclomeemail.jpg?raw=true)
 
-  The `k4.lic` or `kc.lic` license file can be downloaded to your PC using the link also found in the welcome email.
+    The `k4.lic` or `kc.lic` license file can be downloaded to your PC using the link also found in the welcome email.
 
 1. If you wish to use q outside of VS Code, set a [`QHOME` environment variable](https://code.kx.com/q/learn/install/#step-5-edit-your-profile) to the location used by the kdb VS Code install. A notification dialog displays the location of q, as do the extension [settings](#settings). T
 
-  ![qfound](https://github.com/KxSystems/kx-vscode/blob/main/img/installationofqfound.jpg?raw=true)
+    ![qfound](https://github.com/KxSystems/kx-vscode/blob/main/img/installationofqfound.jpg?raw=true)
 
-  If q is installed at `C:\q`, then `QHOME` is `C:\q`.
+    If q is installed at `C:\q`, then `QHOME` is `C:\q`.
 
 1. To finish, a prompt is offered with an opt-in to receive a newsletter.
 
@@ -107,11 +107,11 @@ This runs a q session using the existing kdb installed as part of the kdb VS Cod
 
 1. Click _connect to kdb server_ or _Add new connection_ from the _CONNECTIONS_ context menu.
 
-  ![connecttoakdbserver](https://github.com/KxSystems/kx-vscode/blob/main/img/connecttoakdbserver.png?raw=true)
+    ![connecttoakdbserver](https://github.com/KxSystems/kx-vscode/blob/main/img/connecttoakdbserver.png?raw=true)
 
 1. A new window will open with the type of connection you desire to add, **Select Bundled q**.
 
-  ![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/bundleqform.png?raw=true)
+    ![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/bundleqform.png?raw=true)
 
 1. The _server name / alias_ will already be set as `local`.
 
@@ -119,13 +119,13 @@ This runs a q session using the existing kdb installed as part of the kdb VS Cod
 
 1. Set the _port_ for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. _5002_
 
-  - I want to learn more about [setting a q port](https://code.kx.com/q/basics/ipc/)
+    - I want to learn more about [setting a q port](https://code.kx.com/q/basics/ipc/)
 
 1. Click **Create connection** to confirm the _connection creation_
 
 1. Right-click the q bundled process listed under _KX:CONNECTIONS_, and click _Start q process_.
 
-  ![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/managedqprocess.jpg?raw=true)
+    ![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/managedqprocess.jpg?raw=true)
 
 1. From the same right-click menu, click _Connect kdb server_. This connects to the child q process running inside the kdb VS Code extension.
 
@@ -137,11 +137,11 @@ If you close the extension, the connection to the child q process also closes.
 
 1. Within the kdb VS Code extension, click _connect to kdb server_, or *Add new connection\*\* from the *CONNECTIONS\* context menu.
 
-  ![connecttoakdbserver](https://github.com/KxSystems/kx-vscode/blob/main/img/connecttoakdbserver.png?raw=true)
+    ![connecttoakdbserver](https://github.com/KxSystems/kx-vscode/blob/main/img/connecttoakdbserver.png?raw=true)
 
 1. A new window will open with the type of connection you desire to add, **Select My q**.
 
-  ![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/myq.png?raw=true)
+    ![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/myq.png?raw=true)
 
 1. Assign a _server name / alias_. The server name selected **cannot be `local` or `insights`**, as these are reserved for use by [Bundled q connections](#bundled-q) and [Insights connections](#insights-connection), respectively; e.g. dev
 
@@ -149,13 +149,13 @@ If you close the extension, the connection to the child q process also closes.
 
 1. Set the _port_ used by the kdb server; e.g. _5001_.
 
-  - I want to learn more about [setting a q port](https://code.kx.com/q/basics/ipc/)
+    - I want to learn more about [setting a q port](https://code.kx.com/q/basics/ipc/)
 
 1. If authentication is needed, fill in the username and password fields, otherwise, leave these fields **blank**
 
 1. If TLS is enabled, check the checkbox.
 
-  - I want to learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).
+    - I want to learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).
 
 1. Click **Create connection** to confirm the _connection creation_
 
@@ -167,11 +167,11 @@ For kdb Insights Enterprise, the kdb VS Code extension uses a shared kdb process
 
 1. Click _Add Connection_.
 
-  ![connecttoakdbserver](https://github.com/KxSystems/kx-vscode/blob/main/img/connecttoakdbserver.png?raw=true)
+    ![connecttoakdbserver](https://github.com/KxSystems/kx-vscode/blob/main/img/connecttoakdbserver.png?raw=true)
 
 1. A new window will open with the type of connection you desire to add, **Select Insights connection**.
 
-  ![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsconnection.png?raw=true)
+    ![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsconnection.png?raw=true)
 
 1. Create a _server name / alias_; this can be any name, aside from `local`, which is used by [Bundled q connection](#bundled-q).
 
@@ -181,11 +181,11 @@ For kdb Insights Enterprise, the kdb VS Code extension uses a shared kdb process
 
 1. The kdb Insights Enterprise connection is listed under _KX:Connections_, with its own icon. Right-click the connection and _Connect to Insights_
 
-  ![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/kdbinsightsconnection.jpg?raw=true)
+    ![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/kdbinsightsconnection.jpg?raw=true)
 
 1. The kdb VS Code extension runs an authentication step with the remote kdb Insights Enterprise process; sign-in to kdb Insights Enterprise.
 
-  ![authenticateinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsauthenticate.jpg?raw=true)
+    ![authenticateinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsauthenticate.jpg?raw=true)
 
 
 Once connected, go to [execute code](#execute-code).
