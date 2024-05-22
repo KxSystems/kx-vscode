@@ -67,17 +67,18 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     }
     const selectedConnection =
       connMngService.retrieveConnectedConnection(connLabel);
-    if (
-      selectedConnection &&
-      !(selectedConnection instanceof InsightsConnection)
-    ) {
-      window.showErrorMessage("The connection selected is not Insights");
-      //TODO ADD ERROR TO CONSOLE HERE
-      this.cache.set(connLabel, Promise.resolve(<MetaObjectPayload>{}));
-      return Promise.resolve(<MetaObjectPayload>{});
-    }
+
     try {
-      if (selectedConnection?.meta?.payload.assembly.length === 0) {
+      if (
+        !(selectedConnection instanceof InsightsConnection) ||
+        !selectedConnection
+      ) {
+        throw new Error("The connection selected is not Insights");
+      }
+      if (
+        !selectedConnection.meta ||
+        selectedConnection.meta.payload.assembly.length === 0
+      ) {
         throw new Error();
       }
       meta = Promise.resolve(selectedConnection?.meta?.payload);

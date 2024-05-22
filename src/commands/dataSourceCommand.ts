@@ -121,15 +121,11 @@ export async function runDataSource(
   const selectedConnection =
     connMngService.retrieveConnectedConnection(connLabel);
 
-  if (selectedConnection && selectedConnection instanceof LocalConnection) {
-    window.showErrorMessage("No Insights active connection found");
-    DataSourcesPanel.running = false;
-    //TODO ADD ERROR TO CONSOLE HERE
-    return;
-  }
-
   try {
-    selectedConnection?.getMeta();
+    if (selectedConnection instanceof LocalConnection || !selectedConnection) {
+      throw new Error("No Insights active connection found");
+    }
+    selectedConnection.getMeta();
     if (!selectedConnection?.meta?.payload.assembly) {
       ext.outputChannel.appendLine(
         `To run a datasource you need to be connected to an Insights server`,
@@ -137,7 +133,7 @@ export async function runDataSource(
       window.showErrorMessage(
         "To run a datasource you need to be connected to an Insights server",
       );
-      //TODO ADD ERROR TO CONSOLE HERE
+
       return;
     }
 
@@ -193,6 +189,10 @@ export async function runDataSource(
         selectedType,
       );
     }
+  } catch (error) {
+    window.showErrorMessage((error as Error).message);
+    DataSourcesPanel.running = false;
+    //TODO ADD ERROR TO CONSOLE HERE
   } finally {
     DataSourcesPanel.running = false;
   }
