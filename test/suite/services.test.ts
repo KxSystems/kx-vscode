@@ -1051,6 +1051,28 @@ describe("connectionManagerService", () => {
       sinon.assert.notCalled(resetScratchpadStub);
     });
   });
+
+  describe("refreshGetMetas", () => {
+    let getMetaStub: sinon.SinonStub;
+    beforeEach(() => {
+      getMetaStub = sinon.stub(insightsConn, "getMeta");
+    });
+    afterEach(() => {
+      sinon.restore();
+      ext.connectedConnectionList.length = 0;
+    });
+
+    it("Should not refresh getMetas if connection is not InsightsConnection", async () => {
+      await connectionManagerService.refreshGetMetas();
+      sinon.assert.notCalled(getMetaStub);
+    });
+
+    it("Should refresh getMetas if connection is InsightsConnection", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      await connectionManagerService.refreshGetMetas();
+      sinon.assert.calledOnce(getMetaStub);
+    });
+  });
 });
 
 describe("dataSourceEditorProvider", () => {
