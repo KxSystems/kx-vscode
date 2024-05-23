@@ -152,35 +152,37 @@ export async function runDataSource(
     }
 
     ext.isDatasourceExecution = false;
-    if (res.error) {
-      window.showErrorMessage(res.error);
-      addDStoQueryHistory(dataSourceForm, false, connLabel, executorName);
-    } else if (ext.resultsViewProvider.isVisible()) {
-      ext.outputChannel.appendLine(
-        `Results: ${typeof res === "string" ? "0" : res.rows.length} rows`,
-      );
-      addDStoQueryHistory(dataSourceForm, true, connLabel, executorName);
-      writeQueryResultsToView(
-        res,
-        getQuery(fileContent, selectedType),
-        connLabel,
-        executorName,
-        true,
-        selectedType,
-      );
-    } else {
-      ext.outputChannel.appendLine(
-        `Results is a string with length: ${res.length}`,
-      );
-      addDStoQueryHistory(dataSourceForm, true, connLabel, executorName);
-      writeQueryResultsToConsole(
-        res,
-        getQuery(fileContent, selectedType),
-        connLabel,
-        executorName,
-        true,
-        selectedType,
-      );
+    if (res) {
+      const success = !res.error;
+      const query = getQuery(fileContent, selectedType);
+
+      if (!success) {
+        window.showErrorMessage(res.error);
+      } else if (ext.resultsViewProvider.isVisible()) {
+        const resultCount = typeof res === "string" ? "0" : res.rows.length;
+        ext.outputChannel.appendLine(`Results: ${resultCount} rows`);
+        writeQueryResultsToView(
+          res,
+          query,
+          connLabel,
+          executorName,
+          true,
+          selectedType,
+        );
+      } else {
+        ext.outputChannel.appendLine(
+          `Results is a string with length: ${res.length}`,
+        );
+        writeQueryResultsToConsole(
+          res,
+          query,
+          connLabel,
+          executorName,
+          true,
+          selectedType,
+        );
+      }
+      addDStoQueryHistory(dataSourceForm, success, connLabel, executorName);
     }
   } catch (error) {
     window.showErrorMessage((error as Error).message);
