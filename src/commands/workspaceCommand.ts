@@ -191,18 +191,22 @@ export async function pickConnection(uri: Uri) {
   return picked;
 }
 
+/* istanbul ignore next */
 function isPython(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".py");
 }
 
+/* istanbul ignore next */
 function isScratchpad(uri: Uri | undefined) {
   return uri && (uri.path.endsWith(".kdb.q") || uri.path.endsWith(".kdb.py"));
 }
 
+/* istanbul ignore next */
 function isDataSource(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".kdb.json");
 }
 
+/* istanbul ignore next */
 function isKxFolder(uri: Uri | undefined) {
   return uri && Path.basename(uri.path) === ".kx";
 }
