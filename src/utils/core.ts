@@ -250,6 +250,7 @@ export function getServerAlias(serverList: ServerDetails[]): void {
   });
 }
 
+/* istanbul ignore next */
 export function offerConnectAction(connLabel: string): void {
   window
     .showInformationMessage(
