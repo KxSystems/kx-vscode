@@ -32,6 +32,7 @@ import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import { runQuery } from "./serverCommand";
 import { ExecutionTypes } from "../models/execution";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
+import { offerConnectAction } from "../utils/core";
 
 const connectionService = new ConnectionManagementService();
 
@@ -228,6 +229,7 @@ export async function activateConnectionForServer(server: string) {
 /* istanbul ignore next */
 export async function runActiveEditor(type?: ExecutionTypes) {
   if (ext.activeTextEditor) {
+    const connMngService = new ConnectionManagementService();
     const uri = ext.activeTextEditor.document.uri;
     const isWorkbook = uri.path.endsWith(".kdb.q");
 
@@ -237,6 +239,10 @@ export async function runActiveEditor(type?: ExecutionTypes) {
     }
     if (!server) {
       server = "";
+    }
+    if (!connMngService.isConnected(server) && isScratchpad(uri)) {
+      offerConnectAction(server);
+      return;
     }
     const executorName = ext.activeTextEditor.document.fileName
       .split("/")

@@ -1729,6 +1729,28 @@ describe("serverCommand", () => {
       assert.ok(updateServersStub.notCalled);
     }).timeout(5000);
   });
+
+  describe("connect", () => {
+    const connService = new ConnectionManagementService();
+    const _console = vscode.window.createOutputChannel("q Console Output");
+    const executionConsole = new ExecutionConsole(_console);
+    let windowErrorStub, retrieveConnectionStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      windowErrorStub = sinon.stub(vscode.window, "showErrorMessage");
+      retrieveConnectionStub = sinon.stub(connService, "retrieveConnection");
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should show error message if connection not found", async () => {
+      retrieveConnectionStub.returns(undefined);
+      await serverCommand.connect("test");
+      windowErrorStub.calledOnce;
+    });
+  });
 });
 
 describe("walkthroughCommand", () => {

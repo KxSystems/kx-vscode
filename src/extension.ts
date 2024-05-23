@@ -185,9 +185,18 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.datasource.import.ds", async () => {
       await importOldDSFiles();
     }),
-    commands.registerCommand("kdb.connect", async (viewItem: KdbNode) => {
-      await connect(viewItem);
-    }),
+    commands.registerCommand(
+      "kdb.connect",
+      async (viewItem: KdbNode | InsightsNode) => {
+        await connect(viewItem.label);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.connect.via.dialog",
+      async (connLabel: string) => {
+        await connect(connLabel);
+      },
+    ),
     commands.registerCommand(
       "kdb.active.connection",
       async (viewItem: KdbNode) => {
@@ -197,12 +206,6 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.enableTLS", async (viewItem: KdbNode) => {
       await enableTLS(viewItem.children[0]);
     }),
-    commands.registerCommand(
-      "kdb.insightsConnect",
-      async (viewItem: InsightsNode) => {
-        await connect(viewItem);
-      },
-    ),
     commands.registerCommand(
       "kdb.insightsRemove",
       async (viewItem: InsightsNode) => {

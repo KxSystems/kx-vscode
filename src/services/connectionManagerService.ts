@@ -329,7 +329,7 @@ export class ConnectionManagementService {
     }
   }
 
-  public async refreshGetMetas(): Promise<void> {
+  public async refreshAllGetMetas(): Promise<void> {
     if (ext.connectedConnectionList.length > 0) {
       const promises = ext.connectedConnectionList.map(async (connection) => {
         if (connection instanceof InsightsConnection) {
@@ -337,6 +337,13 @@ export class ConnectionManagementService {
         }
       });
       await Promise.all(promises);
+    }
+  }
+
+  public async refreshGetMeta(connLabel: string): Promise<void> {
+    const connection = this.retrieveConnectedConnection(connLabel);
+    if (connection instanceof InsightsConnection) {
+      await connection.getMeta();
     }
   }
 }
