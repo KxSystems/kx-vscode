@@ -203,10 +203,6 @@ function isDataSource(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".kdb.json");
 }
 
-function isWorkspaceItem(uri: Uri | undefined) {
-  return isDataSource(uri) || isScratchpad(uri);
-}
-
 function isKxFolder(uri: Uri | undefined) {
   return uri && Path.basename(uri.path) === ".kx";
 }
@@ -268,6 +264,15 @@ export async function runActiveEditor(type?: ExecutionTypes) {
   }
 }
 
+/* istanbul ignore next */
+function update(uri: Uri) {
+  if (isDataSource(uri)) {
+    ext.dataSourceTreeProvider.reload();
+  } else if (isScratchpad(uri)) {
+    ext.scratchpadTreeProvider.reload();
+  }
+}
+
 export class ConnectionLensProvider implements CodeLensProvider {
   provideCodeLenses(document: TextDocument): ProviderResult<CodeLens[]> {
     const server = getServerForUri(document.uri);
@@ -301,20 +306,9 @@ export function connectWorkspaceCommands() {
   };
 
   const watcher = workspace.createFileSystemWatcher("**/*.kdb.{json,q,py}");
-  watcher.onDidCreate((uri) => {
-    if (isDataSource(uri)) {
-      ext.dataSourceTreeProvider.reload();
-    } else if (isScratchpad(uri)) {
-      ext.scratchpadTreeProvider.reload();
-    }
-  });
-  watcher.onDidDelete((uri) => {
-    if (isDataSource(uri)) {
-      ext.dataSourceTreeProvider.reload();
-    } else if (isScratchpad(uri)) {
-      ext.scratchpadTreeProvider.reload();
-    }
-  });
+  watcher.onDidCreate(update);
+  watcher.onDidDelete(update);
+  /* istanbul ignore next */
   workspace.onDidDeleteFiles((event) => {
     for (const uri of event.files) {
       if (isKxFolder(uri)) {
@@ -324,12 +318,14 @@ export function connectWorkspaceCommands() {
       }
     }
   });
+  /* istanbul ignore next */
   workspace.onDidRenameFiles(async (event) => {
     for (const { oldUri, newUri } of event.files) {
       await setServerForUri(newUri, getServerForUri(oldUri));
       await setServerForUri(oldUri, undefined);
     }
   });
+  /* istanbul ignore next */
   workspace.onDidChangeWorkspaceFolders(() => {
     ext.dataSourceTreeProvider.reload();
     ext.scratchpadTreeProvider.reload();

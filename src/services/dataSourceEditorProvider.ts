@@ -117,6 +117,12 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       });
     };
 
+    workspace.onDidChangeConfiguration((event) => {
+      if ((event.affectsConfiguration("kdb.connectionMap"), document)) {
+        updateWebview();
+      }
+    });
+
     const changeDocumentSubscription = workspace.onDidChangeTextDocument(
       (event) => {
         if (event.document.uri.toString() === document.uri.toString()) {
