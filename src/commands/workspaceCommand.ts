@@ -196,12 +196,10 @@ function isPython(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".py");
 }
 
-/* istanbul ignore next */
 function isScratchpad(uri: Uri | undefined) {
   return uri && (uri.path.endsWith(".kdb.q") || uri.path.endsWith(".kdb.py"));
 }
 
-/* istanbul ignore next */
 function isDataSource(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".kdb.json");
 }
@@ -268,7 +266,6 @@ export async function runActiveEditor(type?: ExecutionTypes) {
   }
 }
 
-/* istanbul ignore next */
 function update(uri: Uri) {
   if (isDataSource(uri)) {
     ext.dataSourceTreeProvider.reload();
