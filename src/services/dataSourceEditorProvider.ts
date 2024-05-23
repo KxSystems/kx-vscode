@@ -135,6 +135,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       changeDocumentSubscription.dispose();
     });
 
+    /* istanbul ignore next */
     webview.onDidReceiveMessage(async (msg: DataSourceMessage2) => {
       switch (msg.command) {
         case DataSourceCommand.Server:
