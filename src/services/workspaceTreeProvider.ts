@@ -23,7 +23,10 @@ import {
 } from "vscode";
 import Path from "path";
 import { getWorkspaceIconsState } from "../utils/core";
-import { getConnectionForUri } from "../commands/workspaceCommand";
+import {
+  getConnectionForUri,
+  setServerForUri,
+} from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
 
 export class WorkspaceTreeProvider implements TreeDataProvider<FileTreeItem> {
@@ -165,6 +168,7 @@ export async function addWorkspaceFile(
       });
 
       await workspace.openTextDocument(uri);
+      await setServerForUri(uri, undefined);
       return uri;
     }
   } else {

@@ -49,6 +49,7 @@ import { ConnectionManagementService } from "../../src/services/connectionManage
 import { InsightsConnection } from "../../src/classes/insightsConnection";
 import * as workspaceCommand from "../../src/commands/workspaceCommand";
 import { MetaObject } from "../../src/models/meta";
+import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
@@ -1778,8 +1779,27 @@ describe("workspaceCommand", () => {
     sinon.restore();
   });
   describe("connectWorkspaceCommands", () => {
-    it("should connect listeners", () => {
+    it("should update views on delete and create", () => {
+      let cb1, cb2, dsTree, wbTree;
+      sinon.stub(vscode.workspace, "createFileSystemWatcher").value(() => ({
+        onDidCreate: (cb) => (cb1 = cb),
+        onDidDelete: (cb) => (cb2 = cb),
+      }));
+      ext.dataSourceTreeProvider = <WorkspaceTreeProvider>{
+        reload() {
+          dsTree = true;
+        },
+      };
+      ext.scratchpadTreeProvider = <WorkspaceTreeProvider>{
+        reload() {
+          wbTree = true;
+        },
+      };
       workspaceCommand.connectWorkspaceCommands();
+      cb1(vscode.Uri.file("test.kdb.json"));
+      assert.strictEqual(dsTree, true);
+      cb2(vscode.Uri.file("test.kdb.q"));
+      assert.strictEqual(wbTree, true);
     });
   });
   describe("activateConnectionForServer", () => {

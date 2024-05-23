@@ -33,14 +33,9 @@ import { runQuery } from "./serverCommand";
 import { ExecutionTypes } from "../models/execution";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
 import { offerConnectAction } from "../utils/core";
+import Path from "path";
 
 const connectionService = new ConnectionManagementService();
-
-/* istanbul ignore next */
-function updateViews() {
-  ext.dataSourceTreeProvider.reload();
-  ext.scratchpadTreeProvider.reload();
-}
 
 /* istanbul ignore next */
 function setRealActiveTextEditor(editor?: TextEditor | undefined) {
@@ -196,12 +191,22 @@ export async function pickConnection(uri: Uri) {
   return picked;
 }
 
-function isPython(uri: Uri) {
-  return uri.path.endsWith(".py");
+/* istanbul ignore next */
+function isPython(uri: Uri | undefined) {
+  return uri && uri.path.endsWith(".py");
 }
 
-function isScratchpad(uri: Uri) {
-  return uri.path.endsWith(".kdb.q") || uri.path.endsWith(".kdb.py");
+function isScratchpad(uri: Uri | undefined) {
+  return uri && (uri.path.endsWith(".kdb.q") || uri.path.endsWith(".kdb.py"));
+}
+
+function isDataSource(uri: Uri | undefined) {
+  return uri && uri.path.endsWith(".kdb.json");
+}
+
+/* istanbul ignore next */
+function isKxFolder(uri: Uri | undefined) {
+  return uri && Path.basename(uri.path) === ".kx";
 }
 
 /* istanbul ignore next */
@@ -261,6 +266,14 @@ export async function runActiveEditor(type?: ExecutionTypes) {
   }
 }
 
+function update(uri: Uri) {
+  if (isDataSource(uri)) {
+    ext.dataSourceTreeProvider.reload();
+  } else if (isScratchpad(uri)) {
+    ext.scratchpadTreeProvider.reload();
+  }
+}
+
 export class ConnectionLensProvider implements CodeLensProvider {
   provideCodeLenses(document: TextDocument): ProviderResult<CodeLens[]> {
     const server = getServerForUri(document.uri);
@@ -294,11 +307,30 @@ export function connectWorkspaceCommands() {
   };
 
   const watcher = workspace.createFileSystemWatcher("**/*.kdb.{json,q,py}");
-  watcher.onDidDelete((uri) =>
-    setServerForUri(uri, undefined).then(() => updateViews()),
-  );
-  watcher.onDidCreate(updateViews);
-  workspace.onDidChangeWorkspaceFolders(updateViews);
+  watcher.onDidCreate(update);
+  watcher.onDidDelete(update);
+  /* istanbul ignore next */
+  workspace.onDidDeleteFiles((event) => {
+    for (const uri of event.files) {
+      if (isKxFolder(uri)) {
+        ext.dataSourceTreeProvider.reload();
+        ext.scratchpadTreeProvider.reload();
+        break;
+      }
+    }
+  });
+  /* istanbul ignore next */
+  workspace.onDidRenameFiles(async (event) => {
+    for (const { oldUri, newUri } of event.files) {
+      await setServerForUri(newUri, getServerForUri(oldUri));
+      await setServerForUri(oldUri, undefined);
+    }
+  });
+  /* istanbul ignore next */
+  workspace.onDidChangeWorkspaceFolders(() => {
+    ext.dataSourceTreeProvider.reload();
+    ext.scratchpadTreeProvider.reload();
+  });
   window.onDidChangeActiveTextEditor(activeEditorChanged);
   activeEditorChanged(window.activeTextEditor);
 }
