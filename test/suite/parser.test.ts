@@ -21,6 +21,23 @@ describe("QParser", () => {
       assert.ok(generateTextMateGrammar());
     });
   });
+  describe("parse", () => {
+    it("should not throw on empty text", () => {
+      assert.doesNotThrow(() => parse(""));
+      assert.doesNotThrow(() => parse(" "));
+      assert.doesNotThrow(() => parse("\n"));
+    });
+    it("should not throw on missing scope", () => {
+      assert.doesNotThrow(() => parse("}"));
+      assert.doesNotThrow(() => parse("{\n}"));
+      assert.doesNotThrow(() => parse("]"));
+      assert.doesNotThrow(() => parse("[\n]"));
+      assert.doesNotThrow(() => parse(")"));
+      assert.doesNotThrow(() => parse("(\n)"));
+      assert.doesNotThrow(() => parse("from"));
+      assert.doesNotThrow(() => parse("select\nfrom"));
+    });
+  });
 });
 
 describe("TSQLint", () => {

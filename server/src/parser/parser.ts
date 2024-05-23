@@ -104,7 +104,7 @@ function block(state: State, tokens: Token[], scopped = true) {
   const cache: Token[] = [];
   const scope: Token[] = [];
 
-  let token;
+  let token, next;
 
   for (let i = 0; i < tokens.length; i++) {
     token = tokens[i];
@@ -119,8 +119,10 @@ function block(state: State, tokens: Token[], scopped = true) {
       case RBracket:
       case RParen:
       case RCurly:
-        scope.pop();
-        cache.push(token);
+        next = scope.pop();
+        if (next) {
+          cache.push(token);
+        }
         break;
       case SemiColon:
         if (peek(scope)) {
@@ -213,6 +215,9 @@ export function parse(text: string): Token[] {
         scope.push(token);
         cache.push(token);
         break;
+      case TestBegin:
+      case TestBlock:
+      case TestLambdaBlock:
       case LParen:
       case LCurly:
       case LSql:
@@ -223,8 +228,10 @@ export function parse(text: string): Token[] {
       case RBracket:
       case RCurly:
       case RSql:
-        scope.pop();
-        cache.push(token);
+        next = scope.pop();
+        if (next) {
+          cache.push(token);
+        }
         break;
       case SemiColon:
         if (token.scope) {
@@ -234,9 +241,13 @@ export function parse(text: string): Token[] {
         }
         break;
       case EndOfLine:
-        if (!testblock(token.scope)) {
-          next = tokens[i + 1];
-          if (next && isExpression(next)) {
+        next = tokens[i + 1];
+        if (next && isExpression(next)) {
+          next = scope.pop();
+          if (testblock(next)) {
+            block(state, cache, false);
+            next!.assignment = [next!, next!];
+          } else {
             expression(state, cache);
           }
         }
@@ -255,19 +266,6 @@ export function parse(text: string): Token[] {
       case StringEscape:
         checkEscape(token);
         break;
-      case TestBegin:
-      case TestBlock:
-      case TestLambdaBlock:
-        scope.pop();
-        scope.push(token);
-        cache.push(token);
-        block(state, cache);
-        if (token.scope) {
-          token.scope.assignment = [token.scope, token.scope];
-          token.scope = undefined;
-        }
-        cache.push(token);
-        break;
       case CharLiteral:
         break;
       default:
@@ -278,11 +276,11 @@ export function parse(text: string): Token[] {
     }
   }
 
-  token = peek(scope);
+  next = peek(scope);
 
-  if (testblock(token)) {
+  if (testblock(next)) {
     block(state, cache, false);
-    token!.assignment = [token!, token!];
+    next!.assignment = [next!, next!];
   } else {
     expression(state, cache);
   }
