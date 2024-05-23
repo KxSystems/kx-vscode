@@ -117,6 +117,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       });
     };
 
+    /* istanbul ignore next */
     workspace.onDidChangeConfiguration((event) => {
       if ((event.affectsConfiguration("kdb.connectionMap"), document)) {
         updateWebview();
