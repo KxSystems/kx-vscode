@@ -1053,7 +1053,7 @@ describe("connectionManagerService", () => {
     });
   });
 
-  describe("refreshGetMetas", () => {
+  describe("refreshAllGetMetas && refreshGetMeta", () => {
     let getMetaStub: sinon.SinonStub;
     beforeEach(() => {
       getMetaStub = sinon.stub(insightsConn, "getMeta");
@@ -1063,14 +1063,24 @@ describe("connectionManagerService", () => {
       ext.connectedConnectionList.length = 0;
     });
 
-    it("Should not refresh getMetas if connection is not InsightsConnection", async () => {
-      await connectionManagerService.refreshGetMetas();
+    it("Should not refreshAllgetMetas if connection is not InsightsConnection", async () => {
+      await connectionManagerService.refreshAllGetMetas();
       sinon.assert.notCalled(getMetaStub);
     });
 
-    it("Should refresh getMetas if connection is InsightsConnection", async () => {
+    it("Should refreshAllgetMetas if connection is InsightsConnection", async () => {
       ext.connectedConnectionList.push(insightsConn);
-      await connectionManagerService.refreshGetMetas();
+      await connectionManagerService.refreshAllGetMetas();
+      sinon.assert.calledOnce(getMetaStub);
+    });
+    it("Should not refreshGetMeta if connection is not InsightsConnection", async () => {
+      await connectionManagerService.refreshGetMeta("test");
+      sinon.assert.notCalled(getMetaStub);
+    });
+
+    it("Should refreshGetMeta if connection is InsightsConnection", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      await connectionManagerService.refreshGetMeta(insightsConn.connLabel);
       sinon.assert.calledOnce(getMetaStub);
     });
   });
