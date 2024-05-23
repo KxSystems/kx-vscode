@@ -294,11 +294,6 @@
       },
       {
         "category": "KX",
-        "command": "kdb.insightsConnect",
-        "title": "Connect to Insights"
-      },
-      {
-        "category": "KX",
         "command": "kdb.insightsRemove",
         "title": "Remove connection"
       },
@@ -522,10 +517,6 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "kdb.insightsConnect",
-          "when": "false"
-        },
-        {
           "command": "kdb.insightsRemove",
           "when": "false"
         },
@@ -634,7 +625,7 @@
       "view/item/context": [
         {
           "command": "kdb.connect",
-          "when": "view == kdb-servers && viewItem not in kdb.connected && viewItem in kdb.rootNodes",
+          "when": "view == kdb-servers && viewItem not in kdb.connected",
           "group": "connection@1"
         },
         {
@@ -651,11 +642,6 @@
           "command": "kdb.enableTLS",
           "when": "view == kdb-servers && viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutTls && viewItem not in kdb.local",
           "group": "connection@4"
-        },
-        {
-          "command": "kdb.insightsConnect",
-          "when": "view == kdb-servers && viewItem not in kdb.connected && viewItem in kdb.insightsNodes",
-          "group": "connection@0"
         },
         {
           "command": "kdb.insightsRemove",
