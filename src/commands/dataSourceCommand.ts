@@ -153,17 +153,17 @@ export async function runDataSource(
 
     ext.isDatasourceExecution = false;
     if (res) {
-      if (res.error) {
+      const success = !res.error;
+      const query = getQuery(fileContent, selectedType);
+
+      if (!success) {
         window.showErrorMessage(res.error);
-        addDStoQueryHistory(dataSourceForm, false, connLabel, executorName);
       } else if (ext.resultsViewProvider.isVisible()) {
-        ext.outputChannel.appendLine(
-          `Results: ${typeof res === "string" ? "0" : res.rows.length} rows`,
-        );
-        addDStoQueryHistory(dataSourceForm, true, connLabel, executorName);
+        const resultCount = typeof res === "string" ? "0" : res.rows.length;
+        ext.outputChannel.appendLine(`Results: ${resultCount} rows`);
         writeQueryResultsToView(
           res,
-          getQuery(fileContent, selectedType),
+          query,
           connLabel,
           executorName,
           true,
@@ -173,16 +173,16 @@ export async function runDataSource(
         ext.outputChannel.appendLine(
           `Results is a string with length: ${res.length}`,
         );
-        addDStoQueryHistory(dataSourceForm, true, connLabel, executorName);
         writeQueryResultsToConsole(
           res,
-          getQuery(fileContent, selectedType),
+          query,
           connLabel,
           executorName,
           true,
           selectedType,
         );
       }
+      addDStoQueryHistory(dataSourceForm, success, connLabel, executorName);
     }
   } catch (error) {
     window.showErrorMessage((error as Error).message);
