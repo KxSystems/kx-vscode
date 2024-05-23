@@ -278,6 +278,11 @@
       },
       {
         "category": "KX",
+        "command": "kdb.connect.via.dialog",
+        "title": "Connect server"
+      },
+      {
+        "category": "KX",
         "command": "kdb.active.connection",
         "title": "Active connection"
       },
@@ -538,6 +543,10 @@
         },
         {
           "command": "kdb.connect",
+          "when": "false"
+        },
+        {
+          "command": "kdb.connect.via.dialog",
           "when": "false"
         },
         {

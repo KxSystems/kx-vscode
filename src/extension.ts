@@ -192,6 +192,12 @@ export async function activate(context: ExtensionContext) {
       },
     ),
     commands.registerCommand(
+      "kdb.connect.via.dialog",
+      async (connLabel: string) => {
+        await connect(connLabel);
+      },
+    ),
+    commands.registerCommand(
       "kdb.active.connection",
       async (viewItem: KdbNode) => {
         activeConnection(viewItem);
