@@ -250,6 +250,21 @@ export function getServerAlias(serverList: ServerDetails[]): void {
   });
 }
 
+/* istanbul ignore next */
+export function offerConnectAction(connLabel: string): void {
+  window
+    .showInformationMessage(
+      `You aren't connected to ${connLabel}, would you like to connect?`,
+      "Connect",
+      "Cancel",
+    )
+    .then(async (result) => {
+      if (result === "Connect") {
+        await commands.executeCommand("kdb.connect.via.dialog", connLabel);
+      }
+    });
+}
+
 export function getInsightsAlias(insightsList: InsightDetails[]): void {
   insightsList.forEach((x) => {
     ext.kdbConnectionAliasList.push(x.alias);

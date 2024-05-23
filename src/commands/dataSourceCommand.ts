@@ -45,6 +45,7 @@ import { Telemetry } from "../utils/telemetryClient";
 import { LocalConnection } from "../classes/localConnection";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
+import { offerConnectAction } from "../utils/core";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -92,7 +93,7 @@ export async function populateScratchpad(
         selectedConnection instanceof LocalConnection ||
         !selectedConnection
       ) {
-        window.showErrorMessage("No Insights active connection found");
+        offerConnectAction(connLabel);
         DataSourcesPanel.running = false;
         return;
       }
@@ -123,7 +124,8 @@ export async function runDataSource(
 
   try {
     if (selectedConnection instanceof LocalConnection || !selectedConnection) {
-      throw new Error("The selected Insights Connection is not connected");
+      offerConnectAction(connLabel);
+      return;
     }
     selectedConnection.getMeta();
     if (!selectedConnection?.meta?.payload.assembly) {
