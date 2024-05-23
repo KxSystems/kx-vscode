@@ -11,10 +11,23 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export * from "./utils";
-export * from "./keywords";
-export * from "./language";
-export * from "./lexer";
-export * from "./literals";
-export * from "./parser";
-export * from "./tokens";
+import { SyntaxError, Token } from "./utils";
+
+export function checkEscape(token: Token) {
+  let value;
+  switch (token.image.slice(1)) {
+    case "n":
+    case "r":
+    case "t":
+    case "\\":
+    case "/":
+    case '"':
+      break;
+    default:
+      value = parseInt(token.image.slice(1));
+      if (!value || value < 100 || value > 377) {
+        token.error = SyntaxError.InvalidEscape;
+      }
+      break;
+  }
+}

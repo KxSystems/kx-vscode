@@ -11,19 +11,22 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { TextDocument } from "vscode-languageserver-textdocument";
+import { Position, TextDocument } from "vscode-languageserver-textdocument";
 import {
   CompletionItem,
   CompletionItemKind,
   CompletionParams,
   Connection,
   DefinitionParams,
+  Diagnostic,
+  DiagnosticSeverity,
   DidChangeConfigurationParams,
   DocumentSymbol,
   DocumentSymbolParams,
   InitializeParams,
   LSPAny,
   Location,
+  Range,
   ReferenceParams,
   RenameParams,
   ServerCapabilities,
@@ -35,21 +38,30 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver/node";
-import { IdentifierKind, Token, TokenKind, parse } from "./parser";
 import {
   FindKind,
+  Token,
   findIdentifiers,
-  getLabel,
-  positionToToken,
-  rangeFromToken,
-} from "./util";
+  inLambda,
+  amended,
+  parse,
+  identifier,
+  tokenId,
+  assigned,
+  lambda,
+  assignable,
+  inParam,
+  namespace,
+  relative,
+} from "./parser";
 import { lint } from "./linter";
 
 interface Settings {
+  debug: boolean;
   linting: boolean;
 }
 
-const defaultSettings: Settings = { linting: false };
+const defaultSettings: Settings = { debug: false, linting: false };
 
 export default class QLangServer {
   private declare connection: Connection;
@@ -92,9 +104,11 @@ export default class QLangServer {
 
   public onDidChangeConfiguration({ settings }: DidChangeConfigurationParams) {
     if ("kdb" in settings) {
-      if ("linting" in settings.kdb) {
-        this.setSettings({ linting: settings.kdb.linting });
-      }
+      const kdb = settings.kdb;
+      this.setSettings({
+        debug: kdb.debug_parser === true || false,
+        linting: kdb.linting === true || false,
+      });
     }
   }
 
@@ -107,58 +121,31 @@ export default class QLangServer {
   }: TextDocumentChangeEvent<TextDocument>) {
     if (this.settings.linting) {
       const uri = document.uri;
-      const diagnostics = lint(this.parse(document));
+      const diagnostics = lint(this.parse(document)).map((item) =>
+        Diagnostic.create(
+          rangeFromToken(item.token),
+          item.message,
+          item.severity as DiagnosticSeverity,
+          item.code,
+          item.source,
+        ),
+      );
       this.connection.sendDiagnostics({ uri, diagnostics });
     }
-  }
-
-  public onDocumentSymbol_Debug({
-    textDocument,
-  }: DocumentSymbolParams): DocumentSymbol[] {
-    return this.parse(textDocument).map((token) =>
-      DocumentSymbol.create(
-        token.identifier || token.image,
-        `${token.tokenType.name} (${token.reverse})`,
-        SymbolKind.Variable,
-        rangeFromToken(token),
-        rangeFromToken(token),
-      ),
-    );
   }
 
   public onDocumentSymbol({
     textDocument,
   }: DocumentSymbolParams): DocumentSymbol[] {
     const tokens = this.parse(textDocument);
+    if (this.settings.debug) {
+      return tokens.map((token) => createDebugSymbol(token));
+    }
     return tokens
-      .filter((token) => token.kind === TokenKind.Assignment && !token.scope)
-      .map((token) =>
-        DocumentSymbol.create(
-          getLabel(token),
-          undefined,
-          token.lambda ? SymbolKind.Object : SymbolKind.Variable,
-          rangeFromToken(token),
-          rangeFromToken(token),
-          tokens
-            .filter(
-              (child) =>
-                child.scope &&
-                child.scope === token.lambda &&
-                child.kind === TokenKind.Assignment,
-            )
-            .map((token) =>
-              DocumentSymbol.create(
-                token.image,
-                undefined,
-                token.identifierKind === IdentifierKind.Argument
-                  ? SymbolKind.Array
-                  : SymbolKind.Variable,
-                rangeFromToken(token),
-                rangeFromToken(token),
-              ),
-            ),
-        ),
-      );
+      .filter(
+        (token) => assignable(token) && assigned(token) && !inLambda(token),
+      )
+      .map((token) => createSymbol(token, tokens));
   }
 
   public onReferences({ textDocument, position }: ReferenceParams): Location[] {
@@ -187,16 +174,22 @@ export default class QLangServer {
   }: RenameParams): WorkspaceEdit | null {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
-    const edits = findIdentifiers(FindKind.Rename, tokens, source).map(
-      (token) => TextEdit.replace(rangeFromToken(token), newName),
-    );
-    return edits.length === 0
-      ? null
-      : {
-          changes: {
-            [textDocument.uri]: edits,
-          },
-        };
+    const refs = findIdentifiers(FindKind.Rename, tokens, source);
+    if (refs.length === 0) {
+      return null;
+    }
+    const name = <Token>{
+      image: newName,
+      namespace: source?.namespace,
+    };
+    const edits = refs.map((token) => {
+      return TextEdit.replace(rangeFromToken(token), relative(name, token));
+    });
+    return {
+      changes: {
+        [textDocument.uri]: edits,
+      },
+    };
   }
 
   public onCompletion({
@@ -205,14 +198,18 @@ export default class QLangServer {
   }: CompletionParams): CompletionItem[] {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
-    return findIdentifiers(FindKind.Completion, tokens, source).map(
-      (token) => ({
-        label: getLabel(token, source),
-        kind: token.lambda
+    return findIdentifiers(FindKind.Completion, tokens, source).map((token) => {
+      return {
+        label: token.image,
+        labelDetails: {
+          detail: ` .${namespace(token)}`,
+        },
+        insertText: relative(token, source),
+        kind: lambda(assigned(token))
           ? CompletionItemKind.Function
           : CompletionItemKind.Variable,
-      }),
-    );
+      };
+    });
   }
 
   private parse(textDocument: TextDocumentIdentifier): Token[] {
@@ -222,4 +219,70 @@ export default class QLangServer {
     }
     return parse(document.getText());
   }
+}
+
+function rangeFromToken(token: Token): Range {
+  return Range.create(
+    (token.startLine || 1) - 1,
+    (token.startColumn || 1) - 1,
+    (token.endLine || 1) - 1,
+    token.endColumn || 1,
+  );
+}
+
+function positionToToken(tokens: Token[], position: Position) {
+  return tokens.find((token) => {
+    const { start, end } = rangeFromToken(token);
+    return (
+      start.line <= position.line &&
+      end.line >= position.line &&
+      start.character <= position.character &&
+      end.character >= position.character
+    );
+  });
+}
+
+function createSymbol(token: Token, tokens: Token[]): DocumentSymbol {
+  const range = rangeFromToken(token);
+  return DocumentSymbol.create(
+    (inLambda(token) && !amended(token)
+      ? token.image
+      : identifier(token)
+    ).trim(),
+    (amended(token) && "Amend") || undefined,
+    lambda(assigned(token))
+      ? SymbolKind.Object
+      : inParam(token)
+        ? SymbolKind.Array
+        : SymbolKind.Variable,
+    range,
+    range,
+    tokens
+      .filter(
+        (child) =>
+          assigned(child) &&
+          assignable(child) &&
+          inLambda(child) === assigned(token),
+      )
+      .map((child) => createSymbol(child, tokens)),
+  );
+}
+
+function createDebugSymbol(token: Token): DocumentSymbol {
+  const range = rangeFromToken(token);
+  return DocumentSymbol.create(
+    tokenId(token),
+    `${token.tokenType.name} ${token.namespace ? `(${token.namespace})` : ""} ${
+      token.error !== undefined ? `E=${token.error}` : ""
+    } ${token.order ? `O=${token.order}` : ""} ${
+      token.tangled ? `T=${tokenId(token.tangled)}` : ""
+    } ${token.scope ? `S=${tokenId(token.scope)}` : ""} ${
+      token.assignment
+        ? `A=${token.assignment.map((token) => tokenId(token)).join(" ")}`
+        : ""
+    }`,
+    SymbolKind.Variable,
+    range,
+    range,
+  );
 }

@@ -13,11 +13,6 @@
 
 import { createToken } from "chevrotain";
 
-export const CharLiteral = createToken({
-  name: "CharLiteral",
-  pattern: /"(?:\\.|[^"])*"/,
-});
-
 export const SymbolLiteral = createToken({
   name: "SymbolLiteral",
   pattern: /`[/.:\w]*/,
@@ -48,11 +43,6 @@ export const TimeLiteral = createToken({
   pattern: /(?:0D)?(?:\d{2}:){1,2}\d{2}\.?\d*/,
 });
 
-export const FileLiteral = createToken({
-  name: "FileLiteral",
-  pattern: /[012]:/,
-});
-
 export const InfinityLiteral = createToken({
   name: "InfinityLiteral",
   pattern: /(?:0N[deghjmnptuvz]?|-?0[wW]|0n)/,
@@ -71,4 +61,14 @@ export const ByteLiteral = createToken({
 export const NumberLiteral = createToken({
   name: "NumberLiteral",
   pattern: /-?(?:\d+\.\d+|\.\d+|\d+\.|\d+)(?:e[+-]?\d?\d)?[jhife]?/,
+});
+
+export const CharLiteral = createToken({
+  name: "CharLiteral",
+  pattern: /\S/,
+});
+
+export const CommentLiteral = createToken({
+  name: "CommentLiteral",
+  pattern: /\S/,
 });

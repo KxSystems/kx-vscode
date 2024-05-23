@@ -24,6 +24,12 @@ export const System = createToken({
   longer_alt: Identifier,
 });
 
+export const Control = createToken({
+  name: "Control",
+  pattern: /(?:while|if|do)/,
+  longer_alt: Identifier,
+});
+
 export const LSql = createToken({
   name: "LSql",
   pattern: /(?:select|exec|update|delete)/,

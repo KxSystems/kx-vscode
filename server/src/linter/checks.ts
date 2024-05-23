@@ -12,159 +12,85 @@
  */
 
 import {
-  CharLiteral,
-  Colon,
   DateTimeLiteral,
-  Identifier,
-  IdentifierKind,
-  InfinityLiteral,
-  Keyword,
-  NumberLiteral,
-  Operator,
-  SymbolLiteral,
+  SyntaxError,
   Token,
-  TokenKind,
+  amended,
+  assignable,
+  assigned,
+  identifier,
+  inLambda,
+  inParam,
+  ordered,
 } from "../parser";
-import { isLocal } from "../util";
-
-function seek(tokens: Token[], token: Token, count = 1) {
-  if (token.index !== undefined) {
-    const result = tokens[token.index + count];
-    if (result) {
-      return result;
-    }
-  }
-  return undefined;
-}
-
-function isNextAssignment(tokens: Token[], token: Token) {
-  const next = seek(tokens, token);
-  if (next) {
-    if (next.tokenType === Colon) {
-      return true;
-    }
-  }
-  return false;
-}
 
 export function deprecatedDatetime(tokens: Token[]): Token[] {
   return tokens.filter((token) => token.tokenType === DateTimeLiteral);
 }
 
-export function assignReservedWord(tokens: Token[]): Token[] {
-  return tokens.filter(
-    (token) => token.tokenType === Keyword && isNextAssignment(tokens, token),
-  );
-}
-
-export function invalidAssign(tokens: Token[]): Token[] {
-  return tokens.filter(
-    (token) =>
-      isNextAssignment(tokens, token) &&
-      (token.tokenType === CharLiteral ||
-        token.tokenType === SymbolLiteral ||
-        token.tokenType === NumberLiteral),
-  );
-}
-
-export function fixedSeed(tokens: Token[]): Token[] {
-  return tokens.filter((token) => {
-    if (token.tokenType === InfinityLiteral) {
-      let prev = seek(tokens, token, -1);
-      if (prev?.tokenType === Operator && prev.image === "?") {
-        prev = seek(tokens, token, -2);
-        if (prev?.tokenType === NumberLiteral) {
-          const value = parseFloat(prev.image);
-          if (value >= 0) {
-            return true;
-          }
-        }
-      }
-    }
-    return false;
-  });
-}
-
 export function invalidEscape(tokens: Token[]): Token[] {
-  const valid = ["n", "r", "t", "\\", "/", '"'];
-  return tokens
-    .filter((token) => token.tokenType === CharLiteral)
-    .filter((token) => {
-      const escapes = /\\([0-9]{3}|.{1})/g;
-      let match, value;
-      while ((match = escapes.exec(token.image))) {
-        if (valid.indexOf(match[1]) !== -1) {
-          continue;
-        }
-        value = parseInt(match[1]);
-        if (value && value >= 100 && value <= 377) {
-          continue;
-        }
-        return true;
-      }
-      return false;
-    });
+  return tokens.filter((token) => token.error === SyntaxError.InvalidEscape);
 }
 
 export function unusedParam(tokens: Token[]): Token[] {
-  return tokens
-    .filter((token) => token.identifierKind === IdentifierKind.Argument)
-    .filter((arg) => {
-      return !tokens.find(
-        (token) =>
-          token !== arg &&
-          token.kind !== TokenKind.Assignment &&
-          token.tokenType === Identifier &&
-          token.scope === arg.scope &&
-          token.identifier === arg.identifier,
-      );
-    });
+  return tokens.filter(
+    (token) =>
+      inParam(token) &&
+      assigned(token) &&
+      assignable(token) &&
+      !tokens.find(
+        (target) =>
+          !assigned(target) &&
+          assignable(target) &&
+          inLambda(target) === inLambda(token) &&
+          identifier(target) === identifier(token),
+      ),
+  );
 }
 
 export function unusedVar(tokens: Token[]): Token[] {
-  return tokens
-    .filter(
-      (token) =>
-        token.kind === TokenKind.Assignment &&
-        token.identifierKind !== IdentifierKind.Argument,
-    )
-    .filter((token) => {
-      if (isLocal(tokens, token)) {
-        return !tokens.find(
-          (target) =>
-            target !== token &&
-            target.identifier === token.identifier &&
-            target.tokenType === Identifier &&
-            target.kind !== TokenKind.Assignment &&
-            target.scope === token.scope,
-        );
-      }
-      return !tokens.find(
+  return tokens.filter(
+    (token) =>
+      !amended(token) &&
+      !inParam(token) &&
+      inLambda(token) &&
+      assigned(token) &&
+      assignable(token) &&
+      !tokens.find(
         (target) =>
-          target !== token &&
-          target.identifier === token.identifier &&
-          target.tokenType === Identifier &&
-          target.kind !== TokenKind.Assignment &&
-          !isLocal(tokens, target),
-      );
-    });
+          !assigned(target) &&
+          assignable(target) &&
+          inLambda(target) === inLambda(token) &&
+          identifier(target) === identifier(token),
+      ),
+  );
 }
 
 export function declaredAfterUse(tokens: Token[]): Token[] {
   return tokens
     .filter(
       (token) =>
-        !token.scope && !token.reverse && token.kind === TokenKind.Assignment,
+        !inParam(token) &&
+        !amended(token) &&
+        assigned(token) &&
+        assignable(token),
     )
+    .sort((a, b) =>
+      identifier(a) < identifier(b)
+        ? -1
+        : identifier(a) > identifier(b)
+          ? 1
+          : (a.order || 0) - (b.order || 0),
+    )
+    .filter((e, i, a) => !a[i - 1] || identifier(e) !== identifier(a[i - 1]))
     .filter((token) =>
       tokens.find(
         (target) =>
-          target !== token &&
-          target.identifier === token.identifier &&
-          target.tokenType === Identifier &&
-          target.kind !== TokenKind.Assignment &&
-          target.scope === token.scope &&
-          target.index! < token.index!,
+          !assigned(target) &&
+          assignable(target) &&
+          inLambda(target) === inLambda(token) &&
+          identifier(target) === identifier(token) &&
+          ordered(target, token),
       ),
     );
 }

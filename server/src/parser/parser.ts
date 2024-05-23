@@ -11,229 +11,278 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { IToken } from "chevrotain";
 import { QLexer } from "./lexer";
 import {
-  Colon,
   Command,
-  DoubleColon,
+  Documentation,
+  EndOfLine,
   LBracket,
   LCurly,
   LParen,
+  LineComment,
   RBracket,
   RCurly,
   RParen,
+  SemiColon,
+  StringEscape,
+  TestBlock,
+  WhiteSpace,
+  CommentEndOfLine,
+  TestLambdaBlock,
+  Colon,
+  DoubleColon,
 } from "./tokens";
-import { CharLiteral } from "./literals";
-import { Identifier, LSql, RSql, System } from "./keywords";
 import {
-  After,
-  AfterEach,
-  Baseline,
-  Before,
-  BeforeEach,
-  Behaviour,
-  Bench,
-  Expect,
-  Feature,
-  Property,
-  Replicate,
-  Setup,
-  Should,
-  SkipIf,
-  Teardown,
-  TimeLimit,
-  ToMatch,
-  Tolerance,
-} from "./quke";
+  CommentBegin,
+  CommentEnd,
+  ExitCommentBegin,
+  TestBegin,
+} from "./ranges";
+import { CharLiteral, CommentLiteral } from "./literals";
+import { Token, inParam, testblock } from "./utils";
+import { Control, Identifier, LSql, RSql } from "./keywords";
+import { checkEscape } from "./checks";
 
-function args(image: string, count: number): string[] {
-  return image.split(/\s+/, count);
+function isExpression(token: Token) {
+  switch (token.tokenType) {
+    case CommentBegin:
+    case CommentLiteral:
+    case CommentEndOfLine:
+    case CommentEnd:
+    case Documentation:
+    case LineComment:
+    case WhiteSpace:
+    case ExitCommentBegin:
+      return false;
+  }
+  return true;
 }
 
-function setQualified(token: Token, namespace: string): void {
-  token.identifier =
-    token.identifierKind === IdentifierKind.Unassignable ||
-    !namespace ||
-    !namespace.startsWith(".") ||
-    token.scope ||
-    token.image.startsWith(".")
-      ? token.image
-      : `${namespace}.${token.image}`;
+function clear(tokens: Token[]) {
+  while (tokens.pop()) {}
 }
 
-export const enum TokenKind {
-  Identifier,
-  Assignment,
+function peek(tokens: Token[]): Token | undefined {
+  return tokens[tokens.length - 1];
 }
 
-export const enum IdentifierKind {
-  Argument,
-  Unassignable,
-  Quke,
+interface State {
+  order: number;
+  stack: Token[];
 }
 
-export interface Token extends IToken {
-  kind?: TokenKind;
-  namespace?: string;
-  identifier?: string;
-  identifierKind?: IdentifierKind;
-  scope?: Token;
-  lambda?: Token;
-  nullary?: boolean;
-  reverse?: number;
-  index?: number;
+function assignment(state: State, token: Token) {
+  const { stack } = state;
+
+  if (inParam(token)) {
+    token.assignment = [token, token];
+  } else {
+    let top = peek(stack);
+    if (top?.tokenType === Colon || top?.tokenType === DoubleColon) {
+      token.assignment = [top];
+      stack.pop();
+      top = stack.shift();
+      if (top) {
+        token.assignment.push(top);
+        clear(stack);
+      }
+    }
+    stack.push(token);
+  }
+  token.order = state.order++;
+}
+
+function block(state: State, tokens: Token[], scopped = true) {
+  if (scopped) {
+    const anchor = peek(tokens);
+    if (anchor && anchor.scope) {
+      tokens.pop();
+      tokens = tokens.splice(tokens.indexOf(anchor.scope) + 1);
+    }
+  }
+
+  const cache: Token[] = [];
+  const scope: Token[] = [];
+
+  let token, next;
+
+  for (let i = 0; i < tokens.length; i++) {
+    token = tokens[i];
+
+    switch (token.tokenType) {
+      case LParen:
+      case LBracket:
+      case LCurly:
+        scope.push(token);
+        cache.push(token);
+        break;
+      case RBracket:
+      case RParen:
+      case RCurly:
+        next = scope.pop();
+        if (next) {
+          cache.push(token);
+        }
+        break;
+      case SemiColon:
+        if (peek(scope)) {
+          cache.push(token);
+        } else {
+          expression(state, cache);
+        }
+        break;
+      default:
+        cache.push(token);
+        break;
+    }
+  }
+  expression(state, cache);
+}
+
+function expression(state: State, tokens: Token[]) {
+  const { stack } = state;
+
+  let token;
+
+  while ((token = tokens.pop())) {
+    switch (token.tokenType) {
+      case Identifier:
+        assignment(state, token);
+        break;
+      case SemiColon:
+        clear(stack);
+        break;
+      case RCurly:
+        tokens.push(token);
+        block(state, tokens);
+        break;
+      case RBracket:
+        switch (token.scope?.tangled?.tokenType) {
+          case LBracket:
+          case LParen:
+          case LCurly:
+          case Control:
+          case Colon:
+          case DoubleColon:
+          case SemiColon:
+          case undefined:
+            tokens.push(token);
+            block(state, tokens);
+            break;
+          default:
+            stack.push(token);
+            break;
+        }
+        break;
+      case RParen:
+      case LParen:
+        break;
+      default:
+        stack.push(token);
+        break;
+    }
+  }
+  clear(stack);
 }
 
 export function parse(text: string): Token[] {
   const result = QLexer.tokenize(text);
   const tokens = result.tokens as Token[];
-  const scopes: Token[] = [];
+  const cache: Token[] = [];
+  const scope: Token[] = [];
+
+  const state: State = {
+    order: 1,
+    stack: [],
+  };
 
   let namespace = "";
-  let sql = 0;
-  let table = 0;
-  let reverse = 0;
-  let argument = 0;
-  let token, prev, next: IToken;
-
-  const _namespace = (arg: string) => {
-    if (arg) {
-      const args = arg.split(/\.+/, 2);
-      namespace = args[1] ? `.${args[1]}` : "";
-    }
-  };
+  let token, next;
 
   for (let i = 0; i < tokens.length; i++) {
     token = tokens[i];
     token.index = i;
-    token.reverse = reverse;
+    token.scope = peek(scope);
     token.namespace = namespace;
+
     switch (token.tokenType) {
-      case Identifier:
-        if (argument) {
-          token.kind = TokenKind.Assignment;
-          token.identifierKind = IdentifierKind.Argument;
-          token.scope = scopes[scopes.length - 1];
-          token.identifier = token.image;
-          break;
+      case LBracket:
+        next = peek(cache);
+        if (next) {
+          next.tangled = token;
+          token.tangled = next;
         }
-        token.kind = TokenKind.Identifier;
-        if (sql || table) {
-          token.identifierKind = IdentifierKind.Unassignable;
-        }
-        if (!token.image.includes(".")) {
-          token.scope = scopes[scopes.length - 1];
-        }
-        setQualified(token, namespace);
+        scope.push(token);
+        cache.push(token);
         break;
-      case Colon:
-      case DoubleColon:
-        prev = tokens[i - 1];
-        if (prev?.kind === TokenKind.Identifier) {
-          if (prev.identifierKind !== IdentifierKind.Unassignable) {
-            prev.kind = TokenKind.Assignment;
-            if (token.tokenType === DoubleColon) {
-              prev.scope = undefined;
-              prev.kind = TokenKind.Identifier;
-            }
-            setQualified(prev, namespace);
+      case TestBegin:
+      case TestBlock:
+      case TestLambdaBlock:
+      case LParen:
+      case LCurly:
+      case LSql:
+        scope.push(token);
+        cache.push(token);
+        break;
+      case RParen:
+      case RBracket:
+      case RCurly:
+      case RSql:
+        next = scope.pop();
+        if (next) {
+          cache.push(token);
+        }
+        break;
+      case SemiColon:
+        if (token.scope) {
+          cache.push(token);
+        } else {
+          expression(state, cache);
+        }
+        break;
+      case EndOfLine:
+        next = tokens[i + 1];
+        if (next && isExpression(next)) {
+          next = scope.pop();
+          if (testblock(next)) {
+            block(state, cache, false);
+            next!.assignment = [next!, next!];
+          } else {
+            expression(state, cache);
           }
         }
         break;
-      case LCurly:
-        prev = tokens[i - 2];
-        if (prev?.kind === TokenKind.Assignment && !prev.lambda) {
-          prev.lambda = token;
-        }
-        token.nullary = true;
-        next = tokens[i + 1];
-        if (next?.tokenType === LBracket) {
-          token.nullary = false;
-          argument++;
-        }
-        scopes.push(token);
-        break;
-      case LBracket:
-        reverse++;
-        break;
-      case RBracket:
-        if (argument) {
-          argument--;
-        }
-        reverse--;
-        break;
-      case RCurly:
-        scopes.pop();
-        break;
-      case LSql:
-        sql++;
-        break;
-      case RSql:
-        sql--;
-        break;
-      case LParen:
-        next = tokens[i + 1];
-        if (table || next?.tokenType === LBracket) {
-          table++;
-        }
-        reverse++;
-        break;
-      case RParen:
-        if (table) {
-          table--;
-        }
-        reverse--;
-        break;
-      case Command:
-        const [cmd, arg] = args(token.image, 2);
+      case Command: {
+        const [cmd, arg] = token.image.split(/[ \t]+/, 2);
         switch (cmd) {
           case "\\d":
-            _namespace(arg);
+            if (arg) {
+              namespace = (arg.startsWith(".") && arg.split(".", 2)[1]) || "";
+            }
             break;
         }
         break;
-      case System:
-        next = tokens[i + 1];
-        if (next?.tokenType === CharLiteral) {
-          const [cmd, arg] = args(next.image.slice(1, -1), 2);
-          switch (cmd) {
-            case "d":
-              if (token.startColumn === 1) {
-                _namespace(arg);
-              }
-              break;
-          }
+      }
+      case StringEscape:
+        checkEscape(token);
+        break;
+      case CharLiteral:
+        break;
+      default:
+        if (isExpression(token)) {
+          cache.push(token);
         }
         break;
-      case Feature:
-      case Should:
-      case Bench:
-      case Replicate:
-      case TimeLimit:
-      case Tolerance:
-        token.identifierKind = IdentifierKind.Quke;
-        scopes.pop();
-        break;
-      case Expect:
-      case ToMatch:
-      case Property:
-      case After:
-      case AfterEach:
-      case Before:
-      case BeforeEach:
-      case SkipIf:
-      case Baseline:
-      case Behaviour:
-      case Setup:
-      case Teardown:
-        scopes.pop();
-        token.kind = TokenKind.Assignment;
-        token.identifierKind = IdentifierKind.Quke;
-        token.lambda = token;
-        scopes.push(token);
-        break;
     }
+  }
+
+  next = peek(scope);
+
+  if (testblock(next)) {
+    block(state, cache, false);
+    next!.assignment = [next!, next!];
+  } else {
+    expression(state, cache);
   }
 
   return tokens;

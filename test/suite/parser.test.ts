@@ -21,6 +21,23 @@ describe("QParser", () => {
       assert.ok(generateTextMateGrammar());
     });
   });
+  describe("parse", () => {
+    it("should not throw on empty text", () => {
+      assert.doesNotThrow(() => parse(""));
+      assert.doesNotThrow(() => parse(" "));
+      assert.doesNotThrow(() => parse("\n"));
+    });
+    it("should not throw on missing scope", () => {
+      assert.doesNotThrow(() => parse("}"));
+      assert.doesNotThrow(() => parse("{\n}"));
+      assert.doesNotThrow(() => parse("]"));
+      assert.doesNotThrow(() => parse("[\n]"));
+      assert.doesNotThrow(() => parse(")"));
+      assert.doesNotThrow(() => parse("(\n)"));
+      assert.doesNotThrow(() => parse("from"));
+      assert.doesNotThrow(() => parse("select\nfrom"));
+    });
+  });
 });
 
 describe("TSQLint", () => {
@@ -29,26 +46,6 @@ describe("TSQLint", () => {
     const result = lint(parse(text));
     assert.strictEqual(result.length, 1);
     assert.strictEqual(result[0].code, "DEPRECATED_DATETIME");
-  });
-  it("should lint assignReservedWord", () => {
-    const text = "if:1";
-    const result = lint(parse(text));
-    assert.strictEqual(result.length, 1);
-    assert.strictEqual(result[0].code, "ASSIGN_RESERVED_WORD");
-  });
-  it("should lint invalidAssign", () => {
-    const text = '100:1;`a :1;"":1';
-    const result = lint(parse(text));
-    assert.strictEqual(result.length, 3);
-    assert.strictEqual(result[0].code, "INVALID_ASSIGN");
-    assert.strictEqual(result[1].code, "INVALID_ASSIGN");
-    assert.strictEqual(result[2].code, "INVALID_ASSIGN");
-  });
-  it("should lint fixedSeed", () => {
-    const text = "1?0Ng";
-    const result = lint(parse(text));
-    assert.strictEqual(result.length, 1);
-    assert.strictEqual(result[0].code, "FIXED_SEED");
   });
   it("should lint invalidEscape", () => {
     const text = '"\\378"';
@@ -63,15 +60,40 @@ describe("TSQLint", () => {
     assert.strictEqual(result[0].code, "UNUSED_PARAM");
   });
   it("should lint unusedVar", () => {
-    const text = "a:1";
+    const text = "{a:1}";
     const result = lint(parse(text));
     assert.strictEqual(result.length, 1);
     assert.strictEqual(result[0].code, "UNUSED_VAR");
+  });
+  it("should not lint unusedVar", () => {
+    const text = "{a::1}";
+    const result = lint(parse(text));
+    assert.strictEqual(result.length, 0);
   });
   it("should lint declaredAfterUse", () => {
     const text = "a;a:1";
     const result = lint(parse(text));
     assert.strictEqual(result.length, 1);
     assert.strictEqual(result[0].code, "DECLARED_AFTER_USE");
+  });
+  it("should not lint declaredAfterUse", () => {
+    const text = "a:1;a;a:1";
+    const result = lint(parse(text));
+    assert.strictEqual(result.length, 0);
+  });
+  it("should not lint declaredAfterUse", () => {
+    const text = "a;{a:1;a}";
+    const result = lint(parse(text));
+    assert.strictEqual(result.length, 0);
+  });
+  it("should not lint declaredAfterUse", () => {
+    const text = "[1=1;[a:1;b:1];[a;b]]";
+    const result = lint(parse(text));
+    assert.strictEqual(result.length, 0);
+  });
+  it("should not lint declaredAfterUse", () => {
+    const text = "[[a:1;b:1;a;b];c:1;[a;b;c]]";
+    const result = lint(parse(text));
+    assert.strictEqual(result.length, 0);
   });
 });

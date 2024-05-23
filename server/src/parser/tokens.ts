@@ -11,38 +11,57 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Lexer, createToken } from "chevrotain";
+import { createToken } from "chevrotain";
 
-export const WhiteSpace = createToken({
-  name: "WhiteSpace",
-  pattern: /\s+/,
-  group: Lexer.SKIPPED,
+export const TestBlock = createToken({
+  name: "TestBlock",
+  pattern:
+    /(?<!.)[ \t]*(x?(?:replicate|timelimit|tolerance|feature|should|bench))\b(.*)/i,
 });
 
-export const BlockComment = createToken({
-  name: "BlockComment",
-  pattern: /(?<!.)\/(?!.)[\s\S]*?(?<!.)\\(?!.)/,
-  line_breaks: true,
-  group: Lexer.SKIPPED,
+export const TestLambdaBlock = createToken({
+  name: "TestLambdaBlock",
+  pattern:
+    /(?<!.)[ \t]*(x?(?:before each|after each|behaviour|baseline|teardown|property|to match|skip if|expect|before|after|setup))\b(.*)/i,
 });
 
-export const LastComment = createToken({
-  name: "LastComment",
-  pattern: /(?<!.)\\[ \t]*(?!.)[\s\S]*/,
-  line_breaks: true,
-  group: Lexer.SKIPPED,
+export const Documentation = createToken({
+  name: "Documentation",
+  pattern:
+    /(?:(?<=[ \t])|(?<!.))\/{1,2}[ \t]*(@(?:default-subcategory|default-category|file[oO]verview|subcategory|deprecated|overview|category|doctest|example|private|typedef|returns?|throws|author|param|kind|name|todo|desc|see|end))\b.*/,
 });
 
 export const LineComment = createToken({
   name: "LineComment",
   pattern: /(?:(?<=[ \t])|(?<!.))\/.*/,
-  line_breaks: false,
-  group: Lexer.SKIPPED,
 });
 
 export const Command = createToken({
   name: "Command",
   pattern: /(?<!.)\\(?:cd|ts|[abBcCdefglopPrsStTuvwWxz12_\\]).*/,
+});
+
+export const WhiteSpace = createToken({
+  name: "WhiteSpace",
+  pattern: /[ \t]+/,
+  line_breaks: true,
+});
+
+export const EndOfLine = createToken({
+  name: "EndOfLine",
+  pattern: /(?:\r?\n)+/,
+  line_breaks: true,
+});
+
+export const CommentEndOfLine = createToken({
+  name: "CommentEndOfLine",
+  pattern: /(?:\r?\n)+/,
+  line_breaks: true,
+});
+
+export const StringEscape = createToken({
+  name: "StringEscape",
+  pattern: /\\([0-9]{3}|.{1})/,
 });
 
 export const Iterator = createToken({
@@ -55,14 +74,14 @@ export const DoubleColon = createToken({
   pattern: /::/,
 });
 
-export const Operator = createToken({
-  name: "Operator",
-  pattern: /[_,.'^?!#@$&|%*+-]/,
-});
-
 export const Comparator = createToken({
   name: "Comparator",
-  pattern: /[~<=>]/,
+  pattern: /(?:<=|>=|<>|[>=<~])/,
+});
+
+export const Operator = createToken({
+  name: "Operator",
+  pattern: /[\\.,'|^$?!#@&_%*+-]/,
 });
 
 export const Colon = createToken({

@@ -206,12 +206,5 @@ describe("qLangServer", () => {
       const result = server.onCompletion(params);
       assert.strictEqual(result.length, 2);
     });
-    it("should complete according to namespace context", () => {
-      const params = createDocument("a:1\n\\d .foo\na:1\n\\d .bar\na:1;a");
-      const result = server.onCompletion(params);
-      assert.strictEqual(result.length, 2);
-      assert.strictEqual(result[0].label, ".foo.a");
-      assert.strictEqual(result[1].label, "a");
-    });
   });
 });
