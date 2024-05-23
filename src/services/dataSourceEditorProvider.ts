@@ -40,6 +40,7 @@ import {
 import { InsightsConnection } from "../classes/insightsConnection";
 import { MetaObjectPayload } from "../models/meta";
 import { ConnectionManagementService } from "./connectionManagerService";
+import { offerConnectAction } from "../utils/core";
 
 export class DataSourceEditorProvider implements CustomTextEditorProvider {
   public filenname = "";
@@ -156,8 +157,12 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           break;
         case DataSourceCommand.Refresh:
           const connMngService = new ConnectionManagementService();
-          await connMngService.refreshGetMetas();
           const selectedServer = getServerForUri(document.uri) || "";
+          if (!connMngService.isConnected(selectedServer)) {
+            offerConnectAction(selectedServer);
+            break;
+          }
+          await connMngService.refreshGetMeta(selectedServer);
           this.cache.delete(selectedServer);
           updateWebview();
           break;
