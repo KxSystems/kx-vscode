@@ -258,13 +258,14 @@ export async function removeConnection(viewItem: KdbNode | InsightsNode) {
   await connMngService.removeConnection(viewItem);
 }
 
-export async function connect(viewItem: KdbNode | InsightsNode): Promise<void> {
+export async function connect(connLabel: string): Promise<void> {
   const connMngService = new ConnectionManagementService();
   commands.executeCommand("kdb-results.focus");
   ExecutionConsole.start();
-  // handle cleaning up existing connection
-  if (ext.activeConnection !== undefined) {
-    DataSourcesPanel.close();
+  const viewItem = connMngService.retrieveConnection(connLabel);
+  if (viewItem === undefined) {
+    window.showErrorMessage("Connection not found");
+    return;
   }
 
   const isKdbNode = viewItem instanceof KdbNode;
