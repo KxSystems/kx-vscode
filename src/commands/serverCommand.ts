@@ -335,7 +335,7 @@ export async function executeQuery(
   if (connLabel === "") {
     if (ext.activeConnection === undefined) {
       window.showErrorMessage(
-        "No active connection founded. Connect to one connection.",
+        "No active connection found. Connect to one connection.",
       );
       //TODO ADD ERROR TO CONSOLE HERE
       return undefined;

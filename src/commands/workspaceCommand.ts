@@ -240,7 +240,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
     if (!server) {
       server = "";
     }
-    if (!connMngService.isConnected(server)) {
+    if (!connMngService.isConnected(server) && isScratchpad(uri)) {
       offerConnectAction(server);
       return;
     }
