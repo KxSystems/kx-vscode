@@ -245,6 +245,8 @@ export async function runActiveEditor(type?: ExecutionTypes) {
     if (!server) {
       server = "";
     }
+    const connection = await getConnectionForServer(server);
+    server = connection?.label || "";
     if (!connMngService.isConnected(server) && isScratchpad(uri)) {
       offerConnectAction(server);
       return;
