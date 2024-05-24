@@ -176,14 +176,13 @@ Set the following properties:
 |Property               | Description                          |
 |-----------------------|--------------------------------------|
 |Server Name            | The server name / alias. The server name selected **cannot be `local` or `insights`**, as these are reserved for use by [Bundled q connections](#bundled-q) and [Insights connections](#insights-connection), respectively; e.g. dev|
-
 |The connection address | Set to the IP address of the kdb server; e.g. _localhost_. |
 |Port                   | Set the _port_ used by the kdb server; e.g. _5001_.  Learn more about [setting a q port](https://code.kx.com/q/basics/ipc/) .       |
 Username                | If authentication is needed, fill in the username otherwise, leave **blank** |
 Password                | If authentication is needed, fill in the password otherwise, leave **blank** |
 Enable TLS Encryption   |  Check the box is TLS is enabled. Learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/). |
 
-![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/myq.png?raw=true).
+![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/myq.png?raw=true)
 
 1. Click **Create Connection** and the connection appears under **CONNECTIONS** in the Primary Sidebar.
 
@@ -258,7 +257,7 @@ While developing q scripts, the kdb VS Code extension supports:
 
     ![Find all references](https://github.com/KxSystems/kx-vscode/blob/main/img/find-all-references.png?raw=true)
 
-     ![Go to References](https://github.com/KxSystems/kx-vscode/blob/main/img/go-to-references.png?raw=true)
+    ![Go to References](https://github.com/KxSystems/kx-vscode/blob/main/img/go-to-references.png?raw=true)
 
 - Outline View 
 
