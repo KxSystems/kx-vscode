@@ -570,9 +570,9 @@ export function writeQueryResultsToConsole(
   duration?: string,
 ): void {
   const queryConsole = ExecutionConsole.start();
-  const res = Array.isArray(result)
-    ? decodeQUTF(result[0])
-    : decodeQUTF(result);
+  const isNonEmptyArray = Array.isArray(result) && result.length > 0;
+  const valueToDecode = isNonEmptyArray ? result[0] : result.toString();
+  const res = decodeQUTF(valueToDecode);
   if (!res.startsWith(queryConstants.error)) {
     queryConsole.append(
       res,
