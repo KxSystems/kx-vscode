@@ -250,6 +250,11 @@ export function getServerAlias(serverList: ServerDetails[]): void {
   });
 }
 
+export function kdbOutputLog(message: string, type: string): void {
+  const timeNow = new Date().toLocaleTimeString();
+  ext.outputChannel.appendLine(`[${timeNow}] [${type}]: ${message}`);
+}
+
 /* istanbul ignore next */
 export function offerConnectAction(connLabel: string): void {
   window
