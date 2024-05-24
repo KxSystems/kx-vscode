@@ -254,7 +254,7 @@ export function getServerAlias(serverList: ServerDetails[]): void {
 export function offerConnectAction(connLabel: string): void {
   window
     .showInformationMessage(
-      `You aren't connected to ${connLabel}, would you like to connect?`,
+      `You aren't connected to ${connLabel}, would you like to connect? Once connected please try again.`,
       "Connect",
       "Cancel",
     )
