@@ -157,7 +157,7 @@ When you select **Bundled q** as the connection type and set the following prope
 |The connection address| This is already be set as `127.0.0.1` which corresponds to your _localhost_ |
 |Port                  | Port for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. _5002_. [Read here for more about setting a q port](https://code.kx.com/q/basics/ipc/)|
 
-1. Click **Create Connection** and the connection appears under **CONNECTIONS** in the Primary Sidebar..
+1. Click **Create Connection** and the connection appears under **CONNECTIONS** in the Primary Sidebar.
 
 1. Right-click the q bundled process listed under **CONNECTIONS**, and click _Start q process_.
 
@@ -322,20 +322,31 @@ To create a data source and run it against a specific connection:
 1. Ensure you have at least one folder open in VS Code.
 1. In the **DATASOURCES** View, click **+**. Specify the parameters defined in the following table:
 
-    | Property              | Description                                                             |
-    |-----------------------|-------------------------------------------------------------------------|
-    | Connection            | Select a Connection from the Connections dropdown                       |
-    | Select API            | Choose **getData** from the **Select API** dropdown.                    |
-    | Table                 | Choose the table you wish to query from the **Tables** dropdown.        |
-    | Start Time/End Time   | Select the Start and End Time for the query.                            |
-    | Additional Parameters | You can choose from the additional parameters as required.              |
+    | Property              | Description                                                                                                                     |
+    |-----------------------|---------------------------------------------------------------------------------------------------------------------------------|
+    | Connection            | Select a Connection from list of existing Connections in the dropdown. If none are listed [create a connection](#connections).  |
+    | Select API            | Choose **getData** from the **Select API** dropdown. If none are listed click the **Refresh** button.*                          |
+    | Table                 | Choose the table you wish to query from the **Tables** dropdown.  If none are listed click the **Refresh** button.*             |
+    | Start Time/End Time   | Select the Start and End Time for the query.                                                                                    |
+    | Additional Parameters | You can choose from the additional parameters as required.                                                                      |
 
+    *If you are not already connected when you click the **Refresh** button a notification gives you the option to connect.
+    
+    ![Connection Request](https://github.com/KxSystems/kx-vscode/blob/main/img/connect-request.png?raw=true)
+
+    Once connected you need to click **Refresh** again.
 
 1. Click **Save** to store the settings you have chosen, for reuse later. When you save a data source; query parameters and the connection details are stored. The data source icon is green if it is associated with a connection and grey if there is no association. 
 
     ![data Source](https://github.com/KxSystems/kx-vscode/blob/main/img/data-source.png?raw=true)
 
 1. Click **Run**.
+
+    If you are not already connected a notification gives you the option to connect.
+    
+    ![Connection Request](https://github.com/KxSystems/kx-vscode/blob/main/img/connect-request.png?raw=true)
+
+    Once connected you need to click **Run** again.
 
 1. The results populate:
 
@@ -360,6 +371,12 @@ To do this:
 1. Create a data source and execute it by clicking **Populate Scratchpad**.
 
     ![Populate Scratchpad](https://github.com/KxSystems/kx-vscode/blob/main/img/populate-scratchpad-button.png?raw=true)
+
+    If you are not already connected a notification gives you the option to connect.
+    
+    ![Connection Request](https://github.com/KxSystems/kx-vscode/blob/main/img/connect-request.png?raw=true)
+
+    Once connected you need to click **Populate Scratchpad** again.
 
 1. At the prompt, provide a variable to populate your own scratchpad instance running in the connected kdb Insights Enterprise with the data.
 
@@ -409,6 +426,13 @@ To create a Workbook and run code against a specific connection:
         1. Right click and choose 'KX: Execute Entire File' from the menu.
 
     1. If you wish to only run the current selection (or current line if nothing is selected), right click and choose 'KX: Execute Current Selection' from the menu.
+
+    If you are not already connected a notification gives you the option to connect.
+    
+    ![Connection Request](https://github.com/KxSystems/kx-vscode/blob/main/img/connect-request.png?raw=true)
+
+    Once connected you need to run the code again.
+
 
 1. If you have not yet chosen a connection to associate with the workbook you will be asked to choose a connection before the code is executed.
     ![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookconnectionlink.png)
