@@ -27,6 +27,7 @@ import {
 import { getUri } from "../utils/getUri";
 import { getNonce } from "../utils/getNonce";
 import {
+  getConnectionForServer,
   getInsightsServers,
   getServerForUri,
   setServerForUri,
@@ -107,6 +108,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
 
     const updateWebview = async () => {
       const selectedServer = getServerForUri(document.uri) || "";
+      await getConnectionForServer(selectedServer);
       webview.postMessage(<DataSourceMessage2>{
         command: DataSourceCommand.Update,
         selectedServer,
