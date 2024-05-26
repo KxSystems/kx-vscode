@@ -343,7 +343,7 @@ export class KdbDataSourceView extends LitElement {
         <vscode-text-field
           class="text-field"
           .value="${live(filter.values)}"
-          @change="${(event: Event) => {
+          @input="${(event: Event) => {
             filter.values = (event.target as HTMLInputElement).value;
             this.requestChange();
           }}"
@@ -394,7 +394,7 @@ export class KdbDataSourceView extends LitElement {
         <vscode-text-field
           class="text-field"
           .value="${live(label.key)}"
-          @change="${(event: Event) => {
+          @input="${(event: Event) => {
             label.key = (event.target as HTMLInputElement).value;
             this.requestChange();
           }}"
@@ -405,7 +405,7 @@ export class KdbDataSourceView extends LitElement {
         <vscode-text-field
           class="text-field"
           .value="${live(label.value)}"
-          @change="${(event: Event) => {
+          @input="${(event: Event) => {
             label.value = (event.target as HTMLInputElement).value;
             this.requestChange();
           }}"
@@ -522,7 +522,7 @@ export class KdbDataSourceView extends LitElement {
         <vscode-text-field
           class="text-field"
           .value="${live(agg.key)}"
-          @change="${(event: Event) => {
+          @input="${(event: Event) => {
             agg.key = (event.target as HTMLInputElement).value;
             this.requestChange();
           }}"
@@ -769,7 +769,7 @@ export class KdbDataSourceView extends LitElement {
                       type="datetime-local"
                       class="text-field larger"
                       .value="${live(this.startTS)}"
-                      @change="${(event: Event) => {
+                      @input="${(event: Event) => {
                         this.startTS = (
                           event.target as HTMLSelectElement
                         ).value;
@@ -782,7 +782,7 @@ export class KdbDataSourceView extends LitElement {
                       type="datetime-local"
                       class="text-field larger"
                       .value="${live(this.endTS)}"
-                      @change="${(event: Event) => {
+                      @input="${(event: Event) => {
                         this.endTS = (event.target as HTMLSelectElement).value;
                         this.requestChange();
                       }}"
@@ -922,7 +922,7 @@ export class KdbDataSourceView extends LitElement {
                     <vscode-text-area
                       rows="20"
                       .value="${live(this.qsql)}"
-                      @change="${(event: Event) => {
+                      @input="${(event: Event) => {
                         this.qsql = (event.target as HTMLSelectElement).value;
                         this.requestChange();
                       }}"
@@ -938,7 +938,7 @@ export class KdbDataSourceView extends LitElement {
                     <vscode-text-area
                       rows="20"
                       .value="${live(this.sql)}"
-                      @change="${(event: Event) => {
+                      @input="${(event: Event) => {
                         this.sql = (event.target as HTMLSelectElement).value;
                         this.requestChange();
                       }}"
