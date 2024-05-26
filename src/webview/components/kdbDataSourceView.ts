@@ -55,6 +55,7 @@ export class KdbDataSourceView extends LitElement {
   ];
 
   readonly vscode = acquireVsCodeApi();
+  private declare debounce;
 
   isInsights = false;
   isMetaLoaded = false;
@@ -201,10 +202,15 @@ export class KdbDataSourceView extends LitElement {
 
   requestChange() {
     this.requestUpdate();
-    this.postMessage({
-      command: DataSourceCommand.Change,
-      dataSourceFile: this.data,
-    });
+    if (this.debounce) {
+      clearTimeout(this.debounce);
+    }
+    this.debounce = setTimeout(() => {
+      this.postMessage({
+        command: DataSourceCommand.Change,
+        dataSourceFile: this.data,
+      });
+    }, 200);
   }
 
   requestServerChange(event: Event) {
