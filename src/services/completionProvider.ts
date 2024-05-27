@@ -29,28 +29,18 @@ export class CompletionProvider implements CompletionItemProvider {
     ext.keywords.forEach((item) =>
       items.push({ label: item, kind: CompletionItemKind.Keyword }),
     );
-    ext.functions.forEach((item) =>
-      items.push({
-        label: item,
-        insertText: item,
-        kind: CompletionItemKind.Function,
-      }),
-    );
-    ext.tables.forEach((item) =>
-      items.push({
-        label: item,
-        insertText: item,
-        kind: CompletionItemKind.Value,
-      }),
-    );
-    ext.variables.forEach((item) =>
-      items.push({
-        label: item,
-        insertText: item,
-        kind: CompletionItemKind.Variable,
-      }),
-    );
-
+    if (ext.connectionNode) {
+      [ext.functions, ext.tables, ext.variables].forEach((group) =>
+        group.forEach((item) =>
+          items.push({
+            label: item,
+            detail: `${ext.connectionNode?.label}`,
+            insertText: item,
+            kind: CompletionItemKind.Variable,
+          }),
+        ),
+      );
+    }
     return [...items, ...qLangParserItems];
   }
 }
