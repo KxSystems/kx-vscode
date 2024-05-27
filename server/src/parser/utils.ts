@@ -98,11 +98,7 @@ export function relative(token: Token, source: Token | undefined) {
 
 export function lambda(token?: Token) {
   return (
-    token &&
-    (token.tokenType === LCurly ||
-      token.tokenType === TestBegin ||
-      token.tokenType === TestBlock ||
-      token.tokenType === TestLambdaBlock)
+    token && (token.tokenType === LCurly || token.tokenType === TestLambdaBlock)
   );
 }
 

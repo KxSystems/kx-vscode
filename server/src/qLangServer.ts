@@ -53,6 +53,7 @@ import {
   inParam,
   namespace,
   relative,
+  testblock,
 } from "./parser";
 import { lint } from "./linter";
 
@@ -246,7 +247,9 @@ function createSymbol(token: Token, tokens: Token[]): DocumentSymbol {
   const range = rangeFromToken(token);
   return DocumentSymbol.create(
     lambda(token)
-      ? " "
+      ? testblock(token)
+        ? token.image.trim()
+        : " "
       : inLambda(token) && !amended(token)
         ? token.image
         : identifier(token),
