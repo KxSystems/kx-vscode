@@ -25,10 +25,6 @@ export class CompletionProvider implements CompletionItemProvider {
     CompletionItem[] | CompletionList<CompletionItem>
   > {
     const items: CompletionItem[] = [];
-
-    ext.keywords.forEach((item) =>
-      items.push({ label: item, kind: CompletionItemKind.Keyword }),
-    );
     if (ext.connectionNode) {
       [ext.functions, ext.tables, ext.variables].forEach((group) =>
         group.forEach((item) =>
@@ -39,6 +35,13 @@ export class CompletionProvider implements CompletionItemProvider {
             kind: CompletionItemKind.Variable,
           }),
         ),
+      );
+      ext.keywords.forEach((item) =>
+        items.push({
+          label: item,
+          detail: `${ext.connectionNode?.label}`,
+          kind: CompletionItemKind.Keyword,
+        }),
       );
     }
     return [...items, ...qLangParserItems];
