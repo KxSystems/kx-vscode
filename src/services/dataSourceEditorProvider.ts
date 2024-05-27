@@ -105,10 +105,10 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     const webview = webviewPanel.webview;
     webview.options = { enableScripts: true };
     webview.html = this.getWebviewContent(webview);
-    let updating = false;
+    let changing = 0;
 
     const updateWebview = async () => {
-      if (!updating) {
+      if (changing === 0) {
         const selectedServer = getServerForUri(document.uri) || "";
         await getConnectionForServer(selectedServer);
         webview.postMessage(<DataSourceMessage2>{
@@ -158,11 +158,11 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           const changed = msg.dataSourceFile;
           const current = this.getDocumentAsJson(document);
           if (!isDeepStrictEqual(current, changed)) {
-            updating = true;
+            changing++;
             try {
               await this.updateTextDocument(document, changed);
             } finally {
-              updating = false;
+              changing--;
             }
           }
           break;
