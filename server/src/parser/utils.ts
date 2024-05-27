@@ -116,7 +116,11 @@ export function testblock(token?: Token) {
 }
 
 export function amended(token: Token) {
-  return token.assignment && token.assignment[0]?.tokenType === DoubleColon;
+  return (
+    inLambda(token) &&
+    token.assignment &&
+    token.assignment[0]?.tokenType === DoubleColon
+  );
 }
 
 export function local(token: Token, tokens: Token[]) {

@@ -143,7 +143,9 @@ export default class QLangServer {
     }
     return tokens
       .filter(
-        (token) => assignable(token) && assigned(token) && !inLambda(token),
+        (token) =>
+          !inLambda(token) &&
+          ((assignable(token) && assigned(token)) || lambda(token)),
       )
       .map((token) => createSymbol(token, tokens));
   }
@@ -204,10 +206,8 @@ export default class QLangServer {
         labelDetails: {
           detail: ` .${namespace(token)}`,
         },
+        kind: CompletionItemKind.Variable,
         insertText: relative(token, source),
-        kind: lambda(assigned(token))
-          ? CompletionItemKind.Function
-          : CompletionItemKind.Variable,
       };
     });
   }
@@ -245,12 +245,13 @@ function positionToToken(tokens: Token[], position: Position) {
 function createSymbol(token: Token, tokens: Token[]): DocumentSymbol {
   const range = rangeFromToken(token);
   return DocumentSymbol.create(
-    (inLambda(token) && !amended(token)
-      ? token.image
-      : identifier(token)
-    ).trim(),
+    lambda(token)
+      ? " "
+      : inLambda(token) && !amended(token)
+        ? token.image
+        : identifier(token),
     (amended(token) && "Amend") || undefined,
-    lambda(assigned(token))
+    lambda(token)
       ? SymbolKind.Object
       : inParam(token)
         ? SymbolKind.Array
@@ -260,9 +261,8 @@ function createSymbol(token: Token, tokens: Token[]): DocumentSymbol {
     tokens
       .filter(
         (child) =>
-          assigned(child) &&
-          assignable(child) &&
-          inLambda(child) === assigned(token),
+          inLambda(child) === token &&
+          ((assigned(child) && assignable(child)) || lambda(child)),
       )
       .map((child) => createSymbol(child, tokens)),
   );
