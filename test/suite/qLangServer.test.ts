@@ -84,7 +84,7 @@ describe("qLangServer", () => {
     it("should return symbols", () => {
       const params = createDocument("a:1;b:{[c]d:c+1;e::1;d}");
       const result = server.onDocumentSymbol(params);
-      assert.strictEqual(result.length, 2);
+      assert.strictEqual(result.length, 3);
     });
     it("should skip table and sql", () => {
       const params = createDocument(")([]a:1;b:2);select a:1 from(");
