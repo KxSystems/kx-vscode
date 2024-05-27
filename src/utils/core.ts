@@ -251,8 +251,29 @@ export function getServerAlias(serverList: ServerDetails[]): void {
 }
 
 export function kdbOutputLog(message: string, type: string): void {
+  const dateNow = new Date().toLocaleDateString();
   const timeNow = new Date().toLocaleTimeString();
-  ext.outputChannel.appendLine(`[${timeNow}] [${type}]: ${message}`);
+  ext.outputChannel.appendLine(`[${dateNow} ${timeNow}] [${type}] ${message}`);
+}
+
+export function tokenUndefinedError(connLabel: string): void {
+  kdbOutputLog(
+    `Error retrieving access token for Insights connection named: ${connLabel}`,
+    "ERROR",
+  );
+  window.showErrorMessage(
+    `Error retrieving access token for Insights connection named: ${connLabel}`,
+  );
+}
+
+export function invalidUsernameJWT(connLabel: string): void {
+  kdbOutputLog(
+    `JWT did not contain a valid preferred username for Insights connection: ${connLabel}`,
+    "ERROR",
+  );
+  window.showErrorMessage(
+    `JWT did not contain a valid preferred username for Insights connection: ${connLabel}`,
+  );
 }
 
 /* istanbul ignore next */
