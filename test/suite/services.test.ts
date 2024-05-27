@@ -1405,6 +1405,8 @@ describe("workspaceTreeProvider", () => {
 
 describe("CompletionProvider", () => {
   it("should provide completion items", () => {
+    sinon.stub(ext, "connectionNode").value(sinon.createStubInstance(KdbNode));
+    sinon.stub(ext, "functions").value(["test"]);
     const provider = new CompletionProvider();
     const items = provider.provideCompletionItems();
     assert.ok(items);
