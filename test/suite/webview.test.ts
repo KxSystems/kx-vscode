@@ -200,11 +200,14 @@ describe("KdbDataSourceView", () => {
   });
 
   describe("requestChange", () => {
-    it("should send a message", () => {
+    it("should send a message after 200 ms", (done) => {
       let result = undefined;
       sinon.stub(view, "postMessage").value(() => (result = true));
       view.requestChange();
-      assert.ok(result);
+      setTimeout(() => {
+        assert.ok(result);
+        done();
+      }, 250);
     });
   });
 

@@ -105,18 +105,21 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     const webview = webviewPanel.webview;
     webview.options = { enableScripts: true };
     webview.html = this.getWebviewContent(webview);
+    let changing = 0;
 
     const updateWebview = async () => {
-      const selectedServer = getServerForUri(document.uri) || "";
-      await getConnectionForServer(selectedServer);
-      webview.postMessage(<DataSourceMessage2>{
-        command: DataSourceCommand.Update,
-        selectedServer,
-        servers: getInsightsServers(),
-        dataSourceFile: this.getDocumentAsJson(document),
-        insightsMeta: await this.getMeta(selectedServer),
-        isInsights: true,
-      });
+      if (changing === 0) {
+        const selectedServer = getServerForUri(document.uri) || "";
+        await getConnectionForServer(selectedServer);
+        webview.postMessage(<DataSourceMessage2>{
+          command: DataSourceCommand.Update,
+          selectedServer,
+          servers: getInsightsServers(),
+          dataSourceFile: this.getDocumentAsJson(document),
+          insightsMeta: await this.getMeta(selectedServer),
+          isInsights: true,
+        });
+      }
     };
 
     /* istanbul ignore next */
@@ -154,10 +157,14 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
         case DataSourceCommand.Change:
           const changed = msg.dataSourceFile;
           const current = this.getDocumentAsJson(document);
-          if (isDeepStrictEqual(current, changed)) {
-            break;
+          if (!isDeepStrictEqual(current, changed)) {
+            changing++;
+            try {
+              await this.updateTextDocument(document, changed);
+            } finally {
+              changing--;
+            }
           }
-          this.updateTextDocument(document, changed);
           break;
         case DataSourceCommand.Save:
           await commands.executeCommand(
@@ -209,7 +216,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       JSON.stringify(json, null, 2),
     );
 
-    return workspace.applyEdit(edit);
+    return workspace.applyEdit(edit, { isRefactoring: true });
   }
 
   private getWebviewContent(webview: Webview) {
