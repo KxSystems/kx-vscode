@@ -1,6 +1,6 @@
 # Change log
 
-All notable changes to the kdb extension will be documented in this file.
+All notable changes to the kdb extension are documented in this file.
 
 # v1.5.0
 
