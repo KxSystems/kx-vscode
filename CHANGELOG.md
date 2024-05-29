@@ -4,15 +4,15 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 # v1.5.0
 
-This release requires at VS Code version 1.86.0 or higher.
+This release requires VS Code version 1.86.0 or higher.
 
 ### Enhancements
 
 - **Multiple Connections** - It is now possible to have more than one connection open simultaneously. q and Python files run against the active connection, which can be chosen from the list of open connections.
 - **Workbooks** - We have introduced Workbook files, which can be associated with a specific connection rather than just running against the active connection. These files are identified with the extension `*.kdb.q` (for q) or `*.kdb.py` (for Python) and are created in `.kx` directory of the current workspace folder.
-  - A new **WORKBOOK** view displays the list of Workbooks per workspace.  
+  - A new **WORKBOOK** view displays the list of Workbooks per workspace.
 - **Data sources** - Data sources can be associated with a specific connection rather than just running against the active connection. They are created in the `.kx` directory of the current workspace folder as `*.kdb.json` files.
-  -  A new **DATASOURCES** view displays the list of data sources per workspace.  
+  - A new **DATASOURCES** view displays the list of data sources per workspace.
 - **Data Source Editor** - The data source editor visual design has been improved.
 - **OUTLINE** - A new OUTLINE view provides support for q and quke files.
 - **Command Grouping** - All extension commands are now grouped under the KX prefix.

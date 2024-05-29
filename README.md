@@ -304,11 +304,11 @@ To create a data source and run it against a specific connection:
 
 1. The results are populated in the **KDB Results** window, if it is active.
 
-   ![KDB Results](https://github.com/KxSystems/kx-vscode/blob/main/img/datasource-kdbresults.png)
+   ![KDB Results](https://github.com/KxSystems/kx-vscode/blob/main/img/datasource-kdbresults.png?raw=true)
 
    - Otherwise the **Output** window is populated.
 
-     ![Output](https://github.com/KxSystems/kx-vscode/blob/main/img/datasource-output.png)
+     ![Output](https://github.com/KxSystems/kx-vscode/blob/main/img/datasource-output.png?raw=true)
 
 In addition to [API queries](https://code.kx.com/insights/api/database/query/get-data.html), if the query environment is enabled on the deployed instance of **kdb Insights Enterprise**, qSQL and SQL queries can be used within a data source with the appropriate parameterization. If qSQL or SQL is required and issues occur trying to run these queries contact a kdb Insights Enterprise administrator for assistance.
 
@@ -357,33 +357,33 @@ To create a Workbook and run code against a specific connection:
    1. To run all the code in the file you can use one of the following methods:
 
       1. Click **Run** from above the first line of code in the workbook file.
-         ![workbook links](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookrunlink.png)
+         ![workbook links](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookrunlink.png?raw=true)
 
       1. Select **Run** from the upper right of the editor. Using the dropdown next to the button you can choose to **KX: Execute Entire File** or **KX Execute Current Selection**.
-         ![play dropdown](https://github.com/KxSystems/kx-vscode/blob/main/img/wortkbookplaydropdown.png)
+         ![play dropdown](https://github.com/KxSystems/kx-vscode/blob/main/img/wortkbookplaydropdown.png?raw=true)
 
       1. Click **Run** on the right-hand side of the status bar.
-         ![status bar run ](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookstatusbarrun.png)
+         ![status bar run ](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookstatusbarrun.png?raw=true)
 
       1. Right-click and choose **KX: Execute Entire File** from the menu.
 
    1. If you wish to only run the current selection (or current line if nothing is selected), right-click and choose **KX: Execute Current Selection** from the menu.
 
 1. If you have not yet chosen a connection to associate with the workbook you are asked to choose a connection before the code is executed.
-   ![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookconnectionlink.png)
+   ![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookconnectionlink.png?raw=true)
 
 1. The results populate the kdb results window if it is active, otherwise the output window is populated.
 
 When you save a workbook file the code and the connection details are stored. The workbook icon is green if it is associated with a connection and grey if there is no association.
 
 You can also change the connection associated with a workbook at any time by clicking on **Choose Connection** from above the first line of code in the workbook file.
-![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/wortkbookplaydropdown.png)
+![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/wortkbookplaydropdown.png?raw=true)
 
 ## Query History
 
 The **Query History** view in the primary sidebar captures each query execution and enables you to re-run any of the queries listed. Initially the query history view is empty but once you run a query it is captured and displayed in the window - with a separate row displayed for every execution. All information is stored in memory and not persisted upon application exit.
 
-![Query History](https://github.com/KxSystems/kx-vscode/blob/main/img/query-history.png)
+![Query History](https://github.com/KxSystems/kx-vscode/blob/main/img/query-history.png?raw=true)
 
 Rows consists of the following:
 
@@ -397,11 +397,11 @@ Rows consists of the following:
 | **Query**                     | When Code is being execute the code is shown.                                  |
 | **Data Source Type**          | When a datasource is being run 'API' is displayed.                             |
 
-![Query History Details](https://github.com/KxSystems/kx-vscode/blob/main/img/query-history-details.png)
+![Query History Details](https://github.com/KxSystems/kx-vscode/blob/main/img/query-history-details.png?raw=true)
 
 Right-clicking on a history row brings up a menu with the option to **Rerun query**.
 
-![Query History Clear](https://github.com/KxSystems/kx-vscode/blob/main/img/query-history-clear.png)
+![Query History Clear](https://github.com/KxSystems/kx-vscode/blob/main/img/query-history-clear.png?raw=true)
 
 ## View results
 
