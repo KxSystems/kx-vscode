@@ -1,30 +1,31 @@
 # Change log
 
-All notable changes to the kdb extension will be documented in this file.
+All notable changes to the **kdb VS Code extension** are documented in this file.
 
 # v1.5.0
 
-This release requires at least version 1.86.0 of VS Code
+This release requires at VS Code version 1.86.0 or higher.
 
 ### Enhancements
 
-- Ability to have more than one connection open simultaneously. q and Python files run against the active connection which can be chosen from the open connections
-- There is a new concept of Workbook files with extension `*.kdb.q` (for q) or `*.kdb.py` (for Python) created in `.kx` directory of the current workspace folder, that can be associated with a specific connection rather than just running against the active connection
-- Data sources are created in `.kx` directory of the current workspace folder as `*.kdb.json` files and can be associated with a specific connection rather than just running against the active connection
-- New DATASOURCES and WORKBOOKS views in KX tab which lists workbook and data source files per workspace
-- Improved data source editor visual design
-- New OUTLINE view suppport for q and quke files
-- Grouped all extension commands under KX prefix
-- Improved syntax highlighting for q and quke files
-- Status sensitive new icon for connections
-- New icon for q files
+- **Multiple Connections** - It is now possible to have more than one connection open simultaneously. q and Python files run against the active connection, which can be chosen from the list of open connections.
+- **Workbooks** - We have introduced Workbook files, which can be associated with a specific connection rather than just running against the active connection. These files are identified with the extension `*.kdb.q` (for q) or `*.kdb.py` (for Python) and are created in `.kx` directory of the current workspace folder.
+  - A new **WORKBOOK** view displays the list of Workbooks per workspace.  
+- **Data sources** - Data sources can be associated with a specific connection rather than just running against the active connection. They are created in the `.kx` directory of the current workspace folder as `*.kdb.json` files.
+  -  A new **DATASOURCES** view displays the list of data sources per workspace.  
+- **Data Source Editor** - The data source editor visual design has been improved.
+- **OUTLINE** - A new OUTLINE view provides support for q and quke files.
+- **Command Grouping** - All extension commands are now grouped under the KX prefix.
+- **Syntax Highlighting** - The syntax highlighting for q and quke files has been improved.
+- **Connections Icons** - New status sensitive icons have been implemented for connections/
+- **q file icon** - New icon for q files.
 
 ### Fixes
 
-- Fixed inconsistent command descriptions
-- Fixed execute entire file button only works when code editor is selected
-- Language server, parser and linter improvements
-- Updated dependencies
+- Inconsistent command descriptions have been fixed.
+- The Execute entire file button was only working when the code editor was selected. This is resolved.
+- Language server, parser and linter improvements.
+- Updated dependencies.
 
 ### Internal Improvements
 
