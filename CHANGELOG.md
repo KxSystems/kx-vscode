@@ -2,6 +2,12 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.5.1
+
+### Fixes
+
+- Documentation fixes.
+
 # v1.5.0
 
 This release requires VS Code version 1.86.0 or higher.
