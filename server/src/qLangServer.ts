@@ -54,6 +54,7 @@ import {
   namespace,
   relative,
   testblock,
+  parseExpressions,
 } from "./parser";
 import { lint } from "./linter";
 
@@ -85,6 +86,10 @@ export default class QLangServer {
     this.connection.onCompletion(this.onCompletion.bind(this));
     this.connection.onDidChangeConfiguration(
       this.onDidChangeConfiguration.bind(this),
+    );
+    this.connection.onRequest(
+      "kdb.parseExpressions",
+      this.parseExpressions.bind(this),
     );
   }
 
@@ -211,6 +216,14 @@ export default class QLangServer {
         insertText: relative(token, source),
       };
     });
+  }
+
+  public parseExpressions(textDocument: TextDocumentIdentifier): string[] {
+    const document = this.documents.get(textDocument.uri);
+    if (!document) {
+      return [];
+    }
+    return parseExpressions(document.getText());
   }
 
   private parse(textDocument: TextDocumentIdentifier): Token[] {

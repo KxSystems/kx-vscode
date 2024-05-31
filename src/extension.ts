@@ -18,6 +18,7 @@ import {
   EventEmitter,
   ExtensionContext,
   Range,
+  TextDocument,
   TextDocumentContentProvider,
   Uri,
   WorkspaceEdit,
@@ -94,6 +95,7 @@ import { createDefaultDataSourceFile } from "./models/dataSource";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { CompletionProvider } from "./services/completionProvider";
 import { QuickFixProvider } from "./services/quickFixProvider";
+import { QClient, wrapExpressions } from "./utils/qclient";
 
 let client: LanguageClient;
 
@@ -292,7 +294,24 @@ export async function activate(context: ExtensionContext) {
       await runActiveEditor();
     }),
     commands.registerCommand("kdb.execute.selectedQuery", async () => {
-      await runActiveEditor(ExecutionTypes.QuerySelection);
+      if (ext.activeTextEditor) {
+        const exprs = await commands.executeCommand<string[]>(
+          "kdb.parseExpressions",
+          ext.activeTextEditor.document,
+        );
+        exprs.forEach((a, i) => ext.outputChannel.appendLine(`${i}: ${a}`));
+        const client = new QClient("localhost", 5002);
+        await client.connect();
+        try {
+          const res = await client.execute(wrapExpressions(exprs));
+          ext.outputChannel.appendLine(JSON.stringify(res));
+        } catch (error) {
+          ext.outputChannel.appendLine(`${error}`);
+        } finally {
+          client.disconnect();
+        }
+      }
+      //await runActiveEditor(ExecutionTypes.QuerySelection);
     }),
     commands.registerCommand("kdb.execute.fileQuery", async () => {
       await runActiveEditor(ExecutionTypes.QueryFile);
@@ -464,6 +483,12 @@ export async function activate(context: ExtensionContext) {
   );
 
   await client.start();
+
+  context.subscriptions.push(
+    commands.registerCommand("kdb.parseExpressions", (document: TextDocument) =>
+      client.sendRequest("kdb.parseExpressions", { uri: `${document.uri}` }),
+    ),
+  );
 
   Telemetry.sendEvent("Extension.Activated");
   const yamlExtension = extensions.getExtension("redhat.vscode-yaml");
