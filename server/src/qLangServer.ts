@@ -54,7 +54,6 @@ import {
   namespace,
   relative,
   testblock,
-  parseExpressions,
 } from "./parser";
 import { lint } from "./linter";
 
@@ -87,9 +86,10 @@ export default class QLangServer {
     this.connection.onDidChangeConfiguration(
       this.onDidChangeConfiguration.bind(this),
     );
-    this.connection.onRequest(
-      "kdb.parseExpressions",
-      this.parseExpressions.bind(this),
+    this.connection.onRequest("kdb.parseExpressions", (textDocument) =>
+      this.parse(textDocument)
+        .filter((token) => token.exprs)
+        .map((token) => token.escaped || token.image),
     );
   }
 
@@ -218,14 +218,6 @@ export default class QLangServer {
     });
   }
 
-  public parseExpressions(textDocument: TextDocumentIdentifier): string[] {
-    const document = this.documents.get(textDocument.uri);
-    if (!document) {
-      return [];
-    }
-    return parseExpressions(document.getText());
-  }
-
   private parse(textDocument: TextDocumentIdentifier): Token[] {
     const document = this.documents.get(textDocument.uri);
     if (!document) {
@@ -290,6 +282,8 @@ function createDebugSymbol(token: Token): DocumentSymbol {
     tokenId(token),
     `${token.tokenType.name} ${token.namespace ? `(${token.namespace})` : ""} ${
       token.error !== undefined ? `E=${token.error}` : ""
+    } ${
+      token.exprs ? `X=${token.exprs}` : ""
     } ${token.order ? `O=${token.order}` : ""} ${
       token.tangled ? `T=${tokenId(token.tangled)}` : ""
     } ${token.scope ? `S=${tokenId(token.scope)}` : ""} ${

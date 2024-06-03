@@ -72,6 +72,7 @@ function peek(tokens: Token[]): Token | undefined {
 
 interface State {
   order: number;
+  exprs: number;
   stack: Token[];
 }
 
@@ -197,6 +198,7 @@ export function parse(text: string): Token[] {
 
   const state: State = {
     order: 1,
+    exprs: 1,
     stack: [],
   };
 
@@ -218,6 +220,7 @@ export function parse(text: string): Token[] {
         }
         scope.push(token);
         cache.push(token);
+        token.exprs = state.exprs;
         break;
       case TestBegin:
       case TestBlock:
@@ -227,6 +230,7 @@ export function parse(text: string): Token[] {
       case LSql:
         scope.push(token);
         cache.push(token);
+        token.exprs = state.exprs;
         break;
       case RParen:
       case RBracket:
@@ -235,14 +239,39 @@ export function parse(text: string): Token[] {
         next = scope.pop();
         if (next) {
           cache.push(token);
+          token.exprs = state.exprs;
+        }
+        break;
+      case StringBegin:
+        scope.push(token);
+        cache.push(token);
+        token.exprs = state.exprs;
+        token.escaped = '\\"';
+        break;
+      case StringEnd:
+        next = scope.pop();
+        if (next) {
+          cache.push(token);
+          token.exprs = state.exprs;
+          token.escaped = '\\"';
         }
         break;
       case SemiColon:
+        token.exprs = state.exprs;
         if (token.scope) {
           cache.push(token);
         } else {
           expression(state, cache);
+          state.exprs++;
         }
+        break;
+      case Operator:
+      case Iterator:
+        if (token.image.startsWith("\\")) {
+          token.escaped = `\\${token.image}`;
+        }
+        cache.push(token);
+        token.exprs = state.exprs;
         break;
       case EndOfLine:
         next = tokens[i + 1];
@@ -254,7 +283,28 @@ export function parse(text: string): Token[] {
           } else {
             expression(state, cache);
           }
+          token.escaped = ";";
+          token.exprs = state.exprs;
+          state.exprs++;
+        } else if (token.scope?.tokenType === StringBegin) {
+          token.exprs = state.exprs;
         }
+        break;
+      case StringEscape:
+        checkEscape(token);
+        if (token.image === '\\"' || token.image === "\\\\") {
+          token.escaped = `\\\\${token.image}`;
+        }
+        token.exprs = state.exprs;
+        break;
+      case CharLiteral:
+        token.exprs = state.exprs;
+        break;
+      case WhiteSpace:
+        if (token.scope?.tokenType !== StringBegin) {
+          token.escaped = " ";
+        }
+        token.exprs = state.exprs;
         break;
       case Command: {
         const [cmd, arg] = token.image.split(/[ \t]+/, 2);
@@ -265,16 +315,14 @@ export function parse(text: string): Token[] {
             }
             break;
         }
+        token.exprs = state.exprs;
+        token.escaped = `system \\"${token.image.slice(1)}\\"`;
         break;
       }
-      case StringEscape:
-        checkEscape(token);
-        break;
-      case CharLiteral:
-        break;
       default:
         if (isExpression(token)) {
           cache.push(token);
+          token.exprs = state.exprs;
         }
         break;
     }
@@ -290,102 +338,4 @@ export function parse(text: string): Token[] {
   }
 
   return tokens;
-}
-
-export function parseExpressions(text: string) {
-  const result = QLexer.tokenize(text);
-  const tokens = result.tokens;
-  const expressions: string[] = [];
-
-  let cache: string[] = [];
-  let scope = 0;
-  let quote = 0;
-  let token, next;
-
-  const push = () => {
-    const expression = cache.join("").trim();
-    if (expression) {
-      expressions.push(expression);
-    }
-    cache = [];
-  };
-
-  for (let i = 0; i < tokens.length; i++) {
-    token = tokens[i];
-
-    switch (token.tokenType) {
-      case LCurly:
-      case LBracket:
-      case LParen:
-        scope++;
-        cache.push(token.image);
-        break;
-      case RCurly:
-      case RBracket:
-      case RParen:
-        scope--;
-        cache.push(token.image);
-        break;
-      case StringBegin:
-        quote++;
-        cache.push("\\");
-        cache.push(token.image);
-        break;
-      case StringEnd:
-        quote--;
-        cache.push("\\");
-        cache.push(token.image);
-        break;
-      case Operator:
-      case Iterator:
-        if (token.image.startsWith("\\")) {
-          cache.push("\\");
-        }
-        cache.push(token.image);
-        break;
-      case StringEscape:
-        cache.push(
-          token.image === '\\"' || token.image === "\\\\" ? "\\\\" : "\\",
-        );
-        cache.push(token.image);
-        break;
-      case Command:
-        cache.push('system \\"');
-        cache.push(token.image.slice(1));
-        cache.push('\\"');
-        break;
-      case SemiColon:
-        if (scope === 0) {
-          push();
-        } else {
-          cache.push(token.image);
-        }
-        break;
-      case EndOfLine:
-        next = tokens[i + 1];
-        if (next && isExpression(next)) {
-          if (quote > 0) {
-            cache.push('\\"');
-          }
-          push();
-        } else if (quote > 0) {
-          cache.push(token.image);
-        }
-        break;
-      case WhiteSpace:
-        if (quote) {
-          cache.push(token.image);
-        } else {
-          cache.push(" ");
-        }
-        break;
-      default:
-        if (isExpression(token)) {
-          cache.push(token.image);
-        }
-        break;
-    }
-  }
-  push();
-  return expressions;
 }

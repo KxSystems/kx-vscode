@@ -299,11 +299,12 @@ export async function activate(context: ExtensionContext) {
           "kdb.parseExpressions",
           ext.activeTextEditor.document,
         );
-        exprs.forEach((a, i) => ext.outputChannel.appendLine(`${i}: ${a}`));
+        const wrapped = wrapExpressions(exprs);
+        ext.outputChannel.appendLine(wrapped);
         const client = new QClient("localhost", 5002);
         await client.connect();
         try {
-          const res = await client.execute(wrapExpressions(exprs));
+          const res = await client.execute(wrapped);
           ext.outputChannel.appendLine(JSON.stringify(res));
         } catch (error) {
           ext.outputChannel.appendLine(`${error}`);

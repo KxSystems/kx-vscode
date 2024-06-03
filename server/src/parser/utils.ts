@@ -30,6 +30,8 @@ export const enum SyntaxError {
 export interface Token extends IToken {
   index?: number;
   order?: number;
+  exprs?: number;
+  escaped?: string;
   namespace?: string;
   scope?: Token;
   tangled?: Token;

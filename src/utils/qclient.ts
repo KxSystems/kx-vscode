@@ -81,5 +81,5 @@ export class QClient {
 }
 
 export function wrapExpressions(expressions: string[]) {
-  return `{[script]result:eval parse script;kind:type[result];(\`result\`kind\`meta)!(result;kind;$[kind=98h;meta[result];kind])}["${expressions.join(";")}"]`;
+  return `{[script]result:eval parse script;kind:type[result];(\`result\`kind\`meta)!(result;kind;$[kind=98h;meta[result];kind])}["${expressions.join("")}"]`;
 }
