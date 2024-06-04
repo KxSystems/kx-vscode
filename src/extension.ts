@@ -95,9 +95,13 @@ import { createDefaultDataSourceFile } from "./models/dataSource";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { CompletionProvider } from "./services/completionProvider";
 import { QuickFixProvider } from "./services/quickFixProvider";
-import { InsightsClient, QClient, wrapExpressions } from "./utils/qclient";
+import { InsightsClient, wrapExpressions } from "./utils/qclient";
 
 let client: LanguageClient;
+
+const connection = new InsightsClient(
+  "https://gui-nightly.aws-pink.kxi-dev.kx.com/",
+);
 
 export async function activate(context: ExtensionContext) {
   ext.context = context;
@@ -299,15 +303,13 @@ export async function activate(context: ExtensionContext) {
           "kdb.parseExpressions",
           ext.activeTextEditor.document,
         );
-        const wrapped = wrapExpressions(exprs);
-        ext.outputChannel.appendLine(wrapped);
-        const test = new InsightsClient(
-          "https://gui-nightly.aws-pink.kxi-dev.kx.com/",
-        );
+        const wrapped = wrapExpressions(exprs, true);
+        if (!connection.isConnected) {
+          await connection.login();
+        }
         try {
-          await test.login();
-          const res = await test.execute(wrapped);
-          console.log(res.data);
+          const res = await connection.execute(wrapped);
+          ext.outputChannel.appendLine(JSON.stringify(res, null, 2));
         } catch (error) {
           window.showErrorMessage(`${error}`);
         }

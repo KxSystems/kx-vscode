@@ -22,7 +22,8 @@ import querystring from "querystring";
 
 export interface QResponse {
   result: any;
-  type: number;
+  kind: number;
+  meta: any;
 }
 
 export class QClient {
@@ -86,8 +87,8 @@ export class QClient {
   }
 }
 
-export function wrapExpressions(expressions: string[]) {
-  return `{[script]result:eval parse script;kind:type[result];(\`result\`kind\`meta)!(result;kind;$[kind=98h;meta[result];kind])}["${expressions.join("")}"]`;
+export function wrapExpressions(expressions: string[], serialize = false) {
+  return `{[script]result:eval parse script;kind:type[result];response:(\`result\`kind\`meta)!(result;kind;$[kind=98h;meta[result];kind]);${serialize ? ".j.j[response]" : "response"}}["${expressions.join("")}"]`;
 }
 
 export class InsightsClient {
@@ -95,6 +96,10 @@ export class InsightsClient {
   private declare refresh_token: string;
 
   constructor(private readonly server: string) {}
+
+  get isConnected() {
+    return !!this.refresh_token;
+  }
 
   login() {
     return new Promise<void>((resolve, reject) => {
@@ -165,8 +170,8 @@ export class InsightsClient {
     });
   }
 
-  execute(script: string) {
-    return axios.post(
+  async execute(script: string): Promise<QResponse> {
+    const response = await axios.post(
       `${this.server}servicebroker/scratchpad/display`,
       {
         expression: script,
@@ -180,5 +185,11 @@ export class InsightsClient {
         },
       },
     );
+
+    if (response.data.error) {
+      throw new Error(response.data.errorMsg);
+    }
+
+    return JSON.parse(JSON.parse(response.data.data));
   }
 }
