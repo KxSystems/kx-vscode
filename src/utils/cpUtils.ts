@@ -15,6 +15,7 @@ import * as cp from "child_process";
 import * as os from "os";
 import { join } from "path";
 import { ext } from "../extensionVariables";
+import { kdbOutputLog } from "./core";
 
 export async function executeCommand(
   workingDirectory: string | undefined,
@@ -26,16 +27,17 @@ export async function executeCommand(
     workingDirectory,
     command,
     spawnCallback,
-    ...args
+    ...args,
   );
+  ext.outputChannel.show();
   if (result.code !== 0) {
-    ext.outputChannel.show();
     throw new Error(
-      `Failed to run ${command} command.  Check output window for more details.`
+      `Failed to run ${command} command.  Check output window for more details.`,
     );
   } else {
-    ext.outputChannel.append(
-      `Finished running command: ${command} ${result.formattedArgs}`
+    kdbOutputLog(
+      `Finished running command: ${command} ${result.formattedArgs}`,
+      "INFO",
     );
   }
   return result.cmdOutput;
@@ -50,7 +52,7 @@ export async function tryExecuteCommand(
   return await new Promise(
     (
       resolve: (res: ICommandResult) => void,
-      reject: (e: Error) => void
+      reject: (e: Error) => void,
     ): void => {
       let cmdOutput = "";
       let cmdOutputIncludingStderr = "";
@@ -78,24 +80,24 @@ export async function tryExecuteCommand(
         data = data.toString();
         cmdOutput = cmdOutput.concat(data);
         cmdOutputIncludingStderr = cmdOutputIncludingStderr.concat(data);
-        ext.outputChannel.append(data);
+        kdbOutputLog(data, "INFO");
       });
 
       childProc.stderr?.on("data", (data: string | Buffer) => {
         data = data.toString();
         cmdOutputIncludingStderr = cmdOutputIncludingStderr.concat(data);
-        ext.outputChannel.append(data);
+        kdbOutputLog(data, "INFO");
       });
 
       childProc.on("error", (error) => {
-        console.log(error);
+        kdbOutputLog(error.message, "ERROR");
         reject(error);
       });
 
       childProc.on("close", (code: number) => {
         resolve({ code, cmdOutput, cmdOutputIncludingStderr, formattedArgs });
       });
-    }
+    },
   );
 }
 

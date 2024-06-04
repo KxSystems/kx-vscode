@@ -254,16 +254,16 @@ export class InsightsConnection {
             headers,
           );
 
-          ext.outputChannel.append(JSON.stringify(scratchpadResponse.data));
+          kdbOutputLog(
+            `Executed successfully, stored in ${variableName}.`,
+            "INFO",
+          );
+
+          kdbOutputLog("[SCRATCHPAD] Data:", "INFO");
+          kdbOutputLog(JSON.stringify(scratchpadResponse.data), "INFO");
           window.showInformationMessage(
             `Executed successfully, stored in ${variableName}.`,
           );
-          token.onCancellationRequested(() => {
-            kdbOutputLog(
-              `[${this.connLabel}] Executed successfully, stored in ${variableName}.`,
-              "INFO",
-            );
-          });
           Telemetry.sendEvent(
             "Datasource." + dsTypeString + ".Scratchpad.Populated",
           );
