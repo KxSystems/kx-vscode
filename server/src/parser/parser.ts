@@ -31,11 +31,16 @@ import {
   TestLambdaBlock,
   Colon,
   DoubleColon,
+  Iterator,
+  Operator,
+  Cond,
 } from "./tokens";
 import {
   CommentBegin,
   CommentEnd,
   ExitCommentBegin,
+  StringBegin,
+  StringEnd,
   TestBegin,
 } from "./ranges";
 import { CharLiteral, CommentLiteral } from "./literals";
@@ -68,6 +73,7 @@ function peek(tokens: Token[]): Token | undefined {
 
 interface State {
   order: number;
+  exprs: number;
   stack: Token[];
 }
 
@@ -76,6 +82,7 @@ function assignment(state: State, token: Token) {
 
   if (inParam(token)) {
     token.assignment = [token, token];
+    token.order = 1;
   } else {
     let top = peek(stack);
     if (top?.tokenType === Colon || top?.tokenType === DoubleColon) {
@@ -88,8 +95,8 @@ function assignment(state: State, token: Token) {
       }
     }
     stack.push(token);
+    token.order = state.order++;
   }
-  token.order = state.order++;
 }
 
 function block(state: State, tokens: Token[], scopped = true) {
@@ -162,6 +169,7 @@ function expression(state: State, tokens: Token[]) {
           case LParen:
           case LCurly:
           case Control:
+          case Cond:
           case Colon:
           case DoubleColon:
           case SemiColon:
@@ -193,6 +201,7 @@ export function parse(text: string): Token[] {
 
   const state: State = {
     order: 1,
+    exprs: 1,
     stack: [],
   };
 
@@ -214,6 +223,7 @@ export function parse(text: string): Token[] {
         }
         scope.push(token);
         cache.push(token);
+        token.exprs = state.exprs;
         break;
       case TestBegin:
       case TestBlock:
@@ -223,6 +233,7 @@ export function parse(text: string): Token[] {
       case LSql:
         scope.push(token);
         cache.push(token);
+        token.exprs = state.exprs;
         break;
       case RParen:
       case RBracket:
@@ -231,14 +242,39 @@ export function parse(text: string): Token[] {
         next = scope.pop();
         if (next) {
           cache.push(token);
+          token.exprs = state.exprs;
+        }
+        break;
+      case StringBegin:
+        scope.push(token);
+        cache.push(token);
+        token.exprs = state.exprs;
+        token.escaped = '\\"';
+        break;
+      case StringEnd:
+        next = scope.pop();
+        if (next) {
+          cache.push(token);
+          token.exprs = state.exprs;
+          token.escaped = '\\"';
         }
         break;
       case SemiColon:
+        token.exprs = state.exprs;
         if (token.scope) {
           cache.push(token);
         } else {
           expression(state, cache);
+          state.exprs++;
         }
+        break;
+      case Operator:
+      case Iterator:
+        if (token.image.startsWith("\\")) {
+          token.escaped = `\\${token.image}`;
+        }
+        cache.push(token);
+        token.exprs = state.exprs;
         break;
       case EndOfLine:
         next = tokens[i + 1];
@@ -250,7 +286,28 @@ export function parse(text: string): Token[] {
           } else {
             expression(state, cache);
           }
+          token.escaped = ";";
+          token.exprs = state.exprs;
+          state.exprs++;
+        } else if (token.scope?.tokenType === StringBegin) {
+          token.exprs = state.exprs;
         }
+        break;
+      case StringEscape:
+        checkEscape(token);
+        if (token.image === '\\"' || token.image === "\\\\") {
+          token.escaped = `\\\\${token.image}`;
+        }
+        token.exprs = state.exprs;
+        break;
+      case CharLiteral:
+        token.exprs = state.exprs;
+        break;
+      case WhiteSpace:
+        if (token.scope?.tokenType !== StringBegin) {
+          token.escaped = " ";
+        }
+        token.exprs = state.exprs;
         break;
       case Command: {
         const [cmd, arg] = token.image.split(/[ \t]+/, 2);
@@ -261,16 +318,14 @@ export function parse(text: string): Token[] {
             }
             break;
         }
+        token.exprs = state.exprs;
+        token.escaped = `system \\"${token.image.slice(1)}\\"`;
         break;
       }
-      case StringEscape:
-        checkEscape(token);
-        break;
-      case CharLiteral:
-        break;
       default:
         if (isExpression(token)) {
           cache.push(token);
+          token.exprs = state.exprs;
         }
         break;
     }
