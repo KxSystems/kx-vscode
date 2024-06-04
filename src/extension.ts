@@ -95,7 +95,7 @@ import { createDefaultDataSourceFile } from "./models/dataSource";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { CompletionProvider } from "./services/completionProvider";
 import { QuickFixProvider } from "./services/quickFixProvider";
-import { QClient, wrapExpressions } from "./utils/qclient";
+import { InsightsClient, QClient, wrapExpressions } from "./utils/qclient";
 
 let client: LanguageClient;
 
@@ -301,16 +301,26 @@ export async function activate(context: ExtensionContext) {
         );
         const wrapped = wrapExpressions(exprs);
         ext.outputChannel.appendLine(wrapped);
-        const client = new QClient("localhost", 5002);
-        await client.connect();
+        const test = new InsightsClient(
+          "https://gui-nightly.aws-pink.kxi-dev.kx.com/",
+        );
         try {
-          const res = await client.execute(wrapped);
-          ext.outputChannel.appendLine(JSON.stringify(res));
+          await test.login();
+          const res = await test.execute(wrapped);
+          console.log(res.data);
         } catch (error) {
-          ext.outputChannel.appendLine(`${error}`);
-        } finally {
-          client.disconnect();
+          window.showErrorMessage(`${error}`);
         }
+        //   const client = new QClient("localhost", 5002);
+        //   await client.connect();
+        //   try {
+        //     const res = await client.execute(wrapped);
+        //     ext.outputChannel.appendLine(JSON.stringify(res));
+        //   } catch (error) {
+        //     ext.outputChannel.appendLine(`${error}`);
+        //   } finally {
+        //     client.disconnect();
+        //   }
       }
       //await runActiveEditor(ExecutionTypes.QuerySelection);
     }),

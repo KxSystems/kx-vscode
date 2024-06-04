@@ -12,7 +12,13 @@
  */
 
 import nodeq from "node-q";
-import { commands } from "vscode";
+import http from "http";
+import { pickPort } from "pick-port";
+import { Uri, env } from "vscode";
+import { randomBytes } from "crypto";
+import { URLSearchParams } from "url";
+import axios from "axios";
+import querystring from "querystring";
 
 export interface QResponse {
   result: any;
@@ -82,4 +88,97 @@ export class QClient {
 
 export function wrapExpressions(expressions: string[]) {
   return `{[script]result:eval parse script;kind:type[result];(\`result\`kind\`meta)!(result;kind;$[kind=98h;meta[result];kind])}["${expressions.join("")}"]`;
+}
+
+export class InsightsClient {
+  private declare access_token: string;
+  private declare refresh_token: string;
+
+  constructor(private readonly server: string) {}
+
+  login() {
+    return new Promise<void>((resolve, reject) => {
+      pickPort({
+        ip: "127.0.0.1",
+        type: "tcp",
+        minPort: 9000,
+        maxPort: 9999,
+      })
+        .then((port) => {
+          const hostname = "localhost";
+          const state = randomBytes(20).toString("hex");
+
+          const server = http.createServer((req, res) => {
+            res.setHeader("Content-Type", "text/plain");
+
+            if (req.url) {
+              const params = new URLSearchParams(
+                req.url.replace("/redirect?", ""),
+              );
+              if (params.get("state") === state) {
+                const code = params.get("code");
+                if (code) {
+                  axios
+                    .post(
+                      `${this.server}auth/realms/insights/protocol/openid-connect/token/`,
+                      querystring.stringify({
+                        code,
+                        state,
+                        scope: "profile",
+                        response_type: "code",
+                        client_id: "insights-app",
+                        grant_type: "authorization_code",
+                        redirect_uri: `http://${hostname}:${port}/redirect`,
+                      }),
+                      {
+                        headers: {
+                          "Content-Type": "application/x-www-form-urlencoded",
+                        },
+                      },
+                    )
+                    .then((response) => {
+                      this.access_token = response.data?.access_token;
+                      this.refresh_token = response.data?.refresh_token;
+                      res.end(this.access_token);
+                      resolve();
+                    })
+                    .catch((err) => {
+                      res.end(`${err}`);
+                      reject(err);
+                    });
+                }
+              }
+            }
+          });
+
+          setTimeout(() => {
+            server.close();
+            reject(new Error("Timeout"));
+          }, 30 * 1000);
+
+          server.listen(port, hostname, () => {
+            const uri = `${this.server}auth/realms/insights/protocol/openid-connect/auth?client_id=insights-app&response_type=code&scope=profile&redirect_uri=http://${hostname}:${port}/redirect&state=${state}`;
+            env.openExternal(Uri.parse(uri));
+          });
+        })
+        .catch(reject);
+    });
+  }
+
+  execute(script: string) {
+    return axios.post(
+      `${this.server}servicebroker/scratchpad/display`,
+      {
+        expression: script,
+        language: "q",
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${this.access_token}`,
+          Username: "kxi-user",
+          "Content-Type": "application/json",
+        },
+      },
+    );
+  }
 }
