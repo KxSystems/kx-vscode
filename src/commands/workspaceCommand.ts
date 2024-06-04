@@ -96,7 +96,7 @@ function getServers() {
 }
 
 /* istanbul ignore next */
-async function getConnectionForServer(server: string) {
+export async function getConnectionForServer(server: string) {
   if (server) {
     const servers = await ext.serverProvider.getChildren();
     return servers.find((item) => {

@@ -137,11 +137,11 @@ export async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
     await workspace.fs.createDirectory(importToUri);
     let i = 1;
     let fileName = `datasource-${i}.kdb.json`;
-    let filePath = path.join(importToUri.path, fileName);
+    let filePath = path.join(importToUri.fsPath, fileName);
     while (fs.existsSync(filePath)) {
       i++;
       fileName = `datasource-${i}.kdb.json`;
-      filePath = path.join(importToUri.path, fileName);
+      filePath = path.join(importToUri.fsPath, fileName);
     }
     fs.writeFileSync(filePath, JSON.stringify(ds));
     window.showInformationMessage(`Datasource created.`);

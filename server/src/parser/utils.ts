@@ -98,11 +98,7 @@ export function relative(token: Token, source: Token | undefined) {
 
 export function lambda(token?: Token) {
   return (
-    token &&
-    (token.tokenType === LCurly ||
-      token.tokenType === TestBegin ||
-      token.tokenType === TestBlock ||
-      token.tokenType === TestLambdaBlock)
+    token && (token.tokenType === LCurly || token.tokenType === TestLambdaBlock)
   );
 }
 
@@ -116,7 +112,11 @@ export function testblock(token?: Token) {
 }
 
 export function amended(token: Token) {
-  return token.assignment && token.assignment[0]?.tokenType === DoubleColon;
+  return (
+    inLambda(token) &&
+    token.assignment &&
+    token.assignment[0]?.tokenType === DoubleColon
+  );
 }
 
 export function local(token: Token, tokens: Token[]) {

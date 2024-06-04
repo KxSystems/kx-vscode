@@ -59,6 +59,7 @@ import {
 import Path from "path";
 import * as utils from "../../src/utils/getUri";
 import { MetaObject } from "../../src/models/meta";
+import { CompletionProvider } from "../../src/services/completionProvider";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -1399,5 +1400,15 @@ describe("workspaceTreeProvider", () => {
       stubWorkspaceFile("/workspace/test.kdb.q");
       await assert.rejects(() => addWorkspaceFile(undefined, "test", ".kdb.q"));
     });
+  });
+});
+
+describe("CompletionProvider", () => {
+  it("should provide completion items", () => {
+    sinon.stub(ext, "connectionNode").value(sinon.createStubInstance(KdbNode));
+    sinon.stub(ext, "functions").value(["test"]);
+    const provider = new CompletionProvider();
+    const items = provider.provideCompletionItems();
+    assert.ok(items);
   });
 });
