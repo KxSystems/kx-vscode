@@ -18,7 +18,9 @@ import { Uri, env } from "vscode";
 import { randomBytes } from "crypto";
 import { URLSearchParams } from "url";
 import axios from "axios";
+import url from "url";
 import querystring from "querystring";
+import { jwtDecode } from "jwt-decode";
 
 export interface QResponse {
   result: any;
@@ -92,13 +94,18 @@ export function wrapExpressions(expressions: string[], serialize = false) {
 }
 
 export class InsightsClient {
-  private declare access_token: string;
-  private declare refresh_token: string;
+  private declare access_token?: string;
+  private declare refresh_token?: string;
+  private declare access_token_exp?: Date;
+  private declare refresh_token_exp?: Date;
+  private declare username?: string;
 
   constructor(private readonly server: string) {}
 
   get isConnected() {
-    return !!this.refresh_token;
+    return (
+      this.access_token_exp && this.access_token_exp.getTime() > Date.now()
+    );
   }
 
   login() {
@@ -125,7 +132,7 @@ export class InsightsClient {
                 if (code) {
                   axios
                     .post(
-                      `${this.server}auth/realms/insights/protocol/openid-connect/token/`,
+                      `${getTokenUrl(this.server)}`,
                       querystring.stringify({
                         code,
                         state,
@@ -144,8 +151,29 @@ export class InsightsClient {
                     .then((response) => {
                       this.access_token = response.data?.access_token;
                       this.refresh_token = response.data?.refresh_token;
-                      res.end(this.access_token);
-                      resolve();
+
+                      if (this.refresh_token) {
+                        let decoded = jwtDecode(this.refresh_token);
+                        if (decoded.exp) {
+                          this.refresh_token_exp = new Date(decoded.exp * 1000);
+                        }
+                        if (this.access_token) {
+                          decoded = jwtDecode(this.access_token);
+                          if (decoded.exp) {
+                            this.access_token_exp = new Date(
+                              decoded.exp * 1000,
+                            );
+                          }
+                          if ("preferred_username" in decoded) {
+                            this.username =
+                              decoded.preferred_username as string;
+                          }
+                          res.end(JSON.stringify(decoded, null, 2));
+                          resolve();
+                          return;
+                        }
+                      }
+                      reject(new Error("No tokens"));
                     })
                     .catch((err) => {
                       res.end(`${err}`);
@@ -162,7 +190,7 @@ export class InsightsClient {
           }, 30 * 1000);
 
           server.listen(port, hostname, () => {
-            const uri = `${this.server}auth/realms/insights/protocol/openid-connect/auth?client_id=insights-app&response_type=code&scope=profile&redirect_uri=http://${hostname}:${port}/redirect&state=${state}`;
+            const uri = `${getAuthUrl(this.server)}?client_id=insights-app&response_type=code&scope=profile&redirect_uri=http://${hostname}:${port}/redirect&state=${state}`;
             env.openExternal(Uri.parse(uri));
           });
         })
@@ -170,26 +198,71 @@ export class InsightsClient {
     });
   }
 
-  async execute(script: string): Promise<QResponse> {
-    const response = await axios.post(
-      `${this.server}servicebroker/scratchpad/display`,
-      {
-        expression: script,
-        language: "q",
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${this.access_token}`,
-          Username: "kxi-user",
-          "Content-Type": "application/json",
-        },
-      },
-    );
-
-    if (response.data.error) {
-      throw new Error(response.data.errorMsg);
-    }
-
-    return JSON.parse(JSON.parse(response.data.data));
+  execute(script: string) {
+    return new Promise<QResponse>((resolve, reject) => {
+      axios
+        .post(
+          `${this.server}servicebroker/scratchpad/display`,
+          {
+            expression: script,
+            language: "q",
+            context: ".",
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${this.access_token}`,
+              Username: this.username,
+            },
+          },
+        )
+        .then((response) => {
+          if (response.data.error) {
+            reject(
+              new Error(`${response.data.errorMsg || response.data.error}`),
+            );
+          } else {
+            if (response.data.data) {
+              try {
+                resolve(JSON.parse(JSON.parse(response.data.data)));
+              } catch (error) {
+                reject(error);
+              }
+            } else {
+              reject(new Error("No data"));
+            }
+          }
+        })
+        .catch(reject);
+    });
   }
+}
+
+function getRealm(insightsUrl: string) {
+  const server = new url.URL(insightsUrl);
+  const realm = server.hostname.replace(/\.ft[0-9]+\.cld\.kx\.com$/, "");
+  if (realm && realm !== server.hostname) {
+    return `-${realm}`;
+  }
+  return "";
+}
+
+function getAuthUrl(insightsUrl: string) {
+  return new url.URL(
+    `auth/realms/insights${getRealm(insightsUrl)}/protocol/openid-connect/auth`,
+    insightsUrl,
+  );
+}
+
+function getTokenUrl(insightsUrl: string) {
+  return new url.URL(
+    `auth/realms/insights${getRealm(insightsUrl)}/protocol/openid-connect/token`,
+    insightsUrl,
+  );
+}
+
+function getRevokeUrl(insightsUrl: string) {
+  return new url.URL(
+    `auth/realms/insights${getRealm(insightsUrl)}/protocol/openid-connect/revoke`,
+    insightsUrl,
+  );
 }
