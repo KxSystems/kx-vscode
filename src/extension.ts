@@ -101,9 +101,7 @@ import { InsightsClient, wrapExpressions } from "./utils/qclient";
 
 let client: LanguageClient;
 
-const connection = new InsightsClient(
-  "https://gui-nightly.aws-pink.kxi-dev.kx.com/",
-);
+const connection = new InsightsClient("https://fstc83yi5b.ft1.cld.kx.com/");
 
 export async function activate(context: ExtensionContext) {
   ext.context = context;
