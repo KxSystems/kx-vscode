@@ -307,6 +307,7 @@ export async function activate(context: ExtensionContext) {
         }
         try {
           const res = await connection.execute(wrapped);
+          await connection.executeData();
           ext.outputChannel.appendLine(JSON.stringify(res, null, 2));
         } catch (error) {
           window.showErrorMessage(`${error}`);

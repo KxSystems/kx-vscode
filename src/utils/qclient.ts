@@ -104,7 +104,8 @@ export class InsightsClient {
 
   get isConnected() {
     return (
-      this.access_token_exp && this.access_token_exp.getTime() > Date.now()
+      this.access_token_exp &&
+      this.access_token_exp.getTime() - 10 * 1000 > Date.now()
     );
   }
 
@@ -234,6 +235,27 @@ export class InsightsClient {
         })
         .catch(reject);
     });
+  }
+
+  async executeData() {
+    const response = await axios.post(
+      `${this.server}/servicegateway/data`,
+      {
+        table: "trips",
+        startTS: "2023-12-06T00:00:00.000000000",
+        endTS: "2023-12-11T00:00:00.000000000",
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${this.access_token}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    console.log(response);
+    return response;
   }
 }
 
