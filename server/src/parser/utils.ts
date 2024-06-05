@@ -139,6 +139,10 @@ export function local(token: Token, tokens: Token[]) {
   );
 }
 
+export function qualified(token: Token) {
+  return token.image.startsWith(".");
+}
+
 export function ordered(token: Token, next: Token) {
   return (token.order && next.order && next.order > token.order) || false;
 }

@@ -33,6 +33,7 @@ import {
   DoubleColon,
   Iterator,
   Operator,
+  Cond,
 } from "./tokens";
 import {
   CommentBegin,
@@ -81,6 +82,7 @@ function assignment(state: State, token: Token) {
 
   if (inParam(token)) {
     token.assignment = [token, token];
+    token.order = 1;
   } else {
     let top = peek(stack);
     if (top?.tokenType === Colon || top?.tokenType === DoubleColon) {
@@ -93,8 +95,8 @@ function assignment(state: State, token: Token) {
       }
     }
     stack.push(token);
+    token.order = state.order++;
   }
-  token.order = state.order++;
 }
 
 function block(state: State, tokens: Token[], scopped = true) {
@@ -167,6 +169,7 @@ function expression(state: State, tokens: Token[]) {
           case LParen:
           case LCurly:
           case Control:
+          case Cond:
           case Colon:
           case DoubleColon:
           case SemiColon:
