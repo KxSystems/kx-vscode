@@ -32,6 +32,7 @@ import {
   getInsights,
   getServerName,
   getServers,
+  kdbOutputLog,
   updateInsights,
   updateServers,
 } from "../utils/core";
@@ -337,7 +338,10 @@ export async function executeQuery(
       window.showErrorMessage(
         "No active connection found. Connect to one connection.",
       );
-      //TODO ADD ERROR TO CONSOLE HERE
+      kdbOutputLog(
+        "No active connection found. Connect to one connection.",
+        "ERROR",
+      );
       return undefined;
     } else {
       connLabel = ext.activeConnection.connLabel;
@@ -346,7 +350,7 @@ export async function executeQuery(
   const isConnected = connMngService.isConnected(connLabel);
   if (!isConnected) {
     window.showInformationMessage("The selected connection is not connected.");
-    //TODO ADD ERROR TO CONSOLE HERE
+    kdbOutputLog("The selected connection is not connected.", "ERROR");
     return undefined;
   }
 
