@@ -28,6 +28,36 @@ interface IDeferred<T> {
   reject: (reason: any) => void;
 }
 
+function getRealm(insightsUrl: string) {
+  const server = new url.URL(insightsUrl);
+  const realm = server.hostname.replace(/\.ft[0-9]+\.cld\.kx\.com$/, "");
+  if (realm && realm !== server.hostname) {
+    return `-${realm}`;
+  }
+  return "";
+}
+
+function getAuthUrl(insightsUrl: string) {
+  return new url.URL(
+    `auth/realms/insights${getRealm(insightsUrl)}/protocol/openid-connect/auth`,
+    insightsUrl,
+  );
+}
+
+function getTokenUrl(insightsUrl: string) {
+  return new url.URL(
+    `auth/realms/insights${getRealm(insightsUrl)}/protocol/openid-connect/token`,
+    insightsUrl,
+  );
+}
+
+function getRevokeUrl(insightsUrl: string) {
+  return new url.URL(
+    `auth/realms/insights${getRealm(insightsUrl)}/protocol/openid-connect/revoke`,
+    insightsUrl,
+  );
+}
+
 export interface IToken {
   accessToken: string;
   accessTokenExpirationDate: Date;
@@ -54,10 +84,7 @@ export async function signIn(insightsUrl: string) {
       state: crypto.randomBytes(20).toString("hex"),
     };
 
-    const authorizationUrl = new url.URL(
-      ext.insightsAuthUrls.authURL,
-      insightsUrl,
-    );
+    const authorizationUrl = getAuthUrl(insightsUrl);
 
     authorizationUrl.search = queryString(authParams);
 
@@ -84,7 +111,7 @@ export async function signOut(
   const headers = {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
   };
-  const requestUrl = new url.URL(ext.insightsAuthUrls.revoke, insightsUrl);
+  const requestUrl = getRevokeUrl(insightsUrl);
 
   await axios.post(requestUrl.toString(), body, headers).then((res) => {
     return res.data;
@@ -155,7 +182,7 @@ async function tokenRequest(
     signal: AbortSignal.timeout(closeTimeout),
   };
 
-  const requestUrl = new url.URL(ext.insightsAuthUrls.tokenURL, insightsUrl);
+  const requestUrl = getTokenUrl(insightsUrl);
 
   let response;
   if (params.grant_type === "refresh_token") {
