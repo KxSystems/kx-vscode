@@ -57,6 +57,7 @@ import {
   TestBlock,
   CommentEndOfLine,
   TestLambdaBlock,
+  Cond,
 } from "./tokens";
 import {
   CommentEnd,
@@ -89,9 +90,10 @@ const Language = [
   Reserved,
   Identifier,
   Iterator,
+  Comparator,
   DoubleColon,
   Operator,
-  Comparator,
+  Cond,
   Colon,
   SemiColon,
   LParen,

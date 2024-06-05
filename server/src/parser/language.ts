@@ -37,6 +37,7 @@ import {
   StringEscape,
   TestBlock,
   TestLambdaBlock,
+  Cond,
 } from "./tokens";
 import { TokenType } from "chevrotain";
 import { writeFileSync } from "fs";
@@ -209,6 +210,10 @@ const repository = {
         match: _(Iterator),
       },
       {
+        name: "keyword.operator.arithmetic.q",
+        match: _(Comparator),
+      },
+      {
         name: "punctuation.assignment.q",
         match: _(DoubleColon),
       },
@@ -218,7 +223,7 @@ const repository = {
       },
       {
         name: "keyword.operator.arithmetic.q",
-        match: _(Comparator),
+        match: _(Cond),
       },
       {
         name: "punctuation.assignment.q",

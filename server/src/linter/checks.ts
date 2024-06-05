@@ -22,6 +22,7 @@ import {
   inLambda,
   inParam,
   ordered,
+  qualified,
 } from "../parser";
 
 export function deprecatedDatetime(tokens: Token[]): Token[] {
@@ -41,7 +42,6 @@ export function unusedParam(tokens: Token[]): Token[] {
       !tokens.find(
         (target) =>
           !assigned(target) &&
-          assignable(target) &&
           inLambda(target) === inLambda(token) &&
           identifier(target) === identifier(token),
       ),
@@ -51,15 +51,15 @@ export function unusedParam(tokens: Token[]): Token[] {
 export function unusedVar(tokens: Token[]): Token[] {
   return tokens.filter(
     (token) =>
-      !amended(token) &&
       !inParam(token) &&
+      !amended(token) &&
+      !qualified(token) &&
       inLambda(token) &&
       assigned(token) &&
       assignable(token) &&
       !tokens.find(
         (target) =>
           !assigned(target) &&
-          assignable(target) &&
           inLambda(target) === inLambda(token) &&
           identifier(target) === identifier(token),
       ),
@@ -70,8 +70,8 @@ export function declaredAfterUse(tokens: Token[]): Token[] {
   return tokens
     .filter(
       (token) =>
-        !inParam(token) &&
         !amended(token) &&
+        !qualified(token) &&
         assigned(token) &&
         assignable(token),
     )
@@ -87,7 +87,6 @@ export function declaredAfterUse(tokens: Token[]): Token[] {
       tokens.find(
         (target) =>
           !assigned(target) &&
-          assignable(target) &&
           inLambda(target) === inLambda(token) &&
           identifier(target) === identifier(token) &&
           ordered(target, token),
