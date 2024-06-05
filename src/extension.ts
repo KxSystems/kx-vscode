@@ -17,6 +17,7 @@ import {
   ConfigurationTarget,
   EventEmitter,
   ExtensionContext,
+  ProgressLocation,
   Range,
   TextDocument,
   TextDocumentContentProvider,
@@ -295,34 +296,48 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.runScratchpad", async () => {
       await runActiveEditor();
     }),
-    commands.registerCommand("kdb.execute.selectedQuery", async () => {
-      if (ext.activeTextEditor) {
-        const exprs = await commands.executeCommand<string[]>(
-          "kdb.parseExpressions",
-          ext.activeTextEditor.document,
+    commands.registerCommand("kdb.execute.selectedQuery", () => {
+      return window
+        .withProgress(
+          {
+            title: "Executing",
+            cancellable: true,
+            location: ProgressLocation.Window,
+          },
+          async (_progress, token) => {
+            if (ext.activeTextEditor) {
+              const exprs = await commands.executeCommand<string[]>(
+                "kdb.parseExpressions",
+                ext.activeTextEditor.document,
+              );
+              const wrapped = wrapExpressions(exprs, true);
+              if (!connection.isConnected) {
+                await connection.login(token);
+                await connection.meta(token);
+                await connection.executeData(token);
+              }
+              const res = await connection.execute(wrapped, token);
+              ext.outputChannel.appendLine(JSON.stringify(res, null, 2));
+            }
+          },
+        )
+        .then(
+          () => {},
+          (err) => {
+            window.showErrorMessage(`${err}`);
+          },
         );
-        const wrapped = wrapExpressions(exprs, true);
-        if (!connection.isConnected) {
-          await connection.login();
-        }
-        try {
-          const res = await connection.execute(wrapped);
-          await connection.executeData();
-          ext.outputChannel.appendLine(JSON.stringify(res, null, 2));
-        } catch (error) {
-          window.showErrorMessage(`${error}`);
-        }
-        //   const client = new QClient("localhost", 5002);
-        //   await client.connect();
-        //   try {
-        //     const res = await client.execute(wrapped);
-        //     ext.outputChannel.appendLine(JSON.stringify(res));
-        //   } catch (error) {
-        //     ext.outputChannel.appendLine(`${error}`);
-        //   } finally {
-        //     client.disconnect();
-        //   }
-      }
+      //   const client = new QClient("localhost", 5002);
+      //   await client.connect();
+      //   try {
+      //     const res = await client.execute(wrapped);
+      //     ext.outputChannel.appendLine(JSON.stringify(res));
+      //   } catch (error) {
+      //     ext.outputChannel.appendLine(`${error}`);
+      //   } finally {
+      //     client.disconnect();
+      //   }
+
       //await runActiveEditor(ExecutionTypes.QuerySelection);
     }),
     commands.registerCommand("kdb.execute.fileQuery", async () => {

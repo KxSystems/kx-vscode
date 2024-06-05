@@ -14,10 +14,10 @@
 import nodeq from "node-q";
 import http from "http";
 import { pickPort } from "pick-port";
-import { Uri, env } from "vscode";
+import { CancellationToken, Uri, env } from "vscode";
 import { randomBytes } from "crypto";
 import { URLSearchParams } from "url";
-import axios from "axios";
+import axios, { Cancel, CancelToken } from "axios";
 import url from "url";
 import querystring from "querystring";
 import { jwtDecode } from "jwt-decode";
@@ -109,7 +109,9 @@ export class InsightsClient {
     );
   }
 
-  login() {
+  login(token: CancellationToken) {
+    const controller = toController(token);
+
     return new Promise<void>((resolve, reject) => {
       pickPort({
         ip: "127.0.0.1",
@@ -147,6 +149,7 @@ export class InsightsClient {
                         headers: {
                           "Content-Type": "application/x-www-form-urlencoded",
                         },
+                        signal: controller.signal,
                       },
                     )
                     .then((response) => {
@@ -190,6 +193,11 @@ export class InsightsClient {
             reject(new Error("Timeout"));
           }, 30 * 1000);
 
+          controller.signal.addEventListener("abort", () => {
+            server.close();
+            reject(new Error("Cancelled"));
+          });
+
           server.listen(port, hostname, () => {
             const uri = `${getAuthUrl(this.server)}?client_id=insights-app&response_type=code&scope=profile&redirect_uri=http://${hostname}:${port}/redirect&state=${state}`;
             env.openExternal(Uri.parse(uri));
@@ -199,7 +207,8 @@ export class InsightsClient {
     });
   }
 
-  execute(script: string) {
+  execute(script: string, token: CancellationToken) {
+    const controller = toController(token);
     return new Promise<QResponse>((resolve, reject) => {
       axios
         .post(
@@ -214,6 +223,7 @@ export class InsightsClient {
               Authorization: `Bearer ${this.access_token}`,
               Username: this.username,
             },
+            signal: controller.signal,
           },
         )
         .then((response) => {
@@ -237,7 +247,8 @@ export class InsightsClient {
     });
   }
 
-  async executeData() {
+  async executeData(token: CancellationToken) {
+    const controller = toController(token);
     const response = await axios.post(
       `${this.server}/servicegateway/data`,
       {
@@ -251,9 +262,27 @@ export class InsightsClient {
           Accept: "application/json",
           "Content-Type": "application/json",
         },
+        signal: controller.signal,
       },
     );
+    console.log(response);
+    return response;
+  }
 
+  async meta(token: CancellationToken) {
+    const controller = toController(token);
+    const response = await axios.post(
+      `${this.server}/servicegateway/meta`,
+      {},
+      {
+        headers: {
+          Authorization: `Bearer ${this.access_token}`,
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        signal: controller.signal,
+      },
+    );
     console.log(response);
     return response;
   }
@@ -287,4 +316,18 @@ function getRevokeUrl(insightsUrl: string) {
     `auth/realms/insights${getRealm(insightsUrl)}/protocol/openid-connect/revoke`,
     insightsUrl,
   );
+}
+
+function toController(token: CancellationToken): AbortController {
+  const controller = new AbortController();
+
+  token.onCancellationRequested(() => {
+    controller.abort("Cancelled");
+  });
+
+  if (token.isCancellationRequested) {
+    controller.abort("Cancelled");
+  }
+
+  return controller;
 }
