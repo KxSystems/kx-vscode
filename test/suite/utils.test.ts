@@ -250,6 +250,55 @@ describe("Utils", () => {
         assert.strictEqual(result, "");
       });
     });
+
+    describe("coreLogs", () => {
+      ext.outputChannel = vscode.window.createOutputChannel("kdb");
+      let appendLineSpy, showErrorMessageSpy: sinon.SinonSpy;
+      beforeEach(() => {
+        appendLineSpy = sinon.spy(
+          vscode.window.createOutputChannel("testChannel"),
+          "appendLine",
+        );
+        showErrorMessageSpy = sinon.spy(vscode.window, "showErrorMessage");
+      });
+
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("kdbOutputLog should log message with date and type", () => {
+        const message = "test message";
+        const type = "INFO";
+
+        coreUtils.kdbOutputLog(message, type);
+
+        appendLineSpy.calledOnce;
+        appendLineSpy.calledWithMatch(message);
+        appendLineSpy.calledWithMatch(type);
+      });
+
+      it("tokenUndefinedError should log and show error message", () => {
+        const connLabel = "test connection";
+
+        coreUtils.tokenUndefinedError(connLabel);
+
+        appendLineSpy.calledOnce;
+        showErrorMessageSpy.calledOnce;
+        appendLineSpy.calledWithMatch(connLabel);
+        showErrorMessageSpy.calledWithMatch(connLabel);
+      });
+
+      it("invalidUsernameJWT should log and show error message", () => {
+        const connLabel = "test connection";
+
+        coreUtils.invalidUsernameJWT(connLabel);
+
+        appendLineSpy.calledOnce;
+        showErrorMessageSpy.calledOnce;
+        appendLineSpy.calledWithMatch(connLabel);
+        showErrorMessageSpy.calledWithMatch(connLabel);
+      });
+    });
   });
 
   describe("dataSource", () => {
