@@ -14,7 +14,7 @@
 import nodeq from "node-q";
 import http from "http";
 import { pickPort } from "pick-port";
-import { CancellationToken, Uri, env } from "vscode";
+import { CancellationError, CancellationToken, Uri, env } from "vscode";
 import { randomBytes } from "crypto";
 import { URLSearchParams } from "url";
 import axios, { Cancel, CancelToken } from "axios";
@@ -190,12 +190,12 @@ export class InsightsClient {
 
           setTimeout(() => {
             server.close();
-            reject(new Error("Timeout"));
+            reject(new CancellationError());
           }, 30 * 1000);
 
           controller.signal.addEventListener("abort", () => {
             server.close();
-            reject(new Error("Cancelled"));
+            reject(new CancellationError());
           });
 
           server.listen(port, hostname, () => {
@@ -209,6 +209,7 @@ export class InsightsClient {
 
   execute(script: string, token: CancellationToken) {
     const controller = toController(token);
+
     return new Promise<QResponse>((resolve, reject) => {
       axios
         .post(
@@ -249,6 +250,7 @@ export class InsightsClient {
 
   async executeData(token: CancellationToken) {
     const controller = toController(token);
+
     const response = await axios.post(
       `${this.server}/servicegateway/data`,
       {
@@ -271,6 +273,7 @@ export class InsightsClient {
 
   async meta(token: CancellationToken) {
     const controller = toController(token);
+
     const response = await axios.post(
       `${this.server}/servicegateway/meta`,
       {},
@@ -322,11 +325,11 @@ function toController(token: CancellationToken): AbortController {
   const controller = new AbortController();
 
   token.onCancellationRequested(() => {
-    controller.abort("Cancelled");
+    controller.abort();
   });
 
   if (token.isCancellationRequested) {
-    controller.abort("Cancelled");
+    controller.abort();
   }
 
   return controller;

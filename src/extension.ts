@@ -14,6 +14,7 @@
 import { env } from "node:process";
 import path from "path";
 import {
+  CancellationError,
   ConfigurationTarget,
   EventEmitter,
   ExtensionContext,
@@ -100,7 +101,9 @@ import { InsightsClient, wrapExpressions } from "./utils/qclient";
 
 let client: LanguageClient;
 
-const connection = new InsightsClient("https://fstc83yi5b.ft1.cld.kx.com/");
+const connection = new InsightsClient(
+  "https://gui-nightly.aws-pink.kxi-dev.kx.com/",
+);
 
 export async function activate(context: ExtensionContext) {
   ext.context = context;
@@ -324,7 +327,11 @@ export async function activate(context: ExtensionContext) {
         .then(
           () => {},
           (err) => {
-            window.showErrorMessage(`${err}`);
+            if (err instanceof CancellationError) {
+              // LOG
+            } else {
+              window.showErrorMessage(`${err}`);
+            }
           },
         );
       //   const client = new QClient("localhost", 5002);
