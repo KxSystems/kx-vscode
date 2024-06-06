@@ -92,14 +92,7 @@ export default class QLangServer {
     );
     this.connection.onRequest(
       "kdb.qls.expressionRange",
-      ({ textDocument, position }: TextDocumentPositionParams) => {
-        const tokens = this.parse(textDocument);
-        const source = positionToToken(tokens, position);
-        if (!source || !source.exprs) {
-          return null;
-        }
-        return expressionToRange(tokens, source.exprs);
-      },
+      this.onExpressionRange.bind(this),
     );
   }
 
@@ -226,6 +219,18 @@ export default class QLangServer {
         insertText: relative(token, source),
       };
     });
+  }
+
+  public onExpressionRange({
+    textDocument,
+    position,
+  }: TextDocumentPositionParams) {
+    const tokens = this.parse(textDocument);
+    const source = positionToToken(tokens, position);
+    if (!source || !source.exprs) {
+      return null;
+    }
+    return expressionToRange(tokens, source.exprs);
   }
 
   private parse(textDocument: TextDocumentIdentifier): Token[] {

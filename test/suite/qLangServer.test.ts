@@ -208,4 +208,15 @@ describe("qLangServer", () => {
       assert.strictEqual(result.length, 2);
     });
   });
+
+  describe("onCompletion", () => {
+    it("should complete identifiers", () => {
+      const params = createDocument("a:1;");
+      const result = server.onExpressionRange(params);
+      assert.strictEqual(result.start.line, 0);
+      assert.strictEqual(result.start.character, 0);
+      assert.strictEqual(result.end.line, 0);
+      assert.strictEqual(result.end.character, 3);
+    });
+  });
 });
