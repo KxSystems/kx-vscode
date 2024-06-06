@@ -25,6 +25,7 @@ import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import { QueryHistoryProvider } from "../../src/services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as coreUtils from "../../src/utils/core";
+import * as cpUtils from "../../src/utils/cpUtils";
 import * as dataSourceUtils from "../../src/utils/dataSource";
 import * as decodeUtils from "../../src/utils/decode";
 import * as executionUtils from "../../src/utils/execution";
@@ -70,6 +71,36 @@ describe("Utils", () => {
   });
 
   describe("core", () => {
+    describe("checkOpenSslInstalled", () => {
+      let tryExecuteCommandStub: sinon.SinonStub;
+      let kdbOutputLogStub: sinon.SinonStub;
+      beforeEach(() => {
+        tryExecuteCommandStub = sinon.stub(cpUtils, "tryExecuteCommand");
+        kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+      });
+
+      afterEach(() => {
+        tryExecuteCommandStub.restore();
+        kdbOutputLogStub.restore();
+      });
+
+      it("should return null if OpenSSL is not installed", async () => {
+        tryExecuteCommandStub.resolves({ code: 1, cmdOutput: "" });
+
+        const result = await coreUtils.checkOpenSslInstalled();
+
+        assert.strictEqual(result, null);
+      });
+
+      it("should handle errors correctly", async () => {
+        const error = new Error("Test error");
+        tryExecuteCommandStub.rejects(error);
+
+        const result = await coreUtils.checkOpenSslInstalled();
+
+        assert.strictEqual(result, null);
+      });
+    });
     describe("setOutputWordWrapper", () => {
       let getConfigurationStub: sinon.SinonStub;
       beforeEach(() => {
