@@ -52,6 +52,7 @@ export class KdbNewConnectionView extends LitElement {
       alias: "",
       server: "",
       auth: true,
+      realm: "",
     };
     this.bundledServer = {
       serverName: "127.0.0.1",
@@ -98,7 +99,7 @@ export class KdbNewConnectionView extends LitElement {
     return this.isBundledQ
       ? html`<vscode-text-field
           class="text-field larger option-title"
-          value="${this.bundledServer.serverAlias}"
+          value="${this.bundledServer.serverAlias || ""}"
           readonly
           >Server Name
         </vscode-text-field>`
@@ -106,7 +107,7 @@ export class KdbNewConnectionView extends LitElement {
         ? html`<vscode-text-field
             class="text-field larger option-title"
             placeholder="Server 1"
-            value="${this.kdbServer.serverAlias}"
+            value="${this.kdbServer.serverAlias || ""}"
             @input="${(event: Event) =>
               (this.kdbServer.serverAlias = (
                 event.target as HTMLSelectElement
@@ -218,6 +219,26 @@ export class KdbNewConnectionView extends LitElement {
             ${this.renderConnAddDesc(serverType)}
           </div>
         `;
+  }
+
+  renderRealm() {
+    return html`
+      <div class="row">
+        <vscode-text-field
+          class="text-field larger option-title"
+          value="${this.insightsServer.realm || ""}"
+          placeholder="insights"
+          @input="${(event: Event) => {
+            const value = (event.target as HTMLSelectElement).value;
+            this.insightsServer.realm = value;
+          }}"
+          >Define realm (Optional)</vscode-text-field
+        >
+      </div>
+      <div class="row option-description  option-help">
+        Set the realm of your Insights connection.
+      </div>
+    `;
   }
 
   tabClickAction(tabNumber: number) {
@@ -379,6 +400,11 @@ export class KdbNewConnectionView extends LitElement {
                     <div class="row">
                       <div class="col gap-0">
                         ${this.renderConnAddress(ServerType.INSIGHTS)}
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col gap-0">
+                        ${this.renderRealm()}
                       </div>
                     </div>
                   </div>
