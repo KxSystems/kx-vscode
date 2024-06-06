@@ -223,7 +223,7 @@ export class KdbNewConnectionView extends LitElement {
 
   renderRealm() {
     return html`
-      <div class="row">
+      <div class="row mt-1">
         <vscode-text-field
           class="text-field larger option-title"
           value="${this.insightsServer.realm}"
@@ -234,11 +234,12 @@ export class KdbNewConnectionView extends LitElement {
             /* istanbul ignore next */
             this.insightsServer.realm = value;
           }}"
-          >Define realm (Optional)</vscode-text-field
+          >Define Realm (optional)</vscode-text-field
         >
       </div>
       <div class="row option-description  option-help">
-        Set the realm of your Insights connection.
+        Specify the Keycloak realm for authentication. Use this field to connect
+        to a specific realm as configured on your server.
       </div>
     `;
   }
@@ -406,7 +407,10 @@ export class KdbNewConnectionView extends LitElement {
                     </div>
                     <div class="row">
                       <div class="col gap-0">
+                      <details>
+                        <summary>Advanced</summary>
                         ${this.renderRealm()}
+                      </details>  
                       </div>
                     </div>
                   </div>
