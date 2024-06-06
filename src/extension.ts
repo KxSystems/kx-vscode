@@ -75,6 +75,7 @@ import {
   getInsights,
   getServers,
   initializeLocalServers,
+  kdbOutputLog,
 } from "./utils/core";
 import { runQFileTerminal } from "./utils/execution";
 import AuthSettings from "./utils/secretStorage";
@@ -154,7 +155,7 @@ export async function activate(context: ExtensionContext) {
   AuthSettings.init(context);
   ext.secretSettings = AuthSettings.instance;
 
-  ext.outputChannel.appendLine("kdb extension is now active!");
+  kdbOutputLog("kdb extension is now active!", "INFO");
 
   try {
     // check for installed q runtime
