@@ -21,6 +21,7 @@ import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
 import { TypeBase } from "../ipc/typeBase";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { QueryHistory } from "../models/queryHistory";
+import { kdbOutputLog } from "./core";
 
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {
@@ -90,7 +91,7 @@ export function handleWSError(ab: ArrayBuffer): any {
     }
   }
 
-  ext.outputChannel.appendLine(`Error : ${errorString}`);
+  kdbOutputLog(`Error : ${errorString}`, "ERROR");
 
   return { error: errorString };
 }

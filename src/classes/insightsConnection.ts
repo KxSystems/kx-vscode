@@ -25,6 +25,11 @@ import { jwtDecode } from "jwt-decode";
 import { JwtUser } from "../models/jwt_user";
 import { Telemetry } from "../utils/telemetryClient";
 import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
+import {
+  invalidUsernameJWT,
+  kdbOutputLog,
+  tokenUndefinedError,
+} from "../utils/core";
 
 export class InsightsConnection {
   public connected: boolean;
@@ -75,10 +80,7 @@ export class InsightsConnection {
       );
 
       if (token === undefined) {
-        ext.outputChannel.appendLine(
-          "Error retrieving access token for insights.",
-        );
-        window.showErrorMessage("Failed to retrieve access token for insights");
+        tokenUndefinedError(this.connLabel);
         return undefined;
       }
 
@@ -108,14 +110,7 @@ export class InsightsConnection {
         this.node.details.alias,
       );
       if (token === undefined) {
-        ext.outputChannel.appendLine(
-          "Error retrieving access token for insights connection named: " +
-            this.connLabel,
-        );
-        window.showErrorMessage(
-          "Failed to retrieve access token for insights connection named: " +
-            this.connLabel,
-        );
+        tokenUndefinedError(this.connLabel);
         return undefined;
       }
       const headers = {
@@ -138,15 +133,16 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            ext.outputChannel.appendLine("User cancelled the execution.");
+            kdbOutputLog(`User cancelled the Datasource Run.`, "WARNING");
           });
 
           progress.report({ message: "Query executing..." });
 
           return await axios(options)
             .then((response: any) => {
-              ext.outputChannel.appendLine(
-                `request status: ${response.status}`,
+              kdbOutputLog(
+                `[Datasource RUN] Status: ${response.status}.`,
+                "INFO",
               );
               if (isCompressed(response.data)) {
                 response.data = uncompress(response.data);
@@ -159,8 +155,9 @@ export class InsightsConnection {
               };
             })
             .catch((error: any) => {
-              ext.outputChannel.appendLine(
-                `request status: ${error.response.status}`,
+              kdbOutputLog(
+                `[Datasource RUN] Status: ${error.response.status}.`,
+                "INFO",
               );
               return {
                 error: { buffer: error.response.data },
@@ -219,18 +216,13 @@ export class InsightsConnection {
       );
 
       if (token === undefined) {
-        ext.outputChannel.appendLine(
-          "Error retrieving access token for insights.",
-        );
-        window.showErrorMessage("Failed to retrieve access token for insights");
+        tokenUndefinedError(this.connLabel);
         return undefined;
       }
 
       const username = jwtDecode<JwtUser>(token.accessToken);
       if (username === undefined || username.preferred_username === "") {
-        ext.outputChannel.appendLine(
-          "JWT did not contain a valid preferred username",
-        );
+        invalidUsernameJWT(this.connLabel);
       }
       const headers = {
         headers: {
@@ -251,9 +243,7 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            ext.outputChannel.appendLine(
-              "User cancelled the scratchpad import.",
-            );
+            kdbOutputLog(`User cancelled the scratchpad import.`, "WARNING");
           });
 
           progress.report({ message: "Populating scratchpad..." });
@@ -264,9 +254,15 @@ export class InsightsConnection {
             headers,
           );
 
-          ext.outputChannel.append(JSON.stringify(scratchpadResponse.data));
+          kdbOutputLog(
+            `Executed successfully, stored in ${variableName}.`,
+            "INFO",
+          );
+
+          kdbOutputLog("[SCRATCHPAD] Data:", "INFO");
+          kdbOutputLog(JSON.stringify(scratchpadResponse.data), "INFO");
           window.showInformationMessage(
-            `Executed successfully, stored in ${variableName}`,
+            `Executed successfully, stored in ${variableName}.`,
           );
           Telemetry.sendEvent(
             "Datasource." + dsTypeString + ".Scratchpad.Populated",
@@ -295,17 +291,12 @@ export class InsightsConnection {
         this.node.details.alias,
       );
       if (token === undefined) {
-        ext.outputChannel.appendLine(
-          "Error retrieving access token for insights.",
-        );
-        window.showErrorMessage("Failed to retrieve access token for insights");
+        tokenUndefinedError(this.connLabel);
         return undefined;
       }
       const username = jwtDecode<JwtUser>(token.accessToken);
       if (username === undefined || username.preferred_username === "") {
-        ext.outputChannel.appendLine(
-          "JWT did not contain a valid preferred username",
-        );
+        invalidUsernameJWT(this.connLabel);
       }
       const body = {
         expression: query,
@@ -328,15 +319,14 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            ext.outputChannel.appendLine(
-              "User cancelled the scratchpad execution.",
-            );
+            kdbOutputLog(`User cancelled the Scrathpad execution.`, "WARNING");
           });
 
           progress.report({ message: "Query is executing..." });
           const spRes = await axios
             .post(scratchpadURL.toString(), body, { headers })
             .then((response: any) => {
+              kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
               if (isTableView && !response.data.error) {
                 const buffer = new Uint8Array(
                   response.data.data.map((x: string) => parseInt(x, 16)),
@@ -370,18 +360,13 @@ export class InsightsConnection {
       );
 
       if (token === undefined) {
-        ext.outputChannel.appendLine(
-          "Error retrieving access token for insights.",
-        );
-        window.showErrorMessage("Failed to retrieve access token for insights");
+        tokenUndefinedError(this.connLabel);
         return false;
       }
 
       const username = jwtDecode<JwtUser>(token.accessToken);
       if (username === undefined || username.preferred_username === "") {
-        ext.outputChannel.appendLine(
-          "JWT did not contain a valid preferred username",
-        );
+        invalidUsernameJWT(this.connLabel);
         return false;
       }
       const headers = {
@@ -398,27 +383,28 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            ext.outputChannel.appendLine(
-              "User cancelled the scratchpad reset.",
-            );
+            kdbOutputLog(`User cancelled the scratchpad reset.`, "WARNING");
             return false;
           });
-
           progress.report({ message: "Reseting scratchpad..." });
-
           const res = await axios
             .post(scratchpadURL.toString(), null, headers)
-            .then((response: any) => {
-              console.log(response);
-              ext.outputChannel.append("Scratchpad.Reseted");
+            .then((_response: any) => {
+              kdbOutputLog(
+                `[SCRATCHPAD] Executed successfully, scratchpad reseted at ${this.connLabel} connection.`,
+                "INFO",
+              );
               window.showInformationMessage(
                 `Executed successfully, scratchpad reseted at ${this.connLabel} connection`,
               );
               Telemetry.sendEvent("Scratchpad.Reseted");
               return true;
             })
-            .catch((error: any) => {
-              console.log(error);
+            .catch((_error: any) => {
+              kdbOutputLog(
+                `[SCRATCHPAD] Error ocurried while reseting scratchpad in connection ${this.connLabel}, try again.`,
+                "ERROR",
+              );
               window.showErrorMessage(
                 "Error ocurried while reseting scratchpad, try again.",
               );
@@ -430,59 +416,6 @@ export class InsightsConnection {
       );
     } else {
       return false;
-    }
-  }
-
-  public async pingInsights(): Promise<boolean | undefined> {
-    if (this.connected) {
-      const pingURL = new url.URL(
-        ext.insightsServiceGatewayUrls.ping,
-        this.node.details.server,
-      );
-
-      const userToken = await getCurrentToken(
-        this.node.details.server,
-        this.node.details.alias,
-      );
-
-      if (userToken === undefined) {
-        ext.outputChannel.appendLine(
-          "Error retrieving access token for insights.",
-        );
-        window.showErrorMessage("Failed to retrieve access token for insights");
-        return false;
-      }
-
-      const body = {
-        labels: {},
-      };
-      const startTime = Date.now();
-
-      return await axios
-        .request({
-          method: "post",
-          url: pingURL.toString(),
-          data: body,
-          headers: { Authorization: `Bearer ${userToken.accessToken}` },
-          timeout: 2000,
-        })
-        .then((_response: any) => {
-          Telemetry.sendEvent("Insights.Pinged");
-          return true;
-        })
-        .catch((_error: any) => {
-          const endTime = Date.now();
-          const timeString = new Date().toLocaleTimeString();
-          const timeDiff = endTime - startTime;
-          ext.outputChannel.appendLine(
-            `[${timeString}] Connection keep alive error: ${this.connLabel}. Ping failed. ${_error.code}: status code ${_error.response.status}. Time Elapsed ${timeDiff}ms`,
-          );
-
-          window.showErrorMessage(
-            `Error in connection: ${this.connLabel}, check kdb OUTPUT for more info.`,
-          );
-          return false;
-        });
     }
   }
 }

@@ -45,7 +45,7 @@ import { Telemetry } from "../utils/telemetryClient";
 import { LocalConnection } from "../classes/localConnection";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
-import { offerConnectAction } from "../utils/core";
+import { kdbOutputLog, offerConnectAction } from "../utils/core";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -102,8 +102,9 @@ export async function populateScratchpad(
         dataSourceForm!,
       );
     } else {
-      ext.outputChannel.appendLine(
-        `Invalid scratchpad output variable name: ${outputVariable}`,
+      kdbOutputLog(
+        `[DATASOURCE] Invalid scratchpad output variable name: ${outputVariable}`,
+        "ERROR",
       );
     }
   });
@@ -135,7 +136,10 @@ export async function runDataSource(
     dataSourceForm.insightsNode = getConnectedInsightsNode();
     const fileContent = dataSourceForm;
 
-    ext.outputChannel.appendLine(`Running ${fileContent.name} datasource...`);
+    kdbOutputLog(
+      `[DATASOURCE] Running ${fileContent.name} datasource...`,
+      "INFO",
+    );
     let res: any;
     const selectedType = getSelectedType(fileContent);
     ext.isDatasourceExecution = true;
@@ -162,7 +166,7 @@ export async function runDataSource(
         window.showErrorMessage(res.error);
       } else if (ext.resultsViewProvider.isVisible()) {
         const resultCount = typeof res === "string" ? "0" : res.rows.length;
-        ext.outputChannel.appendLine(`Results: ${resultCount} rows`);
+        kdbOutputLog(`[DATASOURCE] Results: ${resultCount} rows`, "INFO");
         writeQueryResultsToView(
           res,
           query,
@@ -172,8 +176,9 @@ export async function runDataSource(
           selectedType,
         );
       } else {
-        ext.outputChannel.appendLine(
-          `Results is a string with length: ${res.length}`,
+        kdbOutputLog(
+          `[DATASOURCE] Results is a string with length: ${res.length}`,
+          "INFO",
         );
         writeQueryResultsToConsole(
           res,
@@ -188,8 +193,8 @@ export async function runDataSource(
     }
   } catch (error) {
     window.showErrorMessage((error as Error).message);
+    kdbOutputLog(`[DATASOURCE]  ${(error as Error).message}`, "ERROR");
     DataSourcesPanel.running = false;
-    //TODO ADD ERROR TO CONSOLE HERE
   } finally {
     DataSourcesPanel.running = false;
   }
@@ -397,11 +402,11 @@ export function getQuery(
   }
 }
 
-function parseError(error: GetDataError) {
+export function parseError(error: GetDataError) {
   if (error instanceof Object && error.buffer) {
     return handleWSError(error.buffer);
   } else {
-    ext.outputChannel.appendLine(`Error: ${error}`);
+    kdbOutputLog(`[DATASOURCE] Error: ${error}`, "ERROR");
     return {
       error,
     };

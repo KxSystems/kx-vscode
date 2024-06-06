@@ -32,7 +32,7 @@ import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import { runQuery } from "./serverCommand";
 import { ExecutionTypes } from "../models/execution";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
-import { offerConnectAction } from "../utils/core";
+import { kdbOutputLog, offerConnectAction } from "../utils/core";
 import Path from "path";
 
 const connectionService = new ConnectionManagementService();
@@ -357,8 +357,9 @@ export async function importOldDSFiles() {
       },
       async (progress, token) => {
         token.onCancellationRequested(() => {
-          ext.outputChannel.appendLine(
-            "User cancelled the old DS files import.",
+          kdbOutputLog(
+            "[DATASOURCE] User cancelled the old DS files import.",
+            "INFO",
           );
           return false;
         });
@@ -371,6 +372,10 @@ export async function importOldDSFiles() {
   } else {
     window.showInformationMessage(
       "No old Datasource files found on your VSCODE.",
+    );
+    kdbOutputLog(
+      "[DATASOURCE] No old Datasource files found on your VSCODE.",
+      "INFO",
     );
   }
 }

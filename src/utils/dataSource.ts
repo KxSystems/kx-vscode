@@ -19,19 +19,22 @@ import { DataSourcesPanel } from "../panels/datasource";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { workspace, window, Uri } from "vscode";
 import { Telemetry } from "./telemetryClient";
+import { kdbOutputLog } from "./core";
 
 export function createKdbDataSourcesFolder(): string {
   const rootPath = ext.context.globalStorageUri.fsPath;
   const kdbDataSourcesFolderPath = path.join(rootPath, ext.kdbDataSourceFolder);
   if (!fs.existsSync(rootPath)) {
-    ext.outputChannel.appendLine(
-      `Directory created to the extension folder: ${rootPath}`,
+    kdbOutputLog(
+      `[DATSOURCE] Directory created to the extension folder: ${rootPath}`,
+      "INFO",
     );
     fs.mkdirSync(rootPath);
   }
   if (!fs.existsSync(kdbDataSourcesFolderPath)) {
-    ext.outputChannel.appendLine(
-      `Directory created to the extension folder: ${kdbDataSourcesFolderPath}`,
+    kdbOutputLog(
+      `[DATSOURCE] Directory created to the extension folder: ${kdbDataSourcesFolderPath}`,
+      "INFO",
     );
     fs.mkdirSync(kdbDataSourcesFolderPath);
   }
@@ -47,6 +50,10 @@ export function convertTimeToTimestamp(time: string): string {
     const timePart = parts[1].replace("Z", "0").padEnd(9, "0");
     return `${datePart}.${timePart}`;
   } catch (error) {
+    kdbOutputLog(
+      `The string param is in an incorrect format. Param: ${time} Error: ${error}`,
+      "ERROR",
+    );
     console.error(
       `The string param is in an incorrect format. Param: ${time} Error: ${error}`,
     );

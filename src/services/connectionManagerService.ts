@@ -23,6 +23,7 @@ import {
   getInsights,
   getServerName,
   getServers,
+  kdbOutputLog,
   removeLocalConnectionContext,
   updateInsights,
   updateServers,
@@ -92,8 +93,9 @@ export class ConnectionManagementService {
           return;
         }
         if (conn) {
-          ext.outputChannel.appendLine(
-            `Connection established successfully to: ${connLabel}`,
+          kdbOutputLog(
+            `[CONNECTION] Connection established successfully to: ${connLabel}`,
+            "INFO",
           );
 
           Telemetry.sendEvent("Connection.Connected.QProcess");
@@ -254,10 +256,9 @@ export class ConnectionManagementService {
       }
     }
     Telemetry.sendEvent("Connection.Disconnected." + connType);
-    ext.outputChannel.appendLine(
-      `[${new Date().toLocaleTimeString()}] Connection disconnected: ${
-        connection.connLabel
-      }`,
+    kdbOutputLog(
+      `[CONNECTION] Connection closed: ${connection.connLabel}`,
+      "INFO",
     );
     ext.serverProvider.reload();
   }
