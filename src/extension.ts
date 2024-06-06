@@ -278,6 +278,7 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand(
       "kdb.stopLocalProcess",
       async (viewItem: KdbNode) => {
+        await commands.executeCommand("kdb.disconnect", viewItem);
         await stopLocalProcess(viewItem);
       },
     ),
