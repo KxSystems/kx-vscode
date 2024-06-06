@@ -30,7 +30,7 @@ import { showRegistrationNotification } from "./registration";
 import { Telemetry } from "./telemetryClient";
 
 export function log(childProcess: ChildProcess): void {
-  ext.outputChannel.appendLine(`Process ${childProcess.pid!} killed`);
+  kdbOutputLog(`Process ${childProcess.pid} started`, "INFO");
 }
 
 export async function checkOpenSslInstalled(): Promise<string | null> {
@@ -45,14 +45,15 @@ export async function checkOpenSslInstalled(): Promise<string | null> {
       const matcher = /(\d+.\d+.\d+)/;
       const installedVersion = result.cmdOutput.match(matcher);
 
-      ext.outputChannel.appendLine(
+      kdbOutputLog(
         `Detected version ${installedVersion} of OpenSSL installed.`,
+        "INFO",
       );
 
       return semver.clean(installedVersion ? installedVersion[1] : "");
     }
   } catch (err) {
-    ext.outputChannel.appendLine(`Error in checking OpenSSL version: ${err}`);
+    kdbOutputLog(`Error in checking OpenSSL version: ${err}`, "ERROR");
     Telemetry.sendException(err as Error);
   }
   return null;
@@ -125,9 +126,7 @@ export function saveLocalProcessObj(
   args: string[],
 ): void {
   window.showInformationMessage("q process started successfully!");
-  ext.outputChannel.appendLine(
-    `Child process id ${childProcess.pid!} saved in cache.`,
-  );
+  kdbOutputLog(`Child process id ${childProcess.pid} saved in cache.`, "INFO");
   ext.localProcessObjects[args[2]] = childProcess;
 }
 
@@ -250,6 +249,32 @@ export function getServerAlias(serverList: ServerDetails[]): void {
   });
 }
 
+export function kdbOutputLog(message: string, type: string): void {
+  const dateNow = new Date().toLocaleDateString();
+  const timeNow = new Date().toLocaleTimeString();
+  ext.outputChannel.appendLine(`[${dateNow} ${timeNow}] [${type}] ${message}`);
+}
+
+export function tokenUndefinedError(connLabel: string): void {
+  kdbOutputLog(
+    `Error retrieving access token for Insights connection named: ${connLabel}`,
+    "ERROR",
+  );
+  window.showErrorMessage(
+    `Error retrieving access token for Insights connection named: ${connLabel}`,
+  );
+}
+
+export function invalidUsernameJWT(connLabel: string): void {
+  kdbOutputLog(
+    `JWT did not contain a valid preferred username for Insights connection: ${connLabel}`,
+    "ERROR",
+  );
+  window.showErrorMessage(
+    `JWT did not contain a valid preferred username for Insights connection: ${connLabel}`,
+  );
+}
+
 /* istanbul ignore next */
 export function offerConnectAction(connLabel: string): void {
   window
@@ -311,7 +336,7 @@ export async function checkLocalInstall(): Promise<void> {
   if (QHOME || env.QHOME) {
     env.QHOME = QHOME || env.QHOME;
     if (!pathExists(env.QHOME!)) {
-      ext.outputChannel.appendLine("QHOME path stored is empty");
+      kdbOutputLog("QHOME path stored is empty", "ERROR");
     }
     await writeFile(
       join(__dirname, "qinstall.md"),
@@ -323,7 +348,7 @@ export async function checkLocalInstall(): Promise<void> {
       .getConfiguration()
       .update("kdb.qHomeDirectory", env.QHOME, ConfigurationTarget.Global);
 
-    ext.outputChannel.appendLine(`Installation of q found here: ${env.QHOME}`);
+    kdbOutputLog(`Installation of q found here: ${env.QHOME}`, "INFO");
 
     showRegistrationNotification();
 
