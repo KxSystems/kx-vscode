@@ -121,6 +121,7 @@ export async function refreshToken(
   });
 }
 
+/* istanbul ignore next */
 export async function getCurrentToken(
   serverName: string,
   serverAlias: string,
