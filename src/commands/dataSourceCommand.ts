@@ -402,7 +402,7 @@ export function getQuery(
   }
 }
 
-function parseError(error: GetDataError) {
+export function parseError(error: GetDataError) {
   if (error instanceof Object && error.buffer) {
     return handleWSError(error.buffer);
   } else {

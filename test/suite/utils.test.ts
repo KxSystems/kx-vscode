@@ -316,6 +316,11 @@ describe("Utils", () => {
       assert.strictEqual(result, "2021-01-01T00:00:00.000000000");
     });
 
+    it("convertTimeToTimestamp", () => {
+      const result = dataSourceUtils.convertTimeToTimestamp("testTime");
+      assert.strictEqual(result, "");
+    });
+
     it("getConnectedInsightsNode", () => {
       const result = dataSourceUtils.getConnectedInsightsNode();
       assert.strictEqual(result, "");
