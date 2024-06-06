@@ -229,7 +229,9 @@ export class KdbNewConnectionView extends LitElement {
           value="${this.insightsServer.realm}"
           placeholder="insights"
           @input="${(event: Event) => {
+            /* istanbul ignore next */
             const value = (event.target as HTMLSelectElement).value;
+            /* istanbul ignore next */
             this.insightsServer.realm = value;
           }}"
           >Define realm (Optional)</vscode-text-field
