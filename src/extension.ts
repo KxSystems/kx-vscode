@@ -17,7 +17,10 @@ import {
   ConfigurationTarget,
   EventEmitter,
   ExtensionContext,
+  Position,
   Range,
+  Selection,
+  TextDocument,
   TextDocumentContentProvider,
   Uri,
   WorkspaceEdit,
@@ -383,6 +386,22 @@ export async function activate(context: ExtensionContext) {
         await commands.executeCommand("deleteFile");
       }
     }),
+    commands.registerCommand("kdb.execute.block", async () => {
+      if (ext.activeTextEditor) {
+        const range = await commands.executeCommand<Range>(
+          "kdb.qls.expressionRange",
+          ext.activeTextEditor.document,
+          ext.activeTextEditor.selection.active,
+        );
+        if (range) {
+          ext.activeTextEditor.selection = new Selection(
+            range.start,
+            range.end,
+          );
+          await runActiveEditor(ExecutionTypes.QuerySelection);
+        }
+      }
+    }),
 
     DataSourceEditorProvider.register(context),
 
@@ -464,6 +483,17 @@ export async function activate(context: ExtensionContext) {
   );
 
   await client.start();
+
+  context.subscriptions.push(
+    commands.registerCommand(
+      "kdb.qls.expressionRange",
+      (document: TextDocument, position: Position) =>
+        client.sendRequest("kdb.qls.expressionRange", {
+          textDocument: { uri: `${document.uri}` },
+          position: { line: position.line, character: position.character },
+        }),
+    ),
+  );
 
   Telemetry.sendEvent("Extension.Activated");
   const yamlExtension = extensions.getExtension("redhat.vscode-yaml");

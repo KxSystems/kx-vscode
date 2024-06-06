@@ -374,6 +374,12 @@
         "category": "KX",
         "command": "kdb.deleteFile",
         "title": "Delete"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.execute.block",
+        "title": "KX: Execute Current q Block",
+        "icon": "$(run-above)"
       }
     ],
     "keybindings": [
@@ -692,8 +698,13 @@
           "when": "editorLangId == q"
         },
         {
-          "command": "kdb.terminal.run",
+          "command": "kdb.execute.block",
           "group": "q@2",
+          "when": "editorLangId == q"
+        },
+        {
+          "command": "kdb.terminal.run",
+          "group": "q@3",
           "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
         },
         {
@@ -719,8 +730,13 @@
           "when": "editorLangId == q"
         },
         {
-          "command": "kdb.terminal.run",
+          "command": "kdb.execute.block",
           "group": "q@2",
+          "when": "editorLangId == q"
+        },
+        {
+          "command": "kdb.terminal.run",
+          "group": "q@3",
           "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
         },
         {
