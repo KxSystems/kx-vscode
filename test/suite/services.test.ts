@@ -602,8 +602,10 @@ describe("Code flow login service tests", () => {
     );
   });
 
-  it.skip("Should not sign in if link is not opened", async () => {
-    sinon.stub(env, "openExternal").value(async () => false);
+  it("Should continue sign in if link is copied", async () => {
+    sinon.stub(env, "openExternal").value(async () => {
+      throw new Error();
+    });
     await assert.rejects(() => signIn("http://127.0.0.1", "insights"));
   });
 });
