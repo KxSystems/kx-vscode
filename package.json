@@ -411,6 +411,12 @@
         "key": "ctrl+shift+r",
         "mac": "cmd+shift+r",
         "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
+      },
+      {
+        "command": "kdb.execute.block",
+        "key": "ctrl+shift+e",
+        "mac": "cmd+shift+e",
+        "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
       }
     ],
     "snippets": [

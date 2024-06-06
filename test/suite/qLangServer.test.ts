@@ -55,6 +55,7 @@ describe("qLangServer", () => {
       onRenameRequest() {},
       onCompletion() {},
       onDidChangeConfiguration() {},
+      onRequest() {},
     });
 
     const params = <InitializeParams>{
