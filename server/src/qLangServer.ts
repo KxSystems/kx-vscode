@@ -33,6 +33,7 @@ import {
   SymbolKind,
   TextDocumentChangeEvent,
   TextDocumentIdentifier,
+  TextDocumentPositionParams,
   TextDocumentSyncKind,
   TextDocuments,
   TextEdit,
@@ -54,6 +55,9 @@ import {
   namespace,
   relative,
   testblock,
+  EndOfLine,
+  SemiColon,
+  WhiteSpace,
 } from "./parser";
 import { lint } from "./linter";
 
@@ -85,6 +89,10 @@ export default class QLangServer {
     this.connection.onCompletion(this.onCompletion.bind(this));
     this.connection.onDidChangeConfiguration(
       this.onDidChangeConfiguration.bind(this),
+    );
+    this.connection.onRequest(
+      "kdb.qls.expressionRange",
+      this.onExpressionRange.bind(this),
     );
   }
 
@@ -213,6 +221,18 @@ export default class QLangServer {
     });
   }
 
+  public onExpressionRange({
+    textDocument,
+    position,
+  }: TextDocumentPositionParams) {
+    const tokens = this.parse(textDocument);
+    const source = positionToToken(tokens, position);
+    if (!source || !source.exprs) {
+      return null;
+    }
+    return expressionToRange(tokens, source.exprs);
+  }
+
   private parse(textDocument: TextDocumentIdentifier): Token[] {
     const document = this.documents.get(textDocument.uri);
     if (!document) {
@@ -241,6 +261,25 @@ function positionToToken(tokens: Token[], position: Position) {
       end.character >= position.character
     );
   });
+}
+
+function expressionToRange(tokens: Token[], expression: number) {
+  const exprs = tokens.filter(
+    (token) =>
+      token.exprs === expression &&
+      token.tokenType !== EndOfLine &&
+      token.tokenType !== SemiColon &&
+      token.tokenType !== WhiteSpace,
+  );
+  const first = exprs[0];
+  if (!first) {
+    return null;
+  }
+  const last = exprs[exprs.length - 1];
+  const start = rangeFromToken(first);
+  const end = last ? rangeFromToken(last) : start;
+
+  return Range.create(start.start, end.end);
 }
 
 function createSymbol(token: Token, tokens: Token[]): DocumentSymbol {
@@ -277,6 +316,8 @@ function createDebugSymbol(token: Token): DocumentSymbol {
     tokenId(token),
     `${token.tokenType.name} ${token.namespace ? `(${token.namespace})` : ""} ${
       token.error !== undefined ? `E=${token.error}` : ""
+    } ${
+      token.exprs ? `X=${token.exprs}` : ""
     } ${token.order ? `O=${token.order}` : ""} ${
       token.tangled ? `T=${tokenId(token.tangled)}` : ""
     } ${token.scope ? `S=${tokenId(token.scope)}` : ""} ${
