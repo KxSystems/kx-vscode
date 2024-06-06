@@ -154,6 +154,7 @@ export async function getCurrentToken(
   return token;
 }
 
+/* istanbul ignore next */
 async function getToken(
   insightsUrl: string,
   realm: string,

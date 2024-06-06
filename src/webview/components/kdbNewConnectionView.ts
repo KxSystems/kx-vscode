@@ -99,7 +99,7 @@ export class KdbNewConnectionView extends LitElement {
     return this.isBundledQ
       ? html`<vscode-text-field
           class="text-field larger option-title"
-          value="${this.bundledServer.serverAlias || ""}"
+          value="${this.bundledServer.serverAlias}"
           readonly
           >Server Name
         </vscode-text-field>`
@@ -107,7 +107,7 @@ export class KdbNewConnectionView extends LitElement {
         ? html`<vscode-text-field
             class="text-field larger option-title"
             placeholder="Server 1"
-            value="${this.kdbServer.serverAlias || ""}"
+            value="${this.kdbServer.serverAlias}"
             @input="${(event: Event) =>
               (this.kdbServer.serverAlias = (
                 event.target as HTMLSelectElement
@@ -226,7 +226,7 @@ export class KdbNewConnectionView extends LitElement {
       <div class="row">
         <vscode-text-field
           class="text-field larger option-title"
-          value="${this.insightsServer.realm || ""}"
+          value="${this.insightsServer.realm}"
           placeholder="insights"
           @input="${(event: Event) => {
             const value = (event.target as HTMLSelectElement).value;
