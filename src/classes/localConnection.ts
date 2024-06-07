@@ -12,7 +12,7 @@
  */
 
 import * as nodeq from "node-q";
-import { window } from "vscode";
+import { commands, window } from "vscode";
 import { ext } from "../extensionVariables";
 import { delay, kdbOutputLog } from "../utils/core";
 import { convertStringToArray, handleQueryResults } from "../utils/execution";
@@ -86,11 +86,12 @@ export class LocalConnection {
         return;
       }
       conn.addListener("close", () => {
+        commands.executeCommand("kdb.disconnect", this.connLabel);
         kdbOutputLog(
           `Connection closed: ${this.options.host}:${this.options.port}`,
           "INFO",
         );
-        this.connected = false;
+        ext.outputChannel.show();
       });
 
       if (this.connection && this.connected) {

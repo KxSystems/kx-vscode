@@ -218,8 +218,10 @@ export async function activate(context: ExtensionContext) {
     ),
     commands.registerCommand(
       "kdb.disconnect",
-      async (viewItem: InsightsNode | KdbNode) => {
-        await disconnect(viewItem.label);
+      async (viewItem: InsightsNode | KdbNode | string) => {
+        const connLabel =
+          typeof viewItem === "string" ? viewItem : viewItem.label;
+        await disconnect(connLabel);
       },
     ),
     commands.registerCommand("kdb.addConnection", async () => {

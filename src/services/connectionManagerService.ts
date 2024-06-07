@@ -145,19 +145,12 @@ export class ConnectionManagementService {
   public disconnect(connLabel: string): void {
     const connection = this.retrieveConnectedConnection(connLabel);
     const connectionNode = this.retrieveConnection(connLabel);
-    if (!connection) {
+    if (!connection || !connectionNode) {
       return;
     }
-    const isLocal = connection instanceof LocalConnection;
     /* istanbul ignore next */
-    if (isLocal && connectionNode) {
-      connection.getConnection()?.close(() => {
-        this.disconnectBehaviour(connection);
-      });
-    } else {
-      connection.disconnect();
-      this.disconnectBehaviour(connection);
-    }
+    connection.disconnect();
+    this.disconnectBehaviour(connection);
   }
 
   public async removeConnection(

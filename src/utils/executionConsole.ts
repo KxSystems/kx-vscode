@@ -88,13 +88,12 @@ export class ExecutionConsole {
     const hideDetails = ext.hideDetailedConsoleQueryOutput;
     output = this.checkOutput(output, query);
     let dataSourceRes: string[] = [];
-    if (type === undefined) {
-      this._console.show(true);
-    } else {
-      if (Array.isArray(output)) {
-        dataSourceRes = convertRowsToConsole(output);
-      }
+    this._console.show(true);
+
+    if (Array.isArray(output)) {
+      dataSourceRes = convertRowsToConsole(output);
     }
+
     if (!checkIfIsDatasource(type)) {
       addQueryHistory(
         query,
