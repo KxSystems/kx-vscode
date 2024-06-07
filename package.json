@@ -183,7 +183,7 @@
       {
         "category": "KX",
         "command": "kdb.refreshServerObjects",
-        "title": "Refresh server objects",
+        "title": "Refresh server objects & insights meta",
         "icon": "$(refresh)"
       },
       {
@@ -262,6 +262,11 @@
         "category": "KX",
         "command": "kdb.connect",
         "title": "Connect server"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.insights.refreshMeta",
+        "title": "Refresh get meta"
       },
       {
         "category": "KX",
@@ -525,6 +530,10 @@
           "when": "false"
         },
         {
+          "command": "kdb.insights.refreshMeta",
+          "when": "false"
+        },
+        {
           "command": "kdb.startLocalProcess",
           "when": "false"
         },
@@ -650,6 +659,11 @@
           "command": "kdb.enableTLS",
           "when": "view == kdb-servers && viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutTls && viewItem not in kdb.local",
           "group": "connection@4"
+        },
+        {
+          "command": "kdb.insights.refreshMeta",
+          "when": "view == kdb-servers && viewItem in kdb.connected && viewItem in kdb.insightsNodes",
+          "group": "connection@3"
         },
         {
           "command": "kdb.insightsRemove",

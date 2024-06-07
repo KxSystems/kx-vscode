@@ -313,6 +313,15 @@ export async function resetScratchPad(): Promise<void> {
   await connMngService.resetScratchpad();
 }
 
+export async function refreshGetMeta(connLabel?: string): Promise<void> {
+  const connMngService = new ConnectionManagementService();
+  if (connLabel) {
+    await connMngService.refreshGetMeta(connLabel);
+  } else {
+    await connMngService.refreshAllGetMetas();
+  }
+}
+
 export async function disconnect(connLabel: string): Promise<void> {
   const connMngService = new ConnectionManagementService();
   connMngService.disconnect(connLabel);
