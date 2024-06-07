@@ -87,8 +87,9 @@ export class LocalConnection {
       }
       conn.addListener("close", () => {
         commands.executeCommand("kdb.disconnect", this.connLabel);
-        ext.outputChannel.appendLine(
-          `Connection stopped from ${this.options.host}:${this.options.port}`,
+        kdbOutputLog(
+          `Connection closed: ${this.options.host}:${this.options.port}`,
+          "INFO",
         );
         ext.outputChannel.show();
       });
