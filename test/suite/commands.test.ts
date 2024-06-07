@@ -1787,6 +1787,39 @@ describe("serverCommand", () => {
       windowErrorStub.calledOnce;
     });
   });
+
+  describe("refreshGetMeta", () => {
+    let refreshGetMetaStub, refreshAllGetMetasStub: sinon.SinonStub;
+    beforeEach(() => {
+      refreshGetMetaStub = sinon.stub(
+        ConnectionManagementService.prototype,
+        "refreshGetMeta",
+      );
+      refreshAllGetMetasStub = sinon.stub(
+        ConnectionManagementService.prototype,
+        "refreshAllGetMetas",
+      );
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should call refreshGetMeta if connLabel is provided", async () => {
+      await serverCommand.refreshGetMeta("test");
+
+      sinon.assert.calledOnce(refreshGetMetaStub);
+      sinon.assert.calledWith(refreshGetMetaStub, "test");
+      sinon.assert.notCalled(refreshAllGetMetasStub);
+    });
+
+    it("should call refreshAllGetMetas if connLabel is not provided", async () => {
+      await serverCommand.refreshGetMeta();
+
+      sinon.assert.notCalled(refreshGetMetaStub);
+      sinon.assert.calledOnce(refreshAllGetMetasStub);
+    });
+  });
 });
 
 describe("walkthroughCommand", () => {
