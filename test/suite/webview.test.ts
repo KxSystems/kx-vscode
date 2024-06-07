@@ -479,6 +479,7 @@ describe("KdbNewConnectionView", () => {
         alias: "",
         server: "",
         auth: true,
+        realm: "",
       };
       const data = view["data"];
       assert.deepEqual(data, expectedData);

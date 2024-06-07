@@ -83,6 +83,7 @@ export async function addInsightsConnection(insightsData: InsightDetails) {
           auth: true,
           alias: insightsData.alias,
           server: insightsData.server!,
+          realm: insightsData.realm,
         },
       };
     } else {
@@ -90,6 +91,7 @@ export async function addInsightsConnection(insightsData: InsightDetails) {
         auth: true,
         alias: insightsData.alias,
         server: insightsData.server!,
+        realm: insightsData.realm,
       };
     }
 

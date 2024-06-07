@@ -48,6 +48,7 @@ export class InsightsConnection {
     await getCurrentToken(
       this.node.details.server,
       this.node.details.alias,
+      this.node.details.realm || "insights",
     ).then(async (token) => {
       this.connected = token ? true : false;
       if (token) {
@@ -77,6 +78,7 @@ export class InsightsConnection {
       const token = await getCurrentToken(
         this.node.details.server,
         this.node.details.alias,
+        this.node.details.realm || "insights",
       );
 
       if (token === undefined) {
@@ -108,6 +110,7 @@ export class InsightsConnection {
       const token = await getCurrentToken(
         this.node.details.server,
         this.node.details.alias,
+        this.node.details.realm || "insights",
       );
       if (token === undefined) {
         tokenUndefinedError(this.connLabel);
@@ -213,6 +216,7 @@ export class InsightsConnection {
       const token = await getCurrentToken(
         this.node.details.server,
         this.node.details.alias,
+        this.node.details.realm || "insights",
       );
 
       if (token === undefined) {
@@ -289,6 +293,7 @@ export class InsightsConnection {
       const token = await getCurrentToken(
         this.node.details.server,
         this.node.details.alias,
+        this.node.details.realm || "insights",
       );
       if (token === undefined) {
         tokenUndefinedError(this.connLabel);
@@ -357,6 +362,7 @@ export class InsightsConnection {
       const token = await getCurrentToken(
         this.node.details.server,
         this.node.details.alias,
+        this.node.details.realm || "insights",
       );
 
       if (token === undefined) {

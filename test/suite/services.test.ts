@@ -560,13 +560,13 @@ describe("Code flow login service tests", () => {
 
   it("Should return a correct login", async () => {
     sinon.stub(codeFlow, "signIn").returns(token);
-    const result = await signIn("http://localhost");
+    const result = await signIn("http://localhost", "insights");
     assert.strictEqual(result, token, "Invalid token returned");
   });
 
   it("Should execute a correct logout", async () => {
     sinon.stub(axios, "post").resolves(Promise.resolve({ data: token }));
-    const result = await signOut("http://localhost", "token");
+    const result = await signOut("http://localhost", "insights", "token");
     assert.strictEqual(result, undefined, "Invalid response from logout");
   });
 
@@ -574,6 +574,7 @@ describe("Code flow login service tests", () => {
     sinon.stub(axios, "post").resolves(Promise.resolve({ data: token }));
     const result = await refreshToken(
       "http://localhost",
+      "insights",
       JSON.stringify(token),
     );
     assert.strictEqual(
@@ -584,7 +585,7 @@ describe("Code flow login service tests", () => {
   });
 
   it("Should not return token from secret store", async () => {
-    const result = await getCurrentToken("", "testalias");
+    const result = await getCurrentToken("", "testalias", "insights");
     assert.strictEqual(
       result,
       undefined,
@@ -593,7 +594,7 @@ describe("Code flow login service tests", () => {
   });
 
   it("Should not return token from secret store", async () => {
-    const result = await getCurrentToken("testserver", "");
+    const result = await getCurrentToken("testserver", "", "insights");
     assert.strictEqual(
       result,
       undefined,
@@ -601,9 +602,11 @@ describe("Code flow login service tests", () => {
     );
   });
 
-  it.skip("Should not sign in if link is not opened", async () => {
-    sinon.stub(env, "openExternal").value(async () => false);
-    await assert.rejects(() => signIn("http://127.0.0.1"));
+  it("Should continue sign in if link is copied", async () => {
+    sinon.stub(env, "openExternal").value(async () => {
+      throw new Error();
+    });
+    await assert.rejects(() => signIn("http://127.0.0.1", "insights"));
   });
 });
 
