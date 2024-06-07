@@ -50,6 +50,7 @@ import {
   connect,
   disconnect,
   enableTLS,
+  refreshGetMeta,
   removeConnection,
   rerunQuery,
 } from "./commands/serverCommand";
@@ -251,9 +252,16 @@ export async function activate(context: ExtensionContext) {
         await removeConnection(viewItem);
       },
     ),
-    commands.registerCommand("kdb.refreshServerObjects", () => {
+    commands.registerCommand("kdb.refreshServerObjects", async () => {
       ext.serverProvider.reload();
+      await refreshGetMeta();
     }),
+    commands.registerCommand(
+      "kdb.insights.refreshMeta",
+      async (viewItem: InsightsNode) => {
+        await refreshGetMeta(viewItem.label);
+      },
+    ),
     commands.registerCommand(
       "kdb.queryHistory.rerun",
       (viewItem: QueryHistoryTreeItem) => {

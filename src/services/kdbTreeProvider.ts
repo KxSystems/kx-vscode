@@ -50,7 +50,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
 
   constructor(
     private serverList: Server,
-    private insightList: Insights,
+    private insightsList: Insights,
   ) {}
 
   reload(): void {
@@ -64,7 +64,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   }
 
   refreshInsights(insightsList: Insights): void {
-    this.insightList = insightsList;
+    this.insightsList = insightsList;
     this._onDidChangeTreeData.fire();
   }
 
@@ -83,7 +83,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     if (!this.serverList) {
       return Promise.resolve([]);
     }
-    if (!this.insightList) {
+    if (!this.insightsList) {
       return Promise.resolve([]);
     }
 
@@ -124,7 +124,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private getInsightsChildElements(_element?: InsightsNode): InsightsNode[] {
-    return this.createInsightLeafItems(this.insightList);
+    return this.createInsightLeafItems(this.insightsList);
   }
 
   private async getNamespaces(): Promise<QNamespaceNode[]> {
