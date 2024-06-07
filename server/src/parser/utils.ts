@@ -30,6 +30,8 @@ export const enum SyntaxError {
 export interface Token extends IToken {
   index?: number;
   order?: number;
+  exprs?: number;
+  escaped?: string;
   namespace?: string;
   scope?: Token;
   tangled?: Token;
@@ -135,6 +137,10 @@ export function local(token: Token, tokens: Token[]) {
       inLambda(target) === inLambda(token) &&
       identifier(target) === identifier(token),
   );
+}
+
+export function qualified(token: Token) {
+  return token.image.startsWith(".");
 }
 
 export function ordered(token: Token, next: Token) {
