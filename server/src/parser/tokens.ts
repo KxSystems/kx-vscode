@@ -81,7 +81,12 @@ export const Comparator = createToken({
 
 export const Operator = createToken({
   name: "Operator",
-  pattern: /[\\.,'|^$?!#@&_%*+-]/,
+  pattern: /[\\.,'|^?!#@&_%*+-]/,
+});
+
+export const Cond = createToken({
+  name: "Cond",
+  pattern: /\$/,
 });
 
 export const Colon = createToken({

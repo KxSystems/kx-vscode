@@ -183,16 +183,20 @@
           "match": "[\\\\'/]:"
         },
         {
+          "name": "keyword.operator.arithmetic.q",
+          "match": "(?:<=|>=|<>|[>=<~])"
+        },
+        {
           "name": "punctuation.assignment.q",
           "match": "::"
         },
         {
           "name": "keyword.operator.arithmetic.q",
-          "match": "[\\\\.,'|^$?!#@&_%*+-]"
+          "match": "[\\\\.,'|^?!#@&_%*+-]"
         },
         {
           "name": "keyword.operator.arithmetic.q",
-          "match": "(?:<=|>=|<>|[>=<~])"
+          "match": "\\$"
         },
         {
           "name": "punctuation.assignment.q",
