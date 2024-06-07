@@ -1,0 +1,15 @@
+name: KX VS Code Semantic Release Test
+
+on:
+  push:
+    branches:
+      - test-semantic-release
+
+env:
+  NODE_ENV: production
+
+jobs:
+  release:
+    run: npx semantic-release
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
