@@ -2,6 +2,11 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.5.2
+
+- Local connection listener behaviour fixed (if the connection is closed, the connection will disconnect)
+- Return to show console output if results tab isn't visible in case of query execuion
+
 # v1.5.1
 
 ### Fixes
