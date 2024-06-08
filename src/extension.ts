@@ -17,10 +17,7 @@ import {
   ConfigurationTarget,
   EventEmitter,
   ExtensionContext,
-  Position,
   Range,
-  Selection,
-  TextDocument,
   TextDocumentContentProvider,
   Uri,
   WorkspaceEdit,
@@ -99,7 +96,7 @@ import { createDefaultDataSourceFile } from "./models/dataSource";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { CompletionProvider } from "./services/completionProvider";
 import { QuickFixProvider } from "./services/quickFixProvider";
-import crypto from "crypto";
+import { connectRequestCommands } from "./commands/requestCommands";
 
 let client: LanguageClient;
 
@@ -399,76 +396,6 @@ export async function activate(context: ExtensionContext) {
         await commands.executeCommand("deleteFile");
       }
     }),
-    commands.registerCommand("kdb.execute.block", async () => {
-      if (ext.activeTextEditor) {
-        const range = await commands.executeCommand<Range>(
-          "kdb.qls.expressionRange",
-          ext.activeTextEditor.document,
-          ext.activeTextEditor.selection.active,
-        );
-        if (range) {
-          ext.activeTextEditor.selection = new Selection(
-            range.start,
-            range.end,
-          );
-          await runActiveEditor(ExecutionTypes.QuerySelection);
-        }
-      }
-    }),
-    commands.registerCommand("kdb.toggleParameterCache", async () => {
-      if (ext.activeTextEditor) {
-        const doc = ext.activeTextEditor.document;
-        const res = await commands.executeCommand<{
-          params: string[];
-          start: Position;
-          end: Position;
-        }>(
-          "kdb.qls.parameterCache",
-          doc,
-          ext.activeTextEditor.selection.active,
-        );
-        if (res) {
-          const edit = new WorkspaceEdit();
-          const start = new Position(res.start.line, res.start.character);
-          const end = new Position(res.end.line, res.end.character);
-          const text = doc.getText(new Range(start, end));
-          const match =
-            /\.axdebug\.temp[A-F0-9]{6}.*?\.axdebug\.temp[A-F0-9]{6}\s*;\s*/s.exec(
-              text,
-            );
-          if (match) {
-            const offset = doc.offsetAt(start);
-            edit.delete(
-              doc.uri,
-              new Range(
-                doc.positionAt(offset + match.index),
-                doc.positionAt(offset + match.index + match[0].length),
-              ),
-            );
-          } else {
-            const hash = crypto.randomBytes(3).toString("hex").toUpperCase();
-            const expr1 = `.axdebug.temp${hash}: (${res.params.join(";")});`;
-            const expr2 = `${res.params.map((param) => `\`${param}`).join("")} set' .axdebug.temp${hash};`;
-
-            if (start.line === end.line) {
-              edit.insert(doc.uri, start, " ");
-              edit.insert(doc.uri, start, expr1);
-              edit.insert(doc.uri, start, expr2);
-            } else {
-              const space = ext.activeTextEditor.options.insertSpaces;
-              const count = ext.activeTextEditor.options.indentSize as number;
-              edit.insert(doc.uri, start, "\n");
-              edit.insert(doc.uri, start, space ? " ".repeat(count) : "\t");
-              edit.insert(doc.uri, start, expr1);
-              edit.insert(doc.uri, start, "\n");
-              edit.insert(doc.uri, start, space ? " ".repeat(count) : "\t");
-              edit.insert(doc.uri, start, expr2);
-            }
-          }
-          await workspace.applyEdit(edit);
-        }
-      }
-    }),
 
     DataSourceEditorProvider.register(context),
 
@@ -551,12 +478,7 @@ export async function activate(context: ExtensionContext) {
 
   await client.start();
 
-  context.subscriptions.push(
-    createServerCommand(client, "kdb.qls.expressionRange"),
-  );
-  context.subscriptions.push(
-    createServerCommand(client, "kdb.qls.parameterCache"),
-  );
+  connectRequestCommands(context, client);
 
   Telemetry.sendEvent("Extension.Activated");
   const yamlExtension = extensions.getExtension("redhat.vscode-yaml");
@@ -595,15 +517,4 @@ export async function deactivate(): Promise<void> {
     return undefined;
   }
   return ext.client.stop();
-}
-
-function createServerCommand(client: LanguageClient, cmd: string) {
-  return commands.registerCommand(
-    cmd,
-    (document: TextDocument, position: Position) =>
-      client.sendRequest(cmd, {
-        textDocument: { uri: `${document.uri}` },
-        position: { line: position.line, character: position.character },
-      }),
-  );
 }
