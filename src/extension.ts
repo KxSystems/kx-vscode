@@ -96,7 +96,7 @@ import { createDefaultDataSourceFile } from "./models/dataSource";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { CompletionProvider } from "./services/completionProvider";
 import { QuickFixProvider } from "./services/quickFixProvider";
-import { connectRequestCommands } from "./commands/requestCommands";
+import { connectClientCommands } from "./commands/clientCommands";
 
 let client: LanguageClient;
 
@@ -478,7 +478,7 @@ export async function activate(context: ExtensionContext) {
 
   await client.start();
 
-  connectRequestCommands(context, client);
+  connectClientCommands(context, client);
 
   Telemetry.sendEvent("Extension.Activated");
   const yamlExtension = extensions.getExtension("redhat.vscode-yaml");

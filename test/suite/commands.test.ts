@@ -51,7 +51,6 @@ import * as workspaceCommand from "../../src/commands/workspaceCommand";
 import { MetaObject } from "../../src/models/meta";
 import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider";
 import { GetDataError } from "../../src/models/data";
-import { arrayBuffer } from "stream/consumers";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
@@ -2011,6 +2010,38 @@ describe("workspaceCommand", () => {
         "[DATASOURCE] User cancelled the old DS files import.",
         "INFO",
       );
+    });
+  });
+});
+
+describe("clientCommands", () => {
+  afterEach(() => {
+    sinon.restore();
+  });
+  describe("kdb.execute.block", () => {
+    it("should execute current block", async () => {
+      const doc = await vscode.workspace.openTextDocument({
+        language: "q",
+        content: "a:1",
+      });
+      const editor = await window.showTextDocument(doc.uri);
+      sinon
+        .stub(editor.selection, "active")
+        .value(() => new vscode.Position(0, 1));
+      await vscode.commands.executeCommand("kdb.execute.block");
+    });
+  });
+  describe("kdb.toggleParameterCache", () => {
+    it("should toggle parameter cache", async () => {
+      const doc = await vscode.workspace.openTextDocument({
+        language: "q",
+        content: "{[a]}",
+      });
+      const editor = await window.showTextDocument(doc.uri);
+      sinon
+        .stub(editor.selection, "active")
+        .value(() => new vscode.Position(0, 1));
+      await vscode.commands.executeCommand("kdb.toggleParameterCache");
     });
   });
 });

@@ -93,7 +93,7 @@ async function toggleParameterCache(client: LanguageClient) {
   }
 }
 
-export function connectRequestCommands(
+export function connectClientCommands(
   context: ExtensionContext,
   client: LanguageClient,
 ) {

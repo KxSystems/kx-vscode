@@ -97,7 +97,7 @@ export default class QLangServer {
     );
     this.connection.onRequest(
       "kdb.qls.parameterCache",
-      this.parameterCache.bind(this),
+      this.omParameterCache.bind(this),
     );
   }
 
@@ -238,7 +238,7 @@ export default class QLangServer {
     return expressionToRange(tokens, source.exprs);
   }
 
-  public parameterCache({
+  public omParameterCache({
     textDocument,
     position,
   }: TextDocumentPositionParams) {
@@ -267,10 +267,14 @@ export default class QLangServer {
     if (!bracket) {
       return null;
     }
+    const args = params
+      .filter((token) => assigned(token))
+      .map((token) => token.image);
+    if (args.length === 0) {
+      return null;
+    }
     return {
-      params: params
-        .filter((token) => assigned(token))
-        .map((token) => token.image),
+      params: args,
       start: rangeFromToken(bracket).end,
       end: rangeFromToken(curly).start,
     };
