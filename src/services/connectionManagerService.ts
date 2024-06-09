@@ -23,6 +23,7 @@ import {
   getInsights,
   getServerName,
   getServers,
+  kdbOutputLog,
   removeLocalConnectionContext,
   updateInsights,
   updateServers,
@@ -92,8 +93,9 @@ export class ConnectionManagementService {
           return;
         }
         if (conn) {
-          ext.outputChannel.appendLine(
-            `Connection established successfully to: ${connLabel}`,
+          kdbOutputLog(
+            `[CONNECTION] Connection established successfully to: ${connLabel}`,
+            "INFO",
           );
 
           Telemetry.sendEvent("Connection.Connected.QProcess");
@@ -143,19 +145,12 @@ export class ConnectionManagementService {
   public disconnect(connLabel: string): void {
     const connection = this.retrieveConnectedConnection(connLabel);
     const connectionNode = this.retrieveConnection(connLabel);
-    if (!connection) {
+    if (!connection || !connectionNode) {
       return;
     }
-    const isLocal = connection instanceof LocalConnection;
     /* istanbul ignore next */
-    if (isLocal && connectionNode) {
-      connection.getConnection()?.close(() => {
-        this.disconnectBehaviour(connection);
-      });
-    } else {
-      connection.disconnect();
-      this.disconnectBehaviour(connection);
-    }
+    connection.disconnect();
+    this.disconnectBehaviour(connection);
   }
 
   public async removeConnection(
@@ -254,10 +249,9 @@ export class ConnectionManagementService {
       }
     }
     Telemetry.sendEvent("Connection.Disconnected." + connType);
-    ext.outputChannel.appendLine(
-      `[${new Date().toLocaleTimeString()}] Connection disconnected: ${
-        connection.connLabel
-      }`,
+    kdbOutputLog(
+      `[CONNECTION] Connection closed: ${connection.connLabel}`,
+      "INFO",
     );
     ext.serverProvider.reload();
   }

@@ -12,9 +12,9 @@
  */
 
 import * as nodeq from "node-q";
-import { window } from "vscode";
+import { commands, window } from "vscode";
 import { ext } from "../extensionVariables";
-import { delay } from "../utils/core";
+import { delay, kdbOutputLog } from "../utils/core";
 import { convertStringToArray, handleQueryResults } from "../utils/execution";
 import { queryWrapper } from "../utils/queryUtils";
 import { QueryResult, QueryResultType } from "../models/queryResult";
@@ -79,16 +79,19 @@ export class LocalConnection {
         window.showErrorMessage(
           `Connection to server ${this.options.host}:${this.options.port} failed!  Details: ${err?.message}`,
         );
-        ext.outputChannel.appendLine(
+        kdbOutputLog(
           `Connection to server ${this.options.host}:${this.options.port} failed!  Details: ${err?.message}`,
+          "ERROR",
         );
         return;
       }
       conn.addListener("close", () => {
-        ext.outputChannel.appendLine(
-          `Connection stopped from ${this.options.host}:${this.options.port}`,
+        commands.executeCommand("kdb.disconnect", this.connLabel);
+        kdbOutputLog(
+          `Connection closed: ${this.options.host}:${this.options.port}`,
+          "INFO",
         );
-        this.connected = false;
+        ext.outputChannel.show();
       });
 
       if (this.connection && this.connected) {

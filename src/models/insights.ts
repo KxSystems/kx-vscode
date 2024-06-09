@@ -15,6 +15,7 @@ export interface InsightDetails {
   alias: string;
   server: string;
   auth: boolean;
+  realm?: string;
 }
 
 export interface Insights {

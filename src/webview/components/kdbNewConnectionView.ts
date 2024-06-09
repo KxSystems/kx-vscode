@@ -52,6 +52,7 @@ export class KdbNewConnectionView extends LitElement {
       alias: "",
       server: "",
       auth: true,
+      realm: "",
     };
     this.bundledServer = {
       serverName: "127.0.0.1",
@@ -220,6 +221,29 @@ export class KdbNewConnectionView extends LitElement {
         `;
   }
 
+  renderRealm() {
+    return html`
+      <div class="row mt-1">
+        <vscode-text-field
+          class="text-field larger option-title"
+          value="${this.insightsServer.realm}"
+          placeholder="insights"
+          @input="${(event: Event) => {
+            /* istanbul ignore next */
+            const value = (event.target as HTMLSelectElement).value;
+            /* istanbul ignore next */
+            this.insightsServer.realm = value;
+          }}"
+          >Define Realm (optional)</vscode-text-field
+        >
+      </div>
+      <div class="row option-description  option-help">
+        Specify the Keycloak realm for authentication. Use this field to connect
+        to a specific realm as configured on your server.
+      </div>
+    `;
+  }
+
   tabClickAction(tabNumber: number) {
     const config =
       this.tabConfig[tabNumber as keyof typeof this.tabConfig] ||
@@ -379,6 +403,14 @@ export class KdbNewConnectionView extends LitElement {
                     <div class="row">
                       <div class="col gap-0">
                         ${this.renderConnAddress(ServerType.INSIGHTS)}
+                      </div>
+                    </div>
+                    <div class="row">
+                      <div class="col gap-0">
+                      <details>
+                        <summary>Advanced</summary>
+                        ${this.renderRealm()}
+                      </details>  
                       </div>
                     </div>
                   </div>

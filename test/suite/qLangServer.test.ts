@@ -55,6 +55,7 @@ describe("qLangServer", () => {
       onRenameRequest() {},
       onCompletion() {},
       onDidChangeConfiguration() {},
+      onRequest() {},
     });
 
     const params = <InitializeParams>{
@@ -205,6 +206,40 @@ describe("qLangServer", () => {
       const params = createDocument("a:1;b:{[c]d:c+1;d};b");
       const result = server.onCompletion(params);
       assert.strictEqual(result.length, 2);
+    });
+  });
+
+  describe("onExpressionRange", () => {
+    it("should return the range of the expression", () => {
+      const params = createDocument("a:1;");
+      const result = server.onExpressionRange(params);
+      assert.strictEqual(result.start.line, 0);
+      assert.strictEqual(result.start.character, 0);
+      assert.strictEqual(result.end.line, 0);
+      assert.strictEqual(result.end.character, 3);
+    });
+    it("should return the range of the expression", () => {
+      const params = createDocument("a");
+      const result = server.onExpressionRange(params);
+      assert.strictEqual(result.start.line, 0);
+      assert.strictEqual(result.start.character, 0);
+      assert.strictEqual(result.end.line, 0);
+      assert.strictEqual(result.end.character, 1);
+    });
+    it("should return null", () => {
+      const params = createDocument("");
+      const result = server.onExpressionRange(params);
+      assert.strictEqual(result, null);
+    });
+    it("should return null", () => {
+      const params = createDocument(";");
+      const result = server.onExpressionRange(params);
+      assert.strictEqual(result, null);
+    });
+    it("should return null", () => {
+      const params = createDocument("/a:1");
+      const result = server.onExpressionRange(params);
+      assert.strictEqual(result, null);
     });
   });
 });

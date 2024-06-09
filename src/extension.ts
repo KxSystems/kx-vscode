@@ -18,8 +18,9 @@ import {
   ConfigurationTarget,
   EventEmitter,
   ExtensionContext,
-  ProgressLocation,
+  Position,
   Range,
+  Selection,
   TextDocument,
   TextDocumentContentProvider,
   Uri,
@@ -50,6 +51,7 @@ import {
   connect,
   disconnect,
   enableTLS,
+  refreshGetMeta,
   removeConnection,
   rerunQuery,
 } from "./commands/serverCommand";
@@ -75,6 +77,7 @@ import {
   getInsights,
   getServers,
   initializeLocalServers,
+  kdbOutputLog,
 } from "./utils/core";
 import { runQFileTerminal } from "./utils/execution";
 import AuthSettings from "./utils/secretStorage";
@@ -157,7 +160,7 @@ export async function activate(context: ExtensionContext) {
   AuthSettings.init(context);
   ext.secretSettings = AuthSettings.instance;
 
-  ext.outputChannel.appendLine("kdb extension is now active!");
+  kdbOutputLog("kdb extension is now active!", "INFO");
 
   try {
     // check for installed q runtime
@@ -220,8 +223,10 @@ export async function activate(context: ExtensionContext) {
     ),
     commands.registerCommand(
       "kdb.disconnect",
-      async (viewItem: InsightsNode | KdbNode) => {
-        await disconnect(viewItem.label);
+      async (viewItem: InsightsNode | KdbNode | string) => {
+        const connLabel =
+          typeof viewItem === "string" ? viewItem : viewItem.label;
+        await disconnect(connLabel);
       },
     ),
     commands.registerCommand("kdb.addConnection", async () => {
@@ -251,9 +256,16 @@ export async function activate(context: ExtensionContext) {
         await removeConnection(viewItem);
       },
     ),
-    commands.registerCommand("kdb.refreshServerObjects", () => {
+    commands.registerCommand("kdb.refreshServerObjects", async () => {
       ext.serverProvider.reload();
+      await refreshGetMeta();
     }),
+    commands.registerCommand(
+      "kdb.insights.refreshMeta",
+      async (viewItem: InsightsNode) => {
+        await refreshGetMeta(viewItem.label);
+      },
+    ),
     commands.registerCommand(
       "kdb.queryHistory.rerun",
       (viewItem: QueryHistoryTreeItem) => {
@@ -280,6 +292,7 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand(
       "kdb.stopLocalProcess",
       async (viewItem: KdbNode) => {
+        await commands.executeCommand("kdb.disconnect", viewItem);
         await stopLocalProcess(viewItem);
       },
     ),
@@ -434,6 +447,22 @@ export async function activate(context: ExtensionContext) {
         await commands.executeCommand("deleteFile");
       }
     }),
+    commands.registerCommand("kdb.execute.block", async () => {
+      if (ext.activeTextEditor) {
+        const range = await commands.executeCommand<Range>(
+          "kdb.qls.expressionRange",
+          ext.activeTextEditor.document,
+          ext.activeTextEditor.selection.active,
+        );
+        if (range) {
+          ext.activeTextEditor.selection = new Selection(
+            range.start,
+            range.end,
+          );
+          await runActiveEditor(ExecutionTypes.QuerySelection);
+        }
+      }
+    }),
 
     DataSourceEditorProvider.register(context),
 
@@ -517,8 +546,13 @@ export async function activate(context: ExtensionContext) {
   await client.start();
 
   context.subscriptions.push(
-    commands.registerCommand("kdb.parseExpressions", (document: TextDocument) =>
-      client.sendRequest("kdb.parseExpressions", { uri: `${document.uri}` }),
+    commands.registerCommand(
+      "kdb.qls.expressionRange",
+      (document: TextDocument, position: Position) =>
+        client.sendRequest("kdb.qls.expressionRange", {
+          textDocument: { uri: `${document.uri}` },
+          position: { line: position.line, character: position.character },
+        }),
     ),
   );
 
