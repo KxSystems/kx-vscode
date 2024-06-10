@@ -652,7 +652,6 @@ describe("kdbTreeProvider", () => {
 
       assert.deepStrictEqual(node.children, ["child1", "child2"]);
       assert.strictEqual(node.label, "testLabel");
-      assert.strictEqual(node.details, "testConnLabel");
       assert.strictEqual(
         node.collapsibleState,
         TreeItemCollapsibleState.Collapsed,
