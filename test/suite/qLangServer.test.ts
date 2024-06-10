@@ -276,7 +276,7 @@ describe("qLangServer", () => {
   describe("omParameterCache", () => {
     it("should cache paramater", () => {
       const params = createDocument("{[a;b]}");
-      const result = server.omParameterCache(params);
+      const result = server.onParameterCache(params);
       assert.ok(result);
       assert.deepEqual(result.params, ["a", "b"]);
       assert.strictEqual(result.start.line, 0);
@@ -286,7 +286,7 @@ describe("qLangServer", () => {
     });
     it("should cache paramater", () => {
       const params = createDocument("{[a;b]\n }");
-      const result = server.omParameterCache(params);
+      const result = server.onParameterCache(params);
       assert.ok(result);
       assert.deepEqual(result.params, ["a", "b"]);
       assert.strictEqual(result.start.line, 0);
@@ -296,22 +296,22 @@ describe("qLangServer", () => {
     });
     it("should return null", () => {
       const params = createDocument("{[]}");
-      const result = server.omParameterCache(params);
+      const result = server.onParameterCache(params);
       assert.strictEqual(result, null);
     });
     it("should return null", () => {
       const params = createDocument("{}");
-      const result = server.omParameterCache(params);
+      const result = server.onParameterCache(params);
       assert.strictEqual(result, null);
     });
     it("should return null", () => {
       const params = createDocument("a:1;");
-      const result = server.omParameterCache(params);
+      const result = server.onParameterCache(params);
       assert.strictEqual(result, null);
     });
     it("should return null", () => {
       const params = createDocument("");
-      const result = server.omParameterCache(params);
+      const result = server.onParameterCache(params);
       assert.strictEqual(result, null);
     });
   });

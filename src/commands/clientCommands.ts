@@ -97,10 +97,28 @@ export function connectClientCommands(
   context: ExtensionContext,
   client: LanguageClient,
 ) {
+  let mutex = false;
+
   context.subscriptions.push(
-    commands.registerCommand("kdb.execute.block", () => executeBlock(client)),
-    commands.registerCommand("kdb.toggleParameterCache", () =>
-      toggleParameterCache(client),
-    ),
+    commands.registerCommand("kdb.execute.block", async () => {
+      if (!mutex) {
+        mutex = true;
+        try {
+          await executeBlock(client);
+        } finally {
+          mutex = false;
+        }
+      }
+    }),
+    commands.registerCommand("kdb.toggleParameterCache", async () => {
+      if (!mutex) {
+        mutex = true;
+        try {
+          await toggleParameterCache(client);
+        } finally {
+          mutex = false;
+        }
+      }
+    }),
   );
 }
