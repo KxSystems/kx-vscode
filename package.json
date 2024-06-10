@@ -647,7 +647,7 @@
         },
         {
           "command": "kdb.active.connection",
-          "when": "view == kdb-servers && viewItem in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
+          "when": "view == kdb-servers && viewItem in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes) && viewItem not in kdb.connected.active",
           "group": "connection@1"
         },
         {
