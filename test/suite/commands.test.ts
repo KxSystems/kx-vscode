@@ -51,6 +51,8 @@ import * as workspaceCommand from "../../src/commands/workspaceCommand";
 import { MetaObject } from "../../src/models/meta";
 import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider";
 import { GetDataError } from "../../src/models/data";
+import * as clientCommand from "../../src/commands/clientCommands";
+import { LanguageClient } from "vscode-languageclient/node";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
@@ -2014,34 +2016,65 @@ describe("workspaceCommand", () => {
   });
 });
 
-describe.skip("clientCommands", () => {
+describe("clientCommands", () => {
+  const client = sinon.createStubInstance(LanguageClient);
+  let executeBlock;
+  let toggleParameterCache;
+
+  beforeEach(() => {
+    const context = <vscode.ExtensionContext>{ subscriptions: [] };
+    sinon.stub(vscode.commands, "registerCommand").value((a, b) => b);
+    clientCommand.connectClientCommands(context, client);
+    executeBlock = context.subscriptions[0];
+    toggleParameterCache = context.subscriptions[1];
+    ext.activeTextEditor = <vscode.TextEditor>{
+      options: { insertSpaces: true, indentSize: 4 },
+      selection: { active: new vscode.Position(0, 0) },
+      document: {
+        uri: vscode.Uri.file("/tmp/some.q"),
+        getText: () => "",
+      },
+    };
+  });
   afterEach(() => {
     sinon.restore();
+    ext.activeTextEditor = undefined;
   });
-  describe("kdb.execute.block", () => {
+  describe("executeBlock", () => {
     it("should execute current block", async () => {
-      const doc = await vscode.workspace.openTextDocument({
-        language: "q",
-        content: "a:1",
-      });
-      const editor = await window.showTextDocument(doc.uri);
       sinon
-        .stub(editor.selection, "active")
-        .value(() => new vscode.Position(0, 1));
-      await vscode.commands.executeCommand("kdb.execute.block");
+        .stub(client, "sendRequest")
+        .value(async () => new vscode.Range(0, 0, 1, 1));
+      sinon.stub(workspaceCommand, "runActiveEditor").value(() => {});
+      await executeBlock(client);
+      assert.deepEqual(
+        ext.activeTextEditor.selection,
+        new vscode.Selection(0, 0, 1, 1),
+      );
     });
   });
   describe("kdb.toggleParameterCache", () => {
-    it("should toggle parameter cache", async () => {
-      const doc = await vscode.workspace.openTextDocument({
-        language: "q",
-        content: "{[a]}",
-      });
-      const editor = await window.showTextDocument(doc.uri);
-      sinon
-        .stub(editor.selection, "active")
-        .value(() => new vscode.Position(0, 1));
-      await vscode.commands.executeCommand("kdb.toggleParameterCache");
+    it("should add parameter cache for single line functions", async () => {
+      let edit: vscode.WorkspaceEdit;
+      sinon.stub(client, "sendRequest").value(async () => ({
+        params: ["a"],
+        start: new vscode.Position(0, 0),
+        end: new vscode.Position(0, 10),
+      }));
+      sinon.stub(vscode.workspace, "applyEdit").value(async (a) => (edit = a));
+      await toggleParameterCache(client);
+      assert.strictEqual(edit.size, 1);
+    });
+    it("should add parameter cache for multi line functions", async () => {
+      let edit: vscode.WorkspaceEdit;
+      sinon.stub(client, "sendRequest").value(async () => ({
+        params: ["a"],
+        start: new vscode.Position(0, 0),
+        end: new vscode.Position(1, 10),
+      }));
+      sinon.stub(vscode.workspace, "applyEdit").value(async (a) => (edit = a));
+      await toggleParameterCache(client);
+      assert.strictEqual(edit.size, 1);
     });
   });
 });
