@@ -608,7 +608,6 @@ export class InsightsMetaNode extends TreeItem {
     public readonly collapsibleState: TreeItemCollapsibleState,
     public readonly connLabel: string,
   ) {
-    details = connLabel;
     super(label, collapsibleState);
     this.description = this.getDescription();
   }
