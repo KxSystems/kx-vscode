@@ -14,14 +14,10 @@
 import { env } from "node:process";
 import path from "path";
 import {
-  CancellationError,
   ConfigurationTarget,
   EventEmitter,
   ExtensionContext,
-  Position,
   Range,
-  Selection,
-  TextDocument,
   TextDocumentContentProvider,
   Uri,
   WorkspaceEdit,
@@ -100,11 +96,9 @@ import { createDefaultDataSourceFile } from "./models/dataSource";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { CompletionProvider } from "./services/completionProvider";
 import { QuickFixProvider } from "./services/quickFixProvider";
-import { InsightsClient, wrapExpressions } from "./utils/qclient";
+import { connectClientCommands } from "./commands/clientCommands";
 
 let client: LanguageClient;
-
-const connection = new InsightsClient("https://fstc83yi5b.ft1.cld.kx.com/");
 
 export async function activate(context: ExtensionContext) {
   ext.context = context;
@@ -310,53 +304,8 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.runScratchpad", async () => {
       await runActiveEditor();
     }),
-    commands.registerCommand("kdb.execute.selectedQuery", () => {
-      return window
-        .withProgress(
-          {
-            title: "Executing",
-            cancellable: true,
-            location: ProgressLocation.Window,
-          },
-          async (_progress, token) => {
-            if (ext.activeTextEditor) {
-              const exprs = await commands.executeCommand<string[]>(
-                "kdb.parseExpressions",
-                ext.activeTextEditor.document,
-              );
-              const wrapped = wrapExpressions(exprs, true);
-              if (!connection.isConnected) {
-                await connection.login(token);
-                await connection.meta(token);
-                await connection.executeData(token);
-              }
-              const res = await connection.execute(wrapped, token);
-              ext.outputChannel.appendLine(JSON.stringify(res, null, 2));
-            }
-          },
-        )
-        .then(
-          () => {},
-          (err) => {
-            if (err instanceof CancellationError) {
-              // LOG
-            } else {
-              window.showErrorMessage(`${err}`);
-            }
-          },
-        );
-      //   const client = new QClient("localhost", 5002);
-      //   await client.connect();
-      //   try {
-      //     const res = await client.execute(wrapped);
-      //     ext.outputChannel.appendLine(JSON.stringify(res));
-      //   } catch (error) {
-      //     ext.outputChannel.appendLine(`${error}`);
-      //   } finally {
-      //     client.disconnect();
-      //   }
-
-      //await runActiveEditor(ExecutionTypes.QuerySelection);
+    commands.registerCommand("kdb.execute.selectedQuery", async () => {
+      await runActiveEditor(ExecutionTypes.QuerySelection);
     }),
     commands.registerCommand("kdb.execute.fileQuery", async () => {
       await runActiveEditor(ExecutionTypes.QueryFile);
@@ -447,22 +396,6 @@ export async function activate(context: ExtensionContext) {
         await commands.executeCommand("deleteFile");
       }
     }),
-    commands.registerCommand("kdb.execute.block", async () => {
-      if (ext.activeTextEditor) {
-        const range = await commands.executeCommand<Range>(
-          "kdb.qls.expressionRange",
-          ext.activeTextEditor.document,
-          ext.activeTextEditor.selection.active,
-        );
-        if (range) {
-          ext.activeTextEditor.selection = new Selection(
-            range.start,
-            range.end,
-          );
-          await runActiveEditor(ExecutionTypes.QuerySelection);
-        }
-      }
-    }),
 
     DataSourceEditorProvider.register(context),
 
@@ -545,16 +478,7 @@ export async function activate(context: ExtensionContext) {
 
   await client.start();
 
-  context.subscriptions.push(
-    commands.registerCommand(
-      "kdb.qls.expressionRange",
-      (document: TextDocument, position: Position) =>
-        client.sendRequest("kdb.qls.expressionRange", {
-          textDocument: { uri: `${document.uri}` },
-          position: { line: position.line, character: position.character },
-        }),
-    ),
-  );
+  connectClientCommands(context, client);
 
   Telemetry.sendEvent("Extension.Activated");
   const yamlExtension = extensions.getExtension("redhat.vscode-yaml");

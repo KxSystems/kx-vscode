@@ -58,6 +58,7 @@ import {
   EndOfLine,
   SemiColon,
   WhiteSpace,
+  RCurly,
 } from "./parser";
 import { lint } from "./linter";
 
@@ -93,6 +94,17 @@ export default class QLangServer {
     this.connection.onRequest(
       "kdb.qls.expressionRange",
       this.onExpressionRange.bind(this),
+    );
+    this.connection.onRequest(
+      "kdb.qls.parameterCache",
+      this.onParameterCache.bind(this),
+    );
+    this.connection.onRequest(
+      "kdb.qls.parseExpressions",
+      ({ textDocument }: TextDocumentPositionParams) =>
+        this.parse(textDocument)
+          .filter((token) => token.exprs)
+          .map((token) => token.escaped || token.image),
     );
   }
 
@@ -231,6 +243,48 @@ export default class QLangServer {
       return null;
     }
     return expressionToRange(tokens, source.exprs);
+  }
+
+  public onParameterCache({
+    textDocument,
+    position,
+  }: TextDocumentPositionParams) {
+    const tokens = this.parse(textDocument);
+    const source = positionToToken(tokens, position);
+    if (!source) {
+      return null;
+    }
+    const lambda = inLambda(source);
+    if (!lambda) {
+      return null;
+    }
+    const scoped = tokens.filter((token) => inLambda(token) === lambda);
+    if (scoped.length === 0) {
+      return null;
+    }
+    const curly = scoped[scoped.length - 1];
+    if (!curly || curly.tokenType !== RCurly) {
+      return null;
+    }
+    const params = scoped.filter((token) => inParam(token));
+    if (params.length === 0) {
+      return null;
+    }
+    const bracket = params[params.length - 1];
+    if (!bracket) {
+      return null;
+    }
+    const args = params
+      .filter((token) => assigned(token))
+      .map((token) => token.image);
+    if (args.length === 0) {
+      return null;
+    }
+    return {
+      params: args,
+      start: rangeFromToken(bracket).end,
+      end: rangeFromToken(curly).start,
+    };
   }
 
   private parse(textDocument: TextDocumentIdentifier): Token[] {
