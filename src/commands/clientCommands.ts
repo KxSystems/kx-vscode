@@ -12,6 +12,7 @@
  */
 
 import {
+  EndOfLine,
   ExtensionContext,
   Position,
   Range,
@@ -33,7 +34,12 @@ async function executeBlock(client: LanguageClient) {
       position: ext.activeTextEditor.selection.active,
     });
     if (range) {
-      ext.activeTextEditor.selection = new Selection(range.start, range.end);
+      ext.activeTextEditor.selection = new Selection(
+        range.start.line,
+        range.start.character,
+        range.end.line,
+        range.end.character,
+      );
       await runActiveEditor(ExecutionTypes.QuerySelection);
     }
   }
@@ -56,9 +62,7 @@ async function toggleParameterCache(client: LanguageClient) {
       const end = new Position(res.end.line, res.end.character);
       const text = doc.getText(new Range(start, end));
       const match =
-        /\.axdebug\.temp[A-F0-9]{6}.*?\.axdebug\.temp[A-F0-9]{6}\s*;\s*/s.exec(
-          text,
-        );
+        /\.axdebug\.temp([A-F0-9]{6}).*?\.axdebug\.temp\1\s*;\s*/s.exec(text);
       if (match) {
         const offset = doc.offsetAt(start);
         edit.delete(
@@ -80,10 +84,11 @@ async function toggleParameterCache(client: LanguageClient) {
         } else {
           const space = ext.activeTextEditor.options.insertSpaces;
           const count = ext.activeTextEditor.options.indentSize as number;
-          edit.insert(doc.uri, start, "\n");
+          const eol = doc.eol === EndOfLine.CRLF ? "\r\n" : "\n";
+          edit.insert(doc.uri, start, eol);
           edit.insert(doc.uri, start, space ? " ".repeat(count) : "\t");
           edit.insert(doc.uri, start, expr1);
-          edit.insert(doc.uri, start, "\n");
+          edit.insert(doc.uri, start, eol);
           edit.insert(doc.uri, start, space ? " ".repeat(count) : "\t");
           edit.insert(doc.uri, start, expr2);
         }
