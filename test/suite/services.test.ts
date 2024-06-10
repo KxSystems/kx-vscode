@@ -35,6 +35,7 @@ import {
   signOut,
 } from "../../src/services/kdbInsights/codeFlowLogin";
 import {
+  InsightsMetaNode,
   InsightsNode,
   KdbNode,
   KdbTreeProvider,
@@ -69,6 +70,63 @@ describe("kdbTreeProvider", () => {
   let insights: Insights;
   let kdbNode: KdbNode;
   let insightNode: InsightsNode;
+
+  const dummyMeta: MetaObject = {
+    header: {
+      ac: "0",
+      agg: ":127.0.0.1:5070",
+      ai: "",
+      api: ".kxi.getMeta",
+      client: ":127.0.0.1:5050",
+      corr: "CorrHash",
+      http: "json",
+      logCorr: "logCorrHash",
+      protocol: "gw",
+      rc: "0",
+      rcvTS: "2099-05-22T11:06:33.650000000",
+      retryCount: "0",
+      to: "2099-05-22T11:07:33.650000000",
+      userID: "dummyID",
+      userName: "testUser",
+    },
+    payload: {
+      rc: [
+        {
+          api: 3,
+          agg: 1,
+          assembly: 1,
+          schema: 1,
+          rc: "dummy-rc",
+          labels: [{ kxname: "dummy-assembly" }],
+          started: "2023-10-04T17:20:57.659088747",
+        },
+      ],
+      dap: [],
+      api: [],
+      agg: [
+        {
+          aggFn: ".sgagg.aggFnDflt",
+          custom: false,
+          full: true,
+          metadata: {
+            description: "dummy desc.",
+            params: [{ description: "dummy desc." }],
+            return: { description: "dummy desc." },
+            misc: {},
+          },
+          procs: [],
+        },
+      ],
+      assembly: [
+        {
+          assembly: "dummy-assembly",
+          kxname: "dummy-assembly",
+          tbls: ["dummyTbl"],
+        },
+      ],
+      schema: [],
+    },
+  };
 
   beforeEach(() => {
     servers = {
@@ -543,6 +601,90 @@ describe("kdbTreeProvider", () => {
       "servernode1",
       "QServer node creation failed",
     );
+  });
+
+  describe("InsightsMetaNode", () => {
+    it("should initialize fields correctly", () => {
+      const node = new InsightsMetaNode(
+        ["child1", "child2"],
+        "testLabel",
+        "testDetails",
+        TreeItemCollapsibleState.Collapsed,
+        "testConnLabel",
+      );
+
+      assert.deepStrictEqual(node.children, ["child1", "child2"]);
+      assert.strictEqual(node.label, "testLabel");
+      assert.strictEqual(node.details, "testConnLabel");
+      assert.strictEqual(
+        node.collapsibleState,
+        TreeItemCollapsibleState.Collapsed,
+      );
+      assert.strictEqual(node.connLabel, "testConnLabel");
+      assert.strictEqual(node.description, "");
+      assert.strictEqual(node.contextValue, "meta");
+    });
+
+    it("should return empty string from getDescription", () => {
+      const node = new InsightsMetaNode(
+        [],
+        "",
+        "",
+        TreeItemCollapsibleState.None,
+        "",
+      );
+
+      assert.strictEqual(node.getDescription(), "");
+    });
+  });
+
+  describe("getChildren", () => {
+    const kdbProvider = new KdbTreeProvider(servers, insights);
+    insights = {
+      testInsight: {
+        alias: "testInsightsAlias",
+        server: "testInsightsName",
+        auth: false,
+      },
+    };
+    insightNode = new InsightsNode(
+      ["child1"],
+      "testInsight",
+      insights["testInsight"],
+      TreeItemCollapsibleState.None,
+    );
+    insightNode.contextValue = "testInsight";
+
+    afterEach(() => {
+      ext.kdbinsightsNodes.length = 0;
+      sinon.restore();
+    });
+
+    it("Should return categories for insights connection", async () => {
+      ext.kdbinsightsNodes.push("testInsight");
+      kdbProvider.getChildren(insightNode);
+      const result = await kdbProvider.getChildren(insightNode);
+      assert.notStrictEqual(result, undefined);
+    });
+
+    it("should return metaObjects for parent", async () => {
+      const connMng = new ConnectionManagementService();
+      const metaNode = new InsightsMetaNode(
+        [],
+        "testMeta",
+        "",
+        TreeItemCollapsibleState.None,
+        "insightsConn",
+      );
+      const insightsConn = new InsightsConnection(
+        insightNode.label,
+        insightNode,
+      );
+      sinon.stub(connMng, "retrieveConnectedConnection").returns(insightsConn);
+      insightsConn.meta = dummyMeta;
+      const result = await kdbProvider.getChildren(metaNode);
+      assert.notStrictEqual(result, undefined);
+    });
   });
 });
 
