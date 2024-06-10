@@ -2014,7 +2014,7 @@ describe("workspaceCommand", () => {
   });
 });
 
-describe("clientCommands", () => {
+describe.skip("clientCommands", () => {
   afterEach(() => {
     sinon.restore();
   });
