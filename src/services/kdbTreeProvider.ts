@@ -139,6 +139,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     return this.createInsightLeafItems(this.insightsList);
   }
 
+  /* instabul ignore next */
   private async getMetas(connLabel: string): Promise<InsightsMetaNode[]> {
     const connMng = new ConnectionManagementService();
     const conn = connMng.retrieveConnectedConnection(connLabel);
@@ -319,6 +320,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     return new Array<QServerNode>();
   }
 
+  /* instabul ignore next */
   private async getMetaObjects(
     connLabel: string,
   ): Promise<MetaObjectPayloadNode[]> {

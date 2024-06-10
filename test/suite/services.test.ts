@@ -39,6 +39,7 @@ import {
   InsightsNode,
   KdbNode,
   KdbTreeProvider,
+  MetaObjectPayloadNode,
   QCategoryNode,
   QNamespaceNode,
   QServerNode,
@@ -635,6 +636,30 @@ describe("kdbTreeProvider", () => {
       );
 
       assert.strictEqual(node.getDescription(), "");
+    });
+  });
+
+  describe("MetaObjectPayloadNode", () => {
+    it("should initialize fields correctly", () => {
+      const node = new MetaObjectPayloadNode(
+        ["child1", "child2"],
+        "testLabel",
+        "testDetails",
+        TreeItemCollapsibleState.Collapsed,
+        "testIcon",
+        "testConnLabel",
+      );
+
+      assert.deepStrictEqual(node.children, ["child1", "child2"]);
+      assert.strictEqual(node.label, "testLabel");
+      assert.strictEqual(node.details, "testConnLabel");
+      assert.strictEqual(
+        node.collapsibleState,
+        TreeItemCollapsibleState.Collapsed,
+      );
+      assert.strictEqual(node.coreIcon, "testIcon");
+      assert.strictEqual(node.connLabel, "testConnLabel");
+      assert.strictEqual(node.description, "");
     });
   });
 
