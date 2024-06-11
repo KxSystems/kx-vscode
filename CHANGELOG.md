@@ -13,7 +13,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 ### Fixes
 
 - Disconnect when q process is stopped
-- Fix query execution on KDB+ connections no refreshing completion items
+- Fix query execution on KDB+ connections not refreshing completion items
 
 ### Internal Improvements
 
