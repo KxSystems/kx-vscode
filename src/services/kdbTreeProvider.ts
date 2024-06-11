@@ -78,6 +78,16 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     ) {
       ext.isBundleQCreated = true;
     }
+    if (
+      element instanceof InsightsMetaNode ||
+      element instanceof MetaObjectPayloadNode
+    ) {
+      element.command = {
+        command: "kdb.open.meta",
+        title: "Open Meta Object",
+        arguments: [element],
+      };
+    }
     return element;
   }
 

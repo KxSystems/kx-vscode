@@ -11,6 +11,15 @@
  * specific language governing permissions and limitations under the License.
  */
 
+export enum MetaInfoType {
+  META = "meta",
+  SCHEMA = "schema",
+  API = "api",
+  AGG = "agg",
+  DAP = "dap",
+  RC = "rc",
+}
+
 export type MetaRC = {
   rc: string;
   labels: {
