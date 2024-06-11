@@ -264,7 +264,7 @@ For any file with a **.q** or **.py** extension there are additional options ava
 
 - **Execute current selection** - Takes the current selection (or current line if nothing is selected) and executes it against the active connection. Results are displayed in the [Output window and/or the KDB Results window](#view-results).
 
-- **Execute current block** - Selects the q expression under cursor and executes it against the active connection. Results are displayed in the [Output window and/or the KDB Results window](#view-results).
+- **Execute current block** - Selects the q expression under the cursor and executes it against the active connection. Results are displayed in the [Output window and/or the KDB Results window](#view-results).
 
 - **Run q file in new q instance** - If q is installed and executable from the terminal you can execute an entire q script on a newly launched q instance. Executing a file on a new instance is done in the terminal, and allows interrogation of the active q process from the terminal window.
 
@@ -361,15 +361,13 @@ To create a Workbook and run code against a specific connection:
       1. Click **Run** from above the first line of code in the workbook file.
          ![workbook links](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookrunlink.png?raw=true)
 
-      1. Select **Run** from the upper right of the editor. Using the dropdown next to the button you can choose to **KX: Execute Entire File** or **KX Execute Current Selection**.
+      1. Select **Run** from the upper right of the editor. Using the dropdown next to the button you can choose any of the [**KX:** menu items](#kdb-process-executing-q-and-python-code) to run some, or all of the code in the workbook.
          ![play dropdown](https://github.com/KxSystems/kx-vscode/blob/main/img/wortkbookplaydropdown.png?raw=true)
 
       1. Click **Run** on the right-hand side of the status bar.
          ![status bar run ](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookstatusbarrun.png?raw=true)
 
       1. Right-click and choose **KX: Execute Entire File** from the menu.
-
-   1. If you wish to only run the current selection (or current line if nothing is selected), right-click and choose **KX: Execute Current Selection** from the menu.
 
 1. If you have not yet chosen a connection to associate with the workbook you are asked to choose a connection before the code is executed.
    ![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookconnectionlink.png?raw=true)
