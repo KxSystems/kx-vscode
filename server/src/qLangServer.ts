@@ -100,6 +100,10 @@ export default class QLangServer {
       this.onParameterCache.bind(this),
     );
     this.connection.onRequest(
+      "kdb.qls.parameterCache",
+      this.onParameterCache.bind(this),
+    );
+    this.connection.onRequest(
       "kdb.qls.parseExpressions",
       ({ textDocument }: TextDocumentPositionParams) =>
         this.parse(textDocument)

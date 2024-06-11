@@ -385,6 +385,11 @@
         "command": "kdb.execute.block",
         "title": "KX: Execute Current q Block",
         "icon": "$(run-above)"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.toggleParameterCache",
+        "title": "KX: Toggle parameter cache"
       }
     ],
     "keybindings": [
@@ -421,6 +426,12 @@
         "command": "kdb.execute.block",
         "key": "ctrl+shift+e",
         "mac": "cmd+shift+e",
+        "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
+      },
+      {
+        "command": "kdb.toggleParameterCache",
+        "key": "ctrl+shift+y",
+        "mac": "cmd+shift+y",
         "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
       }
     ],
@@ -647,7 +658,7 @@
         },
         {
           "command": "kdb.active.connection",
-          "when": "view == kdb-servers && viewItem in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
+          "when": "view == kdb-servers && viewItem in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes) && viewItem not in kdb.connected.active",
           "group": "connection@1"
         },
         {
