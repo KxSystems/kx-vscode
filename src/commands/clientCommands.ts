@@ -62,7 +62,7 @@ async function toggleParameterCache(client: LanguageClient) {
       const end = new Position(res.end.line, res.end.character);
       const text = doc.getText(new Range(start, end));
       const match =
-        /\.axdebug\.temp([A-F0-9]{6}).*?\.axdebug\.temp\1\s*;\s*/s.exec(text);
+        /\s*\.axdebug\.temp([A-F0-9]{6}).*?\.axdebug\.temp\1\s*;/s.exec(text);
       if (match) {
         const offset = doc.offsetAt(start);
         edit.delete(
@@ -74,23 +74,27 @@ async function toggleParameterCache(client: LanguageClient) {
         );
       } else {
         const hash = crypto.randomBytes(3).toString("hex").toUpperCase();
-        const expr1 = `.axdebug.temp${hash}: (${res.params.join(";")});`;
-        const expr2 = `${res.params.map((param) => `\`${param}`).join("")} set' .axdebug.temp${hash};`;
+        const expr1 = `.axdebug.temp${hash}: ${res.params.length === 1 ? res.params[0] : `(${res.params.join(";")})`};`;
+        const expr2 = `${res.params.map((param) => `\`${param}`).join("")} set${res.params.length === 1 ? "" : "'"} .axdebug.temp${hash};`;
 
         if (start.line === end.line) {
           edit.insert(doc.uri, start, " ");
           edit.insert(doc.uri, start, expr1);
           edit.insert(doc.uri, start, expr2);
         } else {
-          const space = ext.activeTextEditor.options.insertSpaces;
-          const count = ext.activeTextEditor.options.indentSize as number;
-          const eol = doc.eol === EndOfLine.CRLF ? "\r\n" : "\n";
-          edit.insert(doc.uri, start, eol);
-          edit.insert(doc.uri, start, space ? " ".repeat(count) : "\t");
-          edit.insert(doc.uri, start, expr1);
-          edit.insert(doc.uri, start, eol);
-          edit.insert(doc.uri, start, space ? " ".repeat(count) : "\t");
-          edit.insert(doc.uri, start, expr2);
+          const line = doc.getText(
+            new Range(end.line, 0, end.line, end.character),
+          );
+          const match = /^[ \t]*/.exec(line);
+          if (match) {
+            const eol = doc.eol === EndOfLine.CRLF ? "\r\n" : "\n";
+            edit.insert(doc.uri, start, eol);
+            edit.insert(doc.uri, start, match[0]);
+            edit.insert(doc.uri, start, expr1);
+            edit.insert(doc.uri, start, eol);
+            edit.insert(doc.uri, start, match[0]);
+            edit.insert(doc.uri, start, expr2);
+          }
         }
       }
       await workspace.applyEdit(edit);
