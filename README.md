@@ -264,6 +264,8 @@ For any file with a **.q** or **.py** extension there are additional options ava
 
 - **Execute current selection** - Takes the current selection (or current line if nothing is selected) and executes it against the active connection. Results are displayed in the [Output window and/or the KDB Results window](#view-results).
 
+- **Execute current block** - Selects the q expression under cursor and executes it against the active connection. Results are displayed in the [Output window and/or the KDB Results window](#view-results).
+
 - **Run q file in new q instance** - If q is installed and executable from the terminal you can execute an entire q script on a newly launched q instance. Executing a file on a new instance is done in the terminal, and allows interrogation of the active q process from the terminal window.
 
 ### Insights query execution
@@ -506,22 +508,26 @@ To update kdb VS Code settings, search for **kdb** from _Preferences_ > _Setting
 
 ### For Windows
 
-| Key                | Action                       |
-| ------------------ | ---------------------------- |
-| F12                | Go to definition             |
-| Shift + F12        | Go to references             |
-| Ctrl + Shift + F12 | Find all references          |
-| Ctrl + D           | Execute current selection    |
-| Ctrl + Shift + D   | Execute entire file          |
-| Ctrl + Shift + R   | Run q file in new q instance |
+| Key                | Action                            |
+| ------------------ | --------------------------------- |
+| F12                | Go to definition                  |
+| Shift + F12        | Go to references                  |
+| Ctrl + Shift + F12 | Find all references               |
+| Ctrl + D           | Execute current selection         |
+| Ctrl + Shift + E   | Execute current block             |
+| Ctrl + Shift + D   | Execute entire file               |
+| Ctrl + Shift + R   | Run q file in new q instance      |
+| Ctrl + Shift + Y   | Toggle paramater cache for lambda |
 
 ### For MacOS
 
-| Key             | Action                       |
-| --------------- | ---------------------------- |
-| F12             | Go to definition             |
-| Shift + F12     | Go to references             |
-| ⌘ + Shift + F12 | Find all references          |
-| ⌘ + D           | Execute current selection    |
-| ⌘ + Shift + D   | Execute entire file          |
-| ⌘ + Shift + R   | Run q file in new q instance |
+| Key             | Action                            |
+| --------------- | --------------------------------- |
+| F12             | Go to definition                  |
+| Shift + F12     | Go to references                  |
+| ⌘ + Shift + F12 | Find all references               |
+| ⌘ + D           | Execute current selection         |
+| ⌘ + Shift + E   | Execute current block             |
+| ⌘ + Shift + D   | Execute entire file               |
+| ⌘ + Shift + R   | Run q file in new q instance      |
+| ⌘ + Shift + Y   | Toggle paramater cache for lambda |
