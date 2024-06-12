@@ -47,6 +47,7 @@ import {
   connect,
   disconnect,
   enableTLS,
+  openMeta,
   refreshGetMeta,
   removeConnection,
   rerunQuery,
@@ -58,9 +59,11 @@ import { InsightDetails, Insights } from "./models/insights";
 import { QueryResult } from "./models/queryResult";
 import { Server, ServerDetails } from "./models/server";
 import {
+  InsightsMetaNode,
   InsightsNode,
   KdbNode,
   KdbTreeProvider,
+  MetaObjectPayloadNode,
 } from "./services/kdbTreeProvider";
 import {
   QueryHistoryProvider,
@@ -221,6 +224,12 @@ export async function activate(context: ExtensionContext) {
         const connLabel =
           typeof viewItem === "string" ? viewItem : viewItem.label;
         await disconnect(connLabel);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.open.meta",
+      async (viewItem: InsightsMetaNode | MetaObjectPayloadNode) => {
+        await openMeta(viewItem);
       },
     ),
     commands.registerCommand("kdb.addConnection", async () => {

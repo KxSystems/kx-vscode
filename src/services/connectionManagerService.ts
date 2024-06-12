@@ -31,6 +31,7 @@ import {
 import { Insights } from "../models/insights";
 import { Server } from "../models/server";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
+import { MetaInfoType } from "../models/meta";
 
 export class ConnectionManagementService {
   public retrieveConnection(
@@ -339,5 +340,40 @@ export class ConnectionManagementService {
     if (connection instanceof InsightsConnection) {
       await connection.getMeta();
     }
+  }
+
+  public getMetaInfoType(value: string): MetaInfoType | undefined {
+    return MetaInfoType[value as keyof typeof MetaInfoType];
+  }
+
+  public retrieveMetaContent(
+    connLabel: string,
+    metaTypeString: string,
+  ): string {
+    const metaType = this.getMetaInfoType(metaTypeString.toUpperCase());
+    if (!metaType) {
+      kdbOutputLog(
+        "[META] The meta info type that you try to open is not valid",
+        "ERROR",
+      );
+      return "";
+    }
+    const connection = this.retrieveConnectedConnection(connLabel);
+    if (!connection) {
+      kdbOutputLog(
+        "[META] The connection that you try to open meta info is not connected",
+        "ERROR",
+      );
+      return "";
+    }
+    if (connection instanceof LocalConnection) {
+      kdbOutputLog(
+        "[META] The connection that you try to open meta info is not an Insights connection",
+        "ERROR",
+      );
+      return "";
+    }
+
+    return connection.returnMetaObject(metaType);
   }
 }

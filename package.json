@@ -280,6 +280,11 @@
       },
       {
         "category": "KX",
+        "command": "kdb.open.meta",
+        "title": "Open meta object"
+      },
+      {
+        "category": "KX",
         "command": "kdb.addAuthentication",
         "title": "Add Authentication",
         "position": "end"
@@ -562,6 +567,10 @@
         },
         {
           "command": "kdb.connect",
+          "when": "false"
+        },
+        {
+          "command": "kdb.open.meta",
           "when": "false"
         },
         {
