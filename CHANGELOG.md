@@ -8,6 +8,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 - Display meta data for Insights connections
 - Added option to click at meta data and open in json format the meta data
+- Ability to change the name of the Keycloak realm, used for authentication, from the default value of `insights`. This enables the connection to a kdb Insights Enterprise Free trial instance.
 - Improve the console log quality to "kdb"output pane
 - Insights free trial instances are supported
 - Added execute block command for q code
