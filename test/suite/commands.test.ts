@@ -15,7 +15,6 @@ import assert from "assert";
 import mock from "mock-fs";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { TreeItemCollapsibleState, window } from "vscode";
 import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
 import * as installTools from "../../src/commands/installTools";
 import * as serverCommand from "../../src/commands/serverCommand";
@@ -34,6 +33,7 @@ import {
   InsightsNode,
   KdbNode,
   KdbTreeProvider,
+  MetaObjectPayloadNode,
 } from "../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as coreUtils from "../../src/utils/core";
@@ -53,6 +53,7 @@ import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider"
 import { GetDataError } from "../../src/models/data";
 import * as clientCommand from "../../src/commands/clientCommands";
 import { LanguageClient } from "vscode-languageclient/node";
+import { MetaContentProvider } from "../../src/services/metaContentProvider";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
@@ -91,7 +92,7 @@ describe("dataSourceCommand2", () => {
       alias: "insightsserveralias",
       auth: true,
     },
-    TreeItemCollapsibleState.None,
+    vscode.TreeItemCollapsibleState.None,
   );
   const insightsConn = new InsightsConnection(insightsNode.label, insightsNode);
   const uriTest: vscode.Uri = vscode.Uri.parse("test");
@@ -910,14 +911,14 @@ describe("serverCommand", () => {
       alias: "insightsserveralias",
       auth: true,
     },
-    TreeItemCollapsibleState.None,
+    vscode.TreeItemCollapsibleState.None,
   );
 
   const kdbNode = new KdbNode(
     ["child1"],
     "testElement",
     servers["testServer"],
-    TreeItemCollapsibleState.None,
+    vscode.TreeItemCollapsibleState.None,
   );
   const insights = {
     testInsight: {
@@ -1821,6 +1822,57 @@ describe("serverCommand", () => {
       sinon.assert.calledOnce(refreshAllGetMetasStub);
     });
   });
+
+  describe("openMeta", () => {
+    let sandbox: sinon.SinonSandbox;
+    const node = new MetaObjectPayloadNode(
+      [],
+      "meta",
+      "",
+      vscode.TreeItemCollapsibleState.None,
+      "meta",
+      "connLabel",
+    );
+    const connService = new ConnectionManagementService();
+
+    beforeEach(() => {
+      sandbox = sinon.createSandbox();
+      sandbox.spy(vscode.workspace, "registerTextDocumentContentProvider");
+      sandbox.spy(vscode.workspace, "openTextDocument");
+      sandbox.spy(vscode.window, "showTextDocument");
+    });
+
+    afterEach(() => {
+      sandbox.restore();
+      sinon.restore();
+    });
+
+    it("should call functions once for valid meta content", async () => {
+      sinon
+        .stub(ConnectionManagementService.prototype, "retrieveMetaContent")
+        .returns('{"test": []}');
+      await serverCommand.openMeta(node);
+      sinon.assert.calledOnce(
+        vscode.workspace.registerTextDocumentContentProvider as sinon.SinonSpy,
+      );
+      sinon.assert.calledOnce(
+        vscode.workspace.openTextDocument as sinon.SinonSpy,
+      );
+      sinon.assert.calledOnce(vscode.window.showTextDocument as sinon.SinonSpy);
+    });
+
+    it("should not call some functions for invalid meta content", async () => {
+      sinon.stub(connService, "retrieveMetaContent").returns("");
+      await serverCommand.openMeta(node);
+      sinon.assert.calledOnce(
+        vscode.workspace.registerTextDocumentContentProvider as sinon.SinonSpy,
+      );
+      sinon.assert.notCalled(
+        vscode.workspace.openTextDocument as sinon.SinonSpy,
+      );
+      sinon.assert.notCalled(vscode.window.showTextDocument as sinon.SinonSpy);
+    });
+  });
 });
 
 describe("walkthroughCommand", () => {
@@ -1901,14 +1953,14 @@ describe("workspaceCommand", () => {
   });
   describe("pickConnection", () => {
     it("should pick from available servers", async () => {
-      sinon.stub(window, "showQuickPick").value(async () => "test");
+      sinon.stub(vscode.window, "showQuickPick").value(async () => "test");
       const result = await workspaceCommand.pickConnection(
         vscode.Uri.file("test.kdb.q"),
       );
       assert.strictEqual(result, "test");
     });
     it("should return undefined from (none)", async () => {
-      sinon.stub(window, "showQuickPick").value(async () => "(none)");
+      sinon.stub(vscode.window, "showQuickPick").value(async () => "(none)");
       const result = await workspaceCommand.pickConnection(
         vscode.Uri.file("test.kdb.q"),
       );

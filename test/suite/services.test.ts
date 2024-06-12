@@ -60,74 +60,75 @@ import {
 } from "../../src/services/workspaceTreeProvider";
 import Path from "path";
 import * as utils from "../../src/utils/getUri";
-import { MetaObject } from "../../src/models/meta";
+import { MetaInfoType, MetaObject } from "../../src/models/meta";
 import { CompletionProvider } from "../../src/services/completionProvider";
+import { MetaContentProvider } from "../../src/services/metaContentProvider";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
+
+const dummyMeta: MetaObject = {
+  header: {
+    ac: "0",
+    agg: ":127.0.0.1:5070",
+    ai: "",
+    api: ".kxi.getMeta",
+    client: ":127.0.0.1:5050",
+    corr: "CorrHash",
+    http: "json",
+    logCorr: "logCorrHash",
+    protocol: "gw",
+    rc: "0",
+    rcvTS: "2099-05-22T11:06:33.650000000",
+    retryCount: "0",
+    to: "2099-05-22T11:07:33.650000000",
+    userID: "dummyID",
+    userName: "testUser",
+  },
+  payload: {
+    rc: [
+      {
+        api: 3,
+        agg: 1,
+        assembly: 1,
+        schema: 1,
+        rc: "dummy-rc",
+        labels: [{ kxname: "dummy-assembly" }],
+        started: "2023-10-04T17:20:57.659088747",
+      },
+    ],
+    dap: [],
+    api: [],
+    agg: [
+      {
+        aggFn: ".sgagg.aggFnDflt",
+        custom: false,
+        full: true,
+        metadata: {
+          description: "dummy desc.",
+          params: [{ description: "dummy desc." }],
+          return: { description: "dummy desc." },
+          misc: {},
+        },
+        procs: [],
+      },
+    ],
+    assembly: [
+      {
+        assembly: "dummy-assembly",
+        kxname: "dummy-assembly",
+        tbls: ["dummyTbl"],
+      },
+    ],
+    schema: [],
+  },
+};
 
 describe("kdbTreeProvider", () => {
   let servers: Server;
   let insights: Insights;
   let kdbNode: KdbNode;
   let insightNode: InsightsNode;
-
-  const dummyMeta: MetaObject = {
-    header: {
-      ac: "0",
-      agg: ":127.0.0.1:5070",
-      ai: "",
-      api: ".kxi.getMeta",
-      client: ":127.0.0.1:5050",
-      corr: "CorrHash",
-      http: "json",
-      logCorr: "logCorrHash",
-      protocol: "gw",
-      rc: "0",
-      rcvTS: "2099-05-22T11:06:33.650000000",
-      retryCount: "0",
-      to: "2099-05-22T11:07:33.650000000",
-      userID: "dummyID",
-      userName: "testUser",
-    },
-    payload: {
-      rc: [
-        {
-          api: 3,
-          agg: 1,
-          assembly: 1,
-          schema: 1,
-          rc: "dummy-rc",
-          labels: [{ kxname: "dummy-assembly" }],
-          started: "2023-10-04T17:20:57.659088747",
-        },
-      ],
-      dap: [],
-      api: [],
-      agg: [
-        {
-          aggFn: ".sgagg.aggFnDflt",
-          custom: false,
-          full: true,
-          metadata: {
-            description: "dummy desc.",
-            params: [{ description: "dummy desc." }],
-            return: { description: "dummy desc." },
-            misc: {},
-          },
-          procs: [],
-        },
-      ],
-      assembly: [
-        {
-          assembly: "dummy-assembly",
-          kxname: "dummy-assembly",
-          tbls: ["dummyTbl"],
-        },
-      ],
-      schema: [],
-    },
-  };
 
   beforeEach(() => {
     servers = {
@@ -1253,6 +1254,107 @@ describe("connectionManagerService", () => {
       sinon.assert.calledOnce(getMetaStub);
     });
   });
+
+  describe("getMetaInfoType", () => {
+    it("should return correct MetaInfoType for valid input", () => {
+      assert.strictEqual(
+        connectionManagerService.getMetaInfoType("meta".toUpperCase()),
+        MetaInfoType.META,
+      );
+      assert.strictEqual(
+        connectionManagerService.getMetaInfoType("schema".toUpperCase()),
+        MetaInfoType.SCHEMA,
+      );
+      assert.strictEqual(
+        connectionManagerService.getMetaInfoType("api".toUpperCase()),
+        MetaInfoType.API,
+      );
+      assert.strictEqual(
+        connectionManagerService.getMetaInfoType("agg".toUpperCase()),
+        MetaInfoType.AGG,
+      );
+      assert.strictEqual(
+        connectionManagerService.getMetaInfoType("dap".toUpperCase()),
+        MetaInfoType.DAP,
+      );
+      assert.strictEqual(
+        connectionManagerService.getMetaInfoType("rc".toUpperCase()),
+        MetaInfoType.RC,
+      );
+    });
+
+    it("should return undefined for invalid input", () => {
+      assert.strictEqual(
+        connectionManagerService.getMetaInfoType("invalid"),
+        undefined,
+      );
+    });
+  });
+
+  describe("retrieveMetaContent", () => {
+    let sandbox: sinon.SinonSandbox;
+
+    beforeEach(() => {
+      sandbox = sinon.createSandbox();
+    });
+
+    afterEach(() => {
+      sandbox.restore();
+    });
+
+    it("should return empty string for invalid meta info type", () => {
+      sandbox
+        .stub(connectionManagerService, "getMetaInfoType")
+        .returns(undefined);
+      assert.strictEqual(
+        connectionManagerService.retrieveMetaContent("connLabel", "invalid"),
+        "",
+      );
+    });
+
+    it("should return empty string for not connected connection", () => {
+      sandbox
+        .stub(connectionManagerService, "getMetaInfoType")
+        .returns(MetaInfoType.META);
+      sandbox
+        .stub(connectionManagerService, "retrieveConnectedConnection")
+        .returns(undefined);
+      assert.strictEqual(
+        connectionManagerService.retrieveMetaContent("connLabel", "meta"),
+        "",
+      );
+    });
+
+    it("should return empty string for local connection", () => {
+      sandbox
+        .stub(connectionManagerService, "getMetaInfoType")
+        .returns(MetaInfoType.META);
+      sandbox
+        .stub(connectionManagerService, "retrieveConnectedConnection")
+        .returns(localConn);
+      assert.strictEqual(
+        connectionManagerService.retrieveMetaContent("connLabel", "meta"),
+        "",
+      );
+    });
+
+    it("should return meta object for valid input", () => {
+      insightsConn.meta = dummyMeta;
+      sandbox
+        .stub(connectionManagerService, "getMetaInfoType")
+        .returns(MetaInfoType.META);
+      sandbox
+        .stub(connectionManagerService, "retrieveConnectedConnection")
+        .returns(insightsConn);
+      assert.strictEqual(
+        connectionManagerService.retrieveMetaContent(
+          insightsConn.connLabel,
+          "meta",
+        ),
+        JSON.stringify(dummyMeta.payload),
+      );
+    });
+  });
 });
 
 describe("dataSourceEditorProvider", () => {
@@ -1578,5 +1680,39 @@ describe("CompletionProvider", () => {
     const provider = new CompletionProvider();
     const items = provider.provideCompletionItems();
     assert.ok(items);
+  });
+});
+
+describe("MetaContentProvider", () => {
+  let metaContentProvider: MetaContentProvider;
+  let uri: Uri;
+
+  beforeEach(() => {
+    metaContentProvider = new MetaContentProvider();
+    uri = Uri.parse("foo://example.com");
+  });
+
+  it("should update content and fire onDidChange event", () => {
+    const content = "new content";
+    const spy = sinon.spy();
+
+    metaContentProvider.onDidChange(spy);
+
+    metaContentProvider.update(uri, content);
+
+    assert.strictEqual(
+      metaContentProvider.provideTextDocumentContent(uri),
+      content,
+    );
+    assert(spy.calledOnceWith(uri));
+  });
+
+  it("should provide text document content", () => {
+    const content = "content";
+    metaContentProvider.update(uri, content);
+    assert.strictEqual(
+      metaContentProvider.provideTextDocumentContent(uri),
+      content,
+    );
   });
 });
