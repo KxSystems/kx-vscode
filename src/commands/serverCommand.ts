@@ -602,6 +602,8 @@ export async function openMeta(node: MetaObjectPayloadNode | InsightsMetaNode) {
       preview: false,
       viewColumn: ViewColumn.One,
     });
+  } else {
+    kdbOutputLog("[META] Meta content not found", "ERROR");
   }
 }
 

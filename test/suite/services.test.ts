@@ -62,6 +62,7 @@ import Path from "path";
 import * as utils from "../../src/utils/getUri";
 import { MetaInfoType, MetaObject } from "../../src/models/meta";
 import { CompletionProvider } from "../../src/services/completionProvider";
+import { MetaContentProvider } from "../../src/services/metaContentProvider";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -1679,5 +1680,39 @@ describe("CompletionProvider", () => {
     const provider = new CompletionProvider();
     const items = provider.provideCompletionItems();
     assert.ok(items);
+  });
+});
+
+describe("MetaContentProvider", () => {
+  let metaContentProvider: MetaContentProvider;
+  let uri: Uri;
+
+  beforeEach(() => {
+    metaContentProvider = new MetaContentProvider();
+    uri = Uri.parse("foo://example.com");
+  });
+
+  it("should update content and fire onDidChange event", () => {
+    const content = "new content";
+    const spy = sinon.spy();
+
+    metaContentProvider.onDidChange(spy);
+
+    metaContentProvider.update(uri, content);
+
+    assert.strictEqual(
+      metaContentProvider.provideTextDocumentContent(uri),
+      content,
+    );
+    assert(spy.calledOnceWith(uri));
+  });
+
+  it("should provide text document content", () => {
+    const content = "content";
+    metaContentProvider.update(uri, content);
+    assert.strictEqual(
+      metaContentProvider.provideTextDocumentContent(uri),
+      content,
+    );
   });
 });
