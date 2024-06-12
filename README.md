@@ -332,6 +332,16 @@ To do this:
 
 1. Use a [Workbook](#workbooks) to execute q or Python code against the data in your scratchpad using the variable you provided.
 
+## Meta
+
+The Get Meta data is exposed for **connected Insights** connections.
+
+![Insights Meta Tree](https://github.com/KxSystems/kx-vscode/blob/main/img/insights-meta-tree.png?raw=true)
+
+To open the meta object, just click on it, and a json with the **"[Connection Name] - [META OBJECT]"** as title
+
+![Insights Meta JSON](https://github.com/KxSystems/kx-vscode/blob/main/img/insights-meta-json.png?raw=true)
+
 ## Workbooks
 
 Workbooks provide a convenient way to prototype and execute q and python code against a q process and using the variables [populated into the scratchpad](#populate-scratchpad) of a **kdb Insights Enterprise** deployment by data sources.
@@ -428,6 +438,16 @@ All query executions happen remotely from the **kdb VS Code extension** either a
 q REPL can be started from the command prompt by searching **q REPL**.
 
 ![REPL](https://github.com/KxSystems/kx-vscode/blob/main/img/repl.png?raw=true)
+
+## Logs
+
+Any error or info will be posted at **OUTPUT** in **kdb** tab
+
+![LOG](https://github.com/KxSystems/kx-vscode/blob/main/img/log-sample.png?raw=true)
+
+The format will be:
+
+`[DATE TIME] [INFO or ERROR] Message`
 
 ## Settings
 

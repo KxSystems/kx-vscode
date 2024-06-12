@@ -7,6 +7,8 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 ### Enhancements
 
 - Display meta data for Insights connections
+- Added option to click at meta data and open in json format the meta data
+- Improve the console log quality to "kdb"output pane
 - Insights free trial instances are supported
 - Added execute block command for q code
 - Added hotkey to cache function parameters for q code
