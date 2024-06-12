@@ -390,6 +390,11 @@
         "command": "kdb.execute.block",
         "title": "KX: Execute Current q Block",
         "icon": "$(run-above)"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.toggleParameterCache",
+        "title": "KX: Toggle parameter cache"
       }
     ],
     "keybindings": [
@@ -426,6 +431,12 @@
         "command": "kdb.execute.block",
         "key": "ctrl+shift+e",
         "mac": "cmd+shift+e",
+        "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
+      },
+      {
+        "command": "kdb.toggleParameterCache",
+        "key": "ctrl+shift+y",
+        "mac": "cmd+shift+y",
         "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
       }
     ],
