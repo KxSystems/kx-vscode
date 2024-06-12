@@ -595,35 +595,6 @@ export async function openMeta(node: MetaObjectPayloadNode | InsightsMetaNode) {
   workspace.registerTextDocumentContentProvider("meta", metaContentProvider);
   const connMngService = new ConnectionManagementService();
   const doc = connMngService.retrieveMetaContent(node.connLabel, node.label);
-  // if (doc && doc !== "") {
-  //   const formattedDoc = JSON.stringify(JSON.parse(doc), null, 2);
-  //   const document = await workspace.openTextDocument({
-  //     content: formattedDoc,
-  //     language: "json",
-  //   });
-  //   const editor = await window.showTextDocument(document, {
-  //     preview: false,
-  //     viewColumn: ViewColumn.One,
-  //   });
-  //   await commands.executeCommand(
-  //     "workbench.action.files.saveAs",
-  //     Uri.file(`${node.connLabel} - ${node.label}.json`),
-  //   );
-  // }
-  // if (doc && doc !== "") {
-  //   const formattedDoc = JSON.stringify(JSON.parse(doc), null, 2);
-  //   const tempFilePath = path.join(
-  //     os.tmpdir(),
-  //     `${node.connLabel} - ${node.label}.json`,
-  //   );
-  //   fs.writeFileSync(tempFilePath, formattedDoc);
-  //   const document = await workspace.openTextDocument(tempFilePath);
-  //   const editor = await window.showTextDocument(document, {
-  //     preview: false,
-  //     viewColumn: ViewColumn.One,
-  //   });
-  //   await commands.executeCommand("workbench.action.toggleReadMode");
-  // }
   if (doc && doc !== "") {
     const formattedDoc = JSON.stringify(JSON.parse(doc), null, 2);
     const uri = Uri.parse(`meta:${node.connLabel} - ${node.label}.json`);
