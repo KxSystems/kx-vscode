@@ -12,9 +12,7 @@
  */
 
 import { readFileSync } from "fs-extra";
-import path, { join } from "path";
-import * as fs from "fs";
-import * as os from "os";
+import { join } from "path";
 import * as url from "url";
 import {
   Position,
