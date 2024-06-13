@@ -14,7 +14,15 @@
 import { readFileSync } from "fs-extra";
 import { join } from "path";
 import * as url from "url";
-import { Position, Range, commands, window } from "vscode";
+import {
+  Position,
+  Range,
+  Uri,
+  ViewColumn,
+  commands,
+  window,
+  workspace,
+} from "vscode";
 import { ext } from "../extensionVariables";
 import { DataSourceFiles } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
@@ -24,7 +32,12 @@ import { ScratchpadResult } from "../models/scratchpadResult";
 import { Server, ServerDetails, ServerType } from "../models/server";
 import { ServerObject } from "../models/serverObject";
 import { DataSourcesPanel } from "../panels/datasource";
-import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
+import {
+  InsightsMetaNode,
+  InsightsNode,
+  KdbNode,
+  MetaObjectPayloadNode,
+} from "../services/kdbTreeProvider";
 import {
   addLocalConnectionContexts,
   checkOpenSslInstalled,
@@ -53,6 +66,7 @@ import { NewConnectionPannel } from "../panels/newConnection";
 import { Telemetry } from "../utils/telemetryClient";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
+import { MetaContentProvider } from "../services/metaContentProvider";
 
 export async function addNewConnection(): Promise<void> {
   NewConnectionPannel.render(ext.context.extensionUri);
@@ -313,6 +327,15 @@ export async function resetScratchPad(): Promise<void> {
   await connMngService.resetScratchpad();
 }
 
+export async function refreshGetMeta(connLabel?: string): Promise<void> {
+  const connMngService = new ConnectionManagementService();
+  if (connLabel) {
+    await connMngService.refreshGetMeta(connLabel);
+  } else {
+    await connMngService.refreshAllGetMetas();
+  }
+}
+
 export async function disconnect(connLabel: string): Promise<void> {
   const connMngService = new ConnectionManagementService();
   connMngService.disconnect(connLabel);
@@ -562,6 +585,25 @@ export async function loadServerObjects(): Promise<ServerObject[]> {
     return result3;
   } else {
     return new Array<ServerObject>();
+  }
+}
+
+export async function openMeta(node: MetaObjectPayloadNode | InsightsMetaNode) {
+  const metaContentProvider = new MetaContentProvider();
+  workspace.registerTextDocumentContentProvider("meta", metaContentProvider);
+  const connMngService = new ConnectionManagementService();
+  const doc = connMngService.retrieveMetaContent(node.connLabel, node.label);
+  if (doc && doc !== "") {
+    const formattedDoc = JSON.stringify(JSON.parse(doc), null, 2);
+    const uri = Uri.parse(`meta:${node.connLabel} - ${node.label}.json`);
+    metaContentProvider.update(uri, formattedDoc);
+    const document = await workspace.openTextDocument(uri);
+    await window.showTextDocument(document, {
+      preview: false,
+      viewColumn: ViewColumn.One,
+    });
+  } else {
+    kdbOutputLog("[META] Meta content not found", "ERROR");
   }
 }
 

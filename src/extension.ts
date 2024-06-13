@@ -17,10 +17,7 @@ import {
   ConfigurationTarget,
   EventEmitter,
   ExtensionContext,
-  Position,
   Range,
-  Selection,
-  TextDocument,
   TextDocumentContentProvider,
   Uri,
   WorkspaceEdit,
@@ -50,6 +47,8 @@ import {
   connect,
   disconnect,
   enableTLS,
+  openMeta,
+  refreshGetMeta,
   removeConnection,
   rerunQuery,
 } from "./commands/serverCommand";
@@ -60,9 +59,11 @@ import { InsightDetails, Insights } from "./models/insights";
 import { QueryResult } from "./models/queryResult";
 import { Server, ServerDetails } from "./models/server";
 import {
+  InsightsMetaNode,
   InsightsNode,
   KdbNode,
   KdbTreeProvider,
+  MetaObjectPayloadNode,
 } from "./services/kdbTreeProvider";
 import {
   QueryHistoryProvider,
@@ -98,6 +99,7 @@ import { createDefaultDataSourceFile } from "./models/dataSource";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { CompletionProvider } from "./services/completionProvider";
 import { QuickFixProvider } from "./services/quickFixProvider";
+import { connectClientCommands } from "./commands/clientCommands";
 
 let client: LanguageClient;
 
@@ -224,6 +226,12 @@ export async function activate(context: ExtensionContext) {
         await disconnect(connLabel);
       },
     ),
+    commands.registerCommand(
+      "kdb.open.meta",
+      async (viewItem: InsightsMetaNode | MetaObjectPayloadNode) => {
+        await openMeta(viewItem);
+      },
+    ),
     commands.registerCommand("kdb.addConnection", async () => {
       await addNewConnection();
     }),
@@ -251,9 +259,16 @@ export async function activate(context: ExtensionContext) {
         await removeConnection(viewItem);
       },
     ),
-    commands.registerCommand("kdb.refreshServerObjects", () => {
+    commands.registerCommand("kdb.refreshServerObjects", async () => {
       ext.serverProvider.reload();
+      await refreshGetMeta();
     }),
+    commands.registerCommand(
+      "kdb.insights.refreshMeta",
+      async (viewItem: InsightsNode) => {
+        await refreshGetMeta(viewItem.label);
+      },
+    ),
     commands.registerCommand(
       "kdb.queryHistory.rerun",
       (viewItem: QueryHistoryTreeItem) => {
@@ -390,22 +405,6 @@ export async function activate(context: ExtensionContext) {
         await commands.executeCommand("deleteFile");
       }
     }),
-    commands.registerCommand("kdb.execute.block", async () => {
-      if (ext.activeTextEditor) {
-        const range = await commands.executeCommand<Range>(
-          "kdb.qls.expressionRange",
-          ext.activeTextEditor.document,
-          ext.activeTextEditor.selection.active,
-        );
-        if (range) {
-          ext.activeTextEditor.selection = new Selection(
-            range.start,
-            range.end,
-          );
-          await runActiveEditor(ExecutionTypes.QuerySelection);
-        }
-      }
-    }),
 
     DataSourceEditorProvider.register(context),
 
@@ -488,16 +487,7 @@ export async function activate(context: ExtensionContext) {
 
   await client.start();
 
-  context.subscriptions.push(
-    commands.registerCommand(
-      "kdb.qls.expressionRange",
-      (document: TextDocument, position: Position) =>
-        client.sendRequest("kdb.qls.expressionRange", {
-          textDocument: { uri: `${document.uri}` },
-          position: { line: position.line, character: position.character },
-        }),
-    ),
-  );
+  connectClientCommands(context, client);
 
   Telemetry.sendEvent("Extension.Activated");
   const yamlExtension = extensions.getExtension("redhat.vscode-yaml");

@@ -39,6 +39,8 @@ import {
   getServerName,
   getStatus,
 } from "../utils/core";
+import { ConnectionManagementService } from "./connectionManagerService";
+import { InsightsConnection } from "../classes/insightsConnection";
 
 export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: EventEmitter<
@@ -50,7 +52,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
 
   constructor(
     private serverList: Server,
-    private insightList: Insights,
+    private insightsList: Insights,
   ) {}
 
   reload(): void {
@@ -64,7 +66,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   }
 
   refreshInsights(insightsList: Insights): void {
-    this.insightList = insightsList;
+    this.insightsList = insightsList;
     this._onDidChangeTreeData.fire();
   }
 
@@ -76,6 +78,16 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     ) {
       ext.isBundleQCreated = true;
     }
+    if (
+      element instanceof InsightsMetaNode ||
+      element instanceof MetaObjectPayloadNode
+    ) {
+      element.command = {
+        command: "kdb.open.meta",
+        title: "Open Meta Object",
+        arguments: [element],
+      };
+    }
     return element;
   }
 
@@ -83,7 +95,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     if (!this.serverList) {
       return Promise.resolve([]);
     }
-    if (!this.insightList) {
+    if (!this.insightsList) {
       return Promise.resolve([]);
     }
 
@@ -94,6 +106,11 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
       ext.kdbrootNodes.indexOf(element.contextValue) !== -1
     ) {
       return Promise.resolve(await this.getNamespaces());
+    } else if (
+      element.contextValue !== undefined &&
+      ext.kdbinsightsNodes.indexOf(element.contextValue) !== -1
+    ) {
+      return Promise.resolve(await this.getMetas(element.contextValue));
     } else if (element.contextValue === "ns") {
       return Promise.resolve(
         this.getCategories(
@@ -101,6 +118,11 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
           ext.qObjectCategories,
         ),
       );
+    } else if (
+      element.contextValue === "meta" &&
+      element instanceof InsightsMetaNode
+    ) {
+      return Promise.resolve(this.getMetaObjects(element.connLabel));
     } else {
       return Promise.resolve(this.getServerObjects(element));
     }
@@ -124,7 +146,26 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private getInsightsChildElements(_element?: InsightsNode): InsightsNode[] {
-    return this.createInsightLeafItems(this.insightList);
+    return this.createInsightLeafItems(this.insightsList);
+  }
+
+  /* istanbul ignore next */
+  private async getMetas(connLabel: string): Promise<InsightsMetaNode[]> {
+    const connMng = new ConnectionManagementService();
+    const conn = connMng.retrieveConnectedConnection(connLabel);
+    if (conn) {
+      return [
+        new InsightsMetaNode(
+          [],
+          "meta",
+          "",
+          TreeItemCollapsibleState.Collapsed,
+          connLabel,
+        ),
+      ];
+    } else {
+      return new Array<InsightsMetaNode>();
+    }
   }
 
   private async getNamespaces(): Promise<QNamespaceNode[]> {
@@ -289,6 +330,86 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     return new Array<QServerNode>();
   }
 
+  /* istanbul ignore next */
+  private async getMetaObjects(
+    connLabel: string,
+  ): Promise<MetaObjectPayloadNode[]> {
+    const connMng = new ConnectionManagementService();
+    const conn = connMng.retrieveConnectedConnection(connLabel);
+    const isInsights = conn instanceof InsightsConnection;
+    if (conn && isInsights) {
+      const meta = conn.meta;
+      if (!meta) {
+        return new Array<MetaObjectPayloadNode>();
+      }
+      const objects: MetaObjectPayloadNode[] = [];
+      if (meta.payload.schema) {
+        objects.push(
+          new MetaObjectPayloadNode(
+            [],
+            "schema",
+            "",
+            TreeItemCollapsibleState.None,
+            "schemaicon",
+            connLabel,
+          ),
+        );
+      }
+      if (meta.payload.api) {
+        objects.push(
+          new MetaObjectPayloadNode(
+            [],
+            "api",
+            "",
+            TreeItemCollapsibleState.None,
+            "apiicon",
+            connLabel,
+          ),
+        );
+      }
+      if (meta.payload.dap) {
+        objects.push(
+          new MetaObjectPayloadNode(
+            [],
+            "dap",
+            "",
+            TreeItemCollapsibleState.None,
+            "dapicon",
+            connLabel,
+          ),
+        );
+      }
+      if (meta.payload.rc) {
+        objects.push(
+          new MetaObjectPayloadNode(
+            [],
+            "rc",
+            "",
+            TreeItemCollapsibleState.None,
+            "rcicon",
+            connLabel,
+          ),
+        );
+      }
+      if (meta.payload.agg) {
+        objects.push(
+          new MetaObjectPayloadNode(
+            [],
+            "agg",
+            "",
+            TreeItemCollapsibleState.None,
+            "aggicon",
+            connLabel,
+          ),
+        );
+      }
+
+      return objects;
+    } else {
+      return new Array<MetaObjectPayloadNode>();
+    }
+  }
+
   private createLeafItems(servers: Server): KdbNode[] {
     const keys: string[] = Object.keys(servers);
     return keys.map(
@@ -305,16 +426,21 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   }
 
   private createInsightLeafItems(insights: Insights): InsightsNode[] {
+    const connMng = new ConnectionManagementService();
     const keys: string[] = Object.keys(insights);
-    return keys.map(
-      (x) =>
-        new InsightsNode(
-          [],
-          insights[x].alias,
-          insights[x],
-          TreeItemCollapsibleState.None,
-        ),
-    );
+    return keys.map((x) => {
+      const isConnected = connMng.retrieveConnectedConnection(
+        insights[x].alias,
+      );
+      return new InsightsNode(
+        [],
+        insights[x].alias,
+        insights[x],
+        isConnected
+          ? TreeItemCollapsibleState.Collapsed
+          : TreeItemCollapsibleState.None,
+      );
+    });
   }
 }
 
@@ -328,10 +454,6 @@ export class KdbNode extends TreeItem {
     if (details.serverAlias != "") {
       label = label + ` [${details.serverAlias}]`;
     }
-
-    // if (ext.connectionNode != undefined && label === ext.connectionNode.label) {
-    //   label = label + " (connected)";
-    // }
 
     // set context for root nodes
     if (ext.kdbrootNodes.indexOf(label) === -1) {
@@ -488,6 +610,43 @@ export class InsightsNode extends TreeItem {
   contextValue = this.label; // "root";
 }
 
+export class InsightsMetaNode extends TreeItem {
+  constructor(
+    public readonly children: string[],
+    public readonly label: string,
+    public readonly details: string,
+    public readonly collapsibleState: TreeItemCollapsibleState,
+    public readonly connLabel: string,
+  ) {
+    super(label, collapsibleState);
+    this.description = this.getDescription();
+  }
+
+  getDescription(): string {
+    return "";
+  }
+
+  iconPath = {
+    light: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "metaIcons",
+      "metaicon.svg",
+    ),
+    dark: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "metaIcons",
+      "metaicon.svg",
+    ),
+  };
+  contextValue = "meta";
+}
+
 export class QNamespaceNode extends TreeItem {
   constructor(
     public readonly children: string[],
@@ -555,6 +714,38 @@ export class QCategoryNode extends TreeItem {
     ),
   };
   contextValue = this.ns; // "category";
+}
+
+export class MetaObjectPayloadNode extends TreeItem {
+  constructor(
+    public readonly children: string[],
+    public readonly label: string,
+    public readonly details: string,
+    public readonly collapsibleState: TreeItemCollapsibleState,
+    public readonly coreIcon: string,
+    public readonly connLabel: string,
+  ) {
+    super(label, collapsibleState);
+    this.description = "";
+  }
+  iconPath = {
+    light: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "metaIcons",
+      `${this.coreIcon}.svg`,
+    ),
+    dark: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "metaIcons",
+      `${this.coreIcon}.svg`,
+    ),
+  };
 }
 
 export class QServerNode extends TreeItem {

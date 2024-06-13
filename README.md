@@ -188,6 +188,19 @@ Set the following properties:
 
 ![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsconnection.png?raw=true)
 
+Set the following from the Advanced properties if necessary:
+
+| Property               | Description                                                                                                                |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Define Realm           | Specify the Keycloak realm for authentication. Usually the realm is set to `insights`, which is the default value used by the extension. You only need to change this field if a different realm has been configured on your server.  |
+
+![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsconnectionadvanced.png?raw=true)
+
+
+!!!note "For kdb Insights Enterprise Free Trial instances"
+   The realm is configured as `insights-{URL}` where {URL} is the 10 digit code in the trial URL. For example: if your trial url is https://fstc83yi5b.ft1.cld.kx.com/ the realm should be `insights-fstc83yi5b`.
+
+
 1. Click **Create Connection** and the **kdb Insights Enterprise** connection appears under **CONNECTIONS** in the primary sidebar.
 
 1. Right-click the connection, and click **Connect server**.
@@ -264,6 +277,8 @@ For any file with a **.q** or **.py** extension there are additional options ava
 
 - **Execute current selection** - Takes the current selection (or current line if nothing is selected) and executes it against the active connection. Results are displayed in the [Output window and/or the KDB Results window](#view-results).
 
+- **Execute current block** - Selects the q expression under the cursor and executes it against the active connection. Results are displayed in the [Output window and/or the KDB Results window](#view-results).
+
 - **Run q file in new q instance** - If q is installed and executable from the terminal you can execute an entire q script on a newly launched q instance. Executing a file on a new instance is done in the terminal, and allows interrogation of the active q process from the terminal window.
 
 ### Insights query execution
@@ -330,6 +345,16 @@ To do this:
 
 1. Use a [Workbook](#workbooks) to execute q or Python code against the data in your scratchpad using the variable you provided.
 
+## Meta
+
+The Get Meta data is exposed for **connected Insights** connections.
+
+![Insights Meta Tree](https://github.com/KxSystems/kx-vscode/blob/main/img/insights-meta-tree.png?raw=true)
+
+To open the meta object, just click on it, and a json with the **"[Connection Name] - [META OBJECT]"** as title
+
+![Insights Meta JSON](https://github.com/KxSystems/kx-vscode/blob/main/img/insights-meta-json.png?raw=true)
+
 ## Workbooks
 
 Workbooks provide a convenient way to prototype and execute q and python code against a q process and using the variables [populated into the scratchpad](#populate-scratchpad) of a **kdb Insights Enterprise** deployment by data sources.
@@ -359,15 +384,13 @@ To create a Workbook and run code against a specific connection:
       1. Click **Run** from above the first line of code in the workbook file.
          ![workbook links](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookrunlink.png?raw=true)
 
-      1. Select **Run** from the upper right of the editor. Using the dropdown next to the button you can choose to **KX: Execute Entire File** or **KX Execute Current Selection**.
+      1. Select **Run** from the upper right of the editor. Using the dropdown next to the button you can choose any of the [**KX:** menu items](#kdb-process-executing-q-and-python-code) to run some, or all of the code in the workbook.
          ![play dropdown](https://github.com/KxSystems/kx-vscode/blob/main/img/wortkbookplaydropdown.png?raw=true)
 
       1. Click **Run** on the right-hand side of the status bar.
          ![status bar run ](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookstatusbarrun.png?raw=true)
 
       1. Right-click and choose **KX: Execute Entire File** from the menu.
-
-   1. If you wish to only run the current selection (or current line if nothing is selected), right-click and choose **KX: Execute Current Selection** from the menu.
 
 1. If you have not yet chosen a connection to associate with the workbook you are asked to choose a connection before the code is executed.
    ![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookconnectionlink.png?raw=true)
@@ -428,6 +451,16 @@ All query executions happen remotely from the **kdb VS Code extension** either a
 q REPL can be started from the command prompt by searching **q REPL**.
 
 ![REPL](https://github.com/KxSystems/kx-vscode/blob/main/img/repl.png?raw=true)
+
+## Logs
+
+Any error or info will be posted at **OUTPUT** in **kdb** tab
+
+![LOG](https://github.com/KxSystems/kx-vscode/blob/main/img/log-sample.png?raw=true)
+
+The format will be:
+
+`[DATE TIME] [INFO or ERROR] Message`
 
 ## Settings
 
@@ -506,22 +539,26 @@ To update kdb VS Code settings, search for **kdb** from _Preferences_ > _Setting
 
 ### For Windows
 
-| Key                | Action                       |
-| ------------------ | ---------------------------- |
-| F12                | Go to definition             |
-| Shift + F12        | Go to references             |
-| Ctrl + Shift + F12 | Find all references          |
-| Ctrl + D           | Execute current selection    |
-| Ctrl + Shift + D   | Execute entire file          |
-| Ctrl + Shift + R   | Run q file in new q instance |
+| Key                | Action                            |
+| ------------------ | --------------------------------- |
+| F12                | Go to definition                  |
+| Shift + F12        | Go to references                  |
+| Ctrl + Shift + F12 | Find all references               |
+| Ctrl + D           | Execute current selection         |
+| Ctrl + Shift + E   | Execute current block             |
+| Ctrl + Shift + D   | Execute entire file               |
+| Ctrl + Shift + R   | Run q file in new q instance      |
+| Ctrl + Shift + Y   | Toggle paramater cache for lambda |
 
 ### For MacOS
 
-| Key             | Action                       |
-| --------------- | ---------------------------- |
-| F12             | Go to definition             |
-| Shift + F12     | Go to references             |
-| ⌘ + Shift + F12 | Find all references          |
-| ⌘ + D           | Execute current selection    |
-| ⌘ + Shift + D   | Execute entire file          |
-| ⌘ + Shift + R   | Run q file in new q instance |
+| Key             | Action                            |
+| --------------- | --------------------------------- |
+| F12             | Go to definition                  |
+| Shift + F12     | Go to references                  |
+| ⌘ + Shift + F12 | Find all references               |
+| ⌘ + D           | Execute current selection         |
+| ⌘ + Shift + E   | Execute current block             |
+| ⌘ + Shift + D   | Execute entire file               |
+| ⌘ + Shift + R   | Run q file in new q instance      |
+| ⌘ + Shift + Y   | Toggle paramater cache for lambda |

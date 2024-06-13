@@ -187,6 +187,8 @@ export class LocalConnection {
       await delay(500);
     }
 
+    this.updateGlobal();
+
     if (ext.resultsViewProvider.isVisible() && stringify) {
       if (this.isError) {
         this.isError = false;

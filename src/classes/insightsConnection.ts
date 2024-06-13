@@ -15,7 +15,7 @@ import { ext } from "../extensionVariables";
 import axios, { AxiosRequestConfig } from "axios";
 import { ProgressLocation, window } from "vscode";
 import * as url from "url";
-import { MetaObject, MetaObjectPayload } from "../models/meta";
+import { MetaInfoType, MetaObject, MetaObjectPayload } from "../models/meta";
 import { getCurrentToken } from "../services/kdbInsights/codeFlowLogin";
 import { InsightsNode } from "../services/kdbTreeProvider";
 import { GetDataObjectPayload } from "../models/data";
@@ -423,5 +423,43 @@ export class InsightsConnection {
     } else {
       return false;
     }
+  }
+
+  public returnMetaObject(metaType: MetaInfoType): string {
+    if (!this.meta) {
+      kdbOutputLog(
+        `Meta data is undefined for connection ${this.connLabel}`,
+        "ERROR",
+      );
+      return "";
+    }
+
+    let objectToReturn;
+
+    switch (metaType) {
+      case MetaInfoType.META:
+        objectToReturn = this.meta.payload;
+        break;
+      case MetaInfoType.SCHEMA:
+        objectToReturn = this.meta.payload.schema;
+        break;
+      case MetaInfoType.API:
+        objectToReturn = this.meta.payload.api;
+        break;
+      case MetaInfoType.AGG:
+        objectToReturn = this.meta.payload.agg;
+        break;
+      case MetaInfoType.DAP:
+        objectToReturn = this.meta.payload.dap;
+        break;
+      case MetaInfoType.RC:
+        objectToReturn = this.meta.payload.rc;
+        break;
+      default:
+        kdbOutputLog(`Invalid meta type: ${metaType}`, "ERROR");
+        return "";
+    }
+
+    return JSON.stringify(objectToReturn);
   }
 }
