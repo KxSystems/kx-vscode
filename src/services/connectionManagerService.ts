@@ -95,8 +95,8 @@ export class ConnectionManagementService {
         }
         if (conn) {
           kdbOutputLog(
-            `[CONNECTION] Connection established successfully to: ${connLabel}`,
-            "INFO",
+            `Connection established successfully to: ${connLabel}`,
+            "CONNECTION",
           );
 
           Telemetry.sendEvent("Connection.Connected.QProcess");
@@ -115,6 +115,14 @@ export class ConnectionManagementService {
       await insightsConn.connect();
       if (insightsConn.connected) {
         Telemetry.sendEvent("Connection.Connected.Insights");
+        kdbOutputLog(
+          `Connection established successfully to: ${connLabel}`,
+          "CONNECTION",
+        );
+        kdbOutputLog(
+          `${connLabel} connection insights version: ${insightsConn.insightsVersion}`,
+          "CONNECTION",
+        );
         ext.connectedConnectionList.push(insightsConn);
         this.isConnectedBehaviour(connection);
       } else {
