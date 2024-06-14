@@ -133,6 +133,7 @@ export namespace ext {
     revoke: "auth/realms/insights/protocol/openid-connect/revoke",
     tokenURL: "auth/realms/insights/protocol/openid-connect/token",
     scratchpadURL: "servicebroker/scratchpad/display",
+    configURL: "kxicontroller/config",
   };
 
   export const insightsScratchpadUrls = {
