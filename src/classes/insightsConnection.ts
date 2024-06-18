@@ -30,12 +30,16 @@ import {
   kdbOutputLog,
   tokenUndefinedError,
 } from "../utils/core";
+import { InsightsConfig, InsightsEndpoints } from "../models/config";
 
 export class InsightsConnection {
   public connected: boolean;
   public connLabel: string;
   public node: InsightsNode;
   public meta?: MetaObject;
+  public config?: InsightsConfig;
+  public insightsVersion?: string;
+  public connEndpoints?: InsightsEndpoints;
 
   constructor(connLabel: string, node: InsightsNode) {
     this.connected = false;
@@ -52,6 +56,7 @@ export class InsightsConnection {
     ).then(async (token) => {
       this.connected = token ? true : false;
       if (token) {
+        await this.getConfig();
         await this.getMeta();
       }
     });
@@ -96,6 +101,97 @@ export class InsightsConnection {
       return meta.payload;
     }
     return undefined;
+  }
+
+  public async getConfig() {
+    if (this.connected) {
+      const configUrl = new url.URL(
+        ext.insightsAuthUrls.configURL,
+        this.node.details.server,
+      );
+      const token = await getCurrentToken(
+        this.node.details.server,
+        this.node.details.alias,
+        this.node.details.realm || "insights",
+      );
+
+      if (token === undefined) {
+        tokenUndefinedError(this.connLabel);
+        return undefined;
+      }
+
+      const options = {
+        headers: { Authorization: `Bearer ${token.accessToken}` },
+      };
+
+      const configResponse = await axios.get(configUrl.toString(), options);
+      this.config = configResponse.data;
+      this.getInsightsVersion();
+      this.defineEndpoints();
+    }
+  }
+
+  public getInsightsVersion() {
+    const match = this.config?.version.match(/-\d+(\.\d+){2}(-|$)/);
+    const version = match ? match[0].replace(/-/g, "") : null;
+    if (version) {
+      const [major, minor, _path] = version.split(".");
+      this.insightsVersion = `${major}.${minor}`;
+    }
+  }
+
+  public defineEndpoints() {
+    if (this.insightsVersion) {
+      switch (this.insightsVersion) {
+        case "1.11":
+          this.connEndpoints = {
+            scratchpad: {
+              scratchpad: "scratchpad-manager/api/v1/execute/display",
+              import: "scratchpad-manager/api/v1/execute/import/data",
+              importSql: "scratchpad-manager/api/v1/execute/import/sql",
+              importQsql: "scratchpad-manager/api/v1/execute/import/qsql",
+              reset: "scratchpad-manager/api/v1/execute/reset",
+            },
+            serviceGateway: {
+              meta: "servicegateway/meta",
+              data: "servicegateway/data",
+              sql: "servicegateway/qe/sql",
+              qsql: "servicegateway/qe/qsql",
+            },
+          };
+          break;
+        default:
+          this.connEndpoints = {
+            scratchpad: {
+              scratchpad: "servicebroker/scratchpad/display",
+              import: "servicebroker/scratchpad/import/data",
+              importSql: "servicebroker/scratchpad/import/sql",
+              importQsql: "servicebroker/scratchpad/import/qsql",
+              reset: "servicebroker/scratchpad/reset",
+            },
+            serviceGateway: {
+              meta: "servicegateway/meta",
+              data: "servicegateway/data",
+              sql: "servicegateway/qe/sql",
+              qsql: "servicegateway/qe/qsql",
+            },
+          };
+          break;
+      }
+    }
+  }
+
+  public retrieveEndpoints(
+    parentKey: "scratchpad" | "serviceGateway",
+    childKey: string,
+  ): string | undefined {
+    if (this.connEndpoints) {
+      const parent = this.connEndpoints[parentKey];
+      if (parent) {
+        return parent[childKey as keyof typeof parent];
+      }
+      return undefined;
+    }
   }
 
   public async getDataInsights(
