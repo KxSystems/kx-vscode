@@ -275,7 +275,7 @@ export class InsightsConnection {
     params: DataSourceFiles,
   ): Promise<void> {
     let dsTypeString = "";
-    if (this.connected) {
+    if (this.connected && this.connEndpoints) {
       let queryParams, coreUrl: string;
       switch (params.dataSource.selectedType) {
         case DataSourceTypes.API:
@@ -284,12 +284,12 @@ export class InsightsConnection {
             startTS: params.dataSource.api.startTS,
             endTS: params.dataSource.api.endTS,
           };
-          coreUrl = ext.insightsScratchpadUrls.import;
+          coreUrl = this.connEndpoints.scratchpad.import;
           dsTypeString = "API";
           break;
         case DataSourceTypes.SQL:
           queryParams = { query: params.dataSource.sql.query };
-          coreUrl = ext.insightsScratchpadUrls.importSql;
+          coreUrl = this.connEndpoints.scratchpad.importSql;
           dsTypeString = "SQL";
           break;
         case DataSourceTypes.QSQL:
@@ -300,7 +300,7 @@ export class InsightsConnection {
             target: assemblyParts[1],
             query: params.dataSource.qsql.query,
           };
-          coreUrl = ext.insightsScratchpadUrls.importQsql;
+          coreUrl = this.connEndpoints.scratchpad.importQsql;
           dsTypeString = "QSQL";
           break;
         default:
@@ -372,6 +372,8 @@ export class InsightsConnection {
           return p;
         },
       );
+    } else {
+      this.noConnectionOrEndpoints();
     }
   }
 
@@ -380,10 +382,10 @@ export class InsightsConnection {
     context?: string,
     isPython?: boolean,
   ): Promise<any | undefined> {
-    if (this.connected) {
+    if (this.connected && this.connEndpoints) {
       const isTableView = ext.resultsViewProvider.isVisible();
       const scratchpadURL = new url.URL(
-        ext.insightsAuthUrls.scratchpadURL,
+        this.connEndpoints.scratchpad.scratchpad,
         this.node.details.server,
       );
       const token = await getCurrentToken(
@@ -444,14 +446,16 @@ export class InsightsConnection {
         },
       );
       return spReponse;
+    } else {
+      this.noConnectionOrEndpoints();
     }
     return undefined;
   }
 
   public async resetScratchpad(): Promise<boolean> {
-    if (this.connected) {
+    if (this.connected && this.connEndpoints) {
       const scratchpadURL = new url.URL(
-        ext.insightsScratchpadUrls.reset!,
+        this.connEndpoints.scratchpad.reset,
         this.node.details.server,
       );
 
@@ -517,6 +521,7 @@ export class InsightsConnection {
         },
       );
     } else {
+      this.noConnectionOrEndpoints();
       return false;
     }
   }
@@ -557,5 +562,12 @@ export class InsightsConnection {
     }
 
     return JSON.stringify(objectToReturn);
+  }
+
+  public noConnectionOrEndpoints(): void {
+    kdbOutputLog(
+      `No connection or endpoints defined for ${this.connLabel}`,
+      "ERROR",
+    );
   }
 }
