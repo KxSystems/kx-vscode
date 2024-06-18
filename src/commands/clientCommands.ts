@@ -29,6 +29,7 @@ import { runActiveEditor } from "./workspaceCommand";
 import { ExecutionTypes } from "../models/execution";
 import crypto from "crypto";
 import { InsightsClient, wrapExpressions } from "../utils/qclient";
+import { kdbOutputLog } from "../utils/core";
 
 async function executeBlock(client: LanguageClient) {
   if (ext.activeTextEditor) {
@@ -105,7 +106,9 @@ async function toggleParameterCache(client: LanguageClient) {
   }
 }
 
-const connection = new InsightsClient("https://fstc83yi5b.ft1.cld.kx.com/");
+const connection = new InsightsClient(
+  "https://gui-nightly.aws-pink.kxi-dev.kx.com/",
+);
 
 async function parseExpressions(client: LanguageClient) {
   window.withProgress(
@@ -129,7 +132,7 @@ async function parseExpressions(client: LanguageClient) {
           await connection.executeData(token);
         }
         const res = await connection.execute(wrapped, token);
-        console.log(JSON.stringify(res, null, 2));
+        kdbOutputLog(JSON.stringify(res, null, 2), "INFO");
       }
     },
   );
