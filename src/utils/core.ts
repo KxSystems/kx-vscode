@@ -390,7 +390,7 @@ export async function checkLocalInstall(): Promise<void> {
         ConfigurationTarget.Global,
       );
 
-    //   return;
+    return;
   }
 
   // set custom context that QHOME is not setup to control walkthrough visibility
