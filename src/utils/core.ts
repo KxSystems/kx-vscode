@@ -63,6 +63,26 @@ export function getHash(input: string): string {
   return createHash("sha256").update(input).digest("base64");
 }
 
+export function getKeyForServerName(name: string) {
+  const conf = workspace.getConfiguration("kdb");
+  const servers = conf.get<{ [key: string]: { serverAlias: string } }>(
+    "servers",
+    {},
+  );
+  let result = Object.keys(servers).find(
+    (key) => servers[key].serverAlias === name,
+  );
+  if (result) {
+    return result;
+  }
+  const insgihts = conf.get<{ [key: string]: { alias: string } }>(
+    "insightsEnterpriseConnections",
+    {},
+  );
+  result = Object.keys(insgihts).find((key) => insgihts[key].alias === name);
+  return result || "";
+}
+
 export function initializeLocalServers(servers: Server): void {
   Object.keys(servers!).forEach((server) => {
     if (servers![server].managed === true) {
@@ -370,7 +390,7 @@ export async function checkLocalInstall(): Promise<void> {
         ConfigurationTarget.Global,
       );
 
-    return;
+    //   return;
   }
 
   // set custom context that QHOME is not setup to control walkthrough visibility

@@ -41,6 +41,7 @@ import {
 } from "./commands/installTools";
 import {
   activeConnection,
+  addAuthConnection,
   addInsightsConnection,
   addKdbConnection,
   addNewConnection,
@@ -207,6 +208,25 @@ export async function activate(context: ExtensionContext) {
       "kdb.active.connection",
       async (viewItem: KdbNode) => {
         activeConnection(viewItem);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.addAuthentication",
+      async (viewItem: KdbNode) => {
+        const username = await window.showInputBox({
+          prompt: "Username",
+          title: "Add Authentication",
+        });
+        if (username) {
+          const password = await window.showInputBox({
+            prompt: "Password",
+            title: "Add Authentication",
+            password: true,
+          });
+          if (password) {
+            await addAuthConnection(viewItem.children[0], username, password);
+          }
+        }
       },
     ),
     commands.registerCommand("kdb.enableTLS", async (viewItem: KdbNode) => {
