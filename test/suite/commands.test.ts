@@ -1706,6 +1706,7 @@ describe("serverCommand", () => {
       disconnectStub,
       getServersStub,
       getHashStub,
+      getKeyStub,
       getInsightsStub,
       removeLocalConnectionContextStub,
       updateServersStub,
@@ -1717,6 +1718,7 @@ describe("serverCommand", () => {
       getServersStub = sinon.stub(coreUtils, "getServers");
       getInsightsStub = sinon.stub(coreUtils, "getInsights");
       getHashStub = sinon.stub(coreUtils, "getHash");
+      getKeyStub = sinon.stub(coreUtils, "getKeyForServerName");
       removeLocalConnectionContextStub = sinon.stub(
         coreUtils,
         "removeLocalConnectionContext",
@@ -1735,7 +1737,7 @@ describe("serverCommand", () => {
     it("should remove connection and refresh server provider", async () => {
       indexOfStub.returns(1);
       getServersStub.returns({ testKey: {} });
-      getHashStub.returns("testKey");
+      getKeyStub.returns("testKey");
 
       await serverCommand.removeConnection(kdbNode);
 
@@ -1752,7 +1754,7 @@ describe("serverCommand", () => {
       ext.connectedContextStrings.push(kdbNode.label);
       indexOfStub.returns(1);
       getServersStub.returns({ testKey: {} });
-      getHashStub.returns("testKey");
+      getKeyStub.returns("testKey");
 
       await serverCommand.removeConnection(kdbNode);
       assert.ok(updateServersStub.calledOnce);

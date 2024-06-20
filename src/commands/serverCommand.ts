@@ -41,8 +41,8 @@ import {
 import {
   addLocalConnectionContexts,
   checkOpenSslInstalled,
-  getHash,
   getInsights,
+  getKeyForServerName,
   getServerName,
   getServers,
   kdbOutputLog,
@@ -84,13 +84,16 @@ export async function addInsightsConnection(insightsData: InsightDetails) {
   }
 
   let insights: Insights | undefined = getInsights();
-  if (insights != undefined && insights[getHash(insightsData.server!)]) {
+  if (
+    insights != undefined &&
+    insights[getKeyForServerName(insightsData.alias)]
+  ) {
     await window.showErrorMessage(
       `Insights instance named ${insightsData.alias} already exists.`,
     );
     return;
   } else {
-    const key = getHash(insightsData.server!);
+    const key = insightsData.alias;
     if (insights === undefined) {
       insights = {
         key: {
@@ -214,18 +217,13 @@ export async function addKdbConnection(
 
   if (
     servers != undefined &&
-    servers[getHash(`${kdbData.serverName}:${kdbData.serverPort}`)]
+    servers[getKeyForServerName(kdbData.serverAlias || "")]
   ) {
     await window.showErrorMessage(
-      `Server ${kdbData.serverName}:${kdbData.serverPort} already exists.`,
+      `Server name ${kdbData.serverAlias} already exists.`,
     );
   } else {
-    const key =
-      kdbData.serverAlias != undefined
-        ? getHash(
-            `${kdbData.serverName}${kdbData.serverPort}${kdbData.serverAlias}`,
-          )
-        : getHash(`${kdbData.serverName}${kdbData.serverPort}`);
+    const key = kdbData.serverAlias || "";
     if (servers === undefined) {
       servers = {
         key: {
