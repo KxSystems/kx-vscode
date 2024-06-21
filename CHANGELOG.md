@@ -13,6 +13,8 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Insights free trial instances are supported
 - Added execute block command for q code
 - Added hotkey to cache function parameters for q code
+- Extension now reconigze which version of Insights is connected
+- Extension changes scratchpad endpoints accordly to the Insights versions
 - Allow connection information in user settings to be editable
 - Allow same server address to be used in multiple connections
 
