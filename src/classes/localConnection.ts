@@ -184,7 +184,7 @@ export class LocalConnection {
     );
 
     while (result === undefined || result === null) {
-      await delay(500);
+      await delay(50);
     }
 
     this.updateGlobal();

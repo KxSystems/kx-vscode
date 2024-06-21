@@ -50,7 +50,7 @@ import {
   addLocalConnectionStatus,
   convertBase64License,
   delay,
-  getHash,
+  getKeyForServerName,
   getOsFile,
   getServerName,
   getServers,
@@ -245,7 +245,7 @@ export async function installTools(): Promise<void> {
                 let servers: Server | undefined = getServers();
                 if (
                   servers != undefined &&
-                  servers[getHash(`localhost:${port}`)]
+                  servers[getKeyForServerName("local")]
                 ) {
                   Telemetry.sendEvent(
                     `Server localhost:${port} already exists in configuration store.`,
@@ -254,7 +254,7 @@ export async function installTools(): Promise<void> {
                     `Server localhost:${port} already exists.`,
                   );
                 } else {
-                  const key = getHash(`localhost${port}local`);
+                  const key = "local";
                   if (servers === undefined) {
                     servers = {
                       key: {
@@ -289,7 +289,7 @@ export async function installTools(): Promise<void> {
               }
               await startLocalProcessByServerName(
                 `localhost:${port} [local]`,
-                getHash(`localhost${port}local`),
+                getKeyForServerName("local"),
                 Number(port),
               );
             });

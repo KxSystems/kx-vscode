@@ -19,8 +19,8 @@ import { Telemetry } from "../utils/telemetryClient";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { sanitizeQuery } from "../utils/queryUtils";
 import {
-  getHash,
   getInsights,
+  getKeyForServerName,
   getServerName,
   getServers,
   kdbOutputLog,
@@ -172,7 +172,7 @@ export class ConnectionManagementService {
     }
     if (connNode instanceof InsightsNode) {
       const insights = getInsights();
-      const key = getHash(connNode.details.server);
+      const key = getKeyForServerName(connNode.details.alias);
       if (insights && insights[key]) {
         const uInsights = Object.keys(insights).filter((insight) => {
           return insight !== key;
@@ -189,14 +189,7 @@ export class ConnectionManagementService {
     } else {
       const servers: Server | undefined = getServers();
 
-      const key =
-        connNode.details.serverAlias != ""
-          ? getHash(
-              `${connNode.details.serverName}${connNode.details.serverPort}${connNode.details.serverAlias}`,
-            )
-          : getHash(
-              `${connNode.details.serverName}${connNode.details.serverPort}`,
-            );
+      const key = getKeyForServerName(connNode.details.serverAlias || "");
       if (servers != undefined && servers[key]) {
         const uServers = Object.keys(servers).filter((server) => {
           return server !== key;

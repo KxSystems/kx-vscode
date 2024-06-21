@@ -104,5 +104,7 @@ export function validateTls(input: string | undefined): string | undefined {
 }
 
 export function isAliasInUse(alias: string): boolean {
-  return ext.kdbConnectionAliasList.includes(alias);
+  return !!ext.kdbConnectionAliasList.find(
+    (item) => item.toLowerCase() === alias.toLowerCase(),
+  );
 }
