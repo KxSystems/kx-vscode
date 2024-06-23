@@ -11,72 +11,49 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { TypeBase, TypeNum } from "./typeBase";
+import { TypeNum } from "./typeBase";
 import Vector from "./vector";
 
-export default class QFloat extends Vector {
-  static readonly typeNum = TypeNum.float;
-
+export default class QGuid extends Vector {
   constructor(length: number, offset: number, dataView: DataView) {
-    super(length, offset, TypeNum.float, dataView, 4);
+    super(length, offset, TypeNum.guid, dataView, 16);
   }
 
-  static listToIPC(values: Array<number>): Uint8Array {
-    const size = values.length * 4 + 6;
-    const buffer = TypeBase.createBuffer(size);
-
-    buffer.wb(QFloat.typeNum);
-    buffer.wb(0);
-    buffer.wi(values.length);
-    values.forEach((v) => QFloat.writeValue(v, buffer.wb));
-
-    return buffer.data;
-  }
-
-  static toIPC(value: number): Uint8Array {
-    const buffer = TypeBase.createBuffer(5);
-    buffer.wb(256 - QFloat.typeNum);
-    QFloat.writeValue(value, buffer.wb);
-    return buffer.data;
-  }
-
-  static writeValue(value: number, wb: (b: number) => void): void {
-    if (value !== null) {
-      const fb = new Float32Array(1);
-      fb[0] = value;
-      new Uint8Array(fb.buffer).forEach((f) => wb(f));
-    } else {
-      [0, 0, 192, 255].forEach((l) => wb(l));
-    }
-  }
-
-  calcRange(): number[] {
-    let xMax = Number.NEGATIVE_INFINITY;
-    let xMin = Number.POSITIVE_INFINITY;
-
-    for (let i = 0; i < this.length; i += 1) {
-      const x = this.getScalar(i);
-      if (isNaN(xMax) || (x > xMax && !isNaN(x))) {
-        xMax = x;
-      }
-      if (isNaN(xMin) || (x < xMin && !isNaN(x))) {
-        xMin = x;
-      }
-    }
-
-    return [xMin, xMax];
-  }
-
-  getScalar(i: number): number {
-    return this.dataView.getFloat32(this.getByteLocation(i), true);
-  }
-
-  getValue(i: number): number | null {
-    const val = this.getScalar(i);
-    return isNaN(val) ? null : val;
+  calcRange(): bigint[] {
+    throw new Error("Not implemented");
   }
 
   hash(i: number): number {
-    return this.dataView.getFloat32(this.getHashLocation(i), true);
+    // return this.dataView.getFloat64(this.offset + i);
+    throw new Error("GUID hash not implemented " + i);
+  }
+
+  getScalar(i: number): bigint {
+    // TODO: should be 128-bit not 64
+    return this.dataView.getBigInt64(this.getByteLocation(i), true);
+  }
+
+  getValue(index: number): string | null {
+    const UUID_NULL = "00000000-0000-0000-0000-000000000000";
+    const start = this.getByteLocation(index);
+    const end = start + this.size;
+    const x = "0123456789abcdef";
+    let s = "";
+    for (let i = start; i < end; i++) {
+      const c = this.dataView.getUint8(i);
+      const d = i - start;
+      s += d === 4 || d === 6 || d === 8 || d === 10 ? "-" : "";
+
+      // eslint-disable-next-line no-bitwise
+      s += x[c >> 4];
+
+      // eslint-disable-next-line no-bitwise
+      s += x[c & 15];
+    }
+    if (s === UUID_NULL) {
+      return null;
+    }
+
+    return s;
   }
 }
