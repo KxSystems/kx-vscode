@@ -56,6 +56,7 @@ describe("qLangServer", () => {
       onCompletion() {},
       onDidChangeConfiguration() {},
       onRequest() {},
+      onSelectionRanges() {},
     });
 
     const params = <InitializeParams>{
@@ -78,6 +79,7 @@ describe("qLangServer", () => {
       assert.ok(capabilities.definitionProvider);
       assert.ok(capabilities.renameProvider);
       assert.ok(capabilities.completionProvider);
+      assert.ok(capabilities.selectionRangeProvider);
     });
   });
 
@@ -313,6 +315,19 @@ describe("qLangServer", () => {
       const params = createDocument("");
       const result = server.onParameterCache(params);
       assert.strictEqual(result, null);
+    });
+  });
+
+  describe("onSelectionRanges", () => {
+    it("should return identifier range", () => {
+      const params = createDocument(".test.ref");
+      const result = server.onSelectionRanges({
+        textDocument: params.textDocument,
+        positions: [params.position],
+      });
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].range.start.character, 0);
+      assert.strictEqual(result[0].range.end.character, 9);
     });
   });
 });

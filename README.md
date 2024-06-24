@@ -190,16 +190,14 @@ Set the following properties:
 
 Set the following from the Advanced properties if necessary:
 
-| Property               | Description                                                                                                                |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Define Realm           | Specify the Keycloak realm for authentication. Usually the realm is set to `insights`, which is the default value used by the extension. You only need to change this field if a different realm has been configured on your server.  |
+| Property     | Description                                                                                                                                                                                                                          |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Define Realm | Specify the Keycloak realm for authentication. Usually the realm is set to `insights`, which is the default value used by the extension. You only need to change this field if a different realm has been configured on your server. |
 
 ![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsconnectionadvanced.png?raw=true)
 
-
 !!!note "For kdb Insights Enterprise Free Trial instances"
-   The realm is configured as `insights-{URL}` where {URL} is the 10 digit code in the trial URL. For example: if your trial url is https://fstc83yi5b.ft1.cld.kx.com/ the realm should be `insights-fstc83yi5b`.
-
+The realm is configured as `insights-{URL}` where {URL} is the 10 digit code in the trial URL. For example: if your trial url is https://fstc83yi5b.ft1.cld.kx.com/ the realm should be `insights-fstc83yi5b`.
 
 1. Click **Create Connection** and the **kdb Insights Enterprise** connection appears under **CONNECTIONS** in the primary sidebar.
 
@@ -533,6 +531,16 @@ To update kdb VS Code settings, search for **kdb** from _Preferences_ > _Setting
         }
     }
 }
+```
+
+### Double Click Selection
+
+The following setting will change double click behaviour to select the whole identifier including dots:
+
+```JSON
+ "[q]": {
+    "editor.wordSeparators": "`~!@#$%^&*()-=+[{]}\\|;:'\",<>/?"
+  }
 ```
 
 ## Shortcuts

@@ -29,6 +29,8 @@ import {
   Range,
   ReferenceParams,
   RenameParams,
+  SelectionRange,
+  SelectionRangeParams,
   ServerCapabilities,
   SymbolKind,
   TextDocumentChangeEvent,
@@ -99,6 +101,7 @@ export default class QLangServer {
       "kdb.qls.parameterCache",
       this.onParameterCache.bind(this),
     );
+    this.connection.onSelectionRanges(this.onSelectionRanges.bind(this));
   }
 
   public capabilities(): ServerCapabilities {
@@ -109,6 +112,7 @@ export default class QLangServer {
       definitionProvider: true,
       renameProvider: true,
       completionProvider: { resolveProvider: false },
+      selectionRangeProvider: true,
     };
   }
 
@@ -278,6 +282,22 @@ export default class QLangServer {
       start: rangeFromToken(bracket).end,
       end: rangeFromToken(curly).start,
     };
+  }
+
+  public onSelectionRanges({
+    textDocument,
+    positions,
+  }: SelectionRangeParams): SelectionRange[] {
+    const tokens = this.parse(textDocument);
+    const ranges: SelectionRange[] = [];
+
+    for (const position of positions) {
+      const source = positionToToken(tokens, position);
+      if (source) {
+        ranges.push(SelectionRange.create(rangeFromToken(source)));
+      }
+    }
+    return ranges;
   }
 
   private parse(textDocument: TextDocumentIdentifier): Token[] {

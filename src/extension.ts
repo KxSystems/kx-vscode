@@ -492,7 +492,7 @@ export async function activate(context: ExtensionContext) {
     },
   };
   const clientOptions: LanguageClientOptions = {
-    documentSelector: [{ scheme: "file", language: "q" }],
+    documentSelector: [{ language: "q" }],
     synchronize: {
       fileEvents: workspace.createFileSystemWatcher("**/*.{q,quke}"),
     },
