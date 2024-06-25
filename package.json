@@ -662,7 +662,7 @@
       "view/item/context": [
         {
           "command": "kdb.connect",
-          "when": "view == kdb-servers && viewItem not in kdb.connected",
+          "when": "view == kdb-servers && viewItem not in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection@1"
         },
         {
