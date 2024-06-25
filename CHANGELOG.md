@@ -17,6 +17,8 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Extension changes scratchpad endpoints accordly to the Insights versions
 - Allow connection information in user settings to be editable
 - Allow same server address to be used in multiple connections
+- Language server features works on unsaved files
+- Expand Selection command is implemented
 
 ### Fixes
 
