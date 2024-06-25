@@ -31,6 +31,7 @@ import {
   tokenUndefinedError,
 } from "../utils/core";
 import { InsightsConfig, InsightsEndpoints } from "../models/config";
+import { convertTimeToTimestamp } from "../utils/dataSource";
 
 export class InsightsConnection {
   public connected: boolean;
@@ -282,8 +283,8 @@ export class InsightsConnection {
         case DataSourceTypes.API:
           queryParams = {
             table: params.dataSource.api.table,
-            startTS: params.dataSource.api.startTS,
-            endTS: params.dataSource.api.endTS,
+            startTS: convertTimeToTimestamp(params.dataSource.api.startTS),
+            endTS: convertTimeToTimestamp(params.dataSource.api.endTS),
           };
           coreUrl = this.connEndpoints.scratchpad.import;
           dsTypeString = "API";
