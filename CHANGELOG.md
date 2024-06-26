@@ -27,6 +27,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Fixed delay when executing query on KDB+ connections
 - Make connection names case insensitive
 - Fixed GUID type displayed as number for Insights
+- Fixed time zone for populate scratchpad
 
 ### Internal Improvements
 
