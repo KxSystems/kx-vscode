@@ -164,7 +164,7 @@ export async function runDataSource(
 
       if (!success) {
         window.showErrorMessage(res.error);
-      } else if (ext.resultsViewProvider.isVisible()) {
+      } else if (ext.isResultsTabVisible) {
         const resultCount = typeof res === "string" ? "0" : res.rows.length;
         kdbOutputLog(`[DATASOURCE] Results: ${resultCount} rows`, "INFO");
         writeQueryResultsToView(

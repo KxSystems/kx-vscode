@@ -393,7 +393,7 @@ export async function executeQuery(
     );
     return undefined;
   }
-  const isStringfy = !ext.resultsViewProvider.isVisible();
+  const isStringfy = !ext.isResultsTabVisible;
   const startTime = Date.now();
   const results = await connMngService.executeQuery(
     query,
@@ -417,7 +417,7 @@ export async function executeQuery(
       duration,
     );
   } else {
-    if (ext.resultsViewProvider.isVisible()) {
+    if (ext.isResultsTabVisible) {
       writeQueryResultsToView(
         results,
         query,
@@ -700,7 +700,7 @@ export function writeScratchpadResult(
       duration,
     );
   } else {
-    if (ext.resultsViewProvider.isVisible()) {
+    if (ext.isResultsTabVisible) {
       writeQueryResultsToView(
         result.data,
         query,

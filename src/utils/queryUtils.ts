@@ -110,7 +110,7 @@ export function handleWSResults(ab: ArrayBuffer): any {
     if (res.rows.length === 0 && res.columns.length === 0) {
       return "No results found.";
     }
-    if (ext.resultsViewProvider.isVisible()) {
+    if (ext.isResultsTabVisible) {
       return getValueFromArray(res);
     }
     return convertRows(res.rows);

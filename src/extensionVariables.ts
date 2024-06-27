@@ -47,6 +47,7 @@ export namespace ext {
   export let serverProvider: KdbTreeProvider;
   export let queryHistoryProvider: QueryHistoryProvider;
   export let resultsViewProvider: KdbResultsViewProvider;
+  export let isResultsTabVisible: boolean;
   export let scratchpadTreeProvider: WorkspaceTreeProvider;
   export let dataSourceTreeProvider: WorkspaceTreeProvider;
   export let runScratchpadItem: StatusBarItem;
