@@ -984,6 +984,11 @@ describe("Utils", () => {
     });
 
     describe("handleWSResults", () => {
+      afterEach(() => {
+        sinon.restore();
+        ext.isResultsTabVisible = false;
+      });
+
       it("should return no results found", () => {
         const ab = new ArrayBuffer(128);
         const result = queryUtils.handleWSResults(ab);
@@ -999,18 +1004,14 @@ describe("Utils", () => {
           rows: [{ Value: "10" }],
         };
         const uriTest: vscode.Uri = vscode.Uri.parse("test");
-        ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
+        ext.isResultsTabVisible = true;
         const qtableStub = sinon
           .stub(QTable.default, "toLegacy")
           .returns(expectedOutput);
-        const isVisibleStub = sinon
-          .stub(ext.resultsViewProvider, "isVisible")
-          .returns(true);
         const convertRowsSpy = sinon.spy(queryUtils, "convertRows");
         const result = queryUtils.handleWSResults(ab);
         sinon.assert.notCalled(convertRowsSpy);
         assert.strictEqual(result, expectedOutput);
-        sinon.restore();
       });
     });
 

@@ -633,6 +633,7 @@ describe("dataSourceCommand2", () => {
 
     afterEach(() => {
       sinon.restore();
+      ext.isResultsTabVisible = false;
     });
 
     it("should show an error message if not connected to an Insights server", async () => {
@@ -669,7 +670,7 @@ describe("dataSourceCommand2", () => {
       insightsConn.meta = dummyMeta;
       getMetaStub.resolves(dummyMeta);
       getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
-      isVisibleStub.returns(true);
+      ext.isResultsTabVisible = true;
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles,
         insightsConn.connLabel,

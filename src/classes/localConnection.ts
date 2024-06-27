@@ -189,7 +189,7 @@ export class LocalConnection {
 
     this.updateGlobal();
 
-    if (ext.resultsViewProvider.isVisible() && stringify) {
+    if (ext.isResultsTabVisible && stringify) {
       if (this.isError) {
         this.isError = false;
         return result;

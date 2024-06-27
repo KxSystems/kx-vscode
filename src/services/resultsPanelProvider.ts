@@ -39,6 +39,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     // this.resolveWebviewView(webviewView);
   }
 
+  /* istanbul ignore next */
   public resolveWebviewView(webviewView: WebviewView) {
     this._view = webviewView;
 
@@ -51,6 +52,13 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
     webviewView.webview.onDidReceiveMessage((data) => {
       webviewView.webview.html = this._getWebviewContent(data);
+    });
+    webviewView.onDidChangeVisibility(() => {
+      ext.isResultsTabVisible = webviewView.visible;
+    });
+
+    webviewView.onDidDispose(() => {
+      ext.isResultsTabVisible = false;
     });
   }
 
