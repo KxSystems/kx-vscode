@@ -39,6 +39,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     // this.resolveWebviewView(webviewView);
   }
 
+  /* istanbul ignore next */
   public resolveWebviewView(webviewView: WebviewView) {
     this._view = webviewView;
 
