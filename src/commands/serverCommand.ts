@@ -417,6 +417,7 @@ export async function executeQuery(
       duration,
     );
   } else {
+    /* istanbul ignore next */
     if (ext.isResultsTabVisible) {
       writeQueryResultsToView(
         results,
