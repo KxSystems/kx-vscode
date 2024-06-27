@@ -28,6 +28,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Make connection names case insensitive
 - Fixed GUID type displayed as number for Insights
 - Fixed problem when the user close(not hide) the Results Tab
+- Fixed time zone for populate scratchpad
 
 ### Internal Improvements
 

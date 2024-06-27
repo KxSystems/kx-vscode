@@ -31,6 +31,7 @@ import {
   tokenUndefinedError,
 } from "../utils/core";
 import { InsightsConfig, InsightsEndpoints } from "../models/config";
+import { convertTimeToTimestamp } from "../utils/dataSource";
 
 export class InsightsConnection {
   public connected: boolean;
@@ -143,23 +144,24 @@ export class InsightsConnection {
   public defineEndpoints() {
     if (this.insightsVersion) {
       switch (this.insightsVersion) {
-        case "1.11":
-          this.connEndpoints = {
-            scratchpad: {
-              scratchpad: "scratchpad-manager/api/v1/execute/display",
-              import: "scratchpad-manager/api/v1/execute/import/data",
-              importSql: "scratchpad-manager/api/v1/execute/import/sql",
-              importQsql: "scratchpad-manager/api/v1/execute/import/qsql",
-              reset: "scratchpad-manager/api/v1/execute/reset",
-            },
-            serviceGateway: {
-              meta: "servicegateway/meta",
-              data: "servicegateway/data",
-              sql: "servicegateway/qe/sql",
-              qsql: "servicegateway/qe/qsql",
-            },
-          };
-          break;
+        // uncomment it when SCRATCHPAD merge to Insights
+        // case "1.11":
+        //   this.connEndpoints = {
+        //     scratchpad: {
+        //       scratchpad: "scratchpad-manager/api/v1/execute/display",
+        //       import: "scratchpad-manager/api/v1/execute/import/data",
+        //       importSql: "scratchpad-manager/api/v1/execute/import/sql",
+        //       importQsql: "scratchpad-manager/api/v1/execute/import/qsql",
+        //       reset: "scratchpad-manager/api/v1/execute/reset",
+        //     },
+        //     serviceGateway: {
+        //       meta: "servicegateway/meta",
+        //       data: "servicegateway/data",
+        //       sql: "servicegateway/qe/sql",
+        //       qsql: "servicegateway/qe/qsql",
+        //     },
+        //   };
+        //   break;
         default:
           this.connEndpoints = {
             scratchpad: {
@@ -281,8 +283,8 @@ export class InsightsConnection {
         case DataSourceTypes.API:
           queryParams = {
             table: params.dataSource.api.table,
-            startTS: params.dataSource.api.startTS,
-            endTS: params.dataSource.api.endTS,
+            startTS: convertTimeToTimestamp(params.dataSource.api.startTS),
+            endTS: convertTimeToTimestamp(params.dataSource.api.endTS),
           };
           coreUrl = this.connEndpoints.scratchpad.import;
           dsTypeString = "API";
@@ -358,9 +360,14 @@ export class InsightsConnection {
             `Executed successfully, stored in ${variableName}.`,
             "INFO",
           );
-
-          kdbOutputLog("[SCRATCHPAD] Data:", "INFO");
-          kdbOutputLog(JSON.stringify(scratchpadResponse.data), "INFO");
+          kdbOutputLog(
+            `[SCRATCHPAD] Status: ${scratchpadResponse.status}`,
+            "INFO",
+          );
+          kdbOutputLog(
+            `[SCRATCHPAD] Populated scratchpad with the following params: ${JSON.stringify(body.params)}`,
+            "INFO",
+          );
           window.showInformationMessage(
             `Executed successfully, stored in ${variableName}.`,
           );
