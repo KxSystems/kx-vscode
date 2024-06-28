@@ -196,8 +196,7 @@ Set the following from the Advanced properties if necessary:
 
 ![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsconnectionadvanced.png?raw=true)
 
-!!!note "For kdb Insights Enterprise Free Trial instances"
-The realm is configured as `insights-{URL}` where {URL} is the 10 digit code in the trial URL. For example: if your trial url is https://fstc83yi5b.ft1.cld.kx.com/ the realm should be `insights-fstc83yi5b`.
+  **Note** For kdb Insights Enterprise Free Trial instances the realm is configured as `insights-{URL}` where {URL} is the 10 digit code in the trial URL. For example: if your trial url is https://fstc83yi5b.ft1.cld.kx.com/ the realm should be `insights-fstc83yi5b`.
 
 1. Click **Create Connection** and the **kdb Insights Enterprise** connection appears under **CONNECTIONS** in the primary sidebar.
 
