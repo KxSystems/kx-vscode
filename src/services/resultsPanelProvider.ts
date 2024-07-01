@@ -36,7 +36,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       this._colorTheme = window.activeColorTheme;
       this.updateResults(this._results);
     });
-    // this.resolveWebviewView(webviewView);
+    ext.isResultsTabVisible = true;
   }
 
   /* istanbul ignore next */
