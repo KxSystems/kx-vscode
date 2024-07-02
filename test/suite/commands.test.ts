@@ -689,7 +689,7 @@ describe("dataSourceCommand2", () => {
       dummyFileContent.dataSource.selectedType = DataSourceTypes.API;
       getMetaStub.resolves(dummyMeta);
       getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
-      isVisibleStub.returns(false);
+      ext.isResultsTabVisible = false;
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles,
         insightsConn.connLabel,
@@ -708,7 +708,7 @@ describe("dataSourceCommand2", () => {
       dummyFileContent.dataSource.selectedType = DataSourceTypes.SQL;
       getMetaStub.resolves(dummyMeta);
       getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
-      isVisibleStub.returns(false);
+      ext.isResultsTabVisible = false;
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles,
         insightsConn.connLabel,
