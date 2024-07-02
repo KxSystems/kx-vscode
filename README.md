@@ -196,12 +196,7 @@ Set the following from the Advanced properties if necessary:
 
 ![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsconnectionadvanced.png?raw=true)
 
-<<<<<<< 1.6DocUpdates
-!!!note "For kdb Insights Enterprise Free Trial instances"
-The realm is configured as `insights-{URL}` where {URL} is the 10 digit code in the trial URL. For example: if your trial url is https://fstc83yi5b.ft1.cld.kx.com/ the realm is `insights-fstc83yi5b`.
-=======
-  **Note** For kdb Insights Enterprise Free Trial instances the realm is configured as `insights-{URL}` where {URL} is the 10 digit code in the trial URL. For example: if your trial url is https://fstc83yi5b.ft1.cld.kx.com/ the realm should be `insights-fstc83yi5b`.
->>>>>>> dev
+**Note** For kdb Insights Enterprise Free Trial instances the realm is configured as `insights-{URL}` where {URL} is the 10 digit code in the trial URL. For example: if your trial url is https://fstc83yi5b.ft1.cld.kx.com/ the realm should be `insights-fstc83yi5b`.
 
 1. Click **Create Connection** and the **kdb Insights Enterprise** connection appears under **CONNECTIONS** in the primary sidebar.
 
@@ -217,7 +212,6 @@ If you close the extension, the connection also closes.
 
 [//]: # "In what context is the reserved alias name `insights` used? - BMA - the context is used on build the connection tree; different icon; different connection process. - DF - Is this connection process currently supported in kdb VS Code extension; if so, do we need to document it here?"
 
-
 #### Meta
 
 When connected **Insights** connections can be expanded to show the details returned by the [getMeta API](https://code.kx.com/draft/insights/api/database/query/get-meta.html) call, which provides information on the database schemas and all the analytics available.
@@ -231,7 +225,6 @@ To see the results of the getMeta call click on the 'meta' node under the connec
 The 'meta' node contains a child node for each of the child sections in the json. To see a json representation of a specific section click on the child node. The json representation of this section returned by the call is displayed with **"[Connection Name] - [CHILD SECTION]"** as title of the tab.
 
 You can refresh the meta data view at any time by choosing **Refresh meta data** from the right-click menu of an Insights connection.
-
 
 ## kdb language server
 
@@ -360,7 +353,6 @@ To do this:
 1. The scratchpad process is populated.
 
 1. Use a [Workbook](#workbooks) to execute q or Python code against the data in your scratchpad using the variable you provided.
-
 
 ## Workbooks
 
