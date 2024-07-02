@@ -11,13 +11,20 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export interface InsightDetails {
-  alias: string;
-  server: string;
-  auth: boolean;
-  realm?: string;
-}
+import * as vscode from "vscode";
 
-export interface Insights {
-  [name: string]: InsightDetails;
+export class MetaContentProvider implements vscode.TextDocumentContentProvider {
+  private _onDidChange = new vscode.EventEmitter<vscode.Uri>();
+  public readonly onDidChange = this._onDidChange.event;
+
+  private content: string = "";
+
+  public update(uri: vscode.Uri, content: string) {
+    this.content = content;
+    this._onDidChange.fire(uri);
+  }
+
+  provideTextDocumentContent(uri: vscode.Uri): string {
+    return this.content;
+  }
 }

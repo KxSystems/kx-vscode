@@ -50,11 +50,12 @@ import {
   addLocalConnectionStatus,
   convertBase64License,
   delay,
-  getHash,
+  getKeyForServerName,
   getOsFile,
   getServerName,
   getServers,
   getWorkspaceFolder,
+  kdbOutputLog,
   removeLocalConnectionStatus,
   saveLocalProcessObj,
   updateServers,
@@ -84,7 +85,7 @@ export async function installTools(): Promise<void> {
       .showInformationMessage(
         licenseWorkflow.prompt,
         licenseWorkflow.option1,
-        licenseWorkflow.option2
+        licenseWorkflow.option2,
       )
       .then(async (res) => {
         if (res === licenseWorkflow.option2) {
@@ -99,7 +100,7 @@ export async function installTools(): Promise<void> {
     {
       placeHolder: licenseTypePlaceholder,
       ignoreFocusOut: true,
-    }
+    },
   );
 
   if (licenseResult === undefined) {
@@ -138,7 +139,7 @@ export async function installTools(): Promise<void> {
       },
       async (progress, token) => {
         token.onCancellationRequested(() => {
-          ext.outputChannel.appendLine("User cancelled the installation.");
+          kdbOutputLog("[Install] User cancelled the installation.", "INFO");
         });
 
         progress.report({ increment: 0 });
@@ -147,29 +148,31 @@ export async function installTools(): Promise<void> {
         progress.report({ increment: 20, message: "Getting the binaries..." });
         const osFile = getOsFile();
         if (osFile === undefined) {
-          ext.outputChannel.appendLine(
-            "Unsupported operating system, unable to download binaries for this."
+          kdbOutputLog(
+            "[Install] Unsupported operating system, unable to download binaries for this.",
+            "ERROR",
           );
           Telemetry.sendException(
             new Error(
-              "Unsupported operating system, unable to download binaries"
-            )
+              "Unsupported operating system, unable to download binaries",
+            ),
           );
         } else {
           const gpath = join(ext.context.globalStorageUri.fsPath, osFile);
           if (!existsSync(gpath)) {
             const response = await fetch(
-              `${ext.kdbDownloadPrefixUrl}${osFile}`
+              `${ext.kdbDownloadPrefixUrl}${osFile}`,
             );
             if (response.status > 200) {
               Telemetry.sendException(
-                new Error("Invalid or unavailable download url.")
+                new Error("Invalid or unavailable download url."),
               );
-              ext.outputChannel.appendLine(
-                `Invalid or unavailable download url: ${runtimeUrl}`
+              kdbOutputLog(
+                `[Install] Invalid or unavailable download url: ${runtimeUrl}`,
+                "ERROR",
               );
               window.showErrorMessage(
-                `Invalid or unavailable download url: ${runtimeUrl}`
+                `Invalid or unavailable download url: ${runtimeUrl}`,
               );
               exit(1);
             }
@@ -185,7 +188,7 @@ export async function installTools(): Promise<void> {
         await ensureDir(ext.context.globalStorageUri.fsPath);
         await copy(
           file![0].fsPath,
-          join(ext.context.globalStorageUri.fsPath, ext.kdbLicName)
+          join(ext.context.globalStorageUri.fsPath, ext.kdbLicName),
         );
 
         // add the env var for the process
@@ -208,24 +211,25 @@ export async function installTools(): Promise<void> {
         if (QHOME) {
           env.QHOME = QHOME;
           if (!pathExists(env.QHOME)) {
-            ext.outputChannel.appendLine("QHOME path stored is empty");
+            kdbOutputLog("[Install] QHOME path stored is empty", "ERROR");
           }
           await writeFile(
             join(__dirname, "qinstall.md"),
-            `# q runtime installed location: \n### ${QHOME}`
+            `# q runtime installed location: \n### ${QHOME}`,
           );
-          ext.outputChannel.appendLine(
-            `Installation of q found here: ${QHOME}`
+          kdbOutputLog(
+            `[Install] Installation of q found here: ${QHOME}`,
+            "INFO",
           );
         }
-      }
+      },
     )
     .then(async () => {
       window
         .showInformationMessage(
           onboardingWorkflow.prompt(ext.context.globalStorageUri.fsPath),
           onboardingWorkflow.option1,
-          onboardingWorkflow.option2
+          onboardingWorkflow.option2,
         )
         .then(async (startResult) => {
           if (startResult === onboardingWorkflow.option1) {
@@ -241,16 +245,16 @@ export async function installTools(): Promise<void> {
                 let servers: Server | undefined = getServers();
                 if (
                   servers != undefined &&
-                  servers[getHash(`localhost:${port}`)]
+                  servers[getKeyForServerName("local")]
                 ) {
                   Telemetry.sendEvent(
-                    `Server localhost:${port} already exists in configuration store.`
+                    `Server localhost:${port} already exists in configuration store.`,
                   );
                   await window.showErrorMessage(
-                    `Server localhost:${port} already exists.`
+                    `Server localhost:${port} already exists.`,
                   );
                 } else {
-                  const key = getHash(`localhost${port}local`);
+                  const key = "local";
                   if (servers === undefined) {
                     servers = {
                       key: {
@@ -273,7 +277,7 @@ export async function installTools(): Promise<void> {
                       tls: false,
                     };
                     await addLocalConnectionContexts(
-                      getServerName(servers[key])
+                      getServerName(servers[key]),
                     );
                   }
                   await updateServers(servers);
@@ -285,8 +289,8 @@ export async function installTools(): Promise<void> {
               }
               await startLocalProcessByServerName(
                 `localhost:${port} [local]`,
-                getHash(`localhost${port}local`),
-                Number(port)
+                getKeyForServerName("local"),
+                Number(port),
               );
             });
           }
@@ -297,10 +301,10 @@ export async function installTools(): Promise<void> {
 export async function startLocalProcessByServerName(
   serverName: string,
   index: string,
-  port: number
+  port: number,
 ): Promise<void> {
   const workingDirectory = await getWorkspaceFolder(
-    workspace.getConfiguration().get<string>("kdb.qHomeDirectory")!
+    workspace.getConfiguration().get<string>("kdb.qHomeDirectory")!,
   );
 
   await addLocalConnectionStatus(serverName);
@@ -310,13 +314,13 @@ export async function startLocalProcessByServerName(
     saveLocalProcessObj,
     "-p",
     port.toString(),
-    index
+    index,
   );
 }
 
 export async function startLocalProcess(viewItem: KdbNode): Promise<void> {
   const workingDirectory = await getWorkspaceFolder(
-    workspace.getConfiguration().get<string>("kdb.qHomeDirectory")!
+    workspace.getConfiguration().get<string>("kdb.qHomeDirectory")!,
   );
 
   await addLocalConnectionStatus(`${getServerName(viewItem.details)}`);
@@ -326,27 +330,28 @@ export async function startLocalProcess(viewItem: KdbNode): Promise<void> {
     saveLocalProcessObj,
     "-p",
     viewItem.details.serverPort.toString(),
-    viewItem.children[0]
+    viewItem.children[0],
   );
 }
 
 export async function stopLocalProcess(viewItem: KdbNode): Promise<void> {
   ext.localProcessObjects[viewItem.children[0]].kill();
   window.showInformationMessage("q process stopped successfully!");
-  ext.outputChannel.appendLine(
+  kdbOutputLog(
     `Child process id ${ext.localProcessObjects[viewItem.children[0]]
-      .pid!} removed in cache.`
+      .pid!} removed in cache.`,
+    "INFO",
   );
   await removeLocalConnectionStatus(`${getServerName(viewItem.details)}`);
 }
 
 export async function stopLocalProcessByServerName(
-  serverName: string
+  serverName: string,
 ): Promise<void> {
   ext.localProcessObjects[serverName].kill();
   window.showInformationMessage("q process stopped successfully!");
-  ext.outputChannel.appendLine(
-    `Child process id ${ext.localProcessObjects[serverName]
-      .pid!} removed in cache.`
+  kdbOutputLog(
+    `Child process id ${ext.localProcessObjects[serverName].pid!} removed in cache.`,
+    "INFO",
   );
 }

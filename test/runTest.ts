@@ -27,7 +27,7 @@ async function main() {
       // load the instrumented files
       extensionTestsPath = path.join(
         __dirname,
-        "../../out-cov/test/suite/index",
+        "../../out-cov/test/suite/index"
       );
 
       // signal that the coverage data should be gathered
@@ -37,7 +37,6 @@ async function main() {
     await runTests({
       extensionDevelopmentPath,
       extensionTestsPath,
-      version: "1.89.1",
     });
   } catch (err) {
     console.log(err);

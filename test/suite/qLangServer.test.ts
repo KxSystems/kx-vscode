@@ -28,10 +28,10 @@ const context = { includeDeclaration: true };
 describe("qLangServer", () => {
   let server: QLangServer;
 
-  function createDocument(content: string) {
+  function createDocument(content: string, offset?: number) {
     content = content.trim();
     const document = TextDocument.create("test.q", "q", 1, content);
-    const position = document.positionAt(content.length);
+    const position = document.positionAt(offset || content.length);
     const textDocument = TextDocumentIdentifier.create("test.q");
     sinon.stub(server.documents, "get").value(() => document);
     return {
@@ -55,6 +55,8 @@ describe("qLangServer", () => {
       onRenameRequest() {},
       onCompletion() {},
       onDidChangeConfiguration() {},
+      onRequest() {},
+      onSelectionRanges() {},
     });
 
     const params = <InitializeParams>{
@@ -77,6 +79,7 @@ describe("qLangServer", () => {
       assert.ok(capabilities.definitionProvider);
       assert.ok(capabilities.renameProvider);
       assert.ok(capabilities.completionProvider);
+      assert.ok(capabilities.selectionRangeProvider);
     });
   });
 
@@ -205,6 +208,126 @@ describe("qLangServer", () => {
       const params = createDocument("a:1;b:{[c]d:c+1;d};b");
       const result = server.onCompletion(params);
       assert.strictEqual(result.length, 2);
+    });
+  });
+
+  describe("onExpressionRange", () => {
+    it("should return the range of the expression", () => {
+      const params = createDocument("a:1;");
+      const result = server.onExpressionRange(params);
+      assert.strictEqual(result.start.line, 0);
+      assert.strictEqual(result.start.character, 0);
+      assert.strictEqual(result.end.line, 0);
+      assert.strictEqual(result.end.character, 3);
+    });
+    it("should return the range of the expression", () => {
+      const params = createDocument("a");
+      const result = server.onExpressionRange(params);
+      assert.strictEqual(result.start.line, 0);
+      assert.strictEqual(result.start.character, 0);
+      assert.strictEqual(result.end.line, 0);
+      assert.strictEqual(result.end.character, 1);
+    });
+    it("should return null", () => {
+      const params = createDocument("");
+      const result = server.onExpressionRange(params);
+      assert.strictEqual(result, null);
+    });
+    it("should return null", () => {
+      const params = createDocument(";");
+      const result = server.onExpressionRange(params);
+      assert.strictEqual(result, null);
+    });
+    it("should return null", () => {
+      const params = createDocument("/a:1");
+      const result = server.onExpressionRange(params);
+      assert.strictEqual(result, null);
+    });
+  });
+
+  describe("onExpressionRange", () => {
+    it("should return range for simple expression", () => {
+      const params = createDocument("a:1;");
+      const result = server.onExpressionRange(params);
+      assert.ok(result);
+      assert.strictEqual(result.start.line, 0);
+      assert.strictEqual(result.start.character, 0);
+      assert.strictEqual(result.end.line, 0);
+      assert.strictEqual(result.end.character, 3);
+    });
+    it("should return range for lambda", () => {
+      const params = createDocument("a:{b:1;b};");
+      const result = server.onExpressionRange(params);
+      assert.ok(result);
+      assert.strictEqual(result.start.line, 0);
+      assert.strictEqual(result.start.character, 0);
+      assert.strictEqual(result.end.line, 0);
+      assert.strictEqual(result.end.character, 9);
+    });
+    it("should skip comments", () => {
+      const params = createDocument("a:1 /comment", 1);
+      const result = server.onExpressionRange(params);
+      assert.ok(result);
+      assert.strictEqual(result.start.line, 0);
+      assert.strictEqual(result.start.character, 0);
+      assert.strictEqual(result.end.line, 0);
+      assert.strictEqual(result.end.character, 3);
+    });
+  });
+
+  describe("omParameterCache", () => {
+    it("should cache paramater", () => {
+      const params = createDocument("{[a;b]}");
+      const result = server.onParameterCache(params);
+      assert.ok(result);
+      assert.deepEqual(result.params, ["a", "b"]);
+      assert.strictEqual(result.start.line, 0);
+      assert.strictEqual(result.start.character, 6);
+      assert.strictEqual(result.end.line, 0);
+      assert.strictEqual(result.end.character, 6);
+    });
+    it("should cache paramater", () => {
+      const params = createDocument("{[a;b]\n }");
+      const result = server.onParameterCache(params);
+      assert.ok(result);
+      assert.deepEqual(result.params, ["a", "b"]);
+      assert.strictEqual(result.start.line, 0);
+      assert.strictEqual(result.start.character, 6);
+      assert.strictEqual(result.end.line, 1);
+      assert.strictEqual(result.end.character, 1);
+    });
+    it("should return null", () => {
+      const params = createDocument("{[]}");
+      const result = server.onParameterCache(params);
+      assert.strictEqual(result, null);
+    });
+    it("should return null", () => {
+      const params = createDocument("{}");
+      const result = server.onParameterCache(params);
+      assert.strictEqual(result, null);
+    });
+    it("should return null", () => {
+      const params = createDocument("a:1;");
+      const result = server.onParameterCache(params);
+      assert.strictEqual(result, null);
+    });
+    it("should return null", () => {
+      const params = createDocument("");
+      const result = server.onParameterCache(params);
+      assert.strictEqual(result, null);
+    });
+  });
+
+  describe("onSelectionRanges", () => {
+    it("should return identifier range", () => {
+      const params = createDocument(".test.ref");
+      const result = server.onSelectionRanges({
+        textDocument: params.textDocument,
+        positions: [params.position],
+      });
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].range.start.character, 0);
+      assert.strictEqual(result[0].range.end.character, 9);
     });
   });
 });

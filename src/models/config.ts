@@ -11,13 +11,27 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export interface InsightDetails {
-  alias: string;
-  server: string;
-  auth: boolean;
-  realm?: string;
-}
+export type InsightsConfig = {
+  description?: string;
+  encryptionInFlight?: boolean;
+  installSize?: any;
+  restricted?: boolean;
+  storage?: any;
+  version: string;
+};
 
-export interface Insights {
-  [name: string]: InsightDetails;
-}
+export type InsightsEndpoints = {
+  scratchpad: {
+    scratchpad: string;
+    import: string;
+    importSql: string;
+    importQsql: string;
+    reset: string;
+  };
+  serviceGateway: {
+    meta: string;
+    data: string;
+    sql: string;
+    qsql: string;
+  };
+};

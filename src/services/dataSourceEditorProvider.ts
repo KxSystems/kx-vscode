@@ -41,7 +41,7 @@ import {
 import { InsightsConnection } from "../classes/insightsConnection";
 import { MetaObjectPayload } from "../models/meta";
 import { ConnectionManagementService } from "./connectionManagerService";
-import { offerConnectAction } from "../utils/core";
+import { kdbOutputLog, offerConnectAction } from "../utils/core";
 
 export class DataSourceEditorProvider implements CustomTextEditorProvider {
   public filenname = "";
@@ -92,7 +92,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       );
       meta = Promise.resolve(<MetaObjectPayload>{});
       this.cache.set(connLabel, meta);
-      //TODO ADD ERROR TO CONSOLE HERE
+      kdbOutputLog("No database running in this Insights connection.", "ERROR");
     }
     return (await meta) || Promise.resolve(<MetaObjectPayload>{});
   }

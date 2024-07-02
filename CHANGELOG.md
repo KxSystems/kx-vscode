@@ -2,10 +2,44 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.6.0
+
+### Enhancements
+
+- Display meta data for Insights connections
+- Added option to click at meta data and open in json format the meta data
+- Ability to change the name of the Keycloak realm, used for authentication, from the default value of `insights`. This enables the connection to a kdb Insights Enterprise Free trial instance.
+- Improve the console log quality to "kdb"output pane
+- Insights free trial instances are supported
+- Added execute block command for q code
+- Added hotkey to cache function parameters for q code
+- Extension now reconigze which version of Insights is connected
+- Extension changes scratchpad endpoints accordly to the Insights versions
+- Allow connection information in user settings to be editable
+- Allow same server address to be used in multiple connections
+- Language server features works on unsaved files
+- Expand Selection command is implemented
+
+### Fixes
+
+- Disconnect when q process is stopped
+- Fix query execution on KDB+ connections not refreshing completion items
+- Fixed delay when executing query on KDB+ connections
+- Make connection names case insensitive
+- Fixed GUID type displayed as number for Insights
+- Fixed problem when the user close(not hide) the Results Tab
+- Fixed time zone for populate scratchpad
+
+### Internal Improvements
+
+- Added logging framework
+
 # v1.5.2
 
+### Fixes
+
 - Local connection listener behaviour fixed (if the connection is closed, the connection will disconnect)
-- Return to show console output if results tab isn't visible in case of query execuion
+- Return to show console output if results tab isn't visible in case of query execution
 - Linter fixes
 
 # v1.5.1

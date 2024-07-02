@@ -19,10 +19,11 @@ import { Telemetry } from "../utils/telemetryClient";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { sanitizeQuery } from "../utils/queryUtils";
 import {
-  getHash,
   getInsights,
+  getKeyForServerName,
   getServerName,
   getServers,
+  kdbOutputLog,
   removeLocalConnectionContext,
   updateInsights,
   updateServers,
@@ -30,6 +31,7 @@ import {
 import { Insights } from "../models/insights";
 import { Server } from "../models/server";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
+import { MetaInfoType } from "../models/meta";
 
 export class ConnectionManagementService {
   public retrieveConnection(
@@ -92,8 +94,9 @@ export class ConnectionManagementService {
           return;
         }
         if (conn) {
-          ext.outputChannel.appendLine(
+          kdbOutputLog(
             `Connection established successfully to: ${connLabel}`,
+            "CONNECTION",
           );
 
           Telemetry.sendEvent("Connection.Connected.QProcess");
@@ -112,6 +115,14 @@ export class ConnectionManagementService {
       await insightsConn.connect();
       if (insightsConn.connected) {
         Telemetry.sendEvent("Connection.Connected.Insights");
+        kdbOutputLog(
+          `Connection established successfully to: ${connLabel}`,
+          "CONNECTION",
+        );
+        kdbOutputLog(
+          `${connLabel} connection insights version: ${insightsConn.insightsVersion}`,
+          "CONNECTION",
+        );
         ext.connectedConnectionList.push(insightsConn);
         this.isConnectedBehaviour(connection);
       } else {
@@ -161,7 +172,7 @@ export class ConnectionManagementService {
     }
     if (connNode instanceof InsightsNode) {
       const insights = getInsights();
-      const key = getHash(connNode.details.server);
+      const key = getKeyForServerName(connNode.details.alias);
       if (insights && insights[key]) {
         const uInsights = Object.keys(insights).filter((insight) => {
           return insight !== key;
@@ -178,14 +189,7 @@ export class ConnectionManagementService {
     } else {
       const servers: Server | undefined = getServers();
 
-      const key =
-        connNode.details.serverAlias != ""
-          ? getHash(
-              `${connNode.details.serverName}${connNode.details.serverPort}${connNode.details.serverAlias}`,
-            )
-          : getHash(
-              `${connNode.details.serverName}${connNode.details.serverPort}`,
-            );
+      const key = getKeyForServerName(connNode.details.serverAlias || "");
       if (servers != undefined && servers[key]) {
         const uServers = Object.keys(servers).filter((server) => {
           return server !== key;
@@ -247,10 +251,9 @@ export class ConnectionManagementService {
       }
     }
     Telemetry.sendEvent("Connection.Disconnected." + connType);
-    ext.outputChannel.appendLine(
-      `[${new Date().toLocaleTimeString()}] Connection disconnected: ${
-        connection.connLabel
-      }`,
+    kdbOutputLog(
+      `[CONNECTION] Connection closed: ${connection.connLabel}`,
+      "INFO",
     );
     ext.serverProvider.reload();
   }
@@ -338,5 +341,40 @@ export class ConnectionManagementService {
     if (connection instanceof InsightsConnection) {
       await connection.getMeta();
     }
+  }
+
+  public getMetaInfoType(value: string): MetaInfoType | undefined {
+    return MetaInfoType[value as keyof typeof MetaInfoType];
+  }
+
+  public retrieveMetaContent(
+    connLabel: string,
+    metaTypeString: string,
+  ): string {
+    const metaType = this.getMetaInfoType(metaTypeString.toUpperCase());
+    if (!metaType) {
+      kdbOutputLog(
+        "[META] The meta info type that you try to open is not valid",
+        "ERROR",
+      );
+      return "";
+    }
+    const connection = this.retrieveConnectedConnection(connLabel);
+    if (!connection) {
+      kdbOutputLog(
+        "[META] The connection that you try to open meta info is not connected",
+        "ERROR",
+      );
+      return "";
+    }
+    if (connection instanceof LocalConnection) {
+      kdbOutputLog(
+        "[META] The connection that you try to open meta info is not an Insights connection",
+        "ERROR",
+      );
+      return "";
+    }
+
+    return connection.returnMetaObject(metaType);
   }
 }

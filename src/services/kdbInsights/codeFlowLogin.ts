@@ -28,6 +28,27 @@ interface IDeferred<T> {
   reject: (reason: any) => void;
 }
 
+function getAuthUrl(insightsUrl: string, realm: string) {
+  return new url.URL(
+    `auth/realms/${realm}/protocol/openid-connect/auth`,
+    insightsUrl,
+  );
+}
+
+function getTokenUrl(insightsUrl: string, realm: string) {
+  return new url.URL(
+    `auth/realms/${realm}/protocol/openid-connect/token`,
+    insightsUrl,
+  );
+}
+
+function getRevokeUrl(insightsUrl: string, realm: string) {
+  return new url.URL(
+    `auth/realms/${realm}/protocol/openid-connect/revoke`,
+    insightsUrl,
+  );
+}
+
 export interface IToken {
   accessToken: string;
   accessTokenExpirationDate: Date;
@@ -41,7 +62,7 @@ const commonRequestParams = {
   client_id: "insights-app",
 };
 
-export async function signIn(insightsUrl: string) {
+export async function signIn(insightsUrl: string, realm: string) {
   const { server, codePromise } = createServer();
 
   try {
@@ -54,17 +75,14 @@ export async function signIn(insightsUrl: string) {
       state: crypto.randomBytes(20).toString("hex"),
     };
 
-    const authorizationUrl = new url.URL(
-      ext.insightsAuthUrls.authURL,
-      insightsUrl,
-    );
+    const authorizationUrl = getAuthUrl(insightsUrl, realm);
 
     authorizationUrl.search = queryString(authParams);
 
     await env.openExternal(Uri.parse(authorizationUrl.toString()));
 
     const code = await codePromise;
-    return await getToken(insightsUrl, code);
+    return await getToken(insightsUrl, realm, code);
   } finally {
     setImmediate(() => server.close());
   }
@@ -72,6 +90,7 @@ export async function signIn(insightsUrl: string) {
 
 export async function signOut(
   insightsUrl: string,
+  realm: string,
   token: string,
 ): Promise<void> {
   const queryParams = queryString({
@@ -84,7 +103,7 @@ export async function signOut(
   const headers = {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
   };
-  const requestUrl = new url.URL(ext.insightsAuthUrls.revoke, insightsUrl);
+  const requestUrl = getRevokeUrl(insightsUrl, realm);
 
   await axios.post(requestUrl.toString(), body, headers).then((res) => {
     return res.data;
@@ -93,17 +112,20 @@ export async function signOut(
 
 export async function refreshToken(
   insightsUrl: string,
+  realm: string,
   token: string,
 ): Promise<IToken | undefined> {
-  return await tokenRequest(insightsUrl, {
+  return await tokenRequest(insightsUrl, realm, {
     grant_type: ext.insightsGrantType.refreshToken,
     refresh_token: token,
   });
 }
 
+/* istanbul ignore next */
 export async function getCurrentToken(
   serverName: string,
   serverAlias: string,
+  realm: string,
 ): Promise<IToken | undefined> {
   if (serverName === "" || serverAlias === "") {
     return undefined;
@@ -115,9 +137,9 @@ export async function getCurrentToken(
   if (existingToken !== undefined) {
     const storedToken: IToken = JSON.parse(existingToken);
     if (new Date(storedToken.accessTokenExpirationDate) < new Date()) {
-      token = await refreshToken(serverName, storedToken.refreshToken);
+      token = await refreshToken(serverName, realm, storedToken.refreshToken);
       if (token === undefined) {
-        token = await signIn(serverName);
+        token = await signIn(serverName, realm);
         ext.context.secrets.store(serverAlias, JSON.stringify(token));
       }
       ext.context.secrets.store(serverAlias, JSON.stringify(token));
@@ -126,17 +148,19 @@ export async function getCurrentToken(
       return storedToken;
     }
   } else {
-    token = await signIn(serverName);
+    token = await signIn(serverName, realm);
     ext.context.secrets.store(serverAlias, JSON.stringify(token));
   }
   return token;
 }
 
+/* istanbul ignore next */
 async function getToken(
   insightsUrl: string,
+  realm: string,
   code: string,
 ): Promise<IToken | undefined> {
-  return await tokenRequest(insightsUrl, {
+  return await tokenRequest(insightsUrl, realm, {
     code,
     grant_type: ext.insightsGrantType.authorizationCode,
   });
@@ -144,6 +168,7 @@ async function getToken(
 
 async function tokenRequest(
   insightsUrl: string,
+  realm: string,
   params: any,
 ): Promise<IToken | undefined> {
   const queryParams = queryString(params);
@@ -155,7 +180,7 @@ async function tokenRequest(
     signal: AbortSignal.timeout(closeTimeout),
   };
 
-  const requestUrl = new url.URL(ext.insightsAuthUrls.tokenURL, insightsUrl);
+  const requestUrl = getTokenUrl(insightsUrl, realm);
 
   let response;
   if (params.grant_type === "refresh_token") {

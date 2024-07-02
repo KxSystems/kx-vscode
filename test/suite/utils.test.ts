@@ -25,6 +25,7 @@ import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import { QueryHistoryProvider } from "../../src/services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as coreUtils from "../../src/utils/core";
+import * as cpUtils from "../../src/utils/cpUtils";
 import * as dataSourceUtils from "../../src/utils/dataSource";
 import * as decodeUtils from "../../src/utils/decode";
 import * as executionUtils from "../../src/utils/execution";
@@ -70,6 +71,36 @@ describe("Utils", () => {
   });
 
   describe("core", () => {
+    describe("checkOpenSslInstalled", () => {
+      let tryExecuteCommandStub: sinon.SinonStub;
+      let kdbOutputLogStub: sinon.SinonStub;
+      beforeEach(() => {
+        tryExecuteCommandStub = sinon.stub(cpUtils, "tryExecuteCommand");
+        kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+      });
+
+      afterEach(() => {
+        tryExecuteCommandStub.restore();
+        kdbOutputLogStub.restore();
+      });
+
+      it("should return null if OpenSSL is not installed", async () => {
+        tryExecuteCommandStub.resolves({ code: 1, cmdOutput: "" });
+
+        const result = await coreUtils.checkOpenSslInstalled();
+
+        assert.strictEqual(result, null);
+      });
+
+      it("should handle errors correctly", async () => {
+        const error = new Error("Test error");
+        tryExecuteCommandStub.rejects(error);
+
+        const result = await coreUtils.checkOpenSslInstalled();
+
+        assert.strictEqual(result, null);
+      });
+    });
     describe("setOutputWordWrapper", () => {
       let getConfigurationStub: sinon.SinonStub;
       beforeEach(() => {
@@ -250,6 +281,55 @@ describe("Utils", () => {
         assert.strictEqual(result, "");
       });
     });
+
+    describe("coreLogs", () => {
+      ext.outputChannel = vscode.window.createOutputChannel("kdb");
+      let appendLineSpy, showErrorMessageSpy: sinon.SinonSpy;
+      beforeEach(() => {
+        appendLineSpy = sinon.spy(
+          vscode.window.createOutputChannel("testChannel"),
+          "appendLine",
+        );
+        showErrorMessageSpy = sinon.spy(vscode.window, "showErrorMessage");
+      });
+
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("kdbOutputLog should log message with date and type", () => {
+        const message = "test message";
+        const type = "INFO";
+
+        coreUtils.kdbOutputLog(message, type);
+
+        appendLineSpy.calledOnce;
+        appendLineSpy.calledWithMatch(message);
+        appendLineSpy.calledWithMatch(type);
+      });
+
+      it("tokenUndefinedError should log and show error message", () => {
+        const connLabel = "test connection";
+
+        coreUtils.tokenUndefinedError(connLabel);
+
+        appendLineSpy.calledOnce;
+        showErrorMessageSpy.calledOnce;
+        appendLineSpy.calledWithMatch(connLabel);
+        showErrorMessageSpy.calledWithMatch(connLabel);
+      });
+
+      it("invalidUsernameJWT should log and show error message", () => {
+        const connLabel = "test connection";
+
+        coreUtils.invalidUsernameJWT(connLabel);
+
+        appendLineSpy.calledOnce;
+        showErrorMessageSpy.calledOnce;
+        appendLineSpy.calledWithMatch(connLabel);
+        showErrorMessageSpy.calledWithMatch(connLabel);
+      });
+    });
   });
 
   describe("dataSource", () => {
@@ -265,6 +345,11 @@ describe("Utils", () => {
     it("convertTimeToTimestamp", () => {
       const result = dataSourceUtils.convertTimeToTimestamp("2021-01-01");
       assert.strictEqual(result, "2021-01-01T00:00:00.000000000");
+    });
+
+    it("convertTimeToTimestamp", () => {
+      const result = dataSourceUtils.convertTimeToTimestamp("testTime");
+      assert.strictEqual(result, "");
     });
 
     it("getConnectedInsightsNode", () => {
@@ -899,6 +984,11 @@ describe("Utils", () => {
     });
 
     describe("handleWSResults", () => {
+      afterEach(() => {
+        sinon.restore();
+        ext.isResultsTabVisible = false;
+      });
+
       it("should return no results found", () => {
         const ab = new ArrayBuffer(128);
         const result = queryUtils.handleWSResults(ab);
@@ -914,18 +1004,14 @@ describe("Utils", () => {
           rows: [{ Value: "10" }],
         };
         const uriTest: vscode.Uri = vscode.Uri.parse("test");
-        ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
+        ext.isResultsTabVisible = true;
         const qtableStub = sinon
           .stub(QTable.default, "toLegacy")
           .returns(expectedOutput);
-        const isVisibleStub = sinon
-          .stub(ext.resultsViewProvider, "isVisible")
-          .returns(true);
         const convertRowsSpy = sinon.spy(queryUtils, "convertRows");
         const result = queryUtils.handleWSResults(ab);
         sinon.assert.notCalled(convertRowsSpy);
         assert.strictEqual(result, expectedOutput);
-        sinon.restore();
       });
     });
 

@@ -29,10 +29,13 @@ import {
   Range,
   ReferenceParams,
   RenameParams,
+  SelectionRange,
+  SelectionRangeParams,
   ServerCapabilities,
   SymbolKind,
   TextDocumentChangeEvent,
   TextDocumentIdentifier,
+  TextDocumentPositionParams,
   TextDocumentSyncKind,
   TextDocuments,
   TextEdit,
@@ -54,6 +57,10 @@ import {
   namespace,
   relative,
   testblock,
+  EndOfLine,
+  SemiColon,
+  WhiteSpace,
+  RCurly,
 } from "./parser";
 import { lint } from "./linter";
 
@@ -86,6 +93,15 @@ export default class QLangServer {
     this.connection.onDidChangeConfiguration(
       this.onDidChangeConfiguration.bind(this),
     );
+    this.connection.onRequest(
+      "kdb.qls.expressionRange",
+      this.onExpressionRange.bind(this),
+    );
+    this.connection.onRequest(
+      "kdb.qls.parameterCache",
+      this.onParameterCache.bind(this),
+    );
+    this.connection.onSelectionRanges(this.onSelectionRanges.bind(this));
   }
 
   public capabilities(): ServerCapabilities {
@@ -96,6 +112,7 @@ export default class QLangServer {
       definitionProvider: true,
       renameProvider: true,
       completionProvider: { resolveProvider: false },
+      selectionRangeProvider: true,
     };
   }
 
@@ -213,6 +230,76 @@ export default class QLangServer {
     });
   }
 
+  public onExpressionRange({
+    textDocument,
+    position,
+  }: TextDocumentPositionParams) {
+    const tokens = this.parse(textDocument);
+    const source = positionToToken(tokens, position);
+    if (!source || !source.exprs) {
+      return null;
+    }
+    return expressionToRange(tokens, source.exprs);
+  }
+
+  public onParameterCache({
+    textDocument,
+    position,
+  }: TextDocumentPositionParams) {
+    const tokens = this.parse(textDocument);
+    const source = positionToToken(tokens, position);
+    if (!source) {
+      return null;
+    }
+    const lambda = inLambda(source);
+    if (!lambda) {
+      return null;
+    }
+    const scoped = tokens.filter((token) => inLambda(token) === lambda);
+    if (scoped.length === 0) {
+      return null;
+    }
+    const curly = scoped[scoped.length - 1];
+    if (!curly || curly.tokenType !== RCurly) {
+      return null;
+    }
+    const params = scoped.filter((token) => inParam(token));
+    if (params.length === 0) {
+      return null;
+    }
+    const bracket = params[params.length - 1];
+    if (!bracket) {
+      return null;
+    }
+    const args = params
+      .filter((token) => assigned(token))
+      .map((token) => token.image);
+    if (args.length === 0) {
+      return null;
+    }
+    return {
+      params: args,
+      start: rangeFromToken(bracket).end,
+      end: rangeFromToken(curly).start,
+    };
+  }
+
+  public onSelectionRanges({
+    textDocument,
+    positions,
+  }: SelectionRangeParams): SelectionRange[] {
+    const tokens = this.parse(textDocument);
+    const ranges: SelectionRange[] = [];
+
+    for (const position of positions) {
+      const source = positionToToken(tokens, position);
+      if (source) {
+        ranges.push(SelectionRange.create(rangeFromToken(source)));
+      }
+    }
+    return ranges;
+  }
+
   private parse(textDocument: TextDocumentIdentifier): Token[] {
     const document = this.documents.get(textDocument.uri);
     if (!document) {
@@ -241,6 +328,25 @@ function positionToToken(tokens: Token[], position: Position) {
       end.character >= position.character
     );
   });
+}
+
+function expressionToRange(tokens: Token[], expression: number) {
+  const exprs = tokens.filter(
+    (token) =>
+      token.exprs === expression &&
+      token.tokenType !== EndOfLine &&
+      token.tokenType !== SemiColon &&
+      token.tokenType !== WhiteSpace,
+  );
+  const first = exprs[0];
+  if (!first) {
+    return null;
+  }
+  const last = exprs[exprs.length - 1];
+  const start = rangeFromToken(first);
+  const end = last ? rangeFromToken(last) : start;
+
+  return Range.create(start.start, end.end);
 }
 
 function createSymbol(token: Token, tokens: Token[]): DocumentSymbol {
@@ -277,6 +383,8 @@ function createDebugSymbol(token: Token): DocumentSymbol {
     tokenId(token),
     `${token.tokenType.name} ${token.namespace ? `(${token.namespace})` : ""} ${
       token.error !== undefined ? `E=${token.error}` : ""
+    } ${
+      token.exprs ? `X=${token.exprs}` : ""
     } ${token.order ? `O=${token.order}` : ""} ${
       token.tangled ? `T=${tokenId(token.tangled)}` : ""
     } ${token.scope ? `S=${tokenId(token.scope)}` : ""} ${

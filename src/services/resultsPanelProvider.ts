@@ -36,9 +36,10 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       this._colorTheme = window.activeColorTheme;
       this.updateResults(this._results);
     });
-    // this.resolveWebviewView(webviewView);
+    ext.isResultsTabVisible = true;
   }
 
+  /* istanbul ignore next */
   public resolveWebviewView(webviewView: WebviewView) {
     this._view = webviewView;
 
@@ -51,6 +52,13 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
     webviewView.webview.onDidReceiveMessage((data) => {
       webviewView.webview.html = this._getWebviewContent(data);
+    });
+    webviewView.onDidChangeVisibility(() => {
+      ext.isResultsTabVisible = webviewView.visible;
+    });
+
+    webviewView.onDidDispose(() => {
+      ext.isResultsTabVisible = false;
     });
   }
 

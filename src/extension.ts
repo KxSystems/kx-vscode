@@ -41,12 +41,15 @@ import {
 } from "./commands/installTools";
 import {
   activeConnection,
+  addAuthConnection,
   addInsightsConnection,
   addKdbConnection,
   addNewConnection,
   connect,
   disconnect,
   enableTLS,
+  openMeta,
+  refreshGetMeta,
   removeConnection,
   rerunQuery,
 } from "./commands/serverCommand";
@@ -57,9 +60,11 @@ import { InsightDetails, Insights } from "./models/insights";
 import { QueryResult } from "./models/queryResult";
 import { Server, ServerDetails } from "./models/server";
 import {
+  InsightsMetaNode,
   InsightsNode,
   KdbNode,
   KdbTreeProvider,
+  MetaObjectPayloadNode,
 } from "./services/kdbTreeProvider";
 import {
   QueryHistoryProvider,
@@ -72,6 +77,7 @@ import {
   getInsights,
   getServers,
   initializeLocalServers,
+  kdbOutputLog,
 } from "./utils/core";
 import { runQFileTerminal } from "./utils/execution";
 import AuthSettings from "./utils/secretStorage";
@@ -94,6 +100,7 @@ import { createDefaultDataSourceFile } from "./models/dataSource";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { CompletionProvider } from "./services/completionProvider";
 import { QuickFixProvider } from "./services/quickFixProvider";
+import { connectClientCommands } from "./commands/clientCommands";
 
 let client: LanguageClient;
 
@@ -151,7 +158,7 @@ export async function activate(context: ExtensionContext) {
   AuthSettings.init(context);
   ext.secretSettings = AuthSettings.instance;
 
-  ext.outputChannel.appendLine("kdb extension is now active!");
+  kdbOutputLog("kdb extension is now active!", "INFO");
 
   try {
     // check for installed q runtime
@@ -203,6 +210,25 @@ export async function activate(context: ExtensionContext) {
         activeConnection(viewItem);
       },
     ),
+    commands.registerCommand(
+      "kdb.addAuthentication",
+      async (viewItem: KdbNode) => {
+        const username = await window.showInputBox({
+          prompt: "Username",
+          title: "Add Authentication",
+        });
+        if (username) {
+          const password = await window.showInputBox({
+            prompt: "Password",
+            title: "Add Authentication",
+            password: true,
+          });
+          if (password) {
+            await addAuthConnection(viewItem.children[0], username, password);
+          }
+        }
+      },
+    ),
     commands.registerCommand("kdb.enableTLS", async (viewItem: KdbNode) => {
       await enableTLS(viewItem.children[0]);
     }),
@@ -218,6 +244,12 @@ export async function activate(context: ExtensionContext) {
         const connLabel =
           typeof viewItem === "string" ? viewItem : viewItem.label;
         await disconnect(connLabel);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.open.meta",
+      async (viewItem: InsightsMetaNode | MetaObjectPayloadNode) => {
+        await openMeta(viewItem);
       },
     ),
     commands.registerCommand("kdb.addConnection", async () => {
@@ -247,9 +279,16 @@ export async function activate(context: ExtensionContext) {
         await removeConnection(viewItem);
       },
     ),
-    commands.registerCommand("kdb.refreshServerObjects", () => {
+    commands.registerCommand("kdb.refreshServerObjects", async () => {
       ext.serverProvider.reload();
+      await refreshGetMeta();
     }),
+    commands.registerCommand(
+      "kdb.insights.refreshMeta",
+      async (viewItem: InsightsNode) => {
+        await refreshGetMeta(viewItem.label);
+      },
+    ),
     commands.registerCommand(
       "kdb.queryHistory.rerun",
       (viewItem: QueryHistoryTreeItem) => {
@@ -276,6 +315,7 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand(
       "kdb.stopLocalProcess",
       async (viewItem: KdbNode) => {
+        await commands.executeCommand("kdb.disconnect", viewItem);
         await stopLocalProcess(viewItem);
       },
     ),
@@ -452,7 +492,7 @@ export async function activate(context: ExtensionContext) {
     },
   };
   const clientOptions: LanguageClientOptions = {
-    documentSelector: [{ scheme: "file", language: "q" }],
+    documentSelector: [{ language: "q" }],
     synchronize: {
       fileEvents: workspace.createFileSystemWatcher("**/*.{q,quke}"),
     },
@@ -466,6 +506,8 @@ export async function activate(context: ExtensionContext) {
   );
 
   await client.start();
+
+  connectClientCommands(context, client);
 
   Telemetry.sendEvent("Extension.Activated");
   const yamlExtension = extensions.getExtension("redhat.vscode-yaml");

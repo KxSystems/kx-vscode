@@ -15,7 +15,7 @@ import { ext } from "../extensionVariables";
 import axios, { AxiosRequestConfig } from "axios";
 import { ProgressLocation, window } from "vscode";
 import * as url from "url";
-import { MetaObject, MetaObjectPayload } from "../models/meta";
+import { MetaInfoType, MetaObject, MetaObjectPayload } from "../models/meta";
 import { getCurrentToken } from "../services/kdbInsights/codeFlowLogin";
 import { InsightsNode } from "../services/kdbTreeProvider";
 import { GetDataObjectPayload } from "../models/data";
@@ -25,12 +25,22 @@ import { jwtDecode } from "jwt-decode";
 import { JwtUser } from "../models/jwt_user";
 import { Telemetry } from "../utils/telemetryClient";
 import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
+import {
+  invalidUsernameJWT,
+  kdbOutputLog,
+  tokenUndefinedError,
+} from "../utils/core";
+import { InsightsConfig, InsightsEndpoints } from "../models/config";
+import { convertTimeToTimestamp } from "../utils/dataSource";
 
 export class InsightsConnection {
   public connected: boolean;
   public connLabel: string;
   public node: InsightsNode;
   public meta?: MetaObject;
+  public config?: InsightsConfig;
+  public insightsVersion?: string;
+  public connEndpoints?: InsightsEndpoints;
 
   constructor(connLabel: string, node: InsightsNode) {
     this.connected = false;
@@ -43,9 +53,11 @@ export class InsightsConnection {
     await getCurrentToken(
       this.node.details.server,
       this.node.details.alias,
+      this.node.details.realm || "insights",
     ).then(async (token) => {
       this.connected = token ? true : false;
       if (token) {
+        await this.getConfig();
         await this.getMeta();
       }
     });
@@ -72,13 +84,11 @@ export class InsightsConnection {
       const token = await getCurrentToken(
         this.node.details.server,
         this.node.details.alias,
+        this.node.details.realm || "insights",
       );
 
       if (token === undefined) {
-        ext.outputChannel.appendLine(
-          "Error retrieving access token for insights.",
-        );
-        window.showErrorMessage("Failed to retrieve access token for insights");
+        tokenUndefinedError(this.connLabel);
         return undefined;
       }
 
@@ -94,6 +104,98 @@ export class InsightsConnection {
     return undefined;
   }
 
+  public async getConfig() {
+    if (this.connected) {
+      const configUrl = new url.URL(
+        ext.insightsAuthUrls.configURL,
+        this.node.details.server,
+      );
+      const token = await getCurrentToken(
+        this.node.details.server,
+        this.node.details.alias,
+        this.node.details.realm || "insights",
+      );
+
+      if (token === undefined) {
+        tokenUndefinedError(this.connLabel);
+        return undefined;
+      }
+
+      const options = {
+        headers: { Authorization: `Bearer ${token.accessToken}` },
+      };
+
+      const configResponse = await axios.get(configUrl.toString(), options);
+      this.config = configResponse.data;
+      this.getInsightsVersion();
+      this.defineEndpoints();
+    }
+  }
+
+  public getInsightsVersion() {
+    const match = this.config?.version.match(/-\d+(\.\d+){2}(-|$)/);
+    const version = match ? match[0].replace(/-/g, "") : null;
+    if (version) {
+      const [major, minor, _path] = version.split(".");
+      this.insightsVersion = `${major}.${minor}`;
+    }
+  }
+
+  public defineEndpoints() {
+    if (this.insightsVersion) {
+      switch (this.insightsVersion) {
+        // uncomment it when SCRATCHPAD merge to Insights
+        // case "1.11":
+        //   this.connEndpoints = {
+        //     scratchpad: {
+        //       scratchpad: "scratchpad-manager/api/v1/execute/display",
+        //       import: "scratchpad-manager/api/v1/execute/import/data",
+        //       importSql: "scratchpad-manager/api/v1/execute/import/sql",
+        //       importQsql: "scratchpad-manager/api/v1/execute/import/qsql",
+        //       reset: "scratchpad-manager/api/v1/execute/reset",
+        //     },
+        //     serviceGateway: {
+        //       meta: "servicegateway/meta",
+        //       data: "servicegateway/data",
+        //       sql: "servicegateway/qe/sql",
+        //       qsql: "servicegateway/qe/qsql",
+        //     },
+        //   };
+        //   break;
+        default:
+          this.connEndpoints = {
+            scratchpad: {
+              scratchpad: "servicebroker/scratchpad/display",
+              import: "servicebroker/scratchpad/import/data",
+              importSql: "servicebroker/scratchpad/import/sql",
+              importQsql: "servicebroker/scratchpad/import/qsql",
+              reset: "servicebroker/scratchpad/reset",
+            },
+            serviceGateway: {
+              meta: "servicegateway/meta",
+              data: "servicegateway/data",
+              sql: "servicegateway/qe/sql",
+              qsql: "servicegateway/qe/qsql",
+            },
+          };
+          break;
+      }
+    }
+  }
+
+  public retrieveEndpoints(
+    parentKey: "scratchpad" | "serviceGateway",
+    childKey: string,
+  ): string | undefined {
+    if (this.connEndpoints) {
+      const parent = this.connEndpoints[parentKey];
+      if (parent) {
+        return parent[childKey as keyof typeof parent];
+      }
+      return undefined;
+    }
+  }
+
   public async getDataInsights(
     targetUrl: string,
     body: string,
@@ -106,16 +208,10 @@ export class InsightsConnection {
       const token = await getCurrentToken(
         this.node.details.server,
         this.node.details.alias,
+        this.node.details.realm || "insights",
       );
       if (token === undefined) {
-        ext.outputChannel.appendLine(
-          "Error retrieving access token for insights connection named: " +
-            this.connLabel,
-        );
-        window.showErrorMessage(
-          "Failed to retrieve access token for insights connection named: " +
-            this.connLabel,
-        );
+        tokenUndefinedError(this.connLabel);
         return undefined;
       }
       const headers = {
@@ -138,15 +234,16 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            ext.outputChannel.appendLine("User cancelled the execution.");
+            kdbOutputLog(`User cancelled the Datasource Run.`, "WARNING");
           });
 
           progress.report({ message: "Query executing..." });
 
           return await axios(options)
             .then((response: any) => {
-              ext.outputChannel.appendLine(
-                `request status: ${response.status}`,
+              kdbOutputLog(
+                `[Datasource RUN] Status: ${response.status}.`,
+                "INFO",
               );
               if (isCompressed(response.data)) {
                 response.data = uncompress(response.data);
@@ -159,8 +256,9 @@ export class InsightsConnection {
               };
             })
             .catch((error: any) => {
-              ext.outputChannel.appendLine(
-                `request status: ${error.response.status}`,
+              kdbOutputLog(
+                `[Datasource RUN] Status: ${error.response.status}.`,
+                "INFO",
               );
               return {
                 error: { buffer: error.response.data },
@@ -179,21 +277,21 @@ export class InsightsConnection {
     params: DataSourceFiles,
   ): Promise<void> {
     let dsTypeString = "";
-    if (this.connected) {
+    if (this.connected && this.connEndpoints) {
       let queryParams, coreUrl: string;
       switch (params.dataSource.selectedType) {
         case DataSourceTypes.API:
           queryParams = {
             table: params.dataSource.api.table,
-            startTS: params.dataSource.api.startTS,
-            endTS: params.dataSource.api.endTS,
+            startTS: convertTimeToTimestamp(params.dataSource.api.startTS),
+            endTS: convertTimeToTimestamp(params.dataSource.api.endTS),
           };
-          coreUrl = ext.insightsScratchpadUrls.import;
+          coreUrl = this.connEndpoints.scratchpad.import;
           dsTypeString = "API";
           break;
         case DataSourceTypes.SQL:
           queryParams = { query: params.dataSource.sql.query };
-          coreUrl = ext.insightsScratchpadUrls.importSql;
+          coreUrl = this.connEndpoints.scratchpad.importSql;
           dsTypeString = "SQL";
           break;
         case DataSourceTypes.QSQL:
@@ -204,7 +302,7 @@ export class InsightsConnection {
             target: assemblyParts[1],
             query: params.dataSource.qsql.query,
           };
-          coreUrl = ext.insightsScratchpadUrls.importQsql;
+          coreUrl = this.connEndpoints.scratchpad.importQsql;
           dsTypeString = "QSQL";
           break;
         default:
@@ -216,21 +314,17 @@ export class InsightsConnection {
       const token = await getCurrentToken(
         this.node.details.server,
         this.node.details.alias,
+        this.node.details.realm || "insights",
       );
 
       if (token === undefined) {
-        ext.outputChannel.appendLine(
-          "Error retrieving access token for insights.",
-        );
-        window.showErrorMessage("Failed to retrieve access token for insights");
+        tokenUndefinedError(this.connLabel);
         return undefined;
       }
 
       const username = jwtDecode<JwtUser>(token.accessToken);
       if (username === undefined || username.preferred_username === "") {
-        ext.outputChannel.appendLine(
-          "JWT did not contain a valid preferred username",
-        );
+        invalidUsernameJWT(this.connLabel);
       }
       const headers = {
         headers: {
@@ -251,9 +345,7 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            ext.outputChannel.appendLine(
-              "User cancelled the scratchpad import.",
-            );
+            kdbOutputLog(`User cancelled the scratchpad import.`, "WARNING");
           });
 
           progress.report({ message: "Populating scratchpad..." });
@@ -264,9 +356,20 @@ export class InsightsConnection {
             headers,
           );
 
-          ext.outputChannel.append(JSON.stringify(scratchpadResponse.data));
+          kdbOutputLog(
+            `Executed successfully, stored in ${variableName}.`,
+            "INFO",
+          );
+          kdbOutputLog(
+            `[SCRATCHPAD] Status: ${scratchpadResponse.status}`,
+            "INFO",
+          );
+          kdbOutputLog(
+            `[SCRATCHPAD] Populated scratchpad with the following params: ${JSON.stringify(body.params)}`,
+            "INFO",
+          );
           window.showInformationMessage(
-            `Executed successfully, stored in ${variableName}`,
+            `Executed successfully, stored in ${variableName}.`,
           );
           Telemetry.sendEvent(
             "Datasource." + dsTypeString + ".Scratchpad.Populated",
@@ -276,6 +379,8 @@ export class InsightsConnection {
           return p;
         },
       );
+    } else {
+      this.noConnectionOrEndpoints();
     }
   }
 
@@ -284,28 +389,24 @@ export class InsightsConnection {
     context?: string,
     isPython?: boolean,
   ): Promise<any | undefined> {
-    if (this.connected) {
-      const isTableView = ext.resultsViewProvider.isVisible();
+    if (this.connected && this.connEndpoints) {
+      const isTableView = ext.isResultsTabVisible;
       const scratchpadURL = new url.URL(
-        ext.insightsAuthUrls.scratchpadURL,
+        this.connEndpoints.scratchpad.scratchpad,
         this.node.details.server,
       );
       const token = await getCurrentToken(
         this.node.details.server,
         this.node.details.alias,
+        this.node.details.realm || "insights",
       );
       if (token === undefined) {
-        ext.outputChannel.appendLine(
-          "Error retrieving access token for insights.",
-        );
-        window.showErrorMessage("Failed to retrieve access token for insights");
+        tokenUndefinedError(this.connLabel);
         return undefined;
       }
       const username = jwtDecode<JwtUser>(token.accessToken);
       if (username === undefined || username.preferred_username === "") {
-        ext.outputChannel.appendLine(
-          "JWT did not contain a valid preferred username",
-        );
+        invalidUsernameJWT(this.connLabel);
       }
       const body = {
         expression: query,
@@ -328,15 +429,14 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            ext.outputChannel.appendLine(
-              "User cancelled the scratchpad execution.",
-            );
+            kdbOutputLog(`User cancelled the Scrathpad execution.`, "WARNING");
           });
 
           progress.report({ message: "Query is executing..." });
           const spRes = await axios
             .post(scratchpadURL.toString(), body, { headers })
             .then((response: any) => {
+              kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
               if (isTableView && !response.data.error) {
                 const buffer = new Uint8Array(
                   response.data.data.map((x: string) => parseInt(x, 16)),
@@ -353,35 +453,33 @@ export class InsightsConnection {
         },
       );
       return spReponse;
+    } else {
+      this.noConnectionOrEndpoints();
     }
     return undefined;
   }
 
   public async resetScratchpad(): Promise<boolean> {
-    if (this.connected) {
+    if (this.connected && this.connEndpoints) {
       const scratchpadURL = new url.URL(
-        ext.insightsScratchpadUrls.reset!,
+        this.connEndpoints.scratchpad.reset,
         this.node.details.server,
       );
 
       const token = await getCurrentToken(
         this.node.details.server,
         this.node.details.alias,
+        this.node.details.realm || "insights",
       );
 
       if (token === undefined) {
-        ext.outputChannel.appendLine(
-          "Error retrieving access token for insights.",
-        );
-        window.showErrorMessage("Failed to retrieve access token for insights");
+        tokenUndefinedError(this.connLabel);
         return false;
       }
 
       const username = jwtDecode<JwtUser>(token.accessToken);
       if (username === undefined || username.preferred_username === "") {
-        ext.outputChannel.appendLine(
-          "JWT did not contain a valid preferred username",
-        );
+        invalidUsernameJWT(this.connLabel);
         return false;
       }
       const headers = {
@@ -398,27 +496,28 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            ext.outputChannel.appendLine(
-              "User cancelled the scratchpad reset.",
-            );
+            kdbOutputLog(`User cancelled the scratchpad reset.`, "WARNING");
             return false;
           });
-
           progress.report({ message: "Reseting scratchpad..." });
-
           const res = await axios
             .post(scratchpadURL.toString(), null, headers)
-            .then((response: any) => {
-              console.log(response);
-              ext.outputChannel.append("Scratchpad.Reseted");
+            .then((_response: any) => {
+              kdbOutputLog(
+                `[SCRATCHPAD] Executed successfully, scratchpad reseted at ${this.connLabel} connection.`,
+                "INFO",
+              );
               window.showInformationMessage(
                 `Executed successfully, scratchpad reseted at ${this.connLabel} connection`,
               );
               Telemetry.sendEvent("Scratchpad.Reseted");
               return true;
             })
-            .catch((error: any) => {
-              console.log(error);
+            .catch((_error: any) => {
+              kdbOutputLog(
+                `[SCRATCHPAD] Error ocurried while reseting scratchpad in connection ${this.connLabel}, try again.`,
+                "ERROR",
+              );
               window.showErrorMessage(
                 "Error ocurried while reseting scratchpad, try again.",
               );
@@ -429,60 +528,53 @@ export class InsightsConnection {
         },
       );
     } else {
+      this.noConnectionOrEndpoints();
       return false;
     }
   }
 
-  public async pingInsights(): Promise<boolean | undefined> {
-    if (this.connected) {
-      const pingURL = new url.URL(
-        ext.insightsServiceGatewayUrls.ping,
-        this.node.details.server,
+  public returnMetaObject(metaType: MetaInfoType): string {
+    if (!this.meta) {
+      kdbOutputLog(
+        `Meta data is undefined for connection ${this.connLabel}`,
+        "ERROR",
       );
-
-      const userToken = await getCurrentToken(
-        this.node.details.server,
-        this.node.details.alias,
-      );
-
-      if (userToken === undefined) {
-        ext.outputChannel.appendLine(
-          "Error retrieving access token for insights.",
-        );
-        window.showErrorMessage("Failed to retrieve access token for insights");
-        return false;
-      }
-
-      const body = {
-        labels: {},
-      };
-      const startTime = Date.now();
-
-      return await axios
-        .request({
-          method: "post",
-          url: pingURL.toString(),
-          data: body,
-          headers: { Authorization: `Bearer ${userToken.accessToken}` },
-          timeout: 2000,
-        })
-        .then((_response: any) => {
-          Telemetry.sendEvent("Insights.Pinged");
-          return true;
-        })
-        .catch((_error: any) => {
-          const endTime = Date.now();
-          const timeString = new Date().toLocaleTimeString();
-          const timeDiff = endTime - startTime;
-          ext.outputChannel.appendLine(
-            `[${timeString}] Connection keep alive error: ${this.connLabel}. Ping failed. ${_error.code}: status code ${_error.response.status}. Time Elapsed ${timeDiff}ms`,
-          );
-
-          window.showErrorMessage(
-            `Error in connection: ${this.connLabel}, check kdb OUTPUT for more info.`,
-          );
-          return false;
-        });
+      return "";
     }
+
+    let objectToReturn;
+
+    switch (metaType) {
+      case MetaInfoType.META:
+        objectToReturn = this.meta.payload;
+        break;
+      case MetaInfoType.SCHEMA:
+        objectToReturn = this.meta.payload.schema;
+        break;
+      case MetaInfoType.API:
+        objectToReturn = this.meta.payload.api;
+        break;
+      case MetaInfoType.AGG:
+        objectToReturn = this.meta.payload.agg;
+        break;
+      case MetaInfoType.DAP:
+        objectToReturn = this.meta.payload.dap;
+        break;
+      case MetaInfoType.RC:
+        objectToReturn = this.meta.payload.rc;
+        break;
+      default:
+        kdbOutputLog(`Invalid meta type: ${metaType}`, "ERROR");
+        return "";
+    }
+
+    return JSON.stringify(objectToReturn);
+  }
+
+  public noConnectionOrEndpoints(): void {
+    kdbOutputLog(
+      `No connection or endpoints defined for ${this.connLabel}`,
+      "ERROR",
+    );
   }
 }

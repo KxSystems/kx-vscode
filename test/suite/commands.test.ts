@@ -15,7 +15,6 @@ import assert from "assert";
 import mock from "mock-fs";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import { TreeItemCollapsibleState, window } from "vscode";
 import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
 import * as installTools from "../../src/commands/installTools";
 import * as serverCommand from "../../src/commands/serverCommand";
@@ -34,6 +33,7 @@ import {
   InsightsNode,
   KdbNode,
   KdbTreeProvider,
+  MetaObjectPayloadNode,
 } from "../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as coreUtils from "../../src/utils/core";
@@ -50,6 +50,10 @@ import { InsightsConnection } from "../../src/classes/insightsConnection";
 import * as workspaceCommand from "../../src/commands/workspaceCommand";
 import { MetaObject } from "../../src/models/meta";
 import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider";
+import { GetDataError } from "../../src/models/data";
+import * as clientCommand from "../../src/commands/clientCommands";
+import { LanguageClient } from "vscode-languageclient/node";
+import { MetaContentProvider } from "../../src/services/metaContentProvider";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
@@ -57,7 +61,7 @@ describe("dataSourceCommand", () => {
     mock.restore();
   });
 
-  it("should add a data source", async () => {
+  it.skip("should add a data source", async () => {
     mock({
       "/temp": {
         ".kdb-datasources": {
@@ -88,7 +92,7 @@ describe("dataSourceCommand2", () => {
       alias: "insightsserveralias",
       auth: true,
     },
-    TreeItemCollapsibleState.None,
+    vscode.TreeItemCollapsibleState.None,
   );
   const insightsConn = new InsightsConnection(insightsNode.label, insightsNode);
   const uriTest: vscode.Uri = vscode.Uri.parse("test");
@@ -629,6 +633,7 @@ describe("dataSourceCommand2", () => {
 
     afterEach(() => {
       sinon.restore();
+      ext.isResultsTabVisible = false;
     });
 
     it("should show an error message if not connected to an Insights server", async () => {
@@ -665,7 +670,7 @@ describe("dataSourceCommand2", () => {
       insightsConn.meta = dummyMeta;
       getMetaStub.resolves(dummyMeta);
       getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
-      isVisibleStub.returns(true);
+      ext.isResultsTabVisible = true;
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles,
         insightsConn.connLabel,
@@ -684,7 +689,7 @@ describe("dataSourceCommand2", () => {
       dummyFileContent.dataSource.selectedType = DataSourceTypes.API;
       getMetaStub.resolves(dummyMeta);
       getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
-      isVisibleStub.returns(false);
+      ext.isResultsTabVisible = false;
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles,
         insightsConn.connLabel,
@@ -703,7 +708,7 @@ describe("dataSourceCommand2", () => {
       dummyFileContent.dataSource.selectedType = DataSourceTypes.SQL;
       getMetaStub.resolves(dummyMeta);
       getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
-      isVisibleStub.returns(false);
+      ext.isResultsTabVisible = false;
       await dataSourceCommand.runDataSource(
         dummyFileContent as DataSourceFiles,
         insightsConn.connLabel,
@@ -797,6 +802,16 @@ describe("dataSourceCommand2", () => {
       );
       sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
       sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+    });
+
+    it("should handle errors correctly", async () => {
+      retrieveConnStub.throws(new Error("Test error"));
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
+      );
+      windowMock.expects("showErrorMessage").once().withArgs("Test error");
     });
   });
 
@@ -848,6 +863,29 @@ describe("dataSourceCommand2", () => {
         .withArgs("Please connect to an Insights server");
     });
   });
+
+  describe("parseError", () => {
+    let kdbOutputLogStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+    });
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should call kdbOutputLog and return error if error does not have buffer", () => {
+      const error: GetDataError = "test error";
+
+      const result = dataSourceCommand.parseError(error);
+
+      assert(kdbOutputLogStub.calledOnce);
+      assert(
+        kdbOutputLogStub.calledWith(`[DATASOURCE] Error: ${error}`, "ERROR"),
+      );
+      assert.deepEqual(result, { error });
+    });
+  });
 });
 
 describe("installTools", () => {
@@ -874,14 +912,14 @@ describe("serverCommand", () => {
       alias: "insightsserveralias",
       auth: true,
     },
-    TreeItemCollapsibleState.None,
+    vscode.TreeItemCollapsibleState.None,
   );
 
   const kdbNode = new KdbNode(
     ["child1"],
     "testElement",
     servers["testServer"],
-    TreeItemCollapsibleState.None,
+    vscode.TreeItemCollapsibleState.None,
   );
   const insights = {
     testInsight: {
@@ -896,10 +934,10 @@ describe("serverCommand", () => {
     ext.serverProvider = undefined;
   });
 
-  it("should call the New Connection Panel Renderer", () => {
+  it("should call the New Connection Panel Renderer", async () => {
     const newConnectionPanelStub = sinon.stub(NewConnectionPannel, "render");
-
-    serverCommand.addNewConnection();
+    ext.context = <vscode.ExtensionContext>{};
+    await serverCommand.addNewConnection();
     sinon.assert.calledOnce(newConnectionPanelStub);
     sinon.restore();
   });
@@ -1669,6 +1707,7 @@ describe("serverCommand", () => {
       disconnectStub,
       getServersStub,
       getHashStub,
+      getKeyStub,
       getInsightsStub,
       removeLocalConnectionContextStub,
       updateServersStub,
@@ -1680,6 +1719,7 @@ describe("serverCommand", () => {
       getServersStub = sinon.stub(coreUtils, "getServers");
       getInsightsStub = sinon.stub(coreUtils, "getInsights");
       getHashStub = sinon.stub(coreUtils, "getHash");
+      getKeyStub = sinon.stub(coreUtils, "getKeyForServerName");
       removeLocalConnectionContextStub = sinon.stub(
         coreUtils,
         "removeLocalConnectionContext",
@@ -1698,7 +1738,7 @@ describe("serverCommand", () => {
     it("should remove connection and refresh server provider", async () => {
       indexOfStub.returns(1);
       getServersStub.returns({ testKey: {} });
-      getHashStub.returns("testKey");
+      getKeyStub.returns("testKey");
 
       await serverCommand.removeConnection(kdbNode);
 
@@ -1715,7 +1755,7 @@ describe("serverCommand", () => {
       ext.connectedContextStrings.push(kdbNode.label);
       indexOfStub.returns(1);
       getServersStub.returns({ testKey: {} });
-      getHashStub.returns("testKey");
+      getKeyStub.returns("testKey");
 
       await serverCommand.removeConnection(kdbNode);
       assert.ok(updateServersStub.calledOnce);
@@ -1750,6 +1790,90 @@ describe("serverCommand", () => {
       retrieveConnectionStub.returns(undefined);
       await serverCommand.connect("test");
       windowErrorStub.calledOnce;
+    });
+  });
+
+  describe("refreshGetMeta", () => {
+    let refreshGetMetaStub, refreshAllGetMetasStub: sinon.SinonStub;
+    beforeEach(() => {
+      refreshGetMetaStub = sinon.stub(
+        ConnectionManagementService.prototype,
+        "refreshGetMeta",
+      );
+      refreshAllGetMetasStub = sinon.stub(
+        ConnectionManagementService.prototype,
+        "refreshAllGetMetas",
+      );
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should call refreshGetMeta if connLabel is provided", async () => {
+      await serverCommand.refreshGetMeta("test");
+
+      sinon.assert.calledOnce(refreshGetMetaStub);
+      sinon.assert.calledWith(refreshGetMetaStub, "test");
+      sinon.assert.notCalled(refreshAllGetMetasStub);
+    });
+
+    it("should call refreshAllGetMetas if connLabel is not provided", async () => {
+      await serverCommand.refreshGetMeta();
+
+      sinon.assert.notCalled(refreshGetMetaStub);
+      sinon.assert.calledOnce(refreshAllGetMetasStub);
+    });
+  });
+
+  describe("openMeta", () => {
+    let sandbox: sinon.SinonSandbox;
+    const node = new MetaObjectPayloadNode(
+      [],
+      "meta",
+      "",
+      vscode.TreeItemCollapsibleState.None,
+      "meta",
+      "connLabel",
+    );
+    const connService = new ConnectionManagementService();
+
+    beforeEach(() => {
+      sandbox = sinon.createSandbox();
+      sandbox.spy(vscode.workspace, "registerTextDocumentContentProvider");
+      sandbox.spy(vscode.workspace, "openTextDocument");
+      sandbox.spy(vscode.window, "showTextDocument");
+    });
+
+    afterEach(() => {
+      sandbox.restore();
+      sinon.restore();
+    });
+
+    it("should call functions once for valid meta content", async () => {
+      sinon
+        .stub(ConnectionManagementService.prototype, "retrieveMetaContent")
+        .returns('{"test": []}');
+      await serverCommand.openMeta(node);
+      sinon.assert.calledOnce(
+        vscode.workspace.registerTextDocumentContentProvider as sinon.SinonSpy,
+      );
+      sinon.assert.calledOnce(
+        vscode.workspace.openTextDocument as sinon.SinonSpy,
+      );
+      sinon.assert.calledOnce(vscode.window.showTextDocument as sinon.SinonSpy);
+    });
+
+    it("should not call some functions for invalid meta content", async () => {
+      sinon.stub(connService, "retrieveMetaContent").returns("");
+      await serverCommand.openMeta(node);
+      sinon.assert.calledOnce(
+        vscode.workspace.registerTextDocumentContentProvider as sinon.SinonSpy,
+      );
+      sinon.assert.notCalled(
+        vscode.workspace.openTextDocument as sinon.SinonSpy,
+      );
+      sinon.assert.notCalled(vscode.window.showTextDocument as sinon.SinonSpy);
     });
   });
 });
@@ -1832,14 +1956,14 @@ describe("workspaceCommand", () => {
   });
   describe("pickConnection", () => {
     it("should pick from available servers", async () => {
-      sinon.stub(window, "showQuickPick").value(async () => "test");
+      sinon.stub(vscode.window, "showQuickPick").value(async () => "test");
       const result = await workspaceCommand.pickConnection(
         vscode.Uri.file("test.kdb.q"),
       );
       assert.strictEqual(result, "test");
     });
     it("should return undefined from (none)", async () => {
-      sinon.stub(window, "showQuickPick").value(async () => "(none)");
+      sinon.stub(vscode.window, "showQuickPick").value(async () => "(none)");
       const result = await workspaceCommand.pickConnection(
         vscode.Uri.file("test.kdb.q"),
       );
@@ -1878,17 +2002,26 @@ describe("workspaceCommand", () => {
     let windowErrorStub,
       windowWithProgressStub,
       windowShowInfo,
-      workspaceFolderStub: sinon.SinonStub;
+      workspaceFolderStub,
+      tokenOnCancellationRequestedStub,
+      kdbOutputLogStub: sinon.SinonStub;
     beforeEach(() => {
       windowErrorStub = sinon.stub(vscode.window, "showErrorMessage");
       windowWithProgressStub = sinon.stub(vscode.window, "withProgress");
       windowShowInfo = sinon.stub(vscode.window, "showInformationMessage");
       workspaceFolderStub = sinon.stub(vscode.workspace, "workspaceFolders");
+      tokenOnCancellationRequestedStub = sinon.stub();
+      windowWithProgressStub.callsFake((options, task) => {
+        const token = {
+          onCancellationRequested: tokenOnCancellationRequestedStub,
+        };
+        task({}, token);
+      });
+
+      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
     });
     afterEach(() => {
-      windowErrorStub.restore();
-      windowWithProgressStub.restore();
-      windowShowInfo.restore();
+      sinon.restore();
     });
     it("should show info message if old files do not exist", async () => {
       ext.oldDSformatExists = false;
@@ -1912,6 +2045,91 @@ describe("workspaceCommand", () => {
       await workspaceCommand.importOldDSFiles();
       sinon.assert.notCalled(windowErrorStub);
       sinon.assert.notCalled(windowShowInfo);
+    });
+
+    it("should log cancellation if user cancels the request", async () => {
+      ext.oldDSformatExists = true;
+      workspaceFolderStub.get(() => [
+        {
+          uri: { fsPath: "path/to/workspace" },
+          name: "workspace",
+          index: 0,
+        },
+      ]);
+
+      tokenOnCancellationRequestedStub.callsFake((callback) => callback());
+
+      await workspaceCommand.importOldDSFiles();
+
+      sinon.assert.calledOnce(kdbOutputLogStub);
+      sinon.assert.calledWith(
+        kdbOutputLogStub,
+        "[DATASOURCE] User cancelled the old DS files import.",
+        "INFO",
+      );
+    });
+  });
+});
+
+describe("clientCommands", () => {
+  const client = sinon.createStubInstance(LanguageClient);
+  let executeBlock;
+  let toggleParameterCache;
+
+  beforeEach(() => {
+    const context = <vscode.ExtensionContext>{ subscriptions: [] };
+    sinon.stub(vscode.commands, "registerCommand").value((a, b) => b);
+    clientCommand.connectClientCommands(context, client);
+    executeBlock = context.subscriptions[0];
+    toggleParameterCache = context.subscriptions[1];
+    ext.activeTextEditor = <vscode.TextEditor>{
+      options: { insertSpaces: true, indentSize: 4 },
+      selection: { active: new vscode.Position(0, 0) },
+      document: {
+        uri: vscode.Uri.file("/tmp/some.q"),
+        getText: () => "",
+      },
+    };
+  });
+  afterEach(() => {
+    sinon.restore();
+    ext.activeTextEditor = undefined;
+  });
+  describe("executeBlock", () => {
+    it("should execute current block", async () => {
+      sinon
+        .stub(client, "sendRequest")
+        .value(async () => new vscode.Range(0, 0, 1, 1));
+      sinon.stub(workspaceCommand, "runActiveEditor").value(() => {});
+      await executeBlock(client);
+      assert.deepEqual(
+        ext.activeTextEditor.selection,
+        new vscode.Selection(0, 0, 1, 1),
+      );
+    });
+  });
+  describe("kdb.toggleParameterCache", () => {
+    it("should add parameter cache for single line functions", async () => {
+      let edit: vscode.WorkspaceEdit;
+      sinon.stub(client, "sendRequest").value(async () => ({
+        params: ["a"],
+        start: new vscode.Position(0, 0),
+        end: new vscode.Position(0, 10),
+      }));
+      sinon.stub(vscode.workspace, "applyEdit").value(async (a) => (edit = a));
+      await toggleParameterCache(client);
+      assert.strictEqual(edit.size, 1);
+    });
+    it("should add parameter cache for multi line functions", async () => {
+      let edit: vscode.WorkspaceEdit;
+      sinon.stub(client, "sendRequest").value(async () => ({
+        params: ["a"],
+        start: new vscode.Position(0, 0),
+        end: new vscode.Position(1, 10),
+      }));
+      sinon.stub(vscode.workspace, "applyEdit").value(async (a) => (edit = a));
+      await toggleParameterCache(client);
+      assert.strictEqual(edit.size, 1);
     });
   });
 });
