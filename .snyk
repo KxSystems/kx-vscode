@@ -1,0 +1,6 @@
+version: v1.5.0
+ignore:
+  "SNYK-JS-AGGRIDCOMMUNITY-7414157":
+    - "*":
+        reason: "Fix not published yet. When the fix is published, we'll update the package.json to use the fixed version."
+        expires: "2050-01-01T00:00:00.000Z"
