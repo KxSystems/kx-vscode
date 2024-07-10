@@ -2,6 +2,12 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.6.1
+
+### Fixes
+
+- Update Ag-Grid package to avoid prototype pollution
+
 # v1.6.0
 
 ### Enhancements
