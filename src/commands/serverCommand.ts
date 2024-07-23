@@ -95,7 +95,7 @@ export async function addInsightsConnection(insightsData: InsightDetails) {
   } else {
     const key = insightsData.alias;
     let server = insightsData.server || "";
-    if (!server.match(/^https?:\/\//i)) {
+    if (!/^https?:\/\//i.exec(server)) {
       server = "https://" + server;
     }
     if (insights === undefined) {

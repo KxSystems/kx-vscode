@@ -35,7 +35,6 @@ import {
 } from "../utils/core";
 import { InsightsConfig, InsightsEndpoints } from "../models/config";
 import { convertTimeToTimestamp } from "../utils/dataSource";
-import https from "https";
 
 export class InsightsConnection {
   public connected: boolean;
@@ -79,6 +78,27 @@ export class InsightsConnection {
     //will be added the feature to retrieve server objects from insights
   }
 
+  private async getOptions() {
+    const token = await getCurrentToken(
+      this.node.details.server,
+      this.node.details.alias,
+      this.node.details.realm || "insights",
+      !!this.node.details.insecure,
+    );
+
+    if (token === undefined) {
+      tokenUndefinedError(this.connLabel);
+      return undefined;
+    }
+
+    const options: AxiosRequestConfig = {
+      headers: { Authorization: `Bearer ${token.accessToken}` },
+      httpsAgent: getHttpsAgent(this.node.details.insecure),
+    };
+
+    return options;
+  }
+
   public async getMeta(): Promise<MetaObjectPayload | undefined> {
     if (this.connected) {
       const metaUrl = new url.URL(
@@ -86,22 +106,11 @@ export class InsightsConnection {
         this.node.details.server,
       );
 
-      const token = await getCurrentToken(
-        this.node.details.server,
-        this.node.details.alias,
-        this.node.details.realm || "insights",
-        !!this.node.details.insecure,
-      );
+      const options = await this.getOptions();
 
-      if (token === undefined) {
-        tokenUndefinedError(this.connLabel);
+      if (options === undefined) {
         return undefined;
       }
-
-      const options: AxiosRequestConfig = {
-        headers: { Authorization: `Bearer ${token.accessToken}` },
-        httpsAgent: getHttpsAgent(this.node.details.insecure),
-      };
 
       const metaResponse = await axios.post(metaUrl.toString(), {}, options);
       const meta: MetaObject = metaResponse.data;
@@ -117,22 +126,12 @@ export class InsightsConnection {
         ext.insightsAuthUrls.configURL,
         this.node.details.server,
       );
-      const token = await getCurrentToken(
-        this.node.details.server,
-        this.node.details.alias,
-        this.node.details.realm || "insights",
-        !!this.node.details.insecure,
-      );
 
-      if (token === undefined) {
-        tokenUndefinedError(this.connLabel);
+      const options = await this.getOptions();
+
+      if (options === undefined) {
         return undefined;
       }
-
-      const options: AxiosRequestConfig = {
-        headers: { Authorization: `Bearer ${token.accessToken}` },
-        httpsAgent: getHttpsAgent(this.node.details.insecure),
-      };
 
       const configResponse = await axios.get(configUrl.toString(), options);
       this.config = configResponse.data;
