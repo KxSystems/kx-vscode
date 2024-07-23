@@ -94,21 +94,27 @@ export async function addInsightsConnection(insightsData: InsightDetails) {
     return;
   } else {
     const key = insightsData.alias;
+    let server = insightsData.server || "";
+    if (!server.match(/^https?:\/\//i)) {
+      server = "https://" + server;
+    }
     if (insights === undefined) {
       insights = {
         key: {
           auth: true,
           alias: insightsData.alias,
-          server: insightsData.server!,
+          server,
           realm: insightsData.realm,
+          insecure: insightsData.insecure,
         },
       };
     } else {
       insights[key] = {
         auth: true,
         alias: insightsData.alias,
-        server: insightsData.server!,
+        server,
         realm: insightsData.realm,
+        insecure: insightsData.insecure,
       };
     }
 

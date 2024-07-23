@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import axios from "axios";
+import axios, { AxiosRequestConfig } from "axios";
 import * as crypto from "crypto";
 import * as fs from "fs-extra";
 import * as http from "http";
@@ -21,6 +21,7 @@ import * as url from "url";
 import { ext } from "../../extensionVariables";
 import { Uri, env } from "vscode";
 import { pickPort } from "pick-port";
+import https from "https";
 
 interface IDeferred<T> {
   resolve: (result: T | Promise<T>) => void;
@@ -62,7 +63,11 @@ const commonRequestParams = {
   client_id: "insights-app",
 };
 
-export async function signIn(insightsUrl: string, realm: string) {
+export async function signIn(
+  insightsUrl: string,
+  realm: string,
+  insecure: boolean,
+) {
   const { server, codePromise } = createServer();
 
   try {
@@ -82,7 +87,7 @@ export async function signIn(insightsUrl: string, realm: string) {
     await env.openExternal(Uri.parse(authorizationUrl.toString()));
 
     const code = await codePromise;
-    return await getToken(insightsUrl, realm, code);
+    return await getToken(insightsUrl, realm, insecure, code);
   } finally {
     setImmediate(() => server.close());
   }
@@ -91,6 +96,7 @@ export async function signIn(insightsUrl: string, realm: string) {
 export async function signOut(
   insightsUrl: string,
   realm: string,
+  insecure: boolean,
   token: string,
 ): Promise<void> {
   const queryParams = queryString({
@@ -100,8 +106,11 @@ export async function signOut(
   const body = {
     body: queryParams,
   };
-  const headers = {
+  const headers: AxiosRequestConfig = {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    httpsAgent: new https.Agent({
+      rejectUnauthorized: !insecure,
+    }),
   };
   const requestUrl = getRevokeUrl(insightsUrl, realm);
 
@@ -113,9 +122,10 @@ export async function signOut(
 export async function refreshToken(
   insightsUrl: string,
   realm: string,
+  insecure: boolean,
   token: string,
 ): Promise<IToken | undefined> {
-  return await tokenRequest(insightsUrl, realm, {
+  return await tokenRequest(insightsUrl, realm, insecure, {
     grant_type: ext.insightsGrantType.refreshToken,
     refresh_token: token,
   });
@@ -126,6 +136,7 @@ export async function getCurrentToken(
   serverName: string,
   serverAlias: string,
   realm: string,
+  insecure: boolean,
 ): Promise<IToken | undefined> {
   if (serverName === "" || serverAlias === "") {
     return undefined;
@@ -137,9 +148,14 @@ export async function getCurrentToken(
   if (existingToken !== undefined) {
     const storedToken: IToken = JSON.parse(existingToken);
     if (new Date(storedToken.accessTokenExpirationDate) < new Date()) {
-      token = await refreshToken(serverName, realm, storedToken.refreshToken);
+      token = await refreshToken(
+        serverName,
+        realm,
+        insecure,
+        storedToken.refreshToken,
+      );
       if (token === undefined) {
-        token = await signIn(serverName, realm);
+        token = await signIn(serverName, realm, insecure);
         ext.context.secrets.store(serverAlias, JSON.stringify(token));
       }
       ext.context.secrets.store(serverAlias, JSON.stringify(token));
@@ -148,7 +164,7 @@ export async function getCurrentToken(
       return storedToken;
     }
   } else {
-    token = await signIn(serverName, realm);
+    token = await signIn(serverName, realm, insecure);
     ext.context.secrets.store(serverAlias, JSON.stringify(token));
   }
   return token;
@@ -158,9 +174,10 @@ export async function getCurrentToken(
 async function getToken(
   insightsUrl: string,
   realm: string,
+  insecure: boolean,
   code: string,
 ): Promise<IToken | undefined> {
-  return await tokenRequest(insightsUrl, realm, {
+  return await tokenRequest(insightsUrl, realm, insecure, {
     code,
     grant_type: ext.insightsGrantType.authorizationCode,
   });
@@ -169,15 +186,19 @@ async function getToken(
 async function tokenRequest(
   insightsUrl: string,
   realm: string,
+  insecure: boolean,
   params: any,
 ): Promise<IToken | undefined> {
   const queryParams = queryString(params);
-  const headers = {
+  const headers: AxiosRequestConfig = {
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
     },
     timeout: closeTimeout,
     signal: AbortSignal.timeout(closeTimeout),
+    httpsAgent: new https.Agent({
+      rejectUnauthorized: !insecure,
+    }),
   };
 
   const requestUrl = getTokenUrl(insightsUrl, realm);

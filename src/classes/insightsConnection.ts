@@ -32,6 +32,7 @@ import {
 } from "../utils/core";
 import { InsightsConfig, InsightsEndpoints } from "../models/config";
 import { convertTimeToTimestamp } from "../utils/dataSource";
+import https from "https";
 
 export class InsightsConnection {
   public connected: boolean;
@@ -54,6 +55,7 @@ export class InsightsConnection {
       this.node.details.server,
       this.node.details.alias,
       this.node.details.realm || "insights",
+      this.node.details.insecure || false,
     ).then(async (token) => {
       this.connected = token ? true : false;
       if (token) {
@@ -85,6 +87,7 @@ export class InsightsConnection {
         this.node.details.server,
         this.node.details.alias,
         this.node.details.realm || "insights",
+        this.node.details.insecure || false,
       );
 
       if (token === undefined) {
@@ -92,8 +95,11 @@ export class InsightsConnection {
         return undefined;
       }
 
-      const options = {
+      const options: AxiosRequestConfig = {
         headers: { Authorization: `Bearer ${token.accessToken}` },
+        httpsAgent: new https.Agent({
+          rejectUnauthorized: !this.node.details.insecure,
+        }),
       };
 
       const metaResponse = await axios.post(metaUrl.toString(), {}, options);
@@ -114,6 +120,7 @@ export class InsightsConnection {
         this.node.details.server,
         this.node.details.alias,
         this.node.details.realm || "insights",
+        this.node.details.insecure || false,
       );
 
       if (token === undefined) {
@@ -121,8 +128,11 @@ export class InsightsConnection {
         return undefined;
       }
 
-      const options = {
+      const options: AxiosRequestConfig = {
         headers: { Authorization: `Bearer ${token.accessToken}` },
+        httpsAgent: new https.Agent({
+          rejectUnauthorized: !this.node.details.insecure,
+        }),
       };
 
       const configResponse = await axios.get(configUrl.toString(), options);
@@ -209,6 +219,7 @@ export class InsightsConnection {
         this.node.details.server,
         this.node.details.alias,
         this.node.details.realm || "insights",
+        this.node.details.insecure || false,
       );
       if (token === undefined) {
         tokenUndefinedError(this.connLabel);
@@ -226,6 +237,9 @@ export class InsightsConnection {
         data: body,
         headers: headers,
         responseType: "arraybuffer",
+        httpsAgent: new https.Agent({
+          rejectUnauthorized: !this.node.details.insecure,
+        }),
       };
       const results = await window.withProgress(
         {
@@ -315,6 +329,7 @@ export class InsightsConnection {
         this.node.details.server,
         this.node.details.alias,
         this.node.details.realm || "insights",
+        this.node.details.insecure || false,
       );
 
       if (token === undefined) {
@@ -326,12 +341,15 @@ export class InsightsConnection {
       if (username === undefined || username.preferred_username === "") {
         invalidUsernameJWT(this.connLabel);
       }
-      const headers = {
+      const headers: AxiosRequestConfig = {
         headers: {
           Authorization: `Bearer ${token.accessToken}`,
           username: username.preferred_username!,
           json: true,
         },
+        httpsAgent: new https.Agent({
+          rejectUnauthorized: !this.node.details.insecure,
+        }),
       };
       const body = {
         output: variableName,
@@ -399,6 +417,7 @@ export class InsightsConnection {
         this.node.details.server,
         this.node.details.alias,
         this.node.details.realm || "insights",
+        this.node.details.insecure || false,
       );
       if (token === undefined) {
         tokenUndefinedError(this.connLabel);
@@ -434,7 +453,12 @@ export class InsightsConnection {
 
           progress.report({ message: "Query is executing..." });
           const spRes = await axios
-            .post(scratchpadURL.toString(), body, { headers })
+            .post(scratchpadURL.toString(), body, {
+              headers,
+              httpsAgent: new https.Agent({
+                rejectUnauthorized: !this.node.details.insecure,
+              }),
+            })
             .then((response: any) => {
               kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
               if (isTableView && !response.data.error) {
@@ -470,6 +494,7 @@ export class InsightsConnection {
         this.node.details.server,
         this.node.details.alias,
         this.node.details.realm || "insights",
+        this.node.details.insecure || false,
       );
 
       if (token === undefined) {
@@ -482,12 +507,15 @@ export class InsightsConnection {
         invalidUsernameJWT(this.connLabel);
         return false;
       }
-      const headers = {
+      const headers: AxiosRequestConfig = {
         headers: {
           Authorization: `Bearer ${token.accessToken}`,
           username: username.preferred_username!,
           json: true,
         },
+        httpsAgent: new https.Agent({
+          rejectUnauthorized: !this.node.details.insecure,
+        }),
       };
       return await window.withProgress(
         {

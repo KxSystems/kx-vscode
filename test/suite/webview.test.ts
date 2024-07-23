@@ -480,6 +480,7 @@ describe("KdbNewConnectionView", () => {
         server: "",
         auth: true,
         realm: "",
+        insecure: false,
       };
       const data = view["data"];
       assert.deepEqual(data, expectedData);
