@@ -56,6 +56,10 @@ export interface IToken {
   refreshToken: string;
 }
 
+export function getHttpsAgent(insecure: boolean | undefined) {
+  return new https.Agent({ rejectUnauthorized: !insecure });
+}
+
 const defaultTimeout = 3 * 60 * 1000; // 3 min
 const closeTimeout = 10 * 1000; // 10 sec
 
@@ -108,9 +112,7 @@ export async function signOut(
   };
   const headers: AxiosRequestConfig = {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    httpsAgent: new https.Agent({
-      rejectUnauthorized: !insecure,
-    }),
+    httpsAgent: getHttpsAgent(insecure),
   };
   const requestUrl = getRevokeUrl(insightsUrl, realm);
 
@@ -196,9 +198,7 @@ async function tokenRequest(
     },
     timeout: closeTimeout,
     signal: AbortSignal.timeout(closeTimeout),
-    httpsAgent: new https.Agent({
-      rejectUnauthorized: !insecure,
-    }),
+    httpsAgent: getHttpsAgent(insecure),
   };
 
   const requestUrl = getTokenUrl(insightsUrl, realm);

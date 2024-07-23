@@ -16,7 +16,10 @@ import axios, { AxiosRequestConfig } from "axios";
 import { ProgressLocation, window } from "vscode";
 import * as url from "url";
 import { MetaInfoType, MetaObject, MetaObjectPayload } from "../models/meta";
-import { getCurrentToken } from "../services/kdbInsights/codeFlowLogin";
+import {
+  getCurrentToken,
+  getHttpsAgent,
+} from "../services/kdbInsights/codeFlowLogin";
 import { InsightsNode } from "../services/kdbTreeProvider";
 import { GetDataObjectPayload } from "../models/data";
 import { isCompressed, uncompress } from "../ipc/c";
@@ -97,9 +100,7 @@ export class InsightsConnection {
 
       const options: AxiosRequestConfig = {
         headers: { Authorization: `Bearer ${token.accessToken}` },
-        httpsAgent: new https.Agent({
-          rejectUnauthorized: !this.node.details.insecure,
-        }),
+        httpsAgent: getHttpsAgent(this.node.details.insecure),
       };
 
       const metaResponse = await axios.post(metaUrl.toString(), {}, options);
@@ -130,9 +131,7 @@ export class InsightsConnection {
 
       const options: AxiosRequestConfig = {
         headers: { Authorization: `Bearer ${token.accessToken}` },
-        httpsAgent: new https.Agent({
-          rejectUnauthorized: !this.node.details.insecure,
-        }),
+        httpsAgent: getHttpsAgent(this.node.details.insecure),
       };
 
       const configResponse = await axios.get(configUrl.toString(), options);
@@ -237,9 +236,7 @@ export class InsightsConnection {
         data: body,
         headers: headers,
         responseType: "arraybuffer",
-        httpsAgent: new https.Agent({
-          rejectUnauthorized: !this.node.details.insecure,
-        }),
+        httpsAgent: getHttpsAgent(this.node.details.insecure),
       };
       const results = await window.withProgress(
         {
@@ -347,9 +344,7 @@ export class InsightsConnection {
           username: username.preferred_username!,
           json: true,
         },
-        httpsAgent: new https.Agent({
-          rejectUnauthorized: !this.node.details.insecure,
-        }),
+        httpsAgent: getHttpsAgent(this.node.details.insecure),
       };
       const body = {
         output: variableName,
@@ -455,9 +450,7 @@ export class InsightsConnection {
           const spRes = await axios
             .post(scratchpadURL.toString(), body, {
               headers,
-              httpsAgent: new https.Agent({
-                rejectUnauthorized: !this.node.details.insecure,
-              }),
+              httpsAgent: getHttpsAgent(this.node.details.insecure),
             })
             .then((response: any) => {
               kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
@@ -513,9 +506,7 @@ export class InsightsConnection {
           username: username.preferred_username!,
           json: true,
         },
-        httpsAgent: new https.Agent({
-          rejectUnauthorized: !this.node.details.insecure,
-        }),
+        httpsAgent: getHttpsAgent(this.node.details.insecure),
       };
       return await window.withProgress(
         {
