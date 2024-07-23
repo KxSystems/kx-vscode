@@ -55,7 +55,7 @@ export class InsightsConnection {
       this.node.details.server,
       this.node.details.alias,
       this.node.details.realm || "insights",
-      this.node.details.insecure || false,
+      !!this.node.details.insecure,
     ).then(async (token) => {
       this.connected = token ? true : false;
       if (token) {
@@ -87,7 +87,7 @@ export class InsightsConnection {
         this.node.details.server,
         this.node.details.alias,
         this.node.details.realm || "insights",
-        this.node.details.insecure || false,
+        !!this.node.details.insecure,
       );
 
       if (token === undefined) {
@@ -120,7 +120,7 @@ export class InsightsConnection {
         this.node.details.server,
         this.node.details.alias,
         this.node.details.realm || "insights",
-        this.node.details.insecure || false,
+        !!this.node.details.insecure,
       );
 
       if (token === undefined) {
@@ -219,7 +219,7 @@ export class InsightsConnection {
         this.node.details.server,
         this.node.details.alias,
         this.node.details.realm || "insights",
-        this.node.details.insecure || false,
+        !!this.node.details.insecure,
       );
       if (token === undefined) {
         tokenUndefinedError(this.connLabel);
@@ -329,7 +329,7 @@ export class InsightsConnection {
         this.node.details.server,
         this.node.details.alias,
         this.node.details.realm || "insights",
-        this.node.details.insecure || false,
+        !!this.node.details.insecure,
       );
 
       if (token === undefined) {
@@ -417,7 +417,7 @@ export class InsightsConnection {
         this.node.details.server,
         this.node.details.alias,
         this.node.details.realm || "insights",
-        this.node.details.insecure || false,
+        !!this.node.details.insecure,
       );
       if (token === undefined) {
         tokenUndefinedError(this.connLabel);
@@ -494,7 +494,7 @@ export class InsightsConnection {
         this.node.details.server,
         this.node.details.alias,
         this.node.details.realm || "insights",
-        this.node.details.insecure || false,
+        !!this.node.details.insecure,
       );
 
       if (token === undefined) {
