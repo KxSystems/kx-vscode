@@ -15,6 +15,7 @@ import * as vscode from "vscode";
 import { getUri } from "../utils/getUri";
 import { getNonce } from "../utils/getNonce";
 import { ext } from "../extensionVariables";
+import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 
 export class NewConnectionPannel {
   public static currentPanel: NewConnectionPannel | undefined;
@@ -59,7 +60,10 @@ export class NewConnectionPannel {
     });
   }
 
-  public static render(extensionUri: vscode.Uri) {
+  public static render(
+    extensionUri: vscode.Uri,
+    conn?: KdbNode | InsightsNode,
+  ) {
     if (NewConnectionPannel.currentPanel) {
       NewConnectionPannel.currentPanel._panel.dispose();
       return;
@@ -80,6 +84,12 @@ export class NewConnectionPannel {
       panel,
       extensionUri,
     );
+    if (conn) {
+      panel.webview.postMessage({
+        command: "editConnection",
+        data: conn,
+      });
+    }
   }
 
   public static close() {
