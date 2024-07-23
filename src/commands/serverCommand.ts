@@ -69,7 +69,13 @@ import { InsightsConnection } from "../classes/insightsConnection";
 import { MetaContentProvider } from "../services/metaContentProvider";
 
 export async function addNewConnection(): Promise<void> {
+  NewConnectionPannel.close();
   NewConnectionPannel.render(ext.context.extensionUri);
+}
+
+export async function editConnection(viewItem: KdbNode | InsightsNode) {
+  NewConnectionPannel.close();
+  NewConnectionPannel.render(ext.context.extensionUri, viewItem);
 }
 
 export async function addInsightsConnection(insightsData: InsightDetails) {

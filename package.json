@@ -255,6 +255,11 @@
       },
       {
         "category": "KX",
+        "command": "kdb.editConnection",
+        "title": "Edit connection"
+      },
+      {
+        "category": "KX",
         "command": "kdb.removeConnection",
         "title": "Remove connection"
       },
@@ -562,6 +567,10 @@
           "when": "false"
         },
         {
+          "command": "kdb.editConnection",
+          "when": "false"
+        },
+        {
           "command": "kdb.removeConnection",
           "when": "false"
         },
@@ -664,6 +673,11 @@
           "command": "kdb.connect",
           "when": "view == kdb-servers && viewItem not in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection@1"
+        },
+        {
+          "command": "kdb.editConnection",
+          "when": "view == kdb-servers",
+          "group": "connection@4"
         },
         {
           "command": "kdb.active.connection",

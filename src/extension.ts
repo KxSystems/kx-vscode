@@ -47,6 +47,7 @@ import {
   addNewConnection,
   connect,
   disconnect,
+  editConnection,
   enableTLS,
   openMeta,
   refreshGetMeta,
@@ -255,6 +256,12 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.addConnection", async () => {
       await addNewConnection();
     }),
+    commands.registerCommand(
+      "kdb.editConnection",
+      async (viewItem: KdbNode | InsightsNode) => {
+        await editConnection(viewItem);
+      },
+    ),
     commands.registerCommand(
       "kdb.newConnection.createNewInsightConnection",
       async (insightsData: InsightDetails) => {
