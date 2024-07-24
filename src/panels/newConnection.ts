@@ -16,6 +16,7 @@ import { getUri } from "../utils/getUri";
 import { getNonce } from "../utils/getNonce";
 import { ext } from "../extensionVariables";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
+import { ConnectionType, EditConnectionMessage } from "../models/messages";
 
 export class NewConnectionPannel {
   public static currentPanel: NewConnectionPannel | undefined;
@@ -69,9 +70,11 @@ export class NewConnectionPannel {
       return;
     }
 
+    const isEdit = conn ? true : false;
+
     const panel = vscode.window.createWebviewPanel(
       "kdbNewConnection",
-      "New Connection",
+      isEdit ? "Edit Connection" : "New Connection",
       vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -85,9 +88,34 @@ export class NewConnectionPannel {
       extensionUri,
     );
     if (conn) {
+      let connType;
+      if (conn instanceof InsightsNode) {
+        connType = ConnectionType.Insights;
+      } else {
+        if (conn.details.managed) {
+          connType = ConnectionType.BundledQ;
+        } else {
+          connType = ConnectionType.Kdb;
+        }
+      }
+      const editConnData: EditConnectionMessage = {
+        connType,
+        serverName:
+          conn instanceof InsightsNode
+            ? conn.details.alias
+            : conn.details.serverAlias,
+        serverAddress:
+          conn instanceof InsightsNode
+            ? conn.details.server
+            : conn.details.serverName,
+        realm: conn instanceof InsightsNode ? conn.details.realm : undefined,
+        port: conn instanceof KdbNode ? conn.details.serverPort : undefined,
+        auth: conn.details.auth,
+        tls: conn instanceof KdbNode ? conn.details.tls : undefined,
+      };
       panel.webview.postMessage({
         command: "editConnection",
-        data: conn,
+        data: editConnData,
       });
     }
   }

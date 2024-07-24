@@ -42,3 +42,19 @@ export interface DataSourceMessage2 {
   insightsMeta: MetaObjectPayload;
   dataSourceFile: DataSourceFiles;
 }
+
+export const enum ConnectionType {
+  BundledQ,
+  Kdb,
+  Insights,
+}
+
+export interface EditConnectionMessage {
+  connType: ConnectionType;
+  serverName: string;
+  serverAddress: string;
+  port?: string;
+  realm?: string;
+  auth?: boolean;
+  tls?: boolean;
+}

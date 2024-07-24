@@ -12,11 +12,12 @@
  */
 
 import { LitElement, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement, property, state } from "lit/decorators.js";
 import { ServerDetails, ServerType } from "../../models/server";
 import { InsightDetails } from "../../models/insights";
 
 import { kdbStyles, newConnectionStyles, vscodeStyles } from "./styles";
+import { EditConnectionMessage } from "../../models/messages";
 
 @customElement("kdb-new-connection-view")
 export class KdbNewConnectionView extends LitElement {
@@ -26,6 +27,10 @@ export class KdbNewConnectionView extends LitElement {
   @state() declare insightsServer: InsightDetails;
   @state() declare serverType: ServerType;
   @state() declare isBundledQ: boolean;
+  @state() declare editAuth: boolean;
+  @property({ type: Object }) connectionData:
+    | EditConnectionMessage
+    | undefined = undefined;
   private readonly vscode = acquireVsCodeApi();
   private tabConfig = {
     1: { isBundledQ: true, serverType: ServerType.KDB },
@@ -37,6 +42,7 @@ export class KdbNewConnectionView extends LitElement {
   constructor() {
     super();
     this.isBundledQ = true;
+    this.editAuth = false;
     this.serverType = ServerType.KDB;
     this.kdbServer = {
       serverName: "",
@@ -62,6 +68,7 @@ export class KdbNewConnectionView extends LitElement {
       managed: false,
       tls: false,
     };
+    window.addEventListener("message", this.handleMessage.bind(this));
   }
 
   get selectConnection(): string {
@@ -77,8 +84,19 @@ export class KdbNewConnectionView extends LitElement {
     }
   }
 
+  handleMessage(event: { data: any }) {
+    const message = event.data;
+    if (message.command === "editConnection") {
+      this.connectionData = message.data;
+    }
+  }
+
   changeTLS() {
     this.kdbServer.tls = !this.kdbServer.tls;
+  }
+
+  editAuthOfConn() {
+    this.editAuth = !this.editAuth;
   }
 
   renderServerNameDesc() {
@@ -252,7 +270,7 @@ export class KdbNewConnectionView extends LitElement {
     this.serverType = config.serverType;
   }
 
-  render() {
+  renderNewConnectionForm() {
     return html`
       <div class="row mt-1 mb-1 content-wrapper">
         <div class="col form-wrapper">
@@ -263,42 +281,47 @@ export class KdbNewConnectionView extends LitElement {
             <div class="row option-description">
               <span
                 >If you are new to kdb and q, start with the
-                <b>“Bundled q”</b> that comes packaged with the
-                kdb VS Code extension.</span
+                <b>“Bundled q”</b> that comes packaged with the kdb VS Code
+                extension.</span
               >
-              </div>
-              <br />
-              <div class="row option-description"><span>
+            </div>
+            <br />
+            <div class="row option-description">
+              <span>
                 If you are familiar with q and are running a remote q process,
-                then use <b>“My q”</b>. Please ensure your remote q process is running
-                before connecting it to the kdb VS Code extension otherwise you
-                will get a connection error.</span>
-              </div>
-              <br />
-              <div class="row option-description"><span>
-                If you are an Insights user, then use an <b>“Insights connection”.</b>
-                You will be required to authenticate the connection prior to its
-                availability in the kdb VS Code extension.</span>
-              </div>          
-            </div>          
-            <div class="row">
-              <vscode-panels activeid="${this.selectConnection}">
+                then use <b>“My q”</b>. Please ensure your remote q process is
+                running before connecting it to the kdb VS Code extension
+                otherwise you will get a connection error.</span
+              >
+            </div>
+            <br />
+            <div class="row option-description">
+              <span>
+                If you are an Insights user, then use an
+                <b>“Insights connection”.</b> You will be required to
+                authenticate the connection prior to its availability in the kdb
+                VS Code extension.</span
+              >
+            </div>
+          </div>
+          <div class="row">
+            <vscode-panels activeid="${this.selectConnection}">
               <vscode-panel-tab
-                  id="tab-1"
-                  @click="${() => this.tabClickAction(1)}"
-                  >Bundled q</vscode-panel-tab
-                >
-                <vscode-panel-tab
-                  id="tab-2"
-                  @click="${() => this.tabClickAction(2)}"
-                  >My q</vscode-panel-tab
-                >
-                <vscode-panel-tab
-                  id="tab-3"
-                  @click="${() => this.tabClickAction(3)}"
-                  >Insights connection</vscode-panel-tab
-                >
-                <vscode-panel-view id="view-1" class="panel">
+                id="tab-1"
+                @click="${() => this.tabClickAction(1)}"
+                >Bundled q</vscode-panel-tab
+              >
+              <vscode-panel-tab
+                id="tab-2"
+                @click="${() => this.tabClickAction(2)}"
+                >My q</vscode-panel-tab
+              >
+              <vscode-panel-tab
+                id="tab-3"
+                @click="${() => this.tabClickAction(3)}"
+                >Insights connection</vscode-panel-tab
+              >
+              <vscode-panel-view id="view-1" class="panel">
                 <div class="col">
                   <div class="row">
                     <div class="col gap-0">
@@ -311,123 +334,307 @@ export class KdbNewConnectionView extends LitElement {
                     </div>
                   </div>
                   <div class="row">
+                    <div class="col gap-0">${this.renderPortNumber()}</div>
+                  </div>
+                </div>
+              </vscode-panel-view>
+              <vscode-panel-view id="view-2" class="panel">
+                <div class="col">
+                  <div class="row">
                     <div class="col gap-0">
-                      ${this.renderPortNumber()}
+                      ${this.renderServerName(ServerType.KDB)}
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col gap-0">
+                      ${this.renderConnAddress(ServerType.KDB)}
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col gap-0">${this.renderPortNumber()}</div>
+                  </div>
+                  <div class="row option-title">
+                    Add Authentication if enabled
+                  </div>
+                  <div class="row">
+                    <div class="col gap-0">
+                      <div class="row">
+                        <vscode-text-field
+                          class="text-field larger option-title"
+                          value="${this.kdbServer.username
+                            ? this.kdbServer.username
+                            : ""}"
+                          @input="${(event: Event) =>
+                            (this.kdbServer.username = (
+                              event.target as HTMLSelectElement
+                            ).value)}"
+                          >Username</vscode-text-field
+                        >
+                      </div>
+                      <div class="row">
+                        <vscode-text-field
+                          type="password"
+                          class="text-field larger option-title"
+                          value="${this.kdbServer.password
+                            ? this.kdbServer.password
+                            : ""}"
+                          @input="${(event: Event) =>
+                            (this.kdbServer.password = (
+                              event.target as HTMLSelectElement
+                            ).value)}"
+                          >Password</vscode-text-field
+                        >
+                      </div>
+                      <div class="row option-description  option-help">
+                        Add required authentication to get access to the server
+                        connection if enabled.
+                      </div>
+                    </div>
+                  </div>
+                  <div class="row">
+                    <div class="col gap-0">
+                      <div class="row option-title">
+                        Optional: Enable TLS Encryption
+                      </div>
+                      <div class="row">
+                        <vscode-checkbox
+                          value="${this.kdbServer.tls}"
+                          @click="${() => this.changeTLS()}"
+                          >Enable TLS Encryption on the kdb
+                          connection</vscode-checkbox
+                        >
+                      </div>
                     </div>
                   </div>
                 </div>
-                </vscode-panel-view>
-                <vscode-panel-view id="view-2" class="panel">
-                  <div class="col">
-                    <div class="row">
-                      <div class="col gap-0">
-                        ${this.renderServerName(ServerType.KDB)}
-                      </div>
-                    </div>
-                    <div class="row">
-                      <div class="col gap-0">
-                        ${this.renderConnAddress(ServerType.KDB)}
-                      </div>
-                    </div>
-                    <div class="row">
-                      <div class="col gap-0">
-                        ${this.renderPortNumber()}
-                      </div>
-                    </div>
-                    <div class="row option-title">
-                      Add Authentication if enabled
-                    </div>
-                    <div class="row">
-                      <div class="col gap-0">
-                        <div class="row">
-                          <vscode-text-field
-                            class="text-field larger option-title"
-                            value="${
-                              this.kdbServer.username
-                                ? this.kdbServer.username
-                                : ""
-                            }"   
-                            @input="${(event: Event) =>
-                              (this.kdbServer.username = (
-                                event.target as HTMLSelectElement
-                              ).value)}"
-                            >Username</vscode-text-field
-                          >
-                        </div>
-                        <div class="row">
-                          <vscode-text-field
-                            type="password"
-                            class="text-field larger option-title"
-                            value="${
-                              this.kdbServer.password
-                                ? this.kdbServer.password
-                                : ""
-                            }"
-                            @input="${(event: Event) =>
-                              (this.kdbServer.password = (
-                                event.target as HTMLSelectElement
-                              ).value)}"
-                            >Password</vscode-text-field
-                          >
-                        </div>
-                        <div class="row option-description  option-help">
-                          Add required authentication to get access to the
-                          server connection if enabled.
-                        </div>
-                      </div>
-                    </div>
-                    <div class="row">
-                      <div class="col gap-0">
-                        <div class="row option-title">
-                          Optional: Enable TLS Encryption
-                        </div>
-                        <div class="row">
-                          <vscode-checkbox
-                            value="${this.kdbServer.tls}"
-                            @click="${() => this.changeTLS()}"
-                            >Enable TLS Encryption on the kdb
-                            connection</vscode-checkbox
-                          >
-                        </div>
-                      </div>
+              </vscode-panel-view>
+              <vscode-panel-view id="view-3" class="panel">
+                <div class="col">
+                  <div class="row">
+                    <div class="col gap-0">
+                      ${this.renderServerName(ServerType.INSIGHTS)}
                     </div>
                   </div>
-                </vscode-panel-view>
-                <vscode-panel-view id="view-3" class="panel">
-                  <div class="col">
-                    <div class="row">
-                      <div class="col gap-0">
-                        ${this.renderServerName(ServerType.INSIGHTS)}
-                      </div>
+                  <div class="row">
+                    <div class="col gap-0">
+                      ${this.renderConnAddress(ServerType.INSIGHTS)}
                     </div>
-                    <div class="row">
-                      <div class="col gap-0">
-                        ${this.renderConnAddress(ServerType.INSIGHTS)}
-                      </div>
-                    </div>
-                    <div class="row">
-                      <div class="col gap-0">
+                  </div>
+                  <div class="row">
+                    <div class="col gap-0">
                       <details>
                         <summary>Advanced</summary>
                         ${this.renderRealm()}
-                      </details>  
-                      </div>
+                      </details>
                     </div>
                   </div>
-                </vscode-panel-view>
-              </vscode-panels>
+                </div>
+              </vscode-panel-view>
+            </vscode-panels>
+          </div>
+        </div>
+        <div class="col">
+          <div class="row">
+            <vscode-button @click="${() => this.save()}"
+              >Create Connection</vscode-button
+            >
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  renderEditConnectionForm() {
+    if (!this.connectionData) {
+      return html`<div>No connection found to be edited</div>`;
+    }
+    this.isBundledQ = this.connectionData.connType === 0;
+    const connTypeName =
+      this.connectionData.connType === 0
+        ? "Bundled q"
+        : this.connectionData.connType === 1
+          ? "My q"
+          : "Insights";
+    return html`
+      <div class="row mt-1 mb-1 content-wrapper">
+        <div class="col form-wrapper">
+          <div class="header-text-wrapper">
+            <div class="row">
+              <h2>Edit ${connTypeName} Connection</h2>
             </div>
           </div>
-          <div class="col">
+          <div class="row">${this.renderEditConnFields()}</div>
+        </div>
+        <div class="col">
+          <div class="row">
+            <vscode-button @click="${() => this.editConnection()}"
+              >Edit Connection</vscode-button
+            >
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  renderEditConnFields() {
+    if (!this.connectionData) {
+      return html`<div>No connection found to be edited</div>`;
+    }
+    if (this.connectionData.connType === 0) {
+      return this.renderBundleQEditForm();
+    } else if (this.connectionData.connType === 1) {
+      return this.renderMyQEditForm();
+    } else {
+      return this.renderInsightsEditForm();
+    }
+  }
+
+  renderBundleQEditForm() {
+    if (!this.connectionData) {
+      return html`<div>No connection found to be edited</div>`;
+    }
+    this.bundledServer.serverAlias = "local";
+    this.bundledServer.serverPort = this.connectionData.port || "";
+    this.bundledServer.serverName = this.connectionData.serverAddress;
+    return html`
+      <div class="col">
+        <div class="row">
+          <div class="col gap-0">${this.renderServerName(ServerType.KDB)}</div>
+        </div>
+        <div class="row">
+          <div class="col gap-0">${this.renderConnAddress(ServerType.KDB)}</div>
+        </div>
+        <div class="row">
+          <div class="col gap-0">${this.renderPortNumber()}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  renderMyQEditForm() {
+    if (!this.connectionData) {
+      return html`<div>No connection found to be edited</div>`;
+    }
+    this.kdbServer.serverAlias = this.connectionData.serverName;
+    this.kdbServer.serverPort = this.connectionData.port || "";
+    this.kdbServer.serverName = this.connectionData.serverAddress;
+    this.kdbServer.auth = this.connectionData.auth || false;
+    this.kdbServer.tls = this.connectionData.tls || false;
+    return html`
+      <div class="col">
+        <div class="row">
+          <div class="col gap-0">${this.renderServerName(ServerType.KDB)}</div>
+        </div>
+        <div class="row">
+          <div class="col gap-0">${this.renderConnAddress(ServerType.KDB)}</div>
+        </div>
+        <div class="row">
+          <div class="col gap-0">${this.renderPortNumber()}</div>
+        </div>
+        <div class="row">
+          <div class="col gap-0">
+            <div class="row option-title">Optional: Edit Auth options</div>
             <div class="row">
-              <vscode-button @click="${() => this.save()}"
-                >Create Connection</vscode-button
+              <vscode-checkbox
+                value="${this.editAuth}"
+                @click="${() => this.editAuthOfConn()}"
+                >Edit existing auth on the kdb connection</vscode-checkbox
+              >
+            </div>
+          </div>
+        </div>
+        ${this.editAuth
+          ? html`
+              <div class="row">
+                <div class="col gap-0">
+                  <div class="row">
+                    <vscode-text-field
+                      class="text-field larger option-title"
+                      value="${this.kdbServer.username
+                        ? this.kdbServer.username
+                        : ""}"
+                      @input="${(event: Event) =>
+                        (this.kdbServer.username = (
+                          event.target as HTMLSelectElement
+                        ).value)}"
+                      >Username</vscode-text-field
+                    >
+                  </div>
+                  <div class="row">
+                    <vscode-text-field
+                      type="password"
+                      class="text-field larger option-title"
+                      value="${this.kdbServer.password
+                        ? this.kdbServer.password
+                        : ""}"
+                      @input="${(event: Event) =>
+                        (this.kdbServer.password = (
+                          event.target as HTMLSelectElement
+                        ).value)}"
+                      >Password</vscode-text-field
+                    >
+                  </div>
+                  <div class="row option-description  option-help">
+                    Add required authentication to get access to the server
+                    connection if enabled.
+                  </div>
+                </div>
+              </div>
+            `
+          : ""}
+        <div class="row">
+          <div class="col gap-0">
+            <div class="row option-title">Optional: Enable TLS Encryption</div>
+            <div class="row">
+              <vscode-checkbox
+                value="${this.kdbServer.tls}"
+                @click="${() => this.changeTLS()}"
+                >Enable TLS Encryption on the kdb connection</vscode-checkbox
               >
             </div>
           </div>
         </div>
       </div>
     `;
+  }
+
+  renderInsightsEditForm() {
+    if (!this.connectionData) {
+      return html`<div>No connection found to be edited</div>`;
+    }
+    this.insightsServer.alias = this.connectionData.serverName;
+    this.insightsServer.server = this.connectionData.serverAddress;
+    this.insightsServer.realm = this.connectionData.realm || "";
+    return html`
+      <div class="col">
+        <div class="row">
+          <div class="col gap-0">
+            ${this.renderServerName(ServerType.INSIGHTS)}
+          </div>
+        </div>
+        <div class="row">
+          <div class="col gap-0">
+            ${this.renderConnAddress(ServerType.INSIGHTS)}
+          </div>
+        </div>
+        <div class="row">
+          <div class="col gap-0">
+            <details>
+              <summary>Advanced</summary>
+              ${this.renderRealm()}
+            </details>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  render() {
+    if (!this.connectionData) {
+      return this.renderNewConnectionForm();
+    } else {
+      return html` ${this.renderEditConnectionForm()} `;
+    }
   }
 
   private get data(): ServerDetails | InsightDetails {
@@ -458,6 +665,28 @@ export class KdbNewConnectionView extends LitElement {
     } else {
       this.vscode.postMessage({
         command: "kdb.newConnection.createNewConnection",
+        data: this.data,
+      });
+    }
+  }
+
+  private editConnection() {
+    if (!this.connectionData) {
+      return;
+    }
+    if (this.connectionData.connType === 0) {
+      this.vscode.postMessage({
+        command: "kdb.newConnection.editBundledConnection",
+        data: this.bundledServer,
+      });
+    } else if (this.connectionData.connType === 1) {
+      this.vscode.postMessage({
+        command: "kdb.newConnection.editMyQConnection",
+        data: this.data,
+      });
+    } else {
+      this.vscode.postMessage({
+        command: "kdb.newConnection.editInsightsConnection",
         data: this.data,
       });
     }
