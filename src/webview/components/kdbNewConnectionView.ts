@@ -61,6 +61,7 @@ export class KdbNewConnectionView extends LitElement {
       server: "",
       auth: true,
       realm: "",
+      insecure: false,
     };
     this.bundledServer = {
       serverName: "127.0.0.1",
@@ -363,9 +364,11 @@ export class KdbNewConnectionView extends LitElement {
                       <div class="row">
                         <vscode-text-field
                           class="text-field larger option-title"
-                          value="${this.kdbServer.username
-                            ? this.kdbServer.username
-                            : ""}"
+                          value="${
+                            this.kdbServer.username
+                              ? this.kdbServer.username
+                              : ""
+                          }"
                           @input="${(event: Event) =>
                             (this.kdbServer.username = (
                               event.target as HTMLSelectElement
@@ -377,9 +380,11 @@ export class KdbNewConnectionView extends LitElement {
                         <vscode-text-field
                           type="password"
                           class="text-field larger option-title"
-                          value="${this.kdbServer.password
-                            ? this.kdbServer.password
-                            : ""}"
+                          value="${
+                            this.kdbServer.password
+                              ? this.kdbServer.password
+                              : ""
+                          }"
                           @input="${(event: Event) =>
                             (this.kdbServer.password = (
                               event.target as HTMLSelectElement
@@ -427,7 +432,17 @@ export class KdbNewConnectionView extends LitElement {
                       <details>
                         <summary>Advanced</summary>
                         ${this.renderRealm()}
-                      </details>
+                        <div class="row mt-1">
+                          <vscode-checkbox 
+                            .checked="${this.insightsServer.insecure}"
+                            @change="${(event: Event) => {
+                              this.insightsServer.insecure = (
+                                event.target as HTMLInputElement
+                              ).checked;
+                            }}">Accept insecure SSL certifcates</vscode-checkbox>
+                        </div>
+                      </details>  
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -16,7 +16,10 @@ import axios, { AxiosRequestConfig } from "axios";
 import { ProgressLocation, window } from "vscode";
 import * as url from "url";
 import { MetaInfoType, MetaObject, MetaObjectPayload } from "../models/meta";
-import { getCurrentToken } from "../services/kdbInsights/codeFlowLogin";
+import {
+  getCurrentToken,
+  getHttpsAgent,
+} from "../services/kdbInsights/codeFlowLogin";
 import { InsightsNode } from "../services/kdbTreeProvider";
 import { GetDataObjectPayload } from "../models/data";
 import { isCompressed, uncompress } from "../ipc/c";
@@ -54,6 +57,7 @@ export class InsightsConnection {
       this.node.details.server,
       this.node.details.alias,
       this.node.details.realm || "insights",
+      !!this.node.details.insecure,
     ).then(async (token) => {
       this.connected = token ? true : false;
       if (token) {
@@ -74,6 +78,27 @@ export class InsightsConnection {
     //will be added the feature to retrieve server objects from insights
   }
 
+  private async getOptions() {
+    const token = await getCurrentToken(
+      this.node.details.server,
+      this.node.details.alias,
+      this.node.details.realm || "insights",
+      !!this.node.details.insecure,
+    );
+
+    if (token === undefined) {
+      tokenUndefinedError(this.connLabel);
+      return undefined;
+    }
+
+    const options: AxiosRequestConfig = {
+      headers: { Authorization: `Bearer ${token.accessToken}` },
+      httpsAgent: getHttpsAgent(this.node.details.insecure),
+    };
+
+    return options;
+  }
+
   public async getMeta(): Promise<MetaObjectPayload | undefined> {
     if (this.connected) {
       const metaUrl = new url.URL(
@@ -81,20 +106,11 @@ export class InsightsConnection {
         this.node.details.server,
       );
 
-      const token = await getCurrentToken(
-        this.node.details.server,
-        this.node.details.alias,
-        this.node.details.realm || "insights",
-      );
+      const options = await this.getOptions();
 
-      if (token === undefined) {
-        tokenUndefinedError(this.connLabel);
+      if (options === undefined) {
         return undefined;
       }
-
-      const options = {
-        headers: { Authorization: `Bearer ${token.accessToken}` },
-      };
 
       const metaResponse = await axios.post(metaUrl.toString(), {}, options);
       const meta: MetaObject = metaResponse.data;
@@ -110,20 +126,12 @@ export class InsightsConnection {
         ext.insightsAuthUrls.configURL,
         this.node.details.server,
       );
-      const token = await getCurrentToken(
-        this.node.details.server,
-        this.node.details.alias,
-        this.node.details.realm || "insights",
-      );
 
-      if (token === undefined) {
-        tokenUndefinedError(this.connLabel);
+      const options = await this.getOptions();
+
+      if (options === undefined) {
         return undefined;
       }
-
-      const options = {
-        headers: { Authorization: `Bearer ${token.accessToken}` },
-      };
 
       const configResponse = await axios.get(configUrl.toString(), options);
       this.config = configResponse.data;
@@ -209,6 +217,7 @@ export class InsightsConnection {
         this.node.details.server,
         this.node.details.alias,
         this.node.details.realm || "insights",
+        !!this.node.details.insecure,
       );
       if (token === undefined) {
         tokenUndefinedError(this.connLabel);
@@ -226,6 +235,7 @@ export class InsightsConnection {
         data: body,
         headers: headers,
         responseType: "arraybuffer",
+        httpsAgent: getHttpsAgent(this.node.details.insecure),
       };
       const results = await window.withProgress(
         {
@@ -315,6 +325,7 @@ export class InsightsConnection {
         this.node.details.server,
         this.node.details.alias,
         this.node.details.realm || "insights",
+        !!this.node.details.insecure,
       );
 
       if (token === undefined) {
@@ -326,12 +337,13 @@ export class InsightsConnection {
       if (username === undefined || username.preferred_username === "") {
         invalidUsernameJWT(this.connLabel);
       }
-      const headers = {
+      const headers: AxiosRequestConfig = {
         headers: {
           Authorization: `Bearer ${token.accessToken}`,
           username: username.preferred_username!,
           json: true,
         },
+        httpsAgent: getHttpsAgent(this.node.details.insecure),
       };
       const body = {
         output: variableName,
@@ -399,6 +411,7 @@ export class InsightsConnection {
         this.node.details.server,
         this.node.details.alias,
         this.node.details.realm || "insights",
+        !!this.node.details.insecure,
       );
       if (token === undefined) {
         tokenUndefinedError(this.connLabel);
@@ -434,7 +447,10 @@ export class InsightsConnection {
 
           progress.report({ message: "Query is executing..." });
           const spRes = await axios
-            .post(scratchpadURL.toString(), body, { headers })
+            .post(scratchpadURL.toString(), body, {
+              headers,
+              httpsAgent: getHttpsAgent(this.node.details.insecure),
+            })
             .then((response: any) => {
               kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
               if (isTableView && !response.data.error) {
@@ -470,6 +486,7 @@ export class InsightsConnection {
         this.node.details.server,
         this.node.details.alias,
         this.node.details.realm || "insights",
+        !!this.node.details.insecure,
       );
 
       if (token === undefined) {
@@ -482,12 +499,13 @@ export class InsightsConnection {
         invalidUsernameJWT(this.connLabel);
         return false;
       }
-      const headers = {
+      const headers: AxiosRequestConfig = {
         headers: {
           Authorization: `Bearer ${token.accessToken}`,
           username: username.preferred_username!,
           json: true,
         },
+        httpsAgent: getHttpsAgent(this.node.details.insecure),
       };
       return await window.withProgress(
         {

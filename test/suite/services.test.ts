@@ -726,13 +726,18 @@ describe("Code flow login service tests", () => {
 
   it("Should return a correct login", async () => {
     sinon.stub(codeFlow, "signIn").returns(token);
-    const result = await signIn("http://localhost", "insights");
+    const result = await signIn("http://localhost", "insights", false);
     assert.strictEqual(result, token, "Invalid token returned");
   });
 
   it("Should execute a correct logout", async () => {
     sinon.stub(axios, "post").resolves(Promise.resolve({ data: token }));
-    const result = await signOut("http://localhost", "insights", "token");
+    const result = await signOut(
+      "http://localhost",
+      "insights",
+      false,
+      "token",
+    );
     assert.strictEqual(result, undefined, "Invalid response from logout");
   });
 
@@ -741,6 +746,7 @@ describe("Code flow login service tests", () => {
     const result = await refreshToken(
       "http://localhost",
       "insights",
+      false,
       JSON.stringify(token),
     );
     assert.strictEqual(
@@ -751,7 +757,7 @@ describe("Code flow login service tests", () => {
   });
 
   it("Should not return token from secret store", async () => {
-    const result = await getCurrentToken("", "testalias", "insights");
+    const result = await getCurrentToken("", "testalias", "insights", false);
     assert.strictEqual(
       result,
       undefined,
@@ -760,7 +766,7 @@ describe("Code flow login service tests", () => {
   });
 
   it("Should not return token from secret store", async () => {
-    const result = await getCurrentToken("testserver", "", "insights");
+    const result = await getCurrentToken("testserver", "", "insights", false);
     assert.strictEqual(
       result,
       undefined,
@@ -772,7 +778,7 @@ describe("Code flow login service tests", () => {
     sinon.stub(env, "openExternal").value(async () => {
       throw new Error();
     });
-    await assert.rejects(() => signIn("http://127.0.0.1", "insights"));
+    await assert.rejects(() => signIn("http://127.0.0.1", "insights", false));
   });
 });
 
