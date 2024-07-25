@@ -21,7 +21,10 @@ export function validateServerAlias(
   isLocal: boolean,
 ): string | undefined {
   // server alias is not required, but should be validated if entered
-  if (input !== undefined && input !== "") {
+  if (input !== undefined) {
+    if (input === "") {
+      return "Server Name is required";
+    }
     if (isAliasInUse(input)) {
       return "Server Name is already in use. Please use a different name.";
     }
