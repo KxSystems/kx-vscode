@@ -35,6 +35,9 @@
     "onCommand:kdb.newConnection.createNewInsightConnection",
     "onCommand:kdb.newConnection.createNewConnection",
     "onCommand:kdb.newConnection.createNewBundledConnection",
+    "onCommand:kdb.newConnection.editInsightsConnection",
+    "onCommand:kdb.newConnection.editMyQConnection",
+    "onCommand:kdb.newConnection.editBundledConnection",
     "onView:kdb-datasources-explorer",
     "onTerminalProfile:kdb.q-terminal",
     "onLanguage:python"
