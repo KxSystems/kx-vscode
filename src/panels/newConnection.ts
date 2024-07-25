@@ -58,6 +58,28 @@ export class NewConnectionPannel {
           message.data,
         );
       }
+      if (message.command === "kdb.newConnection.editInsightsConnection") {
+        vscode.commands.executeCommand(
+          "kdb.newConnection.editInsightsConnection",
+          message.data,
+          message.oldAlias,
+        );
+      }
+      if (message.command === "kdb.newConnection.editMyQConnection") {
+        vscode.commands.executeCommand(
+          "kdb.newConnection.editMyQConnection",
+          message.data,
+          message.oldAlias,
+          message.editAuth,
+        );
+      }
+      if (message.command === "kdb.newConnection.editBundledConnection") {
+        vscode.commands.executeCommand(
+          "kdb.newConnection.editBundledConnection",
+          message.data,
+          message.oldAlias,
+        );
+      }
     });
   }
 

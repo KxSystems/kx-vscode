@@ -27,6 +27,7 @@ export class KdbNewConnectionView extends LitElement {
   @state() declare insightsServer: InsightDetails;
   @state() declare serverType: ServerType;
   @state() declare isBundledQ: boolean;
+  @state() declare oldAlias: string;
   @state() declare editAuth: boolean;
   @property({ type: Object }) connectionData:
     | EditConnectionMessage
@@ -44,6 +45,7 @@ export class KdbNewConnectionView extends LitElement {
     this.isBundledQ = true;
     this.editAuth = false;
     this.serverType = ServerType.KDB;
+    this.oldAlias = "";
     this.kdbServer = {
       serverName: "",
       serverPort: "",
@@ -449,12 +451,15 @@ export class KdbNewConnectionView extends LitElement {
       return html`<div>No connection found to be edited</div>`;
     }
     this.isBundledQ = this.connectionData.connType === 0;
+    this.oldAlias = this.connectionData.serverName;
     const connTypeName =
       this.connectionData.connType === 0
         ? "Bundled q"
         : this.connectionData.connType === 1
           ? "My q"
           : "Insights";
+    this.serverType =
+      this.connectionData.connType === 2 ? ServerType.INSIGHTS : ServerType.KDB;
     return html`
       <div class="row mt-1 mb-1 content-wrapper">
         <div class="col form-wrapper">
@@ -670,7 +675,8 @@ export class KdbNewConnectionView extends LitElement {
     }
   }
 
-  private editConnection() {
+  editConnection() {
+    console.log("teste");
     if (!this.connectionData) {
       return;
     }
@@ -678,16 +684,20 @@ export class KdbNewConnectionView extends LitElement {
       this.vscode.postMessage({
         command: "kdb.newConnection.editBundledConnection",
         data: this.bundledServer,
+        oldAlias: "local",
       });
     } else if (this.connectionData.connType === 1) {
       this.vscode.postMessage({
         command: "kdb.newConnection.editMyQConnection",
         data: this.data,
+        oldAlias: this.oldAlias,
+        editAuth: this.editAuth,
       });
     } else {
       this.vscode.postMessage({
         command: "kdb.newConnection.editInsightsConnection",
         data: this.data,
+        oldAlias: this.oldAlias,
       });
     }
   }
