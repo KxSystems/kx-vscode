@@ -253,7 +253,7 @@ export class KdbNewConnectionView extends LitElement {
       <div class="row mt-1">
         <vscode-text-field
           class="text-field larger option-title"
-          value="${this.insightsServer.realm || ""}"
+          value="${this.insightsServer.realm ?? ""}"
           placeholder="insights"
           @input="${(event: Event) => {
             /* istanbul ignore next */
