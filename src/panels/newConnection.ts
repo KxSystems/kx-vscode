@@ -92,11 +92,9 @@ export class NewConnectionPannel {
       return;
     }
 
-    const isEdit = conn ? true : false;
-
     const panel = vscode.window.createWebviewPanel(
       "kdbNewConnection",
-      isEdit ? "Edit Connection" : "New Connection",
+      conn ? "Edit Connection" : "New Connection",
       vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -110,31 +108,8 @@ export class NewConnectionPannel {
       extensionUri,
     );
     if (conn) {
-      let connType;
-      if (conn instanceof InsightsNode) {
-        connType = ConnectionType.Insights;
-      } else {
-        if (conn.details.managed) {
-          connType = ConnectionType.BundledQ;
-        } else {
-          connType = ConnectionType.Kdb;
-        }
-      }
-      const editConnData: EditConnectionMessage = {
-        connType,
-        serverName:
-          conn instanceof InsightsNode
-            ? conn.details.alias
-            : conn.details.serverAlias,
-        serverAddress:
-          conn instanceof InsightsNode
-            ? conn.details.server
-            : conn.details.serverName,
-        realm: conn instanceof InsightsNode ? conn.details.realm : undefined,
-        port: conn instanceof KdbNode ? conn.details.serverPort : undefined,
-        auth: conn.details.auth,
-        tls: conn instanceof KdbNode ? conn.details.tls : undefined,
-      };
+      const connType = this.getConnectionType(conn);
+      const editConnData = this.createEditConnectionMessage(conn, connType);
       panel.webview.postMessage({
         command: "editConnection",
         data: editConnData,
@@ -181,5 +156,38 @@ export class NewConnectionPannel {
         </body>
         </html>
         `;
+  }
+
+  private static getConnectionType(
+    conn: KdbNode | InsightsNode,
+  ): ConnectionType {
+    if (conn instanceof InsightsNode) {
+      return ConnectionType.Insights;
+    } else {
+      return conn.details.managed
+        ? ConnectionType.BundledQ
+        : ConnectionType.Kdb;
+    }
+  }
+
+  private static createEditConnectionMessage(
+    conn: KdbNode | InsightsNode,
+    connType: ConnectionType,
+  ): EditConnectionMessage {
+    return {
+      connType,
+      serverName:
+        conn instanceof InsightsNode
+          ? conn.details.alias
+          : conn.details.serverAlias,
+      serverAddress:
+        conn instanceof InsightsNode
+          ? conn.details.server
+          : conn.details.serverName,
+      realm: conn instanceof InsightsNode ? conn.details.realm : undefined,
+      port: conn instanceof KdbNode ? conn.details.serverPort : undefined,
+      auth: conn.details.auth,
+      tls: conn instanceof KdbNode ? conn.details.tls : undefined,
+    };
   }
 }

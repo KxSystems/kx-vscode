@@ -188,7 +188,7 @@ export async function editInsightsConnection(
           updatedInsights[newKey] = {
             auth: true,
             alias: insightsData.alias,
-            server: insightsData.server!,
+            server: insightsData.server,
             realm: insightsData.realm,
           };
 
@@ -197,7 +197,7 @@ export async function editInsightsConnection(
           insights[oldKey] = {
             auth: true,
             alias: insightsData.alias,
-            server: insightsData.server!,
+            server: insightsData.server,
             realm: insightsData.realm,
           };
           await updateInsights(insights);
@@ -253,6 +253,8 @@ export async function addAuthConnection(
   }
 }
 
+// Not possible to test secrets
+/* istanbul ignore next */
 function removeAuthConnection(serverKey: string) {
   if (ext.secretSettings.storeAuthData.hasOwnProperty(serverKey)) {
     delete (ext.secretSettings.storeAuthData as { [key: string]: any })[
