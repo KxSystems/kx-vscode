@@ -455,12 +455,7 @@ export class KdbNewConnectionView extends LitElement {
     }
     this.isBundledQ = this.connectionData.connType === 0;
     this.oldAlias = this.connectionData.serverName;
-    const connTypeName =
-      this.connectionData.connType === 0
-        ? "Bundled q"
-        : this.connectionData.connType === 1
-          ? "My q"
-          : "Insights";
+    const connTypeName = this.defineConnTypeName(this.connectionData.connType);
     this.serverType =
       this.connectionData.connType === 2 ? ServerType.INSIGHTS : ServerType.KDB;
     return html`
@@ -482,6 +477,16 @@ export class KdbNewConnectionView extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  defineConnTypeName(connType: number) {
+    if (connType === 0) {
+      return "Bundled q";
+    } else if (connType === 1) {
+      return "My q";
+    } else {
+      return "Insights";
+    }
   }
 
   renderEditConnFields() {
