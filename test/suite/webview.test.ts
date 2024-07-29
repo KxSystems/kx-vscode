@@ -22,6 +22,7 @@ import { ServerType } from "../../src/models/server";
 
 import { InsightDetails } from "../../src/models/insights";
 import {
+  ConnectionType,
   DataSourceCommand,
   DataSourceMessage2,
 } from "../../src/models/messages";
@@ -34,7 +35,7 @@ import {
   createSort,
 } from "../../src/models/dataSource";
 import { MetaObjectPayload } from "../../src/models/meta";
-import { TemplateResult } from "lit";
+import { html, TemplateResult } from "lit";
 
 describe("KdbDataSourceView", () => {
   let view: KdbDataSourceView;
@@ -226,6 +227,50 @@ describe("KdbNewConnectionView", () => {
 
   beforeEach(() => {
     view = new KdbNewConnectionView();
+  });
+
+  describe("handleMessage", () => {
+    it('should update connectionData when command is "editConnection"', () => {
+      const event = {
+        data: {
+          command: "editConnection",
+          data: {
+            serverName: "test",
+            connType: 1,
+            serverAddress: "localhost",
+          },
+        },
+      };
+
+      view.handleMessage(event);
+
+      assert.equal(view.connectionData, event.data.data);
+    });
+
+    it('should not update connectionData when command is not "editConnection"', () => {
+      const event = {
+        data: {
+          command: "otherCommand",
+          data: { serverName: "testServer" },
+        },
+      };
+
+      view.handleMessage(event);
+
+      assert.equal(view.connectionData, undefined);
+    });
+  });
+
+  describe("editAuthOfConn", () => {
+    it("should toggle editAuth", () => {
+      view.editAuth = false;
+
+      view.editAuthOfConn();
+      assert.equal(view.editAuth, true);
+
+      view.editAuthOfConn();
+      assert.equal(view.editAuth, false);
+    });
   });
 
   describe("selectConnection", () => {
@@ -469,6 +514,168 @@ describe("KdbNewConnectionView", () => {
       assert.equal(renderConnAddressStub.called, true);
       assert.equal(saveStub.called, false);
       assert.equal(changeTLSStub.called, false);
+    });
+  });
+
+  describe("renderEditConnectionForm", () => {
+    it('should return "No connection found to be edited" when connectionData is null', () => {
+      view.connectionData = null;
+
+      const result = view.renderEditConnectionForm();
+
+      assert.strictEqual(
+        result.strings[0],
+        "<div>No connection found to be edited</div>",
+      );
+    });
+
+    it("should set isBundledQ to true and return correct HTML when connType is 0", () => {
+      view.connectionData = { connType: 0, serverName: "testServer" };
+
+      const result = view.renderEditConnectionForm();
+
+      assert.strictEqual(view.isBundledQ, true);
+      assert.strictEqual(view.oldAlias, "testServer");
+      assert.strictEqual(view.serverType, ServerType.KDB);
+      assert.strictEqual(result.values[0].includes("Bundled q"), true);
+    });
+
+    it("should set isBundledQ to false and return correct HTML when connType is 1", () => {
+      view.connectionData = { connType: 1, serverName: "testServer" };
+
+      const result = view.renderEditConnectionForm();
+
+      assert.strictEqual(view.isBundledQ, false);
+      assert.strictEqual(view.oldAlias, "testServer");
+      assert.strictEqual(view.serverType, ServerType.KDB);
+      assert.strictEqual(result.values[0].includes("My q"), true);
+    });
+
+    it("should set serverType to INSIGHTS and return correct HTML when connType is 2", () => {
+      view.connectionData = { connType: 2, serverName: "testServer" };
+
+      const result = view.renderEditConnectionForm();
+
+      assert.strictEqual(view.isBundledQ, false);
+      assert.strictEqual(view.oldAlias, "testServer");
+      assert.strictEqual(view.serverType, ServerType.INSIGHTS);
+      assert.strictEqual(result.values[0].includes("Insights"), true);
+    });
+  });
+
+  describe("renderEditConnFields", () => {
+    it('should return "No connection found to be edited" when connectionData is null', () => {
+      view.connectionData = null;
+      const result = view.renderEditConnFields();
+      assert.equal(
+        result.strings[0],
+        "<div>No connection found to be edited</div>",
+      );
+    });
+
+    it("should call renderBundleQEditForm when connectionData.connType is 0", () => {
+      view.connectionData = { connType: 0 };
+      const renderBundleQEditFormStub = sinon
+        .stub(view, "renderBundleQEditForm")
+        .returns(html``);
+      view.renderEditConnFields();
+      assert.ok(renderBundleQEditFormStub.calledOnce);
+      renderBundleQEditFormStub.restore();
+    });
+
+    it("should call renderMyQEditForm when connectionData.connType is 1", () => {
+      view.connectionData = { connType: 1 };
+      const renderMyQEditFormStub = sinon
+        .stub(view, "renderMyQEditForm")
+        .returns(html``);
+      view.renderEditConnFields();
+      assert.ok(renderMyQEditFormStub.calledOnce);
+      renderMyQEditFormStub.restore();
+    });
+
+    it("should call renderInsightsEditForm when connectionData.connType is any other value", () => {
+      view.connectionData = { connType: 2 };
+      const renderInsightsEditFormStub = sinon
+        .stub(view, "renderInsightsEditForm")
+        .returns(html``);
+      view.renderEditConnFields();
+      assert.ok(renderInsightsEditFormStub.calledOnce);
+      renderInsightsEditFormStub.restore();
+    });
+  });
+
+  describe("renderBundleQEditForm", () => {
+    it('should return "No connection found to be edited" when connectionData is null', () => {
+      view.connectionData = null;
+      const result = view.renderBundleQEditForm();
+      assert.strictEqual(
+        result.strings[0],
+        "<div>No connection found to be edited</div>",
+      );
+    });
+
+    it("should return the correct HTML structure when connectionData is provided", () => {
+      view.connectionData = {
+        port: "5000",
+        serverAddress: "localhost",
+        serverName: "local",
+      };
+      const result = view.renderBundleQEditForm();
+      console.log(JSON.stringify(result));
+      assert.ok(result.strings[0].includes('<div class="col gap-0">'));
+      assert.ok(result.strings[1].includes('<div class="col gap-0">'));
+      assert.ok(result.strings[2].includes('<div class="col gap-0">'));
+      assert.ok(!result.strings[3].includes('<div class="col gap-0">'));
+    });
+  });
+
+  describe("renderMyQEditForm", () => {
+    it('should return "No connection found to be edited" when connectionData is null', () => {
+      view.connectionData = null;
+      const result = view.renderMyQEditForm();
+      assert.strictEqual(
+        result.strings[0],
+        "<div>No connection found to be edited</div>",
+      );
+    });
+
+    it("should return the correct HTML structure when connectionData is provided", () => {
+      view.connectionData = {
+        port: "5000",
+        serverAddress: "localhost",
+        serverName: "local",
+      };
+      const result = view.renderMyQEditForm();
+      console.log(JSON.stringify(result));
+      assert.ok(result.strings[0].includes('<div class="col gap-0">'));
+      assert.ok(result.strings[1].includes('<div class="col gap-0">'));
+      assert.ok(result.strings[2].includes('<div class="col gap-0">'));
+      assert.ok(result.strings[3].includes('<div class="col gap-0">'));
+    });
+  });
+
+  describe("renderInsightsEditForm", () => {
+    it('should return "No connection found to be edited" when connectionData is null', () => {
+      view.connectionData = null;
+      const result = view.renderInsightsEditForm();
+      assert.strictEqual(
+        result.strings[0],
+        "<div>No connection found to be edited</div>",
+      );
+    });
+
+    it("should return the correct HTML structure when connectionData is provided", () => {
+      view.connectionData = {
+        port: "5000",
+        serverAddress: "localhost",
+        serverName: "local",
+      };
+      const result = view.renderInsightsEditForm();
+      console.log(JSON.stringify(result));
+      assert.ok(result.strings[0].includes('<div class="col gap-0">'));
+      assert.ok(result.strings[1].includes('<div class="col gap-0">'));
+      assert.ok(result.strings[2].includes('<div class="col gap-0">'));
+      assert.ok(!result.strings[3].includes('<div class="col gap-0">'));
     });
   });
 
