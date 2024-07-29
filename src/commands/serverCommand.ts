@@ -152,10 +152,10 @@ export async function editInsightsConnection(
   }
   await disconnect(oldAlias);
   if (insightsData.alias === undefined || insightsData.alias === "") {
-    const host = new url.URL(insightsData.server!);
+    const host = new url.URL(insightsData.server);
     insightsData.alias = host.host;
   }
-  let insights: Insights | undefined = getInsights();
+  const insights: Insights | undefined = getInsights();
   if (insights) {
     const oldInsights = insights[getKeyForServerName(oldAlias)];
     const newAliasExists =
