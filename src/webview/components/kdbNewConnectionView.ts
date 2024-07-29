@@ -258,7 +258,7 @@ export class KdbNewConnectionView extends LitElement {
 
   tabClickAction(tabNumber: number) {
     const config =
-      this.tabConfig[tabNumber as keyof typeof this.tabConfig] ||
+      this.tabConfig[tabNumber as keyof typeof this.tabConfig] ??
       this.tabConfig.default;
     this.isBundledQ = config.isBundledQ;
     this.serverType = config.serverType;
@@ -507,7 +507,7 @@ export class KdbNewConnectionView extends LitElement {
       return html`<div>No connection found to be edited</div>`;
     }
     this.bundledServer.serverAlias = "local";
-    this.bundledServer.serverPort = this.connectionData.port || "";
+    this.bundledServer.serverPort = this.connectionData.port ?? "";
     this.bundledServer.serverName = this.connectionData.serverAddress;
     return html`
       <div class="col">
@@ -529,10 +529,10 @@ export class KdbNewConnectionView extends LitElement {
       return html`<div>No connection found to be edited</div>`;
     }
     this.kdbServer.serverAlias = this.connectionData.serverName;
-    this.kdbServer.serverPort = this.connectionData.port || "";
+    this.kdbServer.serverPort = this.connectionData.port ?? "";
     this.kdbServer.serverName = this.connectionData.serverAddress;
-    this.kdbServer.auth = this.connectionData.auth || false;
-    this.kdbServer.tls = this.connectionData.tls || false;
+    this.kdbServer.auth = this.connectionData.auth ?? false;
+    this.kdbServer.tls = this.connectionData.tls ?? false;
     return html`
       <div class="col">
         <div class="row">
@@ -617,7 +617,7 @@ export class KdbNewConnectionView extends LitElement {
     }
     this.insightsServer.alias = this.connectionData.serverName;
     this.insightsServer.server = this.connectionData.serverAddress;
-    this.insightsServer.realm = this.connectionData.realm || "";
+    this.insightsServer.realm = this.connectionData.realm ?? "";
     return html`
       <div class="col">
         <div class="row">
