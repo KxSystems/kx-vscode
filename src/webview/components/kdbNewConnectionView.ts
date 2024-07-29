@@ -12,7 +12,7 @@
  */
 
 import { LitElement, html } from "lit";
-import { customElement, state } from "lit/decorators.js";
+import { customElement } from "lit/decorators.js";
 import { ServerDetails, ServerType } from "../../models/server";
 import { InsightDetails } from "../../models/insights";
 
@@ -22,7 +22,7 @@ import { EditConnectionMessage } from "../../models/messages";
 @customElement("kdb-new-connection-view")
 export class KdbNewConnectionView extends LitElement {
   static styles = [vscodeStyles, kdbStyles, newConnectionStyles];
-  @state() kdbServer: ServerDetails = {
+  kdbServer: ServerDetails = {
     serverName: "",
     serverPort: "",
     auth: false,
@@ -32,7 +32,7 @@ export class KdbNewConnectionView extends LitElement {
     username: "",
     password: "",
   };
-  @state() bundledServer: ServerDetails = {
+  bundledServer: ServerDetails = {
     serverName: "127.0.0.1",
     serverPort: "",
     auth: false,
@@ -40,18 +40,18 @@ export class KdbNewConnectionView extends LitElement {
     managed: false,
     tls: false,
   };
-  @state() insightsServer: InsightDetails = {
+  insightsServer: InsightDetails = {
     alias: "",
     server: "",
     auth: true,
     realm: "",
     insecure: false,
   };
-  @state() serverType: ServerType = ServerType.KDB;
-  @state() isBundledQ: boolean = true;
-  @state() oldAlias: string = "";
-  @state() editAuth: boolean = false;
-  connectionData: EditConnectionMessage | undefined = undefined;
+  serverType: ServerType = ServerType.KDB;
+  isBundledQ: boolean = true;
+  oldAlias: string = "";
+  editAuth: boolean = false;
+  private _connectionData: EditConnectionMessage | undefined = undefined;
   private readonly vscode = acquireVsCodeApi();
   private tabConfig = {
     1: { isBundledQ: true, serverType: ServerType.KDB },
@@ -60,9 +60,24 @@ export class KdbNewConnectionView extends LitElement {
     default: { isBundledQ: true, serverType: ServerType.KDB },
   };
 
-  constructor() {
-    super();
+  get connectionData(): EditConnectionMessage | undefined {
+    return this._connectionData;
+  }
+
+  set connectionData(value: EditConnectionMessage | undefined) {
+    const oldValue = this._connectionData;
+    this._connectionData = value;
+    this.requestUpdate("connectionData", oldValue);
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
     window.addEventListener("message", this.handleMessage.bind(this));
+  }
+
+  disconnectedCallback() {
+    window.removeEventListener("message", this.handleMessage.bind(this));
+    super.disconnectedCallback();
   }
 
   get selectConnection(): string {
