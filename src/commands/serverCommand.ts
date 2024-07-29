@@ -333,7 +333,7 @@ export async function addKdbConnection(
           serverName: kdbData.serverName,
           serverPort: kdbData.serverPort,
           serverAlias: kdbData.serverAlias,
-          managed: kdbData.serverAlias === "local" ? true : false,
+          managed: kdbData.serverAlias === "local",
           tls: kdbData.tls,
         },
       };
@@ -346,7 +346,7 @@ export async function addKdbConnection(
         serverName: kdbData.serverName,
         serverPort: kdbData.serverPort,
         serverAlias: kdbData.serverAlias,
-        managed: kdbData.serverAlias === "local" ? true : false,
+        managed: kdbData.serverAlias === "local",
         tls: kdbData.tls,
       };
       if (servers[key].managed) {
@@ -434,7 +434,7 @@ export async function editKdbConnection(
             serverName: kdbData.serverName,
             serverPort: kdbData.serverPort,
             serverAlias: kdbData.serverAlias,
-            managed: kdbData.serverAlias === "local" ? true : false,
+            managed: kdbData.serverAlias === "local",
             tls: kdbData.tls,
           };
 
@@ -445,7 +445,7 @@ export async function editKdbConnection(
             serverName: kdbData.serverName,
             serverPort: kdbData.serverPort,
             serverAlias: kdbData.serverAlias,
-            managed: kdbData.serverAlias === "local" ? true : false,
+            managed: kdbData.serverAlias === "local",
             tls: kdbData.tls,
           };
 
