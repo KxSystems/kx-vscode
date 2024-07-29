@@ -12,7 +12,7 @@
  */
 
 import { LitElement, html } from "lit";
-import { customElement, property, state } from "lit/decorators.js";
+import { customElement, state } from "lit/decorators.js";
 import { ServerDetails, ServerType } from "../../models/server";
 import { InsightDetails } from "../../models/insights";
 
@@ -22,16 +22,36 @@ import { EditConnectionMessage } from "../../models/messages";
 @customElement("kdb-new-connection-view")
 export class KdbNewConnectionView extends LitElement {
   static styles = [vscodeStyles, kdbStyles, newConnectionStyles];
-  @state() declare kdbServer: ServerDetails;
-  @state() declare bundledServer: ServerDetails;
-  @state() declare insightsServer: InsightDetails;
-  @state() declare serverType: ServerType;
-  @state() declare isBundledQ: boolean;
-  @state() declare oldAlias: string;
-  @state() declare editAuth: boolean;
-  @property({ type: Object }) connectionData:
-    | EditConnectionMessage
-    | undefined = undefined;
+  @state() kdbServer: ServerDetails = {
+    serverName: "",
+    serverPort: "",
+    auth: false,
+    serverAlias: "",
+    managed: false,
+    tls: false,
+    username: "",
+    password: "",
+  };
+  @state() bundledServer: ServerDetails = {
+    serverName: "127.0.0.1",
+    serverPort: "",
+    auth: false,
+    serverAlias: "local",
+    managed: false,
+    tls: false,
+  };
+  @state() insightsServer: InsightDetails = {
+    alias: "",
+    server: "",
+    auth: true,
+    realm: "",
+    insecure: false,
+  };
+  @state() serverType: ServerType = ServerType.KDB;
+  @state() isBundledQ: boolean = true;
+  @state() oldAlias: string = "";
+  @state() editAuth: boolean = false;
+  connectionData: EditConnectionMessage | undefined = undefined;
   private readonly vscode = acquireVsCodeApi();
   private tabConfig = {
     1: { isBundledQ: true, serverType: ServerType.KDB },
@@ -42,35 +62,6 @@ export class KdbNewConnectionView extends LitElement {
 
   constructor() {
     super();
-    this.isBundledQ = true;
-    this.editAuth = false;
-    this.serverType = ServerType.KDB;
-    this.oldAlias = "";
-    this.kdbServer = {
-      serverName: "",
-      serverPort: "",
-      auth: false,
-      serverAlias: "",
-      managed: false,
-      tls: false,
-      username: "",
-      password: "",
-    };
-    this.insightsServer = {
-      alias: "",
-      server: "",
-      auth: true,
-      realm: "",
-      insecure: false,
-    };
-    this.bundledServer = {
-      serverName: "127.0.0.1",
-      serverPort: "",
-      auth: false,
-      serverAlias: "local",
-      managed: false,
-      tls: false,
-    };
     window.addEventListener("message", this.handleMessage.bind(this));
   }
 
@@ -247,7 +238,7 @@ export class KdbNewConnectionView extends LitElement {
       <div class="row mt-1">
         <vscode-text-field
           class="text-field larger option-title"
-          value="${this.insightsServer.realm}"
+          value="${this.insightsServer.realm || ""}"
           placeholder="insights"
           @input="${(event: Event) => {
             /* istanbul ignore next */
@@ -308,7 +299,7 @@ export class KdbNewConnectionView extends LitElement {
             </div>
           </div>
           <div class="row">
-            <vscode-panels activeid="${this.selectConnection}">
+            <vscode-panels activeid="${this.selectConnection}" id="connPanels">
               <vscode-panel-tab
                 id="tab-1"
                 @click="${() => this.tabClickAction(1)}"
@@ -364,11 +355,9 @@ export class KdbNewConnectionView extends LitElement {
                       <div class="row">
                         <vscode-text-field
                           class="text-field larger option-title"
-                          value="${
-                            this.kdbServer.username
-                              ? this.kdbServer.username
-                              : ""
-                          }"
+                          value="${this.kdbServer.username
+                            ? this.kdbServer.username
+                            : ""}"
                           @input="${(event: Event) =>
                             (this.kdbServer.username = (
                               event.target as HTMLSelectElement
@@ -380,11 +369,9 @@ export class KdbNewConnectionView extends LitElement {
                         <vscode-text-field
                           type="password"
                           class="text-field larger option-title"
-                          value="${
-                            this.kdbServer.password
-                              ? this.kdbServer.password
-                              : ""
-                          }"
+                          value="${this.kdbServer.password
+                            ? this.kdbServer.password
+                            : ""}"
                           @input="${(event: Event) =>
                             (this.kdbServer.password = (
                               event.target as HTMLSelectElement
@@ -433,16 +420,17 @@ export class KdbNewConnectionView extends LitElement {
                         <summary>Advanced</summary>
                         ${this.renderRealm()}
                         <div class="row mt-1">
-                          <vscode-checkbox 
+                          <vscode-checkbox
                             .checked="${this.insightsServer.insecure}"
                             @change="${(event: Event) => {
                               this.insightsServer.insecure = (
                                 event.target as HTMLInputElement
                               ).checked;
-                            }}">Accept insecure SSL certifcates</vscode-checkbox>
+                            }}"
+                            >Accept insecure SSL certifcates</vscode-checkbox
+                          >
                         </div>
-                      </details>  
-                      </div>
+                      </details>
                     </div>
                   </div>
                 </div>
@@ -690,8 +678,7 @@ export class KdbNewConnectionView extends LitElement {
     }
   }
 
-  editConnection() {
-    console.log("teste");
+  private editConnection() {
     if (!this.connectionData) {
       return;
     }
