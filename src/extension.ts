@@ -475,6 +475,12 @@ export async function activate(context: ExtensionContext) {
         ext.dataSourceTreeProvider.reload();
         ext.scratchpadTreeProvider.reload();
       }
+      if (event.affectsConfiguration("kdb.connectionLabelsMap")) {
+        ext.serverProvider.reload();
+      }
+      if (event.affectsConfiguration("kdb.connectionLabels")) {
+        ext.serverProvider.reload();
+      }
     }),
   );
 

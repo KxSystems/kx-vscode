@@ -179,6 +179,18 @@
           "description": "Connection map for workspace files",
           "default": {},
           "scope": "resource"
+        },
+        "kdb.connectionLabels": {
+          "type": "object",
+          "description": "List of label names and colorset",
+          "default": {},
+          "scope": "resource"
+        },
+        "kdb.connectionLabelsMap": {
+          "type": "object",
+          "description": "Label connection map",
+          "default": {},
+          "scope": "resource"
         }
       }
     },
