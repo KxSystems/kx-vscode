@@ -186,6 +186,8 @@ export class NewConnectionPannel {
       port: conn instanceof KdbNode ? conn.details.serverPort : undefined,
       auth: conn.details.auth,
       tls: conn instanceof KdbNode ? conn.details.tls : undefined,
+      insecure:
+        conn instanceof InsightsNode ? conn.details.insecure : undefined,
     };
   }
 }

@@ -57,4 +57,5 @@ export interface EditConnectionMessage {
   realm?: string;
   auth?: boolean;
   tls?: boolean;
+  insecure?: boolean;
 }

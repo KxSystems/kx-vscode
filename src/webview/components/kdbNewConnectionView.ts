@@ -633,6 +633,7 @@ export class KdbNewConnectionView extends LitElement {
     this.insightsServer.alias = this.connectionData.serverName;
     this.insightsServer.server = this.connectionData.serverAddress;
     this.insightsServer.realm = this.connectionData.realm ?? "";
+    this.insightsServer.insecure = this.connectionData.insecure ?? false;
     return html`
       <div class="col">
         <div class="row">
@@ -650,6 +651,17 @@ export class KdbNewConnectionView extends LitElement {
             <details>
               <summary>Advanced</summary>
               ${this.renderRealm()}
+              <div class="row mt-1">
+                <vscode-checkbox
+                  .checked="${this.insightsServer.insecure}"
+                  @change="${(event: Event) => {
+                    this.insightsServer.insecure = (
+                      event.target as HTMLInputElement
+                    ).checked;
+                  }}"
+                  >Accept insecure SSL certifcates</vscode-checkbox
+                >
+              </div>
             </details>
           </div>
         </div>
