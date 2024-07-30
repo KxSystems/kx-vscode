@@ -69,7 +69,13 @@ import { InsightsConnection } from "../classes/insightsConnection";
 import { MetaContentProvider } from "../services/metaContentProvider";
 
 export async function addNewConnection(): Promise<void> {
+  NewConnectionPannel.close();
   NewConnectionPannel.render(ext.context.extensionUri);
+}
+
+export async function editConnection(viewItem: KdbNode | InsightsNode) {
+  NewConnectionPannel.close();
+  NewConnectionPannel.render(ext.context.extensionUri, viewItem);
 }
 
 export async function addInsightsConnection(insightsData: InsightDetails) {
@@ -131,6 +137,88 @@ export async function addInsightsConnection(insightsData: InsightDetails) {
   }
 }
 
+/* istanbul ignore next */
+export async function editInsightsConnection(
+  insightsData: InsightDetails,
+  oldAlias: string,
+) {
+  const aliasValidation =
+    oldAlias === insightsData.alias
+      ? undefined
+      : validateServerAlias(insightsData.alias, false);
+  if (aliasValidation) {
+    window.showErrorMessage(aliasValidation);
+    return;
+  }
+  await disconnect(oldAlias);
+  if (insightsData.alias === undefined || insightsData.alias === "") {
+    const host = new url.URL(insightsData.server);
+    insightsData.alias = host.host;
+  }
+  const insights: Insights | undefined = getInsights();
+  if (insights) {
+    const oldInsights = insights[getKeyForServerName(oldAlias)];
+    const newAliasExists =
+      oldAlias !== insightsData.alias
+        ? insights[getKeyForServerName(insightsData.alias)]
+        : undefined;
+    if (newAliasExists) {
+      await window.showErrorMessage(
+        `Insights instance named ${insightsData.alias} already exists.`,
+      );
+      return;
+    } else {
+      if (!oldInsights) {
+        await window.showErrorMessage(
+          `Insights instance named ${oldAlias} does not exist.`,
+        );
+        return;
+      } else {
+        const oldKey = getKeyForServerName(oldAlias);
+        const newKey = insightsData.alias;
+        if (insights[oldKey] && oldAlias !== insightsData.alias) {
+          const uInsights = Object.keys(insights).filter((insight) => {
+            return insight !== oldKey;
+          });
+          const updatedInsights: Insights = {};
+          uInsights.forEach((insight) => {
+            updatedInsights[insight] = insights[insight];
+          });
+
+          updatedInsights[newKey] = {
+            auth: true,
+            alias: insightsData.alias,
+            server: insightsData.server,
+            realm: insightsData.realm,
+            insecure: insightsData.insecure,
+          };
+
+          await updateInsights(updatedInsights);
+        } else {
+          insights[oldKey] = {
+            auth: true,
+            alias: insightsData.alias,
+            server: insightsData.server,
+            realm: insightsData.realm,
+            insecure: insightsData.insecure,
+          };
+          await updateInsights(insights);
+        }
+
+        const newInsights = getInsights();
+        if (newInsights != undefined) {
+          ext.serverProvider.refreshInsights(newInsights);
+          Telemetry.sendEvent("Connection.Edited.Insights");
+        }
+        window.showInformationMessage(
+          `Edited Insights connection: ${insightsData.alias}`,
+        );
+        NewConnectionPannel.close();
+      }
+    }
+  }
+}
+
 // Not possible to test secrets
 /* istanbul ignore next */
 export async function addAuthConnection(
@@ -164,6 +252,16 @@ export async function addAuthConnection(
         ext.serverProvider.refresh(newServers);
       }
     }
+  }
+}
+
+// Not possible to test secrets
+/* istanbul ignore next */
+function removeAuthConnection(serverKey: string) {
+  if (ext.secretSettings.storeAuthData.hasOwnProperty(serverKey)) {
+    delete (ext.secretSettings.storeAuthData as { [key: string]: any })[
+      serverKey
+    ];
   }
 }
 
@@ -237,7 +335,7 @@ export async function addKdbConnection(
           serverName: kdbData.serverName,
           serverPort: kdbData.serverPort,
           serverAlias: kdbData.serverAlias,
-          managed: kdbData.serverAlias === "local" ? true : false,
+          managed: kdbData.serverAlias === "local",
           tls: kdbData.tls,
         },
       };
@@ -250,7 +348,7 @@ export async function addKdbConnection(
         serverName: kdbData.serverName,
         serverPort: kdbData.serverPort,
         serverAlias: kdbData.serverAlias,
-        managed: kdbData.serverAlias === "local" ? true : false,
+        managed: kdbData.serverAlias === "local",
         tls: kdbData.tls,
       };
       if (servers[key].managed) {
@@ -271,6 +369,115 @@ export async function addKdbConnection(
       `Added kdb connection: ${kdbData.serverAlias}`,
     );
     NewConnectionPannel.close();
+  }
+}
+
+/* istanbul ignore next */
+export async function editKdbConnection(
+  kdbData: ServerDetails,
+  oldAlias: string,
+  isLocal?: boolean,
+  editAuth?: boolean,
+) {
+  const aliasValidation =
+    oldAlias === kdbData.serverAlias
+      ? undefined
+      : validateServerAlias(kdbData.serverAlias, isLocal!);
+  const hostnameValidation = validateServerName(kdbData.serverName);
+  const portValidation = validateServerPort(kdbData.serverPort);
+  if (aliasValidation) {
+    window.showErrorMessage(aliasValidation);
+    return;
+  }
+  if (hostnameValidation) {
+    window.showErrorMessage(hostnameValidation);
+    return;
+  }
+  if (portValidation) {
+    window.showErrorMessage(portValidation);
+    return;
+  }
+  await disconnect(oldAlias);
+  let servers: Server | undefined = getServers();
+
+  if (servers) {
+    const oldServer = servers[getKeyForServerName(oldAlias)];
+    const newAliasExists =
+      oldAlias !== kdbData.serverAlias
+        ? servers[getKeyForServerName(kdbData.serverAlias)]
+        : undefined;
+    if (newAliasExists) {
+      await window.showErrorMessage(
+        `KDB instance named ${kdbData.serverAlias} already exists.`,
+      );
+      return;
+    } else {
+      if (!oldServer) {
+        await window.showErrorMessage(
+          `KDB instance named ${oldAlias} does not exist.`,
+        );
+        return;
+      } else {
+        const oldKey = getKeyForServerName(oldAlias);
+        const newKey = kdbData.serverAlias;
+        const removedAuth =
+          editAuth && (kdbData.username === "" || kdbData.password === "");
+        if (servers[oldKey] && oldAlias !== kdbData.serverAlias) {
+          const uServers = Object.keys(servers).filter((server) => {
+            return server !== oldKey;
+          });
+          const updatedServers: Server = {};
+          uServers.forEach((server) => {
+            updatedServers[server] = servers[server];
+          });
+
+          updatedServers[newKey] = {
+            auth: removedAuth ? false : kdbData.auth,
+            serverName: kdbData.serverName,
+            serverPort: kdbData.serverPort,
+            serverAlias: kdbData.serverAlias,
+            managed: kdbData.serverAlias === "local",
+            tls: kdbData.tls,
+          };
+
+          await updateServers(updatedServers);
+        } else {
+          servers[oldKey] = {
+            auth: removedAuth ? false : kdbData.auth,
+            serverName: kdbData.serverName,
+            serverPort: kdbData.serverPort,
+            serverAlias: kdbData.serverAlias,
+            managed: kdbData.serverAlias === "local",
+            tls: kdbData.tls,
+          };
+
+          await updateServers(servers);
+        }
+        const newServers = getServers();
+        if (newServers != undefined) {
+          ext.serverProvider.refresh(newServers);
+          Telemetry.sendEvent("Connection.Edited.KDB");
+        }
+        window.showInformationMessage(
+          `Edited KDB connection: ${kdbData.serverAlias}`,
+        );
+        if (oldKey !== newKey) {
+          removeAuthConnection(oldKey);
+          if (kdbData.auth) {
+            addAuthConnection(newKey, kdbData.username!, kdbData.password!);
+          }
+        } else {
+          if (editAuth && !removedAuth) {
+            addAuthConnection(newKey, kdbData.username!, kdbData.password!);
+          }
+          if (editAuth && removedAuth) {
+            removeAuthConnection(newKey);
+          }
+        }
+
+        NewConnectionPannel.close();
+      }
+    }
   }
 }
 

@@ -47,6 +47,9 @@ import {
   addNewConnection,
   connect,
   disconnect,
+  editConnection,
+  editInsightsConnection,
+  editKdbConnection,
   enableTLS,
   openMeta,
   refreshGetMeta,
@@ -256,6 +259,12 @@ export async function activate(context: ExtensionContext) {
       await addNewConnection();
     }),
     commands.registerCommand(
+      "kdb.editConnection",
+      async (viewItem: KdbNode | InsightsNode) => {
+        await editConnection(viewItem);
+      },
+    ),
+    commands.registerCommand(
       "kdb.newConnection.createNewInsightConnection",
       async (insightsData: InsightDetails) => {
         await addInsightsConnection(insightsData);
@@ -271,6 +280,24 @@ export async function activate(context: ExtensionContext) {
       "kdb.newConnection.createNewBundledConnection",
       async (kdbData: ServerDetails) => {
         await addKdbConnection(kdbData, true);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.newConnection.editInsightsConnection",
+      async (insightsData: InsightDetails, oldAlias: string) => {
+        await editInsightsConnection(insightsData, oldAlias);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.newConnection.editMyQConnection",
+      async (kdbData: ServerDetails, oldAlias: string, editAuth: boolean) => {
+        await editKdbConnection(kdbData, oldAlias, false, editAuth);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.newConnection.editBundledConnection",
+      async (kdbData: ServerDetails, oldAlias: string) => {
+        await editKdbConnection(kdbData, oldAlias, true);
       },
     ),
     commands.registerCommand(

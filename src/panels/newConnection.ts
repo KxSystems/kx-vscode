@@ -15,20 +15,61 @@ import * as vscode from "vscode";
 import { getUri } from "../utils/getUri";
 import { getNonce } from "../utils/getNonce";
 import { ext } from "../extensionVariables";
+import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
+import { ConnectionType, EditConnectionMessage } from "../models/messages";
 
 export class NewConnectionPannel {
   public static currentPanel: NewConnectionPannel | undefined;
-  private uri;
+  private readonly _extensionUri: vscode.Uri;
   public readonly _panel: vscode.WebviewPanel;
   private _disposables: vscode.Disposable[] = [];
 
+  public static render(extensionUri: vscode.Uri, conn?: any) {
+    if (NewConnectionPannel.currentPanel) {
+      NewConnectionPannel.currentPanel._panel.dispose();
+      return;
+    }
+
+    const panel = vscode.window.createWebviewPanel(
+      "kdbNewConnection",
+      conn ? "Edit Connection" : "New Connection",
+      vscode.ViewColumn.One,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: true,
+        localResourceRoots: [vscode.Uri.joinPath(extensionUri, "out")],
+      },
+    );
+
+    NewConnectionPannel.currentPanel = new NewConnectionPannel(
+      panel,
+      extensionUri,
+    );
+
+    if (conn) {
+      const connType = this.getConnectionType(conn);
+      const editConnData = this.createEditConnectionMessage(conn, connType);
+      panel.webview.postMessage({
+        command: "editConnection",
+        data: editConnData,
+      });
+    }
+  }
+
+  public static close() {
+    if (NewConnectionPannel.currentPanel) {
+      NewConnectionPannel.currentPanel._panel.dispose();
+      return;
+    }
+  }
+
   private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
-    this.uri = extensionUri;
+    this._extensionUri = extensionUri;
     this._panel = panel;
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
     this._panel.webview.html = this._getWebviewContent(
       this._panel.webview,
-      extensionUri,
+      this._extensionUri,
     );
     /* istanbul ignore next */
     this._panel.webview.onDidReceiveMessage((message) => {
@@ -56,37 +97,29 @@ export class NewConnectionPannel {
           message.data,
         );
       }
+      if (message.command === "kdb.newConnection.editInsightsConnection") {
+        vscode.commands.executeCommand(
+          "kdb.newConnection.editInsightsConnection",
+          message.data,
+          message.oldAlias,
+        );
+      }
+      if (message.command === "kdb.newConnection.editMyQConnection") {
+        vscode.commands.executeCommand(
+          "kdb.newConnection.editMyQConnection",
+          message.data,
+          message.oldAlias,
+          message.editAuth,
+        );
+      }
+      if (message.command === "kdb.newConnection.editBundledConnection") {
+        vscode.commands.executeCommand(
+          "kdb.newConnection.editBundledConnection",
+          message.data,
+          message.oldAlias,
+        );
+      }
     });
-  }
-
-  public static render(extensionUri: vscode.Uri) {
-    if (NewConnectionPannel.currentPanel) {
-      NewConnectionPannel.currentPanel._panel.dispose();
-      return;
-    }
-
-    const panel = vscode.window.createWebviewPanel(
-      "kdbNewConnection",
-      "New Connection",
-      vscode.ViewColumn.One,
-      {
-        enableScripts: true,
-        retainContextWhenHidden: true,
-        localResourceRoots: [vscode.Uri.joinPath(extensionUri, "out")],
-      },
-    );
-
-    NewConnectionPannel.currentPanel = new NewConnectionPannel(
-      panel,
-      extensionUri,
-    );
-  }
-
-  public static close() {
-    if (NewConnectionPannel.currentPanel) {
-      NewConnectionPannel.currentPanel._panel.dispose();
-      return;
-    }
   }
 
   public dispose() {
@@ -114,12 +147,47 @@ export class NewConnectionPannel {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>New Connection</title>
+            <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
         </head>
         <body>
             <kdb-new-connection-view/>
-            <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
         </body>
         </html>
         `;
+  }
+
+  private static getConnectionType(
+    conn: KdbNode | InsightsNode,
+  ): ConnectionType {
+    if (conn instanceof InsightsNode) {
+      return ConnectionType.Insights;
+    } else {
+      return conn.details.managed
+        ? ConnectionType.BundledQ
+        : ConnectionType.Kdb;
+    }
+  }
+
+  private static createEditConnectionMessage(
+    conn: KdbNode | InsightsNode,
+    connType: ConnectionType,
+  ): EditConnectionMessage {
+    return {
+      connType,
+      serverName:
+        conn instanceof InsightsNode
+          ? conn.details.alias
+          : conn.details.serverAlias,
+      serverAddress:
+        conn instanceof InsightsNode
+          ? conn.details.server
+          : conn.details.serverName,
+      realm: conn instanceof InsightsNode ? conn.details.realm : undefined,
+      port: conn instanceof KdbNode ? conn.details.serverPort : undefined,
+      auth: conn.details.auth,
+      tls: conn instanceof KdbNode ? conn.details.tls : undefined,
+      insecure:
+        conn instanceof InsightsNode ? conn.details.insecure : undefined,
+    };
   }
 }

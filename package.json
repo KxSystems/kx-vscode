@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite",
   "publisher": "KX",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "engines": {
     "vscode": "^1.86.0"
   },
@@ -35,6 +35,9 @@
     "onCommand:kdb.newConnection.createNewInsightConnection",
     "onCommand:kdb.newConnection.createNewConnection",
     "onCommand:kdb.newConnection.createNewBundledConnection",
+    "onCommand:kdb.newConnection.editInsightsConnection",
+    "onCommand:kdb.newConnection.editMyQConnection",
+    "onCommand:kdb.newConnection.editBundledConnection",
     "onView:kdb-datasources-explorer",
     "onTerminalProfile:kdb.q-terminal",
     "onLanguage:python"
@@ -252,6 +255,11 @@
         "command": "kdb.addConnection",
         "title": "New connection...",
         "icon": "$(add)"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.editConnection",
+        "title": "Edit connection"
       },
       {
         "category": "KX",
@@ -562,6 +570,10 @@
           "when": "false"
         },
         {
+          "command": "kdb.editConnection",
+          "when": "false"
+        },
+        {
           "command": "kdb.removeConnection",
           "when": "false"
         },
@@ -664,6 +676,11 @@
           "command": "kdb.connect",
           "when": "view == kdb-servers && viewItem not in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection@1"
+        },
+        {
+          "command": "kdb.editConnection",
+          "when": "view == kdb-servers",
+          "group": "connection@4"
         },
         {
           "command": "kdb.active.connection",
