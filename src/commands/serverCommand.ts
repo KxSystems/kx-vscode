@@ -190,6 +190,7 @@ export async function editInsightsConnection(
             alias: insightsData.alias,
             server: insightsData.server,
             realm: insightsData.realm,
+            insecure: insightsData.insecure,
           };
 
           await updateInsights(updatedInsights);
@@ -199,6 +200,7 @@ export async function editInsightsConnection(
             alias: insightsData.alias,
             server: insightsData.server,
             realm: insightsData.realm,
+            insecure: insightsData.insecure,
           };
           await updateInsights(insights);
         }
