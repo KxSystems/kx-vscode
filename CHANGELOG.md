@@ -2,6 +2,14 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.7.0
+
+### Enhancements
+
+- Now it's possible to edit existing connections
+
+### Fixes
+
 # v1.6.1
 
 ### Fixes
