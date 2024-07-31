@@ -11,15 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export interface InsightDetails {
-  alias: string;
-  server: string;
-  auth: boolean;
-  realm?: string;
-  insecure?: boolean;
-  labels?: string[];
-}
-
-export interface Insights {
-  [name: string]: InsightDetails;
+export interface Label {
+  id: string;
+  color: string;
 }

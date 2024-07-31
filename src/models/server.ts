@@ -26,6 +26,7 @@ export interface ServerDetails {
   tls: boolean;
   username?: string;
   password?: string;
+  labels?: string[];
 }
 
 export interface Server {
