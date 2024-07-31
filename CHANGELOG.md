@@ -7,8 +7,12 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 ### Enhancements
 
 - Now it's possible to edit existing connections
+- Added labels for connections
+- Ability to connect Insights servers with self signed SSL certificate
 
 ### Fixes
+
+- https is prefixed for unschemed Insights server urls
 
 # v1.6.1
 
