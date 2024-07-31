@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { html } from "lit";
 import { LabelColors } from "../models/labels";
 
 export const labelColors: LabelColors[] = [
@@ -43,3 +44,17 @@ export const labelColors: LabelColors[] = [
     colorHex: "#15A7CD",
   },
 ];
+
+export function getDropdownOptions() {
+  let colorsOptions = `<vscode-option .value="${undefined}">
+    No Label Selected
+  </vscode-option>`;
+
+  labelColors.forEach((color) => {
+    colorsOptions += `<vscode-option .value="${color}">
+      ${color.name}
+    </vscode-option>`;
+  });
+
+  return colorsOptions;
+}

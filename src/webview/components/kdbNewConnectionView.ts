@@ -31,6 +31,7 @@ export class KdbNewConnectionView extends LitElement {
     tls: false,
     username: "",
     password: "",
+    labels: [],
   };
   bundledServer: ServerDetails = {
     serverName: "127.0.0.1",
@@ -39,6 +40,7 @@ export class KdbNewConnectionView extends LitElement {
     serverAlias: "local",
     managed: false,
     tls: false,
+    labels: [],
   };
   insightsServer: InsightDetails = {
     alias: "",
@@ -46,6 +48,7 @@ export class KdbNewConnectionView extends LitElement {
     auth: true,
     realm: "",
     insecure: false,
+    labels: [],
   };
   serverType: ServerType = ServerType.KDB;
   isBundledQ: boolean = true;
@@ -279,6 +282,21 @@ export class KdbNewConnectionView extends LitElement {
     this.serverType = config.serverType;
   }
 
+  renderConnectionLabelsSection(type: string) {
+    return html` <div class="row">
+      <div class="col gap-0">
+        <div class="row option-title">Connection label (optional)</div>
+        <div class="row mt-1">
+          <div class="dropdown-container">
+            <label for="selectLabel">Label Name</label>
+            <vscode-dropdown id="selectLabel" class="dropdown larger">
+            </vscode-dropdown>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }
+
   renderNewConnectionForm() {
     return html`
       <div class="row mt-1 mb-1 content-wrapper">
@@ -345,6 +363,7 @@ export class KdbNewConnectionView extends LitElement {
                   <div class="row">
                     <div class="col gap-0">${this.renderPortNumber()}</div>
                   </div>
+                  ${this.renderConnectionLabelsSection("bundleQ")}
                 </div>
               </vscode-panel-view>
               <vscode-panel-view id="view-2" class="panel">
@@ -415,6 +434,7 @@ export class KdbNewConnectionView extends LitElement {
                       </div>
                     </div>
                   </div>
+                  ${this.renderConnectionLabelsSection("myQ")}
                 </div>
               </vscode-panel-view>
               <vscode-panel-view id="view-3" class="panel">
@@ -448,6 +468,7 @@ export class KdbNewConnectionView extends LitElement {
                       </details>
                     </div>
                   </div>
+                  ${this.renderConnectionLabelsSection("insights")}
                 </div>
               </vscode-panel-view>
             </vscode-panels>
@@ -633,7 +654,6 @@ export class KdbNewConnectionView extends LitElement {
     this.insightsServer.alias = this.connectionData.serverName;
     this.insightsServer.server = this.connectionData.serverAddress;
     this.insightsServer.realm = this.connectionData.realm ?? "";
-    this.insightsServer.insecure = this.connectionData.insecure ?? false;
     return html`
       <div class="col">
         <div class="row">
@@ -651,17 +671,6 @@ export class KdbNewConnectionView extends LitElement {
             <details>
               <summary>Advanced</summary>
               ${this.renderRealm()}
-              <div class="row mt-1">
-                <vscode-checkbox
-                  .checked="${this.insightsServer.insecure}"
-                  @change="${(event: Event) => {
-                    this.insightsServer.insecure = (
-                      event.target as HTMLInputElement
-                    ).checked;
-                  }}"
-                  >Accept insecure SSL certifcates</vscode-checkbox
-                >
-              </div>
             </details>
           </div>
         </div>
