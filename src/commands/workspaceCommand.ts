@@ -114,7 +114,7 @@ export async function getConnectionForServer(
     }
     const labels = nodes.filter((server) => server instanceof LabelNode);
     for (const label of labels) {
-      const item = label.children.find((node) => {
+      const item = (label as LabelNode).children.find((node) => {
         const name =
           node instanceof InsightsNode
             ? node.details.alias
