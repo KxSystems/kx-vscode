@@ -15,7 +15,6 @@ export interface InsightDetails {
   alias: string;
   server: string;
   auth: boolean;
-  labels?: string[];
   realm?: string;
   insecure?: boolean;
 }

@@ -24,7 +24,6 @@ export interface ServerDetails {
   serverAlias: string;
   managed: boolean;
   tls: boolean;
-  labels?: string[];
   username?: string;
   password?: string;
 }
