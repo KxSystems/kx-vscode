@@ -140,6 +140,7 @@ describe("kdbTreeProvider", () => {
         tls: false,
         auth: false,
         managed: false,
+        labels: ["White"],
       },
     };
     insights = {
@@ -147,6 +148,7 @@ describe("kdbTreeProvider", () => {
         alias: "testInsightsAlias",
         server: "testInsightsName",
         auth: false,
+        labels: ["White"],
       },
     };
     kdbNode = new KdbNode(
@@ -679,7 +681,6 @@ describe("kdbTreeProvider", () => {
         alias: "testInsightsAlias",
         server: "testInsightsName",
         auth: false,
-        labels: ["White"],
       },
     };
     insightNode = new InsightsNode(
@@ -719,6 +720,15 @@ describe("kdbTreeProvider", () => {
       insightsConn.meta = dummyMeta;
       const result = await kdbProvider.getChildren(metaNode);
       assert.notStrictEqual(result, undefined);
+    });
+
+    it("should return label node", async () => {
+      sinon
+        .stub(workspace, "getConfiguration")
+        .value(() => ({ get: () => [{ id: "White", color: "white" }] }));
+      const provider = new KdbTreeProvider(servers, insights);
+      const result = await provider.getChildren();
+      assert.strictEqual(result.length, 1);
     });
   });
 });
