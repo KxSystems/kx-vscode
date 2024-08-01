@@ -39,6 +39,7 @@ import {
   InsightsNode,
   KdbNode,
   KdbTreeProvider,
+  LabelNode,
   MetaObjectPayloadNode,
   QCategoryNode,
   QNamespaceNode,
@@ -605,6 +606,15 @@ describe("kdbTreeProvider", () => {
     );
   });
 
+  it("Should return a new LabelNode", () => {
+    const labelNode = new LabelNode({ id: "White", color: "white" });
+    assert.strictEqual(
+      labelNode.label,
+      "White",
+      "LabelNode node creation failed",
+    );
+  });
+
   describe("InsightsMetaNode", () => {
     it("should initialize fields correctly", () => {
       const node = new InsightsMetaNode(
@@ -669,6 +679,7 @@ describe("kdbTreeProvider", () => {
         alias: "testInsightsAlias",
         server: "testInsightsName",
         auth: false,
+        labels: ["White"],
       },
     };
     insightNode = new InsightsNode(
