@@ -22,6 +22,8 @@ import { EditConnectionMessage } from "../../models/messages";
 @customElement("kdb-new-connection-view")
 export class KdbNewConnectionView extends LitElement {
   static styles = [vscodeStyles, kdbStyles, newConnectionStyles];
+  newLblName = "";
+  newLblColorName = "";
   kdbServer: ServerDetails = {
     serverName: "",
     serverPort: "",
@@ -31,7 +33,6 @@ export class KdbNewConnectionView extends LitElement {
     tls: false,
     username: "",
     password: "",
-    labels: [],
   };
   bundledServer: ServerDetails = {
     serverName: "127.0.0.1",
@@ -40,7 +41,6 @@ export class KdbNewConnectionView extends LitElement {
     serverAlias: "local",
     managed: false,
     tls: false,
-    labels: [],
   };
   insightsServer: InsightDetails = {
     alias: "",
@@ -48,12 +48,13 @@ export class KdbNewConnectionView extends LitElement {
     auth: true,
     realm: "",
     insecure: false,
-    labels: [],
   };
+  labels = [];
   serverType: ServerType = ServerType.KDB;
   isBundledQ: boolean = true;
   oldAlias: string = "";
   editAuth: boolean = false;
+  private isModalOpen = false;
   private _connectionData: EditConnectionMessage | undefined = undefined;
   private readonly vscode = acquireVsCodeApi();
   private tabConfig = {
@@ -71,6 +72,16 @@ export class KdbNewConnectionView extends LitElement {
     const oldValue = this._connectionData;
     this._connectionData = value;
     this.requestUpdate("connectionData", oldValue);
+  }
+
+  openModal() {
+    this.isModalOpen = true;
+    this.requestUpdate();
+  }
+
+  closeModal() {
+    this.isModalOpen = false;
+    this.requestUpdate();
   }
 
   connectedCallback() {
@@ -280,6 +291,67 @@ export class KdbNewConnectionView extends LitElement {
       this.tabConfig.default;
     this.isBundledQ = config.isBundledQ;
     this.serverType = config.serverType;
+  }
+
+  renderNewLabelModal() {
+    return html`
+      <dialog class="modal" ?open="${this.isModalOpen}">
+        <div class="modal-content">
+          <h2>Add a New Label</h2>
+          <div class="row">
+            <vscode-text-field
+              class="text-field larger option-title"
+              value="${this.newLblName}"
+              @change="${(event: Event) => {
+                this.newLblName = (event.target as HTMLInputElement).value;
+              }}"
+              id="label-name"
+              >Label name</vscode-text-field
+            >
+          </div>
+          <div class="row option-title gap-0" style="margin-top: 10px;">
+            Label color
+          </div>
+          <div class="row">
+            <vscode-dropdown
+              id="label-color"
+              value="${this.newLblColorName}"
+              @change="${(event: Event) => {
+                this.newLblColorName = (event.target as HTMLInputElement).value;
+              }}"
+              class="dropdown"
+              style="width: 18.5em;">
+              <vscode-option .value="${undefined}">
+                No Color Selected
+              </vscode-option>
+            </vscode-dropdown>
+          </div>
+          <div class="row">
+            <vscode-button
+              aria-label="Cancel"
+              appearance="secondary"
+              @click="${this.closeModal}">
+              Cancel
+            </vscode-button>
+            <vscode-button aria-label="Create Label" appearance="primary">
+              Create
+            </vscode-button>
+          </div>
+        </div>
+      </dialog>
+    `;
+  }
+
+  renderNewLblBtn() {
+    return html`
+      <vscode-button
+        aria-label="Add Label"
+        appearance="secondary"
+        @click="${this.openModal}">
+        Create New Label
+      </vscode-button>
+      ${this.isModalOpen ? this.renderNewLabelModal() : ""}
+    `;
   }
 
   renderConnectionLabelsSection(type: string) {
