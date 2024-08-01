@@ -28,7 +28,7 @@ import {
 } from "vscode";
 import { ext } from "../extensionVariables";
 import { ConnectionManagementService } from "../services/connectionManagerService";
-import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
+import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { runQuery } from "./serverCommand";
 import { ExecutionTypes } from "../models/execution";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
@@ -96,17 +96,37 @@ function getServers() {
 }
 
 /* istanbul ignore next */
-export async function getConnectionForServer(server: string) {
+export async function getConnectionForServer(
+  server: string,
+): Promise<InsightsNode | KdbNode | undefined> {
   if (server) {
-    const servers = await ext.serverProvider.getChildren();
-    return servers.find((item) => {
-      if (item instanceof InsightsNode) {
-        return item.details.alias === server;
-      } else if (item instanceof KdbNode) {
-        return item.details.serverAlias === server;
+    const nodes = await ext.serverProvider.getChildren();
+    const orphan = nodes.find((node) => {
+      if (node instanceof InsightsNode) {
+        return node.details.alias === server;
+      } else if (node instanceof KdbNode) {
+        return node.details.serverAlias === server;
       }
       return false;
-    }) as KdbNode | InsightsNode;
+    }) as InsightsNode | KdbNode;
+    if (orphan) {
+      return orphan;
+    }
+    const labels = nodes.filter((server) => server instanceof LabelNode);
+    for (const label of labels) {
+      const item = label.children.find((node) => {
+        const name =
+          node instanceof InsightsNode
+            ? node.details.alias
+            : node instanceof KdbNode
+              ? node.details.serverAlias
+              : "";
+        return name === server;
+      }) as InsightsNode | KdbNode;
+      if (item) {
+        return item;
+      }
+    }
   }
 }
 

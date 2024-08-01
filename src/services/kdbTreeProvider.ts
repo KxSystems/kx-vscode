@@ -20,6 +20,7 @@ import {
   TreeItem,
   TreeItemCollapsibleState,
   commands,
+  workspace,
 } from "vscode";
 import { ext } from "../extensionVariables";
 import { InsightDetails, Insights } from "../models/insights";
@@ -41,6 +42,7 @@ import {
 } from "../utils/core";
 import { ConnectionManagementService } from "./connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
+import { Label } from "../models/label";
 
 export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: EventEmitter<
@@ -92,15 +94,50 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   }
 
   async getChildren(element?: TreeItem): Promise<TreeItem[]> {
-    if (!this.serverList) {
-      return Promise.resolve([]);
-    }
-    if (!this.insightsList) {
-      return Promise.resolve([]);
+    if (!this.serverList || !this.insightsList) {
+      return [];
     }
 
     if (!element) {
-      return Promise.resolve(this.getMergedElements(element));
+      const labels = workspace
+        .getConfiguration("kdb")
+        .get<Label[]>("labels", []);
+
+      const orphans: TreeItem[] = [];
+      const nodes = labels.map((label) => new LabelNode(label));
+      const items = this.getMergedElements(element);
+
+      let orphan, found;
+      for (const item of items) {
+        orphan = true;
+        if (item instanceof KdbNode) {
+          if (item.details.labels) {
+            for (const label of item.details.labels) {
+              found = nodes.find((node) => label === node.source.id);
+              if (found) {
+                found.children.push(item);
+                orphan = false;
+              }
+            }
+          }
+        } else if (item instanceof InsightsNode) {
+          if (item.details.labels) {
+            for (const label of item.details.labels) {
+              found = nodes.find((node) => label === node.source.id);
+              if (found) {
+                found.children.push(item);
+                orphan = false;
+              }
+            }
+          }
+        }
+        if (orphan) {
+          orphans.push(item);
+        }
+      }
+      return [...orphans, ...nodes];
+    } else if (element instanceof LabelNode) {
+      return element.children;
     } else if (
       element.contextValue !== undefined &&
       ext.kdbrootNodes.indexOf(element.contextValue) !== -1
@@ -784,4 +821,34 @@ export class QServerNode extends TreeItem {
     ),
   };
   contextValue = this.label;
+}
+
+export class LabelNode extends TreeItem {
+  readonly children: TreeItem[] = [];
+
+  constructor(public readonly source: Label) {
+    super(source.id, TreeItemCollapsibleState.Collapsed);
+    this.contextValue = "label";
+  }
+
+  iconPath = {
+    light: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "light",
+      "labels",
+      `label-${this.source.color}.svg`,
+    ),
+    dark: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "dark",
+      "labels",
+      `label-${this.source.color}.svg`,
+    ),
+  };
 }

@@ -17,6 +17,7 @@ export interface InsightDetails {
   auth: boolean;
   realm?: string;
   insecure?: boolean;
+  labels?: string[];
 }
 
 export interface Insights {

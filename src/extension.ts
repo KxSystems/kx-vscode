@@ -101,6 +101,7 @@ import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { CompletionProvider } from "./services/completionProvider";
 import { QuickFixProvider } from "./services/quickFixProvider";
 import { connectClientCommands } from "./commands/clientCommands";
+import { Label } from "./models/label";
 
 let client: LanguageClient;
 
@@ -448,6 +449,113 @@ export async function activate(context: ExtensionContext) {
         ext.dataSourceTreeProvider.reload();
         ext.scratchpadTreeProvider.reload();
       }
+    }),
+    commands.registerCommand("kdb.renameLabel", async (item) => {
+      const name = await window.showInputBox({
+        prompt: "Enter label name",
+        value: item.label,
+      });
+      if (name) {
+        const conf = workspace.getConfiguration("kdb");
+        const labels = conf.get<Label[]>("labels", []);
+        const found = labels.find((label) => label.id === item.label);
+        if (found) {
+          const servers = conf.get<Server>("servers", {});
+          for (const server of Object.keys(servers)) {
+            const target = servers[server].labels;
+            if (target) {
+              const index = target.indexOf(found.id);
+              if (index >= 0) {
+                target[index] = name;
+                servers[server].labels = [...target];
+              }
+            }
+          }
+          const insights = conf.get<Insights>(
+            "insightsEnterpriseConnections",
+            {},
+          );
+          for (const server of Object.keys(insights)) {
+            const target = insights[server].labels;
+            if (target) {
+              const index = target.indexOf(found.id);
+              if (index >= 0) {
+                target[index] = name;
+                insights[server].labels = [...target];
+              }
+            }
+          }
+          found.id = name;
+          await conf.update("labels", labels, ConfigurationTarget.Global);
+          await conf.update("servers", servers, ConfigurationTarget.Global);
+          await conf.update(
+            "insightsEnterpriseConnections",
+            insights,
+            ConfigurationTarget.Global,
+          );
+          ext.serverProvider.refresh(servers);
+          ext.serverProvider.refreshInsights(insights);
+          ext.serverProvider.reload();
+        }
+      }
+    }),
+    commands.registerCommand("kdb.editLabelColor", async (item) => {
+      const colors = [
+        "White",
+        "Red",
+        "Green",
+        "Yellow",
+        "Blue",
+        "Magenta",
+        "Cyan",
+      ].map((color) => ({
+        label: color,
+        iconPath: {
+          light: Uri.file(
+            path.join(
+              __filename,
+              "..",
+              "..",
+              "resources",
+              "light",
+              "labels",
+              `label-${color.toLowerCase()}.svg`,
+            ),
+          ),
+          dark: Uri.file(
+            path.join(
+              __filename,
+              "..",
+              "..",
+              "resources",
+              "dark",
+              "labels",
+              `label-${color.toLowerCase()}.svg`,
+            ),
+          ),
+        },
+      }));
+      const picked = await window.showQuickPick(colors, {
+        title: "Select label color",
+        placeHolder: item.source.color,
+      });
+      if (picked) {
+        const conf = workspace.getConfiguration("kdb");
+        const labels = conf.get<Label[]>("labels", []);
+        const found = labels.find((label) => label.id === item.label);
+        if (found) {
+          found.color = picked.label.toLowerCase();
+          await conf.update("labels", labels, ConfigurationTarget.Global);
+          ext.serverProvider.reload();
+        }
+      }
+    }),
+    commands.registerCommand("kdb.deleteLabel", async (item) => {
+      const conf = workspace.getConfiguration("kdb");
+      let labels = conf.get<Label[]>("labels", []);
+      labels = labels.filter((label) => label.id !== item.label);
+      await conf.update("labels", labels, ConfigurationTarget.Global);
+      ext.serverProvider.reload();
     }),
   );
 
