@@ -181,15 +181,15 @@
           "scope": "resource"
         },
         "kdb.connectionLabels": {
-          "type": "object",
+          "type": "array",
           "description": "List of label names and colorset",
-          "default": {},
+          "default": [],
           "scope": "resource"
         },
         "kdb.connectionLabelsMap": {
-          "type": "object",
+          "type": "array",
           "description": "Label connection map",
-          "default": {},
+          "default": [],
           "scope": "resource"
         }
       }

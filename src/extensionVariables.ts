@@ -37,6 +37,7 @@ import { ScratchpadFile } from "./models/scratchpad";
 import { LocalConnection } from "./classes/localConnection";
 import { InsightsConnection } from "./classes/insightsConnection";
 import { DataSourceFiles } from "./models/dataSource";
+import { Labels } from "./models/labels";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
@@ -84,6 +85,7 @@ export namespace ext {
   export const kdbNodesWithoutAuth: string[] = [];
   export const kdbNodesWithoutTls: string[] = [];
   export const kdbConnectionAliasList: string[] = [];
+  export const connLabelList: Labels[] = [];
   export const maxRetryCount = 5;
 
   export let secretSettings: AuthSettings;
