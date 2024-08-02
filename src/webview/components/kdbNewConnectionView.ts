@@ -24,36 +24,7 @@ import { LabelColors, Labels } from "../../models/labels";
 @customElement("kdb-new-connection-view")
 export class KdbNewConnectionView extends LitElement {
   static styles = [vscodeStyles, kdbStyles, newConnectionStyles];
-  lblColorsList: LabelColors[] = [
-    {
-      name: "White",
-      colorHex: "#FFFFFF",
-    },
-    {
-      name: "Red",
-      colorHex: "#CD3131",
-    },
-    {
-      name: "Green",
-      colorHex: "#10BC7A",
-    },
-    {
-      name: "Yellow",
-      colorHex: "#E5E50E",
-    },
-    {
-      name: "Blue",
-      colorHex: "#2371C8",
-    },
-    {
-      name: "Magenta",
-      colorHex: "#BC3FBC",
-    },
-    {
-      name: "Cyan",
-      colorHex: "#15A7CD",
-    },
-  ];
+  lblColorsList: LabelColors[] = [];
   lblNamesList: Labels[] = [];
   newLblName = "";
   newLblColorName = "";
@@ -151,6 +122,7 @@ export class KdbNewConnectionView extends LitElement {
     }
     if (message.command === "refreshLabels") {
       this.lblNamesList = message.data;
+      this.lblColorsList = message.colors;
       this.requestUpdate();
     }
   }

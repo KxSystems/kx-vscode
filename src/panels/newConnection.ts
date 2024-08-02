@@ -50,6 +50,7 @@ export class NewConnectionPannel {
     panel.webview.postMessage({
       command: "refreshLabels",
       data: ext.connLabelList,
+      colors: ext.labelColors,
     });
 
     if (conn) {
@@ -143,6 +144,7 @@ export class NewConnectionPannel {
           this._panel.webview.postMessage({
             command: "refreshLabels",
             data: ext.connLabelList,
+            colors: ext.labelColors,
           });
         }, 500);
       }
