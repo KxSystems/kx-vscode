@@ -17,6 +17,7 @@ import { getNonce } from "../utils/getNonce";
 import { ext } from "../extensionVariables";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import { ConnectionType, EditConnectionMessage } from "../models/messages";
+import { retrieveConnLabelsNames } from "../utils/connLabel";
 
 export class NewConnectionPannel {
   public static currentPanel: NewConnectionPannel | undefined;
@@ -46,12 +47,20 @@ export class NewConnectionPannel {
       extensionUri,
     );
 
+    panel.webview.postMessage({
+      command: "refreshLabels",
+      data: ext.connLabelList,
+      colors: ext.labelColors,
+    });
+
     if (conn) {
+      const labels = retrieveConnLabelsNames(conn);
       const connType = this.getConnectionType(conn);
       const editConnData = this.createEditConnectionMessage(conn, connType);
       panel.webview.postMessage({
         command: "editConnection",
         data: editConnData,
+        labels,
       });
     }
   }
@@ -82,6 +91,7 @@ export class NewConnectionPannel {
           vscode.commands.executeCommand(
             "kdb.newConnection.createNewBundledConnection",
             message.data,
+            message.labels,
           );
         }
       }
@@ -89,12 +99,14 @@ export class NewConnectionPannel {
         vscode.commands.executeCommand(
           "kdb.newConnection.createNewInsightConnection",
           message.data,
+          message.labels,
         );
       }
       if (message.command === "kdb.newConnection.createNewConnection") {
         vscode.commands.executeCommand(
           "kdb.newConnection.createNewConnection",
           message.data,
+          message.labels,
         );
       }
       if (message.command === "kdb.newConnection.editInsightsConnection") {
@@ -102,6 +114,7 @@ export class NewConnectionPannel {
           "kdb.newConnection.editInsightsConnection",
           message.data,
           message.oldAlias,
+          message.labels,
         );
       }
       if (message.command === "kdb.newConnection.editMyQConnection") {
@@ -110,6 +123,7 @@ export class NewConnectionPannel {
           message.data,
           message.oldAlias,
           message.editAuth,
+          message.labels,
         );
       }
       if (message.command === "kdb.newConnection.editBundledConnection") {
@@ -117,7 +131,22 @@ export class NewConnectionPannel {
           "kdb.newConnection.editBundledConnection",
           message.data,
           message.oldAlias,
+          message.labels,
         );
+      }
+      if (message.command === "kdb.labels.create") {
+        vscode.commands.executeCommand(
+          "kdb.labels.create",
+          message.data.name,
+          message.data.colorName,
+        );
+        setTimeout(() => {
+          this._panel.webview.postMessage({
+            command: "refreshLabels",
+            data: ext.connLabelList,
+            colors: ext.labelColors,
+          });
+        }, 500);
       }
     });
   }

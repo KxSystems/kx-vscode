@@ -37,6 +37,7 @@ import { ScratchpadFile } from "./models/scratchpad";
 import { LocalConnection } from "./classes/localConnection";
 import { InsightsConnection } from "./classes/insightsConnection";
 import { DataSourceFiles } from "./models/dataSource";
+import { ConnectionLabel, LabelColors, Labels } from "./models/labels";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
@@ -84,6 +85,8 @@ export namespace ext {
   export const kdbNodesWithoutAuth: string[] = [];
   export const kdbNodesWithoutTls: string[] = [];
   export const kdbConnectionAliasList: string[] = [];
+  export const connLabelList: Labels[] = [];
+  export const labelConnMapList: ConnectionLabel[] = [];
   export const maxRetryCount = 5;
 
   export let secretSettings: AuthSettings;
@@ -306,4 +309,35 @@ export namespace ext {
 
   export const diagnosticCollection =
     languages.createDiagnosticCollection("kdb");
+
+  export const labelColors: LabelColors[] = [
+    {
+      name: "White",
+      colorHex: "#FFFFFF",
+    },
+    {
+      name: "Red",
+      colorHex: "#CD3131",
+    },
+    {
+      name: "Green",
+      colorHex: "#10BC7A",
+    },
+    {
+      name: "Yellow",
+      colorHex: "#E5E50E",
+    },
+    {
+      name: "Blue",
+      colorHex: "#2371C8",
+    },
+    {
+      name: "Magenta",
+      colorHex: "#BC3FBC",
+    },
+    {
+      name: "Cyan",
+      colorHex: "#15A7CD",
+    },
+  ];
 }

@@ -67,6 +67,7 @@ import { Telemetry } from "../utils/telemetryClient";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { MetaContentProvider } from "../services/metaContentProvider";
+import { handleLabelsConnMap } from "../utils/connLabel";
 
 export async function addNewConnection(): Promise<void> {
   NewConnectionPannel.close();
@@ -78,7 +79,10 @@ export async function editConnection(viewItem: KdbNode | InsightsNode) {
   NewConnectionPannel.render(ext.context.extensionUri, viewItem);
 }
 
-export async function addInsightsConnection(insightsData: InsightDetails) {
+export async function addInsightsConnection(
+  insightsData: InsightDetails,
+  labels?: string[],
+) {
   const aliasValidation = validateServerAlias(insightsData.alias, false);
   if (aliasValidation) {
     window.showErrorMessage(aliasValidation);
@@ -127,12 +131,16 @@ export async function addInsightsConnection(insightsData: InsightDetails) {
     await updateInsights(insights);
     const newInsights = getInsights();
     if (newInsights != undefined) {
+      if (labels && labels.length > 0) {
+        handleLabelsConnMap(labels, insightsData.alias);
+      }
       ext.serverProvider.refreshInsights(newInsights);
       Telemetry.sendEvent("Connection.Created.Insights");
     }
     window.showInformationMessage(
       `Added Insights connection: ${insightsData.alias}`,
     );
+
     NewConnectionPannel.close();
   }
 }
@@ -141,6 +149,7 @@ export async function addInsightsConnection(insightsData: InsightDetails) {
 export async function editInsightsConnection(
   insightsData: InsightDetails,
   oldAlias: string,
+  labels?: string[],
 ) {
   const aliasValidation =
     oldAlias === insightsData.alias
@@ -207,12 +216,16 @@ export async function editInsightsConnection(
 
         const newInsights = getInsights();
         if (newInsights != undefined) {
+          if (labels && labels.length > 0) {
+            handleLabelsConnMap(labels, insightsData.alias);
+          }
           ext.serverProvider.refreshInsights(newInsights);
           Telemetry.sendEvent("Connection.Edited.Insights");
         }
         window.showInformationMessage(
           `Edited Insights connection: ${insightsData.alias}`,
         );
+
         NewConnectionPannel.close();
       }
     }
@@ -301,6 +314,7 @@ export async function enableTLS(serverKey: string): Promise<void> {
 export async function addKdbConnection(
   kdbData: ServerDetails,
   isLocal?: boolean,
+  labels?: string[],
 ): Promise<void> {
   const aliasValidation = validateServerAlias(kdbData.serverAlias, isLocal!);
   const hostnameValidation = validateServerName(kdbData.serverName);
@@ -359,6 +373,9 @@ export async function addKdbConnection(
     await updateServers(servers);
     const newServers = getServers();
     if (newServers != undefined) {
+      if (labels && labels.length > 0) {
+        handleLabelsConnMap(labels, kdbData.serverAlias);
+      }
       Telemetry.sendEvent("Connection.Created.QProcess");
       ext.serverProvider.refresh(newServers);
     }
@@ -368,6 +385,7 @@ export async function addKdbConnection(
     window.showInformationMessage(
       `Added kdb connection: ${kdbData.serverAlias}`,
     );
+
     NewConnectionPannel.close();
   }
 }
@@ -378,6 +396,7 @@ export async function editKdbConnection(
   oldAlias: string,
   isLocal?: boolean,
   editAuth?: boolean,
+  labels?: string[],
 ) {
   const aliasValidation =
     oldAlias === kdbData.serverAlias
@@ -455,6 +474,9 @@ export async function editKdbConnection(
         }
         const newServers = getServers();
         if (newServers != undefined) {
+          if (labels && labels.length > 0) {
+            handleLabelsConnMap(labels, kdbData.serverAlias);
+          }
           ext.serverProvider.refresh(newServers);
           Telemetry.sendEvent("Connection.Edited.KDB");
         }

@@ -38,6 +38,7 @@
     "onCommand:kdb.newConnection.editInsightsConnection",
     "onCommand:kdb.newConnection.editMyQConnection",
     "onCommand:kdb.newConnection.editBundledConnection",
+    "onCommand:kdb.labels.create",
     "onView:kdb-datasources-explorer",
     "onTerminalProfile:kdb.q-terminal",
     "onLanguage:python"
@@ -178,6 +179,18 @@
           "type": "object",
           "description": "Connection map for workspace files",
           "default": {},
+          "scope": "resource"
+        },
+        "kdb.connectionLabels": {
+          "type": "array",
+          "description": "List of label names and colorset",
+          "default": [],
+          "scope": "resource"
+        },
+        "kdb.labelsConnectionMap": {
+          "type": "array",
+          "description": "Labels connection map",
+          "default": [],
           "scope": "resource"
         }
       }
