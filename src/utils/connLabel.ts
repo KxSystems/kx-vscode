@@ -31,7 +31,9 @@ export function getWorkspaceLabels() {
 
 export function createNewLabel(name: string, colorName: string) {
   getWorkspaceLabels();
-  const color = ext.labelColors.find((color) => color.name === colorName);
+  const color = ext.labelColors.find(
+    (color) => color.name.toLowerCase() === colorName.toLowerCase(),
+  );
   if (name === "") {
     kdbOutputLog("Label name can't be empty", "ERROR");
   }
@@ -62,7 +64,9 @@ export function getWorkspaceLabelsConnMap() {
 }
 
 export function addConnToLabel(labelName: string, connName: string) {
-  const label = ext.connLabelList.find((lbl) => lbl.name === labelName);
+  const label = ext.connLabelList.find(
+    (lbl) => lbl.name.toLowerCase() === labelName.toLowerCase(),
+  );
   if (label) {
     if (ext.labelConnMapList.length > 0) {
       const labelConnMap = ext.labelConnMapList.find(
