@@ -11,10 +11,11 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { ConnectionLabels, Labels } from "../models/labels";
+import { ConnectionLabel, Labels } from "../models/labels";
 import { workspace } from "vscode";
 import { ext } from "../extensionVariables";
 import { kdbOutputLog } from "./core";
+import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 
 export function getWorkspaceLabels() {
   const existingConnLbls = workspace
@@ -51,10 +52,10 @@ export function createNewLabel(name: string, colorName: string) {
 export function getWorkspaceLabelsConnMap() {
   const existingLabelConnMaps = workspace
     .getConfiguration()
-    .get<ConnectionLabels[]>("kdb.labelsConnectionMap");
+    .get<ConnectionLabel[]>("kdb.labelsConnectionMap");
   ext.labelConnMapList.length = 0;
   if (existingLabelConnMaps && existingLabelConnMaps.length > 0) {
-    existingLabelConnMaps.forEach((labelConnMap: ConnectionLabels) => {
+    existingLabelConnMaps.forEach((labelConnMap: ConnectionLabel) => {
       ext.labelConnMapList.push(labelConnMap);
     });
   }
@@ -104,4 +105,18 @@ export function handleLabelsConnMap(labels: string[], connName: string) {
   workspace
     .getConfiguration()
     .update("kdb.labelsConnectionMap", ext.labelConnMapList, true);
+}
+
+export function retrieveConnLabelsNames(
+  conn: KdbNode | InsightsNode,
+): string[] {
+  const connName =
+    conn instanceof KdbNode ? conn.details.serverAlias : conn.details.alias;
+  const labels: string[] = [];
+  ext.labelConnMapList.forEach((labelConnMap) => {
+    if (labelConnMap.connections.includes(connName)) {
+      labels.push(labelConnMap.labelName);
+    }
+  });
+  return labels;
 }

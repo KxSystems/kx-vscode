@@ -146,6 +146,8 @@ export class KdbNewConnectionView extends LitElement {
     const message = event.data;
     if (message.command === "editConnection") {
       this.connectionData = message.data;
+      this.labels = message.labels;
+      this.requestUpdate();
     }
     if (message.command === "refreshLabels") {
       this.lblNamesList = message.data;
@@ -356,17 +358,19 @@ export class KdbNewConnectionView extends LitElement {
       <vscode-option .value="${undefined}"> No Label Selected </vscode-option>
       ${repeat(
         this.lblNamesList,
-        (lbl) => lbl,
-        (lbl) =>
-          html` <vscode-option .value="${lbl.name}">
-            <span
-              ><div
+        (lbl) => lbl.name,
+        (lbl) => html`
+          <vscode-option
+            .value="${lbl.name}"
+            ?selected="${lbl.name === this.labels[0]}">
+            <span>
+              <div
                 style="width: 10px; height: 10px; background: ${lbl.color
-                  .colorHex}; border-radius: 50%; float: left;
-    margin-right: 10px; margin-top: 3px;"></div>
-              ${lbl.name}</span
-            >
-          </vscode-option>`,
+                  .colorHex}; border-radius: 50%; float: left; margin-right: 10px; margin-top: 3px;"></div>
+              ${lbl.name}
+            </span>
+          </vscode-option>
+        `,
       )}
     `;
   }

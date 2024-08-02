@@ -17,6 +17,7 @@ import { getNonce } from "../utils/getNonce";
 import { ext } from "../extensionVariables";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import { ConnectionType, EditConnectionMessage } from "../models/messages";
+import { retrieveConnLabelsNames } from "../utils/connLabel";
 
 export class NewConnectionPannel {
   public static currentPanel: NewConnectionPannel | undefined;
@@ -46,18 +47,21 @@ export class NewConnectionPannel {
       extensionUri,
     );
 
+    panel.webview.postMessage({
+      command: "refreshLabels",
+      data: ext.connLabelList,
+    });
+
     if (conn) {
+      const labels = retrieveConnLabelsNames(conn);
       const connType = this.getConnectionType(conn);
       const editConnData = this.createEditConnectionMessage(conn, connType);
       panel.webview.postMessage({
         command: "editConnection",
         data: editConnData,
+        labels,
       });
     }
-    panel.webview.postMessage({
-      command: "refreshLabels",
-      data: ext.connLabelList,
-    });
   }
 
   public static close() {

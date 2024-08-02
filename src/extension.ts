@@ -104,7 +104,11 @@ import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { CompletionProvider } from "./services/completionProvider";
 import { QuickFixProvider } from "./services/quickFixProvider";
 import { connectClientCommands } from "./commands/clientCommands";
-import { createNewLabel, getWorkspaceLabels } from "./utils/connLabel";
+import {
+  createNewLabel,
+  getWorkspaceLabels,
+  getWorkspaceLabelsConnMap,
+} from "./utils/connLabel";
 
 let client: LanguageClient;
 
@@ -114,6 +118,7 @@ export async function activate(context: ExtensionContext) {
   ext.openSslVersion = await checkOpenSslInstalled();
   ext.isBundleQCreated = false;
 
+  getWorkspaceLabelsConnMap();
   getWorkspaceLabels();
 
   // clear necessary contexts
