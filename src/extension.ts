@@ -19,8 +19,6 @@ import {
   ExtensionContext,
   Range,
   TextDocumentContentProvider,
-  ThemeColor,
-  ThemeIcon,
   Uri,
   WorkspaceEdit,
   commands,
@@ -114,7 +112,6 @@ import {
   renameLabel,
   setLabelColor,
 } from "./utils/connLabel";
-import { Labels } from "./models/labels";
 
 let client: LanguageClient;
 

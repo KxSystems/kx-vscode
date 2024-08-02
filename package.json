@@ -707,7 +707,7 @@
         },
         {
           "command": "kdb.editConnection",
-          "when": "view == kdb-servers",
+          "when": "view == kdb-servers && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection@4"
         },
         {

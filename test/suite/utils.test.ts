@@ -1745,5 +1745,43 @@ describe("Utils", () => {
 
       assert.deepStrictEqual(labels, ["label1"]);
     });
+
+    it("should rename a label", () => {
+      const labels: Labels[] = [
+        { name: "label1", color: { name: "red", colorHex: "#FF0000" } },
+      ];
+      getConfigurationStub.returns({
+        get: sinon.stub().returns(labels),
+        update: sinon.stub().returns(Promise.resolve()),
+      });
+      LabelsUtils.renameLabel("label1", "label2");
+      assert.strictEqual(ext.connLabelList.length, 1);
+      assert.deepStrictEqual(ext.connLabelList[0].name, "label2");
+    });
+
+    it("should set label color", () => {
+      const labels: Labels[] = [
+        { name: "label1", color: { name: "red", colorHex: "#FF0000" } },
+      ];
+      getConfigurationStub.returns({
+        get: sinon.stub().returns(labels),
+        update: sinon.stub().returns(Promise.resolve()),
+      });
+      LabelsUtils.setLabelColor("label1", "Blue");
+      assert.strictEqual(ext.connLabelList.length, 1);
+      assert.deepStrictEqual(ext.connLabelList[0].color.name, "Blue");
+    });
+
+    it("should delete label", () => {
+      const labels: Labels[] = [
+        { name: "label1", color: { name: "red", colorHex: "#FF0000" } },
+      ];
+      getConfigurationStub.returns({
+        get: sinon.stub().returns(labels),
+        update: sinon.stub().returns(Promise.resolve()),
+      });
+      LabelsUtils.deleteLabel("label1");
+      assert.strictEqual(ext.connLabelList.length, 0);
+    });
   });
 });

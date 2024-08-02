@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { ConnectionLabel, LabelColors, Labels } from "../models/labels";
+import { ConnectionLabel, Labels } from "../models/labels";
 import { workspace } from "vscode";
 import { ext } from "../extensionVariables";
 import { kdbOutputLog } from "./core";
