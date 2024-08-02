@@ -23,13 +23,13 @@ import { QueryResultType } from "../../src/models/queryResult";
 import { ServerDetails, ServerType } from "../../src/models/server";
 import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import { QueryHistoryProvider } from "../../src/services/queryHistoryProvider";
-import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as coreUtils from "../../src/utils/core";
 import * as cpUtils from "../../src/utils/cpUtils";
 import * as dataSourceUtils from "../../src/utils/dataSource";
 import * as decodeUtils from "../../src/utils/decode";
 import * as executionUtils from "../../src/utils/execution";
 import * as executionConsoleUtils from "../../src/utils/executionConsole";
+import * as LabelsUtils from "../../src/utils/connLabel";
 import { getNonce } from "../../src/utils/getNonce";
 import { getUri } from "../../src/utils/getUri";
 import { openUrl } from "../../src/utils/openUrl";
@@ -51,6 +51,7 @@ import {
 import { DataSourceTypes } from "../../src/models/dataSource";
 import { InsightDetails } from "../../src/models/insights";
 import { LocalConnection } from "../../src/classes/localConnection";
+import { Labels } from "../../src/models/labels";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;
@@ -1591,6 +1592,158 @@ describe("Utils", () => {
         const result = validateUtils.isBoolean(value);
         assert.strictEqual(result, false);
       });
+    });
+  });
+
+  describe("connLabelsUtils", () => {
+    let getConfigurationStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
+      ext.connLabelList.length = 0;
+      ext.labelConnMapList.length = 0;
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should get workspace labels", () => {
+      const labels: Labels[] = [
+        { name: "label1", color: { name: "red", colorHex: "#FF0000" } },
+      ];
+      getConfigurationStub.returns({
+        get: sinon.stub().returns(labels),
+        update: sinon.stub(),
+      });
+
+      LabelsUtils.getWorkspaceLabels();
+
+      assert.strictEqual(ext.connLabelList.length, 1);
+
+      assert.deepStrictEqual(ext.connLabelList, labels);
+    });
+
+    it("should create a new label", () => {
+      getConfigurationStub.returns({
+        get: sinon.stub().returns([]),
+        update: sinon.stub(),
+      });
+
+      LabelsUtils.createNewLabel("label1", "red");
+
+      assert.strictEqual(ext.connLabelList.length, 1);
+      assert.strictEqual(ext.connLabelList[0].name, "label1");
+      assert.strictEqual(ext.connLabelList[0].color.name, "Red");
+    });
+
+    it("should handle empty label name", () => {
+      getConfigurationStub.returns({
+        get: sinon.stub(),
+        update: sinon.stub(),
+      });
+      const logStub = sinon.stub(coreUtils, "kdbOutputLog");
+
+      LabelsUtils.createNewLabel("", "red");
+
+      sinon.assert.calledWith(logStub, "Label name can't be empty", "ERROR");
+    });
+
+    it("should handle no color selected", () => {
+      getConfigurationStub.returns({
+        get: sinon.stub(),
+        update: sinon.stub(),
+      });
+      const logStub = sinon.stub(coreUtils, "kdbOutputLog");
+
+      LabelsUtils.createNewLabel("label1", "randomColorName");
+
+      sinon.assert.calledWith(
+        logStub,
+        "No Color selected for the label",
+        "ERROR",
+      );
+    });
+
+    it("should get workspace labels connection map", () => {
+      const connMap = [{ labelName: "label1", connections: ["conn1"] }];
+      getConfigurationStub.returns({
+        get: sinon.stub().returns(connMap),
+        update: sinon.stub(),
+      });
+
+      LabelsUtils.getWorkspaceLabelsConnMap();
+
+      assert.deepStrictEqual(ext.labelConnMapList, connMap);
+    });
+
+    it("should add connection to label", () => {
+      ext.connLabelList.push({
+        name: "label1",
+        color: { name: "red", colorHex: "#FF0000" },
+      });
+
+      LabelsUtils.addConnToLabel("label1", "conn1");
+
+      assert.strictEqual(ext.labelConnMapList.length, 1);
+      assert.strictEqual(ext.labelConnMapList[0].labelName, "label1");
+      assert.deepStrictEqual(ext.labelConnMapList[0].connections, ["conn1"]);
+    });
+
+    it("should remove connection from labels", () => {
+      ext.labelConnMapList.push({
+        labelName: "label1",
+        connections: ["conn1", "conn2"],
+      });
+
+      LabelsUtils.removeConnFromLabels("conn1");
+
+      assert.deepStrictEqual(ext.labelConnMapList[0].connections, ["conn2"]);
+    });
+
+    it("should handle labels connection map", () => {
+      ext.connLabelList.push({
+        name: "label1",
+        color: { name: "Red", colorHex: "#FF0000" },
+      });
+      ext.labelConnMapList.push({
+        labelName: "label1",
+        connections: ["conn2"],
+      });
+
+      getConfigurationStub.returns({
+        get: sinon.stub(),
+        update: sinon.stub(),
+      });
+
+      LabelsUtils.handleLabelsConnMap(["label1"], "conn2");
+
+      assert.strictEqual(ext.labelConnMapList.length, 1);
+      assert.deepStrictEqual(ext.labelConnMapList[0].connections, ["conn2"]);
+    });
+
+    it("should retrieve connection labels names", () => {
+      ext.labelConnMapList.push({
+        labelName: "label1",
+        connections: ["conn1"],
+      });
+      const conn = new KdbNode(
+        [],
+        "conn1",
+        {
+          serverName: "kdbservername",
+          serverAlias: "conn1",
+          serverPort: "5001",
+          managed: false,
+          auth: false,
+          tls: false,
+        },
+        TreeItemCollapsibleState.None,
+      );
+
+      const labels = LabelsUtils.retrieveConnLabelsNames(conn);
+
+      assert.deepStrictEqual(labels, ["label1"]);
     });
   });
 });

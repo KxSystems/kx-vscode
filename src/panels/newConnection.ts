@@ -15,51 +15,17 @@ import * as vscode from "vscode";
 import { getUri } from "../utils/getUri";
 import { getNonce } from "../utils/getNonce";
 import { ext } from "../extensionVariables";
+import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
+import { ConnectionType, EditConnectionMessage } from "../models/messages";
+import { retrieveConnLabelsNames } from "../utils/connLabel";
 
 export class NewConnectionPannel {
   public static currentPanel: NewConnectionPannel | undefined;
-  private uri;
+  private readonly _extensionUri: vscode.Uri;
   public readonly _panel: vscode.WebviewPanel;
   private _disposables: vscode.Disposable[] = [];
 
-  private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
-    this.uri = extensionUri;
-    this._panel = panel;
-    this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
-    this._panel.webview.html = this._getWebviewContent(
-      this._panel.webview,
-      extensionUri,
-    );
-    /* istanbul ignore next */
-    this._panel.webview.onDidReceiveMessage((message) => {
-      if (message.command === "kdb.newConnection.createNewBundledConnection") {
-        if (ext.isBundleQCreated) {
-          vscode.window.showErrorMessage(
-            "Bundled Q is already created, please remove it first",
-          );
-        } else {
-          vscode.commands.executeCommand(
-            "kdb.newConnection.createNewBundledConnection",
-            message.data,
-          );
-        }
-      }
-      if (message.command === "kdb.newConnection.createNewInsightConnection") {
-        vscode.commands.executeCommand(
-          "kdb.newConnection.createNewInsightConnection",
-          message.data,
-        );
-      }
-      if (message.command === "kdb.newConnection.createNewConnection") {
-        vscode.commands.executeCommand(
-          "kdb.newConnection.createNewConnection",
-          message.data,
-        );
-      }
-    });
-  }
-
-  public static render(extensionUri: vscode.Uri) {
+  public static render(extensionUri: vscode.Uri, conn?: any) {
     if (NewConnectionPannel.currentPanel) {
       NewConnectionPannel.currentPanel._panel.dispose();
       return;
@@ -67,7 +33,7 @@ export class NewConnectionPannel {
 
     const panel = vscode.window.createWebviewPanel(
       "kdbNewConnection",
-      "New Connection",
+      conn ? "Edit Connection" : "New Connection",
       vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -80,6 +46,23 @@ export class NewConnectionPannel {
       panel,
       extensionUri,
     );
+
+    panel.webview.postMessage({
+      command: "refreshLabels",
+      data: ext.connLabelList,
+      colors: ext.labelColors,
+    });
+
+    if (conn) {
+      const labels = retrieveConnLabelsNames(conn);
+      const connType = this.getConnectionType(conn);
+      const editConnData = this.createEditConnectionMessage(conn, connType);
+      panel.webview.postMessage({
+        command: "editConnection",
+        data: editConnData,
+        labels,
+      });
+    }
   }
 
   public static close() {
@@ -87,6 +70,85 @@ export class NewConnectionPannel {
       NewConnectionPannel.currentPanel._panel.dispose();
       return;
     }
+  }
+
+  private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+    this._extensionUri = extensionUri;
+    this._panel = panel;
+    this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+    this._panel.webview.html = this._getWebviewContent(
+      this._panel.webview,
+      this._extensionUri,
+    );
+    /* istanbul ignore next */
+    this._panel.webview.onDidReceiveMessage((message) => {
+      if (message.command === "kdb.newConnection.createNewBundledConnection") {
+        if (ext.isBundleQCreated) {
+          vscode.window.showErrorMessage(
+            "Bundled Q is already created, please remove it first",
+          );
+        } else {
+          vscode.commands.executeCommand(
+            "kdb.newConnection.createNewBundledConnection",
+            message.data,
+            message.labels,
+          );
+        }
+      }
+      if (message.command === "kdb.newConnection.createNewInsightConnection") {
+        vscode.commands.executeCommand(
+          "kdb.newConnection.createNewInsightConnection",
+          message.data,
+          message.labels,
+        );
+      }
+      if (message.command === "kdb.newConnection.createNewConnection") {
+        vscode.commands.executeCommand(
+          "kdb.newConnection.createNewConnection",
+          message.data,
+          message.labels,
+        );
+      }
+      if (message.command === "kdb.newConnection.editInsightsConnection") {
+        vscode.commands.executeCommand(
+          "kdb.newConnection.editInsightsConnection",
+          message.data,
+          message.oldAlias,
+          message.labels,
+        );
+      }
+      if (message.command === "kdb.newConnection.editMyQConnection") {
+        vscode.commands.executeCommand(
+          "kdb.newConnection.editMyQConnection",
+          message.data,
+          message.oldAlias,
+          message.editAuth,
+          message.labels,
+        );
+      }
+      if (message.command === "kdb.newConnection.editBundledConnection") {
+        vscode.commands.executeCommand(
+          "kdb.newConnection.editBundledConnection",
+          message.data,
+          message.oldAlias,
+          message.labels,
+        );
+      }
+      if (message.command === "kdb.labels.create") {
+        vscode.commands.executeCommand(
+          "kdb.labels.create",
+          message.data.name,
+          message.data.colorName,
+        );
+        setTimeout(() => {
+          this._panel.webview.postMessage({
+            command: "refreshLabels",
+            data: ext.connLabelList,
+            colors: ext.labelColors,
+          });
+        }, 500);
+      }
+    });
   }
 
   public dispose() {
@@ -114,12 +176,47 @@ export class NewConnectionPannel {
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>New Connection</title>
+            <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
         </head>
         <body>
             <kdb-new-connection-view/>
-            <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
         </body>
         </html>
         `;
+  }
+
+  private static getConnectionType(
+    conn: KdbNode | InsightsNode,
+  ): ConnectionType {
+    if (conn instanceof InsightsNode) {
+      return ConnectionType.Insights;
+    } else {
+      return conn.details.managed
+        ? ConnectionType.BundledQ
+        : ConnectionType.Kdb;
+    }
+  }
+
+  private static createEditConnectionMessage(
+    conn: KdbNode | InsightsNode,
+    connType: ConnectionType,
+  ): EditConnectionMessage {
+    return {
+      connType,
+      serverName:
+        conn instanceof InsightsNode
+          ? conn.details.alias
+          : conn.details.serverAlias,
+      serverAddress:
+        conn instanceof InsightsNode
+          ? conn.details.server
+          : conn.details.serverName,
+      realm: conn instanceof InsightsNode ? conn.details.realm : undefined,
+      port: conn instanceof KdbNode ? conn.details.serverPort : undefined,
+      auth: conn.details.auth,
+      tls: conn instanceof KdbNode ? conn.details.tls : undefined,
+      insecure:
+        conn instanceof InsightsNode ? conn.details.insecure : undefined,
+    };
   }
 }

@@ -11,24 +11,17 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export enum ServerType {
-  INSIGHTS,
-  KDB,
-  undefined,
-}
+export type LabelColors = {
+  name: string;
+  colorHex: string;
+};
 
-export interface ServerDetails {
-  serverName: string;
-  serverPort: string;
-  auth: boolean;
-  serverAlias: string;
-  managed: boolean;
-  tls: boolean;
-  username?: string;
-  password?: string;
-  labels?: string[];
-}
+export type Labels = {
+  name: string;
+  color: LabelColors;
+};
 
-export interface Server {
-  [name: string]: ServerDetails;
-}
+export type ConnectionLabel = {
+  labelName: string;
+  connections: string[];
+};
