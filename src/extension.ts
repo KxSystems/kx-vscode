@@ -104,6 +104,7 @@ import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { CompletionProvider } from "./services/completionProvider";
 import { QuickFixProvider } from "./services/quickFixProvider";
 import { connectClientCommands } from "./commands/clientCommands";
+import { createNewLabel, getWorkspaceLabels } from "./utils/connLabel";
 
 let client: LanguageClient;
 
@@ -112,6 +113,9 @@ export async function activate(context: ExtensionContext) {
   ext.outputChannel = window.createOutputChannel("kdb");
   ext.openSslVersion = await checkOpenSslInstalled();
   ext.isBundleQCreated = false;
+
+  getWorkspaceLabels();
+
   // clear necessary contexts
   commands.executeCommand("setContext", "kdb.connected.active", false);
   commands.executeCommand("setContext", "kdb.insightsConnected", false);
@@ -298,6 +302,12 @@ export async function activate(context: ExtensionContext) {
       "kdb.newConnection.editBundledConnection",
       async (kdbData: ServerDetails, oldAlias: string) => {
         await editKdbConnection(kdbData, oldAlias, true);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.labels.create",
+      async (name: string, colorName: string) => {
+        await createNewLabel(name, colorName);
       },
     ),
     commands.registerCommand(

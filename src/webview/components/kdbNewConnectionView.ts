@@ -18,10 +18,43 @@ import { InsightDetails } from "../../models/insights";
 
 import { kdbStyles, newConnectionStyles, vscodeStyles } from "./styles";
 import { EditConnectionMessage } from "../../models/messages";
+import { repeat } from "lit/directives/repeat.js";
+import { LabelColors, Labels } from "../../models/labels";
 
 @customElement("kdb-new-connection-view")
 export class KdbNewConnectionView extends LitElement {
   static styles = [vscodeStyles, kdbStyles, newConnectionStyles];
+  lblColorsList: LabelColors[] = [
+    {
+      name: "White",
+      colorHex: "#FFFFFF",
+    },
+    {
+      name: "Red",
+      colorHex: "#CD3131",
+    },
+    {
+      name: "Green",
+      colorHex: "#10BC7A",
+    },
+    {
+      name: "Yellow",
+      colorHex: "#E5E50E",
+    },
+    {
+      name: "Blue",
+      colorHex: "#2371C8",
+    },
+    {
+      name: "Magenta",
+      colorHex: "#BC3FBC",
+    },
+    {
+      name: "Cyan",
+      colorHex: "#15A7CD",
+    },
+  ];
+  lblNamesList: Labels[] = [];
   newLblName = "";
   newLblColorName = "";
   kdbServer: ServerDetails = {
@@ -80,6 +113,8 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   closeModal() {
+    this.newLblColorName = "";
+    this.newLblName = "";
     this.isModalOpen = false;
     this.requestUpdate();
   }
@@ -111,6 +146,10 @@ export class KdbNewConnectionView extends LitElement {
     const message = event.data;
     if (message.command === "editConnection") {
       this.connectionData = message.data;
+    }
+    if (message.command === "refreshLabels") {
+      this.lblNamesList = message.data;
+      this.requestUpdate();
     }
   }
 
@@ -293,8 +332,48 @@ export class KdbNewConnectionView extends LitElement {
     this.serverType = config.serverType;
   }
 
+  renderLblDropdownColorOptions() {
+    return html`
+      <vscode-option .value="${undefined}"> No Color Selected </vscode-option>
+      ${repeat(
+        this.lblColorsList,
+        (color) => color,
+        (color) =>
+          html` <vscode-option .value="${color.name}">
+            <span
+              ><div
+                style="width: 10px; height: 10px; background: ${color.colorHex}; border-radius: 50%; float: left;
+    margin-right: 10px; margin-top: 3px;"></div>
+              ${color.name}</span
+            >
+          </vscode-option>`,
+      )}
+    `;
+  }
+
+  renderLblDropdownOptions() {
+    return html`
+      <vscode-option .value="${undefined}"> No Label Selected </vscode-option>
+      ${repeat(
+        this.lblNamesList,
+        (lbl) => lbl,
+        (lbl) =>
+          html` <vscode-option .value="${lbl.name}">
+            <span
+              ><div
+                style="width: 10px; height: 10px; background: ${lbl.color
+                  .colorHex}; border-radius: 50%; float: left;
+    margin-right: 10px; margin-top: 3px;"></div>
+              ${lbl.name}</span
+            >
+          </vscode-option>`,
+      )}
+    `;
+  }
+
   renderNewLabelModal() {
     return html`
+      <div class="overlay"></div>
       <dialog class="modal" ?open="${this.isModalOpen}">
         <div class="modal-content">
           <h2>Add a New Label</h2>
@@ -321,19 +400,20 @@ export class KdbNewConnectionView extends LitElement {
               }}"
               class="dropdown"
               style="width: 18.5em;">
-              <vscode-option .value="${undefined}">
-                No Color Selected
-              </vscode-option>
+              ${this.renderLblDropdownColorOptions()}
             </vscode-dropdown>
           </div>
-          <div class="row">
+          <div class="row" style="margin-top: 10px;">
             <vscode-button
               aria-label="Cancel"
               appearance="secondary"
               @click="${this.closeModal}">
               Cancel
             </vscode-button>
-            <vscode-button aria-label="Create Label" appearance="primary">
+            <vscode-button
+              aria-label="Create Label"
+              appearance="primary"
+              @click="${this.createLabel}">
               Create
             </vscode-button>
           </div>
@@ -345,16 +425,16 @@ export class KdbNewConnectionView extends LitElement {
   renderNewLblBtn() {
     return html`
       <vscode-button
-        aria-label="Add Label"
+        aria-label="Create New Label"
+        style="height: 26px;    margin-top: 18px;"
         appearance="secondary"
         @click="${this.openModal}">
         Create New Label
       </vscode-button>
-      ${this.isModalOpen ? this.renderNewLabelModal() : ""}
     `;
   }
 
-  renderConnectionLabelsSection(type: string) {
+  renderConnectionLabelsSection() {
     return html` <div class="row">
       <div class="col gap-0">
         <div class="row option-title">Connection label (optional)</div>
@@ -362,8 +442,10 @@ export class KdbNewConnectionView extends LitElement {
           <div class="dropdown-container">
             <label for="selectLabel">Label Name</label>
             <vscode-dropdown id="selectLabel" class="dropdown larger">
+              ${this.renderLblDropdownOptions()}
             </vscode-dropdown>
           </div>
+          ${this.renderNewLblBtn()}
         </div>
       </div>
     </div>`;
@@ -372,6 +454,7 @@ export class KdbNewConnectionView extends LitElement {
   renderNewConnectionForm() {
     return html`
       <div class="row mt-1 mb-1 content-wrapper">
+        ${this.isModalOpen ? this.renderNewLabelModal() : ""}
         <div class="col form-wrapper">
           <div class="header-text-wrapper">
             <div class="row">
@@ -540,7 +623,7 @@ export class KdbNewConnectionView extends LitElement {
                       </details>
                     </div>
                   </div>
-                  ${this.renderConnectionLabelsSection("insights")}
+                  ${this.renderConnectionLabelsSection()}
                 </div>
               </vscode-panel-view>
             </vscode-panels>
@@ -789,6 +872,19 @@ export class KdbNewConnectionView extends LitElement {
         data: this.data,
       });
     }
+  }
+
+  private createLabel() {
+    this.vscode.postMessage({
+      command: "kdb.labels.create",
+      data: {
+        name: this.newLblName,
+        colorName: this.newLblColorName,
+      },
+    });
+    setTimeout(() => {
+      this.closeModal();
+    }, 500);
   }
 
   private editConnection() {

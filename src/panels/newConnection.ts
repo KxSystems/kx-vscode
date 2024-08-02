@@ -17,6 +17,7 @@ import { getNonce } from "../utils/getNonce";
 import { ext } from "../extensionVariables";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import { ConnectionType, EditConnectionMessage } from "../models/messages";
+import { getWorkspaceLabels } from "../utils/connLabel";
 
 export class NewConnectionPannel {
   public static currentPanel: NewConnectionPannel | undefined;
@@ -54,6 +55,10 @@ export class NewConnectionPannel {
         data: editConnData,
       });
     }
+    panel.webview.postMessage({
+      command: "refreshLabels",
+      data: ext.connLabelList,
+    });
   }
 
   public static close() {
@@ -118,6 +123,19 @@ export class NewConnectionPannel {
           message.data,
           message.oldAlias,
         );
+      }
+      if (message.command === "kdb.labels.create") {
+        vscode.commands.executeCommand(
+          "kdb.labels.create",
+          message.data.name,
+          message.data.colorName,
+        );
+        setTimeout(() => {
+          this._panel.webview.postMessage({
+            command: "refreshLabels",
+            data: ext.connLabelList,
+          });
+        }, 500);
       }
     });
   }
