@@ -187,9 +187,9 @@
           "default": [],
           "scope": "resource"
         },
-        "kdb.connectionLabelsMap": {
+        "kdb.labelsConnectionMap": {
           "type": "array",
-          "description": "Label connection map",
+          "description": "Labels connection map",
           "default": [],
           "scope": "resource"
         }

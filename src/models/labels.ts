@@ -21,6 +21,7 @@ export type Labels = {
   color: LabelColors;
 };
 
-export type ConnectionLabels = {
-  [labelName: string]: string[]; // Array of connection names
+export type ConnectionLabel = {
+  labelName: string;
+  connections: string[];
 };

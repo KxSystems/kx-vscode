@@ -82,7 +82,7 @@ export class KdbNewConnectionView extends LitElement {
     realm: "",
     insecure: false,
   };
-  labels = [];
+  labels: string[] = [];
   serverType: ServerType = ServerType.KDB;
   isBundledQ: boolean = true;
   oldAlias: string = "";
@@ -441,7 +441,14 @@ export class KdbNewConnectionView extends LitElement {
         <div class="row mt-1">
           <div class="dropdown-container">
             <label for="selectLabel">Label Name</label>
-            <vscode-dropdown id="selectLabel" class="dropdown larger">
+            <vscode-dropdown
+              id="selectLabel"
+              class="dropdown larger"
+              value="${this.labels.length > 0 ? this.labels[0] : ""}"
+              @change="${(event: Event) => {
+                this.labels.length = 0;
+                this.labels.push((event.target as HTMLInputElement).value);
+              }}">
               ${this.renderLblDropdownOptions()}
             </vscode-dropdown>
           </div>
@@ -518,7 +525,7 @@ export class KdbNewConnectionView extends LitElement {
                   <div class="row">
                     <div class="col gap-0">${this.renderPortNumber()}</div>
                   </div>
-                  ${this.renderConnectionLabelsSection("bundleQ")}
+                  ${this.renderConnectionLabelsSection()}
                 </div>
               </vscode-panel-view>
               <vscode-panel-view id="view-2" class="panel">
@@ -589,7 +596,7 @@ export class KdbNewConnectionView extends LitElement {
                       </div>
                     </div>
                   </div>
-                  ${this.renderConnectionLabelsSection("myQ")}
+                  ${this.renderConnectionLabelsSection()}
                 </div>
               </vscode-panel-view>
               <vscode-panel-view id="view-3" class="panel">
@@ -658,6 +665,7 @@ export class KdbNewConnectionView extends LitElement {
             </div>
           </div>
           <div class="row">${this.renderEditConnFields()}</div>
+          <div class="row">${this.renderConnectionLabelsSection()}</div>
         </div>
         <div class="col">
           <div class="row">
@@ -860,16 +868,19 @@ export class KdbNewConnectionView extends LitElement {
       this.vscode.postMessage({
         command: "kdb.newConnection.createNewBundledConnection",
         data: this.bundledServer,
+        labels: this.labels,
       });
     } else if (this.serverType === ServerType.INSIGHTS) {
       this.vscode.postMessage({
         command: "kdb.newConnection.createNewInsightConnection",
         data: this.data,
+        labels: this.labels,
       });
     } else {
       this.vscode.postMessage({
         command: "kdb.newConnection.createNewConnection",
         data: this.data,
+        labels: this.labels,
       });
     }
   }
@@ -896,6 +907,7 @@ export class KdbNewConnectionView extends LitElement {
         command: "kdb.newConnection.editBundledConnection",
         data: this.bundledServer,
         oldAlias: "local",
+        labels: this.labels,
       });
     } else if (this.connectionData.connType === 1) {
       this.vscode.postMessage({
@@ -903,12 +915,14 @@ export class KdbNewConnectionView extends LitElement {
         data: this.data,
         oldAlias: this.oldAlias,
         editAuth: this.editAuth,
+        labels: this.labels,
       });
     } else {
       this.vscode.postMessage({
         command: "kdb.newConnection.editInsightsConnection",
         data: this.data,
         oldAlias: this.oldAlias,
+        labels: this.labels,
       });
     }
   }

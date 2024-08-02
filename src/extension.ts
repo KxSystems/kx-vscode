@@ -270,38 +270,47 @@ export async function activate(context: ExtensionContext) {
     ),
     commands.registerCommand(
       "kdb.newConnection.createNewInsightConnection",
-      async (insightsData: InsightDetails) => {
-        await addInsightsConnection(insightsData);
+      async (insightsData: InsightDetails, labels: string[]) => {
+        await addInsightsConnection(insightsData, labels);
       },
     ),
     commands.registerCommand(
       "kdb.newConnection.createNewConnection",
-      async (kdbData: ServerDetails) => {
-        await addKdbConnection(kdbData, false);
+      async (kdbData: ServerDetails, labels: string[]) => {
+        await addKdbConnection(kdbData, false, labels);
       },
     ),
     commands.registerCommand(
       "kdb.newConnection.createNewBundledConnection",
-      async (kdbData: ServerDetails) => {
-        await addKdbConnection(kdbData, true);
+      async (kdbData: ServerDetails, labels: string[]) => {
+        await addKdbConnection(kdbData, true, labels);
       },
     ),
     commands.registerCommand(
       "kdb.newConnection.editInsightsConnection",
-      async (insightsData: InsightDetails, oldAlias: string) => {
-        await editInsightsConnection(insightsData, oldAlias);
+      async (
+        insightsData: InsightDetails,
+        oldAlias: string,
+        labels: string[],
+      ) => {
+        await editInsightsConnection(insightsData, oldAlias, labels);
       },
     ),
     commands.registerCommand(
       "kdb.newConnection.editMyQConnection",
-      async (kdbData: ServerDetails, oldAlias: string, editAuth: boolean) => {
-        await editKdbConnection(kdbData, oldAlias, false, editAuth);
+      async (
+        kdbData: ServerDetails,
+        oldAlias: string,
+        editAuth: boolean,
+        labels: string[],
+      ) => {
+        await editKdbConnection(kdbData, oldAlias, false, editAuth, labels);
       },
     ),
     commands.registerCommand(
       "kdb.newConnection.editBundledConnection",
-      async (kdbData: ServerDetails, oldAlias: string) => {
-        await editKdbConnection(kdbData, oldAlias, true);
+      async (kdbData: ServerDetails, oldAlias: string, labels: string[]) => {
+        await editKdbConnection(kdbData, oldAlias, true, false, labels);
       },
     ),
     commands.registerCommand(

@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Labels } from "../models/labels";
+import { ConnectionLabels, Labels } from "../models/labels";
 import { workspace } from "vscode";
 import { ext } from "../extensionVariables";
 import { kdbOutputLog } from "./core";
@@ -46,4 +46,62 @@ export function createNewLabel(name: string, colorName: string) {
   } else {
     kdbOutputLog("No Color selected for the label", "ERROR");
   }
+}
+
+export function getWorkspaceLabelsConnMap() {
+  const existingLabelConnMaps = workspace
+    .getConfiguration()
+    .get<ConnectionLabels[]>("kdb.labelsConnectionMap");
+  ext.labelConnMapList.length = 0;
+  if (existingLabelConnMaps && existingLabelConnMaps.length > 0) {
+    existingLabelConnMaps.forEach((labelConnMap: ConnectionLabels) => {
+      ext.labelConnMapList.push(labelConnMap);
+    });
+  }
+}
+
+export function addConnToLabel(labelName: string, connName: string) {
+  const label = ext.connLabelList.find((lbl) => lbl.name === labelName);
+  if (label) {
+    if (ext.labelConnMapList.length > 0) {
+      const labelConnMap = ext.labelConnMapList.find(
+        (lbl) => lbl.labelName === labelName,
+      );
+      if (labelConnMap) {
+        if (!labelConnMap.connections.includes(connName)) {
+          labelConnMap.connections.push(connName);
+        }
+      } else {
+        ext.labelConnMapList.push({
+          labelName: labelName,
+          connections: [connName],
+        });
+      }
+    } else {
+      ext.labelConnMapList.push({
+        labelName: labelName,
+        connections: [connName],
+      });
+    }
+  }
+}
+
+export function removeConnFromLabels(connName: string) {
+  ext.labelConnMapList.forEach((labelConnMap) => {
+    if (labelConnMap.connections.includes(connName)) {
+      labelConnMap.connections = labelConnMap.connections.filter(
+        (conn: string) => conn !== connName,
+      );
+    }
+  });
+}
+
+export function handleLabelsConnMap(labels: string[], connName: string) {
+  removeConnFromLabels(connName);
+  labels.forEach((label) => {
+    addConnToLabel(label, connName);
+  });
+  workspace
+    .getConfiguration()
+    .update("kdb.labelsConnectionMap", ext.labelConnMapList, true);
 }
