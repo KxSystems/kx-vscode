@@ -140,7 +140,6 @@ describe("kdbTreeProvider", () => {
         tls: false,
         auth: false,
         managed: false,
-        labels: ["White"],
       },
     };
     insights = {
@@ -148,7 +147,6 @@ describe("kdbTreeProvider", () => {
         alias: "testInsightsAlias",
         server: "testInsightsName",
         auth: false,
-        labels: ["White"],
       },
     };
     kdbNode = new KdbNode(
@@ -609,7 +607,10 @@ describe("kdbTreeProvider", () => {
   });
 
   it("Should return a new LabelNode", () => {
-    const labelNode = new LabelNode({ id: "White", color: "white" });
+    const labelNode = new LabelNode({
+      name: "White",
+      color: { name: "White", colorHex: "#CCCCCC" },
+    });
     assert.strictEqual(
       labelNode.label,
       "White",
@@ -723,12 +724,9 @@ describe("kdbTreeProvider", () => {
     });
 
     it("should return label node", async () => {
-      sinon
-        .stub(workspace, "getConfiguration")
-        .value(() => ({ get: () => [{ id: "White", color: "white" }] }));
       const provider = new KdbTreeProvider(servers, insights);
       const result = await provider.getChildren();
-      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result.length, 2);
     });
   });
 });

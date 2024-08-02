@@ -20,7 +20,6 @@ import {
   TreeItem,
   TreeItemCollapsibleState,
   commands,
-  workspace,
 } from "vscode";
 import { ext } from "../extensionVariables";
 import { InsightDetails, Insights } from "../models/insights";
@@ -42,7 +41,12 @@ import {
 } from "../utils/core";
 import { ConnectionManagementService } from "./connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
-import { Label } from "../models/label";
+import {
+  getWorkspaceLabels,
+  getWorkspaceLabelsConnMap,
+  retrieveConnLabelsNames,
+} from "../utils/connLabel";
+import { Labels } from "../models/labels";
 
 export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: EventEmitter<
@@ -99,35 +103,23 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     }
 
     if (!element) {
-      const labels = workspace
-        .getConfiguration("kdb")
-        .get<Label[]>("labels", []);
+      getWorkspaceLabels();
+      getWorkspaceLabelsConnMap();
 
       const orphans: TreeItem[] = [];
-      const nodes = labels.map((label) => new LabelNode(label));
+      const nodes = ext.connLabelList.map((label) => new LabelNode(label));
       const items = this.getMergedElements(element);
 
       let orphan, found;
       for (const item of items) {
         orphan = true;
-        if (item instanceof KdbNode) {
-          if (item.details.labels) {
-            for (const label of item.details.labels) {
-              found = nodes.find((node) => label === node.source.id);
-              if (found) {
-                found.children.push(item);
-                orphan = false;
-              }
-            }
-          }
-        } else if (item instanceof InsightsNode) {
-          if (item.details.labels) {
-            for (const label of item.details.labels) {
-              found = nodes.find((node) => label === node.source.id);
-              if (found) {
-                found.children.push(item);
-                orphan = false;
-              }
+        if (item instanceof KdbNode || item instanceof InsightsNode) {
+          const labels = retrieveConnLabelsNames(item);
+          for (const label of labels) {
+            found = nodes.find((node) => label === node.source.name);
+            if (found) {
+              found.children.push(item);
+              orphan = false;
             }
           }
         }
@@ -826,8 +818,8 @@ export class QServerNode extends TreeItem {
 export class LabelNode extends TreeItem {
   readonly children: TreeItem[] = [];
 
-  constructor(public readonly source: Label) {
-    super(source.id, TreeItemCollapsibleState.Collapsed);
+  constructor(public readonly source: Labels) {
+    super(source.name, TreeItemCollapsibleState.Collapsed);
     this.contextValue = "label";
   }
 
@@ -839,7 +831,7 @@ export class LabelNode extends TreeItem {
       "resources",
       "light",
       "labels",
-      `label-${this.source.color}.svg`,
+      `label-${this.source.color.name.toLowerCase()}.svg`,
     ),
     dark: path.join(
       __filename,
@@ -848,7 +840,7 @@ export class LabelNode extends TreeItem {
       "resources",
       "dark",
       "labels",
-      `label-${this.source.color}.svg`,
+      `label-${this.source.color.name.toLowerCase()}.svg`,
     ),
   };
 }
