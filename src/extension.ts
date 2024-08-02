@@ -19,6 +19,8 @@ import {
   ExtensionContext,
   Range,
   TextDocumentContentProvider,
+  ThemeColor,
+  ThemeIcon,
   Uri,
   WorkspaceEdit,
   commands,
@@ -106,9 +108,13 @@ import { QuickFixProvider } from "./services/quickFixProvider";
 import { connectClientCommands } from "./commands/clientCommands";
 import {
   createNewLabel,
+  deleteLabel,
   getWorkspaceLabels,
   getWorkspaceLabelsConnMap,
+  renameLabel,
+  setLabelColor,
 } from "./utils/connLabel";
+import { Labels } from "./models/labels";
 
 let client: LanguageClient;
 
@@ -508,14 +514,56 @@ export async function activate(context: ExtensionContext) {
     }),
     commands.registerCommand("kdb.renameLabel", async (item) => {
       if (item) {
+        const name = await window.showInputBox({
+          prompt: "Enter label name",
+          value: item.label,
+        });
+        if (name) {
+          renameLabel(item.label, name);
+        }
       }
     }),
     commands.registerCommand("kdb.editLabelColor", async (item) => {
       if (item) {
+        const colors = ext.labelColors.map((color) => ({
+          label: color.name,
+          iconPath: {
+            light: Uri.file(
+              path.join(
+                __filename,
+                "..",
+                "..",
+                "resources",
+                "light",
+                "labels",
+                `label-${color.name.toLowerCase()}.svg`,
+              ),
+            ),
+            dark: Uri.file(
+              path.join(
+                __filename,
+                "..",
+                "..",
+                "resources",
+                "dark",
+                "labels",
+                `label-${color.name.toLowerCase()}.svg`,
+              ),
+            ),
+          },
+        }));
+        const picked = await window.showQuickPick(colors, {
+          title: "Select label color",
+          placeHolder: item.source.color.name,
+        });
+        if (picked) {
+          setLabelColor(item.label, picked.label);
+        }
       }
     }),
-    commands.registerCommand("kdb.deleteLabel", async (item) => {
+    commands.registerCommand("kdb.deleteLabel", (item) => {
       if (item) {
+        deleteLabel(item.label);
       }
     }),
   );

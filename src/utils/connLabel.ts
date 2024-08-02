@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { ConnectionLabel, Labels } from "../models/labels";
+import { ConnectionLabel, LabelColors, Labels } from "../models/labels";
 import { workspace } from "vscode";
 import { ext } from "../extensionVariables";
 import { kdbOutputLog } from "./core";
@@ -123,4 +123,50 @@ export function retrieveConnLabelsNames(
     }
   });
   return labels;
+}
+
+export function renameLabel(name: string, newName: string) {
+  getWorkspaceLabels();
+  const found = ext.connLabelList.find((item) => item.name === name);
+  if (found) {
+    found.name = newName;
+  }
+  getWorkspaceLabelsConnMap();
+  const target = ext.labelConnMapList.find((item) => item.labelName === name);
+  if (target) {
+    target.labelName = newName;
+  }
+  workspace
+    .getConfiguration()
+    .update("kdb.labelsConnectionMap", ext.labelConnMapList, true)
+    .then(() =>
+      workspace
+        .getConfiguration()
+        .update("kdb.connectionLabels", ext.connLabelList, true),
+    );
+}
+
+export function setLabelColor(name: string, color: string) {
+  getWorkspaceLabels();
+  const found = ext.connLabelList.find((item) => item.name === name);
+  if (found) {
+    const target = ext.labelColors.find((value) => value.name === color);
+    if (target) {
+      found.color = target;
+    }
+  }
+  workspace
+    .getConfiguration()
+    .update("kdb.connectionLabels", ext.connLabelList, true);
+}
+
+export function deleteLabel(name: string) {
+  getWorkspaceLabels();
+  const found = ext.connLabelList.find((item) => item.name === name);
+  if (found) {
+    ext.connLabelList.splice(ext.connLabelList.indexOf(found), 1);
+  }
+  workspace
+    .getConfiguration()
+    .update("kdb.connectionLabels", ext.connLabelList, true);
 }
