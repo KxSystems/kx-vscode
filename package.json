@@ -416,6 +416,21 @@
         "category": "KX",
         "command": "kdb.toggleParameterCache",
         "title": "KX: Toggle parameter cache"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.renameLabel",
+        "title": "Rename label"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.editLabelColor",
+        "title": "Edit label color"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.deleteLabel",
+        "title": "Delete label"
       }
     ],
     "keybindings": [
@@ -692,7 +707,7 @@
         },
         {
           "command": "kdb.editConnection",
-          "when": "view == kdb-servers",
+          "when": "view == kdb-servers && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection@4"
         },
         {
@@ -754,6 +769,21 @@
           "command": "kdb.deleteFile",
           "when": "(view == kdb-datasource-explorer || view == kdb-scratchpad-explorer) && viewItem == artifact",
           "group": "kdbWorkspace@2"
+        },
+        {
+          "command": "kdb.renameLabel",
+          "when": "view == kdb-servers && viewItem == label",
+          "group": "label@1"
+        },
+        {
+          "command": "kdb.editLabelColor",
+          "when": "view == kdb-servers && viewItem == label",
+          "group": "label@2"
+        },
+        {
+          "command": "kdb.deleteLabel",
+          "when": "view == kdb-servers && viewItem == label",
+          "group": "label@3"
         }
       ],
       "editor/title/run": [

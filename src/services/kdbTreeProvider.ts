@@ -41,6 +41,12 @@ import {
 } from "../utils/core";
 import { ConnectionManagementService } from "./connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
+import {
+  getWorkspaceLabels,
+  getWorkspaceLabelsConnMap,
+  retrieveConnLabelsNames,
+} from "../utils/connLabel";
+import { Labels } from "../models/labels";
 
 export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: EventEmitter<
@@ -92,15 +98,38 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   }
 
   async getChildren(element?: TreeItem): Promise<TreeItem[]> {
-    if (!this.serverList) {
-      return Promise.resolve([]);
-    }
-    if (!this.insightsList) {
-      return Promise.resolve([]);
+    if (!this.serverList || !this.insightsList) {
+      return [];
     }
 
     if (!element) {
-      return Promise.resolve(this.getMergedElements(element));
+      getWorkspaceLabels();
+      getWorkspaceLabelsConnMap();
+
+      const orphans: TreeItem[] = [];
+      const nodes = ext.connLabelList.map((label) => new LabelNode(label));
+      const items = this.getMergedElements(element);
+
+      let orphan, found;
+      for (const item of items) {
+        orphan = true;
+        if (item instanceof KdbNode || item instanceof InsightsNode) {
+          const labels = retrieveConnLabelsNames(item);
+          for (const label of labels) {
+            found = nodes.find((node) => label === node.source.name);
+            if (found) {
+              found.children.push(item);
+              orphan = false;
+            }
+          }
+        }
+        if (orphan) {
+          orphans.push(item);
+        }
+      }
+      return [...orphans, ...nodes];
+    } else if (element instanceof LabelNode) {
+      return element.children;
     } else if (
       element.contextValue !== undefined &&
       ext.kdbrootNodes.indexOf(element.contextValue) !== -1
@@ -784,4 +813,34 @@ export class QServerNode extends TreeItem {
     ),
   };
   contextValue = this.label;
+}
+
+export class LabelNode extends TreeItem {
+  readonly children: TreeItem[] = [];
+
+  constructor(public readonly source: Labels) {
+    super(source.name, TreeItemCollapsibleState.Collapsed);
+    this.contextValue = "label";
+  }
+
+  iconPath = {
+    light: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "light",
+      "labels",
+      `label-${this.source.color.name.toLowerCase()}.svg`,
+    ),
+    dark: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "dark",
+      "labels",
+      `label-${this.source.color.name.toLowerCase()}.svg`,
+    ),
+  };
 }
