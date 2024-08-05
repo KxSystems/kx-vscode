@@ -53,7 +53,7 @@
           {
             "id": "install",
             "title": "Register, acquire license and download the q runtime",
-            "description": " \n[Install runtime](command:kdb.installTools)\n[Ignore/hide this help](command:kdb.hideWalkthrough)",
+            "description": " \n[Install runtime](command:kdb.installTools)",
             "media": {
               "image": "resources/kx_install.png",
               "altText": "register"
@@ -66,7 +66,7 @@
           {
             "id": "view",
             "title": "q runtime installed",
-            "description": " \n[Ignore/hide this help](command:kdb.hideWalkthrough)",
+            "description": " \n",
             "media": {
               "markdown": "out/qinstall.md"
             },
@@ -439,13 +439,13 @@
         "command": "kdb.execute.block",
         "key": "ctrl+shift+e",
         "mac": "cmd+shift+e",
-        "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
+        "when": "editorLangId == q"
       },
       {
         "command": "kdb.toggleParameterCache",
         "key": "ctrl+shift+y",
         "mac": "cmd+shift+y",
-        "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
+        "when": "editorLangId == q"
       }
     ],
     "snippets": [

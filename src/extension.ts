@@ -438,16 +438,32 @@ export async function activate(context: ExtensionContext) {
     }),
     commands.registerCommand("kdb.renameFile", async (item: FileTreeItem) => {
       if (item && item.resourceUri) {
-        const document = await workspace.openTextDocument(item.resourceUri);
-        await window.showTextDocument(document);
+        if (item.resourceUri.path.endsWith(".kdb.json")) {
+          await commands.executeCommand(
+            "vscode.openWith",
+            item.resourceUri,
+            DataSourceEditorProvider.viewType,
+          );
+        } else {
+          const document = await workspace.openTextDocument(item.resourceUri);
+          await window.showTextDocument(document);
+        }
         await commands.executeCommand("revealInExplorer");
         await commands.executeCommand("renameFile");
       }
     }),
     commands.registerCommand("kdb.deleteFile", async (item: FileTreeItem) => {
       if (item && item.resourceUri) {
-        const document = await workspace.openTextDocument(item.resourceUri);
-        await window.showTextDocument(document);
+        if (item.resourceUri.path.endsWith(".kdb.json")) {
+          await commands.executeCommand(
+            "vscode.openWith",
+            item.resourceUri,
+            DataSourceEditorProvider.viewType,
+          );
+        } else {
+          const document = await workspace.openTextDocument(item.resourceUri);
+          await window.showTextDocument(document);
+        }
         await commands.executeCommand("revealInExplorer");
         await commands.executeCommand("deleteFile");
       }
