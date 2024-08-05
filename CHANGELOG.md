@@ -13,6 +13,9 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 ### Fixes
 
 - https is prefixed for unschemed Insights server urls
+- Use the custom editor to open datasource when renaming or deleting
+- Removed unnecessary buttons in walkthrough
+- Fixed toggle parameter cache doesn't work in workbooks
 
 # v1.6.1
 
