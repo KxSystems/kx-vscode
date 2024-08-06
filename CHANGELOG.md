@@ -16,6 +16,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Use the custom editor to open datasource when renaming or deleting
 - Removed unnecessary buttons in walkthrough
 - Fixed toggle parameter cache doesn't work in workbooks
+- Fixed files can't be executed from entity tree
 
 # v1.6.1
 
