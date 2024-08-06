@@ -77,6 +77,7 @@ import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import {
   checkLocalInstall,
   checkOpenSslInstalled,
+  fixUnnamedAlias,
   getInsights,
   getServers,
   initializeLocalServers,
@@ -145,6 +146,8 @@ export async function activate(context: ExtensionContext) {
     "**/*.kdb.json",
     "datasource",
   );
+
+  fixUnnamedAlias();
 
   commands.executeCommand("setContext", "kdb.QHOME", env.QHOME);
 
