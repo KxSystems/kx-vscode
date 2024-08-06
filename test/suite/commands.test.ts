@@ -53,7 +53,6 @@ import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider"
 import { GetDataError } from "../../src/models/data";
 import * as clientCommand from "../../src/commands/clientCommands";
 import { LanguageClient } from "vscode-languageclient/node";
-import { MetaContentProvider } from "../../src/services/metaContentProvider";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
