@@ -46,7 +46,7 @@ describe("Workspace tests", () => {
     assert.throws(
       () => workspaceHelper.getWorkspaceRoot(),
       Error,
-      "Workspace root should be defined."
+      "Workspace root should be defined.",
     );
   });
 
@@ -66,5 +66,15 @@ describe("Workspace tests", () => {
     workspaceMock.value(testWorkspaceFolder);
     const result = workspaceHelper.isWorkspaceOpen();
     assert.strictEqual(result, true);
+  });
+});
+
+describe("activateTextDocument", () => {
+  it("should activate document", async () => {
+    sinon.stub(vscode.workspace, "openTextDocument").value(() => ({}));
+    const stub = sinon.stub(vscode.window, "showTextDocument");
+    const uri = vscode.Uri.file("/test/test.q");
+    await workspaceHelper.activateTextDocument(uri);
+    assert.strictEqual(stub.calledOnce, true);
   });
 });
