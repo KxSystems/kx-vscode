@@ -639,6 +639,13 @@ export class KdbNewConnectionView extends LitElement {
             <div class="row">
               <h2>Edit ${connTypeName} Connection</h2>
             </div>
+            <div class="row option-description">
+              <span
+                >Editing an active connection may require you to
+                <b>restart the connection</b>. If so, you will be prompted to
+                reconnect after saving your changes.</span
+              >
+            </div>
           </div>
           <div class="row">${this.renderEditConnFields()}</div>
           <div class="row">${this.renderConnectionLabelsSection()}</div>
