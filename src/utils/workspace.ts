@@ -11,10 +11,10 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { workspace } from "vscode";
+import { Uri, window, workspace } from "vscode";
 
 export function getWorkspaceRoot(
-  ignoreException: boolean = false
+  ignoreException: boolean = false,
 ): string | undefined {
   const workspaceRoot =
     workspace.workspaceFolders && workspace.workspaceFolders[0].uri.fsPath;
@@ -31,4 +31,18 @@ export function isWorkspaceOpen(): boolean {
   return !!(
     workspace.workspaceFolders && workspace.workspaceFolders[0].uri.fsPath
   );
+}
+
+export async function activateTextDocument(item: Uri) {
+  if (item.fsPath) {
+    let document = workspace.textDocuments.find(
+      (doc) => doc.uri.fsPath === item.fsPath,
+    );
+    if (!document) {
+      document = await workspace.openTextDocument(item);
+    }
+    if (document) {
+      await window.showTextDocument(document);
+    }
+  }
 }

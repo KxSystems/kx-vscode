@@ -112,6 +112,7 @@ import {
   renameLabel,
   setLabelColor,
 } from "./utils/connLabel";
+import { activateTextDocument } from "./utils/workspace";
 
 let client: LanguageClient;
 
@@ -390,7 +391,10 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.execute.selectedQuery", async () => {
       await runActiveEditor(ExecutionTypes.QuerySelection);
     }),
-    commands.registerCommand("kdb.execute.fileQuery", async () => {
+    commands.registerCommand("kdb.execute.fileQuery", async (item) => {
+      if (item instanceof Uri) {
+        await activateTextDocument(item);
+      }
       await runActiveEditor(ExecutionTypes.QueryFile);
     }),
     commands.registerCommand("kdb.execute.pythonScratchpadQuery", async () => {
@@ -402,7 +406,10 @@ export async function activate(context: ExtensionContext) {
     // }),
     commands.registerCommand(
       "kdb.execute.pythonFileScratchpadQuery",
-      async () => {
+      async (item) => {
+        if (item instanceof Uri) {
+          await activateTextDocument(item);
+        }
         await runActiveEditor(ExecutionTypes.PythonQueryFile);
       },
     ),
