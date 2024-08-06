@@ -849,6 +849,18 @@
           "group": "q@1",
           "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
         }
+      ],
+      "explorer/context": [
+        {
+          "command": "kdb.execute.fileQuery",
+          "group": "q",
+          "when": "resourceExtname == .q"
+        },
+        {
+          "command": "kdb.execute.pythonFileScratchpadQuery",
+          "group": "q",
+          "when": "resourceExtname == .py"
+        }
       ]
     },
     "customEditors": [
