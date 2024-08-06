@@ -101,12 +101,12 @@ export function removeConnFromLabels(connName: string) {
   });
 }
 
-export function handleLabelsConnMap(labels: string[], connName: string) {
+export async function handleLabelsConnMap(labels: string[], connName: string) {
   removeConnFromLabels(connName);
   labels.forEach((label) => {
     addConnToLabel(label, connName);
   });
-  workspace
+  await workspace
     .getConfiguration()
     .update("kdb.labelsConnectionMap", ext.labelConnMapList, true);
 }

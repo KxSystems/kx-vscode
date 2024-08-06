@@ -950,6 +950,22 @@ describe("serverCommand", () => {
     sinon.restore();
   });
 
+  describe("isConnected", () => {
+    let connMngServiceMock: sinon.SinonStubbedInstance<ConnectionManagementService>;
+
+    beforeEach(() => {
+      connMngServiceMock = sinon.createStubInstance(
+        ConnectionManagementService,
+      );
+    });
+
+    it("deve retornar false quando isConnected do ConnectionManagementService retornar false", () => {
+      connMngServiceMock.isConnected.returns(false);
+      const result = serverCommand.isConnected("127.0.0.1:6812 [CONNLABEL]");
+      assert.deepStrictEqual(result, false);
+    });
+  });
+
   describe("addInsightsConnection", () => {
     let insightsData: InsightDetails;
     let updateInsightsStub, getInsightsStub: sinon.SinonStub;

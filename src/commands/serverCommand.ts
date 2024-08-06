@@ -46,6 +46,7 @@ import {
   getServerName,
   getServers,
   kdbOutputLog,
+  offerReconnectionAfterEdit,
   updateInsights,
   updateServers,
 } from "../utils/core";
@@ -77,6 +78,11 @@ export async function addNewConnection(): Promise<void> {
 export async function editConnection(viewItem: KdbNode | InsightsNode) {
   NewConnectionPannel.close();
   NewConnectionPannel.render(ext.context.extensionUri, viewItem);
+}
+
+export function isConnected(connLabel: string): boolean {
+  const connMngService = new ConnectionManagementService();
+  return connMngService.isConnected(connLabel);
 }
 
 export async function addInsightsConnection(
@@ -159,6 +165,7 @@ export async function editInsightsConnection(
     window.showErrorMessage(aliasValidation);
     return;
   }
+  const isConnectedConn = isConnected(oldAlias);
   await disconnect(oldAlias);
   if (insightsData.alias === undefined || insightsData.alias === "") {
     const host = new url.URL(insightsData.server);
@@ -217,10 +224,13 @@ export async function editInsightsConnection(
         const newInsights = getInsights();
         if (newInsights != undefined) {
           if (labels && labels.length > 0) {
-            handleLabelsConnMap(labels, insightsData.alias);
+            await handleLabelsConnMap(labels, insightsData.alias);
           }
           ext.serverProvider.refreshInsights(newInsights);
           Telemetry.sendEvent("Connection.Edited.Insights");
+          if (isConnectedConn) {
+            offerReconnectionAfterEdit(insightsData.alias);
+          }
         }
         window.showInformationMessage(
           `Edited Insights connection: ${insightsData.alias}`,
@@ -416,8 +426,9 @@ export async function editKdbConnection(
     window.showErrorMessage(portValidation);
     return;
   }
+  const isConnectedConn = isConnected(oldAlias);
   await disconnect(oldAlias);
-  let servers: Server | undefined = getServers();
+  const servers: Server | undefined = getServers();
 
   if (servers) {
     const oldServer = servers[getKeyForServerName(oldAlias)];
@@ -475,10 +486,14 @@ export async function editKdbConnection(
         const newServers = getServers();
         if (newServers != undefined) {
           if (labels && labels.length > 0) {
-            handleLabelsConnMap(labels, kdbData.serverAlias);
+            await handleLabelsConnMap(labels, kdbData.serverAlias);
           }
           ext.serverProvider.refresh(newServers);
           Telemetry.sendEvent("Connection.Edited.KDB");
+          const connLabelToReconn = `${kdbData.serverName}:${kdbData.serverPort} [${kdbData.serverAlias}]`;
+          if (isConnectedConn) {
+            offerReconnectionAfterEdit(connLabelToReconn);
+          }
         }
         window.showInformationMessage(
           `Edited KDB connection: ${kdbData.serverAlias}`,
