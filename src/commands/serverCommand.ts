@@ -138,7 +138,7 @@ export async function addInsightsConnection(
     const newInsights = getInsights();
     if (newInsights != undefined) {
       if (labels && labels.length > 0) {
-        handleLabelsConnMap(labels, insightsData.alias);
+        await handleLabelsConnMap(labels, insightsData.alias);
       }
       ext.serverProvider.refreshInsights(newInsights);
       Telemetry.sendEvent("Connection.Created.Insights");
@@ -387,7 +387,7 @@ export async function addKdbConnection(
     const newServers = getServers();
     if (newServers != undefined) {
       if (labels && labels.length > 0) {
-        handleLabelsConnMap(labels, kdbData.serverAlias);
+        await handleLabelsConnMap(labels, kdbData.serverAlias);
       }
       Telemetry.sendEvent("Connection.Created.QProcess");
       ext.serverProvider.refresh(newServers);
