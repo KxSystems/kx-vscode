@@ -373,8 +373,7 @@ describe("KdbNewConnectionView", () => {
     });
 
     it("should render port number desc for KDB server", () => {
-      view.isBundledQ = false;
-      const result = view.renderPortNumberDesc(ServerType.KDB);
+      const result = view.renderPortNumberDesc();
       assert.strictEqual(
         JSON.stringify(result).includes("<b>Set port number</b>"),
         true,
@@ -393,8 +392,7 @@ describe("KdbNewConnectionView", () => {
     });
 
     it("should render port number for KDB server", () => {
-      view.isBundledQ = false;
-      const result = view.renderPortNumber(ServerType.KDB);
+      const result = view.renderPortNumber();
       assert.strictEqual(
         JSON.stringify(result).includes("<b>Set port number</b>"),
         true,
@@ -421,9 +419,10 @@ describe("KdbNewConnectionView", () => {
     });
 
     it("should render connection address for Bundled q", () => {
-      const result = view.renderConnAddDesc(ServerType.KDB);
+      const result = view.renderConnAddDesc(ServerType.KDB, true);
+      console.log(JSON.stringify(result));
       assert.strictEqual(
-        result.strings[0].includes("lready set up for you"),
+        result.strings[0].includes("already set up for you"),
         true,
       );
     });
@@ -439,9 +438,8 @@ describe("KdbNewConnectionView", () => {
       );
     });
 
-    it("should render connection address for bundled q", () => {
-      view.isBundledQ = true;
-      const result = view.renderConnAddress(ServerType.KDB);
+    it("should render connection address for Bundled q", () => {
+      const result = view.renderConnAddress(ServerType.KDB, true);
       assert.strictEqual(
         JSON.stringify(result).includes("127.0.0.1 or localhost"),
         false,
@@ -691,7 +689,6 @@ describe("KdbNewConnectionView", () => {
         serverName: "local",
       };
       const result = view.renderBundleQEditForm();
-      console.log(JSON.stringify(result));
       assert.ok(result.strings[0].includes('<div class="col gap-0">'));
       assert.ok(result.strings[1].includes('<div class="col gap-0">'));
       assert.ok(result.strings[2].includes('<div class="col gap-0">'));
@@ -716,7 +713,6 @@ describe("KdbNewConnectionView", () => {
         serverName: "local",
       };
       const result = view.renderMyQEditForm();
-      console.log(JSON.stringify(result));
       assert.ok(result.strings[0].includes('<div class="col gap-0">'));
       assert.ok(result.strings[1].includes('<div class="col gap-0">'));
       assert.ok(result.strings[2].includes('<div class="col gap-0">'));
@@ -741,7 +737,6 @@ describe("KdbNewConnectionView", () => {
         serverName: "local",
       };
       const result = view.renderInsightsEditForm();
-      console.log(JSON.stringify(result));
       assert.ok(result.strings[0].includes('<div class="col gap-0">'));
       assert.ok(result.strings[1].includes('<div class="col gap-0">'));
       assert.ok(result.strings[2].includes('<div class="col gap-0">'));

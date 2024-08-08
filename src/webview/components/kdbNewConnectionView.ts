@@ -191,8 +191,8 @@ export class KdbNewConnectionView extends LitElement {
     `;
   }
 
-  renderPortNumberDesc(isBundledQ?: boolean) {
-    return isBundledQ
+  renderPortNumberDesc(isBundleQ?: boolean) {
+    return isBundleQ
       ? html`<span
           >Ensure the port number you use does not conflict with another
           port.</span
@@ -203,17 +203,17 @@ export class KdbNewConnectionView extends LitElement {
         >`;
   }
 
-  renderPortNumber(isBundledQ?: boolean) {
+  renderPortNumber(isBundleQ?: boolean) {
     return html`
       <div class="row">
         <vscode-text-field
           class="text-field larger option-title"
-          value="${isBundledQ
+          value="${isBundleQ
             ? this.bundledServer.serverPort
             : this.kdbServer.serverPort}"
           @input="${(event: Event) => {
             const value = (event.target as HTMLSelectElement).value;
-            isBundledQ
+            isBundleQ
               ? (this.bundledServer.serverPort = value)
               : (this.kdbServer.serverPort = value);
           }}"
@@ -221,7 +221,7 @@ export class KdbNewConnectionView extends LitElement {
         >
       </div>
       <div class="row option-description option-help">
-        ${this.renderPortNumberDesc()}
+        ${this.renderPortNumberDesc(isBundleQ)}
       </div>
     `;
   }
@@ -501,7 +501,7 @@ export class KdbNewConnectionView extends LitElement {
                     </div>
                   </div>
                   <div class="row">
-                    <div class="col gap-0">${this.renderPortNumber()}</div>
+                    <div class="col gap-0">${this.renderPortNumber(true)}</div>
                   </div>
                   ${this.renderConnectionLabelsSection()}
                 </div>
