@@ -985,7 +985,7 @@ describe("serverCommand", () => {
     });
     it("should add new Insights connection", async () => {
       getInsightsStub.returns({});
-      await serverCommand.addInsightsConnection(insightsData);
+      await serverCommand.addInsightsConnection(insightsData, ["lblTest"]);
       sinon.assert.calledOnce(updateInsightsStub);
       windowMock
         .expects("showInformationMessage")
@@ -1035,7 +1035,7 @@ describe("serverCommand", () => {
 
     it("should add new Kdb connection", async () => {
       getServersStub.returns({});
-      await serverCommand.addKdbConnection(kdbData);
+      await serverCommand.addKdbConnection(kdbData, false, ["lblTest"]);
       sinon.assert.calledOnce(updateServersStub);
       windowMock
         .expects("showInformationMessage")
