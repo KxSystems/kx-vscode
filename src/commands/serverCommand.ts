@@ -68,7 +68,7 @@ import { Telemetry } from "../utils/telemetryClient";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { MetaContentProvider } from "../services/metaContentProvider";
-import { handleLabelsConnMap } from "../utils/connLabel";
+import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
 
 export async function addNewConnection(): Promise<void> {
   NewConnectionPannel.close();
@@ -138,7 +138,7 @@ export async function addInsightsConnection(
     const newInsights = getInsights();
     if (newInsights != undefined) {
       if (labels && labels.length > 0) {
-        handleLabelsConnMap(labels, insightsData.alias);
+        await handleLabelsConnMap(labels, insightsData.alias);
       }
       ext.serverProvider.refreshInsights(newInsights);
       Telemetry.sendEvent("Connection.Created.Insights");
@@ -193,6 +193,7 @@ export async function editInsightsConnection(
         const oldKey = getKeyForServerName(oldAlias);
         const newKey = insightsData.alias;
         if (insights[oldKey] && oldAlias !== insightsData.alias) {
+          removeConnFromLabels(oldAlias);
           const uInsights = Object.keys(insights).filter((insight) => {
             return insight !== oldKey;
           });
@@ -225,6 +226,8 @@ export async function editInsightsConnection(
         if (newInsights != undefined) {
           if (labels && labels.length > 0) {
             await handleLabelsConnMap(labels, insightsData.alias);
+          } else {
+            removeConnFromLabels(insightsData.alias);
           }
           ext.serverProvider.refreshInsights(newInsights);
           Telemetry.sendEvent("Connection.Edited.Insights");
@@ -384,7 +387,7 @@ export async function addKdbConnection(
     const newServers = getServers();
     if (newServers != undefined) {
       if (labels && labels.length > 0) {
-        handleLabelsConnMap(labels, kdbData.serverAlias);
+        await handleLabelsConnMap(labels, kdbData.serverAlias);
       }
       Telemetry.sendEvent("Connection.Created.QProcess");
       ext.serverProvider.refresh(newServers);
@@ -487,6 +490,8 @@ export async function editKdbConnection(
         if (newServers != undefined) {
           if (labels && labels.length > 0) {
             await handleLabelsConnMap(labels, kdbData.serverAlias);
+          } else {
+            removeConnFromLabels(kdbData.serverAlias);
           }
           ext.serverProvider.refresh(newServers);
           Telemetry.sendEvent("Connection.Edited.KDB");
@@ -499,6 +504,7 @@ export async function editKdbConnection(
           `Edited KDB connection: ${kdbData.serverAlias}`,
         );
         if (oldKey !== newKey) {
+          removeConnFromLabels(oldKey);
           removeAuthConnection(oldKey);
           if (kdbData.auth) {
             addAuthConnection(newKey, kdbData.username!, kdbData.password!);

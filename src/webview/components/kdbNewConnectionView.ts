@@ -135,8 +135,8 @@ export class KdbNewConnectionView extends LitElement {
     this.editAuth = !this.editAuth;
   }
 
-  renderServerNameDesc() {
-    return this.isBundledQ
+  renderServerNameDesc(isBundleQ?: boolean) {
+    return isBundleQ
       ? html`<span
           >Name your server "local"; this name has been reserved for use by the
           packaged q in the kdb VS Code extension and must be used to access
@@ -149,8 +149,8 @@ export class KdbNewConnectionView extends LitElement {
         >`;
   }
 
-  renderServerNameField(serverType: ServerType) {
-    return this.isBundledQ
+  renderServerNameField(serverType: ServerType, isBundleQ?: boolean) {
+    return isBundleQ
       ? html`<vscode-text-field
           class="text-field larger option-title"
           value="${this.bundledServer.serverAlias}"
@@ -180,17 +180,19 @@ export class KdbNewConnectionView extends LitElement {
           </vscode-text-field>`;
   }
 
-  renderServerName(serverType: ServerType) {
+  renderServerName(serverType: ServerType, isBundleQ?: boolean) {
     return html`
-      <div class="row">${this.renderServerNameField(serverType)}</div>
+      <div class="row">
+        ${this.renderServerNameField(serverType, isBundleQ)}
+      </div>
       <div class="row option-description  option-help">
-        ${this.renderServerNameDesc()}
+        ${this.renderServerNameDesc(isBundleQ)}
       </div>
     `;
   }
 
-  renderPortNumberDesc() {
-    return this.isBundledQ
+  renderPortNumberDesc(isBundleQ?: boolean) {
+    return isBundleQ
       ? html`<span
           >Ensure the port number you use does not conflict with another
           port.</span
@@ -201,17 +203,17 @@ export class KdbNewConnectionView extends LitElement {
         >`;
   }
 
-  renderPortNumber() {
+  renderPortNumber(isBundleQ?: boolean) {
     return html`
       <div class="row">
         <vscode-text-field
           class="text-field larger option-title"
-          value="${this.isBundledQ
+          value="${isBundleQ
             ? this.bundledServer.serverPort
             : this.kdbServer.serverPort}"
           @input="${(event: Event) => {
             const value = (event.target as HTMLSelectElement).value;
-            this.isBundledQ
+            isBundleQ
               ? (this.bundledServer.serverPort = value)
               : (this.kdbServer.serverPort = value);
           }}"
@@ -219,13 +221,13 @@ export class KdbNewConnectionView extends LitElement {
         >
       </div>
       <div class="row option-description option-help">
-        ${this.renderPortNumberDesc()}
+        ${this.renderPortNumberDesc(isBundleQ)}
       </div>
     `;
   }
 
-  renderConnAddDesc(serverType: ServerType) {
-    return this.isBundledQ
+  renderConnAddDesc(serverType: ServerType, isBundleQ?: boolean) {
+    return isBundleQ
       ? html`The localhost connection is already set up for you.`
       : serverType === ServerType.KDB
         ? html`Set the IP of your kdb+ database connection.`
@@ -233,8 +235,8 @@ export class KdbNewConnectionView extends LitElement {
           connection must be deployed for kdb VS Code to access.`;
   }
 
-  renderConnAddress(serverType: ServerType) {
-    return this.isBundledQ
+  renderConnAddress(serverType: ServerType, isBundleQ?: boolean) {
+    return isBundleQ
       ? html`
           <div class="row">
             <vscode-text-field
@@ -490,16 +492,16 @@ export class KdbNewConnectionView extends LitElement {
                 <div class="col">
                   <div class="row">
                     <div class="col gap-0">
-                      ${this.renderServerName(ServerType.KDB)}
+                      ${this.renderServerName(ServerType.KDB, true)}
                     </div>
                   </div>
                   <div class="row">
                     <div class="col gap-0">
-                      ${this.renderConnAddress(ServerType.KDB)}
+                      ${this.renderConnAddress(ServerType.KDB, true)}
                     </div>
                   </div>
                   <div class="row">
-                    <div class="col gap-0">${this.renderPortNumber()}</div>
+                    <div class="col gap-0">${this.renderPortNumber(true)}</div>
                   </div>
                   ${this.renderConnectionLabelsSection()}
                 </div>
@@ -826,7 +828,7 @@ export class KdbNewConnectionView extends LitElement {
 
   render() {
     if (!this.connectionData) {
-      return this.renderNewConnectionForm();
+      return html` ${this.renderNewConnectionForm()} `;
     } else {
       return html` ${this.renderEditConnectionForm()} `;
     }
