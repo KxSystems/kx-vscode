@@ -47,8 +47,15 @@ export class ConnectionManagementService {
   ): LocalConnection | InsightsConnection | undefined {
     return ext.connectedConnectionList.find(
       (connection: LocalConnection | InsightsConnection) => {
+        if (!connLabel) {
+          return false;
+        }
+        const escapedConnLabel = connLabel.replace(
+          /[-[\]{}()*+?.,\\^$|#\s]/g,
+          "\\$&",
+        );
         const regex = new RegExp(
-          `\\d+\\.\\d+\\.\\d+\\.\\d+:\\d+ \\[${connLabel}\\]`,
+          `\\d+\\.\\d+\\.\\d+\\.\\d+:\\d+ \\[${escapedConnLabel}\\]`,
         );
         return (
           connLabel === connection.connLabel || regex.test(connection.connLabel)
@@ -62,8 +69,12 @@ export class ConnectionManagementService {
   }
 
   public isConnected(connLabel: string): boolean {
+    const escapedConnLabel = connLabel.replace(
+      /[-[\]{}()*+?.,\\^$|#\s]/g,
+      "\\$&",
+    );
     const regex = new RegExp(
-      `\\d+\\.\\d+\\.\\d+\\.\\d+:\\d+ \\[${connLabel}\\]`,
+      `\\d+\\.\\d+\\.\\d+\\.\\d+:\\d+ \\[${escapedConnLabel}\\]`,
     );
     return (
       ext.connectedContextStrings.includes(connLabel) ||
