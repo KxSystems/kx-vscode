@@ -1,7 +1,7 @@
 {
   "name": "kdb",
   "displayName": "kdb",
-  "description": "IDE support for kdb product suite",
+  "description": "IDE support for kdb product suite including the q programming language",
   "publisher": "KX",
   "version": "1.7.0",
   "engines": {
