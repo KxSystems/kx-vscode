@@ -637,6 +637,7 @@ export class KdbNewConnectionView extends LitElement {
       this.connectionData.connType === 2 ? ServerType.INSIGHTS : ServerType.KDB;
     return html`
       <div class="row mt-1 mb-1 content-wrapper">
+        ${this.isModalOpen ? this.renderNewLabelModal() : ""}
         <div class="col form-wrapper">
           <div class="header-text-wrapper">
             <div class="row">
