@@ -141,6 +141,7 @@ When you select **Bundled q** as the connection type and set the following prope
 | Server Name            | The name is already set as **local**.                                                                                                                                                              |
 | The connection address | This is already be set as `127.0.0.1` which corresponds to your **localhost**.                                                                                                                     |
 | Port                   | Set the port for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. 5002. [Read here for more about setting a q port](https://code.kx.com/q/basics/ipc/) |
+| Label Name             | Select the label you want to assign the connection to                                                                                                                                              |
 
 1. Click **Create Connection** and the connection appears under **CONNECTIONS** in the primary sidebar..
 
@@ -166,6 +167,7 @@ Set the following properties:
 | Username               | If authentication is needed, fill in the username otherwise, leave **blank**                                                                                                                                                         |
 | Password               | If authentication is needed, fill in the password otherwise, leave **blank**                                                                                                                                                         |
 | Enable TLS Encryption  | Check the box is TLS is enabled. Learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).                                                                                                                                   |
+| Label Name             | Select the label you want to assign the connection to                                                                                                                                                                                |
 
 ![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/myq.png?raw=true).
 
@@ -185,6 +187,7 @@ Set the following properties:
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | Server Name            | The server name / alias. This can be any name, aside from `local`, which is used by [Bundled q connection](#bundled-q)     |
 | The connection address | This is the remote address of your **kdb Insights Enterprise** deployment: e.g. `https://mykdbinsights.cloudapp.azure.com` |
+| Label Name             | Select the label you want to assign the connection to                                                                      |
 
 ![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsconnection.png?raw=true)
 
