@@ -628,6 +628,20 @@ describe("KdbNewConnectionView", () => {
       assert.strictEqual(view.serverType, ServerType.INSIGHTS);
       assert.strictEqual(result.values[1].includes("Insights"), true);
     });
+
+    it("should set serverType to INSIGHTS and open labels modal", () => {
+      view.connectionData = { connType: 2, serverName: "testServer" };
+      view.openModal();
+
+      const result = view.renderEditConnectionForm();
+      const resultsStrings = JSON.stringify(result);
+
+      assert.strictEqual(view.isBundledQ, false);
+      assert.strictEqual(view.oldAlias, "testServer");
+      assert.strictEqual(view.serverType, ServerType.INSIGHTS);
+      assert.strictEqual(result.values[1].includes("Insights"), true);
+      assert.strictEqual(resultsStrings.includes("Add a New Label"), true);
+    });
   });
 
   describe("renderEditConnFields", () => {
