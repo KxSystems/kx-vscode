@@ -133,6 +133,7 @@ export class KdbNewConnectionView extends LitElement {
 
   editAuthOfConn() {
     this.editAuth = !this.editAuth;
+    this.requestUpdate();
   }
 
   renderServerNameDesc(isBundleQ?: boolean) {
