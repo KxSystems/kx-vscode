@@ -229,6 +229,57 @@ The 'meta' node contains a child node for each of the child sections in the json
 
 You can refresh the meta data view at any time by choosing **Refresh meta data** from the right-click menu of an Insights connection.
 
+## Edit Connections
+
+To edit an existing connection, simply right-click the connection you wish to edit and select the **Edit connection** option.
+
+![Edit connection option](https://github.com/KxSystems/kx-vscode/blob/main/img/select-edit-connection.png?raw=true)
+
+**NOTE: Editing an active connection may require you to restart the connection. If so, you will be prompted to reconnect after saving your changes.**
+
+### Edit Bundle q connection
+
+When you select to edit an **Bundled q** connection, you can edit the following properties:
+
+| Property               | Description                                                                                                                                                                                        |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Server Name            | The name is already set as **local** and **cannot be edited**.                                                                                                                                     |
+| The connection address | This is already be set as `127.0.0.1` which corresponds to your **localhost** and **cannot be edited**.                                                                                            |
+| Port                   | Set the port for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. 5002. [Read here for more about setting a q port](https://code.kx.com/q/basics/ipc/) |
+| Label Name             | Select the label you want to assign the connection to                                                                                                                                              |
+
+![Edit Bundle q connection](https://github.com/KxSystems/kx-vscode/blob/main/img/edit-bundle-q-conn-form.png?raw=true)
+
+### Edit My q connection
+
+When you select to edit an **My q** connection, you can edit the following properties:
+
+| Property               | Description                                                                                                                                                                                                                          |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Server Name            | The server name / alias. The server name selected cannot be **local** or **insights**, as these are reserved for use by [Bundled q connections](#bundled-q) and [Insights connections](#insights-connection), respectively; e.g. dev |
+| The connection address | Set to the IP address of the kdb server; e.g. **localhost**.                                                                                                                                                                         |
+| Port                   | Enter the port used by the kdb server; e.g. 5001. Learn more about [setting a q port](https://code.kx.com/q/basics/ipc/) .                                                                                                           |
+| Edit Auth options      | Check the box if you wish to change **Auth options**. If you want to **remove the Auth** for this connection, select this checkbox and leave the **Username** and **Password** fields in **blank**                                   |
+| Username               | If authentication is needed, fill in the username otherwise, leave **blank**                                                                                                                                                         |
+| Password               | If authentication is needed, fill in the password otherwise, leave **blank**                                                                                                                                                         |
+| Enable TLS Encryption  | Check the box is TLS is enabled. Learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).                                                                                                                                   |
+| Label Name             | Select the label you want to assign the connection to                                                                                                                                                                                |
+
+![Edit My q connection](https://github.com/KxSystems/kx-vscode/blob/main/img/edit-my-q-conn-form.png?raw=true)
+
+### Edit Insights connection
+
+When you select to edit an **Insights** connection, you can edit the following properties:
+
+| Property               | Description                                                                                                                                                                                                                          |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Server Name            | The server name / alias. This can be any name, aside from `local`, which is used by [Bundled q connection](#bundled-q)                                                                                                               |
+| The connection address | This is the remote address of your **kdb Insights Enterprise** deployment: e.g. `https://mykdbinsights.cloudapp.azure.com`                                                                                                           |
+| Define Realm           | Specify the Keycloak realm for authentication. Usually the realm is set to `insights`, which is the default value used by the extension. You only need to change this field if a different realm has been configured on your server. |
+| Label Name             | Select the label you want to assign the connection to                                                                                                                                                                                |
+
+![Edit Insights connection](https://github.com/KxSystems/kx-vscode/blob/main/img/edit-insights-conn-form.png?raw=true)
+
 ## kdb language server
 
 A kdb language server is bundled with the kdb VS Code extension. It offers various common features to aid in the development of kdb code, including:
