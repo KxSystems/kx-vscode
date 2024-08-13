@@ -696,13 +696,17 @@ export class KdbNewConnectionView extends LitElement {
     return html`
       <div class="col">
         <div class="row">
-          <div class="col gap-0">${this.renderServerName(ServerType.KDB)}</div>
+          <div class="col gap-0">
+            ${this.renderServerName(ServerType.KDB, true)}
+          </div>
         </div>
         <div class="row">
-          <div class="col gap-0">${this.renderConnAddress(ServerType.KDB)}</div>
+          <div class="col gap-0">
+            ${this.renderConnAddress(ServerType.KDB, true)}
+          </div>
         </div>
         <div class="row">
-          <div class="col gap-0">${this.renderPortNumber()}</div>
+          <div class="col gap-0">${this.renderPortNumber(true)}</div>
         </div>
       </div>
     `;
