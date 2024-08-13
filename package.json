@@ -38,6 +38,7 @@
     "onCommand:kdb.newConnection.editInsightsConnection",
     "onCommand:kdb.newConnection.editMyQConnection",
     "onCommand:kdb.newConnection.editBundledConnection",
+    "onCommand:kdb.labels.create",
     "onView:kdb-datasources-explorer",
     "onTerminalProfile:kdb.q-terminal",
     "onLanguage:python"
@@ -53,7 +54,7 @@
           {
             "id": "install",
             "title": "Register, acquire license and download the q runtime",
-            "description": " \n[Install runtime](command:kdb.installTools)\n[Ignore/hide this help](command:kdb.hideWalkthrough)",
+            "description": " \n[Install runtime](command:kdb.installTools)",
             "media": {
               "image": "resources/kx_install.png",
               "altText": "register"
@@ -66,7 +67,7 @@
           {
             "id": "view",
             "title": "q runtime installed",
-            "description": " \n[Ignore/hide this help](command:kdb.hideWalkthrough)",
+            "description": " \n",
             "media": {
               "markdown": "out/qinstall.md"
             },
@@ -178,6 +179,18 @@
           "type": "object",
           "description": "Connection map for workspace files",
           "default": {},
+          "scope": "resource"
+        },
+        "kdb.connectionLabels": {
+          "type": "array",
+          "description": "List of label names and colorset",
+          "default": [],
+          "scope": "resource"
+        },
+        "kdb.labelsConnectionMap": {
+          "type": "array",
+          "description": "Labels connection map",
+          "default": [],
           "scope": "resource"
         }
       }
@@ -403,6 +416,21 @@
         "category": "KX",
         "command": "kdb.toggleParameterCache",
         "title": "KX: Toggle parameter cache"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.renameLabel",
+        "title": "Rename label"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.editLabelColor",
+        "title": "Edit label color"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.deleteLabel",
+        "title": "Delete label"
       }
     ],
     "keybindings": [
@@ -439,13 +467,13 @@
         "command": "kdb.execute.block",
         "key": "ctrl+shift+e",
         "mac": "cmd+shift+e",
-        "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
+        "when": "editorLangId == q"
       },
       {
         "command": "kdb.toggleParameterCache",
         "key": "ctrl+shift+y",
         "mac": "cmd+shift+y",
-        "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
+        "when": "editorLangId == q"
       }
     ],
     "snippets": [
@@ -679,7 +707,7 @@
         },
         {
           "command": "kdb.editConnection",
-          "when": "view == kdb-servers",
+          "when": "view == kdb-servers && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection@4"
         },
         {
@@ -741,6 +769,21 @@
           "command": "kdb.deleteFile",
           "when": "(view == kdb-datasource-explorer || view == kdb-scratchpad-explorer) && viewItem == artifact",
           "group": "kdbWorkspace@2"
+        },
+        {
+          "command": "kdb.renameLabel",
+          "when": "view == kdb-servers && viewItem == label",
+          "group": "label@1"
+        },
+        {
+          "command": "kdb.editLabelColor",
+          "when": "view == kdb-servers && viewItem == label",
+          "group": "label@2"
+        },
+        {
+          "command": "kdb.deleteLabel",
+          "when": "view == kdb-servers && viewItem == label",
+          "group": "label@3"
         }
       ],
       "editor/title/run": [
@@ -805,6 +848,18 @@
           "command": "kdb.execute.pythonScratchpadQuery",
           "group": "q@1",
           "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "kdb.execute.fileQuery",
+          "group": "q",
+          "when": "resourceExtname == .q"
+        },
+        {
+          "command": "kdb.execute.pythonFileScratchpadQuery",
+          "group": "q",
+          "when": "resourceExtname == .py"
         }
       ]
     },

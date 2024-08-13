@@ -22,7 +22,6 @@ import { ServerType } from "../../src/models/server";
 
 import { InsightDetails } from "../../src/models/insights";
 import {
-  ConnectionType,
   DataSourceCommand,
   DataSourceMessage2,
 } from "../../src/models/messages";
@@ -36,6 +35,7 @@ import {
 } from "../../src/models/dataSource";
 import { MetaObjectPayload } from "../../src/models/meta";
 import { html, TemplateResult } from "lit";
+import { ext } from "../../src/extensionVariables";
 
 describe("KdbDataSourceView", () => {
   let view: KdbDataSourceView;
@@ -247,6 +247,20 @@ describe("KdbNewConnectionView", () => {
       assert.equal(view.connectionData, event.data.data);
     });
 
+    it('should update connectionData when command is "refreshLabels"', () => {
+      const event = {
+        data: {
+          command: "refreshLabels",
+          data: ["test"],
+          colors: ext.labelColors,
+        },
+      };
+
+      view.handleMessage(event);
+
+      assert.equal(view.lblNamesList, event.data.data);
+    });
+
     it('should not update connectionData when command is not "editConnection"', () => {
       const event = {
         data: {
@@ -359,8 +373,7 @@ describe("KdbNewConnectionView", () => {
     });
 
     it("should render port number desc for KDB server", () => {
-      view.isBundledQ = false;
-      const result = view.renderPortNumberDesc(ServerType.KDB);
+      const result = view.renderPortNumberDesc();
       assert.strictEqual(
         JSON.stringify(result).includes("<b>Set port number</b>"),
         true,
@@ -379,8 +392,7 @@ describe("KdbNewConnectionView", () => {
     });
 
     it("should render port number for KDB server", () => {
-      view.isBundledQ = false;
-      const result = view.renderPortNumber(ServerType.KDB);
+      const result = view.renderPortNumber();
       assert.strictEqual(
         JSON.stringify(result).includes("<b>Set port number</b>"),
         true,
@@ -407,9 +419,10 @@ describe("KdbNewConnectionView", () => {
     });
 
     it("should render connection address for Bundled q", () => {
-      const result = view.renderConnAddDesc(ServerType.KDB);
+      const result = view.renderConnAddDesc(ServerType.KDB, true);
+      console.log(JSON.stringify(result));
       assert.strictEqual(
-        result.strings[0].includes("lready set up for you"),
+        result.strings[0].includes("already set up for you"),
         true,
       );
     });
@@ -425,9 +438,8 @@ describe("KdbNewConnectionView", () => {
       );
     });
 
-    it("should render connection address for bundled q", () => {
-      view.isBundledQ = true;
-      const result = view.renderConnAddress(ServerType.KDB);
+    it("should render connection address for Bundled q", () => {
+      const result = view.renderConnAddress(ServerType.KDB, true);
       assert.strictEqual(
         JSON.stringify(result).includes("127.0.0.1 or localhost"),
         false,
@@ -439,6 +451,62 @@ describe("KdbNewConnectionView", () => {
       const result = view.renderConnAddress(ServerType.INSIGHTS);
       assert.strictEqual(
         JSON.stringify(result).includes("myinsights.clouddeploy.com"),
+        true,
+      );
+    });
+
+    it("should render label dropdown color options", () => {
+      view.lblColorsList = [
+        { name: "red", colorHex: "#FF0000" },
+        { name: "green", colorHex: "#00FF00" },
+      ];
+
+      const result = view.renderLblDropdownColorOptions();
+
+      assert.strictEqual(
+        JSON.stringify(result).includes("No Color Selected"),
+        true,
+      );
+    });
+
+    it("should render label dropdown options", () => {
+      view.lblNamesList = [
+        { name: "label1", color: { colorHex: "#FF0000" } },
+        { name: "label2", color: { colorHex: "#00FF00" } },
+      ];
+      view.labels = ["label1"];
+
+      const result = view.renderLblDropdownOptions();
+
+      assert.strictEqual(
+        JSON.stringify(result).includes("No Label Selected"),
+        true,
+      );
+    });
+
+    it("should render New Label Modal", () => {
+      const result = view.renderNewLabelModal();
+
+      assert.strictEqual(
+        JSON.stringify(result).includes("Add a New Label"),
+        true,
+      );
+    });
+
+    it("should render New Label Btn", () => {
+      const result = view.renderNewLblBtn();
+
+      assert.strictEqual(
+        JSON.stringify(result).includes("Create New Label"),
+        true,
+      );
+    });
+
+    it("should render Connection Label Section", () => {
+      const result = view.renderConnectionLabelsSection();
+
+      assert.strictEqual(
+        JSON.stringify(result).includes("Connection label (optional)"),
         true,
       );
     });
@@ -621,7 +689,6 @@ describe("KdbNewConnectionView", () => {
         serverName: "local",
       };
       const result = view.renderBundleQEditForm();
-      console.log(JSON.stringify(result));
       assert.ok(result.strings[0].includes('<div class="col gap-0">'));
       assert.ok(result.strings[1].includes('<div class="col gap-0">'));
       assert.ok(result.strings[2].includes('<div class="col gap-0">'));
@@ -646,7 +713,6 @@ describe("KdbNewConnectionView", () => {
         serverName: "local",
       };
       const result = view.renderMyQEditForm();
-      console.log(JSON.stringify(result));
       assert.ok(result.strings[0].includes('<div class="col gap-0">'));
       assert.ok(result.strings[1].includes('<div class="col gap-0">'));
       assert.ok(result.strings[2].includes('<div class="col gap-0">'));
@@ -671,7 +737,6 @@ describe("KdbNewConnectionView", () => {
         serverName: "local",
       };
       const result = view.renderInsightsEditForm();
-      console.log(JSON.stringify(result));
       assert.ok(result.strings[0].includes('<div class="col gap-0">'));
       assert.ok(result.strings[1].includes('<div class="col gap-0">'));
       assert.ok(result.strings[2].includes('<div class="col gap-0">'));

@@ -46,6 +46,7 @@ import {
   getServerName,
   getServers,
   kdbOutputLog,
+  offerReconnectionAfterEdit,
   updateInsights,
   updateServers,
 } from "../utils/core";
@@ -67,6 +68,7 @@ import { Telemetry } from "../utils/telemetryClient";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { MetaContentProvider } from "../services/metaContentProvider";
+import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
 
 export async function addNewConnection(): Promise<void> {
   NewConnectionPannel.close();
@@ -78,7 +80,15 @@ export async function editConnection(viewItem: KdbNode | InsightsNode) {
   NewConnectionPannel.render(ext.context.extensionUri, viewItem);
 }
 
-export async function addInsightsConnection(insightsData: InsightDetails) {
+export function isConnected(connLabel: string): boolean {
+  const connMngService = new ConnectionManagementService();
+  return connMngService.isConnected(connLabel);
+}
+
+export async function addInsightsConnection(
+  insightsData: InsightDetails,
+  labels?: string[],
+) {
   const aliasValidation = validateServerAlias(insightsData.alias, false);
   if (aliasValidation) {
     window.showErrorMessage(aliasValidation);
@@ -127,12 +137,16 @@ export async function addInsightsConnection(insightsData: InsightDetails) {
     await updateInsights(insights);
     const newInsights = getInsights();
     if (newInsights != undefined) {
+      if (labels && labels.length > 0) {
+        await handleLabelsConnMap(labels, insightsData.alias);
+      }
       ext.serverProvider.refreshInsights(newInsights);
       Telemetry.sendEvent("Connection.Created.Insights");
     }
     window.showInformationMessage(
       `Added Insights connection: ${insightsData.alias}`,
     );
+
     NewConnectionPannel.close();
   }
 }
@@ -141,6 +155,7 @@ export async function addInsightsConnection(insightsData: InsightDetails) {
 export async function editInsightsConnection(
   insightsData: InsightDetails,
   oldAlias: string,
+  labels?: string[],
 ) {
   const aliasValidation =
     oldAlias === insightsData.alias
@@ -150,6 +165,7 @@ export async function editInsightsConnection(
     window.showErrorMessage(aliasValidation);
     return;
   }
+  const isConnectedConn = isConnected(oldAlias);
   await disconnect(oldAlias);
   if (insightsData.alias === undefined || insightsData.alias === "") {
     const host = new url.URL(insightsData.server);
@@ -177,6 +193,7 @@ export async function editInsightsConnection(
         const oldKey = getKeyForServerName(oldAlias);
         const newKey = insightsData.alias;
         if (insights[oldKey] && oldAlias !== insightsData.alias) {
+          removeConnFromLabels(oldAlias);
           const uInsights = Object.keys(insights).filter((insight) => {
             return insight !== oldKey;
           });
@@ -207,12 +224,21 @@ export async function editInsightsConnection(
 
         const newInsights = getInsights();
         if (newInsights != undefined) {
+          if (labels && labels.length > 0) {
+            await handleLabelsConnMap(labels, insightsData.alias);
+          } else {
+            removeConnFromLabels(insightsData.alias);
+          }
           ext.serverProvider.refreshInsights(newInsights);
           Telemetry.sendEvent("Connection.Edited.Insights");
+          if (isConnectedConn) {
+            offerReconnectionAfterEdit(insightsData.alias);
+          }
         }
         window.showInformationMessage(
           `Edited Insights connection: ${insightsData.alias}`,
         );
+
         NewConnectionPannel.close();
       }
     }
@@ -301,6 +327,7 @@ export async function enableTLS(serverKey: string): Promise<void> {
 export async function addKdbConnection(
   kdbData: ServerDetails,
   isLocal?: boolean,
+  labels?: string[],
 ): Promise<void> {
   const aliasValidation = validateServerAlias(kdbData.serverAlias, isLocal!);
   const hostnameValidation = validateServerName(kdbData.serverName);
@@ -359,6 +386,9 @@ export async function addKdbConnection(
     await updateServers(servers);
     const newServers = getServers();
     if (newServers != undefined) {
+      if (labels && labels.length > 0) {
+        await handleLabelsConnMap(labels, kdbData.serverAlias);
+      }
       Telemetry.sendEvent("Connection.Created.QProcess");
       ext.serverProvider.refresh(newServers);
     }
@@ -368,6 +398,7 @@ export async function addKdbConnection(
     window.showInformationMessage(
       `Added kdb connection: ${kdbData.serverAlias}`,
     );
+
     NewConnectionPannel.close();
   }
 }
@@ -378,6 +409,7 @@ export async function editKdbConnection(
   oldAlias: string,
   isLocal?: boolean,
   editAuth?: boolean,
+  labels?: string[],
 ) {
   const aliasValidation =
     oldAlias === kdbData.serverAlias
@@ -397,8 +429,9 @@ export async function editKdbConnection(
     window.showErrorMessage(portValidation);
     return;
   }
+  const isConnectedConn = isConnected(oldAlias);
   await disconnect(oldAlias);
-  let servers: Server | undefined = getServers();
+  const servers: Server | undefined = getServers();
 
   if (servers) {
     const oldServer = servers[getKeyForServerName(oldAlias)];
@@ -455,13 +488,23 @@ export async function editKdbConnection(
         }
         const newServers = getServers();
         if (newServers != undefined) {
+          if (labels && labels.length > 0) {
+            await handleLabelsConnMap(labels, kdbData.serverAlias);
+          } else {
+            removeConnFromLabels(kdbData.serverAlias);
+          }
           ext.serverProvider.refresh(newServers);
           Telemetry.sendEvent("Connection.Edited.KDB");
+          const connLabelToReconn = `${kdbData.serverName}:${kdbData.serverPort} [${kdbData.serverAlias}]`;
+          if (isConnectedConn) {
+            offerReconnectionAfterEdit(connLabelToReconn);
+          }
         }
         window.showInformationMessage(
           `Edited KDB connection: ${kdbData.serverAlias}`,
         );
         if (oldKey !== newKey) {
+          removeConnFromLabels(oldKey);
           removeAuthConnection(oldKey);
           if (kdbData.auth) {
             addAuthConnection(newKey, kdbData.username!, kdbData.password!);

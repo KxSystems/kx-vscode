@@ -190,6 +190,46 @@ export function getServers(): Server | undefined {
   return workspace.getConfiguration().get("kdb.servers");
 }
 
+// TODO: Remove this on 1.9.0 release
+/* istanbul ignore next */
+export function fixUnnamedAlias(): void {
+  const servers = getServers();
+  const insights = getInsights();
+  let counter = 1;
+
+  if (servers) {
+    const updatedServers: Server = {};
+    for (const key in servers) {
+      if (servers.hasOwnProperty(key)) {
+        const server = servers[key];
+        if (server.serverAlias === "") {
+          server.serverAlias = `unnamedServer-${counter}`;
+          counter++;
+        }
+        updatedServers[server.serverAlias] = server;
+      }
+    }
+    updateServers(updatedServers);
+    ext.serverProvider.refresh(servers);
+  }
+
+  if (insights) {
+    const updatedInsights: Insights = {};
+    for (const key in insights) {
+      if (insights.hasOwnProperty(key)) {
+        const insight = insights[key];
+        if (insight.alias === "") {
+          insight.alias = `unnamedServer-${counter}`;
+          counter++;
+        }
+        updatedInsights[insight.alias] = insight;
+      }
+    }
+    updateInsights(updatedInsights);
+    ext.serverProvider.refreshInsights(insights);
+  }
+}
+
 export function getHideDetailedConsoleQueryOutput(): void {
   const setting = workspace
     .getConfiguration()
@@ -300,6 +340,21 @@ export function offerConnectAction(connLabel: string): void {
   window
     .showInformationMessage(
       `You aren't connected to ${connLabel}, would you like to connect? Once connected please try again.`,
+      "Connect",
+      "Cancel",
+    )
+    .then(async (result) => {
+      if (result === "Connect") {
+        await commands.executeCommand("kdb.connect.via.dialog", connLabel);
+      }
+    });
+}
+
+/* istanbul ignore next */
+export function offerReconnectionAfterEdit(connLabel: string): void {
+  window
+    .showInformationMessage(
+      `You are no longer connected to ${connLabel}, would you like to connect?`,
       "Connect",
       "Cancel",
     )

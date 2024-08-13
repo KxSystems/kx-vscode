@@ -77,6 +77,7 @@ import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
 import {
   checkLocalInstall,
   checkOpenSslInstalled,
+  fixUnnamedAlias,
   getInsights,
   getServers,
   initializeLocalServers,
@@ -104,6 +105,15 @@ import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { CompletionProvider } from "./services/completionProvider";
 import { QuickFixProvider } from "./services/quickFixProvider";
 import { connectClientCommands } from "./commands/clientCommands";
+import {
+  createNewLabel,
+  deleteLabel,
+  getWorkspaceLabels,
+  getWorkspaceLabelsConnMap,
+  renameLabel,
+  setLabelColor,
+} from "./utils/connLabel";
+import { activateTextDocument } from "./utils/workspace";
 
 let client: LanguageClient;
 
@@ -112,6 +122,10 @@ export async function activate(context: ExtensionContext) {
   ext.outputChannel = window.createOutputChannel("kdb");
   ext.openSslVersion = await checkOpenSslInstalled();
   ext.isBundleQCreated = false;
+
+  getWorkspaceLabelsConnMap();
+  getWorkspaceLabels();
+
   // clear necessary contexts
   commands.executeCommand("setContext", "kdb.connected.active", false);
   commands.executeCommand("setContext", "kdb.insightsConnected", false);
@@ -133,6 +147,8 @@ export async function activate(context: ExtensionContext) {
     "**/*.kdb.json",
     "datasource",
   );
+
+  fixUnnamedAlias();
 
   commands.executeCommand("setContext", "kdb.QHOME", env.QHOME);
 
@@ -266,38 +282,53 @@ export async function activate(context: ExtensionContext) {
     ),
     commands.registerCommand(
       "kdb.newConnection.createNewInsightConnection",
-      async (insightsData: InsightDetails) => {
-        await addInsightsConnection(insightsData);
+      async (insightsData: InsightDetails, labels: string[]) => {
+        await addInsightsConnection(insightsData, labels);
       },
     ),
     commands.registerCommand(
       "kdb.newConnection.createNewConnection",
-      async (kdbData: ServerDetails) => {
-        await addKdbConnection(kdbData, false);
+      async (kdbData: ServerDetails, labels: string[]) => {
+        await addKdbConnection(kdbData, false, labels);
       },
     ),
     commands.registerCommand(
       "kdb.newConnection.createNewBundledConnection",
-      async (kdbData: ServerDetails) => {
-        await addKdbConnection(kdbData, true);
+      async (kdbData: ServerDetails, labels: string[]) => {
+        await addKdbConnection(kdbData, true, labels);
       },
     ),
     commands.registerCommand(
       "kdb.newConnection.editInsightsConnection",
-      async (insightsData: InsightDetails, oldAlias: string) => {
-        await editInsightsConnection(insightsData, oldAlias);
+      async (
+        insightsData: InsightDetails,
+        oldAlias: string,
+        labels: string[],
+      ) => {
+        await editInsightsConnection(insightsData, oldAlias, labels);
       },
     ),
     commands.registerCommand(
       "kdb.newConnection.editMyQConnection",
-      async (kdbData: ServerDetails, oldAlias: string, editAuth: boolean) => {
-        await editKdbConnection(kdbData, oldAlias, false, editAuth);
+      async (
+        kdbData: ServerDetails,
+        oldAlias: string,
+        editAuth: boolean,
+        labels: string[],
+      ) => {
+        await editKdbConnection(kdbData, oldAlias, false, editAuth, labels);
       },
     ),
     commands.registerCommand(
       "kdb.newConnection.editBundledConnection",
-      async (kdbData: ServerDetails, oldAlias: string) => {
-        await editKdbConnection(kdbData, oldAlias, true);
+      async (kdbData: ServerDetails, oldAlias: string, labels: string[]) => {
+        await editKdbConnection(kdbData, oldAlias, true, false, labels);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.labels.create",
+      async (name: string, colorName: string) => {
+        await createNewLabel(name, colorName);
       },
     ),
     commands.registerCommand(
@@ -363,7 +394,10 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.execute.selectedQuery", async () => {
       await runActiveEditor(ExecutionTypes.QuerySelection);
     }),
-    commands.registerCommand("kdb.execute.fileQuery", async () => {
+    commands.registerCommand("kdb.execute.fileQuery", async (item) => {
+      if (item instanceof Uri) {
+        await activateTextDocument(item);
+      }
       await runActiveEditor(ExecutionTypes.QueryFile);
     }),
     commands.registerCommand("kdb.execute.pythonScratchpadQuery", async () => {
@@ -375,7 +409,10 @@ export async function activate(context: ExtensionContext) {
     // }),
     commands.registerCommand(
       "kdb.execute.pythonFileScratchpadQuery",
-      async () => {
+      async (item) => {
+        if (item instanceof Uri) {
+          await activateTextDocument(item);
+        }
         await runActiveEditor(ExecutionTypes.PythonQueryFile);
       },
     ),
@@ -438,16 +475,32 @@ export async function activate(context: ExtensionContext) {
     }),
     commands.registerCommand("kdb.renameFile", async (item: FileTreeItem) => {
       if (item && item.resourceUri) {
-        const document = await workspace.openTextDocument(item.resourceUri);
-        await window.showTextDocument(document);
+        if (item.resourceUri.path.endsWith(".kdb.json")) {
+          await commands.executeCommand(
+            "vscode.openWith",
+            item.resourceUri,
+            DataSourceEditorProvider.viewType,
+          );
+        } else {
+          const document = await workspace.openTextDocument(item.resourceUri);
+          await window.showTextDocument(document);
+        }
         await commands.executeCommand("revealInExplorer");
         await commands.executeCommand("renameFile");
       }
     }),
     commands.registerCommand("kdb.deleteFile", async (item: FileTreeItem) => {
       if (item && item.resourceUri) {
-        const document = await workspace.openTextDocument(item.resourceUri);
-        await window.showTextDocument(document);
+        if (item.resourceUri.path.endsWith(".kdb.json")) {
+          await commands.executeCommand(
+            "vscode.openWith",
+            item.resourceUri,
+            DataSourceEditorProvider.viewType,
+          );
+        } else {
+          const document = await workspace.openTextDocument(item.resourceUri);
+          await window.showTextDocument(document);
+        }
         await commands.executeCommand("revealInExplorer");
         await commands.executeCommand("deleteFile");
       }
@@ -474,6 +527,66 @@ export async function activate(context: ExtensionContext) {
       if (event.affectsConfiguration("kdb.connectionMap")) {
         ext.dataSourceTreeProvider.reload();
         ext.scratchpadTreeProvider.reload();
+      }
+      if (event.affectsConfiguration("kdb.connectionLabelsMap")) {
+        ext.serverProvider.reload();
+      }
+      if (event.affectsConfiguration("kdb.connectionLabels")) {
+        ext.serverProvider.reload();
+      }
+    }),
+    commands.registerCommand("kdb.renameLabel", async (item) => {
+      if (item) {
+        const name = await window.showInputBox({
+          prompt: "Enter label name",
+          value: item.label,
+        });
+        if (name) {
+          renameLabel(item.label, name);
+        }
+      }
+    }),
+    commands.registerCommand("kdb.editLabelColor", async (item) => {
+      if (item) {
+        const colors = ext.labelColors.map((color) => ({
+          label: color.name,
+          iconPath: {
+            light: Uri.file(
+              path.join(
+                __filename,
+                "..",
+                "..",
+                "resources",
+                "light",
+                "labels",
+                `label-${color.name.toLowerCase()}.svg`,
+              ),
+            ),
+            dark: Uri.file(
+              path.join(
+                __filename,
+                "..",
+                "..",
+                "resources",
+                "dark",
+                "labels",
+                `label-${color.name.toLowerCase()}.svg`,
+              ),
+            ),
+          },
+        }));
+        const picked = await window.showQuickPick(colors, {
+          title: "Select label color",
+          placeHolder: item.source.color.name,
+        });
+        if (picked) {
+          setLabelColor(item.label, picked.label);
+        }
+      }
+    }),
+    commands.registerCommand("kdb.deleteLabel", (item) => {
+      if (item) {
+        deleteLabel(item.label);
       }
     }),
   );

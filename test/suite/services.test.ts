@@ -39,6 +39,7 @@ import {
   InsightsNode,
   KdbNode,
   KdbTreeProvider,
+  LabelNode,
   MetaObjectPayloadNode,
   QCategoryNode,
   QNamespaceNode,
@@ -63,6 +64,7 @@ import * as utils from "../../src/utils/getUri";
 import { MetaInfoType, MetaObject } from "../../src/models/meta";
 import { CompletionProvider } from "../../src/services/completionProvider";
 import { MetaContentProvider } from "../../src/services/metaContentProvider";
+import { ConnectionLabel, Labels } from "../../src/models/labels";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -605,6 +607,18 @@ describe("kdbTreeProvider", () => {
     );
   });
 
+  it("Should return a new LabelNode", () => {
+    const labelNode = new LabelNode({
+      name: "White",
+      color: { name: "White", colorHex: "#CCCCCC" },
+    });
+    assert.strictEqual(
+      labelNode.label,
+      "White",
+      "LabelNode node creation failed",
+    );
+  });
+
   describe("InsightsMetaNode", () => {
     it("should initialize fields correctly", () => {
       const node = new InsightsMetaNode(
@@ -708,6 +722,24 @@ describe("kdbTreeProvider", () => {
       insightsConn.meta = dummyMeta;
       const result = await kdbProvider.getChildren(metaNode);
       assert.notStrictEqual(result, undefined);
+    });
+
+    it("should return label node", async () => {
+      const labels: Labels[] = [
+        { name: "label1", color: { name: "red", colorHex: "#FF0000" } },
+      ];
+      const conns: ConnectionLabel[] = [
+        {
+          labelName: "label1",
+          connections: ["testServerAlias", "testInsightsAlias"],
+        },
+      ];
+      sinon.stub(workspace, "getConfiguration").value(() => ({
+        get: (v: string) => (v === "kdb.connectionLabels" ? labels : conns),
+      }));
+      const provider = new KdbTreeProvider(servers, insights);
+      const result = await provider.getChildren();
+      assert.strictEqual(result.length, 1);
     });
   });
 });
