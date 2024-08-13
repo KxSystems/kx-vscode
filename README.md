@@ -169,7 +169,7 @@ Set the following properties:
 | Enable TLS Encryption  | Check the box is TLS is enabled. Learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).                                                                                                                                   |
 | Label Name             | Select the label you want to assign the connection to                                                                                                                                                                                |
 
-![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/myq.png?raw=true).
+![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/myq.png?raw=true)
 
 1. Click **Create Connection** and the connection appears under **CONNECTIONS** in the primary sidebar.
 
@@ -235,7 +235,9 @@ To edit an existing connection, simply right-click the connection you wish to ed
 
 ![Edit connection option](https://github.com/KxSystems/kx-vscode/blob/main/img/select-edit-connection.png?raw=true)
 
-**NOTE: Editing an active connection may require you to restart the connection. If so, you will be prompted to reconnect after saving your changes.**
+> NOTE: Editing an **active connection** may require you to **restart** the connection. If so, you will be prompted to reconnect after saving your changes.
+
+![Edit connected connection dialog](https://github.com/KxSystems/kx-vscode/blob/main/img/edit-connected-connection-dialog.png?raw=true)
 
 ### Edit Bundle q connection
 
