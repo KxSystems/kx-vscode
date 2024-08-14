@@ -1,6 +1,0 @@
-version: v1.7.0
-ignore:
-  "SNYK-JS-AXIOS-7361793":
-    - "*":
-        reason: "There is no fix until the moment"
-        expires: "2050-01-01T00:00:00.000Z"

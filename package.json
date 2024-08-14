@@ -1,7 +1,7 @@
 {
   "name": "kdb",
   "displayName": "kdb",
-  "description": "IDE support for kdb product suite",
+  "description": "IDE support for kdb product suite including the q programming language",
   "publisher": "KX",
   "version": "1.7.0",
   "engines": {
@@ -947,7 +947,7 @@
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "@windozer/node-q": "^2.6.0",
     "ag-grid-community": "^32.0.1",
-    "axios": "^1.7.2",
+    "axios": "^1.7.4",
     "chevrotain": "^10.5.0",
     "csv-parser": "^3.0.0",
     "extract-zip": "^2.0.1",
