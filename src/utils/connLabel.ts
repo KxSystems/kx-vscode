@@ -170,3 +170,11 @@ export function deleteLabel(name: string) {
     .getConfiguration()
     .update("kdb.connectionLabels", ext.connLabelList, true);
 }
+
+export function isLabelEmpty(name: string) {
+  const found = ext.labelConnMapList.find((item) => item.labelName === name);
+  if (found) {
+    return found.connections.length === 0;
+  }
+  return true;
+}

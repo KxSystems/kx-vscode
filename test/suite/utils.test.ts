@@ -1784,4 +1784,33 @@ describe("Utils", () => {
       assert.strictEqual(ext.connLabelList.length, 0);
     });
   });
+
+  describe("isLabelEmpty", () => {
+    beforeEach(() => {
+      ext.labelConnMapList.length = 0;
+    });
+
+    afterEach(() => {
+      ext.labelConnMapList.length = 0;
+    });
+    it("should return true if label is empty", () => {
+      ext.labelConnMapList.push({ labelName: "label1", connections: [] });
+      const result = LabelsUtils.isLabelEmpty("label1");
+      assert.strictEqual(result, true);
+    });
+
+    it("should return false if label is not empty", () => {
+      ext.labelConnMapList.push({
+        labelName: "label1",
+        connections: ["conn1"],
+      });
+      const result = LabelsUtils.isLabelEmpty("label1");
+      assert.strictEqual(result, false);
+    });
+
+    it("should return false if label is empty if label not on map list", () => {
+      const result = LabelsUtils.isLabelEmpty("label1");
+      assert.strictEqual(result, true);
+    });
+  });
 });
