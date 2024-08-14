@@ -282,6 +282,65 @@ When you select to edit an **Insights** connection, you can edit the following p
 
 ![Edit Insights connection](https://github.com/KxSystems/kx-vscode/blob/main/img/edit-insights-conn-form.png?raw=true)
 
+## Connection Labels
+
+Connection Labels allow you to categorize and organize your connections by assigning them distinct names and colors, making it easier to manage and locate specific connections within the application.
+
+![Connection Tree With Labels](https://github.com/KxSystems/kx-vscode/blob/main/img/conn-labels-tree.png?raw=true)
+
+### Create New Label
+
+To create a Label, start by **editing** or **creating** a connection. At the **bottom of the form**, you'll see a **Create New Label** button.
+
+![Create New Label Button](https://github.com/KxSystems/kx-vscode/blob/main/img/create-new-label-btn.png?raw=true)
+
+Clicking this button will open a **dialog** where you can enter a **Label name** and choose a **Label color** for it. You can then create the Label by clicking 'Create' or cancel the process by clicking 'Cancel.'
+
+| Property    | Description                                               |
+| ----------- | --------------------------------------------------------- |
+| Label Name  | Enter a name for the label.                               |
+| Label color | Select the color in the list of colors for the new label. |
+
+![Create New Label](https://github.com/KxSystems/kx-vscode/blob/main/img/create-new-label-dialog.png?raw=true)
+
+### Add Label to a connection
+
+To add a Label to a connection, start by **editing** or **creating** a connection. At the **bottom of the form**, you'll see a **Label Name** dropdown to select a Label, select the Label and click in **Edit or Create Connection**.
+
+| Property   | Description                          |
+| ---------- | ------------------------------------ |
+| Label Name | Select Label from the list of Labels |
+
+![Select Label](https://github.com/KxSystems/kx-vscode/blob/main/img/conn-labels.png?raw=true)
+
+### Rename Label
+
+Right-click the label at Connection Tree and select **Rename label**.
+
+![Rename Label Opt](https://github.com/KxSystems/kx-vscode/blob/main/img/labels-rename-opt.png?raw=true)
+
+A prompt will be displayed at the top of the screen with the field to edit the name of the Label.
+
+![Rename Label](https://github.com/KxSystems/kx-vscode/blob/main/img/labels-rename.png?raw=true)
+
+### Edit Label Color
+
+Right-click the label at Connection Tree and select **Edit label color**.
+
+![Edit Label Color Opt](https://github.com/KxSystems/kx-vscode/blob/main/img/labels-edit-color-opt.png?raw=true)
+
+A prompt will be displayed at the top of the screen with the field to edit the color of the Label.
+
+![Edit Label Color](https://github.com/KxSystems/kx-vscode/blob/main/img/labels-edit-color.png?raw=true)
+
+### Delete Label
+
+Right-click the label at Connection Tree and select **Delete label**.
+
+![Delete Label Opt](https://github.com/KxSystems/kx-vscode/blob/main/img/labels-delete-opt.png?raw=true)
+
+> The connections assign to the Label will **not be deleted**.
+
 ## kdb language server
 
 A kdb language server is bundled with the kdb VS Code extension. It offers various common features to aid in the development of kdb code, including:
