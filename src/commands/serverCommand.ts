@@ -192,8 +192,8 @@ export async function editInsightsConnection(
       } else {
         const oldKey = getKeyForServerName(oldAlias);
         const newKey = insightsData.alias;
+        removeConnFromLabels(oldAlias);
         if (insights[oldKey] && oldAlias !== insightsData.alias) {
-          removeConnFromLabels(oldAlias);
           const uInsights = Object.keys(insights).filter((insight) => {
             return insight !== oldKey;
           });
@@ -452,6 +452,7 @@ export async function editKdbConnection(
         return;
       } else {
         const oldKey = getKeyForServerName(oldAlias);
+        removeConnFromLabels(oldKey);
         const newKey = kdbData.serverAlias;
         const removedAuth =
           editAuth && (kdbData.username === "" || kdbData.password === "");
