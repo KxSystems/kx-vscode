@@ -527,6 +527,11 @@ export async function editKdbConnection(
 
 export async function removeConnection(viewItem: KdbNode | InsightsNode) {
   const connMngService = new ConnectionManagementService();
+  removeConnFromLabels(
+    viewItem instanceof KdbNode
+      ? viewItem.details.serverAlias
+      : viewItem.details.alias,
+  );
   await connMngService.removeConnection(viewItem);
 }
 
