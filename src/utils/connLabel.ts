@@ -187,7 +187,6 @@ export function isLabelEmpty(name: string) {
 export function isLabelContentChanged(name: string) {
   const found = ext.latestLblsChanged.find((item) => item === name);
   if (found) {
-    ext.latestLblsChanged.length = 0;
     return true;
   }
   return false;

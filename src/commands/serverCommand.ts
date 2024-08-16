@@ -137,8 +137,8 @@ export async function addInsightsConnection(
     await updateInsights(insights);
     const newInsights = getInsights();
     if (newInsights != undefined) {
+      ext.latestLblsChanged.length = 0;
       if (labels && labels.length > 0) {
-        ext.latestLblsChanged.length = 0;
         ext.latestLblsChanged.push(...labels);
         await handleLabelsConnMap(labels, insightsData.alias);
       }
@@ -226,8 +226,8 @@ export async function editInsightsConnection(
 
         const newInsights = getInsights();
         if (newInsights != undefined) {
+          ext.latestLblsChanged.length = 0;
           if (labels && labels.length > 0) {
-            ext.latestLblsChanged.length = 0;
             ext.latestLblsChanged.push(...labels);
             await handleLabelsConnMap(labels, insightsData.alias);
           } else {
@@ -390,8 +390,8 @@ export async function addKdbConnection(
     await updateServers(servers);
     const newServers = getServers();
     if (newServers != undefined) {
+      ext.latestLblsChanged.length = 0;
       if (labels && labels.length > 0) {
-        ext.latestLblsChanged.length = 0;
         ext.latestLblsChanged.push(...labels);
         await handleLabelsConnMap(labels, kdbData.serverAlias);
       }
@@ -495,8 +495,8 @@ export async function editKdbConnection(
         }
         const newServers = getServers();
         if (newServers != undefined) {
+          ext.latestLblsChanged.length = 0;
           if (labels && labels.length > 0) {
-            ext.latestLblsChanged.length = 0;
             ext.latestLblsChanged.push(...labels);
             await handleLabelsConnMap(labels, kdbData.serverAlias);
           } else {
