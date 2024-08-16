@@ -72,6 +72,16 @@ export class NewConnectionPannel {
     }
   }
 
+  public static refreshLabels() {
+    if (NewConnectionPannel.currentPanel) {
+      NewConnectionPannel.currentPanel._panel.webview.postMessage({
+        command: "refreshLabels",
+        data: ext.connLabelList,
+        colors: ext.labelColors,
+      });
+    }
+  }
+
   private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
     this._extensionUri = extensionUri;
     this._panel = panel;

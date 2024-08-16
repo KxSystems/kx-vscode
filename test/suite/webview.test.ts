@@ -585,6 +585,17 @@ describe("KdbNewConnectionView", () => {
     });
   });
 
+  describe("renderCreateConnectionBtn", () => {
+    it("should render create connection button", () => {
+      const result = view.renderCreateConnectionBtn();
+
+      assert.strictEqual(
+        JSON.stringify(result).includes("Create Connection"),
+        true,
+      );
+    });
+  });
+
   describe("renderEditConnectionForm", () => {
     it('should return "No connection found to be edited" when connectionData is null', () => {
       view.connectionData = null;

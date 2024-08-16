@@ -1813,4 +1813,25 @@ describe("Utils", () => {
       assert.strictEqual(result, true);
     });
   });
+
+  describe("isLabelContentChanged", () => {
+    beforeEach(() => {
+      ext.latestLblsChanged.length = 0;
+    });
+
+    afterEach(() => {
+      ext.latestLblsChanged.length = 0;
+    });
+
+    it("should return true if label content is changed", () => {
+      ext.latestLblsChanged.push("label1");
+      const result = LabelsUtils.isLabelContentChanged("label1");
+      assert.strictEqual(result, true);
+    });
+
+    it("should return false if label content is not changed", () => {
+      const result = LabelsUtils.isLabelContentChanged("label1");
+      assert.strictEqual(result, false);
+    });
+  });
 });

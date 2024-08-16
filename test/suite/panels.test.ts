@@ -555,5 +555,14 @@ describe("WebPanels", () => {
         "Panel HTML should include expected web component",
       );
     });
+
+    it("should refreshLabels", () => {
+      NewConnectionPannel.render(uriTest);
+      NewConnectionPannel.refreshLabels();
+      assert.ok(
+        NewConnectionPannel.currentPanel,
+        "NewConnectionPannel.currentPanel should be truthy",
+      );
+    });
   });
 });

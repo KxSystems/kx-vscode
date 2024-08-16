@@ -330,7 +330,7 @@ export class KdbNewConnectionView extends LitElement {
 
   renderLblDropdownOptions() {
     return html`
-      <vscode-option .value="${undefined}"> No Label Selected </vscode-option>
+      <vscode-option> No Label Selected </vscode-option>
       ${repeat(
         this.lblNamesList,
         (lbl) => lbl.name,
@@ -362,6 +362,7 @@ export class KdbNewConnectionView extends LitElement {
               value="${this.newLblName}"
               @change="${(event: Event) => {
                 this.newLblName = (event.target as HTMLInputElement).value;
+                this.requestUpdate();
               }}"
               id="label-name"
               >Label name</vscode-text-field
@@ -376,6 +377,7 @@ export class KdbNewConnectionView extends LitElement {
               value="${this.newLblColorName}"
               @change="${(event: Event) => {
                 this.newLblColorName = (event.target as HTMLInputElement).value;
+                this.requestUpdate();
               }}"
               class="dropdown"
               style="width: 18.5em;">
@@ -392,7 +394,9 @@ export class KdbNewConnectionView extends LitElement {
             <vscode-button
               aria-label="Create Label"
               appearance="primary"
-              @click="${this.createLabel}">
+              @click="${this.createLabel}"
+              ?disabled="${this.newLblName === "" ||
+              this.newLblColorName === ""}">
               Create
             </vscode-button>
           </div>
@@ -423,10 +427,11 @@ export class KdbNewConnectionView extends LitElement {
             <vscode-dropdown
               id="selectLabel"
               class="dropdown larger"
-              value="${this.labels.length > 0 ? this.labels[0] : ""}"
+              value="${this.labels[0]}"
+              current-value="${this.labels[0]}"
               @change="${(event: Event) => {
-                this.labels.length = 0;
-                this.labels.push((event.target as HTMLInputElement).value);
+                this.labels[0] = (event.target as HTMLInputElement).value;
+                this.requestUpdate();
               }}">
               ${this.renderLblDropdownOptions()}
             </vscode-dropdown>
@@ -505,6 +510,7 @@ export class KdbNewConnectionView extends LitElement {
                     <div class="col gap-0">${this.renderPortNumber(true)}</div>
                   </div>
                   ${this.renderConnectionLabelsSection()}
+                  ${this.renderCreateConnectionBtn()}
                 </div>
               </vscode-panel-view>
               <vscode-panel-view id="view-2" class="panel">
@@ -576,6 +582,7 @@ export class KdbNewConnectionView extends LitElement {
                     </div>
                   </div>
                   ${this.renderConnectionLabelsSection()}
+                  ${this.renderCreateConnectionBtn()}
                 </div>
               </vscode-panel-view>
               <vscode-panel-view id="view-3" class="panel">
@@ -610,20 +617,23 @@ export class KdbNewConnectionView extends LitElement {
                     </div>
                   </div>
                   ${this.renderConnectionLabelsSection()}
+                  ${this.renderCreateConnectionBtn()}
                 </div>
               </vscode-panel-view>
             </vscode-panels>
           </div>
         </div>
-        <div class="col">
-          <div class="row">
-            <vscode-button @click="${() => this.save()}"
-              >Create Connection</vscode-button
-            >
-          </div>
-        </div>
+        <div class="col"></div>
       </div>
     `;
+  }
+
+  renderCreateConnectionBtn() {
+    return html`<div class="row">
+      <vscode-button @click="${() => this.save()}"
+        >Create Connection</vscode-button
+      >
+    </div>`;
   }
 
   renderEditConnectionForm() {
@@ -653,11 +663,9 @@ export class KdbNewConnectionView extends LitElement {
           </div>
           <div class="row">${this.renderEditConnFields()}</div>
           <div class="row">${this.renderConnectionLabelsSection()}</div>
-        </div>
-        <div class="col">
           <div class="row">
             <vscode-button @click="${() => this.editConnection()}"
-              >Edit Connection</vscode-button
+              >Update Connection</vscode-button
             >
           </div>
         </div>
@@ -885,6 +893,7 @@ export class KdbNewConnectionView extends LitElement {
       },
     });
     setTimeout(() => {
+      this.labels[0] = this.newLblName;
       this.closeModal();
     }, 500);
   }
