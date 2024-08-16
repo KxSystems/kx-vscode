@@ -16,6 +16,7 @@ import { workspace } from "vscode";
 import { ext } from "../extensionVariables";
 import { kdbOutputLog } from "./core";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
+import { NewConnectionPannel } from "../panels/newConnection";
 
 export function getWorkspaceLabels() {
   const existingConnLbls = workspace
@@ -144,6 +145,7 @@ export function renameLabel(name: string, newName: string) {
         .getConfiguration()
         .update("kdb.connectionLabels", ext.connLabelList, true),
     );
+  NewConnectionPannel.refreshLabels();
 }
 
 export function setLabelColor(name: string, color: string) {
@@ -158,6 +160,7 @@ export function setLabelColor(name: string, color: string) {
   workspace
     .getConfiguration()
     .update("kdb.connectionLabels", ext.connLabelList, true);
+  NewConnectionPannel.refreshLabels();
 }
 
 export function deleteLabel(name: string) {
@@ -169,6 +172,8 @@ export function deleteLabel(name: string) {
   workspace
     .getConfiguration()
     .update("kdb.connectionLabels", ext.connLabelList, true);
+
+  NewConnectionPannel.refreshLabels();
 }
 
 export function isLabelEmpty(name: string) {
