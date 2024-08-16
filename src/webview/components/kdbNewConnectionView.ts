@@ -362,6 +362,7 @@ export class KdbNewConnectionView extends LitElement {
               value="${this.newLblName}"
               @change="${(event: Event) => {
                 this.newLblName = (event.target as HTMLInputElement).value;
+                this.requestUpdate();
               }}"
               id="label-name"
               >Label name</vscode-text-field
@@ -376,6 +377,7 @@ export class KdbNewConnectionView extends LitElement {
               value="${this.newLblColorName}"
               @change="${(event: Event) => {
                 this.newLblColorName = (event.target as HTMLInputElement).value;
+                this.requestUpdate();
               }}"
               class="dropdown"
               style="width: 18.5em;">
@@ -392,7 +394,9 @@ export class KdbNewConnectionView extends LitElement {
             <vscode-button
               aria-label="Create Label"
               appearance="primary"
-              @click="${this.createLabel}">
+              @click="${this.createLabel}"
+              ?disabled="${this.newLblName === "" ||
+              this.newLblColorName === ""}">
               Create
             </vscode-button>
           </div>
