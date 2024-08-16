@@ -44,6 +44,7 @@ import { InsightsConnection } from "../classes/insightsConnection";
 import {
   getWorkspaceLabels,
   getWorkspaceLabelsConnMap,
+  isLabelContentChanged,
   isLabelEmpty,
   retrieveConnLabelsNames,
 } from "../utils/connLabel";
@@ -824,7 +825,9 @@ export class LabelNode extends TreeItem {
       source.name,
       isLabelEmpty(source.name)
         ? TreeItemCollapsibleState.None
-        : TreeItemCollapsibleState.Collapsed,
+        : isLabelContentChanged(source.name)
+          ? TreeItemCollapsibleState.Expanded
+          : TreeItemCollapsibleState.Collapsed,
     );
     this.contextValue = "label";
   }

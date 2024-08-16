@@ -87,6 +87,7 @@ export namespace ext {
   export const kdbConnectionAliasList: string[] = [];
   export const connLabelList: Labels[] = [];
   export const labelConnMapList: ConnectionLabel[] = [];
+  export const latestLblsChanged: string[] = [];
   export const maxRetryCount = 5;
 
   export let secretSettings: AuthSettings;
