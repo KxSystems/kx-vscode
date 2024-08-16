@@ -821,14 +821,8 @@ export class LabelNode extends TreeItem {
   readonly children: TreeItem[] = [];
 
   constructor(public readonly source: Labels) {
-    super(
-      source.name,
-      isLabelEmpty(source.name)
-        ? TreeItemCollapsibleState.None
-        : isLabelContentChanged(source.name)
-          ? TreeItemCollapsibleState.Expanded
-          : TreeItemCollapsibleState.Collapsed,
-    );
+    super(source.name);
+    this.collapsibleState = this.getCollapsibleState(source.name);
     this.contextValue = "label";
   }
 
@@ -852,4 +846,14 @@ export class LabelNode extends TreeItem {
       `label-${this.source.color.name.toLowerCase()}.svg`,
     ),
   };
+
+  getCollapsibleState(labelName: string): TreeItemCollapsibleState {
+    if (isLabelEmpty(labelName)) {
+      return TreeItemCollapsibleState.None;
+    }
+    if (isLabelContentChanged(labelName)) {
+      return TreeItemCollapsibleState.Expanded;
+    }
+    return TreeItemCollapsibleState.Collapsed;
+  }
 }
