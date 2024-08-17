@@ -662,7 +662,7 @@ export class InsightsMetaNode extends TreeItem {
       "..",
       "..",
       "resources",
-      "metaIcons",
+      "light",
       "metaicon.svg",
     ),
     dark: path.join(
@@ -670,7 +670,7 @@ export class InsightsMetaNode extends TreeItem {
       "..",
       "..",
       "resources",
-      "metaIcons",
+      "dark",
       "metaicon.svg",
     ),
   };
@@ -771,7 +771,7 @@ export class MetaObjectPayloadNode extends TreeItem {
       "..",
       "..",
       "resources",
-      "metaIcons",
+      "light",
       `${this.coreIcon}.svg`,
     ),
     dark: path.join(
@@ -779,7 +779,7 @@ export class MetaObjectPayloadNode extends TreeItem {
       "..",
       "..",
       "resources",
-      "metaIcons",
+      "dark",
       `${this.coreIcon}.svg`,
     ),
   };
