@@ -701,9 +701,16 @@ export class QNamespaceNode extends TreeItem {
       "..",
       "resources",
       "light",
-      "p-file.svg",
+      "namespaces.svg",
     ),
-    dark: path.join(__filename, "..", "..", "resources", "dark", "p-file.svg"),
+    dark: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "dark",
+      "namespaces.svg",
+    ),
   };
   contextValue = "ns";
 }
@@ -732,7 +739,7 @@ export class QCategoryNode extends TreeItem {
       "..",
       "resources",
       "light",
-      "p-folder.svg",
+      `${this.label.toLowerCase()}.svg`,
     ),
     dark: path.join(
       __filename,
@@ -740,7 +747,7 @@ export class QCategoryNode extends TreeItem {
       "..",
       "resources",
       "dark",
-      "p-folder.svg",
+      `${this.label.toLowerCase()}.svg`,
     ),
   };
   contextValue = this.ns; // "category";
