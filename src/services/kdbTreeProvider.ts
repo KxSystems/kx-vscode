@@ -563,6 +563,7 @@ export class KdbNode extends TreeItem {
       "..",
       "..",
       "resources",
+      "light",
       "p-q-connection" + getServerIconState(this.label) + ".svg",
     ),
     dark: path.join(
@@ -570,6 +571,7 @@ export class KdbNode extends TreeItem {
       "..",
       "..",
       "resources",
+      "dark",
       "p-q-connection" + getServerIconState(this.label) + ".svg",
     ),
   };
@@ -620,12 +622,14 @@ export class InsightsNode extends TreeItem {
       : "";
   }
 
+  // TODO
   iconPath = {
     light: path.join(
       __filename,
       "..",
       "..",
       "resources",
+      "light",
       "p-insights" + getServerIconState(this.label) + ".svg",
     ),
     dark: path.join(
@@ -633,6 +637,7 @@ export class InsightsNode extends TreeItem {
       "..",
       "..",
       "resources",
+      "dark",
       "p-insights" + getServerIconState(this.label) + ".svg",
     ),
   };

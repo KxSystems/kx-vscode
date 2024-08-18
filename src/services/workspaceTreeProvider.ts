@@ -98,9 +98,11 @@ export class FileTreeItem extends TreeItem {
         state = getWorkspaceIconsState(connection.label);
       }
     }
+    // TODO
     this.iconPath = Path.join(
       __filename,
-      "../".repeat(2),
+      "..",
+      "..",
       "resources",
       this.baseIcon + state + ".svg",
     );
