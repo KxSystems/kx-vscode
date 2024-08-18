@@ -622,7 +622,6 @@ export class InsightsNode extends TreeItem {
       : "";
   }
 
-  // TODO
   iconPath = {
     light: path.join(
       __filename,

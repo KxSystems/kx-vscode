@@ -495,8 +495,8 @@
           ".quke"
         ],
         "icon": {
-          "dark": "./resources/scratchpad.svg",
-          "light": "./resources/scratchpad.svg"
+          "dark": "./resources/dark/scratchpad.svg",
+          "light": "./resources/light/scratchpad.svg"
         },
         "configuration": "./language-configuration.json"
       },
