@@ -165,4 +165,37 @@ export const newConnectionStyles = css`
   .text-field.larger {
     width: 20em;
   }
+
+  .modal {
+    position: fixed;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--vscode-editor-background);
+    color: var(--vscode-editor-foreground);
+    padding: 1rem;
+    z-index: 1001;
+    border: 1px solid var(--vscode-editorWidget-border);
+    box-shadow: 0 2px 10px var(--vscode-widget-shadow);
+  }
+
+  .modal-content h2 {
+    color: var(--vscode-editor-foreground);
+  }
+  vscode-text-field,
+  vscode-dropdown,
+  vscode-button {
+    --vscode-input-background: var(--vscode-editor-background);
+    --vscode-input-foreground: var(--vscode-editor-foreground);
+    --vscode-input-border: var(--vscode-editorWidget-border);
+  }
+
+  .overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+  }
 `;

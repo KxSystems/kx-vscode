@@ -19,7 +19,7 @@ import { createDefaultDataSourceFile } from "../../src/models/dataSource";
 import { DataSourcesPanel } from "../../src/panels/datasource";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as utils from "../../src/utils/execution";
-import { InsightsNode } from "../../src/services/kdbTreeProvider";
+import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import { TreeItemCollapsibleState } from "vscode";
 import { NewConnectionPannel } from "../../src/panels/newConnection";
 import { InsightsConnection } from "../../src/classes/insightsConnection";
@@ -446,23 +446,68 @@ describe("WebPanels", () => {
 
   describe("kdbNewConnectionPanel", () => {
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
+    const insightsNode = new InsightsNode(
+      [],
+      "insightsnode1",
+      {
+        server: "insightsservername",
+        alias: "insightsserveralias",
+        auth: true,
+      },
+      TreeItemCollapsibleState.None,
+    );
 
-    beforeEach(() => {
-      NewConnectionPannel.render(uriTest);
-    });
+    const kdbNode = new KdbNode(
+      [],
+      "kdbnode1",
+      {
+        serverName: "kdbservername",
+        serverPort: "kdbserverport",
+        auth: true,
+        serverAlias: "kdbserveralias",
+        managed: false,
+        tls: true,
+      },
+      TreeItemCollapsibleState.None,
+    );
+
+    const localNode = new KdbNode(
+      [],
+      "local",
+      {
+        serverName: "kdbservername",
+        serverPort: "kdbserverport",
+        auth: false,
+        serverAlias: "local",
+        managed: true,
+        tls: false,
+      },
+      TreeItemCollapsibleState.None,
+    );
 
     afterEach(() => {
       NewConnectionPannel.close();
     });
 
     it("should create a new panel", () => {
+      NewConnectionPannel.render(uriTest);
       assert.ok(
         NewConnectionPannel.currentPanel,
         "NewConnectionPannel.currentPanel should be truthy",
       );
     });
 
+    it("should close teh panel if open", () => {
+      NewConnectionPannel.render(uriTest);
+      NewConnectionPannel.render(uriTest);
+      assert.ok(
+        !NewConnectionPannel.currentPanel,
+        "NewConnectionPannel.currentPanel should be falsy",
+      );
+    });
+
     it("should close", () => {
+      NewConnectionPannel.render(uriTest);
       NewConnectionPannel.close();
       assert.strictEqual(
         NewConnectionPannel.currentPanel,
@@ -472,11 +517,51 @@ describe("WebPanels", () => {
     });
 
     it("should make sure the Create New Connection panel is rendered, check if the web component exists", () => {
+      NewConnectionPannel.render(uriTest);
       const expectedHtml = `<kdb-new-connection-view/>`;
       const actualHtml = NewConnectionPannel.currentPanel._panel.webview.html;
       assert.ok(
         actualHtml.indexOf(expectedHtml) !== -1,
         "Panel HTML should include expected web component",
+      );
+    });
+
+    it("should render panel with edit connection data for insights", () => {
+      NewConnectionPannel.render(uriTest, insightsNode);
+      const expectedHtml = `<kdb-new-connection-view/>`;
+      const actualHtml = NewConnectionPannel.currentPanel._panel.webview.html;
+      assert.ok(
+        actualHtml.indexOf(expectedHtml) !== -1,
+        "Panel HTML should include expected web component",
+      );
+    });
+
+    it("should render panel with edit connection data for kdb", () => {
+      NewConnectionPannel.render(uriTest, kdbNode);
+      const expectedHtml = `<kdb-new-connection-view/>`;
+      const actualHtml = NewConnectionPannel.currentPanel._panel.webview.html;
+      assert.ok(
+        actualHtml.indexOf(expectedHtml) !== -1,
+        "Panel HTML should include expected web component",
+      );
+    });
+
+    it("should render panel with edit connection data for local", () => {
+      NewConnectionPannel.render(uriTest, localNode);
+      const expectedHtml = `<kdb-new-connection-view/>`;
+      const actualHtml = NewConnectionPannel.currentPanel._panel.webview.html;
+      assert.ok(
+        actualHtml.indexOf(expectedHtml) !== -1,
+        "Panel HTML should include expected web component",
+      );
+    });
+
+    it("should refreshLabels", () => {
+      NewConnectionPannel.render(uriTest);
+      NewConnectionPannel.refreshLabels();
+      assert.ok(
+        NewConnectionPannel.currentPanel,
+        "NewConnectionPannel.currentPanel should be truthy",
       );
     });
   });

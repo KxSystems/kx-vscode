@@ -1,9 +1,9 @@
 {
   "name": "kdb",
   "displayName": "kdb",
-  "description": "IDE support for kdb product suite",
+  "description": "IDE support for kdb product suite including the q programming language",
   "publisher": "KX",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "engines": {
     "vscode": "^1.86.0"
   },
@@ -35,6 +35,10 @@
     "onCommand:kdb.newConnection.createNewInsightConnection",
     "onCommand:kdb.newConnection.createNewConnection",
     "onCommand:kdb.newConnection.createNewBundledConnection",
+    "onCommand:kdb.newConnection.editInsightsConnection",
+    "onCommand:kdb.newConnection.editMyQConnection",
+    "onCommand:kdb.newConnection.editBundledConnection",
+    "onCommand:kdb.labels.create",
     "onView:kdb-datasources-explorer",
     "onTerminalProfile:kdb.q-terminal",
     "onLanguage:python"
@@ -50,7 +54,7 @@
           {
             "id": "install",
             "title": "Register, acquire license and download the q runtime",
-            "description": " \n[Install runtime](command:kdb.installTools)\n[Ignore/hide this help](command:kdb.hideWalkthrough)",
+            "description": " \n[Install runtime](command:kdb.installTools)",
             "media": {
               "image": "resources/kx_install.png",
               "altText": "register"
@@ -63,7 +67,7 @@
           {
             "id": "view",
             "title": "q runtime installed",
-            "description": " \n[Ignore/hide this help](command:kdb.hideWalkthrough)",
+            "description": " \n",
             "media": {
               "markdown": "out/qinstall.md"
             },
@@ -176,6 +180,18 @@
           "description": "Connection map for workspace files",
           "default": {},
           "scope": "resource"
+        },
+        "kdb.connectionLabels": {
+          "type": "array",
+          "description": "List of label names and colorset",
+          "default": [],
+          "scope": "resource"
+        },
+        "kdb.labelsConnectionMap": {
+          "type": "array",
+          "description": "Labels connection map",
+          "default": [],
+          "scope": "resource"
         }
       }
     },
@@ -252,6 +268,11 @@
         "command": "kdb.addConnection",
         "title": "New connection...",
         "icon": "$(add)"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.editConnection",
+        "title": "Edit connection"
       },
       {
         "category": "KX",
@@ -395,6 +416,21 @@
         "category": "KX",
         "command": "kdb.toggleParameterCache",
         "title": "KX: Toggle parameter cache"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.renameLabel",
+        "title": "Rename label"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.editLabelColor",
+        "title": "Edit label color"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.deleteLabel",
+        "title": "Delete label"
       }
     ],
     "keybindings": [
@@ -431,13 +467,13 @@
         "command": "kdb.execute.block",
         "key": "ctrl+shift+e",
         "mac": "cmd+shift+e",
-        "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
+        "when": "editorLangId == q"
       },
       {
         "command": "kdb.toggleParameterCache",
         "key": "ctrl+shift+y",
         "mac": "cmd+shift+y",
-        "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
+        "when": "editorLangId == q"
       }
     ],
     "snippets": [
@@ -459,8 +495,8 @@
           ".quke"
         ],
         "icon": {
-          "dark": "./resources/scratchpad.svg",
-          "light": "./resources/scratchpad.svg"
+          "dark": "./resources/dark/scratchpad.svg",
+          "light": "./resources/light/scratchpad.svg"
         },
         "configuration": "./language-configuration.json"
       },
@@ -559,6 +595,10 @@
         },
         {
           "command": "kdb.addConnection",
+          "when": "false"
+        },
+        {
+          "command": "kdb.editConnection",
           "when": "false"
         },
         {
@@ -666,6 +706,11 @@
           "group": "connection@1"
         },
         {
+          "command": "kdb.editConnection",
+          "when": "view == kdb-servers && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
+          "group": "connection@4"
+        },
+        {
           "command": "kdb.active.connection",
           "when": "view == kdb-servers && viewItem in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes) && viewItem not in kdb.connected.active",
           "group": "connection@1"
@@ -724,6 +769,21 @@
           "command": "kdb.deleteFile",
           "when": "(view == kdb-datasource-explorer || view == kdb-scratchpad-explorer) && viewItem == artifact",
           "group": "kdbWorkspace@2"
+        },
+        {
+          "command": "kdb.renameLabel",
+          "when": "view == kdb-servers && viewItem == label",
+          "group": "label@1"
+        },
+        {
+          "command": "kdb.editLabelColor",
+          "when": "view == kdb-servers && viewItem == label",
+          "group": "label@2"
+        },
+        {
+          "command": "kdb.deleteLabel",
+          "when": "view == kdb-servers && viewItem == label",
+          "group": "label@3"
         }
       ],
       "editor/title/run": [
@@ -788,6 +848,18 @@
           "command": "kdb.execute.pythonScratchpadQuery",
           "group": "q@1",
           "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "kdb.execute.fileQuery",
+          "group": "q",
+          "when": "resourceExtname == .q"
+        },
+        {
+          "command": "kdb.execute.pythonFileScratchpadQuery",
+          "group": "q",
+          "when": "resourceExtname == .py"
         }
       ]
     },
@@ -875,7 +947,7 @@
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "@windozer/node-q": "^2.6.0",
     "ag-grid-community": "^32.0.1",
-    "axios": "^1.7.2",
+    "axios": "^1.7.4",
     "chevrotain": "^10.5.0",
     "csv-parser": "^3.0.0",
     "extract-zip": "^2.0.1",

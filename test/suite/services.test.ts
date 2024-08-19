@@ -39,6 +39,7 @@ import {
   InsightsNode,
   KdbNode,
   KdbTreeProvider,
+  LabelNode,
   MetaObjectPayloadNode,
   QCategoryNode,
   QNamespaceNode,
@@ -63,6 +64,7 @@ import * as utils from "../../src/utils/getUri";
 import { MetaInfoType, MetaObject } from "../../src/models/meta";
 import { CompletionProvider } from "../../src/services/completionProvider";
 import { MetaContentProvider } from "../../src/services/metaContentProvider";
+import { ConnectionLabel, Labels } from "../../src/models/labels";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -605,6 +607,18 @@ describe("kdbTreeProvider", () => {
     );
   });
 
+  it("Should return a new LabelNode", () => {
+    const labelNode = new LabelNode({
+      name: "White",
+      color: { name: "White", colorHex: "#CCCCCC" },
+    });
+    assert.strictEqual(
+      labelNode.label,
+      "White",
+      "LabelNode node creation failed",
+    );
+  });
+
   describe("InsightsMetaNode", () => {
     it("should initialize fields correctly", () => {
       const node = new InsightsMetaNode(
@@ -709,6 +723,24 @@ describe("kdbTreeProvider", () => {
       const result = await kdbProvider.getChildren(metaNode);
       assert.notStrictEqual(result, undefined);
     });
+
+    it("should return label node", async () => {
+      const labels: Labels[] = [
+        { name: "label1", color: { name: "red", colorHex: "#FF0000" } },
+      ];
+      const conns: ConnectionLabel[] = [
+        {
+          labelName: "label1",
+          connections: ["testServerAlias", "testInsightsAlias"],
+        },
+      ];
+      sinon.stub(workspace, "getConfiguration").value(() => ({
+        get: (v: string) => (v === "kdb.connectionLabels" ? labels : conns),
+      }));
+      const provider = new KdbTreeProvider(servers, insights);
+      const result = await provider.getChildren();
+      assert.strictEqual(result.length, 1);
+    });
   });
 });
 
@@ -726,13 +758,18 @@ describe("Code flow login service tests", () => {
 
   it("Should return a correct login", async () => {
     sinon.stub(codeFlow, "signIn").returns(token);
-    const result = await signIn("http://localhost", "insights");
+    const result = await signIn("http://localhost", "insights", false);
     assert.strictEqual(result, token, "Invalid token returned");
   });
 
   it("Should execute a correct logout", async () => {
     sinon.stub(axios, "post").resolves(Promise.resolve({ data: token }));
-    const result = await signOut("http://localhost", "insights", "token");
+    const result = await signOut(
+      "http://localhost",
+      "insights",
+      false,
+      "token",
+    );
     assert.strictEqual(result, undefined, "Invalid response from logout");
   });
 
@@ -741,6 +778,7 @@ describe("Code flow login service tests", () => {
     const result = await refreshToken(
       "http://localhost",
       "insights",
+      false,
       JSON.stringify(token),
     );
     assert.strictEqual(
@@ -751,7 +789,7 @@ describe("Code flow login service tests", () => {
   });
 
   it("Should not return token from secret store", async () => {
-    const result = await getCurrentToken("", "testalias", "insights");
+    const result = await getCurrentToken("", "testalias", "insights", false);
     assert.strictEqual(
       result,
       undefined,
@@ -760,7 +798,7 @@ describe("Code flow login service tests", () => {
   });
 
   it("Should not return token from secret store", async () => {
-    const result = await getCurrentToken("testserver", "", "insights");
+    const result = await getCurrentToken("testserver", "", "insights", false);
     assert.strictEqual(
       result,
       undefined,
@@ -772,7 +810,7 @@ describe("Code flow login service tests", () => {
     sinon.stub(env, "openExternal").value(async () => {
       throw new Error();
     });
-    await assert.rejects(() => signIn("http://127.0.0.1", "insights"));
+    await assert.rejects(() => signIn("http://127.0.0.1", "insights", false));
   });
 });
 

@@ -2,6 +2,23 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.7.0
+
+### Enhancements
+
+- Now it's possible to edit existing connections
+- Dialog offering to reconnect to connection that was edited (if the connection was connected)
+- Added labels for connections
+- Ability to connect Insights servers with self signed SSL certificate
+
+### Fixes
+
+- https is prefixed for unschemed Insights server urls
+- Use the custom editor to open datasource when renaming or deleting
+- Removed unnecessary buttons in walkthrough
+- Fixed toggle parameter cache doesn't work in workbooks
+- Fixed files can't be executed from entity tree
+
 # v1.6.1
 
 ### Fixes

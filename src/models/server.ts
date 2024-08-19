@@ -21,7 +21,7 @@ export interface ServerDetails {
   serverName: string;
   serverPort: string;
   auth: boolean;
-  serverAlias: string | undefined;
+  serverAlias: string;
   managed: boolean;
   tls: boolean;
   username?: string;

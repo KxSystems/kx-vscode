@@ -53,7 +53,6 @@ import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider"
 import { GetDataError } from "../../src/models/data";
 import * as clientCommand from "../../src/commands/clientCommands";
 import { LanguageClient } from "vscode-languageclient/node";
-import { MetaContentProvider } from "../../src/services/metaContentProvider";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
@@ -942,6 +941,30 @@ describe("serverCommand", () => {
     sinon.restore();
   });
 
+  it("should call the Edit Connection Panel Renderer", async () => {
+    const newConnectionPanelStub = sinon.stub(NewConnectionPannel, "render");
+    ext.context = <vscode.ExtensionContext>{};
+    await serverCommand.editConnection(kdbNode);
+    sinon.assert.calledOnce(newConnectionPanelStub);
+    sinon.restore();
+  });
+
+  describe("isConnected", () => {
+    let connMngServiceMock: sinon.SinonStubbedInstance<ConnectionManagementService>;
+
+    beforeEach(() => {
+      connMngServiceMock = sinon.createStubInstance(
+        ConnectionManagementService,
+      );
+    });
+
+    it("deve retornar false quando isConnected do ConnectionManagementService retornar false", () => {
+      connMngServiceMock.isConnected.returns(false);
+      const result = serverCommand.isConnected("127.0.0.1:6812 [CONNLABEL]");
+      assert.deepStrictEqual(result, false);
+    });
+  });
+
   describe("addInsightsConnection", () => {
     let insightsData: InsightDetails;
     let updateInsightsStub, getInsightsStub: sinon.SinonStub;
@@ -962,7 +985,7 @@ describe("serverCommand", () => {
     });
     it("should add new Insights connection", async () => {
       getInsightsStub.returns({});
-      await serverCommand.addInsightsConnection(insightsData);
+      await serverCommand.addInsightsConnection(insightsData, ["lblTest"]);
       sinon.assert.calledOnce(updateInsightsStub);
       windowMock
         .expects("showInformationMessage")
@@ -984,16 +1007,6 @@ describe("serverCommand", () => {
         .expects("showErrorMessage")
         .once()
         .withArgs("Invalid Insights connection");
-    });
-    it("should add connection where alias is not provided", async () => {
-      insightsData.alias = "";
-      getInsightsStub.returns({});
-      await serverCommand.addInsightsConnection(insightsData);
-      sinon.assert.calledOnce(updateInsightsStub);
-      windowMock
-        .expects("showInformationMessage")
-        .once()
-        .withArgs("Insights connection added successfully");
     });
   });
 
@@ -1022,7 +1035,7 @@ describe("serverCommand", () => {
 
     it("should add new Kdb connection", async () => {
       getServersStub.returns({});
-      await serverCommand.addKdbConnection(kdbData);
+      await serverCommand.addKdbConnection(kdbData, false, ["lblTest"]);
       sinon.assert.calledOnce(updateServersStub);
       windowMock
         .expects("showInformationMessage")
@@ -1045,15 +1058,13 @@ describe("serverCommand", () => {
         .once()
         .withArgs("Invalid Kdb connection");
     });
-    it("should add connection where alias is not provided", async () => {
+    it("should show error message if connection where alias is not provided", async () => {
       kdbData.serverAlias = "";
-      getServersStub.returns({});
       await serverCommand.addKdbConnection(kdbData);
-      sinon.assert.calledOnce(updateServersStub);
       windowMock
-        .expects("showInformationMessage")
+        .expects("showErrorMessage")
         .once()
-        .withArgs("Kdb connection added successfully");
+        .withArgs("Server Name is required");
     });
     it("should give error if alias is local and isLocal is false", async () => {
       kdbData.serverAlias = "local";

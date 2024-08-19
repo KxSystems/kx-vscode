@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Install Node.js
@@ -29,13 +29,13 @@ jobs:
       - name: Packaging
         run: npm run package
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: KDB-VSCode-Extension
           path: ./kdb-*vsix
           retention-days: 1
       - name: Upload lcov result for app-sec job
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: lcov
           path: coverage-reports/lcov.info
@@ -58,11 +58,11 @@ jobs:
           VERSION=${{ github.ref_name }}
           echo "run_tag=$(echo ${VERSION:1})" >> $GITHUB_OUTPUT
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Download VSIX file from build job
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: KDB-VSCode-Extension
       - name: Get Body
@@ -102,7 +102,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - name: Install Node.js

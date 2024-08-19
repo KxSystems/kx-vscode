@@ -46,8 +46,21 @@ export class ConnectionManagementService {
     connLabel: string,
   ): LocalConnection | InsightsConnection | undefined {
     return ext.connectedConnectionList.find(
-      (connection: LocalConnection | InsightsConnection) =>
-        connLabel === connection.connLabel,
+      (connection: LocalConnection | InsightsConnection) => {
+        if (!connLabel) {
+          return false;
+        }
+        const escapedConnLabel = connLabel.replace(
+          /[-[\]{}()*+?.,\\^$|#\s]/g,
+          "\\$&",
+        );
+        const regex = new RegExp(
+          `\\d+\\.\\d+\\.\\d+\\.\\d+:\\d+ \\[${escapedConnLabel}\\]`,
+        );
+        return (
+          connLabel === connection.connLabel || regex.test(connection.connLabel)
+        );
+      },
     );
   }
 
@@ -56,7 +69,17 @@ export class ConnectionManagementService {
   }
 
   public isConnected(connLabel: string): boolean {
-    return ext.connectedContextStrings.includes(connLabel);
+    const escapedConnLabel = connLabel.replace(
+      /[-[\]{}()*+?.,\\^$|#\s]/g,
+      "\\$&",
+    );
+    const regex = new RegExp(
+      `\\d+\\.\\d+\\.\\d+\\.\\d+:\\d+ \\[${escapedConnLabel}\\]`,
+    );
+    return (
+      ext.connectedContextStrings.includes(connLabel) ||
+      ext.connectedContextStrings.some((context) => regex.test(context))
+    );
   }
 
   public retrieveLocalConnectionString(connection: KdbNode): string {
@@ -153,7 +176,7 @@ export class ConnectionManagementService {
 
   public disconnect(connLabel: string): void {
     const connection = this.retrieveConnectedConnection(connLabel);
-    const connectionNode = this.retrieveConnection(connLabel);
+    const connectionNode = this.retrieveConnection(connection?.connLabel ?? "");
     if (!connection || !connectionNode) {
       return;
     }

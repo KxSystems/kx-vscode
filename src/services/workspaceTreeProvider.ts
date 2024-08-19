@@ -98,12 +98,25 @@ export class FileTreeItem extends TreeItem {
         state = getWorkspaceIconsState(connection.label);
       }
     }
-    this.iconPath = Path.join(
-      __filename,
-      "../".repeat(2),
-      "resources",
-      this.baseIcon + state + ".svg",
-    );
+
+    this.iconPath = {
+      light: Path.join(
+        __filename,
+        "..",
+        "..",
+        "resources",
+        "light",
+        this.baseIcon + state + ".svg",
+      ),
+      dark: Path.join(
+        __filename,
+        "..",
+        "..",
+        "resources",
+        "dark",
+        this.baseIcon + state + ".svg",
+      ),
+    };
   }
 
   private getFileIconType(fileName: string) {

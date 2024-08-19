@@ -41,6 +41,14 @@ import {
 } from "../utils/core";
 import { ConnectionManagementService } from "./connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
+import {
+  getWorkspaceLabels,
+  getWorkspaceLabelsConnMap,
+  isLabelContentChanged,
+  isLabelEmpty,
+  retrieveConnLabelsNames,
+} from "../utils/connLabel";
+import { Labels } from "../models/labels";
 
 export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: EventEmitter<
@@ -92,15 +100,38 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   }
 
   async getChildren(element?: TreeItem): Promise<TreeItem[]> {
-    if (!this.serverList) {
-      return Promise.resolve([]);
-    }
-    if (!this.insightsList) {
-      return Promise.resolve([]);
+    if (!this.serverList || !this.insightsList) {
+      return [];
     }
 
     if (!element) {
-      return Promise.resolve(this.getMergedElements(element));
+      getWorkspaceLabels();
+      getWorkspaceLabelsConnMap();
+
+      const orphans: TreeItem[] = [];
+      const nodes = ext.connLabelList.map((label) => new LabelNode(label));
+      const items = this.getMergedElements(element);
+
+      let orphan, found;
+      for (const item of items) {
+        orphan = true;
+        if (item instanceof KdbNode || item instanceof InsightsNode) {
+          const labels = retrieveConnLabelsNames(item);
+          for (const label of labels) {
+            found = nodes.find((node) => label === node.source.name);
+            if (found) {
+              found.children.push(item);
+              orphan = false;
+            }
+          }
+        }
+        if (orphan) {
+          orphans.push(item);
+        }
+      }
+      return [...orphans, ...nodes];
+    } else if (element instanceof LabelNode) {
+      return element.children;
     } else if (
       element.contextValue !== undefined &&
       ext.kdbrootNodes.indexOf(element.contextValue) !== -1
@@ -527,22 +558,7 @@ export class KdbNode extends TreeItem {
       : "";
   }
 
-  iconPath = {
-    light: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "p-q-connection" + getServerIconState(this.label) + ".svg",
-    ),
-    dark: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "p-q-connection" + getServerIconState(this.label) + ".svg",
-    ),
-  };
+  iconPath = getNamedIconPath("p-q-connection", this.label);
 
   contextValue = this.label; // "root";
 }
@@ -590,22 +606,7 @@ export class InsightsNode extends TreeItem {
       : "";
   }
 
-  iconPath = {
-    light: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "p-insights" + getServerIconState(this.label) + ".svg",
-    ),
-    dark: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "p-insights" + getServerIconState(this.label) + ".svg",
-    ),
-  };
+  iconPath = getNamedIconPath("p-insights", this.label);
 
   contextValue = this.label; // "root";
 }
@@ -632,7 +633,7 @@ export class InsightsMetaNode extends TreeItem {
       "..",
       "..",
       "resources",
-      "metaIcons",
+      "light",
       "metaicon.svg",
     ),
     dark: path.join(
@@ -640,7 +641,7 @@ export class InsightsMetaNode extends TreeItem {
       "..",
       "..",
       "resources",
-      "metaIcons",
+      "dark",
       "metaicon.svg",
     ),
   };
@@ -671,9 +672,16 @@ export class QNamespaceNode extends TreeItem {
       "..",
       "resources",
       "light",
-      "p-file.svg",
+      "namespaces.svg",
     ),
-    dark: path.join(__filename, "..", "..", "resources", "dark", "p-file.svg"),
+    dark: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "dark",
+      "namespaces.svg",
+    ),
   };
   contextValue = "ns";
 }
@@ -702,7 +710,7 @@ export class QCategoryNode extends TreeItem {
       "..",
       "resources",
       "light",
-      "p-folder.svg",
+      `${this.label.toLowerCase()}.svg`,
     ),
     dark: path.join(
       __filename,
@@ -710,7 +718,7 @@ export class QCategoryNode extends TreeItem {
       "..",
       "resources",
       "dark",
-      "p-folder.svg",
+      `${this.label.toLowerCase()}.svg`,
     ),
   };
   contextValue = this.ns; // "category";
@@ -734,7 +742,7 @@ export class MetaObjectPayloadNode extends TreeItem {
       "..",
       "..",
       "resources",
-      "metaIcons",
+      "light",
       `${this.coreIcon}.svg`,
     ),
     dark: path.join(
@@ -742,7 +750,7 @@ export class MetaObjectPayloadNode extends TreeItem {
       "..",
       "..",
       "resources",
-      "metaIcons",
+      "dark",
       `${this.coreIcon}.svg`,
     ),
   };
@@ -784,4 +792,68 @@ export class QServerNode extends TreeItem {
     ),
   };
   contextValue = this.label;
+}
+
+export class LabelNode extends TreeItem {
+  readonly children: TreeItem[] = [];
+  static id = 0;
+
+  constructor(public readonly source: Labels) {
+    super(source.name);
+    this.id = "LabelNode" + LabelNode.id++;
+    this.collapsibleState = this.getCollapsibleState(source.name);
+    this.contextValue = "label";
+  }
+
+  iconPath = {
+    light: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "light",
+      "labels",
+      `label-${this.source.color.name.toLowerCase()}.svg`,
+    ),
+    dark: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "dark",
+      "labels",
+      `label-${this.source.color.name.toLowerCase()}.svg`,
+    ),
+  };
+
+  getCollapsibleState(labelName: string): TreeItemCollapsibleState {
+    if (isLabelEmpty(labelName)) {
+      return TreeItemCollapsibleState.None;
+    }
+    if (isLabelContentChanged(labelName)) {
+      return TreeItemCollapsibleState.Expanded;
+    }
+    return TreeItemCollapsibleState.Collapsed;
+  }
+}
+
+function getNamedIconPath(name: string, label: string) {
+  return {
+    light: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "light",
+      name + getServerIconState(label) + ".svg",
+    ),
+    dark: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "dark",
+      name + getServerIconState(label) + ".svg",
+    ),
+  };
 }
