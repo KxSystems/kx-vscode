@@ -557,24 +557,7 @@ export class KdbNode extends TreeItem {
       : "";
   }
 
-  iconPath = {
-    light: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "light",
-      "p-q-connection" + getServerIconState(this.label) + ".svg",
-    ),
-    dark: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "dark",
-      "p-q-connection" + getServerIconState(this.label) + ".svg",
-    ),
-  };
+  iconPath = getNamedIconPath("p-q-connection", this.label);
 
   contextValue = this.label; // "root";
 }
@@ -622,24 +605,7 @@ export class InsightsNode extends TreeItem {
       : "";
   }
 
-  iconPath = {
-    light: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "light",
-      "p-insights" + getServerIconState(this.label) + ".svg",
-    ),
-    dark: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "dark",
-      "p-insights" + getServerIconState(this.label) + ".svg",
-    ),
-  };
+  iconPath = getNamedIconPath("p-insights", this.label);
 
   contextValue = this.label; // "root";
 }
@@ -858,6 +824,27 @@ export class LabelNode extends TreeItem {
       "dark",
       "labels",
       `label-${this.source.color.name.toLowerCase()}.svg`,
+    ),
+  };
+}
+
+function getNamedIconPath(name: string, label: string) {
+  return {
+    light: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "light",
+      name + getServerIconState(label) + ".svg",
+    ),
+    dark: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "dark",
+      name + getServerIconState(label) + ".svg",
     ),
   };
 }
