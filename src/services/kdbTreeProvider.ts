@@ -819,9 +819,11 @@ export class QServerNode extends TreeItem {
 
 export class LabelNode extends TreeItem {
   readonly children: TreeItem[] = [];
+  static id = 0;
 
   constructor(public readonly source: Labels) {
     super(source.name);
+    this.id = "LabelNode" + LabelNode.id++;
     this.collapsibleState = this.getCollapsibleState(source.name);
     this.contextValue = "label";
   }
