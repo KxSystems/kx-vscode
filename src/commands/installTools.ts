@@ -307,36 +307,32 @@ export async function startLocalProcessByServerName(
     workspace.getConfiguration().get<string>("kdb.qHomeDirectory")!,
   );
 
-  await addLocalConnectionStatus(serverName);
-  await executeCommand(
-    workingDirectory,
-    "q",
-    saveLocalProcessObj,
-    "-p",
-    port.toString(),
-    index,
-  );
+  try {
+    await addLocalConnectionStatus(serverName);
+    await executeCommand(
+      workingDirectory,
+      "q",
+      saveLocalProcessObj,
+      "-p",
+      port.toString(),
+      index,
+    );
+  } catch (e) {
+    await removeLocalConnectionStatus(serverName);
+    window.showErrorMessage("Error starting q process.");
+  }
 }
 
 export async function startLocalProcess(viewItem: KdbNode): Promise<void> {
-  const workingDirectory = await getWorkspaceFolder(
-    workspace.getConfiguration().get<string>("kdb.qHomeDirectory")!,
-  );
-
-  await addLocalConnectionStatus(`${getServerName(viewItem.details)}`);
-  await executeCommand(
-    workingDirectory,
-    "q",
-    saveLocalProcessObj,
-    "-p",
-    viewItem.details.serverPort.toString(),
+  await startLocalProcessByServerName(
+    `${getServerName(viewItem.details)}`,
     viewItem.children[0],
+    parseInt(viewItem.details.serverPort),
   );
 }
 
 export async function stopLocalProcess(viewItem: KdbNode): Promise<void> {
   ext.localProcessObjects[viewItem.children[0]].kill();
-  window.showInformationMessage("q process stopped successfully!");
   kdbOutputLog(
     `Child process id ${ext.localProcessObjects[viewItem.children[0]]
       .pid!} removed in cache.`,
@@ -349,7 +345,6 @@ export async function stopLocalProcessByServerName(
   serverName: string,
 ): Promise<void> {
   ext.localProcessObjects[serverName].kill();
-  window.showInformationMessage("q process stopped successfully!");
   kdbOutputLog(
     `Child process id ${ext.localProcessObjects[serverName].pid!} removed in cache.`,
     "INFO",
