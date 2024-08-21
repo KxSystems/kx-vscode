@@ -484,6 +484,21 @@ describe("KdbNewConnectionView", () => {
       );
     });
 
+    it("should render label dropdown", () => {
+      view.lblNamesList = [
+        { name: "label1", color: { colorHex: "#FF0000" } },
+        { name: "label2", color: { colorHex: "#00FF00" } },
+      ];
+      view.labels = ["label1"];
+
+      const result = view.renderLblsDropdown(0);
+
+      assert.strictEqual(
+        JSON.stringify(result).includes("No Label Selected"),
+        true,
+      );
+    });
+
     it("should render New Label Modal", () => {
       const result = view.renderNewLabelModal();
 
@@ -536,6 +551,38 @@ describe("KdbNewConnectionView", () => {
       assert.strictEqual(view.isBundledQ, true);
       assert.strictEqual(view.serverType, ServerType.KDB);
     });
+  });
+
+  describe("removeBlankLabels", () => {
+    it("should remove blank labels", () => {
+      view.labels = ["label1", ""];
+      view.removeBlankLabels();
+      assert.strictEqual(view.labels.length, 1);
+    });
+
+    it("should not remove blank labels", () => {
+      view.labels = ["label1"];
+      view.removeBlankLabels();
+      assert.strictEqual(view.labels.length, 1);
+    });
+
+    it("should remove duplicate labels", () => {
+      view.labels = ["label1", "label1", "label1"];
+      view.removeBlankLabels();
+      assert.strictEqual(view.labels.length, 1);
+    });
+  });
+
+  it("should add label", () => {
+    view.labels = ["label1"];
+    view.addLabel();
+    assert.strictEqual(view.labels.length, 2);
+  });
+
+  it("should remove label", () => {
+    view.labels = ["label1"];
+    view.removeLabel(0);
+    assert.strictEqual(view.labels.length, 0);
   });
 
   describe("render()", () => {

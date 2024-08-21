@@ -100,6 +100,24 @@ export class KdbNewConnectionView extends LitElement {
     super.disconnectedCallback();
   }
 
+  removeBlankLabels() {
+    this.labels = Array.from(
+      new Set(
+        this.labels.filter((label) => label !== "" && label !== undefined),
+      ),
+    );
+  }
+
+  addLabel() {
+    this.labels.push("");
+    this.requestUpdate();
+  }
+
+  removeLabel(index: number) {
+    this.labels.splice(index, 1);
+    this.requestUpdate();
+  }
+
   get selectConnection(): string {
     if (this.isBundledQ) {
       return "tab-1";
@@ -328,7 +346,37 @@ export class KdbNewConnectionView extends LitElement {
     `;
   }
 
-  renderLblDropdownOptions() {
+  renderLblsDropdown(pos: number) {
+    return html`
+      <div class="lbl-dropdown-container-field-wrapper">
+        <vscode-dropdown
+          id="selectLabel"
+          class="dropdown larger"
+          value="${this.labels[pos]}"
+          current-value="${this.labels[pos]}"
+          @change="${(event: Event) => {
+            this.labels[pos] = (event.target as HTMLInputElement).value;
+            this.requestUpdate();
+          }}">
+          ${this.renderLblDropdownOptions(pos)}
+        </vscode-dropdown>
+        <vscode-button
+          aria-label="Remove Label"
+          appearance="secondary"
+          @click="${() => this.removeLabel(pos)}"
+          >-</vscode-button
+        >
+        <vscode-button
+          aria-label="Add Label"
+          appearance="secondary"
+          @click="${this.addLabel}"
+          >+</vscode-button
+        >
+      </div>
+    `;
+  }
+
+  renderLblDropdownOptions(pos: number) {
     return html`
       <vscode-option> No Label Selected </vscode-option>
       ${repeat(
@@ -337,7 +385,7 @@ export class KdbNewConnectionView extends LitElement {
         (lbl) => html`
           <vscode-option
             .value="${lbl.name}"
-            ?selected="${lbl.name === this.labels[0]}">
+            ?selected="${lbl.name === this.labels[pos]}">
             <span>
               <div
                 style="width: 10px; height: 10px; background: ${lbl.color
@@ -422,19 +470,11 @@ export class KdbNewConnectionView extends LitElement {
       <div class="col gap-0">
         <div class="row option-title">Connection label (optional)</div>
         <div class="row mt-1">
-          <div class="dropdown-container">
+          <div class="dropdown-container lbl-dropdown-container">
             <label for="selectLabel">Label Name</label>
-            <vscode-dropdown
-              id="selectLabel"
-              class="dropdown larger"
-              value="${this.labels[0]}"
-              current-value="${this.labels[0]}"
-              @change="${(event: Event) => {
-                this.labels[0] = (event.target as HTMLInputElement).value;
-                this.requestUpdate();
-              }}">
-              ${this.renderLblDropdownOptions()}
-            </vscode-dropdown>
+            ${this.labels.length === 0
+              ? this.renderLblsDropdown(0)
+              : this.labels.map((_, i) => this.renderLblsDropdown(i))}
           </div>
           ${this.renderNewLblBtn()}
         </div>
@@ -863,6 +903,7 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   private save() {
+    this.removeBlankLabels();
     if (this.isBundledQ) {
       this.vscode.postMessage({
         command: "kdb.newConnection.createNewBundledConnection",
@@ -902,6 +943,7 @@ export class KdbNewConnectionView extends LitElement {
     if (!this.connectionData) {
       return;
     }
+    this.removeBlankLabels();
     if (this.connectionData.connType === 0) {
       this.vscode.postMessage({
         command: "kdb.newConnection.editBundledConnection",
