@@ -334,19 +334,19 @@ describe("KdbNewConnectionView", () => {
   describe("renderServerNameField", () => {
     it("should render server name field for bundled q", () => {
       const result = view.renderServerNameField(ServerType.KDB, true);
-      assert.strictEqual(result.strings[0].includes("Server 1"), false);
+      assert.strictEqual(result.strings[0].includes("Server-1"), false);
     });
 
     it("should render server name field for KDB", () => {
       view.isBundledQ = false;
       const result = view.renderServerNameField(ServerType.KDB);
-      assert.strictEqual(result.strings[0].includes("Server 1"), true);
+      assert.strictEqual(result.strings[0].includes("Server-1"), true);
     });
 
     it("should render server name field for Insights", () => {
       view.isBundledQ = false;
       const result = view.renderServerNameField(ServerType.INSIGHTS, false);
-      assert.strictEqual(result.strings[0].includes("Insights 1"), true);
+      assert.strictEqual(result.strings[0].includes("Insights-1"), true);
     });
   });
 
