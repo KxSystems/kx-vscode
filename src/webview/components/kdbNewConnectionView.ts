@@ -360,7 +360,7 @@ export class KdbNewConnectionView extends LitElement {
             <vscode-text-field
               class="text-field larger option-title"
               value="${this.newLblName}"
-              @change="${(event: Event) => {
+              @keyup="${(event: Event) => {
                 this.newLblName = (event.target as HTMLInputElement).value;
                 this.requestUpdate();
               }}"
