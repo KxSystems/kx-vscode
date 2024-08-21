@@ -32,6 +32,7 @@ import { Insights } from "../models/insights";
 import { Server } from "../models/server";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { MetaInfoType } from "../models/meta";
+import { retrieveConnLabelsNames } from "../utils/connLabel";
 
 export class ConnectionManagementService {
   public retrieveConnection(
@@ -232,6 +233,8 @@ export class ConnectionManagementService {
   }
 
   public isConnectedBehaviour(connNode: KdbNode | InsightsNode): void {
+    ext.latestLblsChanged.length = 0;
+    ext.latestLblsChanged.push(...retrieveConnLabelsNames(connNode));
     ext.connectedContextStrings.push(connNode.label);
     commands.executeCommand(
       "setContext",
