@@ -161,7 +161,7 @@ export class KdbNewConnectionView extends LitElement {
       : serverType === ServerType.KDB
         ? html`<vscode-text-field
             class="text-field larger option-title"
-            placeholder="Server 1"
+            placeholder="Server-1"
             value="${this.kdbServer.serverAlias}"
             @input="${(event: Event) =>
               (this.kdbServer.serverAlias = (
@@ -171,7 +171,7 @@ export class KdbNewConnectionView extends LitElement {
           </vscode-text-field>`
         : html`<vscode-text-field
             class="text-field larger option-title"
-            placeholder="Insights 1"
+            placeholder="Insights-1"
             value="${this.insightsServer.alias}"
             @input="${(event: Event) =>
               (this.insightsServer.alias = (
