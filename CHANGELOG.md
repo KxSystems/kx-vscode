@@ -10,6 +10,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Dialog offering to reconnect to connection that was edited (if the connection was connected)
 - Added labels for connections
 - Ability to connect Insights servers with self signed SSL certificate
+- Updated KDB+ process icons
 
 ### Fixes
 
@@ -18,6 +19,13 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Removed unnecessary buttons in walkthrough
 - Fixed toggle parameter cache doesn't work in workbooks
 - Fixed files can't be executed from entity tree
+- Fixed output pane doesn't work after connection idle
+- Fixed incorrect behaviour on q process startup failure
+- Fixed datasource icon discrepancy between views
+
+### Internal Improvements
+
+- Fixed axios security vulnerability
 
 # v1.6.1
 
