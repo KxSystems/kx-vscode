@@ -231,7 +231,7 @@ You can refresh the meta data view at any time by choosing **Refresh meta data**
 
 ## Edit Connections
 
-To edit an existing connection, simply right-click the connection you wish to edit and select the **Edit connection** option.
+To edit an existing connection, right-click the connection you wish to edit and select the **Edit connection** option.
 
 ![Edit connection option](https://github.com/KxSystems/kx-vscode/blob/main/img/select-edit-connection.png?raw=true)
 
@@ -241,7 +241,7 @@ To edit an existing connection, simply right-click the connection you wish to ed
 
 ### Edit Bundle q connection
 
-When you select to edit an **Bundled q** connection, you can edit the following properties:
+When editing a **Bundled q** connection, you can edit the following properties
 
 | Property               | Description                                                                                                                                                                                        |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -254,7 +254,7 @@ When you select to edit an **Bundled q** connection, you can edit the following 
 
 ### Edit My q connection
 
-When you select to edit an **My q** connection, you can edit the following properties:
+When editing a **My q** connection, you can edit the following properties:
 
 | Property               | Description                                                                                                                                                                                                                          |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -271,7 +271,7 @@ When you select to edit an **My q** connection, you can edit the following prope
 
 ### Edit Insights connection
 
-When you select to edit an **Insights** connection, you can edit the following properties:
+When editing a **Insights** connection, you can edit the following properties:
 
 | Property               | Description                                                                                                                                                                                                                          |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -319,7 +319,7 @@ Right-click the label at Connection Tree and select **Rename label**.
 
 ![Rename Label Opt](https://github.com/KxSystems/kx-vscode/blob/main/img/labels-rename-opt.png?raw=true)
 
-A prompt will be displayed at the top of the screen with the field to edit the name of the Label.
+A prompt is displayed at the top of the screen where you can edit the name of the Label.
 
 ![Rename Label](https://github.com/KxSystems/kx-vscode/blob/main/img/labels-rename.png?raw=true)
 
@@ -329,7 +329,7 @@ Right-click the label at Connection Tree and select **Edit label color**.
 
 ![Edit Label Color Opt](https://github.com/KxSystems/kx-vscode/blob/main/img/labels-edit-color-opt.png?raw=true)
 
-A prompt will be displayed at the top of the screen with the field to edit the color of the Label.
+A prompt is displayed at the top of the screen where you can edit the color of the Label.
 
 ![Edit Label Color](https://github.com/KxSystems/kx-vscode/blob/main/img/labels-edit-color.png?raw=true)
 
@@ -339,7 +339,7 @@ Right-click the label at Connection Tree and select **Delete label**.
 
 ![Delete Label Opt](https://github.com/KxSystems/kx-vscode/blob/main/img/labels-delete-opt.png?raw=true)
 
-> The connections assign to the Label will **not be deleted**.
+> Connections assigned to the Label are **not deleted**.
 
 ## kdb language server
 
