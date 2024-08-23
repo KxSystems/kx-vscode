@@ -24,6 +24,7 @@ import { InsightDetails } from "../../src/models/insights";
 import {
   DataSourceCommand,
   DataSourceMessage2,
+  EditConnectionMessage,
 } from "../../src/models/messages";
 import {
   DataSourceTypes,
@@ -866,6 +867,42 @@ describe("KdbNewConnectionView", () => {
       assert.ok(result);
       view.serverType = ServerType.INSIGHTS;
       view.save();
+      assert.ok(result);
+      sinon.restore();
+    });
+  });
+
+  describe("edit", () => {
+    const editConn: EditConnectionMessage = {
+      connType: 0,
+      serverName: "test",
+      serverAddress: "127.0.0.1",
+    };
+
+    it("should post a message", () => {
+      const api = acquireVsCodeApi();
+      let result: any;
+      sinon.stub(api, "postMessage").value(({ command, data }) => {
+        if (
+          command === "kdb.newConnection.editMyQConnection" ||
+          command === "kdb.newConnection.editInsightsConnection" ||
+          command === "kdb.newConnection.editBundledConnection"
+        ) {
+          result = data;
+        }
+      });
+      view.editConnection();
+      assert.ok(!result);
+      view.connectionData = editConn;
+      view.editConnection();
+      assert.ok(result);
+      editConn.connType = 1;
+      view.connectionData = editConn;
+      view.editConnection();
+      assert.ok(result);
+      editConn.connType = 2;
+      view.connectionData = editConn;
+      view.editConnection();
       assert.ok(result);
       sinon.restore();
     });
