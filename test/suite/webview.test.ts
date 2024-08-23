@@ -586,6 +586,17 @@ describe("KdbNewConnectionView", () => {
     assert.strictEqual(view.labels.length, 0);
   });
 
+  it("should update label", () => {
+    view.labels = ["label1"];
+    const event: Event = new Event("label2");
+    Object.defineProperty(event, "target", {
+      value: { value: "label2" },
+      writable: false,
+    });
+    view.updateLabelValue(0, event);
+    assert.strictEqual(view.labels[0], "label2");
+  });
+
   describe("render()", () => {
     let renderServerNameStub,
       renderConnAddressStub,

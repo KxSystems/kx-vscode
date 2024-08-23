@@ -118,6 +118,11 @@ export class KdbNewConnectionView extends LitElement {
     this.requestUpdate();
   }
 
+  updateLabelValue(pos: number, event: Event) {
+    this.labels[pos] = (event.target as HTMLSelectElement).value;
+    this.requestUpdate();
+  }
+
   get selectConnection(): string {
     if (this.isBundledQ) {
       return "tab-1";
@@ -355,8 +360,7 @@ export class KdbNewConnectionView extends LitElement {
           value="${this.labels[pos]}"
           current-value="${this.labels[pos]}"
           @change="${(event: Event) => {
-            this.labels[pos] = (event.target as HTMLInputElement).value;
-            this.requestUpdate();
+            this.updateLabelValue(pos, event);
           }}">
           ${this.renderLblDropdownOptions(pos)}
         </vscode-dropdown>
