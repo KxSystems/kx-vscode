@@ -53,7 +53,7 @@ export class KdbNewConnectionView extends LitElement {
     realm: "",
     insecure: false,
   };
-  labels: string[] = [];
+  labels: string[] = [""];
   serverType: ServerType = ServerType.KDB;
   isBundledQ: boolean = true;
   oldAlias: string = "";
