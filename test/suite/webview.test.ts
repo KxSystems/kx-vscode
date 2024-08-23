@@ -24,6 +24,7 @@ import { InsightDetails } from "../../src/models/insights";
 import {
   DataSourceCommand,
   DataSourceMessage2,
+  EditConnectionMessage,
 } from "../../src/models/messages";
 import {
   DataSourceTypes,
@@ -484,6 +485,21 @@ describe("KdbNewConnectionView", () => {
       );
     });
 
+    it("should render label dropdown", () => {
+      view.lblNamesList = [
+        { name: "label1", color: { colorHex: "#FF0000" } },
+        { name: "label2", color: { colorHex: "#00FF00" } },
+      ];
+      view.labels = ["label1"];
+
+      const result = view.renderLblsDropdown(0);
+
+      assert.strictEqual(
+        JSON.stringify(result).includes("No Label Selected"),
+        true,
+      );
+    });
+
     it("should render New Label Modal", () => {
       const result = view.renderNewLabelModal();
 
@@ -536,6 +552,49 @@ describe("KdbNewConnectionView", () => {
       assert.strictEqual(view.isBundledQ, true);
       assert.strictEqual(view.serverType, ServerType.KDB);
     });
+  });
+
+  describe("removeBlankLabels", () => {
+    it("should remove blank labels", () => {
+      view.labels = ["label1", ""];
+      view.removeBlankLabels();
+      assert.strictEqual(view.labels.length, 1);
+    });
+
+    it("should not remove blank labels", () => {
+      view.labels = ["label1"];
+      view.removeBlankLabels();
+      assert.strictEqual(view.labels.length, 1);
+    });
+
+    it("should remove duplicate labels", () => {
+      view.labels = ["label1", "label1", "label1"];
+      view.removeBlankLabels();
+      assert.strictEqual(view.labels.length, 1);
+    });
+  });
+
+  it("should add label", () => {
+    view.labels = ["label1"];
+    view.addLabel();
+    assert.strictEqual(view.labels.length, 2);
+  });
+
+  it("should remove label", () => {
+    view.labels = ["label1"];
+    view.removeLabel(0);
+    assert.strictEqual(view.labels.length, 0);
+  });
+
+  it("should update label", () => {
+    view.labels = ["label1"];
+    const event: Event = new Event("label2");
+    Object.defineProperty(event, "target", {
+      value: { value: "label2" },
+      writable: false,
+    });
+    view.updateLabelValue(0, event);
+    assert.strictEqual(view.labels[0], "label2");
   });
 
   describe("render()", () => {
@@ -819,6 +878,42 @@ describe("KdbNewConnectionView", () => {
       assert.ok(result);
       view.serverType = ServerType.INSIGHTS;
       view.save();
+      assert.ok(result);
+      sinon.restore();
+    });
+  });
+
+  describe("edit", () => {
+    const editConn: EditConnectionMessage = {
+      connType: 0,
+      serverName: "test",
+      serverAddress: "127.0.0.1",
+    };
+
+    it("should post a message", () => {
+      const api = acquireVsCodeApi();
+      let result: any;
+      sinon.stub(api, "postMessage").value(({ command, data }) => {
+        if (
+          command === "kdb.newConnection.editMyQConnection" ||
+          command === "kdb.newConnection.editInsightsConnection" ||
+          command === "kdb.newConnection.editBundledConnection"
+        ) {
+          result = data;
+        }
+      });
+      view.editConnection();
+      assert.ok(!result);
+      view.connectionData = editConn;
+      view.editConnection();
+      assert.ok(result);
+      editConn.connType = 1;
+      view.connectionData = editConn;
+      view.editConnection();
+      assert.ok(result);
+      editConn.connType = 2;
+      view.connectionData = editConn;
+      view.editConnection();
       assert.ok(result);
       sinon.restore();
     });
