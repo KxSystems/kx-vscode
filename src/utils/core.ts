@@ -145,7 +145,6 @@ export function saveLocalProcessObj(
   childProcess: ChildProcess,
   args: string[],
 ): void {
-  window.showInformationMessage("q process started successfully!");
   kdbOutputLog(`Child process id ${childProcess.pid} saved in cache.`, "INFO");
   ext.localProcessObjects[args[2]] = childProcess;
 }
