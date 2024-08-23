@@ -243,12 +243,12 @@ To edit an existing connection, right-click the connection you wish to edit and 
 
 When editing a **Bundled q** connection, you can edit the following properties:
 
-| Property               | Description                                                                                                                                                                                        |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Server Name            | The name is already set as **local** and **cannot be edited**.                                                                                                                                     |
-| The connection address | This is already be set as `127.0.0.1` which corresponds to your **localhost** and **cannot be edited**.                                                                                            |
+| Property               | Description                                                                                                                                                                                         |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Server Name            | The name is already set as **local** and **cannot be edited**.                                                                                                                                      |
+| The connection address | This is already be set as `127.0.0.1` which corresponds to your **localhost** and **cannot be edited**.                                                                                             |
 | Port                   | Set the port for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. 5002. [Read here for more about setting a q port](https://code.kx.com/q/basics/ipc/). |
-| Label Name             | Select the label you want to assign the connection to.                                                                                                                                          |
+| Label Name             | Select the label you want to assign the connection to.                                                                                                                                              |
 
 ![Edit Bundle q connection](https://github.com/KxSystems/kx-vscode/blob/main/img/edit-bundle-q-conn-form.png?raw=true)
 
@@ -261,17 +261,17 @@ When editing a **My q** connection, you can edit the following properties:
 | Server Name            | The server name / alias. The server name selected cannot be **local** or **insights**, as these are reserved for use by [Bundled q connections](#bundled-q) and [Insights connections](#insights-connection), respectively; e.g. dev |
 | The connection address | Set to the IP address of the kdb server; e.g. **localhost**.                                                                                                                                                                         |
 | Port                   | Enter the port used by the kdb server; e.g. 5001. Learn more about [setting a q port](https://code.kx.com/q/basics/ipc/) .                                                                                                           |
-| Edit Auth options      | Check the box if you wish to change **Auth options**. If you want to **remove the Auth** for this connection, select this checkbox and leave the **Username** and **Password** fields in **blank**.                                   |
+| Edit Auth options      | Check the box if you wish to change **Auth options**. If you want to **remove the Auth** for this connection, select this checkbox and leave the **Username** and **Password** fields in **blank**.                                  |
 | Username               | If authentication is needed, fill in the username otherwise, leave **blank**.                                                                                                                                                        |
-| Password               | If authentication is needed, fill in the password otherwise, leave **blank**.                                                                                                                                                         |
+| Password               | If authentication is needed, fill in the password otherwise, leave **blank**.                                                                                                                                                        |
 | Enable TLS Encryption  | Check the box is TLS is enabled. Learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).                                                                                                                                   |
-| Label Name             | Select the label to assign the connection to.                                                                                                                                                                                |
+| Label Name             | Select the label to assign the connection to.                                                                                                                                                                                        |
 
 ![Edit My q connection](https://github.com/KxSystems/kx-vscode/blob/main/img/edit-my-q-conn-form.png?raw=true)
 
 ### Edit Insights connection
 
-When editing an **Insights** connection, you can edit the following properties:
+When editing a **Insights** connection, you can edit the following properties:
 
 | Property               | Description                                                                                                                                                                                                                          |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |

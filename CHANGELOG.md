@@ -10,6 +10,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - You can now reconnect to an edited connection (if the connection was already connected)
 - Labels are now available for connections
 - Now you can connect Insights servers with a self-signed SSL certificate
+- Updated KDB+ process icons
 
 ### Fixes
 
