@@ -1882,5 +1882,26 @@ describe("Utils", () => {
       assert.strictEqual(showInformationMessageStub.called, true);
       assert.strictEqual(executeCommandStub.called, true);
     });
+
+    it("should handle 'Never show again' response", async () => {
+      getConfigurationStub()
+        .get.withArgs("kdb.qHomeDirectory")
+        .returns(undefined);
+      getConfigurationStub()
+        .get.withArgs("kdb.neverShowQInstallAgain")
+        .returns(false);
+      showInformationMessageStub.resolves("Never show again");
+
+      await coreUtils.checkLocalInstall(true);
+
+      assert.strictEqual(
+        updateConfigurationStub.calledWith(
+          "kdb.neverShowQInstallAgain",
+          true,
+          vscode.ConfigurationTarget.Global,
+        ),
+        true,
+      );
+    });
   });
 });
