@@ -36,6 +36,7 @@ import { openUrl } from "../../src/utils/openUrl";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { showRegistrationNotification } from "../../src/utils/registration";
 import { killPid } from "../../src/utils/shell";
+import { env } from "node:process";
 import {
   showInputBox,
   showOpenFolderDialog,
@@ -1832,6 +1833,47 @@ describe("Utils", () => {
     it("should return false if label content is not changed", () => {
       const result = LabelsUtils.isLabelContentChanged("label1");
       assert.strictEqual(result, false);
+    });
+  });
+
+  describe("checkLocalInstall", () => {
+    let getConfigurationStub: sinon.SinonStub;
+    let updateConfigurationStub: sinon.SinonStub;
+    let showInformationMessageStub: sinon.SinonStub;
+    let executeCommandStub: sinon.SinonStub;
+    let envStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      getConfigurationStub = sinon
+        .stub(vscode.workspace, "getConfiguration")
+        .returns({
+          get: sinon.stub().returns(false),
+          update: sinon.stub().resolves(),
+        } as any);
+      updateConfigurationStub = getConfigurationStub()
+        .update as sinon.SinonStub;
+      showInformationMessageStub = sinon
+        .stub(vscode.window, "showInformationMessage")
+        .resolves();
+      executeCommandStub = sinon
+        .stub(vscode.commands, "executeCommand")
+        .resolves();
+      envStub = sinon.stub(env, "QHOME").value(undefined);
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should return if 'neverShowQInstallAgain' is true", async () => {
+      getConfigurationStub()
+        .get.withArgs("kdb.neverShowQInstallAgain")
+        .returns(true);
+
+      await coreUtils.checkLocalInstall(true);
+
+      assert.strictEqual(showInformationMessageStub.called, false);
+      assert.strictEqual(executeCommandStub.called, false);
     });
   });
 });
