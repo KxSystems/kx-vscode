@@ -177,6 +177,8 @@ export async function activate(context: ExtensionContext) {
   AuthSettings.init(context);
   ext.secretSettings = AuthSettings.instance;
 
+  commands.executeCommand("kdb-results.focus");
+
   kdbOutputLog("kdb extension is now active!", "INFO");
 
   try {

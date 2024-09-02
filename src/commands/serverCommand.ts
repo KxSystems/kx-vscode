@@ -545,7 +545,6 @@ export async function removeConnection(viewItem: KdbNode | InsightsNode) {
 
 export async function connect(connLabel: string): Promise<void> {
   const connMngService = new ConnectionManagementService();
-  commands.executeCommand("kdb-results.focus");
   ExecutionConsole.start();
   const viewItem = connMngService.retrieveConnection(connLabel);
   if (viewItem === undefined) {
