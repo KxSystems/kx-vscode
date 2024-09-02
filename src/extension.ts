@@ -181,7 +181,7 @@ export async function activate(context: ExtensionContext) {
 
   try {
     // check for installed q runtime
-    await checkLocalInstall();
+    await checkLocalInstall(true);
   } catch (err) {
     window.showErrorMessage(`${err}`);
   }
