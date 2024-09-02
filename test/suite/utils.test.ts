@@ -1872,5 +1872,15 @@ describe("Utils", () => {
       assert.strictEqual(showInformationMessageStub.called, false);
       assert.strictEqual(executeCommandStub.called, false);
     });
+    it("should continue if 'neverShowQInstallAgain' is false", async () => {
+      getConfigurationStub()
+        .get.withArgs("kdb.neverShowQInstallAgain")
+        .returns(false);
+
+      await coreUtils.checkLocalInstall(true);
+
+      assert.strictEqual(showInformationMessageStub.called, true);
+      assert.strictEqual(executeCommandStub.called, false);
+    });
   });
 });
