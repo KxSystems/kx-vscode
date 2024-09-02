@@ -36,7 +36,6 @@ import { openUrl } from "../../src/utils/openUrl";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { showRegistrationNotification } from "../../src/utils/registration";
 import { killPid } from "../../src/utils/shell";
-import { env } from "node:process";
 import {
   showInputBox,
   showOpenFolderDialog,
@@ -1841,7 +1840,6 @@ describe("Utils", () => {
     let updateConfigurationStub: sinon.SinonStub;
     let showInformationMessageStub: sinon.SinonStub;
     let executeCommandStub: sinon.SinonStub;
-    let envStub: sinon.SinonStub;
 
     beforeEach(() => {
       getConfigurationStub = sinon
@@ -1858,7 +1856,6 @@ describe("Utils", () => {
       executeCommandStub = sinon
         .stub(vscode.commands, "executeCommand")
         .resolves();
-      envStub = sinon.stub(env, "QHOME").value(undefined);
     });
 
     afterEach(() => {
