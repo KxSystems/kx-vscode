@@ -1892,7 +1892,7 @@ describe("Utils", () => {
         .returns(false);
       showInformationMessageStub.resolves("Never show again");
 
-      await coreUtils.checkLocalInstall(true);
+      await coreUtils.checkLocalInstall();
 
       assert.strictEqual(
         updateConfigurationStub.calledWith(
