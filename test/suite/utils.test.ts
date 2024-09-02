@@ -1880,7 +1880,7 @@ describe("Utils", () => {
       await coreUtils.checkLocalInstall(true);
 
       assert.strictEqual(showInformationMessageStub.called, true);
-      assert.strictEqual(executeCommandStub.called, false);
+      assert.strictEqual(executeCommandStub.called, true);
     });
   });
 });
