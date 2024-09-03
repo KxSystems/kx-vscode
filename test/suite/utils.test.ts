@@ -1834,4 +1834,74 @@ describe("Utils", () => {
       assert.strictEqual(result, false);
     });
   });
+
+  describe("checkLocalInstall", () => {
+    let getConfigurationStub: sinon.SinonStub;
+    let updateConfigurationStub: sinon.SinonStub;
+    let showInformationMessageStub: sinon.SinonStub;
+    let executeCommandStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      getConfigurationStub = sinon
+        .stub(vscode.workspace, "getConfiguration")
+        .returns({
+          get: sinon.stub().returns(false),
+          update: sinon.stub().resolves(),
+        } as any);
+      updateConfigurationStub = getConfigurationStub()
+        .update as sinon.SinonStub;
+      showInformationMessageStub = sinon
+        .stub(vscode.window, "showInformationMessage")
+        .resolves();
+      executeCommandStub = sinon
+        .stub(vscode.commands, "executeCommand")
+        .resolves();
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should return if 'neverShowQInstallAgain' is true", async () => {
+      getConfigurationStub()
+        .get.withArgs("kdb.neverShowQInstallAgain")
+        .returns(true);
+
+      await coreUtils.checkLocalInstall(true);
+
+      assert.strictEqual(showInformationMessageStub.called, false);
+      assert.strictEqual(executeCommandStub.called, false);
+    });
+    it("should continue if 'neverShowQInstallAgain' is false", async () => {
+      getConfigurationStub()
+        .get.withArgs("kdb.neverShowQInstallAgain")
+        .returns(false);
+
+      await coreUtils.checkLocalInstall(true);
+
+      assert.strictEqual(showInformationMessageStub.called, true);
+      assert.strictEqual(executeCommandStub.called, true);
+    });
+
+    it("should handle 'Never show again' response", async () => {
+      getConfigurationStub()
+        .get.withArgs("kdb.qHomeDirectory")
+        .returns(undefined);
+      getConfigurationStub()
+        .get.withArgs("kdb.neverShowQInstallAgain")
+        .returns(false);
+      showInformationMessageStub.resolves("Never show again");
+
+      await coreUtils.checkLocalInstall();
+
+      assert.strictEqual(
+        updateConfigurationStub.calledWith(
+          "kdb.neverShowQInstallAgain",
+          true,
+          vscode.ConfigurationTarget.Global,
+        ),
+        true,
+      );
+    });
+  });
 });

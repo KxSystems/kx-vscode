@@ -405,8 +405,18 @@ export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function checkLocalInstall(): Promise<void> {
+export async function checkLocalInstall(
+  isExtensionStartCheck?: boolean,
+): Promise<void> {
   const QHOME = workspace.getConfiguration().get<string>("kdb.qHomeDirectory");
+  if (isExtensionStartCheck) {
+    const notShow = workspace
+      .getConfiguration()
+      .get<boolean>("kdb.neverShowQInstallAgain");
+    if (notShow) {
+      return;
+    }
+  }
   if (QHOME || env.QHOME) {
     env.QHOME = QHOME || env.QHOME;
     if (!pathExists(env.QHOME!)) {
@@ -454,12 +464,21 @@ export async function checkLocalInstall(): Promise<void> {
     .showInformationMessage(
       "Local q installation not found!",
       "Install new instance",
-      "Cancel",
+      "No",
+      "Never show again",
     )
     .then(async (installResult) => {
       if (installResult === "Install new instance") {
         await installTools();
-      } else if (installResult === "Cancel") {
+      } else if (installResult === "Never show again") {
+        await workspace
+          .getConfiguration()
+          .update(
+            "kdb.neverShowQInstallAgain",
+            true,
+            ConfigurationTarget.Global,
+          );
+      } else {
         showRegistrationNotification();
       }
     });

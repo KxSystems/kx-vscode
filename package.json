@@ -165,6 +165,10 @@
           "type": "string",
           "description": "QHOME directory for q runtime"
         },
+        "kdb.neverShowQInstallAgain": {
+          "type": "boolean",
+          "description": "Never show q install walkthrough again"
+        },
         "kdb.hideSubscribeRegistrationNotification": {
           "type": "boolean",
           "description": "Hide subscribe for registration notification",
