@@ -267,6 +267,12 @@ export async function activate(context: ExtensionContext) {
         await disconnect(connLabel);
       },
     ),
+    commands.registerCommand("kdb.connections.export", () => {
+      window.showInformationMessage("Export Connections command executed");
+    }),
+    commands.registerCommand("kdb.connections.import", () => {
+      window.showInformationMessage("Import Connections command executed");
+    }),
     commands.registerCommand(
       "kdb.open.meta",
       async (viewItem: InsightsMetaNode | MetaObjectPayloadNode) => {

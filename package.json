@@ -202,6 +202,16 @@
     "commands": [
       {
         "category": "KX",
+        "command": "kdb.connections.export",
+        "title": "Export connections"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.connections.import",
+        "title": "Import connections"
+      },
+      {
+        "category": "KX",
         "command": "kdb.refreshServerObjects",
         "title": "Refresh server objects & insights meta",
         "icon": "$(refresh)"
@@ -701,6 +711,16 @@
           "command": "kdb.resultsPanel.export.csv",
           "when": "view == kdb-results",
           "group": "resultsPanel"
+        },
+        {
+          "command": "kdb.connections.export",
+          "when": "view == kdb-servers",
+          "group": "inline"
+        },
+        {
+          "command": "kdb.connections.import",
+          "when": "view == kdb-servers",
+          "group": "inline"
         }
       ],
       "view/item/context": [
