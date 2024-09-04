@@ -881,17 +881,17 @@ export async function openMeta(node: MetaObjectPayloadNode | InsightsMetaNode) {
   }
 }
 
-export async function exportConnection(connLabel?: string) {
+export async function exportConnections(connLabel?: string) {
   const exportConnProvider = new ExportConnectionContentProvider();
   workspace.registerTextDocumentContentProvider(
-    "Export Connection",
+    "connections",
     exportConnProvider,
   );
   const connMngService = new ConnectionManagementService();
   const doc = connMngService.exportConnection(connLabel);
   if (doc && doc !== "") {
     const formattedDoc = JSON.stringify(JSON.parse(doc), null, 2);
-    const uri = Uri.parse(`exported-connections.json`);
+    const uri = Uri.parse(`connections:exported-connections.json`);
     exportConnProvider.update(uri, formattedDoc);
     const document = await workspace.openTextDocument(uri);
     await window.showTextDocument(document, {

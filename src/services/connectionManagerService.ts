@@ -31,7 +31,11 @@ import {
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { MetaInfoType } from "../models/meta";
 import { retrieveConnLabelsNames } from "../utils/connLabel";
-import { Insights, Server } from "../models/connectionsModels";
+import {
+  ExportedConnections,
+  Insights,
+  Server,
+} from "../models/connectionsModels";
 
 export class ConnectionManagementService {
   public retrieveConnection(
@@ -404,6 +408,34 @@ export class ConnectionManagementService {
   }
 
   public exportConnection(connLabel?: string): string {
-    return "";
+    const exportedContent: ExportedConnections = {
+      connections: {
+        Insights: [],
+        KDB: [],
+      },
+    };
+    if (connLabel) {
+      const connection = this.retrieveConnection(connLabel);
+      if (!connection) {
+        return "";
+      }
+      if (connection instanceof KdbNode) {
+        exportedContent.connections.KDB.push(connection.details);
+      } else {
+        exportedContent.connections.Insights.push(connection.details);
+      }
+    } else {
+      ext.connectionsList.forEach((connection) => {
+        if (connection instanceof KdbNode) {
+          exportedContent.connections.KDB.push(connection.details);
+        } else {
+          exportedContent.connections.Insights.push(connection.details);
+        }
+      });
+    }
+    return exportedContent.connections.Insights.length === 0 &&
+      exportedContent.connections.KDB.length === 0
+      ? ""
+      : JSON.stringify(exportedContent, null, 2);
   }
 }

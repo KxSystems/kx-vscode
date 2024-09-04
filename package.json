@@ -202,7 +202,7 @@
     "commands": [
       {
         "category": "KX",
-        "command": "kdb.connections.export",
+        "command": "kdb.connections.export.all",
         "title": "Export connections"
       },
       {
@@ -713,7 +713,7 @@
           "group": "resultsPanel"
         },
         {
-          "command": "kdb.connections.export",
+          "command": "kdb.connections.export.all",
           "when": "view == kdb-servers",
           "group": "inline"
         },
