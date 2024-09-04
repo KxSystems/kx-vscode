@@ -59,9 +59,7 @@ import {
 import { showInstallationDetails } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
 import { ExecutionTypes } from "./models/execution";
-import { InsightDetails, Insights } from "./models/insights";
 import { QueryResult } from "./models/queryResult";
-import { Server, ServerDetails } from "./models/server";
 import {
   InsightsMetaNode,
   InsightsNode,
@@ -114,6 +112,12 @@ import {
   setLabelColor,
 } from "./utils/connLabel";
 import { activateTextDocument } from "./utils/workspace";
+import {
+  InsightDetails,
+  Insights,
+  Server,
+  ServerDetails,
+} from "./models/connectionsModels";
 
 let client: LanguageClient;
 

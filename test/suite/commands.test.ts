@@ -27,7 +27,6 @@ import {
   createDefaultDataSourceFile,
 } from "../../src/models/dataSource";
 import { ExecutionTypes } from "../../src/models/execution";
-import { InsightDetails } from "../../src/models/insights";
 import { ScratchpadResult } from "../../src/models/scratchpadResult";
 import {
   InsightsNode,
@@ -41,7 +40,6 @@ import * as dataSourceUtils from "../../src/utils/dataSource";
 import { ExecutionConsole } from "../../src/utils/executionConsole";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { QueryHistory } from "../../src/models/queryHistory";
-import { ServerDetails, ServerType } from "../../src/models/server";
 import { NewConnectionPannel } from "../../src/panels/newConnection";
 import { MAX_STR_LEN } from "../../src/validators/kdbValidator";
 import { LocalConnection } from "../../src/classes/localConnection";
@@ -53,6 +51,11 @@ import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider"
 import { GetDataError } from "../../src/models/data";
 import * as clientCommand from "../../src/commands/clientCommands";
 import { LanguageClient } from "vscode-languageclient/node";
+import {
+  InsightDetails,
+  ServerDetails,
+  ServerType,
+} from "../../src/models/connectionsModels";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {

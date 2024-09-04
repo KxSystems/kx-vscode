@@ -11,23 +11,22 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export enum ServerType {
-  INSIGHTS,
-  KDB,
-  undefined,
-}
+import * as vscode from "vscode";
 
-export interface ServerDetails {
-  serverName: string;
-  serverPort: string;
-  auth: boolean;
-  serverAlias: string;
-  managed: boolean;
-  tls: boolean;
-  username?: string;
-  password?: string;
-}
+export class ExportConnectionContentProvider
+  implements vscode.TextDocumentContentProvider
+{
+  private _onDidChange = new vscode.EventEmitter<vscode.Uri>();
+  public readonly onDidChange = this._onDidChange.event;
 
-export interface Server {
-  [name: string]: ServerDetails;
+  private content: string = "";
+
+  public update(uri: vscode.Uri, content: string) {
+    this.content = content;
+    this._onDidChange.fire(uri);
+  }
+
+  provideTextDocumentContent(uri: vscode.Uri): string {
+    return this.content;
+  }
 }

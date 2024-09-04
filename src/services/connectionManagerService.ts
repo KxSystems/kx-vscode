@@ -28,11 +28,10 @@ import {
   updateInsights,
   updateServers,
 } from "../utils/core";
-import { Insights } from "../models/insights";
-import { Server } from "../models/server";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { MetaInfoType } from "../models/meta";
 import { retrieveConnLabelsNames } from "../utils/connLabel";
+import { Insights, Server } from "../models/connectionsModels";
 
 export class ConnectionManagementService {
   public retrieveConnection(
@@ -402,5 +401,9 @@ export class ConnectionManagementService {
     }
 
     return connection.returnMetaObject(metaType);
+  }
+
+  public exportConnection(connLabel?: string): string {
+    return "";
   }
 }

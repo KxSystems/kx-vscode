@@ -26,10 +26,8 @@ import {
 import { ext } from "../extensionVariables";
 import { DataSourceFiles } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
-import { InsightDetails, Insights } from "../models/insights";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
-import { Server, ServerDetails, ServerType } from "../models/server";
 import { ServerObject } from "../models/serverObject";
 import { DataSourcesPanel } from "../panels/datasource";
 import {
@@ -69,6 +67,14 @@ import { ConnectionManagementService } from "../services/connectionManagerServic
 import { InsightsConnection } from "../classes/insightsConnection";
 import { MetaContentProvider } from "../services/metaContentProvider";
 import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
+import { ExportConnectionContentProvider } from "../services/exportConnContentProvider";
+import {
+  InsightDetails,
+  Insights,
+  Server,
+  ServerDetails,
+  ServerType,
+} from "../models/connectionsModels";
 
 export async function addNewConnection(): Promise<void> {
   NewConnectionPannel.close();
@@ -872,6 +878,31 @@ export async function openMeta(node: MetaObjectPayloadNode | InsightsMetaNode) {
     });
   } else {
     kdbOutputLog("[META] Meta content not found", "ERROR");
+  }
+}
+
+export async function exportConnection(connLabel?: string) {
+  const exportConnProvider = new ExportConnectionContentProvider();
+  workspace.registerTextDocumentContentProvider(
+    "Export Connection",
+    exportConnProvider,
+  );
+  const connMngService = new ConnectionManagementService();
+  const doc = connMngService.exportConnection(connLabel);
+  if (doc && doc !== "") {
+    const formattedDoc = JSON.stringify(JSON.parse(doc), null, 2);
+    const uri = Uri.parse(`exported-connections.json`);
+    exportConnProvider.update(uri, formattedDoc);
+    const document = await workspace.openTextDocument(uri);
+    await window.showTextDocument(document, {
+      preview: false,
+      viewColumn: ViewColumn.One,
+    });
+  } else {
+    kdbOutputLog(
+      "[EXPORT CONNECTIONS] No connections found to be exported",
+      "ERROR",
+    );
   }
 }
 

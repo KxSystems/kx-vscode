@@ -25,9 +25,7 @@ import {
   workspace,
 } from "vscode";
 import { ext } from "../../src/extensionVariables";
-import { Insights } from "../../src/models/insights";
 import { QueryHistory } from "../../src/models/queryHistory";
-import { Server, ServerType } from "../../src/models/server";
 import {
   getCurrentToken,
   refreshToken,
@@ -65,6 +63,11 @@ import { MetaInfoType, MetaObject } from "../../src/models/meta";
 import { CompletionProvider } from "../../src/services/completionProvider";
 import { MetaContentProvider } from "../../src/services/metaContentProvider";
 import { ConnectionLabel, Labels } from "../../src/models/labels";
+import {
+  Insights,
+  Server,
+  ServerType,
+} from "../../src/models/connectionsModels";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");

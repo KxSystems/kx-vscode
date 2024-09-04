@@ -11,6 +11,29 @@
  * specific language governing permissions and limitations under the License.
  */
 
+//TODO: start to migrate all connections models to here
+
+export enum ServerType {
+  INSIGHTS,
+  KDB,
+  undefined,
+}
+
+export interface ServerDetails {
+  serverName: string;
+  serverPort: string;
+  auth: boolean;
+  serverAlias: string;
+  managed: boolean;
+  tls: boolean;
+  username?: string;
+  password?: string;
+}
+
+export interface Server {
+  [name: string]: ServerDetails;
+}
+
 export interface InsightDetails {
   alias: string;
   server: string;
@@ -21,4 +44,11 @@ export interface InsightDetails {
 
 export interface Insights {
   [name: string]: InsightDetails;
+}
+
+export interface ExportedConnections {
+  connections: {
+    Insights: InsightDetails[];
+    KDB: ServerDetails[];
+  };
 }

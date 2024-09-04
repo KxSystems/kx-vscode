@@ -22,12 +22,16 @@ import * as semver from "semver";
 import { commands, ConfigurationTarget, Uri, window, workspace } from "vscode";
 import { installTools } from "../commands/installTools";
 import { ext } from "../extensionVariables";
-import { InsightDetails, Insights } from "../models/insights";
 import { QueryResult } from "../models/queryResult";
-import { Server, ServerDetails } from "../models/server";
 import { tryExecuteCommand } from "./cpUtils";
 import { showRegistrationNotification } from "./registration";
 import { Telemetry } from "./telemetryClient";
+import {
+  InsightDetails,
+  Insights,
+  Server,
+  ServerDetails,
+} from "../models/connectionsModels";
 
 export function log(childProcess: ChildProcess): void {
   kdbOutputLog(`Process ${childProcess.pid} started`, "INFO");

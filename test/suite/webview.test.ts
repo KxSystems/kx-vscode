@@ -18,9 +18,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { KdbDataSourceView } from "../../src/webview/components/kdbDataSourceView";
 import { KdbNewConnectionView } from "../../src/webview/components/kdbNewConnectionView";
-import { ServerType } from "../../src/models/server";
 
-import { InsightDetails } from "../../src/models/insights";
 import {
   DataSourceCommand,
   DataSourceMessage2,
@@ -37,6 +35,7 @@ import {
 import { MetaObjectPayload } from "../../src/models/meta";
 import { html, TemplateResult } from "lit";
 import { ext } from "../../src/extensionVariables";
+import { InsightDetails, ServerType } from "../../src/models/connectionsModels";
 
 describe("KdbDataSourceView", () => {
   let view: KdbDataSourceView;
