@@ -312,6 +312,18 @@ describe("Utils", () => {
         appendLineSpy.calledWithMatch(type);
       });
 
+      it("kdbOutputLog should log message with date and ERROR type", () => {
+        const message = "test message";
+        const type = "ERROR";
+
+        coreUtils.kdbOutputLog(message, type);
+
+        appendLineSpy.calledOnce;
+        showErrorMessageSpy.calledOnce;
+        appendLineSpy.calledWithMatch(message);
+        appendLineSpy.calledWithMatch(type);
+      });
+
       it("tokenUndefinedError should log and show error message", () => {
         const connLabel = "test connection";
 

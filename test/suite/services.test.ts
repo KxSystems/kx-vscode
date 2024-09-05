@@ -1396,6 +1396,86 @@ describe("connectionManagerService", () => {
       );
     });
   });
+
+  describe("ConnectionManagementService", () => {
+    let retrieveConnectionStub: sinon.SinonStub;
+    let connectionsListStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      retrieveConnectionStub = sinon.stub(
+        connectionManagerService,
+        "retrieveConnection",
+      );
+      connectionsListStub = sinon.stub(ext, "connectionsList").value([]);
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should return empty string if connLabel is provided and connection is not found", () => {
+      retrieveConnectionStub.withArgs("nonExistentLabel").returns(null);
+
+      const result =
+        connectionManagerService.exportConnection("nonExistentLabel");
+
+      assert.strictEqual(result, "");
+    });
+
+    it("should export KDB connection when connLabel is provided and connection is an instance of KdbNode", () => {
+      kdbNode.details.auth = true;
+      retrieveConnectionStub.withArgs("kdbLabel").returns(kdbNode);
+
+      const result = connectionManagerService.exportConnection("kdbLabel");
+
+      const expectedOutput = {
+        connections: {
+          Insights: [],
+          KDB: [kdbNode.details],
+        },
+      };
+
+      assert.strictEqual(result, JSON.stringify(expectedOutput, null, 2));
+    });
+
+    it("should export Insights connection when connLabel is provided and connection is not an instance of KdbNode", () => {
+      retrieveConnectionStub.withArgs("insightsLabel").returns(insightNode);
+
+      const result = connectionManagerService.exportConnection("insightsLabel");
+
+      const expectedOutput = {
+        connections: {
+          Insights: [insightNode.details],
+          KDB: [],
+        },
+      };
+
+      assert.strictEqual(result, JSON.stringify(expectedOutput, null, 2));
+    });
+
+    it("should return empty string if connLabel is not provided and connectionsList is empty", () => {
+      connectionsListStub.value([]);
+
+      const result = connectionManagerService.exportConnection();
+
+      assert.strictEqual(result, "");
+    });
+
+    it("should export all connections when connLabel is not provided and connectionsList contains instances of KdbNode and other connections", () => {
+      connectionsListStub.value([kdbNode, insightNode]);
+
+      const result = connectionManagerService.exportConnection();
+
+      const expectedOutput = {
+        connections: {
+          Insights: [insightNode.details],
+          KDB: [kdbNode.details],
+        },
+      };
+
+      assert.strictEqual(result, JSON.stringify(expectedOutput, null, 2));
+    });
+  });
 });
 
 describe("dataSourceEditorProvider", () => {
