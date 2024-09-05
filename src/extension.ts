@@ -275,6 +275,12 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.connections.export.all", () => {
       exportConnections();
     }),
+    commands.registerCommand(
+      "kdb.connections.export.single",
+      async (viewItem: KdbNode | InsightsNode) => {
+        exportConnections(viewItem.label);
+      },
+    ),
     commands.registerCommand("kdb.connections.import", () => {
       window.showInformationMessage("Import Connections command executed");
     }),

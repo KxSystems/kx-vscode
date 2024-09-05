@@ -316,6 +316,11 @@ export function kdbOutputLog(message: string, type: string): void {
   const dateNow = new Date().toLocaleDateString();
   const timeNow = new Date().toLocaleTimeString();
   ext.outputChannel.appendLine(`[${dateNow} ${timeNow}] [${type}] ${message}`);
+  if (type === "ERROR") {
+    window.showErrorMessage(
+      `Error occured, check kdb output channel for details.`,
+    );
+  }
 }
 
 export function tokenUndefinedError(connLabel: string): void {
@@ -323,18 +328,12 @@ export function tokenUndefinedError(connLabel: string): void {
     `Error retrieving access token for Insights connection named: ${connLabel}`,
     "ERROR",
   );
-  window.showErrorMessage(
-    `Error retrieving access token for Insights connection named: ${connLabel}`,
-  );
 }
 
 export function invalidUsernameJWT(connLabel: string): void {
   kdbOutputLog(
     `JWT did not contain a valid preferred username for Insights connection: ${connLabel}`,
     "ERROR",
-  );
-  window.showErrorMessage(
-    `JWT did not contain a valid preferred username for Insights connection: ${connLabel}`,
   );
 }
 

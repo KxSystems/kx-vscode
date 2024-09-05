@@ -420,6 +420,7 @@ export class ConnectionManagementService {
         return "";
       }
       if (connection instanceof KdbNode) {
+        connection.details.auth = false;
         exportedContent.connections.KDB.push(connection.details);
       } else {
         exportedContent.connections.Insights.push(connection.details);
@@ -427,6 +428,7 @@ export class ConnectionManagementService {
     } else {
       ext.connectionsList.forEach((connection) => {
         if (connection instanceof KdbNode) {
+          connection.details.auth = false;
           exportedContent.connections.KDB.push(connection.details);
         } else {
           exportedContent.connections.Insights.push(connection.details);

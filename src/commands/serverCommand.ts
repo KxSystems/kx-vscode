@@ -67,7 +67,6 @@ import { ConnectionManagementService } from "../services/connectionManagerServic
 import { InsightsConnection } from "../classes/insightsConnection";
 import { MetaContentProvider } from "../services/metaContentProvider";
 import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
-import { ExportConnectionContentProvider } from "../services/exportConnContentProvider";
 import {
   InsightDetails,
   Insights,
@@ -75,6 +74,7 @@ import {
   ServerDetails,
   ServerType,
 } from "../models/connectionsModels";
+import * as fs from "fs";
 
 export async function addNewConnection(): Promise<void> {
   NewConnectionPannel.close();
@@ -882,22 +882,37 @@ export async function openMeta(node: MetaObjectPayloadNode | InsightsMetaNode) {
 }
 
 export async function exportConnections(connLabel?: string) {
-  const exportConnProvider = new ExportConnectionContentProvider();
-  workspace.registerTextDocumentContentProvider(
-    "connections",
-    exportConnProvider,
-  );
   const connMngService = new ConnectionManagementService();
   const doc = connMngService.exportConnection(connLabel);
   if (doc && doc !== "") {
     const formattedDoc = JSON.stringify(JSON.parse(doc), null, 2);
-    const uri = Uri.parse(`connections:exported-connections.json`);
-    exportConnProvider.update(uri, formattedDoc);
-    const document = await workspace.openTextDocument(uri);
-    await window.showTextDocument(document, {
-      preview: false,
-      viewColumn: ViewColumn.One,
+    const uri = await window.showSaveDialog({
+      saveLabel: "Save Exported Connections",
+      filters: {
+        "JSON Files": ["json"],
+        "All Files": ["*"],
+      },
     });
+    if (uri) {
+      fs.writeFile(uri.fsPath, formattedDoc, (err) => {
+        if (err) {
+          kdbOutputLog(
+            `[EXPORT CONNECTIONS] Error saving file: ${err.message}`,
+            "ERROR",
+          );
+          window.showErrorMessage(`Error saving file: ${err.message}`);
+        } else {
+          workspace.openTextDocument(uri).then((document) => {
+            window.showTextDocument(document, { preview: false });
+          });
+        }
+      });
+    } else {
+      kdbOutputLog(
+        "[EXPORT CONNECTIONS] Save operation was cancelled by the user",
+        "INFO",
+      );
+    }
   } else {
     kdbOutputLog(
       "[EXPORT CONNECTIONS] No connections found to be exported",
