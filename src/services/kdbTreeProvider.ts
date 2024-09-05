@@ -22,8 +22,6 @@ import {
   commands,
 } from "vscode";
 import { ext } from "../extensionVariables";
-import { InsightDetails, Insights } from "../models/insights";
-import { Server, ServerDetails } from "../models/server";
 import {
   loadDictionaries,
   loadFunctions,
@@ -49,6 +47,12 @@ import {
   retrieveConnLabelsNames,
 } from "../utils/connLabel";
 import { Labels } from "../models/labels";
+import {
+  InsightDetails,
+  Insights,
+  Server,
+  ServerDetails,
+} from "../models/connectionsModels";
 
 export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: EventEmitter<

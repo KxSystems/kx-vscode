@@ -26,10 +26,8 @@ import {
 import { ext } from "../extensionVariables";
 import { DataSourceFiles } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
-import { InsightDetails, Insights } from "../models/insights";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
-import { Server, ServerDetails, ServerType } from "../models/server";
 import { ServerObject } from "../models/serverObject";
 import { DataSourcesPanel } from "../panels/datasource";
 import {
@@ -69,6 +67,14 @@ import { ConnectionManagementService } from "../services/connectionManagerServic
 import { InsightsConnection } from "../classes/insightsConnection";
 import { MetaContentProvider } from "../services/metaContentProvider";
 import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
+import {
+  InsightDetails,
+  Insights,
+  Server,
+  ServerDetails,
+  ServerType,
+} from "../models/connectionsModels";
+import * as fs from "fs";
 
 export async function addNewConnection(): Promise<void> {
   NewConnectionPannel.close();
@@ -872,6 +878,46 @@ export async function openMeta(node: MetaObjectPayloadNode | InsightsMetaNode) {
     });
   } else {
     kdbOutputLog("[META] Meta content not found", "ERROR");
+  }
+}
+
+export async function exportConnections(connLabel?: string) {
+  const connMngService = new ConnectionManagementService();
+  const doc = connMngService.exportConnection(connLabel);
+  if (doc && doc !== "") {
+    const formattedDoc = JSON.stringify(JSON.parse(doc), null, 2);
+    const uri = await window.showSaveDialog({
+      saveLabel: "Save Exported Connections",
+      filters: {
+        "JSON Files": ["json"],
+        "All Files": ["*"],
+      },
+    });
+    if (uri) {
+      fs.writeFile(uri.fsPath, formattedDoc, (err) => {
+        if (err) {
+          kdbOutputLog(
+            `[EXPORT CONNECTIONS] Error saving file: ${err.message}`,
+            "ERROR",
+          );
+          window.showErrorMessage(`Error saving file: ${err.message}`);
+        } else {
+          workspace.openTextDocument(uri).then((document) => {
+            window.showTextDocument(document, { preview: false });
+          });
+        }
+      });
+    } else {
+      kdbOutputLog(
+        "[EXPORT CONNECTIONS] Save operation was cancelled by the user",
+        "INFO",
+      );
+    }
+  } else {
+    kdbOutputLog(
+      "[EXPORT CONNECTIONS] No connections found to be exported",
+      "ERROR",
+    );
   }
 }
 

@@ -11,8 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { ServerType } from "./connectionsModels";
 import { DataSourceFiles, DataSourceTypes } from "./dataSource";
-import { ServerType } from "./server";
 
 export interface QueryHistory {
   executorName: string;

@@ -20,7 +20,6 @@ import { ext } from "../../src/extensionVariables";
 import * as QTable from "../../src/ipc/QTable";
 import { CancellationEvent } from "../../src/models/cancellationEvent";
 import { QueryResultType } from "../../src/models/queryResult";
-import { ServerDetails, ServerType } from "../../src/models/server";
 import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import { QueryHistoryProvider } from "../../src/services/queryHistoryProvider";
 import * as coreUtils from "../../src/utils/core";
@@ -49,9 +48,13 @@ import {
   DTimestampClass,
 } from "../../src/ipc/cClasses";
 import { DataSourceTypes } from "../../src/models/dataSource";
-import { InsightDetails } from "../../src/models/insights";
 import { LocalConnection } from "../../src/classes/localConnection";
 import { Labels } from "../../src/models/labels";
+import {
+  InsightDetails,
+  ServerDetails,
+  ServerType,
+} from "../../src/models/connectionsModels";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;
@@ -305,6 +308,18 @@ describe("Utils", () => {
         coreUtils.kdbOutputLog(message, type);
 
         appendLineSpy.calledOnce;
+        appendLineSpy.calledWithMatch(message);
+        appendLineSpy.calledWithMatch(type);
+      });
+
+      it("kdbOutputLog should log message with date and ERROR type", () => {
+        const message = "test message";
+        const type = "ERROR";
+
+        coreUtils.kdbOutputLog(message, type);
+
+        appendLineSpy.calledOnce;
+        showErrorMessageSpy.calledOnce;
         appendLineSpy.calledWithMatch(message);
         appendLineSpy.calledWithMatch(type);
       });

@@ -13,7 +13,6 @@
 
 import { OutputChannel, commands, window } from "vscode";
 import { ext } from "../extensionVariables";
-import { ServerType } from "../models/server";
 import {
   getHideDetailedConsoleQueryOutput,
   setOutputWordWrapper,
@@ -23,6 +22,7 @@ import {
   checkIfIsDatasource,
   convertRowsToConsole,
 } from "./queryUtils";
+import { ServerType } from "../models/connectionsModels";
 
 export class ExecutionConsole {
   public static current: ExecutionConsole | undefined;

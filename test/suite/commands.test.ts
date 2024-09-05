@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import * as fs from "fs";
 import assert from "assert";
 import mock from "mock-fs";
 import * as sinon from "sinon";
@@ -27,7 +28,6 @@ import {
   createDefaultDataSourceFile,
 } from "../../src/models/dataSource";
 import { ExecutionTypes } from "../../src/models/execution";
-import { InsightDetails } from "../../src/models/insights";
 import { ScratchpadResult } from "../../src/models/scratchpadResult";
 import {
   InsightsNode,
@@ -41,7 +41,6 @@ import * as dataSourceUtils from "../../src/utils/dataSource";
 import { ExecutionConsole } from "../../src/utils/executionConsole";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { QueryHistory } from "../../src/models/queryHistory";
-import { ServerDetails, ServerType } from "../../src/models/server";
 import { NewConnectionPannel } from "../../src/panels/newConnection";
 import { MAX_STR_LEN } from "../../src/validators/kdbValidator";
 import { LocalConnection } from "../../src/classes/localConnection";
@@ -53,6 +52,11 @@ import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider"
 import { GetDataError } from "../../src/models/data";
 import * as clientCommand from "../../src/commands/clientCommands";
 import { LanguageClient } from "vscode-languageclient/node";
+import {
+  InsightDetails,
+  ServerDetails,
+  ServerType,
+} from "../../src/models/connectionsModels";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
@@ -1885,6 +1889,58 @@ describe("serverCommand", () => {
         vscode.workspace.openTextDocument as sinon.SinonSpy,
       );
       sinon.assert.notCalled(vscode.window.showTextDocument as sinon.SinonSpy);
+    });
+  });
+
+  describe("exportConnections", () => {
+    let sandbox: sinon.SinonSandbox;
+    let kdbOutputLogStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      sandbox = sinon.createSandbox();
+      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+    });
+
+    afterEach(() => {
+      sandbox.restore();
+      sinon.restore();
+      mock.restore();
+    });
+
+    it("should log an error when no connections are found", async () => {
+      const exportConnectionStub = sandbox
+        .stub(ConnectionManagementService.prototype, "exportConnection")
+        .returns("");
+
+      await serverCommand.exportConnections();
+
+      sinon.assert.calledOnce(kdbOutputLogStub);
+      sinon.assert.calledWith(
+        kdbOutputLogStub,
+        "[EXPORT CONNECTIONS] No connections found to be exported",
+        "ERROR",
+      );
+      exportConnectionStub.restore();
+    });
+
+    it("should log info when save operation is cancelled by the user", async () => {
+      const exportConnectionStub = sandbox
+        .stub(ConnectionManagementService.prototype, "exportConnection")
+        .returns("{}");
+      const showSaveDialogStub = sandbox
+        .stub(vscode.window, "showSaveDialog")
+        .resolves(undefined);
+
+      await serverCommand.exportConnections();
+
+      sinon.assert.calledOnce(kdbOutputLogStub);
+      sinon.assert.calledWith(
+        kdbOutputLogStub,
+        "[EXPORT CONNECTIONS] Save operation was cancelled by the user",
+        "INFO",
+      );
+      exportConnectionStub.restore();
+      showSaveDialogStub.restore();
     });
   });
 });

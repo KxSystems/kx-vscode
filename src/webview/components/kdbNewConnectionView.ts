@@ -13,13 +13,16 @@
 
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
-import { ServerDetails, ServerType } from "../../models/server";
-import { InsightDetails } from "../../models/insights";
 
 import { kdbStyles, newConnectionStyles, vscodeStyles } from "./styles";
 import { EditConnectionMessage } from "../../models/messages";
 import { repeat } from "lit/directives/repeat.js";
 import { LabelColors, Labels } from "../../models/labels";
+import {
+  InsightDetails,
+  ServerDetails,
+  ServerType,
+} from "../../models/connectionsModels";
 
 @customElement("kdb-new-connection-view")
 export class KdbNewConnectionView extends LitElement {

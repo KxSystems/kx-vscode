@@ -16,12 +16,12 @@ import { join } from "path";
 import { ext } from "../extensionVariables";
 import { DCDS, deserialize, isCompressed, uncompress } from "../ipc/c";
 import { Parse } from "../ipc/parse.qlist";
-import { ServerType } from "../models/server";
 import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
 import { TypeBase } from "../ipc/typeBase";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { QueryHistory } from "../models/queryHistory";
 import { kdbOutputLog } from "./core";
+import { ServerType } from "../models/connectionsModels";
 
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {

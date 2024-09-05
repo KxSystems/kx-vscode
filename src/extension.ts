@@ -51,6 +51,7 @@ import {
   editInsightsConnection,
   editKdbConnection,
   enableTLS,
+  exportConnections,
   openMeta,
   refreshGetMeta,
   removeConnection,
@@ -59,9 +60,7 @@ import {
 import { showInstallationDetails } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
 import { ExecutionTypes } from "./models/execution";
-import { InsightDetails, Insights } from "./models/insights";
 import { QueryResult } from "./models/queryResult";
-import { Server, ServerDetails } from "./models/server";
 import {
   InsightsMetaNode,
   InsightsNode,
@@ -114,6 +113,12 @@ import {
   setLabelColor,
 } from "./utils/connLabel";
 import { activateTextDocument } from "./utils/workspace";
+import {
+  InsightDetails,
+  Insights,
+  Server,
+  ServerDetails,
+} from "./models/connectionsModels";
 
 let client: LanguageClient;
 
@@ -267,6 +272,18 @@ export async function activate(context: ExtensionContext) {
         await disconnect(connLabel);
       },
     ),
+    commands.registerCommand("kdb.connections.export.all", () => {
+      exportConnections();
+    }),
+    commands.registerCommand(
+      "kdb.connections.export.single",
+      async (viewItem: KdbNode | InsightsNode) => {
+        exportConnections(viewItem.label);
+      },
+    ),
+    commands.registerCommand("kdb.connections.import", () => {
+      window.showInformationMessage("Import Connections command executed");
+    }),
     commands.registerCommand(
       "kdb.open.meta",
       async (viewItem: InsightsMetaNode | MetaObjectPayloadNode) => {
