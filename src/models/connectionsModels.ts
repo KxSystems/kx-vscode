@@ -34,6 +34,13 @@ export interface Server {
   [name: string]: ServerDetails;
 }
 
+export interface kdbAuthMap {
+  [name: string]: {
+    username: string;
+    password: string;
+  };
+}
+
 export interface InsightDetails {
   alias: string;
   server: string;

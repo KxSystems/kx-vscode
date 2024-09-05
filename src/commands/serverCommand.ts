@@ -883,7 +883,24 @@ export async function openMeta(node: MetaObjectPayloadNode | InsightsMetaNode) {
 
 export async function exportConnections(connLabel?: string) {
   const connMngService = new ConnectionManagementService();
-  const doc = connMngService.exportConnection(connLabel);
+
+  const exportAuth = await window.showQuickPick(["Yes", "No"], {
+    placeHolder: "Do you want to export username and password?",
+  });
+
+  if (!exportAuth) {
+    kdbOutputLog(
+      "[EXPORT CONNECTIONS] Export operation was cancelled by the user",
+      "INFO",
+    );
+    return;
+  }
+
+  const includeAuth = exportAuth === "Yes";
+  if (includeAuth) {
+    await connMngService.retrieveUserPass();
+  }
+  const doc = await connMngService.exportConnection(connLabel, includeAuth);
   if (doc && doc !== "") {
     const formattedDoc = JSON.stringify(JSON.parse(doc), null, 2);
     const uri = await window.showSaveDialog({

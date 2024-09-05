@@ -34,6 +34,7 @@ import { retrieveConnLabelsNames } from "../utils/connLabel";
 import {
   ExportedConnections,
   Insights,
+  kdbAuthMap,
   Server,
 } from "../models/connectionsModels";
 
@@ -407,7 +408,27 @@ export class ConnectionManagementService {
     return connection.returnMetaObject(metaType);
   }
 
-  public exportConnection(connLabel?: string): string {
+  public async retrieveUserPass() {
+    for (const connection of ext.connectionsList) {
+      if (connection instanceof KdbNode) {
+        const authCredentials = await ext.secretSettings.getAuthData(
+          connection.children[0],
+        );
+        if (authCredentials) {
+          const [username, password] = authCredentials.split(":");
+          const authMap: kdbAuthMap = {
+            [connection.children[0]]: {
+              username,
+              password,
+            },
+          };
+          ext.kdbAuthMap.push(authMap);
+        }
+      }
+    }
+  }
+
+  public exportConnection(connLabel?: string, includeAuth?: boolean): string {
     const exportedContent: ExportedConnections = {
       connections: {
         Insights: [],
@@ -420,7 +441,6 @@ export class ConnectionManagementService {
         return "";
       }
       if (connection instanceof KdbNode) {
-        connection.details.auth = false;
         exportedContent.connections.KDB.push(connection.details);
       } else {
         exportedContent.connections.Insights.push(connection.details);
@@ -428,13 +448,32 @@ export class ConnectionManagementService {
     } else {
       ext.connectionsList.forEach((connection) => {
         if (connection instanceof KdbNode) {
-          connection.details.auth = false;
           exportedContent.connections.KDB.push(connection.details);
         } else {
           exportedContent.connections.Insights.push(connection.details);
         }
       });
     }
+
+    if (exportedContent.connections.KDB.length > 0) {
+      for (const kdbConn of exportedContent.connections.KDB) {
+        if (!includeAuth) {
+          kdbConn.auth = false;
+          kdbConn.username = undefined;
+          kdbConn.password = undefined;
+        } else {
+          const auth = ext.kdbAuthMap.find((auth) => {
+            return Object.keys(auth)[0] === kdbConn.serverAlias;
+          });
+          if (auth) {
+            kdbConn.auth = true;
+            kdbConn.username = auth[kdbConn.serverAlias].username;
+            kdbConn.password = auth[kdbConn.serverAlias].password;
+          }
+        }
+      }
+    }
+    ext.kdbAuthMap.length = 0;
     return exportedContent.connections.Insights.length === 0 &&
       exportedContent.connections.KDB.length === 0
       ? ""

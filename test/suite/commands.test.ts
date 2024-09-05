@@ -1911,6 +1911,9 @@ describe("serverCommand", () => {
       const exportConnectionStub = sandbox
         .stub(ConnectionManagementService.prototype, "exportConnection")
         .returns("");
+      const showQuickPickStub = sandbox
+        .stub(vscode.window, "showQuickPick")
+        .resolves({ label: "No" });
 
       await serverCommand.exportConnections();
 
@@ -1920,7 +1923,9 @@ describe("serverCommand", () => {
         "[EXPORT CONNECTIONS] No connections found to be exported",
         "ERROR",
       );
+
       exportConnectionStub.restore();
+      showQuickPickStub.restore();
     });
 
     it("should log info when save operation is cancelled by the user", async () => {
@@ -1930,6 +1935,9 @@ describe("serverCommand", () => {
       const showSaveDialogStub = sandbox
         .stub(vscode.window, "showSaveDialog")
         .resolves(undefined);
+      const showQuickPickStub = sandbox
+        .stub(vscode.window, "showQuickPick")
+        .resolves({ label: "Yes" });
 
       await serverCommand.exportConnections();
 
@@ -1939,8 +1947,10 @@ describe("serverCommand", () => {
         "[EXPORT CONNECTIONS] Save operation was cancelled by the user",
         "INFO",
       );
+
       exportConnectionStub.restore();
       showSaveDialogStub.restore();
+      showQuickPickStub.restore();
     });
   });
 });
