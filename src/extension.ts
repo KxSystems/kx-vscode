@@ -52,6 +52,7 @@ import {
   editKdbConnection,
   enableTLS,
   exportConnections,
+  importConnections,
   openMeta,
   refreshGetMeta,
   removeConnection,
@@ -281,8 +282,8 @@ export async function activate(context: ExtensionContext) {
         exportConnections(viewItem.label);
       },
     ),
-    commands.registerCommand("kdb.connections.import", () => {
-      window.showInformationMessage("Import Connections command executed");
+    commands.registerCommand("kdb.connections.import", async () => {
+      await importConnections();
     }),
     commands.registerCommand(
       "kdb.open.meta",
