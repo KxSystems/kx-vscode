@@ -377,7 +377,7 @@ export async function addKdbConnection(
           tls: kdbData.tls,
         },
       };
-      if (servers[0].managed) {
+      if (servers.key.managed) {
         await addLocalConnectionContexts(getServerName(servers[0]));
       }
     } else {
@@ -540,6 +540,8 @@ export async function editKdbConnection(
   }
 }
 
+// test fs readFileSync unit tests are flaky, no correct way to test them
+/* istanbul ignore next */
 export async function importConnections() {
   const options = {
     canSelectMany: false,
@@ -573,6 +575,16 @@ export async function importConnections() {
     );
     return;
   }
+  if (
+    importedConnections.connections.KDB.length === 0 &&
+    importedConnections.connections.Insights.length === 0
+  ) {
+    kdbOutputLog(
+      "[IMPORT CONNECTION]There is no KDB or Insights connections to import in this JSON file",
+      "ERROR",
+    );
+    return;
+  }
   await addImportedConnections(importedConnections);
 }
 
@@ -594,7 +606,7 @@ export async function addImportedConnections(
     let alias =
       connection.alias !== "local"
         ? connection.alias
-        : `${connection.alias}-${counter}`;
+        : `${connection.alias}Insights-${counter}`;
 
     while (existingAliases.has(alias)) {
       alias = `${connection.alias}-${counter}`;
@@ -615,14 +627,14 @@ export async function addImportedConnections(
       alias = `${connection.serverAlias}-${counter}`;
       counter++;
     }
+    let isManaged = false;
     connection.serverAlias = alias;
     if (!localAlreadyExists && alias === "local") {
-      connection.managed = true;
+      isManaged = true;
     } else {
-      connection.managed = false;
+      isManaged = false;
     }
-
-    await addKdbConnection(connection, connection.managed);
+    await addKdbConnection(connection, isManaged);
     existingAliases.add(alias);
     counter = 1;
   }

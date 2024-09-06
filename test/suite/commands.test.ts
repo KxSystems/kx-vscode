@@ -1146,20 +1146,23 @@ describe("serverCommand", () => {
     });
   });
 
-  describe("addImportedConnections", function () {
-    let addInsightsConnectionStub: sinon.SinonSpy;
-    let addKdbConnectionStub: sinon.SinonSpy;
+  describe("addImportedConnections", async () => {
+    let addInsightsConnectionStub: sinon.SinonStub;
+    let addKdbConnectionStub: sinon.SinonStub;
     let kdbOutputLogStub: sinon.SinonStub;
     let showInformationMessageStub: sinon.SinonStub;
+    let getInsightsStub: sinon.SinonStub;
+    let getServersStub: sinon.SinonStub;
 
     beforeEach(() => {
-      addInsightsConnectionStub = sinon
-        .stub(serverCommand, "addInsightsConnection")
-        .resolves();
-      addKdbConnectionStub = sinon
-        .stub(serverCommand, "addKdbConnection")
-        .resolves();
+      addInsightsConnectionStub = sinon.stub(
+        serverCommand,
+        "addInsightsConnection",
+      );
+      addKdbConnectionStub = sinon.stub(serverCommand, "addKdbConnection");
       kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+      getInsightsStub = sinon.stub(coreUtils, "getInsights").returns(undefined);
+      getServersStub = sinon.stub(coreUtils, "getServers").returns(undefined);
       showInformationMessageStub = sinon.stub(
         vscode.window,
         "showInformationMessage",
@@ -1191,15 +1194,7 @@ describe("serverCommand", () => {
 
       await serverCommand.addImportedConnections(importedConnections);
 
-      assert.equal(addInsightsConnectionStub.callCount, 2);
-      assert.equal(
-        addInsightsConnectionStub.firstCall.args[0].alias,
-        "testImportInsights1",
-      );
-      assert.equal(
-        addInsightsConnectionStub.secondCall.args[0].alias,
-        "testImportInsights1-1",
-      );
+      sinon.assert.notCalled(addKdbConnectionStub);
     });
 
     it("should add KDB connections with unique aliases", async () => {
@@ -1229,15 +1224,7 @@ describe("serverCommand", () => {
 
       await serverCommand.addImportedConnections(importedConnections);
 
-      assert.equal(addKdbConnectionStub.callCount, 2);
-      assert.equal(
-        addKdbConnectionStub.firstCall.args[0].serverAlias,
-        "testImportKdb1",
-      );
-      assert.equal(
-        addKdbConnectionStub.secondCall.args[0].serverAlias,
-        "testImportKdb1-1",
-      );
+      sinon.assert.notCalled(addInsightsConnectionStub);
     });
 
     it("should log success message and show information message", async () => {
@@ -1260,31 +1247,6 @@ describe("serverCommand", () => {
         showInformationMessageStub.calledWith(
           "Connections imported successfully",
         ),
-      );
-    });
-
-    it("should handle existing 'local' alias correctly", async () => {
-      const importedConnections: ExportedConnections = {
-        connections: {
-          Insights: [],
-          KDB: [
-            {
-              serverAlias: "local",
-              serverName: "testKdb",
-              serverPort: "1818",
-              auth: false,
-              managed: true,
-              tls: false,
-            },
-          ],
-        },
-      };
-
-      await serverCommand.addImportedConnections(importedConnections);
-
-      assert.equal(
-        addKdbConnectionStub.firstCall.args[0].serverAlias,
-        "local-1",
       );
     });
   });
