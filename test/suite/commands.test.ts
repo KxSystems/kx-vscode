@@ -11,11 +11,11 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import * as fs from "fs";
 import assert from "assert";
 import mock from "mock-fs";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import * as fs from "fs";
 import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
 import * as installTools from "../../src/commands/installTools";
 import * as serverCommand from "../../src/commands/serverCommand";
@@ -53,6 +53,7 @@ import { GetDataError } from "../../src/models/data";
 import * as clientCommand from "../../src/commands/clientCommands";
 import { LanguageClient } from "vscode-languageclient/node";
 import {
+  ExportedConnections,
   InsightDetails,
   ServerDetails,
   ServerType,
@@ -1109,6 +1110,182 @@ describe("serverCommand", () => {
         .expects("showErrorMessage")
         .once()
         .withArgs("Invalid Kdb connection");
+    });
+  });
+
+  describe("importConnections", () => {
+    let showOpenDialogStub: sinon.SinonStub;
+    let kdbOutputLogStub: sinon.SinonStub;
+    let addImportedConnectionsStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      showOpenDialogStub = sinon.stub(vscode.window, "showOpenDialog");
+      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+      addImportedConnectionsStub = sinon.stub(
+        serverCommand,
+        "addImportedConnections",
+      );
+    });
+
+    afterEach(() => {
+      sinon.restore();
+      mock.restore();
+    });
+
+    it("should log an error if no file is selected", async () => {
+      showOpenDialogStub.resolves(undefined);
+
+      await serverCommand.importConnections();
+
+      assert(
+        kdbOutputLogStub.calledWith(
+          "[IMPORT CONNECTION]No file selected",
+          "ERROR",
+        ),
+      );
+    });
+  });
+
+  describe("addImportedConnections", function () {
+    let addInsightsConnectionStub: sinon.SinonSpy;
+    let addKdbConnectionStub: sinon.SinonSpy;
+    let kdbOutputLogStub: sinon.SinonStub;
+    let showInformationMessageStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      addInsightsConnectionStub = sinon
+        .stub(serverCommand, "addInsightsConnection")
+        .resolves();
+      addKdbConnectionStub = sinon
+        .stub(serverCommand, "addKdbConnection")
+        .resolves();
+      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+      showInformationMessageStub = sinon.stub(
+        vscode.window,
+        "showInformationMessage",
+      );
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should add insights connections with unique aliases", async () => {
+      const importedConnections: ExportedConnections = {
+        connections: {
+          Insights: [
+            {
+              alias: "testImportInsights1",
+              server: "testInsight",
+              auth: false,
+            },
+            {
+              alias: "testImportInsights1",
+              server: "testInsight2",
+              auth: false,
+            },
+          ],
+          KDB: [],
+        },
+      };
+
+      await serverCommand.addImportedConnections(importedConnections);
+
+      assert.equal(addInsightsConnectionStub.callCount, 2);
+      assert.equal(
+        addInsightsConnectionStub.firstCall.args[0].alias,
+        "testImportInsights1",
+      );
+      assert.equal(
+        addInsightsConnectionStub.secondCall.args[0].alias,
+        "testImportInsights1-1",
+      );
+    });
+
+    it("should add KDB connections with unique aliases", async () => {
+      const importedConnections: ExportedConnections = {
+        connections: {
+          Insights: [],
+          KDB: [
+            {
+              serverAlias: "testImportKdb1",
+              serverName: "testKdb",
+              serverPort: "1818",
+              auth: false,
+              managed: false,
+              tls: false,
+            },
+            {
+              serverAlias: "testImportKdb1",
+              serverName: "testKdb2",
+              serverPort: "1819",
+              auth: false,
+              managed: false,
+              tls: false,
+            },
+          ],
+        },
+      };
+
+      await serverCommand.addImportedConnections(importedConnections);
+
+      assert.equal(addKdbConnectionStub.callCount, 2);
+      assert.equal(
+        addKdbConnectionStub.firstCall.args[0].serverAlias,
+        "testImportKdb1",
+      );
+      assert.equal(
+        addKdbConnectionStub.secondCall.args[0].serverAlias,
+        "testImportKdb1-1",
+      );
+    });
+
+    it("should log success message and show information message", async () => {
+      const importedConnections: ExportedConnections = {
+        connections: {
+          Insights: [],
+          KDB: [],
+        },
+      };
+
+      await serverCommand.addImportedConnections(importedConnections);
+
+      assert(
+        kdbOutputLogStub.calledWith(
+          "[IMPORT CONNECTION]Connections imported successfully",
+          "INFO",
+        ),
+      );
+      assert(
+        showInformationMessageStub.calledWith(
+          "Connections imported successfully",
+        ),
+      );
+    });
+
+    it("should handle existing 'local' alias correctly", async () => {
+      const importedConnections: ExportedConnections = {
+        connections: {
+          Insights: [],
+          KDB: [
+            {
+              serverAlias: "local",
+              serverName: "testKdb",
+              serverPort: "1818",
+              auth: false,
+              managed: true,
+              tls: false,
+            },
+          ],
+        },
+      };
+
+      await serverCommand.addImportedConnections(importedConnections);
+
+      assert.equal(
+        addKdbConnectionStub.firstCall.args[0].serverAlias,
+        "local-1",
+      );
     });
   });
 
