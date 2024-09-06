@@ -38,6 +38,7 @@ import { LocalConnection } from "./classes/localConnection";
 import { InsightsConnection } from "./classes/insightsConnection";
 import { DataSourceFiles } from "./models/dataSource";
 import { ConnectionLabel, LabelColors, Labels } from "./models/labels";
+import { kdbAuthMap } from "./models/connectionsModels";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
@@ -80,6 +81,7 @@ export namespace ext {
   export const kdbDataSourceRootNodes: string[] = [];
   export const kdbQueryHistoryNodes: string[] = [];
   export const kdbQueryHistoryList: QueryHistory[] = [];
+  export const kdbAuthMap: kdbAuthMap[] = [];
   export const kdbrootNodes: string[] = [];
   export const kdbinsightsNodes: string[] = [];
   export const kdbNodesWithoutAuth: string[] = [];

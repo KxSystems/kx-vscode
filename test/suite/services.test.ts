@@ -16,6 +16,7 @@ import assert from "node:assert";
 import sinon from "sinon";
 import {
   ExtensionContext,
+  MarkdownString,
   TreeItemCollapsibleState,
   Uri,
   WebviewPanel,
@@ -66,8 +67,10 @@ import { ConnectionLabel, Labels } from "../../src/models/labels";
 import {
   Insights,
   Server,
+  ServerDetails,
   ServerType,
 } from "../../src/models/connectionsModels";
+import AuthSettings from "../../src/utils/secretStorage";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -1397,9 +1400,71 @@ describe("connectionManagerService", () => {
     });
   });
 
-  describe("ConnectionManagementService", () => {
+  describe("retrieveUserPass", () => {
+    let connectionManagerService: ConnectionManagementService;
+    let connectionsListStub: sinon.SinonStub;
+    let getAuthDataStub: sinon.SinonStub;
+    let kdbAuthMapStub: sinon.SinonStub;
+    let contextStub: sinon.SinonStub;
+    ext.context = {} as ExtensionContext;
+
+    beforeEach(() => {
+      contextStub = sinon.stub(ext, "context").value({
+        globalStorageUri: {
+          fsPath: "/temp/",
+        },
+      });
+      AuthSettings.init(ext.context);
+      ext.secretSettings = AuthSettings.instance;
+      connectionManagerService = new ConnectionManagementService();
+      connectionsListStub = sinon.stub(ext, "connectionsList").value([]);
+      getAuthDataStub = sinon.stub(ext.secretSettings, "getAuthData");
+      kdbAuthMapStub = sinon.stub(ext, "kdbAuthMap").value([]);
+    });
+
+    afterEach(() => {
+      sinon.restore();
+      ext.connectionsList.length = 0;
+    });
+
+    it("should retrieve and store auth data for KdbNode connections", async () => {
+      ext.connectionsList.push(kdbNode);
+      getAuthDataStub.withArgs(kdbNode.children[0]).resolves("user1:pass1");
+
+      await connectionManagerService.retrieveUserPass();
+
+      assert.strictEqual(ext.kdbAuthMap.length, 1);
+      assert.deepEqual(ext.kdbAuthMap[0], {
+        child1: {
+          username: "user1",
+          password: "pass1",
+        },
+      });
+    });
+
+    it("should not store auth data if getAuthData returns null", async () => {
+      connectionsListStub.value([kdbNode]);
+      getAuthDataStub.withArgs("server1").resolves(null);
+
+      await connectionManagerService.retrieveUserPass();
+
+      assert.strictEqual(ext.kdbAuthMap.length, 0);
+    });
+
+    it("should not store auth data for non-KdbNode connections", async () => {
+      const nonKdbNode = { children: ["server1"] };
+      connectionsListStub.value([nonKdbNode]);
+
+      await connectionManagerService.retrieveUserPass();
+
+      assert.strictEqual(ext.kdbAuthMap.length, 0);
+    });
+  });
+
+  describe("exportConnection", () => {
     let retrieveConnectionStub: sinon.SinonStub;
     let connectionsListStub: sinon.SinonStub;
+    let kdbAuthMapStub: sinon.SinonStub;
 
     beforeEach(() => {
       retrieveConnectionStub = sinon.stub(
@@ -1407,6 +1472,7 @@ describe("connectionManagerService", () => {
         "retrieveConnection",
       );
       connectionsListStub = sinon.stub(ext, "connectionsList").value([]);
+      kdbAuthMapStub = sinon.stub(ext, "kdbAuthMap").value([]);
     });
 
     afterEach(() => {
@@ -1474,6 +1540,77 @@ describe("connectionManagerService", () => {
       };
 
       assert.strictEqual(result, JSON.stringify(expectedOutput, null, 2));
+    });
+
+    it("should set auth to false and clear username and password if includeAuth is false", () => {
+      connectionsListStub.value([kdbNode]);
+
+      const result = connectionManagerService.exportConnection(
+        undefined,
+        false,
+      );
+
+      const expectedOutput = {
+        connections: {
+          Insights: [],
+          KDB: [kdbNode.details],
+        },
+      };
+
+      assert.strictEqual(result, JSON.stringify(expectedOutput, null, 2));
+    });
+
+    it("should set auth to true and populate username and password if includeAuth is true and auth is found", () => {
+      const authData = {
+        server1: {
+          username: "user1",
+          password: "pass1",
+        },
+      };
+      connectionsListStub.value([kdbNode]);
+      kdbAuthMapStub.value([authData]);
+
+      const result = connectionManagerService.exportConnection(undefined, true);
+
+      const expectedOutput = {
+        connections: {
+          Insights: [],
+          KDB: [kdbNode.details],
+        },
+      };
+
+      assert.strictEqual(result, JSON.stringify(expectedOutput, null, 2));
+    });
+
+    it("should not change auth, username, and password if includeAuth is true and auth is not found", () => {
+      connectionsListStub.value([kdbNode]);
+      kdbAuthMapStub.value([]);
+
+      const result = connectionManagerService.exportConnection(undefined, true);
+
+      const expectedOutput = {
+        connections: {
+          Insights: [],
+          KDB: [kdbNode.details],
+        },
+      };
+
+      assert.strictEqual(result, JSON.stringify(expectedOutput, null, 2));
+    });
+
+    it("should clear kdbAuthMap after processing", () => {
+      const authData = {
+        server1: {
+          username: "user1",
+          password: "pass1",
+        },
+      };
+      connectionsListStub.value([kdbNode]);
+      kdbAuthMapStub.value([authData]);
+
+      connectionManagerService.exportConnection(undefined, true);
+
+      assert.strictEqual(ext.kdbAuthMap.length, 0);
     });
   });
 });
