@@ -618,7 +618,7 @@ export async function addImportedConnections(
       alias = `${connection.serverAlias}-${counter}`;
       counter++;
     }
-    const isManaged = alias === "local" ? true : false;
+    const isManaged = alias === "local";
     connection.serverAlias = alias;
     await addKdbConnection(connection, isManaged);
     existingAliases.add(alias);

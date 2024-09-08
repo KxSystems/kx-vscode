@@ -1261,6 +1261,29 @@ describe("serverCommand", () => {
         ),
       );
     });
+
+    it("should add kdb connections", () => {
+      ext.connectionsList.push(insightsNodeImport1, kdbNodeImport1);
+      const importedConnections: ExportedConnections = {
+        connections: {
+          Insights: [],
+          KDB: [
+            {
+              serverName: "testKdb",
+              serverAlias: "testKdb",
+              serverPort: "1818",
+              auth: false,
+              managed: false,
+              tls: false,
+            },
+          ],
+        },
+      };
+
+      serverCommand.addImportedConnections(importedConnections);
+
+      sinon.assert.notCalled(addInsightsConnectionStub);
+    });
   });
 
   describe("writeQueryResultsToView", () => {
