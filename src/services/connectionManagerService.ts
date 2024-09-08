@@ -69,6 +69,30 @@ export class ConnectionManagementService {
     );
   }
 
+  public retrieveListOfConnectionsNames(): Set<string> {
+    return new Set(
+      ext.connectionsList.map((conn) => {
+        if (conn instanceof KdbNode) {
+          return conn.details.serverAlias;
+        } else {
+          return conn.details.alias;
+        }
+      }),
+    );
+  }
+
+  public checkConnAlias(
+    alias: string,
+    isInsights: boolean,
+    localAlreadyExists?: boolean,
+  ): string {
+    if (isInsights) {
+      return alias !== "local" ? alias : "localInsights";
+    } else {
+      return localAlreadyExists && alias === "local" ? alias + "KDB" : alias;
+    }
+  }
+
   public isKdbConnection(connection: KdbNode | InsightsNode): boolean {
     return connection instanceof KdbNode;
   }

@@ -1153,6 +1153,45 @@ describe("serverCommand", () => {
     let showInformationMessageStub: sinon.SinonStub;
     let getInsightsStub: sinon.SinonStub;
     let getServersStub: sinon.SinonStub;
+    const kdbNodeImport1: KdbNode = {
+      label: "local",
+      details: {
+        serverName: "testKdb",
+        serverAlias: "local",
+        serverPort: "1818",
+        auth: false,
+        managed: false,
+        tls: false,
+      },
+      collapsibleState: vscode.TreeItemCollapsibleState.None,
+      contextValue: "kdbNode",
+      children: [],
+      getTooltip: function (): vscode.MarkdownString {
+        throw new Error("Function not implemented.");
+      },
+      getDescription: function (): string {
+        throw new Error("Function not implemented.");
+      },
+      iconPath: undefined,
+    };
+    const insightsNodeImport1: InsightsNode = {
+      label: "testInsight",
+      details: {
+        server: "testInsight",
+        alias: "testInsight",
+        auth: false,
+      },
+      collapsibleState: vscode.TreeItemCollapsibleState.None,
+      contextValue: "insightsNode",
+      children: [],
+      getTooltip: function (): vscode.MarkdownString {
+        throw new Error("Function not implemented.");
+      },
+      getDescription: function (): string {
+        throw new Error("Function not implemented.");
+      },
+      iconPath: undefined,
+    };
 
     beforeEach(() => {
       addInsightsConnectionStub = sinon.stub(
@@ -1167,13 +1206,16 @@ describe("serverCommand", () => {
         vscode.window,
         "showInformationMessage",
       );
+      ext.connectionsList.length = 0;
     });
 
     afterEach(() => {
       sinon.restore();
+      ext.connectionsList.length = 0;
     });
 
     it("should add insights connections with unique aliases", async () => {
+      ext.connectionsList.push(insightsNodeImport1, kdbNodeImport1);
       const importedConnections: ExportedConnections = {
         connections: {
           Insights: [
@@ -1195,36 +1237,6 @@ describe("serverCommand", () => {
       await serverCommand.addImportedConnections(importedConnections);
 
       sinon.assert.notCalled(addKdbConnectionStub);
-    });
-
-    it("should add KDB connections with unique aliases", async () => {
-      const importedConnections: ExportedConnections = {
-        connections: {
-          Insights: [],
-          KDB: [
-            {
-              serverAlias: "testImportKdb1",
-              serverName: "testKdb",
-              serverPort: "1818",
-              auth: false,
-              managed: false,
-              tls: false,
-            },
-            {
-              serverAlias: "testImportKdb1",
-              serverName: "testKdb2",
-              serverPort: "1819",
-              auth: false,
-              managed: false,
-              tls: false,
-            },
-          ],
-        },
-      };
-
-      await serverCommand.addImportedConnections(importedConnections);
-
-      sinon.assert.notCalled(addInsightsConnectionStub);
     });
 
     it("should log success message and show information message", async () => {

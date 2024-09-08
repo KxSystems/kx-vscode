@@ -591,22 +591,12 @@ export async function importConnections() {
 export async function addImportedConnections(
   importedConnections: ExportedConnections,
 ) {
-  const existingAliases = new Set(
-    ext.connectionsList.map((conn) => {
-      if (conn instanceof KdbNode) {
-        return conn.details.serverAlias;
-      } else {
-        return conn.details.alias;
-      }
-    }),
-  );
+  const connMangService = new ConnectionManagementService();
+  const existingAliases = connMangService.retrieveListOfConnectionsNames();
   const localAlreadyExists = existingAliases.has("local");
   let counter = 1;
   for (const connection of importedConnections.connections.Insights) {
-    let alias =
-      connection.alias !== "local"
-        ? connection.alias
-        : `${connection.alias}Insights-${counter}`;
+    let alias = connMangService.checkConnAlias(connection.alias, true);
 
     while (existingAliases.has(alias)) {
       alias = `${connection.alias}-${counter}`;
@@ -619,21 +609,17 @@ export async function addImportedConnections(
   }
 
   for (const connection of importedConnections.connections.KDB) {
-    let alias =
-      connection.serverAlias === "local" && localAlreadyExists
-        ? `${connection.serverAlias}-${counter}`
-        : connection.serverAlias;
+    let alias = connMangService.checkConnAlias(
+      connection.serverAlias,
+      false,
+      localAlreadyExists,
+    );
     while (existingAliases.has(alias)) {
       alias = `${connection.serverAlias}-${counter}`;
       counter++;
     }
-    let isManaged = false;
+    const isManaged = alias === "local" ? true : false;
     connection.serverAlias = alias;
-    if (!localAlreadyExists && alias === "local") {
-      isManaged = true;
-    } else {
-      isManaged = false;
-    }
     await addKdbConnection(connection, isManaged);
     existingAliases.add(alias);
     counter = 1;
