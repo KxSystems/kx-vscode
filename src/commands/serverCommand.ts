@@ -1151,9 +1151,7 @@ export function writeScratchpadResult(
 
 function isValidExportedConnections(data: any): data is ExportedConnections {
   return (
-    data &&
-    data.connections &&
-    Array.isArray(data.connections.Insights) &&
-    Array.isArray(data.connections.KDB)
+    data?.connections?.Insights instanceof Array &&
+    data?.connections?.KDB instanceof Array
   );
 }
