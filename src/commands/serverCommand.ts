@@ -68,6 +68,7 @@ import { InsightsConnection } from "../classes/insightsConnection";
 import { MetaContentProvider } from "../services/metaContentProvider";
 import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
 import {
+  ExportedConnections,
   InsightDetails,
   Insights,
   Server,
@@ -376,7 +377,7 @@ export async function addKdbConnection(
           tls: kdbData.tls,
         },
       };
-      if (servers[0].managed) {
+      if (servers.key.managed) {
         await addLocalConnectionContexts(getServerName(servers[0]));
       }
     } else {
@@ -537,6 +538,95 @@ export async function editKdbConnection(
       }
     }
   }
+}
+
+// test fs readFileSync unit tests are flaky, no correct way to test them
+/* istanbul ignore next */
+export async function importConnections() {
+  const options = {
+    canSelectMany: false,
+    openLabel: "Select JSON File",
+    filters: {
+      "JSON Files": ["json"],
+      "All Files": ["*"],
+    },
+  };
+
+  const fileUri = await window.showOpenDialog(options);
+  if (!fileUri || fileUri.length === 0) {
+    kdbOutputLog("[IMPORT CONNECTION]No file selected", "ERROR");
+    return;
+  }
+  const filePath = fileUri[0].fsPath;
+  const fileContent = fs.readFileSync(filePath, "utf8");
+
+  let importedConnections: ExportedConnections;
+  try {
+    importedConnections = JSON.parse(fileContent);
+  } catch (e) {
+    kdbOutputLog("[IMPORT CONNECTION]Invalid JSON format", "ERROR");
+    return;
+  }
+
+  if (!isValidExportedConnections(importedConnections)) {
+    kdbOutputLog(
+      "[IMPORT CONNECTION]JSON does not match the required format",
+      "ERROR",
+    );
+    return;
+  }
+  if (
+    importedConnections.connections.KDB.length === 0 &&
+    importedConnections.connections.Insights.length === 0
+  ) {
+    kdbOutputLog(
+      "[IMPORT CONNECTION]There is no KDB or Insights connections to import in this JSON file",
+      "ERROR",
+    );
+    return;
+  }
+  await addImportedConnections(importedConnections);
+}
+
+export async function addImportedConnections(
+  importedConnections: ExportedConnections,
+) {
+  const connMangService = new ConnectionManagementService();
+  const existingAliases = connMangService.retrieveListOfConnectionsNames();
+  const localAlreadyExists = existingAliases.has("local");
+  let counter = 1;
+  for (const connection of importedConnections.connections.Insights) {
+    let alias = connMangService.checkConnAlias(connection.alias, true);
+
+    while (existingAliases.has(alias)) {
+      alias = `${connection.alias}-${counter}`;
+      counter++;
+    }
+    connection.alias = alias;
+    await addInsightsConnection(connection);
+    existingAliases.add(alias);
+    counter = 1;
+  }
+
+  for (const connection of importedConnections.connections.KDB) {
+    let alias = connMangService.checkConnAlias(
+      connection.serverAlias,
+      false,
+      localAlreadyExists,
+    );
+    while (existingAliases.has(alias)) {
+      alias = `${connection.serverAlias}-${counter}`;
+      counter++;
+    }
+    const isManaged = alias === "local";
+    connection.serverAlias = alias;
+    await addKdbConnection(connection, isManaged);
+    existingAliases.add(alias);
+    counter = 1;
+  }
+
+  kdbOutputLog("[IMPORT CONNECTION]Connections imported successfully", "INFO");
+  window.showInformationMessage("Connections imported successfully");
 }
 
 export async function removeConnection(viewItem: KdbNode | InsightsNode) {
@@ -1057,4 +1147,13 @@ export function writeScratchpadResult(
       );
     }
   }
+}
+
+function isValidExportedConnections(data: any): data is ExportedConnections {
+  return (
+    data &&
+    data.connections &&
+    Array.isArray(data.connections.Insights) &&
+    Array.isArray(data.connections.KDB)
+  );
 }
