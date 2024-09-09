@@ -11,11 +11,11 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import * as fs from "fs";
 import assert from "assert";
 import mock from "mock-fs";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import * as fs from "fs";
 import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
 import * as installTools from "../../src/commands/installTools";
 import * as serverCommand from "../../src/commands/serverCommand";
@@ -53,6 +53,7 @@ import { GetDataError } from "../../src/models/data";
 import * as clientCommand from "../../src/commands/clientCommands";
 import { LanguageClient } from "vscode-languageclient/node";
 import {
+  ExportedConnections,
   InsightDetails,
   ServerDetails,
   ServerType,
@@ -1109,6 +1110,179 @@ describe("serverCommand", () => {
         .expects("showErrorMessage")
         .once()
         .withArgs("Invalid Kdb connection");
+    });
+  });
+
+  describe("importConnections", () => {
+    let showOpenDialogStub: sinon.SinonStub;
+    let kdbOutputLogStub: sinon.SinonStub;
+    let addImportedConnectionsStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      showOpenDialogStub = sinon.stub(vscode.window, "showOpenDialog");
+      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+      addImportedConnectionsStub = sinon.stub(
+        serverCommand,
+        "addImportedConnections",
+      );
+    });
+
+    afterEach(() => {
+      sinon.restore();
+      mock.restore();
+    });
+
+    it("should log an error if no file is selected", async () => {
+      showOpenDialogStub.resolves(undefined);
+
+      await serverCommand.importConnections();
+
+      assert(
+        kdbOutputLogStub.calledWith(
+          "[IMPORT CONNECTION]No file selected",
+          "ERROR",
+        ),
+      );
+    });
+  });
+
+  describe("addImportedConnections", async () => {
+    let addInsightsConnectionStub: sinon.SinonStub;
+    let addKdbConnectionStub: sinon.SinonStub;
+    let kdbOutputLogStub: sinon.SinonStub;
+    let showInformationMessageStub: sinon.SinonStub;
+    let getInsightsStub: sinon.SinonStub;
+    let getServersStub: sinon.SinonStub;
+    const kdbNodeImport1: KdbNode = {
+      label: "local",
+      details: {
+        serverName: "testKdb",
+        serverAlias: "local",
+        serverPort: "1818",
+        auth: false,
+        managed: false,
+        tls: false,
+      },
+      collapsibleState: vscode.TreeItemCollapsibleState.None,
+      contextValue: "kdbNode",
+      children: [],
+      getTooltip: function (): vscode.MarkdownString {
+        throw new Error("Function not implemented.");
+      },
+      getDescription: function (): string {
+        throw new Error("Function not implemented.");
+      },
+      iconPath: undefined,
+    };
+    const insightsNodeImport1: InsightsNode = {
+      label: "testInsight",
+      details: {
+        server: "testInsight",
+        alias: "testInsight",
+        auth: false,
+      },
+      collapsibleState: vscode.TreeItemCollapsibleState.None,
+      contextValue: "insightsNode",
+      children: [],
+      getTooltip: function (): vscode.MarkdownString {
+        throw new Error("Function not implemented.");
+      },
+      getDescription: function (): string {
+        throw new Error("Function not implemented.");
+      },
+      iconPath: undefined,
+    };
+
+    beforeEach(() => {
+      addInsightsConnectionStub = sinon.stub(
+        serverCommand,
+        "addInsightsConnection",
+      );
+      addKdbConnectionStub = sinon.stub(serverCommand, "addKdbConnection");
+      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+      getInsightsStub = sinon.stub(coreUtils, "getInsights").returns(undefined);
+      getServersStub = sinon.stub(coreUtils, "getServers").returns(undefined);
+      showInformationMessageStub = sinon.stub(
+        vscode.window,
+        "showInformationMessage",
+      );
+      ext.connectionsList.length = 0;
+    });
+
+    afterEach(() => {
+      sinon.restore();
+      ext.connectionsList.length = 0;
+    });
+
+    it("should add insights connections with unique aliases", async () => {
+      ext.connectionsList.push(insightsNodeImport1, kdbNodeImport1);
+      const importedConnections: ExportedConnections = {
+        connections: {
+          Insights: [
+            {
+              alias: "testImportInsights1",
+              server: "testInsight",
+              auth: false,
+            },
+            {
+              alias: "testImportInsights1",
+              server: "testInsight2",
+              auth: false,
+            },
+          ],
+          KDB: [],
+        },
+      };
+
+      await serverCommand.addImportedConnections(importedConnections);
+
+      sinon.assert.notCalled(addKdbConnectionStub);
+    });
+
+    it("should log success message and show information message", async () => {
+      const importedConnections: ExportedConnections = {
+        connections: {
+          Insights: [],
+          KDB: [],
+        },
+      };
+
+      await serverCommand.addImportedConnections(importedConnections);
+
+      assert(
+        kdbOutputLogStub.calledWith(
+          "[IMPORT CONNECTION]Connections imported successfully",
+          "INFO",
+        ),
+      );
+      assert(
+        showInformationMessageStub.calledWith(
+          "Connections imported successfully",
+        ),
+      );
+    });
+
+    it("should add kdb connections", () => {
+      ext.connectionsList.push(insightsNodeImport1, kdbNodeImport1);
+      const importedConnections: ExportedConnections = {
+        connections: {
+          Insights: [],
+          KDB: [
+            {
+              serverName: "testKdb",
+              serverAlias: "testKdb",
+              serverPort: "1818",
+              auth: false,
+              managed: false,
+              tls: false,
+            },
+          ],
+        },
+      };
+
+      serverCommand.addImportedConnections(importedConnections);
+
+      sinon.assert.notCalled(addInsightsConnectionStub);
     });
   });
 

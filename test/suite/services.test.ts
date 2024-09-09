@@ -16,7 +16,6 @@ import assert from "node:assert";
 import sinon from "sinon";
 import {
   ExtensionContext,
-  MarkdownString,
   TreeItemCollapsibleState,
   Uri,
   WebviewPanel,
@@ -67,7 +66,6 @@ import { ConnectionLabel, Labels } from "../../src/models/labels";
 import {
   Insights,
   Server,
-  ServerDetails,
   ServerType,
 } from "../../src/models/connectionsModels";
 import AuthSettings from "../../src/utils/secretStorage";
@@ -1033,6 +1031,44 @@ describe("connectionManagerService", () => {
       const result =
         connectionManagerService.retrieveLocalConnectionString(kdbNode);
       assert.strictEqual(result, "127.0.0.1:5001");
+    });
+  });
+
+  describe("retrieveListOfConnectionsNames", () => {
+    it("Should return the list of connection names", () => {
+      ext.connectionsList.push(kdbNode, insightNode);
+      const result = connectionManagerService.retrieveListOfConnectionsNames();
+      assert.strictEqual(result.size, 2);
+    });
+  });
+
+  describe("checkConnAlias", () => {
+    it("Should return localInsights when connection is insights and alias equals local", () => {
+      const result = connectionManagerService.checkConnAlias("local", true);
+      assert.strictEqual(result, "localInsights");
+    });
+
+    it("Should note return localInsights when connection is insights and alias not equals local", () => {
+      const result = connectionManagerService.checkConnAlias("notLocal", true);
+      assert.strictEqual(result, "notLocal");
+    });
+
+    it("Should return local when connection is kdb and alias equals local and local conn not exist already", () => {
+      const result = connectionManagerService.checkConnAlias(
+        "local",
+        false,
+        false,
+      );
+      assert.strictEqual(result, "local");
+    });
+
+    it("Should return localKDB when connection is kdb and alias equals local and local conn exist already", () => {
+      const result = connectionManagerService.checkConnAlias(
+        "local",
+        false,
+        true,
+      );
+      assert.strictEqual(result, "localKDB");
     });
   });
 
