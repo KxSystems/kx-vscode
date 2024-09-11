@@ -848,7 +848,8 @@ describe("queryHistoryProvider", () => {
       time: "testTime3",
       query: dummyDS,
       success: false,
-      connectionType: ServerType.undefined,
+      connectionType: ServerType.KDB,
+      isFromConnTree: true,
     },
   ];
   beforeEach(() => {
@@ -934,7 +935,7 @@ describe("queryHistoryProvider", () => {
     it("Should return a new QueryHistoryTreeItem with sucess icom", () => {
       const queryHistoryTreeItem = new QueryHistoryTreeItem(
         "testLabel",
-        dummyQueryHistory[0],
+        dummyQueryHistory[2],
         TreeItemCollapsibleState.None,
       );
       const result = queryHistoryTreeItem.defineQueryIcon(false);
