@@ -74,6 +74,11 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   refresh(serverList: Server): void {
     ext.isBundleQCreated = false;
     this.serverList = serverList;
+    commands.executeCommand(
+      "setContext",
+      "kdb.selectContentNodesContext",
+      ext.selectContentNodesContext,
+    );
     this._onDidChangeTreeData.fire();
   }
 
@@ -99,6 +104,9 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
         title: "Open Meta Object",
         arguments: [element],
       };
+      if (element.label !== "meta") {
+        element.contextValue = element.label;
+      }
     }
     return element;
   }

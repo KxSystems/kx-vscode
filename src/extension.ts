@@ -286,6 +286,13 @@ export async function activate(context: ExtensionContext) {
       await importConnections();
     }),
     commands.registerCommand(
+      "kdb.connection.content.selectView",
+      async (viewItem) => {
+        console.log(viewItem);
+        window.showInformationMessage("Select a view to open");
+      },
+    ),
+    commands.registerCommand(
       "kdb.open.meta",
       async (viewItem: InsightsMetaNode | MetaObjectPayloadNode) => {
         await openMeta(viewItem);

@@ -257,6 +257,15 @@
       },
       {
         "category": "KX",
+        "command": "kdb.connection.content.selectView",
+        "title": "View contents",
+        "icon": {
+          "dark": "./resources/select-view.svg",
+          "light": "./resources/select-view.svg"
+        }
+      },
+      {
+        "category": "KX",
         "command": "kdb.refreshScratchpadExplorer",
         "title": "Refresh workbooks",
         "icon": "$(refresh)",
@@ -651,6 +660,14 @@
         {
           "command": "kdb.enableTLS",
           "when": "false"
+        },
+        {
+          "command": "kdb.connections.export.single",
+          "when": "false"
+        },
+        {
+          "command": "kdb.connection.content.selectView",
+          "when": "false"
         }
       ],
       "webview/context": [
@@ -818,6 +835,11 @@
           "command": "kdb.deleteLabel",
           "when": "view == kdb-servers && viewItem == label",
           "group": "label@3"
+        },
+        {
+          "command": "kdb.connection.content.selectView",
+          "when": "view == kdb-servers && viewItem in kdb.selectContentNodesContext",
+          "group": "inline"
         }
       ],
       "editor/title/run": [
