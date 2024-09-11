@@ -339,6 +339,7 @@ export function addQueryHistory(
   isDatasource?: boolean,
   datasourceType?: DataSourceTypes,
   duration?: string,
+  isFromConnTree?: boolean,
 ) {
   const newQueryHistory: QueryHistory = {
     query: query,
@@ -352,6 +353,7 @@ export function addQueryHistory(
     isDatasource,
     datasourceType,
     duration,
+    isFromConnTree,
   };
 
   ext.kdbQueryHistoryList.unshift(newQueryHistory);

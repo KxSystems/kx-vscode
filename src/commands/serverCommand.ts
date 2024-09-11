@@ -718,14 +718,12 @@ export async function executeQuery(
   context: string,
   isPython: boolean,
   isWorkbook: boolean,
+  isFromConnTree?: boolean,
 ): Promise<void> {
   const connMngService = new ConnectionManagementService();
   const queryConsole = ExecutionConsole.start();
   if (connLabel === "") {
     if (ext.activeConnection === undefined) {
-      window.showErrorMessage(
-        "No active connection found. Connect to one connection.",
-      );
       kdbOutputLog(
         "No active connection found. Connect to one connection.",
         "ERROR",
@@ -755,6 +753,8 @@ export async function executeQuery(
       isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
       isPython,
       false,
+      undefined,
+      isFromConnTree,
     );
     return undefined;
   }
@@ -793,6 +793,7 @@ export async function executeQuery(
         isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
         isPython,
         duration,
+        isFromConnTree,
       );
     } else {
       writeQueryResultsToConsole(
@@ -804,6 +805,7 @@ export async function executeQuery(
         isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
         isPython,
         duration,
+        isFromConnTree,
       );
     }
   }
@@ -1037,6 +1039,7 @@ export function writeQueryResultsToConsole(
   type?: string,
   isPython?: boolean,
   duration?: string,
+  isFromConnTree?: boolean,
 ): void {
   const queryConsole = ExecutionConsole.start();
   const isNonEmptyArray = Array.isArray(result) && result.length > 0;
@@ -1052,6 +1055,7 @@ export function writeQueryResultsToConsole(
       type,
       isPython,
       duration,
+      isFromConnTree,
     );
   } else {
     if (!checkIfIsDatasource(type)) {
@@ -1066,6 +1070,7 @@ export function writeQueryResultsToConsole(
         isPython,
         false,
         duration,
+        isFromConnTree,
       );
     }
   }
@@ -1080,6 +1085,7 @@ export function writeQueryResultsToView(
   type?: string,
   isPython?: boolean,
   duration?: string,
+  isFromConnTree?: boolean,
 ): void {
   commands.executeCommand("kdb.resultsPanel.update", result, isInsights, type);
   if (!checkIfIsDatasource(type)) {
@@ -1094,6 +1100,7 @@ export function writeQueryResultsToView(
       undefined,
       undefined,
       duration,
+      isFromConnTree,
     );
   }
 }

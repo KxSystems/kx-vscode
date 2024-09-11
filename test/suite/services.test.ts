@@ -573,6 +573,7 @@ describe("kdbTreeProvider", () => {
       "nsnodedetails1",
       TreeItemCollapsibleState.None,
       "nsfullname",
+      "connLabel",
     );
     assert.strictEqual(
       qNsNode.label,
@@ -588,6 +589,7 @@ describe("kdbTreeProvider", () => {
       "categorynodedetails1",
       "categoryns",
       TreeItemCollapsibleState.None,
+      "connLabel",
     );
     assert.strictEqual(
       qCategoryNode.label,
@@ -603,6 +605,7 @@ describe("kdbTreeProvider", () => {
       "servernodedetails1",
       TreeItemCollapsibleState.None,
       "",
+      "connLabel",
     );
     assert.strictEqual(
       qServerNode.label,

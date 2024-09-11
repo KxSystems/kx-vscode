@@ -26,4 +26,5 @@ export interface QueryHistory {
   datasourceType?: DataSourceTypes;
   isWorkbook?: boolean;
   duration?: string;
+  isFromConnTree?: boolean;
 }

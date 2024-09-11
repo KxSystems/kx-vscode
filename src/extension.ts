@@ -51,6 +51,7 @@ import {
   editInsightsConnection,
   editKdbConnection,
   enableTLS,
+  executeQuery,
   exportConnections,
   importConnections,
   openMeta,
@@ -288,7 +289,23 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand(
       "kdb.connection.content.selectView",
       async (viewItem) => {
-        console.log(viewItem);
+        const connLabel = viewItem.connLabel
+          ? viewItem.connLabel.split("[")[1].split("]")[0]
+          : undefined;
+        if (connLabel) {
+          const executorName = viewItem.coreIcon.substring(2);
+          executeQuery(
+            viewItem.label,
+            connLabel,
+            executorName,
+            "",
+            false,
+            false,
+            true,
+          );
+        } else {
+          kdbOutputLog("Connection label not found", "ERROR");
+        }
         window.showInformationMessage("Select a view to open");
       },
     ),

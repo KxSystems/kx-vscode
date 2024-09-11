@@ -109,6 +109,11 @@ export class QueryHistoryTreeItem extends TreeItem {
         tooltipMd.appendMarkdown(
           "- Workbook: " + this.details.executorName + " \n",
         );
+      } else if (this.details.isFromConnTree) {
+        tooltipMd.appendMarkdown("- Executiom from: Connection Tree \n");
+        tooltipMd.appendMarkdown(
+          "- Category: " + this.details.executorName + " \n",
+        );
       } else {
         tooltipMd.appendMarkdown(
           "- File: " + this.details.executorName + " \n",

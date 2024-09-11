@@ -83,6 +83,7 @@ export class ExecutionConsole {
     type?: string,
     isPhython?: boolean,
     duration?: string,
+    isFromConnTree?: boolean,
   ): void {
     getHideDetailedConsoleQueryOutput();
     const hideDetails = ext.hideDetailedConsoleQueryOutput;
@@ -106,6 +107,7 @@ export class ExecutionConsole {
         undefined,
         undefined,
         duration,
+        isFromConnTree,
       );
     }
 
@@ -142,6 +144,7 @@ export class ExecutionConsole {
     isPython?: boolean,
     isDatasource?: boolean,
     duration?: string,
+    isFromConnTree?: boolean,
   ): void {
     getHideDetailedConsoleQueryOutput();
     const hideDetails = ext.hideDetailedConsoleQueryOutput;
@@ -172,6 +175,7 @@ export class ExecutionConsole {
           undefined,
           undefined,
           duration,
+          isFromConnTree,
         );
       }
     } else {
