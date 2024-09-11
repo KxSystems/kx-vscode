@@ -914,6 +914,7 @@ export function rerunQuery(rerunQueryElement: QueryHistory) {
       context,
       rerunQueryElement.language !== "q",
       !!rerunQueryElement.isWorkbook,
+      !!rerunQueryElement.isFromConnTree,
     );
   } else {
     const dsFile = rerunQueryElement.query as DataSourceFiles;
