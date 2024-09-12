@@ -184,7 +184,7 @@ export namespace ext {
     "Tables",
     "Variables",
     "Views",
-    "Namespaces",
+    // "Namespaces", removed to investigate
   ];
 
   export const qNamespaceFilters = [".q", ".Q", ".h", ".z", ".o", ".j", ".m"];

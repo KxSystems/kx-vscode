@@ -278,7 +278,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
             TreeItemCollapsibleState.None,
-            "p-dictionary",
+            "dictionaries",
             connLabel,
           ),
       );
@@ -297,7 +297,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
             TreeItemCollapsibleState.None,
-            "p-function",
+            "functions",
             connLabel,
           ),
       );
@@ -316,7 +316,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
             TreeItemCollapsibleState.None,
-            "p-table",
+            "tables",
             connLabel,
           ),
       );
@@ -335,7 +335,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
             TreeItemCollapsibleState.None,
-            "p-var",
+            "variables",
             connLabel,
           ),
       );
@@ -354,7 +354,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             `${ns === "." ? "" : "."}${x}`,
             "",
             TreeItemCollapsibleState.None,
-            "p-view",
+            "views",
             connLabel,
           ),
       );
@@ -363,26 +363,28 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
       } else {
         return new Array<QServerNode>();
       }
-    } else if (serverType.label === ext.qObjectCategories[5]) {
-      // nested namespaces
-      const namespaces = await loadNamespaces(ns);
-      const result = namespaces.map(
-        (x) =>
-          new QNamespaceNode(
-            [],
-            x.fname,
-            "",
-            TreeItemCollapsibleState.Collapsed,
-            x.fname,
-            connLabel,
-          ),
-      );
-      if (result !== undefined) {
-        return result;
-      } else {
-        return Array<QNamespaceNode>();
-      }
     }
+    // Remove this for this moment, to investigate
+    // else if (serverType.label === ext.qObjectCategories[5]) {
+    //   // nested namespaces
+    //   const namespaces = await loadNamespaces(ns);
+    //   const result = namespaces.map(
+    //     (x) =>
+    //       new QNamespaceNode(
+    //         [],
+    //         x.fname,
+    //         "",
+    //         TreeItemCollapsibleState.Collapsed,
+    //         x.fname,
+    //         connLabel,
+    //       ),
+    //   );
+    //   if (result !== undefined) {
+    //     return result;
+    //   } else {
+    //     return Array<QNamespaceNode>();
+    //   }
+    // }
     return new Array<QServerNode>();
   }
 
