@@ -583,7 +583,7 @@ export class KdbNode extends TreeItem {
       : "";
   }
 
-  iconPath = getNamedIconPath("p-q-connection", this.label);
+  iconPath = getNamedIconPath("conn-kdb", this.label);
 
   contextValue = this.label; // "root";
 }
@@ -631,7 +631,7 @@ export class InsightsNode extends TreeItem {
       : "";
   }
 
-  iconPath = getNamedIconPath("p-insights", this.label);
+  iconPath = getNamedIconPath("conn-insights", this.label);
 
   contextValue = this.label; // "root";
 }
@@ -652,24 +652,7 @@ export class InsightsMetaNode extends TreeItem {
     return "";
   }
 
-  iconPath = {
-    light: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "light",
-      "metaicon.svg",
-    ),
-    dark: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "dark",
-      "metaicon.svg",
-    ),
-  };
+  iconPath = getOtherIconPath("metaicon");
   contextValue = "meta";
 }
 
@@ -691,24 +674,7 @@ export class QNamespaceNode extends TreeItem {
     return "";
   }
 
-  iconPath = {
-    light: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "light",
-      "namespaces.svg",
-    ),
-    dark: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "dark",
-      "namespaces.svg",
-    ),
-  };
+  iconPath = getOtherIconPath("namespaces");
   contextValue = "ns";
 }
 
@@ -730,24 +696,7 @@ export class QCategoryNode extends TreeItem {
     return "";
   }
 
-  iconPath = {
-    light: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "light",
-      `${this.label.toLowerCase()}.svg`,
-    ),
-    dark: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "dark",
-      `${this.label.toLowerCase()}.svg`,
-    ),
-  };
+  iconPath = getOtherIconPath(this.label.toLowerCase());
   contextValue = this.ns; // "category";
 }
 
@@ -763,24 +712,7 @@ export class MetaObjectPayloadNode extends TreeItem {
     super(label, collapsibleState);
     this.description = "";
   }
-  iconPath = {
-    light: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "light",
-      `${this.coreIcon}.svg`,
-    ),
-    dark: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "dark",
-      `${this.coreIcon}.svg`,
-    ),
-  };
+  iconPath = getOtherIconPath(this.coreIcon);
 }
 
 export class QServerNode extends TreeItem {
@@ -801,24 +733,7 @@ export class QServerNode extends TreeItem {
     return "";
   }
 
-  iconPath = {
-    light: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "light",
-      `${this.coreIcon}.svg`,
-    ),
-    dark: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "dark",
-      `${this.coreIcon}.svg`,
-    ),
-  };
+  iconPath = getOtherIconPath(this.coreIcon);
   contextValue = this.label;
 }
 
@@ -883,5 +798,19 @@ function getNamedIconPath(name: string, label: string) {
       "dark",
       name + getServerIconState(label) + ".svg",
     ),
+  };
+}
+
+function getOtherIconPath(name: string) {
+  return {
+    light: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "light",
+      name + ".svg",
+    ),
+    dark: path.join(__filename, "..", "..", "resources", "dark", name + ".svg"),
   };
 }
