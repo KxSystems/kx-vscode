@@ -306,7 +306,6 @@ export async function activate(context: ExtensionContext) {
         } else {
           kdbOutputLog("Connection label not found", "ERROR");
         }
-        window.showInformationMessage("Select a view to open");
       },
     ),
     commands.registerCommand(
