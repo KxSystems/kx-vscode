@@ -420,7 +420,6 @@ describe("KdbNewConnectionView", () => {
 
     it("should render connection address for Bundled q", () => {
       const result = view.renderConnAddDesc(ServerType.KDB, true);
-      console.log(JSON.stringify(result));
       assert.strictEqual(
         result.strings[0].includes("already set up for you"),
         true,

@@ -849,7 +849,16 @@ describe("queryHistoryProvider", () => {
       query: dummyDS,
       success: false,
       connectionType: ServerType.KDB,
+    },
+    {
+      executorName: "variables",
+      connectionName: "testConnectionName2",
+      time: "testTime2",
+      query: "testQuery2",
+      success: true,
       isFromConnTree: true,
+      connectionType: ServerType.KDB,
+      duration: "500",
     },
   ];
   beforeEach(() => {
@@ -890,10 +899,25 @@ describe("queryHistoryProvider", () => {
     );
   });
 
+  it("Should return the KdbNode tree item element", () => {
+    const queryHistoryTreeItem = new QueryHistoryTreeItem(
+      "testLabel",
+      dummyQueryHistory[3],
+      TreeItemCollapsibleState.None,
+    );
+    const queryHistoryProvider = new QueryHistoryProvider();
+    const element = queryHistoryProvider.getTreeItem(queryHistoryTreeItem);
+    assert.strictEqual(
+      element.label,
+      queryHistoryTreeItem.label,
+      "Get query history item is incorrect",
+    );
+  });
+
   it("Should return children for the tree when queryHistory has entries", async () => {
     const queryHistoryProvider = new QueryHistoryProvider();
     const result = await queryHistoryProvider.getChildren();
-    assert.strictEqual(result.length, 3, "Children count should be 3");
+    assert.strictEqual(result.length, 4, "Children count should be 3");
   });
 
   it("Should not return children for the tree when queryHistory has no entries", async () => {
@@ -918,7 +942,7 @@ describe("queryHistoryProvider", () => {
         "QueryHistoryTreeItem node creation failed",
       );
     });
-    it("Should return a new QueryHistoryTreeItem with sucess icom", () => {
+    it("Should return a new QueryHistoryTreeItem with sucess icon", () => {
       const queryHistoryTreeItem = new QueryHistoryTreeItem(
         "testLabel",
         dummyQueryHistory[0],
@@ -932,7 +956,7 @@ describe("queryHistoryProvider", () => {
       );
     });
 
-    it("Should return a new QueryHistoryTreeItem with sucess icom", () => {
+    it("Should return a new QueryHistoryTreeItem with fail icon", () => {
       const queryHistoryTreeItem = new QueryHistoryTreeItem(
         "testLabel",
         dummyQueryHistory[2],
@@ -942,6 +966,21 @@ describe("queryHistoryProvider", () => {
       assert.strictEqual(
         result,
         failIcon,
+        "QueryHistoryTreeItem defineQueryIcon failed",
+      );
+    });
+
+    it("Should return a new QueryHistoryTreeItem with sucess icon", () => {
+      const queryHistoryTreeItem = new QueryHistoryTreeItem(
+        "testLabel",
+        dummyQueryHistory[3],
+        TreeItemCollapsibleState.None,
+      );
+      const result = queryHistoryTreeItem.defineQueryIcon(true);
+      console.log(JSON.stringify(queryHistoryTreeItem));
+      assert.strictEqual(
+        result,
+        sucessIcon,
         "QueryHistoryTreeItem defineQueryIcon failed",
       );
     });
