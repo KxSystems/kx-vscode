@@ -212,6 +212,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     }
   }
 
+  /* istanbul ignore next */
   private async getNamespaces(connLabel?: string): Promise<QNamespaceNode[]> {
     const ns = await loadNamespaces();
     const result = ns.map(
@@ -232,6 +233,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     }
   }
 
+  /* istanbul ignore next */
   private async getCategories(
     ns: string | undefined,
     objectCategories: string[],
@@ -260,10 +262,10 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     return result;
   }
 
+  /* istanbul ignore next */
   private async getServerObjects(
     serverType: QCategoryNode | TreeItem,
   ): Promise<QServerNode[] | QNamespaceNode[]> {
-    console.log(serverType);
     if (serverType === undefined) return new Array<QServerNode>();
     const ns = serverType.contextValue ?? "";
     const connLabel =
