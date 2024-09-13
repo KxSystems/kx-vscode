@@ -981,7 +981,6 @@ describe("Utils", () => {
         inputSample.rows = [{ Value: "hello" }];
         const expectedOutput = [{ Value: "hello" }];
         const actualOutput = queryUtils.getValueFromArray(inputSample);
-        console.log(JSON.stringify(actualOutput.rows));
         assert.deepEqual(actualOutput.rows, expectedOutput);
       });
 

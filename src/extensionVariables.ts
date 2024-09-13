@@ -84,6 +84,7 @@ export namespace ext {
   export const kdbAuthMap: kdbAuthMap[] = [];
   export const kdbrootNodes: string[] = [];
   export const kdbinsightsNodes: string[] = [];
+  export const selectContentNodesContext: string[] = ["kdbVariable"];
   export const kdbNodesWithoutAuth: string[] = [];
   export const kdbNodesWithoutTls: string[] = [];
   export const kdbConnectionAliasList: string[] = [];
@@ -183,7 +184,7 @@ export namespace ext {
     "Tables",
     "Variables",
     "Views",
-    "Namespaces",
+    // "Namespaces", removed to investigate
   ];
 
   export const qNamespaceFilters = [".q", ".Q", ".h", ".z", ".o", ".j", ".m"];

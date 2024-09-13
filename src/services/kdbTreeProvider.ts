@@ -74,6 +74,11 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   refresh(serverList: Server): void {
     ext.isBundleQCreated = false;
     this.serverList = serverList;
+    commands.executeCommand(
+      "setContext",
+      "kdb.selectContentNodesContext",
+      ext.selectContentNodesContext,
+    );
     this._onDidChangeTreeData.fire();
   }
 
@@ -99,6 +104,9 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
         title: "Open Meta Object",
         arguments: [element],
       };
+    }
+    if (element instanceof QServerNode) {
+      element.contextValue = ext.selectContentNodesContext[0];
     }
     return element;
   }
@@ -140,7 +148,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
       element.contextValue !== undefined &&
       ext.kdbrootNodes.indexOf(element.contextValue) !== -1
     ) {
-      return Promise.resolve(await this.getNamespaces());
+      return Promise.resolve(await this.getNamespaces(element.contextValue));
     } else if (
       element.contextValue !== undefined &&
       ext.kdbinsightsNodes.indexOf(element.contextValue) !== -1
@@ -151,6 +159,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
         this.getCategories(
           (element as QNamespaceNode).details?.toString(),
           ext.qObjectCategories,
+          (element as QNamespaceNode).connLabel,
         ),
       );
     } else if (
@@ -203,7 +212,8 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     }
   }
 
-  private async getNamespaces(): Promise<QNamespaceNode[]> {
+  /* istanbul ignore next */
+  private async getNamespaces(connLabel?: string): Promise<QNamespaceNode[]> {
     const ns = await loadNamespaces();
     const result = ns.map(
       (x) =>
@@ -213,6 +223,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
           "",
           TreeItemCollapsibleState.Collapsed,
           x.fname,
+          connLabel ?? "",
         ),
     );
     if (result !== undefined) {
@@ -222,9 +233,11 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     }
   }
 
+  /* istanbul ignore next */
   private async getCategories(
     ns: string | undefined,
     objectCategories: string[],
+    connLabel?: string,
   ): Promise<QCategoryNode[]> {
     // filter out views for non-default namespaces
     let filteredCategories;
@@ -243,16 +256,20 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
           "",
           ns ?? "",
           TreeItemCollapsibleState.Collapsed,
+          connLabel ?? "",
         ),
     );
     return result;
   }
 
+  /* istanbul ignore next */
   private async getServerObjects(
-    serverType: TreeItem,
+    serverType: QCategoryNode | TreeItem,
   ): Promise<QServerNode[] | QNamespaceNode[]> {
     if (serverType === undefined) return new Array<QServerNode>();
     const ns = serverType.contextValue ?? "";
+    const connLabel =
+      serverType instanceof QCategoryNode ? serverType.connLabel : "";
     if (serverType.label === ext.qObjectCategories[0]) {
       // dictionaries
       const dicts = await loadDictionaries(serverType.contextValue ?? "");
@@ -263,7 +280,8 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
             TreeItemCollapsibleState.None,
-            "p-dictionary",
+            "dictionaries",
+            connLabel,
           ),
       );
       if (result !== undefined) {
@@ -281,7 +299,8 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
             TreeItemCollapsibleState.None,
-            "p-function",
+            "functions",
+            connLabel,
           ),
       );
       if (result !== undefined) {
@@ -299,7 +318,8 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
             TreeItemCollapsibleState.None,
-            "p-table",
+            "tables",
+            connLabel,
           ),
       );
       if (result !== undefined) {
@@ -314,10 +334,11 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
         (x) =>
           new QServerNode(
             [],
-            `${ns === "." ? "." : ""}${x.name}`,
+            `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
             TreeItemCollapsibleState.None,
-            "p-var",
+            "variables",
+            connLabel,
           ),
       );
       if (result !== undefined) {
@@ -335,7 +356,8 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             `${ns === "." ? "" : "."}${x}`,
             "",
             TreeItemCollapsibleState.None,
-            "p-view",
+            "views",
+            connLabel,
           ),
       );
       if (result !== undefined) {
@@ -343,25 +365,28 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
       } else {
         return new Array<QServerNode>();
       }
-    } else if (serverType.label === ext.qObjectCategories[5]) {
-      // nested namespaces
-      const namespaces = await loadNamespaces(ns);
-      const result = namespaces.map(
-        (x) =>
-          new QNamespaceNode(
-            [],
-            x.fname,
-            "",
-            TreeItemCollapsibleState.Collapsed,
-            x.fname,
-          ),
-      );
-      if (result !== undefined) {
-        return result;
-      } else {
-        return Array<QNamespaceNode>();
-      }
     }
+    // Remove this for this moment, to investigate
+    // else if (serverType.label === ext.qObjectCategories[5]) {
+    //   // nested namespaces
+    //   const namespaces = await loadNamespaces(ns);
+    //   const result = namespaces.map(
+    //     (x) =>
+    //       new QNamespaceNode(
+    //         [],
+    //         x.fname,
+    //         "",
+    //         TreeItemCollapsibleState.Collapsed,
+    //         x.fname,
+    //         connLabel,
+    //       ),
+    //   );
+    //   if (result !== undefined) {
+    //     return result;
+    //   } else {
+    //     return Array<QNamespaceNode>();
+    //   }
+    // }
     return new Array<QServerNode>();
   }
 
@@ -562,7 +587,7 @@ export class KdbNode extends TreeItem {
       : "";
   }
 
-  iconPath = getNamedIconPath("p-q-connection", this.label);
+  iconPath = getNamedIconPath("conn-kdb", this.label);
 
   contextValue = this.label; // "root";
 }
@@ -610,7 +635,7 @@ export class InsightsNode extends TreeItem {
       : "";
   }
 
-  iconPath = getNamedIconPath("p-insights", this.label);
+  iconPath = getNamedIconPath("conn-insights", this.label);
 
   contextValue = this.label; // "root";
 }
@@ -631,24 +656,7 @@ export class InsightsMetaNode extends TreeItem {
     return "";
   }
 
-  iconPath = {
-    light: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "light",
-      "metaicon.svg",
-    ),
-    dark: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "dark",
-      "metaicon.svg",
-    ),
-  };
+  iconPath = getOtherIconPath("metaicon");
   contextValue = "meta";
 }
 
@@ -659,6 +667,7 @@ export class QNamespaceNode extends TreeItem {
     public readonly details: string,
     public readonly collapsibleState: TreeItemCollapsibleState,
     public readonly fullName: string,
+    public readonly connLabel: string,
   ) {
     details = fullName;
     super(label, collapsibleState);
@@ -669,24 +678,7 @@ export class QNamespaceNode extends TreeItem {
     return "";
   }
 
-  iconPath = {
-    light: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "light",
-      "namespaces.svg",
-    ),
-    dark: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "dark",
-      "namespaces.svg",
-    ),
-  };
+  iconPath = getOtherIconPath("namespaces");
   contextValue = "ns";
 }
 
@@ -697,6 +689,7 @@ export class QCategoryNode extends TreeItem {
     public readonly details: string,
     public readonly ns: string,
     public readonly collapsibleState: TreeItemCollapsibleState,
+    public readonly connLabel: string,
   ) {
     details = "";
     super(label, collapsibleState);
@@ -707,24 +700,7 @@ export class QCategoryNode extends TreeItem {
     return "";
   }
 
-  iconPath = {
-    light: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "light",
-      `${this.label.toLowerCase()}.svg`,
-    ),
-    dark: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "dark",
-      `${this.label.toLowerCase()}.svg`,
-    ),
-  };
+  iconPath = getOtherIconPath(this.label.toLowerCase());
   contextValue = this.ns; // "category";
 }
 
@@ -740,24 +716,7 @@ export class MetaObjectPayloadNode extends TreeItem {
     super(label, collapsibleState);
     this.description = "";
   }
-  iconPath = {
-    light: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "light",
-      `${this.coreIcon}.svg`,
-    ),
-    dark: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "dark",
-      `${this.coreIcon}.svg`,
-    ),
-  };
+  iconPath = getOtherIconPath(this.coreIcon);
 }
 
 export class QServerNode extends TreeItem {
@@ -767,6 +726,7 @@ export class QServerNode extends TreeItem {
     public readonly details: string,
     public readonly collapsibleState: TreeItemCollapsibleState,
     public readonly coreIcon: string,
+    public readonly connLabel: string,
   ) {
     details = "";
     super(label, collapsibleState);
@@ -777,24 +737,7 @@ export class QServerNode extends TreeItem {
     return "";
   }
 
-  iconPath = {
-    light: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "light",
-      `${this.coreIcon}.svg`,
-    ),
-    dark: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "dark",
-      `${this.coreIcon}.svg`,
-    ),
-  };
+  iconPath = getOtherIconPath(this.coreIcon);
   contextValue = this.label;
 }
 
@@ -859,5 +802,19 @@ function getNamedIconPath(name: string, label: string) {
       "dark",
       name + getServerIconState(label) + ".svg",
     ),
+  };
+}
+
+function getOtherIconPath(name: string) {
+  return {
+    light: path.join(
+      __filename,
+      "..",
+      "..",
+      "resources",
+      "light",
+      name + ".svg",
+    ),
+    dark: path.join(__filename, "..", "..", "resources", "dark", name + ".svg"),
   };
 }
