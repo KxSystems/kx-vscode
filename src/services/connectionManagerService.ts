@@ -340,41 +340,37 @@ export class ConnectionManagementService {
   }
 
   public async resetScratchpad(): Promise<void> {
-    let error = true;
-    if (!ext.activeConnection) {
-      window.showErrorMessage(
-        "Please active an Insights connection to use this feature.",
+    if (
+      !ext.activeConnection ||
+      !(ext.activeConnection instanceof InsightsConnection)
+    ) {
+      kdbOutputLog(
+        "[RESET SCRATCHPAD] Please activate an Insights connection to use this feature.",
+        "ERROR",
       );
       return;
     }
-    const confirmationPromt = {
-      prompt:
-        "Are you sure you want to reset the scratchpad from the connecttion " +
-        ext.activeConnection.connLabel +
-        "?",
-      option1: "Yes",
-      option2: "No",
-    };
-    await window
-      .showInformationMessage(
-        confirmationPromt.prompt,
-        confirmationPromt.option1,
-        confirmationPromt.option2,
-      )
-      .then(async (selection) => {
-        if (selection === confirmationPromt.option1) {
-          if (ext.activeConnection instanceof InsightsConnection) {
-            error = false;
-            return await ext.activeConnection.resetScratchpad();
-          } else {
-            return;
-          }
-        }
-      });
+    const { insightsVersion, connLabel } = ext.activeConnection;
 
-    if (error) {
-      window.showErrorMessage(
-        "This feature is only available for Insights connections.",
+    if (insightsVersion && insightsVersion > 1.1) {
+      const confirmationPrompt = `Are you sure you want to reset the scratchpad from the connection ${connLabel}?`;
+      const selection = await window.showInformationMessage(
+        confirmationPrompt,
+        "Yes",
+        "No",
+      );
+
+      if (selection === "Yes") {
+        await ext.activeConnection.resetScratchpad();
+      } else {
+        window.showErrorMessage(
+          "This feature is only available for Insights connections.",
+        );
+      }
+    } else {
+      kdbOutputLog(
+        "[RESET SCRATCHPAD] Please connect to an Insights connection with version superior to 1.10",
+        "ERROR",
       );
     }
   }

@@ -58,6 +58,7 @@ import {
   refreshGetMeta,
   removeConnection,
   rerunQuery,
+  resetScratchPad,
 } from "./commands/serverCommand";
 import { showInstallationDetails } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
