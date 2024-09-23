@@ -69,6 +69,7 @@ import {
   ServerType,
 } from "../../src/models/connectionsModels";
 import AuthSettings from "../../src/utils/secretStorage";
+import * as coreUtils from "../../src/utils/core";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -1314,35 +1315,49 @@ describe("connectionManagerService", () => {
 
   describe("resetScratchpad", () => {
     let connMngService: ConnectionManagementService;
-    let showErrorMessageStub: sinon.SinonStub;
-    let showInformationMessageStub: sinon.SinonStub;
     let resetScratchpadStub: sinon.SinonStub;
+    let kdbOutputLogStub: sinon.SinonStub;
+    let showInformationMessageStub: sinon.SinonStub;
+    let showErrorMessageStub: sinon.SinonStub;
 
     beforeEach(() => {
       connMngService = new ConnectionManagementService();
-      showErrorMessageStub = sinon.stub(window, "showErrorMessage");
-      showInformationMessageStub = sinon.stub(window, "showInformationMessage");
       ext.activeConnection = insightsConn;
       resetScratchpadStub = sinon.stub(ext.activeConnection, "resetScratchpad");
+      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+      showInformationMessageStub = sinon.stub(window, "showInformationMessage");
+      showErrorMessageStub = sinon.stub(window, "showErrorMessage");
     });
 
     afterEach(() => {
       sinon.restore();
     });
 
-    it("should call resetScratchpad on activeConnection if selection is Yes and activeConnection is an instance of InsightsConnection", async () => {
-      showInformationMessageStub.resolves("Yes");
+    it("should log an error if there is no active connection", async () => {
+      ext.activeConnection = null;
       await connMngService.resetScratchpad();
-      sinon.assert.calledOnce(resetScratchpadStub);
-      sinon.assert.notCalled(showErrorMessageStub);
+      sinon.assert.calledWith(
+        kdbOutputLogStub,
+        "[RESET SCRATCHPAD] Please activate an Insights connection to use this feature.",
+        "ERROR",
+      );
     });
 
-    it("should show error message if activeConnection is not an instance of InsightsConnection", async () => {
-      showInformationMessageStub.resolves("Yes");
-      ext.activeConnection = undefined;
+    it("should log an error if the active connection is not an InsightsConnection", async () => {
+      ext.activeConnection = localConn;
       await connMngService.resetScratchpad();
-      sinon.assert.calledOnce(showErrorMessageStub);
-      sinon.assert.notCalled(resetScratchpadStub);
+      sinon.assert.calledWith(
+        kdbOutputLogStub,
+        "[RESET SCRATCHPAD] Please activate an Insights connection to use this feature.",
+        "ERROR",
+      );
+    });
+
+    it("should log an error if insightsVersion is less than or equal to 1.10", async () => {
+      ext.activeConnection = insightsConn;
+      ext.activeConnection.insightsVersion = 1.11;
+      await connMngService.resetScratchpad();
+      sinon.assert.calledOnce(kdbOutputLogStub);
     });
   });
 
