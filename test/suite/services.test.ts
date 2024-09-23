@@ -1353,7 +1353,15 @@ describe("connectionManagerService", () => {
       );
     });
 
-    it("should log an error if insightsVersion is less than or equal to 1.10", async () => {
+    it("should reset the scratchpad if the active connection is an InsightsConnection", async () => {
+      ext.activeConnection = insightsConn;
+      ext.activeConnection.insightsVersion = 1.12;
+      showInformationMessageStub.resolves("Yes");
+      await connMngService.resetScratchpad();
+      sinon.assert.calledOnce(resetScratchpadStub);
+    });
+
+    it("should log an error if insightsVersion is less than or equal to 1.11", async () => {
       ext.activeConnection = insightsConn;
       ext.activeConnection.insightsVersion = 1.11;
       await connMngService.resetScratchpad();

@@ -350,10 +350,12 @@ export class ConnectionManagementService {
       );
       return;
     }
-    const { insightsVersion, connLabel } = ext.activeConnection;
 
-    if (insightsVersion && insightsVersion > 1.2) {
-      const confirmationPrompt = `Are you sure you want to reset the scratchpad from the connection ${connLabel}?`;
+    if (
+      ext.activeConnection.insightsVersion &&
+      ext.activeConnection.insightsVersion >= 1.12
+    ) {
+      const confirmationPrompt = `Are you sure you want to reset the scratchpad from the connection ${ext.activeConnection.connLabel}?`;
       const selection = await window.showInformationMessage(
         confirmationPrompt,
         "Yes",
