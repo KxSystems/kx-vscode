@@ -446,6 +446,14 @@ export class ConnectionManagementService {
     }
   }
 
+  public async retrieveInsightsConnVersion(connLabel: string): Promise<number> {
+    const connection = this.retrieveConnectedConnection(connLabel);
+    if (!connection || !(connection instanceof InsightsConnection)) {
+      return 0;
+    }
+    return connection.insightsVersion ? connection.insightsVersion : 0;
+  }
+
   public exportConnection(connLabel?: string, includeAuth?: boolean): string {
     const exportedContent: ExportedConnections = {
       connections: {

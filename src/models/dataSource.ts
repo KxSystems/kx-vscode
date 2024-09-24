@@ -17,6 +17,7 @@ export enum DataSourceTypes {
   SQL = "SQL",
 }
 
+//TODO: make the optional params required in 1.10 or superior
 export interface DataSourceFiles {
   name?: string;
   originalName?: string;
@@ -30,6 +31,8 @@ export interface DataSourceFiles {
       endTS: string;
       fill: string;
       temporality: string;
+      rowCountLimit?: string;
+      isRowLimitLast?: boolean;
       filter: string[];
       groupBy: string[];
       agg: string[];
@@ -44,6 +47,7 @@ export interface DataSourceFiles {
         sorts: Sort[];
         aggs: Agg[];
         groups: Group[];
+        rowLimit?: boolean;
       };
     };
     qsql: {
@@ -68,6 +72,8 @@ export function createDefaultDataSourceFile(): DataSourceFiles {
         endTS: "",
         fill: "zero",
         temporality: "snapshot",
+        rowCountLimit: "100000",
+        isRowCountLast: true,
         filter: [],
         groupBy: [],
         agg: [],
