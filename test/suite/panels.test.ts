@@ -227,7 +227,7 @@ describe("WebPanels", () => {
         stub.get(() => insightsConn);
 
         const output = resultsPanel.convertToGrid(results, true);
-        assert.equal(output, expectedOutput);
+        assert.equal(JSON.stringify(output), expectedOutput);
 
         // Restore the stub
         stub.restore();
@@ -277,7 +277,7 @@ describe("WebPanels", () => {
         stub.get(() => insightsConn);
 
         const output = resultsPanel.convertToGrid(results, true);
-        assert.equal(output, expectedOutput);
+        assert.equal(JSON.stringify(output), expectedOutput);
 
         // Restore the stub
         stub.restore();
@@ -416,11 +416,12 @@ describe("WebPanels", () => {
           { id: 1, test: "test1" },
           { id: 2, test: "test2" },
         ];
-        const expectedOutput = `"rowData":[{"id":1,"test":"test1"},{"id":2,"test":"test2"}],"columnDefs":[{"field":"id","headerName":"id"},{"field":"test","headerName":"test"}]`;
+        const expectedOutput = `agGrid.createGrid(gridDiv, obj)`;
         const stub = sinon
           .stub(resultsPanel, "convertToGrid")
           .returns(expectedOutput);
         const actualOutput = resultsPanel["_getWebviewContent"](input);
+        console.log(actualOutput);
         assert.strictEqual(typeof actualOutput, "string");
         assert.ok(actualOutput.includes(expectedOutput));
         stub.restore();

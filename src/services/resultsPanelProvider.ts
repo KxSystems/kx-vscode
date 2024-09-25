@@ -176,7 +176,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     }
   }
 
-  convertToGrid(results: any, isInsights: boolean): string {
+  convertToGrid(results: any, isInsights: boolean): any {
     const queryResult = isInsights ? results.rows : results;
 
     const columnDefs = this.generateCoumnDefs(results, isInsights);
@@ -199,7 +199,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     if (rowData.length > 0) {
       ext.resultPanelCSV = this.convertToCsv(rowData).join("\n");
     }
-    return JSON.stringify({
+    return {
       defaultColDef: {
         sortable: true,
         resizable: true,
@@ -217,7 +217,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       suppressContextMenu: true,
       suppressDragLeaveHidesColumns: true,
       tooltipShowDelay: 200,
-    });
+    };
   }
 
   isVisible(): boolean {
@@ -266,7 +266,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       ]);
       const nonce = getNonce();
       let result = "";
-      let gridOptionsString = "";
+      let gridOptions = undefined;
 
       let isGrid = false;
       if (typeof queryResult === "string" || typeof queryResult === "number") {
@@ -278,11 +278,11 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
             : "<p>No results to show</p>";
       } else if (queryResult) {
         isGrid = true;
-        gridOptionsString = this.convertToGrid(queryResult, !!isInsights);
+        gridOptions = this.convertToGrid(queryResult, !!isInsights);
       }
 
       result =
-        gridOptionsString === ""
+        gridOptions === undefined
           ? result !== ""
             ? result
             : "<p>No results to show</p>"
@@ -317,7 +317,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
           document.addEventListener('DOMContentLoaded', () => {
             if(${isGrid}){
               const gridDiv = document.getElementById('grid');
-              const obj = JSON.parse('${gridOptionsString}');
+              const obj = ${JSON.stringify(gridOptions)};
               const gridApi = agGrid.createGrid(gridDiv, obj);
               document.getElementById("results").scrollIntoView();
             }
