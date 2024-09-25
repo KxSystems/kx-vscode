@@ -11,6 +11,18 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import "@shoelace-style/shoelace/dist/components/button/button.js";
+import "@shoelace-style/shoelace/dist/components/checkbox/checkbox.js";
+import "@shoelace-style/shoelace/dist/components/button-group/button-group.js";
+import "@shoelace-style/shoelace/dist/components/input/input.js";
+import "@shoelace-style/shoelace/dist/components/textarea/textarea.js";
+import "@shoelace-style/shoelace/dist/components/select/select.js";
+import "@shoelace-style/shoelace/dist/components/option/option.js";
+import "@shoelace-style/shoelace/dist/components/divider/divider.js";
+import "@shoelace-style/shoelace/dist/components/tab-group/tab-group.js";
+import "@shoelace-style/shoelace/dist/components/tab-panel/tab-panel.js";
+import "@shoelace-style/shoelace/dist/components/tab/tab.js";
+
 import {
   allComponents,
   provideVSCodeDesignSystem,
