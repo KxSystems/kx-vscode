@@ -231,7 +231,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
 
     return /* html */ `
       <!DOCTYPE html>
-      <html lang="en" class="sl-theme-dark">
+      <html lang="en" class="${window.activeColorTheme.kind === 1 || window.activeColorTheme.kind === 4 ? "sl-theme-light" : "sl-theme-dark"}">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
