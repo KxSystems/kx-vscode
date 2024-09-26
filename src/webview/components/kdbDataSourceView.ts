@@ -50,14 +50,10 @@ export class KdbDataSourceView extends LitElement {
         margin: 0;
       }
 
-      :host {
-        overflow: hidden;
-      }
-
       .container {
         display: flex;
         flex-flow: row nowrap;
-        overflow: hidden;
+        overflow-x: auto;
       }
 
       .tabs {
@@ -67,40 +63,52 @@ export class KdbDataSourceView extends LitElement {
       .actions {
         display: flex;
         flex-flow: column nowrap;
-        gap: 0.5rem;
-        padding: 1rem;
+        flex-grow: 0;
+        gap: var(--sl-spacing-x-small);
+        padding: var(--sl-spacing-medium);
       }
 
       .actions sl-button-group > sl-button {
         flex-grow: 1;
       }
 
+      sl-tab::part(base) {
+        padding: var(--sl-spacing-medium);
+      }
+
+      sl-select::part(listbox) {
+        min-width: max-content;
+      }
+
       sl-tab-panel {
-        height: calc(100vh - 57.2px);
-        overflow: scroll;
-        padding: 0.5rem;
+        --padding: 0;
+        overflow-y: scroll;
+        padding: var(--sl-spacing-medium);
+        height: calc(
+          100vh - 1rem - 2 * var(--sl-spacing-medium) - var(--track-width)
+        );
       }
 
       sl-input,
       sl-select {
-        min-width: 12rem;
-        max-width: 12rem;
+        min-width: 11rem;
+        max-width: 11rem;
       }
 
       sl-checkbox {
-        padding-bottom: 0.275rem;
+        padding-bottom: var(--sl-spacing-2x-small);
       }
 
       .col {
         display: flex;
         flex-direction: column;
-        gap: 0.5em;
+        gap: var(--sl-spacing-x-small);
       }
 
       .row {
         display: flex;
         flex-direction: row;
-        gap: 0.5em;
+        gap: var(--sl-spacing-x-small);
         align-items: flex-end;
       }
     `,
