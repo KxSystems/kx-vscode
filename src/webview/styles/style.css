@@ -1,3 +1,8 @@
+:root {
+  --sl-focus-ring-color: var(--vscode-focusBorder);
+  --sl-focus-ring-width: 1px;
+}
+
 html,
 body {
   margin: 0;
@@ -15,9 +20,4 @@ body {
   -webkit-text-size-adjust: 100%;
   color: var(--vscode-foreground);
   background-color: var(--vscode-panel-background);
-}
-
-html.sl-theme-dark .only-light,
-html:not(.sl-theme-dark) .only-dark {
-  display: none !important;
 }
