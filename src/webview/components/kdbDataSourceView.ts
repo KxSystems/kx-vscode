@@ -40,14 +40,8 @@ const MAX_RULES = 32;
 export class KdbDataSourceView extends LitElement {
   static styles = [
     css`
-      *,
-      *::before,
-      *::after {
+      :host {
         box-sizing: border-box;
-      }
-
-      * {
-        margin: 0;
       }
 
       .container {
@@ -85,7 +79,8 @@ export class KdbDataSourceView extends LitElement {
         overflow-y: scroll;
         padding: var(--sl-spacing-medium);
         height: calc(
-          100vh - 1rem - 2 * var(--sl-spacing-medium) - var(--track-width)
+          100vh - 1rem * var(--sl-line-height-dense) - 2 *
+            var(--sl-spacing-medium)
         );
       }
 
