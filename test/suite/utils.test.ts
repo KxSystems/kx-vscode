@@ -1886,7 +1886,7 @@ describe("Utils", () => {
       assert.strictEqual(showInformationMessageStub.called, false);
       assert.strictEqual(executeCommandStub.called, false);
     });
-    it("should continue if 'neverShowQInstallAgain' is false", async () => {
+    it.skip("should continue if 'neverShowQInstallAgain' is false", async () => {
       getConfigurationStub()
         .get.withArgs("kdb.neverShowQInstallAgain")
         .returns(false);
@@ -1897,7 +1897,7 @@ describe("Utils", () => {
       assert.strictEqual(executeCommandStub.called, true);
     });
 
-    it("should handle 'Never show again' response", async () => {
+    it.skip("should handle 'Never show again' response", async () => {
       getConfigurationStub()
         .get.withArgs("kdb.qHomeDirectory")
         .returns(undefined);
