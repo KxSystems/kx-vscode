@@ -1307,7 +1307,6 @@ describe("serverCommand", () => {
         "kdb.resultsPanel.update",
         result,
         false,
-        "WORKBOOK",
       );
 
       executeCommandStub.restore();

@@ -411,35 +411,9 @@ describe("WebPanels", () => {
         resultsPanel["_view"] = view;
       });
 
-      it("returns a table", () => {
-        const input = [
-          { id: 1, test: "test1" },
-          { id: 2, test: "test2" },
-        ];
-        const expectedOutput = `agGrid.createGrid(gridDiv, obj)`;
-        const stub = sinon
-          .stub(resultsPanel, "convertToGrid")
-          .returns(expectedOutput);
-        const actualOutput = resultsPanel["_getWebviewContent"](input);
-        console.log(actualOutput);
-        assert.strictEqual(typeof actualOutput, "string");
-        assert.ok(actualOutput.includes(expectedOutput));
-        stub.restore();
-      });
-
-      it("returns string results", () => {
-        const input = "Test";
-        const expectedOutput = `<p class="results-txt">Test</p>`;
-        const actualOutput = resultsPanel["_getWebviewContent"](input);
-        assert.strictEqual(typeof actualOutput, "string");
-        assert.ok(actualOutput.includes(expectedOutput));
-      });
-
-      it("returns no results", () => {
-        const input = "";
-        const expectedOutput = `<p>No results to show</p>`;
-        const actualOutput = resultsPanel["_getWebviewContent"](input);
-        assert.strictEqual(typeof actualOutput, "string");
+      it("should render the results tab", () => {
+        const expectedOutput = ` id="results" class="results-view-container"`;
+        const actualOutput = resultsPanel["_getWebviewContent"]();
         assert.ok(actualOutput.includes(expectedOutput));
       });
     });
