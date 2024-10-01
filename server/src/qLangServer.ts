@@ -352,6 +352,7 @@ export default class QLangServer {
     if (source && assignable(source)) {
       return [
         {
+          data: true,
           kind: SymbolKind.Variable,
           name: source.image,
           uri: textDocument.uri,
@@ -372,7 +373,7 @@ export default class QLangServer {
       .all()
       .map((document) =>
         findIdentifiers(FindKind.Reference, this.parse(document), source)
-          .filter((token) => !assigned(token))
+          .filter((token) => !assigned(token) && item.data)
           .map((token) => {
             const lambda = inLambda(token);
             return {
@@ -399,7 +400,7 @@ export default class QLangServer {
       .all()
       .map((document) =>
         findIdentifiers(FindKind.Reference, this.parse(document), source)
-          .filter((token) => inLambda(token) && !assigned(token))
+          .filter((token) => inLambda(token) && !assigned(token) && item.data)
           .map((token) => {
             return {
               to: {
