@@ -221,6 +221,20 @@ describe("KdbDataSourceView", () => {
       assert.ok(result);
     });
   });
+
+  describe("renderRowCountOptions", () => {
+    it("should render row count options", () => {
+      view.selectedServerVersion = 1.11;
+      const result = view.renderRowCountOptions();
+      assert.ok(result);
+    });
+
+    it("should not render row count options for older server version", () => {
+      view.selectedServerVersion = 1.1;
+      const result = view.renderRowCountOptions();
+      assert.ok(!result);
+    });
+  });
 });
 
 describe("KdbNewConnectionView", () => {
