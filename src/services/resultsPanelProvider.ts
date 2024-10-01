@@ -316,22 +316,12 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
               function saveColumnWidths() {
                 if (!gridApi) {return null};
-                return gridApi.getAllColumns().map(col => ({
-                  colId: col.getColId(),
-                  width: col.getActualWidth()
-                }));
+                return gridApi.getColumnState();
               }
 
               function restoreColumnWidths(columnWidths) {
                 if (!gridApi || !columnWidths) return;
-                columnWidths.forEach(colWidth => {
-                  gridApi.getColumnState().forEach(colState => {
-                    if (colState.colId === colWidth.colId) {
-                      colState.width = colWidth.width;
-                    }
-                  });
-                });
-                gridApi.setColumnState(gridApi.getColumnState());
+                gridApi.applyColumnState({state: columnWidths});
               }
 
               window.addEventListener('message', event => {
