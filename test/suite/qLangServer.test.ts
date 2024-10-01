@@ -34,6 +34,7 @@ describe("qLangServer", () => {
     const position = document.positionAt(offset || content.length);
     const textDocument = TextDocumentIdentifier.create("test.q");
     sinon.stub(server.documents, "get").value(() => document);
+    sinon.stub(server.documents, "all").value(() => [document]);
     return {
       textDocument,
       position,
@@ -57,6 +58,13 @@ describe("qLangServer", () => {
       onDidChangeConfiguration() {},
       onRequest() {},
       onSelectionRanges() {},
+      languages: {
+        callHierarchy: {
+          onPrepare() {},
+          onIncomingCalls() {},
+          onOutgoingCalls() {},
+        },
+      },
     });
 
     const params = <InitializeParams>{
@@ -80,6 +88,7 @@ describe("qLangServer", () => {
       assert.ok(capabilities.renameProvider);
       assert.ok(capabilities.completionProvider);
       assert.ok(capabilities.selectionRangeProvider);
+      assert.ok(capabilities.callHierarchyProvider);
     });
   });
 
@@ -328,6 +337,32 @@ describe("qLangServer", () => {
       assert.strictEqual(result.length, 1);
       assert.strictEqual(result[0].range.start.character, 0);
       assert.strictEqual(result[0].range.end.character, 9);
+    });
+  });
+
+  describe("onPrepareCallHierarchy", () => {
+    it("should prepare call hierarchy", () => {
+      const params = createDocument("a:1;a");
+      const result = server.onPrepareCallHierarchy(params);
+      assert.strictEqual(result.length, 1);
+    });
+  });
+
+  describe("onIncomingCallsCallHierarchy", () => {
+    it("should return incoming calls", () => {
+      const params = createDocument("a:1;a");
+      const items = server.onPrepareCallHierarchy(params);
+      const result = server.onIncomingCallsCallHierarchy({ item: items[0] });
+      assert.strictEqual(result.length, 1);
+    });
+  });
+
+  describe("onOutgoingCallsCallHierarchy", () => {
+    it("should return outgoing calls", () => {
+      const params = createDocument("a:1;{a");
+      const items = server.onPrepareCallHierarchy(params);
+      const result = server.onOutgoingCallsCallHierarchy({ item: items[0] });
+      assert.strictEqual(result.length, 1);
     });
   });
 });
