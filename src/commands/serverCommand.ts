@@ -1088,7 +1088,7 @@ export function writeQueryResultsToView(
   duration?: string,
   isFromConnTree?: boolean,
 ): void {
-  commands.executeCommand("kdb.resultsPanel.update", result, isInsights, type);
+  commands.executeCommand("kdb.resultsPanel.update", result, isInsights);
   if (!checkIfIsDatasource(type)) {
     addQueryHistory(
       query,

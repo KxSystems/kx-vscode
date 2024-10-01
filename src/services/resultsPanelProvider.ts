@@ -23,11 +23,13 @@ import { ext } from "../extensionVariables";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
+import { kdbOutputLog } from "../utils/core";
 
 export class KdbResultsViewProvider implements WebviewViewProvider {
   public static readonly viewType = "kdb-results";
-  private _view?: WebviewView;
+  public isInsights = false;
   public _colorTheme: any;
+  private _view?: WebviewView;
   private _results: string | string[] = "";
 
   constructor(private readonly _extensionUri: Uri) {
@@ -48,10 +50,11 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       localResourceRoots: [Uri.joinPath(this._extensionUri, "out")],
     };
 
-    webviewView.webview.html = this._getWebviewContent("");
+    webviewView.webview.html = this._getWebviewContent();
+    this.updateWebView("");
 
     webviewView.webview.onDidReceiveMessage((data) => {
-      webviewView.webview.html = this._getWebviewContent(data);
+      this.updateWebView(data);
     });
     webviewView.onDidChangeVisibility(() => {
       ext.isResultsTabVisible = webviewView.visible;
@@ -62,19 +65,11 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     });
   }
 
-  public updateResults(
-    queryResults: any,
-    isInsights?: boolean,
-    dataSourceType?: string,
-  ) {
+  public updateResults(queryResults: any, isInsights?: boolean) {
     if (this._view) {
       this._view.show?.(true);
-      this._view.webview.postMessage(queryResults);
-      this._view.webview.html = this._getWebviewContent(
-        queryResults,
-        isInsights,
-        dataSourceType,
-      );
+      this.isInsights = !!isInsights;
+      this.updateWebView(queryResults);
     }
   }
 
@@ -176,7 +171,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     }
   }
 
-  convertToGrid(results: any, isInsights: boolean): string {
+  convertToGrid(results: any, isInsights: boolean): any {
     const queryResult = isInsights ? results.rows : results;
 
     const columnDefs = this.generateCoumnDefs(results, isInsights);
@@ -199,7 +194,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     if (rowData.length > 0) {
       ext.resultPanelCSV = this.convertToCsv(rowData).join("\n");
     }
-    return JSON.stringify({
+    return {
       defaultColDef: {
         sortable: true,
         resizable: true,
@@ -217,7 +212,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       suppressContextMenu: true,
       suppressDragLeaveHidesColumns: true,
       tooltipShowDelay: 200,
-    });
+    };
   }
 
   isVisible(): boolean {
@@ -251,13 +246,39 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       : "";
   }
 
-  private _getWebviewContent(
-    queryResult: any,
-    isInsights?: boolean,
-    _dataSourceType?: string,
-  ) {
+  public updateWebView(queryResult: any) {
     ext.resultPanelCSV = "";
     this._results = queryResult;
+    let result = "";
+    let gridOptions = undefined;
+    if (!this._view) {
+      kdbOutputLog("[Results Tab] No view to update", "ERROR");
+      return;
+    }
+    if (typeof queryResult === "string" || typeof queryResult === "number") {
+      result =
+        queryResult !== ""
+          ? `<p class="results-txt">${queryResult
+              .toString()
+              .replace(/\n/g, "<br/>")}</p>`
+          : "<p>No results to show</p>";
+    } else if (queryResult) {
+      gridOptions = this.convertToGrid(queryResult, this.isInsights);
+    }
+    if (gridOptions) {
+      this._view.webview.postMessage({
+        command: "setGridOptions",
+        gridOptions: gridOptions,
+      });
+    } else {
+      this._view.webview.postMessage({
+        command: "setResultsContent",
+        results: result,
+      });
+    }
+  }
+
+  private _getWebviewContent() {
     const agGridTheme = this.defineAgGridTheme();
     if (this._view) {
       const webviewUri = getUri(this._view.webview, this._extensionUri, [
@@ -265,70 +286,82 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         "webview.js",
       ]);
       const nonce = getNonce();
-      let result = "";
-      let gridOptionsString = "";
-
-      let isGrid = false;
-      if (typeof queryResult === "string" || typeof queryResult === "number") {
-        result =
-          queryResult !== ""
-            ? `<p class="results-txt">${queryResult
-                .toString()
-                .replace(/\n/g, "<br/>")}</p>`
-            : "<p>No results to show</p>";
-      } else if (queryResult) {
-        isGrid = true;
-        gridOptionsString = this.convertToGrid(queryResult, !!isInsights);
-      }
-
-      result =
-        gridOptionsString === ""
-          ? result !== ""
-            ? result
-            : "<p>No results to show</p>"
-          : "";
       return /*html*/ `
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-        <link rel="stylesheet" href="${this._getLibUri("reset.css")}" />
-        <link rel="stylesheet" href="${this._getLibUri("vscode.css")}" />
-        <link rel="stylesheet" href="${this._getLibUri("resultsPanel.css")}" />
-        <link rel="stylesheet" href="${this._getLibUri("ag-grid.min.css")}" />
-        <link rel="stylesheet" href="${this._getLibUri(
-          "ag-theme-alpine.min.css",
-        )}" />
-        <title>Q Results</title>
-        <script nonce="${nonce}" src="${this._getLibUri(
-          "ag-grid-community.min.js",
-        )}"></script>
-      </head>
-      <body>      
-        <div id="results" class="results-view-container">
-          <div class="content-wrapper">
-              ${result}
-            </div>
-          </div>      
-        <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
-        <div id="grid" style="height: 100%;  width:100%;" class="${agGridTheme}"></div>
-        <script nonce="${nonce}" >          
-          document.addEventListener('DOMContentLoaded', () => {
-            if(${isGrid}){
-              const gridDiv = document.getElementById('grid');
-              const obj = JSON.parse('${gridOptionsString}');
-              const gridApi = agGrid.createGrid(gridDiv, obj);
-              document.getElementById("results").scrollIntoView();
-            }
-          });
-          document.addEventListener('contextmenu', (e) => {
-            e.stopImmediatePropagation()
-          }, true);
-        </script>
-      </body>
-    </html>
-    `;
+        <!DOCTYPE html>
+        <html lang="en">
+          <head>
+            <meta charset="UTF-8" />
+            <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+            <link rel="stylesheet" href="${this._getLibUri("reset.css")}" />
+            <link rel="stylesheet" href="${this._getLibUri("vscode.css")}" />
+            <link rel="stylesheet" href="${this._getLibUri("resultsPanel.css")}" />
+            <link rel="stylesheet" href="${this._getLibUri("ag-grid.min.css")}" />
+            <link rel="stylesheet" href="${this._getLibUri(
+              "ag-theme-alpine.min.css",
+            )}" />
+            <title>Q Results</title>
+            <script nonce="${nonce}" src="${this._getLibUri(
+              "ag-grid-community.min.js",
+            )}"></script>
+          </head>
+          <body>      
+            <div id="results" class="results-view-container">
+              <div class="content-wrapper"></div>
+            </div>      
+            <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
+            <div id="grid" style="height: 100%;  width:100%;" class="${agGridTheme}"></div>
+            <script nonce="${nonce}" >          
+              const vscode = acquireVsCodeApi();
+              let gridApi;
+
+              function saveColumnWidths() {
+                if (!gridApi) {return null};
+                return gridApi.getAllColumns().map(col => ({
+                  colId: col.getColId(),
+                  width: col.getActualWidth()
+                }));
+              }
+
+              function restoreColumnWidths(columnWidths) {
+                if (!gridApi || !columnWidths) return;
+                columnWidths.forEach(colWidth => {
+                  gridApi.getColumnState().forEach(colState => {
+                    if (colState.colId === colWidth.colId) {
+                      colState.width = colWidth.width;
+                    }
+                  });
+                });
+                gridApi.setColumnState(gridApi.getColumnState());
+              }
+
+              window.addEventListener('message', event => {
+                const message = event.data;
+                if (message.command === 'setGridOptions') {
+                  const columnWidths = saveColumnWidths();
+                  const gridOptions = message.gridOptions;
+                  const gridDiv = document.getElementById('grid');
+                  const resultsDiv = document.querySelector('#results .content-wrapper');
+                  resultsDiv.innerHTML = ''; 
+                  gridDiv.innerHTML = ''; 
+                  gridApi = agGrid.createGrid(gridDiv, gridOptions);
+                  restoreColumnWidths(columnWidths);
+                  document.getElementById("results").scrollIntoView();
+                } else if (message.command === 'setResultsContent') {
+                  const resultsContent = message.results;
+                  const resultsDiv = document.querySelector('#results .content-wrapper');
+                  const gridDiv = document.getElementById('grid');
+                  gridDiv.innerHTML = ''; 
+                  resultsDiv.innerHTML = ''; 
+                  resultsDiv.innerHTML = resultsContent;
+                }
+              });
+              document.addEventListener('contextmenu', (e) => {
+                e.stopImmediatePropagation();
+              }, true);
+            </script>
+          </body>
+        </html>
+      `;
     } else {
       return "";
     }

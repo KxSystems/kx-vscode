@@ -15,7 +15,6 @@ import assert from "assert";
 import mock from "mock-fs";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import * as fs from "fs";
 import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
 import * as installTools from "../../src/commands/installTools";
 import * as serverCommand from "../../src/commands/serverCommand";
@@ -1307,7 +1306,6 @@ describe("serverCommand", () => {
         "kdb.resultsPanel.update",
         result,
         false,
-        "WORKBOOK",
       );
 
       executeCommandStub.restore();
