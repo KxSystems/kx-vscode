@@ -37,5 +37,5 @@ export type getDataBodyPayload = {
   temporality?: string;
   slice?: string[];
   sortCols?: string[];
-  limit?: string;
+  limit?: number;
 };

@@ -283,11 +283,11 @@ export function getApiBody(
     if (optional.temporal) {
       apiBody.temporality = api.temporality;
     }
-    if (optional.rowLimit) {
+    if (optional.rowLimit && api.rowCountLimit) {
       if (api.isRowLimitLast) {
-        apiBody.limit = "-" + api.rowCountLimit;
+        apiBody.limit = -parseInt(api.rowCountLimit);
       } else {
-        apiBody.limit = `${api.rowCountLimit}`;
+        apiBody.limit = parseInt(api.rowCountLimit);
       }
     }
 

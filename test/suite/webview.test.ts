@@ -87,6 +87,7 @@ describe("KdbDataSourceView", () => {
               optional: {
                 filled: false,
                 temporal: false,
+                rowLimit: false,
                 filters: [createFilter()],
                 labels: [createLabel()],
                 sorts: [createSort()],
