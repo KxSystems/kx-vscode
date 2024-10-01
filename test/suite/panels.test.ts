@@ -19,6 +19,7 @@ import { createDefaultDataSourceFile } from "../../src/models/dataSource";
 import { DataSourcesPanel } from "../../src/panels/datasource";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as utils from "../../src/utils/execution";
+import * as coreUtils from "../../src/utils/core";
 import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import { TreeItemCollapsibleState } from "vscode";
 import { NewConnectionPannel } from "../../src/panels/newConnection";
@@ -380,6 +381,94 @@ describe("WebPanels", () => {
         const expectedOutput = ["a,b", "1,1", "2,2", "3,3"];
         const actualOutput = resultsPanel.convertToCsv(inputQueryResult);
         assert.deepStrictEqual(actualOutput, expectedOutput);
+      });
+    });
+
+    describe("updateWebView", () => {
+      const uriTest: vscode.Uri = vscode.Uri.parse("test");
+
+      let resultsPanel: KdbResultsViewProvider;
+      let postMessageStub: sinon.SinonStub;
+      let kdbOutputLogStub: sinon.SinonStub;
+      let convertToGridStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        resultsPanel = new KdbResultsViewProvider(uriTest);
+        resultsPanel["_view"] = {
+          webview: {
+            postMessage: sinon.stub(),
+          },
+        } as any;
+        postMessageStub = resultsPanel["_view"].webview
+          .postMessage as sinon.SinonStub;
+        kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+        convertToGridStub = sinon.stub(resultsPanel, "convertToGrid");
+      });
+
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("should log an error if there is no view to update", () => {
+        resultsPanel["_view"] = undefined;
+        resultsPanel.updateWebView("test");
+        sinon.assert.calledWith(
+          kdbOutputLogStub,
+          "[Results Tab] No view to update",
+          "ERROR",
+        );
+      });
+
+      it("should handle string queryResult", () => {
+        const queryResult = "test string";
+        resultsPanel.updateWebView(queryResult);
+        sinon.assert.calledWith(postMessageStub, {
+          command: "setResultsContent",
+          results: `<p class="results-txt">test string</p>`,
+        });
+      });
+
+      it("should handle number queryResult", () => {
+        const queryResult = 123;
+        resultsPanel.updateWebView(queryResult);
+        sinon.assert.calledWith(postMessageStub, {
+          command: "setResultsContent",
+          results: `<p class="results-txt">123</p>`,
+        });
+      });
+
+      it("should handle empty string queryResult", () => {
+        const queryResult = "";
+        resultsPanel.updateWebView(queryResult);
+        sinon.assert.calledWith(postMessageStub, {
+          command: "setResultsContent",
+          results: "<p>No results to show</p>",
+        });
+      });
+
+      it("should handle object queryResult and call convertToGrid", () => {
+        const queryResult = { data: "test" };
+        const gridOptions = { columnDefs: [], rowData: [] };
+        convertToGridStub.returns(gridOptions);
+        resultsPanel.updateWebView(queryResult);
+        sinon.assert.calledWith(
+          convertToGridStub,
+          queryResult,
+          resultsPanel.isInsights,
+        );
+        sinon.assert.calledWith(postMessageStub, {
+          command: "setGridOptions",
+          gridOptions: gridOptions,
+        });
+      });
+
+      it("should handle null queryResult", () => {
+        const queryResult = null;
+        resultsPanel.updateWebView(queryResult);
+        sinon.assert.calledWith(postMessageStub, {
+          command: "setResultsContent",
+          results: "",
+        });
       });
     });
 
