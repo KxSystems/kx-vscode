@@ -285,9 +285,9 @@ export function getApiBody(
     }
     if (optional.rowLimit) {
       if (api.isRowLimitLast) {
-        apiBody.limit = api.rowCountLimit;
+        apiBody.limit = "-" + api.rowCountLimit;
       } else {
-        apiBody.limit = `[0, ${api.rowCountLimit}]`;
+        apiBody.limit = `${api.rowCountLimit}`;
       }
     }
 
@@ -298,6 +298,8 @@ export function getApiBody(
         {},
         ...labels.map((label) => ({ [label.key]: label.value })),
       );
+    } else {
+      apiBody.labels = {};
     }
 
     const filters = optional.filters
