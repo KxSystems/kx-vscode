@@ -938,7 +938,7 @@ describe("queryHistoryProvider", () => {
   it("Should return children for the tree when queryHistory has entries", async () => {
     const queryHistoryProvider = new QueryHistoryProvider();
     const result = await queryHistoryProvider.getChildren();
-    assert.strictEqual(result.length, 4, "Children count should be 3");
+    assert.strictEqual(result.length, 6, "Children count should be 6");
   });
 
   it("Should not return children for the tree when queryHistory has no entries", async () => {
