@@ -315,11 +315,18 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
               let gridApi;
 
               function saveColumnWidths() {
-                if (!gridApi) {return null};
-                return gridApi.getAllColumns().map(col => ({
-                  colId: col.getColId(),
-                  width: col.getActualWidth()
-                }));
+                try {
+                  if (!gridApi || typeof gridApi.getAllColumns !== 'function') {
+                    return null;
+                  }
+                  return gridApi.getAllColumns().map(col => ({
+                    colId: col.getColId(),
+                    width: col.getActualWidth()
+                  }));
+                } catch (error) {
+                  console.error("Error saving column widths:", error);
+                  return null;
+                }
               }
 
               function restoreColumnWidths(columnWidths) {
