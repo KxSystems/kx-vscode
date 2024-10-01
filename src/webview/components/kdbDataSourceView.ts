@@ -238,7 +238,13 @@ export class KdbDataSourceView extends LitElement {
   }
 
   renderRowCountOptions() {
-    if (this.selectedServerVersion >= 1.11) {
+    const compareVersions = (v1: string, v2: string) =>
+      v1
+        .split(".")
+        .map(Number)
+        .reduce((acc, num, i) => acc || num - Number(v2.split(".")[i] || 0), 0);
+
+    if (compareVersions(this.selectedServerVersion.toString(), "1.11") >= 0) {
       return html`
         <div class="row align-bottom">
           <vscode-checkbox
@@ -858,7 +864,8 @@ export class KdbDataSourceView extends LitElement {
                         ).value;
                         this.requestChange();
                       }}"
-                      >Start Time</vscode-text-field
+                      >Start Time
+                      ${this.selectedServerVersion}</vscode-text-field
                     >
 
                     <vscode-text-field

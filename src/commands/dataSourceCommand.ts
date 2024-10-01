@@ -283,6 +283,13 @@ export function getApiBody(
     if (optional.temporal) {
       apiBody.temporality = api.temporality;
     }
+    if (optional.rowLimit) {
+      if (api.isRowLimitLast) {
+        apiBody.limit = api.rowCountLimit;
+      } else {
+        apiBody.limit = `[0, ${api.rowCountLimit}]`;
+      }
+    }
 
     const labels = optional.labels.filter((label) => label.active);
 
