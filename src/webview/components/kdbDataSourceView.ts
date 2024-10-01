@@ -101,7 +101,9 @@ export class KdbDataSourceView extends LitElement {
     if (msg.command === DataSourceCommand.Update) {
       this.servers = msg.servers;
       this.selectedServer = msg.selectedServer;
-      this.selectedServerVersion = msg.selectedServerVersion;
+      this.selectedServerVersion = msg.selectedServerVersion
+        ? msg.selectedServerVersion
+        : 0;
       this.isInsights = msg.isInsights;
       this.isMetaLoaded = !!msg.insightsMeta.dap;
       this.insightsMeta = msg.insightsMeta;

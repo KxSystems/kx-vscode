@@ -73,7 +73,7 @@ export function createDefaultDataSourceFile(): DataSourceFiles {
         fill: "zero",
         temporality: "snapshot",
         rowCountLimit: "100000",
-        isRowCountLast: true,
+        isRowLimitLast: true,
         filter: [],
         groupBy: [],
         agg: [],
