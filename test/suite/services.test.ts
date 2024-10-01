@@ -829,7 +829,8 @@ describe("queryHistoryProvider", () => {
       executorName: "testExecutorName",
       connectionName: "testConnectionName",
       time: "testTime",
-      query: "testQuery",
+      query:
+        "testQuery\n long test query line counter aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       success: true,
       connectionType: ServerType.INSIGHTS,
     },
@@ -837,7 +838,7 @@ describe("queryHistoryProvider", () => {
       executorName: "testExecutorName2",
       connectionName: "testConnectionName2",
       time: "testTime2",
-      query: "testQuery2",
+      query: "testQuery2\n testQuery2\n testQuery2",
       success: true,
       isWorkbook: true,
       connectionType: ServerType.KDB,
@@ -1560,6 +1561,55 @@ describe("connectionManagerService", () => {
       await connectionManagerService.retrieveUserPass();
 
       assert.strictEqual(ext.kdbAuthMap.length, 0);
+    });
+  });
+
+  describe("retrieveInsightsConnVersion", () => {
+    let retrieveConnectionStub: sinon.SinonStub;
+    let connectionsListStub: sinon.SinonStub;
+    beforeEach(() => {
+      retrieveConnectionStub = sinon.stub(
+        connectionManagerService,
+        "retrieveConnection",
+      );
+      connectionsListStub = sinon.stub(ext, "connectionsList").value([]);
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should return 0 in case of non-Insights connection", async () => {
+      retrieveConnectionStub.withArgs("nonInsightsLabel").returns(kdbNode);
+
+      const result =
+        await connectionManagerService.retrieveInsightsConnVersion(
+          "nonInsightsLabel",
+        );
+
+      assert.strictEqual(result, 0);
+    });
+
+    it("should return 0 in case of Insights connection with no version", async () => {
+      retrieveConnectionStub.withArgs("insightsLabel").returns(insightsConn);
+
+      const result =
+        await connectionManagerService.retrieveInsightsConnVersion(
+          "insightsLabel",
+        );
+
+      assert.strictEqual(result, 0);
+    });
+
+    it("should not return the version of undefined connection", async () => {
+      retrieveConnectionStub.withArgs("nonInsightsLabel").returns(undefined);
+
+      const result =
+        await connectionManagerService.retrieveInsightsConnVersion(
+          "nonInsightsLabel",
+        );
+
+      assert.strictEqual(result, 0);
     });
   });
 
