@@ -1570,7 +1570,7 @@ describe("connectionManagerService", () => {
     beforeEach(() => {
       retrieveConnectionStub = sinon.stub(
         connectionManagerService,
-        "retrieveConnection",
+        "retrieveConnectedConnection",
       );
       connectionsListStub = sinon.stub(ext, "connectionsList").value([]);
     });
@@ -1590,7 +1590,7 @@ describe("connectionManagerService", () => {
       assert.strictEqual(result, 0);
     });
 
-    it("should return 0 in case of Insights connection with no version", async () => {
+    it("should return 1.11 in case of Insights connection with  version", async () => {
       retrieveConnectionStub.withArgs("insightsLabel").returns(insightsConn);
 
       const result =
@@ -1598,7 +1598,7 @@ describe("connectionManagerService", () => {
           "insightsLabel",
         );
 
-      assert.strictEqual(result, 0);
+      assert.strictEqual(result, 1.11);
     });
 
     it("should not return the version of undefined connection", async () => {
@@ -1607,6 +1607,21 @@ describe("connectionManagerService", () => {
       const result =
         await connectionManagerService.retrieveInsightsConnVersion(
           "nonInsightsLabel",
+        );
+
+      assert.strictEqual(result, 0);
+    });
+
+    it("should return  0 in case of Insights with no connection version", async () => {
+      const insightsConn2 = new InsightsConnection(
+        "insightsLabel",
+        insightNode,
+      );
+      retrieveConnectionStub.withArgs("insightsLabel").returns(insightsConn2);
+
+      const result =
+        await connectionManagerService.retrieveInsightsConnVersion(
+          "insightsLabel",
         );
 
       assert.strictEqual(result, 0);
