@@ -2,6 +2,22 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.8.0
+
+### Enhancements
+
+- Show KDB+ process explorer item content when clicked
+- Add ability to export and import connections
+- All files opened in the current workspace are considered when using language server features
+- Show call hierarchy is implemented in language server
+- Query history shows an ellipsis of the query execution text
+- Add limit option to datasource
+
+### Fixes
+
+- Ficed KDB Results columns resizing back to defaults everytime a datasource is run
+- Fixed KDB Results for large data sets
+
 # v1.7.0
 
 ### Enhancements
