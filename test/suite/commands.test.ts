@@ -244,6 +244,7 @@ describe("dataSourceCommand2", () => {
         startTS: "2022-01-01T00:00:00.000000000",
         endTS: "2022-01-02T00:00:00.000000000",
         fill: "zero",
+        limit: -20,
         labels: {},
         temporality: "snapshot",
       });
