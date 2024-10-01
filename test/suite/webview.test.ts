@@ -87,6 +87,7 @@ describe("KdbDataSourceView", () => {
               optional: {
                 filled: false,
                 temporal: false,
+                rowLimit: false,
                 filters: [createFilter()],
                 labels: [createLabel()],
                 sorts: [createSort()],
@@ -218,6 +219,20 @@ describe("KdbDataSourceView", () => {
       sinon.stub(view, "postMessage").value(() => (result = true));
       view.requestServerChange(createValueEvent("server"));
       assert.ok(result);
+    });
+  });
+
+  describe("renderRowCountOptions", () => {
+    it("should render row count options", () => {
+      view.selectedServerVersion = 1.11;
+      const result = view.renderRowCountOptions();
+      assert.ok(result);
+    });
+
+    it("should not render row count options for older server version", () => {
+      view.selectedServerVersion = 1.1;
+      const result = view.renderRowCountOptions();
+      assert.ok(!result);
     });
   });
 });

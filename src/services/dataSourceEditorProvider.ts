@@ -106,15 +106,19 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     webview.options = { enableScripts: true };
     webview.html = this.getWebviewContent(webview);
     let changing = 0;
+    const connMngService = new ConnectionManagementService();
 
     const updateWebview = async () => {
       if (changing === 0) {
         const selectedServer = getServerForUri(document.uri) || "";
+        const selectedServerVersion =
+          await connMngService.retrieveInsightsConnVersion(selectedServer);
         await getConnectionForServer(selectedServer);
         webview.postMessage(<DataSourceMessage2>{
           command: DataSourceCommand.Update,
           selectedServer,
           servers: getInsightsServers(),
+          selectedServerVersion,
           dataSourceFile: this.getDocumentAsJson(document),
           insightsMeta: await this.getMeta(selectedServer),
           isInsights: true,
@@ -173,7 +177,6 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           );
           break;
         case DataSourceCommand.Refresh:
-          const connMngService = new ConnectionManagementService();
           const selectedServer = getServerForUri(document.uri) || "";
           if (!connMngService.isConnected(selectedServer)) {
             offerConnectAction(selectedServer);

@@ -829,7 +829,7 @@ describe("queryHistoryProvider", () => {
       executorName: "testExecutorName",
       connectionName: "testConnectionName",
       time: "testTime",
-      query: "testQuery",
+      query: `testQuery\n long test query line counter ${"a".repeat(80)}`,
       success: true,
       connectionType: ServerType.INSIGHTS,
     },
@@ -837,7 +837,17 @@ describe("queryHistoryProvider", () => {
       executorName: "testExecutorName2",
       connectionName: "testConnectionName2",
       time: "testTime2",
-      query: "testQuery2",
+      query: `testQuery2 ${"a".repeat(80)} \n testQuery2 ${"a".repeat(80)}\n testQuery2 ${"a".repeat(80)}`,
+      success: true,
+      isWorkbook: true,
+      connectionType: ServerType.KDB,
+      duration: "500",
+    },
+    {
+      executorName: "testExecutorName2",
+      connectionName: "testConnectionName2",
+      time: "testTime2",
+      query: "testQuery2\n testQuery2\n testQuery2",
       success: true,
       isWorkbook: true,
       connectionType: ServerType.KDB,
@@ -850,6 +860,16 @@ describe("queryHistoryProvider", () => {
       query: dummyDS,
       success: false,
       connectionType: ServerType.KDB,
+    },
+    {
+      executorName: "variables",
+      connectionName: "testConnectionName2",
+      time: "testTime2",
+      query: `testQuery2 ${"a".repeat(80)}`,
+      success: true,
+      isFromConnTree: true,
+      connectionType: ServerType.KDB,
+      duration: "500",
     },
     {
       executorName: "variables",
@@ -918,7 +938,7 @@ describe("queryHistoryProvider", () => {
   it("Should return children for the tree when queryHistory has entries", async () => {
     const queryHistoryProvider = new QueryHistoryProvider();
     const result = await queryHistoryProvider.getChildren();
-    assert.strictEqual(result.length, 4, "Children count should be 3");
+    assert.strictEqual(result.length, 6, "Children count should be 6");
   });
 
   it("Should not return children for the tree when queryHistory has no entries", async () => {
@@ -1560,6 +1580,70 @@ describe("connectionManagerService", () => {
       await connectionManagerService.retrieveUserPass();
 
       assert.strictEqual(ext.kdbAuthMap.length, 0);
+    });
+  });
+
+  describe("retrieveInsightsConnVersion", () => {
+    let retrieveConnectionStub: sinon.SinonStub;
+    let connectionsListStub: sinon.SinonStub;
+    beforeEach(() => {
+      retrieveConnectionStub = sinon.stub(
+        connectionManagerService,
+        "retrieveConnectedConnection",
+      );
+      connectionsListStub = sinon.stub(ext, "connectionsList").value([]);
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should return 0 in case of non-Insights connection", async () => {
+      retrieveConnectionStub.withArgs("nonInsightsLabel").returns(kdbNode);
+
+      const result =
+        await connectionManagerService.retrieveInsightsConnVersion(
+          "nonInsightsLabel",
+        );
+
+      assert.strictEqual(result, 0);
+    });
+
+    it("should return 1.11 in case of Insights connection with  version", async () => {
+      retrieveConnectionStub.withArgs("insightsLabel").returns(insightsConn);
+
+      const result =
+        await connectionManagerService.retrieveInsightsConnVersion(
+          "insightsLabel",
+        );
+
+      assert.strictEqual(result, 1.11);
+    });
+
+    it("should not return the version of undefined connection", async () => {
+      retrieveConnectionStub.withArgs("nonInsightsLabel").returns(undefined);
+
+      const result =
+        await connectionManagerService.retrieveInsightsConnVersion(
+          "nonInsightsLabel",
+        );
+
+      assert.strictEqual(result, 0);
+    });
+
+    it("should return  0 in case of Insights with no connection version", async () => {
+      const insightsConn2 = new InsightsConnection(
+        "insightsLabel",
+        insightNode,
+      );
+      retrieveConnectionStub.withArgs("insightsLabel").returns(insightsConn2);
+
+      const result =
+        await connectionManagerService.retrieveInsightsConnVersion(
+          "insightsLabel",
+        );
+
+      assert.strictEqual(result, 0);
     });
   });
 
