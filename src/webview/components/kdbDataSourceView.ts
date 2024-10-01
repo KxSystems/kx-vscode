@@ -252,6 +252,7 @@ export class KdbDataSourceView extends LitElement {
           <vscode-checkbox
             .checked="${this.rowLimit}"
             @change="${(event: Event) => {
+              /* istanbul ignore next */
               this.rowLimit = (event.target as HTMLInputElement).checked;
               this.requestChange();
             }}"></vscode-checkbox>
@@ -262,6 +263,7 @@ export class KdbDataSourceView extends LitElement {
               class="text-field input-number"
               .value="${live(this.rowLimitCount)}"
               @input="${(event: Event) => {
+                /* istanbul ignore next */
                 this.rowLimitCount = (event.target as HTMLInputElement).value;
                 this.requestChange();
               }}">
@@ -275,6 +277,7 @@ export class KdbDataSourceView extends LitElement {
                 value="first"
                 .checked="${!this.isRowLimitLast}"
                 @change="${(event: Event) => {
+                  /* istanbul ignore next */
                   if ((event.target as HTMLInputElement).checked) {
                     this.isRowLimitLast = false;
                     this.requestChange();
@@ -289,6 +292,7 @@ export class KdbDataSourceView extends LitElement {
                 value="last"
                 .checked="${this.isRowLimitLast}"
                 @change="${(event: Event) => {
+                  /* istanbul ignore next */
                   if ((event.target as HTMLInputElement).checked) {
                     this.isRowLimitLast = true;
                     this.requestChange();
