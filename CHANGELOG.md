@@ -15,8 +15,8 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 ### Fixes
 
-- Ficed KDB Results columns resizing back to defaults everytime a datasource is run
-- Fixed KDB Results for large data sets
+- Fixed KDB results columns resizing back to defaults everytime a datasource is run
+- Fixed KDB results for large data sets
 
 # v1.7.0
 
