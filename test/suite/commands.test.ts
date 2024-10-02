@@ -1294,6 +1294,35 @@ describe("serverCommand", () => {
 
       sinon.assert.notCalled(addInsightsConnectionStub);
     });
+
+    it("should overwrite connections", async () => {
+      ext.connectionsList.push(insightsNodeImport1, kdbNodeImport1);
+      const importedConnections: ExportedConnections = {
+        connections: {
+          Insights: [
+            {
+              alias: "testInsight",
+              server: "testInsight",
+              auth: false,
+            },
+          ],
+          KDB: [
+            {
+              serverName: "testKdb",
+              serverAlias: "testKdb",
+              serverPort: "1818",
+              auth: false,
+              managed: false,
+              tls: false,
+            },
+          ],
+        },
+      };
+
+      showInformationMessageStub.returns("Overwrite");
+      await serverCommand.addImportedConnections(importedConnections);
+      sinon.assert.notCalled(addInsightsConnectionStub);
+    });
   });
 
   describe("writeQueryResultsToView", () => {
