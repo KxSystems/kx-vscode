@@ -58,6 +58,7 @@ describe("qLangServer", () => {
       onDidChangeConfiguration() {},
       onRequest() {},
       onSelectionRanges() {},
+      onDidChangeWatchedFiles() {},
       languages: {
         callHierarchy: {
           onPrepare() {},

@@ -18,7 +18,6 @@ import {
   EventEmitter,
   ExtensionContext,
   Range,
-  TabInputText,
   TextDocumentContentProvider,
   Uri,
   WorkspaceEdit,
@@ -685,19 +684,6 @@ export async function activate(context: ExtensionContext) {
     serverOptions,
     clientOptions,
   );
-
-  const docs = window.tabGroups.all
-    .flatMap((group) => group.tabs)
-    .map((tab) => tab.input as TabInputText);
-
-  for (const doc of docs) {
-    if (
-      doc.uri &&
-      (doc.uri.path.endsWith(".q") || doc.uri.path.endsWith(".quke"))
-    ) {
-      await workspace.openTextDocument(doc.uri);
-    }
-  }
 
   await client.start();
 
