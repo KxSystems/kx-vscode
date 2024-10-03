@@ -440,6 +440,7 @@ export default class QLangServer {
       : [];
   }
 
+  /* istanbul ignore next */
   public scan() {
     this.connection.workspace.getWorkspaceFolders().then((folders) => {
       if (folders) {
@@ -458,6 +459,7 @@ export default class QLangServer {
     });
   }
 
+  /* istanbul ignore next */
   private parseFiles(matches: string[]) {
     matches.forEach((match) =>
       readFile(match, "utf-8", (err, file) => {

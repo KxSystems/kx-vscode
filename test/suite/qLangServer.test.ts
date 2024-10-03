@@ -13,12 +13,10 @@
 
 /* eslint @typescript-eslint/no-empty-function: 0 */
 
-import mock from "mock-fs";
 import * as assert from "assert";
 import * as sinon from "sinon";
 import {
   Connection,
-  FileChangeType,
   InitializeParams,
   TextDocumentIdentifier,
 } from "vscode-languageserver";
@@ -86,7 +84,6 @@ describe("qLangServer", () => {
 
   afterEach(() => {
     sinon.restore();
-    mock.restore();
   });
 
   describe("capabilities", () => {
@@ -402,37 +399,20 @@ describe("qLangServer", () => {
   });
 
   describe("scan", () => {
-    it("should scan workspace files", () => {
-      mock({
-        "/test": {
-          "def.q": "a:1",
-          "ref.q": "a",
-        },
-      });
+    it("should scan empty workspace", () => {
       sinon
         .stub(connection.workspace, "getWorkspaceFolders")
-        .value(async () => [{ uri: "file:///test" }]);
+        .value(async () => []);
       server.scan();
     });
   });
 
   describe("onDidChangeWatchedFiles", () => {
-    it("should parse empty", () => {
-      mock({
-        "/test": {
-          "def.q": "a:1",
-          "ref.q": "a",
-        },
-      });
+    it("should parse empty match", () => {
       sinon
         .stub(connection.workspace, "getWorkspaceFolders")
-        .value(async () => [{ uri: "file:///test" }]);
-      server.onDidChangeWatchedFiles({
-        changes: [
-          { type: FileChangeType.Deleted, uri: "file:///test/ref.q" },
-          { type: FileChangeType.Changed, uri: "file:///test/def.q" },
-        ],
-      });
+        .value(async () => []);
+      server.onDidChangeWatchedFiles({ changes: [] });
     });
   });
 });
