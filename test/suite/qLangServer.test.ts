@@ -17,16 +17,19 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import {
   Connection,
+  FileChangeType,
   InitializeParams,
   TextDocumentIdentifier,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import QLangServer from "../../server/src/qLangServer";
+import { workspace } from "vscode";
 
 const context = { includeDeclaration: true };
 
 describe("qLangServer", () => {
   let server: QLangServer;
+  let connection: Connection;
 
   function createDocument(content: string, offset?: number) {
     content = content.trim();
@@ -42,7 +45,7 @@ describe("qLangServer", () => {
   }
 
   beforeEach(async () => {
-    const connection = <Connection>(<unknown>{
+    connection = <Connection>(<unknown>{
       listen() {},
       onDidOpenTextDocument() {},
       onDidChangeTextDocument() {},
@@ -59,6 +62,11 @@ describe("qLangServer", () => {
       onRequest() {},
       onSelectionRanges() {},
       onDidChangeWatchedFiles() {},
+      workspace: {
+        async getWorkspaceFolders() {
+          return [];
+        },
+      },
       languages: {
         callHierarchy: {
           onPrepare() {},
@@ -364,6 +372,41 @@ describe("qLangServer", () => {
       const items = server.onPrepareCallHierarchy(params);
       const result = server.onOutgoingCallsCallHierarchy({ item: items[0] });
       assert.strictEqual(result.length, 1);
+    });
+  });
+
+  describe("setSettings", () => {
+    let defaultSettings = {
+      debug: false,
+      linting: false,
+      refactoring: "Workspace",
+    };
+    it("should use default settings for empty", () => {
+      server.setSettings({});
+      assert.deepEqual(server["settings"], defaultSettings);
+    });
+    it("should use default settings for empty coming from client", () => {
+      server.onDidChangeConfiguration({ settings: { kdb: {} } });
+      assert.deepEqual(server["settings"], defaultSettings);
+    });
+  });
+
+  describe("onDidChangeWatchedFiles", () => {
+    it("should parse bogus", () => {
+      server.onDidChangeWatchedFiles({
+        changes: [
+          { type: FileChangeType.Deleted, uri: "file:///none" },
+          { type: FileChangeType.Changed, uri: "file:///none" },
+        ],
+      });
+      assert.strictEqual(server["cached"].size, 0);
+    });
+  });
+
+  describe("scan", () => {
+    it("should scan epmty workspace files", () => {
+      server.scan();
+      assert.strictEqual(server["cached"].size, 0);
     });
   });
 });
