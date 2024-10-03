@@ -13,6 +13,7 @@
 
 /* eslint @typescript-eslint/no-empty-function: 0 */
 
+import mock from "mock-fs";
 import * as assert from "assert";
 import * as sinon from "sinon";
 import {
@@ -23,7 +24,6 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import QLangServer from "../../server/src/qLangServer";
-import { workspace } from "vscode";
 
 const context = { includeDeclaration: true };
 
@@ -74,6 +74,7 @@ describe("qLangServer", () => {
           onOutgoingCalls() {},
         },
       },
+      sendDiagnostics() {},
     });
 
     const params = <InitializeParams>{
@@ -85,6 +86,7 @@ describe("qLangServer", () => {
 
   afterEach(() => {
     sinon.restore();
+    mock.restore();
   });
 
   describe("capabilities", () => {
@@ -391,17 +393,46 @@ describe("qLangServer", () => {
     });
   });
 
-  describe("onDidChangeWatchedFiles", () => {
-    it("should parse empty", () => {
-      server.onDidChangeWatchedFiles({ changes: [] });
-      assert.strictEqual(server["cached"].size, 0);
+  describe("onDidClose", () => {
+    it("should send epmty diagnostics", () => {
+      const stub = sinon.stub(connection, "sendDiagnostics");
+      server.onDidClose({ document: <TextDocument>{ uri: "" } });
+      assert.ok(stub.calledOnce);
     });
   });
 
   describe("scan", () => {
-    it("should scan epmty workspace files", () => {
+    it("should scan workspace files", () => {
+      mock({
+        "/test": {
+          "def.q": "a:1",
+          "ref.q": "a",
+        },
+      });
+      sinon
+        .stub(connection.workspace, "getWorkspaceFolders")
+        .value(async () => [{ uri: "file:///test" }]);
       server.scan();
-      assert.strictEqual(server["cached"].size, 0);
+    });
+  });
+
+  describe("onDidChangeWatchedFiles", () => {
+    it("should parse empty", () => {
+      mock({
+        "/test": {
+          "def.q": "a:1",
+          "ref.q": "a",
+        },
+      });
+      sinon
+        .stub(connection.workspace, "getWorkspaceFolders")
+        .value(async () => [{ uri: "file:///test" }]);
+      server.onDidChangeWatchedFiles({
+        changes: [
+          { type: FileChangeType.Deleted, uri: "file:///test/ref" },
+          { type: FileChangeType.Changed, uri: "file:///test/def" },
+        ],
+      });
     });
   });
 });
