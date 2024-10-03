@@ -429,8 +429,8 @@ describe("qLangServer", () => {
         .value(async () => [{ uri: "file:///test" }]);
       server.onDidChangeWatchedFiles({
         changes: [
-          { type: FileChangeType.Deleted, uri: "file:///test/ref" },
-          { type: FileChangeType.Changed, uri: "file:///test/def" },
+          { type: FileChangeType.Deleted, uri: "file:///test/ref.q" },
+          { type: FileChangeType.Changed, uri: "file:///test/def.q" },
         ],
       });
     });
