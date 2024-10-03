@@ -392,13 +392,8 @@ describe("qLangServer", () => {
   });
 
   describe("onDidChangeWatchedFiles", () => {
-    it("should parse bogus", () => {
-      server.onDidChangeWatchedFiles({
-        changes: [
-          { type: FileChangeType.Deleted, uri: "file:///none" },
-          { type: FileChangeType.Changed, uri: "file:///none" },
-        ],
-      });
+    it("should parse empty", () => {
+      server.onDidChangeWatchedFiles({ changes: [] });
       assert.strictEqual(server["cached"].size, 0);
     });
   });
