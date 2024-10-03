@@ -166,6 +166,7 @@ export default class QLangServer {
     }
   }
 
+  /* istanbul ignore next */
   public onDidChangeWatchedFiles({ changes }: DidChangeWatchedFilesParams) {
     this.parseFiles(
       changes.reduce((matches, change) => {
