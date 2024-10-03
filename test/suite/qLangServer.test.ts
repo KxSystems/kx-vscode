@@ -27,6 +27,7 @@ const context = { includeDeclaration: true };
 
 describe("qLangServer", () => {
   let server: QLangServer;
+  let connection: Connection;
 
   function createDocument(content: string, offset?: number) {
     content = content.trim();
@@ -42,7 +43,7 @@ describe("qLangServer", () => {
   }
 
   beforeEach(async () => {
-    const connection = <Connection>(<unknown>{
+    connection = <Connection>(<unknown>{
       listen() {},
       onDidOpenTextDocument() {},
       onDidChangeTextDocument() {},
@@ -58,6 +59,12 @@ describe("qLangServer", () => {
       onDidChangeConfiguration() {},
       onRequest() {},
       onSelectionRanges() {},
+      onDidChangeWatchedFiles() {},
+      workspace: {
+        async getWorkspaceFolders() {
+          return [];
+        },
+      },
       languages: {
         callHierarchy: {
           onPrepare() {},
@@ -65,6 +72,7 @@ describe("qLangServer", () => {
           onOutgoingCalls() {},
         },
       },
+      sendDiagnostics() {},
     });
 
     const params = <InitializeParams>{
@@ -363,6 +371,48 @@ describe("qLangServer", () => {
       const items = server.onPrepareCallHierarchy(params);
       const result = server.onOutgoingCallsCallHierarchy({ item: items[0] });
       assert.strictEqual(result.length, 1);
+    });
+  });
+
+  describe("setSettings", () => {
+    let defaultSettings = {
+      debug: false,
+      linting: false,
+      refactoring: "Workspace",
+    };
+    it("should use default settings for empty", () => {
+      server.setSettings({});
+      assert.deepEqual(server["settings"], defaultSettings);
+    });
+    it("should use default settings for empty coming from client", () => {
+      server.onDidChangeConfiguration({ settings: { kdb: {} } });
+      assert.deepEqual(server["settings"], defaultSettings);
+    });
+  });
+
+  describe("onDidClose", () => {
+    it("should send epmty diagnostics", () => {
+      const stub = sinon.stub(connection, "sendDiagnostics");
+      server.onDidClose({ document: <TextDocument>{ uri: "" } });
+      assert.ok(stub.calledOnce);
+    });
+  });
+
+  describe("scan", () => {
+    it("should scan empty workspace", () => {
+      sinon
+        .stub(connection.workspace, "getWorkspaceFolders")
+        .value(async () => []);
+      server.scan();
+    });
+  });
+
+  describe("onDidChangeWatchedFiles", () => {
+    it("should parse empty match", () => {
+      sinon
+        .stub(connection.workspace, "getWorkspaceFolders")
+        .value(async () => []);
+      server.onDidChangeWatchedFiles({ changes: [] });
     });
   });
 });

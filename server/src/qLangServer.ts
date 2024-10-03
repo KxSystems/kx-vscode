@@ -27,8 +27,10 @@ import {
   Diagnostic,
   DiagnosticSeverity,
   DidChangeConfigurationParams,
+  DidChangeWatchedFilesParams,
   DocumentSymbol,
   DocumentSymbolParams,
+  FileChangeType,
   InitializeParams,
   LSPAny,
   Location,
@@ -47,6 +49,8 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver/node";
+import { glob } from "glob";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   FindKind,
   Token,
@@ -69,24 +73,37 @@ import {
   RCurly,
 } from "./parser";
 import { lint } from "./linter";
+import { readFile } from "node:fs";
 
 interface Settings {
   debug: boolean;
   linting: boolean;
+  refactoring: "Workspace" | "Window";
 }
 
-const defaultSettings: Settings = { debug: false, linting: false };
+const defaultSettings: Settings = {
+  debug: false,
+  linting: false,
+  refactoring: "Workspace",
+};
+
+interface Tokenized {
+  uri: string;
+  tokens: Token[];
+}
 
 export default class QLangServer {
   private declare connection: Connection;
   private declare params: InitializeParams;
   private declare settings: Settings;
+  private declare cached: Map<string, Token[]>;
   public declare documents: TextDocuments<TextDocument>;
 
   constructor(connection: Connection, params: InitializeParams) {
     this.connection = connection;
     this.params = params;
     this.settings = defaultSettings;
+    this.cached = new Map();
     this.documents = new TextDocuments(TextDocument);
     this.documents.listen(this.connection);
     this.documents.onDidClose(this.onDidClose.bind(this));
@@ -96,6 +113,9 @@ export default class QLangServer {
     this.connection.onDefinition(this.onDefinition.bind(this));
     this.connection.onRenameRequest(this.onRenameRequest.bind(this));
     this.connection.onCompletion(this.onCompletion.bind(this));
+    this.connection.onDidChangeWatchedFiles(
+      this.onDidChangeWatchedFiles.bind(this),
+    );
     this.connection.languages.callHierarchy.onPrepare(
       this.onPrepareCallHierarchy.bind(this),
     );
@@ -133,21 +153,31 @@ export default class QLangServer {
   }
 
   public setSettings(settings: LSPAny) {
-    this.settings = settings;
+    this.settings = {
+      debug: settings.debug || false,
+      linting: settings.linting || false,
+      refactoring: settings.refactoring || "Workspace",
+    };
   }
 
   public onDidChangeConfiguration({ settings }: DidChangeConfigurationParams) {
     if ("kdb" in settings) {
-      const kdb = settings.kdb;
-      this.setSettings({
-        debug: kdb.debug_parser === true || false,
-        linting: kdb.linting === true || false,
-      });
+      this.setSettings(settings.kdb);
     }
   }
 
-  public onDidClose({ document }: TextDocumentChangeEvent<TextDocument>) {
-    this.connection.sendDiagnostics({ uri: document.uri, diagnostics: [] });
+  /* istanbul ignore next */
+  public onDidChangeWatchedFiles({ changes }: DidChangeWatchedFilesParams) {
+    this.parseFiles(
+      changes.reduce((matches, change) => {
+        if (change.type === FileChangeType.Deleted) {
+          this.cached.delete(change.uri);
+        } else {
+          matches.push(fileURLToPath(change.uri));
+        }
+        return matches;
+      }, [] as string[]),
+    );
   }
 
   public onDidChangeContent({
@@ -166,6 +196,10 @@ export default class QLangServer {
       );
       this.connection.sendDiagnostics({ uri, diagnostics });
     }
+  }
+
+  public onDidClose({ document }: TextDocumentChangeEvent<TextDocument>) {
+    this.connection.sendDiagnostics({ uri: document.uri, diagnostics: [] });
   }
 
   public onDocumentSymbol({
@@ -187,14 +221,11 @@ export default class QLangServer {
   public onReferences({ textDocument, position }: ReferenceParams): Location[] {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
-    return this.documents
-      .all()
+    return this.context({ uri: textDocument.uri, tokens })
       .map((document) =>
-        findIdentifiers(
-          FindKind.Reference,
-          document.uri === textDocument.uri ? tokens : this.parse(document),
-          source,
-        ).map((token) => Location.create(document.uri, rangeFromToken(token))),
+        findIdentifiers(FindKind.Reference, document.tokens, source).map(
+          (token) => Location.create(document.uri, rangeFromToken(token)),
+        ),
       )
       .flat();
   }
@@ -205,14 +236,11 @@ export default class QLangServer {
   }: DefinitionParams): Location[] {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
-    return this.documents
-      .all()
+    return this.context({ uri: textDocument.uri, tokens })
       .map((document) =>
-        findIdentifiers(
-          FindKind.Definition,
-          document.uri === textDocument.uri ? tokens : this.parse(document),
-          source,
-        ).map((token) => Location.create(document.uri, rangeFromToken(token))),
+        findIdentifiers(FindKind.Definition, document.tokens, source).map(
+          (token) => Location.create(document.uri, rangeFromToken(token)),
+        ),
       )
       .flat();
   }
@@ -224,13 +252,10 @@ export default class QLangServer {
   }: RenameParams): WorkspaceEdit {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
-    return this.documents.all().reduce(
+    const all = this.settings.refactoring === "Workspace";
+    return this.context({ uri: textDocument.uri, tokens }, all).reduce(
       (edit, document) => {
-        const refs = findIdentifiers(
-          FindKind.Rename,
-          document.uri === textDocument.uri ? tokens : this.parse(document),
-          source,
-        );
+        const refs = findIdentifiers(FindKind.Rename, document.tokens, source);
         if (refs.length > 0) {
           const name = <Token>{
             image: newName,
@@ -252,23 +277,20 @@ export default class QLangServer {
   }: CompletionParams): CompletionItem[] {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
-    return this.documents
-      .all()
+    return this.context({ uri: textDocument.uri, tokens })
       .map((document) =>
-        findIdentifiers(
-          FindKind.Completion,
-          document.uri === textDocument.uri ? tokens : this.parse(document),
-          source,
-        ).map((token) => {
-          return {
-            label: token.image,
-            labelDetails: {
-              detail: ` .${namespace(token)}`,
-            },
-            kind: CompletionItemKind.Variable,
-            insertText: relative(token, source),
-          };
-        }),
+        findIdentifiers(FindKind.Completion, document.tokens, source).map(
+          (token) => {
+            return {
+              label: token.image,
+              labelDetails: {
+                detail: ` .${namespace(token)}`,
+              },
+              kind: CompletionItemKind.Variable,
+              insertText: relative(token, source),
+            };
+          },
+        ),
       )
       .flat();
   }
@@ -369,26 +391,27 @@ export default class QLangServer {
   }: CallHierarchyIncomingCallsParams): CallHierarchyIncomingCall[] {
     const tokens = this.parse({ uri: item.uri });
     const source = positionToToken(tokens, item.range.end);
-    return this.documents
-      .all()
-      .map((document) =>
-        findIdentifiers(FindKind.Reference, this.parse(document), source)
-          .filter((token) => !assigned(token) && item.data)
-          .map((token) => {
-            const lambda = inLambda(token);
-            return {
-              from: {
-                kind: lambda ? SymbolKind.Object : SymbolKind.Function,
-                name: token.image,
-                uri: document.uri,
-                range: rangeFromToken(lambda || token),
-                selectionRange: rangeFromToken(token),
-              },
-              fromRanges: [],
-            } as CallHierarchyIncomingCall;
-          }),
-      )
-      .flat();
+    return item.data
+      ? this.context({ uri: item.uri, tokens })
+          .map((document) =>
+            findIdentifiers(FindKind.Reference, document.tokens, source)
+              .filter((token) => !assigned(token))
+              .map((token) => {
+                const lambda = inLambda(token);
+                return {
+                  from: {
+                    kind: lambda ? SymbolKind.Object : SymbolKind.Function,
+                    name: token.image,
+                    uri: document.uri,
+                    range: rangeFromToken(lambda || token),
+                    selectionRange: rangeFromToken(token),
+                  },
+                  fromRanges: [],
+                } as CallHierarchyIncomingCall;
+              }),
+          )
+          .flat()
+      : [];
   }
 
   public onOutgoingCallsCallHierarchy({
@@ -396,25 +419,56 @@ export default class QLangServer {
   }: CallHierarchyOutgoingCallsParams): CallHierarchyOutgoingCall[] {
     const tokens = this.parse({ uri: item.uri });
     const source = positionToToken(tokens, item.range.end);
-    return this.documents
-      .all()
-      .map((document) =>
-        findIdentifiers(FindKind.Reference, this.parse(document), source)
-          .filter((token) => inLambda(token) && !assigned(token) && item.data)
-          .map((token) => {
-            return {
-              to: {
-                kind: SymbolKind.Object,
-                name: token.image,
-                uri: document.uri,
-                range: rangeFromToken(inLambda(token)!),
-                selectionRange: rangeFromToken(token),
-              },
-              fromRanges: [],
-            } as CallHierarchyOutgoingCall;
-          }),
-      )
-      .flat();
+    return item.data
+      ? this.context({ uri: item.uri, tokens })
+          .map((document) =>
+            findIdentifiers(FindKind.Reference, document.tokens, source)
+              .filter((token) => inLambda(token) && !assigned(token))
+              .map((token) => {
+                return {
+                  to: {
+                    kind: SymbolKind.Object,
+                    name: token.image,
+                    uri: document.uri,
+                    range: rangeFromToken(inLambda(token)!),
+                    selectionRange: rangeFromToken(token),
+                  },
+                  fromRanges: [],
+                } as CallHierarchyOutgoingCall;
+              }),
+          )
+          .flat()
+      : [];
+  }
+
+  /* istanbul ignore next */
+  public scan() {
+    this.connection.workspace.getWorkspaceFolders().then((folders) => {
+      if (folders) {
+        folders.forEach((folder) => {
+          glob(
+            "**/*.{q,quke}",
+            { cwd: fileURLToPath(folder.uri), ignore: "node_modules/**" },
+            (err, matches) => {
+              if (!err) {
+                this.parseFiles(matches);
+              }
+            },
+          );
+        });
+      }
+    });
+  }
+
+  /* istanbul ignore next */
+  private parseFiles(matches: string[]) {
+    matches.forEach((match) =>
+      readFile(match, "utf-8", (err, file) => {
+        if (!err) {
+          this.cached.set(pathToFileURL(match).toString(), parse(file));
+        }
+      }),
+    );
   }
 
   private parse(textDocument: TextDocumentIdentifier): Token[] {
@@ -423,6 +477,25 @@ export default class QLangServer {
       return [];
     }
     return parse(document.getText());
+  }
+
+  private context({ uri, tokens }: Tokenized, all = true): Tokenized[] {
+    if (all) {
+      this.documents.all().forEach((document) => {
+        this.cached.set(
+          document.uri,
+          document.uri === uri ? tokens : parse(document.getText()),
+        );
+      });
+      return Array.from(this.cached.entries(), (entry) => ({
+        uri: entry[0],
+        tokens: entry[1],
+      }));
+    }
+    return this.documents.all().map((document) => ({
+      uri: document.uri,
+      tokens: document.uri === uri ? tokens : parse(document.getText()),
+    }));
   }
 }
 

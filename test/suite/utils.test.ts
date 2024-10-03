@@ -15,6 +15,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import mock from "mock-fs";
+import { env } from "node:process";
 import { TreeItemCollapsibleState } from "vscode";
 import { ext } from "../../src/extensionVariables";
 import * as QTable from "../../src/ipc/QTable";
@@ -1854,6 +1855,7 @@ describe("Utils", () => {
     let updateConfigurationStub: sinon.SinonStub;
     let showInformationMessageStub: sinon.SinonStub;
     let executeCommandStub: sinon.SinonStub;
+    let QHOME = "";
 
     beforeEach(() => {
       getConfigurationStub = sinon
@@ -1870,9 +1872,12 @@ describe("Utils", () => {
       executeCommandStub = sinon
         .stub(vscode.commands, "executeCommand")
         .resolves();
+      QHOME = env.QHOME;
+      env.QHOME = "";
     });
 
     afterEach(() => {
+      env.QHOME = QHOME;
       sinon.restore();
     });
 
