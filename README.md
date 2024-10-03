@@ -282,6 +282,46 @@ When editing a **Insights** connection, you can edit the following properties:
 
 ![Edit Insights connection](https://github.com/KxSystems/kx-vscode/blob/main/img/edit-insights-conn-form.png?raw=true)
 
+### Import/Export Connection Configuration
+
+The import/export connection feature allows you to import and export connections in JSON format from the VSCode IDE without having to create them manually.
+
+![Import Export](https://github.com/KxSystems/kx-vscode/blob/main/img/impex.png?raw=true)
+
+To import a connection:
+
+1. Open the Command Palette (Ctrl+Shift+P) and type the command to open the connection configuration for the installed database extension OR click the three dots (…) next to the Refresh button in the Connections window
+2. Select Import Connections
+3. Navigate to the location of the configuration file, such as a JSON file that contains the connection details, and select it
+4. Review the imported connection for accuracy
+5. Confirm the importTo export a connection:
+
+6. Open the Command Palette (Ctrl+Shift+P) and type the command to manage connection configurations for the installed database extension OR click the three dots (…) next to the Refresh button in the Connections window
+
+7. Select Export Connections
+
+8. Choose the connection(s) you want to export
+
+9. Specify the format and location for the exported configuration file. For example, JSON, YAML.
+
+10. Confirm the export action.
+
+To verify the export is successful navigate to the saved location and open the configuration file to check its contents.
+
+To connect to the database, select the newly imported connection from the list of available connections and initiate the connection to the database. You can run a simple query or command to verify the connection is successful.
+
+Note: If the imported connection has the same name as an existing connection, you will see a notification in the bottom right corner prompting you to either duplicate, overwrite, or cancel the import.
+
+To export a connection:
+
+1. Open the Command Palette (Ctrl+Shift+P) and type the command to manage connection configurations for the installed database extension OR click the three dots (…) next to the Refresh button in the Connections window
+2. Select Export Connections
+3. Choose the connection(s) you want to export
+4. Specify the format and location for the exported configuration file. For example, JSON, YAML.
+5. Confirm the export action.
+
+Note: To verify the export is successful navigate to the saved location and open the configuration file to check its contents.
+
 ## Connection Labels
 
 Connection Labels allow you to categorize and organize your connections by assigning them distinct names and colors, making it easier to manage and locate specific connections within the application.
@@ -586,6 +626,7 @@ To update kdb VS Code settings, search for **kdb** from _Preferences_ > _Setting
 | **Hide subscription to newsletter after first install**        | yes/no; default no                                                  |
 | **Insights Enterprise Connections for Explorer**               | [edit JSON settings](#insights-enterprise-connections-for-explorer) |
 | **Linting**                                                    | Enable linting for q and quke files                                 |
+| **Refactoring**                                                | Choose refactoring scope                                            |
 | **QHOME directory for q runtime**                              | Display location path of q installation                             |
 | **Servers**                                                    | [edit JSON settings](#servers)                                      |
 
