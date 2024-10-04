@@ -284,29 +284,17 @@ When editing a **Insights** connection, you can edit the following properties:
 
 ### Import/Export Connection Configuration
 
-The import/export connection feature allows you to import and export connections in JSON format from the VSCode IDE without having to create them manually.
+The **Import/Export Connection** config allows you to import and export connections in JSON format from the VSCode IDE without having to create them manually.
 
 ![Import Export](https://github.com/KxSystems/kx-vscode/blob/main/img/impex.png?raw=true)
 
 To import a connection:
 
-1. Open the Command Palette (Ctrl+Shift+P) and type the command to open the connection configuration for the installed database extension OR click the three dots (…) next to the Refresh button in the Connections window
-2. Select Import Connections
-3. Navigate to the location of the configuration file, such as a JSON file that contains the connection details, and select it
-4. Review the imported connection for accuracy
-5. Confirm the importTo export a connection:
-
-6. Open the Command Palette (Ctrl+Shift+P) and type the command to manage connection configurations for the installed database extension OR click the three dots (…) next to the Refresh button in the Connections window
-
-7. Select Export Connections
-
-8. Choose the connection(s) you want to export
-
-9. Specify the format and location for the exported configuration file. For example, JSON, YAML.
-
-10. Confirm the export action.
-
-To verify the export is successful navigate to the saved location and open the configuration file to check its contents.
+1. Open the Command Palette (Ctrl+Shift+P) and type the command to open the connection configuration for the installed database extension **OR** click the three dots (…) next to the Refresh button in the Connections window.
+2. Select **Import Connections**.
+3. Navigate to the location of the configuration file, such as a JSON file that contains the connection details, and select it.
+4. Review the imported connection for accuracy.
+5. Confirm the import.
 
 To connect to the database, select the newly imported connection from the list of available connections and initiate the connection to the database. You can run a simple query or command to verify the connection is successful.
 
@@ -314,13 +302,13 @@ Note: If the imported connection has the same name as an existing connection, yo
 
 To export a connection:
 
-1. Open the Command Palette (Ctrl+Shift+P) and type the command to manage connection configurations for the installed database extension OR click the three dots (…) next to the Refresh button in the Connections window
-2. Select Export Connections
-3. Choose the connection(s) you want to export
+1. Open the Command Palette (Ctrl+Shift+P) and type the command to manage connection configurations for the installed database extension **OR** click the three dots (…) next to the Refresh button in the Connections window.
+2. Select **Export Connections**.
+3. Choose the connection(s) you want to export.
 4. Specify the format and location for the exported configuration file. For example, JSON, YAML.
 5. Confirm the export action.
 
-Note: To verify the export is successful navigate to the saved location and open the configuration file to check its contents.
+To verify the export is successful navigate to the saved location and open the configuration file to check its contents.
 
 ## Connection Labels
 
@@ -473,6 +461,7 @@ To create a data source and run it against a specific connection:
    | **Select API**          | Choose **getData** from the **Select API** dropdown.             |
    | **Table**               | Choose the table you wish to query from the **Tables** dropdown. |
    | **Start Time/End Time** | Select the **Start Time** and **End Time** for the query.        |
+   | **Row Limit** | Add a limit to the number of queries executed to reduce the number of Out of Memory (OOM) issues or failed queries. |
    | Additional Parameters   | You can choose from the additional parameters as required.       |
 
 1. Click **Save** to store the settings you have chosen, for reuse later. When you save a data source; query parameters and the connection details are stored. The data source icon is green if it is associated with a connection and grey if there is no association.
