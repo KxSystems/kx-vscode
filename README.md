@@ -455,14 +455,14 @@ To create a data source and run it against a specific connection:
 1. Ensure you have at least one folder open in VS Code.
 1. In the **DATASOURCES** view, click **+** and specify the parameters defined in the following table:
 
-   | Property                | Description                                                      |
-   | ----------------------- | ---------------------------------------------------------------- |
-   | **Connection**          | Select a Connection from the **Connection** dropdown.            |
-   | **Select API**          | Choose **getData** from the **Select API** dropdown.             |
-   | **Table**               | Choose the table you wish to query from the **Tables** dropdown. |
-   | **Start Time/End Time** | Select the **Start Time** and **End Time** for the query.        |
-   | **Row Limit** | Add a limit to the number of queries executed to reduce the number of Out of Memory (OOM) issues or failed queries. |
-   | Additional Parameters   | You can choose from the additional parameters as required.       |
+   | Property                | Description                                                                                                         |
+   | ----------------------- | ------------------------------------------------------------------------------------------------------------------- |
+   | **Connection**          | Select a Connection from the **Connection** dropdown.                                                               |
+   | **Select API**          | Choose **getData** from the **Select API** dropdown.                                                                |
+   | **Table**               | Choose the table you wish to query from the **Tables** dropdown.                                                    |
+   | **Start Time/End Time** | Select the **Start Time** and **End Time** for the query.                                                           |
+   | **Row Limit**           | Add a limit to the number of queries executed to reduce the number of Out of Memory (OOM) issues or failed queries. |
+   | Additional Parameters   | You can choose from the additional parameters as required.                                                          |
 
 1. Click **Save** to store the settings you have chosen, for reuse later. When you save a data source; query parameters and the connection details are stored. The data source icon is green if it is associated with a connection and grey if there is no association.
 
@@ -618,6 +618,16 @@ To update kdb VS Code settings, search for **kdb** from _Preferences_ > _Setting
 | **Refactoring**                                                | Choose refactoring scope                                            |
 | **QHOME directory for q runtime**                              | Display location path of q installation                             |
 | **Servers**                                                    | [edit JSON settings](#servers)                                      |
+
+### Refactoring
+
+Refactorings such as renaming are by default applied to all files in the workspace. You can preview the changes before applying them and select the files to apply the refactoring by pressing **ctrl** or **command** key before the action.
+
+![Preview](https://github.com/KxSystems/kx-vscode/blob/main/img/preview.png?raw=true)
+
+If you only need to apply the refactorings for the currently opened files, refactoring option **Window** can be selected instead of **Workspace**:
+
+![Refactoring](https://github.com/KxSystems/kx-vscode/blob/main/img/refactoring.png?raw=true)
 
 ### kdb Insights Enterprise Connections for Explorer
 
