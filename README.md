@@ -621,11 +621,11 @@ To update kdb VS Code settings, search for **kdb** from _Preferences_ > _Setting
 
 ### Refactoring
 
-Refactorings such as renaming are by default applied to all files in the workspace. You can preview the changes before applying them and select the files to apply the refactoring by pressing **ctrl** or **command** key before the action.
+By default, refactorings like renaming are applied to all files in the workspace. You can preview the changes before applying them and select specific files to apply the refactoring by pressing the **ctrl** or **command** key before executing the action.
 
 ![Preview](https://github.com/KxSystems/kx-vscode/blob/main/img/preview.png?raw=true)
 
-If you only need to apply the refactorings for the currently opened files, refactoring option **Window** can be selected instead of **Workspace**:
+If you only need to apply the refactorings to the currently opened files, you can select **Window** instead of **Workspace** for the refactoring option:
 
 ![Refactoring](https://github.com/KxSystems/kx-vscode/blob/main/img/refactoring.png?raw=true)
 
