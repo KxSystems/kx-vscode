@@ -1,24 +1,50 @@
 :root {
-  --sl-focus-ring-color: var(--vscode-focusBorder);
   --sl-focus-ring-width: 1px;
+  --sl-focus-ring-offset: 1px;
+  --sl-focus-ring-style: solid;
+  --sl-focus-ring-color: var(--vscode-focusBorder);
+  --sl-input-focus-ring-offset: -1px;
+  --sl-input-focus-ring-color: var(--vscode-focusBorder);
+
+  --sl-button-font-size-small: var(--vscode-font-size);
+  --sl-input-font-size-small: var(--vscode-font-size);
+  --sl-input-label-font-size-small: var(--vscode-font-size);
+  --sl-input-font-family: var(--vscode-font-family);
+  --sl-input-font-weight: var(--vscode-font-weight);
+
+  --sl-input-border-width: 1px;
+  --sl-input-border-radius-small: 2px;
+  --sl-input-border-radius-medium: 2px;
+  --sl-input-border-radius-large: 2px;
+  --sl-input-border-color: var(--vscode-input-border, transparent);
+  --sl-input-border-color-hover: var(--vscode-input-border, transparent);
+  --sl-input-border-color-focus: var(--vscode-input-border, transparent);
+
+  --sl-input-height-small: calc(2rem + 2 * var(--sl-input-border-width));
+  --sl-input-spacing-small: var(--sl-spacing-x-small);
+  --sl-input-color: var(--vscode-input-foreground);
+  --sl-input-color-hover: var(--vscode-input-foreground);
+  --sl-input-color-focus: var(--vscode-input-foreground);
+  --sl-input-background-color: var(--vscode-input-background);
+  --sl-input-background-color-hover: var(--vscode-input-background);
+  --sl-input-background-color-focus: var(--vscode-input-background);
+  --sl-panel-background-color: var(--vscode-input-background);
 }
 
 html,
 body {
   margin: 0;
-  padding: 0;
-  height: 100%;
-  line-height: var(--sl-line-height-dense);
+  line-height: 1.6;
+  font-size: var(--vscode-font-size);
 }
 
 body {
   overflow: hidden;
-  font-size: var(--vscode-font-size);
+  box-sizing: border-box;
   font-family: var(--vscode-font-family);
   font-weight: var(--vscode-font-weight);
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
-  box-sizing: border-box;
   color: var(--vscode-foreground);
   background-color: var(--vscode-panel-background);
 }

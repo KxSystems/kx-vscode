@@ -13,6 +13,27 @@
 
 import { css } from "lit";
 
+export const shoelaceStyles = css`
+  :host {
+    box-sizing: border-box;
+  }
+
+  sl-button::part(base) {
+    color: var(--vscode-button-secondaryForeground);
+    background-color: var(--vscode-button-secondaryBackground);
+    border-color: var(
+      --vscode-button-border,
+      var(--vscode-button-secondaryBackground)
+    );
+  }
+
+  sl-button[variant="primary"]::part(base) {
+    color: var(--vscode-button-foreground);
+    background-color: var(--vscode-button-background);
+    border-color: var(--vscode-button-border, var(--vscode-button-background));
+  }
+`;
+
 export const vscodeStyles = css`
   .dropdown-container {
     box-sizing: border-box;

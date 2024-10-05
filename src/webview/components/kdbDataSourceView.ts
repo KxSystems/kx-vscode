@@ -33,17 +33,15 @@ import {
 } from "../../models/dataSource";
 import { MetaObjectPayload } from "../../models/meta";
 import { DataSourceCommand, DataSourceMessage2 } from "../../models/messages";
+import { shoelaceStyles } from "./styles";
 
 const MAX_RULES = 32;
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {
   static styles = [
+    shoelaceStyles,
     css`
-      :host {
-        box-sizing: border-box;
-      }
-
       .container {
         display: flex;
         flex-flow: row nowrap;
@@ -86,8 +84,8 @@ export class KdbDataSourceView extends LitElement {
 
       sl-input,
       sl-select {
-        min-width: 11rem;
-        max-width: 11rem;
+        min-width: 14rem;
+        max-width: 14rem;
       }
 
       sl-checkbox {
@@ -263,15 +261,10 @@ export class KdbDataSourceView extends LitElement {
 
   requestChange() {
     this.requestUpdate();
-    if (this.debounce) {
-      clearTimeout(this.debounce);
-    }
-    this.debounce = setTimeout(() => {
-      this.postMessage({
-        command: DataSourceCommand.Change,
-        dataSourceFile: this.data,
-      });
-    }, 200);
+    this.postMessage({
+      command: DataSourceCommand.Change,
+      dataSourceFile: this.data,
+    });
   }
 
   requestServerChange(event: Event) {
@@ -353,7 +346,6 @@ export class KdbDataSourceView extends LitElement {
             this.requestChange();
           }}"></sl-checkbox>
         <sl-select
-          filled
           size="small"
           .value="${live(filter.column)}"
           label="${this.filters.indexOf(filter) === 0
@@ -372,7 +364,6 @@ export class KdbDataSourceView extends LitElement {
           ${this.renderColumnOptions()}
         </sl-select>
         <sl-select
-          filled
           size="small"
           .value=${live(filter.operator)}
           label="${this.filters.indexOf(filter) === 0 ? "Apply Function" : ""}"
@@ -390,7 +381,6 @@ export class KdbDataSourceView extends LitElement {
           )}
         </sl-select>
         <sl-input
-          filled
           size="small"
           label="${this.filters.indexOf(filter) === 0 ? "Set Parameter" : ""}"
           .value="${live(filter.values)}"
@@ -401,7 +391,6 @@ export class KdbDataSourceView extends LitElement {
         <sl-button-group>
           <sl-button
             size="small"
-            variant="neutral"
             aria-label="Add Filter"
             appearance="secondary"
             @click="${() => {
@@ -415,7 +404,6 @@ export class KdbDataSourceView extends LitElement {
           >
           <sl-button
             size="small"
-            variant="neutral"
             aria-label="Remove Filter"
             @click="${() => {
               if (this.filters.length > 0) {
@@ -444,7 +432,6 @@ export class KdbDataSourceView extends LitElement {
             this.requestChange();
           }}"></sl-checkbox>
         <sl-input
-          filled
           size="small"
           label="${this.labels.indexOf(label) === 0 ? "Filter By Label" : ""}"
           .value="${live(label.key)}"
@@ -453,7 +440,6 @@ export class KdbDataSourceView extends LitElement {
             this.requestChange();
           }}"></sl-input>
         <sl-input
-          filled
           size="small"
           label="${this.labels.indexOf(label) === 0 ? "Value" : ""}"
           .value="${live(label.value)}"
@@ -464,7 +450,6 @@ export class KdbDataSourceView extends LitElement {
         <sl-button-group>
           <sl-button
             size="small"
-            variant="neutral"
             aria-label="Add Label"
             @click="${() => {
               if (this.labels.length < MAX_RULES) {
@@ -477,7 +462,6 @@ export class KdbDataSourceView extends LitElement {
           >
           <sl-button
             size="small"
-            variant="neutral"
             aria-label="Remove Label"
             @click="${() => {
               if (this.labels.length > 0) {
@@ -506,7 +490,6 @@ export class KdbDataSourceView extends LitElement {
             this.requestChange();
           }}"></sl-checkbox>
         <sl-select
-          filled
           size="small"
           .value="${live(sort.column)}"
           label="${this.sorts.indexOf(sort) === 0 ? "Sort By" : ""}"
@@ -525,7 +508,6 @@ export class KdbDataSourceView extends LitElement {
         <sl-button-group>
           <sl-button
             size="small"
-            variant="neutral"
             aria-label="Add Sort By"
             @click="${() => {
               if (this.sorts.length < MAX_RULES) {
@@ -538,7 +520,6 @@ export class KdbDataSourceView extends LitElement {
           >
           <sl-button
             size="small"
-            variant="neutral"
             aria-label="Remove Sort By"
             @click="${() => {
               if (this.sorts.length > 0) {
@@ -567,7 +548,6 @@ export class KdbDataSourceView extends LitElement {
             this.requestChange();
           }}"></sl-checkbox>
         <sl-input
-          filled
           size="small"
           label="${this.aggs.indexOf(agg) === 0
             ? "Define Output Aggregate"
@@ -578,7 +558,6 @@ export class KdbDataSourceView extends LitElement {
             this.requestChange();
           }}"></sl-input>
         <sl-select
-          filled
           size="small"
           .value="${live(agg.operator)}"
           label="${this.aggs.indexOf(agg) === 0 ? "Choose Aggregation" : ""}"
@@ -596,7 +575,6 @@ export class KdbDataSourceView extends LitElement {
           )}
         </sl-select>
         <sl-select
-          filled
           size="small"
           .value="${live(agg.column)}"
           label="${this.aggs.indexOf(agg) === 0 ? "By Column" : ""}"
@@ -615,7 +593,6 @@ export class KdbDataSourceView extends LitElement {
         <sl-button-group>
           <sl-button
             size="small"
-            variant="neutral"
             aria-label="Add Aggregation"
             @click="${() => {
               if (this.aggs.length < MAX_RULES) {
@@ -628,7 +605,6 @@ export class KdbDataSourceView extends LitElement {
           >
           <sl-button
             size="small"
-            variant="neutral"
             aria-label="Remove Aggregation"
             @click="${() => {
               if (this.aggs.length > 0) {
@@ -657,7 +633,6 @@ export class KdbDataSourceView extends LitElement {
             this.requestChange();
           }}"></sl-checkbox>
         <sl-select
-          filled
           size="small"
           .value="${live(group.column)}"
           label="${this.groups.indexOf(group) === 0
@@ -678,7 +653,6 @@ export class KdbDataSourceView extends LitElement {
         <sl-button-group>
           <sl-button
             size="small"
-            variant="neutral"
             aria-label="Add Group By"
             @click="${() => {
               if (this.groups.length < MAX_RULES) {
@@ -692,7 +666,6 @@ export class KdbDataSourceView extends LitElement {
           <sl-button
             size="small"
             aria-label="Remove Group By"
-            variant="neutral"
             @click="${() => {
               if (this.groups.length > 0) {
                 const index = this.groups.indexOf(group);
@@ -715,7 +688,6 @@ export class KdbDataSourceView extends LitElement {
       <div class="col">
         <div class="row">
           <sl-select
-            filled
             size="small"
             label="Select API"
             .value="${live(this.selectedApi)}"
@@ -735,7 +707,6 @@ export class KdbDataSourceView extends LitElement {
           </sl-select>
 
           <sl-select
-            filled
             size="small"
             label="Table"
             .value="${live(this.selectedTable)}"
@@ -757,7 +728,6 @@ export class KdbDataSourceView extends LitElement {
 
         <div class="row">
           <sl-input
-            filled
             size="small"
             label="Start Time"
             type="datetime-local"
@@ -768,7 +738,6 @@ export class KdbDataSourceView extends LitElement {
             }}"></sl-input>
 
           <sl-input
-            filled
             size="small"
             label="End Time"
             type="datetime-local"
@@ -787,7 +756,6 @@ export class KdbDataSourceView extends LitElement {
               this.requestChange();
             }}"></sl-checkbox>
           <sl-select
-            filled
             size="small"
             label="Fill"
             .value="${live(this.fill)}"
@@ -813,7 +781,6 @@ export class KdbDataSourceView extends LitElement {
             }}"></sl-checkbox>
 
           <sl-select
-            filled
             size="small"
             label="Temporality"
             .value="${live(this.temporality)}"
@@ -874,7 +841,6 @@ export class KdbDataSourceView extends LitElement {
   renderQSQL() {
     return html`
       <sl-select
-        filled
         size="small"
         label="Target"
         .value="${live(this.qsqlTarget)}"
@@ -889,7 +855,6 @@ export class KdbDataSourceView extends LitElement {
         ${this.renderTargetOptions()}
       </sl-select>
       <sl-textarea
-        filled
         size="small"
         label="Query"
         rows="16"
@@ -904,7 +869,6 @@ export class KdbDataSourceView extends LitElement {
   renderSQL() {
     return html`
       <sl-textarea
-        filled
         size="small"
         label="Query"
         rows="16"
@@ -960,8 +924,8 @@ export class KdbDataSourceView extends LitElement {
   renderActions() {
     return html`
       <sl-select
-        filled
         label="Connection"
+        size="small"
         .value="${live(this.selectedServer)}"
         @sl-change="${this.requestServerChange}"
         ?disabled="${this.running}">
@@ -978,17 +942,27 @@ export class KdbDataSourceView extends LitElement {
         )}
       </sl-select>
       <sl-button-group>
-        <sl-button variant="primary" class="grow" @click="${this.save}"
+        <sl-button
+          size="small"
+          variant="primary"
+          class="grow"
+          @click="${this.save}"
           >Save</sl-button
         >
-        <sl-button @click="${this.refresh}" ?disabled="${this.running}"
+        <sl-button
+          size="small"
+          @click="${this.refresh}"
+          ?disabled="${this.running}"
           >Refresh</sl-button
         >
       </sl-button-group>
-      <sl-button @click="${this.run}" ?disabled="${this.running}"
+      <sl-button size="small" @click="${this.run}" ?disabled="${this.running}"
         >Run</sl-button
       >
-      <sl-button @click="${this.populateScratchpad}" ?disabled="${this.running}"
+      <sl-button
+        size="small"
+        @click="${this.populateScratchpad}"
+        ?disabled="${this.running}"
         >Populate Scratchpad</sl-button
       >
     `;
