@@ -6,22 +6,20 @@
   --sl-input-focus-ring-offset: -1px;
   --sl-input-focus-ring-color: var(--vscode-focusBorder);
 
-  --sl-button-font-size-small: var(--vscode-font-size);
-  --sl-input-font-size-small: var(--vscode-font-size);
-  --sl-input-label-font-size-small: var(--vscode-font-size);
+  --sl-button-font-size-medium: var(--vscode-font-size);
+  --sl-input-font-size-medium: var(--vscode-font-size);
+  --sl-input-label-font-size-medium: var(--vscode-font-size);
   --sl-input-font-family: var(--vscode-font-family);
   --sl-input-font-weight: var(--vscode-font-weight);
 
   --sl-input-border-width: 1px;
-  --sl-input-border-radius-small: 2px;
   --sl-input-border-radius-medium: 2px;
-  --sl-input-border-radius-large: 2px;
   --sl-input-border-color: var(--vscode-input-border, transparent);
   --sl-input-border-color-hover: var(--vscode-input-border, transparent);
   --sl-input-border-color-focus: var(--vscode-input-border, transparent);
 
-  --sl-input-height-small: calc(2rem + 2 * var(--sl-input-border-width));
-  --sl-input-spacing-small: var(--sl-spacing-x-small);
+  --sl-input-height-medium: calc(2rem + 2 * var(--sl-input-border-width));
+  --sl-input-spacing-medium: var(--sl-spacing-x-small);
   --sl-input-color: var(--vscode-input-foreground);
   --sl-input-color-hover: var(--vscode-input-foreground);
   --sl-input-color-focus: var(--vscode-input-foreground);
@@ -34,7 +32,7 @@
 html,
 body {
   margin: 0;
-  line-height: 1.6;
+  line-height: 1.5;
   font-size: var(--vscode-font-size);
 }
 

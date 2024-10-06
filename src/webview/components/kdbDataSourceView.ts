@@ -346,7 +346,6 @@ export class KdbDataSourceView extends LitElement {
             this.requestChange();
           }}"></sl-checkbox>
         <sl-select
-          size="small"
           .value="${live(filter.column)}"
           label="${this.filters.indexOf(filter) === 0
             ? "Filter By Column"
@@ -364,7 +363,6 @@ export class KdbDataSourceView extends LitElement {
           ${this.renderColumnOptions()}
         </sl-select>
         <sl-select
-          size="small"
           .value=${live(filter.operator)}
           label="${this.filters.indexOf(filter) === 0 ? "Apply Function" : ""}"
           @sl-change="${(event: Event) => {
@@ -381,7 +379,6 @@ export class KdbDataSourceView extends LitElement {
           )}
         </sl-select>
         <sl-input
-          size="small"
           label="${this.filters.indexOf(filter) === 0 ? "Set Parameter" : ""}"
           .value="${live(filter.values)}"
           @input="${(event: Event) => {
@@ -390,7 +387,6 @@ export class KdbDataSourceView extends LitElement {
           }}"></sl-input>
         <sl-button-group>
           <sl-button
-            size="small"
             aria-label="Add Filter"
             appearance="secondary"
             @click="${() => {
@@ -403,7 +399,6 @@ export class KdbDataSourceView extends LitElement {
             >+</sl-button
           >
           <sl-button
-            size="small"
             aria-label="Remove Filter"
             @click="${() => {
               if (this.filters.length > 0) {
@@ -432,7 +427,6 @@ export class KdbDataSourceView extends LitElement {
             this.requestChange();
           }}"></sl-checkbox>
         <sl-input
-          size="small"
           label="${this.labels.indexOf(label) === 0 ? "Filter By Label" : ""}"
           .value="${live(label.key)}"
           @input="${(event: Event) => {
@@ -440,7 +434,6 @@ export class KdbDataSourceView extends LitElement {
             this.requestChange();
           }}"></sl-input>
         <sl-input
-          size="small"
           label="${this.labels.indexOf(label) === 0 ? "Value" : ""}"
           .value="${live(label.value)}"
           @input="${(event: Event) => {
@@ -449,7 +442,6 @@ export class KdbDataSourceView extends LitElement {
           }}"></sl-input>
         <sl-button-group>
           <sl-button
-            size="small"
             aria-label="Add Label"
             @click="${() => {
               if (this.labels.length < MAX_RULES) {
@@ -461,7 +453,6 @@ export class KdbDataSourceView extends LitElement {
             >+</sl-button
           >
           <sl-button
-            size="small"
             aria-label="Remove Label"
             @click="${() => {
               if (this.labels.length > 0) {
@@ -490,7 +481,6 @@ export class KdbDataSourceView extends LitElement {
             this.requestChange();
           }}"></sl-checkbox>
         <sl-select
-          size="small"
           .value="${live(sort.column)}"
           label="${this.sorts.indexOf(sort) === 0 ? "Sort By" : ""}"
           @sl-change="${(event: Event) => {
@@ -507,7 +497,6 @@ export class KdbDataSourceView extends LitElement {
         </sl-select>
         <sl-button-group>
           <sl-button
-            size="small"
             aria-label="Add Sort By"
             @click="${() => {
               if (this.sorts.length < MAX_RULES) {
@@ -519,7 +508,6 @@ export class KdbDataSourceView extends LitElement {
             >+</sl-button
           >
           <sl-button
-            size="small"
             aria-label="Remove Sort By"
             @click="${() => {
               if (this.sorts.length > 0) {
@@ -548,7 +536,6 @@ export class KdbDataSourceView extends LitElement {
             this.requestChange();
           }}"></sl-checkbox>
         <sl-input
-          size="small"
           label="${this.aggs.indexOf(agg) === 0
             ? "Define Output Aggregate"
             : ""}"
@@ -558,7 +545,6 @@ export class KdbDataSourceView extends LitElement {
             this.requestChange();
           }}"></sl-input>
         <sl-select
-          size="small"
           .value="${live(agg.operator)}"
           label="${this.aggs.indexOf(agg) === 0 ? "Choose Aggregation" : ""}"
           @sl-change="${(event: Event) => {
@@ -575,7 +561,6 @@ export class KdbDataSourceView extends LitElement {
           )}
         </sl-select>
         <sl-select
-          size="small"
           .value="${live(agg.column)}"
           label="${this.aggs.indexOf(agg) === 0 ? "By Column" : ""}"
           @sl-change="${(event: Event) => {
@@ -592,7 +577,6 @@ export class KdbDataSourceView extends LitElement {
         </sl-select>
         <sl-button-group>
           <sl-button
-            size="small"
             aria-label="Add Aggregation"
             @click="${() => {
               if (this.aggs.length < MAX_RULES) {
@@ -604,7 +588,6 @@ export class KdbDataSourceView extends LitElement {
             >+</sl-button
           >
           <sl-button
-            size="small"
             aria-label="Remove Aggregation"
             @click="${() => {
               if (this.aggs.length > 0) {
@@ -633,7 +616,6 @@ export class KdbDataSourceView extends LitElement {
             this.requestChange();
           }}"></sl-checkbox>
         <sl-select
-          size="small"
           .value="${live(group.column)}"
           label="${this.groups.indexOf(group) === 0
             ? "Group Aggregation By"
@@ -652,7 +634,6 @@ export class KdbDataSourceView extends LitElement {
         </sl-select>
         <sl-button-group>
           <sl-button
-            size="small"
             aria-label="Add Group By"
             @click="${() => {
               if (this.groups.length < MAX_RULES) {
@@ -664,7 +645,6 @@ export class KdbDataSourceView extends LitElement {
             >+</sl-button
           >
           <sl-button
-            size="small"
             aria-label="Remove Group By"
             @click="${() => {
               if (this.groups.length > 0) {
@@ -688,7 +668,6 @@ export class KdbDataSourceView extends LitElement {
       <div class="col">
         <div class="row">
           <sl-select
-            size="small"
             label="Select API"
             .value="${live(this.selectedApi)}"
             @sl-change="${(event: Event) => {
@@ -707,7 +686,6 @@ export class KdbDataSourceView extends LitElement {
           </sl-select>
 
           <sl-select
-            size="small"
             label="Table"
             .value="${live(this.selectedTable)}"
             @sl-change="${(event: Event) => {
@@ -728,7 +706,6 @@ export class KdbDataSourceView extends LitElement {
 
         <div class="row">
           <sl-input
-            size="small"
             label="Start Time"
             type="datetime-local"
             .value="${live(this.startTS)}"
@@ -738,7 +715,6 @@ export class KdbDataSourceView extends LitElement {
             }}"></sl-input>
 
           <sl-input
-            size="small"
             label="End Time"
             type="datetime-local"
             .value="${live(this.endTS)}"
@@ -756,7 +732,6 @@ export class KdbDataSourceView extends LitElement {
               this.requestChange();
             }}"></sl-checkbox>
           <sl-select
-            size="small"
             label="Fill"
             .value="${live(this.fill)}"
             @sl-change="${(event: Event) => {
@@ -781,7 +756,6 @@ export class KdbDataSourceView extends LitElement {
             }}"></sl-checkbox>
 
           <sl-select
-            size="small"
             label="Temporality"
             .value="${live(this.temporality)}"
             @sl-change="${(event: Event) => {
@@ -841,7 +815,6 @@ export class KdbDataSourceView extends LitElement {
   renderQSQL() {
     return html`
       <sl-select
-        size="small"
         label="Target"
         .value="${live(this.qsqlTarget)}"
         @sl-change="${(event: Event) => {
@@ -855,7 +828,6 @@ export class KdbDataSourceView extends LitElement {
         ${this.renderTargetOptions()}
       </sl-select>
       <sl-textarea
-        size="small"
         label="Query"
         rows="16"
         .value="${live(this.qsql)}"
@@ -869,7 +841,6 @@ export class KdbDataSourceView extends LitElement {
   renderSQL() {
     return html`
       <sl-textarea
-        size="small"
         label="Query"
         rows="16"
         .value="${live(this.sql)}"
@@ -925,7 +896,6 @@ export class KdbDataSourceView extends LitElement {
     return html`
       <sl-select
         label="Connection"
-        size="small"
         .value="${live(this.selectedServer)}"
         @sl-change="${this.requestServerChange}"
         ?disabled="${this.running}">
@@ -942,27 +912,17 @@ export class KdbDataSourceView extends LitElement {
         )}
       </sl-select>
       <sl-button-group>
-        <sl-button
-          size="small"
-          variant="primary"
-          class="grow"
-          @click="${this.save}"
+        <sl-button variant="primary" class="grow" @click="${this.save}"
           >Save</sl-button
         >
-        <sl-button
-          size="small"
-          @click="${this.refresh}"
-          ?disabled="${this.running}"
+        <sl-button @click="${this.refresh}" ?disabled="${this.running}"
           >Refresh</sl-button
         >
       </sl-button-group>
-      <sl-button size="small" @click="${this.run}" ?disabled="${this.running}"
+      <sl-button @click="${this.run}" ?disabled="${this.running}"
         >Run</sl-button
       >
-      <sl-button
-        size="small"
-        @click="${this.populateScratchpad}"
-        ?disabled="${this.running}"
+      <sl-button @click="${this.populateScratchpad}" ?disabled="${this.running}"
         >Populate Scratchpad</sl-button
       >
     `;
