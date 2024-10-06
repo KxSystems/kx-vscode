@@ -12,7 +12,6 @@
  */
 
 import {
-  ColorThemeKind,
   CustomTextEditorProvider,
   Disposable,
   ExtensionContext,
@@ -131,10 +130,6 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       }
     });
 
-    window.onDidChangeActiveColorTheme(() => {
-      updateWebview();
-    });
-
     const changeDocumentSubscription = workspace.onDidChangeTextDocument(
       (event) => {
         if (event.document.uri.toString() === document.uri.toString()) {
@@ -231,12 +226,11 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
 
     return /* html */ `
       <!DOCTYPE html>
-      <html lang="en" class="${window.activeColorTheme.kind === 1 || window.activeColorTheme.kind === 4 ? "sl-theme-light" : "sl-theme-dark"}">
+      <html lang="en" class="sl-theme-light">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="stylesheet" href="${getResource("light.css")}" />
-        <link rel="stylesheet" href="${getResource("dark.css")}" />
         <link rel="stylesheet" href="${getResource("style.css")}" />
         <script type="module" nonce="${getNonce()}" src="${getResource("webview.js")}"></script>
         <title>DataSource</title>

@@ -18,19 +18,35 @@ export const shoelaceStyles = css`
     box-sizing: border-box;
   }
 
-  sl-button::part(base) {
-    color: var(--vscode-button-secondaryForeground);
-    background-color: var(--vscode-button-secondaryBackground);
-    border-color: var(
-      --vscode-button-border,
-      var(--vscode-button-secondaryBackground)
-    );
+  sl-select::part(listbox) {
+    --sl-panel-border-color: var(--vscode-focusBorder);
   }
 
-  sl-button[variant="primary"]::part(base) {
-    color: var(--vscode-button-foreground);
-    background-color: var(--vscode-button-background);
-    border-color: var(--vscode-button-border, var(--vscode-button-background));
+  sl-option::part(base) {
+    --sl-color-primary-600: var(--vscode-button-background);
+    --sl-color-neutral-700: var(--vscode-input-foreground);
+    --sl-color-neutral-1000: var(--vscode-input-foreground);
+    --sl-color-neutral-100: var(--vscode-button-secondaryHoverBackground);
+  }
+
+  sl-button::part(base) {
+    --sl-color-primary-600: var(--vscode-button-background);
+    --sl-color-primary-500: var(--vscode-button-hoverBackground);
+    --sl-color-neutral-600: var(--vscode-button-secondaryBackground);
+    --sl-color-neutral-500: var(--vscode-button-secondaryHoverBackground);
+  }
+
+  sl-button[variant="neutral"]::part(base) {
+    --sl-color-neutral-0: var(--vscode-input-foreground);
+  }
+
+  sl-tab-group::part(tabs) {
+    --track-color: var(--vscode-button-secondaryHoverBackground);
+    --indicator-color: var(--vscode-button-background);
+  }
+
+  sl-tab::part(base) {
+    --sl-color-primary-600: var(--vscode-button-background);
   }
 `;
 

@@ -84,8 +84,8 @@ export class KdbDataSourceView extends LitElement {
 
       sl-input,
       sl-select {
-        min-width: 14rem;
-        max-width: 14rem;
+        min-width: 13rem;
+        max-width: 13rem;
       }
 
       sl-checkbox {
@@ -173,12 +173,6 @@ export class KdbDataSourceView extends LitElement {
         this.sorts = optional.sorts;
         this.aggs = optional.aggs;
         this.groups = optional.groups;
-      }
-      if ("theme" in msg) {
-        document.documentElement.className =
-          msg.theme === 1 || msg.theme === 4
-            ? "sl-theme-light"
-            : "sl-theme-dark";
       }
       this.requestUpdate();
     }
@@ -387,6 +381,7 @@ export class KdbDataSourceView extends LitElement {
           }}"></sl-input>
         <sl-button-group>
           <sl-button
+            variant="neutral"
             aria-label="Add Filter"
             appearance="secondary"
             @click="${() => {
@@ -399,6 +394,7 @@ export class KdbDataSourceView extends LitElement {
             >+</sl-button
           >
           <sl-button
+            variant="neutral"
             aria-label="Remove Filter"
             @click="${() => {
               if (this.filters.length > 0) {
@@ -442,6 +438,7 @@ export class KdbDataSourceView extends LitElement {
           }}"></sl-input>
         <sl-button-group>
           <sl-button
+            variant="neutral"
             aria-label="Add Label"
             @click="${() => {
               if (this.labels.length < MAX_RULES) {
@@ -453,6 +450,7 @@ export class KdbDataSourceView extends LitElement {
             >+</sl-button
           >
           <sl-button
+            variant="neutral"
             aria-label="Remove Label"
             @click="${() => {
               if (this.labels.length > 0) {
@@ -497,6 +495,7 @@ export class KdbDataSourceView extends LitElement {
         </sl-select>
         <sl-button-group>
           <sl-button
+            variant="neutral"
             aria-label="Add Sort By"
             @click="${() => {
               if (this.sorts.length < MAX_RULES) {
@@ -508,6 +507,7 @@ export class KdbDataSourceView extends LitElement {
             >+</sl-button
           >
           <sl-button
+            variant="neutral"
             aria-label="Remove Sort By"
             @click="${() => {
               if (this.sorts.length > 0) {
@@ -577,6 +577,7 @@ export class KdbDataSourceView extends LitElement {
         </sl-select>
         <sl-button-group>
           <sl-button
+            variant="neutral"
             aria-label="Add Aggregation"
             @click="${() => {
               if (this.aggs.length < MAX_RULES) {
@@ -588,6 +589,7 @@ export class KdbDataSourceView extends LitElement {
             >+</sl-button
           >
           <sl-button
+            variant="neutral"
             aria-label="Remove Aggregation"
             @click="${() => {
               if (this.aggs.length > 0) {
@@ -634,6 +636,7 @@ export class KdbDataSourceView extends LitElement {
         </sl-select>
         <sl-button-group>
           <sl-button
+            variant="neutral"
             aria-label="Add Group By"
             @click="${() => {
               if (this.groups.length < MAX_RULES) {
@@ -645,6 +648,7 @@ export class KdbDataSourceView extends LitElement {
             >+</sl-button
           >
           <sl-button
+            variant="neutral"
             aria-label="Remove Group By"
             @click="${() => {
               if (this.groups.length > 0) {
@@ -915,14 +919,23 @@ export class KdbDataSourceView extends LitElement {
         <sl-button variant="primary" class="grow" @click="${this.save}"
           >Save</sl-button
         >
-        <sl-button @click="${this.refresh}" ?disabled="${this.running}"
+        <sl-button
+          variant="neutral"
+          @click="${this.refresh}"
+          ?disabled="${this.running}"
           >Refresh</sl-button
         >
       </sl-button-group>
-      <sl-button @click="${this.run}" ?disabled="${this.running}"
+      <sl-button
+        variant="neutral"
+        @click="${this.run}"
+        ?disabled="${this.running}"
         >Run</sl-button
       >
-      <sl-button @click="${this.populateScratchpad}" ?disabled="${this.running}"
+      <sl-button
+        variant="neutral"
+        @click="${this.populateScratchpad}"
+        ?disabled="${this.running}"
         >Populate Scratchpad</sl-button
       >
     `;
