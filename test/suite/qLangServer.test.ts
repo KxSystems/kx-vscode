@@ -31,9 +31,9 @@ describe("qLangServer", () => {
 
   function createDocument(content: string, offset?: number) {
     content = content.trim();
-    const document = TextDocument.create("test.q", "q", 1, content);
+    const document = TextDocument.create("file:///test.q", "q", 1, content);
     const position = document.positionAt(offset || content.length);
-    const textDocument = TextDocumentIdentifier.create("test.q");
+    const textDocument = TextDocumentIdentifier.create("file:///test.q");
     sinon.stub(server.documents, "get").value(() => document);
     sinon.stub(server.documents, "all").value(() => [document]);
     return {
