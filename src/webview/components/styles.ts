@@ -23,21 +23,22 @@ export const shoelaceStyles = css`
   }
 
   sl-option::part(base) {
-    --sl-color-primary-600: var(--vscode-button-background);
     --sl-color-neutral-700: var(--vscode-input-foreground);
+    --sl-color-primary-600: var(--vscode-button-background);
     --sl-color-neutral-1000: var(--vscode-input-foreground);
-    --sl-color-neutral-100: var(--vscode-button-secondaryHoverBackground);
+    --sl-color-neutral-100: var(--vscode-inputOption-hoverBackground);
   }
 
   sl-button::part(base) {
     --sl-color-primary-600: var(--vscode-button-background);
     --sl-color-primary-500: var(--vscode-button-hoverBackground);
-    --sl-color-neutral-600: var(--vscode-button-secondaryBackground);
-    --sl-color-neutral-500: var(--vscode-button-secondaryHoverBackground);
   }
 
   sl-button[variant="neutral"]::part(base) {
+    --sl-color-neutral-600: var(--vscode-input-background);
+    --sl-color-neutral-500: var(--vscode-inputOption-hoverBackground);
     --sl-color-neutral-0: var(--vscode-input-foreground);
+    border-color: var(--vscode-input-border, transparent);
   }
 
   sl-tab-group::part(tabs) {
@@ -46,7 +47,7 @@ export const shoelaceStyles = css`
   }
 
   sl-tab::part(base) {
-    --sl-color-primary-600: var(--vscode-button-background);
+    --sl-color-primary-600: var(--vscode-foreground);
   }
 
   sl-checkbox::part(base) {
