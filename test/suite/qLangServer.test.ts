@@ -404,6 +404,7 @@ describe("qLangServer", () => {
         .stub(connection.workspace, "getWorkspaceFolders")
         .value(async () => []);
       server.scan();
+      assert.strictEqual(server["cached"].size, 0);
     });
   });
 
@@ -413,6 +414,7 @@ describe("qLangServer", () => {
         .stub(connection.workspace, "getWorkspaceFolders")
         .value(async () => []);
       server.onDidChangeWatchedFiles({ changes: [] });
+      assert.strictEqual(server["cached"].size, 0);
     });
   });
 });
