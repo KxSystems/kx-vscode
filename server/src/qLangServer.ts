@@ -49,7 +49,7 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver/node";
-import { glob } from "glob";
+import { sync as glob } from "glob";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   FindKind,
@@ -73,7 +73,7 @@ import {
   RCurly,
 } from "./parser";
 import { lint } from "./linter";
-import { readFile } from "node:fs";
+import { readFileSync } from "node:fs";
 
 interface Settings {
   debug: boolean;
@@ -168,16 +168,20 @@ export default class QLangServer {
 
   /* istanbul ignore next */
   public onDidChangeWatchedFiles({ changes }: DidChangeWatchedFilesParams) {
-    this.parseFiles(
-      changes.reduce((matches, change) => {
-        if (change.type === FileChangeType.Deleted) {
-          this.cached.delete(change.uri);
-        } else {
-          matches.push(fileURLToPath(change.uri));
-        }
-        return matches;
-      }, [] as string[]),
-    );
+    try {
+      this.parseFiles(
+        changes.reduce((matches, change) => {
+          if (change.type === FileChangeType.Deleted) {
+            this.cached.delete(change.uri);
+          } else {
+            matches.push(fileURLToPath(change.uri));
+          }
+          return matches;
+        }, [] as string[]),
+      );
+    } catch (error) {
+      this.connection.window.showErrorMessage(`${error}`);
+    }
   }
 
   public onDidChangeContent({
@@ -443,32 +447,33 @@ export default class QLangServer {
 
   /* istanbul ignore next */
   public scan() {
-    this.connection.workspace.getWorkspaceFolders().then((folders) => {
-      if (folders) {
-        folders.forEach((folder) => {
-          glob(
-            "**/*.{q,quke}",
-            { cwd: fileURLToPath(folder.uri), ignore: "node_modules/**" },
-            (err, matches) => {
-              if (!err) {
-                this.parseFiles(matches);
-              }
-            },
+    const folders = this.params.workspaceFolders;
+    if (folders) {
+      try {
+        for (const folder of folders) {
+          this.parseFiles(
+            glob("**/*.{q,quke}", {
+              dot: true,
+              absolute: true,
+              nodir: true,
+              follow: false,
+              ignore: "node_modules/**/*.*",
+              cwd: fileURLToPath(folder.uri),
+            }),
           );
-        });
+        }
+      } catch (error) {
+        this.connection.window.showErrorMessage(`${error}`);
       }
-    });
+    }
   }
 
   /* istanbul ignore next */
   private parseFiles(matches: string[]) {
-    matches.forEach((match) =>
-      readFile(match, "utf-8", (err, file) => {
-        if (!err) {
-          this.cached.set(pathToFileURL(match).toString(), parse(file));
-        }
-      }),
-    );
+    for (const match of matches) {
+      const file = readFileSync(match, "utf-8");
+      this.cached.set(pathToFileURL(match).toString(), parse(file));
+    }
   }
 
   private parse(textDocument: TextDocumentIdentifier): Token[] {
@@ -482,10 +487,13 @@ export default class QLangServer {
   private context({ uri, tokens }: Tokenized, all = true): Tokenized[] {
     if (all) {
       this.documents.all().forEach((document) => {
-        this.cached.set(
-          document.uri,
-          document.uri === uri ? tokens : parse(document.getText()),
-        );
+        const path = fileURLToPath(document.uri);
+        if (path) {
+          this.cached.set(
+            pathToFileURL(path).toString(),
+            document.uri === uri ? tokens : parse(document.getText()),
+          );
+        }
       });
       return Array.from(this.cached.entries(), (entry) => ({
         uri: entry[0],
