@@ -16,8 +16,6 @@
   --sl-focus-ring-offset: 1px;
   --sl-focus-ring-style: solid;
   --sl-focus-ring-color: var(--vscode-focusBorder);
-  --sl-input-focus-ring-offset: -1px;
-  --sl-input-focus-ring-color: var(--vscode-focusBorder);
 
   --sl-button-font-size-medium: var(--vscode-font-size);
   --sl-input-font-size-medium: var(--vscode-font-size);
@@ -28,7 +26,7 @@
   --sl-input-border-width: 1px;
   --sl-input-border-radius-medium: 2px;
   --sl-input-border-color-hover: var(--sl-input-border-color);
-  --sl-input-border-color-focus: var(--sl-input-border-color);
+  --sl-input-border-color-focus: var(--vscode-focusBorder);
 
   --sl-input-height-medium: calc(2rem + 2 * var(--sl-input-border-width));
   --sl-input-spacing-medium: var(--sl-spacing-x-small);

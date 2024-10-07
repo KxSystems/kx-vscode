@@ -18,6 +18,11 @@ export const shoelaceStyles = css`
     box-sizing: border-box;
   }
 
+  sl-input,
+  sl-select {
+    --sl-focus-ring-width: 0;
+  }
+
   sl-select::part(listbox) {
     --sl-panel-border-color: var(--vscode-focusBorder);
   }
@@ -44,7 +49,7 @@ export const shoelaceStyles = css`
   sl-tab-group::part(tabs) {
     --track-width: 1px;
     --track-color: var(--vscode-inputOption-hoverBackground);
-    --indicator-color: var(--vscode-button-background);
+    --indicator-color: var(--vscode-focusBorder);
   }
 
   sl-tab::part(base) {
