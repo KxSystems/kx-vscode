@@ -1,4 +1,17 @@
-:root {
+.sl-theme-dark {
+  color-scheme: dark;
+  --sl-input-border-color: var(--vscode-input-border, transparent);
+}
+
+.sl-theme-light {
+  --sl-input-border-color: var(
+    --vscode-input-border,
+    var(--vscode-inputOption-hoverBackground)
+  );
+}
+
+.sl-theme-dark,
+.sl-theme-light {
   --sl-focus-ring-width: 1px;
   --sl-focus-ring-offset: 1px;
   --sl-focus-ring-style: solid;
@@ -14,9 +27,8 @@
 
   --sl-input-border-width: 1px;
   --sl-input-border-radius-medium: 2px;
-  --sl-input-border-color: var(--vscode-input-border, transparent);
-  --sl-input-border-color-hover: var(--vscode-input-border, transparent);
-  --sl-input-border-color-focus: var(--vscode-input-border, transparent);
+  --sl-input-border-color-hover: var(--sl-input-border-color);
+  --sl-input-border-color-focus: var(--sl-input-border-color);
 
   --sl-input-height-medium: calc(2rem + 2 * var(--sl-input-border-width));
   --sl-input-spacing-medium: var(--sl-spacing-x-small);
@@ -32,6 +44,7 @@
 html,
 body {
   margin: 0;
+  padding: 0;
   line-height: 1.5;
   font-size: var(--vscode-font-size);
 }
@@ -44,5 +57,5 @@ body {
   -webkit-font-smoothing: antialiased;
   -webkit-text-size-adjust: 100%;
   color: var(--vscode-foreground);
-  background-color: var(--vscode-panel-background);
+  background-color: var(--vscode-editor-background);
 }

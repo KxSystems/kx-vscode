@@ -23,8 +23,8 @@ export const shoelaceStyles = css`
   }
 
   sl-option::part(base) {
-    --sl-color-neutral-700: var(--vscode-input-foreground);
     --sl-color-primary-600: var(--vscode-button-background);
+    --sl-color-neutral-700: var(--vscode-input-foreground);
     --sl-color-neutral-1000: var(--vscode-input-foreground);
     --sl-color-neutral-100: var(--vscode-inputOption-hoverBackground);
   }
@@ -38,11 +38,12 @@ export const shoelaceStyles = css`
     --sl-color-neutral-600: var(--vscode-input-background);
     --sl-color-neutral-500: var(--vscode-inputOption-hoverBackground);
     --sl-color-neutral-0: var(--vscode-input-foreground);
-    border-color: var(--vscode-input-border, transparent);
+    border-color: var(--sl-input-border-color);
   }
 
   sl-tab-group::part(tabs) {
-    --track-color: var(--vscode-button-secondaryHoverBackground);
+    --track-width: 1px;
+    --track-color: var(--vscode-inputOption-hoverBackground);
     --indicator-color: var(--vscode-button-background);
   }
 

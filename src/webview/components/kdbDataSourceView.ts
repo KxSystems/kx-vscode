@@ -46,6 +46,9 @@ export class KdbDataSourceView extends LitElement {
         display: flex;
         flex-flow: row nowrap;
         overflow-x: auto;
+        gap: var(--sl-spacing-medium);
+        padding-left: var(--sl-spacing-medium);
+        padding-right: var(--sl-spacing-medium);
       }
 
       .tabs {
@@ -57,9 +60,8 @@ export class KdbDataSourceView extends LitElement {
         flex-flow: column nowrap;
         flex-grow: 0;
         gap: var(--sl-spacing-x-small);
-        padding: var(--sl-spacing-medium);
         margin-top: calc(
-          1rem * var(--sl-line-height-dense) + 2 * var(--sl-spacing-medium)
+          1rem * var(--sl-line-height-dense) + 3 * var(--sl-spacing-medium)
         );
       }
 
@@ -78,7 +80,8 @@ export class KdbDataSourceView extends LitElement {
       sl-tab-panel {
         --padding: 0;
         overflow-y: scroll;
-        padding: var(--sl-spacing-medium);
+        padding-top: var(--sl-spacing-medium);
+        padding-bottom: var(--sl-spacing-medium);
         height: calc(
           100vh - 1rem * var(--sl-line-height-dense) - 2 *
             var(--sl-spacing-medium)
@@ -821,27 +824,31 @@ export class KdbDataSourceView extends LitElement {
 
   renderQSQL() {
     return html`
-      <sl-select
-        label="Target"
-        .value="${live(this.qsqlTarget)}"
-        @sl-change="${(event: Event) => {
-          this.qsqlTarget = (event.target as HTMLSelectElement).value;
-          this.requestChange();
-        }}">
-        <sl-option .value="${live(this.qsqlTarget)}" .selected="${live(true)}"
-          >${this.qsqlTarget || "(none)"}</sl-option
-        >
-        <small>${this.isMetaLoaded ? "Meta Targets" : "Meta Not Loaded"}</small>
-        ${this.renderTargetOptions()}
-      </sl-select>
-      <sl-textarea
-        label="Query"
-        rows="16"
-        .value="${live(this.qsql)}"
-        @input="${(event: Event) => {
-          this.qsql = (event.target as HTMLSelectElement).value;
-          this.requestChange();
-        }}"></sl-textarea>
+      <div class="col">
+        <sl-select
+          label="Target"
+          .value="${live(this.qsqlTarget)}"
+          @sl-change="${(event: Event) => {
+            this.qsqlTarget = (event.target as HTMLSelectElement).value;
+            this.requestChange();
+          }}">
+          <sl-option .value="${live(this.qsqlTarget)}" .selected="${live(true)}"
+            >${this.qsqlTarget || "(none)"}</sl-option
+          >
+          <small
+            >${this.isMetaLoaded ? "Meta Targets" : "Meta Not Loaded"}</small
+          >
+          ${this.renderTargetOptions()}
+        </sl-select>
+        <sl-textarea
+          label="Query"
+          rows="16"
+          .value="${live(this.qsql)}"
+          @input="${(event: Event) => {
+            this.qsql = (event.target as HTMLSelectElement).value;
+            this.requestChange();
+          }}"></sl-textarea>
+      </div>
     `;
   }
 

@@ -224,21 +224,20 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
   private getWebviewContent(webview: Webview) {
     const getResource = (resource: string) =>
       getUri(webview, this.context.extensionUri, ["out", resource]);
-    const scheme =
-      window.activeColorTheme.kind === ColorThemeKind.Light ||
-      window.activeColorTheme.kind === ColorThemeKind.HighContrastLight
-        ? "light"
-        : "dark";
 
     return /* html */ `
       <!DOCTYPE html>
-      <html lang="en" class="sl-theme-light">
+      <html lang="en" class="${
+        window.activeColorTheme.kind === ColorThemeKind.Light ||
+        window.activeColorTheme.kind === ColorThemeKind.HighContrastLight
+          ? "sl-theme-light"
+          : "sl-theme-dark"
+      }">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="stylesheet" href="${getResource("light.css")}" />
         <link rel="stylesheet" href="${getResource("style.css")}" />
-        <style>.sl-theme-light{color-scheme:${scheme};}</style>
         <script type="module" nonce="${getNonce()}" src="${getResource("webview.js")}"></script>
         <title>DataSource</title>
       </head>
