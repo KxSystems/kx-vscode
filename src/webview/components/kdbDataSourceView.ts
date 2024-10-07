@@ -58,6 +58,9 @@ export class KdbDataSourceView extends LitElement {
         flex-grow: 0;
         gap: var(--sl-spacing-x-small);
         padding: var(--sl-spacing-medium);
+        margin-top: calc(
+          1rem * var(--sl-line-height-dense) + 2 * var(--sl-spacing-medium)
+        );
       }
 
       .actions sl-button-group > sl-button {

@@ -48,6 +48,11 @@ export const shoelaceStyles = css`
   sl-tab::part(base) {
     --sl-color-primary-600: var(--vscode-button-background);
   }
+
+  sl-checkbox::part(base) {
+    --sl-color-primary-600: var(--vscode-button-background);
+    --sl-input-background-color-hover: var(--vscode-button-hoverBackground);
+  }
 `;
 
 export const vscodeStyles = css`
