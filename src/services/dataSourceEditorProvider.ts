@@ -12,6 +12,7 @@
  */
 
 import {
+  ColorThemeKind,
   CustomTextEditorProvider,
   Disposable,
   ExtensionContext,
@@ -223,6 +224,11 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
   private getWebviewContent(webview: Webview) {
     const getResource = (resource: string) =>
       getUri(webview, this.context.extensionUri, ["out", resource]);
+    const scheme =
+      window.activeColorTheme.kind === ColorThemeKind.Light ||
+      window.activeColorTheme.kind === ColorThemeKind.HighContrastLight
+        ? "light"
+        : "dark";
 
     return /* html */ `
       <!DOCTYPE html>
@@ -232,6 +238,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <link rel="stylesheet" href="${getResource("light.css")}" />
         <link rel="stylesheet" href="${getResource("style.css")}" />
+        <style>.sl-theme-light{color-scheme:${scheme};}</style>
         <script type="module" nonce="${getNonce()}" src="${getResource("webview.js")}"></script>
         <title>DataSource</title>
       </head>
