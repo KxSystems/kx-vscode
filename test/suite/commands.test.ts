@@ -15,7 +15,6 @@ import assert from "assert";
 import mock from "mock-fs";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
-import * as fs from "fs";
 import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
 import * as installTools from "../../src/commands/installTools";
 import * as serverCommand from "../../src/commands/serverCommand";
@@ -218,6 +217,8 @@ describe("dataSourceCommand2", () => {
       api.startTS = "2022-01-01T00:00:00Z";
       api.endTS = "2022-01-02T00:00:00Z";
       api.fill = "zero";
+      api.rowCountLimit = "20";
+      api.isRowLimitLast = true;
       api.temporality = "snapshot";
       api.filter = ["col1=val1;col2=val2", "col3=val3"];
       api.groupBy = ["col1", "col2"];
@@ -229,6 +230,7 @@ describe("dataSourceCommand2", () => {
       api.optional = {
         filled: true,
         temporal: true,
+        rowLimit: true,
         filters: [],
         sorts: [],
         groups: [],
@@ -242,6 +244,8 @@ describe("dataSourceCommand2", () => {
         startTS: "2022-01-01T00:00:00.000000000",
         endTS: "2022-01-02T00:00:00.000000000",
         fill: "zero",
+        limit: -20,
+        labels: {},
         temporality: "snapshot",
       });
     });
@@ -252,6 +256,8 @@ describe("dataSourceCommand2", () => {
       api.startTS = "2022-01-01T00:00:00Z";
       api.endTS = "2022-01-02T00:00:00Z";
       api.fill = "zero";
+      api.rowCountLimit = "20";
+      api.isRowLimitLast = false;
       api.temporality = "slice";
       api.filter = [];
       api.groupBy = [];
@@ -261,6 +267,7 @@ describe("dataSourceCommand2", () => {
       api.labels = [];
       api.table = "myTable";
       api.optional = {
+        rowLimit: true,
         filled: false,
         temporal: true,
         filters: [],
@@ -280,6 +287,8 @@ describe("dataSourceCommand2", () => {
       api.endTS = "2022-01-02T00:00:00Z";
       api.fill = "zero";
       api.temporality = "snapshot";
+      api.rowCountLimit = "20";
+      api.isRowLimitLast = false;
       api.filter = [];
       api.groupBy = [];
       api.agg = [];
@@ -288,6 +297,7 @@ describe("dataSourceCommand2", () => {
       api.labels = [];
       api.table = "myTable";
       api.optional = {
+        rowLimit: false,
         filled: true,
         temporal: true,
         filters: [
@@ -1284,6 +1294,35 @@ describe("serverCommand", () => {
 
       sinon.assert.notCalled(addInsightsConnectionStub);
     });
+
+    it("should overwrite connections", async () => {
+      ext.connectionsList.push(insightsNodeImport1, kdbNodeImport1);
+      const importedConnections: ExportedConnections = {
+        connections: {
+          Insights: [
+            {
+              alias: "testInsight",
+              server: "testInsight",
+              auth: false,
+            },
+          ],
+          KDB: [
+            {
+              serverName: "testKdb",
+              serverAlias: "testKdb",
+              serverPort: "1818",
+              auth: false,
+              managed: false,
+              tls: false,
+            },
+          ],
+        },
+      };
+
+      showInformationMessageStub.returns("Overwrite");
+      await serverCommand.addImportedConnections(importedConnections);
+      sinon.assert.notCalled(addInsightsConnectionStub);
+    });
   });
 
   describe("writeQueryResultsToView", () => {
@@ -1307,7 +1346,6 @@ describe("serverCommand", () => {
         "kdb.resultsPanel.update",
         result,
         false,
-        "WORKBOOK",
       );
 
       executeCommandStub.restore();

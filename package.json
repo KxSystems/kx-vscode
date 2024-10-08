@@ -179,6 +179,15 @@
           "description": "Enable linting for q and quke files",
           "default": false
         },
+        "kdb.refactoring": {
+          "type": "string",
+          "enum": [
+            "Workspace",
+            "Window"
+          ],
+          "description": "Enable refactoring across files",
+          "default": "Workspace"
+        },
         "kdb.connectionMap": {
           "type": "object",
           "description": "Connection map for workspace files",

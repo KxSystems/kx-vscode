@@ -594,35 +594,94 @@ export async function addImportedConnections(
   const connMangService = new ConnectionManagementService();
   const existingAliases = connMangService.retrieveListOfConnectionsNames();
   const localAlreadyExists = existingAliases.has("local");
+
+  const hasDuplicates =
+    importedConnections.connections.Insights.some((connection) =>
+      existingAliases.has(
+        connMangService.checkConnAlias(connection.alias, true),
+      ),
+    ) ||
+    importedConnections.connections.KDB.some((connection) =>
+      existingAliases.has(
+        connMangService.checkConnAlias(
+          connection.serverAlias,
+          false,
+          localAlreadyExists,
+        ),
+      ),
+    );
+
+  let res: "Duplicate" | "Overwrite" | "Cancel" | undefined = "Duplicate";
+  if (hasDuplicates) {
+    res = await window.showInformationMessage(
+      "You are importing connections with the same name. Would you like to duplicate, overwrite or cancel the import?",
+      "Duplicate",
+      "Overwrite",
+      "Cancel",
+    );
+    if (!res || res === "Cancel") {
+      return;
+    }
+  }
+
   let counter = 1;
+  const insights: InsightDetails[] = [];
   for (const connection of importedConnections.connections.Insights) {
     let alias = connMangService.checkConnAlias(connection.alias, true);
 
-    while (existingAliases.has(alias)) {
-      alias = `${connection.alias}-${counter}`;
-      counter++;
+    if (res === "Overwrite") {
+      insights.push(connection);
+    } else {
+      while (existingAliases.has(alias)) {
+        alias = `${connection.alias}-${counter}`;
+        counter++;
+      }
+      connection.alias = alias;
+      await addInsightsConnection(connection);
     }
-    connection.alias = alias;
-    await addInsightsConnection(connection);
     existingAliases.add(alias);
     counter = 1;
   }
 
+  const servers: ServerDetails[] = [];
   for (const connection of importedConnections.connections.KDB) {
     let alias = connMangService.checkConnAlias(
       connection.serverAlias,
       false,
       localAlreadyExists,
     );
-    while (existingAliases.has(alias)) {
-      alias = `${connection.serverAlias}-${counter}`;
-      counter++;
+
+    if (res === "Overwrite") {
+      servers.push(connection);
+    } else {
+      while (existingAliases.has(alias)) {
+        alias = `${connection.serverAlias}-${counter}`;
+        counter++;
+      }
+      connection.serverAlias = alias;
+      const isManaged = alias === "local";
+      await addKdbConnection(connection, isManaged);
     }
-    const isManaged = alias === "local";
-    connection.serverAlias = alias;
-    await addKdbConnection(connection, isManaged);
     existingAliases.add(alias);
     counter = 1;
+  }
+
+  if (insights.length > 0) {
+    const config = insights.reduce((config, connection) => {
+      config[connection.alias] = connection;
+      return config;
+    }, getInsights() || {});
+    await updateInsights(config);
+    ext.serverProvider.refreshInsights(config);
+  }
+
+  if (servers.length > 0) {
+    const config = servers.reduce((config, connection) => {
+      config[connection.serverAlias] = connection;
+      return config;
+    }, getServers() || {});
+    await updateServers(config);
+    ext.serverProvider.refresh(config);
   }
 
   kdbOutputLog("[IMPORT CONNECTION]Connections imported successfully", "INFO");
@@ -1088,7 +1147,7 @@ export function writeQueryResultsToView(
   duration?: string,
   isFromConnTree?: boolean,
 ): void {
-  commands.executeCommand("kdb.resultsPanel.update", result, isInsights, type);
+  commands.executeCommand("kdb.resultsPanel.update", result, isInsights);
   if (!checkIfIsDatasource(type)) {
     addQueryHistory(
       query,
