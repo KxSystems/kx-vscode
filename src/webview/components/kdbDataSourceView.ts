@@ -176,9 +176,7 @@ export class KdbDataSourceView extends LitElement {
       this.rowLimitCount = ds.dataSource.api.rowCountLimit
         ? ds.dataSource.api.rowCountLimit
         : "100000";
-      this.isRowLimitLast = ds.dataSource.api.isRowLimitLast
-        ? ds.dataSource.api.isRowLimitLast
-        : true;
+      this.isRowLimitLast = ds.dataSource.api.isRowLimitLast !== false;
       this.temporality = ds.dataSource.api.temporality;
       this.qsqlTarget = ds.dataSource.qsql.selectedTarget;
       this.qsql = ds.dataSource.qsql.query;
@@ -303,59 +301,32 @@ export class KdbDataSourceView extends LitElement {
     if (compareVersions(this.selectedServerVersion.toString(), "1.11") >= 0) {
       return html`
         <div class="row align-bottom">
-          <vscode-checkbox
+          <sl-checkbox
             .checked="${this.rowLimit}"
-            @change="${(event: Event) => {
-              /* istanbul ignore next */
+            @sl-change="${(event: Event) => {
               this.rowLimit = (event.target as HTMLInputElement).checked;
               this.requestChange();
-            }}"></vscode-checkbox>
-          <div class="dropdown-container">
-            <label for="row-count">Row Limit</label>
-            <vscode-text-field
-              type="number"
-              class="text-field input-number"
-              .value="${live(this.rowLimitCount)}"
-              @input="${(event: Event) => {
-                /* istanbul ignore next */
-                this.rowLimitCount = (event.target as HTMLInputElement).value;
-                this.requestChange();
-              }}">
-            </vscode-text-field>
-          </div>
+            }}"></sl-checkbox>
 
-          <vscode-radio-group>
-            <div class="dropdown-container">
-              <vscode-radio
-                name="row-count"
-                value="first"
-                .checked="${!this.isRowLimitLast}"
-                @change="${(event: Event) => {
-                  /* istanbul ignore next */
-                  if ((event.target as HTMLInputElement).checked) {
-                    this.isRowLimitLast = false;
-                    this.requestChange();
-                  }
-                }}"
-                >First</vscode-radio
-              >
-            </div>
-            <div class="dropdown-container">
-              <vscode-radio
-                name="row-count"
-                value="last"
-                .checked="${this.isRowLimitLast}"
-                @change="${(event: Event) => {
-                  /* istanbul ignore next */
-                  if ((event.target as HTMLInputElement).checked) {
-                    this.isRowLimitLast = true;
-                    this.requestChange();
-                  }
-                }}"
-                >Last</vscode-radio
-              >
-            </div>
-          </vscode-radio-group>
+          <sl-input
+            type="number"
+            label="Row Limit"
+            .value="${live(this.rowLimitCount)}"
+            @input="${(event: Event) => {
+              this.rowLimitCount = (event.target as HTMLInputElement).value;
+              this.requestChange();
+            }}"></sl-input>
+
+          <sl-radio-group
+            .value="${live(this.isRowLimitLast ? "last" : "first")}"
+            @sl-change="${(event: Event) => {
+              const value = (event.target as HTMLInputElement).value;
+              this.isRowLimitLast = value === "last";
+              this.requestChange();
+            }}">
+            <sl-radio-button value="first">First</sl-radio-button>
+            <sl-radio-button value="last">Last</sl-radio-button>
+          </sl-radio-group>
         </div>
       `;
     } else {
@@ -804,55 +775,47 @@ export class KdbDataSourceView extends LitElement {
         </div>
 
         <div class="row">
-          <vscode-text-field
+          <sl-input
+            label="Start Time ${this.selectedServerVersion}"
             type="datetime-local"
             class="text-field larger"
             .value="${live(this.startTS)}"
             @input="${(event: Event) => {
               this.startTS = (event.target as HTMLSelectElement).value;
               this.requestChange();
-            }}"
-            >Start Time ${this.selectedServerVersion}</vscode-text-field
-          >
+            }}"></sl-input>
 
-          <vscode-text-field
+          <sl-input
+            label="End Time"
             type="datetime-local"
             class="text-field larger"
             .value="${live(this.endTS)}"
             @input="${(event: Event) => {
               this.endTS = (event.target as HTMLSelectElement).value;
               this.requestChange();
-            }}"
-            >End Time</vscode-text-field
-          >
+            }}"></sl-input>
         </div>
         ${this.renderRowCountOptions()}
         <div class="row align-bottom">
-          <vscode-checkbox
+          <sl-checkbox
             .checked="${this.filled}"
-            @change="${(event: Event) => {
+            @sl-change="${(event: Event) => {
               this.filled = (event.target as HTMLInputElement).checked;
               this.requestChange();
-            }}"></vscode-checkbox>
-          <div class="dropdown-container">
-            <label for="fill">Fill</label>
-            <vscode-dropdown
-              id="fill"
-              class="dropdown"
-              @change="${(event: Event) => {
-                this.fill = (event.target as HTMLSelectElement).value;
-                this.requestChange();
-              }}">
-              <vscode-option
-                .value="${live(this.fill)}"
-                .selected="${live(true)}"
-                >${this.fill || "(none)"}</vscode-option
-              >
-              <vscode-tag>Options</vscode-tag>
-              <vscode-option value="zero">zero</vscode-option>
-              <vscode-option value="forward">forward</vscode-option>
-            </vscode-dropdown>
-          </div>
+            }}"></sl-checkbox>
+          <sl-select
+            label="Fill"
+            @sl-change="${(event: Event) => {
+              this.fill = (event.target as HTMLSelectElement).value;
+              this.requestChange();
+            }}">
+            <sl-option .value="${live(this.fill)}" .selected="${live(true)}"
+              >${this.fill || "(none)"}</sl-option
+            >
+            <small>Options</small>
+            <sl-option value="zero">zero</sl-option>
+            <sl-option value="forward">forward</sl-option>
+          </sl-select>
         </div>
 
         <div class="row align-bottom">
