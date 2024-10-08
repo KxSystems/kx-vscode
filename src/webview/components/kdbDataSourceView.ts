@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { LitElement, html, css } from "lit";
+import { LitElement, html, css, PropertyValues } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 import { live } from "lit/directives/live.js";
 import { customElement } from "lit/decorators.js";
@@ -932,8 +932,8 @@ export class KdbDataSourceView extends LitElement {
       <sl-tab-group>
         <sl-tab
           slot="nav"
-          panel="api"
-          ?active="${this.selectedType === DataSourceTypes.API}"
+          panel="${DataSourceTypes.API}"
+          ?active="${live(this.selectedType === DataSourceTypes.API)}"
           @click="${() => {
             this.selectedType = DataSourceTypes.API;
             this.requestChange();
@@ -942,8 +942,8 @@ export class KdbDataSourceView extends LitElement {
         >
         <sl-tab
           slot="nav"
-          panel="qsql"
-          ?active="${this.selectedType === DataSourceTypes.QSQL}"
+          panel="${DataSourceTypes.QSQL}"
+          ?active="${live(this.selectedType === DataSourceTypes.QSQL)}"
           @click="${() => {
             this.selectedType = DataSourceTypes.QSQL;
             this.requestChange();
@@ -952,17 +952,29 @@ export class KdbDataSourceView extends LitElement {
         >
         <sl-tab
           slot="nav"
-          panel="sql"
-          ?active="${this.selectedType === DataSourceTypes.SQL}"
+          panel="${DataSourceTypes.SQL}"
+          ?active="${live(this.selectedType === DataSourceTypes.SQL)}"
           @click="${() => {
             this.selectedType = DataSourceTypes.SQL;
             this.requestChange();
           }}"
           >SQL</sl-tab
         >
-        <sl-tab-panel name="api">${this.renderAPI()}</sl-tab-panel>
-        <sl-tab-panel name="qsql">${this.renderQSQL()}</sl-tab-panel>
-        <sl-tab-panel name="sql">${this.renderSQL()}</sl-tab-panel>
+        <sl-tab-panel
+          name="${DataSourceTypes.API}"
+          ?active="${live(this.selectedType === DataSourceTypes.API)}"
+          >${this.renderAPI()}</sl-tab-panel
+        >
+        <sl-tab-panel
+          name="${DataSourceTypes.QSQL}"
+          ?active="${live(this.selectedType === DataSourceTypes.QSQL)}"
+          >${this.renderQSQL()}</sl-tab-panel
+        >
+        <sl-tab-panel
+          name="${DataSourceTypes.SQL}"
+          ?active="${live(this.selectedType === DataSourceTypes.SQL)}"
+          >${this.renderSQL()}</sl-tab-panel
+        >
       </sl-tab-group>
     `;
   }

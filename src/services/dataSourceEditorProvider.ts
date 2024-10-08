@@ -123,7 +123,6 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           dataSourceFile: this.getDocumentAsJson(document),
           insightsMeta: await this.getMeta(selectedServer),
           isInsights: true,
-          theme: window.activeColorTheme.kind,
         });
       }
     };
