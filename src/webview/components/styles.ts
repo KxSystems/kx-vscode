@@ -34,7 +34,8 @@ export const shoelaceStyles = css`
     --sl-color-neutral-100: var(--vscode-inputOption-hoverBackground);
   }
 
-  sl-button::part(base) {
+  sl-button::part(base),
+  sl-radio-button::part(base) {
     --sl-color-primary-600: var(--vscode-button-background);
     --sl-color-primary-500: var(--vscode-button-hoverBackground);
   }
