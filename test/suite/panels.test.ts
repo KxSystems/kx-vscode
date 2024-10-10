@@ -178,7 +178,7 @@ describe("WebPanels", () => {
     });
 
     describe("convertToGrid()", () => {
-      it("should convert results to grid format for inisights", () => {
+      it("should convert results to grid format for insights", () => {
         const results = {
           rows: [
             { prop1: "value1", prop2: "value2" },
@@ -236,7 +236,7 @@ describe("WebPanels", () => {
         stub.restore();
       });
 
-      it("should convert results to grid format with empty rows ", () => {
+      it("should convert results to grid format with empty rows", () => {
         const results = {
           rows: [],
           meta: { prop1: "type1", prop2: "type2" },
@@ -263,6 +263,111 @@ describe("WebPanels", () => {
               field: "prop2",
               headerName: "prop2",
               headerTooltip: "type2",
+              cellDataType: "text",
+            },
+          ],
+          domLayout: "autoHeight",
+          pagination: true,
+          paginationPageSize: 100,
+          enableCellTextSelection: true,
+          ensureDomOrder: true,
+          suppressContextMenu: true,
+          suppressDragLeaveHidesColumns: true,
+          tooltipShowDelay: 200,
+          loading: true,
+        });
+
+        // Mock ext.connectionNode
+        const stub = sinon.stub(ext, "activeConnection");
+        stub.get(() => insightsConn);
+
+        const output = resultsPanel.convertToGrid(results, true);
+        assert.equal(JSON.stringify(output), expectedOutput);
+
+        // Restore the stub
+        stub.restore();
+      });
+
+      it("should convert results to grid format when queryResult[0] is an array of objects", () => {
+        const results = {
+          rows: [
+            [{ sym: "a" }, { sym: "b" }, { sym: "c" }],
+            [{ val: 1 }, { val: 2 }, { val: 3 }],
+          ],
+          meta: { sym: "type1", val: "type2" },
+        };
+
+        const expectedOutput = JSON.stringify({
+          defaultColDef: {
+            sortable: true,
+            resizable: true,
+            filter: true,
+            flex: 1,
+            minWidth: 100,
+          },
+          rowData: [
+            { index: 1, sym: "a", val: 1 },
+            { index: 2, sym: "b", val: 2 },
+            { index: 3, sym: "c", val: 3 },
+          ],
+          columnDefs: [
+            { field: "index", headerName: "Index", cellDataType: "number" },
+            {
+              field: "sym",
+              headerName: "sym",
+              headerTooltip: "type1",
+              cellDataType: "text",
+            },
+            {
+              field: "val",
+              headerName: "val",
+              headerTooltip: "type2",
+              cellDataType: "text",
+            },
+          ],
+          domLayout: "autoHeight",
+          pagination: true,
+          paginationPageSize: 100,
+          enableCellTextSelection: true,
+          ensureDomOrder: true,
+          suppressContextMenu: true,
+          suppressDragLeaveHidesColumns: true,
+          tooltipShowDelay: 200,
+          loading: true,
+        });
+
+        // Mock ext.connectionNode
+        const stub = sinon.stub(ext, "activeConnection");
+        stub.get(() => insightsConn);
+
+        const output = resultsPanel.convertToGrid(results, true);
+        assert.equal(JSON.stringify(output), expectedOutput);
+
+        // Restore the stub
+        stub.restore();
+      });
+
+      it("should convert results to grid format when queryResult[0] is an array of non-objects", () => {
+        const results = {
+          rows: [[1, 2, 3]],
+          meta: { value: "type1" },
+        };
+
+        const expectedOutput = JSON.stringify({
+          defaultColDef: {
+            sortable: true,
+            resizable: true,
+            filter: true,
+            flex: 1,
+            minWidth: 100,
+          },
+          rowData: [{ index: 1, value: [1, 2, 3] }],
+          columnDefs: [
+            { field: "index", headerName: "Index", cellDataType: "number" },
+            {
+              field: "value",
+              headerName: "value",
+              headerTooltip: "type1",
               cellDataType: "text",
             },
           ],
