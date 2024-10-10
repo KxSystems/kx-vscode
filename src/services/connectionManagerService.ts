@@ -28,11 +28,15 @@ import {
   updateInsights,
   updateServers,
 } from "../utils/core";
-import { Insights } from "../models/insights";
-import { Server } from "../models/server";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { MetaInfoType } from "../models/meta";
 import { retrieveConnLabelsNames } from "../utils/connLabel";
+import {
+  ExportedConnections,
+  Insights,
+  kdbAuthMap,
+  Server,
+} from "../models/connectionsModels";
 
 export class ConnectionManagementService {
   public retrieveConnection(
@@ -63,6 +67,30 @@ export class ConnectionManagementService {
         );
       },
     );
+  }
+
+  public retrieveListOfConnectionsNames(): Set<string> {
+    return new Set(
+      ext.connectionsList.map((conn) => {
+        if (conn instanceof KdbNode) {
+          return conn.details.serverAlias;
+        } else {
+          return conn.details.alias;
+        }
+      }),
+    );
+  }
+
+  public checkConnAlias(
+    alias: string,
+    isInsights: boolean,
+    localAlreadyExists?: boolean,
+  ): string {
+    if (isInsights) {
+      return alias !== "local" ? alias : "localInsights";
+    } else {
+      return localAlreadyExists && alias === "local" ? alias + "KDB" : alias;
+    }
   }
 
   public isKdbConnection(connection: KdbNode | InsightsNode): boolean {
@@ -312,41 +340,35 @@ export class ConnectionManagementService {
   }
 
   public async resetScratchpad(): Promise<void> {
-    let error = true;
-    if (!ext.activeConnection) {
-      window.showErrorMessage(
-        "Please active an Insights connection to use this feature.",
+    if (
+      !ext.activeConnection ||
+      !(ext.activeConnection instanceof InsightsConnection)
+    ) {
+      kdbOutputLog(
+        "[RESET SCRATCHPAD] Please activate an Insights connection to use this feature.",
+        "ERROR",
       );
       return;
     }
-    const confirmationPromt = {
-      prompt:
-        "Are you sure you want to reset the scratchpad from the connecttion " +
-        ext.activeConnection.connLabel +
-        "?",
-      option1: "Yes",
-      option2: "No",
-    };
-    await window
-      .showInformationMessage(
-        confirmationPromt.prompt,
-        confirmationPromt.option1,
-        confirmationPromt.option2,
-      )
-      .then(async (selection) => {
-        if (selection === confirmationPromt.option1) {
-          if (ext.activeConnection instanceof InsightsConnection) {
-            error = false;
-            return await ext.activeConnection.resetScratchpad();
-          } else {
-            return;
-          }
-        }
-      });
 
-    if (error) {
-      window.showErrorMessage(
-        "This feature is only available for Insights connections.",
+    if (
+      ext.activeConnection.insightsVersion &&
+      ext.activeConnection.insightsVersion >= 1.12
+    ) {
+      const confirmationPrompt = `Are you sure you want to reset the scratchpad from the connection ${ext.activeConnection.connLabel}?`;
+      const selection = await window.showInformationMessage(
+        confirmationPrompt,
+        "Yes",
+        "No",
+      );
+
+      if (selection === "Yes") {
+        await ext.activeConnection.resetScratchpad();
+      }
+    } else {
+      kdbOutputLog(
+        "[RESET SCRATCHPAD] Please connect to an Insights connection with version superior to 1.11",
+        "ERROR",
       );
     }
   }
@@ -402,5 +424,85 @@ export class ConnectionManagementService {
     }
 
     return connection.returnMetaObject(metaType);
+  }
+
+  public async retrieveUserPass() {
+    for (const connection of ext.connectionsList) {
+      if (connection instanceof KdbNode) {
+        const authCredentials = await ext.secretSettings.getAuthData(
+          connection.children[0],
+        );
+        if (authCredentials) {
+          const [username, password] = authCredentials.split(":");
+          const authMap: kdbAuthMap = {
+            [connection.children[0]]: {
+              username,
+              password,
+            },
+          };
+          ext.kdbAuthMap.push(authMap);
+        }
+      }
+    }
+  }
+
+  public async retrieveInsightsConnVersion(connLabel: string): Promise<number> {
+    const connection = this.retrieveConnectedConnection(connLabel);
+    if (!connection || !(connection instanceof InsightsConnection)) {
+      return 0;
+    }
+    return connection.insightsVersion ? connection.insightsVersion : 0;
+  }
+
+  public exportConnection(connLabel?: string, includeAuth?: boolean): string {
+    const exportedContent: ExportedConnections = {
+      connections: {
+        Insights: [],
+        KDB: [],
+      },
+    };
+    if (connLabel) {
+      const connection = this.retrieveConnection(connLabel);
+      if (!connection) {
+        return "";
+      }
+      if (connection instanceof KdbNode) {
+        exportedContent.connections.KDB.push(connection.details);
+      } else {
+        exportedContent.connections.Insights.push(connection.details);
+      }
+    } else {
+      ext.connectionsList.forEach((connection) => {
+        if (connection instanceof KdbNode) {
+          exportedContent.connections.KDB.push(connection.details);
+        } else {
+          exportedContent.connections.Insights.push(connection.details);
+        }
+      });
+    }
+
+    if (exportedContent.connections.KDB.length > 0) {
+      for (const kdbConn of exportedContent.connections.KDB) {
+        if (!includeAuth) {
+          kdbConn.auth = false;
+          kdbConn.username = undefined;
+          kdbConn.password = undefined;
+        } else {
+          const auth = ext.kdbAuthMap.find((auth) => {
+            return Object.keys(auth)[0] === kdbConn.serverAlias;
+          });
+          if (auth) {
+            kdbConn.auth = true;
+            kdbConn.username = auth[kdbConn.serverAlias].username;
+            kdbConn.password = auth[kdbConn.serverAlias].password;
+          }
+        }
+      }
+    }
+    ext.kdbAuthMap.length = 0;
+    return exportedContent.connections.Insights.length === 0 &&
+      exportedContent.connections.KDB.length === 0
+      ? ""
+      : JSON.stringify(exportedContent, null, 2);
   }
 }

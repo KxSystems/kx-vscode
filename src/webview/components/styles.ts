@@ -198,4 +198,16 @@ export const newConnectionStyles = css`
     background: rgba(0, 0, 0, 0.5);
     z-index: 1000;
   }
+
+  .lbl-dropdown-container {
+    width: 350px;
+  }
+
+  .lbl-dropdown-container-field-wrapper {
+    margin-bottom: 0.5em;
+    width: 100%;
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+  }
 `;

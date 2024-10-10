@@ -43,7 +43,6 @@ import {
   onboardingInput,
   onboardingWorkflow,
 } from "../models/items/onboarding";
-import { Server } from "../models/server";
 import { KdbNode } from "../services/kdbTreeProvider";
 import {
   addLocalConnectionContexts,
@@ -64,6 +63,7 @@ import { executeCommand } from "../utils/cpUtils";
 import { openUrl } from "../utils/openUrl";
 import { Telemetry } from "../utils/telemetryClient";
 import { validateServerPort } from "../validators/kdbValidator";
+import { Server } from "../models/connectionsModels";
 
 export async function installTools(): Promise<void> {
   let file: Uri[] | undefined;

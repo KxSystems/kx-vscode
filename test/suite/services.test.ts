@@ -25,9 +25,7 @@ import {
   workspace,
 } from "vscode";
 import { ext } from "../../src/extensionVariables";
-import { Insights } from "../../src/models/insights";
 import { QueryHistory } from "../../src/models/queryHistory";
-import { Server, ServerType } from "../../src/models/server";
 import {
   getCurrentToken,
   refreshToken,
@@ -65,6 +63,13 @@ import { MetaInfoType, MetaObject } from "../../src/models/meta";
 import { CompletionProvider } from "../../src/services/completionProvider";
 import { MetaContentProvider } from "../../src/services/metaContentProvider";
 import { ConnectionLabel, Labels } from "../../src/models/labels";
+import {
+  Insights,
+  Server,
+  ServerType,
+} from "../../src/models/connectionsModels";
+import AuthSettings from "../../src/utils/secretStorage";
+import * as coreUtils from "../../src/utils/core";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -569,6 +574,7 @@ describe("kdbTreeProvider", () => {
       "nsnodedetails1",
       TreeItemCollapsibleState.None,
       "nsfullname",
+      "connLabel",
     );
     assert.strictEqual(
       qNsNode.label,
@@ -584,6 +590,7 @@ describe("kdbTreeProvider", () => {
       "categorynodedetails1",
       "categoryns",
       TreeItemCollapsibleState.None,
+      "connLabel",
     );
     assert.strictEqual(
       qCategoryNode.label,
@@ -599,6 +606,7 @@ describe("kdbTreeProvider", () => {
       "servernodedetails1",
       TreeItemCollapsibleState.None,
       "",
+      "connLabel",
     );
     assert.strictEqual(
       qServerNode.label,
@@ -821,7 +829,7 @@ describe("queryHistoryProvider", () => {
       executorName: "testExecutorName",
       connectionName: "testConnectionName",
       time: "testTime",
-      query: "testQuery",
+      query: `testQuery\n long test query line counter ${"a".repeat(80)}`,
       success: true,
       connectionType: ServerType.INSIGHTS,
     },
@@ -829,7 +837,17 @@ describe("queryHistoryProvider", () => {
       executorName: "testExecutorName2",
       connectionName: "testConnectionName2",
       time: "testTime2",
-      query: "testQuery2",
+      query: `testQuery2 ${"a".repeat(80)} \n testQuery2 ${"a".repeat(80)}\n testQuery2 ${"a".repeat(80)}`,
+      success: true,
+      isWorkbook: true,
+      connectionType: ServerType.KDB,
+      duration: "500",
+    },
+    {
+      executorName: "testExecutorName2",
+      connectionName: "testConnectionName2",
+      time: "testTime2",
+      query: "testQuery2\n testQuery2\n testQuery2",
       success: true,
       isWorkbook: true,
       connectionType: ServerType.KDB,
@@ -841,7 +859,27 @@ describe("queryHistoryProvider", () => {
       time: "testTime3",
       query: dummyDS,
       success: false,
-      connectionType: ServerType.undefined,
+      connectionType: ServerType.KDB,
+    },
+    {
+      executorName: "variables",
+      connectionName: "testConnectionName2",
+      time: "testTime2",
+      query: `testQuery2 ${"a".repeat(80)}`,
+      success: true,
+      isFromConnTree: true,
+      connectionType: ServerType.KDB,
+      duration: "500",
+    },
+    {
+      executorName: "variables",
+      connectionName: "testConnectionName2",
+      time: "testTime2",
+      query: "testQuery2",
+      success: true,
+      isFromConnTree: true,
+      connectionType: ServerType.KDB,
+      duration: "500",
     },
   ];
   beforeEach(() => {
@@ -882,10 +920,25 @@ describe("queryHistoryProvider", () => {
     );
   });
 
+  it("Should return the KdbNode tree item element", () => {
+    const queryHistoryTreeItem = new QueryHistoryTreeItem(
+      "testLabel",
+      dummyQueryHistory[3],
+      TreeItemCollapsibleState.None,
+    );
+    const queryHistoryProvider = new QueryHistoryProvider();
+    const element = queryHistoryProvider.getTreeItem(queryHistoryTreeItem);
+    assert.strictEqual(
+      element.label,
+      queryHistoryTreeItem.label,
+      "Get query history item is incorrect",
+    );
+  });
+
   it("Should return children for the tree when queryHistory has entries", async () => {
     const queryHistoryProvider = new QueryHistoryProvider();
     const result = await queryHistoryProvider.getChildren();
-    assert.strictEqual(result.length, 3, "Children count should be 3");
+    assert.strictEqual(result.length, 6, "Children count should be 6");
   });
 
   it("Should not return children for the tree when queryHistory has no entries", async () => {
@@ -910,7 +963,7 @@ describe("queryHistoryProvider", () => {
         "QueryHistoryTreeItem node creation failed",
       );
     });
-    it("Should return a new QueryHistoryTreeItem with sucess icom", () => {
+    it("Should return a new QueryHistoryTreeItem with sucess icon", () => {
       const queryHistoryTreeItem = new QueryHistoryTreeItem(
         "testLabel",
         dummyQueryHistory[0],
@@ -924,16 +977,31 @@ describe("queryHistoryProvider", () => {
       );
     });
 
-    it("Should return a new QueryHistoryTreeItem with sucess icom", () => {
+    it("Should return a new QueryHistoryTreeItem with fail icon", () => {
       const queryHistoryTreeItem = new QueryHistoryTreeItem(
         "testLabel",
-        dummyQueryHistory[0],
+        dummyQueryHistory[2],
         TreeItemCollapsibleState.None,
       );
       const result = queryHistoryTreeItem.defineQueryIcon(false);
       assert.strictEqual(
         result,
         failIcon,
+        "QueryHistoryTreeItem defineQueryIcon failed",
+      );
+    });
+
+    it("Should return a new QueryHistoryTreeItem with sucess icon", () => {
+      const queryHistoryTreeItem = new QueryHistoryTreeItem(
+        "testLabel",
+        dummyQueryHistory[3],
+        TreeItemCollapsibleState.None,
+      );
+      const result = queryHistoryTreeItem.defineQueryIcon(true);
+      console.log(JSON.stringify(queryHistoryTreeItem));
+      assert.strictEqual(
+        result,
+        sucessIcon,
         "QueryHistoryTreeItem defineQueryIcon failed",
       );
     });
@@ -1027,6 +1095,44 @@ describe("connectionManagerService", () => {
       const result =
         connectionManagerService.retrieveLocalConnectionString(kdbNode);
       assert.strictEqual(result, "127.0.0.1:5001");
+    });
+  });
+
+  describe("retrieveListOfConnectionsNames", () => {
+    it("Should return the list of connection names", () => {
+      ext.connectionsList.push(kdbNode, insightNode);
+      const result = connectionManagerService.retrieveListOfConnectionsNames();
+      assert.strictEqual(result.size, 2);
+    });
+  });
+
+  describe("checkConnAlias", () => {
+    it("Should return localInsights when connection is insights and alias equals local", () => {
+      const result = connectionManagerService.checkConnAlias("local", true);
+      assert.strictEqual(result, "localInsights");
+    });
+
+    it("Should note return localInsights when connection is insights and alias not equals local", () => {
+      const result = connectionManagerService.checkConnAlias("notLocal", true);
+      assert.strictEqual(result, "notLocal");
+    });
+
+    it("Should return local when connection is kdb and alias equals local and local conn not exist already", () => {
+      const result = connectionManagerService.checkConnAlias(
+        "local",
+        false,
+        false,
+      );
+      assert.strictEqual(result, "local");
+    });
+
+    it("Should return localKDB when connection is kdb and alias equals local and local conn exist already", () => {
+      const result = connectionManagerService.checkConnAlias(
+        "local",
+        false,
+        true,
+      );
+      assert.strictEqual(result, "localKDB");
     });
   });
 
@@ -1229,35 +1335,57 @@ describe("connectionManagerService", () => {
 
   describe("resetScratchpad", () => {
     let connMngService: ConnectionManagementService;
-    let showErrorMessageStub: sinon.SinonStub;
-    let showInformationMessageStub: sinon.SinonStub;
     let resetScratchpadStub: sinon.SinonStub;
+    let kdbOutputLogStub: sinon.SinonStub;
+    let showInformationMessageStub: sinon.SinonStub;
+    let showErrorMessageStub: sinon.SinonStub;
 
     beforeEach(() => {
       connMngService = new ConnectionManagementService();
-      showErrorMessageStub = sinon.stub(window, "showErrorMessage");
-      showInformationMessageStub = sinon.stub(window, "showInformationMessage");
       ext.activeConnection = insightsConn;
       resetScratchpadStub = sinon.stub(ext.activeConnection, "resetScratchpad");
+      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+      showInformationMessageStub = sinon.stub(window, "showInformationMessage");
+      showErrorMessageStub = sinon.stub(window, "showErrorMessage");
     });
 
     afterEach(() => {
       sinon.restore();
     });
 
-    it("should call resetScratchpad on activeConnection if selection is Yes and activeConnection is an instance of InsightsConnection", async () => {
+    it("should log an error if there is no active connection", async () => {
+      ext.activeConnection = null;
+      await connMngService.resetScratchpad();
+      sinon.assert.calledWith(
+        kdbOutputLogStub,
+        "[RESET SCRATCHPAD] Please activate an Insights connection to use this feature.",
+        "ERROR",
+      );
+    });
+
+    it("should log an error if the active connection is not an InsightsConnection", async () => {
+      ext.activeConnection = localConn;
+      await connMngService.resetScratchpad();
+      sinon.assert.calledWith(
+        kdbOutputLogStub,
+        "[RESET SCRATCHPAD] Please activate an Insights connection to use this feature.",
+        "ERROR",
+      );
+    });
+
+    it("should reset the scratchpad if the active connection is an InsightsConnection", async () => {
+      ext.activeConnection = insightsConn;
+      ext.activeConnection.insightsVersion = 1.12;
       showInformationMessageStub.resolves("Yes");
       await connMngService.resetScratchpad();
       sinon.assert.calledOnce(resetScratchpadStub);
-      sinon.assert.notCalled(showErrorMessageStub);
     });
 
-    it("should show error message if activeConnection is not an instance of InsightsConnection", async () => {
-      showInformationMessageStub.resolves("Yes");
-      ext.activeConnection = undefined;
+    it("should log an error if insightsVersion is less than or equal to 1.11", async () => {
+      ext.activeConnection = insightsConn;
+      ext.activeConnection.insightsVersion = 1.11;
       await connMngService.resetScratchpad();
-      sinon.assert.calledOnce(showErrorMessageStub);
-      sinon.assert.notCalled(resetScratchpadStub);
+      sinon.assert.calledOnce(kdbOutputLogStub);
     });
   });
 
@@ -1391,6 +1519,284 @@ describe("connectionManagerService", () => {
         ),
         JSON.stringify(dummyMeta.payload),
       );
+    });
+  });
+
+  describe("retrieveUserPass", () => {
+    let connectionManagerService: ConnectionManagementService;
+    let connectionsListStub: sinon.SinonStub;
+    let getAuthDataStub: sinon.SinonStub;
+    let kdbAuthMapStub: sinon.SinonStub;
+    let contextStub: sinon.SinonStub;
+    ext.context = {} as ExtensionContext;
+
+    beforeEach(() => {
+      contextStub = sinon.stub(ext, "context").value({
+        globalStorageUri: {
+          fsPath: "/temp/",
+        },
+      });
+      AuthSettings.init(ext.context);
+      ext.secretSettings = AuthSettings.instance;
+      connectionManagerService = new ConnectionManagementService();
+      connectionsListStub = sinon.stub(ext, "connectionsList").value([]);
+      getAuthDataStub = sinon.stub(ext.secretSettings, "getAuthData");
+      kdbAuthMapStub = sinon.stub(ext, "kdbAuthMap").value([]);
+    });
+
+    afterEach(() => {
+      sinon.restore();
+      ext.connectionsList.length = 0;
+    });
+
+    it("should retrieve and store auth data for KdbNode connections", async () => {
+      ext.connectionsList.push(kdbNode);
+      getAuthDataStub.withArgs(kdbNode.children[0]).resolves("user1:pass1");
+
+      await connectionManagerService.retrieveUserPass();
+
+      assert.strictEqual(ext.kdbAuthMap.length, 1);
+      assert.deepEqual(ext.kdbAuthMap[0], {
+        child1: {
+          username: "user1",
+          password: "pass1",
+        },
+      });
+    });
+
+    it("should not store auth data if getAuthData returns null", async () => {
+      connectionsListStub.value([kdbNode]);
+      getAuthDataStub.withArgs("server1").resolves(null);
+
+      await connectionManagerService.retrieveUserPass();
+
+      assert.strictEqual(ext.kdbAuthMap.length, 0);
+    });
+
+    it("should not store auth data for non-KdbNode connections", async () => {
+      const nonKdbNode = { children: ["server1"] };
+      connectionsListStub.value([nonKdbNode]);
+
+      await connectionManagerService.retrieveUserPass();
+
+      assert.strictEqual(ext.kdbAuthMap.length, 0);
+    });
+  });
+
+  describe("retrieveInsightsConnVersion", () => {
+    let retrieveConnectionStub: sinon.SinonStub;
+    let connectionsListStub: sinon.SinonStub;
+    beforeEach(() => {
+      retrieveConnectionStub = sinon.stub(
+        connectionManagerService,
+        "retrieveConnectedConnection",
+      );
+      connectionsListStub = sinon.stub(ext, "connectionsList").value([]);
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should return 0 in case of non-Insights connection", async () => {
+      retrieveConnectionStub.withArgs("nonInsightsLabel").returns(kdbNode);
+
+      const result =
+        await connectionManagerService.retrieveInsightsConnVersion(
+          "nonInsightsLabel",
+        );
+
+      assert.strictEqual(result, 0);
+    });
+
+    it("should return 1.11 in case of Insights connection with  version", async () => {
+      retrieveConnectionStub.withArgs("insightsLabel").returns(insightsConn);
+
+      const result =
+        await connectionManagerService.retrieveInsightsConnVersion(
+          "insightsLabel",
+        );
+
+      assert.strictEqual(result, 1.11);
+    });
+
+    it("should not return the version of undefined connection", async () => {
+      retrieveConnectionStub.withArgs("nonInsightsLabel").returns(undefined);
+
+      const result =
+        await connectionManagerService.retrieveInsightsConnVersion(
+          "nonInsightsLabel",
+        );
+
+      assert.strictEqual(result, 0);
+    });
+
+    it("should return  0 in case of Insights with no connection version", async () => {
+      const insightsConn2 = new InsightsConnection(
+        "insightsLabel",
+        insightNode,
+      );
+      retrieveConnectionStub.withArgs("insightsLabel").returns(insightsConn2);
+
+      const result =
+        await connectionManagerService.retrieveInsightsConnVersion(
+          "insightsLabel",
+        );
+
+      assert.strictEqual(result, 0);
+    });
+  });
+
+  describe("exportConnection", () => {
+    let retrieveConnectionStub: sinon.SinonStub;
+    let connectionsListStub: sinon.SinonStub;
+    let kdbAuthMapStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      retrieveConnectionStub = sinon.stub(
+        connectionManagerService,
+        "retrieveConnection",
+      );
+      connectionsListStub = sinon.stub(ext, "connectionsList").value([]);
+      kdbAuthMapStub = sinon.stub(ext, "kdbAuthMap").value([]);
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should return empty string if connLabel is provided and connection is not found", () => {
+      retrieveConnectionStub.withArgs("nonExistentLabel").returns(null);
+
+      const result =
+        connectionManagerService.exportConnection("nonExistentLabel");
+
+      assert.strictEqual(result, "");
+    });
+
+    it("should export KDB connection when connLabel is provided and connection is an instance of KdbNode", () => {
+      kdbNode.details.auth = true;
+      retrieveConnectionStub.withArgs("kdbLabel").returns(kdbNode);
+
+      const result = connectionManagerService.exportConnection("kdbLabel");
+
+      const expectedOutput = {
+        connections: {
+          Insights: [],
+          KDB: [kdbNode.details],
+        },
+      };
+
+      assert.strictEqual(result, JSON.stringify(expectedOutput, null, 2));
+    });
+
+    it("should export Insights connection when connLabel is provided and connection is not an instance of KdbNode", () => {
+      retrieveConnectionStub.withArgs("insightsLabel").returns(insightNode);
+
+      const result = connectionManagerService.exportConnection("insightsLabel");
+
+      const expectedOutput = {
+        connections: {
+          Insights: [insightNode.details],
+          KDB: [],
+        },
+      };
+
+      assert.strictEqual(result, JSON.stringify(expectedOutput, null, 2));
+    });
+
+    it("should return empty string if connLabel is not provided and connectionsList is empty", () => {
+      connectionsListStub.value([]);
+
+      const result = connectionManagerService.exportConnection();
+
+      assert.strictEqual(result, "");
+    });
+
+    it("should export all connections when connLabel is not provided and connectionsList contains instances of KdbNode and other connections", () => {
+      connectionsListStub.value([kdbNode, insightNode]);
+
+      const result = connectionManagerService.exportConnection();
+
+      const expectedOutput = {
+        connections: {
+          Insights: [insightNode.details],
+          KDB: [kdbNode.details],
+        },
+      };
+
+      assert.strictEqual(result, JSON.stringify(expectedOutput, null, 2));
+    });
+
+    it("should set auth to false and clear username and password if includeAuth is false", () => {
+      connectionsListStub.value([kdbNode]);
+
+      const result = connectionManagerService.exportConnection(
+        undefined,
+        false,
+      );
+
+      const expectedOutput = {
+        connections: {
+          Insights: [],
+          KDB: [kdbNode.details],
+        },
+      };
+
+      assert.strictEqual(result, JSON.stringify(expectedOutput, null, 2));
+    });
+
+    it("should set auth to true and populate username and password if includeAuth is true and auth is found", () => {
+      const authData = {
+        server1: {
+          username: "user1",
+          password: "pass1",
+        },
+      };
+      connectionsListStub.value([kdbNode]);
+      kdbAuthMapStub.value([authData]);
+
+      const result = connectionManagerService.exportConnection(undefined, true);
+
+      const expectedOutput = {
+        connections: {
+          Insights: [],
+          KDB: [kdbNode.details],
+        },
+      };
+
+      assert.strictEqual(result, JSON.stringify(expectedOutput, null, 2));
+    });
+
+    it("should not change auth, username, and password if includeAuth is true and auth is not found", () => {
+      connectionsListStub.value([kdbNode]);
+      kdbAuthMapStub.value([]);
+
+      const result = connectionManagerService.exportConnection(undefined, true);
+
+      const expectedOutput = {
+        connections: {
+          Insights: [],
+          KDB: [kdbNode.details],
+        },
+      };
+
+      assert.strictEqual(result, JSON.stringify(expectedOutput, null, 2));
+    });
+
+    it("should clear kdbAuthMap after processing", () => {
+      const authData = {
+        server1: {
+          username: "user1",
+          password: "pass1",
+        },
+      };
+      connectionsListStub.value([kdbNode]);
+      kdbAuthMapStub.value([authData]);
+
+      connectionManagerService.exportConnection(undefined, true);
+
+      assert.strictEqual(ext.kdbAuthMap.length, 0);
     });
   });
 });

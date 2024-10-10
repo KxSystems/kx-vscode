@@ -1,7 +1,8 @@
 html,
 body {
   height: 86vh;
-  width: 100%;
+  width: 99%;
+  padding: 0;
   box-sizing: border-box;
   -webkit-overflow-scrolling: touch;
 }

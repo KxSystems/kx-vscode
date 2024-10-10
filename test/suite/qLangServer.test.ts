@@ -22,18 +22,22 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import QLangServer from "../../server/src/qLangServer";
+import { pathToFileURL } from "url";
 
 const context = { includeDeclaration: true };
 
 describe("qLangServer", () => {
   let server: QLangServer;
+  let connection: Connection;
 
   function createDocument(content: string, offset?: number) {
     content = content.trim();
-    const document = TextDocument.create("test.q", "q", 1, content);
+    const uri = pathToFileURL("test.q").toString();
+    const document = TextDocument.create(uri, "q", 1, content);
     const position = document.positionAt(offset || content.length);
-    const textDocument = TextDocumentIdentifier.create("test.q");
+    const textDocument = TextDocumentIdentifier.create(uri);
     sinon.stub(server.documents, "get").value(() => document);
+    sinon.stub(server.documents, "all").value(() => [document]);
     return {
       textDocument,
       position,
@@ -41,7 +45,7 @@ describe("qLangServer", () => {
   }
 
   beforeEach(async () => {
-    const connection = <Connection>(<unknown>{
+    connection = <Connection>(<unknown>{
       listen() {},
       onDidOpenTextDocument() {},
       onDidChangeTextDocument() {},
@@ -57,6 +61,20 @@ describe("qLangServer", () => {
       onDidChangeConfiguration() {},
       onRequest() {},
       onSelectionRanges() {},
+      onDidChangeWatchedFiles() {},
+      workspace: {
+        async getWorkspaceFolders() {
+          return [];
+        },
+      },
+      languages: {
+        callHierarchy: {
+          onPrepare() {},
+          onIncomingCalls() {},
+          onOutgoingCalls() {},
+        },
+      },
+      sendDiagnostics() {},
     });
 
     const params = <InitializeParams>{
@@ -80,6 +98,7 @@ describe("qLangServer", () => {
       assert.ok(capabilities.renameProvider);
       assert.ok(capabilities.completionProvider);
       assert.ok(capabilities.selectionRangeProvider);
+      assert.ok(capabilities.callHierarchyProvider);
     });
   });
 
@@ -328,6 +347,76 @@ describe("qLangServer", () => {
       assert.strictEqual(result.length, 1);
       assert.strictEqual(result[0].range.start.character, 0);
       assert.strictEqual(result[0].range.end.character, 9);
+    });
+  });
+
+  describe("onPrepareCallHierarchy", () => {
+    it("should prepare call hierarchy", () => {
+      const params = createDocument("a:1;a");
+      const result = server.onPrepareCallHierarchy(params);
+      assert.strictEqual(result.length, 1);
+    });
+  });
+
+  describe("onIncomingCallsCallHierarchy", () => {
+    it("should return incoming calls", () => {
+      const params = createDocument("a:1;a");
+      const items = server.onPrepareCallHierarchy(params);
+      const result = server.onIncomingCallsCallHierarchy({ item: items[0] });
+      assert.strictEqual(result.length, 1);
+    });
+  });
+
+  describe("onOutgoingCallsCallHierarchy", () => {
+    it("should return outgoing calls", () => {
+      const params = createDocument("a:1;{a");
+      const items = server.onPrepareCallHierarchy(params);
+      const result = server.onOutgoingCallsCallHierarchy({ item: items[0] });
+      assert.strictEqual(result.length, 1);
+    });
+  });
+
+  describe("setSettings", () => {
+    let defaultSettings = {
+      debug: false,
+      linting: false,
+      refactoring: "Workspace",
+    };
+    it("should use default settings for empty", () => {
+      server.setSettings({});
+      assert.deepEqual(server["settings"], defaultSettings);
+    });
+    it("should use default settings for empty coming from client", () => {
+      server.onDidChangeConfiguration({ settings: { kdb: {} } });
+      assert.deepEqual(server["settings"], defaultSettings);
+    });
+  });
+
+  describe("onDidClose", () => {
+    it("should send epmty diagnostics", () => {
+      const stub = sinon.stub(connection, "sendDiagnostics");
+      server.onDidClose({ document: <TextDocument>{ uri: "" } });
+      assert.ok(stub.calledOnce);
+    });
+  });
+
+  describe("scan", () => {
+    it("should scan empty workspace", () => {
+      sinon
+        .stub(connection.workspace, "getWorkspaceFolders")
+        .value(async () => []);
+      server.scan();
+      assert.strictEqual(server["cached"].size, 0);
+    });
+  });
+
+  describe("onDidChangeWatchedFiles", () => {
+    it("should parse empty match", () => {
+      sinon
+        .stub(connection.workspace, "getWorkspaceFolders")
+        .value(async () => []);
+      server.onDidChangeWatchedFiles({ changes: [] });
+      assert.strictEqual(server["cached"].size, 0);
     });
   });
 });

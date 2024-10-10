@@ -51,17 +51,19 @@ import {
   editInsightsConnection,
   editKdbConnection,
   enableTLS,
+  executeQuery,
+  exportConnections,
+  importConnections,
   openMeta,
   refreshGetMeta,
   removeConnection,
   rerunQuery,
+  resetScratchPad,
 } from "./commands/serverCommand";
 import { showInstallationDetails } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
 import { ExecutionTypes } from "./models/execution";
-import { InsightDetails, Insights } from "./models/insights";
 import { QueryResult } from "./models/queryResult";
-import { Server, ServerDetails } from "./models/server";
 import {
   InsightsMetaNode,
   InsightsNode,
@@ -114,6 +116,12 @@ import {
   setLabelColor,
 } from "./utils/connLabel";
 import { activateTextDocument } from "./utils/workspace";
+import {
+  InsightDetails,
+  Insights,
+  Server,
+  ServerDetails,
+} from "./models/connectionsModels";
 
 let client: LanguageClient;
 
@@ -177,11 +185,13 @@ export async function activate(context: ExtensionContext) {
   AuthSettings.init(context);
   ext.secretSettings = AuthSettings.instance;
 
+  commands.executeCommand("kdb-results.focus");
+
   kdbOutputLog("kdb extension is now active!", "INFO");
 
   try {
     // check for installed q runtime
-    await checkLocalInstall();
+    await checkLocalInstall(true);
   } catch (err) {
     window.showErrorMessage(`${err}`);
   }
@@ -194,12 +204,8 @@ export async function activate(context: ExtensionContext) {
     ),
     commands.registerCommand(
       "kdb.resultsPanel.update",
-      (results: string, isInsights: boolean, dataSourceType?: string) => {
-        ext.resultsViewProvider.updateResults(
-          results,
-          isInsights,
-          dataSourceType,
-        );
+      (results: string, isInsights: boolean) => {
+        ext.resultsViewProvider.updateResults(results, isInsights);
       },
     ),
     commands.registerCommand("kdb.resultsPanel.clear", () => {
@@ -263,6 +269,40 @@ export async function activate(context: ExtensionContext) {
         const connLabel =
           typeof viewItem === "string" ? viewItem : viewItem.label;
         await disconnect(connLabel);
+      },
+    ),
+    commands.registerCommand("kdb.connections.export.all", () => {
+      exportConnections();
+    }),
+    commands.registerCommand(
+      "kdb.connections.export.single",
+      async (viewItem: KdbNode | InsightsNode) => {
+        exportConnections(viewItem.label);
+      },
+    ),
+    commands.registerCommand("kdb.connections.import", async () => {
+      await importConnections();
+    }),
+    commands.registerCommand(
+      "kdb.connection.content.selectView",
+      async (viewItem) => {
+        const connLabel = viewItem.connLabel
+          ? viewItem.connLabel.split("[")[1].split("]")[0]
+          : undefined;
+        if (connLabel) {
+          const executorName = viewItem.coreIcon.substring(2);
+          executeQuery(
+            viewItem.label,
+            connLabel,
+            executorName,
+            "",
+            false,
+            false,
+            true,
+          );
+        } else {
+          kdbOutputLog("Connection label not found", "ERROR");
+        }
       },
     ),
     commands.registerCommand(

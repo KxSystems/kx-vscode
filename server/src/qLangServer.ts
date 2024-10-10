@@ -13,6 +13,12 @@
 
 import { Position, TextDocument } from "vscode-languageserver-textdocument";
 import {
+  CallHierarchyIncomingCall,
+  CallHierarchyIncomingCallsParams,
+  CallHierarchyItem,
+  CallHierarchyOutgoingCall,
+  CallHierarchyOutgoingCallsParams,
+  CallHierarchyPrepareParams,
   CompletionItem,
   CompletionItemKind,
   CompletionParams,
@@ -21,8 +27,10 @@ import {
   Diagnostic,
   DiagnosticSeverity,
   DidChangeConfigurationParams,
+  DidChangeWatchedFilesParams,
   DocumentSymbol,
   DocumentSymbolParams,
+  FileChangeType,
   InitializeParams,
   LSPAny,
   Location,
@@ -41,6 +49,8 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver/node";
+import { sync as glob } from "glob";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   FindKind,
   Token,
@@ -63,24 +73,37 @@ import {
   RCurly,
 } from "./parser";
 import { lint } from "./linter";
+import { readFileSync } from "node:fs";
 
 interface Settings {
   debug: boolean;
   linting: boolean;
+  refactoring: "Workspace" | "Window";
 }
 
-const defaultSettings: Settings = { debug: false, linting: false };
+const defaultSettings: Settings = {
+  debug: false,
+  linting: false,
+  refactoring: "Workspace",
+};
+
+interface Tokenized {
+  uri: string;
+  tokens: Token[];
+}
 
 export default class QLangServer {
   private declare connection: Connection;
   private declare params: InitializeParams;
   private declare settings: Settings;
+  private declare cached: Map<string, Token[]>;
   public declare documents: TextDocuments<TextDocument>;
 
   constructor(connection: Connection, params: InitializeParams) {
     this.connection = connection;
     this.params = params;
     this.settings = defaultSettings;
+    this.cached = new Map();
     this.documents = new TextDocuments(TextDocument);
     this.documents.listen(this.connection);
     this.documents.onDidClose(this.onDidClose.bind(this));
@@ -90,6 +113,18 @@ export default class QLangServer {
     this.connection.onDefinition(this.onDefinition.bind(this));
     this.connection.onRenameRequest(this.onRenameRequest.bind(this));
     this.connection.onCompletion(this.onCompletion.bind(this));
+    this.connection.onDidChangeWatchedFiles(
+      this.onDidChangeWatchedFiles.bind(this),
+    );
+    this.connection.languages.callHierarchy.onPrepare(
+      this.onPrepareCallHierarchy.bind(this),
+    );
+    this.connection.languages.callHierarchy.onIncomingCalls(
+      this.onIncomingCallsCallHierarchy.bind(this),
+    );
+    this.connection.languages.callHierarchy.onOutgoingCalls(
+      this.onOutgoingCallsCallHierarchy.bind(this),
+    );
     this.connection.onDidChangeConfiguration(
       this.onDidChangeConfiguration.bind(this),
     );
@@ -113,25 +148,40 @@ export default class QLangServer {
       renameProvider: true,
       completionProvider: { resolveProvider: false },
       selectionRangeProvider: true,
+      callHierarchyProvider: true,
     };
   }
 
   public setSettings(settings: LSPAny) {
-    this.settings = settings;
+    this.settings = {
+      debug: settings.debug || false,
+      linting: settings.linting || false,
+      refactoring: settings.refactoring || "Workspace",
+    };
   }
 
   public onDidChangeConfiguration({ settings }: DidChangeConfigurationParams) {
     if ("kdb" in settings) {
-      const kdb = settings.kdb;
-      this.setSettings({
-        debug: kdb.debug_parser === true || false,
-        linting: kdb.linting === true || false,
-      });
+      this.setSettings(settings.kdb);
     }
   }
 
-  public onDidClose({ document }: TextDocumentChangeEvent<TextDocument>) {
-    this.connection.sendDiagnostics({ uri: document.uri, diagnostics: [] });
+  /* istanbul ignore next */
+  public onDidChangeWatchedFiles({ changes }: DidChangeWatchedFilesParams) {
+    try {
+      this.parseFiles(
+        changes.reduce((matches, change) => {
+          if (change.type === FileChangeType.Deleted) {
+            this.cached.delete(change.uri);
+          } else {
+            matches.push(fileURLToPath(change.uri));
+          }
+          return matches;
+        }, [] as string[]),
+      );
+    } catch (error) {
+      this.connection.window.showErrorMessage(`${error}`);
+    }
   }
 
   public onDidChangeContent({
@@ -150,6 +200,10 @@ export default class QLangServer {
       );
       this.connection.sendDiagnostics({ uri, diagnostics });
     }
+  }
+
+  public onDidClose({ document }: TextDocumentChangeEvent<TextDocument>) {
+    this.connection.sendDiagnostics({ uri: document.uri, diagnostics: [] });
   }
 
   public onDocumentSymbol({
@@ -171,9 +225,13 @@ export default class QLangServer {
   public onReferences({ textDocument, position }: ReferenceParams): Location[] {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
-    return findIdentifiers(FindKind.Reference, tokens, source).map((token) =>
-      Location.create(textDocument.uri, rangeFromToken(token)),
-    );
+    return this.context({ uri: textDocument.uri, tokens })
+      .map((document) =>
+        findIdentifiers(FindKind.Reference, document.tokens, source).map(
+          (token) => Location.create(document.uri, rangeFromToken(token)),
+        ),
+      )
+      .flat();
   }
 
   public onDefinition({
@@ -182,34 +240,39 @@ export default class QLangServer {
   }: DefinitionParams): Location[] {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
-    return findIdentifiers(FindKind.Definition, tokens, source).map((token) =>
-      Location.create(textDocument.uri, rangeFromToken(token)),
-    );
+    return this.context({ uri: textDocument.uri, tokens })
+      .map((document) =>
+        findIdentifiers(FindKind.Definition, document.tokens, source).map(
+          (token) => Location.create(document.uri, rangeFromToken(token)),
+        ),
+      )
+      .flat();
   }
 
   public onRenameRequest({
     textDocument,
     position,
     newName,
-  }: RenameParams): WorkspaceEdit | null {
+  }: RenameParams): WorkspaceEdit {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
-    const refs = findIdentifiers(FindKind.Rename, tokens, source);
-    if (refs.length === 0) {
-      return null;
-    }
-    const name = <Token>{
-      image: newName,
-      namespace: source?.namespace,
-    };
-    const edits = refs.map((token) => {
-      return TextEdit.replace(rangeFromToken(token), relative(name, token));
-    });
-    return {
-      changes: {
-        [textDocument.uri]: edits,
+    const all = this.settings.refactoring === "Workspace";
+    return this.context({ uri: textDocument.uri, tokens }, all).reduce(
+      (edit, document) => {
+        const refs = findIdentifiers(FindKind.Rename, document.tokens, source);
+        if (refs.length > 0) {
+          const name = <Token>{
+            image: newName,
+            namespace: source?.namespace,
+          };
+          edit.changes![document.uri] = refs.map((token) =>
+            TextEdit.replace(rangeFromToken(token), relative(name, token)),
+          );
+        }
+        return edit;
       },
-    };
+      { changes: {} } as WorkspaceEdit,
+    );
   }
 
   public onCompletion({
@@ -218,16 +281,22 @@ export default class QLangServer {
   }: CompletionParams): CompletionItem[] {
     const tokens = this.parse(textDocument);
     const source = positionToToken(tokens, position);
-    return findIdentifiers(FindKind.Completion, tokens, source).map((token) => {
-      return {
-        label: token.image,
-        labelDetails: {
-          detail: ` .${namespace(token)}`,
-        },
-        kind: CompletionItemKind.Variable,
-        insertText: relative(token, source),
-      };
-    });
+    return this.context({ uri: textDocument.uri, tokens })
+      .map((document) =>
+        findIdentifiers(FindKind.Completion, document.tokens, source).map(
+          (token) => {
+            return {
+              label: token.image,
+              labelDetails: {
+                detail: ` .${namespace(token)}`,
+              },
+              kind: CompletionItemKind.Variable,
+              insertText: relative(token, source),
+            };
+          },
+        ),
+      )
+      .flat();
   }
 
   public onExpressionRange({
@@ -300,12 +369,141 @@ export default class QLangServer {
     return ranges;
   }
 
+  public onPrepareCallHierarchy({
+    textDocument,
+    position,
+  }: CallHierarchyPrepareParams): CallHierarchyItem[] {
+    const tokens = this.parse(textDocument);
+    const source = positionToToken(tokens, position);
+    if (source && assignable(source)) {
+      return [
+        {
+          data: true,
+          kind: SymbolKind.Variable,
+          name: source.image,
+          uri: textDocument.uri,
+          range: rangeFromToken(source),
+          selectionRange: rangeFromToken(source),
+        },
+      ];
+    }
+    return [];
+  }
+
+  public onIncomingCallsCallHierarchy({
+    item,
+  }: CallHierarchyIncomingCallsParams): CallHierarchyIncomingCall[] {
+    const tokens = this.parse({ uri: item.uri });
+    const source = positionToToken(tokens, item.range.end);
+    return item.data
+      ? this.context({ uri: item.uri, tokens })
+          .map((document) =>
+            findIdentifiers(FindKind.Reference, document.tokens, source)
+              .filter((token) => !assigned(token))
+              .map((token) => {
+                const lambda = inLambda(token);
+                return {
+                  from: {
+                    kind: lambda ? SymbolKind.Object : SymbolKind.Function,
+                    name: token.image,
+                    uri: document.uri,
+                    range: rangeFromToken(lambda || token),
+                    selectionRange: rangeFromToken(token),
+                  },
+                  fromRanges: [],
+                } as CallHierarchyIncomingCall;
+              }),
+          )
+          .flat()
+      : [];
+  }
+
+  public onOutgoingCallsCallHierarchy({
+    item,
+  }: CallHierarchyOutgoingCallsParams): CallHierarchyOutgoingCall[] {
+    const tokens = this.parse({ uri: item.uri });
+    const source = positionToToken(tokens, item.range.end);
+    return item.data
+      ? this.context({ uri: item.uri, tokens })
+          .map((document) =>
+            findIdentifiers(FindKind.Reference, document.tokens, source)
+              .filter((token) => inLambda(token) && !assigned(token))
+              .map((token) => {
+                return {
+                  to: {
+                    kind: SymbolKind.Object,
+                    name: token.image,
+                    uri: document.uri,
+                    range: rangeFromToken(inLambda(token)!),
+                    selectionRange: rangeFromToken(token),
+                  },
+                  fromRanges: [],
+                } as CallHierarchyOutgoingCall;
+              }),
+          )
+          .flat()
+      : [];
+  }
+
+  /* istanbul ignore next */
+  public scan() {
+    const folders = this.params.workspaceFolders;
+    if (folders) {
+      try {
+        for (const folder of folders) {
+          this.parseFiles(
+            glob("**/*.{q,quke}", {
+              dot: true,
+              absolute: true,
+              nodir: true,
+              follow: false,
+              ignore: "node_modules/**/*.*",
+              cwd: fileURLToPath(folder.uri),
+            }),
+          );
+        }
+      } catch (error) {
+        this.connection.window.showErrorMessage(`${error}`);
+      }
+    }
+  }
+
+  /* istanbul ignore next */
+  private parseFiles(matches: string[]) {
+    for (const match of matches) {
+      const file = readFileSync(match, "utf-8");
+      this.cached.set(pathToFileURL(match).toString(), parse(file));
+    }
+  }
+
   private parse(textDocument: TextDocumentIdentifier): Token[] {
     const document = this.documents.get(textDocument.uri);
     if (!document) {
       return [];
     }
     return parse(document.getText());
+  }
+
+  private context({ uri, tokens }: Tokenized, all = true): Tokenized[] {
+    if (all) {
+      this.documents.all().forEach((document) => {
+        const path = fileURLToPath(document.uri);
+        if (path) {
+          this.cached.set(
+            pathToFileURL(path).toString(),
+            document.uri === uri ? tokens : parse(document.getText()),
+          );
+        }
+      });
+      return Array.from(this.cached.entries(), (entry) => ({
+        uri: entry[0],
+        tokens: entry[1],
+      }));
+    }
+    return this.documents.all().map((document) => ({
+      uri: document.uri,
+      tokens: document.uri === uri ? tokens : parse(document.getText()),
+    }));
   }
 }
 

@@ -35,13 +35,12 @@ connection.onInitialized(() => {
     section: "kdb",
   });
 
-  if (connection.workspace) {
-    connection.workspace.getConfiguration("kdb").then((settings) => {
-      if (server) {
-        server.setSettings(settings);
-      }
-    });
-  }
+  connection.workspace.getConfiguration("kdb").then((settings) => {
+    if (server) {
+      server.setSettings(settings);
+      server.scan();
+    }
+  });
 });
 
 connection.listen();

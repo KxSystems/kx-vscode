@@ -38,6 +38,7 @@ export interface DataSourceMessage2 {
   command: DataSourceCommand;
   servers: string[];
   selectedServer: string;
+  selectedServerVersion: number;
   isInsights: boolean;
   insightsMeta: MetaObjectPayload;
   dataSourceFile: DataSourceFiles;

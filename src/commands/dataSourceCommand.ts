@@ -40,12 +40,12 @@ import {
   writeQueryResultsToConsole,
   writeQueryResultsToView,
 } from "./serverCommand";
-import { ServerType } from "../models/server";
 import { Telemetry } from "../utils/telemetryClient";
 import { LocalConnection } from "../classes/localConnection";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { kdbOutputLog, offerConnectAction } from "../utils/core";
+import { ServerType } from "../models/connectionsModels";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -283,6 +283,13 @@ export function getApiBody(
     if (optional.temporal) {
       apiBody.temporality = api.temporality;
     }
+    if (optional.rowLimit && api.rowCountLimit) {
+      if (api.isRowLimitLast) {
+        apiBody.limit = -parseInt(api.rowCountLimit);
+      } else {
+        apiBody.limit = parseInt(api.rowCountLimit);
+      }
+    }
 
     const labels = optional.labels.filter((label) => label.active);
 
@@ -291,6 +298,8 @@ export function getApiBody(
         {},
         ...labels.map((label) => ({ [label.key]: label.value })),
       );
+    } else {
+      apiBody.labels = {};
     }
 
     const filters = optional.filters

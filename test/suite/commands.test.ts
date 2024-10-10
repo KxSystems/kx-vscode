@@ -27,7 +27,6 @@ import {
   createDefaultDataSourceFile,
 } from "../../src/models/dataSource";
 import { ExecutionTypes } from "../../src/models/execution";
-import { InsightDetails } from "../../src/models/insights";
 import { ScratchpadResult } from "../../src/models/scratchpadResult";
 import {
   InsightsNode,
@@ -41,7 +40,6 @@ import * as dataSourceUtils from "../../src/utils/dataSource";
 import { ExecutionConsole } from "../../src/utils/executionConsole";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { QueryHistory } from "../../src/models/queryHistory";
-import { ServerDetails, ServerType } from "../../src/models/server";
 import { NewConnectionPannel } from "../../src/panels/newConnection";
 import { MAX_STR_LEN } from "../../src/validators/kdbValidator";
 import { LocalConnection } from "../../src/classes/localConnection";
@@ -53,6 +51,12 @@ import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider"
 import { GetDataError } from "../../src/models/data";
 import * as clientCommand from "../../src/commands/clientCommands";
 import { LanguageClient } from "vscode-languageclient/node";
+import {
+  ExportedConnections,
+  InsightDetails,
+  ServerDetails,
+  ServerType,
+} from "../../src/models/connectionsModels";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
@@ -213,6 +217,8 @@ describe("dataSourceCommand2", () => {
       api.startTS = "2022-01-01T00:00:00Z";
       api.endTS = "2022-01-02T00:00:00Z";
       api.fill = "zero";
+      api.rowCountLimit = "20";
+      api.isRowLimitLast = true;
       api.temporality = "snapshot";
       api.filter = ["col1=val1;col2=val2", "col3=val3"];
       api.groupBy = ["col1", "col2"];
@@ -224,6 +230,7 @@ describe("dataSourceCommand2", () => {
       api.optional = {
         filled: true,
         temporal: true,
+        rowLimit: true,
         filters: [],
         sorts: [],
         groups: [],
@@ -237,6 +244,8 @@ describe("dataSourceCommand2", () => {
         startTS: "2022-01-01T00:00:00.000000000",
         endTS: "2022-01-02T00:00:00.000000000",
         fill: "zero",
+        limit: -20,
+        labels: {},
         temporality: "snapshot",
       });
     });
@@ -247,6 +256,8 @@ describe("dataSourceCommand2", () => {
       api.startTS = "2022-01-01T00:00:00Z";
       api.endTS = "2022-01-02T00:00:00Z";
       api.fill = "zero";
+      api.rowCountLimit = "20";
+      api.isRowLimitLast = false;
       api.temporality = "slice";
       api.filter = [];
       api.groupBy = [];
@@ -256,6 +267,7 @@ describe("dataSourceCommand2", () => {
       api.labels = [];
       api.table = "myTable";
       api.optional = {
+        rowLimit: true,
         filled: false,
         temporal: true,
         filters: [],
@@ -275,6 +287,8 @@ describe("dataSourceCommand2", () => {
       api.endTS = "2022-01-02T00:00:00Z";
       api.fill = "zero";
       api.temporality = "snapshot";
+      api.rowCountLimit = "20";
+      api.isRowLimitLast = false;
       api.filter = [];
       api.groupBy = [];
       api.agg = [];
@@ -283,6 +297,7 @@ describe("dataSourceCommand2", () => {
       api.labels = [];
       api.table = "myTable";
       api.optional = {
+        rowLimit: false,
         filled: true,
         temporal: true,
         filters: [
@@ -1108,6 +1123,208 @@ describe("serverCommand", () => {
     });
   });
 
+  describe("importConnections", () => {
+    let showOpenDialogStub: sinon.SinonStub;
+    let kdbOutputLogStub: sinon.SinonStub;
+    let addImportedConnectionsStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      showOpenDialogStub = sinon.stub(vscode.window, "showOpenDialog");
+      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+      addImportedConnectionsStub = sinon.stub(
+        serverCommand,
+        "addImportedConnections",
+      );
+    });
+
+    afterEach(() => {
+      sinon.restore();
+      mock.restore();
+    });
+
+    it("should log an error if no file is selected", async () => {
+      showOpenDialogStub.resolves(undefined);
+
+      await serverCommand.importConnections();
+
+      assert(
+        kdbOutputLogStub.calledWith(
+          "[IMPORT CONNECTION]No file selected",
+          "ERROR",
+        ),
+      );
+    });
+  });
+
+  describe("addImportedConnections", async () => {
+    let addInsightsConnectionStub: sinon.SinonStub;
+    let addKdbConnectionStub: sinon.SinonStub;
+    let kdbOutputLogStub: sinon.SinonStub;
+    let showInformationMessageStub: sinon.SinonStub;
+    let getInsightsStub: sinon.SinonStub;
+    let getServersStub: sinon.SinonStub;
+    const kdbNodeImport1: KdbNode = {
+      label: "local",
+      details: {
+        serverName: "testKdb",
+        serverAlias: "local",
+        serverPort: "1818",
+        auth: false,
+        managed: false,
+        tls: false,
+      },
+      collapsibleState: vscode.TreeItemCollapsibleState.None,
+      contextValue: "kdbNode",
+      children: [],
+      getTooltip: function (): vscode.MarkdownString {
+        throw new Error("Function not implemented.");
+      },
+      getDescription: function (): string {
+        throw new Error("Function not implemented.");
+      },
+      iconPath: undefined,
+    };
+    const insightsNodeImport1: InsightsNode = {
+      label: "testInsight",
+      details: {
+        server: "testInsight",
+        alias: "testInsight",
+        auth: false,
+      },
+      collapsibleState: vscode.TreeItemCollapsibleState.None,
+      contextValue: "insightsNode",
+      children: [],
+      getTooltip: function (): vscode.MarkdownString {
+        throw new Error("Function not implemented.");
+      },
+      getDescription: function (): string {
+        throw new Error("Function not implemented.");
+      },
+      iconPath: undefined,
+    };
+
+    beforeEach(() => {
+      addInsightsConnectionStub = sinon.stub(
+        serverCommand,
+        "addInsightsConnection",
+      );
+      addKdbConnectionStub = sinon.stub(serverCommand, "addKdbConnection");
+      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+      getInsightsStub = sinon.stub(coreUtils, "getInsights").returns(undefined);
+      getServersStub = sinon.stub(coreUtils, "getServers").returns(undefined);
+      showInformationMessageStub = sinon.stub(
+        vscode.window,
+        "showInformationMessage",
+      );
+      ext.connectionsList.length = 0;
+    });
+
+    afterEach(() => {
+      sinon.restore();
+      ext.connectionsList.length = 0;
+    });
+
+    it("should add insights connections with unique aliases", async () => {
+      ext.connectionsList.push(insightsNodeImport1, kdbNodeImport1);
+      const importedConnections: ExportedConnections = {
+        connections: {
+          Insights: [
+            {
+              alias: "testImportInsights1",
+              server: "testInsight",
+              auth: false,
+            },
+            {
+              alias: "testImportInsights1",
+              server: "testInsight2",
+              auth: false,
+            },
+          ],
+          KDB: [],
+        },
+      };
+
+      await serverCommand.addImportedConnections(importedConnections);
+
+      sinon.assert.notCalled(addKdbConnectionStub);
+    });
+
+    it("should log success message and show information message", async () => {
+      const importedConnections: ExportedConnections = {
+        connections: {
+          Insights: [],
+          KDB: [],
+        },
+      };
+
+      await serverCommand.addImportedConnections(importedConnections);
+
+      assert(
+        kdbOutputLogStub.calledWith(
+          "[IMPORT CONNECTION]Connections imported successfully",
+          "INFO",
+        ),
+      );
+      assert(
+        showInformationMessageStub.calledWith(
+          "Connections imported successfully",
+        ),
+      );
+    });
+
+    it("should add kdb connections", () => {
+      ext.connectionsList.push(insightsNodeImport1, kdbNodeImport1);
+      const importedConnections: ExportedConnections = {
+        connections: {
+          Insights: [],
+          KDB: [
+            {
+              serverName: "testKdb",
+              serverAlias: "testKdb",
+              serverPort: "1818",
+              auth: false,
+              managed: false,
+              tls: false,
+            },
+          ],
+        },
+      };
+
+      serverCommand.addImportedConnections(importedConnections);
+
+      sinon.assert.notCalled(addInsightsConnectionStub);
+    });
+
+    it("should overwrite connections", async () => {
+      ext.connectionsList.push(insightsNodeImport1, kdbNodeImport1);
+      const importedConnections: ExportedConnections = {
+        connections: {
+          Insights: [
+            {
+              alias: "testInsight",
+              server: "testInsight",
+              auth: false,
+            },
+          ],
+          KDB: [
+            {
+              serverName: "testKdb",
+              serverAlias: "testKdb",
+              serverPort: "1818",
+              auth: false,
+              managed: false,
+              tls: false,
+            },
+          ],
+        },
+      };
+
+      showInformationMessageStub.returns("Overwrite");
+      await serverCommand.addImportedConnections(importedConnections);
+      sinon.assert.notCalled(addInsightsConnectionStub);
+    });
+  });
+
   describe("writeQueryResultsToView", () => {
     it("should call executeCommand with correct arguments", () => {
       const result = { data: [1, 2, 3] };
@@ -1129,7 +1346,6 @@ describe("serverCommand", () => {
         "kdb.resultsPanel.update",
         result,
         false,
-        "WORKBOOK",
       );
 
       executeCommandStub.restore();
@@ -1885,6 +2101,68 @@ describe("serverCommand", () => {
         vscode.workspace.openTextDocument as sinon.SinonSpy,
       );
       sinon.assert.notCalled(vscode.window.showTextDocument as sinon.SinonSpy);
+    });
+  });
+
+  describe("exportConnections", () => {
+    let sandbox: sinon.SinonSandbox;
+    let kdbOutputLogStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      sandbox = sinon.createSandbox();
+      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+    });
+
+    afterEach(() => {
+      sandbox.restore();
+      sinon.restore();
+      mock.restore();
+    });
+
+    it("should log an error when no connections are found", async () => {
+      const exportConnectionStub = sandbox
+        .stub(ConnectionManagementService.prototype, "exportConnection")
+        .returns("");
+      const showQuickPickStub = sandbox
+        .stub(vscode.window, "showQuickPick")
+        .resolves({ label: "No" });
+
+      await serverCommand.exportConnections();
+
+      sinon.assert.calledOnce(kdbOutputLogStub);
+      sinon.assert.calledWith(
+        kdbOutputLogStub,
+        "[EXPORT CONNECTIONS] No connections found to be exported",
+        "ERROR",
+      );
+
+      exportConnectionStub.restore();
+      showQuickPickStub.restore();
+    });
+
+    it("should log info when save operation is cancelled by the user", async () => {
+      const exportConnectionStub = sandbox
+        .stub(ConnectionManagementService.prototype, "exportConnection")
+        .returns("{}");
+      const showSaveDialogStub = sandbox
+        .stub(vscode.window, "showSaveDialog")
+        .resolves(undefined);
+      const showQuickPickStub = sandbox
+        .stub(vscode.window, "showQuickPick")
+        .resolves({ label: "Yes" });
+
+      await serverCommand.exportConnections();
+
+      sinon.assert.calledOnce(kdbOutputLogStub);
+      sinon.assert.calledWith(
+        kdbOutputLogStub,
+        "[EXPORT CONNECTIONS] Save operation was cancelled by the user",
+        "INFO",
+      );
+
+      exportConnectionStub.restore();
+      showSaveDialogStub.restore();
+      showQuickPickStub.restore();
     });
   });
 });
