@@ -196,10 +196,11 @@ describe("WebPanels", () => {
             minWidth: 100,
           },
           rowData: [
-            { prop1: "value1", prop2: "value2" },
-            { prop1: "value3", prop2: "value4" },
+            { index: 1, prop1: "value1", prop2: "value2" },
+            { index: 2, prop1: "value3", prop2: "value4" },
           ],
           columnDefs: [
+            { field: "index", headerName: "Index", cellDataType: "number" },
             {
               field: "prop1",
               headerName: "prop1",
@@ -221,6 +222,7 @@ describe("WebPanels", () => {
           suppressContextMenu: true,
           suppressDragLeaveHidesColumns: true,
           tooltipShowDelay: 200,
+          loading: true,
         });
 
         // Mock ext.connectionNode
@@ -250,6 +252,7 @@ describe("WebPanels", () => {
           },
           rowData: [],
           columnDefs: [
+            { field: "index", headerName: "Index", cellDataType: "number" },
             {
               field: "prop1",
               headerName: "prop1",
@@ -271,6 +274,7 @@ describe("WebPanels", () => {
           suppressContextMenu: true,
           suppressDragLeaveHidesColumns: true,
           tooltipShowDelay: 200,
+          loading: true,
         });
 
         // Mock ext.connectionNode
