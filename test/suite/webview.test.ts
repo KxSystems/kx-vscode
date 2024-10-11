@@ -896,6 +896,40 @@ describe("KdbNewConnectionView", () => {
     });
   });
 
+  describe("createLabel", () => {
+    let clock: sinon.SinonFakeTimers;
+
+    beforeEach(() => {
+      clock = sinon.useFakeTimers();
+    });
+
+    afterEach(() => {
+      clock.restore();
+    });
+
+    it("should post a message and update labels after timeout", () => {
+      const api = acquireVsCodeApi();
+      const postMessageStub = sinon.stub(api, "postMessage");
+      const closeModalStub = sinon.stub(view, "closeModal");
+
+      view.newLblName = "Test Label";
+      view.newLblColorName = "Test Color";
+      view.labels = [];
+
+      view.createLabel();
+
+      sinon.assert.calledOnce(postMessageStub);
+
+      // Avança o tempo em 500ms
+      clock.tick(500);
+
+      assert.equal(view.labels[0], "Test Label");
+      sinon.assert.calledOnce(closeModalStub);
+
+      sinon.restore();
+    });
+  });
+
   describe("edit", () => {
     const editConn: EditConnectionMessage = {
       connType: 0,
@@ -931,4 +965,6 @@ describe("KdbNewConnectionView", () => {
       sinon.restore();
     });
   });
+
+  describe("createLabel", () => {});
 });
