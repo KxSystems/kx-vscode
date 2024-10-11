@@ -100,6 +100,9 @@ export function removeConnFromLabels(connName: string) {
       );
     }
   });
+  workspace
+    .getConfiguration()
+    .update("kdb.labelsConnectionMap", ext.labelConnMapList, true);
 }
 
 export async function handleLabelsConnMap(labels: string[], connName: string) {
