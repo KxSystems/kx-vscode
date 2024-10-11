@@ -346,7 +346,7 @@ export class InsightsConnection {
         isTableView: false,
         params: queryParams,
       };
-      window.withProgress(
+      await window.withProgress(
         {
           location: ProgressLocation.Notification,
           cancellable: false,
@@ -358,7 +358,7 @@ export class InsightsConnection {
 
           progress.report({ message: "Populating scratchpad..." });
 
-          const scratchpadResponse = await axios
+          return await axios
             .post(scratchpadURL.toString(), body, headers)
             .then((response: any) => {
               if (response.data.error) {
@@ -384,9 +384,6 @@ export class InsightsConnection {
                 );
               }
             });
-
-          const p = new Promise<void>((resolve) => resolve());
-          return p;
         },
       );
     } else {
