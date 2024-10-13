@@ -870,8 +870,7 @@ export class KdbDataSourceView extends LitElement {
                         ).value;
                         this.requestChange();
                       }}"
-                      >Start Time
-                      ${this.selectedServerVersion}</vscode-text-field
+                      >Start Time</vscode-text-field
                     >
 
                     <vscode-text-field

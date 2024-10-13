@@ -57,7 +57,8 @@ export async function checkOpenSslInstalled(): Promise<string | null> {
       return semver.clean(installedVersion ? installedVersion[1] : "");
     }
   } catch (err) {
-    kdbOutputLog(`Error in checking OpenSSL version: ${err}`, "ERROR");
+    // Disabled the error, as it is not critical
+    // kdbOutputLog(`Error in checking OpenSSL version: ${err}`, "ERROR");
     Telemetry.sendException(err as Error);
   }
   return null;
