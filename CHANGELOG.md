@@ -11,7 +11,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Added the ability to export and import connections
 - All files in the workspace are considered when using language server features
 - Show call hierarchy is implemented in language server
-- Query history shows an ellipsis of the query execution text
+- Query history shows an ellipsis of the query execution text to the available line length
 - Added limit option to datasource for 1.11 + versions of Insights Enterprise connections
 
 ### Fixes
