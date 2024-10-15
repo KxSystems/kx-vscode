@@ -13,7 +13,6 @@
 
 import { OutputChannel, commands, window } from "vscode";
 import { ext } from "../extensionVariables";
-import { ServerType } from "../models/server";
 import {
   getHideDetailedConsoleQueryOutput,
   setOutputWordWrapper,
@@ -23,6 +22,7 @@ import {
   checkIfIsDatasource,
   convertRowsToConsole,
 } from "./queryUtils";
+import { ServerType } from "../models/connectionsModels";
 
 export class ExecutionConsole {
   public static current: ExecutionConsole | undefined;
@@ -83,6 +83,7 @@ export class ExecutionConsole {
     type?: string,
     isPhython?: boolean,
     duration?: string,
+    isFromConnTree?: boolean,
   ): void {
     getHideDetailedConsoleQueryOutput();
     const hideDetails = ext.hideDetailedConsoleQueryOutput;
@@ -106,6 +107,7 @@ export class ExecutionConsole {
         undefined,
         undefined,
         duration,
+        isFromConnTree,
       );
     }
 
@@ -142,6 +144,7 @@ export class ExecutionConsole {
     isPython?: boolean,
     isDatasource?: boolean,
     duration?: string,
+    isFromConnTree?: boolean,
   ): void {
     getHideDetailedConsoleQueryOutput();
     const hideDetails = ext.hideDetailedConsoleQueryOutput;
@@ -172,6 +175,7 @@ export class ExecutionConsole {
           undefined,
           undefined,
           duration,
+          isFromConnTree,
         );
       }
     } else {

@@ -18,12 +18,11 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import { KdbDataSourceView } from "../../src/webview/components/kdbDataSourceView";
 import { KdbNewConnectionView } from "../../src/webview/components/kdbNewConnectionView";
-import { ServerType } from "../../src/models/server";
 
-import { InsightDetails } from "../../src/models/insights";
 import {
   DataSourceCommand,
   DataSourceMessage2,
+  EditConnectionMessage,
 } from "../../src/models/messages";
 import {
   DataSourceTypes,
@@ -36,6 +35,7 @@ import {
 import { MetaObjectPayload } from "../../src/models/meta";
 import { html, TemplateResult } from "lit";
 import { ext } from "../../src/extensionVariables";
+import { InsightDetails, ServerType } from "../../src/models/connectionsModels";
 
 describe("KdbDataSourceView", () => {
   let view: KdbDataSourceView;
@@ -87,6 +87,7 @@ describe("KdbDataSourceView", () => {
               optional: {
                 filled: false,
                 temporal: false,
+                rowLimit: false,
                 filters: [createFilter()],
                 labels: [createLabel()],
                 sorts: [createSort()],
@@ -218,6 +219,20 @@ describe("KdbDataSourceView", () => {
       sinon.stub(view, "postMessage").value(() => (result = true));
       view.requestServerChange(createValueEvent("server"));
       assert.ok(result);
+    });
+  });
+
+  describe("renderRowCountOptions", () => {
+    it("should render row count options", () => {
+      view.selectedServerVersion = 1.11;
+      const result = view.renderRowCountOptions();
+      assert.ok(result);
+    });
+
+    it("should not render row count options for older server version", () => {
+      view.selectedServerVersion = 1.1;
+      const result = view.renderRowCountOptions();
+      assert.ok(!result);
     });
   });
 });
@@ -420,7 +435,6 @@ describe("KdbNewConnectionView", () => {
 
     it("should render connection address for Bundled q", () => {
       const result = view.renderConnAddDesc(ServerType.KDB, true);
-      console.log(JSON.stringify(result));
       assert.strictEqual(
         result.strings[0].includes("already set up for you"),
         true,
@@ -484,6 +498,21 @@ describe("KdbNewConnectionView", () => {
       );
     });
 
+    it("should render label dropdown", () => {
+      view.lblNamesList = [
+        { name: "label1", color: { colorHex: "#FF0000" } },
+        { name: "label2", color: { colorHex: "#00FF00" } },
+      ];
+      view.labels = ["label1"];
+
+      const result = view.renderLblsDropdown(0);
+
+      assert.strictEqual(
+        JSON.stringify(result).includes("No Label Selected"),
+        true,
+      );
+    });
+
     it("should render New Label Modal", () => {
       const result = view.renderNewLabelModal();
 
@@ -536,6 +565,49 @@ describe("KdbNewConnectionView", () => {
       assert.strictEqual(view.isBundledQ, true);
       assert.strictEqual(view.serverType, ServerType.KDB);
     });
+  });
+
+  describe("removeBlankLabels", () => {
+    it("should remove blank labels", () => {
+      view.labels = ["label1", ""];
+      view.removeBlankLabels();
+      assert.strictEqual(view.labels.length, 1);
+    });
+
+    it("should not remove blank labels", () => {
+      view.labels = ["label1"];
+      view.removeBlankLabels();
+      assert.strictEqual(view.labels.length, 1);
+    });
+
+    it("should remove duplicate labels", () => {
+      view.labels = ["label1", "label1", "label1"];
+      view.removeBlankLabels();
+      assert.strictEqual(view.labels.length, 1);
+    });
+  });
+
+  it("should add label", () => {
+    view.labels = ["label1"];
+    view.addLabel();
+    assert.strictEqual(view.labels.length, 2);
+  });
+
+  it("should remove label", () => {
+    view.labels = ["label1"];
+    view.removeLabel(0);
+    assert.strictEqual(view.labels.length, 0);
+  });
+
+  it("should update label", () => {
+    view.labels = ["label1"];
+    const event: Event = new Event("label2");
+    Object.defineProperty(event, "target", {
+      value: { value: "label2" },
+      writable: false,
+    });
+    view.updateLabelValue(0, event);
+    assert.strictEqual(view.labels[0], "label2");
   });
 
   describe("render()", () => {
@@ -823,4 +895,76 @@ describe("KdbNewConnectionView", () => {
       sinon.restore();
     });
   });
+
+  describe("createLabel", () => {
+    let clock: sinon.SinonFakeTimers;
+
+    beforeEach(() => {
+      clock = sinon.useFakeTimers();
+    });
+
+    afterEach(() => {
+      clock.restore();
+    });
+
+    it("should post a message and update labels after timeout", () => {
+      const api = acquireVsCodeApi();
+      const postMessageStub = sinon.stub(api, "postMessage");
+      const closeModalStub = sinon.stub(view, "closeModal");
+
+      view.newLblName = "Test Label";
+      view.newLblColorName = "Test Color";
+      view.labels = [];
+
+      view.createLabel();
+
+      sinon.assert.calledOnce(postMessageStub);
+
+      // Avança o tempo em 500ms
+      clock.tick(500);
+
+      assert.equal(view.labels[0], "Test Label");
+      sinon.assert.calledOnce(closeModalStub);
+
+      sinon.restore();
+    });
+  });
+
+  describe("edit", () => {
+    const editConn: EditConnectionMessage = {
+      connType: 0,
+      serverName: "test",
+      serverAddress: "127.0.0.1",
+    };
+
+    it("should post a message", () => {
+      const api = acquireVsCodeApi();
+      let result: any;
+      sinon.stub(api, "postMessage").value(({ command, data }) => {
+        if (
+          command === "kdb.newConnection.editMyQConnection" ||
+          command === "kdb.newConnection.editInsightsConnection" ||
+          command === "kdb.newConnection.editBundledConnection"
+        ) {
+          result = data;
+        }
+      });
+      view.editConnection();
+      assert.ok(!result);
+      view.connectionData = editConn;
+      view.editConnection();
+      assert.ok(result);
+      editConn.connType = 1;
+      view.connectionData = editConn;
+      view.editConnection();
+      assert.ok(result);
+      editConn.connType = 2;
+      view.connectionData = editConn;
+      view.editConnection();
+      assert.ok(result);
+      sinon.restore();
+    });
+  });
+
+  describe("createLabel", () => {});
 });

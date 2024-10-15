@@ -64,6 +64,10 @@ export class KdbDataSourceView extends LitElement {
   selectedApi = "";
   selectedTable = "";
   startTS = "";
+  rowLimitCount = "100000";
+  isRowLimitLast = true;
+  rowLimit = false;
+  selectedServerVersion = 0;
   endTS = "";
   fill = "";
   filled = false;
@@ -97,6 +101,9 @@ export class KdbDataSourceView extends LitElement {
     if (msg.command === DataSourceCommand.Update) {
       this.servers = msg.servers;
       this.selectedServer = msg.selectedServer;
+      this.selectedServerVersion = msg.selectedServerVersion
+        ? msg.selectedServerVersion
+        : 0;
       this.isInsights = msg.isInsights;
       this.isMetaLoaded = !!msg.insightsMeta.dap;
       this.insightsMeta = msg.insightsMeta;
@@ -107,6 +114,12 @@ export class KdbDataSourceView extends LitElement {
       this.startTS = ds.dataSource.api.startTS;
       this.endTS = ds.dataSource.api.endTS;
       this.fill = ds.dataSource.api.fill;
+      this.rowLimitCount = ds.dataSource.api.rowCountLimit
+        ? ds.dataSource.api.rowCountLimit
+        : "100000";
+      this.isRowLimitLast = ds.dataSource.api.isRowLimitLast
+        ? ds.dataSource.api.isRowLimitLast
+        : true;
       this.temporality = ds.dataSource.api.temporality;
       this.qsqlTarget = ds.dataSource.qsql.selectedTarget;
       this.qsql = ds.dataSource.qsql.query;
@@ -120,6 +133,7 @@ export class KdbDataSourceView extends LitElement {
         this.sorts = optional.sorts;
         this.aggs = optional.aggs;
         this.groups = optional.groups;
+        this.rowLimit = optional.rowLimit ? optional.rowLimit : false;
       }
       this.requestUpdate();
     }
@@ -137,6 +151,8 @@ export class KdbDataSourceView extends LitElement {
           startTS: this.startTS,
           endTS: this.endTS,
           fill: this.fill,
+          rowCountLimit: this.rowLimitCount,
+          isRowLimitLast: this.isRowLimitLast,
           temporality: this.temporality,
           filter: [],
           groupBy: [],
@@ -152,6 +168,7 @@ export class KdbDataSourceView extends LitElement {
             sorts: this.sorts,
             aggs: this.aggs,
             groups: this.groups,
+            rowLimit: this.rowLimit,
           },
         },
         qsql: {
@@ -220,6 +237,78 @@ export class KdbDataSourceView extends LitElement {
       command: DataSourceCommand.Server,
       selectedServer: this.selectedServer,
     });
+  }
+
+  renderRowCountOptions() {
+    const compareVersions = (v1: string, v2: string) =>
+      v1
+        .split(".")
+        .map(Number)
+        .reduce((acc, num, i) => acc || num - Number(v2.split(".")[i] || 0), 0);
+
+    if (compareVersions(this.selectedServerVersion.toString(), "1.11") >= 0) {
+      return html`
+        <div class="row align-bottom">
+          <vscode-checkbox
+            .checked="${this.rowLimit}"
+            @change="${(event: Event) => {
+              /* istanbul ignore next */
+              this.rowLimit = (event.target as HTMLInputElement).checked;
+              this.requestChange();
+            }}"></vscode-checkbox>
+          <div class="dropdown-container">
+            <label for="row-count">Row Limit</label>
+            <vscode-text-field
+              type="number"
+              class="text-field input-number"
+              .value="${live(this.rowLimitCount)}"
+              @input="${(event: Event) => {
+                /* istanbul ignore next */
+                this.rowLimitCount = (event.target as HTMLInputElement).value;
+                this.requestChange();
+              }}">
+            </vscode-text-field>
+          </div>
+
+          <vscode-radio-group>
+            <div class="dropdown-container">
+              <vscode-radio
+                name="row-count"
+                value="first"
+                .checked="${!this.isRowLimitLast}"
+                @change="${(event: Event) => {
+                  /* istanbul ignore next */
+                  if ((event.target as HTMLInputElement).checked) {
+                    this.isRowLimitLast = false;
+                    this.requestChange();
+                  }
+                }}"
+                >First</vscode-radio
+              >
+            </div>
+            <div class="dropdown-container">
+              <vscode-radio
+                name="row-count"
+                value="last"
+                .checked="${this.isRowLimitLast}"
+                @change="${(event: Event) => {
+                  /* istanbul ignore next */
+                  if ((event.target as HTMLInputElement).checked) {
+                    this.isRowLimitLast = true;
+                    this.requestChange();
+                  }
+                }}"
+                >Last</vscode-radio
+              >
+            </div>
+          </vscode-radio-group>
+        </div>
+      `;
+    } else {
+      this.rowLimit = false;
+      this.rowLimitCount = "100000";
+      this.isRowLimitLast = true;
+    }
   }
 
   renderApiOptions() {
@@ -795,7 +884,7 @@ export class KdbDataSourceView extends LitElement {
                       >End Time</vscode-text-field
                     >
                   </div>
-
+                  ${this.renderRowCountOptions()}
                   <div class="row align-bottom">
                     <vscode-checkbox
                       .checked="${this.filled}"

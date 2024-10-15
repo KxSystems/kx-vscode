@@ -15,12 +15,12 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 import mock from "mock-fs";
+import { env } from "node:process";
 import { TreeItemCollapsibleState } from "vscode";
 import { ext } from "../../src/extensionVariables";
 import * as QTable from "../../src/ipc/QTable";
 import { CancellationEvent } from "../../src/models/cancellationEvent";
 import { QueryResultType } from "../../src/models/queryResult";
-import { ServerDetails, ServerType } from "../../src/models/server";
 import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import { QueryHistoryProvider } from "../../src/services/queryHistoryProvider";
 import * as coreUtils from "../../src/utils/core";
@@ -49,9 +49,13 @@ import {
   DTimestampClass,
 } from "../../src/ipc/cClasses";
 import { DataSourceTypes } from "../../src/models/dataSource";
-import { InsightDetails } from "../../src/models/insights";
 import { LocalConnection } from "../../src/classes/localConnection";
 import { Labels } from "../../src/models/labels";
+import {
+  InsightDetails,
+  ServerDetails,
+  ServerType,
+} from "../../src/models/connectionsModels";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;
@@ -305,6 +309,18 @@ describe("Utils", () => {
         coreUtils.kdbOutputLog(message, type);
 
         appendLineSpy.calledOnce;
+        appendLineSpy.calledWithMatch(message);
+        appendLineSpy.calledWithMatch(type);
+      });
+
+      it("kdbOutputLog should log message with date and ERROR type", () => {
+        const message = "test message";
+        const type = "ERROR";
+
+        coreUtils.kdbOutputLog(message, type);
+
+        appendLineSpy.calledOnce;
+        showErrorMessageSpy.calledOnce;
         appendLineSpy.calledWithMatch(message);
         appendLineSpy.calledWithMatch(type);
       });
@@ -966,7 +982,6 @@ describe("Utils", () => {
         inputSample.rows = [{ Value: "hello" }];
         const expectedOutput = [{ Value: "hello" }];
         const actualOutput = queryUtils.getValueFromArray(inputSample);
-        console.log(JSON.stringify(actualOutput.rows));
         assert.deepEqual(actualOutput.rows, expectedOutput);
       });
 
@@ -1695,6 +1710,10 @@ describe("Utils", () => {
         labelName: "label1",
         connections: ["conn1", "conn2"],
       });
+      getConfigurationStub.returns({
+        get: sinon.stub(),
+        update: sinon.stub(),
+      });
 
       LabelsUtils.removeConnFromLabels("conn1");
 
@@ -1832,6 +1851,80 @@ describe("Utils", () => {
     it("should return false if label content is not changed", () => {
       const result = LabelsUtils.isLabelContentChanged("label1");
       assert.strictEqual(result, false);
+    });
+  });
+
+  describe("checkLocalInstall", () => {
+    let getConfigurationStub: sinon.SinonStub;
+    let updateConfigurationStub: sinon.SinonStub;
+    let showInformationMessageStub: sinon.SinonStub;
+    let executeCommandStub: sinon.SinonStub;
+    let QHOME = "";
+
+    beforeEach(() => {
+      getConfigurationStub = sinon
+        .stub(vscode.workspace, "getConfiguration")
+        .returns({
+          get: sinon.stub().returns(false),
+          update: sinon.stub().resolves(),
+        } as any);
+      updateConfigurationStub = getConfigurationStub()
+        .update as sinon.SinonStub;
+      showInformationMessageStub = sinon
+        .stub(vscode.window, "showInformationMessage")
+        .resolves();
+      executeCommandStub = sinon
+        .stub(vscode.commands, "executeCommand")
+        .resolves();
+      QHOME = env.QHOME;
+      env.QHOME = "";
+    });
+
+    afterEach(() => {
+      env.QHOME = QHOME;
+      sinon.restore();
+    });
+
+    it("should return if 'neverShowQInstallAgain' is true", async () => {
+      getConfigurationStub()
+        .get.withArgs("kdb.neverShowQInstallAgain")
+        .returns(true);
+
+      await coreUtils.checkLocalInstall(true);
+
+      assert.strictEqual(showInformationMessageStub.called, false);
+      assert.strictEqual(executeCommandStub.called, false);
+    });
+    it("should continue if 'neverShowQInstallAgain' is false", async () => {
+      getConfigurationStub()
+        .get.withArgs("kdb.neverShowQInstallAgain")
+        .returns(false);
+
+      await coreUtils.checkLocalInstall(true);
+
+      assert.strictEqual(showInformationMessageStub.called, true);
+      assert.strictEqual(executeCommandStub.called, true);
+    });
+
+    it("should handle 'Never show again' response", async () => {
+      getConfigurationStub()
+        .get.withArgs("kdb.qHomeDirectory")
+        .returns(undefined);
+      getConfigurationStub()
+        .get.withArgs("kdb.neverShowQInstallAgain")
+        .returns(false);
+      showInformationMessageStub.resolves("Never show again");
+
+      await coreUtils.checkLocalInstall();
+
+      assert.strictEqual(
+        updateConfigurationStub.calledWith(
+          "kdb.neverShowQInstallAgain",
+          true,
+          vscode.ConfigurationTarget.Global,
+        ),
+        true,
+      );
     });
   });
 });

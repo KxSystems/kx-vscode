@@ -26,10 +26,8 @@ import {
 import { ext } from "../extensionVariables";
 import { DataSourceFiles } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
-import { InsightDetails, Insights } from "../models/insights";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
-import { Server, ServerDetails, ServerType } from "../models/server";
 import { ServerObject } from "../models/serverObject";
 import { DataSourcesPanel } from "../panels/datasource";
 import {
@@ -69,6 +67,15 @@ import { ConnectionManagementService } from "../services/connectionManagerServic
 import { InsightsConnection } from "../classes/insightsConnection";
 import { MetaContentProvider } from "../services/metaContentProvider";
 import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
+import {
+  ExportedConnections,
+  InsightDetails,
+  Insights,
+  Server,
+  ServerDetails,
+  ServerType,
+} from "../models/connectionsModels";
+import * as fs from "fs";
 
 export async function addNewConnection(): Promise<void> {
   NewConnectionPannel.close();
@@ -370,7 +377,7 @@ export async function addKdbConnection(
           tls: kdbData.tls,
         },
       };
-      if (servers[0].managed) {
+      if (servers.key.managed) {
         await addLocalConnectionContexts(getServerName(servers[0]));
       }
     } else {
@@ -533,6 +540,154 @@ export async function editKdbConnection(
   }
 }
 
+// test fs readFileSync unit tests are flaky, no correct way to test them
+/* istanbul ignore next */
+export async function importConnections() {
+  const options = {
+    canSelectMany: false,
+    openLabel: "Select JSON File",
+    filters: {
+      "JSON Files": ["json"],
+      "All Files": ["*"],
+    },
+  };
+
+  const fileUri = await window.showOpenDialog(options);
+  if (!fileUri || fileUri.length === 0) {
+    kdbOutputLog("[IMPORT CONNECTION]No file selected", "ERROR");
+    return;
+  }
+  const filePath = fileUri[0].fsPath;
+  const fileContent = fs.readFileSync(filePath, "utf8");
+
+  let importedConnections: ExportedConnections;
+  try {
+    importedConnections = JSON.parse(fileContent);
+  } catch (e) {
+    kdbOutputLog("[IMPORT CONNECTION]Invalid JSON format", "ERROR");
+    return;
+  }
+
+  if (!isValidExportedConnections(importedConnections)) {
+    kdbOutputLog(
+      "[IMPORT CONNECTION]JSON does not match the required format",
+      "ERROR",
+    );
+    return;
+  }
+  if (
+    importedConnections.connections.KDB.length === 0 &&
+    importedConnections.connections.Insights.length === 0
+  ) {
+    kdbOutputLog(
+      "[IMPORT CONNECTION]There is no KDB or Insights connections to import in this JSON file",
+      "ERROR",
+    );
+    return;
+  }
+  await addImportedConnections(importedConnections);
+}
+
+export async function addImportedConnections(
+  importedConnections: ExportedConnections,
+) {
+  const connMangService = new ConnectionManagementService();
+  const existingAliases = connMangService.retrieveListOfConnectionsNames();
+  const localAlreadyExists = existingAliases.has("local");
+
+  const hasDuplicates =
+    importedConnections.connections.Insights.some((connection) =>
+      existingAliases.has(
+        connMangService.checkConnAlias(connection.alias, true),
+      ),
+    ) ||
+    importedConnections.connections.KDB.some((connection) =>
+      existingAliases.has(
+        connMangService.checkConnAlias(
+          connection.serverAlias,
+          false,
+          localAlreadyExists,
+        ),
+      ),
+    );
+
+  let res: "Duplicate" | "Overwrite" | "Cancel" | undefined = "Duplicate";
+  if (hasDuplicates) {
+    res = await window.showInformationMessage(
+      "You are importing connections with the same name. Would you like to duplicate, overwrite or cancel the import?",
+      "Duplicate",
+      "Overwrite",
+      "Cancel",
+    );
+    if (!res || res === "Cancel") {
+      return;
+    }
+  }
+
+  let counter = 1;
+  const insights: InsightDetails[] = [];
+  for (const connection of importedConnections.connections.Insights) {
+    let alias = connMangService.checkConnAlias(connection.alias, true);
+
+    if (res === "Overwrite") {
+      insights.push(connection);
+    } else {
+      while (existingAliases.has(alias)) {
+        alias = `${connection.alias}-${counter}`;
+        counter++;
+      }
+      connection.alias = alias;
+      await addInsightsConnection(connection);
+    }
+    existingAliases.add(alias);
+    counter = 1;
+  }
+
+  const servers: ServerDetails[] = [];
+  for (const connection of importedConnections.connections.KDB) {
+    let alias = connMangService.checkConnAlias(
+      connection.serverAlias,
+      false,
+      localAlreadyExists,
+    );
+
+    if (res === "Overwrite") {
+      servers.push(connection);
+    } else {
+      while (existingAliases.has(alias)) {
+        alias = `${connection.serverAlias}-${counter}`;
+        counter++;
+      }
+      connection.serverAlias = alias;
+      const isManaged = alias === "local";
+      await addKdbConnection(connection, isManaged);
+    }
+    existingAliases.add(alias);
+    counter = 1;
+  }
+
+  if (insights.length > 0) {
+    const config = insights.reduce((config, connection) => {
+      config[connection.alias] = connection;
+      return config;
+    }, getInsights() || {});
+    await updateInsights(config);
+    ext.serverProvider.refreshInsights(config);
+  }
+
+  if (servers.length > 0) {
+    const config = servers.reduce((config, connection) => {
+      config[connection.serverAlias] = connection;
+      return config;
+    }, getServers() || {});
+    await updateServers(config);
+    ext.serverProvider.refresh(config);
+  }
+
+  kdbOutputLog("[IMPORT CONNECTION]Connections imported successfully", "INFO");
+  window.showInformationMessage("Connections imported successfully");
+}
+
 export async function removeConnection(viewItem: KdbNode | InsightsNode) {
   const connMngService = new ConnectionManagementService();
   removeConnFromLabels(
@@ -545,7 +700,6 @@ export async function removeConnection(viewItem: KdbNode | InsightsNode) {
 
 export async function connect(connLabel: string): Promise<void> {
   const connMngService = new ConnectionManagementService();
-  commands.executeCommand("kdb-results.focus");
   ExecutionConsole.start();
   const viewItem = connMngService.retrieveConnection(connLabel);
   if (viewItem === undefined) {
@@ -623,14 +777,12 @@ export async function executeQuery(
   context: string,
   isPython: boolean,
   isWorkbook: boolean,
+  isFromConnTree?: boolean,
 ): Promise<void> {
   const connMngService = new ConnectionManagementService();
   const queryConsole = ExecutionConsole.start();
   if (connLabel === "") {
     if (ext.activeConnection === undefined) {
-      window.showErrorMessage(
-        "No active connection found. Connect to one connection.",
-      );
       kdbOutputLog(
         "No active connection found. Connect to one connection.",
         "ERROR",
@@ -660,6 +812,8 @@ export async function executeQuery(
       isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
       isPython,
       false,
+      undefined,
+      isFromConnTree,
     );
     return undefined;
   }
@@ -698,6 +852,7 @@ export async function executeQuery(
         isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
         isPython,
         duration,
+        isFromConnTree,
       );
     } else {
       writeQueryResultsToConsole(
@@ -709,6 +864,7 @@ export async function executeQuery(
         isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
         isPython,
         duration,
+        isFromConnTree,
       );
     }
   }
@@ -817,6 +973,7 @@ export function rerunQuery(rerunQueryElement: QueryHistory) {
       context,
       rerunQueryElement.language !== "q",
       !!rerunQueryElement.isWorkbook,
+      !!rerunQueryElement.isFromConnTree,
     );
   } else {
     const dsFile = rerunQueryElement.query as DataSourceFiles;
@@ -876,6 +1033,63 @@ export async function openMeta(node: MetaObjectPayloadNode | InsightsMetaNode) {
   }
 }
 
+export async function exportConnections(connLabel?: string) {
+  const connMngService = new ConnectionManagementService();
+
+  const exportAuth = await window.showQuickPick(["Yes", "No"], {
+    placeHolder: "Do you want to export username and password?",
+  });
+
+  if (!exportAuth) {
+    kdbOutputLog(
+      "[EXPORT CONNECTIONS] Export operation was cancelled by the user",
+      "INFO",
+    );
+    return;
+  }
+
+  const includeAuth = exportAuth === "Yes";
+  if (includeAuth) {
+    await connMngService.retrieveUserPass();
+  }
+  const doc = await connMngService.exportConnection(connLabel, includeAuth);
+  if (doc && doc !== "") {
+    const formattedDoc = JSON.stringify(JSON.parse(doc), null, 2);
+    const uri = await window.showSaveDialog({
+      saveLabel: "Save Exported Connections",
+      filters: {
+        "JSON Files": ["json"],
+        "All Files": ["*"],
+      },
+    });
+    if (uri) {
+      fs.writeFile(uri.fsPath, formattedDoc, (err) => {
+        if (err) {
+          kdbOutputLog(
+            `[EXPORT CONNECTIONS] Error saving file: ${err.message}`,
+            "ERROR",
+          );
+          window.showErrorMessage(`Error saving file: ${err.message}`);
+        } else {
+          workspace.openTextDocument(uri).then((document) => {
+            window.showTextDocument(document, { preview: false });
+          });
+        }
+      });
+    } else {
+      kdbOutputLog(
+        "[EXPORT CONNECTIONS] Save operation was cancelled by the user",
+        "INFO",
+      );
+    }
+  } else {
+    kdbOutputLog(
+      "[EXPORT CONNECTIONS] No connections found to be exported",
+      "ERROR",
+    );
+  }
+}
+
 export function writeQueryResultsToConsole(
   result: string | string[],
   query: string,
@@ -885,6 +1099,7 @@ export function writeQueryResultsToConsole(
   type?: string,
   isPython?: boolean,
   duration?: string,
+  isFromConnTree?: boolean,
 ): void {
   const queryConsole = ExecutionConsole.start();
   const isNonEmptyArray = Array.isArray(result) && result.length > 0;
@@ -900,6 +1115,7 @@ export function writeQueryResultsToConsole(
       type,
       isPython,
       duration,
+      isFromConnTree,
     );
   } else {
     if (!checkIfIsDatasource(type)) {
@@ -914,6 +1130,7 @@ export function writeQueryResultsToConsole(
         isPython,
         false,
         duration,
+        isFromConnTree,
       );
     }
   }
@@ -928,8 +1145,9 @@ export function writeQueryResultsToView(
   type?: string,
   isPython?: boolean,
   duration?: string,
+  isFromConnTree?: boolean,
 ): void {
-  commands.executeCommand("kdb.resultsPanel.update", result, isInsights, type);
+  commands.executeCommand("kdb.resultsPanel.update", result, isInsights);
   if (!checkIfIsDatasource(type)) {
     addQueryHistory(
       query,
@@ -942,6 +1160,7 @@ export function writeQueryResultsToView(
       undefined,
       undefined,
       duration,
+      isFromConnTree,
     );
   }
 }
@@ -995,4 +1214,13 @@ export function writeScratchpadResult(
       );
     }
   }
+}
+
+function isValidExportedConnections(data: any): data is ExportedConnections {
+  return (
+    data &&
+    data.connections &&
+    Array.isArray(data.connections.Insights) &&
+    Array.isArray(data.connections.KDB)
+  );
 }

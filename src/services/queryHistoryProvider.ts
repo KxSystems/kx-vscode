@@ -109,13 +109,35 @@ export class QueryHistoryTreeItem extends TreeItem {
         tooltipMd.appendMarkdown(
           "- Workbook: " + this.details.executorName + " \n",
         );
+      } else if (this.details.isFromConnTree) {
+        tooltipMd.appendMarkdown("- Executiom from: Connection Tree \n");
+        tooltipMd.appendMarkdown(
+          "- Category: " + this.details.executorName + " \n",
+        );
       } else {
         tooltipMd.appendMarkdown(
           "- File: " + this.details.executorName + " \n",
         );
       }
-      tooltipMd.appendMarkdown("- Query: \n");
-      tooltipMd.appendCodeblock(this.details.query, codeType);
+      tooltipMd.appendMarkdown("- Query: ");
+      let queryText = this.details.query;
+
+      if (typeof queryText === "string") {
+        const lines = queryText.split("\n");
+        if (lines.length > 1) {
+          queryText =
+            lines[0].slice(0, 77) +
+            (lines[0].length > 77 ? "... " : "") +
+            "\n" +
+            lines[1].slice(0, 77) +
+            (lines[1].length > 77 ? "... " : "");
+        } else {
+          queryText =
+            lines[0].slice(0, 77) + (lines[0].length > 77 ? "... " : "");
+        }
+      }
+
+      tooltipMd.appendCodeblock(queryText, codeType);
     } else {
       tooltipMd.appendMarkdown(
         "- Data Source: **" + this.details.executorName + "**  \n",

@@ -42,7 +42,7 @@ export class InsightsConnection {
   public node: InsightsNode;
   public meta?: MetaObject;
   public config?: InsightsConfig;
-  public insightsVersion?: string;
+  public insightsVersion?: number;
   public connEndpoints?: InsightsEndpoints;
 
   constructor(connLabel: string, node: InsightsNode) {
@@ -145,50 +145,46 @@ export class InsightsConnection {
     const version = match ? match[0].replace(/-/g, "") : null;
     if (version) {
       const [major, minor, _path] = version.split(".");
-      this.insightsVersion = `${major}.${minor}`;
+      this.insightsVersion = parseFloat(`${major}.${minor}`);
     }
   }
 
   public defineEndpoints() {
-    if (this.insightsVersion) {
-      switch (this.insightsVersion) {
-        // uncomment it when SCRATCHPAD merge to Insights
-        // case "1.11":
-        //   this.connEndpoints = {
-        //     scratchpad: {
-        //       scratchpad: "scratchpad-manager/api/v1/execute/display",
-        //       import: "scratchpad-manager/api/v1/execute/import/data",
-        //       importSql: "scratchpad-manager/api/v1/execute/import/sql",
-        //       importQsql: "scratchpad-manager/api/v1/execute/import/qsql",
-        //       reset: "scratchpad-manager/api/v1/execute/reset",
-        //     },
-        //     serviceGateway: {
-        //       meta: "servicegateway/meta",
-        //       data: "servicegateway/data",
-        //       sql: "servicegateway/qe/sql",
-        //       qsql: "servicegateway/qe/qsql",
-        //     },
-        //   };
-        //   break;
-        default:
-          this.connEndpoints = {
-            scratchpad: {
-              scratchpad: "servicebroker/scratchpad/display",
-              import: "servicebroker/scratchpad/import/data",
-              importSql: "servicebroker/scratchpad/import/sql",
-              importQsql: "servicebroker/scratchpad/import/qsql",
-              reset: "servicebroker/scratchpad/reset",
-            },
-            serviceGateway: {
-              meta: "servicegateway/meta",
-              data: "servicegateway/data",
-              sql: "servicegateway/qe/sql",
-              qsql: "servicegateway/qe/qsql",
-            },
-          };
-          break;
-      }
-    }
+    this.connEndpoints = {
+      scratchpad: {
+        scratchpad: "servicebroker/scratchpad/display",
+        import: "servicebroker/scratchpad/import/data",
+        importSql: "servicebroker/scratchpad/import/sql",
+        importQsql: "servicebroker/scratchpad/import/qsql",
+        reset: "servicebroker/scratchpad/reset",
+      },
+      serviceGateway: {
+        meta: "servicegateway/meta",
+        data: "servicegateway/data",
+        sql: "servicegateway/qe/sql",
+        qsql: "servicegateway/qe/qsql",
+      },
+    };
+    // uncomment this WHEN the insights version is available
+    // if (this.insightsVersion) {
+    //   if (this.insightsVersion >= 1.12) {
+    //     this.connEndpoints = {
+    //       scratchpad: {
+    //         scratchpad: "scratchpad/execute/display",
+    //         import: "scratchpad/execute/import/data",
+    //         importSql: "scratchpad/execute/import/sql",
+    //         importQsql: "scratchpad/execute/import/qsql",
+    //         reset: "scratchpad/reset",
+    //       },
+    //       serviceGateway: {
+    //         meta: "servicegateway/meta",
+    //         data: "servicegateway/data",
+    //         sql: "servicegateway/qe/sql",
+    //         qsql: "servicegateway/qe/qsql",
+    //       },
+    //     };
+    //   }
+    // }
   }
 
   public retrieveEndpoints(
@@ -350,7 +346,7 @@ export class InsightsConnection {
         isTableView: false,
         params: queryParams,
       };
-      window.withProgress(
+      await window.withProgress(
         {
           location: ProgressLocation.Notification,
           cancellable: false,
@@ -362,33 +358,32 @@ export class InsightsConnection {
 
           progress.report({ message: "Populating scratchpad..." });
 
-          const scratchpadResponse = await axios.post(
-            scratchpadURL.toString(),
-            body,
-            headers,
-          );
-
-          kdbOutputLog(
-            `Executed successfully, stored in ${variableName}.`,
-            "INFO",
-          );
-          kdbOutputLog(
-            `[SCRATCHPAD] Status: ${scratchpadResponse.status}`,
-            "INFO",
-          );
-          kdbOutputLog(
-            `[SCRATCHPAD] Populated scratchpad with the following params: ${JSON.stringify(body.params)}`,
-            "INFO",
-          );
-          window.showInformationMessage(
-            `Executed successfully, stored in ${variableName}.`,
-          );
-          Telemetry.sendEvent(
-            "Datasource." + dsTypeString + ".Scratchpad.Populated",
-          );
-
-          const p = new Promise<void>((resolve) => resolve());
-          return p;
+          return await axios
+            .post(scratchpadURL.toString(), body, headers)
+            .then((response: any) => {
+              if (response.data.error) {
+                kdbOutputLog(
+                  `[SCRATCHPAD] Error occured while populating scratchpad: ${response.data.errorMsg}`,
+                  "ERROR",
+                );
+              } else {
+                kdbOutputLog(
+                  `Executed successfully, stored in ${variableName}.`,
+                  "INFO",
+                );
+                kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
+                kdbOutputLog(
+                  `[SCRATCHPAD] Populated scratchpad with the following params: ${JSON.stringify(body.params)}`,
+                  "INFO",
+                );
+                window.showInformationMessage(
+                  `Executed successfully, stored in ${variableName}.`,
+                );
+                Telemetry.sendEvent(
+                  "Datasource." + dsTypeString + ".Scratchpad.Populated",
+                );
+              }
+            });
         },
       );
     } else {
