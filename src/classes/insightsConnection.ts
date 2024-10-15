@@ -63,6 +63,7 @@ export class InsightsConnection {
       if (token) {
         await this.getConfig();
         await this.getMeta();
+        await this.getScratchpadQuery("");
       }
     });
     return this.connected;
@@ -447,18 +448,30 @@ export class InsightsConnection {
               httpsAgent: getHttpsAgent(this.node.details.insecure),
             })
             .then((response: any) => {
-              kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
-              if (isTableView && !response.data.error) {
-                const buffer = new Uint8Array(
-                  response.data.data.map((x: string) => parseInt(x, 16)),
-                ).buffer;
-
-                response.data.data = handleWSResults(buffer);
-                response.data.data = handleScratchpadTableRes(
-                  response.data.data,
+              if (response.data.error) {
+                kdbOutputLog(
+                  `[SCRATCHPAD] Error occured while executing scratchpad: ${response.data.errorMsg}`,
+                  "ERROR",
                 );
+              } else if (query === "") {
+                kdbOutputLog(
+                  `[SCRATCHPAD] scratchpad created for connection: ${this.connLabel}`,
+                  "INFO",
+                );
+              } else {
+                kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
+                if (isTableView && !response.data.error) {
+                  const buffer = new Uint8Array(
+                    response.data.data.map((x: string) => parseInt(x, 16)),
+                  ).buffer;
+
+                  response.data.data = handleWSResults(buffer);
+                  response.data.data = handleScratchpadTableRes(
+                    response.data.data,
+                  );
+                }
+                return response.data;
               }
-              return response.data;
             });
           return spRes;
         },
