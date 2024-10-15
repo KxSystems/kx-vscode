@@ -12,7 +12,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - All files in the workspace are considered when using language server features
 - Show call hierarchy is implemented in language server
 - Query history shows an ellipsis of the query execution text
-- Add limit option to datasource
+- Added limit option to datasource for 1.11 + versions of Insights Enterprise connections
 
 ### Fixes
 
