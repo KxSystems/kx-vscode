@@ -1,0 +1,59 @@
+.sl-theme-dark {
+  color-scheme: dark;
+  --sl-input-border-color: var(--vscode-input-border, transparent);
+}
+
+.sl-theme-light {
+  --sl-input-border-color: var(
+    --vscode-input-border,
+    var(--vscode-inputOption-hoverBackground)
+  );
+}
+
+.sl-theme-dark,
+.sl-theme-light {
+  --sl-focus-ring-width: 1px;
+  --sl-focus-ring-offset: 1px;
+  --sl-focus-ring-style: solid;
+  --sl-focus-ring-color: var(--vscode-focusBorder);
+
+  --sl-button-font-size-medium: var(--vscode-font-size);
+  --sl-input-font-size-medium: var(--vscode-font-size);
+  --sl-input-label-font-size-medium: var(--vscode-font-size);
+  --sl-input-font-family: var(--vscode-font-family);
+  --sl-input-font-weight: var(--vscode-font-weight);
+
+  --sl-input-border-width: 1px;
+  --sl-input-border-radius-medium: 2px;
+  --sl-input-border-color-hover: var(--sl-input-border-color);
+  --sl-input-border-color-focus: var(--vscode-focusBorder);
+
+  --sl-input-height-medium: calc(2rem + 2 * var(--sl-input-border-width));
+  --sl-input-spacing-medium: var(--sl-spacing-x-small);
+  --sl-input-color: var(--vscode-input-foreground);
+  --sl-input-color-hover: var(--vscode-input-foreground);
+  --sl-input-color-focus: var(--vscode-input-foreground);
+  --sl-input-background-color: var(--vscode-input-background);
+  --sl-input-background-color-hover: var(--vscode-input-background);
+  --sl-input-background-color-focus: var(--vscode-input-background);
+  --sl-panel-background-color: var(--vscode-input-background);
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  line-height: 1.5;
+  font-size: var(--vscode-font-size);
+}
+
+body {
+  overflow: hidden;
+  box-sizing: border-box;
+  font-family: var(--vscode-font-family);
+  font-weight: var(--vscode-font-weight);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+  color: var(--vscode-foreground);
+  background-color: var(--vscode-editor-background);
+}
