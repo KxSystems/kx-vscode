@@ -174,26 +174,52 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   convertToGrid(results: any, isInsights: boolean): any {
     const queryResult = isInsights ? results.rows : results;
 
-    const columnDefs = this.generateCoumnDefs(results, isInsights);
     let rowData = [];
-    if (!isInsights && typeof results[0] === "string") {
-      rowData = [];
+    let columnDefs = [];
+
+    if (Array.isArray(queryResult[0])) {
+      if (typeof queryResult[0][0] === "object") {
+        rowData = queryResult[0].map((_, index) => {
+          const row: any = {};
+          queryResult.forEach((subArray: any[]) => {
+            Object.assign(row, subArray[index]);
+          });
+          return row;
+        });
+      } else {
+        rowData = queryResult.map((element: any) => ({ value: element }));
+      }
     } else {
-      rowData = queryResult.map((row: any) => {
-        for (const key in row) {
-          if (Object.prototype.hasOwnProperty.call(row, key)) {
-            row[key] =
-              row[key] !== undefined && row[key] !== null
-                ? this.sanitizeString(row[key])
-                : "";
-          }
-        }
-        return row;
+      rowData = queryResult;
+    }
+
+    if (isInsights) {
+      results.rows = rowData;
+      columnDefs = this.generateCoumnDefs(results, isInsights);
+    } else {
+      columnDefs = this.generateCoumnDefs(rowData, isInsights);
+    }
+
+    if (
+      !columnDefs.some(
+        (col: any) => col.field.toString().toLowerCase() === "index",
+      )
+    ) {
+      rowData = rowData.map((row: any, index: any) => ({
+        index: index + 1,
+        ...row,
+      }));
+      columnDefs.unshift({
+        field: "index",
+        headerName: "Index",
+        cellDataType: "number",
       });
     }
+
     if (rowData.length > 0) {
       ext.resultPanelCSV = this.convertToCsv(rowData).join("\n");
     }
+
     return {
       defaultColDef: {
         sortable: true,
@@ -202,8 +228,8 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         flex: 1,
         minWidth: 100,
       },
-      rowData,
-      columnDefs,
+      rowData: rowData,
+      columnDefs: columnDefs,
       domLayout: "autoHeight",
       pagination: true,
       paginationPageSize: 100,
@@ -212,6 +238,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       suppressContextMenu: true,
       suppressDragLeaveHidesColumns: true,
       tooltipShowDelay: 200,
+      loading: true,
     };
   }
 
@@ -304,7 +331,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
               "ag-grid-community.min.js",
             )}"></script>
           </head>
-          <body>      
+          <body>     
             <div id="results" class="results-view-container">
               <div class="content-wrapper"></div>
             </div>      
@@ -321,7 +348,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
               function restoreColumnWidths(columnWidths) {
                 if (!gridApi || !columnWidths) return;
-                gridApi.applyColumnState({state: columnWidths});
+                gridApi.applyColumnState({state: columnWidths, applyOrder: true,});
               }
 
               window.addEventListener('message', event => {
@@ -333,8 +360,14 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
                   const resultsDiv = document.querySelector('#results .content-wrapper');
                   resultsDiv.innerHTML = ''; 
                   gridDiv.innerHTML = ''; 
+                  const rowData = gridOptions.rowData;
+                  gridOptions.rowData = [];
                   gridApi = agGrid.createGrid(gridDiv, gridOptions);
                   restoreColumnWidths(columnWidths);
+                  setTimeout(() => {
+                    gridApi.setGridOption("rowData", rowData);
+                    gridApi.setGridOption("loading", false);
+                  }, 500);
                   document.getElementById("results").scrollIntoView();
                 } else if (message.command === 'setResultsContent') {
                   const resultsContent = message.results;
