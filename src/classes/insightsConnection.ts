@@ -346,7 +346,7 @@ export class InsightsConnection {
         isTableView: false,
         params: queryParams,
       };
-      window.withProgress(
+      await window.withProgress(
         {
           location: ProgressLocation.Notification,
           cancellable: false,
@@ -358,33 +358,32 @@ export class InsightsConnection {
 
           progress.report({ message: "Populating scratchpad..." });
 
-          const scratchpadResponse = await axios.post(
-            scratchpadURL.toString(),
-            body,
-            headers,
-          );
-
-          kdbOutputLog(
-            `Executed successfully, stored in ${variableName}.`,
-            "INFO",
-          );
-          kdbOutputLog(
-            `[SCRATCHPAD] Status: ${scratchpadResponse.status}`,
-            "INFO",
-          );
-          kdbOutputLog(
-            `[SCRATCHPAD] Populated scratchpad with the following params: ${JSON.stringify(body.params)}`,
-            "INFO",
-          );
-          window.showInformationMessage(
-            `Executed successfully, stored in ${variableName}.`,
-          );
-          Telemetry.sendEvent(
-            "Datasource." + dsTypeString + ".Scratchpad.Populated",
-          );
-
-          const p = new Promise<void>((resolve) => resolve());
-          return p;
+          return await axios
+            .post(scratchpadURL.toString(), body, headers)
+            .then((response: any) => {
+              if (response.data.error) {
+                kdbOutputLog(
+                  `[SCRATCHPAD] Error occured while populating scratchpad: ${response.data.errorMsg}`,
+                  "ERROR",
+                );
+              } else {
+                kdbOutputLog(
+                  `Executed successfully, stored in ${variableName}.`,
+                  "INFO",
+                );
+                kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
+                kdbOutputLog(
+                  `[SCRATCHPAD] Populated scratchpad with the following params: ${JSON.stringify(body.params)}`,
+                  "INFO",
+                );
+                window.showInformationMessage(
+                  `Executed successfully, stored in ${variableName}.`,
+                );
+                Telemetry.sendEvent(
+                  "Datasource." + dsTypeString + ".Scratchpad.Populated",
+                );
+              }
+            });
         },
       );
     } else {

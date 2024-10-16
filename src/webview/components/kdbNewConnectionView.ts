@@ -941,7 +941,7 @@ export class KdbNewConnectionView extends LitElement {
       },
     });
     setTimeout(() => {
-      this.labels[0] = this.newLblName;
+      this.labels.unshift(this.newLblName);
       this.closeModal();
     }, 500);
   }

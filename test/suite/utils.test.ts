@@ -1710,6 +1710,10 @@ describe("Utils", () => {
         labelName: "label1",
         connections: ["conn1", "conn2"],
       });
+      getConfigurationStub.returns({
+        get: sinon.stub(),
+        update: sinon.stub(),
+      });
 
       LabelsUtils.removeConnFromLabels("conn1");
 
