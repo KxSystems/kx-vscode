@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { LitElement, html, css, PropertyValues } from "lit";
+import { LitElement, html, css } from "lit";
 import { repeat } from "lit/directives/repeat.js";
 import { live } from "lit/directives/live.js";
 import { customElement } from "lit/decorators.js";
