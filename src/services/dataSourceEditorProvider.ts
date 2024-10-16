@@ -12,6 +12,7 @@
  */
 
 import {
+  ColorThemeKind,
   CustomTextEditorProvider,
   Disposable,
   ExtensionContext,
@@ -223,23 +224,27 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
   }
 
   private getWebviewContent(webview: Webview) {
-    const webviewUri = getUri(webview, this.context.extensionUri, [
-      "out",
-      "webview.js",
-    ]);
-    const nonce = getNonce();
+    const getResource = (resource: string) =>
+      getUri(webview, this.context.extensionUri, ["out", resource]);
 
     return /* html */ `
       <!DOCTYPE html>
-      <html lang="en">
+      <html lang="en" class="${
+        window.activeColorTheme.kind === ColorThemeKind.Light ||
+        window.activeColorTheme.kind === ColorThemeKind.HighContrastLight
+          ? "sl-theme-light"
+          : "sl-theme-dark"
+      }">
       <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link rel="stylesheet" href="${getResource("light.css")}" />
+        <link rel="stylesheet" href="${getResource("style.css")}" />
+        <script type="module" nonce="${getNonce()}" src="${getResource("webview.js")}"></script>
         <title>DataSource</title>
       </head>
       <body>
         <kdb-data-source-view></kdb-data-source-view>
-        <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
       </body>
       </html>
     `;
