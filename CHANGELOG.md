@@ -2,6 +2,15 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.9.0
+
+### Enhancements
+
+### Fixes
+
+- Fix for results tab flickering , improving of UX
+- Fix for Issue [#382](https://github.com/KxSystems/kx-vscode/issues/382)
+
 # v1.8.0
 
 ### Enhancements
