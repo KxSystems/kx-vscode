@@ -63,6 +63,76 @@ export const shoelaceStyles = css`
   }
 `;
 
+export const dataSourceStyles = css`
+  .container {
+    display: flex;
+    flex-flow: row nowrap;
+    overflow-x: auto;
+    gap: var(--sl-spacing-medium);
+    padding-left: var(--sl-spacing-medium);
+    padding-right: var(--sl-spacing-medium);
+  }
+
+  .tabs {
+    flex-grow: 1;
+  }
+
+  .actions {
+    display: flex;
+    flex-flow: column nowrap;
+    flex-grow: 0;
+    gap: var(--sl-spacing-x-small);
+    margin-top: calc(
+      1rem * var(--sl-line-height-dense) + 3 * var(--sl-spacing-medium)
+    );
+  }
+
+  .actions sl-button-group > sl-button {
+    flex-grow: 1;
+  }
+
+  sl-tab::part(base) {
+    padding: var(--sl-spacing-medium);
+  }
+
+  sl-select::part(listbox) {
+    min-width: max-content;
+  }
+
+  sl-tab-panel {
+    --padding: 0;
+    overflow-y: scroll;
+    padding-top: var(--sl-spacing-medium);
+    padding-bottom: var(--sl-spacing-medium);
+    height: calc(
+      100vh - 1rem * var(--sl-line-height-dense) - 2 * var(--sl-spacing-medium)
+    );
+  }
+
+  sl-input,
+  sl-select {
+    min-width: 13rem;
+    max-width: 13rem;
+  }
+
+  sl-checkbox {
+    padding-bottom: var(--sl-spacing-2x-small);
+  }
+
+  .col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sl-spacing-x-small);
+  }
+
+  .row {
+    display: flex;
+    flex-direction: row;
+    gap: var(--sl-spacing-x-small);
+    align-items: flex-end;
+  }
+`;
+
 export const vscodeStyles = css`
   .dropdown-container {
     box-sizing: border-box;
