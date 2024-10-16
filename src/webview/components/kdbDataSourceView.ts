@@ -775,15 +775,16 @@ export class KdbDataSourceView extends LitElement {
         </div>
 
         <div class="row">
-          <sl-input
-            label="Start Time ${this.selectedServerVersion}"
+          <vscode-text-field
             type="datetime-local"
             class="text-field larger"
             .value="${live(this.startTS)}"
             @input="${(event: Event) => {
               this.startTS = (event.target as HTMLSelectElement).value;
               this.requestChange();
-            }}"></sl-input>
+            }}"
+            >Start Time</vscode-text-field
+          >
 
           <sl-input
             label="End Time"
