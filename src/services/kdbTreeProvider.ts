@@ -23,14 +23,6 @@ import {
 } from "vscode";
 import { ext } from "../extensionVariables";
 import {
-  loadDictionaries,
-  loadFunctions,
-  loadNamespaces,
-  loadTables,
-  loadVariables,
-  loadViews,
-} from "../models/serverObject";
-import {
   getInsightsAlias,
   getServerAlias,
   getServerIconState,
@@ -53,6 +45,7 @@ import {
   Server,
   ServerDetails,
 } from "../models/connectionsModels";
+import { KdbTreeService } from "./kdbTreeService";
 
 export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: EventEmitter<
@@ -214,7 +207,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
 
   /* istanbul ignore next */
   private async getNamespaces(connLabel?: string): Promise<QNamespaceNode[]> {
-    const ns = await loadNamespaces();
+    const ns = await KdbTreeService.loadNamespaces();
     const result = ns.map(
       (x) =>
         new QNamespaceNode(
@@ -272,7 +265,9 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
       serverType instanceof QCategoryNode ? serverType.connLabel : "";
     if (serverType.label === ext.qObjectCategories[0]) {
       // dictionaries
-      const dicts = await loadDictionaries(serverType.contextValue ?? "");
+      const dicts = await KdbTreeService.loadDictionaries(
+        serverType.contextValue ?? "",
+      );
       const result = dicts.map(
         (x) =>
           new QServerNode(
@@ -291,7 +286,9 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
       }
     } else if (serverType.label === ext.qObjectCategories[1]) {
       // functions
-      const funcs = await loadFunctions(serverType.contextValue ?? "");
+      const funcs = await KdbTreeService.loadFunctions(
+        serverType.contextValue ?? "",
+      );
       const result = funcs.map(
         (x) =>
           new QServerNode(
@@ -310,7 +307,9 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
       }
     } else if (serverType.label === ext.qObjectCategories[2]) {
       // tables
-      const tables = await loadTables(serverType.contextValue ?? "");
+      const tables = await KdbTreeService.loadTables(
+        serverType.contextValue ?? "",
+      );
       const result = tables.map(
         (x) =>
           new QServerNode(
@@ -329,7 +328,9 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
       }
     } else if (serverType.label === ext.qObjectCategories[3]) {
       // variables
-      const vars = await loadVariables(serverType.contextValue ?? "");
+      const vars = await KdbTreeService.loadVariables(
+        serverType.contextValue ?? "",
+      );
       const result = vars.map(
         (x) =>
           new QServerNode(
@@ -348,7 +349,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
       }
     } else if (serverType.label === ext.qObjectCategories[4]) {
       // views
-      const views = await loadViews();
+      const views = await KdbTreeService.loadViews();
       const result = views.map(
         (x) =>
           new QServerNode(
