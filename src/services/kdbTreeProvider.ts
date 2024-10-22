@@ -600,13 +600,18 @@ export class InsightsNode extends TreeItem {
     public readonly details: InsightDetails,
     public readonly collapsibleState: TreeItemCollapsibleState,
   ) {
+    super(label, collapsibleState);
+    this.initializeNode();
+  }
+
+  async initializeNode() {
     // set context for root nodes
-    if (ext.kdbinsightsNodes.indexOf(label) === -1) {
-      const indexOriginalLabel = ext.kdbinsightsNodes.indexOf(label);
+    if (ext.kdbinsightsNodes.indexOf(this.label) === -1) {
+      const indexOriginalLabel = ext.kdbinsightsNodes.indexOf(this.label);
       if (indexOriginalLabel !== -1) {
         ext.kdbinsightsNodes.splice(indexOriginalLabel, 1);
       }
-      ext.kdbinsightsNodes.push(label);
+      ext.kdbinsightsNodes.push(this.label);
       commands.executeCommand(
         "setContext",
         "kdb.insightsNodes",
@@ -614,18 +619,23 @@ export class InsightsNode extends TreeItem {
       );
     }
 
-    super(label, collapsibleState);
-    this.tooltip = this.getTooltip();
+    this.tooltip = await this.getTooltip();
     this.description = this.getDescription();
   }
 
-  getTooltip(): MarkdownString {
+  async getTooltip(): Promise<MarkdownString> {
+    const connService = new ConnectionManagementService();
     const tooltipMd = new MarkdownString();
     const title = `${this.label} ${getStatus(this.label)}`;
-    tooltipMd.appendMarkdown(`### ${title}\n`);
+    tooltipMd.appendMarkdown(`### ${title} \n`);
     tooltipMd.appendMarkdown(
       `${this.details.server.replace(/:\/\//g, "&#65279;://")}`,
     );
+    tooltipMd.appendMarkdown(`${this.details.alias} \n`);
+    const version = await connService.retrieveInsightsConnVersion(this.label);
+    if (version !== 0) {
+      tooltipMd.appendMarkdown(`\nVersion: ${version}`);
+    }
     return tooltipMd;
   }
 
