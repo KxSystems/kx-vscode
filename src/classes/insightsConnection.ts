@@ -35,6 +35,7 @@ import {
 } from "../utils/core";
 import { InsightsConfig, InsightsEndpoints } from "../models/config";
 import { convertTimeToTimestamp } from "../utils/dataSource";
+import { ScratchpadRequestBody } from "../models/scratchpad";
 
 export class InsightsConnection {
   public connected: boolean;
@@ -417,14 +418,22 @@ export class InsightsConnection {
       if (username === undefined || username.preferred_username === "") {
         invalidUsernameJWT(this.connLabel);
       }
-      const body = {
+      const body: ScratchpadRequestBody = {
         expression: query,
-        isTableView,
         language: !isPython ? "q" : "python",
         context: context || ".",
         sampleFn: "first",
         sampleSize: 10000,
       };
+
+      if (this.insightsVersion) {
+        if (this.insightsVersion >= 1.11) {
+          body.returnFormat = isTableView ? "structuredText" : "text";
+        } else {
+          body.isTableView = isTableView;
+        }
+      }
+
       const headers = {
         Authorization: `Bearer ${token.accessToken}`,
         Username: username.preferred_username,
