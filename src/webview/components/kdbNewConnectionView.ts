@@ -27,7 +27,7 @@ import {
 
 @customElement("kdb-new-connection-view")
 export class KdbNewConnectionView extends LitElement {
-  static styles = [shoelaceStyles, kdbStyles, newConnectionStyles];
+  static readonly styles = [shoelaceStyles, kdbStyles, newConnectionStyles];
   selectedTab = ConnectionType.BundledQ;
   lblColorsList: LabelColors[] = [];
   lblNamesList: Labels[] = [];
