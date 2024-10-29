@@ -235,6 +235,10 @@ export const newConnectionStyles = css`
     word-wrap: break-word;
   }
 
+  .tabs {
+    flex-grow: 1;
+  }
+
   .option-description {
     color: var(--vscode-foreground);
     font-size: 12px;
@@ -249,6 +253,11 @@ export const newConnectionStyles = css`
 
   .content-wrapper {
     display: flex;
+    flex-flow: row nowrap;
+    overflow-x: auto;
+    gap: var(--sl-spacing-medium);
+    padding-left: var(--sl-spacing-medium);
+    padding-right: var(--sl-spacing-medium);
     align-content: center;
     justify-content: center;
     font-family: var(--vscode-font-family);

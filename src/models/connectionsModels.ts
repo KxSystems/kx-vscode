@@ -11,7 +11,11 @@
  * specific language governing permissions and limitations under the License.
  */
 
-//TODO: start to migrate all connections models to here
+export const enum ConnectionType {
+  BundledQ,
+  Kdb,
+  Insights,
+}
 
 export enum ServerType {
   INSIGHTS,
