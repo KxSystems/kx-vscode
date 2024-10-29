@@ -48,7 +48,6 @@ body {
 }
 
 body {
-  overflow: hidden;
   box-sizing: border-box;
   font-family: var(--vscode-font-family);
   font-weight: var(--vscode-font-weight);
