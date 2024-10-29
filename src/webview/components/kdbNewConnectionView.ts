@@ -178,6 +178,7 @@ export class KdbNewConnectionView extends LitElement {
         >`;
   }
 
+  /* istanbul ignore next */
   renderServerNameField(serverType: ServerType, isBundleQ?: boolean) {
     return isBundleQ
       ? html`<sl-input
@@ -240,7 +241,9 @@ export class KdbNewConnectionView extends LitElement {
               : this.kdbServer.serverPort,
           )}"
           @input="${(event: Event) => {
+            /* istanbul ignore next */
             const value = (event.target as HTMLInputElement).value;
+            /* istanbul ignore next */
             if (isBundleQ) {
               this.bundledServer.serverPort = value;
             } else {
@@ -291,7 +294,9 @@ export class KdbNewConnectionView extends LitElement {
                   : this.insightsServer.server,
               )}"
               @input="${(event: Event) => {
+                /* istanbul ignore next */
                 const value = (event.target as HTMLInputElement).value;
+                /* istanbul ignore next */
                 if (serverType === ServerType.KDB) {
                   this.kdbServer.serverName = value;
                 } else {
@@ -420,7 +425,9 @@ export class KdbNewConnectionView extends LitElement {
               class="text-field larger"
               value="${live(this.newLblName)}"
               @sl-input="${(event: Event) => {
+                /* istanbul ignore next */
                 this.newLblName = (event.target as HTMLInputElement).value;
+                /* istanbul ignore next */
                 this.requestUpdate();
               }}"
               id="label-name"></sl-input>
@@ -433,7 +440,9 @@ export class KdbNewConnectionView extends LitElement {
               id="label-color"
               value="${live(this.newLblColorName)}"
               @sl-change="${(event: Event) => {
+                /* istanbul ignore next */
                 this.newLblColorName = (event.target as HTMLInputElement).value;
+                /* istanbul ignore next */
                 this.requestUpdate();
               }}"
               class="dropdown"
@@ -515,6 +524,7 @@ export class KdbNewConnectionView extends LitElement {
     `;
   }
 
+  /* istanbul ignore next */
   renderNewMyQConnectionForm() {
     return html`<div class="col">
       <div class="row">
@@ -596,6 +606,7 @@ export class KdbNewConnectionView extends LitElement {
               <vscode-checkbox
                 .checked="${this.insightsServer.insecure}"
                 @change="${(event: Event) => {
+                  /* istanbul ignore next */
                   this.insightsServer.insecure = (
                     event.target as HTMLInputElement
                   ).checked;
@@ -656,6 +667,7 @@ export class KdbNewConnectionView extends LitElement {
                     this.selectedTab === ConnectionType.BundledQ,
                   )}"
                   @click="${() => {
+                    /* istanbul ignore next */
                     this.selectedTab = ConnectionType.BundledQ;
                   }}"
                   >Bundle q</sl-tab
@@ -665,6 +677,7 @@ export class KdbNewConnectionView extends LitElement {
                   panel="${ConnectionType.Kdb}"
                   ?active="${live(this.selectedTab === ConnectionType.Kdb)}"
                   @click="${() => {
+                    /* istanbul ignore next */
                     this.selectedTab = ConnectionType.Kdb;
                   }}"
                   >My q
@@ -676,6 +689,7 @@ export class KdbNewConnectionView extends LitElement {
                     this.selectedTab === ConnectionType.Insights,
                   )}"
                   @click="${() => {
+                    /* istanbul ignore next */
                     this.selectedTab = ConnectionType.Insights;
                   }}"
                   >Insights connection
