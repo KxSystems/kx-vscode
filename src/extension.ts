@@ -417,9 +417,20 @@ export async function activate(context: ExtensionContext) {
         await stopLocalProcess(viewItem);
       },
     ),
-    commands.registerCommand("kdb.terminal.run", () => {
-      const filename = ext.activeTextEditor?.document.fileName;
-      if (filename) runQFileTerminal(filename);
+    commands.registerCommand("kdb.terminal.run", async () => {
+      if (ext.activeTextEditor) {
+        const uri = Uri.joinPath(
+          ext.context.globalStorageUri,
+          "kdb-vscode-repl.q",
+        );
+        const text = ext.activeTextEditor.document.getText();
+        try {
+          await workspace.fs.writeFile(uri, Buffer.from(text, "utf-8"));
+          runQFileTerminal(`"${uri.fsPath}"`);
+        } catch (error) {
+          kdbOutputLog(`Unable to write temp file: ${error}`, "ERROR");
+        }
+      }
     }),
     commands.registerCommand("kdb.terminal.start", () => {
       if (env.QHOME) {
