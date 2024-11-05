@@ -39,6 +39,8 @@ import {
   RenameParams,
   SelectionRange,
   SelectionRangeParams,
+  SemanticTokens,
+  SemanticTokensParams,
   ServerCapabilities,
   SymbolKind,
   TextDocumentChangeEvent,
@@ -71,6 +73,7 @@ import {
   SemiColon,
   WhiteSpace,
   RCurly,
+  local,
 } from "./parser";
 import { lint } from "./linter";
 import { readFileSync } from "node:fs";
@@ -125,6 +128,9 @@ export default class QLangServer {
     this.connection.languages.callHierarchy.onOutgoingCalls(
       this.onOutgoingCallsCallHierarchy.bind(this),
     );
+    this.connection.languages.semanticTokens.on(
+      this.onSemanticTokens.bind(this),
+    );
     this.connection.onDidChangeConfiguration(
       this.onDidChangeConfiguration.bind(this),
     );
@@ -149,6 +155,13 @@ export default class QLangServer {
       completionProvider: { resolveProvider: false },
       selectionRangeProvider: true,
       callHierarchyProvider: true,
+      semanticTokensProvider: {
+        full: true,
+        legend: {
+          tokenTypes: ["variable"],
+          tokenModifiers: ["declaration", "readonly"],
+        },
+      },
     };
   }
 
@@ -445,6 +458,33 @@ export default class QLangServer {
       : [];
   }
 
+  public onSemanticTokens({
+    textDocument,
+  }: SemanticTokensParams): SemanticTokens {
+    const tokens = this.parse({ uri: textDocument.uri });
+    const result = { data: [] } as SemanticTokens;
+    let range: Range = Range.create(0, 0, 0, 0);
+    let line = 0;
+    let character = 0;
+    let delta = 0;
+    for (const token of tokens) {
+      if (assignable(token) && local(token, tokens)) {
+        line = range.start.line;
+        character = range.start.character;
+        range = rangeFromToken(token);
+        delta = range.start.line - line;
+        result.data.push(
+          delta,
+          delta ? range.start.character : range.start.character - character,
+          token.image.length,
+          0,
+          3,
+        );
+      }
+    }
+    return result;
+  }
+
   /* istanbul ignore next */
   public scan() {
     const folders = this.params.workspaceFolders;
@@ -487,13 +527,13 @@ export default class QLangServer {
   private context({ uri, tokens }: Tokenized, all = true): Tokenized[] {
     if (all) {
       this.documents.all().forEach((document) => {
-        const path = fileURLToPath(document.uri);
-        if (path) {
-          this.cached.set(
-            pathToFileURL(path).toString(),
-            document.uri === uri ? tokens : parse(document.getText()),
-          );
-        }
+        const path = document.uri.startsWith("file://")
+          ? fileURLToPath(document.uri)
+          : "";
+        this.cached.set(
+          path ? pathToFileURL(path).toString() : document.uri,
+          document.uri === uri ? tokens : parse(document.getText()),
+        );
       });
       return Array.from(this.cached.entries(), (entry) => ({
         uri: entry[0],
