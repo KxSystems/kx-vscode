@@ -745,6 +745,62 @@ describe("WebPanels", () => {
         assert.deepEqual(rowData, expectedRowData);
       });
     });
+
+    describe("updatedExtractColumnDefs", () => {
+      it("should correctly extract column definitions from structured text results", () => {
+        const results: StructuredTextResults = {
+          columns: [
+            {
+              name: "date",
+              type: "dates",
+              order: [0, 1, 2],
+              values: ["2024.10.21", "2024.10.22", "2024.10.23"],
+            },
+            {
+              name: "instance",
+              type: "symbols",
+              order: [0, 1, 2],
+              values: ["`inst1", "`inst2", "`inst3"],
+            },
+          ],
+          count: 3,
+        };
+
+        const expectedColumnDefs = [
+          {
+            field: "date",
+            headerName: "date",
+            cellDataType: "text",
+            cellRendererParams: { disabled: false },
+            headerTooltip: "dates",
+          },
+          {
+            field: "instance",
+            headerName: "instance",
+            cellDataType: "text",
+            cellRendererParams: { disabled: false },
+            headerTooltip: "symbols",
+          },
+        ];
+
+        const columnDefs = resultsPanel.updatedExtractColumnDefs(results);
+
+        assert.deepEqual(columnDefs, expectedColumnDefs);
+      });
+
+      it("should handle empty columns correctly", () => {
+        const results: StructuredTextResults = {
+          columns: [],
+          count: 0,
+        };
+
+        const expectedColumnDefs: any[] = [];
+
+        const columnDefs = resultsPanel.updatedExtractColumnDefs(results);
+
+        assert.deepEqual(columnDefs, expectedColumnDefs);
+      });
+    });
   });
 
   describe("kdbNewConnectionPanel", () => {
