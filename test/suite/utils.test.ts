@@ -347,6 +347,25 @@ describe("Utils", () => {
         showErrorMessageSpy.calledWithMatch(connLabel);
       });
     });
+
+    describe("hasWorkspaceOrShowOption", () => {
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("should return true if a workspace folder is opened", () => {
+        sinon.stub(vscode.workspace, "workspaceFolders").get(() => [{}]);
+        const result = coreUtils.hasWorkspaceOrShowOption();
+        assert.strictEqual(result, true);
+      });
+
+      it("should return false and display message if no workspace", () => {
+        const stub = sinon.stub(vscode.window, "showWarningMessage").resolves();
+        const result = coreUtils.hasWorkspaceOrShowOption();
+        assert.strictEqual(result, false);
+        assert.ok(stub.calledOnce);
+      });
+    });
   });
 
   describe("dataSource", () => {

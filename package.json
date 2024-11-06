@@ -234,8 +234,7 @@
         "category": "KX",
         "command": "kdb.createDataSource",
         "title": "New Datasource...",
-        "icon": "$(add)",
-        "enablement": "workspaceFolderCount > 0"
+        "icon": "$(add)"
       },
       {
         "category": "KX",
@@ -251,8 +250,7 @@
         "icon": {
           "dark": "./resources/dark/add-scratchpad.svg",
           "light": "./resources/light/add-scratchpad.svg"
-        },
-        "enablement": "workspaceFolderCount > 0"
+        }
       },
       {
         "category": "KX",
@@ -261,8 +259,7 @@
         "icon": {
           "dark": "./resources/dark/add-scratchpad-python.svg",
           "light": "./resources/light/add-scratchpad-python.svg"
-        },
-        "enablement": "workspaceFolderCount > 0"
+        }
       },
       {
         "category": "KX",
