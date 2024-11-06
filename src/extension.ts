@@ -204,8 +204,8 @@ export async function activate(context: ExtensionContext) {
     ),
     commands.registerCommand(
       "kdb.resultsPanel.update",
-      (results: string, isInsights: boolean) => {
-        ext.resultsViewProvider.updateResults(results, isInsights);
+      (results: any, isInsights: boolean, connVersion?: number) => {
+        ext.resultsViewProvider.updateResults(results, isInsights, connVersion);
       },
     ),
     commands.registerCommand("kdb.resultsPanel.clear", () => {

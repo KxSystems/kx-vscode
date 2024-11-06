@@ -36,6 +36,7 @@ import {
 import { InsightsConfig, InsightsEndpoints } from "../models/config";
 import { convertTimeToTimestamp } from "../utils/dataSource";
 import { ScratchpadRequestBody } from "../models/scratchpad";
+import { StructuredTextResults } from "../models/queryResult";
 
 export class InsightsConnection {
   public connected: boolean;
@@ -469,15 +470,24 @@ export class InsightsConnection {
                 );
               } else {
                 kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
-                if (isTableView && !response.data.error) {
-                  const buffer = new Uint8Array(
-                    response.data.data.map((x: string) => parseInt(x, 16)),
-                  ).buffer;
+                if (!response.data.error) {
+                  if (isTableView) {
+                    if (this.insightsVersion && this.insightsVersion >= 1.11) {
+                      response.data = JSON.parse(
+                        response.data.data,
+                      ) as StructuredTextResults;
+                    } else {
+                      const buffer = new Uint8Array(
+                        response.data.data.map((x: string) => parseInt(x, 16)),
+                      ).buffer;
 
-                  response.data.data = handleWSResults(buffer);
-                  response.data.data = handleScratchpadTableRes(
-                    response.data.data,
-                  );
+                      response.data.data = handleWSResults(buffer);
+                      response.data.data = handleScratchpadTableRes(
+                        response.data.data,
+                      );
+                    }
+                  }
+                  return response.data;
                 }
                 return response.data;
               }
