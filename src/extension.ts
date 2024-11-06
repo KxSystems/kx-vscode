@@ -82,6 +82,7 @@ import {
   fixUnnamedAlias,
   getInsights,
   getServers,
+  hasWorkspaceOrShowOption,
   initializeLocalServers,
   kdbOutputLog,
 } from "./utils/core";
@@ -470,25 +471,27 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand(
       "kdb.createDataSource",
       async (item: FileTreeItem) => {
-        const uri = await addWorkspaceFile(item, "datasource", ".kdb.json");
+        if (hasWorkspaceOrShowOption()) {
+          const uri = await addWorkspaceFile(item, "datasource", ".kdb.json");
 
-        if (uri) {
-          const edit = new WorkspaceEdit();
+          if (uri) {
+            const edit = new WorkspaceEdit();
 
-          edit.replace(
-            uri,
-            new Range(0, 0, 1, 0),
-            JSON.stringify(createDefaultDataSourceFile(), null, 2),
-          );
+            edit.replace(
+              uri,
+              new Range(0, 0, 1, 0),
+              JSON.stringify(createDefaultDataSourceFile(), null, 2),
+            );
 
-          workspace.applyEdit(edit);
+            workspace.applyEdit(edit);
 
-          await commands.executeCommand(
-            "vscode.openWith",
-            uri,
-            DataSourceEditorProvider.viewType,
-          );
-          await commands.executeCommand("workbench.action.files.save", uri);
+            await commands.executeCommand(
+              "vscode.openWith",
+              uri,
+              DataSourceEditorProvider.viewType,
+            );
+            await commands.executeCommand("workbench.action.files.save", uri);
+          }
         }
       },
     ),
@@ -498,20 +501,24 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand(
       "kdb.createScratchpad",
       async (item: FileTreeItem) => {
-        const uri = await addWorkspaceFile(item, "workbook", ".kdb.q");
-        if (uri) {
-          await window.showTextDocument(uri);
-          await commands.executeCommand("workbench.action.files.save", uri);
+        if (hasWorkspaceOrShowOption()) {
+          const uri = await addWorkspaceFile(item, "workbook", ".kdb.q");
+          if (uri) {
+            await window.showTextDocument(uri);
+            await commands.executeCommand("workbench.action.files.save", uri);
+          }
         }
       },
     ),
     commands.registerCommand(
       "kdb.createPythonScratchpad",
       async (item: FileTreeItem) => {
-        const uri = await addWorkspaceFile(item, "workbook", ".kdb.py");
-        if (uri) {
-          await window.showTextDocument(uri);
-          await commands.executeCommand("workbench.action.files.save", uri);
+        if (hasWorkspaceOrShowOption()) {
+          const uri = await addWorkspaceFile(item, "workbook", ".kdb.py");
+          if (uri) {
+            await window.showTextDocument(uri);
+            await commands.executeCommand("workbench.action.files.save", uri);
+          }
         }
       },
     ),
