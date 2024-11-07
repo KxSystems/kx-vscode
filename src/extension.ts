@@ -471,7 +471,7 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand(
       "kdb.createDataSource",
       async (item: FileTreeItem) => {
-        if (hasWorkspaceOrShowOption()) {
+        if (hasWorkspaceOrShowOption("adding datasources")) {
           const uri = await addWorkspaceFile(item, "datasource", ".kdb.json");
 
           if (uri) {
@@ -501,7 +501,7 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand(
       "kdb.createScratchpad",
       async (item: FileTreeItem) => {
-        if (hasWorkspaceOrShowOption()) {
+        if (hasWorkspaceOrShowOption("adding workbooks")) {
           const uri = await addWorkspaceFile(item, "workbook", ".kdb.q");
           if (uri) {
             await window.showTextDocument(uri);
@@ -513,7 +513,7 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand(
       "kdb.createPythonScratchpad",
       async (item: FileTreeItem) => {
-        if (hasWorkspaceOrShowOption()) {
+        if (hasWorkspaceOrShowOption("adding workbooks")) {
           const uri = await addWorkspaceFile(item, "workbook", ".kdb.py");
           if (uri) {
             await window.showTextDocument(uri);

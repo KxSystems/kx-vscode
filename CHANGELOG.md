@@ -7,7 +7,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 ### Enhancements
 
 - Semantic highlighting for local variables
-- Display version of Insights server connected
+- Display version of connected Insights server
 
 ### Fixes
 
@@ -15,6 +15,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Fix for Issue [#382](https://github.com/KxSystems/kx-vscode/issues/382)
 - Fix for run q file not using the current editor contents
 - Fix for autocomplete for new and unsaved documents
+- Fix for results tab
 
 ### Internal Improvements
 

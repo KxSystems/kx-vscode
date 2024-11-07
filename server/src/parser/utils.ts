@@ -122,6 +122,9 @@ export function amended(token: Token) {
 }
 
 export function local(token: Token, tokens: Token[]) {
+  if (qualified(token)) {
+    return false;
+  }
   const scope = inLambda(token);
   if (scope && !scope.tangled) {
     if (token.image === "x" || token.image === "y" || token.image === "z") {

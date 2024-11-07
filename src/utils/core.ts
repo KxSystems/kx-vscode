@@ -635,12 +635,15 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
   return result.join("\n");
 }
 
-export function hasWorkspaceOrShowOption() {
+export function hasWorkspaceOrShowOption(action: string) {
   if (workspace.workspaceFolders && workspace.workspaceFolders.length > 0) {
     return true;
   }
   window
-    .showWarningMessage("No workspace folder is opened.", "Open")
+    .showWarningMessage(
+      `No workspace folder is open. Please open a folder to enable ${action}.`,
+      "Open",
+    )
     .then((res) => {
       if (res === "Open") {
         commands.executeCommand("workbench.action.files.openFolder");
