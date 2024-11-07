@@ -88,9 +88,8 @@ function assignment(state: State, token: Token) {
     if (top?.tokenType === Colon || top?.tokenType === DoubleColon) {
       token.assignment = [top];
       stack.pop();
-      top = stack.shift();
-      if (top) {
-        token.assignment.push(top);
+      if (stack.length > 0) {
+        token.assignment.push(...stack);
         clear(stack);
       }
     }
@@ -181,9 +180,6 @@ function expression(state: State, tokens: Token[]) {
             stack.push(token);
             break;
         }
-        break;
-      case RParen:
-      case LParen:
         break;
       default:
         stack.push(token);

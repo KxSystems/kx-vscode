@@ -122,6 +122,9 @@ export function amended(token: Token) {
 }
 
 export function local(token: Token, tokens: Token[]) {
+  if (qualified(token)) {
+    return false;
+  }
   const scope = inLambda(token);
   if (scope && !scope.tangled) {
     if (token.image === "x" || token.image === "y" || token.image === "z") {
@@ -145,6 +148,10 @@ export function qualified(token: Token) {
 
 export function ordered(token: Token, next: Token) {
   return (token.order && next.order && next.order > token.order) || false;
+}
+
+export function callable(token: Token) {
+  return token.assignment && token.assignment[1]?.tokenType === LCurly;
 }
 
 export function assigned(token: Token) {

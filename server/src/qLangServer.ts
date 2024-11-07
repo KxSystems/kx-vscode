@@ -167,7 +167,7 @@ export default class QLangServer {
 
   public setSettings(settings: LSPAny) {
     this.settings = {
-      debug: settings.debug || false,
+      debug: settings.debug_parser || false,
       linting: settings.linting || false,
       refactoring: settings.refactoring || "Workspace",
     };

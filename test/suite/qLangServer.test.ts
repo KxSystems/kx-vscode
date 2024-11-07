@@ -381,10 +381,22 @@ describe("qLangServer", () => {
   });
 
   describe("onSemanticTokens", () => {
-    it("should find semantic local variables", () => {
+    it("should tokenize local variables", () => {
       const params = createDocument("a:{[b;c]d:1;b*c*d}");
       const result = server.onSemanticTokens(params);
       assert.strictEqual(result.data.length, 30);
+    });
+
+    it("should ignore qualified variables", () => {
+      const params = createDocument("a:{.ns.b:1;.ns.b}");
+      const result = server.onSemanticTokens(params);
+      assert.strictEqual(result.data.length, 0);
+    });
+
+    it("should detect empty lists", () => {
+      const params = createDocument("a:{b:();b}");
+      const result = server.onSemanticTokens(params);
+      assert.strictEqual(result.data.length, 10);
     });
   });
 
