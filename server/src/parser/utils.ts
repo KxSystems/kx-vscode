@@ -150,10 +150,6 @@ export function ordered(token: Token, next: Token) {
   return (token.order && next.order && next.order > token.order) || false;
 }
 
-export function callable(token: Token) {
-  return token.assignment && token.assignment[1]?.tokenType === LCurly;
-}
-
 export function assigned(token: Token) {
   return token.assignment && token.assignment[1];
 }
