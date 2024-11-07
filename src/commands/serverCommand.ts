@@ -801,6 +801,7 @@ export async function executeQuery(
 
   const selectedConn = connMngService.retrieveConnectedConnection(connLabel);
   const isInsights = selectedConn instanceof InsightsConnection;
+  const connVersion = isInsights ? (selectedConn.insightsVersion ?? 0) : 0;
   if (query.length === 0) {
     queryConsole.appendQueryError(
       query,
@@ -839,6 +840,7 @@ export async function executeQuery(
       isPython,
       isWorkbook,
       duration,
+      connVersion,
     );
   } else {
     /* istanbul ignore next */
@@ -853,6 +855,7 @@ export async function executeQuery(
         isPython,
         duration,
         isFromConnTree,
+        connVersion,
       );
     } else {
       writeQueryResultsToConsole(
@@ -1146,8 +1149,14 @@ export function writeQueryResultsToView(
   isPython?: boolean,
   duration?: string,
   isFromConnTree?: boolean,
+  connVersion?: number,
 ): void {
-  commands.executeCommand("kdb.resultsPanel.update", result, isInsights);
+  commands.executeCommand(
+    "kdb.resultsPanel.update",
+    result,
+    isInsights,
+    connVersion,
+  );
   if (!checkIfIsDatasource(type)) {
     addQueryHistory(
       query,
@@ -1173,6 +1182,7 @@ export function writeScratchpadResult(
   isPython: boolean,
   isWorkbook: boolean,
   duration: string,
+  connVersion: number,
 ): void {
   const queryConsole = ExecutionConsole.start();
 
@@ -1192,7 +1202,7 @@ export function writeScratchpadResult(
   } else {
     if (ext.isResultsTabVisible) {
       writeQueryResultsToView(
-        result.data,
+        result,
         query,
         connLabel,
         executorName,
@@ -1200,6 +1210,8 @@ export function writeScratchpadResult(
         isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
         isPython,
         duration,
+        false,
+        connVersion,
       );
     } else {
       writeQueryResultsToConsole(
