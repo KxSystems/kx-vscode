@@ -669,6 +669,8 @@ export class KdbNewConnectionView extends LitElement {
                   @click="${() => {
                     /* istanbul ignore next */
                     this.selectedTab = ConnectionType.BundledQ;
+                    this.serverType = ServerType.KDB;
+                    this.isBundledQ = true;
                   }}"
                   >Bundle q</sl-tab
                 >
@@ -678,6 +680,8 @@ export class KdbNewConnectionView extends LitElement {
                   ?active="${live(this.selectedTab === ConnectionType.Kdb)}"
                   @click="${() => {
                     /* istanbul ignore next */
+                    this.isBundledQ = false;
+                    this.serverType = ServerType.KDB;
                     this.selectedTab = ConnectionType.Kdb;
                   }}"
                   >My q
@@ -690,6 +694,8 @@ export class KdbNewConnectionView extends LitElement {
                   )}"
                   @click="${() => {
                     /* istanbul ignore next */
+                    this.isBundledQ = false;
+                    this.serverType = ServerType.INSIGHTS;
                     this.selectedTab = ConnectionType.Insights;
                   }}"
                   >Insights connection
