@@ -15,7 +15,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Fixed Issue [#382](https://github.com/KxSystems/kx-vscode/issues/382)
 - Fixed the run q file not using the current editor contents
 - Fixed the autocomplete functionality for new and unsaved documents
-- Fixed issues with results tab format when query insights connections version 1.11 or newer
+- Fixed issues with results tab format when querying Insights connections version 1.11 or newer
 
 ### Internal Improvements
 
