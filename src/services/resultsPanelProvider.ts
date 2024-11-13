@@ -225,7 +225,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   convertToGrid(results: any, isInsights: boolean, connVersion?: number): any {
     let rowData = [];
     let columnDefs = [];
-    if (connVersion && connVersion >= 1.11) {
+    if (connVersion && connVersion >= 1.12) {
       rowData = this.updatedExtractRowData(results);
       columnDefs = this.updatedExtractColumnDefs(results);
     } else {

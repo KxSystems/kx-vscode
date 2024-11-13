@@ -428,7 +428,7 @@ export class InsightsConnection {
       };
 
       if (this.insightsVersion) {
-        if (this.insightsVersion >= 1.11) {
+        if (this.insightsVersion >= 1.12) {
           body.returnFormat = isTableView ? "structuredText" : "text";
         } else {
           body.isTableView = isTableView;
