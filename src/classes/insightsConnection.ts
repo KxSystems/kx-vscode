@@ -65,7 +65,7 @@ export class InsightsConnection {
       if (token) {
         await this.getConfig();
         await this.getMeta();
-        await this.getScratchpadQuery("");
+        await this.getScratchpadQuery("", undefined, false, true);
       }
     });
     return this.connected;
@@ -398,9 +398,13 @@ export class InsightsConnection {
     query: string,
     context?: string,
     isPython?: boolean,
+    isStarting?: boolean,
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
       const isTableView = ext.isResultsTabVisible;
+      const queryMsg = isStarting
+        ? "Starting scratchpad..."
+        : "Query is executing...";
       const scratchpadURL = new url.URL(
         this.connEndpoints.scratchpad.scratchpad,
         this.node.details.server,
@@ -451,7 +455,7 @@ export class InsightsConnection {
             kdbOutputLog(`User cancelled the Scrathpad execution.`, "WARNING");
           });
 
-          progress.report({ message: "Query is executing..." });
+          progress.report({ message: queryMsg });
           const spRes = await axios
             .post(scratchpadURL.toString(), body, {
               headers,
@@ -472,7 +476,7 @@ export class InsightsConnection {
                 kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
                 if (!response.data.error) {
                   if (isTableView) {
-                    if (this.insightsVersion && this.insightsVersion >= 1.11) {
+                    if (this.insightsVersion && this.insightsVersion >= 1.12) {
                       response.data = JSON.parse(
                         response.data.data,
                       ) as StructuredTextResults;
