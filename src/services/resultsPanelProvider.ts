@@ -55,7 +55,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       char: "text",
       symbol: "text",
       string: "text",
-      date: "date",
+      date: "text",
       time: "time",
       timestamp: "datetime",
       timespan: "text",
@@ -159,7 +159,8 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
           const sanitizedKey = this.sanitizeString(key);
           const type = results.meta[key];
           const headerTooltip = type;
-          const cellDataType = this.kdbToAgGridCellType(type);
+          const cellDataType =
+            type != undefined ? this.kdbToAgGridCellType(type) : undefined;
           return {
             field: sanitizedKey,
             headerName: sanitizedKey,
@@ -229,6 +230,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       rowData = this.updatedExtractRowData(results);
       columnDefs = this.updatedExtractColumnDefs(results);
     } else {
+      results = isInsights ? results.data : results;
       const queryResult = isInsights ? results.rows : results;
       if (Array.isArray(queryResult[0])) {
         if (typeof queryResult[0][0] === "object") {
@@ -246,12 +248,21 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         rowData = queryResult;
       }
 
+      rowData = rowData.map((row: any) => {
+        const newRow = { ...row };
+        Object.keys(newRow).forEach((key) => {
+          if (typeof newRow[key] === "object" && newRow[key] !== null) {
+            newRow[key] = newRow[key].toString();
+          }
+        });
+        return newRow;
+      });
+
       if (isInsights) {
         results.rows = rowData;
-        columnDefs = this.generateCoumnDefs(results, isInsights);
-      } else {
-        columnDefs = this.generateCoumnDefs(rowData, isInsights);
       }
+
+      columnDefs = this.generateCoumnDefs(results, isInsights);
     }
 
     if (
@@ -406,7 +417,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
               function restoreColumnWidths(columnWidths) {
                 if (!gridApi || !columnWidths) return;
-                gridApi.applyColumnState({state: columnWidths, applyOrder: true,});
+                gridApi.applyColumnState({state: columnWidths, });
               }
 
               window.addEventListener('message', event => {

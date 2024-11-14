@@ -186,11 +186,13 @@ describe("WebPanels", () => {
     describe("convertToGrid()", () => {
       it("should convert results to grid format for insights", () => {
         const results = {
-          rows: [
-            { prop1: "value1", prop2: "value2" },
-            { prop1: "value3", prop2: "value4" },
-          ],
-          meta: { prop1: "type1", prop2: "type2" },
+          data: {
+            rows: [
+              { prop1: "value1", prop2: "value2" },
+              { prop1: "value3", prop2: "value4" },
+            ],
+            meta: { prop1: "type1", prop2: "type2" },
+          },
         };
 
         const expectedOutput = JSON.stringify({
@@ -244,8 +246,10 @@ describe("WebPanels", () => {
 
       it("should convert results to grid format with empty rows", () => {
         const results = {
-          rows: [],
-          meta: { prop1: "type1", prop2: "type2" },
+          data: {
+            rows: [],
+            meta: { prop1: "type1", prop2: "type2" },
+          },
         };
 
         const expectedOutput = JSON.stringify({
@@ -296,11 +300,13 @@ describe("WebPanels", () => {
 
       it("should convert results to grid format when queryResult[0] is an array of objects", () => {
         const results = {
-          rows: [
-            [{ sym: "a" }, { sym: "b" }, { sym: "c" }],
-            [{ val: 1 }, { val: 2 }, { val: 3 }],
-          ],
-          meta: { sym: "type1", val: "type2" },
+          data: {
+            rows: [
+              [{ sym: "a" }, { sym: "b" }, { sym: "c" }],
+              [{ val: 1 }, { val: 2 }, { val: 3 }],
+            ],
+            meta: { sym: "type1", val: "type2" },
+          },
         };
 
         const expectedOutput = JSON.stringify({
@@ -355,8 +361,7 @@ describe("WebPanels", () => {
 
       it("should convert results to grid format when queryResult[0] is an array of non-objects", () => {
         const results = {
-          rows: [[1, 2, 3]],
-          meta: { value: "type1" },
+          data: { rows: [[1, 2, 3]], meta: { value: "type1" } },
         };
 
         const expectedOutput = JSON.stringify({
@@ -367,7 +372,7 @@ describe("WebPanels", () => {
             flex: 1,
             minWidth: 100,
           },
-          rowData: [{ index: 1, value: [1, 2, 3] }],
+          rowData: [{ index: 1, value: "1,2,3" }],
           columnDefs: [
             { field: "index", headerName: "Index", cellDataType: "number" },
             {
