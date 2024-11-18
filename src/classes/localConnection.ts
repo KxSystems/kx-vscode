@@ -76,12 +76,31 @@ export class LocalConnection {
       if (err || !conn) {
         ext.serverProvider.reload();
 
-        window.showErrorMessage(
-          `Connection to server ${this.options.host}:${this.options.port} failed!  Details: ${err?.message}`,
-        );
+        if (this.connLabel.endsWith("[local]")) {
+          window
+            .showErrorMessage(
+              `Connection to server ${this.options.host}:${this.options.port} failed.`,
+              "Start q process",
+            )
+            .then((res) => {
+              if (res) {
+                commands.executeCommand(
+                  "kdb.startLocalProcess",
+                  ext.connectionsList.find(
+                    (conn) => conn.label === this.connLabel,
+                  ),
+                );
+              }
+            });
+        } else {
+          window.showErrorMessage(
+            `Connection to server ${this.options.host}:${this.options.port} failed.`,
+          );
+        }
+
         kdbOutputLog(
           `Connection to server ${this.options.host}:${this.options.port} failed!  Details: ${err?.message}`,
-          "ERROR",
+          "CONNECTION",
         );
         return;
       }
