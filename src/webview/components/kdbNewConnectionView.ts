@@ -143,6 +143,7 @@ export class KdbNewConnectionView extends LitElement {
 
   handleMessage(event: { data: any }) {
     const message = event.data;
+    console.log(message);
     if (message.command === "editConnection") {
       this.connectionData = message.data;
       this.labels = message.labels;
@@ -366,7 +367,7 @@ export class KdbNewConnectionView extends LitElement {
         <sl-select
           id="selectLabel"
           class="dropdown larger"
-          .value="${live(this.labels[pos])}"
+          value="${live(this.labels[pos])}"
           @sl-change="${(event: Event) => {
             this.updateLabelValue(pos, event);
           }}">
@@ -389,16 +390,17 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   renderLblDropdownOptions(pos: number) {
+    console.log(this.labels);
     return html`
-      <sl-select placeholder="No Label Selected">
-        <sl-option> No Label Selected </sl-option>
-        ${repeat(
-          this.lblNamesList,
-          (lbl) => lbl.name,
-          (lbl) => html`
-            <sl-option
-              .value="${live(lbl.name)}"
-              ?selected="${lbl.name === this.labels[pos]}">
+      <sl-option> No Label Selected </sl-option>
+      ${repeat(
+        this.lblNamesList,
+        (lbl) => lbl,
+        (lbl) => {
+          console.log(lbl.name);
+          console.log(lbl.name === this.labels[pos]);
+          return html`
+            <sl-option .value="${lbl.name}">
               <span>
                 <div
                   style="width: 10px; height: 10px; background: ${lbl.color
@@ -406,9 +408,9 @@ export class KdbNewConnectionView extends LitElement {
                 ${lbl.name}
               </span>
             </sl-option>
-          `,
-        )}
-      </sl-select>
+          `;
+        },
+      )}
     `;
   }
 
@@ -998,7 +1000,7 @@ export class KdbNewConnectionView extends LitElement {
       },
     });
     setTimeout(() => {
-      this.labels.unshift(this.newLblName);
+      this.labels.push(this.newLblName);
       this.closeModal();
     }, 500);
   }
