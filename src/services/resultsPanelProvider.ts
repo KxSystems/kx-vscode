@@ -230,7 +230,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       rowData = this.updatedExtractRowData(results);
       columnDefs = this.updatedExtractColumnDefs(results);
     } else {
-      results = isInsights ? results.data : results;
+      results = isInsights ? (results.data ?? results) : results;
       const queryResult = isInsights ? results.rows : results;
       if (Array.isArray(queryResult[0])) {
         if (typeof queryResult[0][0] === "object") {
