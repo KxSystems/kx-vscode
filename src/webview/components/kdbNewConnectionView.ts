@@ -1001,6 +1001,7 @@ export class KdbNewConnectionView extends LitElement {
     });
     setTimeout(() => {
       this.labels.push(this.newLblName);
+      this.removeBlankLabels();
       this.closeModal();
     }, 500);
   }
