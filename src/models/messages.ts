@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { ConnectionType } from "./connectionsModels";
 import { DataSourceFiles } from "./dataSource";
 import { MetaObjectPayload } from "./meta";
 
@@ -42,12 +43,6 @@ export interface DataSourceMessage2 {
   isInsights: boolean;
   insightsMeta: MetaObjectPayload;
   dataSourceFile: DataSourceFiles;
-}
-
-export const enum ConnectionType {
-  BundledQ,
-  Kdb,
-  Insights,
 }
 
 export interface EditConnectionMessage {

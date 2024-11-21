@@ -16,8 +16,9 @@ import { getUri } from "../utils/getUri";
 import { getNonce } from "../utils/getNonce";
 import { ext } from "../extensionVariables";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
-import { ConnectionType, EditConnectionMessage } from "../models/messages";
+import { EditConnectionMessage } from "../models/messages";
 import { retrieveConnLabelsNames } from "../utils/connLabel";
+import { ConnectionType } from "../models/connectionsModels";
 
 export class NewConnectionPannel {
   public static currentPanel: NewConnectionPannel | undefined;
@@ -176,17 +177,25 @@ export class NewConnectionPannel {
     webview: vscode.Webview,
     extensionUri: vscode.Uri,
   ) {
-    const webviewUri = getUri(webview, extensionUri, ["out", "webview.js"]);
-    const nonce = getNonce();
+    const getResource = (resource: string) =>
+      getUri(webview, extensionUri, ["out", resource]);
 
     return /* html */ `
         <!DOCTYPE html>
-        <html lang="en">
+        <html lang="en" class="${
+          vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Light ||
+          vscode.window.activeColorTheme.kind ===
+            vscode.ColorThemeKind.HighContrastLight
+            ? "sl-theme-light"
+            : "sl-theme-dark"
+        }">
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>New Connection</title>
-            <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
+            <link rel="stylesheet" href="${getResource("light.css")}" />
+            <link rel="stylesheet" href="${getResource("style.css")}" />
+            <script type="module" nonce="${getNonce()}" src="${getResource("webview.js")}"></script>
         </head>
         <body>
             <kdb-new-connection-view/>

@@ -35,6 +35,8 @@ import {
 } from "../utils/core";
 import { InsightsConfig, InsightsEndpoints } from "../models/config";
 import { convertTimeToTimestamp } from "../utils/dataSource";
+import { ScratchpadRequestBody } from "../models/scratchpad";
+import { StructuredTextResults } from "../models/queryResult";
 
 export class InsightsConnection {
   public connected: boolean;
@@ -63,6 +65,7 @@ export class InsightsConnection {
       if (token) {
         await this.getConfig();
         await this.getMeta();
+        await this.getScratchpadQuery("", undefined, false, true);
       }
     });
     return this.connected;
@@ -395,9 +398,13 @@ export class InsightsConnection {
     query: string,
     context?: string,
     isPython?: boolean,
+    isStarting?: boolean,
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
       const isTableView = ext.isResultsTabVisible;
+      const queryMsg = isStarting
+        ? "Starting scratchpad..."
+        : "Query is executing...";
       const scratchpadURL = new url.URL(
         this.connEndpoints.scratchpad.scratchpad,
         this.node.details.server,
@@ -416,14 +423,22 @@ export class InsightsConnection {
       if (username === undefined || username.preferred_username === "") {
         invalidUsernameJWT(this.connLabel);
       }
-      const body = {
+      const body: ScratchpadRequestBody = {
         expression: query,
-        isTableView,
         language: !isPython ? "q" : "python",
         context: context || ".",
         sampleFn: "first",
         sampleSize: 10000,
       };
+
+      if (this.insightsVersion) {
+        if (this.insightsVersion >= 1.12) {
+          body.returnFormat = isTableView ? "structuredText" : "text";
+        } else {
+          body.isTableView = isTableView;
+        }
+      }
+
       const headers = {
         Authorization: `Bearer ${token.accessToken}`,
         Username: username.preferred_username,
@@ -440,25 +455,46 @@ export class InsightsConnection {
             kdbOutputLog(`User cancelled the Scrathpad execution.`, "WARNING");
           });
 
-          progress.report({ message: "Query is executing..." });
+          progress.report({ message: queryMsg });
           const spRes = await axios
             .post(scratchpadURL.toString(), body, {
               headers,
               httpsAgent: getHttpsAgent(this.node.details.insecure),
             })
             .then((response: any) => {
-              kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
-              if (isTableView && !response.data.error) {
-                const buffer = new Uint8Array(
-                  response.data.data.map((x: string) => parseInt(x, 16)),
-                ).buffer;
-
-                response.data.data = handleWSResults(buffer);
-                response.data.data = handleScratchpadTableRes(
-                  response.data.data,
+              if (response.data.error) {
+                kdbOutputLog(
+                  `[SCRATCHPAD] Error occured while executing scratchpad: ${response.data.errorMsg}`,
+                  "ERROR",
                 );
+              } else if (query === "") {
+                kdbOutputLog(
+                  `[SCRATCHPAD] scratchpad created for connection: ${this.connLabel}`,
+                  "INFO",
+                );
+              } else {
+                kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
+                if (!response.data.error) {
+                  if (isTableView) {
+                    if (this.insightsVersion && this.insightsVersion >= 1.12) {
+                      response.data = JSON.parse(
+                        response.data.data,
+                      ) as StructuredTextResults;
+                    } else {
+                      const buffer = new Uint8Array(
+                        response.data.data.map((x: string) => parseInt(x, 16)),
+                      ).buffer;
+
+                      response.data.data = handleWSResults(buffer);
+                      response.data.data = handleScratchpadTableRes(
+                        response.data.data,
+                      );
+                    }
+                  }
+                  return response.data;
+                }
+                return response.data;
               }
-              return response.data;
             });
           return spRes;
         },

@@ -38,3 +38,14 @@ export enum QueryResultType {
 export const queryConstants = {
   error: "Error:",
 };
+
+export interface StructuredTextColumns {
+  name: string;
+  type: string;
+  values: any[];
+  order: any[];
+}
+export interface StructuredTextResults {
+  columns: StructuredTextColumns[];
+  count: number;
+}

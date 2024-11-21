@@ -24,6 +24,7 @@ import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import { TreeItemCollapsibleState } from "vscode";
 import { NewConnectionPannel } from "../../src/panels/newConnection";
 import { InsightsConnection } from "../../src/classes/insightsConnection";
+import { StructuredTextResults } from "../../src/models/queryResult";
 
 describe("WebPanels", () => {
   describe("DataSourcesPanel", () => {
@@ -67,6 +68,7 @@ describe("WebPanels", () => {
   describe("ResultsPanelProvider", () => {
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
     let resultsPanel: KdbResultsViewProvider;
+    let viewStub: any;
 
     const insightsNode = new InsightsNode(
       [],
@@ -85,6 +87,10 @@ describe("WebPanels", () => {
     );
     beforeEach(() => {
       resultsPanel = new KdbResultsViewProvider(uriTest);
+      viewStub = {
+        show: sinon.stub(),
+      };
+      resultsPanel["_view"] = viewStub;
     });
 
     describe("defineAgGridTheme()", () => {
@@ -178,13 +184,15 @@ describe("WebPanels", () => {
     });
 
     describe("convertToGrid()", () => {
-      it("should convert results to grid format for inisights", () => {
+      it("should convert results to grid format for insights", () => {
         const results = {
-          rows: [
-            { prop1: "value1", prop2: "value2" },
-            { prop1: "value3", prop2: "value4" },
-          ],
-          meta: { prop1: "type1", prop2: "type2" },
+          data: {
+            rows: [
+              { prop1: "value1", prop2: "value2" },
+              { prop1: "value3", prop2: "value4" },
+            ],
+            meta: { prop1: "type1", prop2: "type2" },
+          },
         };
 
         const expectedOutput = JSON.stringify({
@@ -196,10 +204,11 @@ describe("WebPanels", () => {
             minWidth: 100,
           },
           rowData: [
-            { prop1: "value1", prop2: "value2" },
-            { prop1: "value3", prop2: "value4" },
+            { index: 1, prop1: "value1", prop2: "value2" },
+            { index: 2, prop1: "value3", prop2: "value4" },
           ],
           columnDefs: [
+            { field: "index", headerName: "Index", cellDataType: "number" },
             {
               field: "prop1",
               headerName: "prop1",
@@ -221,6 +230,7 @@ describe("WebPanels", () => {
           suppressContextMenu: true,
           suppressDragLeaveHidesColumns: true,
           tooltipShowDelay: 200,
+          loading: true,
         });
 
         // Mock ext.connectionNode
@@ -234,10 +244,12 @@ describe("WebPanels", () => {
         stub.restore();
       });
 
-      it("should convert results to grid format with empty rows ", () => {
+      it("should convert results to grid format with empty rows", () => {
         const results = {
-          rows: [],
-          meta: { prop1: "type1", prop2: "type2" },
+          data: {
+            rows: [],
+            meta: { prop1: "type1", prop2: "type2" },
+          },
         };
 
         const expectedOutput = JSON.stringify({
@@ -250,6 +262,7 @@ describe("WebPanels", () => {
           },
           rowData: [],
           columnDefs: [
+            { field: "index", headerName: "Index", cellDataType: "number" },
             {
               field: "prop1",
               headerName: "prop1",
@@ -271,6 +284,113 @@ describe("WebPanels", () => {
           suppressContextMenu: true,
           suppressDragLeaveHidesColumns: true,
           tooltipShowDelay: 200,
+          loading: true,
+        });
+
+        // Mock ext.connectionNode
+        const stub = sinon.stub(ext, "activeConnection");
+        stub.get(() => insightsConn);
+
+        const output = resultsPanel.convertToGrid(results, true);
+        assert.equal(JSON.stringify(output), expectedOutput);
+
+        // Restore the stub
+        stub.restore();
+      });
+
+      it("should convert results to grid format when queryResult[0] is an array of objects", () => {
+        const results = {
+          data: {
+            rows: [
+              [{ sym: "a" }, { sym: "b" }, { sym: "c" }],
+              [{ val: 1 }, { val: 2 }, { val: 3 }],
+            ],
+            meta: { sym: "type1", val: "type2" },
+          },
+        };
+
+        const expectedOutput = JSON.stringify({
+          defaultColDef: {
+            sortable: true,
+            resizable: true,
+            filter: true,
+            flex: 1,
+            minWidth: 100,
+          },
+          rowData: [
+            { index: 1, sym: "a", val: 1 },
+            { index: 2, sym: "b", val: 2 },
+            { index: 3, sym: "c", val: 3 },
+          ],
+          columnDefs: [
+            { field: "index", headerName: "Index", cellDataType: "number" },
+            {
+              field: "sym",
+              headerName: "sym",
+              headerTooltip: "type1",
+              cellDataType: "text",
+            },
+            {
+              field: "val",
+              headerName: "val",
+              headerTooltip: "type2",
+              cellDataType: "text",
+            },
+          ],
+          domLayout: "autoHeight",
+          pagination: true,
+          paginationPageSize: 100,
+          enableCellTextSelection: true,
+          ensureDomOrder: true,
+          suppressContextMenu: true,
+          suppressDragLeaveHidesColumns: true,
+          tooltipShowDelay: 200,
+          loading: true,
+        });
+
+        // Mock ext.connectionNode
+        const stub = sinon.stub(ext, "activeConnection");
+        stub.get(() => insightsConn);
+
+        const output = resultsPanel.convertToGrid(results, true);
+        assert.equal(JSON.stringify(output), expectedOutput);
+
+        // Restore the stub
+        stub.restore();
+      });
+
+      it("should convert results to grid format when queryResult[0] is an array of non-objects", () => {
+        const results = {
+          data: { rows: [[1, 2, 3]], meta: { value: "type1" } },
+        };
+
+        const expectedOutput = JSON.stringify({
+          defaultColDef: {
+            sortable: true,
+            resizable: true,
+            filter: true,
+            flex: 1,
+            minWidth: 100,
+          },
+          rowData: [{ index: 1, value: "1,2,3" }],
+          columnDefs: [
+            { field: "index", headerName: "Index", cellDataType: "number" },
+            {
+              field: "value",
+              headerName: "value",
+              headerTooltip: "type1",
+              cellDataType: "text",
+            },
+          ],
+          domLayout: "autoHeight",
+          pagination: true,
+          paginationPageSize: 100,
+          enableCellTextSelection: true,
+          ensureDomOrder: true,
+          suppressContextMenu: true,
+          suppressDragLeaveHidesColumns: true,
+          tooltipShowDelay: 200,
+          loading: true,
         });
 
         // Mock ext.connectionNode
@@ -504,6 +624,186 @@ describe("WebPanels", () => {
         const expectedOutput = ` id="results" class="results-view-container"`;
         const actualOutput = resultsPanel["_getWebviewContent"]();
         assert.ok(actualOutput.includes(expectedOutput));
+      });
+    });
+
+    describe("updateResults", () => {
+      it("should show the view and update the web view with insights", () => {
+        const queryResults = { data: "test" };
+        const isInsights = true;
+        const connVersion = 1.11;
+
+        const updateWebViewStub = sinon.stub(resultsPanel, "updateWebView");
+
+        resultsPanel.updateResults(queryResults, isInsights, connVersion);
+
+        assert.equal(viewStub.show.calledOnceWith(true), true);
+        assert.equal(resultsPanel.isInsights, true);
+        assert.equal(
+          updateWebViewStub.calledOnceWith(queryResults, connVersion),
+          true,
+        );
+      });
+
+      it("should show the view and update the web view without insights", () => {
+        const queryResults = { data: "test" };
+        const isInsights = false;
+        const connVersion = 1.11;
+
+        const updateWebViewStub = sinon.stub(resultsPanel, "updateWebView");
+
+        resultsPanel.updateResults(queryResults, isInsights, connVersion);
+
+        assert.equal(viewStub.show.calledOnceWith(true), true);
+        assert.equal(resultsPanel.isInsights, false);
+        assert.equal(
+          updateWebViewStub.calledOnceWith(queryResults, connVersion),
+          true,
+        );
+      });
+
+      it("should not update the web view if _view is not defined", () => {
+        resultsPanel["_view"] = undefined;
+        const queryResults = { data: "test" };
+        const isInsights = true;
+        const connVersion = 1.11;
+
+        const updateWebViewStub = sinon.stub(resultsPanel, "updateWebView");
+
+        resultsPanel.updateResults(queryResults, isInsights, connVersion);
+
+        assert.equal(viewStub.show.called, false);
+        assert.equal(updateWebViewStub.called, false);
+      });
+    });
+    describe("exportToCsv", () => {
+      it("should show an error message if there are no results to export", () => {
+        sinon.stub(ext, "resultPanelCSV").value("");
+        const showErrorMessageStub = sinon.stub(
+          vscode.window,
+          "showErrorMessage",
+        );
+
+        resultsPanel.exportToCsv();
+
+        assert.equal(
+          showErrorMessageStub.calledOnceWith("No results to export"),
+          true,
+        );
+      });
+
+      it("should export to CSV if there are results and a folder is open", () => {
+        sinon.stub(ext, "resultPanelCSV").value("some,csv,data");
+        const workspaceUri = vscode.Uri.parse("file:///path/to/workspace");
+        sinon
+          .stub(vscode.workspace, "workspaceFolders")
+          .value([{ uri: workspaceUri }]);
+        const exportToCsvStub = sinon.stub(utils, "exportToCsv");
+
+        resultsPanel.exportToCsv();
+
+        assert.equal(exportToCsvStub.calledOnceWith(workspaceUri), true);
+      });
+    });
+
+    describe("updatedExtractRowData", () => {
+      it("should correctly extract row data from structured text results", () => {
+        const results: StructuredTextResults = {
+          columns: [
+            {
+              name: "date",
+              type: "dates",
+              order: [0, 1, 2],
+              values: ["2024.10.21", "2024.10.22", "2024.10.23"],
+            },
+            {
+              name: "instance",
+              type: "symbols",
+              order: [0, 1, 2],
+              values: ["`inst1", "`inst2", "`inst3"],
+            },
+          ],
+          count: 3,
+        };
+
+        const expectedRowData = [
+          { date: "2024.10.21", instance: "`inst1" },
+          { date: "2024.10.22", instance: "`inst2" },
+          { date: "2024.10.23", instance: "`inst3" },
+        ];
+
+        const rowData = resultsPanel.updatedExtractRowData(results);
+
+        assert.deepEqual(rowData, expectedRowData);
+      });
+
+      it("should handle empty results correctly", () => {
+        const results: StructuredTextResults = {
+          columns: [],
+          count: 0,
+        };
+
+        const expectedRowData: any[] = [];
+
+        const rowData = resultsPanel.updatedExtractRowData(results);
+
+        assert.deepEqual(rowData, expectedRowData);
+      });
+    });
+
+    describe("updatedExtractColumnDefs", () => {
+      it("should correctly extract column definitions from structured text results", () => {
+        const results: StructuredTextResults = {
+          columns: [
+            {
+              name: "date",
+              type: "dates",
+              order: [0, 1, 2],
+              values: ["2024.10.21", "2024.10.22", "2024.10.23"],
+            },
+            {
+              name: "instance",
+              type: "symbols",
+              order: [0, 1, 2],
+              values: ["`inst1", "`inst2", "`inst3"],
+            },
+          ],
+          count: 3,
+        };
+
+        const expectedColumnDefs = [
+          {
+            field: "date",
+            headerName: "date",
+            cellDataType: "text",
+            cellRendererParams: { disabled: false },
+            headerTooltip: "dates",
+          },
+          {
+            field: "instance",
+            headerName: "instance",
+            cellDataType: "text",
+            cellRendererParams: { disabled: false },
+            headerTooltip: "symbols",
+          },
+        ];
+
+        const columnDefs = resultsPanel.updatedExtractColumnDefs(results);
+
+        assert.deepEqual(columnDefs, expectedColumnDefs);
+      });
+
+      it("should handle empty columns correctly", () => {
+        const results: StructuredTextResults = {
+          columns: [],
+          count: 0,
+        };
+
+        const expectedColumnDefs: any[] = [];
+
+        const columnDefs = resultsPanel.updatedExtractColumnDefs(results);
+
+        assert.deepEqual(columnDefs, expectedColumnDefs);
       });
     });
   });

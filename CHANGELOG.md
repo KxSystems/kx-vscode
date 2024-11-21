@@ -2,6 +2,26 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.9.0
+
+### Enhancements
+
+- Highlight local variables semantically
+- Display the version of the connected Insights server
+
+### Fixes
+
+- Fixed flickering issue in the results tab, improving the UX
+- Fixed Issue [#382](https://github.com/KxSystems/kx-vscode/issues/382)
+- Fixed the run q file not using the current editor contents
+- Fixed the autocomplete functionality for new and unsaved documents
+- Fixed issues with results tab format when querying Insights connections version 1.11 or newer
+
+### Internal Improvements
+
+- Migrate to Shoelace Web Components
+- Move server object logic to separate it from model's code
+
 # v1.8.0
 
 ### Enhancements

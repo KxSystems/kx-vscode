@@ -635,6 +635,23 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
   return result.join("\n");
 }
 
+export function hasWorkspaceOrShowOption(action: string) {
+  if (workspace.workspaceFolders && workspace.workspaceFolders.length > 0) {
+    return true;
+  }
+  window
+    .showWarningMessage(
+      `No workspace folder is open. Please open a folder to enable ${action}.`,
+      "Open",
+    )
+    .then((res) => {
+      if (res === "Open") {
+        commands.executeCommand("workbench.action.files.openFolder");
+      }
+    });
+  return false;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function reduce(xs: any, f: any, init: any) {
   if (xs.reduce) {

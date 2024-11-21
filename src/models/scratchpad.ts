@@ -17,3 +17,13 @@ export interface ScratchpadFile {
   activeConnection?: string;
   code: string;
 }
+
+export interface ScratchpadRequestBody {
+  expression: string;
+  language: string;
+  context: string;
+  sampleFn: string;
+  sampleSize: number;
+  isTableView?: boolean;
+  returnFormat?: string;
+}

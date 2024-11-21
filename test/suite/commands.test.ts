@@ -1163,6 +1163,7 @@ describe("serverCommand", () => {
     let showInformationMessageStub: sinon.SinonStub;
     let getInsightsStub: sinon.SinonStub;
     let getServersStub: sinon.SinonStub;
+    let retrieveVersionStub: sinon.SinonStub;
     const kdbNodeImport1: KdbNode = {
       label: "local",
       details: {
@@ -1194,13 +1195,16 @@ describe("serverCommand", () => {
       collapsibleState: vscode.TreeItemCollapsibleState.None,
       contextValue: "insightsNode",
       children: [],
-      getTooltip: function (): vscode.MarkdownString {
-        throw new Error("Function not implemented.");
+      getTooltip(): Promise<vscode.MarkdownString> {
+        return Promise.resolve(new vscode.MarkdownString(""));
       },
-      getDescription: function (): string {
-        throw new Error("Function not implemented.");
+      getDescription(): string {
+        return "";
       },
       iconPath: undefined,
+      initializeNode(): Promise<void> {
+        return Promise.resolve();
+      },
     };
 
     beforeEach(() => {
@@ -1215,6 +1219,10 @@ describe("serverCommand", () => {
       showInformationMessageStub = sinon.stub(
         vscode.window,
         "showInformationMessage",
+      );
+      retrieveVersionStub = sinon.stub(
+        ConnectionManagementService.prototype,
+        "retrieveInsightsConnVersion",
       );
       ext.connectionsList.length = 0;
     });
@@ -1243,6 +1251,8 @@ describe("serverCommand", () => {
           KDB: [],
         },
       };
+
+      retrieveVersionStub.resolves("1.0");
 
       await serverCommand.addImportedConnections(importedConnections);
 
@@ -1318,6 +1328,8 @@ describe("serverCommand", () => {
           ],
         },
       };
+
+      retrieveVersionStub.resolves("0");
 
       showInformationMessageStub.returns("Overwrite");
       await serverCommand.addImportedConnections(importedConnections);
@@ -1487,6 +1499,7 @@ describe("serverCommand", () => {
         false,
         true,
         "2",
+        0,
       );
       sinon.assert.notCalled(writeQueryResultsToViewStub);
       sinon.assert.notCalled(writeQueryResultsToConsoleStub);
@@ -1503,6 +1516,7 @@ describe("serverCommand", () => {
         true,
         true,
         "2",
+        0,
       );
       sinon.assert.notCalled(writeQueryResultsToConsoleStub);
       sinon.assert.notCalled(queryConsoleErrorStub);
@@ -1519,6 +1533,7 @@ describe("serverCommand", () => {
         true,
         true,
         "2",
+        0,
       );
       sinon.assert.notCalled(writeQueryResultsToViewStub);
     });

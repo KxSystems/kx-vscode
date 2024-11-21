@@ -73,6 +73,9 @@ describe("qLangServer", () => {
           onIncomingCalls() {},
           onOutgoingCalls() {},
         },
+        semanticTokens: {
+          on() {},
+        },
       },
       sendDiagnostics() {},
     });
@@ -99,6 +102,7 @@ describe("qLangServer", () => {
       assert.ok(capabilities.completionProvider);
       assert.ok(capabilities.selectionRangeProvider);
       assert.ok(capabilities.callHierarchyProvider);
+      assert.ok(capabilities.semanticTokensProvider);
     });
   });
 
@@ -373,6 +377,26 @@ describe("qLangServer", () => {
       const items = server.onPrepareCallHierarchy(params);
       const result = server.onOutgoingCallsCallHierarchy({ item: items[0] });
       assert.strictEqual(result.length, 1);
+    });
+  });
+
+  describe("onSemanticTokens", () => {
+    it("should tokenize local variables", () => {
+      const params = createDocument("a:{[b;c]d:1;b*c*d}");
+      const result = server.onSemanticTokens(params);
+      assert.strictEqual(result.data.length, 30);
+    });
+
+    it("should ignore qualified variables", () => {
+      const params = createDocument("a:{.ns.b:1;.ns.b}");
+      const result = server.onSemanticTokens(params);
+      assert.strictEqual(result.data.length, 0);
+    });
+
+    it("should detect empty lists", () => {
+      const params = createDocument("a:{b:();b}");
+      const result = server.onSemanticTokens(params);
+      assert.strictEqual(result.data.length, 10);
     });
   });
 

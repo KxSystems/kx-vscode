@@ -388,6 +388,10 @@ The extension provides keyword syntax highlighting, comments and linting help.
 
 Linting can be enabled by checking **Enable linting for q and quke files** in [extension settings](#settings).
 
+Semantic highlighting is provided for local variables:
+
+![Semantic](https://github.com/KxSystems/kx-vscode/blob/main/img/semantic.png?raw=true)
+
 ### Code navigation
 
 While developing q scripts you can:

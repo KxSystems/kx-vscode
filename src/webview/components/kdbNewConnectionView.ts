@@ -13,12 +13,13 @@
 
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
-
-import { kdbStyles, newConnectionStyles, vscodeStyles } from "./styles";
+import { live } from "lit/directives/live.js";
+import { kdbStyles, newConnectionStyles, shoelaceStyles } from "./styles";
 import { EditConnectionMessage } from "../../models/messages";
 import { repeat } from "lit/directives/repeat.js";
 import { LabelColors, Labels } from "../../models/labels";
 import {
+  ConnectionType,
   InsightDetails,
   ServerDetails,
   ServerType,
@@ -26,7 +27,8 @@ import {
 
 @customElement("kdb-new-connection-view")
 export class KdbNewConnectionView extends LitElement {
-  static styles = [vscodeStyles, kdbStyles, newConnectionStyles];
+  static readonly styles = [shoelaceStyles, kdbStyles, newConnectionStyles];
+  selectedTab = ConnectionType.BundledQ;
   lblColorsList: LabelColors[] = [];
   lblNamesList: Labels[] = [];
   newLblName = "";
@@ -141,6 +143,7 @@ export class KdbNewConnectionView extends LitElement {
 
   handleMessage(event: { data: any }) {
     const message = event.data;
+    console.log(message);
     if (message.command === "editConnection") {
       this.connectionData = message.data;
       this.labels = message.labels;
@@ -176,35 +179,33 @@ export class KdbNewConnectionView extends LitElement {
         >`;
   }
 
+  /* istanbul ignore next */
   renderServerNameField(serverType: ServerType, isBundleQ?: boolean) {
     return isBundleQ
-      ? html`<vscode-text-field
+      ? html`<sl-input
           class="text-field larger option-title"
-          value="${this.bundledServer.serverAlias}"
+          value="${live(this.bundledServer.serverAlias)}"
           readonly
-          >Server Name
-        </vscode-text-field>`
+          label="Server Name"></sl-input>`
       : serverType === ServerType.KDB
-        ? html`<vscode-text-field
+        ? html`<sl-input
             class="text-field larger option-title"
             placeholder="Server-1"
-            value="${this.kdbServer.serverAlias}"
+            value="${live(this.kdbServer.serverAlias)}"
             @input="${(event: Event) =>
               (this.kdbServer.serverAlias = (
-                event.target as HTMLSelectElement
+                event.target as HTMLInputElement
               ).value)}"
-            >Server Name
-          </vscode-text-field>`
-        : html`<vscode-text-field
+            label="Server Name"></sl-input>`
+        : html`<sl-input
             class="text-field larger option-title"
             placeholder="Insights-1"
-            value="${this.insightsServer.alias}"
+            value="${live(this.insightsServer.alias)}"
             @input="${(event: Event) =>
               (this.insightsServer.alias = (
-                event.target as HTMLSelectElement
+                event.target as HTMLInputElement
               ).value)}"
-            >Server Name
-          </vscode-text-field>`;
+            label="Server Name"></sl-input>`;
   }
 
   renderServerName(serverType: ServerType, isBundleQ?: boolean) {
@@ -233,19 +234,24 @@ export class KdbNewConnectionView extends LitElement {
   renderPortNumber(isBundleQ?: boolean) {
     return html`
       <div class="row">
-        <vscode-text-field
+        <sl-input
           class="text-field larger option-title"
-          value="${isBundleQ
-            ? this.bundledServer.serverPort
-            : this.kdbServer.serverPort}"
-          @input="${(event: Event) => {
-            const value = (event.target as HTMLSelectElement).value;
+          value="${live(
             isBundleQ
-              ? (this.bundledServer.serverPort = value)
-              : (this.kdbServer.serverPort = value);
+              ? this.bundledServer.serverPort
+              : this.kdbServer.serverPort,
+          )}"
+          @input="${(event: Event) => {
+            /* istanbul ignore next */
+            const value = (event.target as HTMLInputElement).value;
+            /* istanbul ignore next */
+            if (isBundleQ) {
+              this.bundledServer.serverPort = value;
+            } else {
+              this.kdbServer.serverPort = value;
+            }
           }}"
-          >Set port number</vscode-text-field
-        >
+          label="Set port number"></sl-input>
       </div>
       <div class="row option-description option-help">
         ${this.renderPortNumberDesc(isBundleQ)}
@@ -266,39 +272,41 @@ export class KdbNewConnectionView extends LitElement {
     return isBundleQ
       ? html`
           <div class="row">
-            <vscode-text-field
+            <sl-input
               class="text-field larger option-title"
-              value="${this.bundledServer.serverName}"
+              value="${live(this.bundledServer.serverName)}"
               readonly
-              >Define connection address</vscode-text-field
-            >
+              label="Define connection address"></sl-input>
           </div>
-          <div class="row option-description  option-help">
+          <div class="row option-description option-help">
             ${this.renderConnAddDesc(serverType)}
           </div>
         `
       : html`
           <div class="row">
-            <vscode-text-field
+            <sl-input
               class="text-field larger option-title"
               placeholder="${serverType === ServerType.KDB
                 ? "127.0.0.1 or localhost"
                 : `myinsights.clouddeploy.com`}"
-              value="${serverType === ServerType.KDB
-                ? this.kdbServer.serverName
-                : this.insightsServer.server}"
+              value="${live(
+                serverType === ServerType.KDB
+                  ? this.kdbServer.serverName
+                  : this.insightsServer.server,
+              )}"
               @input="${(event: Event) => {
-                const value = (event.target as HTMLSelectElement).value;
+                /* istanbul ignore next */
+                const value = (event.target as HTMLInputElement).value;
+                /* istanbul ignore next */
                 if (serverType === ServerType.KDB) {
                   this.kdbServer.serverName = value;
                 } else {
                   this.insightsServer.server = value;
                 }
               }}"
-              >Define connection address</vscode-text-field
-            >
+              label="Define connection address"></sl-input>
           </div>
-          <div class="row option-description  option-help">
+          <div class="row option-description option-help">
             ${this.renderConnAddDesc(serverType)}
           </div>
         `;
@@ -307,20 +315,19 @@ export class KdbNewConnectionView extends LitElement {
   renderRealm() {
     return html`
       <div class="row mt-1">
-        <vscode-text-field
+        <sl-input
           class="text-field larger option-title"
-          value="${this.insightsServer.realm ?? ""}"
+          value="${live(this.insightsServer.realm ?? "")}"
           placeholder="insights"
           @input="${(event: Event) => {
             /* istanbul ignore next */
-            const value = (event.target as HTMLSelectElement).value;
+            const value = (event.target as HTMLInputElement).value;
             /* istanbul ignore next */
             this.insightsServer.realm = value;
           }}"
-          >Define Realm (optional)</vscode-text-field
-        >
+          label="Define Realm (optional)"></sl-input>
       </div>
-      <div class="row option-description  option-help">
+      <div class="row option-description option-help">
         Specify the Keycloak realm for authentication. Use this field to connect
         to a specific realm as configured on your server.
       </div>
@@ -337,19 +344,19 @@ export class KdbNewConnectionView extends LitElement {
 
   renderLblDropdownColorOptions() {
     return html`
-      <vscode-option .value="${undefined}"> No Color Selected </vscode-option>
+      <sl-option> No Color Selected </sl-option>
       ${repeat(
         this.lblColorsList,
         (color) => color,
         (color) =>
-          html` <vscode-option .value="${color.name}">
+          html` <sl-option .value="${color.name}">
             <span
               ><div
                 style="width: 10px; height: 10px; background: ${color.colorHex}; border-radius: 50%; float: left;
     margin-right: 10px; margin-top: 3px;"></div>
               ${color.name}</span
             >
-          </vscode-option>`,
+          </sl-option>`,
       )}
     `;
   }
@@ -357,50 +364,52 @@ export class KdbNewConnectionView extends LitElement {
   renderLblsDropdown(pos: number) {
     return html`
       <div class="lbl-dropdown-container-field-wrapper">
-        <vscode-dropdown
+        <sl-select
           id="selectLabel"
           class="dropdown larger"
-          value="${this.labels[pos]}"
-          current-value="${this.labels[pos]}"
-          @change="${(event: Event) => {
+          value="${live(this.labels[pos])}"
+          @sl-change="${(event: Event) => {
             this.updateLabelValue(pos, event);
           }}">
           ${this.renderLblDropdownOptions(pos)}
-        </vscode-dropdown>
-        <vscode-button
+        </sl-select>
+        <sl-button
           aria-label="Remove Label"
-          appearance="secondary"
+          variant="neutral"
           @click="${() => this.removeLabel(pos)}"
-          >-</vscode-button
+          >-</sl-button
         >
-        <vscode-button
+        <sl-button
           aria-label="Add Label"
-          appearance="secondary"
+          variant="neutral"
           @click="${this.addLabel}"
-          >+</vscode-button
+          >+</sl-button
         >
       </div>
     `;
   }
 
   renderLblDropdownOptions(pos: number) {
+    console.log(this.labels);
     return html`
-      <vscode-option> No Label Selected </vscode-option>
+      <sl-option> No Label Selected </sl-option>
       ${repeat(
         this.lblNamesList,
-        (lbl) => lbl.name,
-        (lbl) => html`
-          <vscode-option
-            .value="${lbl.name}"
-            ?selected="${lbl.name === this.labels[pos]}">
-            <span>
-              <div
-                style="width: 10px; height: 10px; background: ${lbl.color
-                  .colorHex}; border-radius: 50%; float: left; margin-right: 10px; margin-top: 3px;"></div>
-              ${lbl.name}
-            </span>
-          </vscode-option>
-        `,
+        (lbl) => lbl,
+        (lbl) => {
+          console.log(lbl.name);
+          console.log(lbl.name === this.labels[pos]);
+          return html`
+            <sl-option .value="${lbl.name}">
+              <span>
+                <div
+                  style="width: 10px; height: 10px; background: ${lbl.color
+                    .colorHex}; border-radius: 50%; float: left; margin-right: 10px; margin-top: 3px;"></div>
+                ${lbl.name}
+              </span>
+            </sl-option>
+          `;
+        },
       )}
     `;
   }
@@ -412,48 +421,53 @@ export class KdbNewConnectionView extends LitElement {
         <div class="modal-content">
           <h2>Add a New Label</h2>
           <div class="row">
-            <vscode-text-field
-              class="text-field larger option-title"
-              value="${this.newLblName}"
-              @keyup="${(event: Event) => {
+            <sl-input
+              label="Label name"
+              placeholder="Label name"
+              class="text-field larger"
+              value="${live(this.newLblName)}"
+              @sl-input="${(event: Event) => {
+                /* istanbul ignore next */
                 this.newLblName = (event.target as HTMLInputElement).value;
+                /* istanbul ignore next */
                 this.requestUpdate();
               }}"
-              id="label-name"
-              >Label name</vscode-text-field
-            >
+              id="label-name"></sl-input>
           </div>
           <div class="row option-title gap-0" style="margin-top: 10px;">
             Label color
           </div>
           <div class="row">
-            <vscode-dropdown
+            <sl-select
               id="label-color"
-              value="${this.newLblColorName}"
-              @change="${(event: Event) => {
+              value="${live(this.newLblColorName)}"
+              @sl-change="${(event: Event) => {
+                /* istanbul ignore next */
                 this.newLblColorName = (event.target as HTMLInputElement).value;
+                /* istanbul ignore next */
                 this.requestUpdate();
               }}"
               class="dropdown"
               style="width: 18.5em;">
               ${this.renderLblDropdownColorOptions()}
-            </vscode-dropdown>
+            </sl-select>
           </div>
           <div class="row" style="margin-top: 10px;">
-            <vscode-button
+            <sl-button
+              variant="neutral"
               aria-label="Cancel"
               appearance="secondary"
               @click="${this.closeModal}">
               Cancel
-            </vscode-button>
-            <vscode-button
+            </sl-button>
+            <sl-button
+              variant="primary"
               aria-label="Create Label"
-              appearance="primary"
               @click="${this.createLabel}"
               ?disabled="${this.newLblName === "" ||
               this.newLblColorName === ""}">
               Create
-            </vscode-button>
+            </sl-button>
           </div>
         </div>
       </dialog>
@@ -462,13 +476,14 @@ export class KdbNewConnectionView extends LitElement {
 
   renderNewLblBtn() {
     return html`
-      <vscode-button
+      <sl-button
+        variant="neutral"
         aria-label="Create New Label"
         style="height: 26px;    margin-top: 18px;"
         appearance="secondary"
         @click="${this.openModal}">
         Create New Label
-      </vscode-button>
+      </sl-button>
     `;
   }
 
@@ -486,6 +501,126 @@ export class KdbNewConnectionView extends LitElement {
           ${this.renderNewLblBtn()}
         </div>
       </div>
+    </div>`;
+  }
+
+  renderNewBundleqConnectionForm() {
+    return html`
+      <div class="col">
+        <div class="row">
+          <div class="col gap-0">
+            ${this.renderServerName(ServerType.KDB, true)}
+          </div>
+        </div>
+        <div class="row">
+          <div class="col gap-0">
+            ${this.renderConnAddress(ServerType.KDB, true)}
+          </div>
+        </div>
+        <div class="row">
+          <div class="col gap-0">${this.renderPortNumber(true)}</div>
+        </div>
+        ${this.renderConnectionLabelsSection()}
+        ${this.renderCreateConnectionBtn()}
+      </div>
+    `;
+  }
+
+  /* istanbul ignore next */
+  renderNewMyQConnectionForm() {
+    return html`<div class="col">
+      <div class="row">
+        <div class="col gap-0">${this.renderServerName(ServerType.KDB)}</div>
+      </div>
+      <div class="row">
+        <div class="col gap-0">${this.renderConnAddress(ServerType.KDB)}</div>
+      </div>
+      <div class="row">
+        <div class="col gap-0">${this.renderPortNumber()}</div>
+      </div>
+      <div class="row option-title">Add Authentication if enabled</div>
+      <div class="row">
+        <div class="col gap-0">
+          <div class="row">
+            <vscode-text-field
+              class="text-field larger option-title"
+              value="${this.kdbServer.username ? this.kdbServer.username : ""}"
+              @input="${(event: Event) =>
+                (this.kdbServer.username = (
+                  event.target as HTMLSelectElement
+                ).value)}"
+              >Username</vscode-text-field
+            >
+          </div>
+          <div class="row">
+            <vscode-text-field
+              type="password"
+              class="text-field larger option-title"
+              value="${this.kdbServer.password ? this.kdbServer.password : ""}"
+              @input="${(event: Event) =>
+                (this.kdbServer.password = (
+                  event.target as HTMLSelectElement
+                ).value)}"
+              >Password</vscode-text-field
+            >
+          </div>
+          <div class="row option-description  option-help">
+            Add required authentication to get access to the server connection
+            if enabled.
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col gap-0">
+          <div class="row option-title">Optional: Enable TLS Encryption</div>
+          <div class="row">
+            <vscode-checkbox
+              value="${this.kdbServer.tls}"
+              @click="${() => this.changeTLS()}"
+              >Enable TLS Encryption on the kdb connection</vscode-checkbox
+            >
+          </div>
+        </div>
+      </div>
+      ${this.renderConnectionLabelsSection()}
+      ${this.renderCreateConnectionBtn()}
+    </div>`;
+  }
+
+  renderNewInsightsConnectionForm() {
+    return html`<div class="col">
+      <div class="row">
+        <div class="col gap-0">
+          ${this.renderServerName(ServerType.INSIGHTS)}
+        </div>
+      </div>
+      <div class="row">
+        <div class="col gap-0">
+          ${this.renderConnAddress(ServerType.INSIGHTS)}
+        </div>
+      </div>
+      <div class="row">
+        <div class="col gap-0">
+          <details>
+            <summary>Advanced</summary>
+            ${this.renderRealm()}
+            <div class="row mt-1">
+              <vscode-checkbox
+                .checked="${this.insightsServer.insecure}"
+                @change="${(event: Event) => {
+                  /* istanbul ignore next */
+                  this.insightsServer.insecure = (
+                    event.target as HTMLInputElement
+                  ).checked;
+                }}"
+                >Accept insecure SSL certifcates</vscode-checkbox
+              >
+            </div>
+          </details>
+        </div>
+      </div>
+      ${this.renderConnectionLabelsSection()}
+      ${this.renderCreateConnectionBtn()}
     </div>`;
   }
 
@@ -525,160 +660,79 @@ export class KdbNewConnectionView extends LitElement {
             </div>
           </div>
           <div class="row">
-            <vscode-panels activeid="${this.selectConnection}" id="connPanels">
-              <vscode-panel-tab
-                id="tab-1"
-                @click="${() => this.tabClickAction(1)}"
-                >Bundled q</vscode-panel-tab
-              >
-              <vscode-panel-tab
-                id="tab-2"
-                @click="${() => this.tabClickAction(2)}"
-                >My q</vscode-panel-tab
-              >
-              <vscode-panel-tab
-                id="tab-3"
-                @click="${() => this.tabClickAction(3)}"
-                >Insights connection</vscode-panel-tab
-              >
-              <vscode-panel-view id="view-1" class="panel">
-                <div class="col">
-                  <div class="row">
-                    <div class="col gap-0">
-                      ${this.renderServerName(ServerType.KDB, true)}
-                    </div>
-                  </div>
-                  <div class="row">
-                    <div class="col gap-0">
-                      ${this.renderConnAddress(ServerType.KDB, true)}
-                    </div>
-                  </div>
-                  <div class="row">
-                    <div class="col gap-0">${this.renderPortNumber(true)}</div>
-                  </div>
-                  ${this.renderConnectionLabelsSection()}
-                  ${this.renderCreateConnectionBtn()}
-                </div>
-              </vscode-panel-view>
-              <vscode-panel-view id="view-2" class="panel">
-                <div class="col">
-                  <div class="row">
-                    <div class="col gap-0">
-                      ${this.renderServerName(ServerType.KDB)}
-                    </div>
-                  </div>
-                  <div class="row">
-                    <div class="col gap-0">
-                      ${this.renderConnAddress(ServerType.KDB)}
-                    </div>
-                  </div>
-                  <div class="row">
-                    <div class="col gap-0">${this.renderPortNumber()}</div>
-                  </div>
-                  <div class="row option-title">
-                    Add Authentication if enabled
-                  </div>
-                  <div class="row">
-                    <div class="col gap-0">
-                      <div class="row">
-                        <vscode-text-field
-                          class="text-field larger option-title"
-                          value="${this.kdbServer.username
-                            ? this.kdbServer.username
-                            : ""}"
-                          @input="${(event: Event) =>
-                            (this.kdbServer.username = (
-                              event.target as HTMLSelectElement
-                            ).value)}"
-                          >Username</vscode-text-field
-                        >
-                      </div>
-                      <div class="row">
-                        <vscode-text-field
-                          type="password"
-                          class="text-field larger option-title"
-                          value="${this.kdbServer.password
-                            ? this.kdbServer.password
-                            : ""}"
-                          @input="${(event: Event) =>
-                            (this.kdbServer.password = (
-                              event.target as HTMLSelectElement
-                            ).value)}"
-                          >Password</vscode-text-field
-                        >
-                      </div>
-                      <div class="row option-description  option-help">
-                        Add required authentication to get access to the server
-                        connection if enabled.
-                      </div>
-                    </div>
-                  </div>
-                  <div class="row">
-                    <div class="col gap-0">
-                      <div class="row option-title">
-                        Optional: Enable TLS Encryption
-                      </div>
-                      <div class="row">
-                        <vscode-checkbox
-                          value="${this.kdbServer.tls}"
-                          @click="${() => this.changeTLS()}"
-                          >Enable TLS Encryption on the kdb
-                          connection</vscode-checkbox
-                        >
-                      </div>
-                    </div>
-                  </div>
-                  ${this.renderConnectionLabelsSection()}
-                  ${this.renderCreateConnectionBtn()}
-                </div>
-              </vscode-panel-view>
-              <vscode-panel-view id="view-3" class="panel">
-                <div class="col">
-                  <div class="row">
-                    <div class="col gap-0">
-                      ${this.renderServerName(ServerType.INSIGHTS)}
-                    </div>
-                  </div>
-                  <div class="row">
-                    <div class="col gap-0">
-                      ${this.renderConnAddress(ServerType.INSIGHTS)}
-                    </div>
-                  </div>
-                  <div class="row">
-                    <div class="col gap-0">
-                      <details>
-                        <summary>Advanced</summary>
-                        ${this.renderRealm()}
-                        <div class="row mt-1">
-                          <vscode-checkbox
-                            .checked="${this.insightsServer.insecure}"
-                            @change="${(event: Event) => {
-                              this.insightsServer.insecure = (
-                                event.target as HTMLInputElement
-                              ).checked;
-                            }}"
-                            >Accept insecure SSL certifcates</vscode-checkbox
-                          >
-                        </div>
-                      </details>
-                    </div>
-                  </div>
-                  ${this.renderConnectionLabelsSection()}
-                  ${this.renderCreateConnectionBtn()}
-                </div>
-              </vscode-panel-view>
-            </vscode-panels>
+            <div class="tabs">
+              <sl-tab-group>
+                <sl-tab
+                  slot="nav"
+                  panel="${ConnectionType.BundledQ}"
+                  ?active="${live(
+                    this.selectedTab === ConnectionType.BundledQ,
+                  )}"
+                  @click="${() => {
+                    /* istanbul ignore next */
+                    this.selectedTab = ConnectionType.BundledQ;
+                    this.serverType = ServerType.KDB;
+                    this.isBundledQ = true;
+                  }}"
+                  >Bundle q</sl-tab
+                >
+                <sl-tab
+                  slot="nav"
+                  panel="${ConnectionType.Kdb}"
+                  ?active="${live(this.selectedTab === ConnectionType.Kdb)}"
+                  @click="${() => {
+                    /* istanbul ignore next */
+                    this.isBundledQ = false;
+                    this.serverType = ServerType.KDB;
+                    this.selectedTab = ConnectionType.Kdb;
+                  }}"
+                  >My q
+                </sl-tab>
+                <sl-tab
+                  slot="nav"
+                  panel="${ConnectionType.Insights}"
+                  ?active="${live(
+                    this.selectedTab === ConnectionType.Insights,
+                  )}"
+                  @click="${() => {
+                    /* istanbul ignore next */
+                    this.isBundledQ = false;
+                    this.serverType = ServerType.INSIGHTS;
+                    this.selectedTab = ConnectionType.Insights;
+                  }}"
+                  >Insights connection
+                </sl-tab>
+                <sl-tab-panel
+                  name="${ConnectionType.BundledQ}"
+                  ?active="${live(
+                    this.selectedTab === ConnectionType.BundledQ,
+                  )}">
+                  ${this.renderNewBundleqConnectionForm()}
+                </sl-tab-panel>
+                <sl-tab-panel
+                  name="${ConnectionType.Kdb}"
+                  ?active="${live(this.selectedTab === ConnectionType.Kdb)}">
+                  ${this.renderNewMyQConnectionForm()}
+                </sl-tab-panel>
+                <sl-tab-panel
+                  name="${ConnectionType.Insights}"
+                  ?active="${live(
+                    this.selectedTab === ConnectionType.Insights,
+                  )}">
+                  ${this.renderNewInsightsConnectionForm()}
+                </sl-tab-panel>
+              </sl-tab-group>
+            </div>
           </div>
         </div>
-        <div class="col"></div>
       </div>
     `;
   }
 
   renderCreateConnectionBtn() {
     return html`<div class="row">
-      <vscode-button @click="${() => this.save()}"
-        >Create Connection</vscode-button
+      <sl-button variant="primary" class="grow" @click="${() => this.save()}"
+        >Create Connection</sl-button
       >
     </div>`;
   }
@@ -687,11 +741,13 @@ export class KdbNewConnectionView extends LitElement {
     if (!this.connectionData) {
       return html`<div>No connection found to be edited</div>`;
     }
-    this.isBundledQ = this.connectionData.connType === 0;
+    this.isBundledQ = this.connectionData.connType === ConnectionType.BundledQ;
     this.oldAlias = this.connectionData.serverName;
     const connTypeName = this.defineConnTypeName(this.connectionData.connType);
     this.serverType =
-      this.connectionData.connType === 2 ? ServerType.INSIGHTS : ServerType.KDB;
+      this.connectionData.connType === ConnectionType.Insights
+        ? ServerType.INSIGHTS
+        : ServerType.KDB;
     return html`
       <div class="row mt-1 mb-1 content-wrapper">
         ${this.isModalOpen ? this.renderNewLabelModal() : ""}
@@ -711,8 +767,11 @@ export class KdbNewConnectionView extends LitElement {
           <div class="row">${this.renderEditConnFields()}</div>
           <div class="row">${this.renderConnectionLabelsSection()}</div>
           <div class="row">
-            <vscode-button @click="${() => this.editConnection()}"
-              >Update Connection</vscode-button
+            <sl-button
+              variant="primary"
+              class="grow"
+              @click="${() => this.editConnection()}"
+              >Update Connection</sl-button
             >
           </div>
         </div>
@@ -721,9 +780,9 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   defineConnTypeName(connType: number) {
-    if (connType === 0) {
+    if (connType === ConnectionType.BundledQ) {
       return "Bundled q";
-    } else if (connType === 1) {
+    } else if (connType === ConnectionType.Kdb) {
       return "My q";
     } else {
       return "Insights";
@@ -941,7 +1000,8 @@ export class KdbNewConnectionView extends LitElement {
       },
     });
     setTimeout(() => {
-      this.labels.unshift(this.newLblName);
+      this.labels.push(this.newLblName);
+      this.removeBlankLabels();
       this.closeModal();
     }, 500);
   }
