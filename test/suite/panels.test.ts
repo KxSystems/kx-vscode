@@ -244,6 +244,76 @@ describe("WebPanels", () => {
         stub.restore();
       });
 
+      it("should convert results to grid format for insights above 1.12", () => {
+        const results: StructuredTextResults = {
+          columns: [
+            {
+              name: "prop1",
+              type: "type1",
+              values: ["value1", "value2"],
+              order: [1, 2],
+            },
+            {
+              name: "prop2",
+              type: "type2",
+              values: ["value3", "value4"],
+              order: [1, 2],
+            },
+          ],
+          count: 2,
+        };
+
+        const expectedOutput = JSON.stringify({
+          defaultColDef: {
+            sortable: true,
+            resizable: true,
+            filter: true,
+            flex: 1,
+            minWidth: 100,
+          },
+          rowData: [
+            { index: 1, prop1: "value2", prop2: "value4" },
+            { index: 2 },
+          ],
+          columnDefs: [
+            { field: "index", headerName: "Index", cellDataType: "number" },
+            {
+              field: "prop1",
+              headerName: "prop1",
+              cellDataType: "text",
+              cellRendererParams: { disabled: false },
+              headerTooltip: "type1",
+            },
+            {
+              field: "prop2",
+              headerName: "prop2",
+              cellDataType: "text",
+              cellRendererParams: { disabled: false },
+              headerTooltip: "type2",
+            },
+          ],
+          domLayout: "autoHeight",
+          pagination: true,
+          paginationPageSize: 100,
+          enableCellTextSelection: true,
+          ensureDomOrder: true,
+          suppressContextMenu: true,
+          suppressDragLeaveHidesColumns: true,
+          tooltipShowDelay: 200,
+          loading: true,
+        });
+
+        // Mock ext.connectionNode
+        const stub = sinon.stub(ext, "activeConnection");
+        stub.get(() => insightsConn);
+
+        const output = resultsPanel.convertToGrid(results, true, 1.12);
+        assert.equal(JSON.stringify(output), expectedOutput);
+
+        // Restore the stub
+        stub.restore();
+      });
+
       it("should convert results to grid format with empty rows", () => {
         const results = {
           data: {

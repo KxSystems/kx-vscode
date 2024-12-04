@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite including the q programming language",
   "publisher": "KX",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "engines": {
     "vscode": "^1.86.0"
   },
