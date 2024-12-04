@@ -28,3 +28,24 @@ body {
 .results-txt {
   white-space: pre;
 }
+
+/* styles.css */
+
+.custom-ag-grid-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+}
+
+.custom-ag-grid-header-title {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.custom-ag-grid-header-subtitle {
+  font-size: 12px;
+  color: #666666;
+}
