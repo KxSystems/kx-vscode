@@ -24,6 +24,7 @@ import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
 import { kdbOutputLog } from "../utils/core";
+import { GridOptions } from "ag-grid-community";
 import { StructuredTextResults } from "../models/queryResult";
 
 export class KdbResultsViewProvider implements WebviewViewProvider {
@@ -208,22 +209,29 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
   updatedExtractColumnDefs(results: StructuredTextResults) {
     const { columns } = results;
+
     const columnDefs = columns.map((column) => {
       const cellDataType = this.kdbToAgGridCellType(column.type);
-      const headerName = `${column.name}`;
+      const headerName = column.type
+        ? `${column.name} [${column.type}]`
+        : column.name;
+
       return {
         field: column.name,
-        headerName,
-        cellDataType,
+        headerName: headerName,
+        cellDataType: cellDataType,
         cellRendererParams: { disabled: cellDataType === "boolean" },
-        headerTooltip: column.type ? column.type : undefined,
       };
     });
 
     return columnDefs;
   }
 
-  convertToGrid(results: any, isInsights: boolean, connVersion?: number): any {
+  convertToGrid(
+    results: any,
+    isInsights: boolean,
+    connVersion?: number,
+  ): GridOptions {
     let rowData = [];
     let columnDefs = [];
     if (connVersion && connVersion >= 1.12) {
@@ -285,7 +293,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       ext.resultPanelCSV = this.convertToCsv(rowData).join("\n");
     }
 
-    return {
+    const gridOptions: GridOptions = {
       defaultColDef: {
         sortable: true,
         resizable: true,
@@ -305,6 +313,8 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       tooltipShowDelay: 200,
       loading: true,
     };
+
+    return gridOptions;
   }
 
   isVisible(): boolean {
@@ -422,6 +432,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
               window.addEventListener('message', event => {
                 const message = event.data;
+                console.log(event)
                 if (message.command === 'setGridOptions') {
                   const columnWidths = saveColumnWidths();
                   const gridOptions = message.gridOptions;

@@ -774,17 +774,15 @@ describe("WebPanels", () => {
         const expectedColumnDefs = [
           {
             field: "date",
-            headerName: "date",
+            headerName: "date [dates]",
             cellDataType: "text",
             cellRendererParams: { disabled: false },
-            headerTooltip: "dates",
           },
           {
             field: "instance",
-            headerName: "instance",
+            headerName: "instance [symbols]",
             cellDataType: "text",
             cellRendererParams: { disabled: false },
-            headerTooltip: "symbols",
           },
         ];
 
