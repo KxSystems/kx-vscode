@@ -29,6 +29,7 @@ import { JwtUser } from "../models/jwt_user";
 import { Telemetry } from "../utils/telemetryClient";
 import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
 import {
+  compareVersions,
   invalidUsernameJWT,
   kdbOutputLog,
   tokenUndefinedError,
@@ -170,7 +171,7 @@ export class InsightsConnection {
     };
     // uncomment this WHEN the insights version is available
     // if (this.insightsVersion) {
-    //   if (this.insightsVersion >= 1.12) {
+    //   if (compareVersions(this.insightsVersion, 1.12)) {
     //     this.connEndpoints = {
     //       scratchpad: {
     //         scratchpad: "scratchpad/execute/display",
@@ -432,7 +433,7 @@ export class InsightsConnection {
       };
 
       if (this.insightsVersion) {
-        if (this.insightsVersion >= 1.12) {
+        if (compareVersions(this.insightsVersion, 1.12)) {
           body.returnFormat = isTableView ? "structuredText" : "text";
         } else {
           body.isTableView = isTableView;
@@ -476,7 +477,10 @@ export class InsightsConnection {
                 kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
                 if (!response.data.error) {
                   if (isTableView) {
-                    if (this.insightsVersion && this.insightsVersion >= 1.12) {
+                    if (
+                      this.insightsVersion &&
+                      compareVersions(this.insightsVersion, 1.12)
+                    ) {
                       response.data = JSON.parse(
                         response.data.data,
                       ) as StructuredTextResults;
