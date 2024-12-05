@@ -2,6 +2,12 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.9.1
+
+### Fixes
+
+- Fixed Insights version validation
+
 # v1.9.0
 
 ### Enhancements
