@@ -23,9 +23,9 @@ import { ext } from "../extensionVariables";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
-import { kdbOutputLog } from "../utils/core";
-import { GridOptions } from "ag-grid-community";
+import { compareVersions, kdbOutputLog } from "../utils/core";
 import { StructuredTextResults } from "../models/queryResult";
+import { GridOptions } from "ag-grid-community";
 
 export class KdbResultsViewProvider implements WebviewViewProvider {
   public static readonly viewType = "kdb-results";
@@ -234,7 +234,8 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   ): GridOptions {
     let rowData = [];
     let columnDefs = [];
-    if (connVersion && connVersion >= 1.12) {
+
+    if (connVersion && compareVersions(connVersion, 1.12)) {
       rowData = this.updatedExtractRowData(results);
       columnDefs = this.updatedExtractColumnDefs(results);
     } else {

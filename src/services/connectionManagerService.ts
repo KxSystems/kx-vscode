@@ -19,6 +19,7 @@ import { Telemetry } from "../utils/telemetryClient";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { sanitizeQuery } from "../utils/queryUtils";
 import {
+  compareVersions,
   getInsights,
   getKeyForServerName,
   getServerName,
@@ -353,7 +354,7 @@ export class ConnectionManagementService {
 
     if (
       ext.activeConnection.insightsVersion &&
-      ext.activeConnection.insightsVersion >= 1.12
+      compareVersions(ext.activeConnection.insightsVersion, 1.12)
     ) {
       const confirmationPrompt = `Are you sure you want to reset the scratchpad from the connection ${ext.activeConnection.connLabel}?`;
       const selection = await window.showInformationMessage(

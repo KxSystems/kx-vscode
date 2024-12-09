@@ -694,3 +694,7 @@ function map(xs: any, f: any) {
     res.push(f.call(xs, xs[i], i));
   }
 }
+
+export function compareVersions(version1: number, version2: number): boolean {
+  return semver.gte(`${version1}.0`, `${version2}.0`);
+}
