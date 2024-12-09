@@ -279,17 +279,15 @@ describe("WebPanels", () => {
             { field: "index", headerName: "Index", cellDataType: "number" },
             {
               field: "prop1",
-              headerName: "prop1",
+              headerName: "prop1 [type1]",
               cellDataType: "text",
               cellRendererParams: { disabled: false },
-              headerTooltip: "type1",
             },
             {
               field: "prop2",
-              headerName: "prop2",
+              headerName: "prop2 [type2]",
               cellDataType: "text",
               cellRendererParams: { disabled: false },
-              headerTooltip: "type2",
             },
           ],
           domLayout: "autoHeight",
@@ -844,17 +842,15 @@ describe("WebPanels", () => {
         const expectedColumnDefs = [
           {
             field: "date",
-            headerName: "date",
+            headerName: "date [dates]",
             cellDataType: "text",
             cellRendererParams: { disabled: false },
-            headerTooltip: "dates",
           },
           {
             field: "instance",
-            headerName: "instance",
+            headerName: "instance [symbols]",
             cellDataType: "text",
             cellRendererParams: { disabled: false },
-            headerTooltip: "symbols",
           },
         ];
 
