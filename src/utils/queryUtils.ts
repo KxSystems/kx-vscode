@@ -22,6 +22,7 @@ import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { QueryHistory } from "../models/queryHistory";
 import { kdbOutputLog } from "./core";
 import { ServerType } from "../models/connectionsModels";
+import { ScratchpadStacktrace } from "../models/scratchpadResult";
 
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {
@@ -359,4 +360,39 @@ export function addQueryHistory(
   ext.kdbQueryHistoryList.unshift(newQueryHistory);
 
   ext.queryHistoryProvider.refresh();
+}
+
+export function formatStacktrace(stacktrace: ScratchpadStacktrace) {
+  const trace = stacktrace.map((frame) => {
+    let lines = frame.text[0].split("\n");
+    let preline = "";
+    // We need to account for the possibility that the error
+    // occurs in a piece of code containing newlines, so we split
+    // up the text into lines and inject the caret into the correct
+    // location.
+    preline = lines.pop() as string;
+    const caretline = Array(preline.length).fill(" ").join("") + "^";
+    const postlines = (preline + frame.text[1]).split("\n");
+    postlines.splice(1, 0, caretline);
+    lines = lines.concat(postlines);
+    return {
+      ...frame,
+      lines,
+    };
+  });
+
+  return trace
+    .map((t, i) => {
+      let str = "[" + (trace.length - 1 - i) + "] " + t.name;
+
+      if (t.isNested) {
+        str += " @ ";
+      }
+
+      const gutter = " ".repeat(str.length);
+      str += t.lines.map((l, i) => (i > 0 ? gutter + l : l)).join("\n");
+
+      return str;
+    })
+    .join("\n");
 }
