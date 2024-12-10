@@ -137,7 +137,7 @@ export async function activate(context: ExtensionContext) {
 
   // clear necessary contexts
   commands.executeCommand("setContext", "kdb.connected.active", false);
-  commands.executeCommand("setContext", "kdb.insightsConnected", false);
+  commands.executeCommand("setContext", "kdb.pythonEnabled", false);
   commands.executeCommand("setContext", "kdb.connected", []);
 
   const servers: Server | undefined = getServers();
