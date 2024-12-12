@@ -25,8 +25,7 @@ export default class QChar extends U8 {
   static listToIPC(values: Array<string>): Uint8Array {
     const charData = values.map((v) => u8u16(v && v.length ? v[0] : " "));
 
-    // eslint-disable-next-line prefer-spread
-    const merged = ([] as number[]).concat.apply([], charData);
+    const merged = (charData as any).flat();
     const size = charData.length + 6;
     const buffer = TypeBase.createBuffer(size);
 
