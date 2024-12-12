@@ -146,12 +146,11 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         return Object.keys(results.meta).map((key: string) => {
           const sanitizedKey = this.sanitizeString(key);
           const type = results.meta[key];
-          const headerTooltip = type;
+          const headerName = type ? `${sanitizedKey} [${type}]` : sanitizedKey;
           const cellDataType = this.kdbToAgGridCellType(type);
           return {
             field: sanitizedKey,
-            headerName: sanitizedKey,
-            headerTooltip,
+            headerName,
             cellDataType,
           };
         });
@@ -159,13 +158,12 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         return Object.keys(results.rows[0]).map((key: string) => {
           const sanitizedKey = this.sanitizeString(key);
           const type = results.meta[key];
-          const headerTooltip = type;
+          const headerName = type ? `${sanitizedKey} [${type}]` : sanitizedKey;
           const cellDataType =
             type != undefined ? this.kdbToAgGridCellType(type) : undefined;
           return {
             field: sanitizedKey,
-            headerName: sanitizedKey,
-            headerTooltip,
+            headerName,
             cellDataType,
           };
         });
@@ -211,10 +209,11 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     const { columns } = results;
 
     const columnDefs = columns.map((column) => {
+      const sanitizedKey = this.sanitizeString(column.name);
       const cellDataType = this.kdbToAgGridCellType(column.type);
       const headerName = column.type
-        ? `${column.name} [${column.type}]`
-        : column.name;
+        ? `${sanitizedKey} [${column.type}]`
+        : sanitizedKey;
 
       return {
         field: column.name,
