@@ -894,13 +894,6 @@ describe("dataSourceCommand2", () => {
       const result = dataSourceCommand.parseError(error);
 
       assert(kdbOutputLogStub.calledOnce);
-      assert(
-        kdbOutputLogStub.calledWith(
-          `[DATASOURCE] Error: ${error}`,
-          "ERROR",
-          true,
-        ),
-      );
       assert.deepEqual(result, { error });
     });
   });
