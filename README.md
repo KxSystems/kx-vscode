@@ -128,8 +128,6 @@ To add connections:
    - [My q](#my-q): This is an unmanaged q session and is a connection to a remote q process.
    - [Insights](#insights-connection): This accesses **kdb Insights Enterprise** API endpoints and a user-specific scratchpad process within a **kdb Insights Enterprise** deployment.
 
-   ![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/bundleqform.png?raw=true)
-
 1. Set the properties appropriate to the connection type as described in the following sections.
 
 ### Bundled q
@@ -142,6 +140,8 @@ When you select **Bundled q** as the connection type and set the following prope
 | The connection address | This is already be set as `127.0.0.1` which corresponds to your **localhost**.                                                                                                                     |
 | Port                   | Set the port for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. 5002. [Read here for more about setting a q port](https://code.kx.com/q/basics/ipc/) |
 | Label Name             | Select the label you want to assign the connection to                                                                                                                                              |
+
+![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/bundleq.png?raw=true)
 
 1. Click **Create Connection** and the connection appears under **CONNECTIONS** in the primary sidebar..
 

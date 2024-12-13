@@ -91,7 +91,7 @@ export function handleWSError(ab: ArrayBuffer): any {
     }
   }
 
-  kdbOutputLog(`Error : ${errorString}`, "ERROR");
+  kdbOutputLog(`Error : ${errorString}`, "ERROR", true);
 
   return { error: errorString };
 }

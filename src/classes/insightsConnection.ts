@@ -464,10 +464,7 @@ export class InsightsConnection {
             })
             .then((response: any) => {
               if (response.data.error) {
-                kdbOutputLog(
-                  `[SCRATCHPAD] Error occured while executing scratchpad: ${response.data.errorMsg}`,
-                  "ERROR",
-                );
+                return response.data;
               } else if (query === "") {
                 kdbOutputLog(
                   `[SCRATCHPAD] scratchpad created for connection: ${this.connLabel}`,

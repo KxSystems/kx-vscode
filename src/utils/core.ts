@@ -313,11 +313,15 @@ export function getServerAlias(serverList: ServerDetails[]): void {
   });
 }
 
-export function kdbOutputLog(message: string, type: string): void {
+export function kdbOutputLog(
+  message: string,
+  type: string,
+  supressDialog?: boolean,
+): void {
   const dateNow = new Date().toLocaleDateString();
   const timeNow = new Date().toLocaleTimeString();
   ext.outputChannel.appendLine(`[${dateNow} ${timeNow}] [${type}] ${message}`);
-  if (type === "ERROR") {
+  if (type === "ERROR" && !supressDialog) {
     window.showErrorMessage(
       `Error occured, check kdb output channel for details.`,
     );
