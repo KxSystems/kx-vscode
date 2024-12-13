@@ -1184,47 +1184,30 @@ export function writeScratchpadResult(
   duration: string,
   connVersion: number,
 ): void {
-  const queryConsole = ExecutionConsole.start();
-
-  if (result.error) {
-    queryConsole.appendQueryError(
+  if (ext.isResultsTabVisible) {
+    writeQueryResultsToView(
+      result.error ? result.errorMsg : result,
       query,
-      result.errorMsg,
       connLabel,
       executorName,
       true,
+      isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+      isPython,
+      duration,
+      false,
+      connVersion,
+    );
+  } else {
+    writeQueryResultsToConsole(
+      result.error ? result.errorMsg : result.data,
+      query,
+      connLabel,
+      executorName,
       true,
       isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
       isPython,
-      false,
       duration,
     );
-  } else {
-    if (ext.isResultsTabVisible) {
-      writeQueryResultsToView(
-        result,
-        query,
-        connLabel,
-        executorName,
-        true,
-        isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
-        isPython,
-        duration,
-        false,
-        connVersion,
-      );
-    } else {
-      writeQueryResultsToConsole(
-        result.data,
-        query,
-        connLabel,
-        executorName,
-        true,
-        isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
-        isPython,
-        duration,
-      );
-    }
   }
 }
 
