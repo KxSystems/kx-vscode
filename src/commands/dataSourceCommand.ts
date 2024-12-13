@@ -420,7 +420,11 @@ export function parseError(error: GetDataError) {
   if (error instanceof Object && error.buffer) {
     return handleWSError(error.buffer);
   } else {
-    kdbOutputLog(`[DATASOURCE] Error: ${error}`, "ERROR", true);
+    kdbOutputLog(
+      `[DATASOURCE] Error: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+      "ERROR",
+      true,
+    );
     return {
       error,
     };
