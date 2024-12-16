@@ -166,6 +166,10 @@ export function tokenId(token: Token) {
   return (token.tokenType.tokenTypeIdx?.toString(16) || "").padStart(2, "0");
 }
 
+export function lamdaDefinition(token: Token) {
+  return token.assignment?.find((value) => value.tokenType === LCurly);
+}
+
 export const enum FindKind {
   Reference,
   Definition,
