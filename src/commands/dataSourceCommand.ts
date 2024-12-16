@@ -198,7 +198,7 @@ export async function runDataSource(
     }
   } catch (error) {
     window.showErrorMessage((error as Error).message);
-    kdbOutputLog(`[DATASOURCE]  ${(error as Error).message}`, "ERROR");
+    kdbOutputLog(`[DATASOURCE]  ${(error as Error).message}`, "ERROR", true);
     DataSourcesPanel.running = false;
   } finally {
     DataSourcesPanel.running = false;
