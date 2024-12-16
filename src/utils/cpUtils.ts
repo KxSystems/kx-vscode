@@ -66,8 +66,16 @@ export async function tryExecuteCommand(
       let childProc: cp.ChildProcess;
       if (process.platform === "darwin") {
         // need to send the escaped working directory and command together for MacOS
-        workingDirectory = workingDirectory.replace(/(\s+)/g, "\\ ");
+        workingDirectory = workingDirectory.replace(/\s/g, "\\ ");
         childProc = cp.spawn(join(workingDirectory, command), args, options);
+      } else if (process.platform === "linux") {
+        childProc = cp.spawn(
+          workingDirectory === os.tmpdir()
+            ? command
+            : join(workingDirectory, command),
+          args,
+          options,
+        );
       } else {
         childProc = cp.spawn(command, args, options);
       }
