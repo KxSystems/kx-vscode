@@ -11,9 +11,18 @@
  * specific language governing permissions and limitations under the License.
  */
 
+type StacktraceItem = {
+  isNested: boolean;
+  name: string;
+  text: string[];
+};
+
+export type ScratchpadStacktrace = StacktraceItem[];
+
 export type ScratchpadResult = {
   data: string;
   error: boolean;
   errorMsg: string;
   sessionID: string;
+  stacktrace?: ScratchpadStacktrace;
 };

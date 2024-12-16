@@ -901,6 +901,34 @@ describe("Utils", () => {
       );
       assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
     });
+
+    it("should format a Scratchpad stacktrace correctly", () => {
+      const stacktrace = [
+        { name: "g", isNested: false, text: ["{a:x*2;a", "+y}"] },
+        { name: "f", isNested: false, text: ["{", "g[x;2#y]}"] },
+        { name: "", isNested: false, text: ["", 'f[3;"hello"]'] },
+      ];
+
+      const formatted = queryUtils.formatScratchpadStacktrace(stacktrace);
+      assert.strictEqual(
+        formatted,
+        '[2] g{a:x*2;a+y}\n             ^\n[1] f{g[x;2#y]}\n      ^\n[0] f[3;"hello"]\n    ^',
+      );
+    });
+
+    it("should format a Scratchpad stacktrace with nested function correctly", () => {
+      const stacktrace = [
+        { name: "f", isNested: true, text: ["{a:x*2;a", "+y}"] },
+        { name: "f", isNested: false, text: ["{", "{a:x*2;a+y}[x;2#y]}"] },
+        { name: "", isNested: false, text: ["", 'f[3;"hello"]'] },
+      ];
+
+      const formatted = queryUtils.formatScratchpadStacktrace(stacktrace);
+      assert.strictEqual(
+        formatted,
+        '[2] f @ {a:x*2;a+y}\n                ^\n[1] f{{a:x*2;a+y}[x;2#y]}\n      ^\n[0] f[3;"hello"]\n    ^',
+      );
+    });
   });
 
   describe("selectDSType", () => {

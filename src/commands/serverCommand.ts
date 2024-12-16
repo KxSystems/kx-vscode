@@ -52,7 +52,11 @@ import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { decodeQUTF } from "../utils/decode";
 import { ExecutionConsole } from "../utils/executionConsole";
 import { openUrl } from "../utils/openUrl";
-import { checkIfIsDatasource, addQueryHistory } from "../utils/queryUtils";
+import {
+  checkIfIsDatasource,
+  addQueryHistory,
+  formatScratchpadStacktrace,
+} from "../utils/queryUtils";
 import {
   validateServerAlias,
   validateServerName,
@@ -1184,9 +1188,20 @@ export function writeScratchpadResult(
   duration: string,
   connVersion: number,
 ): void {
+  let errorMsg;
+
+  if (result.error) {
+    errorMsg = result.errorMsg;
+
+    if (result.stacktrace) {
+      errorMsg =
+        errorMsg + "\n" + formatScratchpadStacktrace(result.stacktrace);
+    }
+  }
+
   if (ext.isResultsTabVisible) {
     writeQueryResultsToView(
-      result.error ? result.errorMsg : result,
+      errorMsg ?? result,
       query,
       connLabel,
       executorName,
@@ -1199,7 +1214,7 @@ export function writeScratchpadResult(
     );
   } else {
     writeQueryResultsToConsole(
-      result.error ? result.errorMsg : result.data,
+      errorMsg ?? result.data,
       query,
       connLabel,
       executorName,
