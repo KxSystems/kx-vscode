@@ -1,0 +1,280 @@
+feature removeExtraIndents
+    before
+        .test.src: "\n" sv read0 `:resources/evaluatePy.q;
+        .test.evaluatePy: {[isString; code]
+            0i (.test.src; isString; code)
+            };
+    should handle unmatched dedents
+        expect both expressions to be moved to column 0
+            x:  "  a = 1 + 2\n",
+                "a + 3";
+            .qu.compare[.test.evaluatePy[0b; x]`result; 6]
+
+    should handle blank lines
+        expect the expression to be moved to column 0
+            x:  "\n",
+                "  1 + 2";
+            .qu.compare[.test.evaluatePy[0b; x]`result; 3]
+
+    should handle tabs
+        expect the expression and statement to be moved to column 0
+            x:  "\t\ta = 1\n",
+                "\t\tdef foo(x):\n",
+                "\t\t\treturn x + 1\n",
+                "\tfoo(a)\n";
+            .qu.compare[.test.evaluatePy[0b; x]`result; 2]
+            
+    should handle multiline strings
+        expect all statements to be moved to column 0
+            x:  "    a = len(\"\"\"\n",
+                "       1 2 3\n",
+                "       \"\"\")\n",
+                "    b = \"one\"\n",
+                "    c = \"two\"\n",
+                "    (a,b,c)";
+            .qu.compare[.test.evaluatePy[0b; x]`result; (21; `one; `two)];
+
+    should handle functions at decreasing indents
+        expect all statements to start in col 0
+            x:  "        def foo (x):\n",
+                "            return x * x\n",
+                "    \n",
+                "    def bar (x):\n",
+                "        return x * x\n",
+                " \n",
+                "def quux (x):\n",
+                "    return x * x\n",
+                "\n",
+                "foo(bar(quux(2)))";
+            
+            .qu.compare[.test.evaluatePy[0b; x]`result; 256];
+            
+    should handle functions at decreasing indents
+        expect relative indenting within the function to be preserved
+            x:  "    def indented1 (x):\n",
+                "    \n",
+                "        def indented2 (x):\n",
+                " \n",
+                "            def indented3 (x):\n",
+                "                return x * x";
+            .test.evaluatePy[0b; x]`result;
+            
+            all (
+                .test.evaluatePy[0b; "indented1(1)"][`errored] ~ 0b;
+                .test.evaluatePy[0b; "indented2(1)"][`errored] ~ 1b;
+                .test.evaluatePy[0b; "indented3(1)"][`errored] ~ 1b
+                )
+            
+    should leave legitimately incorrect indentation
+        expect the "else" to not be moved to column 0
+            x:  "if False:\n",
+                "    print(1)\n",
+                " else:\n",
+                "    print(2)\n";
+
+            .qu.compare[.test.evaluatePy[0b; x]`error;
+                "unindent does not match any outer indentation level (<unknown>, line 3)"]
+
+            
+feature evaluatePy 1
+    // These are the tests from the scratchpad repo
+    before
+        .test.src: "\n" sv read0 `:resources/evaluatePy.q;
+        .test.evaluatePy: {[isString; code]
+            0i (.test.src; isString; code)
+            };
+        .test.wrap: {`result`errored`error!(x; 0b; "")}
+        
+    should run python code
+        expect an empty input to return "None"
+            .qu.compare[
+                .test.evaluatePy[1b; ""];
+                .test.wrap "None"]
+        expect an empty input to return ::
+            .qu.compare[
+                .test.evaluatePy[0b; "  \n \n  "];
+                .test.wrap (::)]
+        expect a non-string value asString is false
+            // The list must be cast, as pykx returns all lists as 0h
+            .qu.compare[
+                .test.evaluatePy[0b; "[1,2,3]"];
+                .test.wrap 1 2 3]
+        expect expressions to return a value
+            .qu.compare[
+                .test.evaluatePy[1b; "1+2"];
+                .test.wrap enlist "3"]
+        expect statements to return an empty string
+            .qu.compare[
+                .test.evaluatePy[1b; "def axedi_test_fn(x):\n    return 1 + x"];
+                .test.wrap "None"]
+        expect statements to have been executed
+            .qu.compare[
+                .test.evaluatePy[1b; "axedi_test_fn(10)"];
+                .test.wrap "11"]
+        expect utf-8 to be handled
+            .qu.compare[
+                .test.evaluatePy[1b; "'你好'"];
+                .test.wrap "你好"]
+        expect return values to be limited to 250,000 characters
+            .qu.compare[
+                .test.evaluatePy[1b; "'", (251000#.Q.a) , "'"];
+                .test.wrap (250000#.Q.a) , ".."]
+        expect an ellipsis on a new line for long multiline results
+            // A custom class is the easiest way to get a newline in the python results
+            .pykx.pyexec "class Long_Text:
+                def __repr__(self):
+                    return '\\n123456789' * 26_000";
+            
+            .qu.compare[
+                .test.evaluatePy[1b; "Long_Text()"];
+                .test.wrap (raze 25000#enlist "\n123456789") , "\n.."]
+        expect invalid statements to error
+            .qu.compare[
+                .test.evaluatePy[1b; "1+++"];
+                (!) . flip (
+                    (`result;    ::);
+                    (`errored;   1b);
+                    (`error;     "invalid syntax (<unknown>, line 1)");
+                    (`backtrace; "  File \"<unknown>\", line 1\n    1+++\n        ^\nSyntaxError: invalid syntax"))]
+
+    should run multiline python code
+        expect code ending in comments to evaluate correctly
+            .qu.compare[
+                .test.evaluatePy[1b;"a=(1+ # An inline comment\n   2 + 3)\na\n# This is a comment"];
+                .test.wrap enlist "6"]
+        expect code multiline strings to return the value of the last expression
+            .qu.compare[
+                .test.evaluatePy[1b;"'''This is\na multiline\nstring'''"];
+                .test.wrap "This is\na multiline\nstring"]
+        expect code multiline strings to return the value of the last expression
+            .qu.compare[
+                .test.evaluatePy[1b;"'''This is\na multiline\nstring'''"];
+                .test.wrap "This is\na multiline\nstring"]
+        expect code with multiline expressions per line to return the last expression
+            .qu.compare[
+                .test.evaluatePy[0b;"a = 3; b = 10; c = '''This is\nmy\nstring'''; a + b + len(c)"];
+                .test.wrap 30]
+        expect code with multiline expressions per line to return None
+            .qu.compare[
+                .test.evaluatePy[0b;"# Just comments\n# More comments"];
+                .test.wrap (::)]
+        expect an assignment to return None
+            .qu.compare[
+                .test.evaluatePy[1b;"a=1"];
+                .test.wrap "None"]
+        expect a backslash to work for writing multiline expressions
+            .qu.compare[.test.evaluatePy[1b;"\n" sv (
+                    "a = 1   \\";
+                    "    + 2 \\";
+                    "    + 3 \\";
+                    "    - 0";
+                    "a * \\";
+                    "    3")];
+                .test.wrap "18"]
+
+    should display the stack trace for Python errors
+        expect the stack trace to not show the functions before usercode
+           .pykx.pyexec "\n" sv (
+                "def foo(x):";
+                "    return bar(x)";
+                "";
+                "def bar(x):";
+                "    return x + 'hello'");
+
+            .qu.compare[.test.evaluatePy[1b; "size = len(foo(5))"];
+                (!) . flip (
+                    (`result;    ::);
+                    (`errored;   1b);
+                    (`error;     "unsupported operand type(s) for +: 'int' and 'str'");
+                    (`backtrace; "\n" sv (
+                        "Traceback (most recent call last):";
+                        "  File \"<string>\", line 1, in <module>";
+                        "  File \"<string>\", line 2, in foo";
+                        "  File \"<string>\", line 5, in bar";
+                        "TypeError: unsupported operand type(s) for +: 'int' and 'str'")))]
+
+        expect the stack trace to not show the functions before user code
+            .qu.compare[.test.evaluatePy[0b; "1 2 + 3 4"];
+                (!) . flip (
+                    (`result;    ::);
+                    (`errored;   1b);
+                    (`error;     "invalid syntax (<unknown>, line 1)");
+                    (`backtrace; "\n" sv (
+                        "  File \"<unknown>\", line 1";
+                        "    1 2 + 3 4";
+                        "      ^";
+                        "SyntaxError: invalid syntax")))]
+            
+        expect no stack trace for errors outside a function
+            .qu.compare[.test.evaluatePy[1b; "1 + 'a'"];
+                (!) . flip (
+                    (`result;    ::);
+                    (`errored;   1b);
+                    (`error;     "unsupported operand type(s) for +: 'int' and 'str'");
+                    (`backtrace; "\n" sv (
+                        "Traceback (most recent call last):";
+                        "  File \"<string>\", line 1, in <module>";
+                        "TypeError: unsupported operand type(s) for +: 'int' and 'str'")))]
+
+        expect a stack trace for syntax errors
+            .qu.compare[.test.evaluatePy[0b; "2)"];
+                (!) . flip (
+                    (`result;    ::);
+                    (`errored;   1b);
+                    (`error;     "unmatched ')' (<unknown>, line 1)");
+                    (`backtrace; "\n" sv (
+                        "  File \"<unknown>\", line 1";
+                        "    2)";
+                        "     ^";
+                        "SyntaxError: unmatched ')'")))]
+
+feature evaluatePy 2
+    // These are the tests specific to the VS Code extension
+    before
+        .test.src: "\n" sv read0 `:resources/evaluatePy.q;
+        .test.evaluatePy: {[isString; code]
+            0i (.test.src; isString; code)
+            };
+
+    should define nothing in the global namespace except when explicitly the result of user code
+        expect sendMe to not define anything in the remote process
+            .test.evaluatePy[1b; "1+2"];
+            .test.evaluatePy[0b; "1+2"];
+            .pykx.qeval "all(map(lambda x: not(x in globals()), ['_kx_ast', 'BytesIO', 'tokenize', 'is_expr', 'run_line', 'range_to_text', 'run', 'find_strings']))";
+
+        expect the nested functions to be undefined
+            @[{.pykx.eval x; 0b};
+                "is_expr";
+                {x ~ "NameError(\"name 'is_expr' is not defined\")"}];
+
+        expect the user to be able to define values in the remote process
+            .test.evaluatePy[0b; "def my_fn():\n    return [1,2,3]"];
+            1 2 3 ~ .pykx.qeval"my_fn()";
+            
+    should not affect the value of .pykx.i.defaultConv
+        expect .pykx.i.defaultConv to remain "py"
+            original: .pykx.i.defaultConv;
+            .pykx.i.defaultConv: "py";
+            result: .test.evaluatePy[0b; "1 + 2"];
+            defaultConvAfter: .pykx.i.defaultConv;
+            .pykx.i.defaultConv: original;
+            all (
+                defaultConvAfter ~ "py";
+                result[`result] ~ 3
+                )
+            
+    should raise an error when .pykx is not installed
+        expect error if .pykx not installed
+            backup: .pykx;
+            
+            // Since a namepsace can't be deleted, .pykx is set to an empty dictionary
+            // so it will behave like an undefined namespace when passed to "key"
+            .pykx: ()!();
+            result: .test.evaluatePy[0b; "2 + 2"];
+            .pykx: backup;
+            
+            .qu.compare[result;
+                (!) . flip (
+                    (`result; ::);
+                    (`errored; 1b);
+                    (`error; ".pykx is not defined: please load pykx"))]

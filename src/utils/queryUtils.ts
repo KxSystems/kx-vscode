@@ -33,9 +33,11 @@ export function sanitizeQuery(query: string): string {
   return query;
 }
 
-export function queryWrapper(): string {
+export function queryWrapper(isPython: boolean): string {
+  const filename = isPython ? "evaluatePy.q" : "evaluate.q";
+
   return readFileSync(
-    ext.context.asAbsolutePath(join("resources", "evaluate.q")),
+    ext.context.asAbsolutePath(join("resources", filename)),
   ).toString();
 }
 

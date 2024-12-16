@@ -483,13 +483,13 @@
         "command": "kdb.execute.pythonScratchpadQuery",
         "key": "ctrl+d",
         "mac": "cmd+d",
-        "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
+        "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
       },
       {
         "command": "kdb.execute.pythonFileScratchpadQuery",
         "key": "ctrl+shift+d",
         "mac": "cmd+shift+d",
-        "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
+        "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
       },
       {
         "command": "kdb.terminal.run",
@@ -872,12 +872,12 @@
         {
           "command": "kdb.execute.pythonFileScratchpadQuery",
           "group": "q@0",
-          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
+          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
         },
         {
           "command": "kdb.execute.pythonScratchpadQuery",
           "group": "q@1",
-          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
+          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
         }
       ],
       "editor/context": [
@@ -904,12 +904,12 @@
         {
           "command": "kdb.execute.pythonFileScratchpadQuery",
           "group": "q@0",
-          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
+          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
         },
         {
           "command": "kdb.execute.pythonScratchpadQuery",
           "group": "q@1",
-          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
+          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
         }
       ],
       "explorer/context": [
