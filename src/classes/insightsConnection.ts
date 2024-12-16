@@ -27,11 +27,7 @@ import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { jwtDecode } from "jwt-decode";
 import { JwtUser } from "../models/jwt_user";
 import { Telemetry } from "../utils/telemetryClient";
-import {
-  formatStacktrace,
-  handleScratchpadTableRes,
-  handleWSResults,
-} from "../utils/queryUtils";
+import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
 import {
   compareVersions,
   invalidUsernameJWT,
@@ -468,14 +464,6 @@ export class InsightsConnection {
             })
             .then((response: any) => {
               if (response.data.error) {
-                // let msg = `[SCRATCHPAD] Error occured while executing scratchpad: ${response.data.errorMsg}`;
-
-                // if (response.data.stacktrace) {
-                //   msg = msg + "\n" + formatStacktrace(response.data.stacktrace);
-                // }
-
-                // kdbOutputLog(msg, "ERROR");
-
                 return response.data;
               } else if (query === "") {
                 kdbOutputLog(

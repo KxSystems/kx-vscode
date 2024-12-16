@@ -24,5 +24,5 @@ export type ScratchpadResult = {
   error: boolean;
   errorMsg: string;
   sessionID: string;
-  stacktrace: ScratchpadStacktrace;
+  stacktrace?: ScratchpadStacktrace;
 };

@@ -362,35 +362,32 @@ export function addQueryHistory(
   ext.queryHistoryProvider.refresh();
 }
 
-export function formatStacktrace(stacktrace: ScratchpadStacktrace) {
-  const trace = stacktrace.map((frame) => {
-    let lines = frame.text[0].split("\n");
-    let preline = "";
-    // We need to account for the possibility that the error
-    // occurs in a piece of code containing newlines, so we split
-    // up the text into lines and inject the caret into the correct
-    // location.
-    preline = lines.pop() as string;
-    const caretline = Array(preline.length).fill(" ").join("") + "^";
-    const postlines = (preline + frame.text[1]).split("\n");
-    postlines.splice(1, 0, caretline);
-    lines = lines.concat(postlines);
-    return {
-      ...frame,
-      lines,
-    };
-  });
+export function formatScratchpadStacktrace(stacktrace: ScratchpadStacktrace) {
+  return stacktrace
+    .map((frame, i) => {
+      let lines = frame.text[0].split("\n");
+      let preline = "";
+      // We need to account for the possibility that the error
+      // occurs in a piece of code containing newlines, so we split
+      // up the text into lines and inject the caret into the correct
+      // location.
+      preline = lines.pop() as string;
+      const caretline = Array(preline.length).fill(" ").join("") + "^";
+      const postlines = (preline + frame.text[1]).split("\n");
+      postlines.splice(1, 0, caretline);
+      lines = lines.concat(postlines);
 
-  return trace
-    .map((t, i) => {
-      let str = "[" + (trace.length - 1 - i) + "] " + t.name;
+      // main line of trace
+      let str = "[" + (stacktrace.length - 1 - i) + "] " + frame.name;
 
-      if (t.isNested) {
+      // add indicator for nested anonymous functions
+      if (frame.isNested) {
         str += " @ ";
       }
 
+      // add gutter to align other lines with the first one
       const gutter = " ".repeat(str.length);
-      str += t.lines.map((l, i) => (i > 0 ? gutter + l : l)).join("\n");
+      str += lines.map((l, i) => (i > 0 ? gutter + l : l)).join("\n");
 
       return str;
     })
