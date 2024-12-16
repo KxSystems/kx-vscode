@@ -105,7 +105,7 @@
  maxSize:250000;
  $[count[text]>maxSize;
  sublist[maxSize;text],$["\n" in text;"\n..";".."];
- text]
+ text],"\n"
  }(),result`result;
  result`result];
  $[asString;"";::]];
