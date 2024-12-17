@@ -41,7 +41,7 @@ export async function checkOpenSslInstalled(): Promise<string | null> {
   try {
     const result = await tryExecuteCommand(
       undefined,
-      "openSsl",
+      "openssl",
       log,
       "version",
     );
