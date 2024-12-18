@@ -93,7 +93,11 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       );
       meta = Promise.resolve(<MetaObjectPayload>{});
       this.cache.set(connLabel, meta);
-      kdbOutputLog("No database running in this Insights connection.", "ERROR");
+      kdbOutputLog(
+        "No database running in this Insights connection.",
+        "ERROR",
+        true,
+      );
     }
     return (await meta) || Promise.resolve(<MetaObjectPayload>{});
   }
