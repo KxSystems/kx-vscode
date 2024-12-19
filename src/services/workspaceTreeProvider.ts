@@ -23,10 +23,7 @@ import {
 } from "vscode";
 import Path from "path";
 import { getWorkspaceIconsState } from "../utils/core";
-import {
-  getConnectionForUri,
-  setServerForUri,
-} from "../commands/workspaceCommand";
+import { getConnectionForUri } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
 
 export class WorkspaceTreeProvider implements TreeDataProvider<FileTreeItem> {
@@ -65,7 +62,7 @@ export class WorkspaceTreeProvider implements TreeDataProvider<FileTreeItem> {
 }
 
 export class FileTreeItem extends TreeItem {
-  private declare pattern?: RelativePattern;
+  declare private pattern?: RelativePattern;
 
   constructor(
     resourceUri: Uri,
@@ -142,49 +139,5 @@ export class FileTreeItem extends TreeItem {
         });
     }
     return [];
-  }
-}
-
-export async function addWorkspaceFile(
-  item: FileTreeItem,
-  name: string,
-  ext: string,
-  directory = ".kx",
-) {
-  const folders = workspace.workspaceFolders;
-  if (folders) {
-    const folder =
-      item && item.resourceUri
-        ? workspace.getWorkspaceFolder(item.resourceUri)
-        : folders[0];
-    if (folder) {
-      let i = 1;
-      while (true) {
-        const files = await workspace.findFiles(
-          `${directory}/${name}-${i}${ext}`,
-        );
-        if (files.length === 0) {
-          break;
-        }
-        i++;
-        if (i > 100) {
-          throw new Error("No available file name found");
-        }
-      }
-
-      const uri = Uri.joinPath(
-        folder.uri,
-        directory,
-        `${name}-${i}${ext}`,
-      ).with({
-        scheme: "untitled",
-      });
-
-      await workspace.openTextDocument(uri);
-      await setServerForUri(uri, undefined);
-      return uri;
-    }
-  } else {
-    throw new Error("No workspace has been opened");
   }
 }

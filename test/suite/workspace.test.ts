@@ -20,14 +20,10 @@ describe("Workspace tests", () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const testWorkspaceFolder: any[] = [
     {
-      uri: {
-        fsPath: "testPath1",
-      },
+      uri: vscode.Uri.file("testPath1"),
     },
     {
-      uri: {
-        fsPath: "testPath2",
-      },
+      uri: vscode.Uri.file("testPath2"),
     },
   ];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -67,14 +63,57 @@ describe("Workspace tests", () => {
     const result = workspaceHelper.isWorkspaceOpen();
     assert.strictEqual(result, true);
   });
-});
 
-describe("activateTextDocument", () => {
-  it("should activate document", async () => {
-    sinon.stub(vscode.workspace, "openTextDocument").value(() => ({}));
-    const stub = sinon.stub(vscode.window, "showTextDocument");
-    const uri = vscode.Uri.file("/test/test.q");
-    await workspaceHelper.activateTextDocument(uri);
-    assert.strictEqual(stub.calledOnce, true);
+  describe("activateTextDocument", () => {
+    it("should activate document", async () => {
+      sinon.stub(vscode.workspace, "openTextDocument").value(() => ({}));
+      const stub = sinon.stub(vscode.window, "showTextDocument");
+      const uri = vscode.Uri.file("/test/test.q");
+      await workspaceHelper.activateTextDocument(uri);
+      assert.strictEqual(stub.calledOnce, true);
+    });
+  });
+
+  describe("addWorkspaceFile", () => {
+    it("should reject when no workspace", async () => {
+      await assert.rejects(
+        workspaceHelper.addWorkspaceFile(undefined, "test", ".q"),
+      );
+    });
+    it("should return file uri", async () => {
+      workspaceMock.value(testWorkspaceFolder);
+      sinon
+        .stub(vscode.workspace, "getWorkspaceFolder")
+        .returns(testWorkspaceFolder[0]);
+      const uri = vscode.Uri.file("test.q");
+      const result = await workspaceHelper.addWorkspaceFile(uri, "test", ".q");
+      assert.strictEqual(result.fsPath, "/testPath1/.kx/test-1.q");
+    });
+  });
+
+  describe("setUriContent", () => {
+    it("should reject when no workspace", async () => {
+      const applyEdit = sinon.stub(vscode.workspace, "applyEdit");
+      const uri = vscode.Uri.file("test.q");
+      await workspaceHelper.setUriContent(uri, "test");
+      assert.ok(applyEdit.calledOnce);
+    });
+  });
+
+  describe("workspaceHas", () => {
+    it("should return false", async () => {
+      const uri = vscode.Uri.file("test.q");
+      const result = workspaceHelper.workspaceHas(uri);
+      assert.strictEqual(result, false);
+    });
+  });
+
+  describe("openWith", () => {
+    it("should call command", async () => {
+      const executeCommand = sinon.stub(vscode.commands, "executeCommand");
+      const uri = vscode.Uri.file("test.q");
+      await workspaceHelper.openWith(uri, "test");
+      assert.strictEqual(executeCommand.calledOnce, true);
+    });
   });
 });

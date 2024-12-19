@@ -32,5 +32,6 @@ import {
 } from "@vscode/webview-ui-toolkit";
 import "./components/kdbDataSourceView";
 import "./components/kdbNewConnectionView";
+import "./components/kdbChartView";
 
 provideVSCodeDesignSystem().register(allComponents);

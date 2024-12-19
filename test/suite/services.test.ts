@@ -53,10 +53,7 @@ import { LocalConnection } from "../../src/classes/localConnection";
 import { Telemetry } from "../../src/utils/telemetryClient";
 import { InsightsConnection } from "../../src/classes/insightsConnection";
 import { DataSourceEditorProvider } from "../../src/services/dataSourceEditorProvider";
-import {
-  WorkspaceTreeProvider,
-  addWorkspaceFile,
-} from "../../src/services/workspaceTreeProvider";
+import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider";
 import Path from "path";
 import * as utils from "../../src/utils/getUri";
 import { MetaInfoType, MetaObject } from "../../src/models/meta";
@@ -73,6 +70,7 @@ import * as coreUtils from "../../src/utils/core";
 import { KdbTreeService } from "../../src/services/kdbTreeService";
 import * as serverCommand from "../../src/commands/serverCommand";
 import { ServerObject } from "../../src/models/serverObject";
+import { ChartEditorProvider } from "../../src/services/chartEditorProvider";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -1804,37 +1802,37 @@ describe("connectionManagerService", () => {
   });
 });
 
+function createPanel() {
+  const listeners = {
+    onDidReceiveMessage: undefined,
+    postMessage: undefined,
+    onDidChangeViewState: undefined,
+    onDidDispose: undefined,
+  };
+  const panel = <WebviewPanel>{
+    webview: {
+      onDidReceiveMessage(e) {
+        listeners.onDidReceiveMessage = e;
+      },
+      postMessage(e) {
+        listeners.postMessage = e;
+      },
+    },
+    onDidChangeViewState(e) {
+      listeners.onDidChangeViewState = e;
+    },
+    onDidDispose(e) {
+      listeners.onDidDispose = e;
+    },
+  };
+  return {
+    panel,
+    listeners,
+  };
+}
+
 describe("dataSourceEditorProvider", () => {
   let context: ExtensionContext;
-
-  function createPanel() {
-    const listeners = {
-      onDidReceiveMessage: undefined,
-      postMessage: undefined,
-      onDidChangeViewState: undefined,
-      onDidDispose: undefined,
-    };
-    const panel = <WebviewPanel>{
-      webview: {
-        onDidReceiveMessage(e) {
-          listeners.onDidReceiveMessage = e;
-        },
-        postMessage(e) {
-          listeners.postMessage = e;
-        },
-      },
-      onDidChangeViewState(e) {
-        listeners.onDidChangeViewState = e;
-      },
-      onDidDispose(e) {
-        listeners.onDidDispose = e;
-      },
-    };
-    return {
-      panel,
-      listeners,
-    };
-  }
 
   beforeEach(() => {
     context = <ExtensionContext>{};
@@ -2062,6 +2060,47 @@ describe("dataSourceEditorProvider", () => {
   });
 });
 
+describe("ChartEditorProvider", () => {
+  let context: ExtensionContext;
+
+  beforeEach(() => {
+    context = <ExtensionContext>{};
+  });
+
+  afterEach(() => {
+    sinon.restore();
+  });
+
+  describe("register", () => {
+    it("should register the provider", () => {
+      let result = undefined;
+      sinon
+        .stub(window, "registerCustomEditorProvider")
+        .value(() => (result = true));
+      ChartEditorProvider.register(context);
+      assert.ok(result);
+    });
+  });
+
+  describe("resolveCustomTextEditor", () => {
+    it("should resolve", async () => {
+      const provider = new ChartEditorProvider(context);
+      const document = await workspace.openTextDocument({
+        language: "kdbplot",
+        content: "{}",
+      });
+      sinon.stub(utils, "getUri").value(() => "");
+      const panel = createPanel();
+      await assert.doesNotReject(
+        provider.resolveCustomTextEditor(document, panel.panel),
+      );
+      panel.listeners.onDidReceiveMessage({});
+      panel.listeners.onDidChangeViewState();
+      panel.listeners.onDidDispose();
+    });
+  });
+});
+
 describe("workspaceTreeProvider", () => {
   let provider: WorkspaceTreeProvider;
 
@@ -2109,13 +2148,6 @@ describe("workspaceTreeProvider", () => {
       assert.strictEqual(result.length, 1);
       result = await provider.getChildren(provider.getTreeItem(result[0]));
       assert.strictEqual(result.length, 1);
-    });
-  });
-
-  describe("addWorkspaceFile", () => {
-    it("should break after try", async () => {
-      stubWorkspaceFile("/workspace/test.kdb.q");
-      await assert.rejects(() => addWorkspaceFile(undefined, "test", ".kdb.q"));
     });
   });
 });
