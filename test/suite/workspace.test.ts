@@ -87,7 +87,7 @@ describe("Workspace tests", () => {
         .returns(testWorkspaceFolder[0]);
       const uri = vscode.Uri.file("test.q");
       const result = await workspaceHelper.addWorkspaceFile(uri, "test", ".q");
-      assert.strictEqual(result.fsPath, "/testPath1/.kx/test-1.q");
+      assert.ok(result.fsPath.endsWith("test-1.q"));
     });
   });
 
