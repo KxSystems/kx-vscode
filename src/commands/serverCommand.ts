@@ -80,6 +80,14 @@ import {
   ServerType,
 } from "../models/connectionsModels";
 import * as fs from "fs";
+import { ChartEditorProvider } from "../services/chartEditorProvider";
+import {
+  addWorkspaceFile,
+  openWith,
+  setUriContent,
+  workspaceHas,
+} from "../utils/workspace";
+import { Plot } from "../models/plot";
 
 export async function addNewConnection(): Promise<void> {
   NewConnectionPannel.close();
@@ -848,7 +856,25 @@ export async function executeQuery(
     );
   } else {
     /* istanbul ignore next */
-    if (ext.isResultsTabVisible) {
+    if (results.base64) {
+      const active = ext.activeTextEditor;
+      if (active) {
+        const data = `data:image/png;base64,${results.result}`;
+        const plot = <Plot>{
+          charts: [{ data }],
+        };
+        const uri = await addWorkspaceFile(
+          active.document.uri,
+          "plot",
+          ".plot",
+        );
+        if (!workspaceHas(uri)) {
+          await workspace.openTextDocument(uri);
+          await openWith(uri, ChartEditorProvider.viewType, ViewColumn.Beside);
+        }
+        await setUriContent(uri, JSON.stringify(plot));
+      }
+    } else if (ext.isResultsTabVisible) {
       writeQueryResultsToView(
         results,
         query,

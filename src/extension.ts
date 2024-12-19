@@ -17,10 +17,8 @@ import {
   ConfigurationTarget,
   EventEmitter,
   ExtensionContext,
-  Range,
   TextDocumentContentProvider,
   Uri,
-  WorkspaceEdit,
   commands,
   extensions,
   languages,
@@ -93,7 +91,6 @@ import { DataSourceEditorProvider } from "./services/dataSourceEditorProvider";
 import {
   FileTreeItem,
   WorkspaceTreeProvider,
-  addWorkspaceFile,
 } from "./services/workspaceTreeProvider";
 import {
   ConnectionLensProvider,
@@ -102,6 +99,7 @@ import {
   importOldDSFiles,
   pickConnection,
   runActiveEditor,
+  setServerForUri,
 } from "./commands/workspaceCommand";
 import { createDefaultDataSourceFile } from "./models/dataSource";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
@@ -116,13 +114,19 @@ import {
   renameLabel,
   setLabelColor,
 } from "./utils/connLabel";
-import { activateTextDocument } from "./utils/workspace";
+import {
+  activateTextDocument,
+  addWorkspaceFile,
+  openWith,
+  setUriContent,
+} from "./utils/workspace";
 import {
   InsightDetails,
   Insights,
   Server,
   ServerDetails,
 } from "./models/connectionsModels";
+import { ChartEditorProvider } from "./services/chartEditorProvider";
 
 let client: LanguageClient;
 
@@ -472,26 +476,19 @@ export async function activate(context: ExtensionContext) {
       "kdb.createDataSource",
       async (item: FileTreeItem) => {
         if (hasWorkspaceOrShowOption("adding datasources")) {
-          const uri = await addWorkspaceFile(item, "datasource", ".kdb.json");
-
-          if (uri) {
-            const edit = new WorkspaceEdit();
-
-            edit.replace(
-              uri,
-              new Range(0, 0, 1, 0),
-              JSON.stringify(createDefaultDataSourceFile(), null, 2),
-            );
-
-            workspace.applyEdit(edit);
-
-            await commands.executeCommand(
-              "vscode.openWith",
-              uri,
-              DataSourceEditorProvider.viewType,
-            );
-            await commands.executeCommand("workbench.action.files.save", uri);
-          }
+          const uri = await addWorkspaceFile(
+            item ? item.resourceUri : undefined,
+            "datasource",
+            ".kdb.json",
+          );
+          await workspace.openTextDocument(uri);
+          await setUriContent(
+            uri,
+            JSON.stringify(createDefaultDataSourceFile(), null, 2),
+          );
+          await openWith(uri, DataSourceEditorProvider.viewType);
+          await commands.executeCommand("workbench.action.files.save", uri);
+          await setServerForUri(uri, undefined);
         }
       },
     ),
@@ -502,11 +499,15 @@ export async function activate(context: ExtensionContext) {
       "kdb.createScratchpad",
       async (item: FileTreeItem) => {
         if (hasWorkspaceOrShowOption("adding workbooks")) {
-          const uri = await addWorkspaceFile(item, "workbook", ".kdb.q");
-          if (uri) {
-            await window.showTextDocument(uri);
-            await commands.executeCommand("workbench.action.files.save", uri);
-          }
+          const uri = await addWorkspaceFile(
+            item ? item.resourceUri : undefined,
+            "workbook",
+            ".kdb.q",
+          );
+          await workspace.openTextDocument(uri);
+          await window.showTextDocument(uri);
+          await commands.executeCommand("workbench.action.files.save", uri);
+          await setServerForUri(uri, undefined);
         }
       },
     ),
@@ -514,11 +515,15 @@ export async function activate(context: ExtensionContext) {
       "kdb.createPythonScratchpad",
       async (item: FileTreeItem) => {
         if (hasWorkspaceOrShowOption("adding workbooks")) {
-          const uri = await addWorkspaceFile(item, "workbook", ".kdb.py");
-          if (uri) {
-            await window.showTextDocument(uri);
-            await commands.executeCommand("workbench.action.files.save", uri);
-          }
+          const uri = await addWorkspaceFile(
+            item ? item.resourceUri : undefined,
+            "workbook",
+            ".kdb.py",
+          );
+          await workspace.openTextDocument(uri);
+          await window.showTextDocument(uri);
+          await commands.executeCommand("workbench.action.files.save", uri);
+          await setServerForUri(uri, undefined);
         }
       },
     ),
@@ -534,11 +539,7 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.renameFile", async (item: FileTreeItem) => {
       if (item && item.resourceUri) {
         if (item.resourceUri.path.endsWith(".kdb.json")) {
-          await commands.executeCommand(
-            "vscode.openWith",
-            item.resourceUri,
-            DataSourceEditorProvider.viewType,
-          );
+          await openWith(item.resourceUri, DataSourceEditorProvider.viewType);
         } else {
           const document = await workspace.openTextDocument(item.resourceUri);
           await window.showTextDocument(document);
@@ -550,11 +551,7 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.deleteFile", async (item: FileTreeItem) => {
       if (item && item.resourceUri) {
         if (item.resourceUri.path.endsWith(".kdb.json")) {
-          await commands.executeCommand(
-            "vscode.openWith",
-            item.resourceUri,
-            DataSourceEditorProvider.viewType,
-          );
+          await openWith(item.resourceUri, DataSourceEditorProvider.viewType);
         } else {
           const document = await workspace.openTextDocument(item.resourceUri);
           await window.showTextDocument(document);
@@ -565,6 +562,7 @@ export async function activate(context: ExtensionContext) {
     }),
 
     DataSourceEditorProvider.register(context),
+    ChartEditorProvider.register(context),
 
     languages.registerCodeLensProvider(
       { pattern: "**/*.kdb.{q,py}" },

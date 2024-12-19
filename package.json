@@ -546,6 +546,19 @@
           "dark": "./resources/dark/datasource.svg",
           "light": "./resources/light/datasource.svg"
         }
+      },
+      {
+        "id": "kdbplot",
+        "aliases": [
+          "kdbplot"
+        ],
+        "extensions": [
+          ".plot"
+        ],
+        "icon": {
+          "dark": "./resources/dark/plot.svg",
+          "light": "./resources/light/plot.svg"
+        }
       }
     ],
     "grammars": [
@@ -932,6 +945,16 @@
         "selector": [
           {
             "filenamePattern": "*.kdb.json"
+          }
+        ],
+        "priority": "default"
+      },
+      {
+        "viewType": "kdb.chartEditor",
+        "displayName": "Chart Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.plot"
           }
         ],
         "priority": "default"

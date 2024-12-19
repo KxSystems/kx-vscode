@@ -175,6 +175,7 @@ export class LocalConnection {
     isPython?: boolean,
   ): Promise<any> {
     let result;
+    let base64 = false;
     await this.waitForConnection();
 
     if (!this.connection) {
@@ -202,6 +203,7 @@ export class LocalConnection {
         );
       } else {
         result = res.result === null ? "" : res.result;
+        base64 = res.base64 || false;
       }
     });
 
@@ -212,6 +214,10 @@ export class LocalConnection {
     }
 
     this.updateGlobal();
+
+    if (base64) {
+      return { base64, result };
+    }
 
     if (ext.isResultsTabVisible && stringify) {
       if (this.isError) {

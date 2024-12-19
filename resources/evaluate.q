@@ -117,15 +117,21 @@
  (`result;    ::);
  (`errored;   1b);
  (`error;     err);
- (`backtrace; .Q.sbt userCode))
+ (`backtrace; .Q.sbt userCode);
+ (`base64;    0b))
  }[suffix; prefix]];
  if [isLastLine or result`errored;
  system "d ", cachedCtx;
  : result];
  index +: 1];
  };
- result: evalInContext[ctx; splitExpression stripTrailingSemi wrapLines removeMultilineComments code];
- if [(not result `errored) and stringify;
- result[`result]: toString result `result];
+ result: evalInContext[ctx; splitExpression stripTrailingSemi wrapLines removeMultilineComments code]; 
+ if[result `errored; :result];
+ if[type[result[`result]] = 99h;
+ if[`output in key result[`result]; 
+ if[type[result[`result][`output]] = 99h;
+ if[`bytes in key result[`result][`output]; 
+ result[`base64]:1b; result[`result]: .Q.btoa result[`result][`output][`bytes]; :result]]]];
+ if [stringify; result[`result]: toString result `result];
  result
  }
