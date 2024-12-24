@@ -124,7 +124,8 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   updateLabelValue(pos: number, event: Event) {
-    this.labels[pos] = (event.target as HTMLSelectElement).value;
+    const value = (event.target as HTMLSelectElement).value;
+    this.labels[pos] = decodeURIComponent(value);
     this.requestUpdate();
   }
 
@@ -367,24 +368,30 @@ export class KdbNewConnectionView extends LitElement {
         <sl-select
           id="selectLabel"
           class="dropdown larger"
-          value="${live(this.labels[pos])}"
+          value="${live(
+            this.labels[pos] === undefined
+              ? ""
+              : encodeURIComponent(this.labels[pos]),
+          )}"
           @sl-change="${(event: Event) => {
             this.updateLabelValue(pos, event);
           }}">
           ${this.renderLblDropdownOptions(pos)}
         </sl-select>
-        <sl-button
-          aria-label="Remove Label"
-          variant="neutral"
-          @click="${() => this.removeLabel(pos)}"
-          >-</sl-button
-        >
-        <sl-button
-          aria-label="Add Label"
-          variant="neutral"
-          @click="${this.addLabel}"
-          >+</sl-button
-        >
+        <sl-button-group>
+          <sl-button
+            aria-label="Remove Label"
+            variant="neutral"
+            @click="${() => this.removeLabel(pos)}"
+            >-</sl-button
+          >
+          <sl-button
+            aria-label="Add Label"
+            variant="neutral"
+            @click="${this.addLabel}"
+            >+</sl-button
+          >
+        </sl-button-group>
       </div>
     `;
   }
@@ -400,7 +407,7 @@ export class KdbNewConnectionView extends LitElement {
           console.log(lbl.name);
           console.log(lbl.name === this.labels[pos]);
           return html`
-            <sl-option .value="${lbl.name}">
+            <sl-option .value="${encodeURIComponent(lbl.name)}">
               <span>
                 <div
                   style="width: 10px; height: 10px; background: ${lbl.color
