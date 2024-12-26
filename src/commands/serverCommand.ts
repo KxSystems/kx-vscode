@@ -15,7 +15,9 @@ import { readFileSync } from "fs-extra";
 import { join } from "path";
 import * as url from "url";
 import {
+  CancellationToken,
   Position,
+  ProgressLocation,
   Range,
   Uri,
   ViewColumn,
@@ -791,6 +793,37 @@ export async function executeQuery(
   isWorkbook: boolean,
   isFromConnTree?: boolean,
 ): Promise<void> {
+  await window.withProgress(
+    {
+      cancellable: true,
+      location: ProgressLocation.Window,
+      title: `Executing Query (${executorName})`,
+    },
+    async (_progress, token) => {
+      await _executeQuery(
+        query,
+        connLabel,
+        executorName,
+        context,
+        isPython,
+        isWorkbook,
+        isFromConnTree,
+        token,
+      );
+    },
+  );
+}
+
+async function _executeQuery(
+  query: string,
+  connLabel: string,
+  executorName: string,
+  context: string,
+  isPython: boolean,
+  isWorkbook: boolean,
+  isFromConnTree?: boolean,
+  token?: CancellationToken,
+): Promise<void> {
   const connMngService = new ConnectionManagementService();
   const queryConsole = ExecutionConsole.start();
   if (connLabel === "") {
@@ -842,9 +875,13 @@ export async function executeQuery(
   const endTime = Date.now();
   const duration = (endTime - startTime).toString();
 
+  if (token?.isCancellationRequested) {
+    return undefined;
+  }
+
   // set context for root nodes
   if (selectedConn instanceof InsightsConnection) {
-    writeScratchpadResult(
+    await writeScratchpadResult(
       results,
       query,
       connLabel,
@@ -875,7 +912,7 @@ export async function executeQuery(
         await setUriContent(uri, JSON.stringify(plot));
       }
     } else if (ext.isResultsTabVisible) {
-      writeQueryResultsToView(
+      await writeQueryResultsToView(
         results,
         query,
         connLabel,
@@ -888,7 +925,7 @@ export async function executeQuery(
         connVersion,
       );
     } else {
-      writeQueryResultsToConsole(
+      await writeQueryResultsToConsole(
         results,
         query,
         connLabel,
@@ -1123,7 +1160,7 @@ export async function exportConnections(connLabel?: string) {
   }
 }
 
-export function writeQueryResultsToConsole(
+export async function writeQueryResultsToConsole(
   result: string | string[],
   query: string,
   connLabel: string,
@@ -1133,7 +1170,7 @@ export function writeQueryResultsToConsole(
   isPython?: boolean,
   duration?: string,
   isFromConnTree?: boolean,
-): void {
+): Promise<void> {
   const queryConsole = ExecutionConsole.start();
   const isNonEmptyArray = Array.isArray(result) && result.length > 0;
   const valueToDecode = isNonEmptyArray ? result[0] : result.toString();
@@ -1169,7 +1206,7 @@ export function writeQueryResultsToConsole(
   }
 }
 
-export function writeQueryResultsToView(
+export async function writeQueryResultsToView(
   result: any,
   query: string,
   connLabel: string,
@@ -1180,8 +1217,8 @@ export function writeQueryResultsToView(
   duration?: string,
   isFromConnTree?: boolean,
   connVersion?: number,
-): void {
-  commands.executeCommand(
+): Promise<void> {
+  await commands.executeCommand(
     "kdb.resultsPanel.update",
     result,
     isInsights,
@@ -1204,7 +1241,7 @@ export function writeQueryResultsToView(
   }
 }
 
-export function writeScratchpadResult(
+export async function writeScratchpadResult(
   result: ScratchpadResult,
   query: string,
   connLabel: string,
@@ -1213,7 +1250,7 @@ export function writeScratchpadResult(
   isWorkbook: boolean,
   duration: string,
   connVersion: number,
-): void {
+): Promise<void> {
   let errorMsg;
 
   if (result.error) {
@@ -1226,7 +1263,7 @@ export function writeScratchpadResult(
   }
 
   if (ext.isResultsTabVisible) {
-    writeQueryResultsToView(
+    await writeQueryResultsToView(
       errorMsg ?? result,
       query,
       connLabel,
@@ -1239,7 +1276,7 @@ export function writeScratchpadResult(
       connVersion,
     );
   } else {
-    writeQueryResultsToConsole(
+    await writeQueryResultsToConsole(
       errorMsg ?? result.data,
       query,
       connLabel,
