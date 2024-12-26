@@ -875,6 +875,7 @@ async function _executeQuery(
   const endTime = Date.now();
   const duration = (endTime - startTime).toString();
 
+  /* istanbul ignore next */
   if (token?.isCancellationRequested) {
     return undefined;
   }
