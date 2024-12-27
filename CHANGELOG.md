@@ -13,6 +13,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Semantic highlighting for function definitions
 - Enhanced results tab table headers
 - KDB+ connection query progress
+- Added notification for data source refresh
 - Updated screenshots and documentation
 
 ### Fixes
@@ -23,6 +24,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Fixed editing a connection and move it into an existing group is not working
 - Fixed 'query is running' notification should persist until the results are rendered
 - Fixed extension becomes unresponsive when showing large tables with KDB Results
+- Fixed unicode characters not displayed correctly in results table
 
 ### Internal Improvements
 
