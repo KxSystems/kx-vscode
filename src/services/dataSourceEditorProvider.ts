@@ -16,6 +16,7 @@ import {
   CustomTextEditorProvider,
   Disposable,
   ExtensionContext,
+  ProgressLocation,
   Range,
   TextDocument,
   Webview,
@@ -187,9 +188,18 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
             offerConnectAction(selectedServer);
             break;
           }
-          await connMngService.refreshGetMeta(selectedServer);
-          this.cache.delete(selectedServer);
-          updateWebview();
+          await window.withProgress(
+            {
+              cancellable: false,
+              location: ProgressLocation.Notification,
+              title: "Refreshimg meta data...",
+            },
+            async () => {
+              await connMngService.refreshGetMeta(selectedServer);
+              this.cache.delete(selectedServer);
+              updateWebview();
+            },
+          );
           break;
         case DataSourceCommand.Run:
           await runDataSource(
