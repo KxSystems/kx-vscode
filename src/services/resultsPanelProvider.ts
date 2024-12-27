@@ -26,6 +26,7 @@ import { getUri } from "../utils/getUri";
 import { compareVersions, kdbOutputLog } from "../utils/core";
 import { StructuredTextResults } from "../models/queryResult";
 import { GridOptions } from "ag-grid-community";
+import { decodeQUTF } from "../utils/decode";
 
 export class KdbResultsViewProvider implements WebviewViewProvider {
   public static readonly viewType = "kdb-results";
@@ -198,7 +199,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     columns.forEach((column) => {
       const { name, values, order } = column;
       order.forEach((pos, index) => {
-        rowData[index][name] = values[pos];
+        rowData[index][name] = decodeQUTF(values[pos]);
       });
     });
 
