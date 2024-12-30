@@ -403,9 +403,6 @@ export class InsightsConnection {
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
       const isTableView = ext.isResultsTabVisible;
-      const queryMsg = isStarting
-        ? "Starting scratchpad..."
-        : "Query is executing...";
       const scratchpadURL = new url.URL(
         this.connEndpoints.scratchpad.scratchpad,
         this.node.details.server,
@@ -453,10 +450,13 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            kdbOutputLog(`User cancelled the Scrathpad execution.`, "WARNING");
+            kdbOutputLog(`User cancelled the scratchpad execution.`, "WARNING");
           });
 
-          progress.report({ message: queryMsg });
+          if (isStarting) {
+            progress.report({ message: "Starting scratchpad..." });
+          }
+
           const spRes = await axios
             .post(scratchpadURL.toString(), body, {
               headers,

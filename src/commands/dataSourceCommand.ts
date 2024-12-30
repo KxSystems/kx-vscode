@@ -170,7 +170,7 @@ export async function runDataSource(
           const resultCount = typeof res === "string" ? "0" : res.rows.length;
           kdbOutputLog(`[DATASOURCE] Results: ${resultCount} rows`, "INFO");
         }
-        writeQueryResultsToView(
+        await writeQueryResultsToView(
           success ? res : res.error,
           query,
           connLabel,
@@ -185,7 +185,7 @@ export async function runDataSource(
             "INFO",
           );
         }
-        writeQueryResultsToConsole(
+        await writeQueryResultsToConsole(
           success ? res : res.error,
           query,
           connLabel,
