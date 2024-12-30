@@ -601,11 +601,11 @@ The following features of [AxLibraries](https://code.kx.com/developer/libraries/
 - Grammar of Graphics
 - q static linter
 
-**Note:** To use those features, AxLibraries should be installed folowing [installation instructions.](https://code.kx.com/developer/libraries/#installation)
+**Note:** To use those features, you should install AxLibraries following the [installation instructions.](https://code.kx.com/developer/libraries/#installation)
 
 ### Grammar of Graphics
 
-Calling `.qp.display` will display the plot locally.
+Calling `.qp.display` displays the plot locally.
 
 ![gg-plot](https://github.com/KxSystems/kx-vscode/blob/main/img/gg-plot.png?raw=true)
 
