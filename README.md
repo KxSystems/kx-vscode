@@ -598,7 +598,7 @@ All query executions happen remotely from the **kdb VS Code extension** either a
 
 The following features of [AxLibraries](https://code.kx.com/developer/libraries/) are integrated and can be used within the extension:
 
-- Grammar of Graphics
+- [Grammar of Graphics](#grammar-of-graphics)
 - q static linter
 
 **Note:** To use those features, you should install AxLibraries following the [installation instructions.](https://code.kx.com/developer/libraries/#installation)
