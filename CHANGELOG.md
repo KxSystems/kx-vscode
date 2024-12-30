@@ -19,10 +19,10 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 ### Fixes
 
 - Fixed issue with starting local q server when using WSL
-- Fixed double error message when not able to connect Insights
-- Fixewd query errors are being written to the 'kdb' output rather than the 'q console output'
-- Fixed editing a connection and move it into an existing group is not working
-- Fixed 'query is running' notification should persist until the results are rendered
+- Fixed double error message when unable to connect to Insights
+- Fixed query errors being written to the 'kdb' output rather than the 'q console output'
+- Fixed issue with editing a connection and moving it into an existing group
+- Ensured 'query is running' notification shows until the results are rendered
 - Fixed unresponsiveness of the extension when displaying large tables with KDB Results
 - Fixed unicode characters not displayed correctly in results table
 
