@@ -192,7 +192,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
             {
               cancellable: false,
               location: ProgressLocation.Notification,
-              title: "Refreshimg meta data...",
+              title: "Refreshing meta data...",
             },
             async () => {
               await connMngService.refreshGetMeta(selectedServer);
