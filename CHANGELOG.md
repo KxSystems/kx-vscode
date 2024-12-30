@@ -14,7 +14,6 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Improved table headers in the results tab
 - Show query progress for KDB+ connections
 - Added notification for data source refresh
-- Updated screenshots and documentation
 
 ### Fixes
 

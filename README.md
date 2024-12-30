@@ -605,7 +605,9 @@ The following features of [AxLibraries](https://code.kx.com/developer/libraries/
 
 ### Grammar of Graphics
 
-Calling `.qp.display` displays the plot locally.
+Grammar of Graphics (GG) is a scripted visualization library for kdb+. For more information refer to the [documentation](https://code.kx.com/developer/ggplot/).
+
+When executing GG scripts, calling `.qp.display` displays the plot locally.
 
 ![gg-plot](https://github.com/KxSystems/kx-vscode/blob/main/img/gg-plot.png?raw=true)
 
