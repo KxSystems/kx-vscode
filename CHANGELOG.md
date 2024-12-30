@@ -6,10 +6,10 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 ### Enhancements
 
+- Display GGPlot for binary data output from q queries, providing a quick way to generate charts inside VSCode, making it easier to identify patterns, trends, and outliers in your data
 - Show stack trace for errors in the Insights scratchpad
 - Autocomplete for [Query APIs](https://code.kx.com/insights/1.12/enterprise/analysis/queryapi.html)
 - Add support for Python for KDB+ connections
-- Display GGPlot for binary data output from q queries
 - Semantic highlighting for function definitions
 - Improved table headers in the results tab
 - Show query progress for KDB+ connections
