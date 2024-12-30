@@ -450,7 +450,7 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            kdbOutputLog(`User cancelled the Scrathpad execution.`, "WARNING");
+            kdbOutputLog(`User cancelled the scratchpad execution.`, "WARNING");
           });
 
           if (isStarting) {

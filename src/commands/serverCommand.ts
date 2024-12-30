@@ -797,7 +797,7 @@ export async function executeQuery(
     {
       cancellable: true,
       location: ProgressLocation.Window,
-      title: `Executing Query (${executorName})`,
+      title: `Executing query (${executorName})`,
     },
     async (_progress, token) => {
       await _executeQuery(
