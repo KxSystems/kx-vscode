@@ -26,6 +26,7 @@ export type QueryResult = {
     text: string;
     index: number;
   }[];
+  base64?: boolean;
 };
 
 export enum QueryResultType {

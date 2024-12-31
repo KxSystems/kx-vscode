@@ -15,7 +15,9 @@ import { readFileSync } from "fs-extra";
 import { join } from "path";
 import * as url from "url";
 import {
+  CancellationToken,
   Position,
+  ProgressLocation,
   Range,
   Uri,
   ViewColumn,
@@ -52,7 +54,11 @@ import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { decodeQUTF } from "../utils/decode";
 import { ExecutionConsole } from "../utils/executionConsole";
 import { openUrl } from "../utils/openUrl";
-import { checkIfIsDatasource, addQueryHistory } from "../utils/queryUtils";
+import {
+  checkIfIsDatasource,
+  addQueryHistory,
+  formatScratchpadStacktrace,
+} from "../utils/queryUtils";
 import {
   validateServerAlias,
   validateServerName,
@@ -76,6 +82,14 @@ import {
   ServerType,
 } from "../models/connectionsModels";
 import * as fs from "fs";
+import { ChartEditorProvider } from "../services/chartEditorProvider";
+import {
+  addWorkspaceFile,
+  openWith,
+  setUriContent,
+  workspaceHas,
+} from "../utils/workspace";
+import { Plot } from "../models/plot";
 
 export async function addNewConnection(): Promise<void> {
   NewConnectionPannel.close();
@@ -779,6 +793,37 @@ export async function executeQuery(
   isWorkbook: boolean,
   isFromConnTree?: boolean,
 ): Promise<void> {
+  await window.withProgress(
+    {
+      cancellable: true,
+      location: ProgressLocation.Window,
+      title: `Executing query (${executorName})`,
+    },
+    async (_progress, token) => {
+      await _executeQuery(
+        query,
+        connLabel,
+        executorName,
+        context,
+        isPython,
+        isWorkbook,
+        isFromConnTree,
+        token,
+      );
+    },
+  );
+}
+
+async function _executeQuery(
+  query: string,
+  connLabel: string,
+  executorName: string,
+  context: string,
+  isPython: boolean,
+  isWorkbook: boolean,
+  isFromConnTree?: boolean,
+  token?: CancellationToken,
+): Promise<void> {
   const connMngService = new ConnectionManagementService();
   const queryConsole = ExecutionConsole.start();
   if (connLabel === "") {
@@ -830,9 +875,14 @@ export async function executeQuery(
   const endTime = Date.now();
   const duration = (endTime - startTime).toString();
 
+  /* istanbul ignore next */
+  if (token?.isCancellationRequested) {
+    return undefined;
+  }
+
   // set context for root nodes
   if (selectedConn instanceof InsightsConnection) {
-    writeScratchpadResult(
+    await writeScratchpadResult(
       results,
       query,
       connLabel,
@@ -844,8 +894,26 @@ export async function executeQuery(
     );
   } else {
     /* istanbul ignore next */
-    if (ext.isResultsTabVisible) {
-      writeQueryResultsToView(
+    if (results.base64) {
+      const active = ext.activeTextEditor;
+      if (active) {
+        const data = `data:image/png;base64,${results.result}`;
+        const plot = <Plot>{
+          charts: [{ data }],
+        };
+        const uri = await addWorkspaceFile(
+          active.document.uri,
+          "plot",
+          ".plot",
+        );
+        if (!workspaceHas(uri)) {
+          await workspace.openTextDocument(uri);
+          await openWith(uri, ChartEditorProvider.viewType, ViewColumn.Beside);
+        }
+        await setUriContent(uri, JSON.stringify(plot));
+      }
+    } else if (ext.isResultsTabVisible) {
+      await writeQueryResultsToView(
         results,
         query,
         connLabel,
@@ -858,7 +926,7 @@ export async function executeQuery(
         connVersion,
       );
     } else {
-      writeQueryResultsToConsole(
+      await writeQueryResultsToConsole(
         results,
         query,
         connLabel,
@@ -1093,7 +1161,7 @@ export async function exportConnections(connLabel?: string) {
   }
 }
 
-export function writeQueryResultsToConsole(
+export async function writeQueryResultsToConsole(
   result: string | string[],
   query: string,
   connLabel: string,
@@ -1103,7 +1171,7 @@ export function writeQueryResultsToConsole(
   isPython?: boolean,
   duration?: string,
   isFromConnTree?: boolean,
-): void {
+): Promise<void> {
   const queryConsole = ExecutionConsole.start();
   const isNonEmptyArray = Array.isArray(result) && result.length > 0;
   const valueToDecode = isNonEmptyArray ? result[0] : result.toString();
@@ -1139,7 +1207,7 @@ export function writeQueryResultsToConsole(
   }
 }
 
-export function writeQueryResultsToView(
+export async function writeQueryResultsToView(
   result: any,
   query: string,
   connLabel: string,
@@ -1150,8 +1218,8 @@ export function writeQueryResultsToView(
   duration?: string,
   isFromConnTree?: boolean,
   connVersion?: number,
-): void {
-  commands.executeCommand(
+): Promise<void> {
+  await commands.executeCommand(
     "kdb.resultsPanel.update",
     result,
     isInsights,
@@ -1174,7 +1242,7 @@ export function writeQueryResultsToView(
   }
 }
 
-export function writeScratchpadResult(
+export async function writeScratchpadResult(
   result: ScratchpadResult,
   query: string,
   connLabel: string,
@@ -1183,48 +1251,42 @@ export function writeScratchpadResult(
   isWorkbook: boolean,
   duration: string,
   connVersion: number,
-): void {
-  const queryConsole = ExecutionConsole.start();
+): Promise<void> {
+  let errorMsg;
 
   if (result.error) {
-    queryConsole.appendQueryError(
+    errorMsg = result.errorMsg;
+
+    if (result.stacktrace) {
+      errorMsg =
+        errorMsg + "\n" + formatScratchpadStacktrace(result.stacktrace);
+    }
+  }
+
+  if (ext.isResultsTabVisible) {
+    await writeQueryResultsToView(
+      errorMsg ?? result,
       query,
-      result.errorMsg,
       connLabel,
       executorName,
       true,
+      isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+      isPython,
+      duration,
+      false,
+      connVersion,
+    );
+  } else {
+    await writeQueryResultsToConsole(
+      errorMsg ?? result.data,
+      query,
+      connLabel,
+      executorName,
       true,
       isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
       isPython,
-      false,
       duration,
     );
-  } else {
-    if (ext.isResultsTabVisible) {
-      writeQueryResultsToView(
-        result,
-        query,
-        connLabel,
-        executorName,
-        true,
-        isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
-        isPython,
-        duration,
-        false,
-        connVersion,
-      );
-    } else {
-      writeQueryResultsToConsole(
-        result.data,
-        query,
-        connLabel,
-        executorName,
-        true,
-        isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
-        isPython,
-        duration,
-      );
-    }
   }
 }
 

@@ -29,6 +29,7 @@ import { JwtUser } from "../models/jwt_user";
 import { Telemetry } from "../utils/telemetryClient";
 import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
 import {
+  compareVersions,
   invalidUsernameJWT,
   kdbOutputLog,
   tokenUndefinedError,
@@ -170,7 +171,7 @@ export class InsightsConnection {
     };
     // uncomment this WHEN the insights version is available
     // if (this.insightsVersion) {
-    //   if (this.insightsVersion >= 1.12) {
+    //   if (compareVersions(this.insightsVersion, 1.12)) {
     //     this.connEndpoints = {
     //       scratchpad: {
     //         scratchpad: "scratchpad/execute/display",
@@ -402,9 +403,6 @@ export class InsightsConnection {
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
       const isTableView = ext.isResultsTabVisible;
-      const queryMsg = isStarting
-        ? "Starting scratchpad..."
-        : "Query is executing...";
       const scratchpadURL = new url.URL(
         this.connEndpoints.scratchpad.scratchpad,
         this.node.details.server,
@@ -432,7 +430,7 @@ export class InsightsConnection {
       };
 
       if (this.insightsVersion) {
-        if (this.insightsVersion >= 1.12) {
+        if (compareVersions(this.insightsVersion, 1.12)) {
           body.returnFormat = isTableView ? "structuredText" : "text";
         } else {
           body.isTableView = isTableView;
@@ -452,10 +450,13 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            kdbOutputLog(`User cancelled the Scrathpad execution.`, "WARNING");
+            kdbOutputLog(`User cancelled the scratchpad execution.`, "WARNING");
           });
 
-          progress.report({ message: queryMsg });
+          if (isStarting) {
+            progress.report({ message: "Starting scratchpad..." });
+          }
+
           const spRes = await axios
             .post(scratchpadURL.toString(), body, {
               headers,
@@ -463,10 +464,7 @@ export class InsightsConnection {
             })
             .then((response: any) => {
               if (response.data.error) {
-                kdbOutputLog(
-                  `[SCRATCHPAD] Error occured while executing scratchpad: ${response.data.errorMsg}`,
-                  "ERROR",
-                );
+                return response.data;
               } else if (query === "") {
                 kdbOutputLog(
                   `[SCRATCHPAD] scratchpad created for connection: ${this.connLabel}`,
@@ -476,7 +474,10 @@ export class InsightsConnection {
                 kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
                 if (!response.data.error) {
                   if (isTableView) {
-                    if (this.insightsVersion && this.insightsVersion >= 1.12) {
+                    if (
+                      this.insightsVersion &&
+                      compareVersions(this.insightsVersion, 1.12)
+                    ) {
                       response.data = JSON.parse(
                         response.data.data,
                       ) as StructuredTextResults;

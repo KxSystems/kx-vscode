@@ -164,11 +164,14 @@ export async function runDataSource(
 
       if (!success) {
         window.showErrorMessage(res.error);
-      } else if (ext.isResultsTabVisible) {
-        const resultCount = typeof res === "string" ? "0" : res.rows.length;
-        kdbOutputLog(`[DATASOURCE] Results: ${resultCount} rows`, "INFO");
-        writeQueryResultsToView(
-          res,
+      }
+      if (ext.isResultsTabVisible) {
+        if (success) {
+          const resultCount = typeof res === "string" ? "0" : res.rows.length;
+          kdbOutputLog(`[DATASOURCE] Results: ${resultCount} rows`, "INFO");
+        }
+        await writeQueryResultsToView(
+          success ? res : res.error,
           query,
           connLabel,
           executorName,
@@ -176,12 +179,14 @@ export async function runDataSource(
           selectedType,
         );
       } else {
-        kdbOutputLog(
-          `[DATASOURCE] Results is a string with length: ${res.length}`,
-          "INFO",
-        );
-        writeQueryResultsToConsole(
-          res,
+        if (success) {
+          kdbOutputLog(
+            `[DATASOURCE] Results is a string with length: ${res.length}`,
+            "INFO",
+          );
+        }
+        await writeQueryResultsToConsole(
+          success ? res : res.error,
           query,
           connLabel,
           executorName,
@@ -193,7 +198,7 @@ export async function runDataSource(
     }
   } catch (error) {
     window.showErrorMessage((error as Error).message);
-    kdbOutputLog(`[DATASOURCE]  ${(error as Error).message}`, "ERROR");
+    kdbOutputLog(`[DATASOURCE]  ${(error as Error).message}`, "ERROR", true);
     DataSourcesPanel.running = false;
   } finally {
     DataSourcesPanel.running = false;
@@ -415,7 +420,11 @@ export function parseError(error: GetDataError) {
   if (error instanceof Object && error.buffer) {
     return handleWSError(error.buffer);
   } else {
-    kdbOutputLog(`[DATASOURCE] Error: ${error}`, "ERROR");
+    kdbOutputLog(
+      `[DATASOURCE] Error: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+      "ERROR",
+      true,
+    );
     return {
       error,
     };

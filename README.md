@@ -21,6 +21,7 @@ This guide provides information on the following:
 - [Workbooks](#workbooks)
 - [Query History](#query-history)
 - [Viewing results](#view-results)
+- [AxLibraries](#axlibraries)
 - [q REPL](#q-repl)
 - [Settings](#settings)
 - [Shortcuts](#shortcuts)
@@ -128,8 +129,6 @@ To add connections:
    - [My q](#my-q): This is an unmanaged q session and is a connection to a remote q process.
    - [Insights](#insights-connection): This accesses **kdb Insights Enterprise** API endpoints and a user-specific scratchpad process within a **kdb Insights Enterprise** deployment.
 
-   ![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/bundleqform.png?raw=true)
-
 1. Set the properties appropriate to the connection type as described in the following sections.
 
 ### Bundled q
@@ -142,6 +141,8 @@ When you select **Bundled q** as the connection type and set the following prope
 | The connection address | This is already be set as `127.0.0.1` which corresponds to your **localhost**.                                                                                                                     |
 | Port                   | Set the port for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. 5002. [Read here for more about setting a q port](https://code.kx.com/q/basics/ipc/) |
 | Label Name             | Select the label you want to assign the connection to                                                                                                                                              |
+
+![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/bundleq.png?raw=true)
 
 1. Click **Create Connection** and the connection appears under **CONNECTIONS** in the primary sidebar..
 
@@ -592,6 +593,23 @@ All query executions happen remotely from the **kdb VS Code extension** either a
 - **KDB Results** - This window displays the kdb returned data in a table.
 
   ![kdb results view](https://github.com/KxSystems/kx-vscode/blob/main/img/kdbview-results.png?raw=true)
+
+## AxLibraries
+
+The following features of [AxLibraries](https://code.kx.com/developer/libraries/) are integrated and can be used within the extension:
+
+- [Grammar of Graphics](#grammar-of-graphics)
+- q static linter
+
+**Note:** To use those features, you should install AxLibraries following the [installation instructions.](https://code.kx.com/developer/libraries/#installation)
+
+### Grammar of Graphics
+
+Grammar of Graphics (GG) is a scripted visualization library for kdb+. For more information refer to the [documentation](https://code.kx.com/developer/ggplot/).
+
+When executing GG scripts, calling `.qp.display` displays the plot locally.
+
+![gg-plot](https://github.com/KxSystems/kx-vscode/blob/main/img/gg-plot.png?raw=true)
 
 ## q REPL
 

@@ -36,6 +36,7 @@ import { MetaObjectPayload } from "../../src/models/meta";
 import { html, TemplateResult } from "lit";
 import { ext } from "../../src/extensionVariables";
 import { InsightDetails, ServerType } from "../../src/models/connectionsModels";
+import { KdbChartView } from "../../src/webview/components/kdbChartView";
 
 describe("KdbDataSourceView", () => {
   let view: KdbDataSourceView;
@@ -967,4 +968,44 @@ describe("KdbNewConnectionView", () => {
   });
 
   describe("createLabel", () => {});
+});
+
+describe("kdbChartView.ts", () => {
+  let view: KdbChartView;
+
+  beforeEach(async () => {
+    view = new KdbChartView();
+  });
+
+  afterEach(() => {
+    sinon.restore();
+  });
+
+  describe("connectedCallback", () => {
+    it("should add an event listener", () => {
+      let result = undefined;
+      sinon.stub(window, "addEventListener").value(() => (result = true));
+      view.connectedCallback();
+      assert.ok(result);
+    });
+  });
+
+  describe("disconnectedCallback", () => {
+    it("should remove an event listener", () => {
+      let result = undefined;
+      sinon.stub(window, "removeEventListener").value(() => (result = true));
+      view.disconnectedCallback();
+      assert.ok(result);
+    });
+  });
+
+  it("should update from message", () => {
+    const data = { charts: [{ data: "test" }] };
+    view.message(<MessageEvent>{
+      data: JSON.stringify(data),
+    });
+    assert.deepStrictEqual(view.plot, data);
+    const result = view.render();
+    assert.ok(result);
+  });
 });

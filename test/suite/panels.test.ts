@@ -211,14 +211,12 @@ describe("WebPanels", () => {
             { field: "index", headerName: "Index", cellDataType: "number" },
             {
               field: "prop1",
-              headerName: "prop1",
-              headerTooltip: "type1",
+              headerName: "prop1 [type1]",
               cellDataType: "text",
             },
             {
               field: "prop2",
-              headerName: "prop2",
-              headerTooltip: "type2",
+              headerName: "prop2 [type2]",
               cellDataType: "text",
             },
           ],
@@ -238,6 +236,74 @@ describe("WebPanels", () => {
         stub.get(() => insightsConn);
 
         const output = resultsPanel.convertToGrid(results, true);
+        assert.equal(JSON.stringify(output), expectedOutput);
+
+        // Restore the stub
+        stub.restore();
+      });
+
+      it("should convert results to grid format for insights above 1.12", () => {
+        const results: StructuredTextResults = {
+          columns: [
+            {
+              name: "prop1",
+              type: "type1",
+              values: ["value1", "value2"],
+              order: [1, 2],
+            },
+            {
+              name: "prop2",
+              type: "type2",
+              values: ["value3", "value4"],
+              order: [1, 2],
+            },
+          ],
+          count: 2,
+        };
+
+        const expectedOutput = JSON.stringify({
+          defaultColDef: {
+            sortable: true,
+            resizable: true,
+            filter: true,
+            flex: 1,
+            minWidth: 100,
+          },
+          rowData: [
+            { index: 1, prop1: "value2", prop2: "value4" },
+            { index: 2 },
+          ],
+          columnDefs: [
+            { field: "index", headerName: "Index", cellDataType: "number" },
+            {
+              field: "prop1",
+              headerName: "prop1 [type1]",
+              cellDataType: "text",
+              cellRendererParams: { disabled: false },
+            },
+            {
+              field: "prop2",
+              headerName: "prop2 [type2]",
+              cellDataType: "text",
+              cellRendererParams: { disabled: false },
+            },
+          ],
+          domLayout: "autoHeight",
+          pagination: true,
+          paginationPageSize: 100,
+          enableCellTextSelection: true,
+          ensureDomOrder: true,
+          suppressContextMenu: true,
+          suppressDragLeaveHidesColumns: true,
+          tooltipShowDelay: 200,
+          loading: true,
+        });
+
+        // Mock ext.connectionNode
+        const stub = sinon.stub(ext, "activeConnection");
+        stub.get(() => insightsConn);
+
+        const output = resultsPanel.convertToGrid(results, true, 1.12);
         assert.equal(JSON.stringify(output), expectedOutput);
 
         // Restore the stub
@@ -265,14 +331,12 @@ describe("WebPanels", () => {
             { field: "index", headerName: "Index", cellDataType: "number" },
             {
               field: "prop1",
-              headerName: "prop1",
-              headerTooltip: "type1",
+              headerName: "prop1 [type1]",
               cellDataType: "text",
             },
             {
               field: "prop2",
-              headerName: "prop2",
-              headerTooltip: "type2",
+              headerName: "prop2 [type2]",
               cellDataType: "text",
             },
           ],
@@ -324,18 +388,8 @@ describe("WebPanels", () => {
           ],
           columnDefs: [
             { field: "index", headerName: "Index", cellDataType: "number" },
-            {
-              field: "sym",
-              headerName: "sym",
-              headerTooltip: "type1",
-              cellDataType: "text",
-            },
-            {
-              field: "val",
-              headerName: "val",
-              headerTooltip: "type2",
-              cellDataType: "text",
-            },
+            { field: "sym", headerName: "sym [type1]", cellDataType: "text" },
+            { field: "val", headerName: "val [type2]", cellDataType: "text" },
           ],
           domLayout: "autoHeight",
           pagination: true,
@@ -377,8 +431,7 @@ describe("WebPanels", () => {
             { field: "index", headerName: "Index", cellDataType: "number" },
             {
               field: "value",
-              headerName: "value",
-              headerTooltip: "type1",
+              headerName: "value [type1]",
               cellDataType: "text",
             },
           ],
@@ -774,17 +827,15 @@ describe("WebPanels", () => {
         const expectedColumnDefs = [
           {
             field: "date",
-            headerName: "date",
+            headerName: "date [dates]",
             cellDataType: "text",
             cellRendererParams: { disabled: false },
-            headerTooltip: "dates",
           },
           {
             field: "instance",
-            headerName: "instance",
+            headerName: "instance [symbols]",
             cellDataType: "text",
             cellRendererParams: { disabled: false },
-            headerTooltip: "symbols",
           },
         ];
 

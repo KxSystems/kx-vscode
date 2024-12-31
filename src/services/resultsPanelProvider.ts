@@ -23,8 +23,10 @@ import { ext } from "../extensionVariables";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
-import { kdbOutputLog } from "../utils/core";
+import { compareVersions, kdbOutputLog } from "../utils/core";
 import { StructuredTextResults } from "../models/queryResult";
+import { GridOptions } from "ag-grid-community";
+import { decodeQUTF } from "../utils/decode";
 
 export class KdbResultsViewProvider implements WebviewViewProvider {
   public static readonly viewType = "kdb-results";
@@ -145,12 +147,11 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         return Object.keys(results.meta).map((key: string) => {
           const sanitizedKey = this.sanitizeString(key);
           const type = results.meta[key];
-          const headerTooltip = type;
+          const headerName = type ? `${sanitizedKey} [${type}]` : sanitizedKey;
           const cellDataType = this.kdbToAgGridCellType(type);
           return {
             field: sanitizedKey,
-            headerName: sanitizedKey,
-            headerTooltip,
+            headerName,
             cellDataType,
           };
         });
@@ -158,13 +159,12 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         return Object.keys(results.rows[0]).map((key: string) => {
           const sanitizedKey = this.sanitizeString(key);
           const type = results.meta[key];
-          const headerTooltip = type;
+          const headerName = type ? `${sanitizedKey} [${type}]` : sanitizedKey;
           const cellDataType =
             type != undefined ? this.kdbToAgGridCellType(type) : undefined;
           return {
             field: sanitizedKey,
-            headerName: sanitizedKey,
-            headerTooltip,
+            headerName,
             cellDataType,
           };
         });
@@ -199,7 +199,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     columns.forEach((column) => {
       const { name, values, order } = column;
       order.forEach((pos, index) => {
-        rowData[index][name] = values[pos];
+        rowData[index][name] = decodeQUTF(values[pos]);
       });
     });
 
@@ -208,25 +208,34 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
   updatedExtractColumnDefs(results: StructuredTextResults) {
     const { columns } = results;
+
     const columnDefs = columns.map((column) => {
+      const sanitizedKey = this.sanitizeString(column.name);
       const cellDataType = this.kdbToAgGridCellType(column.type);
-      const headerName = `${column.name}`;
+      const headerName = column.type
+        ? `${sanitizedKey} [${column.type}]`
+        : sanitizedKey;
+
       return {
         field: column.name,
-        headerName,
-        cellDataType,
+        headerName: headerName,
+        cellDataType: cellDataType,
         cellRendererParams: { disabled: cellDataType === "boolean" },
-        headerTooltip: column.type ? column.type : undefined,
       };
     });
 
     return columnDefs;
   }
 
-  convertToGrid(results: any, isInsights: boolean, connVersion?: number): any {
+  convertToGrid(
+    results: any,
+    isInsights: boolean,
+    connVersion?: number,
+  ): GridOptions {
     let rowData = [];
     let columnDefs = [];
-    if (connVersion && connVersion >= 1.12) {
+
+    if (connVersion && compareVersions(connVersion, 1.12)) {
       rowData = this.updatedExtractRowData(results);
       columnDefs = this.updatedExtractColumnDefs(results);
     } else {
@@ -285,7 +294,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       ext.resultPanelCSV = this.convertToCsv(rowData).join("\n");
     }
 
-    return {
+    const gridOptions: GridOptions = {
       defaultColDef: {
         sortable: true,
         resizable: true,
@@ -305,6 +314,8 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       tooltipShowDelay: 200,
       loading: true,
     };
+
+    return gridOptions;
   }
 
   isVisible(): boolean {
@@ -422,6 +433,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
               window.addEventListener('message', event => {
                 const message = event.data;
+                console.log(event)
                 if (message.command === 'setGridOptions') {
                   const columnWidths = saveColumnWidths();
                   const gridOptions = message.gridOptions;

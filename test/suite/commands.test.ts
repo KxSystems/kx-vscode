@@ -604,6 +604,9 @@ describe("dataSourceCommand2", () => {
       },
       insightsNode: "dummyNode",
     };
+    const dummyError = {
+      error: "error message",
+    };
     const connMngService = new ConnectionManagementService();
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
     const ab = new ArrayBuffer(26);
@@ -676,6 +679,44 @@ describe("dataSourceCommand2", () => {
         .expects("showErrorMessage")
         .once()
         .withArgs("No Insights active connection found");
+    });
+
+    it("should return error for visible results panel", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = dummyMeta;
+      getMetaStub.resolves(dummyMeta);
+      sinon.stub(dataSourceCommand, "runQsqlDataSource").resolves(dummyError);
+
+      ext.isResultsTabVisible = true;
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+      sinon.assert.calledOnce(writeQueryResultsToViewStub);
+
+      ext.connectedConnectionList.length = 0;
+    });
+
+    it("should return error for console panel", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = dummyMeta;
+      getMetaStub.resolves(dummyMeta);
+      sinon.stub(dataSourceCommand, "runQsqlDataSource").resolves(dummyError);
+
+      ext.isResultsTabVisible = false;
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
+
+      ext.connectedConnectionList.length = 0;
     });
 
     it("should return QSQL results", async () => {
@@ -894,9 +935,6 @@ describe("dataSourceCommand2", () => {
       const result = dataSourceCommand.parseError(error);
 
       assert(kdbOutputLogStub.calledOnce);
-      assert(
-        kdbOutputLogStub.calledWith(`[DATASOURCE] Error: ${error}`, "ERROR"),
-      );
       assert.deepEqual(result, { error });
     });
   });

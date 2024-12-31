@@ -172,41 +172,52 @@ export class LocalConnection {
     command: string,
     context?: string,
     stringify?: boolean,
+    isPython?: boolean,
   ): Promise<any> {
     let result;
+    let base64 = false;
     await this.waitForConnection();
 
     if (!this.connection) {
       return "timeout";
     }
-    const wrapper = queryWrapper();
-    this.connection.k(
-      wrapper,
-      context ?? ".",
-      command,
-      !!stringify,
-      (err: Error, res: QueryResult) => {
-        if (err) {
-          this.isError = true;
-          result = handleQueryResults(err.toString(), QueryResultType.Error);
-        }
-        if (res.errored) {
-          this.isError = true;
-          result = handleQueryResults(
-            res.error + (res.backtrace ? "\n" + res.backtrace : ""),
-            QueryResultType.Error,
-          );
-        } else {
-          result = res.result === null ? "" : res.result;
-        }
-      },
-    );
+    const args: any[] = [];
+    const wrapper = queryWrapper(!!isPython);
+
+    if (isPython) {
+      args.push(!!stringify, command);
+    } else {
+      args.push(context ?? ".", command, !!stringify);
+    }
+
+    args.push((err: Error, res: QueryResult) => {
+      if (err) {
+        this.isError = true;
+        result = handleQueryResults(err.toString(), QueryResultType.Error);
+      }
+      if (res.errored) {
+        this.isError = true;
+        result = handleQueryResults(
+          res.error + (res.backtrace ? "\n" + res.backtrace : ""),
+          QueryResultType.Error,
+        );
+      } else {
+        result = res.result === null ? "" : res.result;
+        base64 = res.base64 || false;
+      }
+    });
+
+    this.connection.k(wrapper, ...args);
 
     while (result === undefined || result === null) {
       await delay(50);
     }
 
     this.updateGlobal();
+
+    if (base64) {
+      return { base64, result };
+    }
 
     if (ext.isResultsTabVisible && stringify) {
       if (this.isError) {

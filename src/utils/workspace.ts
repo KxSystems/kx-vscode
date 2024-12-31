@@ -11,7 +11,16 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Uri, window, workspace } from "vscode";
+import {
+  commands,
+  Range,
+  TextDocumentShowOptions,
+  Uri,
+  ViewColumn,
+  window,
+  workspace,
+  WorkspaceEdit,
+} from "vscode";
 
 export function getWorkspaceRoot(
   ignoreException: boolean = false,
@@ -45,4 +54,62 @@ export async function activateTextDocument(item: Uri) {
       await window.showTextDocument(document);
     }
   }
+}
+
+export async function addWorkspaceFile(
+  uri: Uri | undefined,
+  name: string,
+  ext: string,
+  directory = ".kx",
+) {
+  const folders = workspace.workspaceFolders;
+  if (folders) {
+    const folder = uri ? workspace.getWorkspaceFolder(uri) : folders[0];
+    if (folder) {
+      let i = 1;
+      while (true) {
+        const files = await workspace.findFiles(
+          `${directory}/${name}-${i}${ext}`,
+        );
+        if (files.length === 0) {
+          break;
+        }
+        i++;
+        if (i > 100) {
+          throw new Error("No available file name found");
+        }
+      }
+
+      const uri = Uri.joinPath(
+        folder.uri,
+        directory,
+        `${name}-${i}${ext}`,
+      ).with({
+        scheme: "untitled",
+      });
+
+      return uri;
+    }
+  }
+  throw new Error("No workspace has been opened");
+}
+
+export async function setUriContent(uri: Uri, content: string) {
+  const edit = new WorkspaceEdit();
+  edit.replace(uri, new Range(0, 0, 1, 0), content);
+  await workspace.applyEdit(edit);
+}
+
+export function workspaceHas(uri: Uri) {
+  return workspace.textDocuments.some(
+    (doc) => doc.uri.toString() == uri.toString(),
+  );
+}
+
+export async function openWith(
+  uri: Uri,
+  type: string,
+  options?: TextDocumentShowOptions | ViewColumn,
+) {
+  await commands.executeCommand<void>("vscode.openWith", uri, type, options);
 }

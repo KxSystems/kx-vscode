@@ -41,7 +41,7 @@ export async function checkOpenSslInstalled(): Promise<string | null> {
   try {
     const result = await tryExecuteCommand(
       undefined,
-      "openSsl",
+      "openssl",
       log,
       "version",
     );
@@ -313,11 +313,15 @@ export function getServerAlias(serverList: ServerDetails[]): void {
   });
 }
 
-export function kdbOutputLog(message: string, type: string): void {
+export function kdbOutputLog(
+  message: string,
+  type: string,
+  supressDialog?: boolean,
+): void {
   const dateNow = new Date().toLocaleDateString();
   const timeNow = new Date().toLocaleTimeString();
   ext.outputChannel.appendLine(`[${dateNow} ${timeNow}] [${type}] ${message}`);
-  if (type === "ERROR") {
+  if (type === "ERROR" && !supressDialog) {
     window.showErrorMessage(
       `Error occured, check kdb output channel for details.`,
     );
@@ -693,4 +697,8 @@ function map(xs: any, f: any) {
   for (let i = 0; i < xs.length; i++) {
     res.push(f.call(xs, xs[i], i));
   }
+}
+
+export function compareVersions(version1: number, version2: number): boolean {
+  return semver.gte(`${version1}.0`, `${version2}.0`);
 }

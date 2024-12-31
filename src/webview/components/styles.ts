@@ -133,6 +133,18 @@ export const dataSourceStyles = css`
   }
 `;
 
+export const chartStyles = css`
+  .frame {
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .plot {
+    width: auto;
+    max-height: 100%;
+  }
+`;
+
 export const vscodeStyles = css`
   .dropdown-container {
     box-sizing: border-box;

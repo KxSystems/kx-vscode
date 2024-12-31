@@ -19,6 +19,7 @@ import { Telemetry } from "../utils/telemetryClient";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { sanitizeQuery } from "../utils/queryUtils";
 import {
+  compareVersions,
   getInsights,
   getKeyForServerName,
   getServerName,
@@ -194,11 +195,21 @@ export class ConnectionManagementService {
     ]);
     Telemetry.sendEvent("Connection.Connected.Active");
     ext.activeConnection = connection;
+
     if (node instanceof InsightsNode) {
-      commands.executeCommand("setContext", "kdb.insightsConnected", true);
-    } else {
-      commands.executeCommand("setContext", "kdb.insightsConnected", false);
+      commands.executeCommand("setContext", "kdb.pythonEnabled", true);
+    } else if (connection instanceof LocalConnection) {
+      // check if pykx namespace is defined
+      connection
+        .execute("`pykx in key`")
+        .then((res) => {
+          commands.executeCommand("setContext", "kdb.pythonEnabled", !!res);
+        })
+        .catch(() => {
+          commands.executeCommand("setContext", "kdb.pythonEnabled", false);
+        });
     }
+
     ext.connectionNode = node;
     ext.serverProvider.reload();
   }
@@ -300,9 +311,7 @@ export class ConnectionManagementService {
       ext.activeConnection = undefined;
       ext.connectionNode = undefined;
       commands.executeCommand("setContext", "kdb.connected.active", false);
-      if (connType === "Insights") {
-        commands.executeCommand("setContext", "kdb.insightsConnected", false);
-      }
+      commands.executeCommand("setContext", "kdb.pythonEnabled", false);
     }
     Telemetry.sendEvent("Connection.Disconnected." + connType);
     kdbOutputLog(
@@ -316,7 +325,7 @@ export class ConnectionManagementService {
     command: string,
     connLabel?: string,
     context?: string,
-    stringfy?: boolean,
+    stringify?: boolean,
     isPython?: boolean,
   ): Promise<any> {
     let selectedConn;
@@ -333,7 +342,12 @@ export class ConnectionManagementService {
     }
     command = sanitizeQuery(command);
     if (selectedConn instanceof LocalConnection) {
-      return await selectedConn.executeQuery(command, context, stringfy);
+      return await selectedConn.executeQuery(
+        command,
+        context,
+        stringify,
+        isPython,
+      );
     } else {
       return await selectedConn.getScratchpadQuery(command, context, isPython);
     }
@@ -353,7 +367,7 @@ export class ConnectionManagementService {
 
     if (
       ext.activeConnection.insightsVersion &&
-      ext.activeConnection.insightsVersion >= 1.12
+      compareVersions(ext.activeConnection.insightsVersion, 1.12)
     ) {
       const confirmationPrompt = `Are you sure you want to reset the scratchpad from the connection ${ext.activeConnection.connLabel}?`;
       const selection = await window.showInformationMessage(

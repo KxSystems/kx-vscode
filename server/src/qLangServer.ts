@@ -74,6 +74,8 @@ import {
   WhiteSpace,
   RCurly,
   local,
+  LCurly,
+  lamdaDefinition,
 } from "./parser";
 import { lint } from "./linter";
 import { readFileSync } from "node:fs";
@@ -158,7 +160,7 @@ export default class QLangServer {
       semanticTokensProvider: {
         full: true,
         legend: {
-          tokenTypes: ["variable"],
+          tokenTypes: ["variable", "function"],
           tokenModifiers: ["declaration", "readonly"],
         },
       },
@@ -468,18 +470,21 @@ export default class QLangServer {
     let character = 0;
     let delta = 0;
     for (const token of tokens) {
-      if (assignable(token) && local(token, tokens)) {
-        line = range.start.line;
-        character = range.start.character;
-        range = rangeFromToken(token);
-        delta = range.start.line - line;
-        result.data.push(
-          delta,
-          delta ? range.start.character : range.start.character - character,
-          token.image.length,
-          0,
-          3,
-        );
+      if (assignable(token)) {
+        let kind = lamdaDefinition(token) ? 1 : local(token, tokens) ? 0 : -1;
+        if (kind >= 0) {
+          line = range.start.line;
+          character = range.start.character;
+          range = rangeFromToken(token);
+          delta = range.start.line - line;
+          result.data.push(
+            delta,
+            delta ? range.start.character : range.start.character - character,
+            token.image.length,
+            kind,
+            3,
+          );
+        }
       }
     }
     return result;
