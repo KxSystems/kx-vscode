@@ -405,6 +405,12 @@ For any file with a **.q** or **.py** extension there are additional options ava
 
 - **Run q file in new q instance** - If q is installed and executable from the terminal you can execute an entire q script on a newly launched q instance. Executing a file on a new instance is done in the terminal, and allows interrogation of the active q process from the terminal window.
 
+**Note**: To write and execute Python code against kdb+ connections, make sure that `pykx` is loaded into the q process. If `.pykx` is undefined, it returns the following error:
+
+```
+.pykx is not defined: please load pykx
+```
+
 ### Insights query execution
 
 **kdb Insights Enterprise** offers enhanced connectivity and enterprise level API endpoints, providing additional means to query data and interact with **kdb Insights Enterprise** that are not available with standard kdb processes. You must have an instance of **kdb Insights Enterprise** running, and have created a [connection](#connections) within the **kdb VS Code extension**.
