@@ -117,7 +117,8 @@
   (`result;    ::);
   (`errored;   1b);
   (`error;     err);
-  (`backtrace; .Q.sbt userCode))
+  (`backtrace; .Q.sbt userCode);
+  (`base64;    0b))
   }[suffix; prefix]];
   if [isLastLine or result`errored;
   system "d ", cachedCtx;
@@ -191,9 +192,15 @@
   // fn[sampleSize; data]
   // }
   result: evalInContext[ctx; splitExpression stripTrailingSemi wrapLines removeMultilineComments code];
-  if [(not result `errored) and returnFormat ~ "text";
+  if[result `errored; :result];
+  if[type[result[`result]] = 99h;
+  if[`output in key result[`result]; 
+  if[type[result[`result][`output]] = 99h;
+  if[`bytes in key result[`result][`output]; 
+  result[`base64]:1b; result[`result]: .Q.btoa result[`result][`output][`bytes]; :result]]]];
+  if [returnFormat ~ "text";
   result[`result]: toString result `result];
-  if [(not result `errored) and returnFormat ~ "structuredText";
+  if [returnFormat ~ "structuredText";
   result[`result]: toStructuredText[result `result;count result`result; isAtom result`result; typeOf result`result]];
   result
   }
