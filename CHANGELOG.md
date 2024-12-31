@@ -2,6 +2,34 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.10.0
+
+### Enhancements
+
+- Display GGPlot for binary data output from q queries, providing a quick way to generate charts inside VSCode, making it easier to identify patterns, trends, and outliers in your data
+- Show stack trace for errors in the kdb Insights Enterprise scratchpad
+- Autocomplete for [Query APIs](https://code.kx.com/insights/1.12/enterprise/analysis/queryapi.html)
+- Add support for Python for KDB+ connections
+- Semantic highlighting for function definitions
+- Improved table headers in the results tab
+- Show query progress for KDB+ connections
+- Added notification for data source refresh
+
+### Fixes
+
+- Fixed issue with starting local q server when using WSL
+- Fixed double error message when unable to connect to Insights
+- Fixed query errors being written to the 'kdb' output rather than the 'q console output'
+- Fixed issue with editing a connection and moving it into an existing group
+- Ensured 'query is running' notification shows until the results are rendered
+- Fixed unresponsiveness of the extension when displaying large tables with KDB Results
+- Fixed unicode characters not displayed correctly in results table
+
+### Internal Improvements
+
+- Removed jwtDecode types
+- Changed the output for local q queries for structured text
+
 # v1.9.1
 
 ### Fixes

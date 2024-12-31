@@ -21,6 +21,7 @@ This guide provides information on the following:
 - [Workbooks](#workbooks)
 - [Query History](#query-history)
 - [Viewing results](#view-results)
+- [AxLibraries](#axlibraries)
 - [q REPL](#q-repl)
 - [Settings](#settings)
 - [Shortcuts](#shortcuts)
@@ -592,6 +593,23 @@ All query executions happen remotely from the **kdb VS Code extension** either a
 - **KDB Results** - This window displays the kdb returned data in a table.
 
   ![kdb results view](https://github.com/KxSystems/kx-vscode/blob/main/img/kdbview-results.png?raw=true)
+
+## AxLibraries
+
+The following features of [AxLibraries](https://code.kx.com/developer/libraries/) are integrated and can be used within the extension:
+
+- [Grammar of Graphics](#grammar-of-graphics)
+- q static linter
+
+**Note:** To use those features, you should install AxLibraries following the [installation instructions.](https://code.kx.com/developer/libraries/#installation)
+
+### Grammar of Graphics
+
+Grammar of Graphics (GG) is a scripted visualization library for kdb+. For more information refer to the [documentation](https://code.kx.com/developer/ggplot/).
+
+When executing GG scripts, calling `.qp.display` displays the plot locally.
+
+![gg-plot](https://github.com/KxSystems/kx-vscode/blob/main/img/gg-plot.png?raw=true)
 
 ## q REPL
 
