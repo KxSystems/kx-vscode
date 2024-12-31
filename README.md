@@ -405,11 +405,13 @@ For any file with a **.q** or **.py** extension there are additional options ava
 
 - **Run q file in new q instance** - If q is installed and executable from the terminal you can execute an entire q script on a newly launched q instance. Executing a file on a new instance is done in the terminal, and allows interrogation of the active q process from the terminal window.
 
-!!!warning "Prerequisite for executing Python code against kdb+ connections"
-   To write and execute Python code against kdb+ connections, make sure that `pykx` is loaded into the q process. If `.pykx` is undefined, it returns the following error:
-   ```
-   .pykx is not defined: please load pykx
-   ```
+When executing Python code against kdb+ connections, **note** the following:
+
+- A Python variable is defined in the remote process `_kx_execution_context`, which means you need to explicitly accept it to avoid implicit changes to the remote process. It doesn’t make any other change to the remote process.
+- To write and execute Python code against kdb+ connections, make sure that `pykx` is loaded into the q process. If `.pykx` is undefined, it returns the following error:
+  ```
+  .pykx is not defined: please load pykx
+  ```
 
 ### Insights query execution
 
