@@ -249,13 +249,13 @@ describe("WebPanels", () => {
               name: "prop1",
               type: "type1",
               values: ["value1", "value2"],
-              order: [1, 2],
+              order: [1, 0],
             },
             {
               name: "prop2",
               type: "type2",
               values: ["value3", "value4"],
-              order: [1, 2],
+              order: [1, 0],
             },
           ],
           count: 2,
@@ -270,8 +270,8 @@ describe("WebPanels", () => {
             minWidth: 100,
           },
           rowData: [
-            { index: 1, prop1: "value2", prop2: "value4" },
-            { index: 2 },
+            { index: 1, prop1: "value1", prop2: "value3" },
+            { index: 2, prop1: "value2", prop2: "value4" },
           ],
           columnDefs: [
             { field: "index", headerName: "Index", cellDataType: "number" },
@@ -304,7 +304,7 @@ describe("WebPanels", () => {
         stub.get(() => insightsConn);
 
         const output = resultsPanel.convertToGrid(results, true, 1.12);
-        assert.equal(JSON.stringify(output), expectedOutput);
+        assert.deepEqual(JSON.stringify(output), expectedOutput);
 
         // Restore the stub
         stub.restore();

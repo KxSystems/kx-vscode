@@ -187,7 +187,7 @@ export class LocalConnection {
     if (isPython) {
       args.push(!!stringify, command);
     } else {
-      args.push(context ?? ".", command, !!stringify);
+      args.push(context ?? ".", command, stringify ? "text" : "structuredText");
     }
 
     args.push((err: Error, res: QueryResult) => {
@@ -217,6 +217,10 @@ export class LocalConnection {
 
     if (base64) {
       return { base64, result };
+    }
+
+    if (!stringify) {
+      return JSON.parse(result);
     }
 
     if (ext.isResultsTabVisible && stringify) {
