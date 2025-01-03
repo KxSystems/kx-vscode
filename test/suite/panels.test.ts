@@ -304,7 +304,7 @@ describe("WebPanels", () => {
         stub.get(() => insightsConn);
 
         const output = resultsPanel.convertToGrid(results, true, 1.12);
-        assert.deepEqual(JSON.stringify(output), expectedOutput);
+        assert.equal(JSON.stringify(output), expectedOutput);
 
         // Restore the stub
         stub.restore();
