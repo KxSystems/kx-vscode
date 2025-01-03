@@ -177,20 +177,20 @@
   }[generateTableColumns; generateColumns];
   typeOf: {$[0>type x; .axq.i_PRIMCODE neg type x; .axq.i_NONPRIMCODE type x]};
   isAtom: {not type[x] within 0 99h};
-  // sample: {[sampleFn; sampleSize; data]
-  // sampleSize: min (sampleSize; count data);
-  // fn: $[  sampleFn ~ "random";
-  // {[sampleSize; data]
-  // $[  type[data] ~ 99h;
-  // [   ii: neg[sampleSize]?count data;
-  // (key[data] ii)!value[data]ii];
-  // neg[sampleSize]?data]
-  // };
-  // sampleFn ~ "first"; #;
-  // sampleFn ~ "last";  {neg[x]#y};
-  // ' "Unrecognized sample function"];
-  // fn[sampleSize; data]
-  // }
+  sample: {[sampleFn; sampleSize; data]
+  sampleSize: min (sampleSize; count data);
+  fn: $[  sampleFn ~ "random";
+  {[sampleSize; data]
+  $[  type[data] ~ 99h;
+  [   ii: neg[sampleSize]?count data;
+  (key[data] ii)!value[data]ii];
+  neg[sampleSize]?data]
+  };
+  sampleFn ~ "first"; #;
+  sampleFn ~ "last";  {neg[x]#y};
+  ' "Unrecognized sample function"];
+  fn[sampleSize; data]
+  }
   result: evalInContext[ctx; splitExpression stripTrailingSemi wrapLines removeMultilineComments code];
   if[result `errored; :result];
   if[type[result[`result]] = 99h;
