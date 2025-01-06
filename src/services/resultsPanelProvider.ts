@@ -197,9 +197,9 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     );
 
     columns.forEach((column) => {
-      const { name, values, order } = column;
-      order.forEach((pos, index) => {
-        rowData[index][name] = decodeQUTF(values[pos]);
+      const { name, values } = column;
+      values.forEach((value, index) => {
+        rowData[index][name] = decodeQUTF(value);
       });
     });
 
@@ -235,7 +235,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     let rowData = [];
     let columnDefs = [];
 
-    if (connVersion && compareVersions(connVersion, 1.12)) {
+    if (!isInsights || (connVersion && compareVersions(connVersion, 1.12))) {
       rowData = this.updatedExtractRowData(results);
       columnDefs = this.updatedExtractColumnDefs(results);
     } else {
