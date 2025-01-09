@@ -31,6 +31,7 @@ import { decodeQUTF } from "../utils/decode";
 export class KdbResultsViewProvider implements WebviewViewProvider {
   public static readonly viewType = "kdb-results";
   public isInsights = false;
+  public isPython = false;
   public _colorTheme: any;
   private _view?: WebviewView;
   private _results: string | string[] = "";
@@ -97,10 +98,12 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     queryResults: any,
     isInsights?: boolean,
     connVersion?: number,
+    isPython?: boolean,
   ) {
     if (this._view) {
       this._view.show?.(true);
       this.isInsights = !!isInsights;
+      this.isPython = !!isPython;
       this.updateWebView(queryResults, connVersion);
     }
   }
@@ -231,11 +234,15 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     results: any,
     isInsights: boolean,
     connVersion?: number,
+    isPython?: boolean,
   ): GridOptions {
     let rowData = [];
     let columnDefs = [];
 
-    if (!isInsights || (connVersion && compareVersions(connVersion, 1.12))) {
+    if (
+      (!isInsights && !isPython) ||
+      (isInsights && connVersion && compareVersions(connVersion, 1.12))
+    ) {
       rowData = this.updatedExtractRowData(results);
       columnDefs = this.updatedExtractColumnDefs(results);
     } else {
@@ -370,6 +377,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         queryResult,
         this.isInsights,
         connVersion,
+        this.isPython,
       );
     }
     if (gridOptions) {

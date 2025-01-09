@@ -1224,6 +1224,7 @@ export async function writeQueryResultsToView(
     result,
     isInsights,
     connVersion,
+    isPython,
   );
   if (!checkIfIsDatasource(type)) {
     addQueryHistory(
