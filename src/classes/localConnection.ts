@@ -219,7 +219,7 @@ export class LocalConnection {
       return { base64, result };
     }
 
-    if (!stringify) {
+    if (!stringify && !isPython) {
       return JSON.parse(result);
     }
 
