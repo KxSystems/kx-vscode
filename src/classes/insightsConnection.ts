@@ -430,7 +430,8 @@ export class InsightsConnection {
       };
 
       if (this.insightsVersion) {
-        if (compareVersions(this.insightsVersion, 1.12)) {
+        /* TODO: Workaround for Python structuredText bug */
+        if (!isPython && compareVersions(this.insightsVersion, 1.12)) {
           body.returnFormat = isTableView ? "structuredText" : "text";
         } else {
           body.isTableView = isTableView;
@@ -475,6 +476,8 @@ export class InsightsConnection {
                 if (!response.data.error) {
                   if (isTableView) {
                     if (
+                      /* TODO: Workaround for Python structuredText bug */
+                      !isPython &&
                       this.insightsVersion &&
                       compareVersions(this.insightsVersion, 1.12)
                     ) {
