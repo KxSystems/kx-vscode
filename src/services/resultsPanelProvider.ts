@@ -241,7 +241,8 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
     if (
       (!isInsights && !isPython) ||
-      (isInsights && connVersion && compareVersions(connVersion, 1.12))
+      /* TODO: Workaround for Python structuredText bug */
+      (!isPython && connVersion && compareVersions(connVersion, 1.12))
     ) {
       rowData = this.updatedExtractRowData(results);
       columnDefs = this.updatedExtractColumnDefs(results);
