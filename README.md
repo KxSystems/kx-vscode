@@ -616,6 +616,8 @@ GGPlot2 in VSCode allows you to create detailed and informative visualizations, 
 
 To use GGPlot2 in VSCode:
 
+- Create a `my q` connection to the port to load the library.
+
 - Write a script to query and load data. Make sure to clean and prepare the data for visualization, ensuring it is in a format suitable for analysis.
 
 - Use GGPlot2 to create visualizations, such as a bar plot showing the total transaction amount by month.
