@@ -51,8 +51,6 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       guid: "text",
       byte: "number",
       short: "number",
-      int: "number",
-      long: "number",
       real: "number",
       float: "number",
       char: "text",
@@ -199,7 +197,9 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       () => ({}),
     );
 
-    columns.forEach((column) => {
+    const columnsArray = Array.isArray(columns) ? columns : [columns];
+
+    columnsArray.forEach((column) => {
       const { name, values } = column;
       values.forEach((value, index) => {
         rowData[index][name] = decodeQUTF(value);
@@ -212,7 +212,9 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   updatedExtractColumnDefs(results: StructuredTextResults) {
     const { columns } = results;
 
-    const columnDefs = columns.map((column) => {
+    const columnsArray = Array.isArray(columns) ? columns : [columns];
+
+    const columnDefs = columnsArray.map((column) => {
       const sanitizedKey = this.sanitizeString(column.name);
       const cellDataType = this.kdbToAgGridCellType(column.type);
       const headerName = column.type
