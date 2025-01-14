@@ -608,13 +608,27 @@ The following features of [AxLibraries](https://code.kx.com/developer/libraries/
 
 **Note:** To use those features, you should install AxLibraries following the [installation instructions.](https://code.kx.com/developer/libraries/#installation)
 
-### Grammar of Graphics
+### Grammar of Graphics
 
-Grammar of Graphics (GG) is a scripted visualization library for kdb+. For more information refer to the [documentation](https://code.kx.com/developer/ggplot/).
+Grammar of Graphics (GG) is a scripted visualization library for kdb+. 
 
-When executing GG scripts, calling `.qp.display` displays the plot locally.
+GGPlot2 in VSCode allows you to create detailed and informative visualizations, helping you understand the underlying patterns and trends in your data more clearly without having to switch to RStudio. For more information refer to the [GGPlot documentation](https://code.kx.com/developer/ggplot/).
+
+To use GGPlot2 in VSCode:
+
+- Create a `my q` connection to the port to load the library.
+
+- Write a script to query and load data. Make sure to clean and prepare the data for visualization, ensuring it is in a format suitable for analysis.
+
+- Use GGPlot2 to create visualizations, such as a bar plot showing the total transaction amount by month.
+
+- Run the script within VSCode. The chart is generated and displayed in the VSCode plot viewer, and you can save the plot.
+   
+   **Note**: When executing GG scripts, calling `.qp.display` displays the plot locally.
 
 ![gg-plot](https://github.com/KxSystems/kx-vscode/blob/main/img/gg-plot.png?raw=true)
+
+You can make changes to the script before exporting the plot. Re-running the script updates to reflect the changes.
 
 ## q REPL
 
