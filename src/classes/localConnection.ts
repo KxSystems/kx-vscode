@@ -195,15 +195,17 @@ export class LocalConnection {
         this.isError = true;
         result = handleQueryResults(err.toString(), QueryResultType.Error);
       }
-      if (res.errored) {
-        this.isError = true;
-        result = handleQueryResults(
-          res.error + (res.backtrace ? "\n" + res.backtrace : ""),
-          QueryResultType.Error,
-        );
-      } else {
-        result = res.result === null ? "" : res.result;
-        base64 = res.base64 || false;
+      if (res) {
+        if (res.errored) {
+          this.isError = true;
+          result = handleQueryResults(
+            res.error + (res.backtrace ? "\n" + res.backtrace : ""),
+            QueryResultType.Error,
+          );
+        } else {
+          result = res.result === null ? "" : res.result;
+          base64 = res.base64 || false;
+        }
       }
     });
 
@@ -215,6 +217,11 @@ export class LocalConnection {
 
     this.updateGlobal();
 
+    if (this.isError) {
+      this.isError = false;
+      return result;
+    }
+
     if (base64) {
       return { base64, result };
     }
@@ -224,10 +231,6 @@ export class LocalConnection {
     }
 
     if (ext.isResultsTabVisible && stringify) {
-      if (this.isError) {
-        this.isError = false;
-        return result;
-      }
       return convertStringToArray(result ? result : "");
     }
 
