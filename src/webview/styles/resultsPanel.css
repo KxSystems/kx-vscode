@@ -61,7 +61,7 @@ body {
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  display: none; /* Initially hidden */
+  display: none;
 }
 
 .loading-box {
