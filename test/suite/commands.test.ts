@@ -1400,6 +1400,31 @@ describe("serverCommand", () => {
 
       executeCommandStub.restore();
     });
+
+    it("should call executeCommand with correct arguments for an error", () => {
+      const result = "Error: test error";
+      const executeCommandStub = sinon.stub(vscode.commands, "executeCommand");
+
+      serverCommand.writeQueryResultsToView(
+        result,
+        "",
+        "testConn",
+        "testFile.kdb.q",
+        false,
+        "WORKBOOK",
+        false,
+        "2",
+      );
+
+      sinon.assert.calledWith(
+        executeCommandStub.firstCall,
+        "kdb.resultsPanel.update",
+        result,
+        false,
+      );
+
+      executeCommandStub.restore();
+    });
   });
   describe("enableTLS", () => {
     let getServersStub: sinon.SinonStub;
