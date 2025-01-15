@@ -305,24 +305,8 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     }
 
     const gridOptions: GridOptions = {
-      defaultColDef: {
-        sortable: true,
-        resizable: true,
-        filter: true,
-        flex: 1,
-        minWidth: 100,
-      },
       rowData: rowData,
       columnDefs: columnDefs,
-      domLayout: "autoHeight",
-      pagination: true,
-      paginationPageSize: 100,
-      enableCellTextSelection: true,
-      ensureDomOrder: true,
-      suppressContextMenu: true,
-      suppressDragLeaveHidesColumns: true,
-      tooltipShowDelay: 200,
-      loading: true,
     };
 
     return gridOptions;
@@ -364,17 +348,16 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     this._results = queryResult;
     let result = "";
     let gridOptions = undefined;
+
     if (!this._view) {
       kdbOutputLog("[Results Tab] No view to update", "ERROR");
       return;
     }
+
+    this._view.webview.postMessage({ command: "loading" });
+
     if (typeof queryResult === "string" || typeof queryResult === "number") {
-      result =
-        queryResult !== ""
-          ? `<p class="results-txt">${queryResult
-              .toString()
-              .replace(/\n/g, "<br/>")}</p>`
-          : "<p>No results to show</p>";
+      result = this.formatResult(queryResult);
     } else if (queryResult) {
       gridOptions = this.convertToGrid(
         queryResult,
@@ -383,16 +366,33 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         this.isPython,
       );
     }
-    if (gridOptions) {
-      this._view.webview.postMessage({
-        command: "setGridOptions",
-        gridOptions: gridOptions,
-      });
-    } else {
-      this._view.webview.postMessage({
-        command: "setResultsContent",
-        results: result,
-      });
+
+    this.postMessageToWebview(gridOptions, result);
+  }
+
+  private formatResult(queryResult: string | number): string {
+    return queryResult !== ""
+      ? `<p class="results-txt">${queryResult.toString().replace(/\n/g, "<br/>")}</p>`
+      : "<p>No results to show</p>";
+  }
+
+  private postMessageToWebview(
+    gridOptions: GridOptions | undefined,
+    result: string,
+  ) {
+    if (this._view) {
+      if (gridOptions) {
+        this._view.webview.postMessage({
+          command: "setGridDatasource",
+          results: gridOptions.rowData,
+          columnDefs: gridOptions.columnDefs,
+        });
+      } else {
+        this._view.webview.postMessage({
+          command: "setResultsContent",
+          results: result,
+        });
+      }
     }
   }
 
@@ -422,15 +422,32 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
               "ag-grid-community.min.js",
             )}"></script>
           </head>
-          <body>     
+          <body>
             <div id="results" class="results-view-container">
               <div class="content-wrapper"></div>
-            </div>      
+            </div>
+            <div id="overlay" class="overlay">
+            <div class="loading-box">
+              <div class="spinner"></div>
+              <div class="loading-text">Loading data...</div>
+            </div>
+          </div>
             <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
             <div id="grid" style="height: 100%;  width:100%;" class="${agGridTheme}"></div>
-            <script nonce="${nonce}" >          
+            <script nonce="${nonce}" >
               const vscode = acquireVsCodeApi();
+              const gridDiv = document.getElementById('grid');
+              const resultsDiv = document.querySelector('#results .content-wrapper');
+              const overlay = document.getElementById('overlay');
               let gridApi;
+
+              function showOverlay() {
+              overlay.style.display = 'flex';
+            }
+
+            function hideOverlay() {
+              overlay.style.display = 'none';
+            }
 
               function saveColumnWidths() {
                 if (!gridApi) {return null};
@@ -444,30 +461,78 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
               window.addEventListener('message', event => {
                 const message = event.data;
-                console.log(event)
-                if (message.command === 'setGridOptions') {
+                showOverlay();
+
+                const handleSetGridDatasource = () => {
                   const columnWidths = saveColumnWidths();
-                  const gridOptions = message.gridOptions;
-                  const gridDiv = document.getElementById('grid');
-                  const resultsDiv = document.querySelector('#results .content-wrapper');
-                  resultsDiv.innerHTML = ''; 
-                  gridDiv.innerHTML = ''; 
-                  const rowData = gridOptions.rowData;
-                  gridOptions.rowData = [];
+                  const gridOptions = {
+                    defaultColDef: {
+                      sortable: true,
+                      resizable: true,
+                      filter: true,
+                      flex: 1,
+                      minWidth: 100,
+                    },
+                    columnDefs: message.columnDefs,
+                    domLayout: "autoHeight",
+                    pagination: true,
+                    enableCellTextSelection: true,
+                    ensureDomOrder: true,
+                    suppressContextMenu: true,
+                    suppressDragLeaveHidesColumns: true,
+                    tooltipShowDelay: 200,
+                    rowBuffer: 0,
+                    rowModelType: "infinite",
+                    cacheBlockSize: 100,
+                    cacheOverflowSize: 2,
+                    maxConcurrentDatasourceRequests: 1,
+                    infiniteInitialRowCount: 10000,
+                    maxBlocksInCache: 10,
+                    datasource: {
+                      rowCount: undefined,
+                      getRows: function(params) {
+                        showOverlay();
+                        const results = message.results;
+                        setTimeout(() => {
+                          const lastRow = results.length;
+                          const rowsThisPage = results.slice(params.startRow, params.endRow);
+                          params.successCallback(rowsThisPage, lastRow);
+                          hideOverlay();
+                        }, 500);
+                      }
+                    }
+                  };
+                  resultsDiv.innerHTML = '';
+                  gridDiv.innerHTML = '';
                   gridApi = agGrid.createGrid(gridDiv, gridOptions);
                   restoreColumnWidths(columnWidths);
-                  setTimeout(() => {
-                    gridApi.setGridOption("rowData", rowData);
-                    gridApi.setGridOption("loading", false);
-                  }, 500);
                   document.getElementById("results").scrollIntoView();
-                } else if (message.command === 'setResultsContent') {
+                };
+
+                const handleSetResultsContent = () => {
                   const resultsContent = message.results;
-                  const resultsDiv = document.querySelector('#results .content-wrapper');
-                  const gridDiv = document.getElementById('grid');
-                  gridDiv.innerHTML = ''; 
-                  resultsDiv.innerHTML = ''; 
+                  gridDiv.innerHTML = '';
+                  resultsDiv.innerHTML = '';
                   resultsDiv.innerHTML = resultsContent;
+                  hideOverlay();
+                };
+
+                const handleLoading = () => {
+                  gridDiv.innerHTML = '';
+                  resultsDiv.innerHTML = '';
+                };
+
+                switch (message.command) {
+                  case 'setGridDatasource':
+                    handleSetGridDatasource();
+                    break;
+                  case 'setResultsContent':
+                    handleSetResultsContent();
+                    break;
+                  default:
+                  case 'loading':
+                    handleLoading();
+                    break;
                 }
               });
               document.addEventListener('contextmenu', (e) => {
