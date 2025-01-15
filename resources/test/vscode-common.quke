@@ -1,0 +1,432 @@
+feature EDI
+    
+    before
+        .test.dims : system "c";
+        .test.precision: system "P";
+        .test.attrLines: ("dict: `s#`a`b`c`d`e`f`g!enlist each 7?0";
+                              "dict[`e] : dict[`e] , 1";
+                              "attr dict");
+
+    after each
+        system "c ", " " sv string .test.dims;
+        system "P ", string .test.precision;
+
+    // @TICKET KXI-9607
+    should ensure EDI performs display correctly for standard expressions
+        // @TICKET KXI-12260
+        expect simple expression of 3+3 to return 6:
+            6 ~ .com_kx_ediNoCoverage.evaluate["3+3"; "."]`data
+
+        // This test is skipped because coverage is not handling generic null correctly in QBUILD 1.0.17 and greater
+        // @TICKET KXI-12260
+        xexpect projection null to return as generic null
+            (::) ~ .com_kx_ediNoCoverage.evaluate["last value (;;)"; "."]
+
+        expect function definition to work:
+            {: 333} ~ .com_kx_ediNoCoverage.evaluate["fn333: {: 333}"; "."]`data
+            
+        expect function call to work and return 333:
+            333 ~ .com_kx_ediNoCoverage.evaluate["fn333 []"; "."]`data
+
+        expect each right and each left of similar expressions to be equal:
+            .com_kx_edi.dropIrrelevantRecords[.com_kx_ediNoCoverage.evaluate["1 2 3 +\\: 10"; "."]] ~ .com_kx_edi.dropIrrelevantRecords  .com_kx_ediNoCoverage.evaluate["10 +/: 1 2 3"; "."]
+
+        expect scan to work and return 11 13 16:
+            11 13 16 ~ .com_kx_ediNoCoverage.evaluate["10 +\\ 1 2 3"; "."]`data
+
+        expect over to work and return 16:
+            16 ~ .com_kx_ediNoCoverage.evaluate["10 +/ 1 2 3"; "."]`data
+
+        expect a list created by EDI to be equal to the list:
+            1 2 3 4 5 6 7 8 ~ .com_kx_ediNoCoverage.evaluate["1 2 3 4 5 6 7 8"; "."]`data
+
+        expect an expression that creates a list to return the correct list:
+            "abcdefghijklmnopqrstuvwxyz" ~ .com_kx_ediNoCoverage.evaluate["`char$97+til 26"; "."]`data
+            
+        expect the concat of two lists to be the same:
+            (til[100], til 100) ~ .com_kx_ediNoCoverage.evaluate["(til 100),(til 100)"; "."]`data
+
+    // @TICKET KXI-9607
+    should ensure EDI performs display correctly for k expressions
+        expect simple k expressions to work, 3+3=6:
+            6 ~ .com_kx_ediNoCoverage.evaluate["k) 3 + 3"; "."]`data
+
+        expect more complicated k expressions to work such as over:
+            10 ~ .com_kx_ediNoCoverage.evaluate["k) +/1 2 3 4"; "."]`data
+
+        expect more complicated k expressions to work such as dyadic function over:
+            19 ~ .com_kx_ediNoCoverage.evaluate["k) {x+2*y}/1 2 3 4"; "."]`data
+
+        expect more complicated k expressions to work such as monadic each both:
+            1 1 1 1 ~ .com_kx_ediNoCoverage.evaluate["k) (-':)1 2 3 4"; "."]`data
+
+        expect more complicated k expressions to work such as monadic each both:
+            1 3 6 10 ~ .com_kx_ediNoCoverage.evaluate["k) +\\1 2 3 4"; "."]`data
+
+        expect a string to be a string in k:
+            "hello\\there" ~ .com_kx_ediNoCoverage.evaluate["k) \"hello\\\\there\""; "."]`data
+
+    // @TICKET KXI-9607
+    should ensure EDI performs display correctly for system expressions
+        expect it to return timing information:
+            // this fails intermittently on windows for some reason ...
+            10 > .com_kx_ediNoCoverage.evaluate["\\t count \"doug\""; "."]`data
+
+        expect expression in t to set zz correctly:
+            (zz ~ 4) and (10 > .com_kx_ediNoCoverage.evaluate["\\t zz: count \"doug\""; "."]`data)
+
+        expect simple expression in t to work correctly:
+            (zz ~ 4) and (10 > .com_kx_ediNoCoverage.evaluate["\\t zz: 1 + 1 + 1 + 1"; "."]`data)
+
+        expect ts to return time and space:
+            2 = count .com_kx_ediNoCoverage.evaluate["\\ts til 10000"; "."]`data
+    
+        expect workspace information to return correctly (should usually work but may fail):
+            (last system "w") ~ last .com_kx_ediNoCoverage.evaluate["\\w"; "."]`data
+
+        expect ls os command to return data back as a general list equivalent to system call:
+            $["w" ~ first string .z.o;
+                // The /b is needed to show the simple results,
+                // as if just "dir" is used, the results can change between the two calls
+                (system "dir /b") ~ .com_kx_ediNoCoverage.evaluate["\\dir /b"; "."]`data;
+                (system "ls") ~ .com_kx_ediNoCoverage.evaluate["\\ls"; "."]`data];
+
+        expect pwd os command to return the current directory equivalent to system call:
+            (system "cd") ~ .com_kx_ediNoCoverage.evaluate["\\cd"; "."]`data
+
+        expect a to return a list of tables:
+            11h ~ type .com_kx_ediNoCoverage.evaluate["\\a"; "."]`data
+
+        expect c to return the console size:
+            6h ~ type .com_kx_ediNoCoverage.evaluate["\\c"; "."]`data
+
+        expect c 100 100 to set the console to 100 100:
+            .com_kx_ediNoCoverage.evaluate["\\c 100 100"; "."]`data;
+            100 100i ~ system "c"
+            
+        expect p to provide the port:
+            system["p"] ~ .com_kx_ediNoCoverage.evaluate["\\p"; "."]`data
+
+        expect P to provide the precision:
+            system["P"] ~ .com_kx_ediNoCoverage.evaluate["\\P"; "."]`data
+
+        expect setting precision to 4 for it to be set to 4:
+            (system ["P"] ~ 4i) and (::) ~ .com_kx_ediNoCoverage.evaluate["\\P 4"; "."]`data
+
+        expect setting the precision to 0 sets it to max (same as 16):
+            (system ["P"] ~ 0i) and (::) ~ .com_kx_ediNoCoverage.evaluate["\\P 0"; "."]`data
+
+    // @TICKET KXI-9607
+    should work for non-default contexts
+        expect correct expression result
+            6 ~ .com_kx_ediNoCoverage.evaluate["3+3"; ".f"]`data
+
+        expect function to be compiled in the correct context
+            `f ~ first @[;3] value .com_kx_ediNoCoverage.evaluate["fn:{3+3}"; ".f"]`data
+            
+    // @TICKET KXI-9607
+    should accept alternate values to indicate "."
+        expect correct expression result
+            .test.ctx: system "d";
+            system "d .foo";
+            .com_kx_ediNoCoverage.evaluate["myVal1: `first"; "."]`data;
+            .com_kx_ediNoCoverage.evaluate["myVal2: `second"; "."]`data;
+            system "d " , string .test.ctx;
+            `first`second ~ get each `..myVal1`..myVal2;
+            
+    // @TICKET KXI-9607
+    // @TICKET KXI-16397
+    should not remove things that look like comments
+        expect the /test to not be removed
+            // This needs the trim, because it returns "/test " on windows
+            trim[.com_kx_ediNoCoverage.evaluate["\\echo /test"; "."]`data] ~ enlist "/test"
+    
+    // @TICKET KXI-9607
+    // @TICKET KXI-16397
+    should handle windows line endings
+        expect this to be treated as a single expression
+            .qu.compare[.com_kx_ediNoCoverage.evaluate["(1\r\n\r\n    2 3)"; "."]`data;
+                1 2 3]
+            
+    // @TICKET KXI-9607
+    should maintain attributes regardless of semi-colon (KXAX-16342)
+        expect an attribute with no semi colons
+            `s ~ .com_kx_ediNoCoverage.evaluate["\n" sv .test.attrLines; "."]`data
+        expect an attribute with semi colons
+            `s ~ .com_kx_ediNoCoverage.evaluate["\n" sv .test.attrLines ,\: ";"; "."]`data
+        expect an attribute with no semi colons with two newlines
+            `s ~ .com_kx_ediNoCoverage.evaluate["\n\n" sv .test.attrLines; "."]`data
+        expect an attribute with semi colons with two newlines
+            `s ~ .com_kx_ediNoCoverage.evaluate["\n\n" sv .test.attrLines ,\: ";"; "."]`data
+        expect an attribute with no semi colons if run one after the other
+            `s ~ (last .com_kx_ediNoCoverage.evaluate[; "."] each .test.attrLines)[`data]
+        // @TICKET KXI-24244
+        expect an attribute with semi colons if run one after the other
+            `s ~ (last .com_kx_ediNoCoverage.evaluate[; "."] each .test.attrLines ,\: ";")[`data]
+
+    // @TICKET KXI-18000 
+    expect comments to be removed after system command
+        ("system \"d\";\n\n";"3+3")~ .com_kx_edi.i.normalizeExpn["\\d\n//comment\n3+3"; "."]
+
+    expect windows style line breaks should be handled correctly
+        lines: .com_kx_edi.i.normalizeExpn["test: `passed\r\n/\r\ntest: `failed\r\n\\\r\ntest"; "."];
+        .qu.compare[lines; ("test: `passed\n"; "test")]
+
+    // @TICKET KXI-24244
+    should test the evaluation of reset functionality running exit
+        expect the running .com_kx_edi.reset to run exit on the process
+            preEvalExit:exit;
+            set[`.q.exit;{EXIT_CALLED::1b;}];
+            .com_kx_edi.reset[];
+            set[`.q.exit;preEvalExit];
+            EXIT_CALLED
+
+    should evaluate DSL statements
+        expect multiline statements with windows line breaks to work
+            rows: .com_kx_ediNoCoverage.evaluate["t:([] a: til 10; b: reverse til 10)\r\ns)SELECT * FROM t\r\n WHERE a > 7\r\n AND b >= 0;"; "."]`data;
+            .qu.compare[rows; ([] a: 8 9; b: 1 0)]
+        expect multiline statements with unix line breaks to work
+            rows: .com_kx_ediNoCoverage.evaluate["t:([] a: til 10; b: reverse til 10)\ns)SELECT * FROM t\n WHERE a > 7\n AND b >= 0;"; "."]`data;
+            .qu.compare[rows; ([] a: 8 9; b: 1 0)]
+        expect DSL statements without line breaks work
+            rows: .com_kx_ediNoCoverage.evaluate["t:([] a: til 10)\ns)SELECT * FROM t WHERE a > 7;"; "."]`data;
+            .qu.compare[rows; ([] a: 8 9)]
+        expect DSL statements with DSL comments to work
+            rows: .com_kx_ediNoCoverage.evaluate["t:([] a: til 10)\ns)SELECT * FROM t WHERE a > 7; -- SQL comment"; "."]`data;
+            .qu.compare[rows; ([] a: 8 9)]
+
+
+feature .com_kx_edi.toStructuredText
+    before
+        .test.toStructuredText: {
+            .com_kx_edi.toStructuredText[x; count x; .axq.isAtom x; .axq.typeOf x]
+            }
+
+    // @TICKET KXI-47765
+    should test the structured text functionality
+        expect the result to use the count passed in (the pre-sampling length), rather than the length of data
+            .qu.compare[
+                .com_kx_edi.toStructuredText[10 + til 5; 10000; 1b; `longs];
+                "{\"count\":10000,\"columns\":{\"name\":\"value\",\"type\":\"longs\",\"values\":[\"10\",\"11\",\"12\",\"13\",\"14\"],\"order\":[0,1,2,3,4],\"attributes\":\"s\"}}"]
+        expect the result for atoms to show the type of the underlying atom rather than the column
+            .qu.compare[
+                .com_kx_edi.toStructuredText[100f; 1; 1b; `float];
+                "{\"count\":1,\"columns\":{\"name\":\"value\",\"type\":\"float\",\"values\":\"100f\",\"order\":[0]}}"]
+        expect structured text to handle atoms
+            exampleAtom: {[x;y]x + y};
+            .qu.compare[.test.toStructuredText exampleAtom; "{\"count\":1,\"columns\":{\"name\":\"value\",\"type\":\"lambda\",\"values\":\"{[x;y]x + y}\",\"order\":[0]}}"]
+        expect structured text to handle lists
+            exampleList: 1.1 452 -32.9;
+            .qu.compare[.test.toStructuredText exampleList; "{\"count\":3,\"columns\":{\"name\":\"values\",\"type\":\"floats\",\"values\":[\"1.1\",\"452f\",\"-32.9\"],\"order\":[2,0,1]}}"]
+        expect structured text to handle 2D lists
+            example2dList: (1.1 1.0 2.0; 452 112 561);
+            .qu.compare[.test.toStructuredText example2dList; "{\"count\":2,\"columns\":{\"name\":\"values\",\"type\":\"general\",\"values\":[\"1.1 1 2\",\"452 112 561\"],\"order\":[1,0]}}"]
+        expect structured text to handle dictionaries
+            exampleDict: `tom`dick`harry!1040 59 27;
+            .qu.compare[.test.toStructuredText exampleDict; "{\"count\":3,\"columns\":[{\"name\":\"key\",\"type\":\"symbols\",\"values\":[\"`tom\",\"`dick\",\"`harry\"],\"order\":[1,2,0],\"isKey\":true},{\"name\":\"values\",\"type\":\"longs\",\"values\":[\"1040\",\"59\",\"27\"],\"order\":[2,1,0]}]}"]
+        expect structured text to handle unkeyed tables
+            exampleTable: flip `name`iq!(`Dent`Beeblebrox`Prefect;98 42 126);
+            .qu.compare[.test.toStructuredText exampleTable; "{\"count\":3,\"columns\":[{\"name\":\"name\",\"type\":\"symbols\",\"values\":[\"`Dent\",\"`Beeblebrox\",\"`Prefect\"],\"order\":[1,0,2]},{\"name\":\"iq\",\"type\":\"longs\",\"values\":[\"98\",\"42\",\"126\"],\"order\":[1,0,2]}]}"]
+        expect structured text to handle keyed tables
+            exampleKeyedTable: ([sym: `AAPl`TSLA`GOOGL] price: 100 200 300);
+            .qu.compare[.test.toStructuredText exampleKeyedTable; "{\"count\":3,\"columns\":[{\"name\":\"sym\",\"type\":\"symbols\",\"values\":[\"`AAPl\",\"`TSLA\",\"`GOOGL\"],\"order\":[0,2,1],\"isKey\":true},{\"name\":\"price\",\"type\":\"longs\",\"values\":[\"100\",\"200\",\"300\"],\"order\":[0,1,2],\"attributes\":\"s\"}]}"]
+        expect structured text to handle strings
+            exampleString: "ThisIsAExampleString";
+            .qu.compare[.test.toStructuredText exampleString; "{\"count\":20,\"columns\":{\"name\":\"values\",\"type\":\"chars\",\"values\":[\"\\\"ThisIsAExampleString\\\"\"],\"order\":[0]}}"]
+        expect structured text to handle empty lists
+            exampleEmptyList: ();
+            .qu.compare[.test.toStructuredText exampleEmptyList; "{\"count\":0,\"columns\":{\"name\":\"values\",\"type\":\"general\",\"values\":[],\"order\":[]}}"]
+        expect structured text to handle empty tables
+            exampleEmptyTable: ([] name:(); iq:());
+            .qu.compare[.test.toStructuredText exampleEmptyTable; "{\"count\":0,\"columns\":[{\"name\":\"name\",\"type\":\"general\",\"values\":[],\"order\":[]},{\"name\":\"iq\",\"type\":\"general\",\"values\":[],\"order\":[]}]}"]
+        expect structured text to handle empty dictionaries
+            exampleEmptyDict:(`$())!`float$();
+            .qu.compare[.test.toStructuredText exampleEmptyDict; "{\"count\":0,\"columns\":[{\"name\":\"key\",\"type\":\"symbols\",\"values\":[],\"order\":[],\"isKey\":true},{\"name\":\"values\",\"type\":\"floats\",\"values\":[],\"order\":[]}]}"]
+        expect structured text to handle enums
+            .test.d:`a`b`c;
+            .test.y:`a`b`c`b`a`b`c`c`c`c`c`c`c;
+            .test.e: `.test.d$.test.y;
+            .qu.compare[.test.toStructuredText .test.e; "{\"count\":13,\"columns\":{\"name\":\"values\",\"type\":\"enum\",\"values\":[\"`.test.d$`a\",\"`.test.d$`b\",\"`.test.d$`c\",\"`.test.d$`b\",\"`.test.d$`a\",\"`.test.d$`b\",\"`.test.d$`c\",\"`.test.d$`c\",\"`.test.d$`c\",\"`.test.d$`c\",\"`.test.d$`c\",\"`.test.d$`c\",\"`.test.d$`c\"],\"order\":[0,4,1,3,5,2,6,7,8,9,10,11,12]}}"]
+        expect structured text to handle foreign key columns
+            name:`$("Stock Exchange";"Boersen";"NYSE");
+            country:`$("United Kingdom";"Denmark";"United States");
+            city:`$("London";"Copenhagen";"New York");
+            id:1001 1002 1003;
+            .test.market:([id]name;country;city);
+            .test.trade:([]
+                stock:  `ibm`APPL;
+                market: `.test.market$1001 1001;
+                price:  122.5 320.9;
+                amount: 500 40i;
+                time:   09:04:59:000 08:03:58:000);
+            .qu.compare[.test.toStructuredText .test.trade;"{\"count\":2,\"columns\":[{\"name\":\"stock\",\"type\":\"symbols\",\"values\":[\"`ibm\",\"`APPL\"],\"order\":[1,0]},{\"name\":\"market\",\"type\":\"enum\",\"values\":[\"`.test.market$1001\",\"`.test.market$1001\"],\"order\":[0,1]},{\"name\":\"price\",\"type\":\"floats\",\"values\":[\"122.5\",\"320.9\"],\"order\":[0,1],\"attributes\":\"s\"},{\"name\":\"amount\",\"type\":\"ints\",\"values\":[\"500i\",\"40i\"],\"order\":[1,0]},{\"name\":\"time\",\"type\":\"times\",\"values\":[\"09:04:59.000\",\"08:03:58.000\"],\"order\":[1,0]}]}"]
+        expect structured text to handle splayed tables
+            originalDir: first system "pwd";
+            m1:4; / 4 entries
+            q:613 905 111 222 417 819;
+            edpn:{10000000+x?80000000};
+            calls:([]tim:m1?23:59; occ:m1?q; ono:edpn m1; dcc:m1?q; dno:edpn m1);
+            `:/tmp/callsFolder/ set calls;
+            callsFromMem: get `:/tmp/callsFolder/;
+            system "cd " , originalDir;
+            .qu.compare[@[{.test.toStructuredText x; 0b}; callsFromMem; "type"~];0b]
+        expect structured text to handle partitioned tables
+            originalDir: first system "pwd";
+            `:/tmp/db/2015.01.01/t/ set ([] ti:09:30:00 09:31:00; p:101 102f);
+            `:/tmp/db/2015.01.02/t/ set ([] ti:09:30:00 09:31:00; p:101.5 102.5);
+            system"l /tmp/db";
+            system "cd " , originalDir;
+            .qu.compare[@[{.test.toStructuredText x; 0b}; t; "type"~];0b]
+            expect structured text to handle lists of dictionaries
+            exampleList:((`tom`dick`harry!1040 59 27);(`Adrian`Ben!10 20);(`Nathaniel`Igor!("a";"string")));
+            .qu.compare[.test.toStructuredText exampleList; "{\"count\":3,\"columns\":{\"name\":\"values\",\"type\":\"general\",\"values\":[\"tom  | 1040\\ndick | 59\\nharry| 27\",\"Adrian| 10\\nBen   | 20\",\"Nathaniel| \\\"a\\\"\\nIgor     | \\\"string\\\"\"],\"order\":[2,1,0]}}"]
+        expect structured text to handle anymap
+            originalDir: first system "pwd";
+            anymap: get`:/tmp/anymap set ((1 2;3 4);`time`price`vol!(09:30:00;1.;100i);([]a:1 2;b:("ab";"cd")));
+            system "cd " , originalDir;
+            .qu.compare[.test.toStructuredText anymap; "{\"count\":3,\"columns\":{\"name\":\"values\",\"type\":\"compoundGeneral\",\"values\":[\"1 2\\n3 4\",\"time | 09:30:00\\nprice| 1f\\nvol  | 100i\",\"a b   \\n------\\n1 \\\"ab\\\"\\n2 \\\"cd\\\"\"],\"order\":[0,2,1]}}"]
+        
+        expect locked and foreign functions to be displayed as "locked" and "code"
+            locked  : .kurl.resolvePath;
+            foreign : .kurl.sync;
+            
+            // Ensure that these functions are locked and foreign.
+            // If .kurl has been changed since the test was written,
+            // different locked or foreign function should replace these.
+           all all (
+                112h ~ type foreign;
+                .sputil.isLocked locked;
+                .test.toStructuredText (locked; foreign) ~ 
+                    "{\"count\":2,\"columns\":{\"name\":\"values\",\"type\":\"general\",\"values\":[\"locked\",\"code\"],\"order\":[0,1],\"attributes\":\"s\"}}"
+
+                )
+
+feature .com_kx_ediNoCoverage.evaluate
+
+    before
+        .test.ctx: string system "d";
+
+    after
+        system "d ", .test.ctx;
+        delete edi_test_global from `.;
+
+
+    // @TICKET KXI-9607
+    should reset the context in the event of an error
+        expect the correct context to be set
+            cctx: system "d";
+            expr: ".[.com_kx_ediNoCoverage.evaluate;(\"'`abc\";\".abc\");{x}];edi_test_global:1b";
+            .com_kx_ediNoCoverage.evaluate[expr; "."];
+            system["d"] ~ cctx
+        expect the global to have the correct value
+             1b ~ get `..edi_test_global
+
+    should return to the correct context
+        expect the context to be restored after evaluating in a different context
+            system "d .original";
+            .com_kx_ediNoCoverage.evaluate["foo: 2+2"; ".test"];
+            (.test.foo = 4) and system["d"] ~ `.original;
+        // @TICKET KXI-9607
+        expect correct context if reset within expression
+            system "d .initial";
+            .com_kx_ediNoCoverage.evaluate[ "system  \"d .nested\""; ".evaluation"];
+            system["d"] ~ `.initial
+
+    // @TICKET KXI-9607
+    should handle the case that a line starts with \, but isn't a command
+        expect it to not wrap the \ in a string as it would for commands
+            // This did not work in kdb+ 3.4 or earlier, and can not be easily fixed for those versions
+            // as the -4! tokenizer strips things that look like comments from commands,
+            // making it more difficult to handle lines starting with \
+            if [.z.K <= 3.4; : 1b];
+            .test.edi.foo:{count x};
+            .qu.compare[
+                .com_kx_edi.dropIrrelevantRecords  .com_kx_ediNoCoverage.evaluate["value \"edi.foo \\\"Hello, world!\n\\\"\""; ".test"];
+                `error`errorMsg`data!(0b; ""; 14)]
+
+// @TICKET KXI-9607
+feature .com_kx_edi.toString
+    
+    before
+        // @qlintsuppress OVERWRITE_ARTIFACT(1)
+        .com_kx_edi.test.qualify : {$["w"~first string .z.o; ssr[x;"\n";"\r\n"]; x]}
+    
+    should format all datatypes to easy-to-read strings
+        expect it to show tables as multiline 2d tables
+            .com_kx_edi.toString[([] a: 1 2; b: 3 4; c: ("foo";"bar"))] ~
+                .com_kx_edi.test.qualify"a b c    \n---------\n1 3 \"foo\"\n2 4 \"bar\"\n"
+        
+        // @TICKET KXI-12166
+        expect it to show dictionaries as multiline 2d dictionaries
+            .com_kx_edi.toString[`a`b`c!(1 2 3; "foobar"; 456)] ~
+                .com_kx_edi.test.qualify"a| 1 2 3\nb| \"foobar\"\nc| 456\n"
+        
+        expect it to show keyed tables as multiline 2d keyed tables
+            .com_kx_edi.toString[([a: 1 2] b: 3 4; c: ("foo";"bar"))] ~
+               .com_kx_edi.test.qualify "a| b c    \n-| -------\n1| 3 \"foo\"\n2| 4 \"bar\"\n"
+        
+        expect it to show empty dictionaries
+            .com_kx_edi.toString[()!()] ~
+                "()!()\n"
+        
+         expect it to show empty lists
+            .com_kx_edi.toString[()] ~
+                "()\n"
+        
+         // @TICKET KXI-12166
+         expect it to show more complex empty lists
+            .com_kx_edi.toString[enlist (();();())] ~
+                ",(();();())\n"
+
+// @TICKET KXI-12077
+feature sampling
+    before
+        .test.args: (!) . flip (
+            (`isTableView; 1b);
+            (`expression;  "til 100");
+            (`context;     enlist ".")
+            );
+        .qu.stub.single[`.keyc.token.validatePerms; {[x;y] (1b;"")}];
+
+    after
+        .qu.stub.restoreAll[];
+
+
+    should sample serialized requests
+        expect a sampleSize longer than the sample to only return the sample
+            settings: `sampleFn`sampleSize`returnFormat!("first"; 300; "");
+            .qu.compare[.com_kx_edi.dropIrrelevantRecords .com_kx_edi.web.display .test.buildRequest[1b; .test.args , settings];
+                `error`errorMsg`data`sessionID!(0b; ""; -8!([] Value: til 100); .com_kx_edi.sessionID)];
+
+        expect the last n records
+            settings: `sampleFn`sampleSize`returnFormat!("last"; 5; "");
+            .qu.compare[.com_kx_edi.dropIrrelevantRecords .com_kx_edi.web.display .test.buildRequest[1b; .test.args , settings];
+                `error`errorMsg`data`sessionID!(0b; ""; -8!([] Value: 95 96 97 98 99); .com_kx_edi.sessionID)];
+
+        expect a random sample without replacement
+            settings: `sampleFn`sampleSize`returnFormat!("random"; 95; "");
+            result: .com_kx_edi.web.display .test.buildRequest[1b; .test.args , settings];
+            (95#1b) ~ (distinct (-9!result `data) `Value) in til 100;
+        
+        expect random sampling to work on dictionaries
+            args: (!) . flip (
+                (`returnFormat; "structuredText");
+                (`expression;  "`a`b`c`d`e`f!til 6");
+                (`context;     enlist ".");
+                (`sampleFn;    "random");
+                (`preserveLastQuery; 0b);
+                (`sampleSize;  3)
+                );
+            result: .com_kx_edi.web.display .test.buildRequest[1b; args];
+            values: .j.k[result`data][`columns] @\: `values;
+            all (
+                all values[0] in .Q.s1 each `a`b`c`d`e`f;
+                all values[1] in .Q.s1 each til 6
+                )
+            
+        // @TICKET KXI-8998
+        expect an error for unrecognized sample functions
+            settings: `sampleFn`sampleSize`returnFormat!("RANDOM"; 5; "");
+            .qu.compare[
+                .com_kx_edi.dropIrrelevantRecords .com_kx_edi.web.display .test.buildRequest[1b; .test.args , settings];
+                `error`errorMsg`data`sessionID!(1b; "Executing code using (Q) raised - Unrecognized sample function"; ::; .com_kx_edi.sessionID)];
