@@ -1226,13 +1226,21 @@ export async function writeQueryResultsToView(
     connVersion,
     isPython,
   );
+  let isSuccess = true;
+
   if (!checkIfIsDatasource(type)) {
+    if (typeof result === "string") {
+      const res = decodeQUTF(result);
+      if (res.startsWith(queryConstants.error)) {
+        isSuccess = false;
+      }
+    }
     addQueryHistory(
       query,
       executorName,
       connLabel,
       isInsights ? ServerType.INSIGHTS : ServerType.KDB,
-      true,
+      isSuccess,
       isPython,
       type === "WORKBOOK",
       undefined,
