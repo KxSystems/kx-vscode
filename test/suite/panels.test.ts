@@ -196,13 +196,6 @@ describe("WebPanels", () => {
         };
 
         const expectedOutput = JSON.stringify({
-          defaultColDef: {
-            sortable: true,
-            resizable: true,
-            filter: true,
-            flex: 1,
-            minWidth: 100,
-          },
           rowData: [
             { index: 1, prop1: "value1", prop2: "value2" },
             { index: 2, prop1: "value3", prop2: "value4" },
@@ -220,15 +213,6 @@ describe("WebPanels", () => {
               cellDataType: "text",
             },
           ],
-          domLayout: "autoHeight",
-          pagination: true,
-          paginationPageSize: 100,
-          enableCellTextSelection: true,
-          ensureDomOrder: true,
-          suppressContextMenu: true,
-          suppressDragLeaveHidesColumns: true,
-          tooltipShowDelay: 200,
-          loading: true,
         });
 
         // Mock ext.connectionNode
@@ -262,13 +246,6 @@ describe("WebPanels", () => {
         };
 
         const expectedOutput = JSON.stringify({
-          defaultColDef: {
-            sortable: true,
-            resizable: true,
-            filter: true,
-            flex: 1,
-            minWidth: 100,
-          },
           rowData: [
             { index: 1, prop1: "value1", prop2: "value3" },
             { index: 2, prop1: "value2", prop2: "value4" },
@@ -288,15 +265,6 @@ describe("WebPanels", () => {
               cellRendererParams: { disabled: false },
             },
           ],
-          domLayout: "autoHeight",
-          pagination: true,
-          paginationPageSize: 100,
-          enableCellTextSelection: true,
-          ensureDomOrder: true,
-          suppressContextMenu: true,
-          suppressDragLeaveHidesColumns: true,
-          tooltipShowDelay: 200,
-          loading: true,
         });
 
         // Mock ext.connectionNode
@@ -319,13 +287,6 @@ describe("WebPanels", () => {
         };
 
         const expectedOutput = JSON.stringify({
-          defaultColDef: {
-            sortable: true,
-            resizable: true,
-            filter: true,
-            flex: 1,
-            minWidth: 100,
-          },
           rowData: [],
           columnDefs: [
             { field: "index", headerName: "Index", cellDataType: "number" },
@@ -340,15 +301,6 @@ describe("WebPanels", () => {
               cellDataType: "text",
             },
           ],
-          domLayout: "autoHeight",
-          pagination: true,
-          paginationPageSize: 100,
-          enableCellTextSelection: true,
-          ensureDomOrder: true,
-          suppressContextMenu: true,
-          suppressDragLeaveHidesColumns: true,
-          tooltipShowDelay: 200,
-          loading: true,
         });
 
         // Mock ext.connectionNode
@@ -374,13 +326,6 @@ describe("WebPanels", () => {
         };
 
         const expectedOutput = JSON.stringify({
-          defaultColDef: {
-            sortable: true,
-            resizable: true,
-            filter: true,
-            flex: 1,
-            minWidth: 100,
-          },
           rowData: [
             { index: 1, sym: "a", val: 1 },
             { index: 2, sym: "b", val: 2 },
@@ -391,15 +336,6 @@ describe("WebPanels", () => {
             { field: "sym", headerName: "sym [type1]", cellDataType: "text" },
             { field: "val", headerName: "val [type2]", cellDataType: "text" },
           ],
-          domLayout: "autoHeight",
-          pagination: true,
-          paginationPageSize: 100,
-          enableCellTextSelection: true,
-          ensureDomOrder: true,
-          suppressContextMenu: true,
-          suppressDragLeaveHidesColumns: true,
-          tooltipShowDelay: 200,
-          loading: true,
         });
 
         // Mock ext.connectionNode
@@ -419,13 +355,6 @@ describe("WebPanels", () => {
         };
 
         const expectedOutput = JSON.stringify({
-          defaultColDef: {
-            sortable: true,
-            resizable: true,
-            filter: true,
-            flex: 1,
-            minWidth: 100,
-          },
           rowData: [{ index: 1, value: "1,2,3" }],
           columnDefs: [
             { field: "index", headerName: "Index", cellDataType: "number" },
@@ -435,15 +364,6 @@ describe("WebPanels", () => {
               cellDataType: "text",
             },
           ],
-          domLayout: "autoHeight",
-          pagination: true,
-          paginationPageSize: 100,
-          enableCellTextSelection: true,
-          ensureDomOrder: true,
-          suppressContextMenu: true,
-          suppressDragLeaveHidesColumns: true,
-          tooltipShowDelay: 200,
-          loading: true,
         });
 
         // Mock ext.connectionNode
@@ -630,8 +550,9 @@ describe("WebPanels", () => {
           resultsPanel.isInsights,
         );
         sinon.assert.calledWith(postMessageStub, {
-          command: "setGridOptions",
-          gridOptions: gridOptions,
+          command: "setGridDatasource",
+          results: [],
+          columnDefs: [],
         });
       });
 
