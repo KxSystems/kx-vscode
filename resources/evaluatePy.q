@@ -97,11 +97,14 @@
  if [`backtrace in key result;
  result[`backtrace]:string result`backtrace];
  if[result `errored; :result];
+ /ggplot - start
  if[type[result[`result]] = 99h;
+ if[type[key[[result[`result]]]] = 11h;
  if[`output in key result[`result]; 
  if[type[result[`result][`output]] = 99h;
  if[`bytes in key result[`result][`output]; 
- result[`base64]:1b; result[`result]: .Q.btoa result[`result][`output][`bytes]; :result]]]];
+ result[`base64]:1b; result[`result]: .Q.btoa result[`result][`output][`bytes]; :result]]]]];
+ /ggplot - end
  result[`result]:
  $[result`errored;
  ::;
