@@ -1,4 +1,6 @@
 {[ctx; code; returnFormat]
+  .axdebug.temp83710D: (ctx;code;returnFormat);
+  `ctx`code`returnFormat set' .axdebug.temp83710D;
   if [-10h ~ type ctx;
   ctx: enlist ctx];
   toString: {[data]
@@ -172,6 +174,7 @@
   (generateColumns[::;0b;1b;key data;"key"]; generateColumns[::;0b;0b;value data;"values"]);
   isTable;
   generateTableColumns[originalType;isAtom;0b;data];
+  generateColumns[originalType;isAtom;0b;data;$[isAtom;"value";"values"]]
   ];
   : .j.j `count`columns!(quantity; columns)
   }[generateTableColumns; generateColumns];
@@ -192,12 +195,7 @@
   fn[sampleSize; data]
   }
   result: evalInContext[ctx; splitExpression stripTrailingSemi wrapLines removeMultilineComments code];
-  if[result `errored; :result];
-  if[type[result[`result]] = 99h;
-  if[`output in key result[`result]; 
-  if[type[result[`result][`output]] = 99h;
-  if[`bytes in key result[`result][`output]; 
-  result[`base64]:1b; result[`result]: .Q.btoa result[`result][`output][`bytes]; :result]]]];
+  if [result `errored; :result];
   if [returnFormat ~ "text";
   result[`result]: toString result `result];
   if [returnFormat ~ "structuredText";
