@@ -1,6 +1,4 @@
 {[ctx; code; returnFormat]
-  .axdebug.temp83710D: (ctx;code;returnFormat);
-  `ctx`code`returnFormat set' .axdebug.temp83710D;
   if [-10h ~ type ctx;
   ctx: enlist ctx];
   toString: {[data]
