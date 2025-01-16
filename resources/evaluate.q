@@ -150,6 +150,7 @@
   `chars;
   .axq.i_NONPRIMCODE type data];
   values: ('[removeTrailingNewline; toString] each data);
+  values: $[type values = 11h; enlist values; values];
   order: $[1 ~ count data; iasc enlist data; iasc data];
   returnDictionary: `name`type`values`order!(name;types;values;order);
   if[isKey; returnDictionary[`isKey]: isKey];
