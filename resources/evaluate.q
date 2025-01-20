@@ -175,7 +175,15 @@
   generateTableColumns[originalType;isAtom;0b;data];
   generateColumns[originalType;isAtom;0b;data;$[isAtom;"value";"values"]]
   ];
-  : .j.j `count`columns!(quantity; columns)
+  : .j.j `count`columns!($[
+  (type columns) = 99h;
+  $[
+    (count columns[`values] = 1);
+    1;
+    quantity
+  ];
+  quantity
+  ]; columns)
   }[generateTableColumns; generateColumns];
   typeOf: {$[0>type x; .axq.i_PRIMCODE neg type x; .axq.i_NONPRIMCODE type x]};
   isAtom: {not type[x] within 0 99h};
