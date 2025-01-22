@@ -101,8 +101,6 @@
  if[type[result[`result]] = 99h;
  attrs: key[[result[`result]]]; 
  if[type[attrs] = 11h;
- if[`i_.type in attrs; 
- if[result[`result][`i_.type] = `.gg.ty;
  if[`output in attrs; 
  output: result[`result][`output];
  if[type[output] = 99h;
@@ -114,7 +112,7 @@
  if[0x89504E470D0A1A0A ~ bytes til 8;
  result[`base64]: 1b; 
  result[`result]: .Q.btoa bytes; 
- :result]]]]]]]]]];
+ :result]]]]]]]];
  /ggplot - end
  $[result`errored;
  ::;
