@@ -197,11 +197,22 @@
   if [result `errored; :result];
   /ggplot - start
   if[type[result[`result]] = 99h;
-  if[type[key[[result[`result]]]] = 11h;
-  if[`output in key result[`result]; 
-  if[type[result[`result][`output]] = 99h;
-  if[`bytes in key result[`result][`output]; 
-  result[`base64]:1b; result[`result]: .Q.btoa result[`result][`output][`bytes]; :result]]]]];
+  attrs: key[[result[`result]]]; 
+  if[type[attrs] = 11h;
+  if[`i_.type in attrs; 
+  if[result[`result][`i_.type] = `.gg.ty;
+  if[`output in attrs; 
+  output: result[`result][`output];
+  if[type[output] = 99h;
+  attrs: key[output];
+  if[type[attrs] = 11h;
+  if[`bytes in attrs;
+  bytes: output[`bytes];
+  if[type[bytes] = 4h;
+  if[0x89504E470D0A1A0A ~ bytes til 8;
+  result[`base64]: 1b; 
+  result[`result]: .Q.btoa bytes; 
+  :result]]]]]]]]]];
   /ggplot - end
   if [returnFormat ~ "text";
   result[`result]: toString result `result];
