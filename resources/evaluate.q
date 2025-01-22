@@ -148,6 +148,7 @@
   `chars;
   .axq.i_NONPRIMCODE type data];
   values: ('[removeTrailingNewline; toString] each data);
+  values: $[type values = 11h; enlist values; values];
   order: $[1 ~ count data; iasc enlist data; iasc data];
   returnDictionary: `name`type`values`order!(name;types;values;order);
   if[isKey; returnDictionary[`isKey]: isKey];
@@ -172,6 +173,7 @@
   (generateColumns[::;0b;1b;key data;"key"]; generateColumns[::;0b;0b;value data;"values"]);
   isTable;
   generateTableColumns[originalType;isAtom;0b;data];
+  generateColumns[originalType;isAtom;0b;data;$[isAtom;"value";"values"]]
   ];
   : .j.j `count`columns!(quantity; columns)
   }[generateTableColumns; generateColumns];
@@ -192,12 +194,24 @@
   fn[sampleSize; data]
   }
   result: evalInContext[ctx; splitExpression stripTrailingSemi wrapLines removeMultilineComments code];
-  if[result `errored; :result];
+  if [result `errored; :result];
+  /ggplot - start
   if[type[result[`result]] = 99h;
-  if[`output in key result[`result]; 
-  if[type[result[`result][`output]] = 99h;
-  if[`bytes in key result[`result][`output]; 
-  result[`base64]:1b; result[`result]: .Q.btoa result[`result][`output][`bytes]; :result]]]];
+  attrs: key[[result[`result]]]; 
+  if[type[attrs] = 11h;
+  if[`output in attrs; 
+  output: result[`result][`output];
+  if[type[output] = 99h;
+  attrs: key[output];
+  if[type[attrs] = 11h;
+  if[`bytes in attrs;
+  bytes: output[`bytes];
+  if[type[bytes] = 4h;
+  if[0x89504E470D0A1A0A ~ bytes til 8;
+  result[`base64]: 1b; 
+  result[`result]: .Q.btoa bytes; 
+  :result]]]]]]]];
+  /ggplot - end
   if [returnFormat ~ "text";
   result[`result]: toString result `result];
   if [returnFormat ~ "structuredText";
