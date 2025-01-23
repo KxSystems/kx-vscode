@@ -24,6 +24,8 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Ensured 'query is running' notification shows until the results are rendered
 - Fixed unresponsiveness of the extension when displaying large tables with KDB Results
 - Fixed unicode characters not displayed correctly in results table
+- Fixed OpenSSL installation check when using WSL
+- Fixed QSQL populate scratchpad not working
 
 ### Internal Improvements
 
