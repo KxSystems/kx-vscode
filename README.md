@@ -610,7 +610,7 @@ The following features of [AxLibraries](https://code.kx.com/developer/libraries/
 
 ### Grammar of Graphics
 
-Grammar of Graphics (GG) is a scripted visualization library for kdb+. 
+Grammar of Graphics (GG) is a scripted visualization library for kdb+.
 
 GGPlot2 in VSCode allows you to create detailed and informative visualizations, helping you understand the underlying patterns and trends in your data more clearly without having to switch to RStudio. For more information refer to the [GGPlot documentation](https://code.kx.com/developer/ggplot/).
 
@@ -623,12 +623,13 @@ To use GGPlot2 in VSCode:
 - Use GGPlot2 to create visualizations, such as a bar plot showing the total transaction amount by month.
 
 - Run the script within VSCode. The chart is generated and displayed in the VSCode plot viewer, and you can save the plot.
-   
-   **Note**: When executing GG scripts, calling `.qp.display` displays the plot locally.
+  **Note**: When executing GG scripts, calling `.qp.display` displays the plot locally.
 
 ![gg-plot](https://github.com/KxSystems/kx-vscode/blob/main/img/gg-plot.png?raw=true)
 
 You can make changes to the script before exporting the plot. Re-running the script updates to reflect the changes.
+
+**Note**: When executing GG script commands in PyKX, select the `KDB RESULTS` tab to display the plot.
 
 ## q REPL
 
