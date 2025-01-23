@@ -147,7 +147,7 @@
   originalType ~ `chars;
   `chars;
   .axq.i_NONPRIMCODE type data];
-  values: ('[removeTrailingNewline; toString] each data);
+  values: enlist ('[removeTrailingNewline; toString] each data);
   values: $[type values = 11h; enlist values; values];
   order: $[1 ~ count data; iasc enlist data; iasc data];
   returnDictionary: `name`type`values`order!(name;types;values;order);
@@ -173,7 +173,7 @@
   (generateColumns[::;0b;1b;key data;"key"]; generateColumns[::;0b;0b;value data;"values"]);
   isTable;
   generateTableColumns[originalType;isAtom;0b;data];
-  generateColumns[originalType;isAtom;0b;data;$[isAtom;"value";"values"]]
+  generateColumns[originalType;isAtom;0b;data;"values"]
   ];
   : .j.j `count`columns!(quantity; columns)
   }[generateTableColumns; generateColumns];
