@@ -1264,7 +1264,7 @@ export async function writeScratchpadResult(
   let errorMsg;
 
   if (result.error) {
-    errorMsg = result.errorMsg;
+    errorMsg = "Error: " + result.errorMsg;
 
     if (result.stacktrace) {
       errorMsg =
