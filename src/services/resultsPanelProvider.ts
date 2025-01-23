@@ -193,12 +193,17 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   updatedExtractRowData(results: StructuredTextResults) {
     const { columns } = results;
     const columnsArray = Array.isArray(columns) ? columns : [columns];
-    const dataLength =
-      columnsArray.length > 0
-        ? Array.isArray(columnsArray[0].values)
-          ? columnsArray[0].values.length
-          : 1
-        : 0;
+
+    let dataLength = 0;
+    if (columnsArray.length > 0) {
+      const firstColumnValues = columnsArray[0].values;
+      if (Array.isArray(firstColumnValues)) {
+        dataLength = firstColumnValues.length;
+      } else {
+        dataLength = 1;
+      }
+    }
+
     const rowData: { [key: string]: any }[] = Array.from(
       { length: dataLength },
       () => ({}),
