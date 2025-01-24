@@ -141,6 +141,7 @@
   text
   };
   generateColumns:{[removeTrailingNewline; toString; originalType; isAtom; isKey; data; name]
+  attributes: attr data;
   types: $[
   isAtom;
   originalType;
@@ -149,10 +150,11 @@
   .axq.i_NONPRIMCODE type data];
   values: ('[removeTrailingNewline; toString] each data);
   values: $[type values = 11h; enlist values; values];
-  order: $[1 ~ count data; iasc enlist data; iasc data];
+  formatData: $[1 ~ count data; enlist data; data];
+  order:@[{iasc x}; formatData; {"Not Yet Implemented for the input"}];
   returnDictionary: `name`type`values`order!(name;types;values;order);
   if[isKey; returnDictionary[`isKey]: isKey];
-  if[attr[data] <> `; returnDictionary[`attributes]: attr data];
+  if[attributes <> `; returnDictionary[`attributes]: attributes];
   :returnDictionary
   }[removeTrailingNewline;toString];
   generateTableColumns:{[generateColumns; originalType; isAtom; isKey; data]
