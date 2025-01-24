@@ -629,7 +629,7 @@ To use GGPlot2 in VSCode:
 
 You can make changes to the script before exporting the plot. Re-running the script updates to reflect the changes.
 
-**Note**: When executing GG script commands in PyKX, select the `KDB RESULTS` tab to display the plot.
+**Note**: When executing GG script commands, select the `KDB RESULTS` tab to display the plot.
 
 ## q REPL
 

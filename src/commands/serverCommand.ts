@@ -58,6 +58,7 @@ import {
   checkIfIsDatasource,
   addQueryHistory,
   formatScratchpadStacktrace,
+  resultToBase64,
 } from "../utils/queryUtils";
 import {
   validateServerAlias,
@@ -894,10 +895,10 @@ async function _executeQuery(
     );
   } else {
     /* istanbul ignore next */
-    if (results.base64) {
+    const data = resultToBase64(results);
+    if (data) {
       const active = ext.activeTextEditor;
       if (active) {
-        const data = `data:image/png;base64,${results.result}`;
         const plot = <Plot>{
           charts: [{ data }],
         };
