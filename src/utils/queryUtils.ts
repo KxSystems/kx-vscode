@@ -396,30 +396,18 @@ export function formatScratchpadStacktrace(stacktrace: ScratchpadStacktrace) {
     .join("\n");
 }
 
+const PNG = ["0x89", "0x50", "0x4e", "0x47", "0x0d", "0x0a", "0x1a", "0x0a"];
+
 export function resultToBase64(result: any): string | undefined {
   const bytes =
-    result?.columns?.type === "bytes" ? result?.columns?.values : result;
-
-  if (Array.isArray(bytes) && bytes.length > 7) {
-    const png = [
-      "0x89",
-      "0x50",
-      "0x4e",
-      "0x47",
-      "0x0d",
-      "0x0a",
-      "0x1a",
-      "0x0a",
-    ];
-
-    for (let i = 0; i < png.length; i++) {
-      if (bytes[i] !== png[i] && bytes[i] !== parseInt(png[i], 16)) {
+    result?.columns?.type === "bytes" ? result.columns.values : result;
+  if (Array.isArray(bytes) && bytes.length > 66) {
+    for (let i = 0; i < PNG.length; i++) {
+      if (bytes[i] !== PNG[i] && bytes[i] !== parseInt(PNG[i], 16)) {
         return undefined;
       }
     }
-
     return `data:image/png;base64,${Buffer.from(bytes).toString("base64")}`;
   }
-
   return undefined;
 }
