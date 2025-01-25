@@ -1,4 +1,8 @@
 {[isString;code]
+ if [`histogram in key `.qp;
+ if [not `display2 in key `.qp; 
+ .qp.display2: (')[{x[`output][`bytes]}; .qp.display]
+ ]]; 
  if[()~key`.pykx;
  :(!). flip(
  (`result;::);
@@ -97,23 +101,6 @@
  if [`backtrace in key result;
  result[`backtrace]:string result`backtrace];
  if[result `errored; :result];
- /ggplot - start
- if[type[result[`result]] = 99h;
- attrs: key[[result[`result]]]; 
- if[type[attrs] = 11h;
- if[`output in attrs; 
- output: result[`result][`output];
- if[type[output] = 99h;
- attrs: key[output];
- if[type[attrs] = 11h;
- if[`bytes in attrs;
- bytes: output[`bytes];
- if[type[bytes] = 4h;
- if[0x89504E470D0A1A0A ~ bytes til 8;
- result[`base64]: 1b; 
- result[`result]: .Q.btoa bytes; 
- :result]]]]]]]];
- /ggplot - end
  $[result`errored;
  ::;
  returnResult;

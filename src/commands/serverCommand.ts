@@ -58,6 +58,7 @@ import {
   checkIfIsDatasource,
   addQueryHistory,
   formatScratchpadStacktrace,
+  resultToBase64,
 } from "../utils/queryUtils";
 import {
   validateServerAlias,
@@ -894,37 +895,43 @@ async function _executeQuery(
     );
   } else {
     /* istanbul ignore next */
-    if (results.base64) {
-      const active = ext.activeTextEditor;
-      if (active) {
-        const data = `data:image/png;base64,${results.result}`;
-        const plot = <Plot>{
-          charts: [{ data }],
-        };
-        const uri = await addWorkspaceFile(
-          active.document.uri,
-          "plot",
-          ".plot",
-        );
-        if (!workspaceHas(uri)) {
-          await workspace.openTextDocument(uri);
-          await openWith(uri, ChartEditorProvider.viewType, ViewColumn.Beside);
+    if (ext.isResultsTabVisible) {
+      const data = resultToBase64(results);
+      if (data) {
+        const active = ext.activeTextEditor;
+        if (active) {
+          const plot = <Plot>{
+            charts: [{ data }],
+          };
+          const uri = await addWorkspaceFile(
+            active.document.uri,
+            "plot",
+            ".plot",
+          );
+          if (!workspaceHas(uri)) {
+            await workspace.openTextDocument(uri);
+            await openWith(
+              uri,
+              ChartEditorProvider.viewType,
+              ViewColumn.Beside,
+            );
+          }
+          await setUriContent(uri, JSON.stringify(plot));
         }
-        await setUriContent(uri, JSON.stringify(plot));
+      } else {
+        await writeQueryResultsToView(
+          results,
+          query,
+          connLabel,
+          executorName,
+          isInsights,
+          isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+          isPython,
+          duration,
+          isFromConnTree,
+          connVersion,
+        );
       }
-    } else if (ext.isResultsTabVisible) {
-      await writeQueryResultsToView(
-        results,
-        query,
-        connLabel,
-        executorName,
-        isInsights,
-        isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
-        isPython,
-        duration,
-        isFromConnTree,
-        connVersion,
-      );
     } else {
       await writeQueryResultsToConsole(
         results,

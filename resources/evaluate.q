@@ -1,4 +1,8 @@
 {[ctx; code; returnFormat]
+  if [`histogram in key `.qp;
+  if [not `display2 in key `.qp; 
+  .qp.display2: (')[{x[`output][`bytes]}; .qp.display]
+  ]]; 
   if [-10h ~ type ctx;
   ctx: enlist ctx];
   toString: {[data]
@@ -117,8 +121,7 @@
   (`result;    ::);
   (`errored;   1b);
   (`error;     err);
-  (`backtrace; .Q.sbt userCode);
-  (`base64;    0b))
+  (`backtrace; .Q.sbt userCode))
   }[suffix; prefix]];
   if [isLastLine or result`errored;
   system "d ", cachedCtx;
@@ -197,23 +200,6 @@
   }
   result: evalInContext[ctx; splitExpression stripTrailingSemi wrapLines removeMultilineComments code];
   if [result `errored; :result];
-  /ggplot - start
-  if[type[result[`result]] = 99h;
-  attrs: key[[result[`result]]]; 
-  if[type[attrs] = 11h;
-  if[`output in attrs; 
-  output: result[`result][`output];
-  if[type[output] = 99h;
-  attrs: key[output];
-  if[type[attrs] = 11h;
-  if[`bytes in attrs;
-  bytes: output[`bytes];
-  if[type[bytes] = 4h;
-  if[0x89504E470D0A1A0A ~ bytes til 8;
-  result[`base64]: 1b; 
-  result[`result]: .Q.btoa bytes; 
-  :result]]]]]]]];
-  /ggplot - end
   if [returnFormat ~ "text";
   result[`result]: toString result `result];
   if [returnFormat ~ "structuredText";
