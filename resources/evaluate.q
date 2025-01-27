@@ -143,16 +143,15 @@
   text: -1 _ text];
   text
   };
-  generateColumns:{[removeTrailingNewline; toString; originalType; isAtom; isKey; data; name]
-  attributes: attr data;
+  generateColumns:{[removeTrailingNewline; toString; originalType; isAtomic; isKey; data; name]
   types: $[
-  isAtom;
+  isAtomic;
   originalType;
   originalType ~ `chars;
   `chars;
   .axq.i_NONPRIMCODE type data];
   values: ('[removeTrailingNewline; toString] each data);
-  values: $[type values = 11h; enlist values; values];
+  values: $[isAtomic and (1 >= count data); enlist values; values];
   formatData: $[1 ~ count data; enlist data; data];
   order:@[{iasc x}; formatData; {"Not Yet Implemented for the input"}];
   returnDictionary: `name`type`values`order!(name;types;values;order);
@@ -178,7 +177,7 @@
   (generateColumns[::;0b;1b;key data;"key"]; generateColumns[::;0b;0b;value data;"values"]);
   isTable;
   generateTableColumns[originalType;isAtom;0b;data];
-  generateColumns[originalType;isAtom;0b;data;$[isAtom;"value";"values"]]
+  enlist generateColumns[originalType;isAtom;0b;data;"values"]
   ];
   : .j.j `count`columns!(quantity; columns)
   }[generateTableColumns; generateColumns];
