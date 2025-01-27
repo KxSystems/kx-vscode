@@ -140,15 +140,15 @@
   text: -1 _ text];
   text
   };
-  generateColumns:{[removeTrailingNewline; toString; originalType; isAtom; isKey; data; name]
+  generateColumns:{[removeTrailingNewline; toString; originalType; isAtomic; isKey; data; name]
   types: $[
-  isAtom;
+  isAtomic;
   originalType;
   originalType ~ `chars;
   `chars;
   .axq.i_NONPRIMCODE type data];
   values: ('[removeTrailingNewline; toString] each data);
-  values: $[type values = 11h; enlist values; values];
+  values: $[isAtomic and (1 >= count data); enlist values; values];
   order: $[1 ~ count data; iasc enlist data; iasc data];
   returnDictionary: `name`type`values`order!(name;types;values;order);
   if[isKey; returnDictionary[`isKey]: isKey];
