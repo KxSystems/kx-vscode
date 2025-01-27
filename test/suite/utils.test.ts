@@ -2017,13 +2017,25 @@ describe("Utils", () => {
     });
     it("should return base64 for minimum img str for structuredText", () => {
       const result = queryUtils.resultToBase64({
-        columns: { type: "bytes", values: [...png, ...img] },
+        columns: { values: [...png, ...img] },
+      });
+      assert.ok(result.startsWith("data:image/png;base64"));
+    });
+    it("should return base64 for minimum img str for structuredText v2", () => {
+      const result = queryUtils.resultToBase64({
+        columns: [{ values: [...png, ...img] }],
       });
       assert.ok(result.startsWith("data:image/png;base64"));
     });
     it("should return undefined for bogus structuredText", () => {
       const result = queryUtils.resultToBase64({
-        columns: { type: "bytes" },
+        columns: {},
+      });
+      assert.strictEqual(result, undefined);
+    });
+    it("should return undefined for bogus structuredText v2", () => {
+      const result = queryUtils.resultToBase64({
+        columns: [{}],
       });
       assert.strictEqual(result, undefined);
     });

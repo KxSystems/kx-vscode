@@ -144,6 +144,7 @@
   text
   };
   generateColumns:{[removeTrailingNewline; toString; originalType; isAtomic; isKey; data; name]
+  attributes: attr data;
   types: $[
   isAtomic;
   originalType;
