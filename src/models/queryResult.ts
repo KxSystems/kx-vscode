@@ -40,15 +40,16 @@ export const queryConstants = {
 };
 
 export interface StructuredTextColumns {
-  name: "values" | "value" | string;
+  name: string;
   type: string;
   values: string[] | string;
-  /* not the order for initial display */
-  order: number[] | "Not Yet Implemented for the input";
+  order:
+    | number[] /* ascending indexes if the column is sorted */
+    | string /* error message if sorting is not possible */;
 }
 
 export interface StructuredTextResults {
   columns: StructuredTextColumns[] | StructuredTextColumns;
-  /* values array length may differ */
+  /* note: values array length may differ */
   count: number;
 }

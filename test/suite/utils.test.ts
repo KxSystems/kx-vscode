@@ -2035,7 +2035,7 @@ describe("Utils", () => {
     });
     it("should return undefined for bogus structuredText v2", () => {
       const result = queryUtils.resultToBase64({
-        columns: [{}],
+        columns: [],
       });
       assert.strictEqual(result, undefined);
     });

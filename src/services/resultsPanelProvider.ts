@@ -227,7 +227,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
     const columnDefs = columnsArray.map((column) => {
       const sanitizedKey = this.sanitizeString(column.name);
-      const cellDataType = this.kdbToAgGridCellType(column.type);
+      const cellDataType = "text";
       const headerName = column.type
         ? `${sanitizedKey} [${column.type}]`
         : sanitizedKey;
@@ -236,7 +236,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         field: column.name,
         headerName: headerName,
         cellDataType: cellDataType,
-        cellRendererParams: { disabled: cellDataType === "boolean" },
+        cellRendererParams: { disabled: false },
       };
     });
 
