@@ -42,10 +42,14 @@ export const queryConstants = {
 export interface StructuredTextColumns {
   name: string;
   type: string;
-  values: any[];
-  order: any[];
+  values: string[] | string;
+  order:
+    | number[] /* ascending indexes if the column is sorted */
+    | string /* error message if sorting is not possible */;
 }
+
 export interface StructuredTextResults {
-  columns: StructuredTextColumns[];
+  columns: StructuredTextColumns[] | StructuredTextColumns;
+  /* note: values array length may differ */
   count: number;
 }

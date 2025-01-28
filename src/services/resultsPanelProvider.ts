@@ -211,7 +211,8 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
     columnsArray.forEach((column) => {
       const { name, values } = column;
-      values.forEach((value, index) => {
+      const valuesArray = Array.isArray(values) ? values : [values];
+      valuesArray.forEach((value, index) => {
         rowData[index][name] = decodeQUTF(value);
       });
     });
@@ -226,7 +227,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
     const columnDefs = columnsArray.map((column) => {
       const sanitizedKey = this.sanitizeString(column.name);
-      const cellDataType = this.kdbToAgGridCellType(column.type);
+      const cellDataType = "text";
       const headerName = column.type
         ? `${sanitizedKey} [${column.type}]`
         : sanitizedKey;
@@ -235,7 +236,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         field: column.name,
         headerName: headerName,
         cellDataType: cellDataType,
-        cellRendererParams: { disabled: cellDataType === "boolean" },
+        cellRendererParams: { disabled: false },
       };
     });
 
