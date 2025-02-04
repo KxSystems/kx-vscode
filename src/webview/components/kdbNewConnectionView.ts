@@ -1062,11 +1062,10 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   private generateRenderId(): string {
-    const array = new Uint32Array(1);
-    window.crypto.getRandomValues(array);
-    const random = array[0].toString(36);
-    const timestamp = new Date().getTime();
-    return `render-${timestamp}-${random}`;
+    let counter = 0;
+    const timestamp = Date.now().toString(36);
+    const uniqueCounter = (counter++).toString(36);
+    return `render-${timestamp}-${uniqueCounter}`;
   }
 }
 
