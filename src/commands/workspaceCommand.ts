@@ -173,7 +173,10 @@ export function getServerForUri(uri: Uri) {
     "connectionMap",
     {},
   );
-  return map[relativePath(uri)];
+  const server = map[relativePath(uri)];
+  const servers = getServers();
+
+  return server && servers.includes(server) ? server : undefined;
 }
 
 /* istanbul ignore next */
