@@ -694,7 +694,7 @@ describe("KdbNewConnectionView", () => {
     it("should set MyQ to false and return correct HTML when connType is 1  and render is filled", () => {
       view.connectionData = { connType: 1, serverName: "testServer" };
       view.oldAlias = "testServer";
-      view.render = "test";
+      view.renderId = "test";
       const result = view.renderEditConnectionForm();
 
       assert.strictEqual(view.isBundledQ, false);
@@ -706,7 +706,7 @@ describe("KdbNewConnectionView", () => {
     it("should set MyQ to false and return correct HTML when connType is 1", () => {
       view.connectionData = { connType: 1, serverName: "testServer" };
       view.oldAlias = "";
-      view.render = "";
+      view.renderId = "";
       const result = view.renderEditConnectionForm();
 
       assert.strictEqual(view.isBundledQ, false);
@@ -718,7 +718,7 @@ describe("KdbNewConnectionView", () => {
     it("should set serverType to INSIGHTS and return correct HTML when connType is 2 and render is filled", () => {
       view.connectionData = { connType: 2, serverName: "testServer" };
       view.oldAlias = "testServer";
-      view.render = "test";
+      view.renderId = "test";
 
       const result = view.renderEditConnectionForm();
 
@@ -731,7 +731,7 @@ describe("KdbNewConnectionView", () => {
     it("should set serverType to INSIGHTS and return correct HTML when connType is 2", () => {
       view.connectionData = { connType: 2, serverName: "testServer" };
       view.oldAlias = "";
-      view.render = "";
+      view.renderId = "";
 
       const result = view.renderEditConnectionForm();
 
