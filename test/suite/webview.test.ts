@@ -682,18 +682,19 @@ describe("KdbNewConnectionView", () => {
     });
 
     it("should set isBundledQ to true and return correct HTML when connType is 0", () => {
-      view.connectionData = { connType: 0, serverName: "testServer" };
+      view.connectionData = { connType: 0, serverName: "local" };
 
       const result = view.renderEditConnectionForm();
       assert.strictEqual(view.isBundledQ, true);
-      assert.strictEqual(view.oldAlias, "testServer");
+      assert.strictEqual(view.oldAlias, "local");
       assert.strictEqual(view.serverType, ServerType.KDB);
       assert.strictEqual(result.values[1].includes("Bundled q"), true);
     });
 
-    it("should set isBundledQ to false and return correct HTML when connType is 1", () => {
+    it("should set MyQ to false and return correct HTML when connType is 1  and render is filled", () => {
       view.connectionData = { connType: 1, serverName: "testServer" };
-
+      view.oldAlias = "testServer";
+      view.renderId = "test";
       const result = view.renderEditConnectionForm();
 
       assert.strictEqual(view.isBundledQ, false);
@@ -702,8 +703,35 @@ describe("KdbNewConnectionView", () => {
       assert.strictEqual(result.values[1].includes("My q"), true);
     });
 
+    it("should set MyQ to false and return correct HTML when connType is 1", () => {
+      view.connectionData = { connType: 1, serverName: "testServer" };
+      view.oldAlias = "";
+      view.renderId = "";
+      const result = view.renderEditConnectionForm();
+
+      assert.strictEqual(view.isBundledQ, false);
+      assert.strictEqual(view.oldAlias, "testServer");
+      assert.strictEqual(view.serverType, ServerType.KDB);
+      assert.strictEqual(result.values[1].includes("My q"), true);
+    });
+
+    it("should set serverType to INSIGHTS and return correct HTML when connType is 2 and render is filled", () => {
+      view.connectionData = { connType: 2, serverName: "testServer" };
+      view.oldAlias = "testServer";
+      view.renderId = "test";
+
+      const result = view.renderEditConnectionForm();
+
+      assert.strictEqual(view.isBundledQ, false);
+      assert.strictEqual(view.oldAlias, "testServer");
+      assert.strictEqual(view.serverType, ServerType.INSIGHTS);
+      assert.strictEqual(result.values[1].includes("Insights"), true);
+    });
+
     it("should set serverType to INSIGHTS and return correct HTML when connType is 2", () => {
       view.connectionData = { connType: 2, serverName: "testServer" };
+      view.oldAlias = "";
+      view.renderId = "";
 
       const result = view.renderEditConnectionForm();
 
