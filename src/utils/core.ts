@@ -357,6 +357,12 @@ export function offerConnectAction(connLabel: string): void {
     });
 }
 
+export function noSelectedConnectionAction(): void {
+  window.showInformationMessage(
+    `You didn't selected any existing connection to execute this action, please select a connection and try again.`,
+  );
+}
+
 /* istanbul ignore next */
 export function offerReconnectionAfterEdit(connLabel: string): void {
   window

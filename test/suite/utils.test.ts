@@ -366,6 +366,20 @@ describe("Utils", () => {
         assert.ok(stub.calledOnce);
       });
     });
+
+    describe("noSelectedConnectionAction", () => {
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("should call showInformationMessage", () => {
+        const stub = sinon
+          .stub(vscode.window, "showInformationMessage")
+          .resolves();
+        coreUtils.noSelectedConnectionAction();
+        assert.ok(stub.calledOnce);
+      });
+    });
   });
 
   describe("dataSource", () => {
