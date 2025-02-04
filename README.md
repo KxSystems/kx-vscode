@@ -623,7 +623,7 @@ To use GGPlot2 in VSCode:
 - Use GGPlot2 to create visualizations, such as a bar plot showing the total transaction amount by month.
 
 - Run the script within VSCode. The chart is generated and displayed in the VSCode plot viewer, and you can save the plot.
-  **Note**: When executing GG scripts, calling `.qp.display` displays the plot locally.
+  **Note**: When executing GG scripts, calling `.qp.display2` displays the plot locally.
 
 ![gg-plot](https://github.com/KxSystems/kx-vscode/blob/main/img/gg-plot.png?raw=true)
 
