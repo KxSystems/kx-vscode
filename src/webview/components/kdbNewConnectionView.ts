@@ -63,7 +63,7 @@ export class KdbNewConnectionView extends LitElement {
   isBundledQ: boolean = true;
   oldAlias: string = "";
   editAuth: boolean = false;
-  private renderId: string = "";
+  renderId: string = "";
   private isModalOpen = false;
   private _connectionData: EditConnectionMessage | undefined = undefined;
   private readonly vscode = acquireVsCodeApi();
