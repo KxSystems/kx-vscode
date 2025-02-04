@@ -704,6 +704,7 @@ describe("KdbNewConnectionView", () => {
 
     it("should set serverType to INSIGHTS and return correct HTML when connType is 2", () => {
       view.connectionData = { connType: 2, serverName: "testServer" };
+      view.oldAlias = "testServer";
 
       const result = view.renderEditConnectionForm();
 
