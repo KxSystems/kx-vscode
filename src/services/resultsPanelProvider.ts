@@ -499,6 +499,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
                     maxConcurrentDatasourceRequests: 1,
                     infiniteInitialRowCount: 10000,
                     maxBlocksInCache: 10,
+                    overlayNoRowsTemplate: '<span class="ag-overlay-loading-center">No results to show</span>',
                     datasource: {
                       rowCount: undefined,
                       getRows: function(params) {
@@ -506,6 +507,11 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
                         const results = message.results;
                         setTimeout(() => {
                           const lastRow = results.length;
+                          if (lastRow === 0) {
+                            gridApi.showNoRowsOverlay();
+                          } else {
+                            gridApi.hideOverlay();
+                          }
                           const rowsThisPage = results.slice(params.startRow, params.endRow);
                           params.successCallback(rowsThisPage, lastRow);
                           hideOverlay();
