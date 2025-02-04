@@ -44,7 +44,11 @@ import { Telemetry } from "../utils/telemetryClient";
 import { LocalConnection } from "../classes/localConnection";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
-import { kdbOutputLog, offerConnectAction } from "../utils/core";
+import {
+  kdbOutputLog,
+  noSelectedConnectionAction,
+  offerConnectAction,
+} from "../utils/core";
 import { ServerType } from "../models/connectionsModels";
 
 export async function addDataSource(): Promise<void> {
@@ -118,6 +122,12 @@ export async function runDataSource(
   if (DataSourcesPanel.running) {
     return;
   }
+
+  if (connLabel === "") {
+    noSelectedConnectionAction();
+    return;
+  }
+
   DataSourcesPanel.running = true;
   const connMngService = new ConnectionManagementService();
   const selectedConnection =
