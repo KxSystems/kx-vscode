@@ -984,17 +984,25 @@ export class KdbDataSourceView extends LitElement {
   }
 
   renderActions() {
+    const selectedServerExists = this.servers.includes(this.selectedServer);
+    if (!selectedServerExists) {
+      this.selectedServer = "";
+    }
     return html`
       <sl-select
         label="Connection"
         .value="${live(this.selectedServer)}"
         @sl-change="${this.requestServerChange}"
         ?disabled="${this.running}">
-        <sl-option
-          .value="${live(this.selectedServer)}"
-          .selected="${live(true)}"
-          >${this.selectedServer || "(none)"}</sl-option
-        >
+        ${!selectedServerExists
+          ? html`<sl-option .value="${live("")}" .selected="${live(true)}"
+              >(none)</sl-option
+            >`
+          : html`<sl-option
+              .value="${live(this.selectedServer)}"
+              .selected="${live(true)}"
+              >${this.selectedServer}</sl-option
+            >`}
         <small>Connections</small>
         ${this.servers.map(
           (server) => html`

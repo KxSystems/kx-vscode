@@ -396,7 +396,7 @@ export function formatScratchpadStacktrace(stacktrace: ScratchpadStacktrace) {
     .join("\n");
 }
 
-const PNG = ["0x89", "0x50", "0x4e", "0x47", "0x0d", "0x0a", "0x1a", "0x0a"];
+const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
 export function resultToBase64(result: any): string | undefined {
   const bytes =
@@ -405,7 +405,7 @@ export function resultToBase64(result: any): string | undefined {
     result;
   if (Array.isArray(bytes) && bytes.length > 66) {
     for (let i = 0; i < PNG.length; i++) {
-      if (bytes[i] !== PNG[i] && bytes[i] !== parseInt(PNG[i], 16)) {
+      if (parseInt(`${bytes[i]}`) !== PNG[i]) {
         return undefined;
       }
     }

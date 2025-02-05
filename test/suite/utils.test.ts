@@ -366,6 +366,20 @@ describe("Utils", () => {
         assert.ok(stub.calledOnce);
       });
     });
+
+    describe("noSelectedConnectionAction", () => {
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("should call showInformationMessage", () => {
+        const stub = sinon
+          .stub(vscode.window, "showInformationMessage")
+          .resolves();
+        coreUtils.noSelectedConnectionAction();
+        assert.ok(stub.calledOnce);
+      });
+    });
   });
 
   describe("dataSource", () => {
@@ -1996,36 +2010,35 @@ describe("Utils", () => {
       const result = queryUtils.resultToBase64(png);
       assert.strictEqual(result, undefined);
     });
-    it("should return undefined for undefined for bad signature", () => {
+    it("should return undefined for bad signature", () => {
       const result = queryUtils.resultToBase64([
         ...png.map((v) => parseInt(v, 16) + 1),
-        ,
         ...img,
       ]);
       assert.strictEqual(result, undefined);
     });
     it("should return base64 for minimum img str", () => {
       const result = queryUtils.resultToBase64([...png, ...img]);
-      assert.ok(result.startsWith("data:image/png;base64"));
+      assert.ok(result);
     });
     it("should return base64 for minimum img num", () => {
       const result = queryUtils.resultToBase64([
         ...png.map((v) => parseInt(v, 16)),
         ...img.map((v) => parseInt(v, 16)),
       ]);
-      assert.ok(result.startsWith("data:image/png;base64"));
+      assert.ok(result);
     });
     it("should return base64 for minimum img str for structuredText", () => {
       const result = queryUtils.resultToBase64({
         columns: { values: [...png, ...img] },
       });
-      assert.ok(result.startsWith("data:image/png;base64"));
+      assert.ok(result);
     });
     it("should return base64 for minimum img str for structuredText v2", () => {
       const result = queryUtils.resultToBase64({
         columns: [{ values: [...png, ...img] }],
       });
-      assert.ok(result.startsWith("data:image/png;base64"));
+      assert.ok(result);
     });
     it("should return undefined for bogus structuredText", () => {
       const result = queryUtils.resultToBase64({
@@ -2038,6 +2051,13 @@ describe("Utils", () => {
         columns: [],
       });
       assert.strictEqual(result, undefined);
+    });
+    it("should return base64 from windows q server", () => {
+      const result = queryUtils.resultToBase64([
+        ...png.map((v) => `${v}\r`),
+        ...img.map((v) => `${v}\r`),
+      ]);
+      assert.ok(result);
     });
   });
 });

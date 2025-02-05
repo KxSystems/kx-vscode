@@ -653,6 +653,21 @@ describe("dataSourceCommand2", () => {
       ext.isResultsTabVisible = false;
     });
 
+    it("should not proceed there is no connection selected", async () => {
+      ext.activeConnection = undefined;
+      await dataSourceCommand.runDataSource(
+        {} as DataSourceFiles,
+        "",
+        "test-file.kdb.json",
+      );
+      windowMock
+        .expects("showInformationMessage")
+        .once()
+        .withArgs(
+          "You didn't selected any existing connection to execute this action, please select a connection and try again.",
+        );
+    });
+
     it("should show an error message if not connected to an Insights server", async () => {
       ext.activeConnection = undefined;
       getMetaStub.resolves({});
