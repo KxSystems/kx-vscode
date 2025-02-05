@@ -272,8 +272,7 @@ export class KdbDataSourceView extends LitElement {
       return this.insightsMeta.api
         .filter(
           (api) =>
-            api.api === ".kxi.getData" ||
-            !api.api.startsWith(".kxi.") ||
+            (api.api === ".kxi.getData" || !api.api.startsWith(".kxi.")) &&
             api.custom === false,
         )
         .map((api) => {
@@ -334,7 +333,7 @@ export class KdbDataSourceView extends LitElement {
 
   renderUDAOptions() {
     if (this.isInsights && this.isMetaLoaded) {
-      return this.insightsMeta.api
+      const udaOptions = this.insightsMeta.api
         .filter((api) => api.custom === true)
         .map((api) => {
           const value =
@@ -344,6 +343,14 @@ export class KdbDataSourceView extends LitElement {
             <small>${api.metadata.description}</small>
           `;
         });
+      if (udaOptions.length === 0) {
+        udaOptions.push(
+          html`<sl-option value="" disabled
+            >No deployed UDAs available</sl-option
+          >`,
+        );
+      }
+      return udaOptions;
     }
     return [];
   }
@@ -890,6 +897,7 @@ export class KdbDataSourceView extends LitElement {
           label="User Defined Analytic (UDA)"
           .value="${live(encodeURIComponent(this.selectedUda))}"
           style="max-width: 100%"
+          search
           @sl-change="${(event: Event) => {
             this.selectedUda = decodeURIComponent(
               (event.target as HTMLSelectElement).value,
@@ -899,7 +907,7 @@ export class KdbDataSourceView extends LitElement {
           <sl-option
             .value="${live(encodeURIComponent(this.selectedUda))}"
             .selected="${live(true)}"
-            >${this.selectedUda || "(none)"}</sl-option
+            >${this.selectedUda || "Select a UDA..."}</sl-option
           >
           <small>${this.isMetaLoaded ? "Meta UDAs" : "Meta Not Loaded"}</small>
           ${this.renderUDAOptions()}
