@@ -508,6 +508,15 @@ To do this:
 
 1. Use a [Workbook](#workbooks) to execute q or Python code against the data in your scratchpad using the variable you provided.
 
+
+### UDAs from a data source in VSCode
+
+User-Defined Analytics (UDAs), also known as custom APIs, are essential for developers to leverage the capabilities of kdb when building Insights Enterprise. These UDAs are deployed and executed on DAPs and AGGs.
+
+You can trigger UDAs from the query interface without rewriting them. The platform allows you to easily add custom features and external services to your apps by calling UDAs directly from the SP Pipeline builder, Scratchpad Web Interface, Dashboard, and Query Tab. This smoother process speeds up development, encourages teamwork, and boosts creativity, helping deliver projects faster.
+
+
+
 ## Workbooks
 
 Workbooks provide a convenient way to prototype and execute q and python code against a q process and using the variables [populated into the scratchpad](#populate-scratchpad) of a **kdb Insights Enterprise** deployment by data sources.
