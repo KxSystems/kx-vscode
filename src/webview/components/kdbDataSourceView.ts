@@ -166,6 +166,9 @@ export class KdbDataSourceView extends LitElement {
         sql: {
           query: this.sql,
         },
+        uda: {
+          selectedUda: this.selectedUda,
+        },
       },
     };
   }
