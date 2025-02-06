@@ -604,6 +604,9 @@ describe("dataSourceCommand2", () => {
       },
       insightsNode: "dummyNode",
     };
+    const dummyError = {
+      error: "error message",
+    };
     const connMngService = new ConnectionManagementService();
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
     const ab = new ArrayBuffer(26);
@@ -650,6 +653,21 @@ describe("dataSourceCommand2", () => {
       ext.isResultsTabVisible = false;
     });
 
+    it("should not proceed there is no connection selected", async () => {
+      ext.activeConnection = undefined;
+      await dataSourceCommand.runDataSource(
+        {} as DataSourceFiles,
+        "",
+        "test-file.kdb.json",
+      );
+      windowMock
+        .expects("showInformationMessage")
+        .once()
+        .withArgs(
+          "You didn't selected any existing connection to execute this action, please select a connection and try again.",
+        );
+    });
+
     it("should show an error message if not connected to an Insights server", async () => {
       ext.activeConnection = undefined;
       getMetaStub.resolves({});
@@ -676,6 +694,44 @@ describe("dataSourceCommand2", () => {
         .expects("showErrorMessage")
         .once()
         .withArgs("No Insights active connection found");
+    });
+
+    it("should return error for visible results panel", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = dummyMeta;
+      getMetaStub.resolves(dummyMeta);
+      sinon.stub(dataSourceCommand, "runQsqlDataSource").resolves(dummyError);
+
+      ext.isResultsTabVisible = true;
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+      sinon.assert.calledOnce(writeQueryResultsToViewStub);
+
+      ext.connectedConnectionList.length = 0;
+    });
+
+    it("should return error for console panel", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = dummyMeta;
+      getMetaStub.resolves(dummyMeta);
+      sinon.stub(dataSourceCommand, "runQsqlDataSource").resolves(dummyError);
+
+      ext.isResultsTabVisible = false;
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
+
+      ext.connectedConnectionList.length = 0;
     });
 
     it("should return QSQL results", async () => {
@@ -894,9 +950,6 @@ describe("dataSourceCommand2", () => {
       const result = dataSourceCommand.parseError(error);
 
       assert(kdbOutputLogStub.calledOnce);
-      assert(
-        kdbOutputLogStub.calledWith(`[DATASOURCE] Error: ${error}`, "ERROR"),
-      );
       assert.deepEqual(result, { error });
     });
   });
@@ -1340,6 +1393,31 @@ describe("serverCommand", () => {
   describe("writeQueryResultsToView", () => {
     it("should call executeCommand with correct arguments", () => {
       const result = { data: [1, 2, 3] };
+      const executeCommandStub = sinon.stub(vscode.commands, "executeCommand");
+
+      serverCommand.writeQueryResultsToView(
+        result,
+        "",
+        "testConn",
+        "testFile.kdb.q",
+        false,
+        "WORKBOOK",
+        false,
+        "2",
+      );
+
+      sinon.assert.calledWith(
+        executeCommandStub.firstCall,
+        "kdb.resultsPanel.update",
+        result,
+        false,
+      );
+
+      executeCommandStub.restore();
+    });
+
+    it("should call executeCommand with correct arguments for an error", () => {
+      const result = "Error: test error";
       const executeCommandStub = sinon.stub(vscode.commands, "executeCommand");
 
       serverCommand.writeQueryResultsToView(

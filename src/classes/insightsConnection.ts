@@ -403,9 +403,6 @@ export class InsightsConnection {
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
       const isTableView = ext.isResultsTabVisible;
-      const queryMsg = isStarting
-        ? "Starting scratchpad..."
-        : "Query is executing...";
       const scratchpadURL = new url.URL(
         this.connEndpoints.scratchpad.scratchpad,
         this.node.details.server,
@@ -433,7 +430,8 @@ export class InsightsConnection {
       };
 
       if (this.insightsVersion) {
-        if (compareVersions(this.insightsVersion, 1.12)) {
+        /* TODO: Workaround for Python structuredText bug */
+        if (!isPython && compareVersions(this.insightsVersion, 1.12)) {
           body.returnFormat = isTableView ? "structuredText" : "text";
         } else {
           body.isTableView = isTableView;
@@ -453,10 +451,13 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            kdbOutputLog(`User cancelled the Scrathpad execution.`, "WARNING");
+            kdbOutputLog(`User cancelled the scratchpad execution.`, "WARNING");
           });
 
-          progress.report({ message: queryMsg });
+          if (isStarting) {
+            progress.report({ message: "Starting scratchpad..." });
+          }
+
           const spRes = await axios
             .post(scratchpadURL.toString(), body, {
               headers,
@@ -464,10 +465,7 @@ export class InsightsConnection {
             })
             .then((response: any) => {
               if (response.data.error) {
-                kdbOutputLog(
-                  `[SCRATCHPAD] Error occured while executing scratchpad: ${response.data.errorMsg}`,
-                  "ERROR",
-                );
+                return response.data;
               } else if (query === "") {
                 kdbOutputLog(
                   `[SCRATCHPAD] scratchpad created for connection: ${this.connLabel}`,
@@ -478,6 +476,8 @@ export class InsightsConnection {
                 if (!response.data.error) {
                   if (isTableView) {
                     if (
+                      /* TODO: Workaround for Python structuredText bug */
+                      !isPython &&
                       this.insightsVersion &&
                       compareVersions(this.insightsVersion, 1.12)
                     ) {

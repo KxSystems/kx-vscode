@@ -63,6 +63,7 @@ export class KdbNewConnectionView extends LitElement {
   isBundledQ: boolean = true;
   oldAlias: string = "";
   editAuth: boolean = false;
+  renderId: string = "";
   private isModalOpen = false;
   private _connectionData: EditConnectionMessage | undefined = undefined;
   private readonly vscode = acquireVsCodeApi();
@@ -124,7 +125,8 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   updateLabelValue(pos: number, event: Event) {
-    this.labels[pos] = (event.target as HTMLSelectElement).value;
+    const value = (event.target as HTMLSelectElement).value;
+    this.labels[pos] = decodeURIComponent(value);
     this.requestUpdate();
   }
 
@@ -143,7 +145,6 @@ export class KdbNewConnectionView extends LitElement {
 
   handleMessage(event: { data: any }) {
     const message = event.data;
-    console.log(message);
     if (message.command === "editConnection") {
       this.connectionData = message.data;
       this.labels = message.labels;
@@ -367,40 +368,43 @@ export class KdbNewConnectionView extends LitElement {
         <sl-select
           id="selectLabel"
           class="dropdown larger"
-          value="${live(this.labels[pos])}"
+          value="${live(
+            this.labels[pos] === undefined
+              ? ""
+              : encodeURIComponent(this.labels[pos]),
+          )}"
           @sl-change="${(event: Event) => {
             this.updateLabelValue(pos, event);
           }}">
           ${this.renderLblDropdownOptions(pos)}
         </sl-select>
-        <sl-button
-          aria-label="Remove Label"
-          variant="neutral"
-          @click="${() => this.removeLabel(pos)}"
-          >-</sl-button
-        >
-        <sl-button
-          aria-label="Add Label"
-          variant="neutral"
-          @click="${this.addLabel}"
-          >+</sl-button
-        >
+        <sl-button-group>
+          <sl-button
+            aria-label="Remove Label"
+            variant="neutral"
+            @click="${() => this.removeLabel(pos)}"
+            >-</sl-button
+          >
+          <sl-button
+            aria-label="Add Label"
+            variant="neutral"
+            @click="${this.addLabel}"
+            >+</sl-button
+          >
+        </sl-button-group>
       </div>
     `;
   }
 
   renderLblDropdownOptions(pos: number) {
-    console.log(this.labels);
     return html`
       <sl-option> No Label Selected </sl-option>
       ${repeat(
         this.lblNamesList,
         (lbl) => lbl,
         (lbl) => {
-          console.log(lbl.name);
-          console.log(lbl.name === this.labels[pos]);
           return html`
-            <sl-option .value="${lbl.name}">
+            <sl-option .value="${encodeURIComponent(lbl.name)}">
               <span>
                 <div
                   style="width: 10px; height: 10px; background: ${lbl.color
@@ -742,7 +746,13 @@ export class KdbNewConnectionView extends LitElement {
       return html`<div>No connection found to be edited</div>`;
     }
     this.isBundledQ = this.connectionData.connType === ConnectionType.BundledQ;
-    this.oldAlias = this.connectionData.serverName;
+    if (
+      this.renderId === "" ||
+      this.oldAlias !== this.connectionData.serverName
+    ) {
+      this.oldAlias = this.connectionData.serverName;
+      this.renderId = "";
+    }
     const connTypeName = this.defineConnTypeName(this.connectionData.connType);
     this.serverType =
       this.connectionData.connType === ConnectionType.Insights
@@ -806,9 +816,14 @@ export class KdbNewConnectionView extends LitElement {
     if (!this.connectionData) {
       return html`<div>No connection found to be edited</div>`;
     }
-    this.bundledServer.serverAlias = "local";
-    this.bundledServer.serverPort = this.connectionData.port ?? "";
-    this.bundledServer.serverName = this.connectionData.serverAddress;
+
+    if (this.renderId === "") {
+      this.renderId = this.generateRenderId();
+      this.bundledServer.serverAlias = "local";
+      this.bundledServer.serverPort = this.connectionData.port ?? "";
+      this.bundledServer.serverName = this.connectionData.serverAddress;
+    }
+
     return html`
       <div class="col">
         <div class="row">
@@ -832,11 +847,16 @@ export class KdbNewConnectionView extends LitElement {
     if (!this.connectionData) {
       return html`<div>No connection found to be edited</div>`;
     }
-    this.kdbServer.serverAlias = this.connectionData.serverName;
-    this.kdbServer.serverPort = this.connectionData.port ?? "";
-    this.kdbServer.serverName = this.connectionData.serverAddress;
-    this.kdbServer.auth = this.connectionData.auth ?? false;
-    this.kdbServer.tls = this.connectionData.tls ?? false;
+
+    if (this.renderId === "") {
+      this.renderId = this.generateRenderId();
+      this.kdbServer.serverAlias = this.connectionData.serverName;
+      this.kdbServer.serverPort = this.connectionData.port ?? "";
+      this.kdbServer.serverName = this.connectionData.serverAddress;
+      this.kdbServer.auth = this.connectionData.auth ?? false;
+      this.kdbServer.tls = this.connectionData.tls ?? false;
+    }
+
     return html`
       <div class="col">
         <div class="row">
@@ -919,9 +939,14 @@ export class KdbNewConnectionView extends LitElement {
     if (!this.connectionData) {
       return html`<div>No connection found to be edited</div>`;
     }
-    this.insightsServer.alias = this.connectionData.serverName;
-    this.insightsServer.server = this.connectionData.serverAddress;
-    this.insightsServer.realm = this.connectionData.realm ?? "";
+
+    if (this.renderId === "") {
+      this.renderId = this.generateRenderId();
+      this.insightsServer.alias = this.connectionData.serverName;
+      this.insightsServer.server = this.connectionData.serverAddress;
+      this.insightsServer.realm = this.connectionData.realm ?? "";
+    }
+
     return html`
       <div class="col">
         <div class="row">
@@ -1034,6 +1059,13 @@ export class KdbNewConnectionView extends LitElement {
         labels: this.labels,
       });
     }
+  }
+
+  private generateRenderId(): string {
+    let counter = 0;
+    const timestamp = Date.now().toString(36);
+    const uniqueCounter = (counter++).toString(36);
+    return `render-${timestamp}-${uniqueCounter}`;
   }
 }
 

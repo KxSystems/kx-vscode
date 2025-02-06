@@ -366,6 +366,20 @@ describe("Utils", () => {
         assert.ok(stub.calledOnce);
       });
     });
+
+    describe("noSelectedConnectionAction", () => {
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("should call showInformationMessage", () => {
+        const stub = sinon
+          .stub(vscode.window, "showInformationMessage")
+          .resolves();
+        coreUtils.noSelectedConnectionAction();
+        assert.ok(stub.calledOnce);
+      });
+    });
   });
 
   describe("dataSource", () => {
@@ -900,6 +914,34 @@ describe("Utils", () => {
         true,
       );
       assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+    });
+
+    it("should format a Scratchpad stacktrace correctly", () => {
+      const stacktrace = [
+        { name: "g", isNested: false, text: ["{a:x*2;a", "+y}"] },
+        { name: "f", isNested: false, text: ["{", "g[x;2#y]}"] },
+        { name: "", isNested: false, text: ["", 'f[3;"hello"]'] },
+      ];
+
+      const formatted = queryUtils.formatScratchpadStacktrace(stacktrace);
+      assert.strictEqual(
+        formatted,
+        '[2] g{a:x*2;a+y}\n             ^\n[1] f{g[x;2#y]}\n      ^\n[0] f[3;"hello"]\n    ^',
+      );
+    });
+
+    it("should format a Scratchpad stacktrace with nested function correctly", () => {
+      const stacktrace = [
+        { name: "f", isNested: true, text: ["{a:x*2;a", "+y}"] },
+        { name: "f", isNested: false, text: ["{", "{a:x*2;a+y}[x;2#y]}"] },
+        { name: "", isNested: false, text: ["", 'f[3;"hello"]'] },
+      ];
+
+      const formatted = queryUtils.formatScratchpadStacktrace(stacktrace);
+      assert.strictEqual(
+        formatted,
+        '[2] f @ {a:x*2;a+y}\n                ^\n[1] f{{a:x*2;a+y}[x;2#y]}\n      ^\n[0] f[3;"hello"]\n    ^',
+      );
     });
   });
 
@@ -1944,6 +1986,78 @@ describe("Utils", () => {
         ),
         true,
       );
+    });
+  });
+
+  describe("resultToBase64", () => {
+    const png = [
+      "0x89",
+      "0x50",
+      "0x4e",
+      "0x47",
+      "0x0d",
+      "0x0a",
+      "0x1a",
+      "0x0a",
+    ];
+    const img = Array.from({ length: 59 }, () => "0x00");
+
+    it("should return undefined for undefined", () => {
+      const result = queryUtils.resultToBase64(undefined);
+      assert.strictEqual(result, undefined);
+    });
+    it("should return undefined for just signature", () => {
+      const result = queryUtils.resultToBase64(png);
+      assert.strictEqual(result, undefined);
+    });
+    it("should return undefined for bad signature", () => {
+      const result = queryUtils.resultToBase64([
+        ...png.map((v) => parseInt(v, 16) + 1),
+        ...img,
+      ]);
+      assert.strictEqual(result, undefined);
+    });
+    it("should return base64 for minimum img str", () => {
+      const result = queryUtils.resultToBase64([...png, ...img]);
+      assert.ok(result);
+    });
+    it("should return base64 for minimum img num", () => {
+      const result = queryUtils.resultToBase64([
+        ...png.map((v) => parseInt(v, 16)),
+        ...img.map((v) => parseInt(v, 16)),
+      ]);
+      assert.ok(result);
+    });
+    it("should return base64 for minimum img str for structuredText", () => {
+      const result = queryUtils.resultToBase64({
+        columns: { values: [...png, ...img] },
+      });
+      assert.ok(result);
+    });
+    it("should return base64 for minimum img str for structuredText v2", () => {
+      const result = queryUtils.resultToBase64({
+        columns: [{ values: [...png, ...img] }],
+      });
+      assert.ok(result);
+    });
+    it("should return undefined for bogus structuredText", () => {
+      const result = queryUtils.resultToBase64({
+        columns: {},
+      });
+      assert.strictEqual(result, undefined);
+    });
+    it("should return undefined for bogus structuredText v2", () => {
+      const result = queryUtils.resultToBase64({
+        columns: [],
+      });
+      assert.strictEqual(result, undefined);
+    });
+    it("should return base64 from windows q server", () => {
+      const result = queryUtils.resultToBase64([
+        ...png.map((v) => `${v}\r`),
+        ...img.map((v) => `${v}\r`),
+      ]);
+      assert.ok(result);
     });
   });
 });

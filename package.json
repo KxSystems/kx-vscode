@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite including the q programming language",
   "publisher": "KX",
-  "version": "1.9.1",
+  "version": "1.10.0",
   "engines": {
     "vscode": "^1.86.0"
   },
@@ -483,13 +483,13 @@
         "command": "kdb.execute.pythonScratchpadQuery",
         "key": "ctrl+d",
         "mac": "cmd+d",
-        "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
+        "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
       },
       {
         "command": "kdb.execute.pythonFileScratchpadQuery",
         "key": "ctrl+shift+d",
         "mac": "cmd+shift+d",
-        "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
+        "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
       },
       {
         "command": "kdb.terminal.run",
@@ -545,6 +545,19 @@
         "icon": {
           "dark": "./resources/dark/datasource.svg",
           "light": "./resources/light/datasource.svg"
+        }
+      },
+      {
+        "id": "kdbplot",
+        "aliases": [
+          "kdbplot"
+        ],
+        "extensions": [
+          ".plot"
+        ],
+        "icon": {
+          "dark": "./resources/dark/plot.svg",
+          "light": "./resources/light/plot.svg"
         }
       }
     ],
@@ -872,12 +885,12 @@
         {
           "command": "kdb.execute.pythonFileScratchpadQuery",
           "group": "q@0",
-          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
+          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
         },
         {
           "command": "kdb.execute.pythonScratchpadQuery",
           "group": "q@1",
-          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
+          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
         }
       ],
       "editor/context": [
@@ -904,12 +917,12 @@
         {
           "command": "kdb.execute.pythonFileScratchpadQuery",
           "group": "q@0",
-          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
+          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
         },
         {
           "command": "kdb.execute.pythonScratchpadQuery",
           "group": "q@1",
-          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.insightsConnected)"
+          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
         }
       ],
       "explorer/context": [
@@ -932,6 +945,16 @@
         "selector": [
           {
             "filenamePattern": "*.kdb.json"
+          }
+        ],
+        "priority": "default"
+      },
+      {
+        "viewType": "kdb.chartEditor",
+        "displayName": "Chart Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.plot"
           }
         ],
         "priority": "default"
@@ -961,24 +984,24 @@
     "bracketSameLine": true
   },
   "devDependencies": {
-    "@shoelace-style/shoelace": "2.17.1",
+    "@shoelace-style/shoelace": "2.19.1",
     "@types/fs-extra": "^11.0.4",
     "@types/glob": "^8.1.0",
     "@types/graceful-fs": "^4.1.9",
     "@types/istanbul-lib-coverage": "^2.0.6",
     "@types/istanbul-reports": "^3.0.4",
-    "@types/mocha": "^10.0.9",
-    "@types/node": "^22.9.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.10.1",
     "@types/node-fetch": "^2.6.12",
     "@types/semver": "^7.5.8",
     "@types/sinon": "^17.0.3",
     "@types/vscode": "^1.86.0",
     "@types/vscode-webview": "^1.57.5",
-    "@typescript-eslint/eslint-plugin": "^8.14.0",
-    "@typescript-eslint/parser": "^8.14.0",
+    "@typescript-eslint/eslint-plugin": "^8.17.0",
+    "@typescript-eslint/parser": "^8.17.0",
     "@vscode/test-electron": "^2.4.1",
     "esbuild": "^0.23.1",
-    "eslint": "^9.14.0",
+    "eslint": "^9.16.0",
     "eslint-plugin-header": "^3.1.1",
     "eslint-plugin-license-header": "^0.6.1",
     "eslint-plugin-unused-imports": "^4.1.4",
@@ -989,25 +1012,26 @@
     "istanbul-lib-source-maps": "^3.0.6",
     "istanbul-reports": "^3.1.7",
     "lit": "^3.2.1",
-    "mocha": "^10.8.2",
+    "mocha": "^11.0.1",
     "mocha-junit-reporter": "^2.2.1",
     "mocha-multi-reporters": "^1.5.1",
     "mock-fs": "^5.4.1",
-    "prettier": "^3.3.3",
+    "prettier": "^3.4.2",
     "rimraf": "^6.0.1",
     "sinon": "^17.0.1",
-    "typescript": "^5.4.5",
+    "typescript": "^5.7.2",
     "vscode-dts": "^0.3.3",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
-    "vscode-languageserver-textdocument": "^1.0.11",
+    "vscode-languageserver-textdocument": "^1.0.12",
     "vscode-test": "^1.6.1"
   },
   "dependencies": {
+    "@ag-grid-community/core": "^32.3.3",
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "@windozer/node-q": "^2.6.0",
-    "ag-grid-community": "^32.3.2",
-    "axios": "^1.7.7",
+    "ag-grid-community": "^32.3.3",
+    "axios": "^1.7.9",
     "chevrotain": "^10.5.0",
     "extract-zip": "^2.0.1",
     "fs-extra": "^11.2.0",
@@ -1018,7 +1042,7 @@
     "node-fetch": "^2.7.0",
     "node-q": "^2.7.0",
     "pick-port": "^2.0.1",
-    "semver": "^7.6.2",
+    "semver": "^7.6.3",
     "vscode-extension-telemetry": "^0.4.5",
     "vscode-languageserver-textdocument": "^1.0.11",
     "vscode-uri": "^3.0.8"

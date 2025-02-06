@@ -25,10 +25,13 @@ import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
 import { compareVersions, kdbOutputLog } from "../utils/core";
 import { StructuredTextResults } from "../models/queryResult";
+import { GridOptions } from "ag-grid-community";
+import { decodeQUTF } from "../utils/decode";
 
 export class KdbResultsViewProvider implements WebviewViewProvider {
   public static readonly viewType = "kdb-results";
   public isInsights = false;
+  public isPython = false;
   public _colorTheme: any;
   private _view?: WebviewView;
   private _results: string | string[] = "";
@@ -48,8 +51,6 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       guid: "text",
       byte: "number",
       short: "number",
-      int: "number",
-      long: "number",
       real: "number",
       float: "number",
       char: "text",
@@ -95,10 +96,12 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     queryResults: any,
     isInsights?: boolean,
     connVersion?: number,
+    isPython?: boolean,
   ) {
     if (this._view) {
       this._view.show?.(true);
       this.isInsights = !!isInsights;
+      this.isPython = !!isPython;
       this.updateWebView(queryResults, connVersion);
     }
   }
@@ -145,12 +148,11 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         return Object.keys(results.meta).map((key: string) => {
           const sanitizedKey = this.sanitizeString(key);
           const type = results.meta[key];
-          const headerTooltip = type;
+          const headerName = type ? `${sanitizedKey} [${type}]` : sanitizedKey;
           const cellDataType = this.kdbToAgGridCellType(type);
           return {
             field: sanitizedKey,
-            headerName: sanitizedKey,
-            headerTooltip,
+            headerName,
             cellDataType,
           };
         });
@@ -158,13 +160,12 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         return Object.keys(results.rows[0]).map((key: string) => {
           const sanitizedKey = this.sanitizeString(key);
           const type = results.meta[key];
-          const headerTooltip = type;
+          const headerName = type ? `${sanitizedKey} [${type}]` : sanitizedKey;
           const cellDataType =
             type != undefined ? this.kdbToAgGridCellType(type) : undefined;
           return {
             field: sanitizedKey,
-            headerName: sanitizedKey,
-            headerTooltip,
+            headerName,
             cellDataType,
           };
         });
@@ -190,16 +191,29 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   }
 
   updatedExtractRowData(results: StructuredTextResults) {
-    const { columns, count } = results;
+    const { columns } = results;
+    const columnsArray = Array.isArray(columns) ? columns : [columns];
+
+    let dataLength = 0;
+    if (columnsArray.length > 0) {
+      const firstColumnValues = columnsArray[0].values;
+      if (Array.isArray(firstColumnValues)) {
+        dataLength = firstColumnValues.length;
+      } else {
+        dataLength = 1;
+      }
+    }
+
     const rowData: { [key: string]: any }[] = Array.from(
-      { length: count },
+      { length: dataLength },
       () => ({}),
     );
 
-    columns.forEach((column) => {
-      const { name, values, order } = column;
-      order.forEach((pos, index) => {
-        rowData[index][name] = values[pos];
+    columnsArray.forEach((column) => {
+      const { name, values } = column;
+      const valuesArray = Array.isArray(values) ? values : [values];
+      valuesArray.forEach((value, index) => {
+        rowData[index][name] = decodeQUTF(value);
       });
     });
 
@@ -208,26 +222,41 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
   updatedExtractColumnDefs(results: StructuredTextResults) {
     const { columns } = results;
-    const columnDefs = columns.map((column) => {
-      const cellDataType = this.kdbToAgGridCellType(column.type);
-      const headerName = `${column.name}`;
+
+    const columnsArray = Array.isArray(columns) ? columns : [columns];
+
+    const columnDefs = columnsArray.map((column) => {
+      const sanitizedKey = this.sanitizeString(column.name);
+      const cellDataType = "text";
+      const headerName = column.type
+        ? `${sanitizedKey} [${column.type}]`
+        : sanitizedKey;
+
       return {
         field: column.name,
-        headerName,
-        cellDataType,
-        cellRendererParams: { disabled: cellDataType === "boolean" },
-        headerTooltip: column.type ? column.type : undefined,
+        headerName: headerName,
+        cellDataType: cellDataType,
+        cellRendererParams: { disabled: false },
       };
     });
 
     return columnDefs;
   }
 
-  convertToGrid(results: any, isInsights: boolean, connVersion?: number): any {
+  convertToGrid(
+    results: any,
+    isInsights: boolean,
+    connVersion?: number,
+    isPython?: boolean,
+  ): GridOptions {
     let rowData = [];
     let columnDefs = [];
 
-    if (connVersion && compareVersions(connVersion, 1.12)) {
+    if (
+      (!isInsights && !isPython) ||
+      /* TODO: Workaround for Python structuredText bug */
+      (!isPython && connVersion && compareVersions(connVersion, 1.12))
+    ) {
       rowData = this.updatedExtractRowData(results);
       columnDefs = this.updatedExtractColumnDefs(results);
     } else {
@@ -286,26 +315,12 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       ext.resultPanelCSV = this.convertToCsv(rowData).join("\n");
     }
 
-    return {
-      defaultColDef: {
-        sortable: true,
-        resizable: true,
-        filter: true,
-        flex: 1,
-        minWidth: 100,
-      },
+    const gridOptions: GridOptions = {
       rowData: rowData,
       columnDefs: columnDefs,
-      domLayout: "autoHeight",
-      pagination: true,
-      paginationPageSize: 100,
-      enableCellTextSelection: true,
-      ensureDomOrder: true,
-      suppressContextMenu: true,
-      suppressDragLeaveHidesColumns: true,
-      tooltipShowDelay: 200,
-      loading: true,
     };
+
+    return gridOptions;
   }
 
   isVisible(): boolean {
@@ -344,34 +359,51 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     this._results = queryResult;
     let result = "";
     let gridOptions = undefined;
+
     if (!this._view) {
       kdbOutputLog("[Results Tab] No view to update", "ERROR");
       return;
     }
+
+    this._view.webview.postMessage({ command: "loading" });
+
     if (typeof queryResult === "string" || typeof queryResult === "number") {
-      result =
-        queryResult !== ""
-          ? `<p class="results-txt">${queryResult
-              .toString()
-              .replace(/\n/g, "<br/>")}</p>`
-          : "<p>No results to show</p>";
+      result = this.formatResult(queryResult);
     } else if (queryResult) {
       gridOptions = this.convertToGrid(
         queryResult,
         this.isInsights,
         connVersion,
+        this.isPython,
       );
     }
-    if (gridOptions) {
-      this._view.webview.postMessage({
-        command: "setGridOptions",
-        gridOptions: gridOptions,
-      });
-    } else {
-      this._view.webview.postMessage({
-        command: "setResultsContent",
-        results: result,
-      });
+
+    this.postMessageToWebview(gridOptions, result);
+  }
+
+  private formatResult(queryResult: string | number): string {
+    return queryResult !== ""
+      ? `<p class="results-txt">${queryResult.toString().replace(/\n/g, "<br/>")}</p>`
+      : "<p>No results to show</p>";
+  }
+
+  private postMessageToWebview(
+    gridOptions: GridOptions | undefined,
+    result: string,
+  ) {
+    if (this._view) {
+      if (gridOptions) {
+        this._view.webview.postMessage({
+          command: "setGridDatasource",
+          results: gridOptions.rowData,
+          columnDefs: gridOptions.columnDefs,
+        });
+      } else {
+        this._view.webview.postMessage({
+          command: "setResultsContent",
+          results: result,
+        });
+      }
     }
   }
 
@@ -401,15 +433,32 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
               "ag-grid-community.min.js",
             )}"></script>
           </head>
-          <body>     
+          <body>
             <div id="results" class="results-view-container">
               <div class="content-wrapper"></div>
-            </div>      
+            </div>
+            <div id="overlay" class="overlay">
+            <div class="loading-box">
+              <div class="spinner"></div>
+              <div class="loading-text">Loading data...</div>
+            </div>
+          </div>
             <script type="module" nonce="${nonce}" src="${webviewUri}"></script>
             <div id="grid" style="height: 100%;  width:100%;" class="${agGridTheme}"></div>
-            <script nonce="${nonce}" >          
+            <script nonce="${nonce}" >
               const vscode = acquireVsCodeApi();
+              const gridDiv = document.getElementById('grid');
+              const resultsDiv = document.querySelector('#results .content-wrapper');
+              const overlay = document.getElementById('overlay');
               let gridApi;
+
+              function showOverlay() {
+              overlay.style.display = 'flex';
+            }
+
+            function hideOverlay() {
+              overlay.style.display = 'none';
+            }
 
               function saveColumnWidths() {
                 if (!gridApi) {return null};
@@ -423,29 +472,84 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
               window.addEventListener('message', event => {
                 const message = event.data;
-                if (message.command === 'setGridOptions') {
+                showOverlay();
+
+                const handleSetGridDatasource = () => {
                   const columnWidths = saveColumnWidths();
-                  const gridOptions = message.gridOptions;
-                  const gridDiv = document.getElementById('grid');
-                  const resultsDiv = document.querySelector('#results .content-wrapper');
-                  resultsDiv.innerHTML = ''; 
-                  gridDiv.innerHTML = ''; 
-                  const rowData = gridOptions.rowData;
-                  gridOptions.rowData = [];
+                  const gridOptions = {
+                    defaultColDef: {
+                      sortable: true,
+                      resizable: true,
+                      filter: true,
+                      flex: 1,
+                      minWidth: 100,
+                    },
+                    columnDefs: message.columnDefs,
+                    domLayout: "autoHeight",
+                    pagination: true,
+                    enableCellTextSelection: true,
+                    ensureDomOrder: true,
+                    suppressContextMenu: true,
+                    suppressDragLeaveHidesColumns: true,
+                    tooltipShowDelay: 200,
+                    rowBuffer: 0,
+                    rowModelType: "infinite",
+                    cacheBlockSize: 100,
+                    cacheOverflowSize: 2,
+                    maxConcurrentDatasourceRequests: 1,
+                    infiniteInitialRowCount: 10000,
+                    maxBlocksInCache: 10,
+                    overlayNoRowsTemplate: '<span class="ag-overlay-loading-center">No results to show</span>',
+                    datasource: {
+                      rowCount: undefined,
+                      getRows: function(params) {
+                        showOverlay();
+                        const results = message.results;
+                        setTimeout(() => {
+                          const lastRow = results.length;
+                          if (lastRow === 0) {
+                            gridApi.showNoRowsOverlay();
+                          } else {
+                            gridApi.hideOverlay();
+                          }
+                          const rowsThisPage = results.slice(params.startRow, params.endRow);
+                          params.successCallback(rowsThisPage, lastRow);
+                          hideOverlay();
+                        }, 500);
+                      }
+                    }
+                  };
+                  resultsDiv.innerHTML = '';
+                  gridDiv.innerHTML = '';
                   gridApi = agGrid.createGrid(gridDiv, gridOptions);
                   restoreColumnWidths(columnWidths);
-                  setTimeout(() => {
-                    gridApi.setGridOption("rowData", rowData);
-                    gridApi.setGridOption("loading", false);
-                  }, 500);
                   document.getElementById("results").scrollIntoView();
-                } else if (message.command === 'setResultsContent') {
+                };
+
+                const handleSetResultsContent = () => {
                   const resultsContent = message.results;
-                  const resultsDiv = document.querySelector('#results .content-wrapper');
-                  const gridDiv = document.getElementById('grid');
-                  gridDiv.innerHTML = ''; 
-                  resultsDiv.innerHTML = ''; 
+                  gridDiv.innerHTML = '';
+                  resultsDiv.innerHTML = '';
                   resultsDiv.innerHTML = resultsContent;
+                  hideOverlay();
+                };
+
+                const handleLoading = () => {
+                  gridDiv.innerHTML = '';
+                  resultsDiv.innerHTML = '';
+                };
+
+                switch (message.command) {
+                  case 'setGridDatasource':
+                    handleSetGridDatasource();
+                    break;
+                  case 'setResultsContent':
+                    handleSetResultsContent();
+                    break;
+                  default:
+                  case 'loading':
+                    handleLoading();
+                    break;
                 }
               });
               document.addEventListener('contextmenu', (e) => {

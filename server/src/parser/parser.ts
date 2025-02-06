@@ -86,11 +86,9 @@ function assignment(state: State, token: Token) {
   } else {
     let top = peek(stack);
     if (top?.tokenType === Colon || top?.tokenType === DoubleColon) {
-      token.assignment = [top];
-      stack.pop();
-      if (stack.length > 0) {
-        token.assignment.push(...stack);
-        clear(stack);
+      token.assignment = [];
+      while ((top = stack.pop())) {
+        token.assignment.push(top);
       }
     }
     stack.push(token);

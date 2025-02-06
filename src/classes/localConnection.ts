@@ -172,6 +172,7 @@ export class LocalConnection {
     command: string,
     context?: string,
     stringify?: boolean,
+    isPython?: boolean,
   ): Promise<any> {
     let result;
     await this.waitForConnection();
@@ -179,17 +180,21 @@ export class LocalConnection {
     if (!this.connection) {
       return "timeout";
     }
-    const wrapper = queryWrapper();
-    this.connection.k(
-      wrapper,
-      context ?? ".",
-      command,
-      !!stringify,
-      (err: Error, res: QueryResult) => {
-        if (err) {
-          this.isError = true;
-          result = handleQueryResults(err.toString(), QueryResultType.Error);
-        }
+    const args: any[] = [];
+    const wrapper = queryWrapper(!!isPython);
+
+    if (isPython) {
+      args.push(!!stringify, command);
+    } else {
+      args.push(context ?? ".", command, stringify ? "text" : "structuredText");
+    }
+
+    args.push((err: Error, res: QueryResult) => {
+      if (err) {
+        this.isError = true;
+        result = handleQueryResults(err.toString(), QueryResultType.Error);
+      }
+      if (res) {
         if (res.errored) {
           this.isError = true;
           result = handleQueryResults(
@@ -199,8 +204,10 @@ export class LocalConnection {
         } else {
           result = res.result === null ? "" : res.result;
         }
-      },
-    );
+      }
+    });
+
+    this.connection.k(wrapper, ...args);
 
     while (result === undefined || result === null) {
       await delay(50);
@@ -208,11 +215,16 @@ export class LocalConnection {
 
     this.updateGlobal();
 
+    if (this.isError) {
+      this.isError = false;
+      return result;
+    }
+
+    if (!stringify && !isPython) {
+      return JSON.parse(result);
+    }
+
     if (ext.isResultsTabVisible && stringify) {
-      if (this.isError) {
-        this.isError = false;
-        return result;
-      }
       return convertStringToArray(result ? result : "");
     }
 

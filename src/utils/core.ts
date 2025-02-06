@@ -41,7 +41,7 @@ export async function checkOpenSslInstalled(): Promise<string | null> {
   try {
     const result = await tryExecuteCommand(
       undefined,
-      "openSsl",
+      "openssl",
       log,
       "version",
     );
@@ -313,11 +313,15 @@ export function getServerAlias(serverList: ServerDetails[]): void {
   });
 }
 
-export function kdbOutputLog(message: string, type: string): void {
+export function kdbOutputLog(
+  message: string,
+  type: string,
+  supressDialog?: boolean,
+): void {
   const dateNow = new Date().toLocaleDateString();
   const timeNow = new Date().toLocaleTimeString();
   ext.outputChannel.appendLine(`[${dateNow} ${timeNow}] [${type}] ${message}`);
-  if (type === "ERROR") {
+  if (type === "ERROR" && !supressDialog) {
     window.showErrorMessage(
       `Error occured, check kdb output channel for details.`,
     );
@@ -351,6 +355,12 @@ export function offerConnectAction(connLabel: string): void {
         await commands.executeCommand("kdb.connect.via.dialog", connLabel);
       }
     });
+}
+
+export function noSelectedConnectionAction(): void {
+  window.showInformationMessage(
+    `You didn't selected any existing connection to execute this action, please select a connection and try again.`,
+  );
 }
 
 /* istanbul ignore next */

@@ -36,6 +36,7 @@ import { MetaObjectPayload } from "../../src/models/meta";
 import { html, TemplateResult } from "lit";
 import { ext } from "../../src/extensionVariables";
 import { InsightDetails, ServerType } from "../../src/models/connectionsModels";
+import { KdbChartView } from "../../src/webview/components/kdbChartView";
 
 describe("KdbDataSourceView", () => {
   let view: KdbDataSourceView;
@@ -681,18 +682,19 @@ describe("KdbNewConnectionView", () => {
     });
 
     it("should set isBundledQ to true and return correct HTML when connType is 0", () => {
-      view.connectionData = { connType: 0, serverName: "testServer" };
+      view.connectionData = { connType: 0, serverName: "local" };
 
       const result = view.renderEditConnectionForm();
       assert.strictEqual(view.isBundledQ, true);
-      assert.strictEqual(view.oldAlias, "testServer");
+      assert.strictEqual(view.oldAlias, "local");
       assert.strictEqual(view.serverType, ServerType.KDB);
       assert.strictEqual(result.values[1].includes("Bundled q"), true);
     });
 
-    it("should set isBundledQ to false and return correct HTML when connType is 1", () => {
+    it("should set MyQ to false and return correct HTML when connType is 1  and render is filled", () => {
       view.connectionData = { connType: 1, serverName: "testServer" };
-
+      view.oldAlias = "testServer";
+      view.renderId = "test";
       const result = view.renderEditConnectionForm();
 
       assert.strictEqual(view.isBundledQ, false);
@@ -701,8 +703,35 @@ describe("KdbNewConnectionView", () => {
       assert.strictEqual(result.values[1].includes("My q"), true);
     });
 
+    it("should set MyQ to false and return correct HTML when connType is 1", () => {
+      view.connectionData = { connType: 1, serverName: "testServer" };
+      view.oldAlias = "";
+      view.renderId = "";
+      const result = view.renderEditConnectionForm();
+
+      assert.strictEqual(view.isBundledQ, false);
+      assert.strictEqual(view.oldAlias, "testServer");
+      assert.strictEqual(view.serverType, ServerType.KDB);
+      assert.strictEqual(result.values[1].includes("My q"), true);
+    });
+
+    it("should set serverType to INSIGHTS and return correct HTML when connType is 2 and render is filled", () => {
+      view.connectionData = { connType: 2, serverName: "testServer" };
+      view.oldAlias = "testServer";
+      view.renderId = "test";
+
+      const result = view.renderEditConnectionForm();
+
+      assert.strictEqual(view.isBundledQ, false);
+      assert.strictEqual(view.oldAlias, "testServer");
+      assert.strictEqual(view.serverType, ServerType.INSIGHTS);
+      assert.strictEqual(result.values[1].includes("Insights"), true);
+    });
+
     it("should set serverType to INSIGHTS and return correct HTML when connType is 2", () => {
       view.connectionData = { connType: 2, serverName: "testServer" };
+      view.oldAlias = "";
+      view.renderId = "";
 
       const result = view.renderEditConnectionForm();
 
@@ -967,4 +996,44 @@ describe("KdbNewConnectionView", () => {
   });
 
   describe("createLabel", () => {});
+});
+
+describe("kdbChartView.ts", () => {
+  let view: KdbChartView;
+
+  beforeEach(async () => {
+    view = new KdbChartView();
+  });
+
+  afterEach(() => {
+    sinon.restore();
+  });
+
+  describe("connectedCallback", () => {
+    it("should add an event listener", () => {
+      let result = undefined;
+      sinon.stub(window, "addEventListener").value(() => (result = true));
+      view.connectedCallback();
+      assert.ok(result);
+    });
+  });
+
+  describe("disconnectedCallback", () => {
+    it("should remove an event listener", () => {
+      let result = undefined;
+      sinon.stub(window, "removeEventListener").value(() => (result = true));
+      view.disconnectedCallback();
+      assert.ok(result);
+    });
+  });
+
+  it("should update from message", () => {
+    const data = { charts: [{ data: "test" }] };
+    view.message(<MessageEvent>{
+      data: JSON.stringify(data),
+    });
+    assert.deepStrictEqual(view.plot, data);
+    const result = view.render();
+    assert.ok(result);
+  });
 });

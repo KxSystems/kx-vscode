@@ -21,6 +21,7 @@ This guide provides information on the following:
 - [Workbooks](#workbooks)
 - [Query History](#query-history)
 - [Viewing results](#view-results)
+- [AxLibraries](#axlibraries)
 - [q REPL](#q-repl)
 - [Settings](#settings)
 - [Shortcuts](#shortcuts)
@@ -128,8 +129,6 @@ To add connections:
    - [My q](#my-q): This is an unmanaged q session and is a connection to a remote q process.
    - [Insights](#insights-connection): This accesses **kdb Insights Enterprise** API endpoints and a user-specific scratchpad process within a **kdb Insights Enterprise** deployment.
 
-   ![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/bundleqform.png?raw=true)
-
 1. Set the properties appropriate to the connection type as described in the following sections.
 
 ### Bundled q
@@ -142,6 +141,8 @@ When you select **Bundled q** as the connection type and set the following prope
 | The connection address | This is already be set as `127.0.0.1` which corresponds to your **localhost**.                                                                                                                     |
 | Port                   | Set the port for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. 5002. [Read here for more about setting a q port](https://code.kx.com/q/basics/ipc/) |
 | Label Name             | Select the label you want to assign the connection to                                                                                                                                              |
+
+![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/bundleq.png?raw=true)
 
 1. Click **Create Connection** and the connection appears under **CONNECTIONS** in the primary sidebar..
 
@@ -437,6 +438,11 @@ For any file with a **.q** or **.py** extension there are additional options ava
 
 - **Run q file in new q instance** - If q is installed and executable from the terminal you can execute an entire q script on a newly launched q instance. Executing a file on a new instance is done in the terminal, and allows interrogation of the active q process from the terminal window.
 
+When executing Python code against kdb+ connections, **note** the following:
+
+- A Python variable is defined in the remote process `_kx_execution_context`, which means you need to explicitly accept it to avoid implicit changes to the remote process. It doesn’t make any other change to the remote process.
+- To write and execute Python code against kdb+ connections, make sure that `pykx` is loaded into the q process. If `.pykx` is undefined, it returns the following error: `.pykx is not defined: please load pykx`. PyKX is a Python-first interface to kdb+ and q. It helps users query and analyze huge amounts of in-memory and on-disk time-series data, significantly faster than other libraries. For more information on getting started with pykx, refer to the [pykx quickstart](https://code.kx.com/pykx/3.0/getting-started/quickstart.html).
+
 ### Insights query execution
 
 **kdb Insights Enterprise** offers enhanced connectivity and enterprise level API endpoints, providing additional means to query data and interact with **kdb Insights Enterprise** that are not available with standard kdb processes. You must have an instance of **kdb Insights Enterprise** running, and have created a [connection](#connections) within the **kdb VS Code extension**.
@@ -592,6 +598,38 @@ All query executions happen remotely from the **kdb VS Code extension** either a
 - **KDB Results** - This window displays the kdb returned data in a table.
 
   ![kdb results view](https://github.com/KxSystems/kx-vscode/blob/main/img/kdbview-results.png?raw=true)
+
+## AxLibraries
+
+The following features of [AxLibraries](https://code.kx.com/developer/libraries/) are integrated and can be used within the extension:
+
+- [Grammar of Graphics](#grammar-of-graphics)
+- q static linter
+
+**Note:** To use those features, you should install AxLibraries following the [installation instructions.](https://code.kx.com/developer/libraries/#installation)
+
+### Grammar of Graphics
+
+Grammar of Graphics (GG) is a scripted visualization library for kdb+.
+
+GGPlot2 in VSCode allows you to create detailed and informative visualizations, helping you understand the underlying patterns and trends in your data more clearly without having to switch to RStudio. For more information refer to the [GGPlot documentation](https://code.kx.com/developer/ggplot/).
+
+To use GGPlot2 in VSCode:
+
+- Create a `my q` connection to the port to load the library.
+
+- Write a script to query and load data. Make sure to clean and prepare the data for visualization, ensuring it is in a format suitable for analysis.
+
+- Use GGPlot2 to create visualizations, such as a bar plot showing the total transaction amount by month.
+
+- Run the script within VSCode. The chart is generated and displayed in the VSCode plot viewer, and you can save the plot.
+  **Note**: When executing GG scripts, calling `.qp.display2` displays the plot locally.
+
+![gg-plot](https://github.com/KxSystems/kx-vscode/blob/main/img/gg-plot.png?raw=true)
+
+You can make changes to the script before exporting the plot. Re-running the script updates to reflect the changes.
+
+**Note**: When executing GG script commands, select the `KDB RESULTS` tab to display the plot.
 
 ## q REPL
 

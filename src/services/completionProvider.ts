@@ -1797,4 +1797,31 @@ const qLangParserItems: CompletionItem[] = [
       "Zip defaults - If defined, is an integer list of default parameters for logical block size, compression algorithm and compression level that apply when saving to files with no file extension.",
     documentation: ".z.zd:100 1 9",
   },
+  {
+    label: ".com_kx_edi.getMeta",
+    detail: "This function returns the metadata of the databases.",
+    documentation: ".com_kx_edi.getMeta[]",
+  },
+  {
+    label: ".com_kx_edi.sql",
+    detail: "This function runs an SQL query.",
+    documentation: ".com_kx_edi.sql[query]",
+  },
+  {
+    label: ".com_kx_edi.qsql",
+    detail:
+      "This is a QSQL query builder that assembles QSQL queries based on a q expression.",
+    documentation: ".com_kx_edi.qsql[args]",
+  },
+  {
+    label: ".com_kx_edi.queryBuilder",
+    detail:
+      "The queryBuilder function uses the GetData API to construct queries.",
+    documentation: ".com_kx_edi.queryBuilder[args]",
+  },
+  {
+    label: ".com_kx_edi.uda",
+    detail: "Use this function to query a UDA.",
+    documentation: ".com_kx_edi.uda[args;name]",
+  },
 ];

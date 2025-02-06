@@ -22,6 +22,7 @@ import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { QueryHistory } from "../models/queryHistory";
 import { kdbOutputLog } from "./core";
 import { ServerType } from "../models/connectionsModels";
+import { ScratchpadStacktrace } from "../models/scratchpadResult";
 
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {
@@ -32,9 +33,11 @@ export function sanitizeQuery(query: string): string {
   return query;
 }
 
-export function queryWrapper(): string {
+export function queryWrapper(isPython: boolean): string {
+  const filename = isPython ? "evaluatePy.q" : "evaluate.q";
+
   return readFileSync(
-    ext.context.asAbsolutePath(join("resources", "evaluate.q")),
+    ext.context.asAbsolutePath(join("resources", filename)),
   ).toString();
 }
 
@@ -91,7 +94,7 @@ export function handleWSError(ab: ArrayBuffer): any {
     }
   }
 
-  kdbOutputLog(`Error : ${errorString}`, "ERROR");
+  kdbOutputLog(`Error : ${errorString}`, "ERROR", true);
 
   return { error: errorString };
 }
@@ -359,4 +362,54 @@ export function addQueryHistory(
   ext.kdbQueryHistoryList.unshift(newQueryHistory);
 
   ext.queryHistoryProvider.refresh();
+}
+
+export function formatScratchpadStacktrace(stacktrace: ScratchpadStacktrace) {
+  return stacktrace
+    .map((frame, i) => {
+      let lines = frame.text[0].split("\n");
+      let preline = "";
+      // We need to account for the possibility that the error
+      // occurs in a piece of code containing newlines, so we split
+      // up the text into lines and inject the caret into the correct
+      // location.
+      preline = lines.pop() as string;
+      const caretline = Array(preline.length).fill(" ").join("") + "^";
+      const postlines = (preline + frame.text[1]).split("\n");
+      postlines.splice(1, 0, caretline);
+      lines = lines.concat(postlines);
+
+      // main line of trace
+      let str = "[" + (stacktrace.length - 1 - i) + "] " + frame.name;
+
+      // add indicator for nested anonymous functions
+      if (frame.isNested) {
+        str += " @ ";
+      }
+
+      // add gutter to align other lines with the first one
+      const gutter = " ".repeat(str.length);
+      str += lines.map((l, i) => (i > 0 ? gutter + l : l)).join("\n");
+
+      return str;
+    })
+    .join("\n");
+}
+
+const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
+
+export function resultToBase64(result: any): string | undefined {
+  const bytes =
+    (Array.isArray(result?.columns) && result.columns[0]?.values) ||
+    result?.columns?.values ||
+    result;
+  if (Array.isArray(bytes) && bytes.length > 66) {
+    for (let i = 0; i < PNG.length; i++) {
+      if (parseInt(`${bytes[i]}`) !== PNG[i]) {
+        return undefined;
+      }
+    }
+    return `data:image/png;base64,${Buffer.from(bytes).toString("base64")}`;
+  }
+  return undefined;
 }

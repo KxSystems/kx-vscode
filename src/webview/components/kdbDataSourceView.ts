@@ -42,7 +42,7 @@ export class KdbDataSourceView extends LitElement {
   static styles = [shoelaceStyles, dataSourceStyles];
 
   readonly vscode = acquireVsCodeApi();
-  private declare debounce;
+  declare private debounce;
 
   isInsights = false;
   isMetaLoaded = false;
@@ -318,7 +318,9 @@ export class KdbDataSourceView extends LitElement {
         if (!this.qsqlTarget) {
           this.qsqlTarget = value;
         }
-        return html`<sl-option value="${value}">${value}</sl-option>`;
+        return html`<sl-option value="${encodeURIComponent(value)}"
+          >${value}</sl-option
+        >`;
       });
     }
     return [];
@@ -816,12 +818,16 @@ export class KdbDataSourceView extends LitElement {
       <div class="col">
         <sl-select
           label="Target"
-          .value="${live(this.qsqlTarget)}"
+          .value="${live(encodeURIComponent(this.qsqlTarget))}"
           @sl-change="${(event: Event) => {
-            this.qsqlTarget = (event.target as HTMLSelectElement).value;
+            this.qsqlTarget = decodeURIComponent(
+              (event.target as HTMLSelectElement).value,
+            );
             this.requestChange();
           }}">
-          <sl-option .value="${live(this.qsqlTarget)}" .selected="${live(true)}"
+          <sl-option
+            .value="${live(encodeURIComponent(this.qsqlTarget))}"
+            .selected="${live(true)}"
             >${this.qsqlTarget || "(none)"}</sl-option
           >
           <small
@@ -908,17 +914,25 @@ export class KdbDataSourceView extends LitElement {
   }
 
   renderActions() {
+    const selectedServerExists = this.servers.includes(this.selectedServer);
+    if (!selectedServerExists) {
+      this.selectedServer = "";
+    }
     return html`
       <sl-select
         label="Connection"
         .value="${live(this.selectedServer)}"
         @sl-change="${this.requestServerChange}"
         ?disabled="${this.running}">
-        <sl-option
-          .value="${live(this.selectedServer)}"
-          .selected="${live(true)}"
-          >${this.selectedServer || "(none)"}</sl-option
-        >
+        ${!selectedServerExists
+          ? html`<sl-option .value="${live("")}" .selected="${live(true)}"
+              >(none)</sl-option
+            >`
+          : html`<sl-option
+              .value="${live(this.selectedServer)}"
+              .selected="${live(true)}"
+              >${this.selectedServer}</sl-option
+            >`}
         <small>Connections</small>
         ${this.servers.map(
           (server) => html`
