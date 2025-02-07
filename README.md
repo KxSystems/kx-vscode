@@ -526,7 +526,13 @@ User-Defined Analytics (UDAs), also known as custom APIs, are essential for deve
 
 You can trigger UDAs from the query interface without rewriting them. The platform allows you to easily add custom features and external services to your apps by calling UDAs directly from the SP Pipeline builder, Scratchpad Web Interface, Dashboard, and Query Tab. 
 
-### Populate scratchpad
+### Run and populate scratchpad
+
+Running and populating scratchpad are two actions that perform the same job but the output gets to a different place.
+
+When you click **Run Scratchpad** in the Web Interface, it adds the data to the scratchpad process in the kdb Insights deployment and is not downloaded to your local machine.
+
+#### Populate scratchpad
 
 You can use a data source to populate a scratchpad process running in a **kdb Insights Enterprise** instance with a dataset. This allows you to then execute q or python code against the data stored in that variable in the scratchpad. This facilitates the generation of complex APIs and pipelines within VS Code and kdb Insights Enterprise.
 
