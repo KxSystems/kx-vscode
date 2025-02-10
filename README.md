@@ -528,9 +528,13 @@ You can trigger UDAs from the query interface without rewriting them. The platfo
 
 ### Run and populate scratchpad
 
-Running and populating scratchpad are two actions that perform the same job but the output gets to a different place.
+Running and populating scratchpad are two actions used to execute q code, allowing you to run queries and perform operations on your kdb Insights Enterprise database but they differ in how and where the output is stored and accessed.
 
-When you click **Run Scratchpad** in the Web Interface, it adds the data to the scratchpad process in the kdb Insights deployment and is not downloaded to your local machine.
+When you click **Run**, the q code is executed directly and immediately. This action loads all the fields with any data directly in the q process. The results of the executed code are added to the scratchpad process within the kdb Insights deployment. This means the data is processed and stored in the scratchpad environment on the server. The data is not downloaded to your local machine. Instead, it remains within the scratchpad process on the server, ensuring that the local environment is not burdened with large data transfers.
+
+The **Populate Scratchpad** option is used to execute q code and store the results in a specified output variable. When you use **populate**, you need to specify an output variable name. The command executes the queries and stores the results in the q process. This command is useful for loading data into a q process and reusing it multiple times without re-executing the queries each time.
+
+For more details on populating scratchpad, refer to the [populate scratchpad](#populate-scratchpad) section below.
 
 #### Populate scratchpad
 
