@@ -490,7 +490,53 @@ To create a data source and run it against a specific connection:
 
 In addition to [API queries](https://code.kx.com/insights/api/database/query/get-data.html), if the query environment is enabled on the deployed instance of **kdb Insights Enterprise**, qSQL and SQL queries can be used within a data source with the appropriate parameterization. If qSQL or SQL is required and issues occur trying to run these queries contact a kdb Insights Enterprise administrator for assistance.
 
-### Populate scratchpad
+### API queries
+
+The getData API is a generic data retrieval API that can be executed against an arbitrary database table. It is intended to run on a Data Access Process and retrieve records from a configured database table using a specified dictionary of parameters.
+
+Refer to the [`getData` API](https://code.kx.com/insights/api/database/query/get-data.html) documentation for more information.
+
+### QSQL queries
+
+The `.com_kx_edi.qsql` API is a QSQL query builder that assembles QSQL queries based on a q expression. It is intended ro run on a data process and execute the command sent in from the client.
+
+This function runs an QSQL query.
+
+```
+.com_kx_edi.qsql[args]
+```
+
+Refer to the [QSQL documentation](https://code.kx.com/insights/api/database/query/qsql.html) for more details.
+
+### SQL queries
+
+The `.com_kx_edi.sql` SQL API allows queries to be distributed/aggregated across multiple DAPs.
+
+This function runs an SQL query.
+
+```
+.com_kx_edi.sql[query]
+```
+
+Refer to the [SQL documentation](https://code.kx.com/insights/api/database/query/sql.html) for more details.
+
+### UDA queries
+
+User-Defined Analytics (UDAs), also known as custom APIs, are essential for developers to leverage the capabilities of kdb when building Insights Enterprise. These UDAs are deployed and executed on DAPs and AGGs.
+
+You can trigger UDAs from the query interface without rewriting them. The platform allows you to easily add custom features and external services to your apps by calling UDAs directly from the SP Pipeline builder, Scratchpad Web Interface, Dashboard, and Query Tab. 
+
+### Run and populate scratchpad
+
+Running and populating scratchpad are two actions used to execute q code, allowing you to run queries and perform operations on your kdb Insights Enterprise database but they differ in how and where the output is stored and accessed.
+
+When you click **Run**, the q code is executed directly and immediately. This action loads all the fields with any data directly in the q process. The results of the executed code are added to the scratchpad process within the kdb Insights deployment. This means the data is processed and stored in the scratchpad environment on the server. The data is not downloaded to your local machine. Instead, it remains within the scratchpad process on the server, ensuring that the local environment is not burdened with large data transfers.
+
+The **Populate Scratchpad** option is used to execute q code and store the results in a specified output variable. When you use **populate**, you need to specify an output variable name. The command executes the queries and stores the results in the q process. This command is useful for loading data into a q process and reusing it multiple times without re-executing the queries each time.
+
+For more details on populating scratchpad, refer to the [populate scratchpad](#populate-scratchpad) section below.
+
+#### Populate scratchpad
 
 You can use a data source to populate a scratchpad process running in a **kdb Insights Enterprise** instance with a dataset. This allows you to then execute q or python code against the data stored in that variable in the scratchpad. This facilitates the generation of complex APIs and pipelines within VS Code and kdb Insights Enterprise.
 
