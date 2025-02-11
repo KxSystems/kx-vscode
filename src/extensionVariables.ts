@@ -92,6 +92,11 @@ export namespace ext {
   export const labelConnMapList: ConnectionLabel[] = [];
   export const latestLblsChanged: string[] = [];
   export const maxRetryCount = 5;
+  export const booleanTypes = new Set([-1]);
+  export const numberTypes = new Set([-4, -5, -6, -7, -8, -9]);
+  export const textTypes = new Set([-10, -11, 10]);
+  export const timestampTypes = new Set([-12]);
+  export const dictionaryTypes = new Set([99]);
 
   export let secretSettings: AuthSettings;
 
@@ -236,6 +241,50 @@ export namespace ext {
       "t",
       "s",
     ],
+    dataTypes: new Map(
+      Object.entries({
+        "-1": "Boolean",
+        "-2": "Symbol",
+        "-4": "Byte",
+        "-5": "Short",
+        "-6": "Int",
+        "-7": "Long",
+        "-8": "Float",
+        "-9": "Double",
+        "-10": "Char",
+        "-11": "Symbol",
+        "-12": "Timestamp",
+        "-13": "Month",
+        "-14": "Date",
+        "-15": "DateTime",
+        "-16": "Timespan",
+        "-17": "Minute",
+        "-18": "Second",
+        "-19": "Time",
+        "0": "List",
+        "1": "Boolean List",
+        "2": "Symbol List",
+        "4": "Byte List",
+        "5": "Short List",
+        "6": "Int List",
+        "7": "Long List",
+        "8": "Float List",
+        "9": "Double List",
+        "10": "Char List",
+        "11": "Symbol List",
+        "12": "Timestamp List",
+        "13": "Month List",
+        "14": "Date List",
+        "15": "DateTime List",
+        "16": "Timespan List",
+        "17": "Minute List",
+        "18": "Second List",
+        "19": "Time List",
+        "98": "Table",
+        "99": "Dictionary",
+        "101": "Unary",
+      }),
+    ),
     listSeparator: [
       ";",
       "",
