@@ -68,6 +68,7 @@ export class KdbDataSourceView extends LitElement {
   qsqlTarget = "";
   qsql = "";
   sql = "";
+  selectedUda = "";
   running = false;
   servers: string[] = [];
   selectedServer = "";
@@ -106,9 +107,6 @@ export class KdbDataSourceView extends LitElement {
         : "100000";
       this.isRowLimitLast = ds.dataSource.api.isRowLimitLast !== false;
       this.temporality = ds.dataSource.api.temporality;
-      this.qsqlTarget = ds.dataSource.qsql.selectedTarget;
-      this.qsql = ds.dataSource.qsql.query;
-      this.sql = ds.dataSource.sql.query;
       const optional = ds.dataSource.api.optional;
       if (optional) {
         this.filled = optional.filled;
@@ -120,6 +118,11 @@ export class KdbDataSourceView extends LitElement {
         this.groups = optional.groups;
         this.rowLimit = optional.rowLimit ? optional.rowLimit : false;
       }
+      this.qsqlTarget = ds.dataSource.qsql.selectedTarget;
+      this.qsql = ds.dataSource.qsql.query;
+      this.sql = ds.dataSource.sql.query;
+      // for the UDAs, it will optional for this moment
+      this.selectedUda = ds.dataSource.uda?.selectedUda || "";
       this.requestUpdate();
     }
   };
@@ -162,6 +165,9 @@ export class KdbDataSourceView extends LitElement {
         },
         sql: {
           query: this.sql,
+        },
+        uda: {
+          selectedUda: this.selectedUda,
         },
       },
     };
@@ -268,7 +274,9 @@ export class KdbDataSourceView extends LitElement {
     if (this.isInsights && this.isMetaLoaded) {
       return this.insightsMeta.api
         .filter(
-          (api) => api.api === ".kxi.getData" || !api.api.startsWith(".kxi."),
+          (api) =>
+            (api.api === ".kxi.getData" || !api.api.startsWith(".kxi.")) &&
+            api.custom === false,
         )
         .map((api) => {
           const value =
@@ -322,6 +330,30 @@ export class KdbDataSourceView extends LitElement {
           >${value}</sl-option
         >`;
       });
+    }
+    return [];
+  }
+
+  renderUDAOptions() {
+    if (this.isInsights && this.isMetaLoaded) {
+      const udaOptions = this.insightsMeta.api
+        .filter((api) => api.custom === true)
+        .map((api) => {
+          const value =
+            api.api === ".kxi.getData" ? api.api.replace(".kxi.", "") : api.api;
+          return html`
+            <sl-option value="${value}">${value} </sl-option>
+            <small>${api.metadata.description}</small>
+          `;
+        });
+      if (udaOptions.length === 0) {
+        udaOptions.push(
+          html`<sl-option value="" disabled
+            >No deployed UDAs available</sl-option
+          >`,
+        );
+      }
+      return udaOptions;
     }
     return [];
   }
@@ -861,6 +893,32 @@ export class KdbDataSourceView extends LitElement {
     `;
   }
 
+  renderUDA() {
+    return html`
+      <div class="col">
+        <sl-select
+          label="User Defined Analytic (UDA)"
+          .value="${live(encodeURIComponent(this.selectedUda))}"
+          style="max-width: 100%"
+          search
+          @sl-change="${(event: Event) => {
+            this.selectedUda = decodeURIComponent(
+              (event.target as HTMLSelectElement).value,
+            );
+            this.requestChange();
+          }}">
+          <sl-option
+            .value="${live(encodeURIComponent(this.selectedUda))}"
+            .selected="${live(true)}"
+            >${this.selectedUda || "Select a UDA..."}</sl-option
+          >
+          <small>${this.isMetaLoaded ? "Meta UDAs" : "Meta Not Loaded"}</small>
+          ${this.renderUDAOptions()}
+        </sl-select>
+      </div>
+    `;
+  }
+
   renderTabGroup() {
     return html`
       <sl-tab-group>
@@ -894,6 +952,16 @@ export class KdbDataSourceView extends LitElement {
           }}"
           >SQL</sl-tab
         >
+        <sl-tab
+          slot="nav"
+          panel="${DataSourceTypes.UDA}"
+          ?active="${live(this.selectedType === DataSourceTypes.UDA)}"
+          @click="${() => {
+            this.selectedType = DataSourceTypes.UDA;
+            this.requestChange();
+          }}"
+          >UDA</sl-tab
+        >
         <sl-tab-panel
           name="${DataSourceTypes.API}"
           ?active="${live(this.selectedType === DataSourceTypes.API)}"
@@ -908,6 +976,11 @@ export class KdbDataSourceView extends LitElement {
           name="${DataSourceTypes.SQL}"
           ?active="${live(this.selectedType === DataSourceTypes.SQL)}"
           >${this.renderSQL()}</sl-tab-panel
+        >
+        <sl-tab-panel
+          name="${DataSourceTypes.UDA}"
+          ?active="${live(this.selectedType === DataSourceTypes.UDA)}"
+          >${this.renderUDA()}</sl-tab-panel
         >
       </sl-tab-group>
     `;
