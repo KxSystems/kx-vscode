@@ -60,6 +60,7 @@ export interface DataSourceFiles {
     };
     uda?: {
       selectedUda: string;
+      udaParams: any[];
     };
   };
 }
