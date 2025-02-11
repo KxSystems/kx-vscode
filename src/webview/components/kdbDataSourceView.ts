@@ -334,30 +334,6 @@ export class KdbDataSourceView extends LitElement {
     return [];
   }
 
-  renderUDAOptions() {
-    if (this.isInsights && this.isMetaLoaded) {
-      const udaOptions = this.insightsMeta.api
-        .filter((api) => api.custom === true)
-        .map((api) => {
-          const value =
-            api.api === ".kxi.getData" ? api.api.replace(".kxi.", "") : api.api;
-          return html`
-            <sl-option value="${value}">${value} </sl-option>
-            <small>${api.metadata.description}</small>
-          `;
-        });
-      if (udaOptions.length === 0) {
-        udaOptions.push(
-          html`<sl-option value="" disabled
-            >No deployed UDAs available</sl-option
-          >`,
-        );
-      }
-      return udaOptions;
-    }
-    return [];
-  }
-
   renderFilter(filter: Filter) {
     return html`
       <div class="row align-bottom">
@@ -905,7 +881,7 @@ export class KdbDataSourceView extends LitElement {
             this.selectedUda = decodeURIComponent(
               (event.target as HTMLSelectElement).value,
             );
-            this.requestChange();
+            this.selectUDA();
           }}">
           <sl-option
             .value="${live(encodeURIComponent(this.selectedUda))}"
@@ -917,6 +893,37 @@ export class KdbDataSourceView extends LitElement {
         </sl-select>
       </div>
     `;
+  }
+
+  renderUDAOptions() {
+    if (this.isInsights && this.isMetaLoaded) {
+      const udaOptions = this.insightsMeta.api
+        .filter((api) => api.custom === true)
+        .map((api) => {
+          const value =
+            api.api === ".kxi.getData" ? api.api.replace(".kxi.", "") : api.api;
+          return html`
+            <sl-option value="${value}">${value} </sl-option>
+            <small>${api.metadata.description}</small>
+          `;
+        });
+      if (udaOptions.length === 0) {
+        udaOptions.push(
+          html`<sl-option value="" disabled
+            >No deployed UDAs available</sl-option
+          >`,
+        );
+      }
+      return udaOptions;
+    }
+    return [];
+  }
+
+  selectUDA() {
+    if (this.selectedUda === "") {
+      return;
+    }
+    this.requestChange();
   }
 
   renderTabGroup() {
