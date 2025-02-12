@@ -492,13 +492,13 @@ In addition to [API queries](https://code.kx.com/insights/api/database/query/get
 
 ### API queries
 
-The getData API is a generic data retrieval API that can be executed against an arbitrary database table. It is intended to run on a Data Access Process and retrieve records from a configured database table using a specified dictionary of parameters.
+The getData API provides a method of querying a table using a defined set of parameters. These parameters can be configured through the getData form available in the VSCode extension.
 
-Refer to the [`getData` API](https://code.kx.com/insights/api/database/query/get-data.html) documentation for more information.
+Refer to the [`getData` API](https://code.kx.com/insights/api/database/query/get-data.html) documentation for more information and a full list of available parameters.
 
 ### QSQL queries
 
-The `.com_kx_edi.qsql` API is a QSQL query builder that assembles QSQL queries based on a q expression. It is intended ro run on a data process and execute the command sent in from the client.
+The `.com_kx_edi.qsql` API is a QSQL query builder that assembles QSQL queries based on a q expression. It is a developer tool that allows running freeform q code against a specific database tier. 
 
 This function runs an QSQL query.
 
@@ -506,11 +506,13 @@ This function runs an QSQL query.
 .com_kx_edi.qsql[args]
 ```
 
+**Note**: Along with the query itself, you must also specify the target database and tier.
+
 Refer to the [QSQL documentation](https://code.kx.com/insights/api/database/query/qsql.html) for more details.
 
 ### SQL queries
 
-The `.com_kx_edi.sql` SQL API allows queries to be distributed/aggregated across multiple DAPs.
+The `.com_kx_edi.sql` SQL API allows running freeform SQL queries. Each query is distributed across all available databases. The results are then aggregated and returned as a single dataset.
 
 This function runs an SQL query.
 
@@ -522,17 +524,22 @@ Refer to the [SQL documentation](https://code.kx.com/insights/api/database/query
 
 ### UDA queries
 
-User-Defined Analytics (UDAs), also known as custom APIs, are essential for developers to leverage the capabilities of kdb when building Insights Enterprise. These UDAs are deployed and executed on DAPs and AGGs.
+User-Defined Analytics (UDAs), also known as custom APIs, are essential for developers to leverage the capabilities of kdb when building Insights Enterprise. These UDAs are deployed to Insights through the Data Access Processes (DAPs) and Aggregators (Aggs).
 
-You can trigger UDAs from the query interface without rewriting them. The platform allows you to easily add custom features and external services to your apps by calling UDAs directly from the SP Pipeline builder, Scratchpad Web Interface, Dashboard, and Query Tab. 
+UDAs can be called directly within the VSCode extension through the UDA tab in a data source. This provides a form-based approach to populating the UDA parameters. UDAs can also be called within the Insights Enterprise web interface using Pipelines, Queries, and Views. 
 
 ### Run and populate scratchpad
 
 Running and populating scratchpad are two actions used to execute q code, allowing you to run queries and perform operations on your kdb Insights Enterprise database but they differ in how and where the output is stored and accessed.
 
-When you click **Run**, the q code is executed directly and immediately. This action loads all the fields with any data directly in the q process. The results of the executed code are added to the scratchpad process within the kdb Insights deployment. This means the data is processed and stored in the scratchpad environment on the server. The data is not downloaded to your local machine. Instead, it remains within the scratchpad process on the server, ensuring that the local environment is not burdened with large data transfers.
+The [QSQL API](#qsql-queries) is designed to run queries against a specific Insights database and tier. However, sometimes you might need to run more flexible or freeform queries against a wider set of data. For this purpose each Insights Enterprise user is assigned a 'scratchpad' q process. This scratchpad is separate from the dedicated query processes, allowing you to run freeform code without impacting the overall system.
 
-The **Populate Scratchpad** option is used to execute q code and store the results in a specified output variable. When you use **populate**, you need to specify an output variable name. The command executes the queries and stores the results in the q process. This command is useful for loading data into a q process and reusing it multiple times without re-executing the queries each time.
+You can populate variables in your scratchpad with the results from your queries, and then perform freeform manipulations on those variables.
+
+After you configure a data source in the VSCode extension you have two options for executing it:
+
+- **Run** executes your query directly against the relevant API (getData, QSQL, SQL, or UDA) and displays the results in the extension
+- **Populate Scratchpad** executes your query through the scratchpad, which passes it to the relevant API, assigns the results to a variable of your choosing in your scratchpad process and then displays them in the VSCode extension
 
 For more details on populating scratchpad, refer to the [populate scratchpad](#populate-scratchpad) section below.
 
