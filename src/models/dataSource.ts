@@ -11,6 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { UDA, UDAParam } from "./uda";
+
 export enum DataSourceTypes {
   API = "API",
   QSQL = "QSQL",
@@ -58,10 +60,7 @@ export interface DataSourceFiles {
     sql: {
       query: string;
     };
-    uda?: {
-      selectedUda: string;
-      udaParams: any[];
-    };
+    uda?: UDA;
   };
 }
 

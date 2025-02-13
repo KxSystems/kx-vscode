@@ -12,7 +12,13 @@
  */
 
 import { ext } from "../extensionVariables";
-import { ParamFieldType, UDAParam } from "../models/uda";
+import { MetaObjectPayload } from "../models/meta";
+import {
+  InvalidParamFieldErrors,
+  ParamFieldType,
+  UDA,
+  UDAParam,
+} from "../models/uda";
 
 export function filterUDAParamsValidTypes(type: number | number[]): number[] {
   const validTypes = new Set([
@@ -20,7 +26,7 @@ export function filterUDAParamsValidTypes(type: number | number[]): number[] {
     ...ext.numberTypes,
     ...ext.textTypes,
     ...ext.timestampTypes,
-    ...ext.dictionaryTypes,
+    ...ext.jsonTypes,
   ]);
 
   const typesArray = Array.isArray(type) ? type : [type];
@@ -53,7 +59,7 @@ export function getUDAFieldType(type: number | number[]): ParamFieldType {
     ParamFieldType.Number,
     ParamFieldType.Boolean,
     ParamFieldType.Timestamp,
-    ParamFieldType.Dictionary,
+    ParamFieldType.JSON,
   ];
 
   for (const fieldType of typePriority) {
@@ -62,7 +68,7 @@ export function getUDAFieldType(type: number | number[]): ParamFieldType {
     }
   }
 
-  return ParamFieldType.Invalid;
+  return typeSet.size > 1 ? ParamFieldType.MultiType : ParamFieldType.Invalid;
 }
 
 export function parseUDAParamTypes(type: number): ParamFieldType {
@@ -79,8 +85,8 @@ export function parseUDAParamTypes(type: number): ParamFieldType {
     ...Array.from(ext.timestampTypes).map(
       (t) => [t, ParamFieldType.Timestamp] as [number, ParamFieldType],
     ),
-    ...Array.from(ext.dictionaryTypes).map(
-      (t) => [t, ParamFieldType.Dictionary] as [number, ParamFieldType],
+    ...Array.from(ext.jsonTypes).map(
+      (t) => [t, ParamFieldType.JSON] as [number, ParamFieldType],
     ),
   ]);
 
@@ -97,7 +103,7 @@ export function parseUDAParams(
   const parsedParams: UDAParam[] = [];
   let hasInvalidRequiredParam = false;
 
-  for (const param of params) {
+  params.forEach((param) => {
     const validTypes = filterUDAParamsValidTypes(param.type);
     const fieldType = validTypes.length
       ? getUDAFieldType(validTypes)
@@ -112,7 +118,35 @@ export function parseUDAParams(
       type: validTypes,
       fieldType,
     });
-  }
+  });
 
   return hasInvalidRequiredParam ? ParamFieldType.Invalid : parsedParams;
+}
+
+export function parseUDAList(getMeta: MetaObjectPayload): UDA[] {
+  const UDAs: UDA[] = [];
+  if (getMeta.api !== undefined) {
+    const getMetaUDAs = getMeta.api.filter((api) => api.custom === true);
+    if (getMetaUDAs.length !== 0) {
+      for (const uda of getMetaUDAs) {
+        const parsedParams = parseUDAParams(uda.metadata?.params);
+        let incompatibleError = undefined;
+        if (!uda.metadata) {
+          incompatibleError = InvalidParamFieldErrors.NoMetadata;
+        }
+        if (parsedParams === ParamFieldType.Invalid) {
+          incompatibleError = InvalidParamFieldErrors.BadField;
+        }
+        UDAs.push({
+          name: uda.aggFn,
+          description: uda.metadata?.description || "",
+          params: Array.isArray(parsedParams) ? parsedParams : [],
+          return: uda.metadata?.return || {},
+          incompatibleError,
+        });
+      }
+    }
+  }
+
+  return UDAs;
 }

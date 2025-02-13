@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -34,6 +34,7 @@ import {
 import { MetaObjectPayload } from "../../models/meta";
 import { DataSourceCommand, DataSourceMessage2 } from "../../models/messages";
 import { dataSourceStyles, shoelaceStyles } from "./styles";
+import { UDA } from "../../models/uda";
 
 const MAX_RULES = 32;
 
@@ -47,6 +48,7 @@ export class KdbDataSourceView extends LitElement {
   isInsights = false;
   isMetaLoaded = false;
   insightsMeta = <MetaObjectPayload>{};
+  UDAs = <UDA[]>[];
   selectedType = DataSourceTypes.API;
   selectedApi = "";
   selectedTable = "";
@@ -68,7 +70,9 @@ export class KdbDataSourceView extends LitElement {
   qsqlTarget = "";
   qsql = "";
   sql = "";
-  selectedUda = "";
+  savedUDA: UDA | undefined = undefined;
+  userSelectedUDA: UDA | undefined = undefined;
+  selectedUDA: string = "";
   running = false;
   servers: string[] = [];
   selectedServer = "";
@@ -95,6 +99,7 @@ export class KdbDataSourceView extends LitElement {
       this.isInsights = msg.isInsights;
       this.isMetaLoaded = !!msg.insightsMeta.dap;
       this.insightsMeta = msg.insightsMeta;
+      this.UDAs = msg.UDAs;
       const ds = msg.dataSourceFile;
       this.selectedType = ds.dataSource.selectedType;
       this.selectedApi = ds.dataSource.api.selectedApi;
@@ -122,7 +127,9 @@ export class KdbDataSourceView extends LitElement {
       this.qsql = ds.dataSource.qsql.query;
       this.sql = ds.dataSource.sql.query;
       // for the UDAs, it will optional for this moment
-      this.selectedUda = ds.dataSource.uda?.selectedUda || "";
+      this.savedUDA = ds.dataSource.uda;
+      this.userSelectedUDA = this.savedUDA;
+      this.selectedUDA = this.savedUDA ? this.savedUDA.name : "";
       this.requestUpdate();
     }
   };
@@ -166,9 +173,7 @@ export class KdbDataSourceView extends LitElement {
         sql: {
           query: this.sql,
         },
-        uda: {
-          selectedUda: this.selectedUda,
-        },
+        uda: this.userSelectedUDA,
       },
     };
   }
@@ -874,39 +879,42 @@ export class KdbDataSourceView extends LitElement {
       <div class="col">
         <sl-select
           label="User Defined Analytic (UDA)"
-          .value="${live(encodeURIComponent(this.selectedUda))}"
+          .value="${live(encodeURIComponent(this.selectedUDA))}"
           style="max-width: 100%"
           search
           @sl-change="${(event: Event) => {
-            this.selectedUda = decodeURIComponent(
+            this.selectedUDA = decodeURIComponent(
               (event.target as HTMLSelectElement).value,
             );
-            this.selectUDA();
+            this.userSelectedUDA = this.UDAs.find(
+              (uda) => uda.name === this.selectedUDA,
+            );
+            this.requestChange();
           }}">
           <sl-option
-            .value="${live(encodeURIComponent(this.selectedUda))}"
+            .value="${live(encodeURIComponent(this.selectedUDA))}"
             .selected="${live(true)}"
-            >${this.selectedUda || "Select a UDA..."}</sl-option
+            >${this.selectedUDA || "Select a UDA..."}</sl-option
           >
+          ${this.userSelectedUDA
+            ? html`<small>${this.userSelectedUDA.description}</small>`
+            : ""}
           <small>${this.isMetaLoaded ? "Meta UDAs" : "Meta Not Loaded"}</small>
           ${this.renderUDAOptions()}
         </sl-select>
+        ${this.renderUDADetails()} ${this.renderUDAParams()}
       </div>
     `;
   }
 
   renderUDAOptions() {
     if (this.isInsights && this.isMetaLoaded) {
-      const udaOptions = this.insightsMeta.api
-        .filter((api) => api.custom === true)
-        .map((api) => {
-          const value =
-            api.api === ".kxi.getData" ? api.api.replace(".kxi.", "") : api.api;
-          return html`
-            <sl-option value="${value}">${value} </sl-option>
-            <small>${api.metadata.description}</small>
-          `;
-        });
+      const udaOptions = this.UDAs.map((uda) => {
+        return html`
+          <sl-option value="${uda.name}">${uda.name}</sl-option>
+          <small>${uda.description}</small>
+        `;
+      });
       if (udaOptions.length === 0) {
         udaOptions.push(
           html`<sl-option value="" disabled
@@ -919,11 +927,96 @@ export class KdbDataSourceView extends LitElement {
     return [];
   }
 
-  selectUDA() {
-    if (this.selectedUda === "") {
-      return;
+  renderUDADetails() {
+    const UDADetails = [];
+    if (this.userSelectedUDA) {
+      if (this.userSelectedUDA.description) {
+        UDADetails.push(html`${this.userSelectedUDA.description}<br />`);
+      }
+      if (this.userSelectedUDA.return) {
+        UDADetails.push(
+          html`Return Description: ${this.userSelectedUDA.return.description}<br />Return
+            Type: ${this.userSelectedUDA.return.type}<br /> `,
+        );
+      }
     }
-    this.requestChange();
+    if (UDADetails.length !== 0) {
+      return html`<small>${UDADetails}</small>`;
+    }
+    return UDADetails;
+  }
+
+  renderUDAParams() {
+    const UDAParams = [];
+    if (this.userSelectedUDA) {
+      UDAParams.push(html`<strong>PARAMETERS:</strong>`);
+      const UDAReqParams = this.renderReqUDAParams();
+      const UDANoParams = this.renderUDANoParams();
+      const UDAInvalidParams = this.renderUDAInvalidParams();
+      if (UDAInvalidParams !== "") {
+        UDAParams.push(UDAInvalidParams);
+      } else {
+        if (UDAReqParams.length > 0) {
+          UDAParams.push(UDAReqParams);
+        } else {
+          UDAParams.push(UDANoParams);
+        }
+      }
+    }
+
+    return UDAParams;
+  }
+
+  renderReqUDAParams() {
+    const UDAParamsList = [];
+    if (this.userSelectedUDA) {
+      const UDAReqParams = this.userSelectedUDA.params.filter(
+        (param) => param.isReq === true,
+      );
+      if (UDAReqParams.length > 0) {
+        for (const param of UDAReqParams) {
+          UDAParamsList.push(html`
+            <sl-input
+              label="${param.name}"
+              .helpText="${param.description}"
+              .value="${live(
+                param.value ? param.value : param.default ? param.default : "",
+              )}"
+              @input="${(event: Event) => {
+                param.value = (event.target as HTMLInputElement).value;
+                this.requestChange();
+              }}"></sl-input>
+          `);
+        }
+      }
+    }
+    return UDAParamsList;
+  }
+
+  renderUDAInvalidParams() {
+    if (this.userSelectedUDA) {
+      if (this.userSelectedUDA.incompatibleError !== undefined) {
+        return html`
+          <sl-alert variant="warning" open>
+            <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+            <strong>Invalid Parameters</strong><br />
+            The UDA you have selected cannot be queried because it has required
+            fields with types that are not supported.
+          </sl-alert>
+        `;
+      }
+    }
+    return "";
+  }
+
+  renderUDANoParams() {
+    return html`
+      <sl-alert variant="primary" open>
+        <sl-icon slot="icon" name="info-circle"></sl-icon>
+        <strong>No Parameters</strong><br />
+        There are no required parameters in this UDA.
+      </sl-alert>
+    `;
   }
 
   renderTabGroup() {

@@ -17,14 +17,35 @@ export enum ParamFieldType {
   Boolean = "boolean",
   Timestamp = "timestamp",
   Invalid = "invalid",
-  Dictionary = "dictionary",
+  MultiType = "multitype",
+  JSON = "json",
+}
+
+export enum InvalidParamFieldErrors {
+  BadField = "badField",
+  NoMetadata = "noMetadata",
 }
 
 export interface UDAParam {
   name: string;
   description: string;
-  default?: string | number | boolean;
+  default?: any;
   isReq: boolean;
   type: number[] | number;
   fieldType?: ParamFieldType;
+  value?: any;
+  isVisible?: boolean;
+}
+
+export interface UDAReturn {
+  type?: number[];
+  description?: string;
+}
+
+export interface UDA {
+  name: string;
+  description: string;
+  params: UDAParam[];
+  return?: UDAReturn;
+  incompatibleError?: string;
 }
