@@ -138,7 +138,7 @@ export function parseUDAList(getMeta: MetaObjectPayload): UDA[] {
           incompatibleError = InvalidParamFieldErrors.BadField;
         }
         UDAs.push({
-          name: uda.aggFn,
+          name: uda.api,
           description: uda.metadata?.description || "",
           params: Array.isArray(parsedParams) ? parsedParams : [],
           return: uda.metadata?.return || {},
