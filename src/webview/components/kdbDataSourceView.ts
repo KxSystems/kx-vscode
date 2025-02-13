@@ -178,6 +178,31 @@ export class KdbDataSourceView extends LitElement {
     };
   }
 
+  renderExclamationTriangleIcon() {
+    return html`<svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 -3 24 24"
+      fill="currentColor"
+      width="15"
+      height="15">
+      <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+    </svg>`;
+  }
+
+  renderInfoCircleIcon() {
+    return html`
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 -3 24 24"
+        fill="currentColor"
+        width="15"
+        height="15">
+        <path
+          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-6h2v6zm0-8h-2V7h2v4z" />
+      </svg>
+    `;
+  }
+
   /* istanbul ignore next */
   postMessage(msg: Partial<DataSourceMessage2>) {
     this.vscode.postMessage(msg);
@@ -998,7 +1023,7 @@ export class KdbDataSourceView extends LitElement {
       if (this.userSelectedUDA.incompatibleError !== undefined) {
         return html`
           <sl-alert variant="warning" open>
-            <sl-icon slot="icon" name="exclamation-triangle"></sl-icon>
+            ${this.renderExclamationTriangleIcon()}
             <strong>Invalid Parameters</strong><br />
             The UDA you have selected cannot be queried because it has required
             fields with types that are not supported.
@@ -1012,7 +1037,7 @@ export class KdbDataSourceView extends LitElement {
   renderUDANoParams() {
     return html`
       <sl-alert variant="primary" open>
-        <sl-icon slot="icon" name="info-circle"></sl-icon>
+        ${this.renderInfoCircleIcon()}
         <strong>No Parameters</strong><br />
         There are no required parameters in this UDA.
       </sl-alert>

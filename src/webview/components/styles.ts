@@ -61,6 +61,16 @@ export const shoelaceStyles = css`
     --sl-color-primary-600: var(--vscode-button-background);
     --sl-input-background-color-hover: var(--vscode-button-hoverBackground);
   }
+
+  sl-alert[variant="warning"]::part(base) {
+    background-color: #fef4e0;
+    color: #d87704;
+  }
+
+  sl-alert[variant="info"]::part(base) {
+    background-color: #e0f2fe;
+    color: #055a85;
+  }
 `;
 
 export const dataSourceStyles = css`
