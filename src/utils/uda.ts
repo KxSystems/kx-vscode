@@ -63,13 +63,17 @@ export function getUDAFieldType(type: number | number[]): ParamFieldType {
     ParamFieldType.JSON,
   ];
 
+  let foundType: ParamFieldType | undefined;
   for (const fieldType of typePriority) {
     if (typeSet.has(fieldType)) {
-      return fieldType;
+      if (foundType) {
+        return ParamFieldType.MultiType;
+      }
+      foundType = fieldType;
     }
   }
 
-  return typeSet.size > 1 ? ParamFieldType.MultiType : ParamFieldType.Invalid;
+  return foundType ?? ParamFieldType.Invalid;
 }
 
 export function parseUDAParamTypes(type: number): ParamFieldType {
@@ -109,6 +113,16 @@ export function parseUDAParams(
     const fieldType = validTypes.length
       ? getUDAFieldType(validTypes)
       : ParamFieldType.Invalid;
+    const typeStrings = convertTypesToString(validTypes);
+
+    let multiFieldTypes: { [key: string]: ParamFieldType }[] | undefined;
+    if (fieldType === ParamFieldType.MultiType) {
+      multiFieldTypes = validTypes.map((type, index) => ({
+        [typeStrings[index]]: getUDAFieldType(type),
+      }));
+    } else {
+      multiFieldTypes = undefined;
+    }
 
     if (fieldType === ParamFieldType.Invalid && param.isReq) {
       hasInvalidRequiredParam = true;
@@ -118,13 +132,15 @@ export function parseUDAParams(
       ...param,
       type: validTypes,
       fieldType,
+      typeStrings,
+      multiFieldTypes,
     });
   });
 
   return hasInvalidRequiredParam ? ParamFieldType.Invalid : parsedParams;
 }
 
-export function parseReturnTypes(returnType: number[]): string[] {
+export function convertTypesToString(returnType: number[]): string[] {
   if (!Array.isArray(returnType)) {
     returnType = [returnType];
   }
@@ -148,7 +164,7 @@ export function parseUDAList(getMeta: MetaObjectPayload): UDA[] {
           incompatibleError = InvalidParamFieldErrors.BadField;
         }
         const returnData: UDAReturn = {
-          type: parseReturnTypes(uda.metadata?.return.type || []),
+          type: convertTypesToString(uda.metadata?.return.type || []),
           description: uda.metadata?.return.description || "",
         };
         UDAs.push({

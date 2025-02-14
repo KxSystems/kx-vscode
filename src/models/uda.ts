@@ -32,7 +32,10 @@ export interface UDAParam {
   default?: any;
   isReq: boolean;
   type: number[] | number;
+  typeStrings?: string[];
   fieldType?: ParamFieldType;
+  multiFieldTypes?: { [key: string]: ParamFieldType }[];
+  selectedMultiTypeString?: string;
   value?: any;
   isVisible?: boolean;
 }

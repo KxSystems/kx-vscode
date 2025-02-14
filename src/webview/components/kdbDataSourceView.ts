@@ -33,14 +33,14 @@ import {
 } from "../../models/dataSource";
 import { MetaObjectPayload } from "../../models/meta";
 import { DataSourceCommand, DataSourceMessage2 } from "../../models/messages";
-import { dataSourceStyles, shoelaceStyles } from "./styles";
-import { UDA } from "../../models/uda";
+import { dataSourceStyles, kdbStyles, shoelaceStyles } from "./styles";
+import { UDA, UDAParam } from "../../models/uda";
 
 const MAX_RULES = 32;
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {
-  static styles = [shoelaceStyles, dataSourceStyles];
+  static styles = [shoelaceStyles, dataSourceStyles, kdbStyles];
 
   readonly vscode = acquireVsCodeApi();
   declare private debounce;
@@ -959,9 +959,12 @@ export class KdbDataSourceView extends LitElement {
         UDADetails.push(html`${this.userSelectedUDA.description}<br />`);
       }
       if (this.userSelectedUDA.return) {
+        const returnType = Array.isArray(this.userSelectedUDA.return.type)
+          ? this.userSelectedUDA.return.type.join(", ")
+          : this.userSelectedUDA.return.type;
         UDADetails.push(
           html`Return Description: ${this.userSelectedUDA.return.description}<br />Return
-            Type: ${this.userSelectedUDA.return.type}<br /> `,
+            Type: ${returnType}<br /> `,
         );
       }
     }
@@ -992,6 +995,24 @@ export class KdbDataSourceView extends LitElement {
     return UDAParams;
   }
 
+  retrieveUDAParamInputType(type: string | undefined) {
+    switch (type) {
+      case "number":
+        return "number";
+      case "boolean":
+        return "checkbox";
+      case "timestamp":
+        return "datetime-local";
+      case "json":
+        return "textarea";
+      case "multitype":
+        return "multitype";
+      case "text":
+      default:
+        return "text";
+    }
+  }
+
   renderReqUDAParams() {
     const UDAParamsList = [];
     if (this.userSelectedUDA) {
@@ -1000,22 +1021,144 @@ export class KdbDataSourceView extends LitElement {
       );
       if (UDAReqParams.length > 0) {
         for (const param of UDAReqParams) {
-          UDAParamsList.push(html`
-            <sl-input
-              label="${param.name}"
-              .helpText="${param.description}"
-              .value="${live(
-                param.value ? param.value : param.default ? param.default : "",
-              )}"
-              @input="${(event: Event) => {
-                param.value = (event.target as HTMLInputElement).value;
-                this.requestChange();
-              }}"></sl-input>
-          `);
+          const inputType = this.retrieveUDAParamInputType(param.fieldType);
+          if (inputType === "checkbox") {
+            UDAParamsList.push(html`
+              <sl-checkbox
+                .helpText="${param.description}"
+                @sl-change="${(event: Event) => {
+                  param.value = (event.target as HTMLInputElement).checked;
+                  this.requestChange();
+                }}"
+                .checked="${live(
+                  param.value
+                    ? param.value
+                    : param.default
+                      ? param.default
+                      : false,
+                )}"
+                >${param.name}</sl-checkbox
+              >
+            `);
+          } else if (inputType === "textarea") {
+            UDAParamsList.push(html`
+              <sl-textarea
+                label="${param.name}"
+                .helpText="${param.description}"
+                .value="${live(
+                  param.value
+                    ? param.value
+                    : param.default
+                      ? param.default
+                      : "",
+                )}"
+                @input="${(event: Event) => {
+                  param.value = (event.target as HTMLTextAreaElement).value;
+                  this.requestChange();
+                }}"></sl-textarea>
+            `);
+          } else if (inputType === "multitype") {
+            param.selectedMultiTypeString = param.selectedMultiTypeString
+              ? param.selectedMultiTypeString
+              : param.typeStrings
+                ? param.typeStrings[0]
+                : "";
+            UDAParamsList.push(html`
+              <div class="row align-top">
+                <sl-select
+                  label="${param.name}"
+                  .helpText="${`Select a type`}"
+                  .value="${live(
+                    param.selectedMultiTypeString
+                      ? param.selectedMultiTypeString
+                      : param.typeStrings
+                        ? param.typeStrings[0]
+                        : "",
+                  )}"
+                  @sl-change="${(event: Event) => {
+                    param.selectedMultiTypeString = (
+                      event.target as HTMLSelectElement
+                    ).value;
+                    this.requestChange();
+                  }}">
+                  ${param.typeStrings?.map(
+                    (option) =>
+                      html`<sl-option value="${option}">${option}</sl-option>`,
+                  )}
+                </sl-select>
+                ${this.renderMultiTypeInput(param)}
+              </div>
+            `);
+          } else {
+            UDAParamsList.push(html`
+              <sl-input
+                .type="${inputType}"
+                label="${param.name}"
+                .helpText="${param.description}"
+                .value="${live(
+                  param.value
+                    ? param.value
+                    : param.default
+                      ? param.default
+                      : "",
+                )}"
+                @input="${(event: Event) => {
+                  param.value = (event.target as HTMLInputElement).value;
+                  this.requestChange();
+                }}"></sl-input>
+            `);
+          }
         }
       }
     }
     return UDAParamsList;
+  }
+
+  renderMultiTypeInput(param: UDAParam) {
+    const selectedType = param.selectedMultiTypeString;
+    const multiFieldType = param.multiFieldTypes?.find(
+      (type) => Object.keys(type)[0] === selectedType,
+    );
+    const fieldType = multiFieldType
+      ? Object.values(multiFieldType)[0]
+      : "text";
+    const inputType = this.retrieveUDAParamInputType(fieldType);
+
+    if (inputType === "checkbox") {
+      return html`
+        <sl-checkbox
+          .label="Selected type: ${selectedType}"
+          .checked="${live(param.value ? param.value : false)}"
+          .helpText="${param.description}"
+          @sl-change="${(event: Event) => {
+            param.value = (event.target as HTMLInputElement).checked;
+            this.requestChange();
+          }}"></sl-checkbox>
+      `;
+    } else if (inputType === "textarea") {
+      return html`
+        <sl-textarea
+          .label="Selected type: ${selectedType}"
+          .value="${live(param.value ? param.value : "")}"
+          .helpText="${param.description}"
+          @input="${(event: Event) => {
+            param.value = (event.target as HTMLTextAreaElement).value;
+            this.requestChange();
+          }}"></sl-textarea>
+      `;
+    } else {
+      return html`
+        <sl-input
+          .label="Selected type: ${selectedType}"
+          .type="${inputType === "multitype" ? "text" : inputType}"
+          .value="${live(param.value ? param.value : "")}"
+          .helpText="${param.description}"
+          @input="${(event: Event) => {
+            param.value = (event.target as HTMLInputElement).value;
+            this.requestChange();
+          }}"></sl-input>
+      `;
+    }
   }
 
   renderUDAInvalidParams() {
