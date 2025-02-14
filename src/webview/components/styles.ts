@@ -67,7 +67,7 @@ export const shoelaceStyles = css`
     color: #d87704;
   }
 
-  sl-alert[variant="info"]::part(base) {
+  sl-alert[variant="primary"]::part(base) {
     background-color: #e0f2fe;
     color: #055a85;
   }

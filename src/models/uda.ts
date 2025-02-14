@@ -38,7 +38,7 @@ export interface UDAParam {
 }
 
 export interface UDAReturn {
-  type?: number[];
+  type?: string[];
   description?: string;
 }
 

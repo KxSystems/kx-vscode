@@ -18,6 +18,7 @@ import {
   ParamFieldType,
   UDA,
   UDAParam,
+  UDAReturn,
 } from "../models/uda";
 
 export function filterUDAParamsValidTypes(type: number | number[]): number[] {
@@ -123,6 +124,15 @@ export function parseUDAParams(
   return hasInvalidRequiredParam ? ParamFieldType.Invalid : parsedParams;
 }
 
+export function parseReturnTypes(returnType: number[]): string[] {
+  if (!Array.isArray(returnType)) {
+    returnType = [returnType];
+  }
+  return returnType.map(
+    (type) => ext.constants.dataTypes.get(type.toString()) ?? type.toString(),
+  );
+}
+
 export function parseUDAList(getMeta: MetaObjectPayload): UDA[] {
   const UDAs: UDA[] = [];
   if (getMeta.api !== undefined) {
@@ -137,11 +147,15 @@ export function parseUDAList(getMeta: MetaObjectPayload): UDA[] {
         if (parsedParams === ParamFieldType.Invalid) {
           incompatibleError = InvalidParamFieldErrors.BadField;
         }
+        const returnData: UDAReturn = {
+          type: parseReturnTypes(uda.metadata?.return.type || []),
+          description: uda.metadata?.return.description || "",
+        };
         UDAs.push({
           name: uda.api,
           description: uda.metadata?.description || "",
           params: Array.isArray(parsedParams) ? parsedParams : [],
-          return: uda.metadata?.return || {},
+          return: returnData,
           incompatibleError,
         });
       }
