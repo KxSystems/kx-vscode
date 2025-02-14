@@ -141,6 +141,10 @@ export const dataSourceStyles = css`
     gap: var(--sl-spacing-x-small);
     align-items: flex-end;
   }
+
+  .fix-multi-checkbox {
+    margin-top: 28px;
+  }
 `;
 
 export const chartStyles = css`

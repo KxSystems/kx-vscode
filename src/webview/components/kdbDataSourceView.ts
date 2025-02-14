@@ -1022,96 +1022,118 @@ export class KdbDataSourceView extends LitElement {
       if (UDAReqParams.length > 0) {
         for (const param of UDAReqParams) {
           const inputType = this.retrieveUDAParamInputType(param.fieldType);
-          if (inputType === "checkbox") {
-            UDAParamsList.push(html`
-              <sl-checkbox
-                .helpText="${param.description}"
-                @sl-change="${(event: Event) => {
-                  param.value = (event.target as HTMLInputElement).checked;
-                  this.requestChange();
-                }}"
-                .checked="${live(
-                  param.value
-                    ? param.value
-                    : param.default
-                      ? param.default
-                      : false,
-                )}"
-                >${param.name}</sl-checkbox
-              >
-            `);
-          } else if (inputType === "textarea") {
-            UDAParamsList.push(html`
-              <sl-textarea
-                label="${param.name}"
-                .helpText="${param.description}"
-                .value="${live(
-                  param.value
-                    ? param.value
-                    : param.default
-                      ? param.default
-                      : "",
-                )}"
-                @input="${(event: Event) => {
-                  param.value = (event.target as HTMLTextAreaElement).value;
-                  this.requestChange();
-                }}"></sl-textarea>
-            `);
-          } else if (inputType === "multitype") {
-            param.selectedMultiTypeString = param.selectedMultiTypeString
-              ? param.selectedMultiTypeString
-              : param.typeStrings
-                ? param.typeStrings[0]
-                : "";
-            UDAParamsList.push(html`
-              <div class="row align-top">
-                <sl-select
-                  label="${param.name}"
-                  .helpText="${`Select a type`}"
-                  .value="${live(
-                    param.selectedMultiTypeString
-                      ? param.selectedMultiTypeString
-                      : param.typeStrings
-                        ? param.typeStrings[0]
-                        : "",
-                  )}"
-                  @sl-change="${(event: Event) => {
-                    param.selectedMultiTypeString = (
-                      event.target as HTMLSelectElement
-                    ).value;
-                    this.requestChange();
-                  }}">
-                  ${param.typeStrings?.map(
-                    (option) =>
-                      html`<sl-option value="${option}">${option}</sl-option>`,
-                  )}
-                </sl-select>
-                ${this.renderMultiTypeInput(param)}
-              </div>
-            `);
-          } else {
-            UDAParamsList.push(html`
-              <sl-input
-                .type="${inputType}"
-                label="${param.name}"
-                .helpText="${param.description}"
-                .value="${live(
-                  param.value
-                    ? param.value
-                    : param.default
-                      ? param.default
-                      : "",
-                )}"
-                @input="${(event: Event) => {
-                  param.value = (event.target as HTMLInputElement).value;
-                  this.requestChange();
-                }}"></sl-input>
-            `);
-          }
+          UDAParamsList.push(this.renderUDAParam(param, inputType));
         }
       }
     }
     return UDAParamsList;
+  }
+
+  renderUDAParam(param: UDAParam, inputType: string) {
+    switch (inputType) {
+      case "checkbox":
+        return this.renderCheckbox(param);
+      case "textarea":
+        return this.renderTextarea(param);
+      case "multitype":
+        return this.renderMultitype(param);
+      default:
+        return this.renderInput(param, inputType);
+    }
+  }
+
+  renderCheckbox(param: UDAParam) {
+    return html`
+      <sl-checkbox
+        .helpText="${param.description}"
+        @sl-change="${(event: Event) => {
+          param.value = (event.target as HTMLInputElement).checked;
+          this.requestChange();
+        }}"
+        .checked="${live(
+          param.value ? param.value : param.default ? param.default : false,
+        )}"
+        >${param.name}</sl-checkbox
+      >
+    `;
+  }
+
+  renderTextarea(param: UDAParam) {
+    return html`
+      <sl-textarea
+        label="${param.name}"
+        .helpText="${param.description}"
+        .value="${live(
+          param.value ? param.value : param.default ? param.default : "",
+        )}"
+        @input="${(event: Event) => {
+          param.value = (event.target as HTMLTextAreaElement).value;
+          this.requestChange();
+        }}"></sl-textarea>
+    `;
+  }
+
+  renderMultitype(param: UDAParam) {
+    param.selectedMultiTypeString = param.selectedMultiTypeString
+      ? param.selectedMultiTypeString
+      : param.typeStrings
+        ? param.typeStrings[0]
+        : "";
+    return html`
+      <div class="row align-top">
+        <sl-select
+          label="${param.name}"
+          .helpText="${`Select a type`}"
+          .value="${live(
+            param.selectedMultiTypeString
+              ? param.selectedMultiTypeString
+              : param.typeStrings
+                ? param.typeStrings[0]
+                : "",
+          )}"
+          @sl-change="${(event: Event) => {
+            param.selectedMultiTypeString = (
+              event.target as HTMLSelectElement
+            ).value;
+            this.requestChange();
+          }}">
+          ${param.typeStrings?.map(
+            (option) =>
+              html`<sl-option value="${option}">${option}</sl-option>`,
+          )}
+        </sl-select>
+        ${this.renderMultiTypeInput(param)}
+      </div>
+    `;
+  }
+
+  renderInput(param: UDAParam, inputType: string) {
+    const validInputTypes = ["text", "number", "datetime-local"];
+    const type = validInputTypes.includes(inputType) ? inputType : "text";
+
+    return html`
+      <sl-input
+        .type="${type as
+          | "number"
+          | "date"
+          | "datetime-local"
+          | "email"
+          | "password"
+          | "search"
+          | "tel"
+          | "text"
+          | "time"
+          | "url"}"
+        label="${param.name}"
+        .helpText="${param.description}"
+        .value="${live(
+          param.value ? param.value : param.default ? param.default : "",
+        )}"
+        @input="${(event: Event) => {
+          param.value = (event.target as HTMLInputElement).value;
+          this.requestChange();
+        }}"></sl-input>
+    `;
   }
 
   renderMultiTypeInput(param: UDAParam) {
@@ -1127,13 +1149,15 @@ export class KdbDataSourceView extends LitElement {
     if (inputType === "checkbox") {
       return html`
         <sl-checkbox
-          .label="Selected type: ${selectedType}"
+          class="fix-multi-checkbox"
           .checked="${live(param.value ? param.value : false)}"
           .helpText="${param.description}"
           @sl-change="${(event: Event) => {
             param.value = (event.target as HTMLInputElement).checked;
             this.requestChange();
-          }}"></sl-checkbox>
+          }}"
+          >Selected type: ${selectedType}</sl-checkbox
+        >
       `;
     } else if (inputType === "textarea") {
       return html`
