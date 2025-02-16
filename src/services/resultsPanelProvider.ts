@@ -211,7 +211,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
     columnsArray.forEach((column) => {
       const { name, values } = column;
-      const valuesArray = Array.isArray(values) ? values : [values];
+      const valuesArray = Array.isArray(values) ? values.flat() : [values];
       valuesArray.forEach((value, index) => {
         rowData[index][name] = decodeQUTF(value);
       });
