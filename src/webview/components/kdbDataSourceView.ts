@@ -899,6 +899,13 @@ export class KdbDataSourceView extends LitElement {
     `;
   }
 
+  getSavedUDAStatus(): string {
+    const udaExists = this.UDAs.some((uda) => uda.name === this.selectedUDA);
+    return udaExists
+      ? "Available UDAs"
+      : "Pre-selected UDA is not available for this connection.";
+  }
+
   renderUDA() {
     return html`
       <div class="col">
@@ -924,7 +931,11 @@ export class KdbDataSourceView extends LitElement {
           ${this.userSelectedUDA
             ? html`<small>${this.userSelectedUDA.description}</small>`
             : ""}
-          <small>${this.isMetaLoaded ? "Meta UDAs" : "Meta Not Loaded"}</small>
+          <small
+            >${this.isMetaLoaded
+              ? this.getSavedUDAStatus()
+              : "Connect to a server environment to access the available UDAs."}</small
+          >
           ${this.renderUDAOptions()}
         </sl-select>
         ${this.renderUDADetails()} ${this.renderUDAParams()}
