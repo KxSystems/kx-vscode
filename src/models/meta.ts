@@ -42,12 +42,34 @@ export type MetaAgg = {
 
 export type MetaApi = {
   api: string;
+  kxname: string[];
   aggFn: string;
   custom: boolean;
   full: boolean;
-  metadata: any;
-  procs: string[];
-  [additionalProp: string]: string | string[] | boolean;
+  metadata?: MetaApiMetadata; // metadata pode ser undefined
+  procs: any[];
+};
+
+export type MetaApiMetadata = {
+  description: string;
+  params: {
+    name: string;
+    type: number | number[];
+    isReq: boolean;
+    description: string;
+    default?: string | number;
+  }[];
+  return: {
+    type: number[];
+    description: string;
+  };
+  aggReturn: {
+    type: number;
+    description: string;
+  };
+  misc: {
+    [key: string]: any;
+  };
 };
 
 export type MetaAssembly = {
