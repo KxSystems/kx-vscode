@@ -19,6 +19,7 @@ import { MetaInfoType, MetaObject, MetaObjectPayload } from "../models/meta";
 import {
   getCurrentToken,
   getHttpsAgent,
+  IToken,
 } from "../services/kdbInsights/codeFlowLogin";
 import { InsightsNode } from "../services/kdbTreeProvider";
 import { GetDataObjectPayload } from "../models/data";
@@ -38,6 +39,7 @@ import { InsightsConfig, InsightsEndpoints } from "../models/config";
 import { convertTimeToTimestamp } from "../utils/dataSource";
 import { ScratchpadRequestBody } from "../models/scratchpad";
 import { StructuredTextResults } from "../models/queryResult";
+import { UDARequestBody } from "../models/uda";
 
 export class InsightsConnection {
   public connected: boolean;
@@ -160,6 +162,7 @@ export class InsightsConnection {
         import: "servicebroker/scratchpad/import/data",
         importSql: "servicebroker/scratchpad/import/sql",
         importQsql: "servicebroker/scratchpad/import/qsql",
+        importUDA: "servicebroker/scratchpad/import/uda",
         reset: "servicebroker/scratchpad/reset",
       },
       serviceGateway: {
@@ -167,6 +170,7 @@ export class InsightsConnection {
         data: "servicegateway/data",
         sql: "servicegateway/qe/sql",
         qsql: "servicegateway/qe/qsql",
+        udaBase: "servicegateway/",
       },
     };
     // uncomment this WHEN the insights version is available
@@ -395,6 +399,157 @@ export class InsightsConnection {
     }
   }
 
+  public async generateToken(): Promise<IToken | undefined> {
+    const token = await getCurrentToken(
+      this.node.details.server,
+      this.node.details.alias,
+      this.node.details.realm || "insights",
+      !!this.node.details.insecure,
+    );
+    if (token === undefined) {
+      tokenUndefinedError(this.connLabel);
+    }
+    return token;
+  }
+
+  public async getUDAQuery(
+    udaReqBody: UDARequestBody,
+  ): Promise<any | undefined> {
+    if (this.connected && this.connEndpoints) {
+      const udaEndpoint =
+        this.connEndpoints.serviceGateway.udaBase +
+        udaReqBody.name.split(".").slice(1).join("/");
+      const udaURL = new url.URL(udaEndpoint, this.node.details.server);
+      const token = await this.generateToken();
+      if (token === undefined) {
+        return undefined;
+      }
+
+      const headers = {
+        Authorization: `Bearer ${token.accessToken}`,
+        Accept: "application/octet-stream",
+        "Content-Type": "application/json",
+      };
+
+      const body = udaReqBody.params;
+
+      const options: AxiosRequestConfig = {
+        method: "post",
+        url: udaURL.toString(),
+        data: body,
+        headers: headers,
+        responseType: "arraybuffer",
+        httpsAgent: getHttpsAgent(this.node.details.insecure),
+      };
+      const results = await window.withProgress(
+        {
+          location: ProgressLocation.Notification,
+          cancellable: false,
+        },
+        async (progress, token) => {
+          token.onCancellationRequested(() => {
+            kdbOutputLog(`User cancelled the Datasource Run.`, "WARNING");
+          });
+
+          progress.report({ message: "Query executing..." });
+
+          return await axios(options)
+            .then((response: any) => {
+              kdbOutputLog(
+                `[Datasource RUN] Status: ${response.status}.`,
+                "INFO",
+              );
+              if (isCompressed(response.data)) {
+                response.data = uncompress(response.data);
+              }
+              return {
+                error: "",
+                arrayBuffer: response.data.buffer
+                  ? response.data.buffer
+                  : response.data,
+              };
+            })
+            .catch((error: any) => {
+              kdbOutputLog(
+                `[Datasource RUN] Status: ${error.response.status}.`,
+                "INFO",
+              );
+              return {
+                error: { buffer: error.response.data },
+                arrayBuffer: undefined,
+              };
+            });
+        },
+      );
+      return results;
+    }
+  }
+
+  public async getUDAScratchpadQuery(
+    udaReqBody: UDARequestBody,
+  ): Promise<any | undefined> {
+    if (this.connected && this.connEndpoints) {
+      const isTableView = udaReqBody.returnFormat === "structuredText";
+      const udaURL = new url.URL(
+        this.connEndpoints.scratchpad.importUDA,
+        this.node.details.server,
+      );
+      const token = await this.generateToken();
+      if (token === undefined) {
+        return undefined;
+      }
+      const username = jwtDecode<JwtUser>(token.accessToken);
+      if (username === undefined || username.preferred_username === "") {
+        invalidUsernameJWT(this.connLabel);
+      }
+
+      const headers = {
+        Authorization: `Bearer ${token.accessToken}`,
+        Username: username.preferred_username,
+        "Content-Type": "application/json",
+      };
+
+      const udaResponse = await window.withProgress(
+        {
+          location: ProgressLocation.Notification,
+          cancellable: false,
+        },
+        async (_progress, token) => {
+          token.onCancellationRequested(() => {
+            kdbOutputLog(`User cancelled the UDA execution.`, "WARNING");
+          });
+
+          const udaRes = await axios
+            .post(udaURL.toString(), udaReqBody, {
+              headers,
+              httpsAgent: getHttpsAgent(this.node.details.insecure),
+            })
+            .then((response: any) => {
+              if (response.data.error) {
+                return response.data;
+              } else {
+                kdbOutputLog(`[UDA] Status: ${response.status}`, "INFO");
+                if (!response.data.error) {
+                  if (isTableView) {
+                    response.data = JSON.parse(
+                      response.data.data,
+                    ) as StructuredTextResults;
+                  }
+                  return response.data;
+                }
+                return response.data;
+              }
+            });
+          return udaRes;
+        },
+      );
+      return udaResponse;
+    } else {
+      this.noConnectionOrEndpoints();
+    }
+    return undefined;
+  }
+
   public async getScratchpadQuery(
     query: string,
     context?: string,
@@ -444,7 +599,7 @@ export class InsightsConnection {
         "Content-Type": "application/json",
       };
 
-      const spReponse = await window.withProgress(
+      const spResponse = await window.withProgress(
         {
           location: ProgressLocation.Notification,
           cancellable: false,
@@ -503,7 +658,7 @@ export class InsightsConnection {
           return spRes;
         },
       );
-      return spReponse;
+      return spResponse;
     } else {
       this.noConnectionOrEndpoints();
     }

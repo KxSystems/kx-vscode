@@ -134,6 +134,7 @@ export function parseUDAParams(
       fieldType,
       typeStrings,
       multiFieldTypes,
+      isVisible: param.isReq,
     });
   });
 
@@ -179,4 +180,9 @@ export function parseUDAList(getMeta: MetaObjectPayload): UDA[] {
   }
 
   return UDAs;
+}
+
+export function retrieveDataTypeByString(type: string): number {
+  const dataType = ext.constants.reverseDataTypes.get(type);
+  return dataType ? dataType : 0;
 }

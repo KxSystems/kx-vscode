@@ -50,6 +50,8 @@ import {
   offerConnectAction,
 } from "../utils/core";
 import { ServerType } from "../models/connectionsModels";
+import { retrieveDataTypeByString } from "../utils/uda";
+import { UDARequestBody } from "../models/uda";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -161,6 +163,9 @@ export async function runDataSource(
       case "QSQL":
         res = await runQsqlDataSource(fileContent, selectedConnection);
         break;
+      case "UDA":
+        res = await runUDADataSource(fileContent, selectedConnection);
+        break;
       case "SQL":
       default:
         res = await runSqlDataSource(fileContent, selectedConnection);
@@ -179,9 +184,12 @@ export async function runDataSource(
         if (success) {
           const resultCount = typeof res === "string" ? "0" : res.rows.length;
           kdbOutputLog(`[DATASOURCE] Results: ${resultCount} rows`, "INFO");
+        } else if (!success) {
+          res = res.errorMsg ? res.errorMsg : res.error;
         }
+        const connVersion = selectedConnection.insightsVersion ?? 0;
         await writeQueryResultsToView(
-          success ? res : res.error,
+          res,
           query,
           connLabel,
           executorName,
@@ -194,9 +202,13 @@ export async function runDataSource(
             `[DATASOURCE] Results is a string with length: ${res.length}`,
             "INFO",
           );
+        } else {
+          if (res.errorMsg) {
+            res = res.errorMsg;
+          }
         }
         await writeQueryResultsToConsole(
-          success ? res : res.error,
+          res,
           query,
           connLabel,
           executorName,
@@ -243,6 +255,8 @@ export function getSelectedType(fileContent: DataSourceFiles): string {
       return "QSQL";
     case DataSourceTypes.SQL:
       return "SQL";
+    case DataSourceTypes.UDA:
+      return "UDA";
     default:
       throw new Error(`Invalid selectedType: ${selectedType}`);
   }
@@ -408,6 +422,58 @@ export async function runSqlDataSource(
     return handleScratchpadTableRes(results);
   } else {
     return { error: "API call failed" };
+  }
+}
+
+export async function runUDADataSource(
+  fileContent: DataSourceFiles,
+  selectedConn: InsightsConnection,
+): Promise<any> {
+  const UDA = fileContent.dataSource.uda;
+  const returnFormat = ext.isResultsTabVisible ? "structuredText" : "text";
+  if (!UDA) {
+    return { error: "UDA not found" };
+  }
+  if (UDA.name === "") {
+    return { error: "UDA name not found" };
+  }
+
+  const params: { [key: string]: any } = {};
+  const parameterTypes: { [key: string]: any } = {};
+
+  if (UDA.params && UDA.params.length > 0) {
+    UDA.params.forEach((param) => {
+      if (param.isVisible) {
+        params[param.name] = param.value;
+        parameterTypes[param.name] = param.selectedMultiTypeString
+          ? retrieveDataTypeByString(param.selectedMultiTypeString)
+          : param.type;
+      }
+    });
+  }
+  // if (Object.keys(params).length === 0) {
+  //   params["table"] = "nsansUdaTable";
+  //   parameterTypes["table"] = -10;
+  // }
+  const udaReqBody: UDARequestBody = {
+    language: "q",
+    name: UDA.name,
+    parameterTypes,
+    params,
+    returnFormat,
+    sampleFn: "first",
+    sampleSize: 10000,
+  };
+
+  const udaCall = await selectedConn.getUDAQuery(udaReqBody);
+
+  if (udaCall?.error) {
+    return parseError(udaCall.error);
+  } else if (udaCall?.arrayBuffer) {
+    const results = handleWSResults(udaCall.arrayBuffer);
+    return handleScratchpadTableRes(results);
+  } else {
+    return { error: "UDA call failed" };
   }
 }
 

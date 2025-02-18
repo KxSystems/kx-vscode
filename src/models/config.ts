@@ -26,6 +26,7 @@ export type InsightsEndpoints = {
     import: string;
     importSql: string;
     importQsql: string;
+    importUDA: string;
     reset: string;
   };
   serviceGateway: {
@@ -33,5 +34,6 @@ export type InsightsEndpoints = {
     data: string;
     sql: string;
     qsql: string;
+    udaBase: string;
   };
 };

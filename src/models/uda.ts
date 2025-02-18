@@ -52,3 +52,14 @@ export interface UDA {
   return?: UDAReturn;
   incompatibleError?: string;
 }
+
+export interface UDARequestBody {
+  language: string;
+  name: string;
+  output?: string;
+  parameterTypes: { [key: string]: any } | {};
+  params: { [key: string]: any } | {};
+  returnFormat: string;
+  sampleFn: string;
+  sampleSize: number;
+}

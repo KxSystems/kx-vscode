@@ -72,7 +72,7 @@ export class DataSourcesPanel {
     }
     const panel = vscode.window.createWebviewPanel(
       "dataSource",
-      dataSourceFile.name,
+      dataSourceFile.name ? dataSourceFile.name : "DataSource",
       vscode.ViewColumn.One,
       {
         // Enable javascript in the webview
