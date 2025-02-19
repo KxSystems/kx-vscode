@@ -82,7 +82,13 @@ export async function populateScratchpad(
   dataSourceForm: DataSourceFiles,
   connLabel: string,
 ): Promise<void> {
-  if (dataSourceForm.dataSource.selectedType === DataSourceTypes.QSQL) {
+  const connMngService = new ConnectionManagementService();
+  const qenvEnabled =
+    (await connMngService.retrieveInsightsConnQEEnabled(connLabel)) ?? "";
+  if (
+    dataSourceForm.dataSource.selectedType === DataSourceTypes.QSQL &&
+    qenvEnabled === "disabled"
+  ) {
     window.showErrorMessage(
       "The query enviroment(s) are disabled for this connection",
     );
@@ -102,7 +108,6 @@ export async function populateScratchpad(
   /* istanbul ignore next */
   window.showInputBox(scratchpadVariable).then(async (outputVariable) => {
     if (outputVariable !== undefined && outputVariable !== "") {
-      const connMngService = new ConnectionManagementService();
       const selectedConnection =
         connMngService.retrieveConnectedConnection(connLabel);
 
