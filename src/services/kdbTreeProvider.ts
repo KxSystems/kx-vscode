@@ -640,7 +640,7 @@ export class InsightsNode extends TreeItem {
       tooltipMd.appendMarkdown(`\nVersion: ${version}\n`);
     }
     if (qeEnabled !== undefined) {
-      tooltipMd.appendMarkdown(`\nQuery Environments: ${qeEnabled}`);
+      tooltipMd.appendMarkdown(`\nQuery Environment(s): ${qeEnabled}`);
     }
     return tooltipMd;
   }

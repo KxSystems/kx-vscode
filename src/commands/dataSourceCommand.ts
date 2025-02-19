@@ -161,6 +161,17 @@ export async function runDataSource(
         res = await runApiDataSource(fileContent, selectedConnection);
         break;
       case "QSQL":
+        if (selectedConnection.apiConfig?.queryEnvironmentsEnabled === false) {
+          window.showErrorMessage(
+            "The query enviroment(s) are disabled for this connection",
+          );
+          kdbOutputLog(
+            `[DATASOURCE]  The query enviroment(s) are disabled for this connection`,
+            "ERROR",
+            true,
+          );
+          return;
+        }
         res = await runQsqlDataSource(fileContent, selectedConnection);
         break;
       case "UDA":
