@@ -82,6 +82,17 @@ export async function populateScratchpad(
   dataSourceForm: DataSourceFiles,
   connLabel: string,
 ): Promise<void> {
+  if (dataSourceForm.dataSource.selectedType === DataSourceTypes.QSQL) {
+    window.showErrorMessage(
+      "The query enviroment(s) are disabled for this connection",
+    );
+    kdbOutputLog(
+      `[DATASOURCE]  The query enviroment(s) are disabled for this connection`,
+      "ERROR",
+      true,
+    );
+    return;
+  }
   const scratchpadVariable: InputBoxOptions = {
     prompt: scratchpadVariableInput.prompt,
     placeHolder: scratchpadVariableInput.placeholder,
