@@ -35,7 +35,11 @@ import {
   kdbOutputLog,
   tokenUndefinedError,
 } from "../utils/core";
-import { InsightsConfig, InsightsEndpoints } from "../models/config";
+import {
+  InsightsApiConfig,
+  InsightsConfig,
+  InsightsEndpoints,
+} from "../models/config";
 import { convertTimeToTimestamp } from "../utils/dataSource";
 import { ScratchpadRequestBody } from "../models/scratchpad";
 import { StructuredTextResults } from "../models/queryResult";
@@ -47,6 +51,7 @@ export class InsightsConnection {
   public node: InsightsNode;
   public meta?: MetaObject;
   public config?: InsightsConfig;
+  public apiConfig?: InsightsApiConfig;
   public insightsVersion?: number;
   public connEndpoints?: InsightsEndpoints;
 
@@ -58,16 +63,12 @@ export class InsightsConnection {
 
   public async connect(): Promise<boolean> {
     ext.context.secrets.delete(this.node.details.alias);
-    await getCurrentToken(
-      this.node.details.server,
-      this.node.details.alias,
-      this.node.details.realm || "insights",
-      !!this.node.details.insecure,
-    ).then(async (token) => {
+    await this.getTokens().then(async (token) => {
       this.connected = token ? true : false;
       if (token) {
         await this.getConfig();
         await this.getMeta();
+        await this.getApiConfig();
         await this.getScratchpadQuery("", undefined, false, true);
       }
     });
@@ -84,25 +85,92 @@ export class InsightsConnection {
     //will be added the feature to retrieve server objects from insights
   }
 
-  private async getOptions() {
-    const token = await getCurrentToken(
+  public async getTokens() {
+    return await getCurrentToken(
       this.node.details.server,
       this.node.details.alias,
       this.node.details.realm || "insights",
       !!this.node.details.insecure,
     );
+  }
 
-    if (token === undefined) {
+  public async getOptions(
+    needUsername?: boolean,
+    customHeaders?: any,
+    method: string = "GET",
+    url?: string,
+    data?: any,
+  ): Promise<AxiosRequestConfig | undefined> {
+    const token = await this.getTokens();
+
+    if (!token) {
       tokenUndefinedError(this.connLabel);
       return undefined;
     }
 
+    if (!customHeaders) {
+      customHeaders = {};
+    }
+
     const options: AxiosRequestConfig = {
-      headers: { Authorization: `Bearer ${token.accessToken}` },
+      headers: {
+        Authorization: `Bearer ${token.accessToken}`,
+        ...customHeaders,
+      },
       httpsAgent: getHttpsAgent(this.node.details.insecure),
+      method,
+      data,
+      url,
     };
 
+    if (needUsername && options.headers) {
+      const username = jwtDecode<JwtUser>(token.accessToken);
+      if (!username || !username.preferred_username) {
+        invalidUsernameJWT(this.connLabel);
+        return undefined;
+      }
+      options.headers.username = username.preferred_username;
+    }
+
     return options;
+  }
+
+  public returnMetaObject(metaType: MetaInfoType): string {
+    if (!this.meta) {
+      kdbOutputLog(
+        `Meta data is undefined for connection ${this.connLabel}`,
+        "ERROR",
+      );
+      return "";
+    }
+
+    let objectToReturn;
+
+    switch (metaType) {
+      case MetaInfoType.META:
+        objectToReturn = this.meta.payload;
+        break;
+      case MetaInfoType.SCHEMA:
+        objectToReturn = this.meta.payload.schema;
+        break;
+      case MetaInfoType.API:
+        objectToReturn = this.meta.payload.api;
+        break;
+      case MetaInfoType.AGG:
+        objectToReturn = this.meta.payload.agg;
+        break;
+      case MetaInfoType.DAP:
+        objectToReturn = this.meta.payload.dap;
+        break;
+      case MetaInfoType.RC:
+        objectToReturn = this.meta.payload.rc;
+        break;
+      default:
+        kdbOutputLog(`Invalid meta type: ${metaType}`, "ERROR");
+        return "";
+    }
+
+    return JSON.stringify(objectToReturn);
   }
 
   public async getMeta(): Promise<MetaObjectPayload | undefined> {
@@ -126,6 +194,33 @@ export class InsightsConnection {
     return undefined;
   }
 
+  public async getApiConfig() {
+    if (
+      this.connected &&
+      this.insightsVersion &&
+      compareVersions(this.insightsVersion, 1.13)
+    ) {
+      const configUrl = new url.URL(
+        ext.insightsAuthUrls.apiConfigUrl,
+        this.node.details.server,
+      );
+
+      const options = await this.getOptions(
+        true,
+        {},
+        "GET",
+        configUrl.toString(),
+      );
+
+      if (options === undefined) {
+        return undefined;
+      }
+
+      const configResponse = await axios(options);
+      this.apiConfig = configResponse.data;
+    }
+  }
+
   public async getConfig() {
     if (this.connected) {
       const configUrl = new url.URL(
@@ -133,13 +228,18 @@ export class InsightsConnection {
         this.node.details.server,
       );
 
-      const options = await this.getOptions();
+      const options = await this.getOptions(
+        false,
+        {},
+        "GET",
+        configUrl.toString(),
+      );
 
       if (options === undefined) {
         return undefined;
       }
 
-      const configResponse = await axios.get(configUrl.toString(), options);
+      const configResponse = await axios(options);
       this.config = configResponse.data;
       this.getInsightsVersion();
       this.defineEndpoints();
@@ -217,30 +317,17 @@ export class InsightsConnection {
         targetUrl,
         this.node.details.server,
       ).toString();
-      const token = await getCurrentToken(
-        this.node.details.server,
-        this.node.details.alias,
-        this.node.details.realm || "insights",
-        !!this.node.details.insecure,
-      );
-      if (token === undefined) {
-        tokenUndefinedError(this.connLabel);
+      const customHeaders = {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      };
+      const options = await this.getOptions(false, customHeaders, "POST", body);
+      if (options === undefined || !options.headers) {
         return undefined;
       }
-      const headers = {
-        Authorization: `Bearer ${token.accessToken}`,
-        Accept: "application/octet-stream",
-        "Content-Type": "application/json",
-      };
 
-      const options: AxiosRequestConfig = {
-        method: "post",
-        url: requestUrl,
-        data: body,
-        headers: headers,
-        responseType: "arraybuffer",
-        httpsAgent: getHttpsAgent(this.node.details.insecure),
-      };
+      options.responseType = "arraybuffer";
+
       const results = await window.withProgress(
         {
           location: ProgressLocation.Notification,
@@ -325,35 +412,27 @@ export class InsightsConnection {
 
       const scratchpadURL = new url.URL(coreUrl!, this.node.details.server);
 
-      const token = await getCurrentToken(
-        this.node.details.server,
-        this.node.details.alias,
-        this.node.details.realm || "insights",
-        !!this.node.details.insecure,
-      );
-
-      if (token === undefined) {
-        tokenUndefinedError(this.connLabel);
-        return undefined;
-      }
-
-      const username = jwtDecode<JwtUser>(token.accessToken);
-      if (username === undefined || username.preferred_username === "") {
-        invalidUsernameJWT(this.connLabel);
-      }
-      const headers: AxiosRequestConfig = {
-        headers: {
-          Authorization: `Bearer ${token.accessToken}`,
-          username: username.preferred_username!,
-          json: true,
-        },
-        httpsAgent: getHttpsAgent(this.node.details.insecure),
+      const customHeaders = {
+        json: true,
       };
+
       const body = {
         output: variableName,
         isTableView: false,
         params: queryParams,
       };
+      const options = await this.getOptions(
+        true,
+        customHeaders,
+        "POST",
+        scratchpadURL.toString(),
+        body,
+      );
+
+      if (options === undefined) {
+        return;
+      }
+
       await window.withProgress(
         {
           location: ProgressLocation.Notification,
@@ -366,32 +445,30 @@ export class InsightsConnection {
 
           progress.report({ message: "Populating scratchpad..." });
 
-          return await axios
-            .post(scratchpadURL.toString(), body, headers)
-            .then((response: any) => {
-              if (response.data.error) {
-                kdbOutputLog(
-                  `[SCRATCHPAD] Error occured while populating scratchpad: ${response.data.errorMsg}`,
-                  "ERROR",
-                );
-              } else {
-                kdbOutputLog(
-                  `Executed successfully, stored in ${variableName}.`,
-                  "INFO",
-                );
-                kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
-                kdbOutputLog(
-                  `[SCRATCHPAD] Populated scratchpad with the following params: ${JSON.stringify(body.params)}`,
-                  "INFO",
-                );
-                window.showInformationMessage(
-                  `Executed successfully, stored in ${variableName}.`,
-                );
-                Telemetry.sendEvent(
-                  "Datasource." + dsTypeString + ".Scratchpad.Populated",
-                );
-              }
-            });
+          return await axios(options).then((response: any) => {
+            if (response.data.error) {
+              kdbOutputLog(
+                `[SCRATCHPAD] Error occured while populating scratchpad: ${response.data.errorMsg}`,
+                "ERROR",
+              );
+            } else {
+              kdbOutputLog(
+                `Executed successfully, stored in ${variableName}.`,
+                "INFO",
+              );
+              kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
+              kdbOutputLog(
+                `[SCRATCHPAD] Populated scratchpad with the following params: ${JSON.stringify(body.params)}`,
+                "INFO",
+              );
+              window.showInformationMessage(
+                `Executed successfully, stored in ${variableName}.`,
+              );
+              Telemetry.sendEvent(
+                "Datasource." + dsTypeString + ".Scratchpad.Populated",
+              );
+            }
+          });
         },
       );
     } else {
@@ -562,20 +639,9 @@ export class InsightsConnection {
         this.connEndpoints.scratchpad.scratchpad,
         this.node.details.server,
       );
-      const token = await getCurrentToken(
-        this.node.details.server,
-        this.node.details.alias,
-        this.node.details.realm || "insights",
-        !!this.node.details.insecure,
-      );
-      if (token === undefined) {
-        tokenUndefinedError(this.connLabel);
-        return undefined;
-      }
-      const username = jwtDecode<JwtUser>(token.accessToken);
-      if (username === undefined || username.preferred_username === "") {
-        invalidUsernameJWT(this.connLabel);
-      }
+      const customHeaders = {
+        "Content-Type": "application/json",
+      };
       const body: ScratchpadRequestBody = {
         expression: query,
         language: !isPython ? "q" : "python",
@@ -593,11 +659,17 @@ export class InsightsConnection {
         }
       }
 
-      const headers = {
-        Authorization: `Bearer ${token.accessToken}`,
-        Username: username.preferred_username,
-        "Content-Type": "application/json",
-      };
+      const options = await this.getOptions(
+        true,
+        customHeaders,
+        "POST",
+        scratchpadURL.toString(),
+        body,
+      );
+
+      if (options === undefined) {
+        return;
+      }
 
       const spResponse = await window.withProgress(
         {
@@ -613,48 +685,43 @@ export class InsightsConnection {
             progress.report({ message: "Starting scratchpad..." });
           }
 
-          const spRes = await axios
-            .post(scratchpadURL.toString(), body, {
-              headers,
-              httpsAgent: getHttpsAgent(this.node.details.insecure),
-            })
-            .then((response: any) => {
-              if (response.data.error) {
-                return response.data;
-              } else if (query === "") {
-                kdbOutputLog(
-                  `[SCRATCHPAD] scratchpad created for connection: ${this.connLabel}`,
-                  "INFO",
-                );
-              } else {
-                kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
-                if (!response.data.error) {
-                  if (isTableView) {
-                    if (
-                      /* TODO: Workaround for Python structuredText bug */
-                      !isPython &&
-                      this.insightsVersion &&
-                      compareVersions(this.insightsVersion, 1.12)
-                    ) {
-                      response.data = JSON.parse(
-                        response.data.data,
-                      ) as StructuredTextResults;
-                    } else {
-                      const buffer = new Uint8Array(
-                        response.data.data.map((x: string) => parseInt(x, 16)),
-                      ).buffer;
+          const spRes = await axios(options).then((response: any) => {
+            if (response.data.error) {
+              return response.data;
+            } else if (query === "") {
+              kdbOutputLog(
+                `[SCRATCHPAD] scratchpad created for connection: ${this.connLabel}`,
+                "INFO",
+              );
+            } else {
+              kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
+              if (!response.data.error) {
+                if (isTableView) {
+                  if (
+                    /* TODO: Workaround for Python structuredText bug */
+                    !isPython &&
+                    this.insightsVersion &&
+                    compareVersions(this.insightsVersion, 1.12)
+                  ) {
+                    response.data = JSON.parse(
+                      response.data.data,
+                    ) as StructuredTextResults;
+                  } else {
+                    const buffer = new Uint8Array(
+                      response.data.data.map((x: string) => parseInt(x, 16)),
+                    ).buffer;
 
-                      response.data.data = handleWSResults(buffer);
-                      response.data.data = handleScratchpadTableRes(
-                        response.data.data,
-                      );
-                    }
+                    response.data.data = handleWSResults(buffer);
+                    response.data.data = handleScratchpadTableRes(
+                      response.data.data,
+                    );
                   }
-                  return response.data;
                 }
                 return response.data;
               }
-            });
+              return response.data;
+            }
+          });
           return spRes;
         },
       );
@@ -665,38 +732,28 @@ export class InsightsConnection {
     return undefined;
   }
 
-  public async resetScratchpad(): Promise<boolean> {
+  public async resetScratchpad(): Promise<boolean | undefined> {
     if (this.connected && this.connEndpoints) {
       const scratchpadURL = new url.URL(
         this.connEndpoints.scratchpad.reset,
         this.node.details.server,
       );
+      const customHeaders = {
+        json: true,
+      };
 
-      const token = await getCurrentToken(
-        this.node.details.server,
-        this.node.details.alias,
-        this.node.details.realm || "insights",
-        !!this.node.details.insecure,
+      const options = await this.getOptions(
+        true,
+        customHeaders,
+        "POST",
+        scratchpadURL.toString(),
+        null,
       );
 
-      if (token === undefined) {
-        tokenUndefinedError(this.connLabel);
-        return false;
+      if (options === undefined) {
+        return;
       }
 
-      const username = jwtDecode<JwtUser>(token.accessToken);
-      if (username === undefined || username.preferred_username === "") {
-        invalidUsernameJWT(this.connLabel);
-        return false;
-      }
-      const headers: AxiosRequestConfig = {
-        headers: {
-          Authorization: `Bearer ${token.accessToken}`,
-          username: username.preferred_username!,
-          json: true,
-        },
-        httpsAgent: getHttpsAgent(this.node.details.insecure),
-      };
       return await window.withProgress(
         {
           location: ProgressLocation.Notification,
@@ -708,8 +765,7 @@ export class InsightsConnection {
             return false;
           });
           progress.report({ message: "Reseting scratchpad..." });
-          const res = await axios
-            .post(scratchpadURL.toString(), null, headers)
+          const res = await axios(options)
             .then((_response: any) => {
               kdbOutputLog(
                 `[SCRATCHPAD] Executed successfully, scratchpad reseted at ${this.connLabel} connection.`,
@@ -739,44 +795,6 @@ export class InsightsConnection {
       this.noConnectionOrEndpoints();
       return false;
     }
-  }
-
-  public returnMetaObject(metaType: MetaInfoType): string {
-    if (!this.meta) {
-      kdbOutputLog(
-        `Meta data is undefined for connection ${this.connLabel}`,
-        "ERROR",
-      );
-      return "";
-    }
-
-    let objectToReturn;
-
-    switch (metaType) {
-      case MetaInfoType.META:
-        objectToReturn = this.meta.payload;
-        break;
-      case MetaInfoType.SCHEMA:
-        objectToReturn = this.meta.payload.schema;
-        break;
-      case MetaInfoType.API:
-        objectToReturn = this.meta.payload.api;
-        break;
-      case MetaInfoType.AGG:
-        objectToReturn = this.meta.payload.agg;
-        break;
-      case MetaInfoType.DAP:
-        objectToReturn = this.meta.payload.dap;
-        break;
-      case MetaInfoType.RC:
-        objectToReturn = this.meta.payload.rc;
-        break;
-      default:
-        kdbOutputLog(`Invalid meta type: ${metaType}`, "ERROR");
-        return "";
-    }
-
-    return JSON.stringify(objectToReturn);
   }
 
   public noConnectionOrEndpoints(): void {

@@ -468,6 +468,23 @@ export class ConnectionManagementService {
     return connection.insightsVersion ? connection.insightsVersion : 0;
   }
 
+  public async retrieveInsightsConnQEEnabled(
+    connLabel: string,
+  ): Promise<string | undefined> {
+    const connection = this.retrieveConnectedConnection(connLabel);
+
+    if (
+      connection instanceof InsightsConnection &&
+      connection.apiConfig?.queryEnvironmentsEnabled !== undefined
+    ) {
+      return connection.apiConfig.queryEnvironmentsEnabled
+        ? "Enabled"
+        : "Disabled";
+    }
+
+    return undefined;
+  }
+
   public exportConnection(connLabel?: string, includeAuth?: boolean): string {
     const exportedContent: ExportedConnections = {
       connections: {

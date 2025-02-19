@@ -150,13 +150,7 @@ export namespace ext {
     tokenURL: "auth/realms/insights/protocol/openid-connect/token",
     scratchpadURL: "servicebroker/scratchpad/display",
     configURL: "kxicontroller/config",
-  };
-
-  export const insightsScratchpadUrls = {
-    import: "servicebroker/scratchpad/import/data",
-    importSql: "servicebroker/scratchpad/import/sql",
-    importQsql: "servicebroker/scratchpad/import/qsql",
-    reset: "servicebroker/scratchpad/reset",
+    apiConfigUrl: "api/config",
   };
 
   export const insightsServiceGatewayUrls = {

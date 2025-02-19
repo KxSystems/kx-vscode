@@ -20,6 +20,13 @@ export type InsightsConfig = {
   version: string;
 };
 
+export type InsightsApiConfig = {
+  encryptionDatabase: boolean;
+  encryptionInTransit: boolean;
+  queryEnvironmentsEnabled: boolean;
+  version: string;
+};
+
 export type InsightsEndpoints = {
   scratchpad: {
     scratchpad: string;

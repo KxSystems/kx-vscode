@@ -633,8 +633,14 @@ export class InsightsNode extends TreeItem {
     );
     tooltipMd.appendMarkdown(`${this.details.alias} \n`);
     const version = await connService.retrieveInsightsConnVersion(this.label);
+    const qeEnabled = await connService.retrieveInsightsConnQEEnabled(
+      this.label,
+    );
     if (version !== 0) {
-      tooltipMd.appendMarkdown(`\nVersion: ${version}`);
+      tooltipMd.appendMarkdown(`\nVersion: ${version}\n`);
+    }
+    if (qeEnabled !== undefined) {
+      tooltipMd.appendMarkdown(`\nQuery Environments: ${qeEnabled}`);
     }
     return tooltipMd;
   }
