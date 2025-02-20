@@ -45,6 +45,16 @@ import { ScratchpadRequestBody } from "../models/scratchpad";
 import { StructuredTextResults } from "../models/queryResult";
 import { UDARequestBody } from "../models/uda";
 
+const customHeadersOctet = {
+  Accept: "application/octet-stream",
+  "Content-Type": "application/json",
+};
+const customHeadersJson = {
+  "Content-Type": "application/json",
+  Accept: "application/json",
+  json: true,
+};
+
 export class InsightsConnection {
   public connected: boolean;
   public connLabel: string;
@@ -179,10 +189,9 @@ export class InsightsConnection {
         ext.insightsServiceGatewayUrls.meta,
         this.node.details.server,
       );
-
       const options = await this.getOptions();
 
-      if (options === undefined) {
+      if (!options) {
         return undefined;
       }
 
@@ -204,7 +213,6 @@ export class InsightsConnection {
         ext.insightsAuthUrls.apiConfigUrl,
         this.node.details.server,
       );
-
       const options = await this.getOptions(
         true,
         {},
@@ -215,8 +223,8 @@ export class InsightsConnection {
       if (options === undefined) {
         return undefined;
       }
-
       const configResponse = await axios(options);
+
       this.apiConfig = configResponse.data;
     }
   }
@@ -227,7 +235,6 @@ export class InsightsConnection {
         ext.insightsAuthUrls.configURL,
         this.node.details.server,
       );
-
       const options = await this.getOptions(
         false,
         {},
@@ -240,6 +247,7 @@ export class InsightsConnection {
       }
 
       const configResponse = await axios(options);
+
       this.config = configResponse.data;
       this.getInsightsVersion();
       this.defineEndpoints();
@@ -317,17 +325,18 @@ export class InsightsConnection {
         targetUrl,
         this.node.details.server,
       ).toString();
-      const customHeaders = {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      };
-      const options = await this.getOptions(false, customHeaders, "POST", body);
-      if (options === undefined || !options.headers) {
+      const options = await this.getOptions(
+        false,
+        customHeadersOctet,
+        "POST",
+        requestUrl.toString(),
+        body,
+      );
+
+      if (!options) {
         return undefined;
       }
-
       options.responseType = "arraybuffer";
-
       const results = await window.withProgress(
         {
           location: ProgressLocation.Notification,
@@ -411,11 +420,6 @@ export class InsightsConnection {
       }
 
       const scratchpadURL = new url.URL(coreUrl!, this.node.details.server);
-
-      const customHeaders = {
-        json: true,
-      };
-
       const body = {
         output: variableName,
         isTableView: false,
@@ -423,7 +427,7 @@ export class InsightsConnection {
       };
       const options = await this.getOptions(
         true,
-        customHeaders,
+        customHeadersJson,
         "POST",
         scratchpadURL.toString(),
         body,
@@ -497,27 +501,20 @@ export class InsightsConnection {
         this.connEndpoints.serviceGateway.udaBase +
         udaReqBody.name.split(".").slice(1).join("/");
       const udaURL = new url.URL(udaEndpoint, this.node.details.server);
-      const token = await this.generateToken();
-      if (token === undefined) {
-        return undefined;
+      const options = await this.getOptions(
+        false,
+        customHeadersOctet,
+        "POST",
+        udaURL.toString(),
+        udaReqBody.params,
+      );
+
+      if (!options) {
+        return;
       }
 
-      const headers = {
-        Authorization: `Bearer ${token.accessToken}`,
-        Accept: "application/octet-stream",
-        "Content-Type": "application/json",
-      };
+      options.responseType = "arraybuffer";
 
-      const body = udaReqBody.params;
-
-      const options: AxiosRequestConfig = {
-        method: "post",
-        url: udaURL.toString(),
-        data: body,
-        headers: headers,
-        responseType: "arraybuffer",
-        httpsAgent: getHttpsAgent(this.node.details.insecure),
-      };
       const results = await window.withProgress(
         {
           location: ProgressLocation.Notification,
@@ -571,20 +568,16 @@ export class InsightsConnection {
         this.connEndpoints.scratchpad.importUDA,
         this.node.details.server,
       );
-      const token = await this.generateToken();
-      if (token === undefined) {
-        return undefined;
+      const options = await this.getOptions(
+        true,
+        customHeadersJson,
+        "POST",
+        udaURL.toString(),
+        udaReqBody,
+      );
+      if (!options) {
+        return;
       }
-      const username = jwtDecode<JwtUser>(token.accessToken);
-      if (username === undefined || username.preferred_username === "") {
-        invalidUsernameJWT(this.connLabel);
-      }
-
-      const headers = {
-        Authorization: `Bearer ${token.accessToken}`,
-        Username: username.preferred_username,
-        "Content-Type": "application/json",
-      };
 
       const udaResponse = await window.withProgress(
         {
@@ -596,27 +589,22 @@ export class InsightsConnection {
             kdbOutputLog(`User cancelled the UDA execution.`, "WARNING");
           });
 
-          const udaRes = await axios
-            .post(udaURL.toString(), udaReqBody, {
-              headers,
-              httpsAgent: getHttpsAgent(this.node.details.insecure),
-            })
-            .then((response: any) => {
-              if (response.data.error) {
-                return response.data;
-              } else {
-                kdbOutputLog(`[UDA] Status: ${response.status}`, "INFO");
-                if (!response.data.error) {
-                  if (isTableView) {
-                    response.data = JSON.parse(
-                      response.data.data,
-                    ) as StructuredTextResults;
-                  }
-                  return response.data;
+          const udaRes = await axios(options).then((response: any) => {
+            if (response.data.error) {
+              return response.data;
+            } else {
+              kdbOutputLog(`[UDA] Status: ${response.status}`, "INFO");
+              if (!response.data.error) {
+                if (isTableView) {
+                  response.data = JSON.parse(
+                    response.data.data,
+                  ) as StructuredTextResults;
                 }
                 return response.data;
               }
-            });
+              return response.data;
+            }
+          });
           return udaRes;
         },
       );
@@ -639,9 +627,6 @@ export class InsightsConnection {
         this.connEndpoints.scratchpad.scratchpad,
         this.node.details.server,
       );
-      const customHeaders = {
-        "Content-Type": "application/json",
-      };
       const body: ScratchpadRequestBody = {
         expression: query,
         language: !isPython ? "q" : "python",
@@ -661,7 +646,7 @@ export class InsightsConnection {
 
       const options = await this.getOptions(
         true,
-        customHeaders,
+        customHeadersJson,
         "POST",
         scratchpadURL.toString(),
         body,
@@ -738,19 +723,15 @@ export class InsightsConnection {
         this.connEndpoints.scratchpad.reset,
         this.node.details.server,
       );
-      const customHeaders = {
-        json: true,
-      };
-
       const options = await this.getOptions(
         true,
-        customHeaders,
+        customHeadersJson,
         "POST",
         scratchpadURL.toString(),
         null,
       );
 
-      if (options === undefined) {
+      if (!options) {
         return;
       }
 
