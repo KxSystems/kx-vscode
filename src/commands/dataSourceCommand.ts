@@ -214,7 +214,6 @@ export async function runDataSource(
         } else if (!success) {
           res = res.errorMsg ? res.errorMsg : res.error;
         }
-        const connVersion = selectedConnection.insightsVersion ?? 0;
         await writeQueryResultsToView(
           res,
           query,
@@ -229,11 +228,10 @@ export async function runDataSource(
             `[DATASOURCE] Results is a string with length: ${res.length}`,
             "INFO",
           );
-        } else {
-          if (res.errorMsg) {
-            res = res.errorMsg;
-          }
+        } else if (res.errorMsg) {
+          res = res.errorMsg;
         }
+
         await writeQueryResultsToConsole(
           res,
           query,
@@ -315,7 +313,7 @@ export async function runApiDataSource(
     const results = handleWSResults(apiCall.arrayBuffer);
     return handleScratchpadTableRes(results);
   } else {
-    return { error: "API call failed" };
+    return { error: "Datasource API call failed" };
   }
 }
 
@@ -426,7 +424,7 @@ export async function runQsqlDataSource(
     const results = handleWSResults(qsqlCall.arrayBuffer);
     return handleScratchpadTableRes(results);
   } else {
-    return { error: "API call failed" };
+    return { error: "Datasource QSQL call failed" };
   }
 }
 
@@ -448,7 +446,7 @@ export async function runSqlDataSource(
     const results = handleWSResults(sqlCall.arrayBuffer);
     return handleScratchpadTableRes(results);
   } else {
-    return { error: "API call failed" };
+    return { error: "Datasource SQL call failed" };
   }
 }
 
