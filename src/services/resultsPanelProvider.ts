@@ -48,6 +48,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   public kdbToAgGridCellType(kdbType: string): string {
     const typeMapping: { [key: string]: string } = {
       boolean: "boolean",
+      booleans: "boolean",
       guid: "text",
       byte: "number",
       short: "number",
@@ -227,7 +228,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
     const columnDefs = columnsArray.map((column) => {
       const sanitizedKey = this.sanitizeString(column.name);
-      const cellDataType = "text";
+      const cellDataType = this.kdbToAgGridCellType(column.type);
       const headerName = column.type
         ? `${sanitizedKey} [${column.type}]`
         : sanitizedKey;
@@ -235,8 +236,8 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       return {
         field: column.name,
         headerName: headerName,
-        cellDataType: cellDataType,
-        cellRendererParams: { disabled: false },
+        cellDataType,
+        cellRendererParams: { disabled: cellDataType === "boolean" },
       };
     });
 
@@ -483,6 +484,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
                       filter: true,
                       flex: 1,
                       minWidth: 100,
+                      editable: false,
                     },
                     columnDefs: message.columnDefs,
                     domLayout: "autoHeight",

@@ -57,6 +57,7 @@ import {
   ServerDetails,
   ServerType,
 } from "../../src/models/connectionsModels";
+import { InsightsApiConfig } from "../../src/models/config";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
@@ -146,6 +147,11 @@ describe("dataSourceCommand2", () => {
         },
         sql: {
           query: "dummy SQL query",
+        },
+        uda: {
+          name: "test query",
+          description: "test description",
+          params: [],
         },
       },
     };
@@ -362,7 +368,7 @@ describe("dataSourceCommand2", () => {
         dataSourceUtils,
         "checkIfTimeParamIsCorrect",
       );
-      getDataInsightsStub = sinon.stub(insightsConn, "getDataInsights");
+      getDataInsightsStub = sinon.stub(insightsConn, "getDatasourceQuery");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableRes = sinon.stub(
         queryUtils,
@@ -432,7 +438,7 @@ describe("dataSourceCommand2", () => {
 
     beforeEach(() => {
       windowMock = sinon.mock(vscode.window);
-      getDataInsightsStub = sinon.stub(insightsConn, "getDataInsights");
+      getDataInsightsStub = sinon.stub(insightsConn, "getDatasourceQuery");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableRes = sinon.stub(
         queryUtils,
@@ -480,7 +486,7 @@ describe("dataSourceCommand2", () => {
 
     beforeEach(() => {
       windowMock = sinon.mock(vscode.window);
-      getDataInsightsStub = sinon.stub(insightsConn, "getDataInsights");
+      getDataInsightsStub = sinon.stub(insightsConn, "getDatasourceQuery");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableRes = sinon.stub(
         queryUtils,
@@ -517,6 +523,99 @@ describe("dataSourceCommand2", () => {
         { a: "4", b: "6" },
         { a: "6", b: "9" },
       ]);
+    });
+  });
+
+  describe("runUDADataSource", () => {
+    let getDataInsightsStub,
+      handleWSResultsStub,
+      handleScratchpadTableRes,
+      parseErrorStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      getDataInsightsStub = sinon.stub(insightsConn, "getDatasourceQuery");
+      handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
+      parseErrorStub = sinon.stub(dataSourceCommand, "parseError");
+      handleScratchpadTableRes = sinon.stub(
+        queryUtils,
+        "handleScratchpadTableRes",
+      );
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should call the API and handle the results", async () => {
+      getDataInsightsStub.resolves({ arrayBuffer: true });
+      handleWSResultsStub.resolves([
+        { a: "2", b: "3" },
+        { a: "4", b: "6" },
+        { a: "6", b: "9" },
+      ]);
+      handleScratchpadTableRes.resolves([
+        { a: "2", b: "3" },
+        { a: "4", b: "6" },
+        { a: "6", b: "9" },
+      ]);
+
+      const result = await dataSourceCommand.runUDADataSource(
+        dummyDataSourceFiles,
+        insightsConn,
+      );
+
+      sinon.assert.calledOnce(getDataInsightsStub);
+      sinon.assert.calledOnce(handleWSResultsStub);
+      assert.deepStrictEqual(result, [
+        { a: "2", b: "3" },
+        { a: "4", b: "6" },
+        { a: "6", b: "9" },
+      ]);
+    });
+
+    it("should call the API and handle the error results", async () => {
+      getDataInsightsStub.resolves({ error: "error test" });
+      parseErrorStub.resolves({ error: "error test" });
+
+      const result = await dataSourceCommand.runUDADataSource(
+        dummyDataSourceFiles,
+        insightsConn,
+      );
+
+      assert.deepStrictEqual(result, { error: "error test" });
+    });
+
+    it("should call the API and handle undefined response ", async () => {
+      getDataInsightsStub.resolves(undefined);
+
+      const result = await dataSourceCommand.runUDADataSource(
+        dummyDataSourceFiles,
+        insightsConn,
+      );
+
+      assert.deepStrictEqual(result, { error: "UDA call failed" });
+    });
+
+    it("should handle undefined UDA ", async () => {
+      dummyDataSourceFiles.dataSource.uda = undefined;
+
+      const result = await dataSourceCommand.runUDADataSource(
+        dummyDataSourceFiles,
+        insightsConn,
+      );
+
+      assert.deepStrictEqual(result, { error: "UDA not found" });
+    });
+
+    it("should handle UDA without name", async () => {
+      dummyDataSourceFiles.dataSource.uda.name = "";
+
+      const result = await dataSourceCommand.runUDADataSource(
+        dummyDataSourceFiles,
+        insightsConn,
+      );
+
+      assert.deepStrictEqual(result, { error: "UDA name not found" });
     });
   });
 
@@ -601,6 +700,11 @@ describe("dataSourceCommand2", () => {
           selectedTarget: "dummy-target",
         },
         sql: { query: "test query" },
+        uda: {
+          name: "test query",
+          description: "test description",
+          params: [],
+        },
       },
       insightsNode: "dummyNode",
     };
@@ -610,6 +714,7 @@ describe("dataSourceCommand2", () => {
     const connMngService = new ConnectionManagementService();
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
     const ab = new ArrayBuffer(26);
+
     ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
     let isVisibleStub,
       getMetaStub,
@@ -618,7 +723,8 @@ describe("dataSourceCommand2", () => {
       retrieveConnStub,
       getDataInsightsStub,
       writeQueryResultsToViewStub,
-      writeQueryResultsToConsoleStub: sinon.SinonStub;
+      writeQueryResultsToConsoleStub,
+      qeStatusStub: sinon.SinonStub;
     let windowMock: sinon.SinonMock;
 
     ext.outputChannel = vscode.window.createOutputChannel("kdb");
@@ -637,7 +743,7 @@ describe("dataSourceCommand2", () => {
       handleScratchpadTableRes = sinon
         .stub(queryUtils, "handleScratchpadTableRes")
         .returns("dummy results");
-      getDataInsightsStub = sinon.stub(insightsConn, "getDataInsights");
+      getDataInsightsStub = sinon.stub(insightsConn, "getDatasourceQuery");
       writeQueryResultsToViewStub = sinon.stub(
         serverCommand,
         "writeQueryResultsToView",
@@ -752,6 +858,30 @@ describe("dataSourceCommand2", () => {
       ext.connectedConnectionList.length = 0;
     });
 
+    it("should fail run QSQL if qe is off", async () => {
+      const apiConfig: InsightsApiConfig = {
+        encryptionDatabase: false,
+        encryptionInTransit: false,
+        queryEnvironmentsEnabled: false,
+        version: "1.0",
+      };
+      insightsConn.apiConfig = apiConfig;
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = dummyMeta;
+      getMetaStub.resolves(dummyMeta);
+      ext.isResultsTabVisible = true;
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToConsoleStub);
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      insightsConn.apiConfig.queryEnvironmentsEnabled = true;
+      ext.connectedConnectionList.length = 0;
+    });
+
     it("should return API results", async () => {
       ext.connectedConnectionList.push(insightsConn);
       retrieveConnStub.resolves(insightsConn);
@@ -776,6 +906,25 @@ describe("dataSourceCommand2", () => {
       retrieveConnStub.resolves(insightsConn);
       insightsConn.meta = dummyMeta;
       dummyFileContent.dataSource.selectedType = DataSourceTypes.SQL;
+      getMetaStub.resolves(dummyMeta);
+      getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
+      ext.isResultsTabVisible = false;
+      await dataSourceCommand.runDataSource(
+        dummyFileContent as DataSourceFiles,
+        insightsConn.connLabel,
+        "test-file.kdb.json",
+      );
+      sinon.assert.neverCalledWith(writeQueryResultsToViewStub);
+      sinon.assert.calledOnce(writeQueryResultsToConsoleStub);
+
+      ext.connectedConnectionList.length = 0;
+    });
+
+    it("should return UDA results", async () => {
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      insightsConn.meta = dummyMeta;
+      dummyFileContent.dataSource.selectedType = DataSourceTypes.UDA;
       getMetaStub.resolves(dummyMeta);
       getDataInsightsStub.resolves({ arrayBuffer: ab, error: "" });
       ext.isResultsTabVisible = false;
@@ -910,13 +1059,26 @@ describe("dataSourceCommand2", () => {
           selectedTarget: "dummy-target",
         },
         sql: { query: "test query" },
+        uda: {
+          name: "test query",
+          description: "test description",
+          params: [],
+        },
       },
       insightsNode: "dummyNode",
     };
     let windowMock: sinon.SinonMock;
+    let connMngService: ConnectionManagementService;
+    let qeStatusStub: sinon.SinonStub;
 
     beforeEach(() => {
+      ext.activeConnection = insightsConn;
       windowMock = sinon.mock(vscode.window);
+      connMngService = new ConnectionManagementService();
+      qeStatusStub = sinon.stub(
+        connMngService,
+        "retrieveInsightsConnQEEnabled",
+      );
     });
     afterEach(() => {
       ext.activeConnection = undefined;
@@ -931,6 +1093,18 @@ describe("dataSourceCommand2", () => {
         .expects("showErrorMessage")
         .once()
         .withArgs("Please connect to an Insights server");
+    });
+
+    it("should show error msg if qe is off", async () => {
+      qeStatusStub.returns("disabled");
+      await dataSourceCommand.populateScratchpad(
+        dummyFileContent,
+        insightsConn.connLabel,
+      );
+      windowMock
+        .expects("showErrorMessage")
+        .once()
+        .withArgs("The query enviroment(s) are disabled for this connection");
     });
   });
 

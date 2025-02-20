@@ -69,6 +69,7 @@ describe("KdbDataSourceView", () => {
             },
           ],
         },
+        UDAs: [],
         dataSourceFile: {
           dataSource: {
             selectedType: DataSourceTypes.API,
@@ -102,6 +103,15 @@ describe("KdbDataSourceView", () => {
             },
             sql: {
               query: "",
+            },
+            uda: {
+              name: "test",
+              description: "test description",
+              params: [],
+              return: {
+                type: ["99"],
+                description: "test return description",
+              },
             },
           },
         },
