@@ -362,7 +362,7 @@ describe("dataSourceCommand2", () => {
         dataSourceUtils,
         "checkIfTimeParamIsCorrect",
       );
-      getDataInsightsStub = sinon.stub(insightsConn, "getDataInsights");
+      getDataInsightsStub = sinon.stub(insightsConn, "getDatasourceQuery");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableRes = sinon.stub(
         queryUtils,
@@ -432,7 +432,7 @@ describe("dataSourceCommand2", () => {
 
     beforeEach(() => {
       windowMock = sinon.mock(vscode.window);
-      getDataInsightsStub = sinon.stub(insightsConn, "getDataInsights");
+      getDataInsightsStub = sinon.stub(insightsConn, "getDatasourceQuery");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableRes = sinon.stub(
         queryUtils,
@@ -480,7 +480,7 @@ describe("dataSourceCommand2", () => {
 
     beforeEach(() => {
       windowMock = sinon.mock(vscode.window);
-      getDataInsightsStub = sinon.stub(insightsConn, "getDataInsights");
+      getDataInsightsStub = sinon.stub(insightsConn, "getDatasourceQuery");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableRes = sinon.stub(
         queryUtils,
@@ -637,7 +637,7 @@ describe("dataSourceCommand2", () => {
       handleScratchpadTableRes = sinon
         .stub(queryUtils, "handleScratchpadTableRes")
         .returns("dummy results");
-      getDataInsightsStub = sinon.stub(insightsConn, "getDataInsights");
+      getDataInsightsStub = sinon.stub(insightsConn, "getDatasourceQuery");
       writeQueryResultsToViewStub = sinon.stub(
         serverCommand,
         "writeQueryResultsToView",

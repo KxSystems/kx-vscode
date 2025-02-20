@@ -316,20 +316,45 @@ export class InsightsConnection {
     }
   }
 
-  public async getDataInsights(
-    targetUrl: string,
-    body: string,
+  public generateDatasourceEndpoints(
+    type: DataSourceTypes,
+    udaName: string,
+  ): string {
+    let endpoint: string = "";
+    switch (type) {
+      case DataSourceTypes.UDA:
+        endpoint =
+          this.retrieveEndpoints("serviceGateway", "udaBase") +
+          udaName.split(".").slice(1).join("/");
+        break;
+      case DataSourceTypes.API:
+        endpoint = this.retrieveEndpoints("serviceGateway", "data") || "";
+        break;
+      case DataSourceTypes.SQL:
+        endpoint = this.retrieveEndpoints("serviceGateway", "sql") || "";
+        break;
+      case DataSourceTypes.QSQL:
+      default:
+        endpoint = this.retrieveEndpoints("serviceGateway", "qsql") || "";
+        break;
+    }
+    return new url.URL(endpoint, this.node.details.server).toString();
+  }
+
+  public async getDatasourceQuery(
+    type: DataSourceTypes,
+    body: any,
   ): Promise<GetDataObjectPayload | undefined> {
     if (this.connected) {
-      const requestUrl = new url.URL(
-        targetUrl,
-        this.node.details.server,
-      ).toString();
+      const udaName = (body as UDARequestBody).name
+        ? (body as UDARequestBody).name
+        : "";
+      const requestUrl = this.generateDatasourceEndpoints(type, udaName);
       const options = await this.getOptions(
         false,
         customHeadersOctet,
         "POST",
-        requestUrl.toString(),
+        requestUrl,
         body,
       );
 
@@ -491,72 +516,6 @@ export class InsightsConnection {
       tokenUndefinedError(this.connLabel);
     }
     return token;
-  }
-
-  public async getUDAQuery(
-    udaReqBody: UDARequestBody,
-  ): Promise<any | undefined> {
-    if (this.connected && this.connEndpoints) {
-      const udaEndpoint =
-        this.connEndpoints.serviceGateway.udaBase +
-        udaReqBody.name.split(".").slice(1).join("/");
-      const udaURL = new url.URL(udaEndpoint, this.node.details.server);
-      const options = await this.getOptions(
-        false,
-        customHeadersOctet,
-        "POST",
-        udaURL.toString(),
-        udaReqBody.params,
-      );
-
-      if (!options) {
-        return;
-      }
-
-      options.responseType = "arraybuffer";
-
-      const results = await window.withProgress(
-        {
-          location: ProgressLocation.Notification,
-          cancellable: false,
-        },
-        async (progress, token) => {
-          token.onCancellationRequested(() => {
-            kdbOutputLog(`User cancelled the Datasource Run.`, "WARNING");
-          });
-
-          progress.report({ message: "Query executing..." });
-
-          return await axios(options)
-            .then((response: any) => {
-              kdbOutputLog(
-                `[Datasource RUN] Status: ${response.status}.`,
-                "INFO",
-              );
-              if (isCompressed(response.data)) {
-                response.data = uncompress(response.data);
-              }
-              return {
-                error: "",
-                arrayBuffer: response.data.buffer
-                  ? response.data.buffer
-                  : response.data,
-              };
-            })
-            .catch((error: any) => {
-              kdbOutputLog(
-                `[Datasource RUN] Status: ${error.response.status}.`,
-                "INFO",
-              );
-              return {
-                error: { buffer: error.response.data },
-                arrayBuffer: undefined,
-              };
-            });
-        },
-      );
-      return results;
-    }
   }
 
   public async getUDAScratchpadQuery(

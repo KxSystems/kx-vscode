@@ -304,8 +304,8 @@ export async function runApiDataSource(
     return;
   }
   const apiBody = getApiBody(fileContent);
-  const apiCall = await selectedConn.getDataInsights(
-    ext.insightsServiceGatewayUrls.data,
+  const apiCall = await selectedConn.getDatasourceQuery(
+    DataSourceTypes.API,
     JSON.stringify(apiBody),
   );
 
@@ -415,8 +415,8 @@ export async function runQsqlDataSource(
     target: target,
     query: fileContent.dataSource.qsql.query,
   };
-  const qsqlCall = await selectedConn.getDataInsights(
-    ext.insightsServiceGatewayUrls.qsql,
+  const qsqlCall = await selectedConn.getDatasourceQuery(
+    DataSourceTypes.QSQL,
     JSON.stringify(qsqlBody),
   );
 
@@ -437,8 +437,8 @@ export async function runSqlDataSource(
   const sqlBody = {
     query: fileContent.dataSource.sql.query,
   };
-  const sqlCall = await selectedConn.getDataInsights(
-    ext.insightsServiceGatewayUrls.sql,
+  const sqlCall = await selectedConn.getDatasourceQuery(
+    DataSourceTypes.SQL,
     JSON.stringify(sqlBody),
   );
 
@@ -478,10 +478,6 @@ export async function runUDADataSource(
       }
     });
   }
-  // if (Object.keys(params).length === 0) {
-  //   params["table"] = "nsansUdaTable";
-  //   parameterTypes["table"] = -10;
-  // }
   const udaReqBody: UDARequestBody = {
     language: "q",
     name: UDA.name,
@@ -492,7 +488,10 @@ export async function runUDADataSource(
     sampleSize: 10000,
   };
 
-  const udaCall = await selectedConn.getUDAQuery(udaReqBody);
+  const udaCall = await selectedConn.getDatasourceQuery(
+    DataSourceTypes.UDA,
+    udaReqBody,
+  );
 
   if (udaCall?.error) {
     return parseError(udaCall.error);
