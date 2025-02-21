@@ -57,7 +57,11 @@ import {
   ServerDetails,
   ServerType,
 } from "../../src/models/connectionsModels";
-import { ParamFieldType, UDAParam } from "../../src/models/uda";
+import {
+  InvalidParamFieldErrors,
+  ParamFieldType,
+  UDAParam,
+} from "../../src/models/uda";
 import { MetaObjectPayload } from "../../src/models/meta";
 
 interface ITestItem extends vscode.QuickPickItem {
@@ -2195,13 +2199,23 @@ describe("Utils", () => {
     });
 
     describe("convertTypesToString", () => {
+      let dataTypesStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        dataTypesStub = sinon.stub(ext.constants, "dataTypes");
+      });
+
+      afterEach(() => {
+        dataTypesStub.restore();
+      });
+
       it("should convert types to strings", () => {
         const types = [1, 2];
         const dataTypes = new Map([
           ["1", "Boolean"],
           ["2", "Number"],
         ]);
-        sinon.stub(ext.constants, "dataTypes").value(dataTypes);
+        dataTypesStub.value(dataTypes);
 
         const result = UDAUtils.convertTypesToString(types);
         assert.deepStrictEqual(result, ["Boolean", "Number"]);
@@ -2210,10 +2224,148 @@ describe("Utils", () => {
       it("should convert type to string", () => {
         const types = [1];
         const dataTypes = new Map([["1", "Boolean"]]);
-        sinon.stub(ext.constants, "dataTypes").value(dataTypes);
+        dataTypesStub.value(dataTypes);
 
         const result = UDAUtils.convertTypesToString(types);
         assert.deepStrictEqual(result, ["Boolean"]);
+      });
+
+      it("should handle empty array", () => {
+        const types: number[] = [];
+        const dataTypes = new Map();
+        dataTypesStub.value(dataTypes);
+
+        const result = UDAUtils.convertTypesToString(types);
+        assert.deepStrictEqual(result, []);
+      });
+
+      it("should return type as string if not found in dataTypes map", () => {
+        const types = [3];
+        const dataTypes = new Map([
+          ["1", "Boolean"],
+          ["2", "Number"],
+        ]);
+        dataTypesStub.value(dataTypes);
+
+        const result = UDAUtils.convertTypesToString(types);
+        assert.deepStrictEqual(result, ["3"]);
+      });
+
+      it("should handle mixed valid and invalid types", () => {
+        const types = [1, 3];
+        const dataTypes = new Map([["1", "Boolean"]]);
+        dataTypesStub.value(dataTypes);
+
+        const result = UDAUtils.convertTypesToString(types);
+        assert.deepStrictEqual(result, ["Boolean", "3"]);
+      });
+    });
+
+    describe("getIncompatibleError", () => {
+      it("should return no meta error message", () => {
+        const result = UDAUtils.getIncompatibleError(undefined, undefined);
+
+        assert.deepEqual(result, InvalidParamFieldErrors.NoMetadata);
+      });
+
+      it("should return BadField error message", () => {
+        const result = UDAUtils.getIncompatibleError(
+          {},
+          ParamFieldType.Invalid,
+        );
+      });
+
+      it("should return undefined", () => {
+        const result = UDAUtils.getIncompatibleError(
+          {},
+          ParamFieldType.Boolean,
+        );
+        assert.strictEqual(result, undefined);
+      });
+    });
+
+    describe("UDAUtils.createUDAReturn", () => {
+      let convertTypesToStringStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        convertTypesToStringStub = sinon.stub(UDAUtils, "convertTypesToString");
+      });
+
+      afterEach(() => {
+        convertTypesToStringStub.restore();
+      });
+
+      it("should return correct UDAReturn when metadata has return type and description", () => {
+        const metadata = {
+          return: {
+            type: [1, 2],
+            description: "Test description",
+          },
+        };
+        convertTypesToStringStub.withArgs([1, 2]).returns(["type1", "type2"]);
+
+        const result = UDAUtils.createUDAReturn(metadata);
+
+        assert.deepStrictEqual(result, {
+          type: ["Boolean", "Number"],
+          description: "Test description",
+        });
+      });
+
+      it("should return empty type array and empty description when metadata is undefined", () => {
+        const metadata = undefined;
+        convertTypesToStringStub.withArgs([]).returns([]);
+
+        const result = UDAUtils.createUDAReturn(metadata);
+
+        assert.deepStrictEqual(result, {
+          type: [],
+          description: "",
+        });
+      });
+
+      it("should return empty type array and empty description when metadata has no return", () => {
+        const metadata = undefined;
+        convertTypesToStringStub.withArgs([]).returns([]);
+
+        const result = UDAUtils.createUDAReturn(metadata);
+
+        assert.deepStrictEqual(result, {
+          type: [],
+          description: "",
+        });
+      });
+
+      it("should return empty type array and provided description when metadata has no return type", () => {
+        const metadata = {
+          return: {
+            description: "Test description",
+          },
+        };
+        convertTypesToStringStub.withArgs([]).returns([]);
+
+        const result = UDAUtils.createUDAReturn(metadata);
+
+        assert.deepStrictEqual(result, {
+          type: [],
+          description: "Test description",
+        });
+      });
+
+      it("should return correct type array and empty description when metadata has return type but no description", () => {
+        const metadata = {
+          return: {
+            type: [1, 2],
+          },
+        };
+        convertTypesToStringStub.withArgs([1, 2]).returns(["type1", "type2"]);
+
+        const result = UDAUtils.createUDAReturn(metadata);
+
+        assert.deepStrictEqual(result, {
+          type: ["Boolean", "Number"],
+          description: "",
+        });
       });
     });
 

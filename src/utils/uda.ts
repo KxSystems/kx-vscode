@@ -205,6 +205,5 @@ export function parseUDAList(getMeta: MetaObjectPayload): UDA[] {
 }
 
 export function retrieveDataTypeByString(type: string): number {
-  const dataType = ext.constants.reverseDataTypes.get(type);
-  return dataType ? dataType : 0;
+  return ext.constants.reverseDataTypes.get(type) ?? 0;
 }
