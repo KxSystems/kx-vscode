@@ -40,7 +40,7 @@ const MAX_RULES = 32;
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {
-  static styles = [shoelaceStyles, dataSourceStyles, kdbStyles];
+  static readonly styles = [shoelaceStyles, dataSourceStyles, kdbStyles];
 
   readonly vscode = acquireVsCodeApi();
   declare private debounce;
@@ -1054,6 +1054,11 @@ export class KdbDataSourceView extends LitElement {
   }
 
   renderCheckbox(param: UDAParam) {
+    const isChecked = param.value
+      ? param.value
+      : param.default
+        ? param.default
+        : false;
     return html`
       <sl-checkbox
         .helpText="${param.description}"
@@ -1061,22 +1066,23 @@ export class KdbDataSourceView extends LitElement {
           param.value = (event.target as HTMLInputElement).checked;
           this.requestChange();
         }}"
-        .checked="${live(
-          param.value ? param.value : param.default ? param.default : false,
-        )}"
+        .checked="${live(isChecked)}"
         >${param.name}</sl-checkbox
       >
     `;
   }
 
   renderTextarea(param: UDAParam) {
+    const value = param.value
+      ? param.value
+      : param.default
+        ? param.default
+        : "";
     return html`
       <sl-textarea
         label="${param.name}"
         .helpText="${param.description}"
-        .value="${live(
-          param.value ? param.value : param.default ? param.default : "",
-        )}"
+        .value="${live(value)}"
         @input="${(event: Event) => {
           param.value = (event.target as HTMLTextAreaElement).value;
           this.requestChange();
@@ -1085,23 +1091,25 @@ export class KdbDataSourceView extends LitElement {
   }
 
   renderMultitype(param: UDAParam) {
-    param.selectedMultiTypeString = param.selectedMultiTypeString
+    const selectedMultiTypeString = param.selectedMultiTypeString
       ? param.selectedMultiTypeString
       : param.typeStrings
         ? param.typeStrings[0]
         : "";
+    param.selectedMultiTypeString = selectedMultiTypeString;
+
+    const value = param.selectedMultiTypeString
+      ? param.selectedMultiTypeString
+      : param.typeStrings
+        ? param.typeStrings[0]
+        : "";
+
     return html`
       <div class="row align-top">
         <sl-select
           label="${param.name}"
           .helpText="${`Select a type`}"
-          .value="${live(
-            param.selectedMultiTypeString
-              ? param.selectedMultiTypeString
-              : param.typeStrings
-                ? param.typeStrings[0]
-                : "",
-          )}"
+          .value="${live(value)}"
           @sl-change="${(event: Event) => {
             param.selectedMultiTypeString = (
               event.target as HTMLSelectElement
@@ -1121,6 +1129,11 @@ export class KdbDataSourceView extends LitElement {
   renderInput(param: UDAParam, inputType: string) {
     const validInputTypes = ["text", "number", "datetime-local"];
     const type = validInputTypes.includes(inputType) ? inputType : "text";
+    const value = param.value
+      ? param.value
+      : param.default
+        ? param.default
+        : "";
 
     return html`
       <sl-input
@@ -1137,9 +1150,7 @@ export class KdbDataSourceView extends LitElement {
           | "url"}"
         label="${param.name}"
         .helpText="${param.description}"
-        .value="${live(
-          param.value ? param.value : param.default ? param.default : "",
-        )}"
+        .value="${live(value)}"
         @input="${(event: Event) => {
           param.value = (event.target as HTMLInputElement).value;
           this.requestChange();
