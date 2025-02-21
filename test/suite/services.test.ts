@@ -71,6 +71,7 @@ import { KdbTreeService } from "../../src/services/kdbTreeService";
 import * as serverCommand from "../../src/commands/serverCommand";
 import { ServerObject } from "../../src/models/serverObject";
 import { ChartEditorProvider } from "../../src/services/chartEditorProvider";
+import { InsightsApiConfig } from "../../src/models/config";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
@@ -137,6 +138,9 @@ describe("kdbTreeProvider", () => {
   let insights: Insights;
   let kdbNode: KdbNode;
   let insightNode: InsightsNode;
+  const connMng = new ConnectionManagementService();
+  let retrieveInsightsConnVersionStub,
+    retrieveInsightsConnQEEnabledStub: sinon.SinonStub;
 
   beforeEach(() => {
     servers = {
@@ -168,6 +172,18 @@ describe("kdbTreeProvider", () => {
       insights["testInsight"],
       TreeItemCollapsibleState.None,
     );
+    retrieveInsightsConnVersionStub = sinon.stub(
+      connMng,
+      "retrieveInsightsConnVersion",
+    );
+    retrieveInsightsConnQEEnabledStub = sinon.stub(
+      connMng,
+      "retrieveInsightsConnQEEnabled",
+    );
+  });
+
+  afterEach(() => {
+    sinon.restore();
   });
 
   it("Validate creation of KDB provider", () => {
@@ -249,6 +265,8 @@ describe("kdbTreeProvider", () => {
   });
 
   it("Should return children for the tree when serverList has entries", async () => {
+    retrieveInsightsConnVersionStub.returned(1);
+    retrieveInsightsConnQEEnabledStub.returned("Enabled");
     const kdbProvider = new KdbTreeProvider(servers, insights);
     const result = await kdbProvider.getChildren();
     assert.strictEqual(result.length, 2, "Children count should be 2");
@@ -1645,6 +1663,51 @@ describe("connectionManagerService", () => {
         );
 
       assert.strictEqual(result, 0);
+    });
+  });
+
+  describe("retrieveInsightsConnQEEnabled", () => {
+    let retrieveConnectedConnectionStub: sinon.SinonStub;
+    const apiConfig: InsightsApiConfig = {
+      version: "1.11",
+      encryptionDatabase: false,
+      encryptionInTransit: false,
+      queryEnvironmentsEnabled: true,
+    };
+
+    beforeEach(() => {
+      retrieveConnectedConnectionStub = sinon.stub(
+        connectionManagerService,
+        "retrieveConnectedConnection",
+      );
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should return undefined if connection is not found", async () => {
+      retrieveConnectedConnectionStub.returns(undefined);
+      const result =
+        await connectionManagerService.retrieveInsightsConnQEEnabled("test");
+      assert.strictEqual(result, undefined);
+    });
+
+    it("should return enabled if connection if qe is on", async () => {
+      insightsConn.apiConfig = apiConfig;
+      retrieveConnectedConnectionStub.returns(insightsConn);
+      const result =
+        await connectionManagerService.retrieveInsightsConnQEEnabled("test");
+      assert.strictEqual(result, "Enabled");
+    });
+
+    it("should return disabled if connection qe is off", async () => {
+      apiConfig.queryEnvironmentsEnabled = false;
+      insightsConn.apiConfig = apiConfig;
+      retrieveConnectedConnectionStub.returns(insightsConn);
+      const result =
+        await connectionManagerService.retrieveInsightsConnQEEnabled("test");
+      assert.strictEqual(result, "Disabled");
     });
   });
 
