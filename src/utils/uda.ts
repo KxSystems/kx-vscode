@@ -35,7 +35,9 @@ export function filterUDAParamsValidTypes(type: number | number[]): number[] {
   return typesArray.filter(validTypes.has, validTypes);
 }
 
-export function getUDAParamType(type: ParamFieldType): string | string[] {
+export function getUDAParamType(
+  type: ParamFieldType | ParamFieldType[],
+): string | string[] {
   if (Array.isArray(type)) {
     return type.map(
       (t) => ext.constants.dataTypes.get(t.toString()) ?? t.toString(),
@@ -150,6 +152,40 @@ export function convertTypesToString(returnType: number[]): string[] {
   );
 }
 
+export function getIncompatibleError(
+  metadata: any,
+  parsedParams: any,
+): InvalidParamFieldErrors | undefined {
+  if (!metadata) {
+    return InvalidParamFieldErrors.NoMetadata;
+  }
+  if (parsedParams === ParamFieldType.Invalid) {
+    return InvalidParamFieldErrors.BadField;
+  }
+  return undefined;
+}
+
+export function createUDAReturn(metadata: any): UDAReturn {
+  return {
+    type: convertTypesToString(metadata?.return.type || []),
+    description: metadata?.return.description || "",
+  };
+}
+
+export function createUDAObject(
+  uda: any,
+  parsedParams: any,
+  incompatibleError: any,
+): UDA {
+  return {
+    name: uda.api,
+    description: uda.metadata?.description || "",
+    params: Array.isArray(parsedParams) ? parsedParams : [],
+    return: createUDAReturn(uda.metadata),
+    incompatibleError,
+  };
+}
+
 export function parseUDAList(getMeta: MetaObjectPayload): UDA[] {
   const UDAs: UDA[] = [];
   if (getMeta.api !== undefined) {
@@ -157,28 +193,14 @@ export function parseUDAList(getMeta: MetaObjectPayload): UDA[] {
     if (getMetaUDAs.length !== 0) {
       for (const uda of getMetaUDAs) {
         const parsedParams = parseUDAParams(uda.metadata?.params);
-        let incompatibleError = undefined;
-        if (!uda.metadata) {
-          incompatibleError = InvalidParamFieldErrors.NoMetadata;
-        }
-        if (parsedParams === ParamFieldType.Invalid) {
-          incompatibleError = InvalidParamFieldErrors.BadField;
-        }
-        const returnData: UDAReturn = {
-          type: convertTypesToString(uda.metadata?.return.type || []),
-          description: uda.metadata?.return.description || "",
-        };
-        UDAs.push({
-          name: uda.api,
-          description: uda.metadata?.description || "",
-          params: Array.isArray(parsedParams) ? parsedParams : [],
-          return: returnData,
-          incompatibleError,
-        });
+        const incompatibleError = getIncompatibleError(
+          uda.metadata,
+          parsedParams,
+        );
+        UDAs.push(createUDAObject(uda, parsedParams, incompatibleError));
       }
     }
   }
-
   return UDAs;
 }
 

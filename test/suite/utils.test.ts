@@ -2097,6 +2097,19 @@ describe("Utils", () => {
         const result = UDAUtils.getUDAParamType(type);
         assert.strictEqual(result, "boolean");
       });
+
+      it("should return the correct types string", () => {
+        const type = [ParamFieldType.Boolean, ParamFieldType.Number];
+        const dataTypes = new Map([
+          ["1", "Boolean"],
+          ["2", "Number"],
+        ]);
+        const expectedRes = ["boolean", "number"];
+        sinon.stub(ext.constants, "dataTypes").value(dataTypes);
+
+        const result = UDAUtils.getUDAParamType(type);
+        assert.strictEqual(result.toString(), expectedRes.toString());
+      });
     });
 
     describe("getUDAFieldType", () => {
@@ -2192,6 +2205,15 @@ describe("Utils", () => {
 
         const result = UDAUtils.convertTypesToString(types);
         assert.deepStrictEqual(result, ["Boolean", "Number"]);
+      });
+
+      it("should convert type to string", () => {
+        const types = [1];
+        const dataTypes = new Map([["1", "Boolean"]]);
+        sinon.stub(ext.constants, "dataTypes").value(dataTypes);
+
+        const result = UDAUtils.convertTypesToString(types);
+        assert.deepStrictEqual(result, ["Boolean"]);
       });
     });
 
