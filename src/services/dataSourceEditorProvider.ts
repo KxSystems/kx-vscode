@@ -44,6 +44,8 @@ import { InsightsConnection } from "../classes/insightsConnection";
 import { MetaObjectPayload } from "../models/meta";
 import { ConnectionManagementService } from "./connectionManagerService";
 import { kdbOutputLog, offerConnectAction } from "../utils/core";
+import { UDA } from "../models/uda";
+import { parseUDAList } from "../utils/uda";
 
 export class DataSourceEditorProvider implements CustomTextEditorProvider {
   public filenname = "";
@@ -120,14 +122,17 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
         const selectedServerVersion =
           await connMngService.retrieveInsightsConnVersion(selectedServer);
         await getConnectionForServer(selectedServer);
+        const insightsMeta = await this.getMeta(selectedServer);
+        const UDAs: UDA[] = parseUDAList(insightsMeta);
         webview.postMessage(<DataSourceMessage2>{
           command: DataSourceCommand.Update,
           selectedServer,
           servers: getInsightsServers(),
           selectedServerVersion,
           dataSourceFile: this.getDocumentAsJson(document),
-          insightsMeta: await this.getMeta(selectedServer),
+          insightsMeta,
           isInsights: true,
+          UDAs,
         });
       }
     };

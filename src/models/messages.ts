@@ -14,10 +14,12 @@
 import { ConnectionType } from "./connectionsModels";
 import { DataSourceFiles } from "./dataSource";
 import { MetaObjectPayload } from "./meta";
+import { UDA } from "./uda";
 
 export type DataSourceMessage = {
   isInsights: boolean;
   insightsMeta: MetaObjectPayload;
+  insightsUDAs: UDA[];
   dataSourceName: string;
   dataSourceFile: DataSourceFiles;
   running?: boolean;
@@ -43,6 +45,7 @@ export interface DataSourceMessage2 {
   isInsights: boolean;
   insightsMeta: MetaObjectPayload;
   dataSourceFile: DataSourceFiles;
+  UDAs: UDA[];
 }
 
 export interface EditConnectionMessage {

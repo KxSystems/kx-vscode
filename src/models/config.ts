@@ -20,12 +20,20 @@ export type InsightsConfig = {
   version: string;
 };
 
+export type InsightsApiConfig = {
+  encryptionDatabase: boolean;
+  encryptionInTransit: boolean;
+  queryEnvironmentsEnabled: boolean;
+  version: string;
+};
+
 export type InsightsEndpoints = {
   scratchpad: {
     scratchpad: string;
     import: string;
     importSql: string;
     importQsql: string;
+    importUDA: string;
     reset: string;
   };
   serviceGateway: {
@@ -33,5 +41,6 @@ export type InsightsEndpoints = {
     data: string;
     sql: string;
     qsql: string;
+    udaBase: string;
   };
 };
