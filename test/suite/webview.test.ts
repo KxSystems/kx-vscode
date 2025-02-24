@@ -37,6 +37,7 @@ import { html, TemplateResult } from "lit";
 import { ext } from "../../src/extensionVariables";
 import { InsightDetails, ServerType } from "../../src/models/connectionsModels";
 import { KdbChartView } from "../../src/webview/components/kdbChartView";
+import { ParamFieldType, UDA, UDAParam } from "../../src/models/uda";
 
 describe("KdbDataSourceView", () => {
   let view: KdbDataSourceView;
@@ -69,6 +70,7 @@ describe("KdbDataSourceView", () => {
             },
           ],
         },
+        UDAs: [],
         dataSourceFile: {
           dataSource: {
             selectedType: DataSourceTypes.API,
@@ -102,6 +104,15 @@ describe("KdbDataSourceView", () => {
             },
             sql: {
               query: "",
+            },
+            uda: {
+              name: "test",
+              description: "test description",
+              params: [],
+              return: {
+                type: ["99"],
+                description: "test return description",
+              },
             },
           },
         },
@@ -143,6 +154,18 @@ describe("KdbDataSourceView", () => {
     });
   });
 
+  describe("renderIcons", () => {
+    it("renderExclamationTriangleIcon", () => {
+      const result = view.renderExclamationTriangleIcon();
+      assert.ok(result);
+    });
+
+    it("renderInfoCircleIcon", () => {
+      const result = view.renderInfoCircleIcon();
+      assert.ok(result);
+    });
+  });
+
   describe("render", () => {
     it("should update from message", () => {
       view.message(createMessageEvent(true));
@@ -163,6 +186,369 @@ describe("KdbDataSourceView", () => {
       testEventHandlers(view.renderSort(createSort()));
       testEventHandlers(view.renderAgg(createAgg()));
       testEventHandlers(view.renderGroup(createGroup()));
+    });
+  });
+
+  describe("UDAs", () => {
+    const dummyUDAs: UDA[] = [
+      {
+        name: "test",
+        description: "test description",
+        params: [
+          {
+            name: "param",
+            type: 10,
+            description: "param description",
+            isReq: true,
+          },
+        ],
+        return: {
+          type: ["99"],
+          description: "test return description",
+        },
+      },
+    ];
+
+    afterEach(() => {
+      sinon.restore();
+      view.UDAs = [];
+    });
+
+    describe("retrieveUDAParamInputType", () => {
+      it("return all types", () => {
+        const inputList = [
+          "number",
+          "boolean",
+          "timestamp",
+          "json",
+          "multitype",
+          "text",
+          "test",
+        ];
+        const resultList = [
+          "number",
+          "checkbox",
+          "datetime-local",
+          "textarea",
+          "multitype",
+          "text",
+          "text",
+        ];
+        for (let i = 0; i < inputList.length; i++) {
+          const result = view.retrieveUDAParamInputType(inputList[i]);
+          assert.strictEqual(result, resultList[i]);
+        }
+      });
+    });
+
+    describe("renderUDAParam", () => {
+      it("should render UDA checkbox field", () => {
+        sinon.stub(view, "renderCheckbox").returns(html`checkbox`);
+        const result = view.renderUDAParam(dummyUDAs[0].params[0], "checkbox");
+        assert.deepStrictEqual(result, html`checkbox`);
+      });
+
+      it("should render UDA textarea field", () => {
+        sinon.stub(view, "renderTextarea").returns(html`textarea`);
+        const result = view.renderUDAParam(dummyUDAs[0].params[0], "textarea");
+        assert.deepStrictEqual(result, html`textarea`);
+      });
+
+      it("should render UDA multitype field", () => {
+        sinon.stub(view, "renderMultitype").returns(html`multitype`);
+        const result = view.renderUDAParam(dummyUDAs[0].params[0], "multitype");
+        assert.deepStrictEqual(result, html`multitype`);
+      });
+
+      it("should render UDA input field", () => {
+        sinon.stub(view, "renderInput").returns(html`input`);
+        const result = view.renderUDAParam(dummyUDAs[0].params[0], "input");
+        assert.deepStrictEqual(result, html`input`);
+      });
+    });
+
+    describe("renderCheckbox", () => {
+      it("should render checkbox with value true", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: true,
+          default: false,
+          isReq: false,
+          type: 0,
+        };
+        const result = view.renderCheckbox(param);
+        assert.ok(result);
+      });
+
+      it("should render checkbox with value false", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: false,
+          default: true,
+          isReq: false,
+          type: 0,
+        };
+        const result = view.renderCheckbox(param);
+        assert.ok(result);
+      });
+
+      it("should render checkbox with default value true", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: undefined,
+          default: true,
+          isReq: false,
+          type: 0,
+        };
+        const result = view.renderCheckbox(param);
+        assert.ok(result);
+      });
+
+      it("should render checkbox with default value false", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: undefined,
+          default: false,
+          isReq: false,
+          type: 0,
+        };
+        const result = view.renderCheckbox(param);
+        assert.ok(result);
+      });
+
+      it("should render checkbox with value and default undefined", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: undefined,
+          default: undefined,
+          isReq: false,
+          type: 0,
+        };
+        const result = view.renderCheckbox(param);
+        assert.ok(result);
+      });
+    });
+
+    describe("renderTextarea", () => {
+      it("should render textarea with value", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: "Test Value",
+          default: "",
+          isReq: false,
+          type: 0,
+        };
+        const result = view.renderTextarea(param);
+        assert.ok(result);
+      });
+
+      it("should render textarea with default value", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: undefined,
+          default: "Default Value",
+          isReq: false,
+          type: 0,
+        };
+        const result = view.renderTextarea(param);
+        assert.ok(result);
+      });
+
+      it("should render textarea with empty value when both value and default are undefined", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: undefined,
+          default: undefined,
+          isReq: false,
+          type: 0,
+        };
+        const result = view.renderTextarea(param);
+        assert.ok(result);
+      });
+    });
+
+    describe("renderInput", () => {
+      it("should render input with valid input type", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: "Test Value",
+          default: "",
+          isReq: true,
+          type: 1,
+        };
+        const result = view.renderInput(param, "number");
+        assert.ok(result);
+      });
+
+      it("should render input with default input type when input type is invalid", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: "Test Value",
+          default: "",
+          isReq: true,
+          type: 1,
+        };
+        const result = view.renderInput(param, "invalid-type");
+        assert.ok(result);
+      });
+
+      it("should render input with value", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: "Test Value",
+          default: "",
+          isReq: true,
+          type: 1,
+        };
+        const result = view.renderInput(param, "text");
+        assert.ok(result);
+      });
+
+      it("should render input with default value when value is undefined", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: undefined,
+          default: "Default Value",
+          isReq: true,
+          type: 1,
+        };
+        const result = view.renderInput(param, "text");
+        assert.ok(result);
+      });
+
+      it("should render input with empty value when both value and default are undefined", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: undefined,
+          default: undefined,
+          isReq: true,
+          type: 1,
+        };
+        const result = view.renderInput(param, "text");
+        assert.ok(result);
+      });
+    });
+
+    describe("renderMultitype", () => {
+      it("should render multitype with selectedMultiTypeString", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: "",
+          default: "",
+          isReq: true,
+          type: 1,
+          selectedMultiTypeString: "type1",
+          typeStrings: ["type1", "type2"],
+          multiFieldTypes: [{ type1: ParamFieldType.Text }],
+        };
+        const result = view.renderMultitype(param);
+        assert.ok(result);
+      });
+
+      it("should render multitype with first typeString when selectedMultiTypeString is undefined", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: "",
+          default: "",
+          isReq: true,
+          type: 1,
+          selectedMultiTypeString: undefined,
+          typeStrings: ["type1", "type2"],
+          multiFieldTypes: [{ type1: ParamFieldType.Text }],
+        };
+        const result = view.renderMultitype(param);
+        assert.ok(result);
+        assert.strictEqual(param.selectedMultiTypeString, "type1");
+      });
+
+      it("should render multitype with empty string when selectedMultiTypeString and typeStrings are undefined", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: "",
+          default: "",
+          isReq: true,
+          type: 1,
+          selectedMultiTypeString: undefined,
+          typeStrings: undefined,
+          multiFieldTypes: undefined,
+        };
+        const result = view.renderMultitype(param);
+        assert.ok(result);
+        assert.strictEqual(param.selectedMultiTypeString, "");
+      });
+
+      it("should render multitype with checkbox input type", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: true,
+          default: "",
+          isReq: true,
+          type: 1,
+          selectedMultiTypeString: "type1",
+          typeStrings: ["type1", "type2"],
+          multiFieldTypes: [{ type1: ParamFieldType.Boolean }],
+        };
+        const result = view.renderMultitype(param);
+        assert.ok(result);
+      });
+
+      it("should render multitype with textarea input type", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: "Test Value",
+          default: "",
+          isReq: true,
+          type: 1,
+          selectedMultiTypeString: "type1",
+          typeStrings: ["type1", "type2"],
+          multiFieldTypes: [{ type1: ParamFieldType.JSON }],
+        };
+        const result = view.renderMultitype(param);
+        assert.ok(result);
+      });
+    });
+
+    describe("renderUDAInvalidParams", () => {
+      afterEach(() => {
+        view.userSelectedUDA = null;
+      });
+      it("should return empty string if user doesnt have userSelectedUDA", () => {
+        view.userSelectedUDA = null;
+        const result = view.renderUDAInvalidParams();
+        assert.strictEqual(result, "");
+      });
+
+      it("should return html template case userSelectedUDA have incompatibleError different than undefined ", () => {
+        view.userSelectedUDA = dummyUDAs[0];
+        view.userSelectedUDA.incompatibleError = "error";
+        const result = view.renderUDAInvalidParams();
+        assert.ok(result);
+      });
+
+      it("should return empty string case incompatibleError is undefined", () => {
+        view.userSelectedUDA = dummyUDAs[0];
+        view.userSelectedUDA.incompatibleError = undefined;
+        const result = view.renderUDAInvalidParams();
+        assert.strictEqual(result, "");
+      });
     });
   });
 

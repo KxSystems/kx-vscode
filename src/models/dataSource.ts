@@ -11,10 +11,13 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { UDA } from "./uda";
+
 export enum DataSourceTypes {
   API = "API",
   QSQL = "QSQL",
   SQL = "SQL",
+  UDA = "UDA",
 }
 
 //TODO: make the optional params required in 1.10 or superior
@@ -57,6 +60,7 @@ export interface DataSourceFiles {
     sql: {
       query: string;
     };
+    uda?: UDA;
   };
 }
 

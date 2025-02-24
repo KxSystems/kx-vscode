@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -33,13 +33,14 @@ import {
 } from "../../models/dataSource";
 import { MetaObjectPayload } from "../../models/meta";
 import { DataSourceCommand, DataSourceMessage2 } from "../../models/messages";
-import { dataSourceStyles, shoelaceStyles } from "./styles";
+import { dataSourceStyles, kdbStyles, shoelaceStyles } from "./styles";
+import { UDA, UDAParam } from "../../models/uda";
 
 const MAX_RULES = 32;
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {
-  static styles = [shoelaceStyles, dataSourceStyles];
+  static readonly styles = [shoelaceStyles, dataSourceStyles, kdbStyles];
 
   readonly vscode = acquireVsCodeApi();
   declare private debounce;
@@ -47,6 +48,7 @@ export class KdbDataSourceView extends LitElement {
   isInsights = false;
   isMetaLoaded = false;
   insightsMeta = <MetaObjectPayload>{};
+  UDAs = <UDA[]>[];
   selectedType = DataSourceTypes.API;
   selectedApi = "";
   selectedTable = "";
@@ -68,6 +70,9 @@ export class KdbDataSourceView extends LitElement {
   qsqlTarget = "";
   qsql = "";
   sql = "";
+  savedUDA: UDA | undefined = undefined;
+  userSelectedUDA: UDA | undefined = undefined;
+  selectedUDA: string = "";
   running = false;
   servers: string[] = [];
   selectedServer = "";
@@ -94,6 +99,7 @@ export class KdbDataSourceView extends LitElement {
       this.isInsights = msg.isInsights;
       this.isMetaLoaded = !!msg.insightsMeta.dap;
       this.insightsMeta = msg.insightsMeta;
+      this.UDAs = msg.UDAs;
       const ds = msg.dataSourceFile;
       this.selectedType = ds.dataSource.selectedType;
       this.selectedApi = ds.dataSource.api.selectedApi;
@@ -106,9 +112,6 @@ export class KdbDataSourceView extends LitElement {
         : "100000";
       this.isRowLimitLast = ds.dataSource.api.isRowLimitLast !== false;
       this.temporality = ds.dataSource.api.temporality;
-      this.qsqlTarget = ds.dataSource.qsql.selectedTarget;
-      this.qsql = ds.dataSource.qsql.query;
-      this.sql = ds.dataSource.sql.query;
       const optional = ds.dataSource.api.optional;
       if (optional) {
         this.filled = optional.filled;
@@ -120,6 +123,13 @@ export class KdbDataSourceView extends LitElement {
         this.groups = optional.groups;
         this.rowLimit = optional.rowLimit ? optional.rowLimit : false;
       }
+      this.qsqlTarget = ds.dataSource.qsql.selectedTarget;
+      this.qsql = ds.dataSource.qsql.query;
+      this.sql = ds.dataSource.sql.query;
+      // for the UDAs, it will optional for this moment
+      this.savedUDA = ds.dataSource.uda;
+      this.userSelectedUDA = this.savedUDA;
+      this.selectedUDA = this.savedUDA ? this.savedUDA.name : "";
       this.requestUpdate();
     }
   };
@@ -163,8 +173,34 @@ export class KdbDataSourceView extends LitElement {
         sql: {
           query: this.sql,
         },
+        uda: this.userSelectedUDA,
       },
     };
+  }
+
+  renderExclamationTriangleIcon() {
+    return html`<svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 -3 24 24"
+      fill="currentColor"
+      width="15"
+      height="15">
+      <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z" />
+    </svg>`;
+  }
+
+  renderInfoCircleIcon() {
+    return html`
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 -3 24 24"
+        fill="currentColor"
+        width="15"
+        height="15">
+        <path
+          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-6h2v6zm0-8h-2V7h2v4z" />
+      </svg>
+    `;
   }
 
   /* istanbul ignore next */
@@ -268,7 +304,9 @@ export class KdbDataSourceView extends LitElement {
     if (this.isInsights && this.isMetaLoaded) {
       return this.insightsMeta.api
         .filter(
-          (api) => api.api === ".kxi.getData" || !api.api.startsWith(".kxi."),
+          (api) =>
+            (api.api === ".kxi.getData" || !api.api.startsWith(".kxi.")) &&
+            api.custom === false,
         )
         .map((api) => {
           const value =
@@ -861,6 +899,340 @@ export class KdbDataSourceView extends LitElement {
     `;
   }
 
+  getSavedUDAStatus(): string {
+    const udaExists = this.UDAs.some((uda) => uda.name === this.selectedUDA);
+    return udaExists
+      ? "Available UDAs"
+      : "Pre-selected UDA is not available for this connection.";
+  }
+
+  renderUDA() {
+    return html`
+      <div class="col">
+        <sl-select
+          label="User Defined Analytic (UDA)"
+          .value="${live(encodeURIComponent(this.selectedUDA))}"
+          style="max-width: 100%"
+          search
+          @sl-change="${(event: Event) => {
+            this.selectedUDA = decodeURIComponent(
+              (event.target as HTMLSelectElement).value,
+            );
+            this.userSelectedUDA = this.UDAs.find(
+              (uda) => uda.name === this.selectedUDA,
+            );
+            this.requestChange();
+          }}">
+          <sl-option
+            .value="${live(encodeURIComponent(this.selectedUDA))}"
+            .selected="${live(true)}"
+            >${this.selectedUDA || "Select a UDA..."}</sl-option
+          >
+          ${this.userSelectedUDA
+            ? html`<small>${this.userSelectedUDA.description}</small>`
+            : ""}
+          <small
+            >${this.isMetaLoaded
+              ? this.getSavedUDAStatus()
+              : "Connect to a server environment to access the available UDAs."}</small
+          >
+          ${this.renderUDAOptions()}
+        </sl-select>
+        ${this.renderUDADetails()} ${this.renderUDAParams()}
+      </div>
+    `;
+  }
+
+  renderUDAOptions() {
+    if (this.isInsights && this.isMetaLoaded) {
+      const udaOptions = this.UDAs.map((uda) => {
+        return html`
+          <sl-option value="${uda.name}">${uda.name}</sl-option>
+          <small>${uda.description}</small>
+        `;
+      });
+      if (udaOptions.length === 0) {
+        udaOptions.push(
+          html`<sl-option value="" disabled
+            >No deployed UDAs available</sl-option
+          >`,
+        );
+      }
+      return udaOptions;
+    }
+    return [];
+  }
+
+  renderUDADetails() {
+    const UDADetails = [];
+    if (this.userSelectedUDA) {
+      if (this.userSelectedUDA.description) {
+        UDADetails.push(html`${this.userSelectedUDA.description}<br />`);
+      }
+      if (this.userSelectedUDA.return) {
+        const returnType = Array.isArray(this.userSelectedUDA.return.type)
+          ? this.userSelectedUDA.return.type.join(", ")
+          : this.userSelectedUDA.return.type;
+        UDADetails.push(
+          html`Return Description: ${this.userSelectedUDA.return.description}<br />Return
+            Type: ${returnType}<br /> `,
+        );
+      }
+    }
+    if (UDADetails.length !== 0) {
+      return html`<small>${UDADetails}</small>`;
+    }
+    return UDADetails;
+  }
+
+  renderUDAParams() {
+    const UDAParams = [];
+    if (this.userSelectedUDA) {
+      UDAParams.push(html`<strong>PARAMETERS:</strong>`);
+      const UDAReqParams = this.renderReqUDAParams();
+      const UDANoParams = this.renderUDANoParams();
+      const UDAInvalidParams = this.renderUDAInvalidParams();
+      if (UDAInvalidParams !== "") {
+        UDAParams.push(UDAInvalidParams);
+      } else {
+        if (UDAReqParams.length > 0) {
+          UDAParams.push(UDAReqParams);
+        } else {
+          UDAParams.push(UDANoParams);
+        }
+      }
+    }
+
+    return UDAParams;
+  }
+
+  retrieveUDAParamInputType(type: string | undefined) {
+    switch (type) {
+      case "number":
+        return "number";
+      case "boolean":
+        return "checkbox";
+      case "timestamp":
+        return "datetime-local";
+      case "json":
+        return "textarea";
+      case "multitype":
+        return "multitype";
+      case "text":
+      default:
+        return "text";
+    }
+  }
+
+  renderReqUDAParams() {
+    const UDAParamsList = [];
+    if (this.userSelectedUDA) {
+      const UDAReqParams = this.userSelectedUDA.params.filter(
+        (param) => param.isReq === true,
+      );
+      if (UDAReqParams.length > 0) {
+        for (const param of UDAReqParams) {
+          const inputType = this.retrieveUDAParamInputType(param.fieldType);
+          UDAParamsList.push(this.renderUDAParam(param, inputType));
+        }
+      }
+    }
+    return UDAParamsList;
+  }
+
+  renderUDAParam(param: UDAParam, inputType: string) {
+    switch (inputType) {
+      case "checkbox":
+        return this.renderCheckbox(param);
+      case "textarea":
+        return this.renderTextarea(param);
+      case "multitype":
+        return this.renderMultitype(param);
+      default:
+        return this.renderInput(param, inputType);
+    }
+  }
+
+  renderCheckbox(param: UDAParam) {
+    const isChecked = param.value
+      ? param.value
+      : param.default
+        ? param.default
+        : false;
+    return html`
+      <sl-checkbox
+        .helpText="${param.description}"
+        @sl-change="${(event: Event) => {
+          param.value = (event.target as HTMLInputElement).checked;
+          this.requestChange();
+        }}"
+        .checked="${live(isChecked)}"
+        >${param.name}</sl-checkbox
+      >
+    `;
+  }
+
+  renderTextarea(param: UDAParam) {
+    const value = param.value
+      ? param.value
+      : param.default
+        ? param.default
+        : "";
+    return html`
+      <sl-textarea
+        label="${param.name}"
+        .helpText="${param.description}"
+        .value="${live(value)}"
+        @input="${(event: Event) => {
+          param.value = (event.target as HTMLTextAreaElement).value;
+          this.requestChange();
+        }}"></sl-textarea>
+    `;
+  }
+
+  renderMultitype(param: UDAParam) {
+    const selectedMultiTypeString = param.selectedMultiTypeString
+      ? param.selectedMultiTypeString
+      : param.typeStrings
+        ? param.typeStrings[0]
+        : "";
+    param.selectedMultiTypeString = selectedMultiTypeString;
+
+    const value = param.selectedMultiTypeString
+      ? param.selectedMultiTypeString
+      : param.typeStrings
+        ? param.typeStrings[0]
+        : "";
+
+    return html`
+      <div class="row align-top">
+        <sl-select
+          label="${param.name}"
+          .helpText="${`Select a type`}"
+          .value="${live(value)}"
+          @sl-change="${(event: Event) => {
+            param.selectedMultiTypeString = (
+              event.target as HTMLSelectElement
+            ).value;
+            this.requestChange();
+          }}">
+          ${param.typeStrings?.map(
+            (option) =>
+              html`<sl-option value="${option}">${option}</sl-option>`,
+          )}
+        </sl-select>
+        ${this.renderMultiTypeInput(param)}
+      </div>
+    `;
+  }
+
+  renderInput(param: UDAParam, inputType: string) {
+    const validInputTypes = ["text", "number", "datetime-local"];
+    const type = validInputTypes.includes(inputType) ? inputType : "text";
+    const value = param.value
+      ? param.value
+      : param.default
+        ? param.default
+        : "";
+
+    return html`
+      <sl-input
+        .type="${type as
+          | "number"
+          | "date"
+          | "datetime-local"
+          | "email"
+          | "password"
+          | "search"
+          | "tel"
+          | "text"
+          | "time"
+          | "url"}"
+        label="${param.name}"
+        .helpText="${param.description}"
+        .value="${live(value)}"
+        @input="${(event: Event) => {
+          param.value = (event.target as HTMLInputElement).value;
+          this.requestChange();
+        }}"></sl-input>
+    `;
+  }
+
+  renderMultiTypeInput(param: UDAParam) {
+    const selectedType = param.selectedMultiTypeString;
+    const multiFieldType = param.multiFieldTypes?.find(
+      (type) => Object.keys(type)[0] === selectedType,
+    );
+    const fieldType = multiFieldType
+      ? Object.values(multiFieldType)[0]
+      : "text";
+    const inputType = this.retrieveUDAParamInputType(fieldType);
+
+    if (inputType === "checkbox") {
+      return html`
+        <sl-checkbox
+          class="fix-multi-checkbox"
+          .checked="${live(param.value ? param.value : false)}"
+          .helpText="${param.description}"
+          @sl-change="${(event: Event) => {
+            param.value = (event.target as HTMLInputElement).checked;
+            this.requestChange();
+          }}"
+          >Selected type: ${selectedType}</sl-checkbox
+        >
+      `;
+    } else if (inputType === "textarea") {
+      return html`
+        <sl-textarea
+          .label="Selected type: ${selectedType}"
+          .value="${live(param.value ? param.value : "")}"
+          .helpText="${param.description}"
+          @input="${(event: Event) => {
+            param.value = (event.target as HTMLTextAreaElement).value;
+            this.requestChange();
+          }}"></sl-textarea>
+      `;
+    } else {
+      return html`
+        <sl-input
+          .label="Selected type: ${selectedType}"
+          .type="${inputType === "multitype" ? "text" : inputType}"
+          .value="${live(param.value ? param.value : "")}"
+          .helpText="${param.description}"
+          @input="${(event: Event) => {
+            param.value = (event.target as HTMLInputElement).value;
+            this.requestChange();
+          }}"></sl-input>
+      `;
+    }
+  }
+
+  renderUDAInvalidParams() {
+    if (this.userSelectedUDA) {
+      if (this.userSelectedUDA.incompatibleError !== undefined) {
+        return html`
+          <sl-alert variant="warning" open>
+            ${this.renderExclamationTriangleIcon()}
+            <strong>Invalid Parameters</strong><br />
+            The UDA you have selected cannot be queried because it has required
+            fields with types that are not supported.
+          </sl-alert>
+        `;
+      }
+    }
+    return "";
+  }
+
+  renderUDANoParams() {
+    return html`
+      <sl-alert variant="primary" open>
+        ${this.renderInfoCircleIcon()}
+        <strong>No Parameters</strong><br />
+        There are no required parameters in this UDA.
+      </sl-alert>
+    `;
+  }
+
   renderTabGroup() {
     return html`
       <sl-tab-group>
@@ -894,6 +1266,16 @@ export class KdbDataSourceView extends LitElement {
           }}"
           >SQL</sl-tab
         >
+        <sl-tab
+          slot="nav"
+          panel="${DataSourceTypes.UDA}"
+          ?active="${live(this.selectedType === DataSourceTypes.UDA)}"
+          @click="${() => {
+            this.selectedType = DataSourceTypes.UDA;
+            this.requestChange();
+          }}"
+          >UDA</sl-tab
+        >
         <sl-tab-panel
           name="${DataSourceTypes.API}"
           ?active="${live(this.selectedType === DataSourceTypes.API)}"
@@ -908,6 +1290,11 @@ export class KdbDataSourceView extends LitElement {
           name="${DataSourceTypes.SQL}"
           ?active="${live(this.selectedType === DataSourceTypes.SQL)}"
           >${this.renderSQL()}</sl-tab-panel
+        >
+        <sl-tab-panel
+          name="${DataSourceTypes.UDA}"
+          ?active="${live(this.selectedType === DataSourceTypes.UDA)}"
+          >${this.renderUDA()}</sl-tab-panel
         >
       </sl-tab-group>
     `;

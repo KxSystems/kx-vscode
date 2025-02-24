@@ -16,9 +16,13 @@
  * @param text The string to decode
  * @returns The decoded string
  */
-export function decodeQUTF(text: string): string {
+export function decodeQUTF(text: string): any {
   if (typeof text === "undefined") {
     return text;
+  }
+
+  if (text === "1b" || text === "0b") {
+    return text === "1b";
   }
 
   return text.replace(/(\\[^0-7])|(\\[0-7]{3})+/g, (text, notOctal) => {
@@ -29,7 +33,7 @@ export function decodeQUTF(text: string): string {
     return text
       .replace(/\\[23][0-7]{2}/g, decodeOctal)
       .split(
-        /((?:[!-~]|[\xc0-\xdf][\x80-\xbf]|[\xe0-\xef][\x80-\xbf]{2}|[\xf0-\xf7][\x80-\xbf]{3}|[\u0100-\uFFFF])+)/
+        /((?:[!-~]|[\xc0-\xdf][\x80-\xbf]|[\xe0-\xef][\x80-\xbf]{2}|[\xf0-\xf7][\x80-\xbf]{3}|[\u0100-\uFFFF])+)/,
       )
       .map(decodeUnicode)
       .join("");
