@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { UDA, UDAParam } from "./uda";
+import { UDA } from "./uda";
 
 export enum DataSourceTypes {
   API = "API",
