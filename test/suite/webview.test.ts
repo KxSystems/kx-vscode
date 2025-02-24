@@ -37,7 +37,7 @@ import { html, TemplateResult } from "lit";
 import { ext } from "../../src/extensionVariables";
 import { InsightDetails, ServerType } from "../../src/models/connectionsModels";
 import { KdbChartView } from "../../src/webview/components/kdbChartView";
-import { UDA, UDAParam } from "../../src/models/uda";
+import { ParamFieldType, UDA, UDAParam } from "../../src/models/uda";
 
 describe("KdbDataSourceView", () => {
   let view: KdbDataSourceView;
@@ -374,6 +374,74 @@ describe("KdbDataSourceView", () => {
         assert.ok(result);
       });
     });
+
+    describe("renderInput", () => {
+      it("should render input with valid input type", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: "Test Value",
+          default: "",
+          isReq: true,
+          type: 1,
+        };
+        const result = view.renderInput(param, "number");
+        assert.ok(result);
+      });
+
+      it("should render input with default input type when input type is invalid", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: "Test Value",
+          default: "",
+          isReq: true,
+          type: 1,
+        };
+        const result = view.renderInput(param, "invalid-type");
+        assert.ok(result);
+      });
+
+      it("should render input with value", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: "Test Value",
+          default: "",
+          isReq: true,
+          type: 1,
+        };
+        const result = view.renderInput(param, "text");
+        assert.ok(result);
+      });
+
+      it("should render input with default value when value is undefined", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: undefined,
+          default: "Default Value",
+          isReq: true,
+          type: 1,
+        };
+        const result = view.renderInput(param, "text");
+        assert.ok(result);
+      });
+
+      it("should render input with empty value when both value and default are undefined", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: undefined,
+          default: undefined,
+          isReq: true,
+          type: 1,
+        };
+        const result = view.renderInput(param, "text");
+        assert.ok(result);
+      });
+    });
+
     describe("renderMultitype", () => {
       it("should render multitype with selectedMultiTypeString", () => {
         const param: UDAParam = {
@@ -385,6 +453,7 @@ describe("KdbDataSourceView", () => {
           type: 1,
           selectedMultiTypeString: "type1",
           typeStrings: ["type1", "type2"],
+          multiFieldTypes: [{ type1: ParamFieldType.Text }],
         };
         const result = view.renderMultitype(param);
         assert.ok(result);
@@ -400,6 +469,7 @@ describe("KdbDataSourceView", () => {
           type: 1,
           selectedMultiTypeString: undefined,
           typeStrings: ["type1", "type2"],
+          multiFieldTypes: [{ type1: ParamFieldType.Text }],
         };
         const result = view.renderMultitype(param);
         assert.ok(result);
@@ -416,10 +486,43 @@ describe("KdbDataSourceView", () => {
           type: 1,
           selectedMultiTypeString: undefined,
           typeStrings: undefined,
+          multiFieldTypes: undefined,
         };
         const result = view.renderMultitype(param);
         assert.ok(result);
         assert.strictEqual(param.selectedMultiTypeString, "");
+      });
+
+      it("should render multitype with checkbox input type", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: true,
+          default: "",
+          isReq: true,
+          type: 1,
+          selectedMultiTypeString: "type1",
+          typeStrings: ["type1", "type2"],
+          multiFieldTypes: [{ type1: ParamFieldType.Boolean }],
+        };
+        const result = view.renderMultitype(param);
+        assert.ok(result);
+      });
+
+      it("should render multitype with textarea input type", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: "Test Value",
+          default: "",
+          isReq: true,
+          type: 1,
+          selectedMultiTypeString: "type1",
+          typeStrings: ["type1", "type2"],
+          multiFieldTypes: [{ type1: ParamFieldType.JSON }],
+        };
+        const result = view.renderMultitype(param);
+        assert.ok(result);
       });
     });
 
