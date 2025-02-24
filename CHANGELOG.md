@@ -8,7 +8,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 - Introducing UDAs(Custom APIs) to Datasource
 - Run UDAs with Requirement params or with no required params
-- VsCode is Query Enviroments variable aware from Insights 1.13
+- VsCode is Query Environment variable aware from Insights 1.13
 
 ### Fixes
 
