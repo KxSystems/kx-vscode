@@ -272,7 +272,7 @@
 
     #return com_kx_edi_to_structured_text(result, length)";
   
- run:{[returnResult;asString;code]
+ run:{[returnResult;asString;code;sample_fn;sample_size]
  removeExtraIndents:{[code]
  if[1 ~ count code; code: enlist code];
  inStrings:$[(count ss[code;"'''"])or count ss[code;"\"\"\""];
@@ -289,7 +289,7 @@
  code:removeExtraIndents code;
  defaultConv:.pykx.util.defaultConv;
  .pykx.util.defaultConv:"k";
- result: $[asString ~ "string"; .pykx.qeval["_kx_execution_context['run_wrapped']"][code;1b];
+ result: $[asString ~ "text"; .pykx.qeval["_kx_execution_context['run_wrapped']"][code;1b];
            asString ~ "serialized"; .pykx.qeval["_kx_execution_context['run_wrapped']"][code;0b];
            asString ~ "structuredText"; .pykx.qeval["com_kx_edi_to_structured_text_wrapper"][code;sample_fn;sample_size];
            // What should we return as the error case in which no return format is specified? I took this from db.q
@@ -315,5 +315,5 @@
  $[asString;"";::]];
  result
  };
- run[1b;returnFormat;code]
+ run[1b;returnFormat;code;sample_fn;sample_size]
  }
