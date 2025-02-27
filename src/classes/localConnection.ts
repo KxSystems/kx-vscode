@@ -61,6 +61,26 @@ export class LocalConnection {
       options.password = creds[1];
     }
     this.connLabel = connLabel;
+
+    if (ext.customAuthApi) {
+      const { kdb } = ext.customAuthApi.auth({
+        label: connLabel,
+        kdb: {
+          host: options.host,
+          port: options.port,
+          user: options.user,
+          password: options.password,
+          unixSocket: options.unixSocket,
+          socketTimeout: options.socketTimeout,
+          socketNoDelay: options.socketNoDelay,
+        },
+      });
+
+      if (kdb) {
+        updateOptions(options, kdb);
+      }
+    }
+
     this.options = options;
     this.connected = false;
   }
@@ -366,4 +386,22 @@ export class LocalConnection {
     this.update();
     callback(err, this);
   }
+}
+
+function updateOptions(options: any, kdb: any): void {
+  const keys = [
+    "host",
+    "port",
+    "user",
+    "password",
+    "unixSocket",
+    "socketTimeout",
+    "socketNoDelay",
+  ];
+
+  keys.forEach((key) => {
+    if (kdb[key] !== undefined) {
+      options[key] = kdb[key];
+    }
+  });
 }
