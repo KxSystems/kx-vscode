@@ -2,6 +2,12 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.10.2
+
+### Fixes
+
+- Resolved issue with export csv method
+
 # v1.10.1
 
 ### Fixes
