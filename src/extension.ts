@@ -738,6 +738,13 @@ export async function activate(context: ExtensionContext) {
         .update("yaml.schemas", actualSchema, ConfigurationTarget.Global);
     });
   }
+  const authExtension = extensions.getExtension("KX.kdb-auth");
+  if (authExtension) {
+    const api = await authExtension.activate();
+    if ("auth" in api) {
+      ext.customAuthApi = api;
+    }
+  }
 }
 
 export async function deactivate(): Promise<void> {

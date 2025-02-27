@@ -39,6 +39,7 @@ import { InsightsConnection } from "./classes/insightsConnection";
 import { DataSourceFiles } from "./models/dataSource";
 import { ConnectionLabel, LabelColors, Labels } from "./models/labels";
 import { kdbAuthMap } from "./models/connectionsModels";
+import { CustomAuth } from "./models/customAuth";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
@@ -438,4 +439,6 @@ export namespace ext {
       colorHex: "#15A7CD",
     },
   ];
+
+  export let customAuthApi: CustomAuth | null = null;
 }
