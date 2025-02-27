@@ -84,7 +84,7 @@ export class LocalConnection {
         if (kdb.socketTimeout !== undefined)
           options.socketTimeout = kdb.socketTimeout;
         if (kdb.socketNoDelay !== undefined)
-          options.socketNoDelay = options.socketNoDelay;
+          options.socketNoDelay = kdb.socketNoDelay;
       }
     }
 
