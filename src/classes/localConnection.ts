@@ -75,16 +75,9 @@ export class LocalConnection {
           socketNoDelay: options.socketNoDelay,
         },
       });
+
       if (kdb) {
-        if (kdb.host !== undefined) options.host = kdb.host;
-        if (kdb.port !== undefined) options.port = kdb.port;
-        if (kdb.user !== undefined) options.user = kdb.user;
-        if (kdb.password !== undefined) options.password = kdb.password;
-        if (kdb.unixSocket !== undefined) options.unixSocket = kdb.unixSocket;
-        if (kdb.socketTimeout !== undefined)
-          options.socketTimeout = kdb.socketTimeout;
-        if (kdb.socketNoDelay !== undefined)
-          options.socketNoDelay = kdb.socketNoDelay;
+        updateOptions(options, kdb);
       }
     }
 
@@ -393,4 +386,22 @@ export class LocalConnection {
     this.update();
     callback(err, this);
   }
+}
+
+function updateOptions(options: any, kdb: any): void {
+  const keys = [
+    "host",
+    "port",
+    "user",
+    "password",
+    "unixSocket",
+    "socketTimeout",
+    "socketNoDelay",
+  ];
+
+  keys.forEach((key) => {
+    if (kdb[key] !== undefined) {
+      options[key] = kdb[key];
+    }
+  });
 }
