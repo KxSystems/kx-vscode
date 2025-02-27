@@ -16,6 +16,7 @@ import path from "path";
 import { Uri, window, workspace } from "vscode";
 import { ext } from "../extensionVariables";
 import { QueryResultType } from "../models/queryResult";
+import { kdbOutputLog } from "./core";
 
 interface tblHeader {
   label: string;
@@ -124,9 +125,17 @@ export function convertResultToVector(result: any): any[] {
 export async function exportToCsv(workspaceUri: Uri): Promise<void> {
   const timestamp = Date.now();
   const fileName = `results-${timestamp}.csv`;
-  const filePath = Uri.parse(path.join(workspaceUri.fsPath, fileName));
-  await workspace.fs.writeFile(filePath, Buffer.from(ext.resultPanelCSV));
-  window.showTextDocument(filePath, { preview: false });
+  const filePath = Uri.file(path.join(workspaceUri.fsPath, fileName));
+
+  try {
+    await workspace.fs.writeFile(filePath, Buffer.from(ext.resultPanelCSV));
+    kdbOutputLog("file located at: " + filePath.fsPath, "INFO");
+    window.showTextDocument(filePath, { preview: false });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    kdbOutputLog(`Error writing file: ${errorMessage}`, "ERROR");
+    window.showErrorMessage(`Failed to write file: ${errorMessage}`);
+  }
 }
 
 export function convertArrayOfArraysToObjects(arr: any): any[] {
