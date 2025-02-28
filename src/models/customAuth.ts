@@ -25,5 +25,5 @@ export interface CustomAuthParams {
 }
 
 export interface CustomAuth {
-  auth: (options: CustomAuthParams) => CustomAuthParams;
+  auth: (options: CustomAuthParams) => Promise<Partial<CustomAuthParams>>;
 }
