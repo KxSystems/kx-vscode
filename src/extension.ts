@@ -742,7 +742,7 @@ export async function activate(context: ExtensionContext) {
   if (authExtension) {
     const api = await authExtension.activate();
     if ("auth" in api) {
-      ext.customAuthApi = api;
+      ext.customAuth = api;
     }
   }
 }

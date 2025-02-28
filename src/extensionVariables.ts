@@ -440,5 +440,5 @@ export namespace ext {
     },
   ];
 
-  export let customAuthApi: CustomAuth | null = null;
+  export let customAuth: CustomAuth | null = null;
 }

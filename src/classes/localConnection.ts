@@ -60,27 +60,8 @@ export class LocalConnection {
       options.user = creds[0];
       options.password = creds[1];
     }
+
     this.connLabel = connLabel;
-
-    if (ext.customAuthApi) {
-      const { kdb } = ext.customAuthApi.auth({
-        label: connLabel,
-        kdb: {
-          host: options.host,
-          port: options.port,
-          user: options.user,
-          password: options.password,
-          unixSocket: options.unixSocket,
-          socketTimeout: options.socketTimeout,
-          socketNoDelay: options.socketNoDelay,
-        },
-      });
-
-      if (kdb) {
-        updateOptions(options, kdb);
-      }
-    }
-
     this.options = options;
     this.connected = false;
   }
@@ -92,7 +73,9 @@ export class LocalConnection {
   public async connect(
     callback: nodeq.AsyncValueCallback<LocalConnection>,
   ): Promise<void> {
-    nodeq.connect(this.options, (err, conn) => {
+    const options = await this.getCustomAuthOptions();
+
+    nodeq.connect(options, (err, conn) => {
       if (err || !conn) {
         ext.serverProvider.reload();
 
@@ -386,22 +369,25 @@ export class LocalConnection {
     this.update();
     callback(err, this);
   }
-}
 
-function updateOptions(options: any, kdb: any): void {
-  const keys = [
-    "host",
-    "port",
-    "user",
-    "password",
-    "unixSocket",
-    "socketTimeout",
-    "socketNoDelay",
-  ];
-
-  keys.forEach((key) => {
-    if (kdb[key] !== undefined) {
-      options[key] = kdb[key];
+  async getCustomAuthOptions(): Promise<nodeq.ConnectionParameters> {
+    if (ext.customAuth) {
+      const { kdb } = await ext.customAuth.auth({
+        label: this.connLabel,
+        kdb: {
+          host: this.options.host,
+          port: this.options.port,
+          user: this.options.user,
+          password: this.options.password,
+          unixSocket: this.options.unixSocket,
+          socketTimeout: this.options.socketTimeout,
+          socketNoDelay: this.options.socketNoDelay,
+        },
+      });
+      if (kdb) {
+        return { ...this.options, ...kdb };
+      }
     }
-  });
+    return this.options;
+  }
 }
