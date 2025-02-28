@@ -2,15 +2,11 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
-# v1.10.0
-
-### Enhancements
-
-- Introducing UDAs(Custom APIs) to Datasource
-- Run UDAs with Requirement params or with no required params
-- VsCode is Query Environment variable aware from Insights 1.13
+# v1.10.2
 
 ### Fixes
+
+- Resolved issue with export csv method
 
 # v1.10.1
 
