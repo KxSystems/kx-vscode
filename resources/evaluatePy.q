@@ -92,7 +92,17 @@
 
     if isinstance(data, list):
         columns = com_kx_edi_generate_columns(False, data, 'values')
-    elif isinstance(data, dict):
+    # First we have to find out if the table is keyed or unkeyed. Since keyed tables also return true in dictionary case, we put this one here first
+    elif isinstance(data, pykx.KeyedTable):
+        columns = []
+
+        for element in kx.q.key(data).columns:
+            columns.append(com_kx_edi_generate_columns(True, data.get([element]).values(), str(element)))
+
+        for element in data.values():
+            columns.append(com_kx_edi_generate_columns(False, data.get([element]).values(), str(element)))
+            
+    elif isinstance(data, dict) or isinstance(data, pykx.Dictionary):
         columns = [com_kx_edi_generate_columns(True,list(data.keys()), 'keys'),com_kx_edi_generate_columns(False, list(data.values()), 'values')]
     elif isinstance(data, pd.DataFrame):
         columns = []
@@ -109,6 +119,12 @@
         # Getting the values of a data frame that are not index
         for element in data:
             columns.append(com_kx_edi_generate_columns(False,data[element].to_list(),element))
+    # This case is for unkeyed tables
+    elif isinstance(data, pykx.Table):
+        columns = []
+        for element in data:
+            columns.append(com_kx_edi_generate_columns(False, data.get([element]).values(), str(element)))
+
     else:
         columns = com_kx_edi_generate_columns(False, data, 'value' if length == 1 else 'values')
 
@@ -268,9 +284,7 @@
        'errored':True,
       'error':str(e),
       'backtrace':tb2
-      }
-
-    #return com_kx_edi_to_structured_text(result, length)";
+      }";
   
  run:{[returnResult;asString;code;sample_fn;sample_size]
  removeExtraIndents:{[code]
