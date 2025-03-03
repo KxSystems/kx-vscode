@@ -510,6 +510,8 @@ This function runs an QSQL query.
 
 Refer to the [QSQL documentation](https://code.kx.com/insights/api/database/query/qsql.html) for more details.
 
+**Warning!** Starting with kdb Insights Enterprise version 1.13, QSQL queries and populating QSQL only work if the Query Environment (QE) is enabled. Ensure you have enabled QEs to use QSQL.
+
 ### SQL queries
 
 The `.com_kx_edi.sql` SQL API allows running freeform SQL queries. Each query is distributed across all available databases. The results are then aggregated and returned as a single dataset.
