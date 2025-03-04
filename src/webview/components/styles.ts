@@ -47,6 +47,20 @@ export const shoelaceStyles = css`
     border-color: var(--sl-input-border-color);
   }
 
+  sl-menu::part(base) {
+    color: var(--vscode-input-foreground);
+    --sl-color-neutral-600: var(--vscode-input-background);
+    --sl-color-neutral-500: var(--vscode-inputOption-hoverBackground);
+    --sl-color-neutral-0: var(--vscode-input-foreground);
+  }
+
+  sl-menu-item::part(base) {
+    color: var(--vscode-input-foreground);
+    --sl-color-neutral-600: var(--vscode-input-background);
+    --sl-color-neutral-500: var(--vscode-inputOption-hoverBackground);
+    --sl-color-neutral-0: var(--vscode-input-foreground);
+  }
+
   sl-tab-group::part(tabs) {
     --track-width: 1px;
     --track-color: var(--vscode-inputOption-hoverBackground);
@@ -70,6 +84,10 @@ export const shoelaceStyles = css`
   sl-alert[variant="primary"]::part(base) {
     background-color: #e0f2fe;
     color: #055a85;
+  }
+
+  .remove-param-btn::part(base) {
+    padding-top: 3px;
   }
 `;
 
@@ -144,6 +162,29 @@ export const dataSourceStyles = css`
 
   .fix-multi-checkbox {
     margin-top: 28px;
+  }
+
+  sl-menu {
+    border: solid var(--sl-panel-border-width) var(--vscode-focusBorder) !important;
+  }
+
+  sl-menu-item::part(base):hover {
+    background-color: var(--vscode-focusBorder);
+    word-wrap: break-word;
+  }
+
+  .remove-param-btn {
+    padding-left: 10px;
+  }
+
+  .opt-param-field {
+    display: flex;
+    align-items: center;
+  }
+
+  .reset-widths-limit {
+    min-width: 0%;
+    max-width: 100%;
   }
 `;
 
@@ -238,6 +279,66 @@ export const kdbStyles = css`
 
   .mt-6 {
     margin-top: 6em;
+  }
+
+  .width-200-px {
+    width: 200px;
+  }
+
+  .width-10-pct {
+    width: 10%;
+  }
+
+  .width-20-pct {
+    width: 20%;
+  }
+
+  .width-30-pct {
+    width: 30%;
+  }
+
+  .width-40-pct {
+    width: 40%;
+  }
+
+  .width-50-pct {
+    width: 50%;
+  }
+
+  .width-60-pct {
+    width: 60%;
+  }
+
+  .width-70-pct {
+    width: 70%;
+  }
+
+  .width-80-pct {
+    width: 80%;
+  }
+
+  .width-90-pct {
+    width: 90%;
+  }
+
+  .width-97-pct {
+    width: 97%;
+  }
+
+  .width-100-pct {
+    width: 100%;
+  }
+
+  .padding-left-10-px {
+    padding-left: 10px;
+  }
+
+  .display-none {
+    display: none;
+  }
+
+  .float-left {
+    float: left;
   }
 
   .dropdown,

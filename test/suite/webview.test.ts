@@ -243,31 +243,31 @@ describe("KdbDataSourceView", () => {
 
     describe("renderUDAParam", () => {
       it("should render UDA checkbox field", () => {
-        sinon.stub(view, "renderCheckbox").returns(html`checkbox`);
+        sinon.stub(view, "renderUDACheckbox").returns(html`checkbox`);
         const result = view.renderUDAParam(dummyUDAs[0].params[0], "checkbox");
         assert.deepStrictEqual(result, html`checkbox`);
       });
 
       it("should render UDA textarea field", () => {
-        sinon.stub(view, "renderTextarea").returns(html`textarea`);
+        sinon.stub(view, "renderUDATextarea").returns(html`textarea`);
         const result = view.renderUDAParam(dummyUDAs[0].params[0], "textarea");
         assert.deepStrictEqual(result, html`textarea`);
       });
 
       it("should render UDA multitype field", () => {
-        sinon.stub(view, "renderMultitype").returns(html`multitype`);
+        sinon.stub(view, "renderUDAMultitype").returns(html`multitype`);
         const result = view.renderUDAParam(dummyUDAs[0].params[0], "multitype");
         assert.deepStrictEqual(result, html`multitype`);
       });
 
       it("should render UDA input field", () => {
-        sinon.stub(view, "renderInput").returns(html`input`);
+        sinon.stub(view, "renderUDAInput").returns(html`input`);
         const result = view.renderUDAParam(dummyUDAs[0].params[0], "input");
         assert.deepStrictEqual(result, html`input`);
       });
     });
 
-    describe("renderCheckbox", () => {
+    describe("renderUDACheckbox", () => {
       it("should render checkbox with value true", () => {
         const param: UDAParam = {
           name: "testParam",
@@ -277,7 +277,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-        const result = view.renderCheckbox(param);
+        const result = view.renderUDACheckbox(param);
         assert.ok(result);
       });
 
@@ -290,7 +290,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-        const result = view.renderCheckbox(param);
+        const result = view.renderUDACheckbox(param);
         assert.ok(result);
       });
 
@@ -303,7 +303,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-        const result = view.renderCheckbox(param);
+        const result = view.renderUDACheckbox(param);
         assert.ok(result);
       });
 
@@ -316,7 +316,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-        const result = view.renderCheckbox(param);
+        const result = view.renderUDACheckbox(param);
         assert.ok(result);
       });
 
@@ -329,12 +329,12 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-        const result = view.renderCheckbox(param);
+        const result = view.renderUDACheckbox(param);
         assert.ok(result);
       });
     });
 
-    describe("renderTextarea", () => {
+    describe("renderUDATextarea", () => {
       it("should render textarea with value", () => {
         const param: UDAParam = {
           name: "testParam",
@@ -344,7 +344,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-        const result = view.renderTextarea(param);
+        const result = view.renderUDATextarea(param);
         assert.ok(result);
       });
 
@@ -357,7 +357,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-        const result = view.renderTextarea(param);
+        const result = view.renderUDATextarea(param);
         assert.ok(result);
       });
 
@@ -370,12 +370,12 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-        const result = view.renderTextarea(param);
+        const result = view.renderUDATextarea(param);
         assert.ok(result);
       });
     });
 
-    describe("renderInput", () => {
+    describe("renderUDAInput", () => {
       it("should render input with valid input type", () => {
         const param: UDAParam = {
           name: "testParam",
@@ -385,7 +385,7 @@ describe("KdbDataSourceView", () => {
           isReq: true,
           type: 1,
         };
-        const result = view.renderInput(param, "number");
+        const result = view.renderUDAInput(param, "number");
         assert.ok(result);
       });
 
@@ -398,7 +398,7 @@ describe("KdbDataSourceView", () => {
           isReq: true,
           type: 1,
         };
-        const result = view.renderInput(param, "invalid-type");
+        const result = view.renderUDAInput(param, "invalid-type");
         assert.ok(result);
       });
 
@@ -411,7 +411,7 @@ describe("KdbDataSourceView", () => {
           isReq: true,
           type: 1,
         };
-        const result = view.renderInput(param, "text");
+        const result = view.renderUDAInput(param, "text");
         assert.ok(result);
       });
 
@@ -424,7 +424,7 @@ describe("KdbDataSourceView", () => {
           isReq: true,
           type: 1,
         };
-        const result = view.renderInput(param, "text");
+        const result = view.renderUDAInput(param, "text");
         assert.ok(result);
       });
 
@@ -437,12 +437,12 @@ describe("KdbDataSourceView", () => {
           isReq: true,
           type: 1,
         };
-        const result = view.renderInput(param, "text");
+        const result = view.renderUDAInput(param, "text");
         assert.ok(result);
       });
     });
 
-    describe("renderMultitype", () => {
+    describe("renderUDAMultitype", () => {
       it("should render multitype with selectedMultiTypeString", () => {
         const param: UDAParam = {
           name: "testParam",
@@ -455,7 +455,7 @@ describe("KdbDataSourceView", () => {
           typeStrings: ["type1", "type2"],
           multiFieldTypes: [{ type1: ParamFieldType.Text }],
         };
-        const result = view.renderMultitype(param);
+        const result = view.renderUDAMultitype(param);
         assert.ok(result);
       });
 
@@ -471,7 +471,7 @@ describe("KdbDataSourceView", () => {
           typeStrings: ["type1", "type2"],
           multiFieldTypes: [{ type1: ParamFieldType.Text }],
         };
-        const result = view.renderMultitype(param);
+        const result = view.renderUDAMultitype(param);
         assert.ok(result);
         assert.strictEqual(param.selectedMultiTypeString, "type1");
       });
@@ -488,7 +488,7 @@ describe("KdbDataSourceView", () => {
           typeStrings: undefined,
           multiFieldTypes: undefined,
         };
-        const result = view.renderMultitype(param);
+        const result = view.renderUDAMultitype(param);
         assert.ok(result);
         assert.strictEqual(param.selectedMultiTypeString, "");
       });
@@ -505,7 +505,7 @@ describe("KdbDataSourceView", () => {
           typeStrings: ["type1", "type2"],
           multiFieldTypes: [{ type1: ParamFieldType.Boolean }],
         };
-        const result = view.renderMultitype(param);
+        const result = view.renderUDAMultitype(param);
         assert.ok(result);
       });
 
@@ -521,7 +521,7 @@ describe("KdbDataSourceView", () => {
           typeStrings: ["type1", "type2"],
           multiFieldTypes: [{ type1: ParamFieldType.JSON }],
         };
-        const result = view.renderMultitype(param);
+        const result = view.renderUDAMultitype(param);
         assert.ok(result);
       });
     });
@@ -548,6 +548,209 @@ describe("KdbDataSourceView", () => {
         view.userSelectedUDA.incompatibleError = undefined;
         const result = view.renderUDAInvalidParams();
         assert.strictEqual(result, "");
+      });
+    });
+
+    describe("handleUDADeleteParam", () => {
+      it("should set param.isVisible to false", () => {
+        const param: UDAParam = {
+          name: "param",
+          type: 10,
+          description: "param description",
+          isReq: false,
+          isVisible: true,
+        };
+        view.handleUDADeleteParam(param);
+        assert.strictEqual(param.isVisible, false);
+      });
+
+      it("should set param.value to undefined", () => {
+        const param: UDAParam = {
+          name: "param",
+          type: 10,
+          description: "param description",
+          isReq: false,
+          value: "some value",
+        };
+        view.handleUDADeleteParam(param);
+        assert.strictEqual(param.value, undefined);
+      });
+
+      it("should set param.selectedMultiTypeString to undefined", () => {
+        const param: UDAParam = {
+          name: "param",
+          type: 10,
+          description: "param description",
+          isReq: false,
+          selectedMultiTypeString: "some string",
+        };
+        view.handleUDADeleteParam(param);
+        assert.strictEqual(param.selectedMultiTypeString, undefined);
+      });
+
+      it("should call requestChange", () => {
+        const param: UDAParam = {
+          name: "param",
+          type: 10,
+          description: "param description",
+          isReq: false,
+        };
+        const requestChangeSpy = sinon.spy(view, "requestChange");
+        view.handleUDADeleteParam(param);
+        assert.strictEqual(requestChangeSpy.calledOnce, true);
+      });
+    });
+
+    describe("handleAddParamSelect", () => {
+      it("should set param.isVisible to true if param is found", () => {
+        const param: UDAParam = {
+          name: "param",
+          type: 10,
+          description: "param description",
+          isReq: false,
+          isVisible: false,
+        };
+        view.userSelectedUDA = {
+          name: "test",
+          description: "test description",
+          params: [param],
+          return: {
+            type: ["99"],
+            description: "test return description",
+          },
+        };
+
+        const event = {
+          detail: {
+            item: {
+              value: "param",
+            },
+          },
+        };
+
+        view.handleUDAAddParamSelect(event);
+        assert.strictEqual(param.isVisible, true);
+      });
+
+      it("should not change param.isVisible if param is not found", () => {
+        const param: UDAParam = {
+          name: "param",
+          type: 10,
+          description: "param description",
+          isReq: false,
+          isVisible: false,
+        };
+        view.userSelectedUDA = {
+          name: "test",
+          description: "test description",
+          params: [param],
+          return: {
+            type: ["99"],
+            description: "test return description",
+          },
+        };
+
+        const event = {
+          detail: {
+            item: {
+              value: "nonexistent_param",
+            },
+          },
+        };
+
+        view.handleUDAAddParamSelect(event);
+        assert.strictEqual(param.isVisible, false);
+      });
+
+      it("should call requestChange", () => {
+        const param: UDAParam = {
+          name: "param",
+          type: 10,
+          description: "param description",
+          isReq: false,
+          isVisible: false,
+        };
+        view.userSelectedUDA = {
+          name: "test",
+          description: "test description",
+          params: [param],
+          return: {
+            type: ["99"],
+            description: "test return description",
+          },
+        };
+
+        const event = {
+          detail: {
+            item: {
+              value: "param",
+            },
+          },
+        };
+
+        const requestChangeSpy = sinon.spy(view, "requestChange");
+        view.handleUDAAddParamSelect(event);
+        assert.strictEqual(requestChangeSpy.calledOnce, true);
+      });
+    });
+
+    describe("handleUDAChange", () => {
+      it("should update selectedUDA with the decoded value from the event", () => {
+        const event = {
+          target: {
+            value: encodeURIComponent("testUDA"),
+          },
+        } as unknown as Event;
+
+        view.handleUDAChange(event);
+        assert.strictEqual(view.selectedUDA, "testUDA");
+      });
+
+      it("should update userSelectedUDA with the corresponding UDA from the list", () => {
+        const dummyUDA = {
+          name: "testUDA",
+          description: "test description",
+          params: [],
+          return: {
+            type: ["99"],
+            description: "test return description",
+          },
+        };
+        view.UDAs = [dummyUDA];
+
+        const event = {
+          target: {
+            value: encodeURIComponent("testUDA"),
+          },
+        } as unknown as Event;
+
+        view.handleUDAChange(event);
+        assert.deepStrictEqual(view.userSelectedUDA, dummyUDA);
+      });
+
+      it("should set userSelectedUDA to undefined if no matching UDA is found", () => {
+        view.UDAs = [];
+
+        const event = {
+          target: {
+            value: encodeURIComponent("nonexistentUDA"),
+          },
+        } as unknown as Event;
+
+        view.handleUDAChange(event);
+        assert.strictEqual(view.userSelectedUDA, undefined);
+      });
+
+      it("should call requestChange", () => {
+        const event = {
+          target: {
+            value: encodeURIComponent("testUDA"),
+          },
+        } as unknown as Event;
+
+        const requestChangeSpy = sinon.spy(view, "requestChange");
+        view.handleUDAChange(event);
+        assert.strictEqual(requestChangeSpy.calledOnce, true);
       });
     });
   });
