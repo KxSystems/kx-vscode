@@ -1029,7 +1029,7 @@ export class KdbDataSourceView extends LitElement {
     return html`
       <sl-dropdown
         class="udaDropdown"
-        @sl-select="${this.handleAddParamSelect}">
+        @sl-select="${this.handleUDAAddParamSelect}">
         <sl-button slot="trigger" variant="neutral" class="width-200-px" caret>
           + Add Parameter
         </sl-button>
@@ -1038,7 +1038,7 @@ export class KdbDataSourceView extends LitElement {
     `;
   }
 
-  handleAddParamSelect(event: any) {
+  handleUDAAddParamSelect(event: any) {
     const paramSelected = event.detail.item.value;
     const param = this.userSelectedUDA?.params.find(
       (param) => param.name === paramSelected,
@@ -1093,13 +1093,13 @@ export class KdbDataSourceView extends LitElement {
       <sl-button
         variant="neutral"
         class="float-left remove-param-btn"
-        @click="${() => this.handleDeleteParam(param)}">
+        @click="${() => this.handleUDADeleteParam(param)}">
         ${this.renderTrashIcon()}
       </sl-button>
     `;
   }
 
-  handleDeleteParam(param: UDAParam) {
+  handleUDADeleteParam(param: UDAParam) {
     param.isVisible = false;
     param.value = undefined;
     param.selectedMultiTypeString = undefined;

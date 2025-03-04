@@ -442,7 +442,7 @@ describe("KdbDataSourceView", () => {
       });
     });
 
-    describe("renderMultitype", () => {
+    describe("renderUDAMultitype", () => {
       it("should render multitype with selectedMultiTypeString", () => {
         const param: UDAParam = {
           name: "testParam",
@@ -548,6 +548,149 @@ describe("KdbDataSourceView", () => {
         view.userSelectedUDA.incompatibleError = undefined;
         const result = view.renderUDAInvalidParams();
         assert.strictEqual(result, "");
+      });
+    });
+
+    describe("handleUDADeleteParam", () => {
+      it("should set param.isVisible to false", () => {
+        const param: UDAParam = {
+          name: "param",
+          type: 10,
+          description: "param description",
+          isReq: false,
+          isVisible: true,
+        };
+        view.handleUDADeleteParam(param);
+        assert.strictEqual(param.isVisible, false);
+      });
+
+      it("should set param.value to undefined", () => {
+        const param: UDAParam = {
+          name: "param",
+          type: 10,
+          description: "param description",
+          isReq: false,
+          value: "some value",
+        };
+        view.handleUDADeleteParam(param);
+        assert.strictEqual(param.value, undefined);
+      });
+
+      it("should set param.selectedMultiTypeString to undefined", () => {
+        const param: UDAParam = {
+          name: "param",
+          type: 10,
+          description: "param description",
+          isReq: false,
+          selectedMultiTypeString: "some string",
+        };
+        view.handleUDADeleteParam(param);
+        assert.strictEqual(param.selectedMultiTypeString, undefined);
+      });
+
+      it("should call requestChange", () => {
+        const param: UDAParam = {
+          name: "param",
+          type: 10,
+          description: "param description",
+          isReq: false,
+        };
+        const requestChangeSpy = sinon.spy(view, "requestChange");
+        view.handleUDADeleteParam(param);
+        assert.strictEqual(requestChangeSpy.calledOnce, true);
+      });
+    });
+
+    describe("handleAddParamSelect", () => {
+      it("should set param.isVisible to true if param is found", () => {
+        const param: UDAParam = {
+          name: "param",
+          type: 10,
+          description: "param description",
+          isReq: false,
+          isVisible: false,
+        };
+        view.userSelectedUDA = {
+          name: "test",
+          description: "test description",
+          params: [param],
+          return: {
+            type: ["99"],
+            description: "test return description",
+          },
+        };
+
+        const event = {
+          detail: {
+            item: {
+              value: "param",
+            },
+          },
+        };
+
+        view.handleUDAAddParamSelect(event);
+        assert.strictEqual(param.isVisible, true);
+      });
+
+      it("should not change param.isVisible if param is not found", () => {
+        const param: UDAParam = {
+          name: "param",
+          type: 10,
+          description: "param description",
+          isReq: false,
+          isVisible: false,
+        };
+        view.userSelectedUDA = {
+          name: "test",
+          description: "test description",
+          params: [param],
+          return: {
+            type: ["99"],
+            description: "test return description",
+          },
+        };
+
+        const event = {
+          detail: {
+            item: {
+              value: "nonexistent_param",
+            },
+          },
+        };
+
+        view.handleUDAAddParamSelect(event);
+        assert.strictEqual(param.isVisible, false);
+      });
+
+      it("should call requestChange", () => {
+        const param: UDAParam = {
+          name: "param",
+          type: 10,
+          description: "param description",
+          isReq: false,
+          isVisible: false,
+        };
+        view.userSelectedUDA = {
+          name: "test",
+          description: "test description",
+          params: [param],
+          return: {
+            type: ["99"],
+            description: "test return description",
+          },
+        };
+
+        const event = {
+          detail: {
+            item: {
+              value: "param",
+            },
+          },
+        };
+
+        const requestChangeSpy = sinon.spy(view, "requestChange");
+        view.handleUDAAddParamSelect(event);
+        assert.strictEqual(requestChangeSpy.calledOnce, true);
       });
     });
   });
