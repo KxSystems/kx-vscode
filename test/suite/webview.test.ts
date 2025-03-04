@@ -693,6 +693,66 @@ describe("KdbDataSourceView", () => {
         assert.strictEqual(requestChangeSpy.calledOnce, true);
       });
     });
+
+    describe("handleUDAChange", () => {
+      it("should update selectedUDA with the decoded value from the event", () => {
+        const event = {
+          target: {
+            value: encodeURIComponent("testUDA"),
+          },
+        } as unknown as Event;
+
+        view.handleUDAChange(event);
+        assert.strictEqual(view.selectedUDA, "testUDA");
+      });
+
+      it("should update userSelectedUDA with the corresponding UDA from the list", () => {
+        const dummyUDA = {
+          name: "testUDA",
+          description: "test description",
+          params: [],
+          return: {
+            type: ["99"],
+            description: "test return description",
+          },
+        };
+        view.UDAs = [dummyUDA];
+
+        const event = {
+          target: {
+            value: encodeURIComponent("testUDA"),
+          },
+        } as unknown as Event;
+
+        view.handleUDAChange(event);
+        assert.deepStrictEqual(view.userSelectedUDA, dummyUDA);
+      });
+
+      it("should set userSelectedUDA to undefined if no matching UDA is found", () => {
+        view.UDAs = [];
+
+        const event = {
+          target: {
+            value: encodeURIComponent("nonexistentUDA"),
+          },
+        } as unknown as Event;
+
+        view.handleUDAChange(event);
+        assert.strictEqual(view.userSelectedUDA, undefined);
+      });
+
+      it("should call requestChange", () => {
+        const event = {
+          target: {
+            value: encodeURIComponent("testUDA"),
+          },
+        } as unknown as Event;
+
+        const requestChangeSpy = sinon.spy(view, "requestChange");
+        view.handleUDAChange(event);
+        assert.strictEqual(requestChangeSpy.calledOnce, true);
+      });
+    });
   });
 
   describe("save", () => {
