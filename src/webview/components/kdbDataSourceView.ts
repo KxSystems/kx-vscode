@@ -924,8 +924,7 @@ export class KdbDataSourceView extends LitElement {
   }
 
   getSavedUDAStatus(): string {
-    const udaExists = this.UDAs.some((uda) => uda.name === this.selectedUDA);
-    return udaExists
+    return this.UDAs.some((uda) => uda.name === this.selectedUDA)
       ? "Available UDAs"
       : "Pre-selected UDA is not available for this connection.";
   }
@@ -938,15 +937,7 @@ export class KdbDataSourceView extends LitElement {
           .value="${live(encodeURIComponent(this.selectedUDA))}"
           class="reset-widths-limit width-97-pct"
           search
-          @sl-change="${(event: Event) => {
-            this.selectedUDA = decodeURIComponent(
-              (event.target as HTMLSelectElement).value,
-            );
-            this.userSelectedUDA = this.UDAs.find(
-              (uda) => uda.name === this.selectedUDA,
-            );
-            this.requestChange();
-          }}">
+          @sl-change="${this.handleUDAChange}">
           <sl-option
             .value="${live(encodeURIComponent(this.selectedUDA))}"
             .selected="${live(true)}"
@@ -955,11 +946,11 @@ export class KdbDataSourceView extends LitElement {
           ${this.userSelectedUDA
             ? html`<small>${this.userSelectedUDA.description}</small>`
             : ""}
-          <small
-            >${this.isMetaLoaded
+          <small>
+            ${this.isMetaLoaded
               ? this.getSavedUDAStatus()
-              : "Connect to a server environment to access the available UDAs."}</small
-          >
+              : "Connect to a server environment to access the available UDAs."}
+          </small>
           ${this.renderUDAOptions()}
         </sl-select>
         ${this.renderUDADetails()} ${this.renderUDAParams()}
@@ -968,89 +959,94 @@ export class KdbDataSourceView extends LitElement {
     `;
   }
 
+  handleUDAChange(event: Event) {
+    this.selectedUDA = decodeURIComponent(
+      (event.target as HTMLSelectElement).value,
+    );
+    this.userSelectedUDA = this.UDAs.find(
+      (uda) => uda.name === this.selectedUDA,
+    );
+    this.requestChange();
+  }
+
   renderUDAOptions() {
-    if (this.isInsights && this.isMetaLoaded) {
-      const udaOptions = this.UDAs.map((uda) => {
-        return html`
-          <sl-option value="${uda.name}">${uda.name}</sl-option>
-          <small>${uda.description}</small>
-        `;
-      });
-      if (udaOptions.length === 0) {
-        udaOptions.push(
-          html`<sl-option value="" disabled
-            >No deployed UDAs available</sl-option
-          >`,
-        );
-      }
-      return udaOptions;
+    if (!this.isInsights || !this.isMetaLoaded) return [];
+
+    const udaOptions = this.UDAs.map(
+      (uda) => html`
+        <sl-option value="${uda.name}">${uda.name}</sl-option>
+        <small>${uda.description}</small>
+      `,
+    );
+
+    if (udaOptions.length === 0) {
+      udaOptions.push(html`
+        <sl-option value="" disabled>No deployed UDAs available</sl-option>
+      `);
     }
-    return [];
+
+    return udaOptions;
   }
 
   renderUDADetails() {
-    const UDADetails = [];
-    if (this.userSelectedUDA) {
-      if (this.userSelectedUDA.description) {
-        UDADetails.push(html`${this.userSelectedUDA.description}<br />`);
-      }
-      if (this.userSelectedUDA.return) {
-        const returnType = Array.isArray(this.userSelectedUDA.return.type)
-          ? this.userSelectedUDA.return.type.join(", ")
-          : this.userSelectedUDA.return.type;
-        UDADetails.push(
-          html`Return Description: ${this.userSelectedUDA.return.description}<br />Return
-            Type: ${returnType}<br /> `,
-        );
-      }
+    if (!this.userSelectedUDA) return [];
+
+    const details = [];
+    if (this.userSelectedUDA.description) {
+      details.push(html`${this.userSelectedUDA.description}<br />`);
     }
-    if (UDADetails.length !== 0) {
-      return html`<small>${UDADetails}</small>`;
+    if (this.userSelectedUDA.return) {
+      const returnType = Array.isArray(this.userSelectedUDA.return.type)
+        ? this.userSelectedUDA.return.type.join(", ")
+        : this.userSelectedUDA.return.type;
+      details.push(html`
+        Return Description: ${this.userSelectedUDA.return.description}<br />
+        Return Type: ${returnType}<br />
+      `);
     }
-    return UDADetails;
+
+    return details.length ? html`<small>${details}</small>` : details;
   }
 
   renderUDAParams() {
-    const UDAParams = [];
-    if (this.userSelectedUDA) {
-      UDAParams.push(html`<strong>PARAMETERS:</strong>`);
-      const UDAVisibleParams = this.renderVisibleUDAParams();
-      const UDANoParams = this.renderUDANoParams();
-      const UDAInvalidParams = this.renderUDAInvalidParams();
-      if (UDAInvalidParams !== "") {
-        UDAParams.push(UDAInvalidParams);
-      } else {
-        if (UDAVisibleParams.length > 0) {
-          UDAParams.push(UDAVisibleParams);
-        } else {
-          UDAParams.push(UDANoParams);
-        }
-      }
+    if (!this.userSelectedUDA) return [];
+
+    const params = [html`<strong>PARAMETERS:</strong>`];
+    const visibleParams = this.renderVisibleUDAParams();
+    const noParams = this.renderUDANoParams();
+    const invalidParams = this.renderUDAInvalidParams();
+
+    if (invalidParams) {
+      params.push(invalidParams);
+    } else {
+      params.push(...(visibleParams.length ? visibleParams : [noParams]));
     }
 
-    return UDAParams;
+    return params;
   }
 
   renderUDAAddParamButton() {
     return html`
       <sl-dropdown
         class="udaDropdown"
-        @sl-select="${(event: any) => {
-          const paramSelected = event.detail.item.value;
-          const param = this.userSelectedUDA?.params.find(
-            (param) => param.name === paramSelected,
-          );
-          if (param) {
-            param.isVisible = true;
-          }
-          this.requestChange();
-        }}">
+        @sl-select="${this.handleAddParamSelect}">
         <sl-button slot="trigger" variant="neutral" class="width-200-px" caret>
-          + Add Parameter</sl-button
-        >
+          + Add Parameter
+        </sl-button>
         ${this.renderUDAAddParamBtnOptions()}
       </sl-dropdown>
     `;
+  }
+
+  handleAddParamSelect(event: any) {
+    const paramSelected = event.detail.item.value;
+    const param = this.userSelectedUDA?.params.find(
+      (param) => param.name === paramSelected,
+    );
+    if (param) {
+      param.isVisible = true;
+    }
+    this.requestChange();
   }
 
   renderUDAAddParamBtnOptions() {
@@ -1062,108 +1058,94 @@ export class KdbDataSourceView extends LitElement {
   }
 
   renderUDAOptionalParamsOpts() {
-    const UDAParamsList: any[] = [];
-    if (this.userSelectedUDA) {
-      const UDAOptionalParams = this.userSelectedUDA.params.filter(
-        (param) => param.isReq === false,
-      );
-      if (UDAOptionalParams.length > 0) {
-        for (const param of UDAOptionalParams) {
-          UDAParamsList.push(
-            html`<sl-menu-item
-              .type=${param.isVisible ? "checkbox" : "normal"}
-              .disabled=${param.isVisible ? true : false}
-              .value=${param.name}
-              >${param.name}<br /><small
-                >${param.description}</small
-              ></sl-menu-item
-            >`,
-          );
-        }
-      }
-    }
-
-    if (UDAParamsList.length === 0) {
-      UDAParamsList.push(
-        html`<sl-menu-item disabled
-          >No optional parameters available</sl-menu-item
-        >`,
-      );
-    }
-    return UDAParamsList;
-  }
-
-  renderDeleteParamButton(param: UDAParam) {
-    if (!param.isReq) {
+    if (!this.userSelectedUDA) {
       return html`
-        <sl-button
-          variant="neutral"
-          class=" float-left remove-param-btn"
-          @click="${() => {
-            param.isVisible = false;
-            param.value = undefined;
-            param.selectedMultiTypeString = undefined;
-            this.requestChange();
-          }}"
-          >${this.renderTrashIcon()}</sl-button
-        >
+        <sl-menu-item disabled>No optional parameters available</sl-menu-item>
       `;
     }
+
+    const optionalParams = this.userSelectedUDA.params.filter(
+      (param) => !param.isReq,
+    );
+
+    if (optionalParams.length === 0) {
+      return html`
+        <sl-menu-item disabled>No optional parameters available</sl-menu-item>
+      `;
+    }
+
+    return optionalParams.map(
+      (param) => html`
+        <sl-menu-item
+          .type=${param.isVisible ? "checkbox" : "normal"}
+          .disabled=${param.isVisible === true}
+          .value=${param.name}>
+          ${param.name}<br /><small>${param.description}</small>
+        </sl-menu-item>
+      `,
+    );
+  }
+
+  renderDeleteUDAParamButton(param: UDAParam) {
+    if (param.isReq) return;
+
+    return html`
+      <sl-button
+        variant="neutral"
+        class="float-left remove-param-btn"
+        @click="${() => this.handleDeleteParam(param)}">
+        ${this.renderTrashIcon()}
+      </sl-button>
+    `;
+  }
+
+  handleDeleteParam(param: UDAParam) {
+    param.isVisible = false;
+    param.value = undefined;
+    param.selectedMultiTypeString = undefined;
+    this.requestChange();
   }
 
   retrieveUDAParamInputType(type: string | undefined) {
-    switch (type) {
-      case "number":
-        return "number";
-      case "boolean":
-        return "checkbox";
-      case "timestamp":
-        return "datetime-local";
-      case "json":
-        return "textarea";
-      case "multitype":
-        return "multitype";
-      case "text":
-      default:
-        return "text";
-    }
+    const inputTypes: { [key: string]: string } = {
+      number: "number",
+      boolean: "checkbox",
+      timestamp: "datetime-local",
+      json: "textarea",
+      multitype: "multitype",
+      text: "text",
+    };
+    return inputTypes[type || "text"] || "text";
   }
 
   renderVisibleUDAParams() {
-    const UDAParamsList = [];
-    if (this.userSelectedUDA) {
-      const UDAReqParams = this.userSelectedUDA.params.filter(
-        (param) => param.isVisible === true,
+    if (!this.userSelectedUDA) return [];
+
+    return this.userSelectedUDA.params
+      .filter((param) => param.isVisible)
+      .map((param) =>
+        this.renderUDAParam(
+          param,
+          this.retrieveUDAParamInputType(param.fieldType),
+        ),
       );
-      if (UDAReqParams.length > 0) {
-        for (const param of UDAReqParams) {
-          const inputType = this.retrieveUDAParamInputType(param.fieldType);
-          UDAParamsList.push(this.renderUDAParam(param, inputType));
-        }
-      }
-    }
-    return UDAParamsList;
   }
 
   renderUDAParam(param: UDAParam, inputType: string) {
     switch (inputType) {
       case "checkbox":
-        return this.renderCheckbox(param);
+        return this.renderUDACheckbox(param);
       case "textarea":
-        return this.renderTextarea(param);
+        return this.renderUDATextarea(param);
       case "multitype":
-        return this.renderMultitype(param);
+        return this.renderUDAMultitype(param);
       default:
-        return this.renderInput(param, inputType);
+        return this.renderUDAInput(param, inputType);
     }
   }
 
-  renderCheckbox(param: UDAParam) {
-    const isChecked = param.value
-      ? param.value
-      : param.default
-        ? param.default
-        : false;
+  renderUDACheckbox(param: UDAParam) {
+    const isChecked = param.value || param.default || false;
     return html`
       <div class="opt-param-field">
         <sl-checkbox
@@ -1172,20 +1154,16 @@ export class KdbDataSourceView extends LitElement {
             param.value = (event.target as HTMLInputElement).checked;
             this.requestChange();
           }}"
-          .checked="${live(isChecked)}"
-          >${param.name}</sl-checkbox
-        >
-        ${this.renderDeleteParamButton(param)}
+          .checked="${live(isChecked)}">
+          ${param.name}
+        </sl-checkbox>
+        ${this.renderDeleteUDAParamButton(param)}
       </div>
     `;
   }
 
-  renderTextarea(param: UDAParam) {
-    const value = param.value
-      ? param.value
-      : param.default
-        ? param.default
-        : "";
+  renderUDATextarea(param: UDAParam) {
+    const value = param.value || param.default || "";
     return html`
       <div class="opt-param-field">
         <sl-textarea
@@ -1198,38 +1176,31 @@ export class KdbDataSourceView extends LitElement {
           @input="${(event: Event) => {
             param.value = (event.target as HTMLTextAreaElement).value;
             this.requestChange();
-          }}"></sl-textarea>
-        ${this.renderDeleteParamButton(param)}
+          }}">
+        </sl-textarea>
+        ${this.renderDeleteUDAParamButton(param)}
       </div>
     `;
   }
 
-  renderMultitype(param: UDAParam) {
-    const selectedMultiTypeString = param.selectedMultiTypeString
-      ? param.selectedMultiTypeString
-      : param.typeStrings
-        ? param.typeStrings[0]
-        : "";
+  renderUDAMultitype(param: UDAParam) {
+    const selectedMultiTypeString =
+      param.selectedMultiTypeString || param.typeStrings?.[0] || "";
     param.selectedMultiTypeString = selectedMultiTypeString;
 
-    const value = param.selectedMultiTypeString
-      ? param.selectedMultiTypeString
-      : param.typeStrings
-        ? param.typeStrings[0]
-        : "";
-
-    const renderDeleteParam = this.renderDeleteParamButton(param);
+    const value = param.selectedMultiTypeString || param.typeStrings?.[0] || "";
+    const renderDeleteParam = this.renderDeleteUDAParamButton(param);
 
     return html`
       <div class="opt-param-field">
         <div
           class="${renderDeleteParam
             ? "width-90-pct"
-            : "width-97-pct"}  row align-top">
+            : "width-97-pct"} row align-top">
           <sl-select
             class="reset-widths-limit width-30-pct"
             label="${param.name}"
-            .helpText="${`Select a type`}"
+            .helpText="Select a type"
             .value="${live(value)}"
             @sl-change="${(event: Event) => {
               param.selectedMultiTypeString = (
@@ -1242,31 +1213,27 @@ export class KdbDataSourceView extends LitElement {
                 html`<sl-option value="${option}">${option}</sl-option>`,
             )}
           </sl-select>
-          ${this.renderMultiTypeInput(param)}
+          ${this.renderUDAMultiTypeInput(param)}
         </div>
-        <div class="${renderDeleteParam ? "width-10-pct" : "display-none"} ">
-          ${this.renderDeleteParamButton(param)}
+        <div class="${renderDeleteParam ? "width-10-pct" : "display-none"}">
+          ${this.renderDeleteUDAParamButton(param)}
         </div>
       </div>
     `;
   }
 
-  renderInput(param: UDAParam, inputType: string) {
+  renderUDAInput(param: UDAParam, inputType: string) {
     const validInputTypes = ["text", "number", "datetime-local"];
     const type = validInputTypes.includes(inputType) ? inputType : "text";
-    const value = param.value
-      ? param.value
-      : param.default
-        ? param.default
-        : "";
-    const renderDeleteParam = this.renderDeleteParamButton(param);
+    const value = param.value || param.default || "";
+    const renderDeleteParam = this.renderDeleteUDAParamButton(param);
 
     return html`
       <div class="opt-param-field">
         <div
           class="${renderDeleteParam
             ? "width-90-pct"
-            : "width-97-pct"}  row align-top">
+            : "width-97-pct"} row align-top">
           <sl-input
             class="reset-widths-limit width-100-pct"
             .type="${type as
@@ -1286,16 +1253,17 @@ export class KdbDataSourceView extends LitElement {
             @input="${(event: Event) => {
               param.value = (event.target as HTMLInputElement).value;
               this.requestChange();
-            }}"></sl-input>
+            }}">
+          </sl-input>
         </div>
-        <div class="${renderDeleteParam ? "width-10-pct" : "display-none"} ">
-          ${this.renderDeleteParamButton(param)}
+        <div class="${renderDeleteParam ? "width-10-pct" : "display-none"}">
+          ${this.renderDeleteUDAParamButton(param)}
         </div>
       </div>
     `;
   }
 
-  renderMultiTypeInput(param: UDAParam) {
+  renderUDAMultiTypeInput(param: UDAParam) {
     const selectedType = param.selectedMultiTypeString;
     const multiFieldType = param.multiFieldTypes?.find(
       (type) => Object.keys(type)[0] === selectedType,
@@ -1305,59 +1273,70 @@ export class KdbDataSourceView extends LitElement {
       : "text";
     const inputType = this.retrieveUDAParamInputType(fieldType);
 
-    if (inputType === "checkbox") {
-      return html`
-        <sl-checkbox
-          class="fix-multi-checkbox"
-          .checked="${live(param.value ? param.value : false)}"
-          .helpText="${param.description}"
-          @sl-change="${(event: Event) => {
-            param.value = (event.target as HTMLInputElement).checked;
-            this.requestChange();
-          }}"
-          >Selected type: ${selectedType}</sl-checkbox
-        >
-      `;
-    } else if (inputType === "textarea") {
-      return html`
-        <sl-textarea
-          class="reset-widths-limit width-70-pct"
-          .label="Selected type: ${selectedType}"
-          .value="${live(param.value ? param.value : "")}"
-          .helpText="${param.description}"
-          @input="${(event: Event) => {
-            param.value = (event.target as HTMLTextAreaElement).value;
-            this.requestChange();
-          }}"></sl-textarea>
-      `;
-    } else {
-      return html`
-        <sl-input
-          class="reset-widths-limit width-70-pct"
-          .label="Selected type: ${selectedType}"
-          .type="${inputType === "multitype" ? "text" : inputType}"
-          .value="${live(param.value ? param.value : "")}"
-          .helpText="${param.description}"
-          @input="${(event: Event) => {
-            param.value = (event.target as HTMLInputElement).value;
-            this.requestChange();
-          }}"></sl-input>
-      `;
+    switch (inputType) {
+      case "checkbox":
+        return html`
+          <sl-checkbox
+            class="fix-multi-checkbox"
+            .checked="${live(param.value || false)}"
+            .helpText="${param.description}"
+            @sl-change="${(event: Event) => {
+              param.value = (event.target as HTMLInputElement).checked;
+              this.requestChange();
+            }}">
+            Selected type: ${selectedType}
+          </sl-checkbox>
+        `;
+      case "textarea":
+        return html`
+          <sl-textarea
+            class="reset-widths-limit width-70-pct"
+            .label="Selected type: ${selectedType}"
+            .value="${live(param.value || "")}"
+            .helpText="${param.description}"
+            @input="${(event: Event) => {
+              param.value = (event.target as HTMLTextAreaElement).value;
+              this.requestChange();
+            }}">
+          </sl-textarea>
+        `;
+      default:
+        return html`
+          <sl-input
+            class="reset-widths-limit width-70-pct"
+            .label="Selected type: ${selectedType}"
+            .type="${(inputType === "multitype" ? "text" : inputType) as
+              | "number"
+              | "datetime-local"
+              | "text"
+              | "date"
+              | "email"
+              | "password"
+              | "search"
+              | "tel"
+              | "time"
+              | "url"}"
+            .value="${live(param.value || "")}"
+            .helpText="${param.description}"
+            @input="${(event: Event) => {
+              param.value = (event.target as HTMLInputElement).value;
+              this.requestChange();
+            }}">
+          </sl-input>
+        `;
     }
   }
 
   renderUDAInvalidParams() {
-    if (this.userSelectedUDA) {
-      if (this.userSelectedUDA.incompatibleError !== undefined) {
-        return html`
-          <sl-alert variant="warning" open>
-            ${this.renderExclamationTriangleIcon()}
-            <strong>Invalid Parameters</strong><br />
-            The UDA you have selected cannot be queried because it has required
-            fields with types that are not supported.
-          </sl-alert>
-        `;
-      }
+    if (this.userSelectedUDA?.incompatibleError !== undefined) {
+      return html`
+        <sl-alert variant="warning" open>
+          ${this.renderExclamationTriangleIcon()}
+          <strong>Invalid Parameters</strong><br />
+          The UDA you have selected cannot be queried because it has required
+          fields with types that are not supported.
+        </sl-alert>
+      `;
     }
     return "";
   }
