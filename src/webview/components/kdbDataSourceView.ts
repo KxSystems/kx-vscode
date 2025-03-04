@@ -203,6 +203,30 @@ export class KdbDataSourceView extends LitElement {
     `;
   }
 
+  renderTrashIcon() {
+    return html`
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 16 16"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg">
+        <g clip-path="url(#clip0_2116_1576)">
+          <path
+            fill-rule="evenodd"
+            clip-rule="evenodd"
+            d="M4.51657 2.06511C4.51657 1.78618 4.83134 1.37064 5.45829 1.37064H10.5417C11.1718 1.37064 11.4834 1.77971 11.4834 2.06511V3.4449C11.4834 3.50487 11.4911 3.56303 11.5056 3.61847H4.49439C4.50887 3.56303 4.51657 3.50487 4.51657 3.4449V2.06511ZM3.16733 3.61847C3.15285 3.56303 3.14515 3.50487 3.14515 3.4449V2.06511C3.14515 0.827196 4.29324 0 5.45829 0H10.5417C11.7036 0 12.8549 0.815392 12.8549 2.06511V3.4449C12.8549 3.50487 12.8471 3.56303 12.8327 3.61847H15.3143C15.693 3.61847 16 3.9253 16 4.30379C16 4.68228 15.693 4.98911 15.3143 4.98911H14.3726V13.9349C14.3726 15.1728 13.2245 16 12.0594 16H3.93143C2.76953 16 1.61829 15.1846 1.61829 13.9349V4.98911H0.685714C0.307005 4.98911 0 4.68228 0 4.30379C0 3.9253 0.307005 3.61847 0.685714 3.61847H2.31314H3.16733ZM2.98972 4.98911V13.9349C2.98972 14.2203 3.30133 14.6294 3.93143 14.6294H12.0594C12.6864 14.6294 13.0011 14.2138 13.0011 13.9349V4.98911H2.98972ZM6.37257 7.06337C6.75128 7.06337 7.05829 7.3702 7.05829 7.74869V11.8789C7.05829 12.2574 6.75128 12.5642 6.37257 12.5642C5.99386 12.5642 5.68686 12.2574 5.68686 11.8789V7.74869C5.68686 7.3702 5.99386 7.06337 6.37257 7.06337ZM10.3131 7.74869C10.3131 7.3702 10.0061 7.06337 9.62743 7.06337C9.24872 7.06337 8.94171 7.3702 8.94171 7.74869V11.8789C8.94171 12.2574 9.24872 12.5642 9.62743 12.5642C10.0061 12.5642 10.3131 12.2574 10.3131 11.8789V7.74869Z"
+            fill="currentColor" />
+        </g>
+        <defs>
+          <clipPath id="clip0_2116_1576">
+            <rect width="16" height="16" fill="currentColor" />
+          </clipPath>
+        </defs>
+      </svg>
+    `;
+  }
+
   /* istanbul ignore next */
   postMessage(msg: Partial<DataSourceMessage2>) {
     this.vscode.postMessage(msg);
@@ -908,11 +932,11 @@ export class KdbDataSourceView extends LitElement {
 
   renderUDA() {
     return html`
-      <div class="col">
+      <div class="col width-70-pct">
         <sl-select
           label="User Defined Analytic (UDA)"
           .value="${live(encodeURIComponent(this.selectedUDA))}"
-          style="max-width: 100%"
+          class="reset-widths-limit width-97-pct"
           search
           @sl-change="${(event: Event) => {
             this.selectedUDA = decodeURIComponent(
@@ -939,6 +963,7 @@ export class KdbDataSourceView extends LitElement {
           ${this.renderUDAOptions()}
         </sl-select>
         ${this.renderUDADetails()} ${this.renderUDAParams()}
+        ${this.userSelectedUDA ? this.renderUDAAddParamButton() : null}
       </div>
     `;
   }
@@ -989,14 +1014,14 @@ export class KdbDataSourceView extends LitElement {
     const UDAParams = [];
     if (this.userSelectedUDA) {
       UDAParams.push(html`<strong>PARAMETERS:</strong>`);
-      const UDAReqParams = this.renderReqUDAParams();
+      const UDAVisibleParams = this.renderVisibleUDAParams();
       const UDANoParams = this.renderUDANoParams();
       const UDAInvalidParams = this.renderUDAInvalidParams();
       if (UDAInvalidParams !== "") {
         UDAParams.push(UDAInvalidParams);
       } else {
-        if (UDAReqParams.length > 0) {
-          UDAParams.push(UDAReqParams);
+        if (UDAVisibleParams.length > 0) {
+          UDAParams.push(UDAVisibleParams);
         } else {
           UDAParams.push(UDANoParams);
         }
@@ -1004,6 +1029,86 @@ export class KdbDataSourceView extends LitElement {
     }
 
     return UDAParams;
+  }
+
+  renderUDAAddParamButton() {
+    return html`
+      <sl-dropdown
+        class="udaDropdown"
+        @sl-select="${(event: any) => {
+          const paramSelected = event.detail.item.value;
+          const param = this.userSelectedUDA?.params.find(
+            (param) => param.name === paramSelected,
+          );
+          if (param) {
+            param.isVisible = true;
+          }
+          this.requestChange();
+        }}">
+        <sl-button slot="trigger" variant="neutral" class="width-200-px" caret>
+          + Add Parameter</sl-button
+        >
+        ${this.renderUDAAddParamBtnOptions()}
+      </sl-dropdown>
+    `;
+  }
+
+  renderUDAAddParamBtnOptions() {
+    return html`
+      <sl-menu class="width-200-px">
+        ${this.renderUDAOptionalParamsOpts()}
+      </sl-menu>
+    `;
+  }
+
+  renderUDAOptionalParamsOpts() {
+    const UDAParamsList: any[] = [];
+    if (this.userSelectedUDA) {
+      const UDAOptionalParams = this.userSelectedUDA.params.filter(
+        (param) => param.isReq === false,
+      );
+      if (UDAOptionalParams.length > 0) {
+        for (const param of UDAOptionalParams) {
+          UDAParamsList.push(
+            html`<sl-menu-item
+              .type=${param.isVisible ? "checkbox" : "normal"}
+              .disabled=${param.isVisible ? true : false}
+              .value=${param.name}
+              >${param.name}<br /><small
+                >${param.description}</small
+              ></sl-menu-item
+            >`,
+          );
+        }
+      }
+    }
+
+    if (UDAParamsList.length === 0) {
+      UDAParamsList.push(
+        html`<sl-menu-item disabled
+          >No optional parameters available</sl-menu-item
+        >`,
+      );
+    }
+    return UDAParamsList;
+  }
+
+  renderDeleteParamButton(param: UDAParam) {
+    if (!param.isReq) {
+      return html`
+        <sl-button
+          variant="neutral"
+          class=" float-left remove-param-btn"
+          @click="${() => {
+            param.isVisible = false;
+            param.value = undefined;
+            param.selectedMultiTypeString = undefined;
+            this.requestChange();
+          }}"
+          >${this.renderTrashIcon()}</sl-button
+        >
+      `;
+    }
   }
 
   retrieveUDAParamInputType(type: string | undefined) {
@@ -1024,11 +1129,11 @@ export class KdbDataSourceView extends LitElement {
     }
   }
 
-  renderReqUDAParams() {
+  renderVisibleUDAParams() {
     const UDAParamsList = [];
     if (this.userSelectedUDA) {
       const UDAReqParams = this.userSelectedUDA.params.filter(
-        (param) => param.isReq === true,
+        (param) => param.isVisible === true,
       );
       if (UDAReqParams.length > 0) {
         for (const param of UDAReqParams) {
@@ -1060,15 +1165,18 @@ export class KdbDataSourceView extends LitElement {
         ? param.default
         : false;
     return html`
-      <sl-checkbox
-        .helpText="${param.description}"
-        @sl-change="${(event: Event) => {
-          param.value = (event.target as HTMLInputElement).checked;
-          this.requestChange();
-        }}"
-        .checked="${live(isChecked)}"
-        >${param.name}</sl-checkbox
-      >
+      <div class="opt-param-field">
+        <sl-checkbox
+          .helpText="${param.description}"
+          @sl-change="${(event: Event) => {
+            param.value = (event.target as HTMLInputElement).checked;
+            this.requestChange();
+          }}"
+          .checked="${live(isChecked)}"
+          >${param.name}</sl-checkbox
+        >
+        ${this.renderDeleteParamButton(param)}
+      </div>
     `;
   }
 
@@ -1079,14 +1187,20 @@ export class KdbDataSourceView extends LitElement {
         ? param.default
         : "";
     return html`
-      <sl-textarea
-        label="${param.name}"
-        .helpText="${param.description}"
-        .value="${live(value)}"
-        @input="${(event: Event) => {
-          param.value = (event.target as HTMLTextAreaElement).value;
-          this.requestChange();
-        }}"></sl-textarea>
+      <div class="opt-param-field">
+        <sl-textarea
+          label="${param.name}"
+          .helpText="${param.description}"
+          .className="${param.isReq
+            ? "width-97-pct"
+            : "width-90-pct"} float-left"
+          .value="${live(value)}"
+          @input="${(event: Event) => {
+            param.value = (event.target as HTMLTextAreaElement).value;
+            this.requestChange();
+          }}"></sl-textarea>
+        ${this.renderDeleteParamButton(param)}
+      </div>
     `;
   }
 
@@ -1104,24 +1218,35 @@ export class KdbDataSourceView extends LitElement {
         ? param.typeStrings[0]
         : "";
 
+    const renderDeleteParam = this.renderDeleteParamButton(param);
+
     return html`
-      <div class="row align-top">
-        <sl-select
-          label="${param.name}"
-          .helpText="${`Select a type`}"
-          .value="${live(value)}"
-          @sl-change="${(event: Event) => {
-            param.selectedMultiTypeString = (
-              event.target as HTMLSelectElement
-            ).value;
-            this.requestChange();
-          }}">
-          ${param.typeStrings?.map(
-            (option) =>
-              html`<sl-option value="${option}">${option}</sl-option>`,
-          )}
-        </sl-select>
-        ${this.renderMultiTypeInput(param)}
+      <div class="opt-param-field">
+        <div
+          class="${renderDeleteParam
+            ? "width-90-pct"
+            : "width-97-pct"}  row align-top">
+          <sl-select
+            class="reset-widths-limit width-30-pct"
+            label="${param.name}"
+            .helpText="${`Select a type`}"
+            .value="${live(value)}"
+            @sl-change="${(event: Event) => {
+              param.selectedMultiTypeString = (
+                event.target as HTMLSelectElement
+              ).value;
+              this.requestChange();
+            }}">
+            ${param.typeStrings?.map(
+              (option) =>
+                html`<sl-option value="${option}">${option}</sl-option>`,
+            )}
+          </sl-select>
+          ${this.renderMultiTypeInput(param)}
+        </div>
+        <div class="${renderDeleteParam ? "width-10-pct" : "display-none"} ">
+          ${this.renderDeleteParamButton(param)}
+        </div>
       </div>
     `;
   }
@@ -1134,27 +1259,39 @@ export class KdbDataSourceView extends LitElement {
       : param.default
         ? param.default
         : "";
+    const renderDeleteParam = this.renderDeleteParamButton(param);
 
     return html`
-      <sl-input
-        .type="${type as
-          | "number"
-          | "date"
-          | "datetime-local"
-          | "email"
-          | "password"
-          | "search"
-          | "tel"
-          | "text"
-          | "time"
-          | "url"}"
-        label="${param.name}"
-        .helpText="${param.description}"
-        .value="${live(value)}"
-        @input="${(event: Event) => {
-          param.value = (event.target as HTMLInputElement).value;
-          this.requestChange();
-        }}"></sl-input>
+      <div class="opt-param-field">
+        <div
+          class="${renderDeleteParam
+            ? "width-90-pct"
+            : "width-97-pct"}  row align-top">
+          <sl-input
+            class="reset-widths-limit width-100-pct"
+            .type="${type as
+              | "number"
+              | "date"
+              | "datetime-local"
+              | "email"
+              | "password"
+              | "search"
+              | "tel"
+              | "text"
+              | "time"
+              | "url"}"
+            label="${param.name}"
+            .helpText="${param.description}"
+            .value="${live(value)}"
+            @input="${(event: Event) => {
+              param.value = (event.target as HTMLInputElement).value;
+              this.requestChange();
+            }}"></sl-input>
+        </div>
+        <div class="${renderDeleteParam ? "width-10-pct" : "display-none"} ">
+          ${this.renderDeleteParamButton(param)}
+        </div>
+      </div>
     `;
   }
 
@@ -1184,6 +1321,7 @@ export class KdbDataSourceView extends LitElement {
     } else if (inputType === "textarea") {
       return html`
         <sl-textarea
+          class="reset-widths-limit width-70-pct"
           .label="Selected type: ${selectedType}"
           .value="${live(param.value ? param.value : "")}"
           .helpText="${param.description}"
@@ -1195,6 +1333,7 @@ export class KdbDataSourceView extends LitElement {
     } else {
       return html`
         <sl-input
+          class="reset-widths-limit width-70-pct"
           .label="Selected type: ${selectedType}"
           .type="${inputType === "multitype" ? "text" : inputType}"
           .value="${live(param.value ? param.value : "")}"
