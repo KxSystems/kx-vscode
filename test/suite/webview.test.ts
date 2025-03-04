@@ -243,31 +243,31 @@ describe("KdbDataSourceView", () => {
 
     describe("renderUDAParam", () => {
       it("should render UDA checkbox field", () => {
-        sinon.stub(view, "renderCheckbox").returns(html`checkbox`);
+        sinon.stub(view, "renderUDACheckbox").returns(html`checkbox`);
         const result = view.renderUDAParam(dummyUDAs[0].params[0], "checkbox");
         assert.deepStrictEqual(result, html`checkbox`);
       });
 
       it("should render UDA textarea field", () => {
-        sinon.stub(view, "renderTextarea").returns(html`textarea`);
+        sinon.stub(view, "renderUDATextarea").returns(html`textarea`);
         const result = view.renderUDAParam(dummyUDAs[0].params[0], "textarea");
         assert.deepStrictEqual(result, html`textarea`);
       });
 
       it("should render UDA multitype field", () => {
-        sinon.stub(view, "renderMultitype").returns(html`multitype`);
+        sinon.stub(view, "renderUDAMultitype").returns(html`multitype`);
         const result = view.renderUDAParam(dummyUDAs[0].params[0], "multitype");
         assert.deepStrictEqual(result, html`multitype`);
       });
 
       it("should render UDA input field", () => {
-        sinon.stub(view, "renderInput").returns(html`input`);
+        sinon.stub(view, "renderUDAInput").returns(html`input`);
         const result = view.renderUDAParam(dummyUDAs[0].params[0], "input");
         assert.deepStrictEqual(result, html`input`);
       });
     });
 
-    describe("renderCheckbox", () => {
+    describe("renderUDACheckbox", () => {
       it("should render checkbox with value true", () => {
         const param: UDAParam = {
           name: "testParam",
@@ -277,7 +277,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-        const result = view.renderCheckbox(param);
+        const result = view.renderUDACheckbox(param);
         assert.ok(result);
       });
 
@@ -290,7 +290,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-        const result = view.renderCheckbox(param);
+        const result = view.renderUDACheckbox(param);
         assert.ok(result);
       });
 
@@ -303,7 +303,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-        const result = view.renderCheckbox(param);
+        const result = view.renderUDACheckbox(param);
         assert.ok(result);
       });
 
@@ -316,7 +316,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-        const result = view.renderCheckbox(param);
+        const result = view.renderUDACheckbox(param);
         assert.ok(result);
       });
 
@@ -329,12 +329,12 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-        const result = view.renderCheckbox(param);
+        const result = view.renderUDACheckbox(param);
         assert.ok(result);
       });
     });
 
-    describe("renderTextarea", () => {
+    describe("renderUDATextarea", () => {
       it("should render textarea with value", () => {
         const param: UDAParam = {
           name: "testParam",
@@ -344,7 +344,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-        const result = view.renderTextarea(param);
+        const result = view.renderUDATextarea(param);
         assert.ok(result);
       });
 
@@ -357,7 +357,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-        const result = view.renderTextarea(param);
+        const result = view.renderUDATextarea(param);
         assert.ok(result);
       });
 
@@ -370,12 +370,12 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-        const result = view.renderTextarea(param);
+        const result = view.renderUDATextarea(param);
         assert.ok(result);
       });
     });
 
-    describe("renderInput", () => {
+    describe("renderUDAInput", () => {
       it("should render input with valid input type", () => {
         const param: UDAParam = {
           name: "testParam",
@@ -385,7 +385,7 @@ describe("KdbDataSourceView", () => {
           isReq: true,
           type: 1,
         };
-        const result = view.renderInput(param, "number");
+        const result = view.renderUDAInput(param, "number");
         assert.ok(result);
       });
 
@@ -398,7 +398,7 @@ describe("KdbDataSourceView", () => {
           isReq: true,
           type: 1,
         };
-        const result = view.renderInput(param, "invalid-type");
+        const result = view.renderUDAInput(param, "invalid-type");
         assert.ok(result);
       });
 
@@ -411,7 +411,7 @@ describe("KdbDataSourceView", () => {
           isReq: true,
           type: 1,
         };
-        const result = view.renderInput(param, "text");
+        const result = view.renderUDAInput(param, "text");
         assert.ok(result);
       });
 
@@ -424,7 +424,7 @@ describe("KdbDataSourceView", () => {
           isReq: true,
           type: 1,
         };
-        const result = view.renderInput(param, "text");
+        const result = view.renderUDAInput(param, "text");
         assert.ok(result);
       });
 
@@ -437,7 +437,7 @@ describe("KdbDataSourceView", () => {
           isReq: true,
           type: 1,
         };
-        const result = view.renderInput(param, "text");
+        const result = view.renderUDAInput(param, "text");
         assert.ok(result);
       });
     });
@@ -455,7 +455,7 @@ describe("KdbDataSourceView", () => {
           typeStrings: ["type1", "type2"],
           multiFieldTypes: [{ type1: ParamFieldType.Text }],
         };
-        const result = view.renderMultitype(param);
+        const result = view.renderUDAMultitype(param);
         assert.ok(result);
       });
 
@@ -471,7 +471,7 @@ describe("KdbDataSourceView", () => {
           typeStrings: ["type1", "type2"],
           multiFieldTypes: [{ type1: ParamFieldType.Text }],
         };
-        const result = view.renderMultitype(param);
+        const result = view.renderUDAMultitype(param);
         assert.ok(result);
         assert.strictEqual(param.selectedMultiTypeString, "type1");
       });
@@ -488,7 +488,7 @@ describe("KdbDataSourceView", () => {
           typeStrings: undefined,
           multiFieldTypes: undefined,
         };
-        const result = view.renderMultitype(param);
+        const result = view.renderUDAMultitype(param);
         assert.ok(result);
         assert.strictEqual(param.selectedMultiTypeString, "");
       });
@@ -505,7 +505,7 @@ describe("KdbDataSourceView", () => {
           typeStrings: ["type1", "type2"],
           multiFieldTypes: [{ type1: ParamFieldType.Boolean }],
         };
-        const result = view.renderMultitype(param);
+        const result = view.renderUDAMultitype(param);
         assert.ok(result);
       });
 
@@ -521,7 +521,7 @@ describe("KdbDataSourceView", () => {
           typeStrings: ["type1", "type2"],
           multiFieldTypes: [{ type1: ParamFieldType.JSON }],
         };
-        const result = view.renderMultitype(param);
+        const result = view.renderUDAMultitype(param);
         assert.ok(result);
       });
     });
