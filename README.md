@@ -79,8 +79,6 @@ After you install **kdb VS Code extension**, if q is not already installed the e
 
 Once registered you will receive an email with you license details. The base64 encoded license string can be found in the welcome email received after registration, under the download link for the license file.
 
-![welcomeemaillicense](https://github.com/KxSystems/kx-vscode/blob/main/img/weclomeemail.jpg?raw=true)
-
 With your license details to hand, you can link this to VS Code by either choosing **Paste license string** or **Select license file** from your PC. The latter method is recommended for new users.
 
 ![findlicense](https://github.com/KxSystems/kx-vscode/blob/main/img/pastelicense.jpg?raw=true)
@@ -104,7 +102,7 @@ There are commercial and non-commercial editions available. We recommend you sta
 | Edition                                                                                         | write q | run q queries | explore results | shared kdb process with kdb Insights |
 | ----------------------------------------------------------------------------------------------- | ------- | ------------- | --------------- | ------------------------------------ |
 | [kdb+ Personal Edition](https://kx.com/kdb-personal-edition-download/)                          | yes     | yes           | yes             | no                                   |
-| [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/) | yes     | yes           | yes             | no                                   |
+| [kdb Insights SDK Personal Edition](https://kx.com/kdb-insights-sdk-personal-edition-download/) | yes     | yes           | yes             | no                                   |
 | **kdb Insights Enterprise**                                                                     | yes     | yes           | yes             | yes                                  |
 
 > **kdb Insights Enterprise** requires a commercial license. Please contact licadmin@kx.com for further information.
