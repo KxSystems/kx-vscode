@@ -34,9 +34,74 @@ import {
 import { MetaObjectPayload } from "../../models/meta";
 import { DataSourceCommand, DataSourceMessage2 } from "../../models/messages";
 import { dataSourceStyles, kdbStyles, shoelaceStyles } from "./styles";
-import { UDA, UDAParam } from "../../models/uda";
+import { ParamFieldType, UDA, UDAParam } from "../../models/uda";
 
 const MAX_RULES = 32;
+const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
+  {
+    name: "table",
+    description: "Table to target.",
+    isReq: false,
+    type: [-11],
+    isVisible: false,
+    fieldType: ParamFieldType.Text,
+    isDistinguised: true,
+  },
+  {
+    name: "labels",
+    description: "A dictionary describing DAP labels to target,",
+    isReq: false,
+    type: [99],
+    isVisible: false,
+    fieldType: ParamFieldType.JSON,
+    isDistinguised: true,
+  },
+  {
+    name: "scope",
+    description: "A dictionary describing what RC and/or DAPs to target.",
+    isReq: false,
+    type: [99],
+    fieldType: ParamFieldType.JSON,
+    isDistinguised: true,
+  },
+  {
+    name: "startTS",
+    description: "Inclusive start time of the request.",
+    isReq: false,
+    type: [-19],
+    isVisible: false,
+    fieldType: ParamFieldType.Timestamp,
+    isDistinguised: true,
+  },
+  {
+    name: "endTS",
+    description: "Exclusive end time of the request.",
+    isReq: false,
+    type: [-19],
+    isVisible: false,
+    fieldType: ParamFieldType.Timestamp,
+    isDistinguised: true,
+  },
+  {
+    name: "inputTZ",
+    description: "Timezone of startTS and endTS (default: UTC).",
+    isReq: false,
+    type: [-11],
+    isVisible: false,
+    fieldType: ParamFieldType.Text,
+    isDistinguised: true,
+  },
+  {
+    name: "outputTZ",
+    description:
+      "Timezone of the final result (.kxi.getData only). No effect on routing.",
+    isReq: false,
+    type: [-11],
+    isVisible: false,
+    fieldType: ParamFieldType.Text,
+    isDistinguised: true,
+  },
+];
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {
@@ -954,7 +1019,6 @@ export class KdbDataSourceView extends LitElement {
           ${this.renderUDAOptions()}
         </sl-select>
         ${this.renderUDADetails()} ${this.renderUDAParams()}
-        ${this.userSelectedUDA ? this.renderUDAAddParamButton() : null}
       </div>
     `;
   }
@@ -1015,11 +1079,15 @@ export class KdbDataSourceView extends LitElement {
     const visibleParams = this.renderVisibleUDAParams();
     const noParams = this.renderUDANoParams();
     const invalidParams = this.renderUDAInvalidParams();
+    const addParamsBtn = this.renderUDAAddParamButton();
 
     if (invalidParams) {
       params.push(invalidParams);
     } else {
-      params.push(...(visibleParams.length ? visibleParams : [noParams]));
+      params.push(
+        ...(visibleParams.length ? visibleParams : [noParams]),
+        ...[addParamsBtn],
+      );
     }
 
     return params;
@@ -1027,14 +1095,20 @@ export class KdbDataSourceView extends LitElement {
 
   renderUDAAddParamButton() {
     return html`
-      <sl-dropdown
-        class="udaDropdown"
-        @sl-select="${this.handleUDAAddParamSelect}">
-        <sl-button slot="trigger" variant="neutral" class="width-200-px" caret>
-          + Add Parameter
-        </sl-button>
-        ${this.renderUDAAddParamBtnOptions()}
-      </sl-dropdown>
+      <div class="width-98-pct">
+        <sl-dropdown
+          class="udaDropdown width-30-pct"
+          @sl-select="${this.handleUDAAddParamSelect}">
+          <sl-button
+            slot="trigger"
+            class="width-100-pct"
+            variant="neutral"
+            caret>
+            + Add Parameter
+          </sl-button>
+          ${this.renderUDAAddParamBtnOptions()}
+        </sl-dropdown>
+      </div>
     `;
   }
 
@@ -1051,7 +1125,7 @@ export class KdbDataSourceView extends LitElement {
 
   renderUDAAddParamBtnOptions() {
     return html`
-      <sl-menu class="width-200-px">
+      <sl-menu class="width-100-pct">
         ${this.renderUDAOptionalParamsOpts()}
       </sl-menu>
     `;
@@ -1064,26 +1138,61 @@ export class KdbDataSourceView extends LitElement {
       `;
     }
 
+    const optParamTxtHtml = html`
+      <small class="btn-opt-text"><strong>OPTIONAL PARAMETERS:</strong></small>
+    `;
+    const distParamTxtHtml = html`
+      <small class="btn-opt-text"
+        ><strong>DISTINGUISHED PARAMETERS:</strong></small
+      >
+    `;
+
     const optionalParams = this.userSelectedUDA.params.filter(
       (param) => !param.isReq,
     );
+    const filteredDistinguisedParam = UDA_DISTINGUISED_PARAMS.filter(
+      (param) =>
+        !optionalParams.some(
+          (optionalParam) => param.name === optionalParam.name,
+        ),
+    );
 
-    if (optionalParams.length === 0) {
-      return html`
-        <sl-menu-item disabled>No optional parameters available</sl-menu-item>
-      `;
+    const renderParams = (params: any[]) =>
+      params.map(
+        (param: {
+          isVisible: unknown;
+          name: unknown;
+          description: unknown;
+        }) => html`
+          <sl-menu-item
+            .type=${param.isVisible ? "checkbox" : "normal"}
+            .disabled=${!!param.isVisible}
+            .value=${param.name as string}>
+            ${param.name}<br /><small>${param.description}</small>
+          </sl-menu-item>
+        `,
+      );
+
+    const optionalParamsHtml = [
+      optParamTxtHtml,
+      ...(optionalParams.length
+        ? renderParams(optionalParams)
+        : [
+            html`<sl-menu-item disabled
+              >No optional parameters available</sl-menu-item
+            >`,
+          ]),
+    ];
+
+    if (filteredDistinguisedParam.length > 0) {
+      optionalParamsHtml.push(
+        html`<hr class="btn-opt-divider" />`,
+        distParamTxtHtml,
+        ...renderParams(filteredDistinguisedParam),
+      );
     }
 
-    return optionalParams.map(
-      (param) => html`
-        <sl-menu-item
-          .type=${param.isVisible ? "checkbox" : "normal"}
-          .disabled=${param.isVisible === true}
-          .value=${param.name}>
-          ${param.name}<br /><small>${param.description}</small>
-        </sl-menu-item>
-      `,
-    );
+    return optionalParamsHtml;
   }
 
   renderDeleteUDAParamButton(param: UDAParam) {
@@ -1115,7 +1224,7 @@ export class KdbDataSourceView extends LitElement {
       multitype: "multitype",
       text: "text",
     };
-    return inputTypes[type || "text"] || "text";
+    return inputTypes[type ?? "text"] || "text";
   }
 
   renderVisibleUDAParams() {
@@ -1200,7 +1309,7 @@ export class KdbDataSourceView extends LitElement {
           <sl-select
             class="reset-widths-limit width-30-pct"
             label="${param.name}"
-            .helpText="Select a type"
+            help-text="Select a type"
             .value="${live(value)}"
             @sl-change="${(event: Event) => {
               param.selectedMultiTypeString = (

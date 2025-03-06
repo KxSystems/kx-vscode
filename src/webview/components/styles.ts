@@ -164,6 +164,14 @@ export const dataSourceStyles = css`
     margin-top: 28px;
   }
 
+  .btn-opt-text {
+    margin-left: 1rem;
+  }
+
+  .btn-opt-divider {
+    border: solid var(--sl-panel-border-width) var(--vscode-focusBorder) !important;
+  }
+
   sl-menu {
     border: solid var(--sl-panel-border-width) var(--vscode-focusBorder) !important;
   }
@@ -323,6 +331,10 @@ export const kdbStyles = css`
 
   .width-97-pct {
     width: 97%;
+  }
+
+  .width-98-pct {
+    width: 98%;
   }
 
   .width-100-pct {

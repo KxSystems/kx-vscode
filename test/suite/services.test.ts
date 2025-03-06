@@ -1017,7 +1017,6 @@ describe("queryHistoryProvider", () => {
         TreeItemCollapsibleState.None,
       );
       const result = queryHistoryTreeItem.defineQueryIcon(true);
-      console.log(JSON.stringify(queryHistoryTreeItem));
       assert.strictEqual(
         result,
         sucessIcon,
