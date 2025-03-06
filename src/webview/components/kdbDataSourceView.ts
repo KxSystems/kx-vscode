@@ -1019,7 +1019,6 @@ export class KdbDataSourceView extends LitElement {
           ${this.renderUDAOptions()}
         </sl-select>
         ${this.renderUDADetails()} ${this.renderUDAParams()}
-        ${this.userSelectedUDA ? this.renderUDAAddParamButton() : null}
       </div>
     `;
   }
@@ -1080,11 +1079,15 @@ export class KdbDataSourceView extends LitElement {
     const visibleParams = this.renderVisibleUDAParams();
     const noParams = this.renderUDANoParams();
     const invalidParams = this.renderUDAInvalidParams();
+    const addParamsBtn = this.renderUDAAddParamButton();
 
     if (invalidParams) {
       params.push(invalidParams);
     } else {
-      params.push(...(visibleParams.length ? visibleParams : [noParams]));
+      params.push(
+        ...(visibleParams.length ? visibleParams : [noParams]),
+        ...[addParamsBtn],
+      );
     }
 
     return params;
