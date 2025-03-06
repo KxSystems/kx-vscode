@@ -38,6 +38,7 @@ export interface UDAParam {
   selectedMultiTypeString?: string;
   value?: any;
   isVisible?: boolean;
+  isDistinguised?: boolean;
 }
 
 export interface UDAReturn {

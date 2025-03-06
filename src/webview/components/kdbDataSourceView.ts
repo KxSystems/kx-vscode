@@ -34,9 +34,68 @@ import {
 import { MetaObjectPayload } from "../../models/meta";
 import { DataSourceCommand, DataSourceMessage2 } from "../../models/messages";
 import { dataSourceStyles, kdbStyles, shoelaceStyles } from "./styles";
-import { UDA, UDAParam } from "../../models/uda";
+import { ParamFieldType, UDA, UDAParam } from "../../models/uda";
 
 const MAX_RULES = 32;
+const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
+  {
+    name: "table",
+    description: "Table to target.",
+    isReq: false,
+    type: [-11],
+    fieldType: ParamFieldType.Text,
+    isDistinguised: true,
+  },
+  {
+    name: "labels",
+    description: "A dictionary describing DAP labels to target,",
+    isReq: false,
+    type: [99],
+    fieldType: ParamFieldType.JSON,
+    isDistinguised: true,
+  },
+  {
+    name: "scope",
+    description: "A dictionary describing what RC and/or DAPs to target.",
+    isReq: false,
+    type: [99],
+    fieldType: ParamFieldType.JSON,
+    isDistinguised: true,
+  },
+  {
+    name: "startTS",
+    description: "Inclusive start time of the request.",
+    isReq: false,
+    type: [-19],
+    fieldType: ParamFieldType.Timestamp,
+    isDistinguised: true,
+  },
+  {
+    name: "endTS",
+    description: "Exclusive end time of the request.",
+    isReq: false,
+    type: [-19],
+    fieldType: ParamFieldType.Timestamp,
+    isDistinguised: true,
+  },
+  {
+    name: "inputTZ",
+    description: "Timezone of startTS and endTS (default: UTC).",
+    isReq: false,
+    type: [-11],
+    fieldType: ParamFieldType.Text,
+    isDistinguised: true,
+  },
+  {
+    name: "outputTZ",
+    description:
+      "Timezone of the final result (.kxi.getData only). No effect on routing.",
+    isReq: false,
+    type: [-11],
+    fieldType: ParamFieldType.Text,
+    isDistinguised: true,
+  },
+];
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {
@@ -1027,14 +1086,20 @@ export class KdbDataSourceView extends LitElement {
 
   renderUDAAddParamButton() {
     return html`
-      <sl-dropdown
-        class="udaDropdown"
-        @sl-select="${this.handleUDAAddParamSelect}">
-        <sl-button slot="trigger" variant="neutral" class="width-200-px" caret>
-          + Add Parameter
-        </sl-button>
-        ${this.renderUDAAddParamBtnOptions()}
-      </sl-dropdown>
+      <div class="width-98-pct">
+        <sl-dropdown
+          class="udaDropdown width-30-pct"
+          @sl-select="${this.handleUDAAddParamSelect}">
+          <sl-button
+            slot="trigger"
+            class="width-100-pct"
+            variant="neutral"
+            caret>
+            + Add Parameter
+          </sl-button>
+          ${this.renderUDAAddParamBtnOptions()}
+        </sl-dropdown>
+      </div>
     `;
   }
 
@@ -1115,7 +1180,7 @@ export class KdbDataSourceView extends LitElement {
       multitype: "multitype",
       text: "text",
     };
-    return inputTypes[type || "text"] || "text";
+    return inputTypes[type ?? "text"] || "text";
   }
 
   renderVisibleUDAParams() {

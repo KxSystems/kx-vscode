@@ -316,7 +316,7 @@ export function checkIfIsDatasource(
   if (dataSourceType === undefined) {
     return false;
   }
-  const validTypes = ["API", "QSQL", "SQL"];
+  const validTypes = ["API", "QSQL", "SQL", "UDA"];
   return validTypes.includes(dataSourceType);
 }
 

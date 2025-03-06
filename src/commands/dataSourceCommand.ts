@@ -228,8 +228,8 @@ export async function runDataSource(
             `[DATASOURCE] Results is a string with length: ${res.length}`,
             "INFO",
           );
-        } else if (res.errorMsg) {
-          res = res.errorMsg;
+        } else if (res.error) {
+          res = res.errorMsg ? res.errorMsg : res.error;
         }
 
         await writeQueryResultsToConsole(
@@ -510,6 +510,8 @@ export function getQuery(
       return `GetData - table: ${fileContent.dataSource.api.table}`;
     case "QSQL":
       return fileContent.dataSource.qsql.query;
+    case "UDA":
+      return `Executed UDA: ${fileContent.dataSource.uda?.name}`;
     case "SQL":
     default:
       return fileContent.dataSource.sql.query;

@@ -325,6 +325,10 @@ export const kdbStyles = css`
     width: 97%;
   }
 
+  .width-98-pct {
+    width: 98%;
+  }
+
   .width-100-pct {
     width: 100%;
   }
