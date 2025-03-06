@@ -910,7 +910,6 @@ describe("KdbDataSourceView", () => {
         ? result.map((item) => item.strings.join("")).join("")
         : result.strings.join("");
 
-      console.log(resultString);
       assert.ok(resultString.includes("DISTINGUISHED PARAMETERS:"));
     });
   });
