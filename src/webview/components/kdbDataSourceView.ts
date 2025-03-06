@@ -43,6 +43,7 @@ const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
     description: "Table to target.",
     isReq: false,
     type: [-11],
+    isVisible: false,
     fieldType: ParamFieldType.Text,
     isDistinguised: true,
   },
@@ -51,6 +52,7 @@ const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
     description: "A dictionary describing DAP labels to target,",
     isReq: false,
     type: [99],
+    isVisible: false,
     fieldType: ParamFieldType.JSON,
     isDistinguised: true,
   },
@@ -67,6 +69,7 @@ const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
     description: "Inclusive start time of the request.",
     isReq: false,
     type: [-19],
+    isVisible: false,
     fieldType: ParamFieldType.Timestamp,
     isDistinguised: true,
   },
@@ -75,6 +78,7 @@ const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
     description: "Exclusive end time of the request.",
     isReq: false,
     type: [-19],
+    isVisible: false,
     fieldType: ParamFieldType.Timestamp,
     isDistinguised: true,
   },
@@ -83,6 +87,7 @@ const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
     description: "Timezone of startTS and endTS (default: UTC).",
     isReq: false,
     type: [-11],
+    isVisible: false,
     fieldType: ParamFieldType.Text,
     isDistinguised: true,
   },
@@ -92,6 +97,7 @@ const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
       "Timezone of the final result (.kxi.getData only). No effect on routing.",
     isReq: false,
     type: [-11],
+    isVisible: false,
     fieldType: ParamFieldType.Text,
     isDistinguised: true,
   },
@@ -1116,7 +1122,7 @@ export class KdbDataSourceView extends LitElement {
 
   renderUDAAddParamBtnOptions() {
     return html`
-      <sl-menu class="width-200-px">
+      <sl-menu class="width-100-pct">
         ${this.renderUDAOptionalParamsOpts()}
       </sl-menu>
     `;
@@ -1129,26 +1135,63 @@ export class KdbDataSourceView extends LitElement {
       `;
     }
 
+    const optParamTxtHtml = html` <small class="btn-opt-text"
+      ><strong>OPTIONAL PARAMETERS:</strong></small
+    >`;
+    const distParamTxtHtml = html` <small class="btn-opt-text"
+      ><strong>DISTINGUISHED PARAMETERS:</strong></small
+    >`;
+
     const optionalParams = this.userSelectedUDA.params.filter(
       (param) => !param.isReq,
     );
 
+    const filteredDistinguisedParam = UDA_DISTINGUISED_PARAMS.filter(
+      (param) =>
+        !optionalParams?.some(
+          (optionalParam) => param.name === optionalParam.name,
+        ),
+    );
+
+    const optionalParamsHtml: any[] = [optParamTxtHtml];
+
     if (optionalParams.length === 0) {
-      return html`
+      optionalParamsHtml.push(html`
         <sl-menu-item disabled>No optional parameters available</sl-menu-item>
-      `;
+      `);
+    } else {
+      optionalParamsHtml.push(
+        ...optionalParams.map(
+          (param) => html`
+            <sl-menu-item
+              .type=${param.isVisible ? "checkbox" : "normal"}
+              .disabled=${param.isVisible === true}
+              .value=${param.name}>
+              ${param.name}<br /><small>${param.description}</small>
+            </sl-menu-item>
+          `,
+        ),
+      );
     }
 
-    return optionalParams.map(
-      (param) => html`
-        <sl-menu-item
-          .type=${param.isVisible ? "checkbox" : "normal"}
-          .disabled=${param.isVisible === true}
-          .value=${param.name}>
-          ${param.name}<br /><small>${param.description}</small>
-        </sl-menu-item>
-      `,
-    );
+    if (filteredDistinguisedParam.length > 0) {
+      optionalParamsHtml.push(html`<hr class="btn-opt-divider" />`);
+      optionalParamsHtml.push(distParamTxtHtml);
+      optionalParamsHtml.push(
+        ...filteredDistinguisedParam.map(
+          (param) => html`
+            <sl-menu-item
+              .type=${param.isVisible ? "checkbox" : "normal"}
+              .disabled=${param.isVisible === true}
+              .value=${param.name}>
+              ${param.name}<br /><small>${param.description}</small>
+            </sl-menu-item>
+          `,
+        ),
+      );
+    }
+
+    return optionalParamsHtml;
   }
 
   renderDeleteUDAParamButton(param: UDAParam) {
@@ -1265,7 +1308,7 @@ export class KdbDataSourceView extends LitElement {
           <sl-select
             class="reset-widths-limit width-30-pct"
             label="${param.name}"
-            .helpText="Select a type"
+            help-text="Select a type"
             .value="${live(value)}"
             @sl-change="${(event: Event) => {
               param.selectedMultiTypeString = (

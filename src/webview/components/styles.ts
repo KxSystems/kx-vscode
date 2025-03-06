@@ -164,6 +164,14 @@ export const dataSourceStyles = css`
     margin-top: 28px;
   }
 
+  .btn-opt-text {
+    margin-left: 1rem;
+  }
+
+  .btn-opt-divider {
+    border: solid var(--sl-panel-border-width) var(--vscode-focusBorder) !important;
+  }
+
   sl-menu {
     border: solid var(--sl-panel-border-width) var(--vscode-focusBorder) !important;
   }
