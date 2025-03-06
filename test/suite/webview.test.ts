@@ -825,6 +825,95 @@ describe("KdbDataSourceView", () => {
       assert.ok(!result);
     });
   });
+
+  describe("renderUDAOptionalParamsOpts", () => {
+    it("should return 'No optional parameters available' if userSelectedUDA is not set", () => {
+      view.userSelectedUDA = undefined;
+      const result = view.renderUDAOptionalParamsOpts();
+      assert.strictEqual(Array.isArray(result) ? result.length : 0, 0);
+      const resultString = Array.isArray(result)
+        ? result.map((item) => item.strings.join("")).join("")
+        : result.strings.join("");
+      assert.ok(resultString.includes("No optional parameters available"));
+    });
+
+    it("should return 'No optional parameters available' if there are no optional parameters", () => {
+      view.userSelectedUDA = {
+        name: "test",
+        description: "test description",
+        params: [
+          {
+            name: "param",
+            type: 10,
+            description: "param description",
+            isReq: true,
+          },
+        ],
+        return: {
+          type: ["99"],
+          description: "test return description",
+        },
+      };
+      const result = view.renderUDAOptionalParamsOpts();
+      assert.strictEqual(Array.isArray(result) ? result.length : 0, 11);
+      const resultString = Array.isArray(result)
+        ? result.map((item) => item.strings.join("")).join("")
+        : result.strings.join("");
+      assert.ok(resultString.includes("No optional parameters available"));
+    });
+
+    it("should render optional parameters if they exist", () => {
+      view.userSelectedUDA = {
+        name: "test",
+        description: "test description",
+        params: [
+          {
+            name: "optionalParam",
+            type: 10,
+            description: "optional param description",
+            isReq: false,
+          },
+        ],
+        return: {
+          type: ["99"],
+          description: "test return description",
+        },
+      };
+      const result = view.renderUDAOptionalParamsOpts();
+      assert.strictEqual(Array.isArray(result) ? result.length : 0, 11);
+      const resultString = Array.isArray(result)
+        ? result.map((item) => item.strings.join("")).join("")
+        : result.strings.join("");
+      assert.ok(resultString.includes("OPTIONAL PARAMETERS"));
+    });
+
+    it("should render distinguished parameters if they exist", () => {
+      view.userSelectedUDA = {
+        name: "test",
+        description: "test description",
+        params: [
+          {
+            name: "optionalParam",
+            type: 10,
+            description: "optional param description",
+            isReq: false,
+          },
+        ],
+        return: {
+          type: ["99"],
+          description: "test return description",
+        },
+      };
+      const result = view.renderUDAOptionalParamsOpts();
+      assert.strictEqual(Array.isArray(result) ? result.length : 0, 11);
+      const resultString = Array.isArray(result)
+        ? result.map((item) => item.strings.join("")).join("")
+        : result.strings.join("");
+
+      console.log(resultString);
+      assert.ok(resultString.includes("DISTINGUISHED PARAMETERS:"));
+    });
+  });
 });
 
 describe("KdbNewConnectionView", () => {

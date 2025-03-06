@@ -1135,59 +1135,57 @@ export class KdbDataSourceView extends LitElement {
       `;
     }
 
-    const optParamTxtHtml = html` <small class="btn-opt-text"
-      ><strong>OPTIONAL PARAMETERS:</strong></small
-    >`;
-    const distParamTxtHtml = html` <small class="btn-opt-text"
-      ><strong>DISTINGUISHED PARAMETERS:</strong></small
-    >`;
+    const optParamTxtHtml = html`
+      <small class="btn-opt-text"><strong>OPTIONAL PARAMETERS:</strong></small>
+    `;
+    const distParamTxtHtml = html`
+      <small class="btn-opt-text"
+        ><strong>DISTINGUISHED PARAMETERS:</strong></small
+      >
+    `;
 
     const optionalParams = this.userSelectedUDA.params.filter(
       (param) => !param.isReq,
     );
-
     const filteredDistinguisedParam = UDA_DISTINGUISED_PARAMS.filter(
       (param) =>
-        !optionalParams?.some(
+        !optionalParams.some(
           (optionalParam) => param.name === optionalParam.name,
         ),
     );
 
-    const optionalParamsHtml: any[] = [optParamTxtHtml];
-
-    if (optionalParams.length === 0) {
-      optionalParamsHtml.push(html`
-        <sl-menu-item disabled>No optional parameters available</sl-menu-item>
-      `);
-    } else {
-      optionalParamsHtml.push(
-        ...optionalParams.map(
-          (param) => html`
-            <sl-menu-item
-              .type=${param.isVisible ? "checkbox" : "normal"}
-              .disabled=${param.isVisible === true}
-              .value=${param.name}>
-              ${param.name}<br /><small>${param.description}</small>
-            </sl-menu-item>
-          `,
-        ),
+    const renderParams = (params: any[]) =>
+      params.map(
+        (param: {
+          isVisible: unknown;
+          name: unknown;
+          description: unknown;
+        }) => html`
+          <sl-menu-item
+            .type=${param.isVisible ? "checkbox" : "normal"}
+            .disabled=${!!param.isVisible}
+            .value=${param.name as string}>
+            ${param.name}<br /><small>${param.description}</small>
+          </sl-menu-item>
+        `,
       );
-    }
+
+    const optionalParamsHtml = [
+      optParamTxtHtml,
+      ...(optionalParams.length
+        ? renderParams(optionalParams)
+        : [
+            html`<sl-menu-item disabled
+              >No optional parameters available</sl-menu-item
+            >`,
+          ]),
+    ];
 
     if (filteredDistinguisedParam.length > 0) {
-      optionalParamsHtml.push(html`<hr class="btn-opt-divider" />`);
-      optionalParamsHtml.push(distParamTxtHtml);
       optionalParamsHtml.push(
-        ...filteredDistinguisedParam.map(
-          (param) => html`
-            <sl-menu-item
-              .type=${param.isVisible ? "checkbox" : "normal"}
-              .disabled=${param.isVisible === true}
-              .value=${param.name}>
-              ${param.name}<br /><small>${param.description}</small>
-            </sl-menu-item>
-          `,
-        ),
+        html`<hr class="btn-opt-divider" />`,
+        distParamTxtHtml,
+        ...renderParams(filteredDistinguisedParam),
       );
     }
 
