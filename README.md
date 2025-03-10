@@ -14,6 +14,7 @@ This guide provides information on the following:
 
 - [Benefits of using kdb VS Code Extension](#benefits-of-kdb-vs-code-extension)
 - [Getting Started](#getting-started)
+- [Customized authentication for kdb VS Code extension](#customized-authentication)
 - [Creating and managing connections](#connections)
 - [kdb language server](#kdb-language-server)
 - [Executing code](#execute-code)
@@ -108,6 +109,23 @@ There are commercial and non-commercial editions available. We recommend you sta
 > **kdb Insights Enterprise** requires a commercial license. Please contact licadmin@kx.com for further information.
 
 After registering for your chosen version, you will receive an email with a link to download an installation file and a `k4.lic` or `kc.lic` license file. Follow the instructions [here](https://code.kx.com/q/learn/install) for Linux, macOS and Windows to install q and a license file before proceeding.
+
+## Customized authentication
+
+Customized authentication has been implemented for the  [kdb VS Code extension](https://github.com/KxSystems/kx-vscode), allowing you to add custom logic when authenticating with kdb. This enhances security by enabling you to authenticate by various identity providers.
+
+### Set up customization
+
+Update the `auth` function in [extension.ts](https://github.com/KxSystems/kx-vscode-auth/blob/main/src/extension.ts) according to the custom requirements. The kdb VS Code extension passes the configuration parameters to `auth`, as defined in [customAuth.ts](https://github.com/KxSystems/kx-vscode-auth/blob/main/src/customAuth.ts).
+
+The following commands build the extension and output `kdb-auth-1.0.0.vsix` to the workspace. It's recommended to install this file as an extension on the target VS Code instances that requires custom authentication.
+
+```sh
+npm test
+npm run vsix
+```
+
+**Note!** The extension `name` and `publisher` in [package.json](https://github.com/KxSystems/kx-vscode-auth/blob/main/package.json) should **not** be changed.
 
 ## Connections
 
