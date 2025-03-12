@@ -357,8 +357,15 @@ export class ConnectionManagementService {
     let conn: InsightsConnection | undefined;
     if (connLabel) {
       const retrievedConn = this.retrieveConnectedConnection(connLabel);
-      conn =
-        retrievedConn instanceof InsightsConnection ? retrievedConn : undefined;
+      if (retrievedConn instanceof InsightsConnection) {
+        conn = retrievedConn;
+      } else {
+        kdbOutputLog(
+          "[RESET SCRATCHPAD] Please connect to an Insights connection to use this feature.",
+          "ERROR",
+        );
+        return;
+      }
     }
     if (!conn) {
       if (
@@ -384,6 +391,12 @@ export class ConnectionManagementService {
 
       if (selection === "Yes") {
         await conn.resetScratchpad();
+      } else {
+        kdbOutputLog(
+          "[RESET SCRATCHPAD] User decided to not reset the scratchpad",
+          "INFO",
+        );
+        return;
       }
     } else {
       kdbOutputLog(

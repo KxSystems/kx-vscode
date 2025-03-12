@@ -1353,6 +1353,7 @@ describe("connectionManagerService", () => {
 
   describe("resetScratchpad", () => {
     let connMngService: ConnectionManagementService;
+    let retrieveConnectedConnectionStub: sinon.SinonStub;
     let resetScratchpadStub: sinon.SinonStub;
     let kdbOutputLogStub: sinon.SinonStub;
     let showInformationMessageStub: sinon.SinonStub;
@@ -1361,7 +1362,11 @@ describe("connectionManagerService", () => {
     beforeEach(() => {
       connMngService = new ConnectionManagementService();
       ext.activeConnection = insightsConn;
-      resetScratchpadStub = sinon.stub(ext.activeConnection, "resetScratchpad");
+      resetScratchpadStub = sinon.stub(insightsConn, "resetScratchpad");
+      retrieveConnectedConnectionStub = sinon.stub(
+        connMngService,
+        "retrieveConnectedConnection",
+      );
       kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
       showInformationMessageStub = sinon.stub(window, "showInformationMessage");
       showErrorMessageStub = sinon.stub(window, "showErrorMessage");
@@ -1397,6 +1402,36 @@ describe("connectionManagerService", () => {
       showInformationMessageStub.resolves("Yes");
       await connMngService.resetScratchpad();
       sinon.assert.calledOnce(resetScratchpadStub);
+    });
+
+    it("should retrieve insights connection and procced with resetScratchpad", async () => {
+      insightsConn.insightsVersion = 1.12;
+      retrieveConnectedConnectionStub.returns(insightsConn);
+      showInformationMessageStub.resolves("Yes");
+      await connMngService.resetScratchpad("test");
+      sinon.assert.calledOnce(retrieveConnectedConnectionStub);
+    });
+
+    it("should retrieve insights connection and procced with resetScratchpad", async () => {
+      insightsConn.insightsVersion = 1.12;
+      retrieveConnectedConnectionStub.returns(insightsConn);
+      showInformationMessageStub.resolves("No");
+      await connMngService.resetScratchpad("test");
+      sinon.assert.calledWith(
+        kdbOutputLogStub,
+        "[RESET SCRATCHPAD] User decided to not reset the scratchpad",
+        "INFO",
+      );
+    });
+
+    it("should retrieve kdb connection not proceed", async () => {
+      retrieveConnectedConnectionStub.returns(localConn);
+      await connMngService.resetScratchpad("test");
+      sinon.assert.calledWith(
+        kdbOutputLogStub,
+        "[RESET SCRATCHPAD] Please connect to an Insights connection to use this feature.",
+        "ERROR",
+      );
     });
 
     it("should log an error if insightsVersion is less than or equal to 1.11", async () => {
