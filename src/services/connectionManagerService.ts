@@ -353,23 +353,29 @@ export class ConnectionManagementService {
     }
   }
 
-  public async resetScratchpad(): Promise<void> {
-    if (
-      !ext.activeConnection ||
-      !(ext.activeConnection instanceof InsightsConnection)
-    ) {
-      kdbOutputLog(
-        "[RESET SCRATCHPAD] Please activate an Insights connection to use this feature.",
-        "ERROR",
-      );
-      return;
+  public async resetScratchpad(connLabel?: string): Promise<void> {
+    let conn: InsightsConnection | undefined;
+    if (connLabel) {
+      const retrievedConn = this.retrieveConnectedConnection(connLabel);
+      conn =
+        retrievedConn instanceof InsightsConnection ? retrievedConn : undefined;
+    }
+    if (!conn) {
+      if (
+        !ext.activeConnection ||
+        !(ext.activeConnection instanceof InsightsConnection)
+      ) {
+        kdbOutputLog(
+          "[RESET SCRATCHPAD] Please activate an Insights connection to use this feature.",
+          "ERROR",
+        );
+        return;
+      }
+      conn = ext.activeConnection;
     }
 
-    if (
-      ext.activeConnection.insightsVersion &&
-      compareVersions(ext.activeConnection.insightsVersion, 1.12)
-    ) {
-      const confirmationPrompt = `Are you sure you want to reset the scratchpad from the connection ${ext.activeConnection.connLabel}?`;
+    if (conn.insightsVersion && compareVersions(conn.insightsVersion, 1.12)) {
+      const confirmationPrompt = `Are you sure you want to reset the scratchpad from the connection ${conn.connLabel}?`;
       const selection = await window.showInformationMessage(
         confirmationPrompt,
         "Yes",
@@ -377,7 +383,7 @@ export class ConnectionManagementService {
       );
 
       if (selection === "Yes") {
-        await ext.activeConnection.resetScratchpad();
+        await conn.resetScratchpad();
       }
     } else {
       kdbOutputLog(

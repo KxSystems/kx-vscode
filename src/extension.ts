@@ -56,7 +56,7 @@ import {
   refreshGetMeta,
   removeConnection,
   rerunQuery,
-  resetScratchPad,
+  resetScratchpad,
 } from "./commands/serverCommand";
 import { showInstallationDetails } from "./commands/walkthroughCommand";
 import { ext } from "./extensionVariables";
@@ -98,6 +98,7 @@ import {
   connectWorkspaceCommands,
   importOldDSFiles,
   pickConnection,
+  resetScratchpadFromEditor,
   runActiveEditor,
   setServerForUri,
 } from "./commands/workspaceCommand";
@@ -469,10 +470,19 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.execute.pythonScratchpadQuery", async () => {
       await runActiveEditor(ExecutionTypes.PythonQuerySelection);
     }),
-    // TODO renable it when the scratchpad reset API is fixed
-    // commands.registerCommand("kdb.scratchpad.reset", async () => {
-    //   await resetScratchPad();
-    // }),
+    commands.registerCommand(
+      "kdb.scratchpad.reset",
+      async (viewItem?: InsightsNode) => {
+        const connLabel = viewItem ? viewItem.label : undefined;
+        await resetScratchpad(connLabel);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.scratchpad.resetEditorConnection",
+      async () => {
+        await resetScratchpadFromEditor();
+      },
+    ),
     commands.registerCommand(
       "kdb.execute.pythonFileScratchpadQuery",
       async (item) => {

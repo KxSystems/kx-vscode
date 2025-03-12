@@ -1797,7 +1797,7 @@ describe("serverCommand", () => {
         ConnectionManagementService.prototype,
         "resetScratchpad",
       );
-      await serverCommand.resetScratchPad();
+      await serverCommand.resetScratchpad();
       sinon.assert.calledOnce(resetScratchpadStub);
       sinon.restore();
     });
@@ -2623,6 +2623,67 @@ describe("workspaceCommand", () => {
         "[DATASOURCE] User cancelled the old DS files import.",
         "INFO",
       );
+    });
+  });
+
+  describe("resetScratchpadFromEditor", () => {
+    let getServerForUriStub: sinon.SinonStub;
+    let pickConnectionStub: sinon.SinonStub;
+    let getConnectionForServerStub: sinon.SinonStub;
+    let resetScratchpadStub: sinon.SinonStub;
+
+    const insightsNode = new InsightsNode(
+      [],
+      "insightsnode1",
+      {
+        server: "https://insightsservername.com/",
+        alias: "insightsserveralias",
+        auth: true,
+      },
+      vscode.TreeItemCollapsibleState.None,
+    );
+
+    beforeEach(() => {
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: { active: new vscode.Position(0, 0) },
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: () => "",
+        },
+      };
+
+      getServerForUriStub = sinon.stub(workspaceCommand, "getServerForUri");
+      pickConnectionStub = sinon.stub(workspaceCommand, "pickConnection");
+      getConnectionForServerStub = sinon
+        .stub(workspaceCommand, "getConnectionForServer")
+        .resolves(insightsNode);
+      resetScratchpadStub = sinon
+        .stub(serverCommand, "resetScratchpad")
+        .resolves();
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should call resetScratchpad with empty server label", async () => {
+      getServerForUriStub.returns("");
+      await workspaceCommand.resetScratchpadFromEditor();
+      assert.strictEqual(resetScratchpadStub.calledWith(""), true);
+    });
+
+    it("should set server to an empty string if no server is found", async () => {
+      getServerForUriStub.returns(undefined);
+      pickConnectionStub.resolves(undefined);
+      await workspaceCommand.resetScratchpadFromEditor();
+      assert.strictEqual(resetScratchpadStub.calledWith(""), true);
+    });
+
+    it("should not call resetScratchpad if activeTextEditor is not set", async () => {
+      ext.activeTextEditor = undefined;
+      await workspaceCommand.resetScratchpadFromEditor();
+      assert.strictEqual(resetScratchpadStub.called, false);
     });
   });
 });
