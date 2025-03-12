@@ -62,6 +62,8 @@ Once the **kdb VS Code extension** is installed **KX** appears in the Activity B
 - [Workbooks](#workbooks)
 - [Query History](#query-history)
 
+**Note** Customized authentication has been implemented for the kdb VS Code extension, allowing you to add custom logic when authenticating with kdb. Refer to [customized authentication](https://github.com/KxSystems/kx-vscode-auth) for details on how to set this up.
+
 ### Installing q
 
 After you install **kdb VS Code extension**, if q is not already installed the extension provides a seamless integration with q, by displaying a notification with an option to download, register and install [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/). For details on the other versions available see [here](#versions-available).
