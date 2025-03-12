@@ -46,8 +46,6 @@ To get started you must do the following:
 1. [Install kdb VS Code Extension](#installing-kdb-vs-code-extension)
 2. [Install q and integrate with VS Code extension](#installing-q)
 
-**Note** Customized authentication has been implemented for the kdb VS Code extension, allowing you to add custom logic when authenticating with kdb. Refer to [customized authentication](https://github.com/KxSystems/kx-vscode-auth) for details on how to set this up.
-
 ### Installing kdb VS Code Extension
 
 This section assumes you have already installed [VS Code](https://code.visualstudio.com/download).
@@ -63,6 +61,8 @@ Once the **kdb VS Code extension** is installed **KX** appears in the Activity B
 - [Datasources](#data-sources)
 - [Workbooks](#workbooks)
 - [Query History](#query-history)
+
+**Note** Customized authentication has been implemented for the kdb VS Code extension, allowing you to add custom logic when authenticating with kdb. Refer to [customized authentication](https://github.com/KxSystems/kx-vscode-auth) for details on how to set this up.
 
 ### Installing q
 
