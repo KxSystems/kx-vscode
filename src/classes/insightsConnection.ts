@@ -271,7 +271,7 @@ export class InsightsConnection {
         importSql: "servicebroker/scratchpad/import/sql",
         importQsql: "servicebroker/scratchpad/import/qsql",
         importUDA: "servicebroker/scratchpad/import/uda",
-        reset: "servicebroker/scratchpad/reset",
+        reset: "scratchpadmanager/reset",
       },
       serviceGateway: {
         meta: "servicegateway/meta",

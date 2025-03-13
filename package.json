@@ -289,6 +289,16 @@
       },
       {
         "category": "KX",
+        "command": "kdb.scratchpad.reset",
+        "title": "Reset scratchpad"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.scratchpad.resetEditorConnection",
+        "title": "Reset editor connection"
+      },
+      {
+        "category": "KX",
         "command": "kdb.startLocalProcess",
         "title": "Start q process"
       },
@@ -492,6 +502,12 @@
         "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
       },
       {
+        "command": "kdb.scratchpad.resetEditorConnection",
+        "key": "ctrl+shift+delete",
+        "mac": "cmd+shift+delete",
+        "when": "(editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)) || editorLangId == q"
+      },
+      {
         "command": "kdb.terminal.run",
         "key": "ctrl+shift+r",
         "mac": "cmd+shift+r",
@@ -661,6 +677,10 @@
           "when": "false"
         },
         {
+          "command": "kdb.scratchpad.resetEditorConnection",
+          "when": "false"
+        },
+        {
           "command": "kdb.connect.via.dialog",
           "when": "false"
         },
@@ -814,6 +834,11 @@
           "command": "kdb.connections.export.single",
           "when": "view == kdb-servers && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection@6"
+        },
+        {
+          "command": "kdb.scratchpad.reset",
+          "when": "view == kdb-servers && viewItem in kdb.connected && viewItem in kdb.insightsNodes",
+          "group": "connection@7"
         },
         {
           "command": "kdb.startLocalProcess",

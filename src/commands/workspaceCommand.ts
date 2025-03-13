@@ -29,7 +29,7 @@ import {
 import { ext } from "../extensionVariables";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
-import { runQuery } from "./serverCommand";
+import { resetScratchpad, runQuery } from "./serverCommand";
 import { ExecutionTypes } from "../models/execution";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
 import { kdbOutputLog, offerConnectAction } from "../utils/core";
@@ -288,6 +288,23 @@ export async function runActiveEditor(type?: ExecutionTypes) {
       executorName ? executorName : "",
       isWorkbook,
     );
+  }
+}
+
+export async function resetScratchpadFromEditor(): Promise<void> {
+  if (ext.activeTextEditor) {
+    const uri = ext.activeTextEditor.document.uri;
+    const isWorkbook = uri.path.endsWith(".kdb.q");
+    let server = getServerForUri(uri);
+    if (!server && isWorkbook) {
+      server = await pickConnection(uri);
+    }
+    if (!server) {
+      server = "";
+    }
+    const connection = await getConnectionForServer(server);
+    server = connection?.label || "";
+    resetScratchpad(server);
   }
 }
 

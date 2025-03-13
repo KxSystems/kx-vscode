@@ -759,9 +759,9 @@ export function activeConnection(viewItem: KdbNode | InsightsNode): void {
   ext.serverProvider.reload();
 }
 
-export async function resetScratchPad(): Promise<void> {
+export async function resetScratchpad(connName?: string): Promise<void> {
   const connMngService = new ConnectionManagementService();
-  await connMngService.resetScratchpad();
+  await connMngService.resetScratchpad(connName);
 }
 
 export async function refreshGetMeta(connLabel?: string): Promise<void> {
