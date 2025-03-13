@@ -381,7 +381,7 @@ export class ConnectionManagementService {
       conn = ext.activeConnection;
     }
 
-    if (conn.insightsVersion && compareVersions(conn.insightsVersion, 1.12)) {
+    if (conn.insightsVersion && compareVersions(conn.insightsVersion, 1.13)) {
       const confirmationPrompt = `Are you sure you want to reset the scratchpad from the connection ${conn.connLabel}?`;
       const selection = await window.showInformationMessage(
         confirmationPrompt,
@@ -393,14 +393,14 @@ export class ConnectionManagementService {
         await conn.resetScratchpad();
       } else {
         kdbOutputLog(
-          "[RESET SCRATCHPAD] User decided to not reset the scratchpad",
+          "[RESET SCRATCHPAD] The user canceled the scratchpad reset.",
           "INFO",
         );
         return;
       }
     } else {
       kdbOutputLog(
-        "[RESET SCRATCHPAD] Please connect to an Insights connection with version superior to 1.11",
+        "[RESET SCRATCHPAD] Please connect to an Insights connection with version 1.13 or higher.",
         "ERROR",
       );
     }

@@ -1398,14 +1398,14 @@ describe("connectionManagerService", () => {
 
     it("should reset the scratchpad if the active connection is an InsightsConnection", async () => {
       ext.activeConnection = insightsConn;
-      ext.activeConnection.insightsVersion = 1.12;
+      ext.activeConnection.insightsVersion = 1.13;
       showInformationMessageStub.resolves("Yes");
       await connMngService.resetScratchpad();
       sinon.assert.calledOnce(resetScratchpadStub);
     });
 
     it("should retrieve insights connection and procced with resetScratchpad", async () => {
-      insightsConn.insightsVersion = 1.12;
+      insightsConn.insightsVersion = 1.13;
       retrieveConnectedConnectionStub.returns(insightsConn);
       showInformationMessageStub.resolves("Yes");
       await connMngService.resetScratchpad("test");
@@ -1413,13 +1413,13 @@ describe("connectionManagerService", () => {
     });
 
     it("should retrieve insights connection and procced with resetScratchpad", async () => {
-      insightsConn.insightsVersion = 1.12;
+      insightsConn.insightsVersion = 1.13;
       retrieveConnectedConnectionStub.returns(insightsConn);
       showInformationMessageStub.resolves("No");
       await connMngService.resetScratchpad("test");
       sinon.assert.calledWith(
         kdbOutputLogStub,
-        "[RESET SCRATCHPAD] User decided to not reset the scratchpad",
+        "[RESET SCRATCHPAD] The user canceled the scratchpad reset.",
         "INFO",
       );
     });
