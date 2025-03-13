@@ -2,6 +2,15 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.11.0
+
+### Enhancements
+
+- Add from UDAs tab to the Datasource Files
+- Add reset scratchpad for insights connections version 1.13 or higher
+
+### Fixes
+
 # v1.10.2
 
 ### Fixes
