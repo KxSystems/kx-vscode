@@ -510,7 +510,7 @@ This function runs an QSQL query.
 
 Refer to the [QSQL documentation](https://code.kx.com/insights/api/database/query/qsql.html) for more details.
 
-**Warning!** Starting with kdb Insights Enterprise version 1.13, QSQL queries and populating QSQL only work if the Query Environment (QE) is enabled. Ensure you have enabled QEs to use QSQL.
+**Warning!** Starting with kdb Insights Enterprise version 1.13, QSQL queries and populating QSQL only work if the Query Environment (QE) is enabled. Ensure you have enabled QEs to use QSQL. Refer to [System Information](https://code.kx.com/insights/enterprise/user-interface/system-information.html) for details on how to check the status.
 
 ### SQL queries
 
