@@ -516,6 +516,8 @@ There are several ways to reset the scratchpad:
 
 1. Right click on the appropriate connection on the left-hand side and select **Reset Scratchpad**. The connection can be either active or idle but it must be connected. This displays a dialog box at the bottom right corner asking you to confirm your action.
 
+   ![Reset Scratchpad with right click on connected instance](img/reset-scratchpad-right-click.png)
+
 2. Using the **Command Palette** in VSCode, start typing **Reset Scratchpad** and click on the option. This action resets the scratchpad for the active connection.
 
 3. Use the MacOS or Windows hot keys in the q file or in the workbook. Running the hot keys in the q file resets the scratchpad for the active connection, while running them in the workbook resets the scratchpad for the connection chosen in the workbook.
