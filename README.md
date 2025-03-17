@@ -218,7 +218,7 @@ If you close the extension, the connection also closes.
 
 #### Meta
 
-When connected **Insights** connections can be expanded to show the details returned by the [getMeta API](https://code.kx.com/draft/insights/api/database/query/get-meta.html) call, which provides information on the database schemas and all the analytics available.
+When connected **Insights** connections can be expanded to show the details returned by the [getMeta API](https://code.kx.com/insights/api/database/query/get-meta.html) call, which provides information on the database schemas and all the analytics available.
 
 ![Insights Meta Tree](https://github.com/KxSystems/kx-vscode/blob/main/img/insights-meta-tree.png?raw=true)
 
@@ -510,7 +510,7 @@ This function runs an QSQL query.
 
 Refer to the [QSQL documentation](https://code.kx.com/insights/api/database/query/qsql.html) for more details.
 
-**Warning!** Starting with kdb Insights Enterprise version 1.13, QSQL queries and populating QSQL only work if the Query Environment (QE) is enabled. Ensure you have enabled QEs to use QSQL; they are disabled by default in kdb VS Code. Refer to [Query Environments](https://code.kx.com/draft/insights/1.13/enterprise/configuration/base.html#query-environments) for more details.
+**Warning!** Starting with kdb Insights Enterprise version 1.13, QSQL queries and populating QSQL only work if the Query Environment (QE) is enabled. Ensure you have enabled QEs to use QSQL; they are disabled by default in kdb VS Code. Refer to [Query Environments](https://code.kx.com/insights/enterprise/configuration/base.html#query-environments) for more details.
 
 ### SQL queries
 
