@@ -508,6 +508,26 @@ To do this:
 
 1. Use a [Workbook](#workbooks) to execute q or Python code against the data in your scratchpad using the variable you provided.
 
+### Reset scratchpad
+
+The **Reset Scratchpad** option in kdb VS Code allows you to delete all the data from a connected instance and restart your development from scratch.
+
+There are several ways to reset the scratchpad:
+
+1. Right click on the appropriate connection on the left-hand side and select **Reset Scratchpad**. The connection can be either active or idle but it must be connected.
+
+   ![Reset Scratchpad with right click on connected instance](https://github.com/KxSystems/kx-vscode/blob/main/img/reset-scratchpad-right-click.png?raw=true)
+
+   This displays a dialog box at the bottom right corner asking you to confirm your action.
+
+   ![Dialog to confirm reset scratchpad](https://github.com/KxSystems/kx-vscode/blob/main/img/reset-scratchpad-dialog.png?raw=true)
+
+2. Using the **Command Palette** in VSCode, start typing **Reset Scratchpad** and click on the option as it shows. This action resets the scratchpad for the active connection.
+
+   ![Reset scratchpad using the Command Palette](https://github.com/KxSystems/kx-vscode/blob/main/img/reset-scratchpad-command-palette.png?raw=true)
+
+3. Use the [MacOS or Windows shortcuts](#shortcuts) in the q file or in the workbook. Note that running the shortcuts in the q file resets the scratchpad for the active connection, while running them in the workbook resets the scratchpad for the connection chosen in the workbook.
+
 ## Workbooks
 
 Workbooks provide a convenient way to prototype and execute q and python code against a q process and using the variables [populated into the scratchpad](#populate-scratchpad) of a **kdb Insights Enterprise** deployment by data sources.
@@ -755,6 +775,7 @@ The following setting will change double click behaviour to select the whole ide
 | Ctrl + Shift + D   | Execute entire file               |
 | Ctrl + Shift + R   | Run q file in new q instance      |
 | Ctrl + Shift + Y   | Toggle paramater cache for lambda |
+| Ctrl + Shift + Delete   | Reset scratchpad |
 
 ### For MacOS
 
@@ -768,3 +789,4 @@ The following setting will change double click behaviour to select the whole ide
 | ⌘ + Shift + D   | Execute entire file               |
 | ⌘ + Shift + R   | Run q file in new q instance      |
 | ⌘ + Shift + Y   | Toggle paramater cache for lambda |
+| ⌘ + Shift + Delete   | Reset scratchpad |
