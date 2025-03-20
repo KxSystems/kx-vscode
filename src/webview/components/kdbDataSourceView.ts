@@ -1030,6 +1030,18 @@ export class KdbDataSourceView extends LitElement {
     this.userSelectedUDA = this.UDAs.find(
       (uda) => uda.name === this.selectedUDA,
     );
+    if (this.userSelectedUDA) {
+      UDA_DISTINGUISED_PARAMS.forEach((distinguishedParam) => {
+        const exists = this.userSelectedUDA?.params.some(
+          (param) => param.name === distinguishedParam.name,
+        );
+        if (!exists) {
+          if (this.userSelectedUDA?.params) {
+            this.userSelectedUDA.params.push({ ...distinguishedParam });
+          }
+        }
+      });
+    }
     this.requestChange();
   }
 
@@ -1148,13 +1160,11 @@ export class KdbDataSourceView extends LitElement {
     `;
 
     const optionalParams = this.userSelectedUDA.params.filter(
-      (param) => !param.isReq,
+      (param) => !param.isReq && !param.isDistinguised,
     );
-    const filteredDistinguisedParam = UDA_DISTINGUISED_PARAMS.filter(
-      (param) =>
-        !optionalParams.some(
-          (optionalParam) => param.name === optionalParam.name,
-        ),
+
+    const filteredDistinguisedParam = this.userSelectedUDA.params.filter(
+      (param) => !param.isReq && param.isDistinguised,
     );
 
     const renderParams = (params: any[]) =>

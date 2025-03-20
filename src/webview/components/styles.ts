@@ -88,6 +88,8 @@ export const shoelaceStyles = css`
 
   .remove-param-btn::part(base) {
     padding-top: 3px;
+    background: none;
+    border: none;
   }
 `;
 

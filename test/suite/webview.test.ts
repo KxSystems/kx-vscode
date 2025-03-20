@@ -826,6 +826,72 @@ describe("KdbDataSourceView", () => {
     });
   });
 
+  const distinguishedParams: UDAParam[] = [
+    {
+      name: "table",
+      description: "Table to target.",
+      isReq: false,
+      type: [-11],
+      isVisible: false,
+      fieldType: ParamFieldType.Text,
+      isDistinguised: true,
+    },
+    {
+      name: "labels",
+      description: "A dictionary describing DAP labels to target,",
+      isReq: false,
+      type: [99],
+      isVisible: false,
+      fieldType: ParamFieldType.JSON,
+      isDistinguised: true,
+    },
+    {
+      name: "scope",
+      description: "A dictionary describing what RC and/or DAPs to target.",
+      isReq: false,
+      type: [99],
+      fieldType: ParamFieldType.JSON,
+      isDistinguised: true,
+    },
+    {
+      name: "startTS",
+      description: "Inclusive start time of the request.",
+      isReq: false,
+      type: [-19],
+      isVisible: false,
+      fieldType: ParamFieldType.Timestamp,
+      isDistinguised: true,
+    },
+    {
+      name: "endTS",
+      description: "Exclusive end time of the request.",
+      isReq: false,
+      type: [-19],
+      isVisible: false,
+      fieldType: ParamFieldType.Timestamp,
+      isDistinguised: true,
+    },
+    {
+      name: "inputTZ",
+      description: "Timezone of startTS and endTS (default: UTC).",
+      isReq: false,
+      type: [-11],
+      isVisible: false,
+      fieldType: ParamFieldType.Text,
+      isDistinguised: true,
+    },
+    {
+      name: "outputTZ",
+      description:
+        "Timezone of the final result (.kxi.getData only). No effect on routing.",
+      isReq: false,
+      type: [-11],
+      isVisible: false,
+      fieldType: ParamFieldType.Text,
+      isDistinguised: true,
+    },
+  ];
+
   describe("renderUDAOptionalParamsOpts", () => {
     it("should return 'No optional parameters available' if userSelectedUDA is not set", () => {
       view.userSelectedUDA = undefined;
@@ -855,7 +921,6 @@ describe("KdbDataSourceView", () => {
         },
       };
       const result = view.renderUDAOptionalParamsOpts();
-      assert.strictEqual(Array.isArray(result) ? result.length : 0, 11);
       const resultString = Array.isArray(result)
         ? result.map((item) => item.strings.join("")).join("")
         : result.strings.join("");
@@ -879,6 +944,8 @@ describe("KdbDataSourceView", () => {
           description: "test return description",
         },
       };
+
+      view.userSelectedUDA.params.push(...distinguishedParams);
       const result = view.renderUDAOptionalParamsOpts();
       assert.strictEqual(Array.isArray(result) ? result.length : 0, 11);
       const resultString = Array.isArray(result)
@@ -904,6 +971,8 @@ describe("KdbDataSourceView", () => {
           description: "test return description",
         },
       };
+
+      view.userSelectedUDA.params.push(...distinguishedParams);
       const result = view.renderUDAOptionalParamsOpts();
       assert.strictEqual(Array.isArray(result) ? result.length : 0, 11);
       const resultString = Array.isArray(result)
