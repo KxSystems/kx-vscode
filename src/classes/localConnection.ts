@@ -187,7 +187,7 @@ export class LocalConnection {
     const wrapper = queryWrapper(!!isPython);
 
     if (isPython) {
-      args.push(!!stringify, command);
+      args.push(stringify ? "text" : "serialized", command, "first", 10000);
     } else {
       args.push(context ?? ".", command, stringify ? "text" : "structuredText");
     }
