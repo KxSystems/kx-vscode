@@ -22,6 +22,7 @@ import { QueryResult, QueryResultType } from "../models/queryResult";
 export class LocalConnection {
   public connected: boolean;
   public connLabel: string;
+  public labels: string[];
   private options: nodeq.ConnectionParameters;
   private connection?: nodeq.Connection;
   private isError: boolean = false;
@@ -30,6 +31,7 @@ export class LocalConnection {
   constructor(
     connectionString: string,
     connLabel: string,
+    labels: string[],
     creds?: string[],
     tls?: boolean,
   ) {
@@ -62,6 +64,7 @@ export class LocalConnection {
     }
 
     this.connLabel = connLabel;
+    this.labels = labels;
     this.options = options;
     this.connected = false;
   }
@@ -373,7 +376,8 @@ export class LocalConnection {
   async getCustomAuthOptions(): Promise<nodeq.ConnectionParameters> {
     if (ext.customAuth) {
       const { kdb } = await ext.customAuth.auth({
-        label: this.connLabel,
+        name: this.connLabel,
+        labels: this.labels,
         kdb: {
           host: this.options.host,
           port: this.options.port,

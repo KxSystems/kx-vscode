@@ -12,7 +12,8 @@
  */
 
 export interface CustomAuthParams {
-  label: string;
+  name: string;
+  labels: string[];
   kdb?: {
     host?: string;
     port?: number;
