@@ -25,7 +25,7 @@ describe("LocalConnection", () => {
   let getConnectionStub: sinon.SinonStub;
 
   beforeEach(() => {
-    localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
+    localConn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
     connectStub = sinon.stub(localConn, "connect");
     disconnectStub = sinon.stub(localConn, "disconnect");
     getConnectionStub = sinon.stub(localConn, "getConnection");
@@ -38,7 +38,7 @@ describe("LocalConnection", () => {
   });
 
   it("Should create a new connection object", () => {
-    const conn = new LocalConnection("server:5001", "server1");
+    const conn = new LocalConnection("server:5001", "server1", []);
     assert.strictEqual(
       conn.connected,
       false,
@@ -50,6 +50,7 @@ describe("LocalConnection", () => {
     const conn = new LocalConnection(
       "server:5001",
       "server1",
+      [],
       ["username", "password"],
       true,
     );
@@ -61,7 +62,7 @@ describe("LocalConnection", () => {
   });
 
   it("Should create a new connection object", () => {
-    const conn = new LocalConnection("server:5001", "server1");
+    const conn = new LocalConnection("server:5001", "server1", []);
     conn.disconnect();
     assert.strictEqual(
       conn.connected,

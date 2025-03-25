@@ -1059,7 +1059,7 @@ describe("connectionManagerService", () => {
   );
   ext.serverProvider = new KdbTreeProvider(servers, insights);
 
-  const localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
+  const localConn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
 
   const insightsConn = new InsightsConnection(insightNode.label, insightNode);
   describe("retrieveConnection", () => {
@@ -1322,7 +1322,11 @@ describe("connectionManagerService", () => {
     });
 
     it("disconnectBehaviour", () => {
-      const testConnection = new LocalConnection("localhost:5001", "server1");
+      const testConnection = new LocalConnection(
+        "localhost:5001",
+        "server1",
+        [],
+      );
       ext.connectedConnectionList.push(testConnection);
       ext.activeConnection = testConnection;
 
@@ -2089,7 +2093,7 @@ describe("dataSourceEditorProvider", () => {
         insightsNode.label,
         insightsNode,
       );
-      const localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
+      const localConn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
       const connMngService = new ConnectionManagementService();
       let isConnetedStub, retrieveConnectedConnectionStub: sinon.SinonStub;
       beforeEach(() => {
@@ -2530,7 +2534,7 @@ describe("kdbTreeService", () => {
   });
 
   it("Should return sorted views", async () => {
-    ext.activeConnection = new LocalConnection("localhost:5001", "server1");
+    ext.activeConnection = new LocalConnection("localhost:5001", "server1", []);
     sinon.stub(ext.activeConnection, "executeQuery").resolves(["vw1", "vw2"]);
     const result = await KdbTreeService.loadViews();
     assert.strictEqual(result[0], "vw1", "Should return the first view");
@@ -2538,7 +2542,7 @@ describe("kdbTreeService", () => {
   });
 
   it("Should return sorted views (reverse order)", async () => {
-    ext.activeConnection = new LocalConnection("localhost:5001", "server1");
+    ext.activeConnection = new LocalConnection("localhost:5001", "server1", []);
     sinon.stub(ext.activeConnection, "executeQuery").resolves(["vw1", "vw2"]);
     const result = await KdbTreeService.loadViews();
     assert.strictEqual(result[0], "vw1", "Should return the first view");

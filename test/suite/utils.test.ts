@@ -221,7 +221,7 @@ describe("Utils", () => {
     });
 
     describe("getServerIconState", () => {
-      const localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
+      const localConn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
       afterEach(() => {
         ext.activeConnection = undefined;
         ext.connectedConnectionList.length = 0;
@@ -248,7 +248,7 @@ describe("Utils", () => {
     });
 
     describe("getStatus", () => {
-      const localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
+      const localConn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
 
       afterEach(() => {
         ext.activeConnection = undefined;
@@ -276,7 +276,7 @@ describe("Utils", () => {
     });
 
     describe("getWorkspaceIconsState", () => {
-      const localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
+      const localConn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
       afterEach(() => {
         ext.connectedConnectionList.length = 0;
       });
