@@ -137,6 +137,7 @@ export class ConnectionManagementService {
       const localConnection = new LocalConnection(
         connectionString,
         connLabel,
+        retrieveConnLabelsNames(connection),
         authCredentials ? authCredentials.split(":") : undefined,
         connection.details.tls,
       );

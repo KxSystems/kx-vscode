@@ -87,7 +87,7 @@ describe("dataSourceCommand", () => {
 
 describe("dataSourceCommand2", () => {
   let dummyDataSourceFiles: DataSourceFiles;
-  const localConn = new LocalConnection("localhost:5001", "test");
+  const localConn = new LocalConnection("localhost:5001", "test", []);
   const insightsNode = new InsightsNode(
     [],
     "insightsnode1",
@@ -1937,7 +1937,7 @@ describe("serverCommand", () => {
       insightsNode.label,
       insightsNode,
     );
-    const localConn = new LocalConnection("localhost:5001", "server1");
+    const localConn = new LocalConnection("localhost:5001", "server1", []);
     beforeEach(() => {
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
       executeQueryStub = sinon.stub(connMangService, "executeQuery");
