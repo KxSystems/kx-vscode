@@ -996,7 +996,7 @@ export class KdbDataSourceView extends LitElement {
 
   renderUDA() {
     return html`
-      <div class="col">
+      <div class="col width-80-pct">
         <sl-select
           label="User Defined Analytic (UDA)"
           .value="${live(encodeURIComponent(this.selectedUDA))}"
