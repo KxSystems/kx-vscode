@@ -996,7 +996,7 @@ export class KdbDataSourceView extends LitElement {
 
   renderUDA() {
     return html`
-      <div class="col width-70-pct">
+      <div class="col">
         <sl-select
           label="User Defined Analytic (UDA)"
           .value="${live(encodeURIComponent(this.selectedUDA))}"
@@ -1111,11 +1111,7 @@ export class KdbDataSourceView extends LitElement {
         <sl-dropdown
           class="udaDropdown width-30-pct"
           @sl-select="${this.handleUDAAddParamSelect}">
-          <sl-button
-            slot="trigger"
-            class="width-100-pct"
-            variant="neutral"
-            caret>
+          <sl-button slot="trigger" variant="neutral">
             + Add Parameter
           </sl-button>
           ${this.renderUDAAddParamBtnOptions()}
@@ -1341,6 +1337,15 @@ export class KdbDataSourceView extends LitElement {
     `;
   }
 
+  getUDAInputWidth(type: string) {
+    switch (type) {
+      case "datetime-local":
+        return "width-30-pct";
+      default:
+        return "width-100-pct";
+    }
+  }
+
   renderUDAInput(param: UDAParam, inputType: string) {
     const validInputTypes = ["text", "number", "datetime-local"];
     const type = validInputTypes.includes(inputType) ? inputType : "text";
@@ -1354,7 +1359,7 @@ export class KdbDataSourceView extends LitElement {
             ? "width-90-pct"
             : "width-97-pct"} row align-top">
           <sl-input
-            class="reset-widths-limit width-100-pct"
+            class="reset-widths-limit ${this.getUDAInputWidth(type)}"
             .type="${type as
               | "number"
               | "date"
@@ -1422,7 +1427,7 @@ export class KdbDataSourceView extends LitElement {
       default:
         return html`
           <sl-input
-            class="reset-widths-limit width-70-pct"
+            class="reset-widths-limit ${this.getUDAInputWidth(inputType)}"
             .label="Selected type: ${selectedType}"
             .type="${(inputType === "multitype" ? "text" : inputType) as
               | "number"

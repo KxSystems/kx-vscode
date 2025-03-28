@@ -47,18 +47,15 @@ export const shoelaceStyles = css`
     border-color: var(--sl-input-border-color);
   }
 
-  sl-menu::part(base) {
-    color: var(--vscode-input-foreground);
-    --sl-color-neutral-600: var(--vscode-input-background);
-    --sl-color-neutral-500: var(--vscode-inputOption-hoverBackground);
-    --sl-color-neutral-0: var(--vscode-input-foreground);
+  sl-menu {
+    --sl-panel-border-color: var(--vscode-focusBorder);
   }
 
   sl-menu-item::part(base) {
-    color: var(--vscode-input-foreground);
-    --sl-color-neutral-600: var(--vscode-input-background);
-    --sl-color-neutral-500: var(--vscode-inputOption-hoverBackground);
-    --sl-color-neutral-0: var(--vscode-input-foreground);
+    --sl-color-primary-600: var(--vscode-button-background);
+    --sl-color-neutral-700: var(--vscode-input-foreground);
+    --sl-color-neutral-1000: var(--vscode-input-foreground);
+    --sl-color-neutral-100: var(--vscode-inputOption-hoverBackground);
   }
 
   sl-tab-group::part(tabs) {
@@ -172,15 +169,6 @@ export const dataSourceStyles = css`
 
   .btn-opt-divider {
     border: solid var(--sl-panel-border-width) var(--vscode-focusBorder) !important;
-  }
-
-  sl-menu {
-    border: solid var(--sl-panel-border-width) var(--vscode-focusBorder) !important;
-  }
-
-  sl-menu-item::part(base):hover {
-    background-color: var(--vscode-focusBorder);
-    word-wrap: break-word;
   }
 
   .remove-param-btn {
