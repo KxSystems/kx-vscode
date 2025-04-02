@@ -43,6 +43,7 @@ const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
     description: "Table to target.",
     isReq: false,
     type: [-11],
+    typeStrings: ["Symbol"],
     isVisible: false,
     fieldType: ParamFieldType.Text,
     isDistinguised: true,
@@ -52,6 +53,7 @@ const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
     description: "A dictionary describing DAP labels to target,",
     isReq: false,
     type: [99],
+    typeStrings: ["Dictionary"],
     isVisible: false,
     fieldType: ParamFieldType.JSON,
     isDistinguised: true,
@@ -61,6 +63,7 @@ const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
     description: "A dictionary describing what RC and/or DAPs to target.",
     isReq: false,
     type: [99],
+    typeStrings: ["Dictionary"],
     fieldType: ParamFieldType.JSON,
     isDistinguised: true,
   },
@@ -69,6 +72,7 @@ const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
     description: "Inclusive start time of the request.",
     isReq: false,
     type: [-19],
+    typeStrings: ["Time"],
     isVisible: false,
     fieldType: ParamFieldType.Timestamp,
     isDistinguised: true,
@@ -78,15 +82,17 @@ const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
     description: "Exclusive end time of the request.",
     isReq: false,
     type: [-19],
+    typeStrings: ["Time"],
     isVisible: false,
     fieldType: ParamFieldType.Timestamp,
     isDistinguised: true,
   },
   {
     name: "inputTZ",
-    description: "Timezone of startTS and endTS (default: UTC).",
+    description: "Timezone of startTS and endTS (default: UTC).teste",
     isReq: false,
     type: [-11],
+    typeStrings: ["Symbol"],
     isVisible: false,
     fieldType: ParamFieldType.Text,
     isDistinguised: true,
@@ -97,6 +103,7 @@ const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
       "Timezone of the final result (.kxi.getData only). No effect on routing.",
     isReq: false,
     type: [-11],
+    typeStrings: ["Symbol"],
     isVisible: false,
     fieldType: ParamFieldType.Text,
     isDistinguised: true,
@@ -1261,16 +1268,24 @@ export class KdbDataSourceView extends LitElement {
 
   renderUDACheckbox(param: UDAParam) {
     const isChecked = param.value || param.default || false;
+    const isReq = param.isReq ? "*" : "";
+    const isDistinguised = param.isDistinguised ? "Distinguished | " : "";
+    const typeString = param.typeStrings?.[0]
+      ? "Type: " + param.typeStrings[0] + " | "
+      : "";
+    const description =
+      param.description !== "" ? "Description: " + param.description : "";
+    const helpText = isDistinguised + typeString + description;
     return html`
       <div class="opt-param-field">
         <sl-checkbox
-          .helpText="${param.description}"
+          .helpText="${helpText}"
           @sl-change="${(event: Event) => {
             param.value = (event.target as HTMLInputElement).checked;
             this.requestChange();
           }}"
           .checked="${live(isChecked)}">
-          ${param.name}
+          ${param.name + isReq}
         </sl-checkbox>
         ${this.renderDeleteUDAParamButton(param)}
       </div>
@@ -1279,11 +1294,19 @@ export class KdbDataSourceView extends LitElement {
 
   renderUDATextarea(param: UDAParam) {
     const value = param.value || param.default || "";
+    const isReq = param.isReq ? "*" : "";
+    const isDistinguised = param.isDistinguised ? "Distinguished | " : "";
+    const typeString = param.typeStrings?.[0]
+      ? "Type: " + param.typeStrings[0] + " | "
+      : "";
+    const description =
+      param.description !== "" ? "Description: " + param.description : "";
+    const helpText = isDistinguised + typeString + description;
     return html`
       <div class="opt-param-field">
         <sl-textarea
-          label="${param.name}"
-          .helpText="${param.description}"
+          label="${param.name + isReq}"
+          .helpText="${helpText}"
           .className="${param.isReq
             ? "width-97-pct"
             : "width-90-pct"} float-left"
@@ -1302,9 +1325,9 @@ export class KdbDataSourceView extends LitElement {
     const selectedMultiTypeString =
       param.selectedMultiTypeString || param.typeStrings?.[0] || "";
     param.selectedMultiTypeString = selectedMultiTypeString;
-
     const value = param.selectedMultiTypeString || param.typeStrings?.[0] || "";
     const renderDeleteParam = this.renderDeleteUDAParamButton(param);
+    const isReq = param.isReq ? "*" : "";
 
     return html`
       <div class="opt-param-field">
@@ -1314,7 +1337,7 @@ export class KdbDataSourceView extends LitElement {
             : "width-97-pct"} row align-top">
           <sl-select
             class="reset-widths-limit width-30-pct"
-            label="${param.name}"
+            label="${param.name + isReq}"
             help-text="Select a type"
             .value="${live(value)}"
             @sl-change="${(event: Event) => {
@@ -1337,29 +1360,40 @@ export class KdbDataSourceView extends LitElement {
     `;
   }
 
-  getUDAInputWidth(type: string) {
+  getUDAInputWidth(type: string, haveDeleteBtn = false) {
     switch (type) {
       case "datetime-local":
         return "width-30-pct";
       default:
-        return "width-100-pct";
+        if (haveDeleteBtn) return "width-90-pct";
+        return "width-97-pct";
     }
   }
 
   renderUDAInput(param: UDAParam, inputType: string) {
+    console.log(param);
     const validInputTypes = ["text", "number", "datetime-local"];
     const type = validInputTypes.includes(inputType) ? inputType : "text";
     const value = param.value || param.default || "";
     const renderDeleteParam = this.renderDeleteUDAParamButton(param);
+    const isReq = param.isReq ? "*" : "";
+    const isDistinguised = param.isDistinguised ? "Distinguished | " : "";
+    const typeString = param.typeStrings?.[0]
+      ? "Type: " + param.typeStrings[0] + " | "
+      : "";
+    const description =
+      param.description !== "" ? "Description: " + param.description : "";
+    const helpText = isDistinguised + typeString + description;
+    const inputFieldWrapperWidth = this.getUDAInputWidth(
+      type,
+      renderDeleteParam ? true : false,
+    );
 
     return html`
       <div class="opt-param-field">
-        <div
-          class="${renderDeleteParam
-            ? "width-90-pct"
-            : "width-97-pct"} row align-top">
+        <div class="${inputFieldWrapperWidth} row align-top">
           <sl-input
-            class="reset-widths-limit ${this.getUDAInputWidth(type)}"
+            class="reset-widths-limit width-100-pct"
             .type="${type as
               | "number"
               | "date"
@@ -1371,8 +1405,8 @@ export class KdbDataSourceView extends LitElement {
               | "text"
               | "time"
               | "url"}"
-            label="${param.name}"
-            .helpText="${param.description}"
+            label="${param.name + isReq}"
+            .helpText="${helpText}"
             .value="${live(value)}"
             @input="${(event: Event) => {
               param.value = (event.target as HTMLInputElement).value;
@@ -1396,6 +1430,11 @@ export class KdbDataSourceView extends LitElement {
       ? Object.values(multiFieldType)[0]
       : "text";
     const inputType = this.retrieveUDAParamInputType(fieldType);
+    const isDistinguised = param.isDistinguised ? "Distinguished | " : "";
+    const typeString = selectedType ? "Type: " + selectedType + " | " : "";
+    const description =
+      param.description !== "" ? "Description: " + param.description : "";
+    const helpText = isDistinguised + typeString + description;
 
     switch (inputType) {
       case "checkbox":
@@ -1403,7 +1442,7 @@ export class KdbDataSourceView extends LitElement {
           <sl-checkbox
             class="fix-multi-checkbox"
             .checked="${live(param.value || false)}"
-            .helpText="${param.description}"
+            .helpText="${helpText}"
             @sl-change="${(event: Event) => {
               param.value = (event.target as HTMLInputElement).checked;
               this.requestChange();
@@ -1417,7 +1456,7 @@ export class KdbDataSourceView extends LitElement {
             class="reset-widths-limit width-70-pct"
             .label="Selected type: ${selectedType}"
             .value="${live(param.value || "")}"
-            .helpText="${param.description}"
+            .helpText="${helpText}"
             @input="${(event: Event) => {
               param.value = (event.target as HTMLTextAreaElement).value;
               this.requestChange();
@@ -1441,7 +1480,7 @@ export class KdbDataSourceView extends LitElement {
               | "time"
               | "url"}"
             .value="${live(param.value || "")}"
-            .helpText="${param.description}"
+            .helpText="${helpText}"
             @input="${(event: Event) => {
               param.value = (event.target as HTMLInputElement).value;
               this.requestChange();

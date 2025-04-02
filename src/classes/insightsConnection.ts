@@ -708,22 +708,22 @@ export class InsightsConnection {
           const res = await axios(options)
             .then((_response: any) => {
               kdbOutputLog(
-                `[SCRATCHPAD] Executed successfully, scratchpad reseted at ${this.connLabel} connection.`,
+                `[SCRATCHPAD] Executed successfully, scratchpad reset at ${this.connLabel} connection.`,
                 "INFO",
               );
               window.showInformationMessage(
-                `Executed successfully, scratchpad reseted at ${this.connLabel} connection`,
+                `Executed successfully, scratchpad reset at ${this.connLabel} connection.`,
               );
               Telemetry.sendEvent("Scratchpad.Reseted");
               return true;
             })
             .catch((_error: any) => {
               kdbOutputLog(
-                `[SCRATCHPAD] Error ocurried while reseting scratchpad in connection ${this.connLabel}, try again.`,
+                `[SCRATCHPAD] Error occurred while resetting scratchpad in connection ${this.connLabel}, try again.`,
                 "ERROR",
               );
               window.showErrorMessage(
-                "Error ocurried while reseting scratchpad, try again.",
+                "Error occurred while resetting scratchpad, try again.",
               );
               return false;
             });
