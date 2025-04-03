@@ -18,6 +18,7 @@ import {
   ParamFieldType,
   UDA,
   UDAParam,
+  UDARequestBody,
   UDAReturn,
 } from "../models/uda";
 
@@ -150,6 +151,31 @@ export function convertTypesToString(returnType: number[]): string[] {
   return returnType.map(
     (type) => ext.constants.dataTypes.get(type.toString()) ?? type.toString(),
   );
+}
+
+//TODO: Should remove this after add nanoseconds support in uda
+export function fixTimeAtUDARequestBody(
+  udaReqBody: UDARequestBody,
+): UDARequestBody {
+  const parameterTypes = udaReqBody.parameterTypes as {
+    [key: string]: Array<any>;
+  };
+  for (const key in parameterTypes) {
+    if (
+      Array.isArray(parameterTypes[key]) &&
+      parameterTypes[key].length === 1 &&
+      parameterTypes[key][0] === -12
+    ) {
+      if (
+        (udaReqBody.params as { [key: string]: any })[key] &&
+        (udaReqBody.params as { [key: string]: any })[key] !== ""
+      ) {
+        (udaReqBody.params as { [key: string]: any })[key] =
+          `${(udaReqBody.params as { [key: string]: any })[key]}:00.000000000`;
+      }
+    }
+  }
+  return udaReqBody;
 }
 
 export function getIncompatibleError(
