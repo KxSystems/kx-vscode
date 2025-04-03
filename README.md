@@ -528,7 +528,9 @@ Refer to the [SQL documentation](https://code.kx.com/insights/api/database/query
 
 User-Defined Analytics (UDAs), also known as custom APIs, are essential for developers to leverage the capabilities of kdb when building Insights Enterprise. These UDAs are deployed to Insights through the Data Access Processes (DAPs) and Aggregators (Aggs).
 
-UDAs can be called directly within the VSCode extension through the UDA tab in a data source. This provides a form-based approach to populating the UDA parameters. UDAs can also be called within the Insights Enterprise web interface using Pipelines, Queries, and Views. 
+UDAs can be called directly within the VSCode extension through the UDA tab in a data source. This provides a form-based approach to populating the UDA parameters. UDAs can also be called within the Insights Enterprise web interface using Pipelines, Queries, and Views.
+
+For more information on User-Defined Analytics, refer to the [UDAs documentation](https://code.kx.com/insights/api/database/uda/uda-overview-introduction.html)
 
 ### Run and populate scratchpad
 
