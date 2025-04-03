@@ -274,11 +274,12 @@ describe("KdbDataSourceView", () => {
           description: "Test Description",
           value: true,
           default: false,
-          isReq: false,
+          isReq: true,
           type: 0,
         };
         const result = view.renderUDACheckbox(param);
         assert.ok(result);
+        console.log(result.strings);
       });
 
       it("should render checkbox with value false", () => {
@@ -288,13 +289,14 @@ describe("KdbDataSourceView", () => {
           value: false,
           default: true,
           isReq: false,
+          isDistinguised: true,
           type: 0,
         };
         const result = view.renderUDACheckbox(param);
         assert.ok(result);
       });
 
-      it("should render checkbox with default value true", () => {
+      it("should render checkbox with default value true and type string", () => {
         const param: UDAParam = {
           name: "testParam",
           description: "Test Description",
@@ -302,15 +304,16 @@ describe("KdbDataSourceView", () => {
           default: true,
           isReq: false,
           type: 0,
+          typeStrings: ["boolean"],
         };
         const result = view.renderUDACheckbox(param);
         assert.ok(result);
       });
 
-      it("should render checkbox with default value false", () => {
+      it("should render checkbox with default value false and no description", () => {
         const param: UDAParam = {
           name: "testParam",
-          description: "Test Description",
+          description: "",
           value: undefined,
           default: false,
           isReq: false,
@@ -318,6 +321,7 @@ describe("KdbDataSourceView", () => {
         };
         const result = view.renderUDACheckbox(param);
         assert.ok(result);
+        assert.ok(!result.strings[0].includes("Description:")); // Verifica que não há descrição
       });
 
       it("should render checkbox with value and default undefined", () => {
@@ -331,6 +335,54 @@ describe("KdbDataSourceView", () => {
         };
         const result = view.renderUDACheckbox(param);
         assert.ok(result);
+      });
+
+      it("should render checkbox and trigger change event", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: false,
+          default: false,
+          isReq: false,
+          type: 0,
+        };
+
+        const requestChangeSpy = sinon.spy(view, "requestChange");
+        const result = view.renderUDACheckbox(param);
+
+        // Simula o evento de mudança
+        const event = new Event("sl-change");
+        Object.defineProperty(event, "target", {
+          value: { checked: true },
+          writable: false,
+        });
+
+        const checkbox = result.values.find((v) => typeof v === "function");
+        if (checkbox) {
+          checkbox(event);
+        }
+
+        assert.strictEqual(param.value, true); // Verifica que o valor foi atualizado
+        assert.ok(requestChangeSpy.calledOnce); // Verifica que requestChange foi chamado
+        requestChangeSpy.restore();
+      });
+
+      it("should render checkbox with delete button", () => {
+        const param: UDAParam = {
+          name: "testParam",
+          description: "Test Description",
+          value: true,
+          default: false,
+          isReq: false,
+          type: 0,
+        };
+
+        const renderDeleteSpy = sinon.spy(view, "renderDeleteUDAParamButton");
+        const result = view.renderUDACheckbox(param);
+
+        assert.ok(result);
+        assert.ok(renderDeleteSpy.calledOnceWith(param)); // Verifica que o botão de exclusão foi renderizado
+        renderDeleteSpy.restore();
       });
     });
 
