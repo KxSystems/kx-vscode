@@ -1371,7 +1371,6 @@ export class KdbDataSourceView extends LitElement {
   }
 
   renderUDAInput(param: UDAParam, inputType: string) {
-    console.log(param);
     const validInputTypes = ["text", "number", "datetime-local"];
     const type = validInputTypes.includes(inputType) ? inputType : "text";
     const value = param.value || param.default || "";
