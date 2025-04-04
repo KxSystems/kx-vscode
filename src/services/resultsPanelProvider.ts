@@ -398,6 +398,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
           command: "setGridDatasource",
           results: gridOptions.rowData,
           columnDefs: gridOptions.columnDefs,
+          theme: "legacy",
         });
       } else {
         this._view.webview.postMessage({
@@ -486,6 +487,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
                       minWidth: 100,
                       editable: false,
                     },
+                    theme: message.theme,
                     columnDefs: message.columnDefs,
                     domLayout: "autoHeight",
                     pagination: true,

@@ -61,6 +61,7 @@ import {
   InvalidParamFieldErrors,
   ParamFieldType,
   UDAParam,
+  UDARequestBody,
 } from "../../src/models/uda";
 import { MetaObjectPayload } from "../../src/models/meta";
 
@@ -2258,6 +2259,123 @@ describe("Utils", () => {
 
         const result = UDAUtils.convertTypesToString(types);
         assert.deepStrictEqual(result, ["Boolean", "3"]);
+      });
+    });
+
+    describe("fixTimeAtUDARequestBody", () => {
+      it("should append ':00.000000000' when parameterTypes[key] is [-12] and params[key] is a valid string", () => {
+        const input: UDARequestBody = {
+          language: "en",
+          name: "test",
+          parameterTypes: { timeKey: [-12] },
+          params: { timeKey: "12:30" },
+          returnFormat: "json",
+          sampleFn: "sample",
+          sampleSize: 10,
+        };
+
+        const expected: UDARequestBody = {
+          ...input,
+          params: { timeKey: "12:30:00.000000000" },
+        };
+
+        const result = UDAUtils.fixTimeAtUDARequestBody(input);
+        assert.deepStrictEqual(result, expected);
+      });
+
+      it("should not modify params[key] if parameterTypes[key] is not [-12]", () => {
+        const input: UDARequestBody = {
+          language: "en",
+          name: "test",
+          parameterTypes: { timeKey: [1] },
+          params: { timeKey: "12:30" },
+          returnFormat: "json",
+          sampleFn: "sample",
+          sampleSize: 10,
+        };
+
+        const result = UDAUtils.fixTimeAtUDARequestBody(input);
+        assert.deepStrictEqual(result, input);
+      });
+
+      it("should not modify params[key] if params[key] is an empty string", () => {
+        const input: UDARequestBody = {
+          language: "en",
+          name: "test",
+          parameterTypes: { timeKey: [-12] },
+          params: { timeKey: "" },
+          returnFormat: "json",
+          sampleFn: "sample",
+          sampleSize: 10,
+        };
+
+        const result = UDAUtils.fixTimeAtUDARequestBody(input);
+        assert.deepStrictEqual(result, input);
+      });
+
+      it("should not modify params[key] if params[key] is undefined", () => {
+        const input: UDARequestBody = {
+          language: "en",
+          name: "test",
+          parameterTypes: { timeKey: [-12] },
+          params: {},
+          returnFormat: "json",
+          sampleFn: "sample",
+          sampleSize: 10,
+        };
+
+        const result = UDAUtils.fixTimeAtUDARequestBody(input);
+        assert.deepStrictEqual(result, input);
+      });
+
+      it("should not modify params[key] if parameterTypes[key] is not an array", () => {
+        const input: UDARequestBody = {
+          language: "en",
+          name: "test",
+          parameterTypes: { timeKey: -12 },
+          params: { timeKey: "12:30" },
+          returnFormat: "json",
+          sampleFn: "sample",
+          sampleSize: 10,
+        };
+
+        const result = UDAUtils.fixTimeAtUDARequestBody(input);
+        assert.deepStrictEqual(result, input);
+      });
+
+      it("should not modify params[key] if parameterTypes[key] is an empty array", () => {
+        const input: UDARequestBody = {
+          language: "en",
+          name: "test",
+          parameterTypes: { timeKey: [] },
+          params: { timeKey: "12:30" },
+          returnFormat: "json",
+          sampleFn: "sample",
+          sampleSize: 10,
+        };
+
+        const result = UDAUtils.fixTimeAtUDARequestBody(input);
+        assert.deepStrictEqual(result, input);
+      });
+
+      it("should handle multiple keys in parameterTypes and params", () => {
+        const input: UDARequestBody = {
+          language: "en",
+          name: "test",
+          parameterTypes: { timeKey1: [-12], timeKey2: [1] },
+          params: { timeKey1: "12:30", timeKey2: "value" },
+          returnFormat: "json",
+          sampleFn: "sample",
+          sampleSize: 10,
+        };
+
+        const expected: UDARequestBody = {
+          ...input,
+          params: { timeKey1: "12:30:00.000000000", timeKey2: "value" },
+        };
+
+        const result = UDAUtils.fixTimeAtUDARequestBody(input);
+        assert.deepStrictEqual(result, expected);
       });
     });
 

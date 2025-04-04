@@ -44,6 +44,7 @@ import { convertTimeToTimestamp } from "../utils/dataSource";
 import { ScratchpadRequestBody } from "../models/scratchpad";
 import { StructuredTextResults } from "../models/queryResult";
 import { UDARequestBody } from "../models/uda";
+import { fixTimeAtUDARequestBody } from "../utils/uda";
 
 const customHeadersOctet = {
   Accept: "application/octet-stream",
@@ -349,6 +350,11 @@ export class InsightsConnection {
       const udaName = (body as UDARequestBody).name
         ? (body as UDARequestBody).name
         : "";
+      if (udaName !== "") {
+        //TODO: Should remove this after add nanoseconds support in uda
+        body = fixTimeAtUDARequestBody(body);
+        body = body.params;
+      }
       const requestUrl = this.generateDatasourceEndpoints(type, udaName);
       const options = await this.getOptions(
         false,
@@ -523,6 +529,8 @@ export class InsightsConnection {
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
       const isTableView = udaReqBody.returnFormat === "structuredText";
+      //TODO: Should remove this after add nanoseconds support in uda
+      udaReqBody = fixTimeAtUDARequestBody(udaReqBody);
       const udaURL = new url.URL(
         this.connEndpoints.scratchpad.importUDA,
         this.node.details.server,
@@ -708,22 +716,22 @@ export class InsightsConnection {
           const res = await axios(options)
             .then((_response: any) => {
               kdbOutputLog(
-                `[SCRATCHPAD] Executed successfully, scratchpad reseted at ${this.connLabel} connection.`,
+                `[SCRATCHPAD] Executed successfully, scratchpad reset at ${this.connLabel} connection.`,
                 "INFO",
               );
               window.showInformationMessage(
-                `Executed successfully, scratchpad reseted at ${this.connLabel} connection`,
+                `Executed successfully, scratchpad reset at ${this.connLabel} connection.`,
               );
               Telemetry.sendEvent("Scratchpad.Reseted");
               return true;
             })
             .catch((_error: any) => {
               kdbOutputLog(
-                `[SCRATCHPAD] Error ocurried while reseting scratchpad in connection ${this.connLabel}, try again.`,
+                `[SCRATCHPAD] Error occurred while resetting scratchpad in connection ${this.connLabel}, try again.`,
                 "ERROR",
               );
               window.showErrorMessage(
-                "Error ocurried while reseting scratchpad, try again.",
+                "Error occurred while resetting scratchpad, try again.",
               );
               return false;
             });

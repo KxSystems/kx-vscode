@@ -550,9 +550,13 @@ describe("WebPanels", () => {
           resultsPanel.isInsights,
         );
         sinon.assert.calledWith(postMessageStub, {
+          command: "loading",
+        });
+        sinon.assert.calledWith(postMessageStub, {
           command: "setGridDatasource",
           results: [],
           columnDefs: [],
+          theme: "legacy",
         });
       });
 

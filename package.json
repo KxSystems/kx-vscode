@@ -1055,7 +1055,7 @@
     "@ag-grid-community/core": "^32.3.4",
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "@windozer/node-q": "^2.6.0",
-    "ag-grid-community": "^33.1.1",
+    "ag-grid-community": "^33.2.1",
     "axios": "^1.8.4",
     "chevrotain": "^10.5.0",
     "extract-zip": "^2.0.1",

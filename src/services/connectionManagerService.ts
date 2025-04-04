@@ -383,7 +383,7 @@ export class ConnectionManagementService {
     }
 
     if (conn.insightsVersion && compareVersions(conn.insightsVersion, 1.13)) {
-      const confirmationPrompt = `Are you sure you want to reset the scratchpad from the connection ${conn.connLabel}?`;
+      const confirmationPrompt = `Reset Scratchpad? All data in the ${conn.connLabel} Scratchpad will be lost, and variables will be reset.`;
       const selection = await window.showInformationMessage(
         confirmationPrompt,
         "Yes",
