@@ -524,6 +524,25 @@ export class InsightsConnection {
     return token;
   }
 
+  public async isUDAAvailable(udaName: string): Promise<boolean> {
+    if (!this.meta || !this.meta.payload.api) {
+      return false;
+    }
+
+    if (!this.connected || !this.connEndpoints) {
+      return false;
+    }
+
+    if (this.meta.payload.api && Array.isArray(this.meta.payload.api)) {
+      return this.meta.payload.api.some(
+        (apiItem: { api: string; custom: boolean }) =>
+          apiItem.api === udaName && apiItem.custom === true,
+      );
+    }
+
+    return false;
+  }
+
   public async getUDAScratchpadQuery(
     udaReqBody: UDARequestBody,
   ): Promise<any | undefined> {

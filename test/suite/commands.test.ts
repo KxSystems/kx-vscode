@@ -530,12 +530,14 @@ describe("dataSourceCommand2", () => {
     let getDataInsightsStub,
       handleWSResultsStub,
       handleScratchpadTableRes,
+      isUDAAvailableStub,
       parseErrorStub: sinon.SinonStub;
 
     beforeEach(() => {
       getDataInsightsStub = sinon.stub(insightsConn, "getDatasourceQuery");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       parseErrorStub = sinon.stub(dataSourceCommand, "parseError");
+      isUDAAvailableStub = sinon.stub(insightsConn, "isUDAAvailable");
       handleScratchpadTableRes = sinon.stub(
         queryUtils,
         "handleScratchpadTableRes",
@@ -547,6 +549,7 @@ describe("dataSourceCommand2", () => {
     });
 
     it("should call the API and handle the results", async () => {
+      isUDAAvailableStub.resolves(true);
       getDataInsightsStub.resolves({ arrayBuffer: true });
       handleWSResultsStub.resolves([
         { a: "2", b: "3" },
@@ -574,6 +577,7 @@ describe("dataSourceCommand2", () => {
     });
 
     it("should call the API and handle the error results", async () => {
+      isUDAAvailableStub.resolves(true);
       getDataInsightsStub.resolves({ error: "error test" });
       parseErrorStub.resolves({ error: "error test" });
 
@@ -586,6 +590,7 @@ describe("dataSourceCommand2", () => {
     });
 
     it("should call the API and handle undefined response ", async () => {
+      isUDAAvailableStub.resolves(true);
       getDataInsightsStub.resolves(undefined);
 
       const result = await dataSourceCommand.runUDADataSource(
@@ -594,6 +599,46 @@ describe("dataSourceCommand2", () => {
       );
 
       assert.deepStrictEqual(result, { error: "UDA call failed" });
+    });
+
+    it("should handle if the UDA doesn't exist in the connection", async () => {
+      isUDAAvailableStub.resolves(false);
+      getDataInsightsStub.resolves(undefined);
+
+      const result = await dataSourceCommand.runUDADataSource(
+        dummyDataSourceFiles,
+        insightsConn,
+      );
+
+      assert.deepStrictEqual(result, {
+        error: "UDA test query is not available in this connection",
+      });
+    });
+
+    it("should handle if a required param is empty", async () => {
+      isUDAAvailableStub.resolves(true);
+      getDataInsightsStub.resolves(undefined);
+
+      const dummyDSFiles2 = dummyDataSourceFiles;
+      dummyDSFiles2.dataSource.uda.params = [
+        {
+          name: "param1",
+          description: "test param",
+          default: "",
+          isReq: true,
+          type: [0],
+          value: "",
+        },
+      ];
+
+      const result = await dataSourceCommand.runUDADataSource(
+        dummyDSFiles2,
+        insightsConn,
+      );
+
+      assert.deepStrictEqual(result, {
+        error: "The UDA required the parameter param1.",
+      });
     });
 
     it("should handle undefined UDA ", async () => {
