@@ -637,7 +637,7 @@ describe("dataSourceCommand2", () => {
       );
 
       assert.deepStrictEqual(result, {
-        error: "The UDA required the parameter param1.",
+        error: "The UDA: test query requires the parameter: param1.",
       });
     });
 
