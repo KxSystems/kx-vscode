@@ -601,6 +601,46 @@ describe("dataSourceCommand2", () => {
       assert.deepStrictEqual(result, { error: "UDA call failed" });
     });
 
+    it("should handle if the UDA doesn't exist in the connection", async () => {
+      isUDAAvailableStub.resolves(false);
+      getDataInsightsStub.resolves(undefined);
+
+      const result = await dataSourceCommand.runUDADataSource(
+        dummyDataSourceFiles,
+        insightsConn,
+      );
+
+      assert.deepStrictEqual(result, {
+        error: "UDA test query is not available in this connection",
+      });
+    });
+
+    it("should handle if a required param is empty", async () => {
+      isUDAAvailableStub.resolves(true);
+      getDataInsightsStub.resolves(undefined);
+
+      const dummyDSFiles2 = dummyDataSourceFiles;
+      dummyDSFiles2.dataSource.uda.params = [
+        {
+          name: "param1",
+          description: "test param",
+          default: "",
+          isReq: true,
+          type: [0],
+          value: "",
+        },
+      ];
+
+      const result = await dataSourceCommand.runUDADataSource(
+        dummyDSFiles2,
+        insightsConn,
+      );
+
+      assert.deepStrictEqual(result, {
+        error: "The UDA required the parameter param1.",
+      });
+    });
+
     it("should handle undefined UDA ", async () => {
       dummyDataSourceFiles.dataSource.uda = undefined;
 
