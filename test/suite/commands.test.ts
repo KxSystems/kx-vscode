@@ -530,12 +530,14 @@ describe("dataSourceCommand2", () => {
     let getDataInsightsStub,
       handleWSResultsStub,
       handleScratchpadTableRes,
+      isUDAAvailableStub,
       parseErrorStub: sinon.SinonStub;
 
     beforeEach(() => {
       getDataInsightsStub = sinon.stub(insightsConn, "getDatasourceQuery");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       parseErrorStub = sinon.stub(dataSourceCommand, "parseError");
+      isUDAAvailableStub = sinon.stub(insightsConn, "isUDAAvailable");
       handleScratchpadTableRes = sinon.stub(
         queryUtils,
         "handleScratchpadTableRes",
@@ -547,6 +549,7 @@ describe("dataSourceCommand2", () => {
     });
 
     it("should call the API and handle the results", async () => {
+      isUDAAvailableStub.resolves(true);
       getDataInsightsStub.resolves({ arrayBuffer: true });
       handleWSResultsStub.resolves([
         { a: "2", b: "3" },
@@ -574,6 +577,7 @@ describe("dataSourceCommand2", () => {
     });
 
     it("should call the API and handle the error results", async () => {
+      isUDAAvailableStub.resolves(true);
       getDataInsightsStub.resolves({ error: "error test" });
       parseErrorStub.resolves({ error: "error test" });
 
@@ -586,6 +590,7 @@ describe("dataSourceCommand2", () => {
     });
 
     it("should call the API and handle undefined response ", async () => {
+      isUDAAvailableStub.resolves(true);
       getDataInsightsStub.resolves(undefined);
 
       const result = await dataSourceCommand.runUDADataSource(
