@@ -456,26 +456,38 @@ export async function runUDADataSource(
 ): Promise<any> {
   const UDA = fileContent.dataSource.uda;
   const returnFormat = ext.isResultsTabVisible ? "structuredText" : "text";
+
   if (!UDA) {
     return { error: "UDA not found" };
   }
+
+  const isAvailable = await selectedConn.isUDAAvailable(UDA.name);
+
   if (UDA.name === "") {
     return { error: "UDA name not found" };
+  }
+
+  if (!isAvailable) {
+    return { error: `UDA ${UDA.name} is not available in this connection` };
   }
 
   const params: { [key: string]: any } = {};
   const parameterTypes: { [key: string]: any } = {};
 
   if (UDA.params && UDA.params.length > 0) {
-    UDA.params.forEach((param) => {
+    for (const param of UDA.params) {
+      if (param.isReq && (!param.value || param.value === "")) {
+        return { error: `The UDA required the parameter ${param.name}.` };
+      }
       if (param.isVisible) {
         params[param.name] = param.value;
         parameterTypes[param.name] = param.selectedMultiTypeString
           ? retrieveDataTypeByString(param.selectedMultiTypeString)
           : param.type;
       }
-    });
+    }
   }
+
   const udaReqBody: UDARequestBody = {
     language: "q",
     name: UDA.name,
