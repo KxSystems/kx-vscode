@@ -477,7 +477,9 @@ export async function runUDADataSource(
   if (UDA.params && UDA.params.length > 0) {
     for (const param of UDA.params) {
       if (param.isReq && (!param.value || param.value === "")) {
-        return { error: `The UDA required the parameter ${param.name}.` };
+        return {
+          error: `The UDA: ${UDA.name} requires the parameter: ${param.name}.`,
+        };
       }
       if (param.isVisible) {
         params[param.name] = param.value;
