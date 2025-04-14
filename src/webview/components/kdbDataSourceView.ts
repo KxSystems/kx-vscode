@@ -110,6 +110,7 @@ const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
   },
 ];
 const allowedEmptyRequiredTypes = [10, -11];
+const allowedEmptyRequiredTypesStrings = ["Symbol", "String"];
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {
@@ -1328,8 +1329,11 @@ export class KdbDataSourceView extends LitElement {
     param.selectedMultiTypeString = selectedMultiTypeString;
     const value = param.selectedMultiTypeString || param.typeStrings?.[0] || "";
     const renderDeleteParam = this.renderDeleteUDAParamButton(param);
-    const isReq = param.isReq ? "*" : "";
+    const isMultiTypeAllowed =
+      param.selectedMultiTypeString &&
+      allowedEmptyRequiredTypesStrings.includes(param.selectedMultiTypeString);
 
+    const isReq = param.isReq && !isMultiTypeAllowed ? "*" : "";
     return html`
       <div class="opt-param-field">
         <div

@@ -158,14 +158,11 @@ export function fixTimeAtUDARequestBody(
   udaReqBody: UDARequestBody,
 ): UDARequestBody {
   const parameterTypes = udaReqBody.parameterTypes as {
-    [key: string]: Array<any>;
+    [key: string]: number;
   };
+
   for (const key in parameterTypes) {
-    if (
-      Array.isArray(parameterTypes[key]) &&
-      parameterTypes[key].length === 1 &&
-      parameterTypes[key][0] === -12
-    ) {
+    if (parameterTypes[key] === -12) {
       if (
         (udaReqBody.params as { [key: string]: any })[key] &&
         (udaReqBody.params as { [key: string]: any })[key] !== ""
@@ -175,6 +172,7 @@ export function fixTimeAtUDARequestBody(
       }
     }
   }
+
   return udaReqBody;
 }
 

@@ -353,7 +353,10 @@ export class InsightsConnection {
       if (udaName !== "") {
         //TODO: Should remove this after add nanoseconds support in uda
         body = fixTimeAtUDARequestBody(body);
-        body = body.params;
+        body = {
+          ...body.params,
+          parameterTypes: body.parameterTypes,
+        };
       }
       const requestUrl = this.generateDatasourceEndpoints(type, udaName);
       const options = await this.getOptions(

@@ -501,11 +501,11 @@ export async function validateUDA(
 
 export function processUDAParams(uda: UDA): {
   params: { [key: string]: any };
-  parameterTypes: { [key: string]: any };
+  parameterTypes: { [key: string]: number };
   error?: { error: string };
 } {
   const params: { [key: string]: any } = {};
-  const parameterTypes: { [key: string]: any } = {};
+  const parameterTypes: { [key: string]: number } = {};
 
   if (uda.params && uda.params.length > 0) {
     for (const param of uda.params) {
@@ -521,9 +521,16 @@ export function processUDAParams(uda: UDA): {
 
       if (param.isVisible) {
         params[param.name] = param.value || "";
-        parameterTypes[param.name] = param.selectedMultiTypeString
-          ? retrieveDataTypeByString(param.selectedMultiTypeString)
-          : param.type;
+
+        if (Array.isArray(param.type) && param.type.length > 0) {
+          parameterTypes[param.name] = param.type[0];
+        } else if (typeof param.type === "number") {
+          parameterTypes[param.name] = param.type;
+        } else {
+          throw new Error(
+            `Invalid type for parameter: ${param.name}. Expected number or array of numbers.`,
+          );
+        }
       }
     }
   }
@@ -536,12 +543,23 @@ export function isInvalidRequiredParam(param: UDAParam): boolean {
     return !param.value || param.value === "";
   }
 
+  let typeToValidate: number | undefined;
+
+  if (Array.isArray(param.type)) {
+    if (param.type.length === 1) {
+      typeToValidate = param.type[0];
+    } else if (param.type.length > 1 && param.selectedMultiTypeString) {
+      typeToValidate = ext.constants.reverseDataTypes.get(
+        param.selectedMultiTypeString,
+      );
+    }
+  } else if (typeof param.type === "number") {
+    typeToValidate = param.type;
+  }
+
   const isAllowedEmptyType =
-    (Array.isArray(param.type) &&
-      param.type.length === 1 &&
-      ext.constants.allowedEmptyRequiredTypes.includes(param.type[0])) ||
-    (typeof param.type === "number" &&
-      ext.constants.allowedEmptyRequiredTypes.includes(param.type));
+    typeof typeToValidate === "number" &&
+    ext.constants.allowedEmptyRequiredTypes.includes(typeToValidate);
 
   return (
     !isAllowedEmptyType && param.isReq && (!param.value || param.value === "")

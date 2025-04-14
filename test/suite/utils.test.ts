@@ -2267,7 +2267,7 @@ describe("Utils", () => {
         const input: UDARequestBody = {
           language: "en",
           name: "test",
-          parameterTypes: { timeKey: [-12] },
+          parameterTypes: { timeKey: -12 },
           params: { timeKey: "12:30" },
           returnFormat: "json",
           sampleFn: "sample",
@@ -2287,7 +2287,7 @@ describe("Utils", () => {
         const input: UDARequestBody = {
           language: "en",
           name: "test",
-          parameterTypes: { timeKey: [1] },
+          parameterTypes: { timeKey: 1 },
           params: { timeKey: "12:30" },
           returnFormat: "json",
           sampleFn: "sample",
@@ -2302,7 +2302,7 @@ describe("Utils", () => {
         const input: UDARequestBody = {
           language: "en",
           name: "test",
-          parameterTypes: { timeKey: [-12] },
+          parameterTypes: { timeKey: -12 },
           params: { timeKey: "" },
           returnFormat: "json",
           sampleFn: "sample",
@@ -2317,7 +2317,7 @@ describe("Utils", () => {
         const input: UDARequestBody = {
           language: "en",
           name: "test",
-          parameterTypes: { timeKey: [-12] },
+          parameterTypes: { timeKey: -12 },
           params: {},
           returnFormat: "json",
           sampleFn: "sample",
@@ -2362,7 +2362,7 @@ describe("Utils", () => {
         const input: UDARequestBody = {
           language: "en",
           name: "test",
-          parameterTypes: { timeKey1: [-12], timeKey2: [1] },
+          parameterTypes: { timeKey1: -12, timeKey2: 1 },
           params: { timeKey1: "12:30", timeKey2: "value" },
           returnFormat: "json",
           sampleFn: "sample",
