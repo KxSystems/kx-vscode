@@ -51,7 +51,7 @@ import {
 } from "../utils/core";
 import { ServerType } from "../models/connectionsModels";
 import { retrieveDataTypeByString } from "../utils/uda";
-import { UDARequestBody } from "../models/uda";
+import { UDA, UDAParam, UDARequestBody } from "../models/uda";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -454,35 +454,73 @@ export async function runUDADataSource(
   fileContent: DataSourceFiles,
   selectedConn: InsightsConnection,
 ): Promise<any> {
-  const UDA = fileContent.dataSource.uda;
+  const uda = fileContent.dataSource.uda;
   const returnFormat = ext.isResultsTabVisible ? "structuredText" : "text";
 
-  if (!UDA) {
+  const validationError = await validateUDA(uda, selectedConn);
+  if (validationError) {
+    return validationError;
+  }
+
+  if (!uda) {
+    return { error: "UDA is undefined" };
+  }
+  const { params, parameterTypes, error } = processUDAParams(uda);
+  if (error) {
+    return error;
+  }
+  const udaReqBody: UDARequestBody = createUDARequestBody(
+    uda.name,
+    params,
+    parameterTypes,
+    returnFormat,
+  );
+
+  return await executeUDARequest(selectedConn, udaReqBody);
+}
+
+export async function validateUDA(
+  uda: UDA | undefined,
+  selectedConn: InsightsConnection,
+): Promise<{ error: string } | null> {
+  if (!uda) {
     return { error: "UDA not found" };
   }
 
-  const isAvailable = await selectedConn.isUDAAvailable(UDA.name);
-
-  if (UDA.name === "") {
+  if (uda.name === "") {
     return { error: "UDA name not found" };
   }
 
+  const isAvailable = await selectedConn.isUDAAvailable(uda.name);
   if (!isAvailable) {
-    return { error: `UDA ${UDA.name} is not available in this connection` };
+    return { error: `UDA ${uda.name} is not available in this connection` };
   }
 
+  return null;
+}
+
+export function processUDAParams(uda: UDA): {
+  params: { [key: string]: any };
+  parameterTypes: { [key: string]: any };
+  error?: { error: string };
+} {
   const params: { [key: string]: any } = {};
   const parameterTypes: { [key: string]: any } = {};
 
-  if (UDA.params && UDA.params.length > 0) {
-    for (const param of UDA.params) {
-      if (param.isReq && (!param.value || param.value === "")) {
+  if (uda.params && uda.params.length > 0) {
+    for (const param of uda.params) {
+      if (isInvalidRequiredParam(param)) {
         return {
-          error: `The UDA: ${UDA.name} requires the parameter: ${param.name}.`,
+          params: {},
+          parameterTypes: {},
+          error: {
+            error: `The UDA: ${uda.name} requires the parameter: ${param.name}.`,
+          },
         };
       }
+
       if (param.isVisible) {
-        params[param.name] = param.value;
+        params[param.name] = param.value || "";
         parameterTypes[param.name] = param.selectedMultiTypeString
           ? retrieveDataTypeByString(param.selectedMultiTypeString)
           : param.type;
@@ -490,16 +528,47 @@ export async function runUDADataSource(
     }
   }
 
-  const udaReqBody: UDARequestBody = {
+  return { params, parameterTypes };
+}
+
+export function isInvalidRequiredParam(param: UDAParam): boolean {
+  if (param.name === "table" && param.isReq) {
+    return !param.value || param.value === "";
+  }
+
+  const isAllowedEmptyType =
+    (Array.isArray(param.type) &&
+      param.type.length === 1 &&
+      ext.constants.allowedEmptyRequiredTypes.includes(param.type[0])) ||
+    (typeof param.type === "number" &&
+      ext.constants.allowedEmptyRequiredTypes.includes(param.type));
+
+  return (
+    !isAllowedEmptyType && param.isReq && (!param.value || param.value === "")
+  );
+}
+
+export function createUDARequestBody(
+  name: string,
+  params: { [key: string]: any },
+  parameterTypes: { [key: string]: any },
+  returnFormat: string,
+): UDARequestBody {
+  return {
     language: "q",
-    name: UDA.name,
+    name,
     parameterTypes,
     params,
     returnFormat,
     sampleFn: "first",
     sampleSize: 10000,
   };
+}
 
+export async function executeUDARequest(
+  selectedConn: InsightsConnection,
+  udaReqBody: UDARequestBody,
+): Promise<any> {
   const udaCall = await selectedConn.getDatasourceQuery(
     DataSourceTypes.UDA,
     udaReqBody,

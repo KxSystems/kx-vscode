@@ -239,6 +239,7 @@ export namespace ext {
       "t",
       "s",
     ],
+    allowedEmptyRequiredTypes: [10, -10, -11],
     dataTypes: new Map(
       Object.entries({
         "-1": "Boolean",

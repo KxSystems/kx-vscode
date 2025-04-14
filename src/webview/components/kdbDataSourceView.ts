@@ -109,6 +109,7 @@ const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
     isDistinguised: true,
   },
 ];
+const allowedEmptyRequiredTypes = [10, -10, -11];
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {
@@ -1375,7 +1376,13 @@ export class KdbDataSourceView extends LitElement {
     const type = validInputTypes.includes(inputType) ? inputType : "text";
     const value = param.value || param.default || "";
     const renderDeleteParam = this.renderDeleteUDAParamButton(param);
-    const isReq = param.isReq ? "*" : "";
+    const fieldCanBeEmpty =
+      param.name !== "table" &&
+      ((Array.isArray(param.type) &&
+        param.type.some((type) => allowedEmptyRequiredTypes.includes(type))) ||
+        (typeof param.type === "number" &&
+          allowedEmptyRequiredTypes.includes(param.type)));
+    const isReq = param.isReq && !fieldCanBeEmpty ? "*" : "";
     const isDistinguised = param.isDistinguised ? "Distinguished | " : "";
     const typeString = param.typeStrings?.[0]
       ? "Type: " + param.typeStrings[0] + " | "

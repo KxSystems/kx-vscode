@@ -58,6 +58,7 @@ import {
   ServerType,
 } from "../../src/models/connectionsModels";
 import { InsightsApiConfig } from "../../src/models/config";
+import { UDAParam } from "../../src/models/uda";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
@@ -1170,6 +1171,116 @@ describe("dataSourceCommand2", () => {
 
       assert(kdbOutputLogStub.calledOnce);
       assert.deepEqual(result, { error });
+    });
+  });
+
+  describe("isInvalidRequiredParam", () => {
+    it("should return true if param.name is 'table' and isReq is true but value is empty", () => {
+      const param: UDAParam = {
+        name: "table",
+        isReq: true,
+        value: "",
+        type: -10,
+        description: "",
+      };
+      const result = dataSourceCommand.isInvalidRequiredParam(param);
+      assert.strictEqual(result, true);
+    });
+
+    it("should return false if param.name is 'table' and isReq is true with a valid value", () => {
+      const param = {
+        name: "table",
+        isReq: true,
+        value: "validValue",
+        type: -10,
+        description: "",
+      };
+      const result = dataSourceCommand.isInvalidRequiredParam(param);
+      assert.strictEqual(result, false);
+    });
+
+    it("should return false if param.type is a number and is in allowedEmptyRequiredTypes", () => {
+      const param = {
+        name: "param1",
+        isReq: true,
+        value: "",
+        type: -10,
+        description: "",
+      };
+      const result = dataSourceCommand.isInvalidRequiredParam(param);
+      assert.strictEqual(result, false);
+    });
+
+    it("should return true if param.type is a number and is not in allowedEmptyRequiredTypes", () => {
+      const param = {
+        name: "param1",
+        isReq: true,
+        value: "",
+        type: 1,
+        description: "",
+      };
+      const result = dataSourceCommand.isInvalidRequiredParam(param);
+      assert.strictEqual(result, true);
+    });
+
+    it("should return false if param.type is an array and contains a value in allowedEmptyRequiredTypes", () => {
+      const param = {
+        name: "param1",
+        isReq: true,
+        value: "",
+        type: [-10],
+        description: "",
+      };
+      const result = dataSourceCommand.isInvalidRequiredParam(param);
+      assert.strictEqual(result, false);
+    });
+
+    it("should return true if param.type is an array and does not contain a value in allowedEmptyRequiredTypes", () => {
+      const param = {
+        name: "param1",
+        isReq: true,
+        value: "",
+        type: [1],
+        description: "",
+      };
+      const result = dataSourceCommand.isInvalidRequiredParam(param);
+      assert.strictEqual(result, true);
+    });
+
+    it("should return true if param.isReq is true and value is empty, and type is not allowed", () => {
+      const param = {
+        name: "param1",
+        isReq: true,
+        value: "",
+        type: 1,
+        description: "",
+      };
+      const result = dataSourceCommand.isInvalidRequiredParam(param);
+      assert.strictEqual(result, true);
+    });
+
+    it("should return false if param.isReq is false, regardless of value or type", () => {
+      const param = {
+        name: "param1",
+        isReq: false,
+        value: "",
+        type: 1,
+        description: "",
+      };
+      const result = dataSourceCommand.isInvalidRequiredParam(param);
+      assert.strictEqual(result, false);
+    });
+
+    it("should return false if param.value is not empty, regardless of type", () => {
+      const param = {
+        name: "param1",
+        isReq: true,
+        value: "validValue",
+        type: 1,
+        description: "",
+      };
+      const result = dataSourceCommand.isInvalidRequiredParam(param);
+      assert.strictEqual(result, false);
     });
   });
 });
