@@ -457,7 +457,7 @@ export async function runUDADataSource(
   const uda = fileContent.dataSource.uda;
   const returnFormat = ext.isResultsTabVisible ? "structuredText" : "text";
 
-  const validationError = validateUDA(uda, selectedConn);
+  const validationError = await validateUDA(uda, selectedConn);
   if (validationError) {
     return validationError;
   }
@@ -465,8 +465,10 @@ export async function runUDADataSource(
   if (!uda) {
     throw new Error("UDA is undefined");
   }
-  const { params, parameterTypes } = processUDAParams(uda);
-
+  const { params, parameterTypes, error } = processUDAParams(uda);
+  if (error) {
+    return error;
+  }
   const udaReqBody: UDARequestBody = createUDARequestBody(
     uda.name,
     params,
@@ -477,10 +479,10 @@ export async function runUDADataSource(
   return await executeUDARequest(selectedConn, udaReqBody);
 }
 
-function validateUDA(
+export async function validateUDA(
   uda: UDA | undefined,
   selectedConn: InsightsConnection,
-): { error: string } | null {
+): Promise<{ error: string } | null> {
   if (!uda) {
     return { error: "UDA not found" };
   }
@@ -489,7 +491,7 @@ function validateUDA(
     return { error: "UDA name not found" };
   }
 
-  const isAvailable = selectedConn.isUDAAvailable(uda.name);
+  const isAvailable = await selectedConn.isUDAAvailable(uda.name);
   if (!isAvailable) {
     return { error: `UDA ${uda.name} is not available in this connection` };
   }
@@ -497,9 +499,10 @@ function validateUDA(
   return null;
 }
 
-function processUDAParams(uda: UDA): {
+export function processUDAParams(uda: UDA): {
   params: { [key: string]: any };
   parameterTypes: { [key: string]: any };
+  error?: { error: string };
 } {
   const params: { [key: string]: any } = {};
   const parameterTypes: { [key: string]: any } = {};
@@ -507,9 +510,13 @@ function processUDAParams(uda: UDA): {
   if (uda.params && uda.params.length > 0) {
     for (const param of uda.params) {
       if (isInvalidRequiredParam(param)) {
-        throw new Error(
-          `The UDA: ${uda.name} requires the parameter: ${param.name}.`,
-        );
+        return {
+          params: {},
+          parameterTypes: {},
+          error: {
+            error: `The UDA: ${uda.name} requires the parameter: ${param.name}.`,
+          },
+        };
       }
 
       if (param.isVisible) {
@@ -524,7 +531,7 @@ function processUDAParams(uda: UDA): {
   return { params, parameterTypes };
 }
 
-function isInvalidRequiredParam(param: UDAParam): boolean {
+export function isInvalidRequiredParam(param: UDAParam): boolean {
   if (param.name === "table" && param.isReq) {
     return !param.value || param.value === "";
   }
@@ -541,7 +548,7 @@ function isInvalidRequiredParam(param: UDAParam): boolean {
   );
 }
 
-function createUDARequestBody(
+export function createUDARequestBody(
   name: string,
   params: { [key: string]: any },
   parameterTypes: { [key: string]: any },
@@ -558,7 +565,7 @@ function createUDARequestBody(
   };
 }
 
-async function executeUDARequest(
+export async function executeUDARequest(
   selectedConn: InsightsConnection,
   udaReqBody: UDARequestBody,
 ): Promise<any> {
