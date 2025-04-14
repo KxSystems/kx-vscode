@@ -463,7 +463,7 @@ export async function runUDADataSource(
   }
 
   if (!uda) {
-    throw new Error("UDA is undefined");
+    return { error: "UDA is undefined" };
   }
   const { params, parameterTypes, error } = processUDAParams(uda);
   if (error) {
