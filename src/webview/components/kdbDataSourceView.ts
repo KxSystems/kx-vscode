@@ -109,7 +109,7 @@ const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
     isDistinguised: true,
   },
 ];
-const allowedEmptyRequiredTypes = [10, -10, -11];
+const allowedEmptyRequiredTypes = [10, -11];
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {

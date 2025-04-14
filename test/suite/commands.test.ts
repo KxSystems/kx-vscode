@@ -1180,7 +1180,7 @@ describe("dataSourceCommand2", () => {
         name: "table",
         isReq: true,
         value: "",
-        type: -10,
+        type: 10,
         description: "",
       };
       const result = dataSourceCommand.isInvalidRequiredParam(param);
@@ -1192,7 +1192,7 @@ describe("dataSourceCommand2", () => {
         name: "table",
         isReq: true,
         value: "validValue",
-        type: -10,
+        type: 10,
         description: "",
       };
       const result = dataSourceCommand.isInvalidRequiredParam(param);
@@ -1204,7 +1204,7 @@ describe("dataSourceCommand2", () => {
         name: "param1",
         isReq: true,
         value: "",
-        type: -10,
+        type: 10,
         description: "",
       };
       const result = dataSourceCommand.isInvalidRequiredParam(param);
@@ -1228,7 +1228,7 @@ describe("dataSourceCommand2", () => {
         name: "param1",
         isReq: true,
         value: "",
-        type: [-10],
+        type: [10],
         description: "",
       };
       const result = dataSourceCommand.isInvalidRequiredParam(param);
