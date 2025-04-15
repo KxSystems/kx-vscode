@@ -317,9 +317,8 @@ export function isInvalidRequiredParam(param: UDAParam): boolean {
     if (param.type.length === 1) {
       typeToValidate = param.type[0];
     } else if (param.type.length > 1 && param.selectedMultiTypeString) {
-      typeToValidate = ext.constants.reverseDataTypes.get(
-        param.selectedMultiTypeString,
-      );
+      const selectedTypeFixed = param.selectedMultiTypeString.replace("_", " ");
+      typeToValidate = ext.constants.reverseDataTypes.get(selectedTypeFixed);
     }
   } else if (typeof param.type === "number") {
     typeToValidate = param.type;

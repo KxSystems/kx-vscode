@@ -1231,7 +1231,6 @@ export class KdbDataSourceView extends LitElement {
   }
 
   retrieveUDAParamInputType(type: string | undefined) {
-    console.log("type", type);
     const inputTypes: { [key: string]: string } = {
       number: "number",
       boolean: "checkbox",
@@ -1245,7 +1244,6 @@ export class KdbDataSourceView extends LitElement {
 
   renderVisibleUDAParams() {
     if (!this.userSelectedUDA) return [];
-    console.log(this.userSelectedUDA);
 
     return this.userSelectedUDA.params
       .filter((param) => param.isVisible)
@@ -1258,15 +1256,12 @@ export class KdbDataSourceView extends LitElement {
   }
 
   renderUDAParam(param: UDAParam, inputType: string) {
-    console.table(param);
-    console.log("inputType", inputType);
     switch (inputType) {
       case "checkbox":
         return this.renderUDACheckbox(param);
       case "textarea":
         return this.renderUDATextarea(param);
       case "multitype":
-        //TODO: when issue with multitype is solved, uncomment this and remove the code above
         return this.renderUDAMultitype(param);
       default:
         return this.renderUDAInput(param, inputType);
@@ -1337,32 +1332,14 @@ export class KdbDataSourceView extends LitElement {
     const isMultiTypeAllowed =
       param.selectedMultiTypeString &&
       allowedEmptyRequiredTypesStrings.includes(param.selectedMultiTypeString);
-
     const isReq = param.isReq && !isMultiTypeAllowed ? "*" : "";
+
     return html`
       <div class="opt-param-field">
         <div
           class="${renderDeleteParam
             ? "width-90-pct"
             : "width-97-pct"} row align-top">
-          <sl-select
-            class="reset-widths-limit width-30-pct"
-            label="${param.name + isReq}"
-            help-text="Select a type"
-            .value="${live(value)}"
-            @sl-change="${(event: Event) => {
-              param.selectedMultiTypeString = (
-                event.target as HTMLSelectElement
-              ).value;
-              this.requestChange();
-            }}">
-            ${param.typeStrings?.map(
-              (option) =>
-                html`<sl-option value="${option.replace(/\s+/g, "_")}"
-                  >${option}</sl-option
-                >`,
-            )}
-          </sl-select>
           ${this.renderUDAMultiTypeInput(param)}
         </div>
         <div class="${renderDeleteParam ? "width-10-pct" : "display-none"}">
@@ -1370,6 +1347,39 @@ export class KdbDataSourceView extends LitElement {
         </div>
       </div>
     `;
+
+    //TODO: remove the return above and uncomment this one
+    // return html`
+    //   <div class="opt-param-field">
+    //     <div
+    //       class="${renderDeleteParam
+    //         ? "width-90-pct"
+    //         : "width-97-pct"} row align-top">
+    //       <sl-select
+    //         class="reset-widths-limit width-30-pct"
+    //         label="${param.name + isReq}"
+    //         help-text="Select a type"
+    //         .value="${live(value)}"
+    //         @sl-change="${(event: Event) => {
+    //           param.selectedMultiTypeString = (
+    //             event.target as HTMLSelectElement
+    //           ).value;
+    //           this.requestChange();
+    //         }}">
+    //         ${param.typeStrings?.map(
+    //           (option) =>
+    //             html`<sl-option value="${option.replace(/\s+/g, "_")}"
+    //               >${option}</sl-option
+    //             >`,
+    //         )}
+    //       </sl-select>
+    //       ${this.renderUDAMultiTypeInput(param)}
+    //     </div>
+    //     <div class="${renderDeleteParam ? "width-10-pct" : "display-none"}">
+    //       ${this.renderDeleteUDAParamButton(param)}
+    //     </div>
+    //   </div>
+    // `;
   }
 
   getUDAInputWidth(type: string, haveDeleteBtn = false) {
