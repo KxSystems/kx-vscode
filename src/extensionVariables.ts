@@ -96,7 +96,9 @@ export namespace ext {
   // list of valid data types
   export const booleanTypes = new Set([-1]);
   export const numberTypes = new Set([-4, -5, -6, -7, -8, -9]);
-  export const textTypes = new Set([-10, -11, 10]);
+  export const textTypes = new Set([
+    -2, -10, -11, -13, -14, -15, -16, -17, -18, -19, 10,
+  ]);
   export const timestampTypes = new Set([-12]);
   export const jsonTypes = new Set([
     0, 1, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 77, 98, 99,
