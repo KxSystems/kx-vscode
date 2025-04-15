@@ -354,6 +354,11 @@ export class InsightsConnection {
         //TODO: Should remove this after add nanoseconds support in uda
         body = fixTimeAtUDARequestBody(body);
         body = body.params;
+        // TODO: This will be necessary when the parametertypes issue is fixed just remove the line above
+        // body = {
+        //   ...body.params,
+        //   parameterTypes: body.parameterTypes,
+        // };
       }
       const requestUrl = this.generateDatasourceEndpoints(type, udaName);
       const options = await this.getOptions(

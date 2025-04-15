@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { InsightsConnection } from "../classes/insightsConnection";
 import { ext } from "../extensionVariables";
 import { MetaObjectPayload } from "../models/meta";
 import {
@@ -158,14 +159,11 @@ export function fixTimeAtUDARequestBody(
   udaReqBody: UDARequestBody,
 ): UDARequestBody {
   const parameterTypes = udaReqBody.parameterTypes as {
-    [key: string]: Array<any>;
+    [key: string]: number;
   };
+
   for (const key in parameterTypes) {
-    if (
-      Array.isArray(parameterTypes[key]) &&
-      parameterTypes[key].length === 1 &&
-      parameterTypes[key][0] === -12
-    ) {
+    if (parameterTypes[key] === -12) {
       if (
         (udaReqBody.params as { [key: string]: any })[key] &&
         (udaReqBody.params as { [key: string]: any })[key] !== ""
@@ -175,6 +173,7 @@ export function fixTimeAtUDARequestBody(
       }
     }
   }
+
   return udaReqBody;
 }
 
@@ -232,4 +231,121 @@ export function parseUDAList(getMeta: MetaObjectPayload): UDA[] {
 
 export function retrieveDataTypeByString(type: string): number {
   return ext.constants.reverseDataTypes.get(type) ?? 0;
+}
+
+export async function validateUDA(
+  uda: UDA | undefined,
+  selectedConn: InsightsConnection,
+): Promise<{ error: string } | null> {
+  if (!uda) {
+    return { error: "UDA not found" };
+  }
+
+  if (uda.name === "") {
+    return { error: "UDA name not found" };
+  }
+
+  const isAvailable = await selectedConn.isUDAAvailable(uda.name);
+  if (!isAvailable) {
+    return { error: `UDA ${uda.name} is not available in this connection` };
+  }
+
+  return null;
+}
+
+export function processUDAParams(uda: UDA): {
+  params: { [key: string]: any };
+  parameterTypes: { [key: string]: number };
+  error?: { error: string };
+} {
+  const params: { [key: string]: any } = {};
+  const parameterTypes: { [key: string]: number } = {};
+
+  if (uda.params && uda.params.length > 0) {
+    for (const param of uda.params) {
+      const validationError = validateParam(param, uda.name);
+      if (validationError) {
+        return validationError;
+      }
+
+      if (param.isVisible) {
+        params[param.name] = param.value || "";
+        parameterTypes[param.name] = resolveParamType(param);
+      }
+    }
+  }
+
+  return { params, parameterTypes };
+}
+
+function validateParam(
+  param: UDAParam,
+  udaName: string,
+): { params: {}; parameterTypes: {}; error: { error: string } } | null {
+  if (isInvalidRequiredParam(param)) {
+    return {
+      params: {},
+      parameterTypes: {},
+      error: {
+        error: `The UDA: ${udaName} requires the parameter: ${param.name}.`,
+      },
+    };
+  }
+  return null;
+}
+
+export function resolveParamType(param: UDAParam): number {
+  if (Array.isArray(param.type) && param.type.length > 0) {
+    return param.type[0];
+  } else if (typeof param.type === "number") {
+    return param.type;
+  } else {
+    throw new Error(
+      `Invalid type for parameter: ${param.name}. Expected number or array of numbers.`,
+    );
+  }
+}
+
+export function isInvalidRequiredParam(param: UDAParam): boolean {
+  if (param.name === "table" && param.isReq) {
+    return !param.value || param.value === "";
+  }
+
+  let typeToValidate: number | undefined;
+
+  if (Array.isArray(param.type)) {
+    if (param.type.length === 1) {
+      typeToValidate = param.type[0];
+    } else if (param.type.length > 1 && param.selectedMultiTypeString) {
+      const selectedTypeFixed = param.selectedMultiTypeString.replace("_", " ");
+      typeToValidate = ext.constants.reverseDataTypes.get(selectedTypeFixed);
+    }
+  } else if (typeof param.type === "number") {
+    typeToValidate = param.type;
+  }
+
+  const isAllowedEmptyType =
+    typeof typeToValidate === "number" &&
+    ext.constants.allowedEmptyRequiredTypes.includes(typeToValidate);
+
+  return (
+    !isAllowedEmptyType && param.isReq && (!param.value || param.value === "")
+  );
+}
+
+export function createUDARequestBody(
+  name: string,
+  params: { [key: string]: any },
+  parameterTypes: { [key: string]: any },
+  returnFormat: string,
+): UDARequestBody {
+  return {
+    language: "q",
+    name,
+    parameterTypes,
+    params,
+    returnFormat,
+    sampleFn: "first",
+    sampleSize: 10000,
+  };
 }

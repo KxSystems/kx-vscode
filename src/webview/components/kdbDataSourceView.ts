@@ -109,7 +109,8 @@ const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
     isDistinguised: true,
   },
 ];
-const allowedEmptyRequiredTypes = [10, -10, -11];
+const allowedEmptyRequiredTypes = [10, -11];
+const allowedEmptyRequiredTypesStrings = ["Symbol", "String"];
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {
@@ -1328,7 +1329,10 @@ export class KdbDataSourceView extends LitElement {
     param.selectedMultiTypeString = selectedMultiTypeString;
     const value = param.selectedMultiTypeString || param.typeStrings?.[0] || "";
     const renderDeleteParam = this.renderDeleteUDAParamButton(param);
-    const isReq = param.isReq ? "*" : "";
+    const isMultiTypeAllowed =
+      param.selectedMultiTypeString &&
+      allowedEmptyRequiredTypesStrings.includes(param.selectedMultiTypeString);
+    const isReq = param.isReq && !isMultiTypeAllowed ? "*" : "";
 
     return html`
       <div class="opt-param-field">
@@ -1336,22 +1340,6 @@ export class KdbDataSourceView extends LitElement {
           class="${renderDeleteParam
             ? "width-90-pct"
             : "width-97-pct"} row align-top">
-          <sl-select
-            class="reset-widths-limit width-30-pct"
-            label="${param.name + isReq}"
-            help-text="Select a type"
-            .value="${live(value)}"
-            @sl-change="${(event: Event) => {
-              param.selectedMultiTypeString = (
-                event.target as HTMLSelectElement
-              ).value;
-              this.requestChange();
-            }}">
-            ${param.typeStrings?.map(
-              (option) =>
-                html`<sl-option value="${option}">${option}</sl-option>`,
-            )}
-          </sl-select>
           ${this.renderUDAMultiTypeInput(param)}
         </div>
         <div class="${renderDeleteParam ? "width-10-pct" : "display-none"}">
@@ -1359,6 +1347,39 @@ export class KdbDataSourceView extends LitElement {
         </div>
       </div>
     `;
+
+    //TODO: remove the return above and uncomment this one
+    // return html`
+    //   <div class="opt-param-field">
+    //     <div
+    //       class="${renderDeleteParam
+    //         ? "width-90-pct"
+    //         : "width-97-pct"} row align-top">
+    //       <sl-select
+    //         class="reset-widths-limit width-30-pct"
+    //         label="${param.name + isReq}"
+    //         help-text="Select a type"
+    //         .value="${live(value)}"
+    //         @sl-change="${(event: Event) => {
+    //           param.selectedMultiTypeString = (
+    //             event.target as HTMLSelectElement
+    //           ).value;
+    //           this.requestChange();
+    //         }}">
+    //         ${param.typeStrings?.map(
+    //           (option) =>
+    //             html`<sl-option value="${option.replace(/\s+/g, "_")}"
+    //               >${option}</sl-option
+    //             >`,
+    //         )}
+    //       </sl-select>
+    //       ${this.renderUDAMultiTypeInput(param)}
+    //     </div>
+    //     <div class="${renderDeleteParam ? "width-10-pct" : "display-none"}">
+    //       ${this.renderDeleteUDAParamButton(param)}
+    //     </div>
+    //   </div>
+    // `;
   }
 
   getUDAInputWidth(type: string, haveDeleteBtn = false) {

@@ -2267,7 +2267,7 @@ describe("Utils", () => {
         const input: UDARequestBody = {
           language: "en",
           name: "test",
-          parameterTypes: { timeKey: [-12] },
+          parameterTypes: { timeKey: -12 },
           params: { timeKey: "12:30" },
           returnFormat: "json",
           sampleFn: "sample",
@@ -2287,7 +2287,7 @@ describe("Utils", () => {
         const input: UDARequestBody = {
           language: "en",
           name: "test",
-          parameterTypes: { timeKey: [1] },
+          parameterTypes: { timeKey: 1 },
           params: { timeKey: "12:30" },
           returnFormat: "json",
           sampleFn: "sample",
@@ -2302,7 +2302,7 @@ describe("Utils", () => {
         const input: UDARequestBody = {
           language: "en",
           name: "test",
-          parameterTypes: { timeKey: [-12] },
+          parameterTypes: { timeKey: -12 },
           params: { timeKey: "" },
           returnFormat: "json",
           sampleFn: "sample",
@@ -2317,7 +2317,7 @@ describe("Utils", () => {
         const input: UDARequestBody = {
           language: "en",
           name: "test",
-          parameterTypes: { timeKey: [-12] },
+          parameterTypes: { timeKey: -12 },
           params: {},
           returnFormat: "json",
           sampleFn: "sample",
@@ -2362,7 +2362,7 @@ describe("Utils", () => {
         const input: UDARequestBody = {
           language: "en",
           name: "test",
-          parameterTypes: { timeKey1: [-12], timeKey2: [1] },
+          parameterTypes: { timeKey1: -12, timeKey2: 1 },
           params: { timeKey1: "12:30", timeKey2: "value" },
           returnFormat: "json",
           sampleFn: "sample",
@@ -2551,6 +2551,260 @@ describe("Utils", () => {
 
         const result = UDAUtils.retrieveDataTypeByString("Number");
         assert.strictEqual(result, 0);
+      });
+    });
+
+    describe("isInvalidRequiredParam", () => {
+      beforeEach(() => {
+        sinon.stub(ext.constants, "allowedEmptyRequiredTypes").value([10, -11]);
+        sinon.stub(ext.constants, "reverseDataTypes").value(
+          new Map([
+            ["Symbol", -11],
+            ["String", 10],
+            ["InvalidType", -1],
+          ]),
+        );
+      });
+
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("should return true if param.name is 'table' and isReq is true but value is empty", () => {
+        const param: UDAParam = {
+          name: "table",
+          isReq: true,
+          value: "",
+          type: 10,
+          description: "",
+        };
+        const result = UDAUtils.isInvalidRequiredParam(param);
+        assert.strictEqual(result, true);
+      });
+
+      it("should return false if param.name is 'table' and isReq is true with a valid value", () => {
+        const param = {
+          name: "table",
+          isReq: true,
+          value: "validValue",
+          type: 10,
+          description: "",
+        };
+        const result = UDAUtils.isInvalidRequiredParam(param);
+        assert.strictEqual(result, false);
+      });
+
+      it("should return false if param.type is a number and is in allowedEmptyRequiredTypes", () => {
+        const param = {
+          name: "param1",
+          isReq: true,
+          value: "",
+          type: 10,
+          description: "",
+        };
+        const result = UDAUtils.isInvalidRequiredParam(param);
+        assert.strictEqual(result, false);
+      });
+
+      it("should return true if param.type is a number and is not in allowedEmptyRequiredTypes", () => {
+        const param = {
+          name: "param1",
+          isReq: true,
+          value: "",
+          type: 1,
+          description: "",
+        };
+        const result = UDAUtils.isInvalidRequiredParam(param);
+        assert.strictEqual(result, true);
+      });
+
+      it("should return false if param.type is an array and contains a value in allowedEmptyRequiredTypes", () => {
+        const param = {
+          name: "param1",
+          isReq: true,
+          value: "",
+          type: [10],
+          description: "",
+        };
+        const result = UDAUtils.isInvalidRequiredParam(param);
+        assert.strictEqual(result, false);
+      });
+
+      it("should return true if param.type is an array and does not contain a value in allowedEmptyRequiredTypes", () => {
+        const param = {
+          name: "param1",
+          isReq: true,
+          value: "",
+          type: [1],
+          description: "",
+        };
+        const result = UDAUtils.isInvalidRequiredParam(param);
+        assert.strictEqual(result, true);
+      });
+
+      it("should return false if param.type is an array with multiple elements and selectedMultiTypeString resolves to an allowed type", () => {
+        const param = {
+          name: "param1",
+          isReq: true,
+          value: "",
+          type: [10, -11],
+          selectedMultiTypeString: "Symbol",
+          description: "",
+        };
+        const result = UDAUtils.isInvalidRequiredParam(param);
+        assert.strictEqual(result, false);
+      });
+
+      it("should return true if param.type is an array with multiple elements and selectedMultiTypeString resolves to a disallowed type", () => {
+        const param = {
+          name: "param1",
+          isReq: true,
+          value: "",
+          type: [10, -11],
+          selectedMultiTypeString: "InvalidType",
+          description: "",
+        };
+        const result = UDAUtils.isInvalidRequiredParam(param);
+        assert.strictEqual(result, true);
+      });
+
+      it("should return true if param.isReq is true and value is empty, and type is not allowed", () => {
+        const param = {
+          name: "param1",
+          isReq: true,
+          value: "",
+          type: 1,
+          description: "",
+        };
+        const result = UDAUtils.isInvalidRequiredParam(param);
+        assert.strictEqual(result, true);
+      });
+
+      it("should return false if param.isReq is false, regardless of value or type", () => {
+        const param = {
+          name: "param1",
+          isReq: false,
+          value: "",
+          type: 1,
+          description: "",
+        };
+        const result = UDAUtils.isInvalidRequiredParam(param);
+        assert.strictEqual(result, false);
+      });
+
+      it("should return false if param.value is not empty, regardless of type", () => {
+        const param = {
+          name: "param1",
+          isReq: true,
+          value: "validValue",
+          type: 1,
+          description: "",
+        };
+        const result = UDAUtils.isInvalidRequiredParam(param);
+        assert.strictEqual(result, false);
+      });
+
+      it("should return true if param.type is an array with multiple elements and selectedMultiTypeString is undefined", () => {
+        const param = {
+          name: "param1",
+          isReq: true,
+          value: "",
+          type: [10, -11],
+          selectedMultiTypeString: undefined,
+          description: "",
+        };
+        const result = UDAUtils.isInvalidRequiredParam(param);
+        assert.strictEqual(result, true);
+      });
+    });
+
+    describe("resolveParamType", () => {
+      it("should return the first element of param.type if it is an array with at least one element", () => {
+        const param: UDAParam = {
+          name: "param1",
+          description: "Test parameter",
+          isReq: true,
+          type: [10, 20],
+        };
+
+        const result = UDAUtils.resolveParamType(param);
+        assert.strictEqual(result, 10);
+      });
+
+      it("should return param.type if it is a number", () => {
+        const param: UDAParam = {
+          name: "param2",
+          description: "Test parameter",
+          isReq: false,
+          type: 15,
+        };
+
+        const result = UDAUtils.resolveParamType(param);
+        assert.strictEqual(result, 15);
+      });
+
+      it("should throw an error if param.type is an empty array", () => {
+        const param: UDAParam = {
+          name: "param3",
+          description: "Test parameter",
+          isReq: true,
+          type: [],
+        };
+
+        assert.throws(
+          () => UDAUtils.resolveParamType(param),
+          new Error(
+            "Invalid type for parameter: param3. Expected number or array of numbers.",
+          ),
+        );
+      });
+
+      it("should throw an error if param.type is undefined", () => {
+        const param: UDAParam = {
+          name: "param4",
+          description: "Test parameter",
+          isReq: false,
+          type: undefined as any, // Simula um caso inválido
+        };
+
+        assert.throws(
+          () => UDAUtils.resolveParamType(param),
+          new Error(
+            "Invalid type for parameter: param4. Expected number or array of numbers.",
+          ),
+        );
+      });
+
+      it("should throw an error if param.type is null", () => {
+        const param: UDAParam = {
+          name: "param5",
+          description: "Test parameter",
+          isReq: false,
+          type: null as any, // Simula um caso inválido
+        };
+
+        assert.throws(
+          () => UDAUtils.resolveParamType(param),
+          new Error(
+            "Invalid type for parameter: param5. Expected number or array of numbers.",
+          ),
+        );
+      });
+
+      it("should throw an error if param.type is not a number or an array", () => {
+        const param: UDAParam = {
+          name: "param6",
+          description: "Test parameter",
+          isReq: true,
+          type: "invalidType" as any, // Simula um caso inválido
+        };
+
+        assert.throws(
+          () => UDAUtils.resolveParamType(param),
+          new Error(
+            "Invalid type for parameter: param6. Expected number or array of numbers.",
+          ),
+        );
       });
     });
   });

@@ -50,7 +50,12 @@ import {
   offerConnectAction,
 } from "../utils/core";
 import { ServerType } from "../models/connectionsModels";
-import { retrieveDataTypeByString } from "../utils/uda";
+import {
+  createUDARequestBody,
+  processUDAParams,
+  retrieveDataTypeByString,
+  validateUDA,
+} from "../utils/uda";
 import { UDA, UDAParam, UDARequestBody } from "../models/uda";
 
 export async function addDataSource(): Promise<void> {
@@ -477,92 +482,6 @@ export async function runUDADataSource(
   );
 
   return await executeUDARequest(selectedConn, udaReqBody);
-}
-
-export async function validateUDA(
-  uda: UDA | undefined,
-  selectedConn: InsightsConnection,
-): Promise<{ error: string } | null> {
-  if (!uda) {
-    return { error: "UDA not found" };
-  }
-
-  if (uda.name === "") {
-    return { error: "UDA name not found" };
-  }
-
-  const isAvailable = await selectedConn.isUDAAvailable(uda.name);
-  if (!isAvailable) {
-    return { error: `UDA ${uda.name} is not available in this connection` };
-  }
-
-  return null;
-}
-
-export function processUDAParams(uda: UDA): {
-  params: { [key: string]: any };
-  parameterTypes: { [key: string]: any };
-  error?: { error: string };
-} {
-  const params: { [key: string]: any } = {};
-  const parameterTypes: { [key: string]: any } = {};
-
-  if (uda.params && uda.params.length > 0) {
-    for (const param of uda.params) {
-      if (isInvalidRequiredParam(param)) {
-        return {
-          params: {},
-          parameterTypes: {},
-          error: {
-            error: `The UDA: ${uda.name} requires the parameter: ${param.name}.`,
-          },
-        };
-      }
-
-      if (param.isVisible) {
-        params[param.name] = param.value || "";
-        parameterTypes[param.name] = param.selectedMultiTypeString
-          ? retrieveDataTypeByString(param.selectedMultiTypeString)
-          : param.type;
-      }
-    }
-  }
-
-  return { params, parameterTypes };
-}
-
-export function isInvalidRequiredParam(param: UDAParam): boolean {
-  if (param.name === "table" && param.isReq) {
-    return !param.value || param.value === "";
-  }
-
-  const isAllowedEmptyType =
-    (Array.isArray(param.type) &&
-      param.type.length === 1 &&
-      ext.constants.allowedEmptyRequiredTypes.includes(param.type[0])) ||
-    (typeof param.type === "number" &&
-      ext.constants.allowedEmptyRequiredTypes.includes(param.type));
-
-  return (
-    !isAllowedEmptyType && param.isReq && (!param.value || param.value === "")
-  );
-}
-
-export function createUDARequestBody(
-  name: string,
-  params: { [key: string]: any },
-  parameterTypes: { [key: string]: any },
-  returnFormat: string,
-): UDARequestBody {
-  return {
-    language: "q",
-    name,
-    parameterTypes,
-    params,
-    returnFormat,
-    sampleFn: "first",
-    sampleSize: 10000,
-  };
 }
 
 export async function executeUDARequest(
