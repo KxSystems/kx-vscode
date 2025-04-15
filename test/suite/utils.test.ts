@@ -2717,5 +2717,95 @@ describe("Utils", () => {
         assert.strictEqual(result, true);
       });
     });
+
+    describe("resolveParamType", () => {
+      it("should return the first element of param.type if it is an array with at least one element", () => {
+        const param: UDAParam = {
+          name: "param1",
+          description: "Test parameter",
+          isReq: true,
+          type: [10, 20],
+        };
+
+        const result = UDAUtils.resolveParamType(param);
+        assert.strictEqual(result, 10);
+      });
+
+      it("should return param.type if it is a number", () => {
+        const param: UDAParam = {
+          name: "param2",
+          description: "Test parameter",
+          isReq: false,
+          type: 15,
+        };
+
+        const result = UDAUtils.resolveParamType(param);
+        assert.strictEqual(result, 15);
+      });
+
+      it("should throw an error if param.type is an empty array", () => {
+        const param: UDAParam = {
+          name: "param3",
+          description: "Test parameter",
+          isReq: true,
+          type: [],
+        };
+
+        assert.throws(
+          () => UDAUtils.resolveParamType(param),
+          new Error(
+            "Invalid type for parameter: param3. Expected number or array of numbers.",
+          ),
+        );
+      });
+
+      it("should throw an error if param.type is undefined", () => {
+        const param: UDAParam = {
+          name: "param4",
+          description: "Test parameter",
+          isReq: false,
+          type: undefined as any, // Simula um caso inválido
+        };
+
+        assert.throws(
+          () => UDAUtils.resolveParamType(param),
+          new Error(
+            "Invalid type for parameter: param4. Expected number or array of numbers.",
+          ),
+        );
+      });
+
+      it("should throw an error if param.type is null", () => {
+        const param: UDAParam = {
+          name: "param5",
+          description: "Test parameter",
+          isReq: false,
+          type: null as any, // Simula um caso inválido
+        };
+
+        assert.throws(
+          () => UDAUtils.resolveParamType(param),
+          new Error(
+            "Invalid type for parameter: param5. Expected number or array of numbers.",
+          ),
+        );
+      });
+
+      it("should throw an error if param.type is not a number or an array", () => {
+        const param: UDAParam = {
+          name: "param6",
+          description: "Test parameter",
+          isReq: true,
+          type: "invalidType" as any, // Simula um caso inválido
+        };
+
+        assert.throws(
+          () => UDAUtils.resolveParamType(param),
+          new Error(
+            "Invalid type for parameter: param6. Expected number or array of numbers.",
+          ),
+        );
+      });
+    });
   });
 });

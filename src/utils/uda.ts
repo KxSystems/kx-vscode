@@ -294,7 +294,7 @@ function validateParam(
   return null;
 }
 
-function resolveParamType(param: UDAParam): number {
+export function resolveParamType(param: UDAParam): number {
   if (Array.isArray(param.type) && param.type.length > 0) {
     return param.type[0];
   } else if (typeof param.type === "number") {
