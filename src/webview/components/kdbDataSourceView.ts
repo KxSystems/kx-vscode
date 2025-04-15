@@ -1231,6 +1231,7 @@ export class KdbDataSourceView extends LitElement {
   }
 
   retrieveUDAParamInputType(type: string | undefined) {
+    console.log("type", type);
     const inputTypes: { [key: string]: string } = {
       number: "number",
       boolean: "checkbox",
@@ -1244,6 +1245,7 @@ export class KdbDataSourceView extends LitElement {
 
   renderVisibleUDAParams() {
     if (!this.userSelectedUDA) return [];
+    console.log(this.userSelectedUDA);
 
     return this.userSelectedUDA.params
       .filter((param) => param.isVisible)
@@ -1256,12 +1258,15 @@ export class KdbDataSourceView extends LitElement {
   }
 
   renderUDAParam(param: UDAParam, inputType: string) {
+    console.table(param);
+    console.log("inputType", inputType);
     switch (inputType) {
       case "checkbox":
         return this.renderUDACheckbox(param);
       case "textarea":
         return this.renderUDATextarea(param);
       case "multitype":
+        //TODO: when issue with multitype is solved, uncomment this and remove the code above
         return this.renderUDAMultitype(param);
       default:
         return this.renderUDAInput(param, inputType);
@@ -1353,7 +1358,9 @@ export class KdbDataSourceView extends LitElement {
             }}">
             ${param.typeStrings?.map(
               (option) =>
-                html`<sl-option value="${option}">${option}</sl-option>`,
+                html`<sl-option value="${option.replace(/\s+/g, "_")}"
+                  >${option}</sl-option
+                >`,
             )}
           </sl-select>
           ${this.renderUDAMultiTypeInput(param)}
