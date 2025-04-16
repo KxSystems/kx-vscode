@@ -441,6 +441,6 @@ export namespace ext {
       colorHex: "#15A7CD",
     },
   ];
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  // eslint-disable-next-line prefer-const
   export let customAuth: CustomAuth | null = null;
 }
