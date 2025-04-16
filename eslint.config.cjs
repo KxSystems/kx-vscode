@@ -1,13 +1,12 @@
-import js from "@eslint/js";
-import tseslint from "typescript-eslint";
-import headerPlugin from "eslint-plugin-header";
-import licenseHeaderPlugin from "eslint-plugin-license-header";
-import unusedImportsPlugin from "eslint-plugin-unused-imports";
-import path from "path";
+const js = require("@eslint/js");
+const tseslint = require("typescript-eslint");
+const headerPlugin = require("eslint-plugin-header");
+const licenseHeaderPlugin = require("eslint-plugin-license-header");
+const unusedImportsPlugin = require("eslint-plugin-unused-imports");
 
 const currentYear = new Date().getFullYear();
 
-export default [
+module.exports = [
   {
     ignores: ["**/*.d.ts", "**/*.js", "src/ipc/**"],
   },
