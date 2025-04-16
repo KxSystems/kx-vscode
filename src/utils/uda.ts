@@ -261,6 +261,16 @@ export function processUDAParams(uda: UDA): {
   const params: { [key: string]: any } = {};
   const parameterTypes: { [key: string]: number } = {};
 
+  if (uda.incompatibleError) {
+    return {
+      params: {},
+      parameterTypes: {},
+      error: {
+        error: `The UDA you have selected cannot be queried because it has required fields with types that are not supported.`,
+      },
+    };
+  }
+
   if (uda.params && uda.params.length > 0) {
     for (const param of uda.params) {
       const validationError = validateParam(param, uda.name);

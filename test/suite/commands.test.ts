@@ -642,6 +642,24 @@ describe("dataSourceCommand2", () => {
       });
     });
 
+    it("should handle if have invalid parameter type", async () => {
+      isUDAAvailableStub.resolves(true);
+      getDataInsightsStub.resolves(undefined);
+
+      const dummyDSFiles2 = dummyDataSourceFiles;
+      dummyDSFiles2.dataSource.uda.incompatibleError = "test error";
+
+      const result = await dataSourceCommand.runUDADataSource(
+        dummyDSFiles2,
+        insightsConn,
+      );
+
+      assert.deepStrictEqual(result, {
+        error:
+          "The UDA you have selected cannot be queried because it has required fields with types that are not supported.",
+      });
+    });
+
     it("should handle undefined UDA ", async () => {
       dummyDataSourceFiles.dataSource.uda = undefined;
 

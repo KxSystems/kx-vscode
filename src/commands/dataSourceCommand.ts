@@ -51,7 +51,7 @@ import {
 } from "../utils/core";
 import { ServerType } from "../models/connectionsModels";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
-import { UDA, UDAParam, UDARequestBody } from "../models/uda";
+import { UDARequestBody } from "../models/uda";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -459,6 +459,7 @@ export async function runUDADataSource(
   const udaReqBody = await retrieveUDAtoCreateReqBody(uda, selectedConn);
 
   if (udaReqBody.error) {
+    kdbOutputLog(`[DATASOURCE] Error: ${udaReqBody.error}`, "ERROR", true);
     return udaReqBody;
   }
 
