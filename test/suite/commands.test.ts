@@ -650,7 +650,7 @@ describe("dataSourceCommand2", () => {
         insightsConn,
       );
 
-      assert.deepStrictEqual(result, { error: "UDA not found" });
+      assert.deepStrictEqual(result, { error: "UDA is undefined" });
     });
 
     it("should handle UDA without name", async () => {
