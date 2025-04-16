@@ -9,8 +9,8 @@ export default [
   {
     ignores: ["**/*.d.ts", "**/*.js", "src/ipc/**"],
   },
-  js.configs.recommended, // inclui regras recomendadas do ESLint para JS
-  ...tseslint.configs.recommended, // inclui regras recomendadas para TypeScript
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
   {
     languageOptions: {
       parser: tseslint.parser,

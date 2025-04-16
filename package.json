@@ -7,7 +7,6 @@
   "engines": {
     "vscode": "^1.86.0"
   },
-  "type": "module",
   "icon": "resources/images/kx-logo-vs.png",
   "repository": {
     "type": "git",

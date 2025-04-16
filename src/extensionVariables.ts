@@ -401,7 +401,6 @@ export namespace ext {
       "",
     ],
 
-     
     base: new Date(2000, 0) as any,
     days: 1000 * 60 * 60 * 24,
     hours: 1000 * 60 * 60,
@@ -442,6 +441,6 @@ export namespace ext {
       colorHex: "#15A7CD",
     },
   ];
-
-  export const customAuth: CustomAuth | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  export let customAuth: CustomAuth | null = null;
 }
