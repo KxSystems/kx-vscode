@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -427,7 +427,7 @@ export class InsightsConnection {
         isTableView: false,
       };
       switch (params.dataSource.selectedType) {
-        case DataSourceTypes.API:
+        case DataSourceTypes.API: {
           body.params = {
             table: params.dataSource.api.table,
             startTS: convertTimeToTimestamp(params.dataSource.api.startTS),
@@ -436,12 +436,14 @@ export class InsightsConnection {
           coreUrl = this.connEndpoints.scratchpad.import;
           dsTypeString = "API";
           break;
-        case DataSourceTypes.SQL:
+        }
+        case DataSourceTypes.SQL: {
           body.params = { query: params.dataSource.sql.query };
           coreUrl = this.connEndpoints.scratchpad.importSql;
           dsTypeString = "SQL";
           break;
-        case DataSourceTypes.QSQL:
+        }
+        case DataSourceTypes.QSQL: {
           const assemblyParts =
             params.dataSource.qsql.selectedTarget.split(" ");
           body.params = {
@@ -452,7 +454,8 @@ export class InsightsConnection {
           coreUrl = this.connEndpoints.scratchpad.importQsql;
           dsTypeString = "QSQL";
           break;
-        case DataSourceTypes.UDA:
+        }
+        case DataSourceTypes.UDA: {
           const uda = params.dataSource.uda;
           const udaReqBody = await retrieveUDAtoCreateReqBody(uda, this);
 
@@ -472,8 +475,8 @@ export class InsightsConnection {
           body.sampleSize = udaReqBody.sampleSize;
 
           coreUrl = this.connEndpoints.scratchpad.importUDA;
-
           break;
+        }
         default:
           break;
       }
@@ -516,7 +519,9 @@ export class InsightsConnection {
               );
               kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
               kdbOutputLog(
-                `[SCRATCHPAD] Populated scratchpad with the following params: ${JSON.stringify(body.params)}`,
+                `[SCRATCHPAD] Populated scratchpad with the following params: ${JSON.stringify(
+                  body.params,
+                )}`,
                 "INFO",
               );
               window.showInformationMessage(

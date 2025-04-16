@@ -281,7 +281,11 @@ export function processUDAParams(uda: UDA): {
 function validateParam(
   param: UDAParam,
   udaName: string,
-): { params: {}; parameterTypes: {}; error: { error: string } } | null {
+): {
+  params: Record<string, never>;
+  parameterTypes: Record<string, never>;
+  error: { error: string };
+} | null {
   if (isInvalidRequiredParam(param)) {
     return {
       params: {},

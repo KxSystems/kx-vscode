@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -90,7 +90,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       meta = Promise.resolve(selectedConnection?.meta?.payload);
 
       this.cache.set(connLabel, meta);
-    } catch (error) {
+    } catch {
       window.showErrorMessage(
         "No database running in this Insights connection.",
       );
@@ -165,11 +165,12 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
     /* istanbul ignore next */
     webview.onDidReceiveMessage(async (msg: DataSourceMessage2) => {
       switch (msg.command) {
-        case DataSourceCommand.Server:
+        case DataSourceCommand.Server: {
           await setServerForUri(document.uri, msg.selectedServer);
           updateWebview();
           break;
-        case DataSourceCommand.Change:
+        }
+        case DataSourceCommand.Change: {
           const changed = msg.dataSourceFile;
           const current = this.getDocumentAsJson(document);
           if (!isDeepStrictEqual(current, changed)) {
@@ -181,13 +182,15 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
             }
           }
           break;
-        case DataSourceCommand.Save:
+        }
+        case DataSourceCommand.Save: {
           await commands.executeCommand(
             "workbench.action.files.save",
             document,
           );
           break;
-        case DataSourceCommand.Refresh:
+        }
+        case DataSourceCommand.Refresh: {
           const selectedServer = getServerForUri(document.uri) || "";
           if (!connMngService.isConnected(selectedServer)) {
             offerConnectAction(selectedServer);
@@ -206,16 +209,19 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
             },
           );
           break;
-        case DataSourceCommand.Run:
+        }
+        case DataSourceCommand.Run: {
           await runDataSource(
             msg.dataSourceFile,
             msg.selectedServer,
             this.filenname,
           );
           break;
-        case DataSourceCommand.Populate:
+        }
+        case DataSourceCommand.Populate: {
           await populateScratchpad(msg.dataSourceFile, msg.selectedServer);
           break;
+        }
       }
     });
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -25,7 +25,7 @@ import https from "https";
 
 interface IDeferred<T> {
   resolve: (result: T | Promise<T>) => void;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
   reject: (reason: any) => void;
 }
 
@@ -207,7 +207,7 @@ async function tokenRequest(
   if (params.grant_type === "refresh_token") {
     try {
       response = await axios.post(requestUrl.toString(), queryParams, headers);
-    } catch (err) {
+    } catch {
       return undefined;
     }
   } else {
@@ -228,7 +228,6 @@ async function tokenRequest(
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function queryString(options: any): string {
   return querystring
     .stringify(Object.assign(commonRequestParams, options))
@@ -252,7 +251,7 @@ function createServer() {
       `${ext.networkProtocols.http}${ext.localhost}`,
     );
     switch (reqUrl.pathname) {
-      case "/":
+      case "/": {
         sendFile(
           res,
           join(
@@ -263,7 +262,8 @@ function createServer() {
           "text/html; charset=utf-8",
         );
         break;
-      case "/redirect":
+      }
+      case "/redirect": {
         const error =
           reqUrl.searchParams.get("error_description") ||
           reqUrl.searchParams.get("error");
@@ -282,7 +282,8 @@ function createServer() {
 
         res.end();
         break;
-      case "/main.css":
+      }
+      case "/main.css": {
         sendFile(
           res,
           join(
@@ -293,10 +294,12 @@ function createServer() {
           "text/css; charset=utf-8",
         );
         break;
-      default:
+      }
+      default: {
         res.writeHead(404);
         res.end();
         break;
+      }
     }
   });
 

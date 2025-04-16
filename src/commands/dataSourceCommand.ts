@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -51,7 +51,7 @@ import {
 } from "../utils/core";
 import { ServerType } from "../models/connectionsModels";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
-import { UDA, UDAParam, UDARequestBody } from "../models/uda";
+import { UDARequestBody } from "../models/uda";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();

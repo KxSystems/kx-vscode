@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -310,7 +310,12 @@ export async function addAuthConnection(
 // Not possible to test secrets
 /* istanbul ignore next */
 function removeAuthConnection(serverKey: string) {
-  if (ext.secretSettings.storeAuthData.hasOwnProperty(serverKey)) {
+  if (
+    Object.prototype.hasOwnProperty.call(
+      ext.secretSettings.storeAuthData,
+      serverKey,
+    )
+  ) {
     delete (ext.secretSettings.storeAuthData as { [key: string]: any })[
       serverKey
     ];
@@ -578,7 +583,7 @@ export async function importConnections() {
   let importedConnections: ExportedConnections;
   try {
     importedConnections = JSON.parse(fileContent);
-  } catch (e) {
+  } catch {
     kdbOutputLog("[IMPORT CONNECTION]Invalid JSON format", "ERROR");
     return;
   }
@@ -1012,7 +1017,7 @@ export function runQuery(
   let isPython = false;
   switch (type) {
     case ExecutionTypes.QuerySelection:
-    case ExecutionTypes.PythonQuerySelection:
+    case ExecutionTypes.PythonQuerySelection: {
       const selection = editor.selection;
       query = selection.isEmpty
         ? editor.document.lineAt(selection.active.line).text
@@ -1022,11 +1027,12 @@ export function runQuery(
         isPython = true;
       }
       break;
+    }
 
     case ExecutionTypes.QueryFile:
     case ExecutionTypes.ReRunQuery:
     case ExecutionTypes.PythonQueryFile:
-    default:
+    default: {
       query = rerunQuery || editor.document.getText();
       context = getQueryContext();
 
@@ -1034,6 +1040,7 @@ export function runQuery(
         isPython = true;
       }
       break;
+    }
   }
   executeQuery(query, connLabel, executorName, context, isPython, isWorkbook);
 }

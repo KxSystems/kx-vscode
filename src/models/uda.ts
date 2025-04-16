@@ -58,8 +58,8 @@ export interface UDARequestBody {
   language: string;
   name: string;
   output?: string;
-  parameterTypes: { [key: string]: any } | {};
-  params: { [key: string]: any } | {};
+  parameterTypes: Record<string, unknown>;
+  params: Record<string, unknown>;
   returnFormat: string;
   sampleFn: string;
   sampleSize: number;
