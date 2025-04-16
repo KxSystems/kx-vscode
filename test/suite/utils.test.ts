@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -295,6 +295,7 @@ describe("Utils", () => {
       });
     });
 
+    /* eslint-disable @typescript-eslint/no-unused-expressions */
     describe("coreLogs", () => {
       ext.outputChannel = vscode.window.createOutputChannel("kdb");
       let appendLineSpy, showErrorMessageSpy: sinon.SinonSpy;
@@ -355,6 +356,7 @@ describe("Utils", () => {
         showErrorMessageSpy.calledWithMatch(connLabel);
       });
     });
+    /* eslint-enable @typescript-eslint/no-unused-expressions */
 
     describe("hasWorkspaceOrShowOption", () => {
       afterEach(() => {
@@ -1097,11 +1099,8 @@ describe("Utils", () => {
           meta: { Value: 7 },
           rows: [{ Value: "10" }],
         };
-        const uriTest: vscode.Uri = vscode.Uri.parse("test");
         ext.isResultsTabVisible = true;
-        const qtableStub = sinon
-          .stub(QTable.default, "toLegacy")
-          .returns(expectedOutput);
+        sinon.stub(QTable.default, "toLegacy").returns(expectedOutput);
         const convertRowsSpy = sinon.spy(queryUtils, "convertRows");
         const result = queryUtils.handleWSResults(ab);
         sinon.assert.notCalled(convertRowsSpy);
@@ -1457,11 +1456,9 @@ describe("Utils", () => {
 
   describe("killPid", () => {
     let tryExecuteCommandStub: sinon.SinonStub;
-    let outputChannelAppendLineSpy: sinon.SinonSpy;
 
     beforeEach(() => {
       tryExecuteCommandStub = sinon.stub();
-      outputChannelAppendLineSpy = sinon.spy();
     });
 
     it("should not execute command if pid is NaN", async () => {
@@ -2391,6 +2388,8 @@ describe("Utils", () => {
           {},
           ParamFieldType.Invalid,
         );
+
+        assert.strictEqual(result, "badField");
       });
 
       it("should return undefined", () => {

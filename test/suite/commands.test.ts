@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -58,7 +58,6 @@ import {
   ServerType,
 } from "../../src/models/connectionsModels";
 import { InsightsApiConfig } from "../../src/models/config";
-import { UDAParam } from "../../src/models/uda";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
@@ -101,11 +100,11 @@ describe("dataSourceCommand2", () => {
   );
   const insightsConn = new InsightsConnection(insightsNode.label, insightsNode);
   const uriTest: vscode.Uri = vscode.Uri.parse("test");
-  let resultsPanel: KdbResultsViewProvider;
+  let _resultsPanel: KdbResultsViewProvider;
   ext.outputChannel = vscode.window.createOutputChannel("kdb");
-  const view: vscode.WebviewView = {
+  const _view: vscode.WebviewView = {
     visible: true,
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
+
     show: (): void => {},
     viewType: "kdb-results",
     webview: {
@@ -156,7 +155,7 @@ describe("dataSourceCommand2", () => {
         },
       },
     };
-    resultsPanel = new KdbResultsViewProvider(uriTest);
+    _resultsPanel = new KdbResultsViewProvider(uriTest);
   });
   describe("getSelectedType", () => {
     it("should return selectedType if it is API", () => {
@@ -355,7 +354,7 @@ describe("dataSourceCommand2", () => {
   });
 
   describe("runApiDataSource", () => {
-    let windowMock: sinon.SinonMock;
+    let _windowMock: sinon.SinonMock;
     let getApiBodyStub: sinon.SinonStub;
     let checkIfTimeParamIsCorrectStub: sinon.SinonStub;
     let getDataInsightsStub: sinon.SinonStub;
@@ -363,7 +362,7 @@ describe("dataSourceCommand2", () => {
     let handleScratchpadTableRes: sinon.SinonStub;
 
     beforeEach(() => {
-      windowMock = sinon.mock(vscode.window);
+      _windowMock = sinon.mock(vscode.window);
       getApiBodyStub = sinon.stub(dataSourceCommand, "getApiBody");
       checkIfTimeParamIsCorrectStub = sinon.stub(
         dataSourceUtils,
@@ -432,13 +431,13 @@ describe("dataSourceCommand2", () => {
   });
 
   describe("runQsqlDataSource", () => {
-    let windowMock: sinon.SinonMock;
+    let _windowMock: sinon.SinonMock;
     let getDataInsightsStub: sinon.SinonStub;
     let handleWSResultsStub: sinon.SinonStub;
     let handleScratchpadTableRes: sinon.SinonStub;
 
     beforeEach(() => {
-      windowMock = sinon.mock(vscode.window);
+      _windowMock = sinon.mock(vscode.window);
       getDataInsightsStub = sinon.stub(insightsConn, "getDatasourceQuery");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableRes = sinon.stub(
@@ -480,13 +479,13 @@ describe("dataSourceCommand2", () => {
   });
 
   describe("runSqlDataSource", () => {
-    let windowMock: sinon.SinonMock;
+    let _windowMock: sinon.SinonMock;
     let getDataInsightsStub: sinon.SinonStub;
     let handleWSResultsStub: sinon.SinonStub;
     let handleScratchpadTableRes: sinon.SinonStub;
 
     beforeEach(() => {
-      windowMock = sinon.mock(vscode.window);
+      _windowMock = sinon.mock(vscode.window);
       getDataInsightsStub = sinon.stub(insightsConn, "getDatasourceQuery");
       handleWSResultsStub = sinon.stub(queryUtils, "handleWSResults");
       handleScratchpadTableRes = sinon.stub(
@@ -782,13 +781,12 @@ describe("dataSourceCommand2", () => {
     ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
     let isVisibleStub,
       getMetaStub,
-      handleWSResultsStub,
-      handleScratchpadTableRes,
+      _handleWSResultsStub,
+      _handleScratchpadTableRes,
       retrieveConnStub,
       getDataInsightsStub,
       writeQueryResultsToViewStub,
-      writeQueryResultsToConsoleStub,
-      qeStatusStub: sinon.SinonStub;
+      writeQueryResultsToConsoleStub: sinon.SinonStub;
     let windowMock: sinon.SinonMock;
 
     ext.outputChannel = vscode.window.createOutputChannel("kdb");
@@ -801,10 +799,10 @@ describe("dataSourceCommand2", () => {
       windowMock = sinon.mock(vscode.window);
       getMetaStub = sinon.stub(insightsConn, "getMeta");
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
-      handleWSResultsStub = sinon
+      _handleWSResultsStub = sinon
         .stub(queryUtils, "handleWSResults")
         .returns("dummy results");
-      handleScratchpadTableRes = sinon
+      _handleScratchpadTableRes = sinon
         .stub(queryUtils, "handleScratchpadTableRes")
         .returns("dummy results");
       getDataInsightsStub = sinon.stub(insightsConn, "getDatasourceQuery");
@@ -1417,12 +1415,12 @@ describe("serverCommand", () => {
   describe("importConnections", () => {
     let showOpenDialogStub: sinon.SinonStub;
     let kdbOutputLogStub: sinon.SinonStub;
-    let addImportedConnectionsStub: sinon.SinonStub;
+    let _addImportedConnectionsStub: sinon.SinonStub;
 
     beforeEach(() => {
       showOpenDialogStub = sinon.stub(vscode.window, "showOpenDialog");
       kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
-      addImportedConnectionsStub = sinon.stub(
+      _addImportedConnectionsStub = sinon.stub(
         serverCommand,
         "addImportedConnections",
       );
@@ -1452,8 +1450,8 @@ describe("serverCommand", () => {
     let addKdbConnectionStub: sinon.SinonStub;
     let kdbOutputLogStub: sinon.SinonStub;
     let showInformationMessageStub: sinon.SinonStub;
-    let getInsightsStub: sinon.SinonStub;
-    let getServersStub: sinon.SinonStub;
+    let _getInsightsStub: sinon.SinonStub;
+    let _getServersStub: sinon.SinonStub;
     let retrieveVersionStub: sinon.SinonStub;
     const kdbNodeImport1: KdbNode = {
       label: "local",
@@ -1505,8 +1503,10 @@ describe("serverCommand", () => {
       );
       addKdbConnectionStub = sinon.stub(serverCommand, "addKdbConnection");
       kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
-      getInsightsStub = sinon.stub(coreUtils, "getInsights").returns(undefined);
-      getServersStub = sinon.stub(coreUtils, "getServers").returns(undefined);
+      _getInsightsStub = sinon
+        .stub(coreUtils, "getInsights")
+        .returns(undefined);
+      _getServersStub = sinon.stub(coreUtils, "getServers").returns(undefined);
       showInformationMessageStub = sinon.stub(
         vscode.window,
         "showInformationMessage",
@@ -1768,7 +1768,7 @@ describe("serverCommand", () => {
     const executionConsole = new ExecutionConsole(_console);
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
     ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
-    let executionConsoleStub: sinon.SinonStub;
+    let _executionConsoleStub: sinon.SinonStub;
     let scratchpadResult: ScratchpadResult;
     let queryConsoleErrorStub: sinon.SinonStub;
     let writeQueryResultsToViewStub: sinon.SinonStub;
@@ -1776,7 +1776,7 @@ describe("serverCommand", () => {
     let isVisibleStub: sinon.SinonStub;
 
     beforeEach(() => {
-      executionConsoleStub = sinon
+      _executionConsoleStub = sinon
         .stub(ExecutionConsole, "start")
         .returns(executionConsole);
       scratchpadResult = {
@@ -2262,7 +2262,7 @@ describe("serverCommand", () => {
 
   describe("removeConnection", () => {
     let indexOfStub,
-      disconnectStub,
+      _disconnectStub,
       getServersStub,
       getHashStub,
       getKeyStub,
@@ -2273,7 +2273,7 @@ describe("serverCommand", () => {
 
     beforeEach(() => {
       indexOfStub = sinon.stub(ext.connectedContextStrings, "indexOf");
-      disconnectStub = sinon.stub(serverCommand, "disconnect");
+      _disconnectStub = sinon.stub(serverCommand, "disconnect");
       getServersStub = sinon.stub(coreUtils, "getServers");
       getInsightsStub = sinon.stub(coreUtils, "getInsights");
       getHashStub = sinon.stub(coreUtils, "getHash");
@@ -2332,7 +2332,7 @@ describe("serverCommand", () => {
   describe("connect", () => {
     const connService = new ConnectionManagementService();
     const _console = vscode.window.createOutputChannel("q Console Output");
-    const executionConsole = new ExecutionConsole(_console);
+    const _executionConsole = new ExecutionConsole(_console);
     let windowErrorStub, retrieveConnectionStub: sinon.SinonStub;
 
     beforeEach(() => {
@@ -2347,7 +2347,7 @@ describe("serverCommand", () => {
     it("should show error message if connection not found", async () => {
       retrieveConnectionStub.returns(undefined);
       await serverCommand.connect("test");
-      windowErrorStub.calledOnce;
+      assert.strictEqual(windowErrorStub.calledOnce, true);
     });
   });
 
@@ -2693,7 +2693,7 @@ describe("workspaceCommand", () => {
   describe("resetScratchpadFromEditor", () => {
     let getServerForUriStub: sinon.SinonStub;
     let pickConnectionStub: sinon.SinonStub;
-    let getConnectionForServerStub: sinon.SinonStub;
+    let _getConnectionForServerStub: sinon.SinonStub;
     let resetScratchpadStub: sinon.SinonStub;
 
     const insightsNode = new InsightsNode(
@@ -2719,7 +2719,7 @@ describe("workspaceCommand", () => {
 
       getServerForUriStub = sinon.stub(workspaceCommand, "getServerForUri");
       pickConnectionStub = sinon.stub(workspaceCommand, "pickConnection");
-      getConnectionForServerStub = sinon
+      _getConnectionForServerStub = sinon
         .stub(workspaceCommand, "getConnectionForServer")
         .resolves(insightsNode);
       resetScratchpadStub = sinon

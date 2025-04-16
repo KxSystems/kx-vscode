@@ -1327,12 +1327,13 @@ export class KdbDataSourceView extends LitElement {
     const selectedMultiTypeString =
       param.selectedMultiTypeString || param.typeStrings?.[0] || "";
     param.selectedMultiTypeString = selectedMultiTypeString;
-    const value = param.selectedMultiTypeString || param.typeStrings?.[0] || "";
+    const _value =
+      param.selectedMultiTypeString || param.typeStrings?.[0] || "";
     const renderDeleteParam = this.renderDeleteUDAParamButton(param);
     const isMultiTypeAllowed =
       param.selectedMultiTypeString &&
       allowedEmptyRequiredTypesStrings.includes(param.selectedMultiTypeString);
-    const isReq = param.isReq && !isMultiTypeAllowed ? "*" : "";
+    const _isReq = param.isReq && !isMultiTypeAllowed ? "*" : "";
 
     return html`
       <div class="opt-param-field">
