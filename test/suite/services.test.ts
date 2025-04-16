@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -73,7 +73,7 @@ import { ServerObject } from "../../src/models/serverObject";
 import { ChartEditorProvider } from "../../src/services/chartEditorProvider";
 import { InsightsApiConfig } from "../../src/models/config";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
 
 const dummyMeta: MetaObject = {
@@ -438,26 +438,13 @@ describe("kdbTreeProvider", () => {
   it("Should add node to no tls list", () => {
     ext.kdbNodesWithoutTls.length = 0;
     ext.kdbNodesWithoutTls.push("testServer [testServerAlias]");
-    const kdbNode = new KdbNode(
-      [],
-      "testServer",
-      {
-        serverName: "testServername",
-        serverAlias: "testServerAlias",
-        serverPort: "5001",
-        managed: false,
-        auth: false,
-        tls: false,
-      },
-      TreeItemCollapsibleState.None,
-    );
     assert.equal(ext.kdbNodesWithoutTls.length, 1);
   });
 
   it("Should remove node from no tls list", () => {
     ext.kdbNodesWithoutTls.length = 0;
     ext.kdbNodesWithoutTls.push("testServer [testServerAlias]");
-    const kdbNode = new KdbNode(
+    new KdbNode(
       [],
       "testServer",
       {
@@ -476,7 +463,7 @@ describe("kdbTreeProvider", () => {
   it("Should add node to no auth list", () => {
     ext.kdbNodesWithoutAuth.length = 0;
     ext.kdbNodesWithoutAuth.push("testServer [testServerAlias]");
-    const kdbNode = new KdbNode(
+    new KdbNode(
       [],
       "testServer",
       {
@@ -495,7 +482,7 @@ describe("kdbTreeProvider", () => {
   it("Should remove node from no auth list", () => {
     ext.kdbNodesWithoutAuth.length = 0;
     ext.kdbNodesWithoutAuth.push("testServer [testServerAlias]");
-    const kdbNode = new KdbNode(
+    new KdbNode(
       [],
       "testServer",
       {
@@ -1361,7 +1348,7 @@ describe("connectionManagerService", () => {
     let resetScratchpadStub: sinon.SinonStub;
     let kdbOutputLogStub: sinon.SinonStub;
     let showInformationMessageStub: sinon.SinonStub;
-    let showErrorMessageStub: sinon.SinonStub;
+    let _showErrorMessageStub: sinon.SinonStub;
 
     beforeEach(() => {
       connMngService = new ConnectionManagementService();
@@ -1373,7 +1360,7 @@ describe("connectionManagerService", () => {
       );
       kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
       showInformationMessageStub = sinon.stub(window, "showInformationMessage");
-      showErrorMessageStub = sinon.stub(window, "showErrorMessage");
+      _showErrorMessageStub = sinon.stub(window, "showErrorMessage");
     });
 
     afterEach(() => {
@@ -1583,12 +1570,12 @@ describe("connectionManagerService", () => {
     let connectionManagerService: ConnectionManagementService;
     let connectionsListStub: sinon.SinonStub;
     let getAuthDataStub: sinon.SinonStub;
-    let kdbAuthMapStub: sinon.SinonStub;
-    let contextStub: sinon.SinonStub;
+    let _kdbAuthMapStub: sinon.SinonStub;
+    let _contextStub: sinon.SinonStub;
     ext.context = {} as ExtensionContext;
 
     beforeEach(() => {
-      contextStub = sinon.stub(ext, "context").value({
+      _contextStub = sinon.stub(ext, "context").value({
         globalStorageUri: {
           fsPath: "/temp/",
         },
@@ -1598,7 +1585,7 @@ describe("connectionManagerService", () => {
       connectionManagerService = new ConnectionManagementService();
       connectionsListStub = sinon.stub(ext, "connectionsList").value([]);
       getAuthDataStub = sinon.stub(ext.secretSettings, "getAuthData");
-      kdbAuthMapStub = sinon.stub(ext, "kdbAuthMap").value([]);
+      _kdbAuthMapStub = sinon.stub(ext, "kdbAuthMap").value([]);
     });
 
     afterEach(() => {
@@ -1642,13 +1629,13 @@ describe("connectionManagerService", () => {
 
   describe("retrieveInsightsConnVersion", () => {
     let retrieveConnectionStub: sinon.SinonStub;
-    let connectionsListStub: sinon.SinonStub;
+    let _connectionsListStub: sinon.SinonStub;
     beforeEach(() => {
       retrieveConnectionStub = sinon.stub(
         connectionManagerService,
         "retrieveConnectedConnection",
       );
-      connectionsListStub = sinon.stub(ext, "connectionsList").value([]);
+      _connectionsListStub = sinon.stub(ext, "connectionsList").value([]);
     });
 
     afterEach(() => {
@@ -2095,10 +2082,10 @@ describe("dataSourceEditorProvider", () => {
       );
       const localConn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
       const connMngService = new ConnectionManagementService();
-      let isConnetedStub, retrieveConnectedConnectionStub: sinon.SinonStub;
+      let isConnetedStub, _retrieveConnectedConnectionStub: sinon.SinonStub;
       beforeEach(() => {
         isConnetedStub = sinon.stub(connMngService, "isConnected");
-        retrieveConnectedConnectionStub = sinon.stub(
+        _retrieveConnectedConnectionStub = sinon.stub(
           connMngService,
           "retrieveConnectedConnection",
         );

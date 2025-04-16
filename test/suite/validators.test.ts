@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -12,12 +12,13 @@
  */
 
 import assert from "assert";
+import * as sinon from "sinon";
 import { validateScratchpadOutputVariableName } from "../../src/validators/interfaceValidator";
 import * as kdbValidators from "../../src/validators/kdbValidator";
 
 import { Validator } from "../../src/validators/validator";
-import * as sinon from "sinon";
 import { ext } from "../../src/extensionVariables";
+import { IsNotEmpty } from "../../src/validators/validationFunctions/isNotEmpty";
 
 describe("Interface validation tests", () => {
   it("Should return successful scratchpad variable output name", () => {
@@ -334,5 +335,33 @@ describe("Validation functions", () => {
       "Password should have at least one lowercase letter from a to z.",
       "String contains both cases",
     );
+  });
+
+  describe("IsNotEmpty Validator", () => {
+    let validator: IsNotEmpty;
+
+    beforeEach(() => {
+      validator = new IsNotEmpty();
+    });
+
+    it("should return null for a non-empty string", () => {
+      const result = validator.validate("Valid Name");
+      assert.strictEqual(result, null);
+    });
+
+    it("should return an error message for an empty string", () => {
+      const result = validator.validate("");
+      assert.strictEqual(result, "Value cannot be empty.");
+    });
+
+    it("should return an error message for a string with only spaces", () => {
+      const result = validator.validate("   ");
+      assert.strictEqual(result, "Value cannot be empty.");
+    });
+
+    it("should return null for a string with leading and trailing spaces but valid content", () => {
+      const result = validator.validate("   Valid Name   ");
+      assert.strictEqual(result, null);
+    });
   });
 });

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -13,10 +13,7 @@
 
 import * as assert from "assert";
 import * as sinon from "sinon";
-import * as vscode from "vscode";
 import { LocalConnection } from "../../src/classes/localConnection";
-import * as nodeq from "node-q";
-import { ext } from "../../src/extensionVariables";
 
 describe("LocalConnection", () => {
   let localConn: LocalConnection;

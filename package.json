@@ -1002,7 +1002,7 @@
     "package": "npx vsce package",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
     "publish": "npx vsce publish",
-    "lint": "eslint 'src/**' --fix"
+    "lint": "eslint 'src/**' 'test/suite/**' --fix"
   },
   "prettier": {
     "printWidth": 80,
