@@ -234,6 +234,7 @@ function queryString(options: any): string {
     .replace(/%2B/g, "+");
 }
 
+/* istanbul ignore next */
 function createServer() {
   let deferredCode: IDeferred<string>;
   const codePromise = new Promise<string>(
