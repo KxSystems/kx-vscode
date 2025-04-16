@@ -50,12 +50,7 @@ import {
   offerConnectAction,
 } from "../utils/core";
 import { ServerType } from "../models/connectionsModels";
-import {
-  createUDARequestBody,
-  processUDAParams,
-  retrieveDataTypeByString,
-  validateUDA,
-} from "../utils/uda";
+import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 import { UDA, UDAParam, UDARequestBody } from "../models/uda";
 
 export async function addDataSource(): Promise<void> {
@@ -460,26 +455,12 @@ export async function runUDADataSource(
   selectedConn: InsightsConnection,
 ): Promise<any> {
   const uda = fileContent.dataSource.uda;
-  const returnFormat = ext.isResultsTabVisible ? "structuredText" : "text";
 
-  const validationError = await validateUDA(uda, selectedConn);
-  if (validationError) {
-    return validationError;
-  }
+  const udaReqBody = await retrieveUDAtoCreateReqBody(uda, selectedConn);
 
-  if (!uda) {
-    return { error: "UDA is undefined" };
+  if (udaReqBody.error) {
+    return udaReqBody;
   }
-  const { params, parameterTypes, error } = processUDAParams(uda);
-  if (error) {
-    return error;
-  }
-  const udaReqBody: UDARequestBody = createUDARequestBody(
-    uda.name,
-    params,
-    parameterTypes,
-    returnFormat,
-  );
 
   return await executeUDARequest(selectedConn, udaReqBody);
 }

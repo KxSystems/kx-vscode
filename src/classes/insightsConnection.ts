@@ -44,7 +44,7 @@ import { convertTimeToTimestamp } from "../utils/dataSource";
 import { ScratchpadRequestBody } from "../models/scratchpad";
 import { StructuredTextResults } from "../models/queryResult";
 import { UDARequestBody } from "../models/uda";
-import { fixTimeAtUDARequestBody } from "../utils/uda";
+import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 
 const customHeadersOctet = {
   Accept: "application/octet-stream",
@@ -351,8 +351,6 @@ export class InsightsConnection {
         ? (body as UDARequestBody).name
         : "";
       if (udaName !== "") {
-        //TODO: Should remove this after add nanoseconds support in uda
-        body = fixTimeAtUDARequestBody(body);
         body = body.params;
         // TODO: This will be necessary when the parametertypes issue is fixed just remove the line above
         // body = {
@@ -419,15 +417,18 @@ export class InsightsConnection {
 
   public async importScratchpad(
     variableName: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     params: DataSourceFiles,
   ): Promise<void> {
     let dsTypeString = "";
     if (this.connected && this.connEndpoints) {
-      let queryParams, coreUrl: string;
+      let coreUrl: string;
+      const body: any = {
+        output: variableName,
+        isTableView: false,
+      };
       switch (params.dataSource.selectedType) {
         case DataSourceTypes.API:
-          queryParams = {
+          body.params = {
             table: params.dataSource.api.table,
             startTS: convertTimeToTimestamp(params.dataSource.api.startTS),
             endTS: convertTimeToTimestamp(params.dataSource.api.endTS),
@@ -436,14 +437,14 @@ export class InsightsConnection {
           dsTypeString = "API";
           break;
         case DataSourceTypes.SQL:
-          queryParams = { query: params.dataSource.sql.query };
+          body.params = { query: params.dataSource.sql.query };
           coreUrl = this.connEndpoints.scratchpad.importSql;
           dsTypeString = "SQL";
           break;
         case DataSourceTypes.QSQL:
           const assemblyParts =
             params.dataSource.qsql.selectedTarget.split(" ");
-          queryParams = {
+          body.params = {
             assembly: assemblyParts[0],
             target: assemblyParts[1],
             query: params.dataSource.qsql.query,
@@ -451,16 +452,33 @@ export class InsightsConnection {
           coreUrl = this.connEndpoints.scratchpad.importQsql;
           dsTypeString = "QSQL";
           break;
+        case DataSourceTypes.UDA:
+          const uda = params.dataSource.uda;
+          const udaReqBody = await retrieveUDAtoCreateReqBody(uda, this);
+
+          if (udaReqBody.error) {
+            kdbOutputLog(
+              `[SCRATCHPAD] Error occurred while creating UDA request body: ${udaReqBody.error}`,
+              "ERROR",
+            );
+            return;
+          }
+          body.params = udaReqBody.params;
+          body.parameterTypes = udaReqBody.parameterTypes;
+          body.language = udaReqBody.language;
+          body.name = udaReqBody.name;
+          body.returnFormat = udaReqBody.returnFormat;
+          body.sampleFn = udaReqBody.sampleFn;
+          body.sampleSize = udaReqBody.sampleSize;
+
+          coreUrl = this.connEndpoints.scratchpad.importUDA;
+
+          break;
         default:
           break;
       }
 
       const scratchpadURL = new url.URL(coreUrl!, this.node.details.server);
-      const body = {
-        output: variableName,
-        isTableView: false,
-        params: queryParams,
-      };
       const options = await this.getOptions(
         true,
         customHeadersJson,
@@ -553,8 +571,6 @@ export class InsightsConnection {
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
       const isTableView = udaReqBody.returnFormat === "structuredText";
-      //TODO: Should remove this after add nanoseconds support in uda
-      udaReqBody = fixTimeAtUDARequestBody(udaReqBody);
       const udaURL = new url.URL(
         this.connEndpoints.scratchpad.importUDA,
         this.node.details.server,

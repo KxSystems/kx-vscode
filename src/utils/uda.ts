@@ -349,3 +349,34 @@ export function createUDARequestBody(
     sampleSize: 10000,
   };
 }
+
+export async function retrieveUDAtoCreateReqBody(
+  uda: UDA | undefined,
+  insightsConn: InsightsConnection,
+): Promise<UDARequestBody | any> {
+  if (!uda) {
+    return { error: "UDA is undefined" };
+  }
+
+  const returnFormat = ext.isResultsTabVisible ? "structuredText" : "text";
+
+  const validationError = await validateUDA(uda, insightsConn);
+  if (validationError) {
+    return validationError;
+  }
+
+  const { params, parameterTypes, error } = processUDAParams(uda);
+  if (error) {
+    return error;
+  }
+
+  const udaReqBody: UDARequestBody = createUDARequestBody(
+    uda.name,
+    params,
+    parameterTypes,
+    returnFormat,
+  );
+
+  //TODO: remove the method bellow and send only the udaReqBody when nanoseconds are fixed
+  return fixTimeAtUDARequestBody(udaReqBody);
+}
