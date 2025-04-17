@@ -530,7 +530,35 @@ User-Defined Analytics (UDAs), also known as custom APIs, are essential for deve
 
 UDAs can be called directly within the VSCode extension through the UDA tab in a data source. This provides a form-based approach to populating the UDA parameters. UDAs can also be called within the Insights Enterprise web interface using Pipelines, Queries, and Views.
 
-For more information on User-Defined Analytics, refer to the [UDAs documentation](https://code.kx.com/insights/api/database/uda/uda-overview-introduction.html)
+![Query UDAs in VSCode extension](https://github.com/KxSystems/kx-vscode/blob/main/img/udas-query.png?raw=true)
+
+When interacting with UDAs, parameter fields are shown for configuration. Note the following:
+
+- Required fields are marked with an asterisk (*).
+
+- Optional fields are not required but may be displayed in your results, even if they are empty.
+
+You can add new parameters by clicking **Add Parameter**. Both optional and distinguished parameters can be added as needed.
+
+![Add parameters to call UDAs](https://github.com/KxSystems/kx-vscode/blob/img/udas-add-parameters.png?raw=true)
+
+**Important!** A UDA cannot be queried if one or more parameters are invalid.
+
+If you attempt to run a UDA with invalid parameters, an error occurs and a pop-up message appears to alert you to the issue.
+
+![Error showing invalid parameters for UDA](https://github.com/KxSystems/kx-vscode/blob/img/udas-invalid-parameter.png?raw=true)
+
+![Pop-up message UDAs include invalid parameter](https://github.com/KxSystems/kx-vscode/blob/img/udas-error-pop-up.png?raw=true)
+
+In some cases, you can successfully query UDAs without any parameters, as seen in the screenshot below.
+
+![UDAs with no parameters](https://github.com/KxSystems/kx-vscode/blob/img/udas-no-parameters.png?raw=true)
+
+However, you can still modify the parameter list to add parameters by clicking **Add parameter** or deleting parameters using the recycle bin icon.
+
+![Delete UDAs parameters](https://github.com/KxSystems/kx-vscode/blob/img/udas-delete parameters.png?raw=true)
+
+For more information on User-Defined Analytics, refer to the [UDAs documentation](https://code.kx.com/insights/api/database/uda/uda-overview-introduction.html).
 
 ### Run and populate scratchpad
 
