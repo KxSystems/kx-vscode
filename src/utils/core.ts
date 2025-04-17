@@ -13,16 +13,16 @@
 
 import { ChildProcess } from "child_process";
 import { createHash } from "crypto";
-import { pathExists } from "fs-extra";
 import { writeFile } from "fs/promises";
+import { pathExists } from "fs-extra";
 import { env } from "node:process";
 import { tmpdir } from "os";
 import { join } from "path";
 import * as semver from "semver";
 import { commands, ConfigurationTarget, Uri, window, workspace } from "vscode";
+
 import { installTools } from "../commands/installTools";
 import { ext } from "../extensionVariables";
-import { QueryResult } from "../models/queryResult";
 import { tryExecuteCommand } from "./cpUtils";
 import { showRegistrationNotification } from "./registration";
 import { Telemetry } from "./telemetryClient";
@@ -32,6 +32,7 @@ import {
   Server,
   ServerDetails,
 } from "../models/connectionsModels";
+import { QueryResult } from "../models/queryResult";
 
 export function log(childProcess: ChildProcess): void {
   kdbOutputLog(`Process ${childProcess.pid} started`, "INFO");

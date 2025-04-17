@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import crypto from "crypto";
 import {
   EndOfLine,
   ExtensionContext,
@@ -22,10 +23,10 @@ import {
   workspace,
 } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
+
 import { ext } from "../extensionVariables";
 import { runActiveEditor } from "./workspaceCommand";
 import { ExecutionTypes } from "../models/execution";
-import crypto from "crypto";
 
 async function executeBlock(client: LanguageClient) {
   if (ext.activeTextEditor) {

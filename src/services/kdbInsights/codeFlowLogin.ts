@@ -15,13 +15,14 @@ import axios, { AxiosRequestConfig } from "axios";
 import * as crypto from "crypto";
 import * as fs from "fs-extra";
 import * as http from "http";
+import https from "https";
 import { join } from "path";
+import { pickPort } from "pick-port";
 import * as querystring from "querystring";
 import * as url from "url";
-import { ext } from "../../extensionVariables";
 import { Uri, env } from "vscode";
-import { pickPort } from "pick-port";
-import https from "https";
+
+import { ext } from "../../extensionVariables";
 
 interface IDeferred<T> {
   resolve: (result: T | Promise<T>) => void;

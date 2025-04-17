@@ -12,6 +12,7 @@
  */
 
 import { ConfigurationTarget, window, workspace } from "vscode";
+
 import { ext } from "../extensionVariables";
 import { openUrl } from "./openUrl";
 

@@ -14,6 +14,7 @@
 import glob from "glob";
 import Mocha from "mocha";
 import * as path from "path";
+
 import { createReport } from "../coverage";
 
 export function run(): Promise<void> {

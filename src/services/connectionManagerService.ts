@@ -11,13 +11,20 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { LocalConnection } from "../classes/localConnection";
 import { window, commands } from "vscode";
+
+import { LocalConnection } from "../classes/localConnection";
 import { ext } from "../extensionVariables";
 import { InsightsNode, KdbNode } from "./kdbTreeProvider";
-import { Telemetry } from "../utils/telemetryClient";
 import { InsightsConnection } from "../classes/insightsConnection";
-import { sanitizeQuery } from "../utils/queryUtils";
+import {
+  ExportedConnections,
+  Insights,
+  kdbAuthMap,
+  Server,
+} from "../models/connectionsModels";
+import { MetaInfoType } from "../models/meta";
+import { retrieveConnLabelsNames } from "../utils/connLabel";
 import {
   compareVersions,
   getInsights,
@@ -30,14 +37,8 @@ import {
   updateServers,
 } from "../utils/core";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
-import { MetaInfoType } from "../models/meta";
-import { retrieveConnLabelsNames } from "../utils/connLabel";
-import {
-  ExportedConnections,
-  Insights,
-  kdbAuthMap,
-  Server,
-} from "../models/connectionsModels";
+import { sanitizeQuery } from "../utils/queryUtils";
+import { Telemetry } from "../utils/telemetryClient";
 
 export class ConnectionManagementService {
   public retrieveConnection(

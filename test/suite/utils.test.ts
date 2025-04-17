@@ -12,58 +12,59 @@
  */
 
 import * as assert from "assert";
-import * as sinon from "sinon";
-import * as vscode from "vscode";
 import mock from "mock-fs";
 import { env } from "node:process";
+import * as sinon from "sinon";
+import * as vscode from "vscode";
 import { TreeItemCollapsibleState } from "vscode";
+
+import { LocalConnection } from "../../src/classes/localConnection";
 import { ext } from "../../src/extensionVariables";
-import * as QTable from "../../src/ipc/QTable";
-import { CancellationEvent } from "../../src/models/cancellationEvent";
-import { QueryResultType } from "../../src/models/queryResult";
-import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
-import { QueryHistoryProvider } from "../../src/services/queryHistoryProvider";
-import * as coreUtils from "../../src/utils/core";
-import * as cpUtils from "../../src/utils/cpUtils";
-import * as dataSourceUtils from "../../src/utils/dataSource";
-import * as decodeUtils from "../../src/utils/decode";
-import * as executionUtils from "../../src/utils/execution";
-import * as executionConsoleUtils from "../../src/utils/executionConsole";
-import * as LabelsUtils from "../../src/utils/connLabel";
-import * as UDAUtils from "../../src/utils/uda";
-import { getNonce } from "../../src/utils/getNonce";
-import { getUri } from "../../src/utils/getUri";
-import { openUrl } from "../../src/utils/openUrl";
-import * as queryUtils from "../../src/utils/queryUtils";
-import { showRegistrationNotification } from "../../src/utils/registration";
-import { killPid } from "../../src/utils/shell";
-import {
-  showInputBox,
-  showOpenFolderDialog,
-  showQuickPick,
-} from "../../src/utils/userInteraction";
-import { validateUtils } from "../../src/utils/validateUtils";
 import { DCDS } from "../../src/ipc/c";
 import {
   DDateClass,
   DDateTimeClass,
   DTimestampClass,
 } from "../../src/ipc/cClasses";
-import { DataSourceTypes } from "../../src/models/dataSource";
-import { LocalConnection } from "../../src/classes/localConnection";
-import { Labels } from "../../src/models/labels";
+import * as QTable from "../../src/ipc/QTable";
+import { CancellationEvent } from "../../src/models/cancellationEvent";
 import {
   InsightDetails,
   ServerDetails,
   ServerType,
 } from "../../src/models/connectionsModels";
+import { DataSourceTypes } from "../../src/models/dataSource";
+import { Labels } from "../../src/models/labels";
+import { MetaObjectPayload } from "../../src/models/meta";
+import { QueryResultType } from "../../src/models/queryResult";
 import {
   InvalidParamFieldErrors,
   ParamFieldType,
   UDAParam,
   UDARequestBody,
 } from "../../src/models/uda";
-import { MetaObjectPayload } from "../../src/models/meta";
+import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
+import { QueryHistoryProvider } from "../../src/services/queryHistoryProvider";
+import * as LabelsUtils from "../../src/utils/connLabel";
+import * as coreUtils from "../../src/utils/core";
+import * as cpUtils from "../../src/utils/cpUtils";
+import * as dataSourceUtils from "../../src/utils/dataSource";
+import * as decodeUtils from "../../src/utils/decode";
+import * as executionUtils from "../../src/utils/execution";
+import * as executionConsoleUtils from "../../src/utils/executionConsole";
+import { getNonce } from "../../src/utils/getNonce";
+import { getUri } from "../../src/utils/getUri";
+import { openUrl } from "../../src/utils/openUrl";
+import * as queryUtils from "../../src/utils/queryUtils";
+import { showRegistrationNotification } from "../../src/utils/registration";
+import { killPid } from "../../src/utils/shell";
+import * as UDAUtils from "../../src/utils/uda";
+import {
+  showInputBox,
+  showOpenFolderDialog,
+  showQuickPick,
+} from "../../src/utils/userInteraction";
+import { validateUtils } from "../../src/utils/validateUtils";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;

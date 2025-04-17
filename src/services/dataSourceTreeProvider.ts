@@ -26,6 +26,7 @@ import {
   commands,
   workspace,
 } from "vscode";
+
 import { ext } from "../extensionVariables";
 import {
   checkFileFromInsightsNode,

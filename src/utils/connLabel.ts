@@ -11,12 +11,13 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { ConnectionLabel, Labels } from "../models/labels";
 import { workspace } from "vscode";
+
 import { ext } from "../extensionVariables";
 import { kdbOutputLog } from "./core";
-import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
+import { ConnectionLabel, Labels } from "../models/labels";
 import { NewConnectionPannel } from "../panels/newConnection";
+import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 
 export function getWorkspaceLabels() {
   const existingConnLbls = workspace

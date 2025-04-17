@@ -3,6 +3,7 @@ const tseslint = require("typescript-eslint");
 const headerPlugin = require("eslint-plugin-header");
 const licenseHeaderPlugin = require("eslint-plugin-license-header");
 const unusedImportsPlugin = require("eslint-plugin-unused-imports");
+const importPlugin = require("eslint-plugin-import");
 
 const currentYear = new Date().getFullYear();
 
@@ -22,6 +23,7 @@ module.exports = [
     },
     plugins: {
       header: headerPlugin,
+      import: importPlugin,
       "license-header": licenseHeaderPlugin,
       "unused-imports": unusedImportsPlugin,
     },
@@ -47,6 +49,17 @@ module.exports = [
           " * specific language governing permissions and limitations under the License.",
           " */",
         ],
+      ],
+      "import/order": [
+        "error",
+        {
+          groups: [
+            ["builtin", "external"],
+            ["internal", "parent", "sibling", "index"],
+          ],
+          "newlines-between": "always",
+          alphabetize: { order: "asc", caseInsensitive: true },
+        },
       ],
       "@typescript-eslint/no-unused-vars": "off",
       "unused-imports/no-unused-imports": "error",

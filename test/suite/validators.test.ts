@@ -13,12 +13,12 @@
 
 import assert from "assert";
 import * as sinon from "sinon";
+
+import { ext } from "../../src/extensionVariables";
 import { validateScratchpadOutputVariableName } from "../../src/validators/interfaceValidator";
 import * as kdbValidators from "../../src/validators/kdbValidator";
-
-import { Validator } from "../../src/validators/validator";
-import { ext } from "../../src/extensionVariables";
 import { IsNotEmpty } from "../../src/validators/validationFunctions/isNotEmpty";
+import { Validator } from "../../src/validators/validator";
 
 describe("Interface validation tests", () => {
   it("Should return successful scratchpad variable output name", () => {

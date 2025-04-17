@@ -22,6 +22,7 @@ import {
   TreeItemCollapsibleState,
   commands,
 } from "vscode";
+
 import { ext } from "../extensionVariables";
 import { QueryHistory } from "../models/queryHistory";
 import { getConnectionType } from "../utils/queryUtils";

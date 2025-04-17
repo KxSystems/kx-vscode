@@ -12,8 +12,9 @@
  */
 
 import { ChildProcess } from "node:child_process";
-import { ICommandResult, tryExecuteCommand } from "./cpUtils";
+
 import { kdbOutputLog } from "./core";
+import { ICommandResult, tryExecuteCommand } from "./cpUtils";
 
 const isWin = process.platform === "win32";
 

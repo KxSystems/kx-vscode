@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import * as fs from "fs";
 import { readFileSync } from "fs-extra";
 import { join } from "path";
 import * as url from "url";
@@ -25,19 +26,37 @@ import {
   window,
   workspace,
 } from "vscode";
+
 import { ext } from "../extensionVariables";
+import { runDataSource } from "./dataSourceCommand";
+import { InsightsConnection } from "../classes/insightsConnection";
+import {
+  ExportedConnections,
+  InsightDetails,
+  Insights,
+  Server,
+  ServerDetails,
+  ServerType,
+} from "../models/connectionsModels";
 import { DataSourceFiles } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
+import { Plot } from "../models/plot";
+import { QueryHistory } from "../models/queryHistory";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
 import { ServerObject } from "../models/serverObject";
 import { DataSourcesPanel } from "../panels/datasource";
+import { NewConnectionPannel } from "../panels/newConnection";
+import { ChartEditorProvider } from "../services/chartEditorProvider";
+import { ConnectionManagementService } from "../services/connectionManagerService";
 import {
   InsightsMetaNode,
   InsightsNode,
   KdbNode,
   MetaObjectPayloadNode,
 } from "../services/kdbTreeProvider";
+import { MetaContentProvider } from "../services/metaContentProvider";
+import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
 import {
   addLocalConnectionContexts,
   checkOpenSslInstalled,
@@ -60,37 +79,19 @@ import {
   formatScratchpadStacktrace,
   resultToBase64,
 } from "../utils/queryUtils";
-import {
-  validateServerAlias,
-  validateServerName,
-  validateServerPort,
-  validateServerUsername,
-} from "../validators/kdbValidator";
-import { QueryHistory } from "../models/queryHistory";
-import { runDataSource } from "./dataSourceCommand";
-import { NewConnectionPannel } from "../panels/newConnection";
 import { Telemetry } from "../utils/telemetryClient";
-import { ConnectionManagementService } from "../services/connectionManagerService";
-import { InsightsConnection } from "../classes/insightsConnection";
-import { MetaContentProvider } from "../services/metaContentProvider";
-import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
-import {
-  ExportedConnections,
-  InsightDetails,
-  Insights,
-  Server,
-  ServerDetails,
-  ServerType,
-} from "../models/connectionsModels";
-import * as fs from "fs";
-import { ChartEditorProvider } from "../services/chartEditorProvider";
 import {
   addWorkspaceFile,
   openWith,
   setUriContent,
   workspaceHas,
 } from "../utils/workspace";
-import { Plot } from "../models/plot";
+import {
+  validateServerAlias,
+  validateServerName,
+  validateServerPort,
+  validateServerUsername,
+} from "../validators/kdbValidator";
 
 export async function addNewConnection(): Promise<void> {
   NewConnectionPannel.close();

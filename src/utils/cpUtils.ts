@@ -14,6 +14,7 @@
 import * as cp from "child_process";
 import * as os from "os";
 import { join } from "path";
+
 import { ext } from "../extensionVariables";
 import { kdbOutputLog } from "./core";
 

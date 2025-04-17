@@ -15,14 +15,15 @@
 
 import * as assert from "assert";
 import * as sinon from "sinon";
+import { pathToFileURL } from "url";
 import {
   Connection,
   InitializeParams,
   TextDocumentIdentifier,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
+
 import QLangServer from "../../server/src/qLangServer";
-import { pathToFileURL } from "url";
 
 const context = { includeDeclaration: true };
 

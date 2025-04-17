@@ -20,9 +20,17 @@ import {
   TextEditor,
 } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
+
+import { InsightsConnection } from "./classes/insightsConnection";
+import { LocalConnection } from "./classes/localConnection";
+import { kdbAuthMap } from "./models/connectionsModels";
+import { CustomAuth } from "./models/customAuth";
+import { DataSourceFiles } from "./models/dataSource";
+import { ConnectionLabel, LabelColors, Labels } from "./models/labels";
 import { LocalProcess } from "./models/localProcess";
 import { MetaObjectPayload } from "./models/meta";
 import { QueryHistory } from "./models/queryHistory";
+import { ScratchpadFile } from "./models/scratchpad";
 import { ServerObject } from "./models/serverObject";
 import {
   InsightsNode,
@@ -31,15 +39,8 @@ import {
 } from "./services/kdbTreeProvider";
 import { QueryHistoryProvider } from "./services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
-import AuthSettings from "./utils/secretStorage";
 import { WorkspaceTreeProvider } from "./services/workspaceTreeProvider";
-import { ScratchpadFile } from "./models/scratchpad";
-import { LocalConnection } from "./classes/localConnection";
-import { InsightsConnection } from "./classes/insightsConnection";
-import { DataSourceFiles } from "./models/dataSource";
-import { ConnectionLabel, LabelColors, Labels } from "./models/labels";
-import { kdbAuthMap } from "./models/connectionsModels";
-import { CustomAuth } from "./models/customAuth";
+import AuthSettings from "./utils/secretStorage";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {

@@ -13,6 +13,7 @@
 
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
+
 import { chartStyles, shoelaceStyles } from "./styles";
 import { Plot } from "../../models/plot";
 

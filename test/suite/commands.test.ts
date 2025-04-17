@@ -15,19 +15,36 @@ import assert from "assert";
 import mock from "mock-fs";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { LanguageClient } from "vscode-languageclient/node";
+
+import { InsightsConnection } from "../../src/classes/insightsConnection";
+import { LocalConnection } from "../../src/classes/localConnection";
+import * as clientCommand from "../../src/commands/clientCommands";
 import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
 import * as installTools from "../../src/commands/installTools";
 import * as serverCommand from "../../src/commands/serverCommand";
-import * as dsUtils from "../../src/utils/dataSource";
 import * as walkthroughCommand from "../../src/commands/walkthroughCommand";
+import * as workspaceCommand from "../../src/commands/workspaceCommand";
 import { ext } from "../../src/extensionVariables";
+import { InsightsApiConfig } from "../../src/models/config";
+import {
+  ExportedConnections,
+  InsightDetails,
+  ServerDetails,
+  ServerType,
+} from "../../src/models/connectionsModels";
+import { GetDataError } from "../../src/models/data";
 import {
   DataSourceFiles,
   DataSourceTypes,
   createDefaultDataSourceFile,
 } from "../../src/models/dataSource";
 import { ExecutionTypes } from "../../src/models/execution";
+import { MetaObject } from "../../src/models/meta";
+import { QueryHistory } from "../../src/models/queryHistory";
 import { ScratchpadResult } from "../../src/models/scratchpadResult";
+import { NewConnectionPannel } from "../../src/panels/newConnection";
+import { ConnectionManagementService } from "../../src/services/connectionManagerService";
 import {
   InsightsNode,
   KdbNode,
@@ -35,29 +52,13 @@ import {
   MetaObjectPayloadNode,
 } from "../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
+import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider";
 import * as coreUtils from "../../src/utils/core";
+import * as dsUtils from "../../src/utils/dataSource";
 import * as dataSourceUtils from "../../src/utils/dataSource";
 import { ExecutionConsole } from "../../src/utils/executionConsole";
 import * as queryUtils from "../../src/utils/queryUtils";
-import { QueryHistory } from "../../src/models/queryHistory";
-import { NewConnectionPannel } from "../../src/panels/newConnection";
 import { MAX_STR_LEN } from "../../src/validators/kdbValidator";
-import { LocalConnection } from "../../src/classes/localConnection";
-import { ConnectionManagementService } from "../../src/services/connectionManagerService";
-import { InsightsConnection } from "../../src/classes/insightsConnection";
-import * as workspaceCommand from "../../src/commands/workspaceCommand";
-import { MetaObject } from "../../src/models/meta";
-import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider";
-import { GetDataError } from "../../src/models/data";
-import * as clientCommand from "../../src/commands/clientCommands";
-import { LanguageClient } from "vscode-languageclient/node";
-import {
-  ExportedConnections,
-  InsightDetails,
-  ServerDetails,
-  ServerType,
-} from "../../src/models/connectionsModels";
-import { InsightsApiConfig } from "../../src/models/config";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {

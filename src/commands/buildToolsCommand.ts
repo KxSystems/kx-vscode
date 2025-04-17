@@ -11,8 +11,10 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import Path from "path";
+import { spawn } from "child_process";
 import fs from "fs";
+import { tmpdir } from "os";
+import Path from "path";
 import {
   Diagnostic,
   DiagnosticSeverity,
@@ -23,8 +25,7 @@ import {
   window,
   workspace,
 } from "vscode";
-import { spawn } from "child_process";
-import { tmpdir } from "os";
+
 import { ext } from "../extensionVariables";
 
 const cache = new Map<string, Thenable<Diagnostic[]>>();

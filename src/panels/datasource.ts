@@ -12,13 +12,14 @@
  */
 
 import * as vscode from "vscode";
+
 import { ext } from "../extensionVariables";
 import { DataSourceFiles } from "../models/dataSource";
 import { DataSourceMessage } from "../models/messages";
+import { UDA } from "../models/uda";
 import { InsightsNode } from "../services/kdbTreeProvider";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
-import { UDA } from "../models/uda";
 
 let running = false;
 

@@ -11,39 +11,40 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { ext } from "../extensionVariables";
 import axios, { AxiosRequestConfig } from "axios";
-import { ProgressLocation, window } from "vscode";
+import { jwtDecode } from "jwt-decode";
 import * as url from "url";
+import { ProgressLocation, window } from "vscode";
+
+import { ext } from "../extensionVariables";
+import { isCompressed, uncompress } from "../ipc/c";
+import {
+  InsightsApiConfig,
+  InsightsConfig,
+  InsightsEndpoints,
+} from "../models/config";
+import { GetDataObjectPayload } from "../models/data";
+import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
+import { JwtUser } from "../models/jwt_user";
 import { MetaInfoType, MetaObject, MetaObjectPayload } from "../models/meta";
+import { StructuredTextResults } from "../models/queryResult";
+import { ScratchpadRequestBody } from "../models/scratchpad";
+import { UDARequestBody } from "../models/uda";
 import {
   getCurrentToken,
   getHttpsAgent,
   IToken,
 } from "../services/kdbInsights/codeFlowLogin";
 import { InsightsNode } from "../services/kdbTreeProvider";
-import { GetDataObjectPayload } from "../models/data";
-import { isCompressed, uncompress } from "../ipc/c";
-import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
-import { jwtDecode } from "jwt-decode";
-import { JwtUser } from "../models/jwt_user";
-import { Telemetry } from "../utils/telemetryClient";
-import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
 import {
   compareVersions,
   invalidUsernameJWT,
   kdbOutputLog,
   tokenUndefinedError,
 } from "../utils/core";
-import {
-  InsightsApiConfig,
-  InsightsConfig,
-  InsightsEndpoints,
-} from "../models/config";
 import { convertTimeToTimestamp } from "../utils/dataSource";
-import { ScratchpadRequestBody } from "../models/scratchpad";
-import { StructuredTextResults } from "../models/queryResult";
-import { UDARequestBody } from "../models/uda";
+import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
+import { Telemetry } from "../utils/telemetryClient";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 
 const customHeadersOctet = {
