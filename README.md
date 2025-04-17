@@ -556,7 +556,7 @@ In some cases, you can successfully query UDAs without any parameters, as seen i
 
 However, you can still modify the parameter list to add parameters by clicking **Add parameter** or deleting parameters using the recycle bin icon.
 
-![Delete UDAs parameters](https://github.com/KxSystems/kx-vscode/blob/img/udas-delete parameters.png?raw=true)
+![Delete UDA parameters](https://github.com/KxSystems/kx-vscode/blob/img/udas-delete-parameters.png?raw=true)
 
 For more information on User-Defined Analytics, refer to the [UDAs documentation](https://code.kx.com/insights/api/database/uda/uda-overview-introduction.html).
 
