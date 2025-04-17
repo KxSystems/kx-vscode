@@ -14,7 +14,15 @@
 import * as fs from "fs";
 import path from "path";
 import { InputBoxOptions, window } from "vscode";
+
 import { ext } from "../extensionVariables";
+import {
+  writeQueryResultsToConsole,
+  writeQueryResultsToView,
+} from "./serverCommand";
+import { InsightsConnection } from "../classes/insightsConnection";
+import { LocalConnection } from "../classes/localConnection";
+import { ServerType } from "../models/connectionsModels";
 import { GetDataError, getDataBodyPayload } from "../models/data";
 import {
   DataSourceFiles,
@@ -22,7 +30,14 @@ import {
   createDefaultDataSourceFile,
 } from "../models/dataSource";
 import { scratchpadVariableInput } from "../models/items/server";
+import { UDARequestBody } from "../models/uda";
 import { DataSourcesPanel } from "../panels/datasource";
+import { ConnectionManagementService } from "../services/connectionManagerService";
+import {
+  kdbOutputLog,
+  noSelectedConnectionAction,
+  offerConnectAction,
+} from "../utils/core";
 import {
   checkIfTimeParamIsCorrect,
   convertTimeToTimestamp,
@@ -35,23 +50,9 @@ import {
   handleWSError,
   handleWSResults,
 } from "../utils/queryUtils";
-import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
-import {
-  writeQueryResultsToConsole,
-  writeQueryResultsToView,
-} from "./serverCommand";
 import { Telemetry } from "../utils/telemetryClient";
-import { LocalConnection } from "../classes/localConnection";
-import { ConnectionManagementService } from "../services/connectionManagerService";
-import { InsightsConnection } from "../classes/insightsConnection";
-import {
-  kdbOutputLog,
-  noSelectedConnectionAction,
-  offerConnectAction,
-} from "../utils/core";
-import { ServerType } from "../models/connectionsModels";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
-import { UDARequestBody } from "../models/uda";
+import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();

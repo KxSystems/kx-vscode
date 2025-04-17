@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { isDeepStrictEqual } from "util";
 import {
   ColorThemeKind,
   CustomTextEditorProvider,
@@ -26,8 +27,13 @@ import {
   window,
   workspace,
 } from "vscode";
-import { getUri } from "../utils/getUri";
-import { getNonce } from "../utils/getNonce";
+
+import { ConnectionManagementService } from "./connectionManagerService";
+import { InsightsConnection } from "../classes/insightsConnection";
+import {
+  populateScratchpad,
+  runDataSource,
+} from "../commands/dataSourceCommand";
 import {
   getConnectionForServer,
   getInsightsServers,
@@ -35,16 +41,11 @@ import {
   setServerForUri,
 } from "../commands/workspaceCommand";
 import { DataSourceCommand, DataSourceMessage2 } from "../models/messages";
-import { isDeepStrictEqual } from "util";
-import {
-  populateScratchpad,
-  runDataSource,
-} from "../commands/dataSourceCommand";
-import { InsightsConnection } from "../classes/insightsConnection";
 import { MetaObjectPayload } from "../models/meta";
-import { ConnectionManagementService } from "./connectionManagerService";
-import { kdbOutputLog, offerConnectAction } from "../utils/core";
 import { UDA } from "../models/uda";
+import { kdbOutputLog, offerConnectAction } from "../utils/core";
+import { getNonce } from "../utils/getNonce";
+import { getUri } from "../utils/getUri";
 import { parseUDAList } from "../utils/uda";
 
 export class DataSourceEditorProvider implements CustomTextEditorProvider {

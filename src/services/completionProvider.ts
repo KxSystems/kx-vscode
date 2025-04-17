@@ -18,6 +18,7 @@ import {
   CompletionList,
   ProviderResult,
 } from "vscode";
+
 import { ext } from "../extensionVariables";
 import { KdbNode } from "./kdbTreeProvider";
 

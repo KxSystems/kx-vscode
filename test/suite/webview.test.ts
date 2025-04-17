@@ -15,15 +15,11 @@
 
 import "../fixtures";
 import * as assert from "assert";
+import { html, TemplateResult } from "lit";
 import * as sinon from "sinon";
-import { KdbDataSourceView } from "../../src/webview/components/kdbDataSourceView";
-import { KdbNewConnectionView } from "../../src/webview/components/kdbNewConnectionView";
 
-import {
-  DataSourceCommand,
-  DataSourceMessage2,
-  EditConnectionMessage,
-} from "../../src/models/messages";
+import { ext } from "../../src/extensionVariables";
+import { InsightDetails, ServerType } from "../../src/models/connectionsModels";
 import {
   DataSourceTypes,
   createAgg,
@@ -32,12 +28,16 @@ import {
   createLabel,
   createSort,
 } from "../../src/models/dataSource";
+import {
+  DataSourceCommand,
+  DataSourceMessage2,
+  EditConnectionMessage,
+} from "../../src/models/messages";
 import { MetaObjectPayload } from "../../src/models/meta";
-import { html, TemplateResult } from "lit";
-import { ext } from "../../src/extensionVariables";
-import { InsightDetails, ServerType } from "../../src/models/connectionsModels";
-import { KdbChartView } from "../../src/webview/components/kdbChartView";
 import { ParamFieldType, UDA, UDAParam } from "../../src/models/uda";
+import { KdbChartView } from "../../src/webview/components/kdbChartView";
+import { KdbDataSourceView } from "../../src/webview/components/kdbDataSourceView";
+import { KdbNewConnectionView } from "../../src/webview/components/kdbNewConnectionView";
 
 describe("KdbDataSourceView", () => {
   let view: KdbDataSourceView;

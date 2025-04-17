@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { GridOptions } from "ag-grid-community";
 import {
   ColorThemeKind,
   Uri,
@@ -19,14 +20,14 @@ import {
   window,
   workspace,
 } from "vscode";
+
 import { ext } from "../extensionVariables";
+import { StructuredTextResults } from "../models/queryResult";
+import { compareVersions, kdbOutputLog } from "../utils/core";
+import { decodeQUTF } from "../utils/decode";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
-import { compareVersions, kdbOutputLog } from "../utils/core";
-import { StructuredTextResults } from "../models/queryResult";
-import { GridOptions } from "ag-grid-community";
-import { decodeQUTF } from "../utils/decode";
 
 export class KdbResultsViewProvider implements WebviewViewProvider {
   public static readonly viewType = "kdb-results";

@@ -13,6 +13,7 @@
 
 import axios from "axios";
 import assert from "node:assert";
+import Path from "path";
 import sinon from "sinon";
 import {
   ExtensionContext,
@@ -24,8 +25,26 @@ import {
   window,
   workspace,
 } from "vscode";
+
+import { InsightsConnection } from "../../src/classes/insightsConnection";
+import { LocalConnection } from "../../src/classes/localConnection";
+import * as serverCommand from "../../src/commands/serverCommand";
 import { ext } from "../../src/extensionVariables";
+import { InsightsApiConfig } from "../../src/models/config";
+import {
+  Insights,
+  Server,
+  ServerType,
+} from "../../src/models/connectionsModels";
+import { createDefaultDataSourceFile } from "../../src/models/dataSource";
+import { ConnectionLabel, Labels } from "../../src/models/labels";
+import { MetaInfoType, MetaObject } from "../../src/models/meta";
 import { QueryHistory } from "../../src/models/queryHistory";
+import { ServerObject } from "../../src/models/serverObject";
+import { ChartEditorProvider } from "../../src/services/chartEditorProvider";
+import { CompletionProvider } from "../../src/services/completionProvider";
+import { ConnectionManagementService } from "../../src/services/connectionManagerService";
+import { DataSourceEditorProvider } from "../../src/services/dataSourceEditorProvider";
 import {
   getCurrentToken,
   refreshToken,
@@ -43,35 +62,17 @@ import {
   QNamespaceNode,
   QServerNode,
 } from "../../src/services/kdbTreeProvider";
+import { KdbTreeService } from "../../src/services/kdbTreeService";
+import { MetaContentProvider } from "../../src/services/metaContentProvider";
 import {
   QueryHistoryProvider,
   QueryHistoryTreeItem,
 } from "../../src/services/queryHistoryProvider";
-import { createDefaultDataSourceFile } from "../../src/models/dataSource";
-import { ConnectionManagementService } from "../../src/services/connectionManagerService";
-import { LocalConnection } from "../../src/classes/localConnection";
-import { Telemetry } from "../../src/utils/telemetryClient";
-import { InsightsConnection } from "../../src/classes/insightsConnection";
-import { DataSourceEditorProvider } from "../../src/services/dataSourceEditorProvider";
 import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider";
-import Path from "path";
-import * as utils from "../../src/utils/getUri";
-import { MetaInfoType, MetaObject } from "../../src/models/meta";
-import { CompletionProvider } from "../../src/services/completionProvider";
-import { MetaContentProvider } from "../../src/services/metaContentProvider";
-import { ConnectionLabel, Labels } from "../../src/models/labels";
-import {
-  Insights,
-  Server,
-  ServerType,
-} from "../../src/models/connectionsModels";
-import AuthSettings from "../../src/utils/secretStorage";
 import * as coreUtils from "../../src/utils/core";
-import { KdbTreeService } from "../../src/services/kdbTreeService";
-import * as serverCommand from "../../src/commands/serverCommand";
-import { ServerObject } from "../../src/models/serverObject";
-import { ChartEditorProvider } from "../../src/services/chartEditorProvider";
-import { InsightsApiConfig } from "../../src/models/config";
+import * as utils from "../../src/utils/getUri";
+import AuthSettings from "../../src/utils/secretStorage";
+import { Telemetry } from "../../src/utils/telemetryClient";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");

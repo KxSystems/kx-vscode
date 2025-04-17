@@ -27,7 +27,9 @@ import {
   window,
   workspace,
 } from "vscode";
+
 import { ext } from "../extensionVariables";
+import { Server } from "../models/connectionsModels";
 import {
   licenseAquire,
   licenseFileInput,
@@ -63,7 +65,6 @@ import { executeCommand } from "../utils/cpUtils";
 import { openUrl } from "../utils/openUrl";
 import { Telemetry } from "../utils/telemetryClient";
 import { validateServerPort } from "../validators/kdbValidator";
-import { Server } from "../models/connectionsModels";
 
 export async function installTools(): Promise<void> {
   let file: Uri[] | undefined;

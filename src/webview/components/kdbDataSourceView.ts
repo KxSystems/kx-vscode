@@ -12,9 +12,11 @@
  */
 
 import { LitElement, html } from "lit";
-import { repeat } from "lit/directives/repeat.js";
-import { live } from "lit/directives/live.js";
 import { customElement } from "lit/decorators.js";
+import { live } from "lit/directives/live.js";
+import { repeat } from "lit/directives/repeat.js";
+
+import { dataSourceStyles, kdbStyles, shoelaceStyles } from "./styles";
 import {
   Agg,
   DataSourceFiles,
@@ -31,9 +33,8 @@ import {
   createSort,
   filterOperators,
 } from "../../models/dataSource";
-import { MetaObjectPayload } from "../../models/meta";
 import { DataSourceCommand, DataSourceMessage2 } from "../../models/messages";
-import { dataSourceStyles, kdbStyles, shoelaceStyles } from "./styles";
+import { MetaObjectPayload } from "../../models/meta";
 import { ParamFieldType, UDA, UDAParam } from "../../models/uda";
 
 const MAX_RULES = 32;

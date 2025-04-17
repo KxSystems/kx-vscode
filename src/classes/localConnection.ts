@@ -13,11 +13,12 @@
 
 import * as nodeq from "node-q";
 import { commands, window } from "vscode";
+
 import { ext } from "../extensionVariables";
+import { QueryResult, QueryResultType } from "../models/queryResult";
 import { delay, kdbOutputLog } from "../utils/core";
 import { convertStringToArray, handleQueryResults } from "../utils/execution";
 import { queryWrapper } from "../utils/queryUtils";
-import { QueryResult, QueryResultType } from "../models/queryResult";
 
 export class LocalConnection {
   public connected: boolean;

@@ -14,16 +14,17 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
-import { kdbStyles, newConnectionStyles, shoelaceStyles } from "./styles";
-import { EditConnectionMessage } from "../../models/messages";
 import { repeat } from "lit/directives/repeat.js";
-import { LabelColors, Labels } from "../../models/labels";
+
+import { kdbStyles, newConnectionStyles, shoelaceStyles } from "./styles";
 import {
   ConnectionType,
   InsightDetails,
   ServerDetails,
   ServerType,
 } from "../../models/connectionsModels";
+import { LabelColors, Labels } from "../../models/labels";
+import { EditConnectionMessage } from "../../models/messages";
 
 @customElement("kdb-new-connection-view")
 export class KdbNewConnectionView extends LitElement {

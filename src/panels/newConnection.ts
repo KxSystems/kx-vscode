@@ -12,13 +12,14 @@
  */
 
 import * as vscode from "vscode";
-import { getUri } from "../utils/getUri";
-import { getNonce } from "../utils/getNonce";
+
 import { ext } from "../extensionVariables";
-import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
-import { EditConnectionMessage } from "../models/messages";
-import { retrieveConnLabelsNames } from "../utils/connLabel";
 import { ConnectionType } from "../models/connectionsModels";
+import { EditConnectionMessage } from "../models/messages";
+import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
+import { retrieveConnLabelsNames } from "../utils/connLabel";
+import { getNonce } from "../utils/getNonce";
+import { getUri } from "../utils/getUri";
 
 export class NewConnectionPannel {
   public static currentPanel: NewConnectionPannel | undefined;

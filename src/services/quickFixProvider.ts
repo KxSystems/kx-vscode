@@ -22,6 +22,7 @@ import {
   TextDocument,
   WorkspaceEdit,
 } from "vscode";
+
 import { ext } from "../extensionVariables";
 
 export class QuickFixProvider implements CodeActionProvider {

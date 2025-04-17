@@ -17,6 +17,7 @@ import {
   QuickPickOptions,
   window,
 } from "vscode";
+
 import { CancellationEvent } from "../models/cancellationEvent";
 
 export async function showInputBox(options: InputBoxOptions): Promise<string> {

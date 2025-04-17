@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import Path from "path";
 import {
   Command,
   EventEmitter,
@@ -21,10 +22,10 @@ import {
   Uri,
   workspace,
 } from "vscode";
-import Path from "path";
-import { getWorkspaceIconsState } from "../utils/core";
+
 import { getConnectionForUri } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
+import { getWorkspaceIconsState } from "../utils/core";
 
 export class WorkspaceTreeProvider implements TreeDataProvider<FileTreeItem> {
   private _onDidChangeTreeData = new EventEmitter<void>();

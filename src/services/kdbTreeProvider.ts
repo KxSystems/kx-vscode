@@ -21,16 +21,18 @@ import {
   TreeItemCollapsibleState,
   commands,
 } from "vscode";
+
 import { ext } from "../extensionVariables";
-import {
-  getInsightsAlias,
-  getServerAlias,
-  getServerIconState,
-  getServerName,
-  getStatus,
-} from "../utils/core";
 import { ConnectionManagementService } from "./connectionManagerService";
+import { KdbTreeService } from "./kdbTreeService";
 import { InsightsConnection } from "../classes/insightsConnection";
+import {
+  InsightDetails,
+  Insights,
+  Server,
+  ServerDetails,
+} from "../models/connectionsModels";
+import { Labels } from "../models/labels";
 import {
   getWorkspaceLabels,
   getWorkspaceLabelsConnMap,
@@ -38,14 +40,13 @@ import {
   isLabelEmpty,
   retrieveConnLabelsNames,
 } from "../utils/connLabel";
-import { Labels } from "../models/labels";
 import {
-  InsightDetails,
-  Insights,
-  Server,
-  ServerDetails,
-} from "../models/connectionsModels";
-import { KdbTreeService } from "./kdbTreeService";
+  getInsightsAlias,
+  getServerAlias,
+  getServerIconState,
+  getServerName,
+  getStatus,
+} from "../utils/core";
 
 export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: EventEmitter<

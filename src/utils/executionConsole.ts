@@ -12,6 +12,7 @@
  */
 
 import { OutputChannel, commands, window } from "vscode";
+
 import { ext } from "../extensionVariables";
 import {
   getHideDetailedConsoleQueryOutput,

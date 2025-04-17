@@ -13,6 +13,7 @@
 
 import * as assert from "assert";
 import * as sinon from "sinon";
+
 import { LocalConnection } from "../../src/classes/localConnection";
 
 describe("LocalConnection", () => {

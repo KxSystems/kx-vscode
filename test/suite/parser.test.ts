@@ -12,8 +12,9 @@
  */
 
 import * as assert from "assert";
-import { generateTextMateGrammar, parse } from "../../server/src/parser";
+
 import { lint } from "../../server/src/linter";
+import { generateTextMateGrammar, parse } from "../../server/src/parser";
 
 describe("QParser", () => {
   describe("language", () => {

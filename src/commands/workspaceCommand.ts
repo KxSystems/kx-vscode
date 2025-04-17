@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import Path from "path";
 import {
   CodeLens,
   CodeLensProvider,
@@ -26,14 +27,14 @@ import {
   window,
   workspace,
 } from "vscode";
+
 import { ext } from "../extensionVariables";
-import { ConnectionManagementService } from "../services/connectionManagerService";
-import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { resetScratchpad, runQuery } from "./serverCommand";
 import { ExecutionTypes } from "../models/execution";
-import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
+import { ConnectionManagementService } from "../services/connectionManagerService";
+import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { kdbOutputLog, offerConnectAction } from "../utils/core";
-import Path from "path";
+import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
 
 const connectionService = new ConnectionManagementService();
 

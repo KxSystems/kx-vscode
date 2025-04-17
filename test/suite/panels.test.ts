@@ -14,17 +14,18 @@
 import assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { TreeItemCollapsibleState } from "vscode";
+
+import { InsightsConnection } from "../../src/classes/insightsConnection";
 import { ext } from "../../src/extensionVariables";
 import { createDefaultDataSourceFile } from "../../src/models/dataSource";
-import { DataSourcesPanel } from "../../src/panels/datasource";
-import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
-import * as utils from "../../src/utils/execution";
-import * as coreUtils from "../../src/utils/core";
-import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
-import { TreeItemCollapsibleState } from "vscode";
-import { NewConnectionPannel } from "../../src/panels/newConnection";
-import { InsightsConnection } from "../../src/classes/insightsConnection";
 import { StructuredTextResults } from "../../src/models/queryResult";
+import { DataSourcesPanel } from "../../src/panels/datasource";
+import { NewConnectionPannel } from "../../src/panels/newConnection";
+import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
+import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
+import * as coreUtils from "../../src/utils/core";
+import * as utils from "../../src/utils/execution";
 
 describe("WebPanels", () => {
   describe("DataSourcesPanel", () => {

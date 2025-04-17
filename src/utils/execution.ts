@@ -14,9 +14,10 @@
 import { env } from "node:process";
 import path from "path";
 import { Uri, window, workspace } from "vscode";
+
 import { ext } from "../extensionVariables";
-import { QueryResultType } from "../models/queryResult";
 import { kdbOutputLog } from "./core";
+import { QueryResultType } from "../models/queryResult";
 
 interface tblHeader {
   label: string;

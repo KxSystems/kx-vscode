@@ -1029,6 +1029,7 @@
     "esbuild": "^0.25.1",
     "eslint": "^9.24.0",
     "eslint-plugin-header": "^3.1.1",
+    "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-license-header": "^0.8.0",
     "eslint-plugin-unused-imports": "^4.1.4",
     "glob": "^8.1.0",

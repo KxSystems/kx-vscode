@@ -11,10 +11,10 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { ServerObject } from "../models/serverObject";
-import { ext } from "../extensionVariables";
-import { loadServerObjects } from "../commands/serverCommand";
 import { LocalConnection } from "../classes/localConnection";
+import { loadServerObjects } from "../commands/serverCommand";
+import { ext } from "../extensionVariables";
+import { ServerObject } from "../models/serverObject";
 
 export class KdbTreeService {
   static async loadNamespaces(root?: string): Promise<ServerObject[]> {
