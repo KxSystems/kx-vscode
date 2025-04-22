@@ -218,7 +218,7 @@ If you close the extension, the connection also closes.
 
 #### Meta
 
-When connected **Insights** connections can be expanded to show the details returned by the [getMeta API](https://code.kx.com/draft/insights/api/database/query/get-meta.html) call, which provides information on the database schemas and all the analytics available.
+When connected **Insights** connections can be expanded to show the details returned by the [getMeta API](https://code.kx.com/insights/api/database/query/get-meta.html) call, which provides information on the database schemas and all the analytics available.
 
 ![Insights Meta Tree](https://github.com/KxSystems/kx-vscode/blob/main/img/insights-meta-tree.png?raw=true)
 
@@ -490,7 +490,92 @@ To create a data source and run it against a specific connection:
 
 In addition to [API queries](https://code.kx.com/insights/api/database/query/get-data.html), if the query environment is enabled on the deployed instance of **kdb Insights Enterprise**, qSQL and SQL queries can be used within a data source with the appropriate parameterization. If qSQL or SQL is required and issues occur trying to run these queries contact a kdb Insights Enterprise administrator for assistance.
 
-### Populate scratchpad
+### API queries
+
+The getData API provides a method of querying a table using a defined set of parameters. These parameters can be configured through the getData form available in the VSCode extension.
+
+Refer to the [`getData` API](https://code.kx.com/insights/api/database/query/get-data.html) documentation for more information and a full list of available parameters.
+
+### QSQL queries
+
+The `.com_kx_edi.qsql` API is a QSQL query builder that assembles QSQL queries based on a q expression. It is a developer tool that allows running freeform q code against a specific database tier. 
+
+This function runs an QSQL query.
+
+```
+.com_kx_edi.qsql[args]
+```
+
+**Note**: Along with the query itself, you must also specify the target database and tier.
+
+Refer to the [QSQL documentation](https://code.kx.com/insights/api/database/query/qsql.html) for more details.
+
+**Warning!** Starting with kdb Insights Enterprise version 1.13, QSQL queries and populating QSQL only work if the Query Environment (QE) is enabled. Ensure you have enabled QEs to use QSQL; they are disabled by default in kdb VS Code. Refer to [Query Environments](https://code.kx.com/insights/enterprise/configuration/base.html#query-environments) for more details.
+
+### SQL queries
+
+The `.com_kx_edi.sql` SQL API allows running freeform SQL queries. Each query is distributed across all available databases. The results are then aggregated and returned as a single dataset.
+
+This function runs an SQL query.
+
+```
+.com_kx_edi.sql[query]
+```
+
+Refer to the [SQL documentation](https://code.kx.com/insights/api/database/query/sql.html) for more details.
+
+### UDA queries
+
+User-Defined Analytics (UDAs), also known as custom APIs, are essential for developers to leverage the capabilities of kdb when using Insights Enterprise. These UDAs are deployed to Insights through the Data Access Processes (DAPs) and Aggregators (Aggs).
+
+UDAs can be called directly within the VSCode extension through the UDA tab in a data source. This provides a form-based approach to populating the UDA parameters. UDAs can also be called within the Insights Enterprise web interface using Pipelines, Queries, and Views.
+
+![Query UDAs in VSCode extension](https://github.com/KxSystems/kx-vscode/blob/main/img/udas-query.png?raw=true)
+
+When interacting with UDAs, parameter fields are shown for configuration. Note the following:
+
+- Required fields are marked with an asterisk (*).
+
+- Optional fields are not required but may be displayed in your results, even if they are empty.
+
+You can add new parameters by clicking **Add Parameter**. Both optional and distinguished parameters can be added as needed.
+
+![Add parameters to call UDAs](https://github.com/KxSystems/kx-vscode/blob/img/udas-add-parameters.png?raw=true)
+
+**Important!** A UDA cannot be queried if one or more parameters are invalid.
+
+If you attempt to run a UDA with invalid parameters, an error occurs and a pop-up message appears to alert you to the issue.
+
+![Error showing invalid parameters for UDA](https://github.com/KxSystems/kx-vscode/blob/img/udas-invalid-parameter.png?raw=true)
+
+![Pop-up message UDAs include invalid parameter](https://github.com/KxSystems/kx-vscode/blob/img/udas-error-pop-up.png?raw=true)
+
+In some cases, you can successfully query UDAs without any parameters, as seen in the screenshot below.
+
+![UDAs with no parameters](https://github.com/KxSystems/kx-vscode/blob/img/udas-no-parameters.png?raw=true)
+
+However, you can still modify the parameter list to add parameters by clicking **Add parameter** or deleting parameters using the recycle bin icon.
+
+![Delete UDA parameters](https://github.com/KxSystems/kx-vscode/blob/img/udas-delete-parameters.png?raw=true)
+
+For more information on User-Defined Analytics, refer to the [UDAs documentation](https://code.kx.com/insights/api/database/uda/uda-overview-introduction.html).
+
+### Run and populate scratchpad
+
+Running and populating scratchpad are two actions used to execute q code, allowing you to run queries and perform operations on your kdb Insights Enterprise database but they differ in how and where the output is stored and accessed.
+
+The [QSQL API](#qsql-queries) is designed to run queries against a specific Insights database and tier. However, sometimes you might need to run more flexible or freeform queries against a wider set of data. For this purpose each Insights Enterprise user is assigned a 'scratchpad' q process. This scratchpad is separate from the dedicated query processes, allowing you to run freeform code without impacting the overall system.
+
+You can populate variables in your scratchpad with the results from your queries, and then perform freeform manipulations on those variables.
+
+After you configure a data source in the VSCode extension you have two options for executing it:
+
+- **Run** executes your query directly against the relevant API (getData, QSQL, SQL, or UDA) and displays the results in the extension
+- **Populate Scratchpad** executes your query through the scratchpad, which passes it to the relevant API, assigns the results to a variable of your choosing in your scratchpad process and then displays them in the VSCode extension
+
+For more details on populating scratchpad, refer to the [populate scratchpad](#populate-scratchpad) section below.
+
+#### Populate scratchpad
 
 You can use a data source to populate a scratchpad process running in a **kdb Insights Enterprise** instance with a dataset. This allows you to then execute q or python code against the data stored in that variable in the scratchpad. This facilitates the generation of complex APIs and pipelines within VS Code and kdb Insights Enterprise.
 
