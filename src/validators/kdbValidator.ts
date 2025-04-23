@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -107,7 +107,5 @@ export function validateTls(input: string | undefined): string | undefined {
 }
 
 export function isAliasInUse(alias: string): boolean {
-  return !!ext.kdbConnectionAliasList.find(
-    (item) => item.toLowerCase() === alias.toLowerCase(),
-  );
+  return !!ext.kdbConnectionAliasList.find((item) => item === alias);
 }

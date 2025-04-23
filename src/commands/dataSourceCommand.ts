@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -14,7 +14,15 @@
 import * as fs from "fs";
 import path from "path";
 import { InputBoxOptions, window } from "vscode";
+
 import { ext } from "../extensionVariables";
+import {
+  writeQueryResultsToConsole,
+  writeQueryResultsToView,
+} from "./serverCommand";
+import { InsightsConnection } from "../classes/insightsConnection";
+import { LocalConnection } from "../classes/localConnection";
+import { ServerType } from "../models/connectionsModels";
 import { GetDataError, getDataBodyPayload } from "../models/data";
 import {
   DataSourceFiles,
@@ -22,7 +30,14 @@ import {
   createDefaultDataSourceFile,
 } from "../models/dataSource";
 import { scratchpadVariableInput } from "../models/items/server";
+import { UDARequestBody } from "../models/uda";
 import { DataSourcesPanel } from "../panels/datasource";
+import { ConnectionManagementService } from "../services/connectionManagerService";
+import {
+  kdbOutputLog,
+  noSelectedConnectionAction,
+  offerConnectAction,
+} from "../utils/core";
 import {
   checkIfTimeParamIsCorrect,
   convertTimeToTimestamp,
@@ -35,21 +50,9 @@ import {
   handleWSError,
   handleWSResults,
 } from "../utils/queryUtils";
-import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
-import {
-  writeQueryResultsToConsole,
-  writeQueryResultsToView,
-} from "./serverCommand";
 import { Telemetry } from "../utils/telemetryClient";
-import { LocalConnection } from "../classes/localConnection";
-import { ConnectionManagementService } from "../services/connectionManagerService";
-import { InsightsConnection } from "../classes/insightsConnection";
-import {
-  kdbOutputLog,
-  noSelectedConnectionAction,
-  offerConnectAction,
-} from "../utils/core";
-import { ServerType } from "../models/connectionsModels";
+import { retrieveUDAtoCreateReqBody } from "../utils/uda";
+import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -80,6 +83,23 @@ export async function populateScratchpad(
   dataSourceForm: DataSourceFiles,
   connLabel: string,
 ): Promise<void> {
+  const connMngService = new ConnectionManagementService();
+  const qenvEnabled =
+    (await connMngService.retrieveInsightsConnQEEnabled(connLabel)) ?? "";
+  if (
+    dataSourceForm.dataSource.selectedType === DataSourceTypes.QSQL &&
+    qenvEnabled === "disabled"
+  ) {
+    window.showErrorMessage(
+      "The query enviroment(s) are disabled for this connection",
+    );
+    kdbOutputLog(
+      `[DATASOURCE]  The query enviroment(s) are disabled for this connection`,
+      "ERROR",
+      true,
+    );
+    return;
+  }
   const scratchpadVariable: InputBoxOptions = {
     prompt: scratchpadVariableInput.prompt,
     placeHolder: scratchpadVariableInput.placeholder,
@@ -89,7 +109,6 @@ export async function populateScratchpad(
   /* istanbul ignore next */
   window.showInputBox(scratchpadVariable).then(async (outputVariable) => {
     if (outputVariable !== undefined && outputVariable !== "") {
-      const connMngService = new ConnectionManagementService();
       const selectedConnection =
         connMngService.retrieveConnectedConnection(connLabel);
 
@@ -159,7 +178,21 @@ export async function runDataSource(
         res = await runApiDataSource(fileContent, selectedConnection);
         break;
       case "QSQL":
+        if (selectedConnection.apiConfig?.queryEnvironmentsEnabled === false) {
+          window.showErrorMessage(
+            "The query enviroment(s) are disabled for this connection",
+          );
+          kdbOutputLog(
+            `[DATASOURCE]  The query enviroment(s) are disabled for this connection`,
+            "ERROR",
+            true,
+          );
+          return;
+        }
         res = await runQsqlDataSource(fileContent, selectedConnection);
+        break;
+      case "UDA":
+        res = await runUDADataSource(fileContent, selectedConnection);
         break;
       case "SQL":
       default:
@@ -179,9 +212,11 @@ export async function runDataSource(
         if (success) {
           const resultCount = typeof res === "string" ? "0" : res.rows.length;
           kdbOutputLog(`[DATASOURCE] Results: ${resultCount} rows`, "INFO");
+        } else if (!success) {
+          res = res.errorMsg ? res.errorMsg : res.error;
         }
         await writeQueryResultsToView(
-          success ? res : res.error,
+          res,
           query,
           connLabel,
           executorName,
@@ -194,9 +229,12 @@ export async function runDataSource(
             `[DATASOURCE] Results is a string with length: ${res.length}`,
             "INFO",
           );
+        } else if (res.error) {
+          res = res.errorMsg ? res.errorMsg : res.error;
         }
+
         await writeQueryResultsToConsole(
-          success ? res : res.error,
+          res,
           query,
           connLabel,
           executorName,
@@ -243,6 +281,8 @@ export function getSelectedType(fileContent: DataSourceFiles): string {
       return "QSQL";
     case DataSourceTypes.SQL:
       return "SQL";
+    case DataSourceTypes.UDA:
+      return "UDA";
     default:
       throw new Error(`Invalid selectedType: ${selectedType}`);
   }
@@ -263,8 +303,8 @@ export async function runApiDataSource(
     return;
   }
   const apiBody = getApiBody(fileContent);
-  const apiCall = await selectedConn.getDataInsights(
-    ext.insightsServiceGatewayUrls.data,
+  const apiCall = await selectedConn.getDatasourceQuery(
+    DataSourceTypes.API,
     JSON.stringify(apiBody),
   );
 
@@ -274,7 +314,7 @@ export async function runApiDataSource(
     const results = handleWSResults(apiCall.arrayBuffer);
     return handleScratchpadTableRes(results);
   } else {
-    return { error: "API call failed" };
+    return { error: "Datasource API call failed" };
   }
 }
 
@@ -374,8 +414,8 @@ export async function runQsqlDataSource(
     target: target,
     query: fileContent.dataSource.qsql.query,
   };
-  const qsqlCall = await selectedConn.getDataInsights(
-    ext.insightsServiceGatewayUrls.qsql,
+  const qsqlCall = await selectedConn.getDatasourceQuery(
+    DataSourceTypes.QSQL,
     JSON.stringify(qsqlBody),
   );
 
@@ -385,7 +425,7 @@ export async function runQsqlDataSource(
     const results = handleWSResults(qsqlCall.arrayBuffer);
     return handleScratchpadTableRes(results);
   } else {
-    return { error: "API call failed" };
+    return { error: "Datasource QSQL call failed" };
   }
 }
 
@@ -396,8 +436,8 @@ export async function runSqlDataSource(
   const sqlBody = {
     query: fileContent.dataSource.sql.query,
   };
-  const sqlCall = await selectedConn.getDataInsights(
-    ext.insightsServiceGatewayUrls.sql,
+  const sqlCall = await selectedConn.getDatasourceQuery(
+    DataSourceTypes.SQL,
     JSON.stringify(sqlBody),
   );
 
@@ -407,7 +447,42 @@ export async function runSqlDataSource(
     const results = handleWSResults(sqlCall.arrayBuffer);
     return handleScratchpadTableRes(results);
   } else {
-    return { error: "API call failed" };
+    return { error: "Datasource SQL call failed" };
+  }
+}
+
+export async function runUDADataSource(
+  fileContent: DataSourceFiles,
+  selectedConn: InsightsConnection,
+): Promise<any> {
+  const uda = fileContent.dataSource.uda;
+
+  const udaReqBody = await retrieveUDAtoCreateReqBody(uda, selectedConn);
+
+  if (udaReqBody.error) {
+    kdbOutputLog(`[DATASOURCE] Error: ${udaReqBody.error}`, "ERROR", true);
+    return udaReqBody;
+  }
+
+  return await executeUDARequest(selectedConn, udaReqBody);
+}
+
+export async function executeUDARequest(
+  selectedConn: InsightsConnection,
+  udaReqBody: UDARequestBody,
+): Promise<any> {
+  const udaCall = await selectedConn.getDatasourceQuery(
+    DataSourceTypes.UDA,
+    udaReqBody,
+  );
+
+  if (udaCall?.error) {
+    return parseError(udaCall.error);
+  } else if (udaCall?.arrayBuffer) {
+    const results = handleWSResults(udaCall.arrayBuffer);
+    return handleScratchpadTableRes(results);
+  } else {
+    return { error: "UDA call failed" };
   }
 }
 
@@ -420,6 +495,8 @@ export function getQuery(
       return `GetData - table: ${fileContent.dataSource.api.table}`;
     case "QSQL":
       return fileContent.dataSource.qsql.query;
+    case "UDA":
+      return `Executed UDA: ${fileContent.dataSource.uda?.name}`;
     case "SQL":
     default:
       return fileContent.dataSource.sql.query;

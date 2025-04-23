@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -20,9 +20,17 @@ import {
   TextEditor,
 } from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
+
+import { InsightsConnection } from "./classes/insightsConnection";
+import { LocalConnection } from "./classes/localConnection";
+import { kdbAuthMap } from "./models/connectionsModels";
+import { CustomAuth } from "./models/customAuth";
+import { DataSourceFiles } from "./models/dataSource";
+import { ConnectionLabel, LabelColors, Labels } from "./models/labels";
 import { LocalProcess } from "./models/localProcess";
 import { MetaObjectPayload } from "./models/meta";
 import { QueryHistory } from "./models/queryHistory";
+import { ScratchpadFile } from "./models/scratchpad";
 import { ServerObject } from "./models/serverObject";
 import {
   InsightsNode,
@@ -31,14 +39,8 @@ import {
 } from "./services/kdbTreeProvider";
 import { QueryHistoryProvider } from "./services/queryHistoryProvider";
 import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
-import AuthSettings from "./utils/secretStorage";
 import { WorkspaceTreeProvider } from "./services/workspaceTreeProvider";
-import { ScratchpadFile } from "./models/scratchpad";
-import { LocalConnection } from "./classes/localConnection";
-import { InsightsConnection } from "./classes/insightsConnection";
-import { DataSourceFiles } from "./models/dataSource";
-import { ConnectionLabel, LabelColors, Labels } from "./models/labels";
-import { kdbAuthMap } from "./models/connectionsModels";
+import AuthSettings from "./utils/secretStorage";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
@@ -92,6 +94,16 @@ export namespace ext {
   export const labelConnMapList: ConnectionLabel[] = [];
   export const latestLblsChanged: string[] = [];
   export const maxRetryCount = 5;
+  // list of valid data types
+  export const booleanTypes = new Set([-1]);
+  export const numberTypes = new Set([-4, -5, -6, -7, -8, -9]);
+  export const textTypes = new Set([
+    -2, -10, -11, -13, -14, -15, -16, -17, -18, -19, 10,
+  ]);
+  export const timestampTypes = new Set([-12]);
+  export const jsonTypes = new Set([
+    0, 1, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 77, 98, 99,
+  ]);
 
   export let secretSettings: AuthSettings;
 
@@ -142,13 +154,7 @@ export namespace ext {
     tokenURL: "auth/realms/insights/protocol/openid-connect/token",
     scratchpadURL: "servicebroker/scratchpad/display",
     configURL: "kxicontroller/config",
-  };
-
-  export const insightsScratchpadUrls = {
-    import: "servicebroker/scratchpad/import/data",
-    importSql: "servicebroker/scratchpad/import/sql",
-    importQsql: "servicebroker/scratchpad/import/qsql",
-    reset: "servicebroker/scratchpad/reset",
+    apiConfigUrl: "api/config",
   };
 
   export const insightsServiceGatewayUrls = {
@@ -236,6 +242,99 @@ export namespace ext {
       "t",
       "s",
     ],
+    allowedEmptyRequiredTypes: [10, -11],
+    dataTypes: new Map(
+      Object.entries({
+        "-1": "Boolean",
+        "-2": "GUID",
+        "-4": "Byte",
+        "-5": "Short",
+        "-6": "Int",
+        "-7": "Long",
+        "-8": "Float",
+        "-9": "Double",
+        "-10": "Char",
+        "-11": "Symbol",
+        "-12": "Timestamp",
+        "-13": "Month",
+        "-14": "Date",
+        "-15": "DateTime",
+        "-16": "Timespan",
+        "-17": "Minute",
+        "-18": "Second",
+        "-19": "Time",
+        "0": "List",
+        "1": "Boolean List",
+        "2": "GUID List",
+        "4": "Byte List",
+        "5": "Short List",
+        "6": "Int List",
+        "7": "Long List",
+        "8": "Float List",
+        "9": "Double List",
+        "10": "String",
+        "11": "Symbol List",
+        "12": "Timestamp List",
+        "13": "Month List",
+        "14": "Date List",
+        "15": "DateTime List",
+        "16": "Timespan List",
+        "17": "Minute List",
+        "18": "Second List",
+        "19": "Time List",
+        "77": "Any Map",
+        "98": "Table",
+        "99": "Dictionary",
+        "100": "Lambda",
+        "101": "Unary",
+      }),
+    ),
+    reverseDataTypes: new Map(
+      Object.entries({
+        Boolean: -1,
+        GUID: -2,
+        Byte: -4,
+        Short: -5,
+        Int: -6,
+        Long: -7,
+        Float: -8,
+        Double: -9,
+        Char: -10,
+        Symbol: -11,
+        Timestamp: -12,
+        Month: -13,
+        Date: -14,
+        DateTime: -15,
+        Timespan: -16,
+        Minute: -17,
+        Second: -18,
+        Time: -19,
+        List: 0,
+        "Boolean List": 1,
+        "GUID List": 2,
+        "Byte List": 4,
+        "Short List": 5,
+        "Int List": 6,
+        "Long List": 7,
+        "Float List": 8,
+        "Double List": 9,
+        String: 10,
+        "Symbol List": 11,
+        "Timestamp List": 12,
+        "Month List": 13,
+        "Date List": 14,
+        "DateTime List": 15,
+        "Timespan List": 16,
+        "Minute List": 17,
+        "Second List": 18,
+        "Time List": 19,
+        "Any Map": 77,
+        Table: 98,
+        Dictionary: 99,
+        Lambda: 100,
+        Unary: 101,
+      }),
+    ),
     listSeparator: [
       ";",
       "",
@@ -303,7 +402,6 @@ export namespace ext {
       "",
     ],
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     base: new Date(2000, 0) as any,
     days: 1000 * 60 * 60 * 24,
     hours: 1000 * 60 * 60,
@@ -344,4 +442,6 @@ export namespace ext {
       colorHex: "#15A7CD",
     },
   ];
+  // eslint-disable-next-line prefer-const
+  export let customAuth: CustomAuth | null = null;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -12,8 +12,9 @@
  */
 
 import { ChildProcess } from "node:child_process";
-import { ICommandResult, tryExecuteCommand } from "./cpUtils";
+
 import { kdbOutputLog } from "./core";
+import { ICommandResult, tryExecuteCommand } from "./cpUtils";
 
 const isWin = process.platform === "win32";
 

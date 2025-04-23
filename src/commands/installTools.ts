@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -27,7 +27,9 @@ import {
   window,
   workspace,
 } from "vscode";
+
 import { ext } from "../extensionVariables";
+import { Server } from "../models/connectionsModels";
 import {
   licenseAquire,
   licenseFileInput,
@@ -63,7 +65,6 @@ import { executeCommand } from "../utils/cpUtils";
 import { openUrl } from "../utils/openUrl";
 import { Telemetry } from "../utils/telemetryClient";
 import { validateServerPort } from "../validators/kdbValidator";
-import { Server } from "../models/connectionsModels";
 
 export async function installTools(): Promise<void> {
   let file: Uri[] | undefined;
@@ -317,7 +318,7 @@ export async function startLocalProcessByServerName(
       port.toString(),
       index,
     );
-  } catch (e) {
+  } catch {
     await removeLocalConnectionStatus(serverName);
     window.showErrorMessage("Error starting q process.");
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -13,6 +13,7 @@
 
 import axios from "axios";
 import assert from "node:assert";
+import Path from "path";
 import sinon from "sinon";
 import {
   ExtensionContext,
@@ -24,8 +25,26 @@ import {
   window,
   workspace,
 } from "vscode";
+
+import { InsightsConnection } from "../../src/classes/insightsConnection";
+import { LocalConnection } from "../../src/classes/localConnection";
+import * as serverCommand from "../../src/commands/serverCommand";
 import { ext } from "../../src/extensionVariables";
+import { InsightsApiConfig } from "../../src/models/config";
+import {
+  Insights,
+  Server,
+  ServerType,
+} from "../../src/models/connectionsModels";
+import { createDefaultDataSourceFile } from "../../src/models/dataSource";
+import { ConnectionLabel, Labels } from "../../src/models/labels";
+import { MetaInfoType, MetaObject } from "../../src/models/meta";
 import { QueryHistory } from "../../src/models/queryHistory";
+import { ServerObject } from "../../src/models/serverObject";
+import { ChartEditorProvider } from "../../src/services/chartEditorProvider";
+import { CompletionProvider } from "../../src/services/completionProvider";
+import { ConnectionManagementService } from "../../src/services/connectionManagerService";
+import { DataSourceEditorProvider } from "../../src/services/dataSourceEditorProvider";
 import {
   getCurrentToken,
   refreshToken,
@@ -43,36 +62,19 @@ import {
   QNamespaceNode,
   QServerNode,
 } from "../../src/services/kdbTreeProvider";
+import { KdbTreeService } from "../../src/services/kdbTreeService";
+import { MetaContentProvider } from "../../src/services/metaContentProvider";
 import {
   QueryHistoryProvider,
   QueryHistoryTreeItem,
 } from "../../src/services/queryHistoryProvider";
-import { createDefaultDataSourceFile } from "../../src/models/dataSource";
-import { ConnectionManagementService } from "../../src/services/connectionManagerService";
-import { LocalConnection } from "../../src/classes/localConnection";
-import { Telemetry } from "../../src/utils/telemetryClient";
-import { InsightsConnection } from "../../src/classes/insightsConnection";
-import { DataSourceEditorProvider } from "../../src/services/dataSourceEditorProvider";
 import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider";
-import Path from "path";
-import * as utils from "../../src/utils/getUri";
-import { MetaInfoType, MetaObject } from "../../src/models/meta";
-import { CompletionProvider } from "../../src/services/completionProvider";
-import { MetaContentProvider } from "../../src/services/metaContentProvider";
-import { ConnectionLabel, Labels } from "../../src/models/labels";
-import {
-  Insights,
-  Server,
-  ServerType,
-} from "../../src/models/connectionsModels";
-import AuthSettings from "../../src/utils/secretStorage";
 import * as coreUtils from "../../src/utils/core";
-import { KdbTreeService } from "../../src/services/kdbTreeService";
-import * as serverCommand from "../../src/commands/serverCommand";
-import { ServerObject } from "../../src/models/serverObject";
-import { ChartEditorProvider } from "../../src/services/chartEditorProvider";
+import * as utils from "../../src/utils/getUri";
+import AuthSettings from "../../src/utils/secretStorage";
+import { Telemetry } from "../../src/utils/telemetryClient";
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");
 
 const dummyMeta: MetaObject = {
@@ -137,6 +139,9 @@ describe("kdbTreeProvider", () => {
   let insights: Insights;
   let kdbNode: KdbNode;
   let insightNode: InsightsNode;
+  const connMng = new ConnectionManagementService();
+  let retrieveInsightsConnVersionStub,
+    retrieveInsightsConnQEEnabledStub: sinon.SinonStub;
 
   beforeEach(() => {
     servers = {
@@ -168,6 +173,18 @@ describe("kdbTreeProvider", () => {
       insights["testInsight"],
       TreeItemCollapsibleState.None,
     );
+    retrieveInsightsConnVersionStub = sinon.stub(
+      connMng,
+      "retrieveInsightsConnVersion",
+    );
+    retrieveInsightsConnQEEnabledStub = sinon.stub(
+      connMng,
+      "retrieveInsightsConnQEEnabled",
+    );
+  });
+
+  afterEach(() => {
+    sinon.restore();
   });
 
   it("Validate creation of KDB provider", () => {
@@ -249,6 +266,8 @@ describe("kdbTreeProvider", () => {
   });
 
   it("Should return children for the tree when serverList has entries", async () => {
+    retrieveInsightsConnVersionStub.returned(1);
+    retrieveInsightsConnQEEnabledStub.returned("Enabled");
     const kdbProvider = new KdbTreeProvider(servers, insights);
     const result = await kdbProvider.getChildren();
     assert.strictEqual(result.length, 2, "Children count should be 2");
@@ -420,26 +439,13 @@ describe("kdbTreeProvider", () => {
   it("Should add node to no tls list", () => {
     ext.kdbNodesWithoutTls.length = 0;
     ext.kdbNodesWithoutTls.push("testServer [testServerAlias]");
-    const kdbNode = new KdbNode(
-      [],
-      "testServer",
-      {
-        serverName: "testServername",
-        serverAlias: "testServerAlias",
-        serverPort: "5001",
-        managed: false,
-        auth: false,
-        tls: false,
-      },
-      TreeItemCollapsibleState.None,
-    );
     assert.equal(ext.kdbNodesWithoutTls.length, 1);
   });
 
   it("Should remove node from no tls list", () => {
     ext.kdbNodesWithoutTls.length = 0;
     ext.kdbNodesWithoutTls.push("testServer [testServerAlias]");
-    const kdbNode = new KdbNode(
+    new KdbNode(
       [],
       "testServer",
       {
@@ -458,7 +464,7 @@ describe("kdbTreeProvider", () => {
   it("Should add node to no auth list", () => {
     ext.kdbNodesWithoutAuth.length = 0;
     ext.kdbNodesWithoutAuth.push("testServer [testServerAlias]");
-    const kdbNode = new KdbNode(
+    new KdbNode(
       [],
       "testServer",
       {
@@ -477,7 +483,7 @@ describe("kdbTreeProvider", () => {
   it("Should remove node from no auth list", () => {
     ext.kdbNodesWithoutAuth.length = 0;
     ext.kdbNodesWithoutAuth.push("testServer [testServerAlias]");
-    const kdbNode = new KdbNode(
+    new KdbNode(
       [],
       "testServer",
       {
@@ -999,7 +1005,6 @@ describe("queryHistoryProvider", () => {
         TreeItemCollapsibleState.None,
       );
       const result = queryHistoryTreeItem.defineQueryIcon(true);
-      console.log(JSON.stringify(queryHistoryTreeItem));
       assert.strictEqual(
         result,
         sucessIcon,
@@ -1042,7 +1047,7 @@ describe("connectionManagerService", () => {
   );
   ext.serverProvider = new KdbTreeProvider(servers, insights);
 
-  const localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
+  const localConn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
 
   const insightsConn = new InsightsConnection(insightNode.label, insightNode);
   describe("retrieveConnection", () => {
@@ -1305,7 +1310,11 @@ describe("connectionManagerService", () => {
     });
 
     it("disconnectBehaviour", () => {
-      const testConnection = new LocalConnection("localhost:5001", "server1");
+      const testConnection = new LocalConnection(
+        "localhost:5001",
+        "server1",
+        [],
+      );
       ext.connectedConnectionList.push(testConnection);
       ext.activeConnection = testConnection;
 
@@ -1336,18 +1345,23 @@ describe("connectionManagerService", () => {
 
   describe("resetScratchpad", () => {
     let connMngService: ConnectionManagementService;
+    let retrieveConnectedConnectionStub: sinon.SinonStub;
     let resetScratchpadStub: sinon.SinonStub;
     let kdbOutputLogStub: sinon.SinonStub;
     let showInformationMessageStub: sinon.SinonStub;
-    let showErrorMessageStub: sinon.SinonStub;
+    let _showErrorMessageStub: sinon.SinonStub;
 
     beforeEach(() => {
       connMngService = new ConnectionManagementService();
       ext.activeConnection = insightsConn;
-      resetScratchpadStub = sinon.stub(ext.activeConnection, "resetScratchpad");
+      resetScratchpadStub = sinon.stub(insightsConn, "resetScratchpad");
+      retrieveConnectedConnectionStub = sinon.stub(
+        connMngService,
+        "retrieveConnectedConnection",
+      );
       kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
       showInformationMessageStub = sinon.stub(window, "showInformationMessage");
-      showErrorMessageStub = sinon.stub(window, "showErrorMessage");
+      _showErrorMessageStub = sinon.stub(window, "showErrorMessage");
     });
 
     afterEach(() => {
@@ -1376,10 +1390,40 @@ describe("connectionManagerService", () => {
 
     it("should reset the scratchpad if the active connection is an InsightsConnection", async () => {
       ext.activeConnection = insightsConn;
-      ext.activeConnection.insightsVersion = 1.12;
+      ext.activeConnection.insightsVersion = 1.13;
       showInformationMessageStub.resolves("Yes");
       await connMngService.resetScratchpad();
       sinon.assert.calledOnce(resetScratchpadStub);
+    });
+
+    it("should retrieve insights connection and procced with resetScratchpad", async () => {
+      insightsConn.insightsVersion = 1.13;
+      retrieveConnectedConnectionStub.returns(insightsConn);
+      showInformationMessageStub.resolves("Yes");
+      await connMngService.resetScratchpad("test");
+      sinon.assert.calledOnce(retrieveConnectedConnectionStub);
+    });
+
+    it("should retrieve insights connection and procced with resetScratchpad", async () => {
+      insightsConn.insightsVersion = 1.13;
+      retrieveConnectedConnectionStub.returns(insightsConn);
+      showInformationMessageStub.resolves("No");
+      await connMngService.resetScratchpad("test");
+      sinon.assert.calledWith(
+        kdbOutputLogStub,
+        "[RESET SCRATCHPAD] The user canceled the scratchpad reset.",
+        "INFO",
+      );
+    });
+
+    it("should retrieve kdb connection not proceed", async () => {
+      retrieveConnectedConnectionStub.returns(localConn);
+      await connMngService.resetScratchpad("test");
+      sinon.assert.calledWith(
+        kdbOutputLogStub,
+        "[RESET SCRATCHPAD] Please connect to an Insights connection to use this feature.",
+        "ERROR",
+      );
     });
 
     it("should log an error if insightsVersion is less than or equal to 1.11", async () => {
@@ -1527,12 +1571,12 @@ describe("connectionManagerService", () => {
     let connectionManagerService: ConnectionManagementService;
     let connectionsListStub: sinon.SinonStub;
     let getAuthDataStub: sinon.SinonStub;
-    let kdbAuthMapStub: sinon.SinonStub;
-    let contextStub: sinon.SinonStub;
+    let _kdbAuthMapStub: sinon.SinonStub;
+    let _contextStub: sinon.SinonStub;
     ext.context = {} as ExtensionContext;
 
     beforeEach(() => {
-      contextStub = sinon.stub(ext, "context").value({
+      _contextStub = sinon.stub(ext, "context").value({
         globalStorageUri: {
           fsPath: "/temp/",
         },
@@ -1542,7 +1586,7 @@ describe("connectionManagerService", () => {
       connectionManagerService = new ConnectionManagementService();
       connectionsListStub = sinon.stub(ext, "connectionsList").value([]);
       getAuthDataStub = sinon.stub(ext.secretSettings, "getAuthData");
-      kdbAuthMapStub = sinon.stub(ext, "kdbAuthMap").value([]);
+      _kdbAuthMapStub = sinon.stub(ext, "kdbAuthMap").value([]);
     });
 
     afterEach(() => {
@@ -1586,13 +1630,13 @@ describe("connectionManagerService", () => {
 
   describe("retrieveInsightsConnVersion", () => {
     let retrieveConnectionStub: sinon.SinonStub;
-    let connectionsListStub: sinon.SinonStub;
+    let _connectionsListStub: sinon.SinonStub;
     beforeEach(() => {
       retrieveConnectionStub = sinon.stub(
         connectionManagerService,
         "retrieveConnectedConnection",
       );
-      connectionsListStub = sinon.stub(ext, "connectionsList").value([]);
+      _connectionsListStub = sinon.stub(ext, "connectionsList").value([]);
     });
 
     afterEach(() => {
@@ -1645,6 +1689,51 @@ describe("connectionManagerService", () => {
         );
 
       assert.strictEqual(result, 0);
+    });
+  });
+
+  describe("retrieveInsightsConnQEEnabled", () => {
+    let retrieveConnectedConnectionStub: sinon.SinonStub;
+    const apiConfig: InsightsApiConfig = {
+      version: "1.11",
+      encryptionDatabase: false,
+      encryptionInTransit: false,
+      queryEnvironmentsEnabled: true,
+    };
+
+    beforeEach(() => {
+      retrieveConnectedConnectionStub = sinon.stub(
+        connectionManagerService,
+        "retrieveConnectedConnection",
+      );
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should return undefined if connection is not found", async () => {
+      retrieveConnectedConnectionStub.returns(undefined);
+      const result =
+        await connectionManagerService.retrieveInsightsConnQEEnabled("test");
+      assert.strictEqual(result, undefined);
+    });
+
+    it("should return enabled if connection if qe is on", async () => {
+      insightsConn.apiConfig = apiConfig;
+      retrieveConnectedConnectionStub.returns(insightsConn);
+      const result =
+        await connectionManagerService.retrieveInsightsConnQEEnabled("test");
+      assert.strictEqual(result, "Enabled");
+    });
+
+    it("should return disabled if connection qe is off", async () => {
+      apiConfig.queryEnvironmentsEnabled = false;
+      insightsConn.apiConfig = apiConfig;
+      retrieveConnectedConnectionStub.returns(insightsConn);
+      const result =
+        await connectionManagerService.retrieveInsightsConnQEEnabled("test");
+      assert.strictEqual(result, "Disabled");
     });
   });
 
@@ -1992,12 +2081,12 @@ describe("dataSourceEditorProvider", () => {
         insightsNode.label,
         insightsNode,
       );
-      const localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
+      const localConn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
       const connMngService = new ConnectionManagementService();
-      let isConnetedStub, retrieveConnectedConnectionStub: sinon.SinonStub;
+      let isConnetedStub, _retrieveConnectedConnectionStub: sinon.SinonStub;
       beforeEach(() => {
         isConnetedStub = sinon.stub(connMngService, "isConnected");
-        retrieveConnectedConnectionStub = sinon.stub(
+        _retrieveConnectedConnectionStub = sinon.stub(
           connMngService,
           "retrieveConnectedConnection",
         );
@@ -2433,7 +2522,7 @@ describe("kdbTreeService", () => {
   });
 
   it("Should return sorted views", async () => {
-    ext.activeConnection = new LocalConnection("localhost:5001", "server1");
+    ext.activeConnection = new LocalConnection("localhost:5001", "server1", []);
     sinon.stub(ext.activeConnection, "executeQuery").resolves(["vw1", "vw2"]);
     const result = await KdbTreeService.loadViews();
     assert.strictEqual(result[0], "vw1", "Should return the first view");
@@ -2441,7 +2530,7 @@ describe("kdbTreeService", () => {
   });
 
   it("Should return sorted views (reverse order)", async () => {
-    ext.activeConnection = new LocalConnection("localhost:5001", "server1");
+    ext.activeConnection = new LocalConnection("localhost:5001", "server1", []);
     sinon.stub(ext.activeConnection, "executeQuery").resolves(["vw1", "vw2"]);
     const result = await KdbTreeService.loadViews();
     assert.strictEqual(result[0], "vw1", "Should return the first view");

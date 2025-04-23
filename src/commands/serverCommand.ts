@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import * as fs from "fs";
 import { readFileSync } from "fs-extra";
 import { join } from "path";
 import * as url from "url";
@@ -25,19 +26,37 @@ import {
   window,
   workspace,
 } from "vscode";
+
 import { ext } from "../extensionVariables";
+import { runDataSource } from "./dataSourceCommand";
+import { InsightsConnection } from "../classes/insightsConnection";
+import {
+  ExportedConnections,
+  InsightDetails,
+  Insights,
+  Server,
+  ServerDetails,
+  ServerType,
+} from "../models/connectionsModels";
 import { DataSourceFiles } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
+import { Plot } from "../models/plot";
+import { QueryHistory } from "../models/queryHistory";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
 import { ServerObject } from "../models/serverObject";
 import { DataSourcesPanel } from "../panels/datasource";
+import { NewConnectionPannel } from "../panels/newConnection";
+import { ChartEditorProvider } from "../services/chartEditorProvider";
+import { ConnectionManagementService } from "../services/connectionManagerService";
 import {
   InsightsMetaNode,
   InsightsNode,
   KdbNode,
   MetaObjectPayloadNode,
 } from "../services/kdbTreeProvider";
+import { MetaContentProvider } from "../services/metaContentProvider";
+import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
 import {
   addLocalConnectionContexts,
   checkOpenSslInstalled,
@@ -60,37 +79,19 @@ import {
   formatScratchpadStacktrace,
   resultToBase64,
 } from "../utils/queryUtils";
-import {
-  validateServerAlias,
-  validateServerName,
-  validateServerPort,
-  validateServerUsername,
-} from "../validators/kdbValidator";
-import { QueryHistory } from "../models/queryHistory";
-import { runDataSource } from "./dataSourceCommand";
-import { NewConnectionPannel } from "../panels/newConnection";
 import { Telemetry } from "../utils/telemetryClient";
-import { ConnectionManagementService } from "../services/connectionManagerService";
-import { InsightsConnection } from "../classes/insightsConnection";
-import { MetaContentProvider } from "../services/metaContentProvider";
-import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
-import {
-  ExportedConnections,
-  InsightDetails,
-  Insights,
-  Server,
-  ServerDetails,
-  ServerType,
-} from "../models/connectionsModels";
-import * as fs from "fs";
-import { ChartEditorProvider } from "../services/chartEditorProvider";
 import {
   addWorkspaceFile,
   openWith,
   setUriContent,
   workspaceHas,
 } from "../utils/workspace";
-import { Plot } from "../models/plot";
+import {
+  validateServerAlias,
+  validateServerName,
+  validateServerPort,
+  validateServerUsername,
+} from "../validators/kdbValidator";
 
 export async function addNewConnection(): Promise<void> {
   NewConnectionPannel.close();
@@ -310,7 +311,12 @@ export async function addAuthConnection(
 // Not possible to test secrets
 /* istanbul ignore next */
 function removeAuthConnection(serverKey: string) {
-  if (ext.secretSettings.storeAuthData.hasOwnProperty(serverKey)) {
+  if (
+    Object.prototype.hasOwnProperty.call(
+      ext.secretSettings.storeAuthData,
+      serverKey,
+    )
+  ) {
     delete (ext.secretSettings.storeAuthData as { [key: string]: any })[
       serverKey
     ];
@@ -578,7 +584,7 @@ export async function importConnections() {
   let importedConnections: ExportedConnections;
   try {
     importedConnections = JSON.parse(fileContent);
-  } catch (e) {
+  } catch {
     kdbOutputLog("[IMPORT CONNECTION]Invalid JSON format", "ERROR");
     return;
   }
@@ -759,9 +765,9 @@ export function activeConnection(viewItem: KdbNode | InsightsNode): void {
   ext.serverProvider.reload();
 }
 
-export async function resetScratchPad(): Promise<void> {
+export async function resetScratchpad(connName?: string): Promise<void> {
   const connMngService = new ConnectionManagementService();
-  await connMngService.resetScratchpad();
+  await connMngService.resetScratchpad(connName);
 }
 
 export async function refreshGetMeta(connLabel?: string): Promise<void> {
@@ -1012,7 +1018,7 @@ export function runQuery(
   let isPython = false;
   switch (type) {
     case ExecutionTypes.QuerySelection:
-    case ExecutionTypes.PythonQuerySelection:
+    case ExecutionTypes.PythonQuerySelection: {
       const selection = editor.selection;
       query = selection.isEmpty
         ? editor.document.lineAt(selection.active.line).text
@@ -1022,11 +1028,12 @@ export function runQuery(
         isPython = true;
       }
       break;
+    }
 
     case ExecutionTypes.QueryFile:
     case ExecutionTypes.ReRunQuery:
     case ExecutionTypes.PythonQueryFile:
-    default:
+    default: {
       query = rerunQuery || editor.document.getText();
       context = getQueryContext();
 
@@ -1034,6 +1041,7 @@ export function runQuery(
         isPython = true;
       }
       break;
+    }
   }
   executeQuery(query, connLabel, executorName, context, isPython, isWorkbook);
 }

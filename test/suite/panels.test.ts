@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -14,17 +14,18 @@
 import assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+import { TreeItemCollapsibleState } from "vscode";
+
+import { InsightsConnection } from "../../src/classes/insightsConnection";
 import { ext } from "../../src/extensionVariables";
 import { createDefaultDataSourceFile } from "../../src/models/dataSource";
-import { DataSourcesPanel } from "../../src/panels/datasource";
-import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
-import * as utils from "../../src/utils/execution";
-import * as coreUtils from "../../src/utils/core";
-import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
-import { TreeItemCollapsibleState } from "vscode";
-import { NewConnectionPannel } from "../../src/panels/newConnection";
-import { InsightsConnection } from "../../src/classes/insightsConnection";
 import { StructuredTextResults } from "../../src/models/queryResult";
+import { DataSourcesPanel } from "../../src/panels/datasource";
+import { NewConnectionPannel } from "../../src/panels/newConnection";
+import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
+import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
+import * as coreUtils from "../../src/utils/core";
+import * as utils from "../../src/utils/execution";
 
 describe("WebPanels", () => {
   describe("DataSourcesPanel", () => {
@@ -151,7 +152,7 @@ describe("WebPanels", () => {
       let resultsPanel: KdbResultsViewProvider;
       const view: vscode.WebviewView = {
         visible: true,
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
+
         show: (): void => {},
         viewType: "kdb-results",
         webview: {
@@ -460,7 +461,7 @@ describe("WebPanels", () => {
 
         windowMock.verify();
         workspaceMock.verify();
-        exportToCsvStub.notCalled;
+        assert.deepStrictEqual(exportToCsvStub.notCalled, true);
       });
     });
 
@@ -550,9 +551,13 @@ describe("WebPanels", () => {
           resultsPanel.isInsights,
         );
         sinon.assert.calledWith(postMessageStub, {
+          command: "loading",
+        });
+        sinon.assert.calledWith(postMessageStub, {
           command: "setGridDatasource",
           results: [],
           columnDefs: [],
+          theme: "legacy",
         });
       });
 
@@ -572,7 +577,7 @@ describe("WebPanels", () => {
       let resultsPanel: KdbResultsViewProvider;
       const view: vscode.WebviewView = {
         visible: true,
-        // eslint-disable-next-line @typescript-eslint/no-empty-function
+
         show: (): void => {},
         viewType: "kdb-results",
         webview: {

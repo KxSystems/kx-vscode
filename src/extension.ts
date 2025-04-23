@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -31,6 +31,9 @@ import {
   ServerOptions,
   TransportKind,
 } from "vscode-languageclient/node";
+
+import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
+import { connectClientCommands } from "./commands/clientCommands";
 import {
   installTools,
   startLocalProcess,
@@ -56,12 +59,32 @@ import {
   refreshGetMeta,
   removeConnection,
   rerunQuery,
-  resetScratchPad,
+  resetScratchpad,
 } from "./commands/serverCommand";
 import { showInstallationDetails } from "./commands/walkthroughCommand";
+import {
+  ConnectionLensProvider,
+  checkOldDatasourceFiles,
+  connectWorkspaceCommands,
+  importOldDSFiles,
+  pickConnection,
+  resetScratchpadFromEditor,
+  runActiveEditor,
+  setServerForUri,
+} from "./commands/workspaceCommand";
 import { ext } from "./extensionVariables";
+import {
+  InsightDetails,
+  Insights,
+  Server,
+  ServerDetails,
+} from "./models/connectionsModels";
+import { createDefaultDataSourceFile } from "./models/dataSource";
 import { ExecutionTypes } from "./models/execution";
 import { QueryResult } from "./models/queryResult";
+import { ChartEditorProvider } from "./services/chartEditorProvider";
+import { CompletionProvider } from "./services/completionProvider";
+import { DataSourceEditorProvider } from "./services/dataSourceEditorProvider";
 import {
   InsightsMetaNode,
   InsightsNode,
@@ -73,7 +96,20 @@ import {
   QueryHistoryProvider,
   QueryHistoryTreeItem,
 } from "./services/queryHistoryProvider";
+import { QuickFixProvider } from "./services/quickFixProvider";
 import { KdbResultsViewProvider } from "./services/resultsPanelProvider";
+import {
+  FileTreeItem,
+  WorkspaceTreeProvider,
+} from "./services/workspaceTreeProvider";
+import {
+  createNewLabel,
+  deleteLabel,
+  getWorkspaceLabels,
+  getWorkspaceLabelsConnMap,
+  renameLabel,
+  setLabelColor,
+} from "./utils/connLabel";
 import {
   checkLocalInstall,
   checkOpenSslInstalled,
@@ -87,46 +123,12 @@ import {
 import { runQFileTerminal } from "./utils/execution";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
-import { DataSourceEditorProvider } from "./services/dataSourceEditorProvider";
-import {
-  FileTreeItem,
-  WorkspaceTreeProvider,
-} from "./services/workspaceTreeProvider";
-import {
-  ConnectionLensProvider,
-  checkOldDatasourceFiles,
-  connectWorkspaceCommands,
-  importOldDSFiles,
-  pickConnection,
-  runActiveEditor,
-  setServerForUri,
-} from "./commands/workspaceCommand";
-import { createDefaultDataSourceFile } from "./models/dataSource";
-import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
-import { CompletionProvider } from "./services/completionProvider";
-import { QuickFixProvider } from "./services/quickFixProvider";
-import { connectClientCommands } from "./commands/clientCommands";
-import {
-  createNewLabel,
-  deleteLabel,
-  getWorkspaceLabels,
-  getWorkspaceLabelsConnMap,
-  renameLabel,
-  setLabelColor,
-} from "./utils/connLabel";
 import {
   activateTextDocument,
   addWorkspaceFile,
   openWith,
   setUriContent,
 } from "./utils/workspace";
-import {
-  InsightDetails,
-  Insights,
-  Server,
-  ServerDetails,
-} from "./models/connectionsModels";
-import { ChartEditorProvider } from "./services/chartEditorProvider";
 
 let client: LanguageClient;
 
@@ -469,10 +471,19 @@ export async function activate(context: ExtensionContext) {
     commands.registerCommand("kdb.execute.pythonScratchpadQuery", async () => {
       await runActiveEditor(ExecutionTypes.PythonQuerySelection);
     }),
-    // TODO renable it when the scratchpad reset API is fixed
-    // commands.registerCommand("kdb.scratchpad.reset", async () => {
-    //   await resetScratchPad();
-    // }),
+    commands.registerCommand(
+      "kdb.scratchpad.reset",
+      async (viewItem?: InsightsNode) => {
+        const connLabel = viewItem ? viewItem.label : undefined;
+        await resetScratchpad(connLabel);
+      },
+    ),
+    commands.registerCommand(
+      "kdb.scratchpad.resetEditorConnection",
+      async () => {
+        await resetScratchpadFromEditor();
+      },
+    ),
     commands.registerCommand(
       "kdb.execute.pythonFileScratchpadQuery",
       async (item) => {
@@ -737,6 +748,13 @@ export async function activate(context: ExtensionContext) {
         .getConfiguration()
         .update("yaml.schemas", actualSchema, ConfigurationTarget.Global);
     });
+  }
+  const authExtension = extensions.getExtension("KX.kdb-auth");
+  if (authExtension) {
+    const api = await authExtension.activate();
+    if ("auth" in api) {
+      ext.customAuth = api;
+    }
   }
 }
 

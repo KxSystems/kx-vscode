@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -13,15 +13,17 @@
 
 import * as nodeq from "node-q";
 import { commands, window } from "vscode";
+
 import { ext } from "../extensionVariables";
+import { QueryResult, QueryResultType } from "../models/queryResult";
 import { delay, kdbOutputLog } from "../utils/core";
 import { convertStringToArray, handleQueryResults } from "../utils/execution";
 import { queryWrapper } from "../utils/queryUtils";
-import { QueryResult, QueryResultType } from "../models/queryResult";
 
 export class LocalConnection {
   public connected: boolean;
   public connLabel: string;
+  public labels: string[];
   private options: nodeq.ConnectionParameters;
   private connection?: nodeq.Connection;
   private isError: boolean = false;
@@ -30,6 +32,7 @@ export class LocalConnection {
   constructor(
     connectionString: string,
     connLabel: string,
+    labels: string[],
     creds?: string[],
     tls?: boolean,
   ) {
@@ -60,7 +63,9 @@ export class LocalConnection {
       options.user = creds[0];
       options.password = creds[1];
     }
+
     this.connLabel = connLabel;
+    this.labels = labels;
     this.options = options;
     this.connected = false;
   }
@@ -72,7 +77,9 @@ export class LocalConnection {
   public async connect(
     callback: nodeq.AsyncValueCallback<LocalConnection>,
   ): Promise<void> {
-    nodeq.connect(this.options, (err, conn) => {
+    const options = await this.getCustomAuthOptions();
+
+    nodeq.connect(options, (err, conn) => {
       if (err || !conn) {
         ext.serverProvider.reload();
 
@@ -184,7 +191,7 @@ export class LocalConnection {
     const wrapper = queryWrapper(!!isPython);
 
     if (isPython) {
-      args.push(!!stringify, command);
+      args.push(stringify ? "text" : "serialized", command, "first", 10000);
     } else {
       args.push(context ?? ".", command, stringify ? "text" : "structuredText");
     }
@@ -309,7 +316,7 @@ export class LocalConnection {
     });
   }
 
-  /* eslint-disable @typescript-eslint/no-explicit-any */
+   
   private updateGlobals(result: any): void {
     const globals = result;
     const entries: [string, any][] = Object.entries(globals);
@@ -339,7 +346,7 @@ export class LocalConnection {
       }
     });
   }
-  /* eslint-disable */
+   
 
   private updateReservedKeywords() {
     const reservedQuery = ".Q.res";
@@ -365,5 +372,27 @@ export class LocalConnection {
 
     this.update();
     callback(err, this);
+  }
+
+  async getCustomAuthOptions(): Promise<nodeq.ConnectionParameters> {
+    if (ext.customAuth) {
+      const { kdb } = await ext.customAuth.auth({
+        name: this.connLabel,
+        labels: this.labels,
+        kdb: {
+          host: this.options.host,
+          port: this.options.port,
+          user: this.options.user,
+          password: this.options.password,
+          unixSocket: this.options.unixSocket,
+          socketTimeout: this.options.socketTimeout,
+          socketNoDelay: this.options.socketNoDelay,
+        },
+      });
+      if (kdb) {
+        return { ...this.options, ...kdb };
+      }
+    }
+    return this.options;
   }
 }

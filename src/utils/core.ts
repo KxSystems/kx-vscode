@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -13,16 +13,16 @@
 
 import { ChildProcess } from "child_process";
 import { createHash } from "crypto";
-import { pathExists } from "fs-extra";
 import { writeFile } from "fs/promises";
+import { pathExists } from "fs-extra";
 import { env } from "node:process";
 import { tmpdir } from "os";
 import { join } from "path";
 import * as semver from "semver";
 import { commands, ConfigurationTarget, Uri, window, workspace } from "vscode";
+
 import { installTools } from "../commands/installTools";
 import { ext } from "../extensionVariables";
-import { QueryResult } from "../models/queryResult";
 import { tryExecuteCommand } from "./cpUtils";
 import { showRegistrationNotification } from "./registration";
 import { Telemetry } from "./telemetryClient";
@@ -32,6 +32,7 @@ import {
   Server,
   ServerDetails,
 } from "../models/connectionsModels";
+import { QueryResult } from "../models/queryResult";
 
 export function log(childProcess: ChildProcess): void {
   kdbOutputLog(`Process ${childProcess.pid} started`, "INFO");
@@ -204,7 +205,7 @@ export function fixUnnamedAlias(): void {
   if (servers) {
     const updatedServers: Server = {};
     for (const key in servers) {
-      if (servers.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(servers, key)) {
         const server = servers[key];
         if (server.serverAlias === "") {
           server.serverAlias = `unnamedServer-${counter}`;
@@ -220,7 +221,7 @@ export function fixUnnamedAlias(): void {
   if (insights) {
     const updatedInsights: Insights = {};
     for (const key in insights) {
-      if (insights.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(insights, key)) {
         const insight = insights[key];
         if (insight.alias === "") {
           insight.alias = `unnamedServer-${counter}`;
@@ -514,7 +515,6 @@ export function isTable(result: QueryResult): boolean {
   return true;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function formatTable(headers_: any, rows_: any, opts: any) {
   if (!opts) {
     opts = {};
@@ -530,17 +530,14 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
   const keys = opts.keys || [];
   const stringLength =
     opts.stringLength ||
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function (s: any) {
       return String(s).length;
     };
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const dotsizes = reduce(
     data,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     function (acc: any, row: any) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       forEach(row, function (c: any, ix: any) {
         const [left, right] = dotoffsets(c);
 
@@ -560,9 +557,7 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
     [],
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rows = map(data, function (row: any) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return map(row, function (c_: any, ix: any) {
       const c = String(c_);
       if (align[ix] === ".") {
@@ -578,12 +573,10 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
     });
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sizes = reduce(
     rows,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     function (acc: any, row: any) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       forEach(row, function (c: any, ix: any) {
         const n = stringLength(c);
         if (!acc[ix] || n > acc[ix]) {
@@ -592,13 +585,11 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
       });
       return acc;
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     headers_.map((x: any) => x.length),
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let result = map(rows, function (row: any) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return map(row, function (c: any, ix: any) {
       const n = sizes[ix] - stringLength(c) || 0;
       const s = Array(Math.max(n + 1, 1)).join(" ");
@@ -618,7 +609,6 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
     }).join(hsep);
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const headers = map(headers_, function (c: any, ix: any) {
     return c + " ".repeat(Math.max(0, sizes[ix] - c.length));
   });
@@ -635,10 +625,9 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
   result.unshift(header);
 
   if (columnSeparatorIndex > 0) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const insertAt = (str: any, sub: any, pos: any) =>
       `${str.slice(0, pos)}${sub}${str.slice(pos)}`;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     result = result.map((x: any) => insertAt(x, "|", columnSeparatorIndex + 1));
   }
 
@@ -662,7 +651,6 @@ export function hasWorkspaceOrShowOption(action: string) {
   return false;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function reduce(xs: any, f: any, init: any) {
   if (xs.reduce) {
     return xs.reduce(f, init);
@@ -677,7 +665,6 @@ function reduce(xs: any, f: any, init: any) {
   return acc;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function forEach(xs: any, f: any) {
   if (xs.forEach) {
     return xs.forEach(f);
@@ -693,7 +680,6 @@ function dotoffsets(c: string) {
   return m ? [m.index, c.length - m.length - 1] : [c.length, 0];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function map(xs: any, f: any) {
   if (xs.map) {
     return xs.map(f);

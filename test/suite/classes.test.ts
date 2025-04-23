@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -13,10 +13,8 @@
 
 import * as assert from "assert";
 import * as sinon from "sinon";
-import * as vscode from "vscode";
+
 import { LocalConnection } from "../../src/classes/localConnection";
-import * as nodeq from "node-q";
-import { ext } from "../../src/extensionVariables";
 
 describe("LocalConnection", () => {
   let localConn: LocalConnection;
@@ -25,7 +23,7 @@ describe("LocalConnection", () => {
   let getConnectionStub: sinon.SinonStub;
 
   beforeEach(() => {
-    localConn = new LocalConnection("127.0.0.1:5001", "testLabel");
+    localConn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
     connectStub = sinon.stub(localConn, "connect");
     disconnectStub = sinon.stub(localConn, "disconnect");
     getConnectionStub = sinon.stub(localConn, "getConnection");
@@ -38,7 +36,7 @@ describe("LocalConnection", () => {
   });
 
   it("Should create a new connection object", () => {
-    const conn = new LocalConnection("server:5001", "server1");
+    const conn = new LocalConnection("server:5001", "server1", []);
     assert.strictEqual(
       conn.connected,
       false,
@@ -50,6 +48,7 @@ describe("LocalConnection", () => {
     const conn = new LocalConnection(
       "server:5001",
       "server1",
+      [],
       ["username", "password"],
       true,
     );
@@ -61,7 +60,7 @@ describe("LocalConnection", () => {
   });
 
   it("Should create a new connection object", () => {
-    const conn = new LocalConnection("server:5001", "server1");
+    const conn = new LocalConnection("server:5001", "server1", []);
     conn.disconnect();
     assert.strictEqual(
       conn.connected,

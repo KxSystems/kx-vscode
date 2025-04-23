@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,12 +11,13 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { ConnectionLabel, Labels } from "../models/labels";
 import { workspace } from "vscode";
+
 import { ext } from "../extensionVariables";
 import { kdbOutputLog } from "./core";
-import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
+import { ConnectionLabel, Labels } from "../models/labels";
 import { NewConnectionPannel } from "../panels/newConnection";
+import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 
 export function getWorkspaceLabels() {
   const existingConnLbls = workspace

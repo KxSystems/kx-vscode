@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -13,15 +13,16 @@
 
 import { readFileSync } from "fs";
 import { join } from "path";
+
 import { ext } from "../extensionVariables";
+import { kdbOutputLog } from "./core";
 import { DCDS, deserialize, isCompressed, uncompress } from "../ipc/c";
-import { Parse } from "../ipc/parse.qlist";
 import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
+import { Parse } from "../ipc/parse.qlist";
 import { TypeBase } from "../ipc/typeBase";
+import { ServerType } from "../models/connectionsModels";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { QueryHistory } from "../models/queryHistory";
-import { kdbOutputLog } from "./core";
-import { ServerType } from "../models/connectionsModels";
 import { ScratchpadStacktrace } from "../models/scratchpadResult";
 
 export function sanitizeQuery(query: string): string {
@@ -172,7 +173,7 @@ export function addIndexKey(input: any) {
     return arr;
   }
 
-  if (!arr[0].hasOwnProperty("Index")) {
+  if (!Object.prototype.hasOwnProperty.call(arr[0], "Index")) {
     arr = arr.map((obj, index) => {
       const newObj = { Index: index + 1 };
 
@@ -316,7 +317,7 @@ export function checkIfIsDatasource(
   if (dataSourceType === undefined) {
     return false;
   }
-  const validTypes = ["API", "QSQL", "SQL"];
+  const validTypes = ["API", "QSQL", "SQL", "UDA"];
   return validTypes.includes(dataSourceType);
 }
 

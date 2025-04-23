@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -14,10 +14,11 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
+
 import * as workspaceHelper from "../../src/utils/workspace";
 
 describe("Workspace tests", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const testWorkspaceFolder: any[] = [
     {
       uri: vscode.Uri.file("testPath1"),
@@ -26,7 +27,7 @@ describe("Workspace tests", () => {
       uri: vscode.Uri.file("testPath2"),
     },
   ];
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   let workspaceMock: sinon.SinonStub<any[], any>;
 
   beforeEach(() => {

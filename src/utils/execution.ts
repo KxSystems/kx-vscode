@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -14,9 +14,10 @@
 import { env } from "node:process";
 import path from "path";
 import { Uri, window, workspace } from "vscode";
+
 import { ext } from "../extensionVariables";
-import { QueryResultType } from "../models/queryResult";
 import { kdbOutputLog } from "./core";
+import { QueryResultType } from "../models/queryResult";
 
 interface tblHeader {
   label: string;

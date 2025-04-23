@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -47,6 +47,17 @@ export const shoelaceStyles = css`
     border-color: var(--sl-input-border-color);
   }
 
+  sl-menu {
+    --sl-panel-border-color: var(--vscode-focusBorder);
+  }
+
+  sl-menu-item::part(base) {
+    --sl-color-primary-600: var(--vscode-button-background);
+    --sl-color-neutral-700: var(--vscode-input-foreground);
+    --sl-color-neutral-1000: var(--vscode-input-foreground);
+    --sl-color-neutral-100: var(--vscode-inputOption-hoverBackground);
+  }
+
   sl-tab-group::part(tabs) {
     --track-width: 1px;
     --track-color: var(--vscode-inputOption-hoverBackground);
@@ -60,6 +71,22 @@ export const shoelaceStyles = css`
   sl-checkbox::part(base) {
     --sl-color-primary-600: var(--vscode-button-background);
     --sl-input-background-color-hover: var(--vscode-button-hoverBackground);
+  }
+
+  sl-alert[variant="warning"]::part(base) {
+    background-color: #fef4e0;
+    color: #d87704;
+  }
+
+  sl-alert[variant="primary"]::part(base) {
+    background-color: #e0f2fe;
+    color: #055a85;
+  }
+
+  .remove-param-btn::part(base) {
+    padding-top: 3px;
+    background: none;
+    border: none;
   }
 `;
 
@@ -130,6 +157,32 @@ export const dataSourceStyles = css`
     flex-direction: row;
     gap: var(--sl-spacing-x-small);
     align-items: flex-end;
+  }
+
+  .fix-multi-checkbox {
+    margin-top: 28px;
+  }
+
+  .btn-opt-text {
+    margin-left: 1rem;
+  }
+
+  .btn-opt-divider {
+    border: solid var(--sl-panel-border-width) var(--vscode-focusBorder) !important;
+  }
+
+  .remove-param-btn {
+    padding-left: 10px;
+  }
+
+  .opt-param-field {
+    display: flex;
+    align-items: center;
+  }
+
+  .reset-widths-limit {
+    min-width: 0%;
+    max-width: 100%;
   }
 `;
 
@@ -224,6 +277,70 @@ export const kdbStyles = css`
 
   .mt-6 {
     margin-top: 6em;
+  }
+
+  .width-200-px {
+    width: 200px;
+  }
+
+  .width-10-pct {
+    width: 10%;
+  }
+
+  .width-20-pct {
+    width: 20%;
+  }
+
+  .width-30-pct {
+    width: 30%;
+  }
+
+  .width-40-pct {
+    width: 40%;
+  }
+
+  .width-50-pct {
+    width: 50%;
+  }
+
+  .width-60-pct {
+    width: 60%;
+  }
+
+  .width-70-pct {
+    width: 70%;
+  }
+
+  .width-80-pct {
+    width: 80%;
+  }
+
+  .width-90-pct {
+    width: 90%;
+  }
+
+  .width-97-pct {
+    width: 97%;
+  }
+
+  .width-98-pct {
+    width: 98%;
+  }
+
+  .width-100-pct {
+    width: 100%;
+  }
+
+  .padding-left-10-px {
+    padding-left: 10px;
+  }
+
+  .display-none {
+    display: none;
+  }
+
+  .float-left {
+    float: left;
   }
 
   .dropdown,

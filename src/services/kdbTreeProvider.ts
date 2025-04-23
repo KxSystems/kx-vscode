@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -21,16 +21,18 @@ import {
   TreeItemCollapsibleState,
   commands,
 } from "vscode";
+
 import { ext } from "../extensionVariables";
-import {
-  getInsightsAlias,
-  getServerAlias,
-  getServerIconState,
-  getServerName,
-  getStatus,
-} from "../utils/core";
 import { ConnectionManagementService } from "./connectionManagerService";
+import { KdbTreeService } from "./kdbTreeService";
 import { InsightsConnection } from "../classes/insightsConnection";
+import {
+  InsightDetails,
+  Insights,
+  Server,
+  ServerDetails,
+} from "../models/connectionsModels";
+import { Labels } from "../models/labels";
 import {
   getWorkspaceLabels,
   getWorkspaceLabelsConnMap,
@@ -38,14 +40,13 @@ import {
   isLabelEmpty,
   retrieveConnLabelsNames,
 } from "../utils/connLabel";
-import { Labels } from "../models/labels";
 import {
-  InsightDetails,
-  Insights,
-  Server,
-  ServerDetails,
-} from "../models/connectionsModels";
-import { KdbTreeService } from "./kdbTreeService";
+  getInsightsAlias,
+  getServerAlias,
+  getServerIconState,
+  getServerName,
+  getStatus,
+} from "../utils/core";
 
 export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   private _onDidChangeTreeData: EventEmitter<
@@ -176,12 +177,12 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     return [...servers, ...insights];
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   private getChildElements(_element?: TreeItem): KdbNode[] {
     return this.createLeafItems(this.serverList);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+   
   private getInsightsChildElements(_element?: InsightsNode): InsightsNode[] {
     return this.createInsightLeafItems(this.insightsList);
   }
@@ -633,8 +634,14 @@ export class InsightsNode extends TreeItem {
     );
     tooltipMd.appendMarkdown(`${this.details.alias} \n`);
     const version = await connService.retrieveInsightsConnVersion(this.label);
+    const qeEnabled = await connService.retrieveInsightsConnQEEnabled(
+      this.label,
+    );
     if (version !== 0) {
-      tooltipMd.appendMarkdown(`\nVersion: ${version}`);
+      tooltipMd.appendMarkdown(`\nVersion: ${version}\n`);
+    }
+    if (qeEnabled !== undefined) {
+      tooltipMd.appendMarkdown(`\nQuery Environment(s): ${qeEnabled}`);
     }
     return tooltipMd;
   }

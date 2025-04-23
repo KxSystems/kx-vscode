@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite including the q programming language",
   "publisher": "KX",
-  "version": "1.10.2",
+  "version": "1.11.0",
   "engines": {
     "vscode": "^1.86.0"
   },
@@ -289,6 +289,16 @@
       },
       {
         "category": "KX",
+        "command": "kdb.scratchpad.reset",
+        "title": "Reset scratchpad"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.scratchpad.resetEditorConnection",
+        "title": "Reset editor connection"
+      },
+      {
+        "category": "KX",
         "command": "kdb.startLocalProcess",
         "title": "Start q process"
       },
@@ -492,6 +502,12 @@
         "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
       },
       {
+        "command": "kdb.scratchpad.resetEditorConnection",
+        "key": "ctrl+shift+delete",
+        "mac": "cmd+shift+delete",
+        "when": "(editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)) || editorLangId == q"
+      },
+      {
         "command": "kdb.terminal.run",
         "key": "ctrl+shift+r",
         "mac": "cmd+shift+r",
@@ -661,6 +677,10 @@
           "when": "false"
         },
         {
+          "command": "kdb.scratchpad.resetEditorConnection",
+          "when": "false"
+        },
+        {
           "command": "kdb.connect.via.dialog",
           "when": "false"
         },
@@ -814,6 +834,11 @@
           "command": "kdb.connections.export.single",
           "when": "view == kdb-servers && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection@6"
+        },
+        {
+          "command": "kdb.scratchpad.reset",
+          "when": "view == kdb-servers && viewItem in kdb.connected && viewItem in kdb.insightsNodes",
+          "group": "connection@7"
         },
         {
           "command": "kdb.startLocalProcess",
@@ -977,13 +1002,14 @@
     "package": "npx vsce package",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
     "publish": "npx vsce publish",
-    "lint": "eslint 'src/**' --fix"
+    "lint": "eslint 'src/**' 'test/suite/**' --fix"
   },
   "prettier": {
     "printWidth": 80,
     "bracketSameLine": true
   },
   "devDependencies": {
+    "@eslint/js": "^9.24.0",
     "@shoelace-style/shoelace": "2.19.1",
     "@types/fs-extra": "^11.0.4",
     "@types/glob": "^8.1.0",
@@ -994,16 +1020,17 @@
     "@types/node": "^22.10.1",
     "@types/node-fetch": "^2.6.12",
     "@types/semver": "^7.5.8",
-    "@types/sinon": "^17.0.3",
+    "@types/sinon": "^17.0.4",
     "@types/vscode": "^1.86.0",
     "@types/vscode-webview": "^1.57.5",
-    "@typescript-eslint/eslint-plugin": "^8.17.0",
-    "@typescript-eslint/parser": "^8.17.0",
+    "@typescript-eslint/eslint-plugin": "^8.27.0",
+    "@typescript-eslint/parser": "^8.27.0",
     "@vscode/test-electron": "^2.4.1",
-    "esbuild": "^0.25.0",
-    "eslint": "^9.16.0",
+    "esbuild": "^0.25.1",
+    "eslint": "^9.24.0",
     "eslint-plugin-header": "^3.1.1",
-    "eslint-plugin-license-header": "^0.6.1",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-license-header": "^0.8.0",
     "eslint-plugin-unused-imports": "^4.1.4",
     "glob": "^8.1.0",
     "istanbul-lib-coverage": "^3.2.2",
@@ -1016,10 +1043,11 @@
     "mocha-junit-reporter": "^2.2.1",
     "mocha-multi-reporters": "^1.5.1",
     "mock-fs": "^5.4.1",
-    "prettier": "^3.4.2",
+    "prettier": "^3.5.3",
     "rimraf": "^6.0.1",
-    "sinon": "^17.0.1",
-    "typescript": "^5.7.2",
+    "sinon": "^19.0.2",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.30.1",
     "vscode-dts": "^0.3.3",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
@@ -1027,11 +1055,11 @@
     "vscode-test": "^1.6.1"
   },
   "dependencies": {
-    "@ag-grid-community/core": "^32.3.3",
+    "@ag-grid-community/core": "^32.3.4",
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "@windozer/node-q": "^2.6.0",
-    "ag-grid-community": "^32.3.3",
-    "axios": "^1.7.9",
+    "ag-grid-community": "^33.2.1",
+    "axios": "^1.8.4",
     "chevrotain": "^10.5.0",
     "extract-zip": "^2.0.1",
     "fs-extra": "^11.2.0",
@@ -1042,9 +1070,9 @@
     "node-fetch": "^2.7.0",
     "node-q": "^2.7.0",
     "pick-port": "^2.0.1",
-    "semver": "^7.6.3",
+    "semver": "^7.7.1",
     "vscode-extension-telemetry": "^0.4.5",
     "vscode-languageserver-textdocument": "^1.0.11",
-    "vscode-uri": "^3.0.8"
+    "vscode-uri": "^3.1.0"
   }
 }

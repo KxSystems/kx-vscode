@@ -2,6 +2,26 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.11.0
+
+### Enhancements
+
+- Added UDA tab to the Datasource Files
+- Added the **Reset Scratchpad** option for insights connections version 1.13 or higher
+- Allow users to create custom authentication logic
+- Improved language server performance and resource usage
+- Support Query Environment Enabled for Insights connections.
+
+### Fixes
+
+- Fixed kdb results view theme issue
+- Fixed case insensitivity for connection labels
+
+### Internal Improvements
+
+- Improved ESlint rules for the codebase
+- Merged PyKX kdb+ structuredText changes
+
 # v1.10.2
 
 ### Fixes

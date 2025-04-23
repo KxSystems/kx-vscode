@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,8 +11,10 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import Path from "path";
+import { spawn } from "child_process";
 import fs from "fs";
+import { tmpdir } from "os";
+import Path from "path";
 import {
   Diagnostic,
   DiagnosticSeverity,
@@ -23,8 +25,7 @@ import {
   window,
   workspace,
 } from "vscode";
-import { spawn } from "child_process";
-import { tmpdir } from "os";
+
 import { ext } from "../extensionVariables";
 
 const cache = new Map<string, Thenable<Diagnostic[]>>();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -22,6 +22,7 @@ import {
   TreeItemCollapsibleState,
   commands,
 } from "vscode";
+
 import { ext } from "../extensionVariables";
 import { QueryHistory } from "../models/queryHistory";
 import { getConnectionType } from "../utils/queryUtils";

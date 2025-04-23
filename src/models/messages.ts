@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -14,10 +14,12 @@
 import { ConnectionType } from "./connectionsModels";
 import { DataSourceFiles } from "./dataSource";
 import { MetaObjectPayload } from "./meta";
+import { UDA } from "./uda";
 
 export type DataSourceMessage = {
   isInsights: boolean;
   insightsMeta: MetaObjectPayload;
+  insightsUDAs: UDA[];
   dataSourceName: string;
   dataSourceFile: DataSourceFiles;
   running?: boolean;
@@ -43,6 +45,7 @@ export interface DataSourceMessage2 {
   isInsights: boolean;
   insightsMeta: MetaObjectPayload;
   dataSourceFile: DataSourceFiles;
+  UDAs: UDA[];
 }
 
 export interface EditConnectionMessage {

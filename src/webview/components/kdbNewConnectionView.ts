@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -14,16 +14,17 @@
 import { LitElement, html } from "lit";
 import { customElement } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
-import { kdbStyles, newConnectionStyles, shoelaceStyles } from "./styles";
-import { EditConnectionMessage } from "../../models/messages";
 import { repeat } from "lit/directives/repeat.js";
-import { LabelColors, Labels } from "../../models/labels";
+
+import { kdbStyles, newConnectionStyles, shoelaceStyles } from "./styles";
 import {
   ConnectionType,
   InsightDetails,
   ServerDetails,
   ServerType,
 } from "../../models/connectionsModels";
+import { LabelColors, Labels } from "../../models/labels";
+import { EditConnectionMessage } from "../../models/messages";
 
 @customElement("kdb-new-connection-view")
 export class KdbNewConnectionView extends LitElement {
@@ -396,7 +397,7 @@ export class KdbNewConnectionView extends LitElement {
     `;
   }
 
-  renderLblDropdownOptions(pos: number) {
+  renderLblDropdownOptions(_pos: number) {
     return html`
       <sl-option> No Label Selected </sl-option>
       ${repeat(

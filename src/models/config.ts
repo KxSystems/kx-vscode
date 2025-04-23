@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -20,12 +20,20 @@ export type InsightsConfig = {
   version: string;
 };
 
+export type InsightsApiConfig = {
+  encryptionDatabase: boolean;
+  encryptionInTransit: boolean;
+  queryEnvironmentsEnabled: boolean;
+  version: string;
+};
+
 export type InsightsEndpoints = {
   scratchpad: {
     scratchpad: string;
     import: string;
     importSql: string;
     importQsql: string;
+    importUDA: string;
     reset: string;
   };
   serviceGateway: {
@@ -33,5 +41,6 @@ export type InsightsEndpoints = {
     data: string;
     sql: string;
     qsql: string;
+    udaBase: string;
   };
 };

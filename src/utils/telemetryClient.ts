@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -15,12 +15,13 @@ import * as crypto from "crypto";
 import * as os from "os";
 import { OutputChannel, window, workspace } from "vscode";
 import TelemetryReporter from "vscode-extension-telemetry";
+
 import { ext } from "../extensionVariables";
 
 class ExtensionTelemetry {
   private readonly output?: OutputChannel;
   private readonly reporter?: TelemetryReporter;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   private readonly defaultProperties: { [key: string]: any } = {};
 
   constructor() {

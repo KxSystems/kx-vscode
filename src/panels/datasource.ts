@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -12,9 +12,11 @@
  */
 
 import * as vscode from "vscode";
+
 import { ext } from "../extensionVariables";
 import { DataSourceFiles } from "../models/dataSource";
 import { DataSourceMessage } from "../models/messages";
+import { UDA } from "../models/uda";
 import { InsightsNode } from "../services/kdbTreeProvider";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
@@ -31,7 +33,7 @@ export class DataSourcesPanel {
   private constructor(
     panel: vscode.WebviewPanel,
     extensionUri: vscode.Uri,
-    dataSourceFile: DataSourceFiles
+    dataSourceFile: DataSourceFiles,
   ) {
     this.uri = extensionUri;
     this.dataSourceFile = dataSourceFile;
@@ -39,24 +41,24 @@ export class DataSourcesPanel {
     this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
     this._panel.webview.html = this._getWebviewContent(
       this._panel.webview,
-      extensionUri
+      extensionUri,
     );
     this._panel.webview.onDidReceiveMessage((message) => {
       if (message.command === "kdb.dataSource.saveDataSource") {
         this._panel.title = message.data.name;
         vscode.commands.executeCommand(
           "kdb.dataSource.saveDataSource",
-          message.data
+          message.data,
         );
       } else if (message.command === "kdb.dataSource.runDataSource") {
         vscode.commands.executeCommand(
           "kdb.dataSource.runDataSource",
-          message.data
+          message.data,
         );
       } else if (message.command === "kdb.dataSource.populateScratchpad") {
         vscode.commands.executeCommand(
           "kdb.dataSource.populateScratchpad",
-          message.data
+          message.data,
         );
       }
     });
@@ -64,14 +66,14 @@ export class DataSourcesPanel {
 
   public static render(
     extensionUri: vscode.Uri,
-    dataSourceFile: DataSourceFiles
+    dataSourceFile: DataSourceFiles,
   ) {
     if (DataSourcesPanel.currentPanel) {
       DataSourcesPanel.currentPanel.dispose();
     }
     const panel = vscode.window.createWebviewPanel(
       "dataSource",
-      dataSourceFile.name,
+      dataSourceFile.name ? dataSourceFile.name : "DataSource",
       vscode.ViewColumn.One,
       {
         // Enable javascript in the webview
@@ -80,13 +82,13 @@ export class DataSourcesPanel {
         retainContextWhenHidden: true,
         // Restrict the webview to only load resources from the `out` directory
         localResourceRoots: [vscode.Uri.joinPath(extensionUri, "out")],
-      }
+      },
     );
 
     DataSourcesPanel.currentPanel = new DataSourcesPanel(
       panel,
       extensionUri,
-      dataSourceFile
+      dataSourceFile,
     );
 
     DataSourcesPanel.currentPanel.update();
@@ -133,13 +135,15 @@ export class DataSourcesPanel {
 
   private update() {
     const dataSourceFile = this.dataSourceFile;
-    const dataSourceName = dataSourceFile.name;
+    const dataSourceName = dataSourceFile.name || "";
     const insightsMeta = ext.insightsMeta;
     const isInsights = ext.connectionNode instanceof InsightsNode;
+    const insightsUDAs: UDA[] = [];
 
     const message: DataSourceMessage = {
       isInsights,
       insightsMeta,
+      insightsUDAs,
       dataSourceName,
       dataSourceFile,
     };
@@ -154,7 +158,7 @@ export class DataSourcesPanel {
 
   private _getWebviewContent(
     webview: vscode.Webview,
-    extensionUri: vscode.Uri
+    extensionUri: vscode.Uri,
   ) {
     const webviewUri = getUri(webview, extensionUri, ["out", "webview.js"]);
     const nonce = getNonce();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { GridOptions } from "ag-grid-community";
 import {
   ColorThemeKind,
   Uri,
@@ -19,14 +20,14 @@ import {
   window,
   workspace,
 } from "vscode";
+
 import { ext } from "../extensionVariables";
+import { StructuredTextResults } from "../models/queryResult";
+import { compareVersions, kdbOutputLog } from "../utils/core";
+import { decodeQUTF } from "../utils/decode";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
-import { compareVersions, kdbOutputLog } from "../utils/core";
-import { StructuredTextResults } from "../models/queryResult";
-import { GridOptions } from "ag-grid-community";
-import { decodeQUTF } from "../utils/decode";
 
 export class KdbResultsViewProvider implements WebviewViewProvider {
   public static readonly viewType = "kdb-results";
@@ -48,6 +49,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   public kdbToAgGridCellType(kdbType: string): string {
     const typeMapping: { [key: string]: string } = {
       boolean: "boolean",
+      booleans: "boolean",
       guid: "text",
       byte: "number",
       short: "number",
@@ -227,7 +229,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
     const columnDefs = columnsArray.map((column) => {
       const sanitizedKey = this.sanitizeString(column.name);
-      const cellDataType = "text";
+      const cellDataType = this.kdbToAgGridCellType(column.type);
       const headerName = column.type
         ? `${sanitizedKey} [${column.type}]`
         : sanitizedKey;
@@ -235,8 +237,8 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       return {
         field: column.name,
         headerName: headerName,
-        cellDataType: cellDataType,
-        cellRendererParams: { disabled: false },
+        cellDataType,
+        cellRendererParams: { disabled: cellDataType === "boolean" },
       };
     });
 
@@ -397,6 +399,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
           command: "setGridDatasource",
           results: gridOptions.rowData,
           columnDefs: gridOptions.columnDefs,
+          theme: "legacy",
         });
       } else {
         this._view.webview.postMessage({
@@ -483,7 +486,9 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
                       filter: true,
                       flex: 1,
                       minWidth: 100,
+                      editable: false,
                     },
+                    theme: message.theme,
                     columnDefs: message.columnDefs,
                     domLayout: "autoHeight",
                     pagination: true,

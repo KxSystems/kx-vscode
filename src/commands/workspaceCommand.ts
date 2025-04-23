@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import Path from "path";
 import {
   CodeLens,
   CodeLensProvider,
@@ -26,14 +27,14 @@ import {
   window,
   workspace,
 } from "vscode";
+
 import { ext } from "../extensionVariables";
+import { resetScratchpad, runQuery } from "./serverCommand";
+import { ExecutionTypes } from "../models/execution";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
-import { runQuery } from "./serverCommand";
-import { ExecutionTypes } from "../models/execution";
-import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
 import { kdbOutputLog, offerConnectAction } from "../utils/core";
-import Path from "path";
+import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
 
 const connectionService = new ConnectionManagementService();
 
@@ -288,6 +289,23 @@ export async function runActiveEditor(type?: ExecutionTypes) {
       executorName ? executorName : "",
       isWorkbook,
     );
+  }
+}
+
+export async function resetScratchpadFromEditor(): Promise<void> {
+  if (ext.activeTextEditor) {
+    const uri = ext.activeTextEditor.document.uri;
+    const isWorkbook = uri.path.endsWith(".kdb.q");
+    let server = getServerForUri(uri);
+    if (!server && isWorkbook) {
+      server = await pickConnection(uri);
+    }
+    if (!server) {
+      server = "";
+    }
+    const connection = await getConnectionForServer(server);
+    server = connection?.label || "";
+    resetScratchpad(server);
   }
 }
 

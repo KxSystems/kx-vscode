@@ -98,11 +98,11 @@ interface Tokenized {
 }
 
 export default class QLangServer {
-  private declare connection: Connection;
-  private declare params: InitializeParams;
-  private declare settings: Settings;
-  private declare cached: Map<string, Token[]>;
-  public declare documents: TextDocuments<TextDocument>;
+  declare private connection: Connection;
+  declare private params: InitializeParams;
+  declare private settings: Settings;
+  declare private cached: Map<string, Token[]>;
+  declare public documents: TextDocuments<TextDocument>;
 
   constructor(connection: Connection, params: InitializeParams) {
     this.connection = connection;
@@ -202,8 +202,9 @@ export default class QLangServer {
   public onDidChangeContent({
     document,
   }: TextDocumentChangeEvent<TextDocument>) {
+    const uri = document.uri;
+    this.cached.delete(uri);
     if (this.settings.linting) {
-      const uri = document.uri;
       const diagnostics = lint(this.parse(document)).map((item) =>
         Diagnostic.create(
           rangeFromToken(item.token),
@@ -502,7 +503,7 @@ export default class QLangServer {
               absolute: true,
               nodir: true,
               follow: false,
-              ignore: "node_modules/**/*.*",
+              ignore: ["**/node_modules/**/*", "**/build/**/*"],
               cwd: fileURLToPath(folder.uri),
             }),
           );
@@ -522,11 +523,17 @@ export default class QLangServer {
   }
 
   private parse(textDocument: TextDocumentIdentifier): Token[] {
-    const document = this.documents.get(textDocument.uri);
-    if (!document) {
-      return [];
+    const uri = textDocument.uri;
+    let tokens = this.cached.get(uri);
+    if (!tokens) {
+      const document = this.documents.get(uri);
+      if (!document) {
+        return [];
+      }
+      tokens = parse(document.getText());
+      this.cached.set(uri, tokens);
     }
-    return parse(document.getText());
+    return tokens;
   }
 
   private context({ uri, tokens }: Tokenized, all = true): Tokenized[] {

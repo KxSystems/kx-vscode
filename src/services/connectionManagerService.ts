@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,13 +11,20 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { LocalConnection } from "../classes/localConnection";
 import { window, commands } from "vscode";
+
+import { LocalConnection } from "../classes/localConnection";
 import { ext } from "../extensionVariables";
 import { InsightsNode, KdbNode } from "./kdbTreeProvider";
-import { Telemetry } from "../utils/telemetryClient";
 import { InsightsConnection } from "../classes/insightsConnection";
-import { sanitizeQuery } from "../utils/queryUtils";
+import {
+  ExportedConnections,
+  Insights,
+  kdbAuthMap,
+  Server,
+} from "../models/connectionsModels";
+import { MetaInfoType } from "../models/meta";
+import { retrieveConnLabelsNames } from "../utils/connLabel";
 import {
   compareVersions,
   getInsights,
@@ -30,14 +37,8 @@ import {
   updateServers,
 } from "../utils/core";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
-import { MetaInfoType } from "../models/meta";
-import { retrieveConnLabelsNames } from "../utils/connLabel";
-import {
-  ExportedConnections,
-  Insights,
-  kdbAuthMap,
-  Server,
-} from "../models/connectionsModels";
+import { sanitizeQuery } from "../utils/queryUtils";
+import { Telemetry } from "../utils/telemetryClient";
 
 export class ConnectionManagementService {
   public retrieveConnection(
@@ -137,6 +138,7 @@ export class ConnectionManagementService {
       const localConnection = new LocalConnection(
         connectionString,
         connLabel,
+        retrieveConnLabelsNames(connection),
         authCredentials ? authCredentials.split(":") : undefined,
         connection.details.tls,
       );
@@ -353,23 +355,36 @@ export class ConnectionManagementService {
     }
   }
 
-  public async resetScratchpad(): Promise<void> {
-    if (
-      !ext.activeConnection ||
-      !(ext.activeConnection instanceof InsightsConnection)
-    ) {
-      kdbOutputLog(
-        "[RESET SCRATCHPAD] Please activate an Insights connection to use this feature.",
-        "ERROR",
-      );
-      return;
+  public async resetScratchpad(connLabel?: string): Promise<void> {
+    let conn: InsightsConnection | undefined;
+    if (connLabel) {
+      const retrievedConn = this.retrieveConnectedConnection(connLabel);
+      if (retrievedConn instanceof InsightsConnection) {
+        conn = retrievedConn;
+      } else {
+        kdbOutputLog(
+          "[RESET SCRATCHPAD] Please connect to an Insights connection to use this feature.",
+          "ERROR",
+        );
+        return;
+      }
+    }
+    if (!conn) {
+      if (
+        !ext.activeConnection ||
+        !(ext.activeConnection instanceof InsightsConnection)
+      ) {
+        kdbOutputLog(
+          "[RESET SCRATCHPAD] Please activate an Insights connection to use this feature.",
+          "ERROR",
+        );
+        return;
+      }
+      conn = ext.activeConnection;
     }
 
-    if (
-      ext.activeConnection.insightsVersion &&
-      compareVersions(ext.activeConnection.insightsVersion, 1.12)
-    ) {
-      const confirmationPrompt = `Are you sure you want to reset the scratchpad from the connection ${ext.activeConnection.connLabel}?`;
+    if (conn.insightsVersion && compareVersions(conn.insightsVersion, 1.13)) {
+      const confirmationPrompt = `Reset Scratchpad? All data in the ${conn.connLabel} Scratchpad will be lost, and variables will be reset.`;
       const selection = await window.showInformationMessage(
         confirmationPrompt,
         "Yes",
@@ -377,11 +392,17 @@ export class ConnectionManagementService {
       );
 
       if (selection === "Yes") {
-        await ext.activeConnection.resetScratchpad();
+        await conn.resetScratchpad();
+      } else {
+        kdbOutputLog(
+          "[RESET SCRATCHPAD] The user canceled the scratchpad reset.",
+          "INFO",
+        );
+        return;
       }
     } else {
       kdbOutputLog(
-        "[RESET SCRATCHPAD] Please connect to an Insights connection with version superior to 1.11",
+        "[RESET SCRATCHPAD] Please connect to an Insights connection with version 1.13 or higher.",
         "ERROR",
       );
     }
@@ -466,6 +487,23 @@ export class ConnectionManagementService {
       return 0;
     }
     return connection.insightsVersion ? connection.insightsVersion : 0;
+  }
+
+  public async retrieveInsightsConnQEEnabled(
+    connLabel: string,
+  ): Promise<string | undefined> {
+    const connection = this.retrieveConnectedConnection(connLabel);
+
+    if (
+      connection instanceof InsightsConnection &&
+      connection.apiConfig?.queryEnvironmentsEnabled !== undefined
+    ) {
+      return connection.apiConfig.queryEnvironmentsEnabled
+        ? "Enabled"
+        : "Disabled";
+    }
+
+    return undefined;
   }
 
   public exportConnection(connLabel?: string, includeAuth?: boolean): string {

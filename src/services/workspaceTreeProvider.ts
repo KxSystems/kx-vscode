@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import Path from "path";
 import {
   Command,
   EventEmitter,
@@ -21,10 +22,10 @@ import {
   Uri,
   workspace,
 } from "vscode";
-import Path from "path";
-import { getWorkspaceIconsState } from "../utils/core";
+
 import { getConnectionForUri } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
+import { getWorkspaceIconsState } from "../utils/core";
 
 export class WorkspaceTreeProvider implements TreeDataProvider<FileTreeItem> {
   private _onDidChangeTreeData = new EventEmitter<void>();
