@@ -1003,7 +1003,7 @@
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
     "publish": "npx vsce publish",
     "lint": "eslint 'src/**' 'test/suite/**' --fix",
-    "ui-test": "rimraf out-test && tsc --outdir out-test -p ./test && extest setup-and-run './out-test/test/ui/**/*.test.js' --code_version max --extensions_dir .test-extensions"
+    "ui-test": "rimraf out-test .test-extensions && tsc --outdir out-test -p ./test && extest setup-and-run './out-test/test/ui/**/*.test.js' --code_version max --code_settings ./test/ui/fixtures/settings.json --extensions_dir .test-extensions -m ./test/ui/fixtures/mocha.json"
   },
   "prettier": {
     "printWidth": 80,

@@ -12,12 +12,14 @@
  */
 
 import * as assert from "assert";
-import { ActivityBar } from "vscode-extension-tester";
+import { VSBrowser, ActivityBar } from "vscode-extension-tester";
 
 describe("ActivityBar", () => {
+  let browser: VSBrowser;
   let activityBar: ActivityBar;
 
   before(async () => {
+    browser = VSBrowser.instance;
     activityBar = new ActivityBar();
   });
 
@@ -32,5 +34,9 @@ describe("ActivityBar", () => {
       }
     }
     assert.strictEqual(kx, "KX");
+  });
+
+  it("should open basic workspace", async () => {
+    await browser.openResources("./test/ui/fixtures/basic");
   });
 });
