@@ -1002,7 +1002,8 @@
     "package": "npx vsce package",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
     "publish": "npx vsce publish",
-    "lint": "eslint 'src/**' 'test/suite/**' --fix"
+    "lint": "eslint 'src/**' 'test/suite/**' --fix",
+    "ui-test": "rimraf out-test .test-extensions && tsc --outdir out-test -p ./test && extest setup-and-run './out-test/test/ui/**/*.test.js' --code_version max --code_settings ./test/ui/fixtures/settings.json --extensions_dir .test-extensions -m ./test/ui/fixtures/mocha.json"
   },
   "prettier": {
     "printWidth": 80,
@@ -1049,6 +1050,7 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.30.1",
     "vscode-dts": "^0.3.3",
+    "vscode-extension-tester": "^8.14.1",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "^1.0.12",
