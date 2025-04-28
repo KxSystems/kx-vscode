@@ -540,23 +540,23 @@ When interacting with UDAs, parameter fields are shown for configuration. Note t
 
 You can add new parameters by clicking **Add Parameter**. Both optional and distinguished parameters can be added as needed.
 
-![Add parameters to call UDAs](https://github.com/KxSystems/kx-vscode/blob/img/udas-add-parameters.png?raw=true)
+![Add parameters to call UDAs](https://github.com/KxSystems/kx-vscode/blob/main/img/udas-add-parameters.png?raw=true)
 
 **Important!** A UDA cannot be queried if one or more parameters are invalid.
 
 If you attempt to run a UDA with invalid parameters, an error occurs and a pop-up message appears to alert you to the issue.
 
-![Error showing invalid parameters for UDA](https://github.com/KxSystems/kx-vscode/blob/img/udas-invalid-parameter.png?raw=true)
+![Error showing invalid parameters for UDA](https://github.com/KxSystems/kx-vscode/blob/main/img/udas-invalid-parameter.png?raw=true)
 
-![Pop-up message UDAs include invalid parameter](https://github.com/KxSystems/kx-vscode/blob/img/udas-error-pop-up.png?raw=true)
+![Pop-up message UDAs include invalid parameter](https://github.com/KxSystems/kx-vscode/blob/main/img/udas-error-pop-up.png?raw=true)
 
 In some cases, you can successfully query UDAs without any parameters, as seen in the screenshot below.
 
-![UDAs with no parameters](https://github.com/KxSystems/kx-vscode/blob/img/udas-no-parameters.png?raw=true)
+![UDAs with no parameters](https://github.com/KxSystems/kx-vscode/blob/main/img/udas-no-parameters.png?raw=true)
 
 However, you can still modify the parameter list to add parameters by clicking **Add parameter** or deleting parameters using the recycle bin icon.
 
-![Delete UDA parameters](https://github.com/KxSystems/kx-vscode/blob/img/udas-delete-parameters.png?raw=true)
+![Delete UDA parameters](https://github.com/KxSystems/kx-vscode/blob/main/img/udas-delete-parameters.png?raw=true)
 
 For more information on User-Defined Analytics, refer to the [UDAs documentation](https://code.kx.com/insights/api/database/uda/uda-overview-introduction.html).
 
