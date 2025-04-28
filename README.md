@@ -651,6 +651,7 @@ To create a Workbook and run code against a specific connection:
       1. Right-click and choose **KX: Execute Entire File** from the menu.
 
 1. If you have not yet chosen a connection to associate with the workbook you are asked to choose a connection before the code is executed.
+
    ![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookconnectionlink.png?raw=true)
 
 1. The results populate the kdb results window if it is active, otherwise the output window is populated.
