@@ -658,7 +658,7 @@ To create a Workbook and run code against a specific connection:
 When you save a workbook file the code and the connection details are stored. The workbook icon is green if it is associated with a connection and grey if there is no association.
 
 You can also change the connection associated with a workbook at any time by clicking on **Choose Connection** from above the first line of code in the workbook file.
-![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/wortkbookplaydropdown.png?raw=true)
+![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookplaydropdown.png?raw=true)
 
 ## Query History
 
