@@ -91,7 +91,7 @@
     import pykx as kx
 
     if isinstance(data, list):
-        columns = com_kx_edi_generate_columns(False, data, 'values')
+        columns = [com_kx_edi_generate_columns(False, data, 'values')]
     # First we have to find out if the table is keyed or unkeyed. Since keyed tables also return true in dictionary case, we put this one here first
     elif isinstance(data, pykx.KeyedTable):
         columns = []
@@ -126,7 +126,7 @@
             columns.append(com_kx_edi_generate_columns(False, data.get([element]).values(), str(element)))
 
     else:
-        columns = com_kx_edi_generate_columns(False, data, 'value' if length == 1 else 'values')
+        columns = [com_kx_edi_generate_columns(False, data, 'value' if length == 1 else 'values')]
 
     finalData = {
         'count': length,
@@ -159,23 +159,23 @@
         try:
             # premade functions not created in C or made by users can get source, otherwise print repr of data
             import inspect
-            values = inspect.getsource(data)
+            values = [inspect.getsource(data)]
         except:
-            values = repr(data)
+            values = [repr(data)]
     # Panda dataframes need to be extracted like so or data is lost
     elif t.__name__ == 'DataFrame':
-        values = repr(data)
+        values = [repr(data)]
     # Check explicitly for iterators, cannot iterate through iterators as it is destructive
     elif isinstance(data, Iterator):
-        values = str(data)
+        values = [str(data)]
     # Check for strings and ranges, stringify whole value instead of iterating
     elif t.__name__ == 'str' or t.__name__ == 'range':
-        values = str(data)
+        values = [str(data)]
     else:
         try:
             values = [repr(x) for x in data]
         except:
-            values = str(data)
+            values = [str(data)]
 
     if len(values) == 1 or isinstance(values, str):
         order = [0]
