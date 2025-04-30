@@ -44,6 +44,9 @@ import AuthSettings from "./utils/secretStorage";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
+  export const EXTENSION_VERSION =
+    extensions.getExtension("KX.kdb")?.packageJSON.version || "unknown";
+  export const isRCExtension = EXTENSION_VERSION.includes("rc");
   export let activeTextEditor: TextEditor | undefined;
   export let context: ExtensionContext;
   export let outputChannel: OutputChannel;

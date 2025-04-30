@@ -21,12 +21,14 @@ import { ext } from "../extensionVariables";
 class ExtensionTelemetry {
   private readonly output?: OutputChannel;
   private readonly reporter?: TelemetryReporter;
-   
+
   private readonly defaultProperties: { [key: string]: any } = {};
 
   constructor() {
-    const isEnableTelemetry =
-      workspace.getConfiguration("telemetry").get("enableTelemetry") || true;
+    const isEnableTelemetry = ext.isRCExtension
+      ? false
+      : (workspace.getConfiguration("telemetry").get("enableTelemetry") ??
+        true);
     const isTestRun = process.env.CODE_TEST || false;
 
     if (isEnableTelemetry) {
@@ -37,7 +39,7 @@ class ExtensionTelemetry {
           this.reporter = new TelemetryReporter(
             ext.extensionName,
             ext.extensionVersion,
-            ext.extensionKey
+            ext.extensionKey,
           );
           this.defaultProperties["common.vscodemachineid"] =
             generateMachineId();
@@ -53,7 +55,7 @@ class ExtensionTelemetry {
   public sendEvent(
     eventName: string,
     properties?: { [key: string]: string },
-    measurements?: { [key: string]: number }
+    measurements?: { [key: string]: number },
   ): void {
     const props = Object.assign({}, this.defaultProperties, properties);
     if (this.reporter) {
@@ -61,7 +63,7 @@ class ExtensionTelemetry {
     }
     if (this.output) {
       this.output.appendLine(
-        `telemetry/${eventName} ${JSON.stringify({ props, measurements })}`
+        `telemetry/${eventName} ${JSON.stringify({ props, measurements })}`,
       );
     }
   }
@@ -69,7 +71,7 @@ class ExtensionTelemetry {
   public sendException(
     exception: Error,
     properties?: { [key: string]: string },
-    measurements?: { [key: string]: number }
+    measurements?: { [key: string]: number },
   ): void {
     const props = Object.assign({}, this.defaultProperties, properties);
     const error = new Error(exception.message);
@@ -81,7 +83,7 @@ class ExtensionTelemetry {
 
     if (this.output) {
       this.output.appendLine(
-        `telemetry/${error}${JSON.stringify({ props, measurements })}`
+        `telemetry/${error}${JSON.stringify({ props, measurements })}`,
       );
     }
   }
