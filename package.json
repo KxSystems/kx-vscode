@@ -475,6 +475,26 @@
         "category": "KX",
         "command": "kdb.deleteLabel",
         "title": "Delete label"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.help.openDocumentation",
+        "title": "Extension Documentation"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.help.suggestFeature",
+        "title": "Suggest a Feature"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.help.provideFeedback",
+        "title": "Provide Feedback"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.help.reportBug",
+        "title": "Report a Bug"
       }
     ],
     "keybindings": [
@@ -622,6 +642,10 @@
           "name": "Query History",
           "contextualTitle": "Query History",
           "icon": "resources/history.svg"
+        },
+        {
+          "id": "kdb-help-feedback-view",
+          "name": "Help and Feedback"
         }
       ],
       "kdb-results": [
