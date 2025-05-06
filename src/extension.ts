@@ -74,6 +74,7 @@ import { QueryResult } from "./models/queryResult";
 import { ChartEditorProvider } from "./services/chartEditorProvider";
 import { CompletionProvider } from "./services/completionProvider";
 import { DataSourceEditorProvider } from "./services/dataSourceEditorProvider";
+import { HelpFeedbackProvider } from "./services/helpFeedbackProvider";
 import {
   InsightsMetaNode,
   InsightsNode,
@@ -118,7 +119,6 @@ import {
   openWith,
   setUriContent,
 } from "./utils/workspace";
-import { HelpFeedbackProvider } from "./services/helpFeedbackProvider";
 
 let client: LanguageClient;
 
@@ -204,100 +204,7 @@ export async function activate(context: vscode.ExtensionContext) {
       ext.resultsViewProvider,
       { webviewOptions: { retainContextWhenHidden: true } },
     ),
-    vscode.commands.registerCommand(
-      "kdb.resultsPanel.update",
-      (
-        results: any,
-        isInsights: boolean,
-        connVersion?: number,
-        isPython?: boolean,
-      ) => {
-        ext.resultsViewProvider.updateResults(
-          results,
-          isInsights,
-          connVersion,
-          isPython,
-        );
-      },
-    ),
-    vscode.commands.registerCommand("kdb.resultsPanel.clear", () => {
-      ext.resultsViewProvider.updateResults("");
-    }),
-    vscode.commands.registerCommand("kdb.resultsPanel.export.csv", () => {
-      ext.resultsViewProvider.exportToCsv();
-    }),
-    vscode.commands.registerCommand("kdb.datasource.import.ds", async () => {
-      await importOldDSFiles();
-    }),
-    vscode.commands.registerCommand(
-      "kdb.connect",
-      async (viewItem: KdbNode | InsightsNode) => {
-        await connect(viewItem.label);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.connect.via.dialog",
-      async (connLabel: string) => {
-        await connect(connLabel);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.active.connection",
-      async (viewItem: KdbNode) => {
-        activeConnection(viewItem);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.addAuthentication",
-      async (viewItem: KdbNode) => {
-        const username = await vscode.window.showInputBox({
-          prompt: "Username",
-          title: "Add Authentication",
-        });
-        if (username) {
-          const password = await vscode.window.showInputBox({
-            prompt: "Password",
-            title: "Add Authentication",
-            password: true,
-          });
-          if (password) {
-            await addAuthConnection(viewItem.children[0], username, password);
-          }
-        }
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.enableTLS",
-      async (viewItem: KdbNode) => {
-        await enableTLS(viewItem.children[0]);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.insightsRemove",
-      async (viewItem: InsightsNode) => {
-        await removeConnection(viewItem);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.disconnect",
-      async (viewItem: InsightsNode | KdbNode | string) => {
-        const connLabel =
-          typeof viewItem === "string" ? viewItem : viewItem.label;
-        await disconnect(connLabel);
-      },
-    ),
-    vscode.commands.registerCommand("kdb.connections.export.all", () => {
-      exportConnections();
-    }),
-    vscode.commands.registerCommand(
-      "kdb.connections.export.single",
-      async (viewItem: KdbNode | InsightsNode) => {
-        exportConnections(viewItem.label);
-      },
-    ),
-    vscode.commands.registerCommand("kdb.connections.import", async () => {
-      await importConnections();
-    }),
+
     vscode.commands.registerCommand(
       "kdb.connection.content.selectView",
       async (viewItem) => {
@@ -495,32 +402,6 @@ export async function activate(context: vscode.ExtensionContext) {
       },
     ),
     vscode.commands.registerCommand(
-      "kdb.createDataSource",
-      async (item: FileTreeItem) => {
-        if (hasWorkspaceOrShowOption("adding datasources")) {
-          const uri = await addWorkspaceFile(
-            item ? item.resourceUri : undefined,
-            "datasource",
-            ".kdb.json",
-          );
-          await vscode.workspace.openTextDocument(uri);
-          await setUriContent(
-            uri,
-            JSON.stringify(createDefaultDataSourceFile(), null, 2),
-          );
-          await openWith(uri, DataSourceEditorProvider.viewType);
-          await vscode.commands.executeCommand(
-            "workbench.action.files.save",
-            uri,
-          );
-          await setServerForUri(uri, undefined);
-        }
-      },
-    ),
-    vscode.commands.registerCommand("kdb.refreshDataSourceExplorer", () => {
-      ext.dataSourceTreeProvider.reload();
-    }),
-    vscode.commands.registerCommand(
       "kdb.createScratchpad",
       async (item: FileTreeItem) => {
         if (hasWorkspaceOrShowOption("adding workbooks")) {
@@ -686,25 +567,6 @@ export async function activate(context: vscode.ExtensionContext) {
         deleteLabel(item.label);
       }
     }),
-
-    vscode.commands.registerCommand("kdb.help.openDocumentation", () => {
-      vscode.commands.executeCommand("extension.open", "KX.kdb");
-    }),
-    vscode.commands.registerCommand("kdb.help.suggestFeature", () => {
-      vscode.env.openExternal(
-        vscode.Uri.parse("https://kx-features.ideas.aha.io/ideas/new"),
-      );
-    }),
-    vscode.commands.registerCommand("kdb.help.provideFeedback", () => {
-      vscode.env.openExternal(vscode.Uri.parse("https://t.maze.co/333268148"));
-    }),
-    vscode.commands.registerCommand("kdb.help.reportBug", () => {
-      vscode.env.openExternal(
-        vscode.Uri.parse(
-          "https://github.com/KxSystems/kx-vscode/issues/new?labels=bug",
-        ),
-      );
-    }),
   );
 
   checkOldDatasourceFiles();
@@ -806,6 +668,212 @@ export async function activate(context: vscode.ExtensionContext) {
       ext.customAuth = api;
     }
   }
+}
+
+function registerHelpCommands(context: vscode.ExtensionContext) {
+  const helpCommands = [
+    {
+      command: "kdb.help.openDocumentation",
+      callback: () => {
+        vscode.commands
+          .executeCommand(
+            "workbench.extensions.action.showExtensionDetails",
+            "KX.kdb",
+          )
+          .then(undefined, () => {
+            vscode.commands.executeCommand("extension.open", "KX.kdb");
+          });
+      },
+    },
+    {
+      command: "kdb.help.suggestFeature",
+      callback: () =>
+        vscode.env.openExternal(
+          vscode.Uri.parse("https://kx-features.ideas.aha.io/ideas/new"),
+        ),
+    },
+    {
+      command: "kdb.help.provideFeedback",
+      callback: () =>
+        vscode.env.openExternal(
+          vscode.Uri.parse("https://t.maze.co/333268148"),
+        ),
+    },
+    {
+      command: "kdb.help.reportBug",
+      callback: () =>
+        vscode.env.openExternal(
+          vscode.Uri.parse(
+            "https://github.com/KxSystems/kx-vscode/issues/new?labels=bug",
+          ),
+        ),
+    },
+  ];
+
+  helpCommands.forEach(({ command, callback }) => {
+    context.subscriptions.push(
+      vscode.commands.registerCommand(command, callback),
+    );
+  });
+}
+
+function registerResultsTabCommands(context: vscode.ExtensionContext) {
+  const resultsCommands = [
+    {
+      command: "kdb.resultsPanel.update",
+      callback: (
+        results: any,
+        isInsights: boolean,
+        connVersion?: number,
+        isPython?: boolean,
+      ) => {
+        ext.resultsViewProvider.updateResults(
+          results,
+          isInsights,
+          connVersion,
+          isPython,
+        );
+      },
+    },
+    {
+      command: "kdb.resultsPanel.clear",
+      callback: () => ext.resultsViewProvider.updateResults(""),
+    },
+    {
+      command: "kdb.resultsPanel.export.csv",
+      callback: () => ext.resultsViewProvider.exportToCsv(),
+    },
+  ];
+
+  resultsCommands.forEach(({ command, callback }) => {
+    context.subscriptions.push(
+      vscode.commands.registerCommand(command, callback),
+    );
+  });
+}
+
+function registerDatasourceCommands(context: vscode.ExtensionContext) {
+  const dataSourceCommands = [
+    {
+      command: "kdb.datasource.import.ds",
+      callback: async () => await importOldDSFiles(),
+    },
+    {
+      command: "kdb.createDataSource",
+      callback: async (item: FileTreeItem) => {
+        if (hasWorkspaceOrShowOption("adding datasources")) {
+          const uri = await addWorkspaceFile(
+            item ? item.resourceUri : undefined,
+            "datasource",
+            ".kdb.json",
+          );
+          await vscode.workspace.openTextDocument(uri);
+          await setUriContent(
+            uri,
+            JSON.stringify(createDefaultDataSourceFile(), null, 2),
+          );
+          await openWith(uri, DataSourceEditorProvider.viewType);
+          await vscode.commands.executeCommand(
+            "workbench.action.files.save",
+            uri,
+          );
+          await setServerForUri(uri, undefined);
+        }
+      },
+    },
+    {
+      command: "kdb.refreshDataSourceExplorer",
+      callback: () => ext.dataSourceTreeProvider.reload(),
+    },
+  ];
+
+  dataSourceCommands.forEach(({ command, callback }) => {
+    context.subscriptions.push(
+      vscode.commands.registerCommand(command, callback),
+    );
+  });
+}
+
+function registerScratchpadCommands(context: vscode.ExtensionContext) {}
+
+function registerConnectionsCommands(context: vscode.ExtensionContext) {
+  const connectionCommands = [
+    {
+      command: "kdb.connect",
+      callback: async (viewItem: KdbNode | InsightsNode) => {
+        await connect(viewItem.label);
+      },
+    },
+    {
+      command: "kdb.connect.via.dialog",
+      callback: async (connLabel: string) => {
+        await connect(connLabel);
+      },
+    },
+    {
+      command: "kdb.active.connection",
+      callback: async (viewItem: KdbNode) => {
+        activeConnection(viewItem);
+      },
+    },
+    {
+      command: "kdb.addAuthentication",
+      callback: async (viewItem: KdbNode) => {
+        const username = await vscode.window.showInputBox({
+          prompt: "Username",
+          title: "Add Authentication",
+        });
+        if (username) {
+          const password = await vscode.window.showInputBox({
+            prompt: "Password",
+            title: "Add Authentication",
+            password: true,
+          });
+          if (password) {
+            await addAuthConnection(viewItem.children[0], username, password);
+          }
+        }
+      },
+    },
+    {
+      command: "kdb.enableTLS",
+      callback: async (viewItem: KdbNode) => {
+        await enableTLS(viewItem.children[0]);
+      },
+    },
+    {
+      command: "kdb.insightsRemove",
+      callback: async (viewItem: InsightsNode) => {
+        await removeConnection(viewItem);
+      },
+    },
+    {
+      command: "kdb.disconnect",
+      callback: async (viewItem: InsightsNode | KdbNode | string) => {
+        const connLabel =
+          typeof viewItem === "string" ? viewItem : viewItem.label;
+        await disconnect(connLabel);
+      },
+    },
+    {
+      command: "kdb.connections.export.all",
+      callback: () => {
+        exportConnections();
+      },
+    },
+    {
+      command: "kdb.connections.export.single",
+      callback: async (viewItem: KdbNode | InsightsNode) => {
+        exportConnections(viewItem.label);
+      },
+    },
+    {
+      command: "kdb.connections.import",
+      callback: async () => {
+        await importConnections();
+      },
+    },
+  ];
 }
 
 export async function deactivate(): Promise<void> {
