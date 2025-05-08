@@ -1,4 +1,4 @@
-name: KX VS Code Production Release Workflow
+name: KX VScode Production Release Workflow
 
 on:
   push:
