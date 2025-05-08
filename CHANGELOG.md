@@ -2,6 +2,12 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.11.2
+
+### Fixes
+
+- Fix README image links for CORS policy at VSCode Marketplace
+
 # v1.11.1
 
 ### Fixes
