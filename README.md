@@ -70,20 +70,20 @@ After you install **kdb VS Code extension**, if q is not already installed the e
 
 1. Click **Install new instance**. If the prompt is not visible ensure the kdb extension is selected in the Activity bar on the left, if that does not display the prompt, close and re-open VS Code.
 
-   ![installnewinstance](https://github.com/KxSystems/kx-vscode/blob/main/img/installnewinstance.jpg?raw=true)
+   ![installnewinstance](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/installnewinstance.jpg)
 
 1. A dropdown is displayed with the two options:
 
    - **Select/Enter a license** - If you have already registered for any of the [versions of q available](#versions-available) choose this to enter the license details.
    - **Acquire license** - If you haven't yet registered for q, click this to open a dialog with a redirect link to register for [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/).
 
-   ![findlicense](https://github.com/KxSystems/kx-vscode/blob/main/img/findlicense.jpg?raw=true)
+   ![findlicense](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/findlicense.jpg)
 
 Once registered you will receive an email with you license details. The base64 encoded license string can be found in the welcome email received after registration, under the download link for the license file.
 
 With your license details to hand, you can link this to VS Code by either choosing **Paste license string** or **Select license file** from your PC. The latter method is recommended for new users.
 
-![findlicense](https://github.com/KxSystems/kx-vscode/blob/main/img/pastelicense.jpg?raw=true)
+![findlicense](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/pastelicense.jpg)
 
 The `k4.lic` or `kc.lic` license file can be downloaded to your PC using the link also found in the welcome email.
 
@@ -93,7 +93,7 @@ To finish, a prompt is offered with an opt-in to receive a newsletter.
 
 If you want to use q outside of VS Code, set a [`QHOME` environment variable](https://code.kx.com/q/learn/install/#step-5-edit-your-profile) to the location used by the kdb VS Code install. A notification dialog displays the location of q, as do the extension [settings](#settings).
 
-![qfound](https://github.com/KxSystems/kx-vscode/blob/main/img/installationofqfound.jpg?raw=true)
+![qfound](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/installationofqfound.jpg)
 
 If q is installed at `C:\q`, then `QHOME` is `C:\q`.
 
@@ -121,7 +121,7 @@ To add connections:
 
 1. When you first install the extension there are no connections so click **Add Connection**. If you have already created connections click **+** for New Connection in the **CONNECTIONS** menu.
 
-   ![connecttoakdbserver](https://github.com/KxSystems/kx-vscode/blob/main/img/connecttoakdbserver.png?raw=true)
+   ![connecttoakdbserver](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/connecttoakdbserver.png)
 
    This opens the **Add a new connection** screen which has three tabs; one for each of the three connection types.
 
@@ -142,13 +142,13 @@ When you select **Bundled q** as the connection type and set the following prope
 | Port                   | Set the port for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. 5002. [Read here for more about setting a q port](https://code.kx.com/q/basics/ipc/) |
 | Label Name             | Select the label you want to assign the connection to                                                                                                                                              |
 
-![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/bundleq.png?raw=true)
+![setendpoint](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/bundleq.png)
 
 1. Click **Create Connection** and the connection appears under **CONNECTIONS** in the primary sidebar..
 
 1. Right-click the q bundled process listed under **CONNECTIONS**, and click **Start q process**.
 
-   ![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/managedqprocess.jpg?raw=true)
+   ![setendpoint](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/managedqprocess.jpg)
 
 1. From the same right-click menu, click **Connect server**. This connects to the child q process running inside the kdb VS Code extension.
 
@@ -170,7 +170,7 @@ Set the following properties:
 | Enable TLS Encryption  | Check the box is TLS is enabled. Learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).                                                                                                                                   |
 | Label Name             | Select the label you want to assign the connection to                                                                                                                                                                                |
 
-![setendpoint](https://github.com/KxSystems/kx-vscode/blob/main/img/myq.png?raw=true)
+![setendpoint](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/myq.png)
 
 1. Click **Create Connection** and the connection appears under **CONNECTIONS** in the primary sidebar.
 
@@ -190,7 +190,7 @@ Set the following properties:
 | The connection address | This is the remote address of your **kdb Insights Enterprise** deployment: e.g. `https://mykdbinsights.cloudapp.azure.com` |
 | Label Name             | Select the label you want to assign the connection to                                                                      |
 
-![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsconnection.png?raw=true)
+![connecttoinsights](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/insightsconnection.png)
 
 Set the following from the Advanced properties if necessary:
 
@@ -198,7 +198,7 @@ Set the following from the Advanced properties if necessary:
 | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Define Realm | Specify the Keycloak realm for authentication. Usually the realm is set to `insights`, which is the default value used by the extension. You only need to change this field if a different realm has been configured on your server. |
 
-![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsconnectionadvanced.png?raw=true)
+![connecttoinsights](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/insightsconnectionadvanced.png)
 
 **Note** For kdb Insights Enterprise Free Trial instances the realm is configured as `insights-{URL}` where {URL} is the 10 digit code in the trial URL. For example: if your trial url is https://fstc83yi5b.ft1.cld.kx.com/ the realm should be `insights-fstc83yi5b`.
 
@@ -206,11 +206,11 @@ Set the following from the Advanced properties if necessary:
 
 1. Right-click the connection, and click **Connect server**.
 
-   ![connecttoinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/kdbinsightsconnection.jpg?raw=true)
+   ![connecttoinsights](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/kdbinsightsconnection.jpg)
 
 1. The kdb VS Code extension runs an authentication step with the remote **kdb Insights Enterprise** process to sign-in.
 
-   ![authenticateinsights](https://github.com/KxSystems/kx-vscode/blob/main/img/insightsauthenticate.jpg?raw=true)
+   ![authenticateinsights](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/insightsauthenticate.jpg)
 
 If you close the extension, the connection also closes.
 
@@ -220,11 +220,11 @@ If you close the extension, the connection also closes.
 
 When connected **Insights** connections can be expanded to show the details returned by the [getMeta API](https://code.kx.com/insights/api/database/query/get-meta.html) call, which provides information on the database schemas and all the analytics available.
 
-![Insights Meta Tree](https://github.com/KxSystems/kx-vscode/blob/main/img/insights-meta-tree.png?raw=true)
+![Insights Meta Tree](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/insights-meta-tree.png)
 
 To see the results of the getMeta call click on the 'meta' node under the connection. A json representation of the details returned by the call are displayed with **"[Connection Name] - meta"** as title of the tab.
 
-![Insights Meta JSON](https://github.com/KxSystems/kx-vscode/blob/main/img/insights-meta-json.png?raw=true)
+![Insights Meta JSON](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/insights-meta-json.png)
 
 The 'meta' node contains a child node for each of the child sections in the json. To see a json representation of a specific section click on the child node. The json representation of this section returned by the call is displayed with **"[Connection Name] - [CHILD SECTION]"** as title of the tab.
 
@@ -234,11 +234,11 @@ You can refresh the meta data view at any time by choosing **Refresh meta data**
 
 To edit an existing connection, right-click the connection you wish to edit and select the **Edit connection** option.
 
-![Edit connection option](https://github.com/KxSystems/kx-vscode/blob/main/img/select-edit-connection.png?raw=true)
+![Edit connection option](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/select-edit-connection.png)
 
 > NOTE: Editing an **active connection** may require you to **restart** the connection. If so, you will be prompted to reconnect after saving your changes.
 
-![Edit connected connection dialog](https://github.com/KxSystems/kx-vscode/blob/main/img/edit-connected-connection-dialog.png?raw=true)
+![Edit connected connection dialog](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/edit-connected-connection-dialog.png)
 
 ### Edit Bundle q connection
 
@@ -251,7 +251,7 @@ When editing a **Bundled q** connection, you can edit the following properties:
 | Port                   | Set the port for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. 5002. [Read here for more about setting a q port](https://code.kx.com/q/basics/ipc/). |
 | Label Name             | Select the label you want to assign the connection to.                                                                                                                                              |
 
-![Edit Bundle q connection](https://github.com/KxSystems/kx-vscode/blob/main/img/edit-bundle-q-conn-form.png?raw=true)
+![Edit Bundle q connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/edit-bundle-q-conn-form.png)
 
 ### Edit My q connection
 
@@ -268,7 +268,7 @@ When editing a **My q** connection, you can edit the following properties:
 | Enable TLS Encryption  | Check the box is TLS is enabled. Learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).                                                                                                                                   |
 | Label Name             | Select the label to assign the connection to.                                                                                                                                                                                        |
 
-![Edit My q connection](https://github.com/KxSystems/kx-vscode/blob/main/img/edit-my-q-conn-form.png?raw=true)
+![Edit My q connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/edit-my-q-conn-form.png)
 
 ### Edit Insights connection
 
@@ -281,13 +281,13 @@ When editing a **Insights** connection, you can edit the following properties:
 | Define Realm           | Specify the Keycloak realm for authentication. Usually the realm is set to `insights`, which is the default value used by the extension. You only need to change this field if a different realm has been configured on your server. |
 | Label Name             | Select the label you want to assign the connection to                                                                                                                                                                                |
 
-![Edit Insights connection](https://github.com/KxSystems/kx-vscode/blob/main/img/edit-insights-conn-form.png?raw=true)
+![Edit Insights connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/edit-insights-conn-form.png)
 
 ### Import/Export Connection Configuration
 
 The **Import/Export Connection** config allows you to import and export connections in JSON format from the VSCode IDE without having to create them manually.
 
-![Import Export](https://github.com/KxSystems/kx-vscode/blob/main/img/impex.png?raw=true)
+![Import Export](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/impex.png)
 
 To import a connection:
 
@@ -315,13 +315,13 @@ To verify the export is successful navigate to the saved location and open the c
 
 Connection Labels allow you to categorize and organize your connections by assigning them distinct names and colors, making it easier to manage and locate specific connections within the application.
 
-![Connection Tree With Labels](https://github.com/KxSystems/kx-vscode/blob/main/img/conn-labels-tree.png?raw=true)
+![Connection Tree With Labels](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/conn-labels-tree.png)
 
 ### Create New Label
 
 To create a Label, start by **editing** or **creating** a connection. At the **bottom of the form**, you'll see a **Create New Label** button.
 
-![Create New Label Button](https://github.com/KxSystems/kx-vscode/blob/main/img/create-new-label-btn.png?raw=true)
+![Create New Label Button](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/create-new-label-btn.png)
 
 A dialog opens where you can enter a **Label name** and choose a **Label color**. Create the Label by clicking **Create** or cancel the process by clicking **Cancel**.
 
@@ -330,7 +330,7 @@ A dialog opens where you can enter a **Label name** and choose a **Label color**
 | Label Name  | Enter a name for the label.                               |
 | Label color | Select the color in the list of colors for the new label. |
 
-![Create New Label](https://github.com/KxSystems/kx-vscode/blob/main/img/create-new-label-dialog.png?raw=true)
+![Create New Label](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/create-new-label-dialog.png)
 
 ### Add Label to a connection
 
@@ -340,33 +340,33 @@ To add a Label to a connection, start by **editing** or **creating** a connectio
 | ---------- | ------------------------------------ |
 | Label Name | Select Label from the list of Labels |
 
-![Select Label](https://github.com/KxSystems/kx-vscode/blob/main/img/conn-labels.png?raw=true)
+![Select Label](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/conn-labels.png)
 
 ### Rename Label
 
 Right-click the label at Connection Tree and select **Rename label**.
 
-![Rename Label Opt](https://github.com/KxSystems/kx-vscode/blob/main/img/labels-rename-opt.png?raw=true)
+![Rename Label Opt](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/labels-rename-opt.png)
 
 A prompt is displayed at the top of the screen where you can edit the name of the Label.
 
-![Rename Label](https://github.com/KxSystems/kx-vscode/blob/main/img/labels-rename.png?raw=true)
+![Rename Label](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/labels-rename.png)
 
 ### Edit Label Color
 
 Right-click the label at Connection Tree and select **Edit label color**.
 
-![Edit Label Color Opt](https://github.com/KxSystems/kx-vscode/blob/main/img/labels-edit-color-opt.png?raw=true)
+![Edit Label Color Opt](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/labels-edit-color-opt.png)
 
 A prompt is displayed at the top of the screen where you can edit the color of the Label.
 
-![Edit Label Color](https://github.com/KxSystems/kx-vscode/blob/main/img/labels-edit-color.png?raw=true)
+![Edit Label Color](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/labels-edit-color.png)
 
 ### Delete Label
 
 Right-click the label at Connection Tree and select **Delete label**.
 
-![Delete Label Opt](https://github.com/KxSystems/kx-vscode/blob/main/img/labels-delete-opt.png?raw=true)
+![Delete Label Opt](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/labels-delete-opt.png)
 
 > Connections assigned to the Label are **not deleted**.
 
@@ -383,15 +383,15 @@ A kdb language server is bundled with the kdb VS Code extension. It offers vario
 
 The extension provides keyword syntax highlighting, comments and linting help.
 
-![Syntax Highlighting and Linting](https://github.com/KxSystems/kx-vscode/blob/main/img/syntax-highlighting.png?raw=true)
+![Syntax Highlighting and Linting](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/syntax-highlighting.png)
 
-![Linting](https://github.com/KxSystems/kx-vscode/blob/main/img/linting.png?raw=true)
+![Linting](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/linting.png)
 
 Linting can be enabled by checking **Enable linting for q and quke files** in [extension settings](#settings).
 
 Semantic highlighting is provided for local variables:
 
-![Semantic](https://github.com/KxSystems/kx-vscode/blob/main/img/semantic.png?raw=true)
+![Semantic](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/semantic.png)
 
 ### Code navigation
 
@@ -400,19 +400,19 @@ While developing q scripts you can:
 - **Go to definition** - Navigate to the definition of a function.
 - **Find/go to all** references - View references of a function both on the side view and inline with the editor.
 
-  ![Find all references](https://github.com/KxSystems/kx-vscode/blob/main/img/find-all-references.png?raw=true)
+  ![Find all references](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/find-all-references.png)
 
-  ![Go to References](https://github.com/KxSystems/kx-vscode/blob/main/img/go-to-references.png?raw=true)
+  ![Go to References](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/go-to-references.png)
 
 - **Outline View** - Use the Overview at the bottom of the explorer view which shows the symbol tree of the currently active q file.
 
-  ![Outline View](https://github.com/KxSystems/kx-vscode/blob/main/img/outline.png?raw=true)
+  ![Outline View](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/outline.png)
 
 ### Code Completion
 
 - **Keyword auto complete for the q language**
 
-  ![Autocomplete](https://github.com/KxSystems/kx-vscode/blob/main/img/autocomplete.png?raw=true)
+  ![Autocomplete](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/autocomplete.png)
 
 - **Autocomplete for local and remotely connected q processes**
 
@@ -420,7 +420,7 @@ While developing q scripts you can:
 
 - **Rename Symbol** - Supports renaming symbols in the text editor. Right-click and select **Rename Symbol** on any identifier to rename it.
 
-![Rename](https://github.com/KxSystems/kx-vscode/blob/main/img/rename.png?raw=true)
+![Rename](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/rename.png)
 
 ## Execute code
 
@@ -476,17 +476,17 @@ To create a data source and run it against a specific connection:
 
 1. Click **Save** to store the settings you have chosen, for reuse later. When you save a data source; query parameters and the connection details are stored. The data source icon is green if it is associated with a connection and grey if there is no association.
 
-   ![data Source](https://github.com/KxSystems/kx-vscode/blob/main/img/data-source.png?raw=true)
+   ![data Source](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/data-source.png)
 
 1. Click **Run**.
 
 1. The results are populated in the **KDB Results** window, if it is active.
 
-   ![KDB Results](https://github.com/KxSystems/kx-vscode/blob/main/img/datasource-kdbresults.png?raw=true)
+   ![KDB Results](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/datasource-kdbresults.png)
 
    - Otherwise the **Output** window is populated.
 
-     ![Output](https://github.com/KxSystems/kx-vscode/blob/main/img/datasource-output.png?raw=true)
+     ![Output](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/datasource-output.png)
 
 In addition to [API queries](https://code.kx.com/insights/api/database/query/get-data.html), if the query environment is enabled on the deployed instance of **kdb Insights Enterprise**, qSQL and SQL queries can be used within a data source with the appropriate parameterization. If qSQL or SQL is required and issues occur trying to run these queries contact a kdb Insights Enterprise administrator for assistance.
 
@@ -498,7 +498,7 @@ Refer to the [`getData` API](https://code.kx.com/insights/api/database/query/get
 
 ### QSQL queries
 
-The `.com_kx_edi.qsql` API is a QSQL query builder that assembles QSQL queries based on a q expression. It is a developer tool that allows running freeform q code against a specific database tier. 
+The `.com_kx_edi.qsql` API is a QSQL query builder that assembles QSQL queries based on a q expression. It is a developer tool that allows running freeform q code against a specific database tier.
 
 This function runs an QSQL query.
 
@@ -530,33 +530,33 @@ User-Defined Analytics (UDAs), also known as custom APIs, are essential for deve
 
 UDAs can be called directly within the VSCode extension through the UDA tab in a data source. This provides a form-based approach to populating the UDA parameters. UDAs can also be called within the Insights Enterprise web interface using Pipelines, Queries, and Views.
 
-![Query UDAs in VSCode extension](https://github.com/KxSystems/kx-vscode/blob/main/img/udas-query.png?raw=true)
+![Query UDAs in VSCode extension](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/udas-query.png)
 
 When interacting with UDAs, parameter fields are shown for configuration. Note the following:
 
-- Required fields are marked with an asterisk (*).
+- Required fields are marked with an asterisk (\*).
 
 - Optional fields are not required but may be displayed in your results, even if they are empty.
 
 You can add new parameters by clicking **Add Parameter**. Both optional and distinguished parameters can be added as needed.
 
-![Add parameters to call UDAs](https://github.com/KxSystems/kx-vscode/blob/main/img/udas-add-parameters.png?raw=true)
+![Add parameters to call UDAs](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/udas-add-parameters.png)
 
 **Important!** A UDA cannot be queried if one or more parameters are invalid.
 
 If you attempt to run a UDA with invalid parameters, an error occurs and a pop-up message appears to alert you to the issue.
 
-![Error showing invalid parameters for UDA](https://github.com/KxSystems/kx-vscode/blob/main/img/udas-invalid-parameter.png?raw=true)
+![Error showing invalid parameters for UDA](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/udas-invalid-parameter.png)
 
-![Pop-up message UDAs include invalid parameter](https://github.com/KxSystems/kx-vscode/blob/main/img/udas-error-pop-up.png?raw=true)
+![Pop-up message UDAs include invalid parameter](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/udas-error-pop-up.png)
 
 In some cases, you can successfully query UDAs without any parameters, as seen in the screenshot below.
 
-![UDAs with no parameters](https://github.com/KxSystems/kx-vscode/blob/main/img/udas-no-parameters.png?raw=true)
+![UDAs with no parameters](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/udas-no-parameters.png)
 
 However, you can still modify the parameter list to add parameters by clicking **Add parameter** or deleting parameters using the recycle bin icon.
 
-![Delete UDA parameters](https://github.com/KxSystems/kx-vscode/blob/main/img/udas-delete-parameters.png?raw=true)
+![Delete UDA parameters](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/udas-delete-parameters.png)
 
 For more information on User-Defined Analytics, refer to the [UDAs documentation](https://code.kx.com/insights/api/database/uda/uda-overview-introduction.html).
 
@@ -583,11 +583,11 @@ To do this:
 
 1. Create a data source and execute it by clicking **Populate Scratchpad**.
 
-   ![Populate Scratchpad](https://github.com/KxSystems/kx-vscode/blob/main/img/populate-scratchpad-button.png?raw=true)
+   ![Populate Scratchpad](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/populate-scratchpad-button.png)
 
 1. At the prompt, provide a variable to populate your own scratchpad instance running in the connected **kdb Insights Enterprise** with the data.
 
-   ![Populate Scratchpad Variable](https://github.com/KxSystems/kx-vscode/blob/main/img/populate-scratchpad.png?raw=true)
+   ![Populate Scratchpad Variable](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/populate-scratchpad.png)
 
 1. The scratchpad process is populated.
 
@@ -601,15 +601,15 @@ There are several ways to reset the scratchpad:
 
 1. Right click on the appropriate connection on the left-hand side and select **Reset Scratchpad**. The connection can be either active or idle but it must be connected.
 
-   ![Reset Scratchpad with right click on connected instance](https://github.com/KxSystems/kx-vscode/blob/main/img/reset-scratchpad-right-click.png?raw=true)
+   ![Reset Scratchpad with right click on connected instance](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/reset-scratchpad-right-click.png)
 
    This displays a dialog box at the bottom right corner asking you to confirm your action.
 
-   ![Dialog to confirm reset scratchpad](https://github.com/KxSystems/kx-vscode/blob/main/img/reset-scratchpad-dialog.png?raw=true)
+   ![Dialog to confirm reset scratchpad](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/reset-scratchpad-dialog.png)
 
 2. Using the **Command Palette** in VSCode, start typing **Reset Scratchpad** and click on the option as it shows. This action resets the scratchpad for the active connection.
 
-   ![Reset scratchpad using the Command Palette](https://github.com/KxSystems/kx-vscode/blob/main/img/reset-scratchpad-command-palette.png?raw=true)
+   ![Reset scratchpad using the Command Palette](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/reset-scratchpad-command-palette.png)
 
 3. Use the [MacOS or Windows shortcuts](#shortcuts) in the q file or in the workbook. Note that running the shortcuts in the q file resets the scratchpad for the active connection, while running them in the workbook resets the scratchpad for the connection chosen in the workbook.
 
@@ -631,7 +631,7 @@ To create a Workbook and run code against a specific connection:
 1. Ensure you have at least one folder open in VS Code.
 1. In the **WORKBOOKS** view in the primary sidebar, click the **+** for either a **New q workbook** or **New Python workbook**.
 
-   ![new workbook](https://github.com/KxSystems/kx-vscode/blob/main/img/addnewworkbook.png?raw=true)
+   ![new workbook](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/addnewworkbook.png)
 
 1. Write the code you wish to execute.
 
@@ -640,19 +640,19 @@ To create a Workbook and run code against a specific connection:
    1. To run all the code in the file you can use one of the following methods:
 
       1. Click **Run** from above the first line of code in the workbook file.
-         ![workbook links](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookrunlink.png?raw=true)
+         ![workbook links](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookrunlink.png)
 
       1. Select **Run** from the upper right of the editor. Using the dropdown next to the button you can choose any of the [**KX:** menu items](#kdb-process-executing-q-and-python-code) to run some, or all of the code in the workbook.
-         ![play dropdown](https://github.com/KxSystems/kx-vscode/blob/main/img/wortkbookplaydropdown.png?raw=true)
+         ![play dropdown](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/wortkbookplaydropdown.png)
 
       1. Click **Run** on the right-hand side of the status bar.
-         ![status bar run ](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookstatusbarrun.png?raw=true)
+         ![status bar run ](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookstatusbarrun.png)
 
       1. Right-click and choose **KX: Execute Entire File** from the menu.
 
 1. If you have not yet chosen a connection to associate with the workbook you are asked to choose a connection before the code is executed.
 
-   ![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookconnectionlink.png?raw=true)
+   ![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookconnectionlink.png)
 
 1. The results populate the kdb results window if it is active, otherwise the output window is populated.
 
@@ -660,13 +660,13 @@ When you save a workbook file the code and the connection details are stored. Th
 
 You can also change the connection associated with a workbook at any time by clicking on **Choose Connection** from above the first line of code in the workbook file.
 
-![choose connection](https://github.com/KxSystems/kx-vscode/blob/main/img/workbookplaydropdown.png?raw=true)
+![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookplaydropdown.png)
 
 ## Query History
 
 The **Query History** view in the primary sidebar captures each query execution and enables you to re-run any of the queries listed. Initially the query history view is empty but once you run a query it is captured and displayed in the window - with a separate row displayed for every execution. All information is stored in memory and not persisted upon application exit.
 
-![Query History](https://github.com/KxSystems/kx-vscode/blob/main/img/query-history.png?raw=true)
+![Query History](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/query-history.png)
 
 Rows consists of the following:
 
@@ -680,11 +680,11 @@ Rows consists of the following:
 | **Query**                     | When Code is being execute the code is shown.                                  |
 | **Data Source Type**          | When a datasource is being run 'API' is displayed.                             |
 
-![Query History Details](https://github.com/KxSystems/kx-vscode/blob/main/img/query-history-details.png?raw=true)
+![Query History Details](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/query-history-details.png)
 
 Right-clicking on a history row brings up a menu with the option to **Rerun query**.
 
-![Query History Clear](https://github.com/KxSystems/kx-vscode/blob/main/img/query-history-clear.png?raw=true)
+![Query History Clear](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/query-history-clear.png)
 
 ## View results
 
@@ -692,19 +692,19 @@ All query executions happen remotely from the **kdb VS Code extension** either a
 
 - **Output** - The **Output** window displays results as they are received by the **kdb VS Code extension**. It includes the query executed, a timestamp and the results.
 
-  ![Output view](https://github.com/KxSystems/kx-vscode/blob/main/img/output-results.png?raw=true)
+  ![Output view](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/output-results.png)
 
   **Note:** You can enable/disable auto-scrolling in the VS Code settings. This setting determines whether the output view scrolls to the latest results.
 
-  ![Output autoscrolling](https://github.com/KxSystems/kx-vscode/blob/main/img/auto-scrolling.png?raw=true)
+  ![Output autoscrolling](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/auto-scrolling.png)
 
   **Note** You can hide or show the full details in the console output. Go to settings of the VS Code, search for kdb, check the option **Hide Detailed Console Query Output** (this option is checked by default)
 
-  ![Hide Detailed Console Query Output](https://github.com/KxSystems/kx-vscode/blob/main/img/hide-detailed-console-query.png?raw=true)
+  ![Hide Detailed Console Query Output](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/hide-detailed-console-query.png)
 
 - **KDB Results** - This window displays the kdb returned data in a table.
 
-  ![kdb results view](https://github.com/KxSystems/kx-vscode/blob/main/img/kdbview-results.png?raw=true)
+  ![kdb results view](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/kdbview-results.png)
 
 ## AxLibraries
 
@@ -732,7 +732,7 @@ To use GGPlot2 in VSCode:
 - Run the script within VSCode. The chart is generated and displayed in the VSCode plot viewer, and you can save the plot.
   **Note**: When executing GG scripts, calling `.qp.display2` displays the plot locally.
 
-![gg-plot](https://github.com/KxSystems/kx-vscode/blob/main/img/gg-plot.png?raw=true)
+![gg-plot](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/gg-plot.png)
 
 You can make changes to the script before exporting the plot. Re-running the script updates to reflect the changes.
 
@@ -742,13 +742,13 @@ You can make changes to the script before exporting the plot. Re-running the scr
 
 q REPL can be started from the command prompt by searching **q REPL**.
 
-![REPL](https://github.com/KxSystems/kx-vscode/blob/main/img/repl.png?raw=true)
+![REPL](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/repl.png)
 
 ## Logs
 
 Any error or info will be posted at **OUTPUT** in **kdb** tab
 
-![LOG](https://github.com/KxSystems/kx-vscode/blob/main/img/log-sample.png?raw=true)
+![LOG](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/log-sample.png)
 
 The format will be:
 
@@ -772,11 +772,11 @@ To update kdb VS Code settings, search for **kdb** from _Preferences_ > _Setting
 
 By default, refactorings like renaming are applied to all files in the workspace. You can preview the changes before applying them and select specific files to apply the refactoring by pressing the **ctrl** or **command** key before executing the action.
 
-![Preview](https://github.com/KxSystems/kx-vscode/blob/main/img/preview.png?raw=true)
+![Preview](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/preview.png)
 
 If you only need to apply the refactorings to the currently opened files, you can select **Window** instead of **Workspace** for the refactoring option:
 
-![Refactoring](https://github.com/KxSystems/kx-vscode/blob/main/img/refactoring.png?raw=true)
+![Refactoring](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/refactoring.png)
 
 ### kdb Insights Enterprise Connections for Explorer
 
@@ -852,28 +852,28 @@ The following setting will change double click behaviour to select the whole ide
 
 ### For Windows
 
+| Key                   | Action                            |
+| --------------------- | --------------------------------- |
+| F12                   | Go to definition                  |
+| Shift + F12           | Go to references                  |
+| Ctrl + Shift + F12    | Find all references               |
+| Ctrl + D              | Execute current selection         |
+| Ctrl + Shift + E      | Execute current block             |
+| Ctrl + Shift + D      | Execute entire file               |
+| Ctrl + Shift + R      | Run q file in new q instance      |
+| Ctrl + Shift + Y      | Toggle paramater cache for lambda |
+| Ctrl + Shift + Delete | Reset scratchpad                  |
+
+### For MacOS
+
 | Key                | Action                            |
 | ------------------ | --------------------------------- |
 | F12                | Go to definition                  |
 | Shift + F12        | Go to references                  |
-| Ctrl + Shift + F12 | Find all references               |
-| Ctrl + D           | Execute current selection         |
-| Ctrl + Shift + E   | Execute current block             |
-| Ctrl + Shift + D   | Execute entire file               |
-| Ctrl + Shift + R   | Run q file in new q instance      |
-| Ctrl + Shift + Y   | Toggle paramater cache for lambda |
-| Ctrl + Shift + Delete   | Reset scratchpad |
-
-### For MacOS
-
-| Key             | Action                            |
-| --------------- | --------------------------------- |
-| F12             | Go to definition                  |
-| Shift + F12     | Go to references                  |
-| ⌘ + Shift + F12 | Find all references               |
-| ⌘ + D           | Execute current selection         |
-| ⌘ + Shift + E   | Execute current block             |
-| ⌘ + Shift + D   | Execute entire file               |
-| ⌘ + Shift + R   | Run q file in new q instance      |
-| ⌘ + Shift + Y   | Toggle paramater cache for lambda |
-| ⌘ + Shift + Delete   | Reset scratchpad |
+| ⌘ + Shift + F12    | Find all references               |
+| ⌘ + D              | Execute current selection         |
+| ⌘ + Shift + E      | Execute current block             |
+| ⌘ + Shift + D      | Execute entire file               |
+| ⌘ + Shift + R      | Run q file in new q instance      |
+| ⌘ + Shift + Y      | Toggle paramater cache for lambda |
+| ⌘ + Shift + Delete | Reset scratchpad                  |
