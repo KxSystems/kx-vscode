@@ -323,12 +323,12 @@ export class ConnectionLensProvider implements CodeLensProvider {
     const top = new Range(0, 0, 0, 0);
     const runScratchpad = new CodeLens(top, {
       command: isPython(document.uri)
-        ? "kdb.execute.pythonFileScratchpadQuery"
+        ? "kdb.scratchpad.python.run.file"
         : "kdb.execute.fileQuery",
       title: server ? `Run on ${server}` : "Run",
     });
     const pickConnection = new CodeLens(top, {
-      command: "kdb.pickConnection",
+      command: "kdb.file.pickConnection",
       title: "Choose Connection",
     });
     return [runScratchpad, pickConnection];
@@ -345,7 +345,7 @@ export function connectWorkspaceCommands() {
   );
   ext.runScratchpadItem.command = <Command>{
     title: "",
-    command: "kdb.runScratchpad",
+    command: "kdb.scratchpad.run",
     arguments: [],
   };
 

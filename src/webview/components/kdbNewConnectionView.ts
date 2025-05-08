@@ -998,19 +998,19 @@ export class KdbNewConnectionView extends LitElement {
     this.removeBlankLabels();
     if (this.isBundledQ) {
       this.vscode.postMessage({
-        command: "kdb.newConnection.createNewBundledConnection",
+        command: "kdb.connections.add.bundleq",
         data: this.bundledServer,
         labels: this.labels,
       });
     } else if (this.serverType === ServerType.INSIGHTS) {
       this.vscode.postMessage({
-        command: "kdb.newConnection.createNewInsightConnection",
+        command: "kdb.connections.add.insights",
         data: this.data,
         labels: this.labels,
       });
     } else {
       this.vscode.postMessage({
-        command: "kdb.newConnection.createNewConnection",
+        command: "kdb.connections.add.kdb",
         data: this.data,
         labels: this.labels,
       });
@@ -1019,7 +1019,7 @@ export class KdbNewConnectionView extends LitElement {
 
   private createLabel() {
     this.vscode.postMessage({
-      command: "kdb.labels.create",
+      command: "kdb.connections.labels.add",
       data: {
         name: this.newLblName,
         colorName: this.newLblColorName,
@@ -1039,14 +1039,14 @@ export class KdbNewConnectionView extends LitElement {
     this.removeBlankLabels();
     if (this.connectionData.connType === 0) {
       this.vscode.postMessage({
-        command: "kdb.newConnection.editBundledConnection",
+        command: "kdb.connections.edit.bundleq",
         data: this.bundledServer,
         oldAlias: "local",
         labels: this.labels,
       });
     } else if (this.connectionData.connType === 1) {
       this.vscode.postMessage({
-        command: "kdb.newConnection.editMyQConnection",
+        command: "kdb.connections.edit.kdb",
         data: this.data,
         oldAlias: this.oldAlias,
         editAuth: this.editAuth,
@@ -1054,7 +1054,7 @@ export class KdbNewConnectionView extends LitElement {
       });
     } else {
       this.vscode.postMessage({
-        command: "kdb.newConnection.editInsightsConnection",
+        command: "kdb.connections.edit.insights",
         data: this.data,
         oldAlias: this.oldAlias,
         labels: this.labels,

@@ -1704,9 +1704,9 @@ describe("KdbNewConnectionView", () => {
       const api = acquireVsCodeApi();
       sinon.stub(api, "postMessage").value(({ command, data }) => {
         if (
-          command === "kdb.newConnection.createNewConnection" ||
-          command === "kdb.newConnection.createNewInsightConnection" ||
-          command === "kdb.newConnection.createNewBundledConnection"
+          command === "kdb.connections.add.kdb" ||
+          command === "kdb.connections.add.insights" ||
+          command === "kdb.connections.add.bundleq"
         ) {
           result = data;
         }
@@ -1769,9 +1769,9 @@ describe("KdbNewConnectionView", () => {
       let result: any;
       sinon.stub(api, "postMessage").value(({ command, data }) => {
         if (
-          command === "kdb.newConnection.editMyQConnection" ||
-          command === "kdb.newConnection.editInsightsConnection" ||
-          command === "kdb.newConnection.editBundledConnection"
+          command === "kdb.connections.edit.kdb" ||
+          command === "kdb.connections.edit.insights" ||
+          command === "kdb.connections.edit.bundleq"
         ) {
           result = data;
         }

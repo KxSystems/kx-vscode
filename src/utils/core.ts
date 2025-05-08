@@ -353,7 +353,10 @@ export function offerConnectAction(connLabel: string): void {
     )
     .then(async (result) => {
       if (result === "Connect") {
-        await commands.executeCommand("kdb.connect.via.dialog", connLabel);
+        await commands.executeCommand(
+          "kdb.connections.connect.via.dialog",
+          connLabel,
+        );
       }
     });
 }
@@ -374,7 +377,10 @@ export function offerReconnectionAfterEdit(connLabel: string): void {
     )
     .then(async (result) => {
       if (result === "Connect") {
-        await commands.executeCommand("kdb.connect.via.dialog", connLabel);
+        await commands.executeCommand(
+          "kdb.connections.connect.via.dialog",
+          connLabel,
+        );
       }
     });
 }

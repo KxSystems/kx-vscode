@@ -92,7 +92,7 @@ export class LocalConnection {
             .then((res) => {
               if (res) {
                 commands.executeCommand(
-                  "kdb.startLocalProcess",
+                  "kdb.connections.localProcess.start",
                   ext.connectionsList.find(
                     (conn) => conn.label === this.connLabel,
                   ),
@@ -112,7 +112,7 @@ export class LocalConnection {
         return;
       }
       conn.addListener("close", () => {
-        commands.executeCommand("kdb.disconnect", this.connLabel);
+        commands.executeCommand("kdb.connections.disconnect", this.connLabel);
         kdbOutputLog(
           `Connection closed: ${this.options.host}:${this.options.port}`,
           "INFO",
@@ -316,7 +316,6 @@ export class LocalConnection {
     });
   }
 
-   
   private updateGlobals(result: any): void {
     const globals = result;
     const entries: [string, any][] = Object.entries(globals);
@@ -346,7 +345,6 @@ export class LocalConnection {
       }
     });
   }
-   
 
   private updateReservedKeywords() {
     const reservedQuery = ".Q.res";

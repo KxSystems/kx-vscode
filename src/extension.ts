@@ -62,6 +62,7 @@ import {
   setServerForUri,
 } from "./commands/workspaceCommand";
 import { ext } from "./extensionVariables";
+import { CommandRegistration } from "./models/commandRegistration";
 import {
   InsightDetails,
   Insights,
@@ -198,289 +199,13 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.window.showErrorMessage(`${err}`);
   }
 
+  registerAllExtensionCommands();
+
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
       KdbResultsViewProvider.viewType,
       ext.resultsViewProvider,
       { webviewOptions: { retainContextWhenHidden: true } },
-    ),
-
-    vscode.commands.registerCommand(
-      "kdb.connection.content.selectView",
-      async (viewItem) => {
-        const connLabel = viewItem.connLabel
-          ? viewItem.connLabel.split("[")[1].split("]")[0]
-          : undefined;
-        if (connLabel) {
-          const executorName = viewItem.coreIcon.substring(2);
-          executeQuery(
-            viewItem.label,
-            connLabel,
-            executorName,
-            "",
-            false,
-            false,
-            true,
-          );
-        } else {
-          kdbOutputLog("Connection label not found", "ERROR");
-        }
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.open.meta",
-      async (viewItem: InsightsMetaNode | MetaObjectPayloadNode) => {
-        await openMeta(viewItem);
-      },
-    ),
-    vscode.commands.registerCommand("kdb.addConnection", async () => {
-      await addNewConnection();
-    }),
-    vscode.commands.registerCommand(
-      "kdb.editConnection",
-      async (viewItem: KdbNode | InsightsNode) => {
-        await editConnection(viewItem);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.newConnection.createNewInsightConnection",
-      async (insightsData: InsightDetails, labels: string[]) => {
-        await addInsightsConnection(insightsData, labels);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.newConnection.createNewConnection",
-      async (kdbData: ServerDetails, labels: string[]) => {
-        await addKdbConnection(kdbData, false, labels);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.newConnection.createNewBundledConnection",
-      async (kdbData: ServerDetails, labels: string[]) => {
-        await addKdbConnection(kdbData, true, labels);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.newConnection.editInsightsConnection",
-      async (
-        insightsData: InsightDetails,
-        oldAlias: string,
-        labels: string[],
-      ) => {
-        await editInsightsConnection(insightsData, oldAlias, labels);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.newConnection.editMyQConnection",
-      async (
-        kdbData: ServerDetails,
-        oldAlias: string,
-        editAuth: boolean,
-        labels: string[],
-      ) => {
-        await editKdbConnection(kdbData, oldAlias, false, editAuth, labels);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.newConnection.editBundledConnection",
-      async (kdbData: ServerDetails, oldAlias: string, labels: string[]) => {
-        await editKdbConnection(kdbData, oldAlias, true, false, labels);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.labels.create",
-      async (name: string, colorName: string) => {
-        await createNewLabel(name, colorName);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.removeConnection",
-      async (viewItem: KdbNode) => {
-        await removeConnection(viewItem);
-      },
-    ),
-    vscode.commands.registerCommand("kdb.refreshServerObjects", async () => {
-      ext.serverProvider.reload();
-      await refreshGetMeta();
-    }),
-    vscode.commands.registerCommand(
-      "kdb.insights.refreshMeta",
-      async (viewItem: InsightsNode) => {
-        await refreshGetMeta(viewItem.label);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.queryHistory.rerun",
-      (viewItem: QueryHistoryTreeItem) => {
-        rerunQuery(viewItem.details);
-      },
-    ),
-    vscode.commands.registerCommand("kdb.queryHistory.clear", () => {
-      ext.kdbQueryHistoryList.length = 0;
-      ext.kdbQueryHistoryNodes.length = 0;
-      ext.queryHistoryProvider.refresh();
-    }),
-    vscode.commands.registerCommand("kdb.showInstallationDetails", async () => {
-      await showInstallationDetails();
-    }),
-    vscode.commands.registerCommand("kdb.installTools", async () => {
-      await installTools();
-    }),
-    vscode.commands.registerCommand(
-      "kdb.startLocalProcess",
-      async (viewItem: KdbNode) => {
-        await startLocalProcess(viewItem);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.stopLocalProcess",
-      async (viewItem: KdbNode) => {
-        await vscode.commands.executeCommand("kdb.disconnect", viewItem);
-        await stopLocalProcess(viewItem);
-      },
-    ),
-    vscode.commands.registerCommand("kdb.terminal.run", async () => {
-      if (ext.activeTextEditor) {
-        const uri = vscode.Uri.joinPath(
-          ext.context.globalStorageUri,
-          "kdb-vscode-repl.q",
-        );
-        const text = ext.activeTextEditor.document.getText();
-        try {
-          await vscode.workspace.fs.writeFile(uri, Buffer.from(text, "utf-8"));
-          runQFileTerminal(`"${uri.fsPath}"`);
-        } catch (error) {
-          kdbOutputLog(`Unable to write temp file: ${error}`, "ERROR");
-        }
-      }
-    }),
-    vscode.commands.registerCommand("kdb.terminal.start", () => {
-      if (env.QHOME) {
-        runQFileTerminal();
-      } else {
-        checkLocalInstall();
-      }
-    }),
-    vscode.commands.registerCommand("kdb.runScratchpad", async () => {
-      await runActiveEditor();
-    }),
-    vscode.commands.registerCommand("kdb.execute.selectedQuery", async () => {
-      await runActiveEditor(ExecutionTypes.QuerySelection);
-    }),
-    vscode.commands.registerCommand("kdb.execute.fileQuery", async (item) => {
-      if (item instanceof vscode.Uri) {
-        await activateTextDocument(item);
-      }
-      await runActiveEditor(ExecutionTypes.QueryFile);
-    }),
-    vscode.commands.registerCommand(
-      "kdb.execute.pythonScratchpadQuery",
-      async () => {
-        await runActiveEditor(ExecutionTypes.PythonQuerySelection);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.scratchpad.reset",
-      async (viewItem?: InsightsNode) => {
-        const connLabel = viewItem ? viewItem.label : undefined;
-        await resetScratchpad(connLabel);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.scratchpad.resetEditorConnection",
-      async () => {
-        await resetScratchpadFromEditor();
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.execute.pythonFileScratchpadQuery",
-      async (item) => {
-        if (item instanceof vscode.Uri) {
-          await activateTextDocument(item);
-        }
-        await runActiveEditor(ExecutionTypes.PythonQueryFile);
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.createScratchpad",
-      async (item: FileTreeItem) => {
-        if (hasWorkspaceOrShowOption("adding workbooks")) {
-          const uri = await addWorkspaceFile(
-            item ? item.resourceUri : undefined,
-            "workbook",
-            ".kdb.q",
-          );
-          await vscode.workspace.openTextDocument(uri);
-          await vscode.window.showTextDocument(uri);
-          await vscode.commands.executeCommand(
-            "workbench.action.files.save",
-            uri,
-          );
-          await setServerForUri(uri, undefined);
-        }
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.createPythonScratchpad",
-      async (item: FileTreeItem) => {
-        if (hasWorkspaceOrShowOption("adding workbooks")) {
-          const uri = await addWorkspaceFile(
-            item ? item.resourceUri : undefined,
-            "workbook",
-            ".kdb.py",
-          );
-          await vscode.workspace.openTextDocument(uri);
-          await vscode.window.showTextDocument(uri);
-          await vscode.commands.executeCommand(
-            "workbench.action.files.save",
-            uri,
-          );
-          await setServerForUri(uri, undefined);
-        }
-      },
-    ),
-    vscode.commands.registerCommand("kdb.refreshScratchpadExplorer", () => {
-      ext.scratchpadTreeProvider.reload();
-    }),
-    vscode.commands.registerCommand("kdb.pickConnection", async () => {
-      const editor = ext.activeTextEditor;
-      if (editor) {
-        await pickConnection(editor.document.uri);
-      }
-    }),
-    vscode.commands.registerCommand(
-      "kdb.renameFile",
-      async (item: FileTreeItem) => {
-        if (item && item.resourceUri) {
-          if (item.resourceUri.path.endsWith(".kdb.json")) {
-            await openWith(item.resourceUri, DataSourceEditorProvider.viewType);
-          } else {
-            const document = await vscode.workspace.openTextDocument(
-              item.resourceUri,
-            );
-            await vscode.window.showTextDocument(document);
-          }
-          await vscode.commands.executeCommand("revealInExplorer");
-          await vscode.commands.executeCommand("renameFile");
-        }
-      },
-    ),
-    vscode.commands.registerCommand(
-      "kdb.deleteFile",
-      async (item: FileTreeItem) => {
-        if (item && item.resourceUri) {
-          if (item.resourceUri.path.endsWith(".kdb.json")) {
-            await openWith(item.resourceUri, DataSourceEditorProvider.viewType);
-          } else {
-            const document = await vscode.workspace.openTextDocument(
-              item.resourceUri,
-            );
-            await vscode.window.showTextDocument(document);
-          }
-          await vscode.commands.executeCommand("revealInExplorer");
-          await vscode.commands.executeCommand("deleteFile");
-        }
-      },
     ),
 
     DataSourceEditorProvider.register(context),
@@ -490,12 +215,7 @@ export async function activate(context: vscode.ExtensionContext) {
       { pattern: "**/*.kdb.{q,py}" },
       new ConnectionLensProvider(),
     ),
-    vscode.commands.registerCommand("kdb.qlint", async () => {
-      const editor = ext.activeTextEditor;
-      if (editor) {
-        await lintCommand(editor.document);
-      }
-    }),
+
     vscode.languages.registerCodeActionsProvider(
       { language: "q" },
       new QuickFixProvider(),
@@ -511,60 +231,6 @@ export async function activate(context: vscode.ExtensionContext) {
       }
       if (event.affectsConfiguration("kdb.connectionLabels")) {
         ext.serverProvider.reload();
-      }
-    }),
-    vscode.commands.registerCommand("kdb.renameLabel", async (item) => {
-      if (item) {
-        const name = await vscode.window.showInputBox({
-          prompt: "Enter label name",
-          value: item.label,
-        });
-        if (name) {
-          renameLabel(item.label, name);
-        }
-      }
-    }),
-    vscode.commands.registerCommand("kdb.editLabelColor", async (item) => {
-      if (item) {
-        const colors = ext.labelColors.map((color) => ({
-          label: color.name,
-          iconPath: {
-            light: vscode.Uri.file(
-              path.join(
-                __filename,
-                "..",
-                "..",
-                "resources",
-                "light",
-                "labels",
-                `label-${color.name.toLowerCase()}.svg`,
-              ),
-            ),
-            dark: vscode.Uri.file(
-              path.join(
-                __filename,
-                "..",
-                "..",
-                "resources",
-                "dark",
-                "labels",
-                `label-${color.name.toLowerCase()}.svg`,
-              ),
-            ),
-          },
-        }));
-        const picked = await vscode.window.showQuickPick(colors, {
-          title: "Select label color",
-          placeHolder: item.source.color.name,
-        });
-        if (picked) {
-          setLabelColor(item.label, picked.label);
-        }
-      }
-    }),
-    vscode.commands.registerCommand("kdb.deleteLabel", (item) => {
-      if (item) {
-        deleteLabel(item.label);
       }
     }),
   );
@@ -670,8 +336,8 @@ export async function activate(context: vscode.ExtensionContext) {
   }
 }
 
-function registerHelpCommands(context: vscode.ExtensionContext) {
-  const helpCommands = [
+function registerHelpCommands(): CommandRegistration[] {
+  const helpCommands: CommandRegistration[] = [
     {
       command: "kdb.help.openDocumentation",
       callback: () => {
@@ -710,15 +376,11 @@ function registerHelpCommands(context: vscode.ExtensionContext) {
     },
   ];
 
-  helpCommands.forEach(({ command, callback }) => {
-    context.subscriptions.push(
-      vscode.commands.registerCommand(command, callback),
-    );
-  });
+  return helpCommands;
 }
 
-function registerResultsTabCommands(context: vscode.ExtensionContext) {
-  const resultsCommands = [
+function registerResultsPanelCommands(): CommandRegistration[] {
+  const resultsCommands: CommandRegistration[] = [
     {
       command: "kdb.resultsPanel.update",
       callback: (
@@ -745,21 +407,17 @@ function registerResultsTabCommands(context: vscode.ExtensionContext) {
     },
   ];
 
-  resultsCommands.forEach(({ command, callback }) => {
-    context.subscriptions.push(
-      vscode.commands.registerCommand(command, callback),
-    );
-  });
+  return resultsCommands;
 }
 
-function registerDatasourceCommands(context: vscode.ExtensionContext) {
-  const dataSourceCommands = [
+function registerDatasourceCommands(): CommandRegistration[] {
+  const dataSourceCommands: CommandRegistration[] = [
     {
-      command: "kdb.datasource.import.ds",
+      command: "kdb.datasource.import",
       callback: async () => await importOldDSFiles(),
     },
     {
-      command: "kdb.createDataSource",
+      command: "kdb.datasource.create",
       callback: async (item: FileTreeItem) => {
         if (hasWorkspaceOrShowOption("adding datasources")) {
           const uri = await addWorkspaceFile(
@@ -782,42 +440,142 @@ function registerDatasourceCommands(context: vscode.ExtensionContext) {
       },
     },
     {
-      command: "kdb.refreshDataSourceExplorer",
+      command: "kdb.datasource.refreshDataSourceExplorer",
       callback: () => ext.dataSourceTreeProvider.reload(),
     },
   ];
 
-  dataSourceCommands.forEach(({ command, callback }) => {
-    context.subscriptions.push(
-      vscode.commands.registerCommand(command, callback),
-    );
-  });
+  return dataSourceCommands;
 }
 
-function registerScratchpadCommands(context: vscode.ExtensionContext) {}
-
-function registerConnectionsCommands(context: vscode.ExtensionContext) {
-  const connectionCommands = [
+function registerScratchpadCommands(): CommandRegistration[] {
+  const scratchpadCommands: CommandRegistration[] = [
     {
-      command: "kdb.connect",
+      command: "kdb.scratchpad.run",
+      callback: async () => {
+        await runActiveEditor();
+      },
+    },
+    {
+      command: "kdb.scratchpad.reset",
+      callback: async (viewItem?: InsightsNode) => {
+        const connLabel = viewItem ? viewItem.label : undefined;
+        await resetScratchpad(connLabel);
+      },
+    },
+    {
+      command: "kdb.scratchpad.editor.reset",
+      callback: async () => {
+        await resetScratchpadFromEditor();
+      },
+    },
+    {
+      command: "kdb.scratchpad.create",
+      callback: async (item: FileTreeItem) => {
+        if (hasWorkspaceOrShowOption("adding workbooks")) {
+          const uri = await addWorkspaceFile(
+            item ? item.resourceUri : undefined,
+            "workbook",
+            ".kdb.q",
+          );
+          await vscode.workspace.openTextDocument(uri);
+          await vscode.window.showTextDocument(uri);
+          await vscode.commands.executeCommand(
+            "workbench.action.files.save",
+            uri,
+          );
+          await setServerForUri(uri, undefined);
+        }
+      },
+    },
+    {
+      command: "kdb.scratchpad.python.run",
+      callback: async () => {
+        await runActiveEditor(ExecutionTypes.PythonQuerySelection);
+      },
+    },
+    {
+      command: "kdb.scratchpad.python.run.file",
+      callback: async (item) => {
+        if (item instanceof vscode.Uri) {
+          await activateTextDocument(item);
+        }
+        await runActiveEditor(ExecutionTypes.PythonQueryFile);
+      },
+    },
+    {
+      command: "kdb.scratchpad.python.create",
+      callback: async (item: FileTreeItem) => {
+        if (hasWorkspaceOrShowOption("adding workbooks")) {
+          const uri = await addWorkspaceFile(
+            item ? item.resourceUri : undefined,
+            "workbook",
+            ".kdb.py",
+          );
+          await vscode.workspace.openTextDocument(uri);
+          await vscode.window.showTextDocument(uri);
+          await vscode.commands.executeCommand(
+            "workbench.action.files.save",
+            uri,
+          );
+          await setServerForUri(uri, undefined);
+        }
+      },
+    },
+    {
+      command: "kdb.scratchpad.explorer.refresh",
+      callback: () => {
+        ext.scratchpadTreeProvider.reload();
+      },
+    },
+  ];
+
+  return scratchpadCommands;
+}
+
+function registerQueryHistoryCommands(): CommandRegistration[] {
+  const queryHistoryCommands: CommandRegistration[] = [
+    {
+      command: "kdb.queryHistory.clear",
+      callback: () => {
+        ext.kdbQueryHistoryList.length = 0;
+        ext.kdbQueryHistoryNodes.length = 0;
+        ext.queryHistoryProvider.refresh();
+      },
+    },
+    {
+      command: "kdb.queryHistory.rerun",
+      callback: async (viewItem: QueryHistoryTreeItem) => {
+        rerunQuery(viewItem.details);
+      },
+    },
+  ];
+
+  return queryHistoryCommands;
+}
+
+function registerConnectionsCommands(): CommandRegistration[] {
+  const connectionCommands: CommandRegistration[] = [
+    {
+      command: "kdb.connections.connect",
       callback: async (viewItem: KdbNode | InsightsNode) => {
         await connect(viewItem.label);
       },
     },
     {
-      command: "kdb.connect.via.dialog",
+      command: "kdb.connections.connect.via.dialog",
       callback: async (connLabel: string) => {
         await connect(connLabel);
       },
     },
     {
-      command: "kdb.active.connection",
+      command: "kdb.connections.setActive",
       callback: async (viewItem: KdbNode) => {
         activeConnection(viewItem);
       },
     },
     {
-      command: "kdb.addAuthentication",
+      command: "kdb.connections.addAuthentication",
       callback: async (viewItem: KdbNode) => {
         const username = await vscode.window.showInputBox({
           prompt: "Username",
@@ -836,19 +594,25 @@ function registerConnectionsCommands(context: vscode.ExtensionContext) {
       },
     },
     {
-      command: "kdb.enableTLS",
+      command: "kdb.connections.enableTLS",
       callback: async (viewItem: KdbNode) => {
         await enableTLS(viewItem.children[0]);
       },
     },
     {
-      command: "kdb.insightsRemove",
+      command: "kdb.connections.remove.insights",
       callback: async (viewItem: InsightsNode) => {
         await removeConnection(viewItem);
       },
     },
     {
-      command: "kdb.disconnect",
+      command: "kdb.connections.remove.kdb",
+      callback: async (viewItem: KdbNode) => {
+        await removeConnection(viewItem);
+      },
+    },
+    {
+      command: "kdb.connections.disconnect",
       callback: async (viewItem: InsightsNode | KdbNode | string) => {
         const connLabel =
           typeof viewItem === "string" ? viewItem : viewItem.label;
@@ -873,7 +637,355 @@ function registerConnectionsCommands(context: vscode.ExtensionContext) {
         await importConnections();
       },
     },
+    {
+      command: "kdb.connections.content.selectView",
+      callback: async (viewItem) => {
+        const connLabel = viewItem.connLabel
+          ? viewItem.connLabel.split("[")[1].split("]")[0]
+          : undefined;
+        if (connLabel) {
+          const executorName = viewItem.coreIcon.substring(2);
+          executeQuery(
+            viewItem.label,
+            connLabel,
+            executorName,
+            "",
+            false,
+            false,
+            true,
+          );
+        } else {
+          kdbOutputLog("Connection label not found", "ERROR");
+        }
+      },
+    },
+    {
+      command: "kdb.connections.open.meta",
+      callback: async (viewItem: InsightsMetaNode | MetaObjectPayloadNode) => {
+        await openMeta(viewItem);
+      },
+    },
+    {
+      command: "kdb.connections.add",
+      callback: async () => {
+        await addNewConnection();
+      },
+    },
+    {
+      command: "kdb.connections.edit",
+      callback: async (viewItem: KdbNode | InsightsNode) => {
+        await editConnection(viewItem);
+      },
+    },
+    {
+      command: "kdb.connections.add.insights",
+      callback: async (insightsData: InsightDetails, labels: string[]) => {
+        await addInsightsConnection(insightsData, labels);
+      },
+    },
+    {
+      command: "kdb.connections.add.kdb",
+      callback: async (kdbData: ServerDetails, labels: string[]) => {
+        await addKdbConnection(kdbData, false, labels);
+      },
+    },
+    {
+      command: "kdb.connections.add.bundleq",
+      callback: async (kdbData: ServerDetails, labels: string[]) => {
+        await addKdbConnection(kdbData, true, labels);
+      },
+    },
+    {
+      command: "kdb.connections.edit.insights",
+      callback: async (
+        insightsData: InsightDetails,
+        oldAlias: string,
+        labels: string[],
+      ) => {
+        await editInsightsConnection(insightsData, oldAlias, labels);
+      },
+    },
+    {
+      command: "kdb.connections.edit.kdb",
+      callback: async (
+        kdbData: ServerDetails,
+        oldAlias: string,
+        editAuth: boolean,
+        labels: string[],
+      ) => {
+        await editKdbConnection(kdbData, oldAlias, false, editAuth, labels);
+      },
+    },
+    {
+      command: "kdb.connections.edit.bundleq",
+      callback: async (
+        kdbData: ServerDetails,
+        oldAlias: string,
+        labels: string[],
+      ) => {
+        await editKdbConnection(kdbData, oldAlias, true, false, labels);
+      },
+    },
+    {
+      command: "kdb.connections.refresh.serverObjects",
+      callback: async () => {
+        ext.serverProvider.reload();
+        await refreshGetMeta();
+      },
+    },
+    {
+      command: "kdb.connections.refresh.meta",
+      callback: async (viewItem: InsightsNode) => {
+        await refreshGetMeta(viewItem.label);
+      },
+    },
+    {
+      command: "kdb.connections.labels.add",
+      callback: async (name: string, colorName: string) => {
+        await createNewLabel(name, colorName);
+      },
+    },
+    {
+      command: "kdb.connections.labels.rename",
+      callback: async (item) => {
+        if (item) {
+          const name = await vscode.window.showInputBox({
+            prompt: "Enter label name",
+            value: item.label,
+          });
+          if (name) {
+            renameLabel(item.label, name);
+          }
+        }
+      },
+    },
+    {
+      command: "kdb.connections.labels.edit",
+      callback: async (item) => {
+        if (item) {
+          const colors = ext.labelColors.map((color) => ({
+            label: color.name,
+            iconPath: {
+              light: vscode.Uri.file(
+                path.join(
+                  __filename,
+                  "..",
+                  "..",
+                  "resources",
+                  "light",
+                  "labels",
+                  `label-${color.name.toLowerCase()}.svg`,
+                ),
+              ),
+              dark: vscode.Uri.file(
+                path.join(
+                  __filename,
+                  "..",
+                  "..",
+                  "resources",
+                  "dark",
+                  "labels",
+                  `label-${color.name.toLowerCase()}.svg`,
+                ),
+              ),
+            },
+          }));
+          const picked = await vscode.window.showQuickPick(colors, {
+            title: "Select label color",
+            placeHolder: item.source.color.name,
+          });
+          if (picked) {
+            setLabelColor(item.label, picked.label);
+          }
+        }
+      },
+    },
+    {
+      command: "kdb.connections.labels.delete",
+      callback: (item) => {
+        if (item) {
+          deleteLabel(item.label);
+        }
+      },
+    },
+    {
+      command: "kdb.connections.localProcess.stop",
+      callback: async (viewItem: KdbNode) => {
+        await vscode.commands.executeCommand(
+          "kdb.connections.disconnect",
+          viewItem,
+        );
+        await stopLocalProcess(viewItem);
+      },
+    },
+    {
+      command: "kdb.connections.localProcess.start",
+      callback: async (viewItem: KdbNode) => {
+        await startLocalProcess(viewItem);
+      },
+    },
   ];
+
+  return connectionCommands;
+}
+
+function registerExecuteCommands(): CommandRegistration[] {
+  const editorCommands: CommandRegistration[] = [
+    {
+      command: "kdb.execute.selectedQuery",
+      callback: async () => {
+        await runActiveEditor(ExecutionTypes.QuerySelection);
+      },
+    },
+    {
+      command: "kdb.execute.fileQuery",
+      callback: async (item) => {
+        if (item instanceof vscode.Uri) {
+          await activateTextDocument(item);
+        }
+        await runActiveEditor(ExecutionTypes.QueryFile);
+      },
+    },
+    {
+      command: "kdb.execute.terminal.run.file",
+      callback: () => {
+        if (env.QHOME) {
+          runQFileTerminal();
+        } else {
+          checkLocalInstall();
+        }
+      },
+    },
+    {
+      command: "kdb.execute.terminal.run",
+      callback: async () => {
+        if (ext.activeTextEditor) {
+          const uri = vscode.Uri.joinPath(
+            ext.context.globalStorageUri,
+            "kdb-vscode-repl.q",
+          );
+          const text = ext.activeTextEditor.document.getText();
+          try {
+            await vscode.workspace.fs.writeFile(
+              uri,
+              Buffer.from(text, "utf-8"),
+            );
+            runQFileTerminal(`"${uri.fsPath}"`);
+          } catch (error) {
+            kdbOutputLog(`Unable to write temp file: ${error}`, "ERROR");
+          }
+        }
+      },
+    },
+  ];
+
+  return editorCommands;
+}
+
+function registerFileCommands(): CommandRegistration[] {
+  const fileCommands: CommandRegistration[] = [
+    {
+      command: "kdb.file.rename",
+      callback: async (item: FileTreeItem) => {
+        if (item && item.resourceUri) {
+          if (item.resourceUri.path.endsWith(".kdb.json")) {
+            await openWith(item.resourceUri, DataSourceEditorProvider.viewType);
+          } else {
+            const document = await vscode.workspace.openTextDocument(
+              item.resourceUri,
+            );
+            await vscode.window.showTextDocument(document);
+          }
+          await vscode.commands.executeCommand("revealInExplorer");
+          await vscode.commands.executeCommand("renameFile");
+        }
+      },
+    },
+    {
+      command: "kdb.file.delete",
+      callback: async (item: FileTreeItem) => {
+        if (item && item.resourceUri) {
+          if (item.resourceUri.path.endsWith(".kdb.json")) {
+            await openWith(item.resourceUri, DataSourceEditorProvider.viewType);
+          } else {
+            const document = await vscode.workspace.openTextDocument(
+              item.resourceUri,
+            );
+            await vscode.window.showTextDocument(document);
+          }
+          await vscode.commands.executeCommand("revealInExplorer");
+          await vscode.commands.executeCommand("deleteFile");
+        }
+      },
+    },
+    {
+      command: "kdb.file.pickConnection",
+      callback: async () => {
+        const editor = ext.activeTextEditor;
+        if (editor) {
+          await pickConnection(editor.document.uri);
+        }
+      },
+    },
+  ];
+
+  return fileCommands;
+}
+
+function registerInstallCommands(): CommandRegistration[] {
+  const installCommands: CommandRegistration[] = [
+    {
+      command: "kdb.install.showDetails",
+      callback: async () => {
+        await showInstallationDetails();
+      },
+    },
+    {
+      command: "kdb.install.tools",
+      callback: async () => {
+        await installTools();
+      },
+    },
+  ];
+
+  return installCommands;
+}
+
+function registerLSCommands(): CommandRegistration[] {
+  const lsCommands: CommandRegistration[] = [
+    {
+      command: "kdb.ls.q.lint",
+      callback: async () => {
+        const editor = ext.activeTextEditor;
+        if (editor) {
+          await lintCommand(editor.document);
+        }
+      },
+    },
+  ];
+
+  return lsCommands;
+}
+
+function registerAllExtensionCommands(): void {
+  const allCommands: CommandRegistration[] = [
+    ...registerHelpCommands(),
+    ...registerResultsPanelCommands(),
+    ...registerDatasourceCommands(),
+    ...registerScratchpadCommands(),
+    ...registerQueryHistoryCommands(),
+    ...registerConnectionsCommands(),
+    ...registerExecuteCommands(),
+    ...registerFileCommands(),
+    ...registerInstallCommands(),
+    ...registerLSCommands(),
+  ];
+
+  allCommands.forEach((command) => {
+    ext.context.subscriptions.push(
+      vscode.commands.registerCommand(command.command, command.callback),
+    );
+  });
 }
 
 export async function deactivate(): Promise<void> {
