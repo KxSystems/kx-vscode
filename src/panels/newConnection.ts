@@ -94,61 +94,61 @@ export class NewConnectionPannel {
     );
     /* istanbul ignore next */
     this._panel.webview.onDidReceiveMessage((message) => {
-      if (message.command === "kdb.newConnection.createNewBundledConnection") {
+      if (message.command === "kdb.connections.add.bundleq") {
         if (ext.isBundleQCreated) {
           vscode.window.showErrorMessage(
             "Bundled Q is already created, please remove it first",
           );
         } else {
           vscode.commands.executeCommand(
-            "kdb.newConnection.createNewBundledConnection",
+            "kdb.connections.add.bundleq",
             message.data,
             message.labels,
           );
         }
       }
-      if (message.command === "kdb.newConnection.createNewInsightConnection") {
+      if (message.command === "kdb.connections.add.insights") {
         vscode.commands.executeCommand(
-          "kdb.newConnection.createNewInsightConnection",
+          "kdb.connections.add.insights",
           message.data,
           message.labels,
         );
       }
-      if (message.command === "kdb.newConnection.createNewConnection") {
+      if (message.command === "kdb.connections.add.kdb") {
         vscode.commands.executeCommand(
-          "kdb.newConnection.createNewConnection",
+          "kdb.connections.add.kdb",
           message.data,
           message.labels,
         );
       }
-      if (message.command === "kdb.newConnection.editInsightsConnection") {
+      if (message.command === "kdb.connections.edit.insights") {
         vscode.commands.executeCommand(
-          "kdb.newConnection.editInsightsConnection",
+          "kdb.connections.edit.insights",
           message.data,
           message.oldAlias,
           message.labels,
         );
       }
-      if (message.command === "kdb.newConnection.editMyQConnection") {
+      if (message.command === "kdb.connections.edit.kdb") {
         vscode.commands.executeCommand(
-          "kdb.newConnection.editMyQConnection",
+          "kdb.connections.edit.kdb",
           message.data,
           message.oldAlias,
           message.editAuth,
           message.labels,
         );
       }
-      if (message.command === "kdb.newConnection.editBundledConnection") {
+      if (message.command === "kdb.connections.edit.bundleq") {
         vscode.commands.executeCommand(
-          "kdb.newConnection.editBundledConnection",
+          "kdb.connections.edit.bundleq",
           message.data,
           message.oldAlias,
           message.labels,
         );
       }
-      if (message.command === "kdb.labels.create") {
+      if (message.command === "kdb.connections.labels.add") {
         vscode.commands.executeCommand(
-          "kdb.labels.create",
+          "kdb.connections.labels.add",
           message.data.name,
           message.data.colorName,
         );

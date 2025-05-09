@@ -94,7 +94,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
       element instanceof MetaObjectPayloadNode
     ) {
       element.command = {
-        command: "kdb.open.meta",
+        command: "kdb.connections.open.meta",
         title: "Open Meta Object",
         arguments: [element],
       };
@@ -177,12 +177,10 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     return [...servers, ...insights];
   }
 
-   
   private getChildElements(_element?: TreeItem): KdbNode[] {
     return this.createLeafItems(this.serverList);
   }
 
-   
   private getInsightsChildElements(_element?: InsightsNode): InsightsNode[] {
     return this.createInsightLeafItems(this.insightsList);
   }

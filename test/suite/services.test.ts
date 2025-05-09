@@ -24,6 +24,7 @@ import {
   env,
   window,
   workspace,
+  TreeItem,
 } from "vscode";
 
 import { InsightsConnection } from "../../src/classes/insightsConnection";
@@ -45,6 +46,7 @@ import { ChartEditorProvider } from "../../src/services/chartEditorProvider";
 import { CompletionProvider } from "../../src/services/completionProvider";
 import { ConnectionManagementService } from "../../src/services/connectionManagerService";
 import { DataSourceEditorProvider } from "../../src/services/dataSourceEditorProvider";
+import { HelpFeedbackProvider } from "../../src/services/helpFeedbackProvider";
 import {
   getCurrentToken,
   refreshToken,
@@ -2535,5 +2537,94 @@ describe("kdbTreeService", () => {
     const result = await KdbTreeService.loadViews();
     assert.strictEqual(result[0], "vw1", "Should return the first view");
     sinon.restore();
+  });
+});
+
+describe("HelpFeedbackProvider", () => {
+  let provider: HelpFeedbackProvider;
+
+  beforeEach(() => {
+    provider = new HelpFeedbackProvider();
+  });
+
+  it("should return all help items in getChildren", () => {
+    const children = provider.getChildren();
+    assert.strictEqual(children.length, 4);
+    assert(children[0] instanceof TreeItem);
+    assert.strictEqual(children[0].label, "Extension Documentation");
+    assert.strictEqual(children[1].label, "Suggest a Feature");
+    assert.strictEqual(children[2].label, "Provide Feedback");
+    assert.strictEqual(children[3].label, "Report a Bug");
+  });
+
+  it("should return the same item in getTreeItem", () => {
+    const children = provider.getChildren();
+    for (const item of children) {
+      const treeItem = provider.getTreeItem(item);
+      assert.strictEqual(treeItem, item);
+    }
+  });
+
+  it("should set correct command and iconPath for each HelpItem", () => {
+    const children = provider.getChildren();
+    const expected = [
+      {
+        label: "Extension Documentation",
+        command: "kdb.help.openDocumentation",
+        icon: "help-doc.svg",
+      },
+      {
+        label: "Suggest a Feature",
+        command: "kdb.help.suggestFeature",
+        icon: "feature.svg",
+      },
+      {
+        label: "Provide Feedback",
+        command: "kdb.help.provideFeedback",
+        icon: "feedback.svg",
+      },
+      {
+        label: "Report a Bug",
+        command: "kdb.help.reportBug",
+        icon: "bug.svg",
+      },
+    ];
+
+    children.forEach((item, idx) => {
+      assert.strictEqual(item.label, expected[idx].label);
+      assert.deepStrictEqual(item.command, {
+        command: expected[idx].command,
+        title: expected[idx].label,
+      });
+      if (
+        typeof item.iconPath === "object" &&
+        item.iconPath !== null &&
+        "light" in item.iconPath &&
+        "dark" in item.iconPath
+      ) {
+        assert.ok(
+          String(item.iconPath.light).endsWith(
+            Path.join("resources", "light", expected[idx].icon),
+          ),
+        );
+        assert.ok(
+          String(item.iconPath.dark).endsWith(
+            Path.join("resources", "dark", expected[idx].icon),
+          ),
+        );
+      }
+    });
+  });
+
+  it("should emit onDidChangeTreeData event", (done) => {
+    const spy = sinon.spy();
+    provider.onDidChangeTreeData(spy);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore: Accessing private member for test
+    provider._onDidChangeTreeData.fire();
+    setTimeout(() => {
+      assert.ok(spy.calledOnce);
+      done();
+    }, 10);
   });
 });

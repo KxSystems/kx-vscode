@@ -114,6 +114,11 @@ export namespace ext {
     return "C:\\Users\\caleteet\\Downloads\\w64\\w64\\q.exe";
   }
 
+  export const urlLinks = {
+    survey: "https://t.maze.co/333268148",
+    suggestFeature: "https://kx-features.ideas.aha.io/ideas/new",
+    reportBug: "https://github.com/KxSystems/kx-vscode/issues/new?labels=bug",
+  };
   export const localProcessObjects: LocalProcess = {};
   // eslint-disable-next-line prefer-const
   export let localConnectionContexts: Array<string> = [];

@@ -32,13 +32,13 @@
   ],
   "activationEvents": [
     "onCommand:kdb.installTools",
-    "onCommand:kdb.newConnection.createNewInsightConnection",
-    "onCommand:kdb.newConnection.createNewConnection",
-    "onCommand:kdb.newConnection.createNewBundledConnection",
-    "onCommand:kdb.newConnection.editInsightsConnection",
-    "onCommand:kdb.newConnection.editMyQConnection",
-    "onCommand:kdb.newConnection.editBundledConnection",
-    "onCommand:kdb.labels.create",
+    "onCommand:kdb.connections.add.insights",
+    "onCommand:kdb.connections.add.kdb",
+    "onCommand:kdb.connections.add.bundleq",
+    "onCommand:kdb.connections.edit.insights",
+    "onCommand:kdb.connections.edit.kdb",
+    "onCommand:kdb.connections.edit.bundleq",
+    "onCommand:kdb.connections.labels.create",
     "onView:kdb-datasources-explorer",
     "onTerminalProfile:kdb.q-terminal",
     "onLanguage:python"
@@ -205,6 +205,11 @@
           "description": "Labels connection map",
           "default": [],
           "scope": "resource"
+        },
+        "kdb.hideSurvey": {
+          "type": "boolean",
+          "default": false,
+          "description": "Hide the extension survey dialog box"
         }
       }
     },
@@ -226,26 +231,26 @@
       },
       {
         "category": "KX",
-        "command": "kdb.refreshServerObjects",
+        "command": "kdb.connections.refresh.serverObjects",
         "title": "Refresh server objects & insights meta",
         "icon": "$(refresh)"
       },
       {
         "category": "KX",
-        "command": "kdb.createDataSource",
+        "command": "kdb.datasource.create",
         "title": "New Datasource...",
         "icon": "$(add)"
       },
       {
         "category": "KX",
-        "command": "kdb.refreshDataSourceExplorer",
+        "command": "kdb.datasource.refreshDataSourceExplorer",
         "title": "Refresh datasources",
         "icon": "$(refresh)",
         "enablement": "workspaceFolderCount > 0"
       },
       {
         "category": "KX",
-        "command": "kdb.createScratchpad",
+        "command": "kdb.scratchpad.create",
         "title": "New q workbook...",
         "icon": {
           "dark": "./resources/dark/add-scratchpad.svg",
@@ -254,7 +259,7 @@
       },
       {
         "category": "KX",
-        "command": "kdb.createPythonScratchpad",
+        "command": "kdb.scratchpad.python.create",
         "title": "New Python workbook...",
         "icon": {
           "dark": "./resources/dark/add-scratchpad-python.svg",
@@ -263,7 +268,7 @@
       },
       {
         "category": "KX",
-        "command": "kdb.connection.content.selectView",
+        "command": "kdb.connections.content.selectView",
         "title": "View contents",
         "icon": {
           "dark": "./resources/select-view.svg",
@@ -272,19 +277,19 @@
       },
       {
         "category": "KX",
-        "command": "kdb.refreshScratchpadExplorer",
+        "command": "kdb.scratchpad.explorer.refresh",
         "title": "Refresh workbooks",
         "icon": "$(refresh)",
         "enablement": "workspaceFolderCount > 0"
       },
       {
         "category": "KX",
-        "command": "kdb.pickConnection",
+        "command": "kdb.file.pickConnection",
         "title": "Pick connection"
       },
       {
         "category": "KX",
-        "command": "kdb.runScratchpad",
+        "command": "kdb.scratchpad.run",
         "title": "Run workbook"
       },
       {
@@ -294,79 +299,79 @@
       },
       {
         "category": "KX",
-        "command": "kdb.scratchpad.resetEditorConnection",
+        "command": "kdb.scratchpad.editor.reset",
         "title": "Reset editor connection"
       },
       {
         "category": "KX",
-        "command": "kdb.startLocalProcess",
+        "command": "kdb.connections.localProcess.start",
         "title": "Start q process"
       },
       {
         "category": "KX",
-        "command": "kdb.stopLocalProcess",
+        "command": "kdb.connections.localProcess.stop",
         "title": "Stop q process"
       },
       {
         "category": "KX",
-        "command": "kdb.addConnection",
+        "command": "kdb.connections.add",
         "title": "New connection...",
         "icon": "$(add)"
       },
       {
         "category": "KX",
-        "command": "kdb.editConnection",
+        "command": "kdb.connections.edit",
         "title": "Edit connection"
       },
       {
         "category": "KX",
-        "command": "kdb.removeConnection",
+        "command": "kdb.connections.remove.kdb",
         "title": "Remove connection"
       },
       {
         "category": "KX",
-        "command": "kdb.connect",
+        "command": "kdb.connections.connect",
         "title": "Connect server"
       },
       {
         "category": "KX",
-        "command": "kdb.insights.refreshMeta",
+        "command": "kdb.connections.refresh.meta",
         "title": "Refresh get meta"
       },
       {
         "category": "KX",
-        "command": "kdb.connect.via.dialog",
+        "command": "kdb.connections.connect.via.dialog",
         "title": "Connect server"
       },
       {
         "category": "KX",
-        "command": "kdb.active.connection",
+        "command": "kdb.connections.setActive",
         "title": "Active connection"
       },
       {
         "category": "KX",
-        "command": "kdb.open.meta",
+        "command": "kdb.connections.open.meta",
         "title": "Open meta object"
       },
       {
         "category": "KX",
-        "command": "kdb.addAuthentication",
+        "command": "kdb.connections.addAuthentication",
         "title": "Add Authentication",
         "position": "end"
       },
       {
         "category": "KX",
-        "command": "kdb.enableTLS",
+        "command": "kdb.connections.enableTLS",
         "title": "Enable TLS"
       },
       {
         "category": "KX",
-        "command": "kdb.insightsRemove",
+        "command": "kdb.connections.remove.insights",
         "title": "Remove connection"
       },
       {
         "category": "KX",
-        "command": "kdb.disconnect",
+        "command": "kdb.connections.disconnect",
         "title": "Disconnect"
       },
       {
@@ -397,18 +402,18 @@
       },
       {
         "category": "KX",
-        "command": "kdb.datasource.import.ds",
+        "command": "kdb.datasource.import",
         "title": "Import Datasource from old format"
       },
       {
         "category": "KX",
-        "command": "kdb.terminal.run",
+        "command": "kdb.execute.terminal.run",
         "title": "KX: Run q file in a new q instance",
         "icon": "$(debug-alt)"
       },
       {
         "category": "KX",
-        "command": "kdb.terminal.start",
+        "command": "kdb.execute.terminal.run.file",
         "title": "Start REPL"
       },
       {
@@ -425,29 +430,29 @@
       },
       {
         "category": "KX",
-        "command": "kdb.execute.pythonScratchpadQuery",
+        "command": "kdb.scratchpad.python.run",
         "title": "KX: Execute Current Python Selection",
         "icon": "$(run-below)"
       },
       {
         "category": "KX",
-        "command": "kdb.execute.pythonFileScratchpadQuery",
+        "command": "kdb.scratchpad.python.run.file",
         "title": "KX: Execute Entire Python File",
         "icon": "$(run)"
       },
       {
         "category": "KX",
-        "command": "kdb.qlint",
+        "command": "kdb.ls.q.lint",
         "title": "Lint file with qlint"
       },
       {
         "category": "KX",
-        "command": "kdb.renameFile",
+        "command": "kdb.file.rename",
         "title": "Rename"
       },
       {
         "category": "KX",
-        "command": "kdb.deleteFile",
+        "command": "kdb.file.delete",
         "title": "Delete"
       },
       {
@@ -463,18 +468,38 @@
       },
       {
         "category": "KX",
-        "command": "kdb.renameLabel",
+        "command": "kdb.connections.labels.rename",
         "title": "Rename label"
       },
       {
         "category": "KX",
-        "command": "kdb.editLabelColor",
+        "command": "kdb.connections.labels.edit",
         "title": "Edit label color"
       },
       {
         "category": "KX",
-        "command": "kdb.deleteLabel",
+        "command": "kdb.connections.labels.delete",
         "title": "Delete label"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.help.openDocumentation",
+        "title": "Extension Documentation"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.help.suggestFeature",
+        "title": "Suggest a Feature"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.help.provideFeedback",
+        "title": "Provide Feedback"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.help.reportBug",
+        "title": "Report a Bug"
       }
     ],
     "keybindings": [
@@ -490,25 +515,25 @@
         "mac": "cmd+shift+d"
       },
       {
-        "command": "kdb.execute.pythonScratchpadQuery",
+        "command": "kdb.scratchpad.python.run",
         "key": "ctrl+d",
         "mac": "cmd+d",
         "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
       },
       {
-        "command": "kdb.execute.pythonFileScratchpadQuery",
+        "command": "kdb.scratchpad.python.run.file",
         "key": "ctrl+shift+d",
         "mac": "cmd+shift+d",
         "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
       },
       {
-        "command": "kdb.scratchpad.resetEditorConnection",
+        "command": "kdb.scratchpad.editor.reset",
         "key": "ctrl+shift+delete",
         "mac": "cmd+shift+delete",
         "when": "(editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)) || editorLangId == q"
       },
       {
-        "command": "kdb.terminal.run",
+        "command": "kdb.execute.terminal.run",
         "key": "ctrl+shift+r",
         "mac": "cmd+shift+r",
         "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
@@ -622,6 +647,10 @@
           "name": "Query History",
           "contextualTitle": "Query History",
           "icon": "resources/history.svg"
+        },
+        {
+          "id": "kdb-help-feedback-view",
+          "name": "Help and Feedback"
         }
       ],
       "kdb-results": [
@@ -641,63 +670,63 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "kdb.insightsRemove",
+          "command": "kdb.connections.remove.insights",
           "when": "false"
         },
         {
-          "command": "kdb.insights.refreshMeta",
+          "command": "kdb.connections.refresh.meta",
           "when": "false"
         },
         {
-          "command": "kdb.startLocalProcess",
+          "command": "kdb.connections.localProcess.start",
           "when": "false"
         },
         {
-          "command": "kdb.stopLocalProcess",
+          "command": "kdb.connections.localProcess.stop",
           "when": "false"
         },
         {
-          "command": "kdb.addConnection",
+          "command": "kdb.connections.add",
           "when": "false"
         },
         {
-          "command": "kdb.editConnection",
+          "command": "kdb.connections.edit",
           "when": "false"
         },
         {
-          "command": "kdb.removeConnection",
+          "command": "kdb.connections.remove.kdb",
           "when": "false"
         },
         {
-          "command": "kdb.connect",
+          "command": "kdb.connections.connect",
           "when": "false"
         },
         {
-          "command": "kdb.open.meta",
+          "command": "kdb.connections.open.meta",
           "when": "false"
         },
         {
-          "command": "kdb.scratchpad.resetEditorConnection",
+          "command": "kdb.scratchpad.editor.reset",
           "when": "false"
         },
         {
-          "command": "kdb.connect.via.dialog",
+          "command": "kdb.connections.connect.via.dialog",
           "when": "false"
         },
         {
-          "command": "kdb.active.connection",
+          "command": "kdb.connections.setActive",
           "when": "false"
         },
         {
-          "command": "kdb.disconnect",
+          "command": "kdb.connections.disconnect",
           "when": "false"
         },
         {
-          "command": "kdb.addAuthentication",
+          "command": "kdb.connections.addAuthentication",
           "when": "false"
         },
         {
-          "command": "kdb.enableTLS",
+          "command": "kdb.connections.enableTLS",
           "when": "false"
         },
         {
@@ -705,7 +734,7 @@
           "when": "false"
         },
         {
-          "command": "kdb.connection.content.selectView",
+          "command": "kdb.connections.content.selectView",
           "when": "false"
         }
       ],
@@ -724,37 +753,37 @@
       "view/title/create": [],
       "view/title": [
         {
-          "command": "kdb.addConnection",
+          "command": "kdb.connections.add",
           "when": "view == kdb-servers",
           "group": "navigation@1"
         },
         {
-          "command": "kdb.refreshServerObjects",
+          "command": "kdb.connections.refresh.serverObjects",
           "when": "view == kdb-servers",
           "group": "navigation@2"
         },
         {
-          "command": "kdb.createDataSource",
+          "command": "kdb.datasource.create",
           "when": "view == kdb-datasource-explorer",
           "group": "navigation@1"
         },
         {
-          "command": "kdb.refreshDataSourceExplorer",
+          "command": "kdb.datasource.refreshDataSourceExplorer",
           "when": "view == kdb-datasource-explorer",
           "group": "navigation@2"
         },
         {
-          "command": "kdb.createScratchpad",
+          "command": "kdb.scratchpad.create",
           "when": "view == kdb-scratchpad-explorer",
           "group": "navigation@1"
         },
         {
-          "command": "kdb.createPythonScratchpad",
+          "command": "kdb.scratchpad.python.create",
           "when": "view == kdb-scratchpad-explorer",
           "group": "navigation@2"
         },
         {
-          "command": "kdb.refreshScratchpadExplorer",
+          "command": "kdb.scratchpad.explorer.refresh",
           "when": "view == kdb-scratchpad-explorer",
           "group": "navigation@3"
         },
@@ -786,47 +815,47 @@
       ],
       "view/item/context": [
         {
-          "command": "kdb.connect",
+          "command": "kdb.connections.connect",
           "when": "view == kdb-servers && viewItem not in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection@1"
         },
         {
-          "command": "kdb.editConnection",
+          "command": "kdb.connections.edit",
           "when": "view == kdb-servers && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection@4"
         },
         {
-          "command": "kdb.active.connection",
+          "command": "kdb.connections.setActive",
           "when": "view == kdb-servers && viewItem in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes) && viewItem not in kdb.connected.active",
           "group": "connection@1"
         },
         {
-          "command": "kdb.addAuthentication",
+          "command": "kdb.connections.addAuthentication",
           "when": "view == kdb-servers && viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutAuth && viewItem not in kdb.local",
           "group": "connection@3"
         },
         {
-          "command": "kdb.enableTLS",
+          "command": "kdb.connections.enableTLS",
           "when": "view == kdb-servers && viewItem not in kdb.insightsNodes && viewItem in kdb.kdbNodesWithoutTls && viewItem not in kdb.local",
           "group": "connection@4"
         },
         {
-          "command": "kdb.insights.refreshMeta",
+          "command": "kdb.connections.refresh.meta",
           "when": "view == kdb-servers && viewItem in kdb.connected && viewItem in kdb.insightsNodes",
           "group": "connection@3"
         },
         {
-          "command": "kdb.insightsRemove",
+          "command": "kdb.connections.remove.insights",
           "when": "view == kdb-servers && viewItem in kdb.insightsNodes",
           "group": "connection@5"
         },
         {
-          "command": "kdb.disconnect",
+          "command": "kdb.connections.disconnect",
           "when": "view == kdb-servers && viewItem in kdb.connected && (viewItem in kdb.rootNodes || viewItem in kdb.insightsNodes)",
           "group": "connection@4"
         },
         {
-          "command": "kdb.removeConnection",
+          "command": "kdb.connections.remove.kdb",
           "when": "view == kdb-servers && viewItem in kdb.rootNodes",
           "group": "connection@5"
         },
@@ -841,12 +870,12 @@
           "group": "connection@7"
         },
         {
-          "command": "kdb.startLocalProcess",
+          "command": "kdb.connections.localProcess.start",
           "when": "view == kdb-servers && viewItem in kdb.local && viewItem not in kdb.running && viewItem in kdb.rootNodes",
           "group": "connection"
         },
         {
-          "command": "kdb.stopLocalProcess",
+          "command": "kdb.connections.localProcess.stop",
           "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running && viewItem in kdb.rootNodes",
           "group": "connection"
         },
@@ -856,32 +885,32 @@
           "group": "queryHistory"
         },
         {
-          "command": "kdb.renameFile",
+          "command": "kdb.file.rename",
           "when": "(view == kdb-datasource-explorer || view == kdb-scratchpad-explorer) && viewItem == artifact",
           "group": "kdbWorkspace@1"
         },
         {
-          "command": "kdb.deleteFile",
+          "command": "kdb.file.delete",
           "when": "(view == kdb-datasource-explorer || view == kdb-scratchpad-explorer) && viewItem == artifact",
           "group": "kdbWorkspace@2"
         },
         {
-          "command": "kdb.renameLabel",
+          "command": "kdb.connections.labels.rename",
           "when": "view == kdb-servers && viewItem == label",
           "group": "label@1"
         },
         {
-          "command": "kdb.editLabelColor",
+          "command": "kdb.connections.labels.edit",
           "when": "view == kdb-servers && viewItem == label",
           "group": "label@2"
         },
         {
-          "command": "kdb.deleteLabel",
+          "command": "kdb.connections.labels.delete",
           "when": "view == kdb-servers && viewItem == label",
           "group": "label@3"
         },
         {
-          "command": "kdb.connection.content.selectView",
+          "command": "kdb.connections.content.selectView",
           "when": "view == kdb-servers && viewItem in kdb.selectContentNodesContext",
           "group": "inline"
         }
@@ -903,17 +932,17 @@
           "when": "editorLangId == q"
         },
         {
-          "command": "kdb.terminal.run",
+          "command": "kdb.execute.terminal.run",
           "group": "q@3",
           "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
         },
         {
-          "command": "kdb.execute.pythonFileScratchpadQuery",
+          "command": "kdb.scratchpad.python.run.file",
           "group": "q@0",
           "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
         },
         {
-          "command": "kdb.execute.pythonScratchpadQuery",
+          "command": "kdb.scratchpad.python.run",
           "group": "q@1",
           "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
         }
@@ -935,17 +964,17 @@
           "when": "editorLangId == q"
         },
         {
-          "command": "kdb.terminal.run",
+          "command": "kdb.execute.terminal.run",
           "group": "q@3",
           "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
         },
         {
-          "command": "kdb.execute.pythonFileScratchpadQuery",
+          "command": "kdb.scratchpad.python.run.file",
           "group": "q@0",
           "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
         },
         {
-          "command": "kdb.execute.pythonScratchpadQuery",
+          "command": "kdb.scratchpad.python.run",
           "group": "q@1",
           "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
         }
@@ -957,7 +986,7 @@
           "when": "resourceExtname == .q"
         },
         {
-          "command": "kdb.execute.pythonFileScratchpadQuery",
+          "command": "kdb.scratchpad.python.run.file",
           "group": "q",
           "when": "resourceExtname == .py"
         }
