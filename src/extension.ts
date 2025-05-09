@@ -112,6 +112,7 @@ import {
   kdbOutputLog,
 } from "./utils/core";
 import { runQFileTerminal } from "./utils/execution";
+import { feedbackSurveyDialog } from "./utils/feedbackSurveyUtils";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
 import {
@@ -334,6 +335,7 @@ export async function activate(context: vscode.ExtensionContext) {
       ext.customAuth = api;
     }
   }
+  feedbackSurveyDialog();
 }
 
 function registerHelpCommands(): CommandRegistration[] {

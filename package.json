@@ -205,6 +205,11 @@
           "description": "Labels connection map",
           "default": [],
           "scope": "resource"
+        },
+        "kdb.hideSurvey": {
+          "type": "boolean",
+          "default": false,
+          "description": "Hide the extension survey dialog box"
         }
       }
     },
