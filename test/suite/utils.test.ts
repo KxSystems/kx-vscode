@@ -52,6 +52,7 @@ import * as dataSourceUtils from "../../src/utils/dataSource";
 import * as decodeUtils from "../../src/utils/decode";
 import * as executionUtils from "../../src/utils/execution";
 import * as executionConsoleUtils from "../../src/utils/executionConsole";
+import { feedbackSurveyDialog } from "../../src/utils/feedbackSurveyUtils";
 import { getNonce } from "../../src/utils/getNonce";
 import { getUri } from "../../src/utils/getUri";
 import { openUrl } from "../../src/utils/openUrl";
@@ -152,6 +153,7 @@ describe("Utils", () => {
 
       afterEach(() => {
         getConfigurationStub.restore();
+        sinon.restore();
       });
 
       it("should update configuration and set hideDetailedConsoleQueryOutput to true when setting is undefined", async () => {
@@ -2805,6 +2807,67 @@ describe("Utils", () => {
             "Invalid type for parameter: param6. Expected number or array of numbers.",
           ),
         );
+      });
+    });
+  });
+  describe("FeedbackSurveyUtils", () => {
+    describe("feedbackSurveyDialog", () => {
+      let showSurveyDialogStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        // Stub the showSurveyDialog function
+        showSurveyDialogStub = sinon
+          .stub(vscode.window, "showInformationMessage")
+          .resolves();
+      });
+
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("should increment extSurveyTriggerCount and return immediately if hideSurvey is true", async () => {
+        const result = await feedbackSurveyDialog(false, 0, true);
+        assert.deepStrictEqual(result, {
+          sawSurveyTwice: false,
+          extSurveyTriggerCount: 1,
+        });
+        sinon.assert.notCalled(showSurveyDialogStub);
+      });
+
+      it("should show survey dialog when extSurveyTriggerCount is 1 and sawSurveyTwice is false", async () => {
+        const result = await feedbackSurveyDialog(false, 0, false);
+        assert.deepStrictEqual(result, {
+          sawSurveyTwice: false,
+          extSurveyTriggerCount: 1,
+        });
+        sinon.assert.calledOnce(showSurveyDialogStub);
+      });
+
+      it("should set sawSurveyTwice to true and reset extSurveyTriggerCount when extSurveyTriggerCount >= 4 and sawSurveyTwice is false", async () => {
+        const result = await feedbackSurveyDialog(false, 4, false);
+        assert.deepStrictEqual(result, {
+          sawSurveyTwice: true,
+          extSurveyTriggerCount: 0,
+        });
+        sinon.assert.calledOnce(showSurveyDialogStub);
+      });
+
+      it("should reset extSurveyTriggerCount when extSurveyTriggerCount >= 5 and sawSurveyTwice is true", async () => {
+        const result = await feedbackSurveyDialog(true, 5, false);
+        assert.deepStrictEqual(result, {
+          sawSurveyTwice: true,
+          extSurveyTriggerCount: 0,
+        });
+        sinon.assert.calledOnce(showSurveyDialogStub);
+      });
+
+      it("should increment extSurveyTriggerCount and not show survey dialog for other cases", async () => {
+        const result = await feedbackSurveyDialog(false, 2, false);
+        assert.deepStrictEqual(result, {
+          sawSurveyTwice: false,
+          extSurveyTriggerCount: 3,
+        });
+        sinon.assert.notCalled(showSurveyDialogStub);
       });
     });
   });

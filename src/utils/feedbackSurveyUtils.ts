@@ -15,50 +15,43 @@ import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
 
-export async function feedbackSurveyDialog() {
-  const context = ext.context;
-
-  const hideSurvey = vscode.workspace
-    .getConfiguration("kdb")
-    .get<boolean>("hideSurvey", false);
-  const sawSurveyTwice = context.globalState.get<boolean>(
-    "sawSurveyTwice",
-    false,
-  );
-  let extSurveyTriggerCount =
-    context.globalState.get<number>("extSurveyTriggerCount", 0) || 0;
-
+export async function feedbackSurveyDialog(
+  sawSurveyTwice: boolean,
+  extSurveyTriggerCount: number,
+  hideSurvey: boolean,
+): Promise<{
+  sawSurveyTwice: boolean;
+  extSurveyTriggerCount: number;
+}> {
   extSurveyTriggerCount += 1;
-  await context.globalState.update(
-    "extSurveyTriggerCount",
-    extSurveyTriggerCount,
-  );
 
-  if (hideSurvey) return;
+  if (hideSurvey) {
+    return { sawSurveyTwice, extSurveyTriggerCount };
+  }
 
   if (!sawSurveyTwice && extSurveyTriggerCount === 1) {
     await showSurveyDialog();
-    return;
+    return { sawSurveyTwice, extSurveyTriggerCount };
   }
 
   if (!sawSurveyTwice && extSurveyTriggerCount >= 4) {
-    await context.globalState.update("sawSurveyTwice", true);
-    await context.globalState.update("extSurveyTriggerCount", 0);
+    sawSurveyTwice = true;
+    extSurveyTriggerCount = 0;
     await showSurveyDialog();
-    return;
+    return { sawSurveyTwice, extSurveyTriggerCount };
   }
 
   if (sawSurveyTwice && extSurveyTriggerCount >= 5) {
-    await context.globalState.update("extSurveyTriggerCount", 0);
+    extSurveyTriggerCount = 0;
     await showSurveyDialog();
-    return;
+    return { sawSurveyTwice, extSurveyTriggerCount };
   }
 
-  return;
+  return { sawSurveyTwice, extSurveyTriggerCount };
 }
 
 async function showSurveyDialog() {
-  const SURVEY_URL = "https://t.maze.co/333268148";
+  const SURVEY_URL = ext.urlLinks.survey;
   const result = await vscode.window.showInformationMessage(
     "Got 2 Minutes? Help us make the KX extension even better for your workflows.",
     "Take Survey",
@@ -71,4 +64,34 @@ async function showSurveyDialog() {
       .getConfiguration("kdb")
       .update("hideSurvey", true, vscode.ConfigurationTarget.Global);
   }
+}
+
+/* istanbul ignore next */
+export async function handleFeedbackSurvey() {
+  const context = ext.context;
+
+  const hideSurvey = vscode.workspace
+    .getConfiguration("kdb")
+    .get<boolean>("hideSurvey", false);
+  const sawSurveyTwice = context.globalState.get<boolean>(
+    "sawSurveyTwice",
+    false,
+  );
+  const extSurveyTriggerCount =
+    context.globalState.get<number>("extSurveyTriggerCount", 0) || 0;
+
+  const updatedValues = await feedbackSurveyDialog(
+    sawSurveyTwice,
+    extSurveyTriggerCount,
+    hideSurvey,
+  );
+
+  await context.globalState.update(
+    "sawSurveyTwice",
+    updatedValues.sawSurveyTwice,
+  );
+  await context.globalState.update(
+    "extSurveyTriggerCount",
+    updatedValues.extSurveyTriggerCount,
+  );
 }

@@ -112,7 +112,7 @@ import {
   kdbOutputLog,
 } from "./utils/core";
 import { runQFileTerminal } from "./utils/execution";
-import { feedbackSurveyDialog } from "./utils/feedbackSurveyUtils";
+import { handleFeedbackSurvey } from "./utils/feedbackSurveyUtils";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
 import {
@@ -335,7 +335,7 @@ export async function activate(context: vscode.ExtensionContext) {
       ext.customAuth = api;
     }
   }
-  feedbackSurveyDialog();
+  handleFeedbackSurvey();
 }
 
 function registerHelpCommands(): CommandRegistration[] {
@@ -356,25 +356,17 @@ function registerHelpCommands(): CommandRegistration[] {
     {
       command: "kdb.help.suggestFeature",
       callback: () =>
-        vscode.env.openExternal(
-          vscode.Uri.parse("https://kx-features.ideas.aha.io/ideas/new"),
-        ),
+        vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.suggestFeature)),
     },
     {
       command: "kdb.help.provideFeedback",
       callback: () =>
-        vscode.env.openExternal(
-          vscode.Uri.parse("https://t.maze.co/333268148"),
-        ),
+        vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.survey)),
     },
     {
       command: "kdb.help.reportBug",
       callback: () =>
-        vscode.env.openExternal(
-          vscode.Uri.parse(
-            "https://github.com/KxSystems/kx-vscode/issues/new?labels=bug",
-          ),
-        ),
+        vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.reportBug)),
     },
   ];
 
