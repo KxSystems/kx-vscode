@@ -572,8 +572,8 @@ export class ConnectionManagementService {
     }
     const isCustom = ext.customAuth ? ".CustomAuth" : "";
     if (connLabel === "local") {
-      return isCustom + ".BundleQ";
+      return isCustom + ".KDB+.Local";
     }
-    return isCustom + ".MyQ";
+    return isCustom + ".KDB+";
   }
 }
