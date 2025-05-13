@@ -403,7 +403,7 @@ export class InsightsConnection {
             .catch((error: any) => {
               kdbOutputLog(
                 `[Datasource RUN] Status: ${error.response.status}.`,
-                "INFO",
+                "ERROR",
               );
               return {
                 error: { buffer: error.response.data },
@@ -512,6 +512,9 @@ export class InsightsConnection {
               kdbOutputLog(
                 `[SCRATCHPAD] Error occured while populating scratchpad: ${response.data.errorMsg}`,
                 "ERROR",
+              );
+              Telemetry.sendEvent(
+                "Datasource." + dsTypeString + ".Scratchpad.Populated.Errored",
               );
             } else {
               kdbOutputLog(

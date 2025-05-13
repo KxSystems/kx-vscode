@@ -332,6 +332,7 @@ export async function activate(context: vscode.ExtensionContext) {
   if (authExtension) {
     const api = await authExtension.activate();
     if ("auth" in api) {
+      Telemetry.sendEvent("CustomAuth.Extension.Actived");
       ext.customAuth = api;
     }
   }

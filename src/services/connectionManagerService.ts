@@ -145,7 +145,7 @@ export class ConnectionManagementService {
       await localConnection.connect((err, conn) => {
         if (err) {
           window.showErrorMessage(err.message);
-          this.isNotConnectedBehaviour(connLabel);
+          this.connectFailBehaviour(connLabel);
           return;
         }
         if (conn) {
@@ -154,11 +154,13 @@ export class ConnectionManagementService {
             "CONNECTION",
           );
 
-          Telemetry.sendEvent("Connection.Connected.QProcess");
+          Telemetry.sendEvent(
+            "Connection.Connected" + this.getTelemetryConnectionType(connLabel),
+          );
 
           ext.connectedConnectionList.push(localConnection);
 
-          this.isConnectedBehaviour(connection);
+          this.connectSuccessBehaviour(connection);
         }
       });
     } else {
@@ -169,7 +171,9 @@ export class ConnectionManagementService {
       );
       await insightsConn.connect();
       if (insightsConn.connected) {
-        Telemetry.sendEvent("Connection.Connected.Insights");
+        Telemetry.sendEvent(
+          "Connection.Connected" + this.getTelemetryConnectionType(connLabel),
+        );
         kdbOutputLog(
           `Connection established successfully to: ${connLabel}`,
           "CONNECTION",
@@ -179,9 +183,9 @@ export class ConnectionManagementService {
           "CONNECTION",
         );
         ext.connectedConnectionList.push(insightsConn);
-        this.isConnectedBehaviour(connection);
+        this.connectSuccessBehaviour(connection);
       } else {
-        this.isNotConnectedBehaviour(connLabel);
+        this.connectFailBehaviour(connLabel);
       }
       refreshDataSourcesPanel();
     }
@@ -273,7 +277,7 @@ export class ConnectionManagementService {
     }
   }
 
-  public isConnectedBehaviour(connNode: KdbNode | InsightsNode): void {
+  public connectSuccessBehaviour(connNode: KdbNode | InsightsNode): void {
     ext.latestLblsChanged.length = 0;
     ext.latestLblsChanged.push(...retrieveConnLabelsNames(connNode));
     ext.connectedContextStrings.push(connNode.label);
@@ -287,9 +291,11 @@ export class ConnectionManagementService {
     ext.serverProvider.reload();
   }
 
-  public isNotConnectedBehaviour(connLabel: string): void {
+  public connectFailBehaviour(connLabel: string): void {
     window.showErrorMessage(`Connection failed to: ${connLabel}`);
-    Telemetry.sendEvent("Connection.Failed");
+    Telemetry.sendEvent(
+      "Connection.Failed" + this.getTelemetryConnectionType(connLabel),
+    );
   }
 
   public disconnectBehaviour(
@@ -556,5 +562,18 @@ export class ConnectionManagementService {
       exportedContent.connections.KDB.length === 0
       ? ""
       : JSON.stringify(exportedContent, null, 2);
+  }
+
+  public getTelemetryConnectionType(connLabel: string): string {
+    const connection = this.retrieveConnection(connLabel);
+
+    if (connection instanceof InsightsNode) {
+      return ".Insights";
+    }
+    const isCustom = ext.customAuth ? ".CustomAuth" : "";
+    if (connLabel === "local") {
+      return isCustom + ".BundleQ";
+    }
+    return isCustom + ".MyQ";
   }
 }

@@ -206,6 +206,7 @@ export async function runDataSource(
       const query = getQuery(fileContent, selectedType);
 
       if (!success) {
+        Telemetry.sendEvent("Datasource." + selectedType + ".Run.Error");
         window.showErrorMessage(res.error);
       }
       if (ext.isResultsTabVisible) {
