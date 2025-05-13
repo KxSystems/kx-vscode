@@ -350,24 +350,31 @@ function registerHelpCommands(): CommandRegistration[] {
             "KX.kdb",
           )
           .then(undefined, () => {
+            Telemetry.sendEvent("Help&Feedback.Open.ExtensionDocumentation");
             vscode.commands.executeCommand("extension.open", "KX.kdb");
           });
       },
     },
     {
       command: "kdb.help.suggestFeature",
-      callback: () =>
-        vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.suggestFeature)),
+      callback: () => {
+        Telemetry.sendEvent("Help&Feedback.Open.SuggestFeature");
+        vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.suggestFeature));
+      },
     },
     {
       command: "kdb.help.provideFeedback",
-      callback: () =>
-        vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.survey)),
+      callback: () => {
+        Telemetry.sendEvent("Help&Feedback.Open.Survey");
+        vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.survey));
+      },
     },
     {
       command: "kdb.help.reportBug",
-      callback: () =>
-        vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.reportBug)),
+      callback: () => {
+        Telemetry.sendEvent("Help&Feedback.Open.ReportBug");
+        vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.reportBug));
+      },
     },
   ];
 
