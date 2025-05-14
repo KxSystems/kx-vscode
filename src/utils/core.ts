@@ -697,6 +697,9 @@ function map(xs: any, f: any) {
   }
 }
 
-export function compareVersions(version1: number, version2: number): boolean {
-  return semver.gte(`${version1}.0`, `${version2}.0`);
+export function isBaseVersionGreaterOrEqual(
+  baseVersion: number,
+  targetVersion: number,
+): boolean {
+  return semver.gte(`${baseVersion}.0`, `${targetVersion}.0`);
 }
