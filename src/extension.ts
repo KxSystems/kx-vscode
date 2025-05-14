@@ -624,18 +624,21 @@ function registerConnectionsCommands(): CommandRegistration[] {
     {
       command: "kdb.connections.export.all",
       callback: () => {
+        Telemetry.sendEvent("Connections.Export.All");
         exportConnections();
       },
     },
     {
       command: "kdb.connections.export.single",
       callback: async (viewItem: KdbNode | InsightsNode) => {
+        Telemetry.sendEvent("Connections.Export.Single");
         exportConnections(viewItem.label);
       },
     },
     {
       command: "kdb.connections.import",
       callback: async () => {
+        Telemetry.sendEvent("Connections.Import");
         await importConnections();
       },
     },
