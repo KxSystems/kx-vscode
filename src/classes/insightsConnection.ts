@@ -37,7 +37,7 @@ import {
 } from "../services/kdbInsights/codeFlowLogin";
 import { InsightsNode } from "../services/kdbTreeProvider";
 import {
-  compareVersions,
+  isBaseVersionGreaterOrEqual,
   invalidUsernameJWT,
   kdbOutputLog,
   tokenUndefinedError,
@@ -209,7 +209,7 @@ export class InsightsConnection {
     if (
       this.connected &&
       this.insightsVersion &&
-      compareVersions(this.insightsVersion, 1.13)
+      isBaseVersionGreaterOrEqual(this.insightsVersion, 1.13)
     ) {
       const configUrl = new url.URL(
         ext.insightsAuthUrls.apiConfigUrl,
@@ -266,7 +266,7 @@ export class InsightsConnection {
   }
 
   public defineEndpoints() {
-    this.connEndpoints = {
+    const baseEndpoints = {
       scratchpad: {
         scratchpad: "servicebroker/scratchpad/display",
         import: "servicebroker/scratchpad/import/data",
@@ -283,26 +283,30 @@ export class InsightsConnection {
         udaBase: "servicegateway/",
       },
     };
-    // uncomment this WHEN the insights version is available
-    // if (this.insightsVersion) {
-    //   if (compareVersions(this.insightsVersion, 1.12)) {
-    //     this.connEndpoints = {
-    //       scratchpad: {
-    //         scratchpad: "scratchpad/execute/display",
-    //         import: "scratchpad/execute/import/data",
-    //         importSql: "scratchpad/execute/import/sql",
-    //         importQsql: "scratchpad/execute/import/qsql",
-    //         reset: "scratchpad/reset",
-    //       },
-    //       serviceGateway: {
-    //         meta: "servicegateway/meta",
-    //         data: "servicegateway/data",
-    //         sql: "servicegateway/qe/sql",
-    //         qsql: "servicegateway/qe/qsql",
-    //       },
-    //     };
-    //   }
-    // }
+
+    const updatedEndpoints = {
+      scratchpad: {
+        scratchpad: "scratchpadmanager/scratchpad/display",
+        import: "scratchpadmanager/scratchpad/import/data",
+        importSql: "scratchpadmanager/scratchpad/import/sql",
+        importQsql: "scratchpadmanager/scratchpad/import/qsql",
+        importUDA: "scratchpadmanager/scratchpad/import/uda",
+        reset: "scratchpadmanager/reset",
+      },
+      serviceGateway: {
+        meta: "servicegateway/meta",
+        data: "servicegateway/data",
+        sql: "servicegateway/qe/sql",
+        qsql: "servicegateway/qe/qsql",
+        udaBase: "servicegateway/",
+      },
+    };
+
+    this.connEndpoints =
+      this.insightsVersion &&
+      isBaseVersionGreaterOrEqual(this.insightsVersion, 1.11)
+        ? updatedEndpoints
+        : baseEndpoints;
   }
 
   public retrieveEndpoints(
@@ -650,7 +654,10 @@ export class InsightsConnection {
 
       if (this.insightsVersion) {
         /* TODO: Workaround for Python structuredText bug */
-        if (!isPython && compareVersions(this.insightsVersion, 1.12)) {
+        if (
+          !isPython &&
+          isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
+        ) {
           body.returnFormat = isTableView ? "structuredText" : "text";
         } else {
           body.isTableView = isTableView;
@@ -699,7 +706,7 @@ export class InsightsConnection {
                     /* TODO: Workaround for Python structuredText bug */
                     !isPython &&
                     this.insightsVersion &&
-                    compareVersions(this.insightsVersion, 1.12)
+                    isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
                   ) {
                     response.data = JSON.parse(
                       response.data.data,

@@ -23,7 +23,7 @@ import {
 
 import { ext } from "../extensionVariables";
 import { StructuredTextResults } from "../models/queryResult";
-import { compareVersions, kdbOutputLog } from "../utils/core";
+import { isBaseVersionGreaterOrEqual, kdbOutputLog } from "../utils/core";
 import { decodeQUTF } from "../utils/decode";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
@@ -257,7 +257,9 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     if (
       (!isInsights && !isPython) ||
       /* TODO: Workaround for Python structuredText bug */
-      (!isPython && connVersion && compareVersions(connVersion, 1.12))
+      (!isPython &&
+        connVersion &&
+        isBaseVersionGreaterOrEqual(connVersion, 1.12))
     ) {
       rowData = this.updatedExtractRowData(results);
       columnDefs = this.updatedExtractColumnDefs(results);
