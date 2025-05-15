@@ -35,13 +35,19 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   public isPython = false;
   public _colorTheme: any;
   private _view?: WebviewView;
+  private savedParamStates: any;
   private _results: string | string[] = "";
 
   constructor(private readonly _extensionUri: Uri) {
     this._colorTheme = window.activeColorTheme;
     window.onDidChangeActiveColorTheme(() => {
       this._colorTheme = window.activeColorTheme;
-      this.updateResults(this._results);
+      this.updateResults(
+        this.savedParamStates.queryResults,
+        this.savedParamStates.isInsights,
+        this.savedParamStates.connVersion,
+        this.savedParamStates.isPython,
+      );
     });
     ext.isResultsTabVisible = true;
   }
@@ -100,6 +106,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     connVersion?: number,
     isPython?: boolean,
   ) {
+    this.savedParamStates = { queryResults, isInsights, connVersion, isPython };
     if (this._view) {
       this._view.show?.(true);
       this.isInsights = !!isInsights;
@@ -402,6 +409,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
           results: gridOptions.rowData,
           columnDefs: gridOptions.columnDefs,
           theme: "legacy",
+          themeColor: this.defineAgGridTheme(),
         });
       } else {
         this._view.webview.postMessage({
@@ -477,6 +485,8 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
               window.addEventListener('message', event => {
                 const message = event.data;
+                gridDiv.className = "";
+                gridDiv.classList.add(message.themeColor); 
                 showOverlay();
 
                 const handleSetGridDatasource = () => {
