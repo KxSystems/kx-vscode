@@ -2828,44 +2828,35 @@ describe("Utils", () => {
       it("should increment extSurveyTriggerCount and return immediately if hideSurvey is true", async () => {
         const result = await feedbackSurveyDialog(false, 0, true);
         assert.deepStrictEqual(result, {
-          sawSurveyTwice: false,
+          sawSurveyAlready: false,
           extSurveyTriggerCount: 1,
         });
         sinon.assert.notCalled(showSurveyDialogStub);
       });
 
-      it("should show survey dialog when extSurveyTriggerCount is 1 and sawSurveyTwice is false", async () => {
-        const result = await feedbackSurveyDialog(false, 0, false);
+      it("should set sawSurveyAlready to true and reset extSurveyTriggerCount when extSurveyTriggerCount >= 3 and sawSurveyAlready is false", async () => {
+        const result = await feedbackSurveyDialog(false, 3, false);
         assert.deepStrictEqual(result, {
-          sawSurveyTwice: false,
-          extSurveyTriggerCount: 1,
-        });
-        sinon.assert.calledOnce(showSurveyDialogStub);
-      });
-
-      it("should set sawSurveyTwice to true and reset extSurveyTriggerCount when extSurveyTriggerCount >= 4 and sawSurveyTwice is false", async () => {
-        const result = await feedbackSurveyDialog(false, 4, false);
-        assert.deepStrictEqual(result, {
-          sawSurveyTwice: true,
+          sawSurveyAlready: true,
           extSurveyTriggerCount: 0,
         });
         sinon.assert.calledOnce(showSurveyDialogStub);
       });
 
-      it("should reset extSurveyTriggerCount when extSurveyTriggerCount >= 5 and sawSurveyTwice is true", async () => {
+      it("should reset extSurveyTriggerCount when extSurveyTriggerCount >= 5 and sawSurveyAlready is true", async () => {
         const result = await feedbackSurveyDialog(true, 5, false);
         assert.deepStrictEqual(result, {
-          sawSurveyTwice: true,
+          sawSurveyAlready: true,
           extSurveyTriggerCount: 0,
         });
         sinon.assert.calledOnce(showSurveyDialogStub);
       });
 
       it("should increment extSurveyTriggerCount and not show survey dialog for other cases", async () => {
-        const result = await feedbackSurveyDialog(false, 2, false);
+        const result = await feedbackSurveyDialog(false, 1, false);
         assert.deepStrictEqual(result, {
-          sawSurveyTwice: false,
-          extSurveyTriggerCount: 3,
+          sawSurveyAlready: false,
+          extSurveyTriggerCount: 2,
         });
         sinon.assert.notCalled(showSurveyDialogStub);
       });
