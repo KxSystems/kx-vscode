@@ -553,12 +553,17 @@ describe("WebPanels", () => {
         sinon.assert.calledWith(postMessageStub, {
           command: "loading",
         });
-        sinon.assert.calledWith(postMessageStub, {
-          command: "setGridDatasource",
-          results: [],
-          columnDefs: [],
-          theme: "legacy",
-        });
+        sinon.assert.calledWith(
+          postMessageStub,
+          sinon
+            .match({
+              command: "setGridDatasource",
+              results: [],
+              columnDefs: [],
+              theme: "legacy",
+            })
+            .and(sinon.match.has("themeColor", sinon.match.string)),
+        );
       });
 
       it("should handle null queryResult", () => {
