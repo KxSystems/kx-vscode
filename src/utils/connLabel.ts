@@ -15,6 +15,7 @@ import { workspace } from "vscode";
 
 import { ext } from "../extensionVariables";
 import { kdbOutputLog } from "./core";
+import { Telemetry } from "./telemetryClient";
 import { ConnectionLabel, Labels } from "../models/labels";
 import { NewConnectionPannel } from "../panels/newConnection";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
@@ -48,6 +49,7 @@ export function createNewLabel(name: string, colorName: string) {
     workspace
       .getConfiguration()
       .update("kdb.connectionLabels", ext.connLabelList, true);
+    Telemetry.sendEvent("Label.Create", {}, getLabelStatistics());
   } else {
     kdbOutputLog("No Color selected for the label", "ERROR");
   }
@@ -90,6 +92,11 @@ export function addConnToLabel(labelName: string, connName: string) {
         connections: [connName],
       });
     }
+    Telemetry.sendEvent(
+      "Label.Assign.Connection",
+      {},
+      getConnectionLabelStatistics(connName),
+    );
   }
 }
 
@@ -104,6 +111,11 @@ export function removeConnFromLabels(connName: string) {
   workspace
     .getConfiguration()
     .update("kdb.labelsConnectionMap", ext.labelConnMapList, true);
+  Telemetry.sendEvent(
+    "Label.Remove.Connection",
+    {},
+    getConnectionLabelStatistics(connName),
+  );
 }
 
 export async function handleLabelsConnMap(labels: string[], connName: string) {
@@ -176,6 +188,7 @@ export function deleteLabel(name: string) {
   workspace
     .getConfiguration()
     .update("kdb.connectionLabels", ext.connLabelList, true);
+  Telemetry.sendEvent("Label.Delete", {}, getLabelStatistics());
 
   NewConnectionPannel.refreshLabels();
 }
@@ -194,4 +207,47 @@ export function isLabelContentChanged(name: string) {
     return true;
   }
   return false;
+}
+
+export function getLabelStatistics(): Record<string, number> {
+  const statistics: Record<string, number> = {
+    count: ext.connLabelList.length,
+  };
+
+  ext.labelColors.forEach((color) => {
+    statistics[color.name] = 0;
+  });
+
+  ext.connLabelList.forEach((label) => {
+    if (label.color && label.color.name in statistics) {
+      statistics[label.color.name]++;
+    }
+  });
+
+  return statistics;
+}
+
+export function getConnectionLabelStatistics(
+  connName: string,
+): Record<string, number> {
+  const statistics: Record<string, number> = { count: 0 };
+
+  ext.labelColors.forEach((color) => {
+    statistics[color.name] = 0;
+  });
+
+  const linkedLabels = ext.labelConnMapList
+    .filter((connectionLabel) => connectionLabel.connections.includes(connName))
+    .map((connectionLabel) => connectionLabel.labelName);
+
+  ext.connLabelList.forEach((label) => {
+    if (linkedLabels.includes(label.name)) {
+      statistics.count++;
+      if (label.color && label.color.name in statistics) {
+        statistics[label.color.name]++;
+      }
+    }
+  });
+
+  return statistics;
 }

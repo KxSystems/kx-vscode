@@ -92,7 +92,7 @@ export class ChartEditorProvider implements CustomTextEditorProvider {
           <link rel="stylesheet" href="${getResource("light.css")}" />
           <link rel="stylesheet" href="${getResource("style.css")}" />
           <script type="module" nonce="${getNonce()}" src="${getResource("webview.js")}"></script>
-          <title>DataSource</title>
+          <title>GG PLOT</title>
         </head>
         <body>
           <kdb-chart-view></kdb-chart-view>

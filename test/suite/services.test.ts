@@ -1276,7 +1276,7 @@ describe("connectionManagerService", () => {
 
       ext.serverProvider = undefined;
     });
-    it("isConnectedBehaviour", () => {
+    it("connectSuccessBehaviour", () => {
       const setActiveConnectionStub = sinon.stub(
         connectionManagerService,
         "setActiveConnection",
@@ -1284,7 +1284,7 @@ describe("connectionManagerService", () => {
       const executeCommandStub = sinon.stub(commands, "executeCommand");
       const reloadStub = sinon.stub(ext.serverProvider, "reload");
 
-      connectionManagerService.isConnectedBehaviour(insightNode);
+      connectionManagerService.connectSuccessBehaviour(insightNode);
 
       sinon.assert.calledOnce(setActiveConnectionStub);
       sinon.assert.calledOnce(reloadStub);
@@ -1296,19 +1296,19 @@ describe("connectionManagerService", () => {
       );
     });
 
-    it("isNotConnectedBehaviour", () => {
+    it("connectFailBehaviour", () => {
       const showErrorMessageStub = sinon.stub(window, "showErrorMessage");
       const sendEventStub = sinon.stub(Telemetry, "sendEvent");
 
       const testLabel = "testLabel";
 
-      connectionManagerService.isNotConnectedBehaviour(testLabel);
+      connectionManagerService.connectFailBehaviour(testLabel);
 
       sinon.assert.calledWith(
         showErrorMessageStub,
         `Connection failed to: ${testLabel}`,
       );
-      sinon.assert.calledWith(sendEventStub, "Connection.Failed");
+      sinon.assert.calledWith(sendEventStub, "Connection.Failed.KDB+");
     });
 
     it("disconnectBehaviour", () => {
