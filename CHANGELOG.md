@@ -2,6 +2,22 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.12.0
+
+### Enhancements
+
+- Added **Help & Feedback** view at the activity bar
+- Added **Feedback Survey**
+- Added **Copy Query** for query history when query is executed
+
+### Fixes
+
+- Fixed Results tab theme change issue
+
+### Internal Improvements
+
+- Added new endpoints for scratchpad
+
 # v1.11.2
 
 ### Fixes

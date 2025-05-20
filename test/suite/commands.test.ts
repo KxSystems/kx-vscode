@@ -1680,6 +1680,7 @@ describe("serverCommand", () => {
       executeCommandStub.restore();
     });
   });
+
   describe("enableTLS", () => {
     let getServersStub: sinon.SinonStub;
     let updateServersStub: sinon.SinonStub;
@@ -2495,6 +2496,63 @@ describe("serverCommand", () => {
       exportConnectionStub.restore();
       showSaveDialogStub.restore();
       showQuickPickStub.restore();
+    });
+  });
+
+  describe("copyQuery", () => {
+    let showInfoStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      showInfoStub = sinon.stub(vscode.window, "showInformationMessage");
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should copy query to clipboard", async () => {
+      const queryHistory: QueryHistory = {
+        executorName: "test",
+        connectionName: "conn",
+        connectionType: ServerType.KDB,
+        query: "select from table",
+        time: "now",
+        success: true,
+      };
+
+      await serverCommand.copyQuery(queryHistory);
+      sinon.assert.calledOnceWithExactly(
+        showInfoStub,
+        "Query copied to clipboard.",
+      );
+    });
+
+    it("should not copy query to clipboard if query is not string", async () => {
+      const dummyDsFiles = createDefaultDataSourceFile();
+      const queryHistory: QueryHistory = {
+        executorName: "test",
+        connectionName: "conn",
+        connectionType: ServerType.KDB,
+        query: dummyDsFiles,
+        time: "now",
+        success: true,
+      };
+      await serverCommand.copyQuery(queryHistory);
+      sinon.assert.notCalled(showInfoStub);
+    });
+
+    it("should not copy query to clipboard if is DS", async () => {
+      const queryHistory: QueryHistory = {
+        executorName: "test",
+        connectionName: "conn",
+        connectionType: ServerType.KDB,
+        query: "select from table",
+        time: "now",
+        success: true,
+        isDatasource: true,
+      };
+      await serverCommand.copyQuery(queryHistory);
+      sinon.assert.notCalled(showInfoStub);
     });
   });
 });

@@ -25,6 +25,7 @@ import {
   commands,
   window,
   workspace,
+  env,
 } from "vscode";
 
 import { ext } from "../extensionVariables";
@@ -1068,6 +1069,16 @@ export function rerunQuery(rerunQueryElement: QueryHistory) {
       rerunQueryElement.connectionName,
       rerunQueryElement.executorName,
     );
+  }
+}
+
+export function copyQuery(queryHistoryElement: QueryHistory) {
+  if (
+    !queryHistoryElement.isDatasource &&
+    typeof queryHistoryElement.query === "string"
+  ) {
+    env.clipboard.writeText(queryHistoryElement.query);
+    window.showInformationMessage("Query copied to clipboard.");
   }
 }
 

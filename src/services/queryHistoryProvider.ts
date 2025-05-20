@@ -59,16 +59,28 @@ export class QueryHistoryProvider implements TreeDataProvider<TreeItem> {
   }
 
   private getQueryHistoryList(): Promise<QueryHistoryTreeItem[]> {
+    commands.executeCommand("setContext", "kdb.kdbQHCopyList", []);
+    ext.queryHistoryAvailableToCopy.length = 0;
     return Promise.resolve(
       this.queryList.map((query) => {
         const label = query.connectionName + " - " + query.time;
+        if (!query.isDatasource && typeof query.query === "string") {
+          ext.queryHistoryAvailableToCopy.push(label);
+        }
         return new QueryHistoryTreeItem(
           label,
           query,
           TreeItemCollapsibleState.None,
         );
       }),
-    );
+    ).then((result) => {
+      commands.executeCommand(
+        "setContext",
+        "kdb.kdbQHCopyList",
+        ext.queryHistoryAvailableToCopy,
+      );
+      return result;
+    });
   }
 }
 
@@ -79,6 +91,8 @@ export class QueryHistoryTreeItem extends TreeItem {
     public readonly collapsibleState: TreeItemCollapsibleState,
   ) {
     super(label, collapsibleState);
+    this.id = label;
+    this.contextValue = label;
     if (ext.kdbQueryHistoryNodes.indexOf(label) === -1) {
       ext.kdbQueryHistoryNodes.push(label);
       commands.executeCommand(

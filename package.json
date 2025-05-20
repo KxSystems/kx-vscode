@@ -381,6 +381,11 @@
       },
       {
         "category": "KX",
+        "command": "kdb.queryHistory.copyQuery",
+        "title": "Copy query"
+      },
+      {
+        "category": "KX",
         "command": "kdb.queryHistory.clear",
         "title": "Clear query history",
         "icon": "$(clear-all)"
@@ -882,7 +887,12 @@
         {
           "command": "kdb.queryHistory.rerun",
           "when": "view == kdb-query-history",
-          "group": "queryHistory"
+          "group": "queryHistory@1"
+        },
+        {
+          "command": "kdb.queryHistory.copyQuery",
+          "when": "view == kdb-query-history && viewItem in kdb.kdbQHCopyList",
+          "group": "queryHistory@2"
         },
         {
           "command": "kdb.file.rename",
