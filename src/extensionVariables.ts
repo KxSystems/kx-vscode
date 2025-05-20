@@ -74,6 +74,7 @@ export namespace ext {
     LocalConnection | InsightsConnection
   > = [];
   export const connectedContextStrings: Array<string> = [];
+  export const queryHistoryAvailableToCopy: Array<string> = [];
   export const connectionsList: Array<KdbNode | InsightsNode> = [];
   export let hideDetailedConsoleQueryOutput: boolean;
   export let networkChangesWatcher: boolean;

@@ -36,6 +36,7 @@ import {
   addKdbConnection,
   addNewConnection,
   connect,
+  copyQuery,
   disconnect,
   editConnection,
   editInsightsConnection,
@@ -137,6 +138,7 @@ export async function activate(context: vscode.ExtensionContext) {
   vscode.commands.executeCommand("setContext", "kdb.connected.active", false);
   vscode.commands.executeCommand("setContext", "kdb.pythonEnabled", false);
   vscode.commands.executeCommand("setContext", "kdb.connected", []);
+  vscode.commands.executeCommand("setContext", "kdb.kdbQHCopyList", []);
 
   const servers: Server | undefined = getServers();
   const insights: Insights | undefined = getInsights();
@@ -541,6 +543,12 @@ function registerQueryHistoryCommands(): CommandRegistration[] {
       command: "kdb.queryHistory.rerun",
       callback: async (viewItem: QueryHistoryTreeItem) => {
         rerunQuery(viewItem.details);
+      },
+    },
+    {
+      command: "kdb.queryHistory.copyQuery",
+      callback: async (viewItem: QueryHistoryTreeItem) => {
+        copyQuery(viewItem.details);
       },
     },
   ];
