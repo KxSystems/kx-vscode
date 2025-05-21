@@ -54,7 +54,7 @@ async function showSurveyDialog() {
   );
   if (result === "Take Survey") {
     vscode.env.openExternal(vscode.Uri.parse(SURVEY_URL));
-  } else {
+  } else if (result === "Don't show me this message next time") {
     await vscode.workspace
       .getConfiguration("kdb")
       .update("hideSurvey", true, vscode.ConfigurationTarget.Global);
