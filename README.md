@@ -24,6 +24,7 @@ This guide provides information on the following:
 - [AxLibraries](#axlibraries)
 - [q REPL](#q-repl)
 - [Settings](#settings)
+- [Help and feedback](#help-and-feedback)
 - [Shortcuts](#shortcuts)
 
 ## Benefits of kdb VS Code Extension
@@ -847,6 +848,23 @@ The following setting will change double click behaviour to select the whole ide
     "editor.wordSeparators": "`~!@#$%^&*()-=+[{]}\\|;:'\",<>/?"
   }
 ```
+
+## Help and feedback
+
+A **Help and Feedback** view can be displayed in the primary sidebar of the kdb VS Code extension. This includes links to:
+
+- Extension documentation. This opens the kdb VS Code extension guide in a new tab in VS Code.
+- Suggest a feature. You are prompted with a pop-up confirmation before opening an external website.
+- Provide feedback. You are prompted with a pop-up confirmation before opening an external website.
+- Report a bug. Clicking this option opens GitHub directly.
+
+The **Help and Feedback** view is not shown by default; you must manually enable it if you wish to access it.
+
+**TO DO**: Explain how to enable it.
+
+### User feedback notification
+
+You may also see a prompt inside VS Code inviting you to provide feedback. This system notification appears after a few uses of the extension and helps us improve your experience. You can dismiss it or opt out permanently if preferred.
 
 ## Shortcuts
 
