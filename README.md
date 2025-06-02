@@ -24,6 +24,7 @@ This guide provides information on the following:
 - [AxLibraries](#axlibraries)
 - [q REPL](#q-repl)
 - [Settings](#settings)
+- [Help and feedback](#help-and-feedback)
 - [Shortcuts](#shortcuts)
 
 ## Benefits of kdb VS Code Extension
@@ -847,6 +848,25 @@ The following setting will change double click behaviour to select the whole ide
     "editor.wordSeparators": "`~!@#$%^&*()-=+[{]}\\|;:'\",<>/?"
   }
 ```
+
+## Help and feedback
+
+A **Help and Feedback** view is displayed in the primary sidebar of the kdb VS Code extension. This includes links to:
+
+- Extension documentation. This opens the kdb VS Code extension guide in a new tab in VS Code.
+- Suggest a feature. You are prompted with a pop-up confirmation before opening an external website.
+- Provide feedback. You are prompted with a pop-up confirmation before opening an external website.
+- Report a bug. Clicking this option opens GitHub directly.
+
+![Help and Feedback](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/helpandfeedback.png)
+
+### User feedback notification
+
+You may also see a prompt inside VS Code inviting you to provide feedback. This system notification appears after a few uses of the extension and helps us improve your experience. You can dismiss it or opt out permanently if preferred.
+
+If you choose to opt out permanently but wish to revert this, open VS Code settings, search for survey, and check the **Hide Survey** option, as shown below.
+
+![Hide Survey](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/extension-survey-dialog.png)
 
 ## Shortcuts
 
