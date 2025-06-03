@@ -90,6 +90,35 @@ export const shoelaceStyles = css`
   }
 `;
 
+export const vaadinStyles = css`
+  .row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+  vaadin-text-field {
+    width: 120px;
+  }
+
+  vaadin-date-picker::part(label),
+  vaadin-date-picker::part(toggle-button),
+  vaadin-time-picker::part(label),
+  vaadin-text-field::part(label) {
+    color: var(--vscode-foreground) !important;
+    font-size: 12px !important;
+    line-height: 16px !important;
+    letter-spacing: 0.46px !important;
+    word-wrap: break-word !important;
+  }
+
+  vaadin-date-picker::part(input-field),
+  vaadin-time-picker::part(input-field),
+  vaadin-text-field::part(input-field) {
+    background-color: var(--vscode-input-background) !important;
+    color: var(--vscode-foreground) !important;
+  }
+`;
+
 export const dataSourceStyles = css`
   .container {
     display: flex;

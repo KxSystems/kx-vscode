@@ -16,7 +16,12 @@ import { customElement } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
 import { repeat } from "lit/directives/repeat.js";
 
-import { dataSourceStyles, kdbStyles, shoelaceStyles } from "./styles";
+import {
+  dataSourceStyles,
+  kdbStyles,
+  shoelaceStyles,
+  vaadinStyles,
+} from "./styles";
 import {
   Agg,
   DataSourceFiles,
@@ -36,6 +41,7 @@ import {
 import { DataSourceCommand, DataSourceMessage2 } from "../../models/messages";
 import { MetaObjectPayload } from "../../models/meta";
 import { ParamFieldType, UDA, UDAParam } from "../../models/uda";
+import "./custom-fields/date-time-nano-picker";
 
 const MAX_RULES = 32;
 const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
@@ -115,7 +121,12 @@ const allowedEmptyRequiredTypesStrings = ["Symbol", "String"];
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {
-  static readonly styles = [shoelaceStyles, dataSourceStyles, kdbStyles];
+  static readonly styles = [
+    shoelaceStyles,
+    vaadinStyles,
+    dataSourceStyles,
+    kdbStyles,
+  ];
 
   readonly vscode = acquireVsCodeApi();
   declare private debounce;
@@ -1426,27 +1437,42 @@ export class KdbDataSourceView extends LitElement {
     return html`
       <div class="opt-param-field">
         <div class="${inputFieldWrapperWidth} row align-top">
-          <sl-input
-            class="reset-widths-limit width-100-pct"
-            .type="${type as
-              | "number"
-              | "date"
-              | "datetime-local"
-              | "email"
-              | "password"
-              | "search"
-              | "tel"
-              | "text"
-              | "time"
-              | "url"}"
-            label="${param.name + isReq}"
-            .helpText="${helpText}"
-            .value="${live(value)}"
-            @input="${(event: Event) => {
-              param.value = (event.target as HTMLInputElement).value;
-              this.requestChange();
-            }}">
-          </sl-input>
+          ${type === "datetime-local"
+            ? html`
+                <date-time-nano-picker
+                  class="reset-widths-limit width-100-pct"
+                  .label="${param.name + isReq}"
+                  .helpText="${helpText}"
+                  .value="${live(value)}"
+                  @change="${(event: CustomEvent) => {
+                    param.value = event.detail.value;
+                    this.requestChange();
+                  }}">
+                </date-time-nano-picker>
+              `
+            : html`
+                <sl-input
+                  class="reset-widths-limit width-100-pct"
+                  .type="${type as
+                    | "number"
+                    | "date"
+                    | "datetime-local"
+                    | "email"
+                    | "password"
+                    | "search"
+                    | "tel"
+                    | "text"
+                    | "time"
+                    | "url"}"
+                  label="${param.name + isReq}"
+                  .helpText="${helpText}"
+                  .value="${live(value)}"
+                  @input="${(event: Event) => {
+                    param.value = (event.target as HTMLInputElement).value;
+                    this.requestChange();
+                  }}">
+                </sl-input>
+              `}
         </div>
         <div class="${renderDeleteParam ? "width-10-pct" : "display-none"}">
           ${this.renderDeleteUDAParamButton(param)}
