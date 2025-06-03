@@ -351,7 +351,13 @@ export class ConnectionManagementService {
         isPython,
       );
     } else {
-      return await selectedConn.getScratchpadQuery(command, context, isPython);
+      return await selectedConn.getScratchpadQuery(
+        command,
+        context,
+        isPython,
+        false,
+        !stringify,
+      );
     }
   }
 

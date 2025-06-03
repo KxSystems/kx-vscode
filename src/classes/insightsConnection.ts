@@ -637,9 +637,12 @@ export class InsightsConnection {
     context?: string,
     isPython?: boolean,
     isStarting?: boolean,
+    isTableView?: boolean,
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
-      const isTableView = ext.isResultsTabVisible;
+      if (isTableView === undefined) {
+        isTableView = ext.isResultsTabVisible;
+      }
       const scratchpadURL = new url.URL(
         this.connEndpoints.scratchpad.scratchpad,
         this.node.details.server,

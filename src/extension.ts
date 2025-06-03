@@ -84,6 +84,8 @@ import {
   KdbTreeProvider,
   MetaObjectPayloadNode,
 } from "./services/kdbTreeProvider";
+import { KxNotebookController } from "./services/notebookController";
+import { KxNotebookSerializer } from "./services/notebookSerializer";
 import {
   QueryHistoryProvider,
   QueryHistoryTreeItem,
@@ -267,6 +269,14 @@ export async function activate(context: vscode.ExtensionContext) {
       { language: "q" },
       new CompletionProvider(),
     ),
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.registerNotebookSerializer(
+      "kx-notebook",
+      new KxNotebookSerializer(),
+    ),
+    new KxNotebookController(),
   );
 
   connectWorkspaceCommands();
@@ -969,6 +979,23 @@ function registerLSCommands(): CommandRegistration[] {
   return lsCommands;
 }
 
+function registerNotebookCommands(): CommandRegistration[] {
+  const notebookCommands: CommandRegistration[] = [
+    {
+      command: "kdb.createNotebook",
+      callback: async () => {
+        if (hasWorkspaceOrShowOption("adding notebook")) {
+          const uri = await addWorkspaceFile(undefined, "notebook", ".kxnb");
+          const notebook = await vscode.workspace.openNotebookDocument(uri);
+          await vscode.window.showNotebookDocument(notebook);
+        }
+      },
+    },
+  ];
+
+  return notebookCommands;
+}
+
 function registerAllExtensionCommands(): void {
   const allCommands: CommandRegistration[] = [
     ...registerHelpCommands(),
@@ -981,6 +1008,7 @@ function registerAllExtensionCommands(): void {
     ...registerFileCommands(),
     ...registerInstallCommands(),
     ...registerLSCommands(),
+    ...registerNotebookCommands(),
   ];
 
   allCommands.forEach((command) => {
