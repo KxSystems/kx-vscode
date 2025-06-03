@@ -19,3 +19,4 @@ release_process.md
 .github/
 out-test/
 .test-extensions/
+.test-folder/

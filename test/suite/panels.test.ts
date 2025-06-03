@@ -26,6 +26,7 @@ import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
 import * as coreUtils from "../../src/utils/core";
 import * as utils from "../../src/utils/execution";
+import * as renderer from "../../src/utils/resultsRenderer";
 
 describe("WebPanels", () => {
   describe("DataSourcesPanel", () => {
@@ -113,35 +114,35 @@ describe("WebPanels", () => {
       it("should remove leading and trailing whitespace", () => {
         const inputString = "  test string  ";
         const expectedString = "test string";
-        const actualString = resultsPanel.sanitizeString(inputString);
+        const actualString = renderer.sanitizeString(inputString);
         assert.strictEqual(actualString, expectedString);
       });
 
       it("should remove single quotes, double quotes, and backticks", () => {
         const inputString = `'test' "string" \`with\` quotes`;
         const expectedString = "test string with quotes";
-        const actualString = resultsPanel.sanitizeString(inputString);
+        const actualString = renderer.sanitizeString(inputString);
         assert.strictEqual(actualString, expectedString);
       });
 
       it("should remove ${ and } characters", () => {
         const inputString = "test ${string} with ${variables}";
         const expectedString = "test string} with variables}";
-        const actualString = resultsPanel.sanitizeString(inputString);
+        const actualString = renderer.sanitizeString(inputString);
         assert.strictEqual(actualString, expectedString);
       });
 
       it("should transform an array of strings into a single string", () => {
         const inputString = ["test", "string", "with", "array"];
         const expectedString = "test string with array";
-        const actualString = resultsPanel.sanitizeString(inputString);
+        const actualString = renderer.sanitizeString(inputString);
         assert.strictEqual(actualString, expectedString);
       });
 
       it("should return a number", () => {
         const inputString = 123;
         const expectedString = 123;
-        const actualString = resultsPanel.sanitizeString(inputString);
+        const actualString = renderer.sanitizeString(inputString);
         assert.strictEqual(actualString, expectedString);
         assert.ok(typeof actualString === "number");
       });
@@ -220,7 +221,7 @@ describe("WebPanels", () => {
         const stub = sinon.stub(ext, "activeConnection");
         stub.get(() => insightsConn);
 
-        const output = resultsPanel.convertToGrid(results, true);
+        const output = renderer.convertToGrid(results, true);
         assert.equal(JSON.stringify(output), expectedOutput);
 
         // Restore the stub
@@ -272,7 +273,7 @@ describe("WebPanels", () => {
         const stub = sinon.stub(ext, "activeConnection");
         stub.get(() => insightsConn);
 
-        const output = resultsPanel.convertToGrid(results, true, 1.12);
+        const output = renderer.convertToGrid(results, true, 1.12);
         assert.equal(JSON.stringify(output), expectedOutput);
 
         // Restore the stub
@@ -308,7 +309,7 @@ describe("WebPanels", () => {
         const stub = sinon.stub(ext, "activeConnection");
         stub.get(() => insightsConn);
 
-        const output = resultsPanel.convertToGrid(results, true);
+        const output = renderer.convertToGrid(results, true);
         assert.equal(JSON.stringify(output), expectedOutput);
 
         // Restore the stub
@@ -343,7 +344,7 @@ describe("WebPanels", () => {
         const stub = sinon.stub(ext, "activeConnection");
         stub.get(() => insightsConn);
 
-        const output = resultsPanel.convertToGrid(results, true);
+        const output = renderer.convertToGrid(results, true);
         assert.equal(JSON.stringify(output), expectedOutput);
 
         // Restore the stub
@@ -371,7 +372,7 @@ describe("WebPanels", () => {
         const stub = sinon.stub(ext, "activeConnection");
         stub.get(() => insightsConn);
 
-        const output = resultsPanel.convertToGrid(results, true);
+        const output = renderer.convertToGrid(results, true);
         assert.equal(JSON.stringify(output), expectedOutput);
 
         // Restore the stub
@@ -397,7 +398,7 @@ describe("WebPanels", () => {
             cellDataType: "text",
           },
         ];
-        const actualOutput = resultsPanel.generateCoumnDefs(input, false);
+        const actualOutput = renderer.generateCoumnDefs(input, false);
         assert.deepStrictEqual(actualOutput, expectedOutput);
       });
 
@@ -415,7 +416,7 @@ describe("WebPanels", () => {
             cellDataType: "text",
           },
         ];
-        const actualOutput = resultsPanel.generateCoumnDefs(input, false);
+        const actualOutput = renderer.generateCoumnDefs(input, false);
         assert.deepStrictEqual(actualOutput, expectedOutput);
       });
     });
@@ -473,7 +474,7 @@ describe("WebPanels", () => {
           { a: "3", b: "3" },
         ];
         const expectedOutput = ["a,b", "1,1", "2,2", "3,3"];
-        const actualOutput = resultsPanel.convertToCsv(inputQueryResult);
+        const actualOutput = renderer.convertToCsv(inputQueryResult);
         assert.deepStrictEqual(actualOutput, expectedOutput);
       });
     });
@@ -496,7 +497,7 @@ describe("WebPanels", () => {
         postMessageStub = resultsPanel["_view"].webview
           .postMessage as sinon.SinonStub;
         kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
-        convertToGridStub = sinon.stub(resultsPanel, "convertToGrid");
+        convertToGridStub = sinon.stub(renderer, "convertToGrid");
       });
 
       afterEach(() => {
@@ -716,7 +717,7 @@ describe("WebPanels", () => {
           { date: "2024.10.23", instance: "`inst3" },
         ];
 
-        const rowData = resultsPanel.updatedExtractRowData(results);
+        const rowData = renderer.updatedExtractRowData(results);
 
         assert.deepEqual(rowData, expectedRowData);
       });
@@ -729,7 +730,7 @@ describe("WebPanels", () => {
 
         const expectedRowData: any[] = [];
 
-        const rowData = resultsPanel.updatedExtractRowData(results);
+        const rowData = renderer.updatedExtractRowData(results);
 
         assert.deepEqual(rowData, expectedRowData);
       });
@@ -770,7 +771,7 @@ describe("WebPanels", () => {
           },
         ];
 
-        const columnDefs = resultsPanel.updatedExtractColumnDefs(results);
+        const columnDefs = renderer.updatedExtractColumnDefs(results);
 
         assert.deepEqual(columnDefs, expectedColumnDefs);
       });
@@ -783,7 +784,7 @@ describe("WebPanels", () => {
 
         const expectedColumnDefs: any[] = [];
 
-        const columnDefs = resultsPanel.updatedExtractColumnDefs(results);
+        const columnDefs = renderer.updatedExtractColumnDefs(results);
 
         assert.deepEqual(columnDefs, expectedColumnDefs);
       });

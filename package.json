@@ -505,6 +505,11 @@
         "category": "KX",
         "command": "kdb.help.reportBug",
         "title": "Report a Bug"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.createNotebook",
+        "title": "Create new KX Notebook"
       }
     ],
     "keybindings": [
@@ -604,6 +609,19 @@
         "icon": {
           "dark": "./resources/dark/plot.svg",
           "light": "./resources/light/plot.svg"
+        }
+      },
+      {
+        "id": "kxnotebook",
+        "aliases": [
+          "kxnotebook"
+        ],
+        "extensions": [
+          ".kxnb"
+        ],
+        "icon": {
+          "dark": "./resources/dark/notebook.svg",
+          "light": "./resources/light/notebook.svg"
         }
       }
     ],
@@ -1023,6 +1041,17 @@
         ],
         "priority": "default"
       }
+    ],
+    "notebooks": [
+      {
+        "type": "kx-notebook",
+        "displayName": "KX Notebook",
+        "selector": [
+          {
+            "filenamePattern": "*.kxnb"
+          }
+        ]
+      }
     ]
   },
   "license": "MIT",
@@ -1042,7 +1071,10 @@
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
     "publish": "npx vsce publish",
     "lint": "eslint 'src/**' 'test/suite/**' --fix",
-    "ui-test": "rimraf out-test .test-extensions && tsc --outdir out-test -p ./test && extest setup-and-run './out-test/test/ui/**/*.test.js' --code_version max --code_settings ./test/ui/fixtures/settings.json --extensions_dir .test-extensions -m ./test/ui/fixtures/mocha.json"
+    "preui-test-cmd": "tsc --outdir out-test -p ./test",
+    "ui-test-cmd": "extest setup-and-run --code_version 1.99.3 --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
+    "preui-test": "rimraf out-test .test-extensions",
+    "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js"
   },
   "prettier": {
     "printWidth": 80,
@@ -1062,6 +1094,7 @@
     "@types/semver": "^7.5.8",
     "@types/sinon": "^17.0.4",
     "@types/vscode": "^1.86.0",
+    "@types/vscode-notebook-renderer": "^1.72.3",
     "@types/vscode-webview": "^1.57.5",
     "@typescript-eslint/eslint-plugin": "^8.27.0",
     "@typescript-eslint/parser": "^8.27.0",
