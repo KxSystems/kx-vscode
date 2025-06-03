@@ -14,9 +14,9 @@
 import { GridOptions } from "ag-grid-community";
 
 import { ext } from "../extensionVariables";
+import { isBaseVersionGreaterOrEqual } from "./core";
+import { decodeQUTF } from "./decode";
 import { StructuredTextResults } from "../models/queryResult";
-import { isBaseVersionGreaterOrEqual } from "../utils/core";
-import { decodeQUTF } from "../utils/decode";
 
 export function convertToGrid(
   results: any,

@@ -24,9 +24,9 @@ import { DataSourcesPanel } from "../../src/panels/datasource";
 import { NewConnectionPannel } from "../../src/panels/newConnection";
 import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
-import * as renderer from "../../src/services/resultsRenderer";
 import * as coreUtils from "../../src/utils/core";
 import * as utils from "../../src/utils/execution";
+import * as renderer from "../../src/utils/resultsRenderer";
 
 describe("WebPanels", () => {
   describe("DataSourcesPanel", () => {

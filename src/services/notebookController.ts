@@ -16,9 +16,9 @@ import * as vscode from "vscode";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { ext } from "../extensionVariables";
 import { ConnectionManagementService } from "../services/connectionManagerService";
-import { convertToGrid, formatResult } from "../services/resultsRenderer";
 import { kdbOutputLog } from "../utils/core";
 import { resultToBase64 } from "../utils/queryUtils";
+import { convertToGrid, formatResult } from "../utils/resultsRenderer";
 
 export class KxNotebookController {
   readonly controllerId = "kx-notebook-1";

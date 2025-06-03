@@ -22,11 +22,11 @@ import {
 } from "vscode";
 
 import { ext } from "../extensionVariables";
-import { convertToGrid, formatResult } from "./resultsRenderer";
 import { kdbOutputLog } from "../utils/core";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
+import { convertToGrid, formatResult } from "../utils/resultsRenderer";
 
 export class KdbResultsViewProvider implements WebviewViewProvider {
   public static readonly viewType = "kdb-results";
