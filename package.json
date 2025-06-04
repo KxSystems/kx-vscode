@@ -1097,7 +1097,6 @@
   },
   "dependencies": {
     "@ag-grid-community/core": "^32.3.4",
-    "@vaadin/vaadin": "^24.7.6",
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "@windozer/node-q": "^2.6.0",
     "ag-grid-community": "^33.2.1",

@@ -14,64 +14,82 @@
 import { LitElement, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
-import "@vaadin/date-picker";
-import "@vaadin/time-picker";
-import "@vaadin/text-field";
-import { vaadinStyles } from "../styles";
+import { shoelaceStyles } from "../styles";
 
 @customElement("date-time-nano-picker")
 export class DateTimeNanoPicker extends LitElement {
   @property({ type: String }) value = "";
   @property({ type: String }) label = "";
+  @property({ type: String }) helpText = "";
   @property({ type: Boolean }) required = false;
   @property({ type: String }) date = new Date().toISOString().slice(0, 10);
   @property({ type: String }) time = "00:00:00";
   @property({ type: String }) nanos = "000000000";
 
-  static styles = [vaadinStyles];
+  static styles = [shoelaceStyles];
 
-  // firstUpdated() {
-  //   console.log("oi");
-  //   const datePickerVaadin = this.shadowRoot?.querySelector("vaadin-date-picker");
+  connectedCallback() {
+    super.connectedCallback();
+    if (this.value) {
+      console.log("tem valor", this.value);
+      this.parseQDateTime(this.value);
+    }
+    console.log("iniciou valores");
+    this.parseValuesToQDateTime();
+  }
 
-  //   if (datePickerVaadin) {
-  //     console.log("tem date");
-  //     datePickerVaadin.addEventListener("opened-changed", (e: any) => {
-  //       console.log("abriu");
-  //       if (e.detail.value) {
-  //         setTimeout(() => {
-  //           const overlays = Array.from(
-  //             document.body.querySelectorAll("vaadin-date-picker-overlay"),
-  //           );
-  //           console.log("overlays", overlays);
-  //           console.log("datePicker", datePickerVaadin);
-  //           if (overlays[0]) {
-  //             debugger;
-  //             (overlays[0] as any).positionTarget = datePickerVaadin;
-  //           }
-  //         }, 0);
-  //       }
-  //     });
-  //   }
-  // }
+  parseQDateTime(qdt: string) {
+    const match = qdt.match(
+      /^(\d{4})\.(\d{2})\.(\d{2})D(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?$/,
+    );
+    if (match) {
+      const [, yyyy, mm, dd, h, m, s, n = ""] = match;
+      this.date = `${yyyy}-${mm}-${dd}`;
+      this.time = `${h.padStart(2, "0")}:${m.padStart(2, "0")}:${s.padStart(2, "0")}`;
+      this.nanos = n.padEnd(9, "0");
+    }
+  }
+
+  parseValuesToQDateTime() {
+    const [yyyy, mm, dd] = this.date.split("-");
+    const [h, m, s] = this.time.split(":");
+    const n = this.nanos.padEnd(9, "0").slice(0, 9);
+    this.value = `${yyyy}.${mm}.${dd}D${h}:${m}:${s}.${n}`;
+    this.requestUpdate();
+    this.dispatchValueChanged();
+  }
+
+  dispatchValueChanged() {
+    this.dispatchEvent(
+      new CustomEvent("change", {
+        detail: { value: this.value },
+        bubbles: true,
+        composed: true,
+      }),
+    );
+  }
 
   render() {
     return html`
-      <div class="row">
-        <label>${this.label}</label>
+      <div class="nanoseconds-row">
+        <label>${this.label + (this.required ? " *" : "")}</label>
       </div>
-      <div class="row">
-        <vaadin-date-picker
+      <div class="nanoseconds-row">
+        <sl-input
           label="Date"
-          .value=${this.date}
-          @value-changed=${(e: { detail: { value: string } }) =>
-            (this.date = e.detail.value)}></vaadin-date-picker>
-        <vaadin-text-field
+          type="date"
+          .value="${this.date}"
+          @input=${(e: { target: { value: string } }) => {
+            this.date = e.target.value;
+            this.parseValuesToQDateTime();
+          }}>
+        </sl-input>
+        <sl-input
+          type="text"
+          .value="${this.time}"
           label="Time(hh:mm:ss)"
           maxlength="8"
           pattern="^([01]\\d|2[0-3]):([0-5]\\d):([0-5]\\d)$"
-          .value=${this.time}
-          placeholder="00:00:00"
           @input=${(e: { target: { value: string } }) => {
             let val = e.target.value.replace(/[^0-9:]/g, "");
             if (/^\d{2}$/.test(val)) val = val + ":";
@@ -79,6 +97,7 @@ export class DateTimeNanoPicker extends LitElement {
             if (val.length > 8) val = val.slice(0, 8);
             this.time = val;
             e.target.value = this.time;
+            this.parseValuesToQDateTime();
           }}
           @blur=${(e: { target: { value: string } }) => {
             let val = e.target.value.replace(/[^0-9]/g, "");
@@ -89,19 +108,32 @@ export class DateTimeNanoPicker extends LitElement {
             const formatted = `${hh}:${mm}:${ss}`;
             this.time = formatted;
             e.target.value = formatted;
-          }}></vaadin-text-field>
-        <vaadin-text-field
+          }}>
+        </sl-input>
+        <sl-input
           label="Nanoseconds"
           maxlength="9"
           pattern="\\d{9}"
           .value=${this.nanos}
+          @input=${(e: { target: { value: string } }) => {
+            this.parseValuesToQDateTime();
+          }}
           @blur=${(e: { target: { value: string } }) => {
             let val = e.target.value.replace(/\D/g, "");
             if (val.length < 9) val = val.padEnd(9, "0");
             if (val.length > 9) val = val.slice(0, 9);
             this.nanos = val;
             e.target.value = this.nanos;
-          }}></vaadin-text-field>
+          }}></sl-input>
+        <sl-input
+          style="width:200px"
+          label="Timestamp value"
+          readonly
+          disabled
+          .value=${this.value}></sl-input>
+      </div>
+      <div class="nanoseconds-row">
+        <p>${this.helpText} | Actual timestamp: ${this.value}</p>
       </div>
     `;
   }

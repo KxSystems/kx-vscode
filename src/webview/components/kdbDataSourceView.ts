@@ -16,12 +16,7 @@ import { customElement } from "lit/decorators.js";
 import { live } from "lit/directives/live.js";
 import { repeat } from "lit/directives/repeat.js";
 
-import {
-  dataSourceStyles,
-  kdbStyles,
-  shoelaceStyles,
-  vaadinStyles,
-} from "./styles";
+import { dataSourceStyles, kdbStyles, shoelaceStyles } from "./styles";
 import {
   Agg,
   DataSourceFiles,
@@ -121,12 +116,7 @@ const allowedEmptyRequiredTypesStrings = ["Symbol", "String"];
 
 @customElement("kdb-data-source-view")
 export class KdbDataSourceView extends LitElement {
-  static readonly styles = [
-    shoelaceStyles,
-    vaadinStyles,
-    dataSourceStyles,
-    kdbStyles,
-  ];
+  static readonly styles = [shoelaceStyles, dataSourceStyles, kdbStyles];
 
   readonly vscode = acquireVsCodeApi();
   declare private debounce;
@@ -1434,14 +1424,17 @@ export class KdbDataSourceView extends LitElement {
       renderDeleteParam ? true : false,
     );
 
+    console.log("valor", value);
+
     return html`
       <div class="opt-param-field">
         <div class="${inputFieldWrapperWidth} row align-top">
-          ${type === "datetime-local"
+          ${type === "datetime-local" || type === "date"
             ? html`
                 <date-time-nano-picker
                   class="reset-widths-limit width-100-pct"
-                  .label="${param.name + isReq}"
+                  .label="${param.name}"
+                  .required="${isReq === "*"}"
                   .helpText="${helpText}"
                   .value="${live(value)}"
                   @change="${(event: CustomEvent) => {
@@ -1455,8 +1448,6 @@ export class KdbDataSourceView extends LitElement {
                   class="reset-widths-limit width-100-pct"
                   .type="${type as
                     | "number"
-                    | "date"
-                    | "datetime-local"
                     | "email"
                     | "password"
                     | "search"

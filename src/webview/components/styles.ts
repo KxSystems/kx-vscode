@@ -88,34 +88,16 @@ export const shoelaceStyles = css`
     background: none;
     border: none;
   }
-`;
 
-export const vaadinStyles = css`
-  .row {
+  .nanoseconds-row {
     display: flex;
     gap: 8px;
     align-items: center;
-  }
-  vaadin-text-field {
-    width: 120px;
-  }
-
-  vaadin-date-picker::part(label),
-  vaadin-date-picker::part(toggle-button),
-  vaadin-time-picker::part(label),
-  vaadin-text-field::part(label) {
-    color: var(--vscode-foreground) !important;
-    font-size: 12px !important;
-    line-height: 16px !important;
-    letter-spacing: 0.46px !important;
-    word-wrap: break-word !important;
-  }
-
-  vaadin-date-picker::part(input-field),
-  vaadin-time-picker::part(input-field),
-  vaadin-text-field::part(input-field) {
-    background-color: var(--vscode-input-background) !important;
-    color: var(--vscode-foreground) !important;
+    min-width: 500px;
+    & p {
+      margin-top: 0;
+      margin-bottom: 0;
+    }
   }
 `;
 

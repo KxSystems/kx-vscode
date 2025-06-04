@@ -56,18 +56,3 @@ body {
   color: var(--vscode-foreground);
   background-color: var(--vscode-editor-background);
 }
-
-vaadin-date-picker-overlay {
-  max-width: 320px !important;
-  max-height: 400px !important;
-  overflow: auto !important;
-  position: absolute !important;
-  top: unset !important;
-  left: unset !important;
-  right: unset !important;
-  bottom: unset !important;
-  transform: none !important;
-  max-width: 300px !important;
-  max-height: 400px !important;
-  z-index: 1000 !important;
-}
