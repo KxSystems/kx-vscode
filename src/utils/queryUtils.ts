@@ -100,7 +100,10 @@ export function handleWSError(ab: ArrayBuffer): any {
   return { error: errorString };
 }
 
-export function handleWSResults(ab: ArrayBuffer): any {
+export function handleWSResults(ab: ArrayBuffer, isTableView?: boolean): any {
+  if (isTableView === undefined) {
+    isTableView = ext.isResultsTabVisible;
+  }
   let res: any;
   try {
     if (isCompressed(ab)) {
@@ -114,7 +117,7 @@ export function handleWSResults(ab: ArrayBuffer): any {
     if (res.rows.length === 0 && res.columns.length === 0) {
       return "No results found.";
     }
-    if (ext.isResultsTabVisible) {
+    if (isTableView) {
       return getValueFromArray(res);
     }
     return convertRows(res.rows);

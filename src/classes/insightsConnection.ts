@@ -719,7 +719,7 @@ export class InsightsConnection {
                       response.data.data.map((x: string) => parseInt(x, 16)),
                     ).buffer;
 
-                    response.data.data = handleWSResults(buffer);
+                    response.data.data = handleWSResults(buffer, isTableView);
                     response.data.data = handleScratchpadTableRes(
                       response.data.data,
                     );
