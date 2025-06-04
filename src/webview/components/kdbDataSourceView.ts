@@ -1424,8 +1424,6 @@ export class KdbDataSourceView extends LitElement {
       renderDeleteParam ? true : false,
     );
 
-    console.log("valor", value);
-
     return html`
       <div class="opt-param-field">
         <div class="${inputFieldWrapperWidth} row align-top">
