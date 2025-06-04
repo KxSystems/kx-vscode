@@ -686,9 +686,11 @@ To change the language of the code block, click on the language labels and selec
 
 Code blocks are executed using the active KX connection, and the results are displayed inline next to the code block. The execution state is preserved across code blocks, similar to Jupyter notebooks, allowing for progressive data analysis.
 
+![See notebook data](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/notebook-data.png)
+
 KX Notebooks detect [GGPlot2](#grammar-of-graphics) outputs. If the execution generates a plot, it is displayed inline for both q and PyKX.
 
-Click the play button next to the code block to expand the plot.
+![See notebook plot](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/notebook-plot.png)
 
 ## Query History
 
