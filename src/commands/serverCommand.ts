@@ -822,7 +822,7 @@ export async function executeQuery(
   );
 }
 
-async function _executeQuery(
+export async function _executeQuery(
   query: string,
   connLabel: string,
   executorName: string,
