@@ -115,7 +115,7 @@ export class DateTimeNanoPicker extends LitElement {
           maxlength="9"
           pattern="\\d{9}"
           .value=${this.nanos}
-          @input=${(e: { target: { value: string } }) => {
+          @input=${(_e: { target: { value: string } }) => {
             this.parseValuesToQDateTime();
           }}
           @blur=${(e: { target: { value: string } }) => {
