@@ -1,13 +1,26 @@
-const js = require("@eslint/js");
-const tseslint = require("typescript-eslint");
-const headerPlugin = require("eslint-plugin-header");
-const licenseHeaderPlugin = require("eslint-plugin-license-header");
-const unusedImportsPlugin = require("eslint-plugin-unused-imports");
-const importPlugin = require("eslint-plugin-import");
+/*
+ * Copyright (c) 1998-2025 Kx Systems Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
+import js from "@eslint/js";
+import headerPlugin from "eslint-plugin-header";
+import importPlugin from "eslint-plugin-import";
+import licenseHeaderPlugin from "eslint-plugin-license-header";
+import unusedImportsPlugin from "eslint-plugin-unused-imports";
+import * as tseslint from "typescript-eslint";
 
 const currentYear = new Date().getFullYear();
 
-module.exports = [
+export default [
   {
     ignores: ["**/*.d.ts", "**/*.js", "src/ipc/**"],
   },

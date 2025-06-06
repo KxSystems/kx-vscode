@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,6 +11,11 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { TokenType } from "chevrotain";
+import { writeFileSync } from "fs";
+import { resolve } from "path";
+
+import { Control, Identifier, Keyword, Reserved } from "./keywords";
 import {
   BinaryLiteral,
   ByteLiteral,
@@ -23,7 +28,14 @@ import {
   TimeLiteral,
   TimeStampLiteral,
 } from "./literals";
-import { Control, Identifier, Keyword, Reserved } from "./keywords";
+import {
+  CommentEnd,
+  ExitCommentBegin,
+  CommentBegin,
+  StringEnd,
+  StringBegin,
+  TestBegin,
+} from "./ranges";
 import {
   Colon,
   Command,
@@ -39,17 +51,6 @@ import {
   TestLambdaBlock,
   Cond,
 } from "./tokens";
-import { TokenType } from "chevrotain";
-import { writeFileSync } from "fs";
-import { resolve } from "path";
-import {
-  CommentEnd,
-  ExitCommentBegin,
-  CommentBegin,
-  StringEnd,
-  StringBegin,
-  TestBegin,
-} from "./ranges";
 
 const includes = [
   {

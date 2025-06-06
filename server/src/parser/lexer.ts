@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -12,6 +12,7 @@
  */
 
 import { Lexer } from "chevrotain";
+
 import {
   Control,
   Identifier,
@@ -36,6 +37,14 @@ import {
   TimeStampLiteral,
 } from "./literals";
 import {
+  CommentEnd,
+  ExitCommentBegin,
+  CommentBegin,
+  StringEnd,
+  StringBegin,
+  TestBegin,
+} from "./ranges";
+import {
   Colon,
   Command,
   Comparator,
@@ -59,14 +68,6 @@ import {
   TestLambdaBlock,
   Cond,
 } from "./tokens";
-import {
-  CommentEnd,
-  ExitCommentBegin,
-  CommentBegin,
-  StringEnd,
-  StringBegin,
-  TestBegin,
-} from "./ranges";
 
 const Language = [
   Command,
