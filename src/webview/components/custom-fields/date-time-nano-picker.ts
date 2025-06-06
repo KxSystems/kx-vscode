@@ -12,29 +12,39 @@
  */
 
 import { LitElement, html } from "lit";
-import { customElement, property } from "lit/decorators.js";
+import { customElement } from "lit/decorators.js";
 
 import { shoelaceStyles } from "../styles";
 
 @customElement("date-time-nano-picker")
 export class DateTimeNanoPicker extends LitElement {
-  @property({ type: String }) value = "";
-  @property({ type: String }) label = "";
-  @property({ type: String }) helpText = "";
-  @property({ type: Boolean }) required = false;
-  @property({ type: String }) date = new Date().toISOString().slice(0, 10);
-  @property({ type: String }) time = "00:00:00";
-  @property({ type: String }) nanos = "000000000";
+  value = "";
+  label = "";
+  helpText = "";
+  required = false;
+  date = new Date().toISOString().slice(0, 10);
+  time = "00:00:00";
+  nanos = "000000000";
 
   static styles = [shoelaceStyles];
+
+  static get properties() {
+    return {
+      value: { type: String },
+      label: { type: String },
+      helpText: { type: String },
+      required: { type: Boolean },
+      date: { type: String },
+      time: { type: String },
+      nanos: { type: String },
+    };
+  }
 
   connectedCallback() {
     super.connectedCallback();
     if (this.value) {
-      console.log("tem valor", this.value);
       this.parseQDateTime(this.value);
     }
-    console.log("iniciou valores");
     this.parseValuesToQDateTime();
   }
 
@@ -136,5 +146,11 @@ export class DateTimeNanoPicker extends LitElement {
         <p>${this.helpText} | Actual timestamp: ${this.value}</p>
       </div>
     `;
+  }
+}
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "date-time-nano-picker": DateTimeNanoPicker;
   }
 }
