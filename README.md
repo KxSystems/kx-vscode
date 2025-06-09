@@ -19,6 +19,7 @@ This guide provides information on the following:
 - [Executing code](#execute-code)
 - [Data sources](#data-sources)
 - [Workbooks](#workbooks)
+- [KX Notebooks](#kx-notebooks-in-visual-studio-code)
 - [Query History](#query-history)
 - [Viewing results](#view-results)
 - [AxLibraries](#axlibraries)
@@ -662,6 +663,34 @@ When you save a workbook file the code and the connection details are stored. Th
 You can also change the connection associated with a workbook at any time by clicking on **Choose Connection** from above the first line of code in the workbook file.
 
 ![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookplaydropdown.png)
+
+## KX Notebooks in Visual Studio Code
+
+KX Notebooks provide an interactive environment within VS Code that allows you to compose and execute Q, Python, and Markdown code blocks in a single notebook, making development and testing more straightforward.
+
+You can easily create, edit, and share KX Notebooks, allowing for better collaboration.
+
+### Create a notebook
+
+To create a new notebook, open the Command Palette (`Ctrl+Shift+P` on Windows or `Cmd+Shift+P` on MacOS) and select `KX: Create New Notebook`. This opens a blank `.knb` notebook in the editor.
+
+From this view, you can add either Markdown or Code blocks to the notebook by clicking the toolbar buttons.
+
+![Add code blocks to notebook](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/add-notebook-code.png)
+
+To change the language of the code block, click on the language labels and select language from the Command Palette.
+
+![Select notebook language](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/select-notebook-language.png)
+
+### Execute code blocks
+
+Code blocks are executed using the active KX connection, and the results are displayed inline next to the code block. The execution state is preserved across code blocks, similar to Jupyter notebooks, allowing for progressive data analysis.
+
+![See notebook data](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/notebook-data.png)
+
+KX Notebooks detect [GGPlot2](#grammar-of-graphics) outputs. If the execution generates a plot, it is displayed inline for both q and PyKX.
+
+![See notebook plot](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/notebook-plot.png)
 
 ## Query History
 
