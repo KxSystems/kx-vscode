@@ -285,16 +285,11 @@ export async function addAuthConnection(
     window.showErrorMessage(validUsername);
     return;
   }
-  if (password === undefined || password === "") {
-    window.showErrorMessage("Password cannot be empty");
-    return;
-  }
   if (password?.trim()?.length) {
     const servers: Server | undefined = getServers();
     // store secrets
     if (
       (username != undefined || username != "") &&
-      (password != undefined || password != "") &&
       servers &&
       servers[serverKey]
     ) {
@@ -378,6 +373,7 @@ export async function addKdbConnection(
     return;
   }
   let servers: Server | undefined = getServers();
+  console.log(kdbData);
 
   if (
     servers != undefined &&
