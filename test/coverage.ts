@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,17 +11,15 @@
  * specific language governing permissions and limitations under the License.
  */
 
-/* eslint-disable @typescript-eslint/no-var-requires */
-
 import * as fs from "fs";
-import * as path from "path";
-
 import { createCoverageMap } from "istanbul-lib-coverage";
 import { create } from "istanbul-reports";
+import * as path from "path";
 
 const REPO_ROOT = path.join(__dirname, "../..");
 
 export function instrument() {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const iLibInstrument = require("istanbul-lib-instrument");
 
   const instrumenter = iLibInstrument.createInstrumenter();
@@ -43,21 +41,23 @@ export function instrument() {
     let map = null;
     try {
       map = JSON.parse(fs.readFileSync(`${inputPath}.map`).toString());
-    } catch (err) {
+    } catch {
       // missing source map
     }
 
     const instrumentedCode = instrumenter.instrumentSync(
       fs.readFileSync(inputPath).toString(),
       inputPath,
-      map
+      map,
     );
     safeWriteFile(outputPath, instrumentedCode);
   }
 }
 
 export function createReport(): void {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const iLibSourceMaps = require("istanbul-lib-source-maps");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const iLibReport = require("istanbul-lib-report");
 
   const global = new Function("return this")();
@@ -107,7 +107,7 @@ function rreaddir(dirname: string): string[] {
 function _rreaddir(
   dirname: string,
   relativeTo: string,
-  result: string[]
+  result: string[],
 ): void {
   const entries = fs.readdirSync(dirname);
   for (let i = 0; i < entries.length; i++) {

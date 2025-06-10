@@ -379,7 +379,7 @@ export class InsightsConnection {
       const results = await window.withProgress(
         {
           location: ProgressLocation.Notification,
-          cancellable: false,
+          cancellable: true,
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {

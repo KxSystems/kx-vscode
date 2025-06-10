@@ -36,6 +36,7 @@ import {
 import { DataSourceCommand, DataSourceMessage2 } from "../../models/messages";
 import { MetaObjectPayload } from "../../models/meta";
 import { ParamFieldType, UDA, UDAParam } from "../../models/uda";
+import "./custom-fields/date-time-nano-picker";
 
 const MAX_RULES = 32;
 const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
@@ -1426,27 +1427,41 @@ export class KdbDataSourceView extends LitElement {
     return html`
       <div class="opt-param-field">
         <div class="${inputFieldWrapperWidth} row align-top">
-          <sl-input
-            class="reset-widths-limit width-100-pct"
-            .type="${type as
-              | "number"
-              | "date"
-              | "datetime-local"
-              | "email"
-              | "password"
-              | "search"
-              | "tel"
-              | "text"
-              | "time"
-              | "url"}"
-            label="${param.name + isReq}"
-            .helpText="${helpText}"
-            .value="${live(value)}"
-            @input="${(event: Event) => {
-              param.value = (event.target as HTMLInputElement).value;
-              this.requestChange();
-            }}">
-          </sl-input>
+          ${type === "datetime-local" || type === "date"
+            ? html`
+                <date-time-nano-picker
+                  class="reset-widths-limit width-100-pct"
+                  .label="${param.name}"
+                  .required="${isReq === "*"}"
+                  .helpText="${helpText}"
+                  .value="${live(value)}"
+                  @change="${(event: CustomEvent) => {
+                    param.value = event.detail.value;
+                    this.requestChange();
+                  }}">
+                </date-time-nano-picker>
+              `
+            : html`
+                <sl-input
+                  class="reset-widths-limit width-100-pct"
+                  .type="${type as
+                    | "number"
+                    | "email"
+                    | "password"
+                    | "search"
+                    | "tel"
+                    | "text"
+                    | "time"
+                    | "url"}"
+                  label="${param.name + isReq}"
+                  .helpText="${helpText}"
+                  .value="${live(value)}"
+                  @input="${(event: Event) => {
+                    param.value = (event.target as HTMLInputElement).value;
+                    this.requestChange();
+                  }}">
+                </sl-input>
+              `}
         </div>
         <div class="${renderDeleteParam ? "width-10-pct" : "display-none"}">
           ${this.renderDeleteUDAParamButton(param)}
