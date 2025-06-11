@@ -80,7 +80,6 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   set connectionData(value: EditConnectionMessage | undefined) {
-    console.log(value);
     const oldValue = this._connectionData;
     this._connectionData = value;
     this.requestUpdate("connectionData", oldValue);
@@ -987,7 +986,6 @@ export class KdbNewConnectionView extends LitElement {
         return this.insightsServer;
       case ServerType.KDB:
       default:
-        console.log(this.kdbServer);
         this.kdbServer.username = this.kdbServer.username!.trim();
         this.kdbServer.password = this.kdbServer.password!.trim();
         this.kdbServer.auth = this.kdbServer.username !== "";

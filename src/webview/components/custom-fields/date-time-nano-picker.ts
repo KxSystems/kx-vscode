@@ -138,14 +138,14 @@ export class DateTimeNanoPicker extends LitElement {
             e.target.value = this.nanos;
           }}></sl-input>
         <sl-input
-          style="width:200px"
+          class="nanoseconds-timestamp-display"
           label="Timestamp value"
           readonly
           disabled
           .value=${this.value}></sl-input>
       </div>
       <div class="nanoseconds-row">
-        <p>${this.helpText} | Actual timestamp: ${this.value}</p>
+        <p>${this.helpText}</p>
       </div>
     `;
   }

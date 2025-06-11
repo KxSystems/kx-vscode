@@ -99,6 +99,10 @@ export const shoelaceStyles = css`
       margin-bottom: 0;
     }
   }
+
+  .nanoseconds-timestamp-display::part(base) {
+    width: 225px;
+  }
 `;
 
 export const dataSourceStyles = css`

@@ -373,7 +373,6 @@ export async function addKdbConnection(
     return;
   }
   let servers: Server | undefined = getServers();
-  console.log(kdbData);
 
   if (
     servers != undefined &&
