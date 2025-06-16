@@ -617,7 +617,7 @@ There are several ways to reset the scratchpad:
 
 ## Workbooks
 
-Workbooks provide a convenient way to prototype and execute q and python code against a q process and using the variables [populated into the scratchpad](#populate-scratchpad) of a **kdb Insights Enterprise** deployment by data sources.
+Workbooks provide a convenient way to prototype and execute q and python code against a q process and using the variables [populated into the scratchpad](#populate-scratchpad) or DAPs (Data Access Processes) of a **kdb Insights Enterprise** deployment by data sources.
 
 Standard **.q** and **.py** files only run on the active connection. Workbook files have the following features:
 
