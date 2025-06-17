@@ -15,7 +15,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 
 import { ext } from "../extensionVariables";
-import { kdbOutputLog } from "./core";
+import { isBaseVersionGreaterOrEqual, kdbOutputLog } from "./core";
 import { DCDS, deserialize, isCompressed, uncompress } from "../ipc/c";
 import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
 import { Parse } from "../ipc/parse.qlist";
@@ -204,6 +204,32 @@ export function getValueFromArray(results: DCDS): any {
   }
   results.meta = generateQTypes(results.meta);
   return results;
+}
+
+export function generateQSqlBody(
+  {
+    assembly,
+    query,
+    target,
+  }: { assembly: string; query: string; target: string },
+  version?: number,
+) {
+  if (version && isBaseVersionGreaterOrEqual(version, 1.13)) {
+    return {
+      query,
+      scope: {
+        affinity: "soft",
+        assembly,
+        tier: target,
+      },
+    };
+  }
+
+  return {
+    query,
+    assembly,
+    target,
+  };
 }
 
 export function generateQTypes(meta: { [key: string]: number }): any {

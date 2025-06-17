@@ -43,7 +43,11 @@ import {
   tokenUndefinedError,
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
-import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
+import {
+  generateQSqlBody,
+  handleScratchpadTableRes,
+  handleWSResults,
+} from "../utils/queryUtils";
 import { Telemetry } from "../utils/telemetryClient";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 
@@ -451,11 +455,17 @@ export class InsightsConnection {
         case DataSourceTypes.QSQL: {
           const assemblyParts =
             params.dataSource.qsql.selectedTarget.split(" ");
-          body.params = {
-            assembly: assemblyParts[0],
-            target: assemblyParts[1],
-            query: params.dataSource.qsql.query,
-          };
+          const query = params.dataSource.qsql.query;
+
+          body.params = generateQSqlBody(
+            {
+              assembly: assemblyParts[0],
+              query,
+              target: assemblyParts[1],
+            },
+            this.insightsVersion,
+          );
+
           coreUrl = this.connEndpoints.scratchpad.importQsql;
           dsTypeString = "QSQL";
           break;

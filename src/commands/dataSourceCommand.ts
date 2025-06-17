@@ -46,6 +46,7 @@ import {
 } from "../utils/dataSource";
 import {
   addQueryHistory,
+  generateQSqlBody,
   handleScratchpadTableRes,
   handleWSError,
   handleWSResults,
@@ -409,11 +410,17 @@ export async function runQsqlDataSource(
 ): Promise<any> {
   const assembly = fileContent.dataSource.qsql.selectedTarget.slice(0, -4);
   const target = fileContent.dataSource.qsql.selectedTarget.slice(-3);
-  const qsqlBody = {
-    assembly: assembly,
-    target: target,
-    query: fileContent.dataSource.qsql.query,
-  };
+  const query = fileContent.dataSource.qsql.query;
+
+  const qsqlBody = generateQSqlBody(
+    {
+      assembly,
+      query,
+      target,
+    },
+    selectedConn.insightsVersion,
+  );
+
   const qsqlCall = await selectedConn.getDatasourceQuery(
     DataSourceTypes.QSQL,
     JSON.stringify(qsqlBody),
