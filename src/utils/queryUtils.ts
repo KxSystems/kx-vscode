@@ -404,6 +404,7 @@ const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
 export function resultToBase64(result: any): string | undefined {
   const bytes =
+    (Array.isArray(result?.data?.rows) && result?.data?.rows[0].Value) ||
     (Array.isArray(result?.columns) && result.columns[0]?.values) ||
     result?.columns?.values ||
     result;
@@ -416,4 +417,12 @@ export function resultToBase64(result: any): string | undefined {
     return `data:image/png;base64,${Buffer.from(bytes).toString("base64")}`;
   }
   return undefined;
+}
+
+export function getAssemblyTarget(source: string, qeDisabled?: boolean) {
+  const [assembly, target] = source.split(/\s+/);
+  return {
+    assembly: qeDisabled ? assembly.replace(/-qe$/, "") : assembly,
+    target,
+  };
 }

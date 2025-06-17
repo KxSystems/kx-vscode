@@ -17,7 +17,6 @@ import {
   CodeLensProvider,
   Command,
   ProgressLocation,
-  ProviderResult,
   Range,
   StatusBarAlignment,
   TextDocument,
@@ -31,6 +30,7 @@ import {
 import { ext } from "../extensionVariables";
 import { resetScratchpad, runQuery } from "./serverCommand";
 import { ExecutionTypes } from "../models/execution";
+import { MetaDap } from "../models/meta";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { kdbOutputLog, offerConnectAction } from "../utils/core";
@@ -180,6 +180,21 @@ export function getServerForUri(uri: Uri) {
   return server && servers.includes(server) ? server : undefined;
 }
 
+export async function setTargetForUri(uri: Uri, target: string | undefined) {
+  uri = Uri.file(uri.path);
+  const conf = workspace.getConfiguration("kdb", uri);
+  const map = conf.get<{ [key: string]: string | undefined }>("targetMap", {});
+  map[relativePath(uri)] = target;
+  await conf.update("targetMap", map);
+}
+
+export function getTargetrForUri(uri: Uri) {
+  uri = Uri.file(uri.path);
+  const conf = workspace.getConfiguration("kdb", uri);
+  const map = conf.get<{ [key: string]: string | undefined }>("targetMap", {});
+  return map[relativePath(uri)];
+}
+
 /* istanbul ignore next */
 export function getConnectionForUri(uri: Uri) {
   const server = getServerForUri(uri);
@@ -197,7 +212,7 @@ export function getConnectionForUri(uri: Uri) {
 
 export async function pickConnection(uri: Uri) {
   const server = getServerForUri(uri);
-  const servers = isPython(uri) ? getInsightsServers() : getServers();
+  const servers = getServers();
 
   let picked = await window.showQuickPick(["(none)", ...servers], {
     title: "Choose a connection",
@@ -207,9 +222,67 @@ export async function pickConnection(uri: Uri) {
   if (picked) {
     if (picked === "(none)") {
       picked = undefined;
+      await setTargetForUri(uri, undefined);
     }
     await setServerForUri(uri, picked);
     setRunScratchpadItemText(picked || "Run");
+  }
+
+  return picked;
+}
+
+export async function pickTarget(uri: Uri) {
+  const server = getServerForUri(uri);
+  if (!server) {
+    return;
+  }
+
+  const conn = await getConnectionForServer(server);
+  const isInsights = conn instanceof InsightsNode;
+  if (!isInsights) {
+    return;
+  }
+
+  let daps: MetaDap[] = [];
+
+  if (!isPython(uri)) {
+    const connected = connectionService.isConnected(conn.label);
+    if (connected) {
+      daps = JSON.parse(
+        connectionService.retrieveMetaContent(conn.label, "DAP"),
+      );
+    } else {
+      offerConnectAction(server);
+    }
+  }
+
+  const target = getTargetrForUri(uri);
+  if (target) {
+    const exists = daps.some(
+      (value) => `${value.assembly}-qe ${value.instance}` === target,
+    );
+    if (!exists) {
+      const [assembly, instance] = target.split(/\s+/);
+      daps.push({ assembly, instance } as MetaDap);
+    }
+  }
+
+  let picked = await window.showQuickPick(
+    [
+      "scratchpad",
+      ...daps.map((value) => `${value.assembly}-qe ${value.instance}`),
+    ],
+    {
+      title: `Choose a target om ${server}`,
+      placeHolder: target,
+    },
+  );
+
+  if (picked) {
+    if (picked === "scratchpad") {
+      picked = undefined;
+    }
+    await setTargetForUri(uri, picked);
   }
 
   return picked;
@@ -260,24 +333,28 @@ export async function runActiveEditor(type?: ExecutionTypes) {
   if (ext.activeTextEditor) {
     const connMngService = new ConnectionManagementService();
     const uri = ext.activeTextEditor.document.uri;
-    const isWorkbook = uri.path.endsWith(".kdb.q");
 
-    let server = getServerForUri(uri);
-    if (!server && isWorkbook) {
-      server = await pickConnection(uri);
+    let isInsights = false;
+    let server = getServerForUri(uri) || "";
+
+    if (server) {
+      const conn = await getConnectionForServer(server);
+      if (conn) {
+        isInsights = conn instanceof InsightsNode;
+        server = conn.label;
+        if (!connMngService.isConnected(server)) {
+          offerConnectAction(server);
+          return;
+        }
+      } else {
+        throw new Error("Connection for  not found");
+      }
     }
-    if (!server) {
-      server = "";
-    }
-    const connection = await getConnectionForServer(server);
-    server = connection?.label || "";
-    if (!connMngService.isConnected(server) && isScratchpad(uri)) {
-      offerConnectAction(server);
-      return;
-    }
-    const executorName = ext.activeTextEditor.document.fileName
-      .split("/")
-      .pop();
+
+    const executorName =
+      ext.activeTextEditor.document.fileName.split("/").pop() || "";
+
+    const target = isInsights ? getTargetrForUri(uri) : undefined;
 
     runQuery(
       type === undefined
@@ -286,8 +363,10 @@ export async function runActiveEditor(type?: ExecutionTypes) {
           : ExecutionTypes.QueryFile
         : type,
       server,
-      executorName ? executorName : "",
-      isWorkbook,
+      executorName,
+      !isPython(uri),
+      undefined,
+      target,
     );
   }
 }
@@ -317,9 +396,11 @@ function update(uri: Uri) {
   }
 }
 
+/*
 export class ConnectionLensProvider implements CodeLensProvider {
   provideCodeLenses(document: TextDocument): ProviderResult<CodeLens[]> {
     const server = getServerForUri(document.uri);
+    const target = getTargetrForUri(document.uri);
     const top = new Range(0, 0, 0, 0);
     const runScratchpad = new CodeLens(top, {
       command: isPython(document.uri)
@@ -327,11 +408,43 @@ export class ConnectionLensProvider implements CodeLensProvider {
         : "kdb.execute.fileQuery",
       title: server ? `Run on ${server}` : "Run",
     });
+    const pickTarget = new CodeLens(top, {
+      command: "kdb.file.pickTarget",
+      title: target || "scratchpad",
+    });
     const pickConnection = new CodeLens(top, {
       command: "kdb.file.pickConnection",
       title: "Choose Connection",
     });
-    return [runScratchpad, pickConnection];
+    return [runScratchpad, pickTarget, pickConnection];
+  }
+}
+*/
+
+export class ConnectionLensProvider implements CodeLensProvider {
+  async provideCodeLenses(document: TextDocument) {
+    const server = getServerForUri(document.uri);
+    const top = new Range(0, 0, 0, 0);
+
+    const pickConnection = new CodeLens(top, {
+      command: "kdb.file.pickConnection",
+      title: server ? `Run on ${server}` : "Choose Connection",
+    });
+
+    const target = getTargetrForUri(document.uri);
+
+    if (server) {
+      const conn = await getConnectionForServer(server);
+      if (conn instanceof InsightsNode) {
+        const pickTarget = new CodeLens(top, {
+          command: "kdb.file.pickTarget",
+          title: target || "scratchpad",
+        });
+        return [pickConnection, pickTarget];
+      }
+    }
+
+    return [pickConnection];
   }
 }
 
@@ -374,8 +487,8 @@ export function connectWorkspaceCommands() {
     ext.dataSourceTreeProvider.reload();
     ext.scratchpadTreeProvider.reload();
   });
-  window.onDidChangeActiveTextEditor(activeEditorChanged);
-  activeEditorChanged(window.activeTextEditor);
+  window.onDidChangeActiveTextEditor(setRealActiveTextEditor);
+  setRealActiveTextEditor(window.activeTextEditor);
 }
 
 export function checkOldDatasourceFiles() {

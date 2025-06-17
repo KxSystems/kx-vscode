@@ -1,0 +1,13 @@
+{
+  "target": "development",
+  "profiles": {
+    "production": { "KX": "PRODUCTION" }
+  },
+  "sources": {
+    "path/to/some.q": {
+      "connection": "KX",
+      "target": "pakx-e2e-uda hda"
+    },
+    "path/to/folder/**/*.{q,py}": { "connection": "KX" }
+  }
+}

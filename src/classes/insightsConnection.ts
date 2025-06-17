@@ -43,7 +43,11 @@ import {
   tokenUndefinedError,
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
-import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
+import {
+  getAssemblyTarget,
+  handleScratchpadTableRes,
+  handleWSResults,
+} from "../utils/queryUtils";
 import { Telemetry } from "../utils/telemetryClient";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 
@@ -423,6 +427,7 @@ export class InsightsConnection {
   public async importScratchpad(
     variableName: string,
     params: DataSourceFiles,
+    qeDisabled?: boolean,
   ): Promise<void> {
     let dsTypeString = "";
     if (this.connected && this.connEndpoints) {
@@ -449,11 +454,11 @@ export class InsightsConnection {
           break;
         }
         case DataSourceTypes.QSQL: {
-          const assemblyParts =
-            params.dataSource.qsql.selectedTarget.split(" ");
           body.params = {
-            assembly: assemblyParts[0],
-            target: assemblyParts[1],
+            ...getAssemblyTarget(
+              params.dataSource.qsql.selectedTarget,
+              qeDisabled,
+            ),
             query: params.dataSource.qsql.query,
           };
           coreUrl = this.connEndpoints.scratchpad.importQsql;

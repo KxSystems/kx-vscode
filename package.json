@@ -194,6 +194,12 @@
           "default": {},
           "scope": "resource"
         },
+        "kdb.targetMap": {
+          "type": "object",
+          "description": "Connection map for workspace files",
+          "default": {},
+          "scope": "resource"
+        },
         "kdb.connectionLabels": {
           "type": "array",
           "description": "List of label names and colorset",
@@ -286,6 +292,11 @@
         "category": "KX",
         "command": "kdb.file.pickConnection",
         "title": "Pick connection"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.file.pickTarget",
+        "title": "Pick target"
       },
       {
         "category": "KX",
@@ -528,19 +539,19 @@
         "command": "kdb.scratchpad.python.run",
         "key": "ctrl+d",
         "mac": "cmd+d",
-        "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
+        "when": "editorLangId == python"
       },
       {
         "command": "kdb.scratchpad.python.run.file",
         "key": "ctrl+shift+d",
         "mac": "cmd+shift+d",
-        "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
+        "when": "editorLangId == python"
       },
       {
         "command": "kdb.scratchpad.editor.reset",
         "key": "ctrl+shift+delete",
         "mac": "cmd+shift+delete",
-        "when": "(editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)) || editorLangId == q"
+        "when": "editorLangId == python || editorLangId == q"
       },
       {
         "command": "kdb.execute.terminal.run",
@@ -967,12 +978,12 @@
         {
           "command": "kdb.scratchpad.python.run.file",
           "group": "q@0",
-          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
+          "when": "editorLangId == python"
         },
         {
           "command": "kdb.scratchpad.python.run",
           "group": "q@1",
-          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
+          "when": "editorLangId == python"
         }
       ],
       "editor/context": [
@@ -999,12 +1010,12 @@
         {
           "command": "kdb.scratchpad.python.run.file",
           "group": "q@0",
-          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
+          "when": "editorLangId == python"
         },
         {
           "command": "kdb.scratchpad.python.run",
           "group": "q@1",
-          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
+          "when": "editorLangId == python"
         }
       ],
       "explorer/context": [
