@@ -617,21 +617,24 @@ There are several ways to reset the scratchpad:
 
 ## Workbooks
 
-Workbooks provide a convenient way to prototype and execute q and python code against a q process and using the variables [populated into the scratchpad](#populate-scratchpad) or DAPs (Data Access Processes) of a **kdb Insights Enterprise** deployment by data sources.
+Workbooks provide a convenient way to prototype and execute q and Python code against a q process and using variables [populated into the scratchpad](#populate-scratchpad) or DAPs (Data Access Processes) of a **kdb Insights Enterprise** deployment by data sources.
 
-Standard **.q** and **.py** files only run on the active connection. Workbook files have the following features:
+Previously, only **.kdb.q** and **.kdb.py** workbook files supported connection association and execution. Now, all **.q** and **.py** files in your workspace support the same functionality, making it easier to develop and test code across different environments.
+
+Workbook files have the following features:
 
 - Are listed in the **WORKBOOKS** view in the primary sidebar
 - Can be associated with a connection
-- Have the **.kdb.q.** or **kdb.py** extension
+- Support the **.kdb.q.**,  **kdb.py**, **.q**, or **.py** file extensions
 - Are stored in a **.kx** folder at the root of your open folder
+- You can have multiple files open and running against different connections and endpoints at the same time.
 
-This allows you to have multiple Workbooks running against different connections at the same time.
+### Create a Workbook
 
 To create a Workbook and run code against a specific connection:
 
 1. Ensure you have at least one folder open in VS Code.
-1. In the **WORKBOOKS** view in the primary sidebar, click the **+** for either a **New q workbook** or **New Python workbook**.
+1. In the **WORKBOOKS** view in the primary sidebar, click the **+** to create either a **New q workbook** or **New Python workbook**.
 
    ![new workbook](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/addnewworkbook.png)
 
@@ -652,17 +655,32 @@ To create a Workbook and run code against a specific connection:
 
       1. Right-click and choose **KX: Execute Entire File** from the menu.
 
-1. If you have not yet chosen a connection to associate with the workbook you are asked to choose a connection before the code is executed.
+### Select connections and endpoints
 
-   ![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookconnectionlink.png)
+#### Unassociated files
 
-1. The results populate the kdb results window if it is active, otherwise the output window is populated.
+- When a `.q` or `.py` file is not associated with a connection, it shows a **Choose Connection** code lens at the top and runs on the active connected connection.
+- Clicking **Choose Connection** allows you to associate the file with a connection.
+- Once associated, the file will only execute on that connection.
 
-When you save a workbook file the code and the connection details are stored. The workbook icon is green if it is associated with a connection and grey if there is no association.
+   ![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/unassociated-file-workbook.png)
+
+#### Associated files
+
+- When a file is associated with a kdb Insights connection, a **scratchpad** code lens appears.
+- Clicking this allows you to choose the execution endpoint:
+   - Scratchpad (default)
+   - Any available DAP (for example, RDB, HDB)
+
+   ![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/associated-file-workbook.png)
+
+### Output and results
+
+The results populate the kdb results window if it's active, otherwise the output window is populated.
+
+When you save a workbook file, the code and the connection details are stored. The workbook icon is green if it's associated with a connection and grey if there is no association.
 
 You can also change the connection associated with a workbook at any time by clicking on **Choose Connection** from above the first line of code in the workbook file.
-
-![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookplaydropdown.png)
 
 ## KX Notebooks in Visual Studio Code
 
