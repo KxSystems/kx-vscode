@@ -65,7 +65,7 @@ export class DateTimeNanoPicker extends LitElement {
     const [yyyy, mm, dd] = this.date.split("-");
     const [h, m, s] = this.time.split(":");
     const n = this.nanos.padEnd(9, "0").slice(0, 9);
-    this.value = `${yyyy}.${mm}.${dd}D${h}:${m}:${s}.${n}`;
+    this.value = `${yyyy}-${mm}-${dd}T${h}:${m}:${s}.${n}`;
     this.requestUpdate();
     this.dispatchValueChanged();
   }
@@ -127,7 +127,8 @@ export class DateTimeNanoPicker extends LitElement {
           maxlength="9"
           pattern="\\d{9}"
           .value=${this.nanos}
-          @input=${(_e: { target: { value: string } }) => {
+          @input=${(e: { target: { value: string } }) => {
+            this.nanos = e.target.value;
             this.parseValuesToQDateTime();
           }}
           @blur=${(e: { target: { value: string } }) => {
