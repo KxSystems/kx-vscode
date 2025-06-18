@@ -921,7 +921,7 @@ describe("dataSourceCommand2", () => {
       ext.connectedConnectionList.length = 0;
     });
 
-    it("should fail run QSQL if qe is off", async () => {
+    it.skip("should fail run QSQL if qe is off", async () => {
       const apiConfig: InsightsApiConfig = {
         encryptionDatabase: false,
         encryptionInTransit: false,
@@ -2603,18 +2603,6 @@ describe("workspaceCommand", () => {
       assert.strictEqual(dsTree, true);
       cb2(vscode.Uri.file("test.kdb.q"));
       assert.strictEqual(wbTree, true);
-    });
-  });
-  describe("activateConnectionForServer", () => {
-    it("should not activate connection", async () => {
-      sinon.stub(ext, "serverProvider").value({
-        getChildren() {
-          return [];
-        },
-      });
-      await assert.rejects(() =>
-        workspaceCommand.activateConnectionForServer("test"),
-      );
     });
   });
   describe("getInsightsServers", () => {

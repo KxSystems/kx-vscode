@@ -570,6 +570,12 @@
         "key": "ctrl+shift+y",
         "mac": "cmd+shift+y",
         "when": "editorLangId == q"
+      },
+      {
+        "command": "kdb.file.pickTarget",
+        "key": "ctrl+shift+t",
+        "mac": "cmd+shift+t",
+        "when": "editorLangId == q || editorLangId == python"
       }
     ],
     "snippets": [

@@ -38,7 +38,6 @@ import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
 
 const connectionService = new ConnectionManagementService();
 
-/* istanbul ignore next */
 function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   if (editor) {
     const scheme = editor.document.uri.scheme;
@@ -48,29 +47,6 @@ function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   } else {
     ext.activeTextEditor = undefined;
   }
-}
-
-/* istanbul ignore next */
-function activeEditorChanged(editor?: TextEditor | undefined) {
-  setRealActiveTextEditor(editor);
-  const item = ext.runScratchpadItem;
-  if (ext.activeTextEditor) {
-    const uri = ext.activeTextEditor.document.uri;
-    if (isScratchpad(uri)) {
-      const server = getServerForUri(uri);
-      setRunScratchpadItemText(server || "Run");
-      item.show();
-    } else {
-      item.hide();
-    }
-  } else {
-    item.hide();
-  }
-}
-
-/* istanbul ignore next */
-function setRunScratchpadItemText(text: string) {
-  ext.runScratchpadItem.text = `$(run) ${text}`;
 }
 
 export function getInsightsServers() {
@@ -96,7 +72,6 @@ function getServers() {
   ];
 }
 
-/* istanbul ignore next */
 export async function getConnectionForServer(
   server: string,
 ): Promise<InsightsNode | KdbNode | undefined> {
@@ -131,27 +106,6 @@ export async function getConnectionForServer(
   }
 }
 
-/* istanbul ignore next */
-async function waitForConnection(label: string) {
-  return new Promise<void>((resolve, reject) => {
-    let count = 0;
-    const retry = () => {
-      count++;
-      setTimeout(() => {
-        if (connectionService.isConnected(label)) {
-          resolve();
-        } else if (count < 5) {
-          retry();
-        } else {
-          reject(new Error(`Can not connect to ${label}`));
-        }
-      }, 50);
-    };
-    retry();
-  });
-}
-
-/* istanbul ignore next */
 function relativePath(uri: Uri) {
   return workspace.asRelativePath(uri, false);
 }
@@ -195,7 +149,6 @@ export function getTargetrForUri(uri: Uri) {
   return map[relativePath(uri)];
 }
 
-/* istanbul ignore next */
 export function getConnectionForUri(uri: Uri) {
   const server = getServerForUri(uri);
   if (server) {
@@ -225,7 +178,6 @@ export async function pickConnection(uri: Uri) {
       await setTargetForUri(uri, undefined);
     }
     await setServerForUri(uri, picked);
-    setRunScratchpadItemText(picked || "Run");
   }
 
   return picked;
@@ -273,7 +225,7 @@ export async function pickTarget(uri: Uri) {
       ...daps.map((value) => `${value.assembly}-qe ${value.instance}`),
     ],
     {
-      title: `Choose a target om ${server}`,
+      title: `Choose a target on ${server}`,
       placeHolder: target,
     },
   );
@@ -288,12 +240,11 @@ export async function pickTarget(uri: Uri) {
   return picked;
 }
 
-/* istanbul ignore next */
 function isPython(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".py");
 }
 
-function isScratchpad(uri: Uri | undefined) {
+function isWorkbook(uri: Uri | undefined) {
   return uri && (uri.path.endsWith(".kdb.q") || uri.path.endsWith(".kdb.py"));
 }
 
@@ -301,34 +252,10 @@ function isDataSource(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".kdb.json");
 }
 
-/* istanbul ignore next */
 function isKxFolder(uri: Uri | undefined) {
   return uri && Path.basename(uri.path) === ".kx";
 }
 
-/* istanbul ignore next */
-export async function activateConnectionForServer(server: string) {
-  const connection = await getConnectionForServer(server);
-  if (connection) {
-    if (!connectionService.isConnected(connection.label)) {
-      const action = await window.showWarningMessage(
-        `${connection.label} is not connected`,
-        "Connect",
-      );
-      if (action === "Connect") {
-        await connectionService.connect(connection.label);
-        await waitForConnection(connection.label);
-      } else {
-        throw new Error(`${connection.label} is not connected`);
-      }
-    }
-    connectionService.setActiveConnection(connection);
-  } else {
-    throw new Error(`${server} is not found`);
-  }
-}
-
-/* istanbul ignore next */
 export async function runActiveEditor(type?: ExecutionTypes) {
   if (ext.activeTextEditor) {
     const connMngService = new ConnectionManagementService();
@@ -391,35 +318,10 @@ export async function resetScratchpadFromEditor(): Promise<void> {
 function update(uri: Uri) {
   if (isDataSource(uri)) {
     ext.dataSourceTreeProvider.reload();
-  } else if (isScratchpad(uri)) {
+  } else if (isWorkbook(uri)) {
     ext.scratchpadTreeProvider.reload();
   }
 }
-
-/*
-export class ConnectionLensProvider implements CodeLensProvider {
-  provideCodeLenses(document: TextDocument): ProviderResult<CodeLens[]> {
-    const server = getServerForUri(document.uri);
-    const target = getTargetrForUri(document.uri);
-    const top = new Range(0, 0, 0, 0);
-    const runScratchpad = new CodeLens(top, {
-      command: isPython(document.uri)
-        ? "kdb.scratchpad.python.run.file"
-        : "kdb.execute.fileQuery",
-      title: server ? `Run on ${server}` : "Run",
-    });
-    const pickTarget = new CodeLens(top, {
-      command: "kdb.file.pickTarget",
-      title: target || "scratchpad",
-    });
-    const pickConnection = new CodeLens(top, {
-      command: "kdb.file.pickConnection",
-      title: "Choose Connection",
-    });
-    return [runScratchpad, pickTarget, pickConnection];
-  }
-}
-*/
 
 export class ConnectionLensProvider implements CodeLensProvider {
   async provideCodeLenses(document: TextDocument) {
@@ -465,7 +367,7 @@ export function connectWorkspaceCommands() {
   const watcher = workspace.createFileSystemWatcher("**/*.kdb.{json,q,py}");
   watcher.onDidCreate(update);
   watcher.onDidDelete(update);
-  /* istanbul ignore next */
+
   workspace.onDidDeleteFiles((event) => {
     for (const uri of event.files) {
       if (isKxFolder(uri)) {
@@ -475,14 +377,16 @@ export function connectWorkspaceCommands() {
       }
     }
   });
-  /* istanbul ignore next */
+
   workspace.onDidRenameFiles(async (event) => {
     for (const { oldUri, newUri } of event.files) {
       await setServerForUri(newUri, getServerForUri(oldUri));
       await setServerForUri(oldUri, undefined);
+      await setTargetForUri(newUri, getTargetrForUri(oldUri));
+      await setTargetForUri(oldUri, undefined);
     }
   });
-  /* istanbul ignore next */
+
   workspace.onDidChangeWorkspaceFolders(() => {
     ext.dataSourceTreeProvider.reload();
     ext.scratchpadTreeProvider.reload();
