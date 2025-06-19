@@ -1083,25 +1083,24 @@ describe("Utils", () => {
     });
 
     describe("generateQSqlBody", () => {
-      let config;
-      beforeEach(() => {
-        config = {
-          assembly: "test-asm",
-          query: "test-query",
-          target: "test-target",
-        };
-      });
-
       it("should use scope for 1.13", () => {
-        const output = queryUtils.generateQSqlBody(config, 1.13);
-        assert.equal(output.scope.assembly, config.assembly);
-        assert.equal(output.scope.tier, config.target);
+        const output = queryUtils.generateQSqlBody(
+          "a:1",
+          "assembly target",
+          1.13,
+        );
+        assert.equal(output.scope.assembly, "assembly");
+        assert.equal(output.scope.tier, "target");
       });
 
       it("should use legacy syntax for 1.12", () => {
-        const output = queryUtils.generateQSqlBody(config, 1.12);
-        assert.equal(output.assembly, config.assembly);
-        assert.equal(output.target, config.target);
+        const output = queryUtils.generateQSqlBody(
+          "a:1",
+          "assembly target",
+          1.12,
+        );
+        assert.equal(output.assembly, "assembly");
+        assert.equal(output.target, "target");
       });
     });
 

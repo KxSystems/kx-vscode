@@ -154,6 +154,29 @@ export function convertTypesToString(returnType: number[]): string[] {
   );
 }
 
+//TODO: Should remove this after add nanoseconds support in uda
+export function fixTimeAtUDARequestBody(
+  udaReqBody: UDARequestBody,
+): UDARequestBody {
+  const parameterTypes = udaReqBody.parameterTypes as {
+    [key: string]: number;
+  };
+
+  for (const key in parameterTypes) {
+    if (parameterTypes[key] === -12) {
+      if (
+        (udaReqBody.params as { [key: string]: any })[key] &&
+        (udaReqBody.params as { [key: string]: any })[key] !== ""
+      ) {
+        (udaReqBody.params as { [key: string]: any })[key] =
+          `${(udaReqBody.params as { [key: string]: any })[key]}:00.000000000`;
+      }
+    }
+  }
+
+  return udaReqBody;
+}
+
 export function getIncompatibleError(
   metadata: any,
   parsedParams: any,

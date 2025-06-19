@@ -427,7 +427,7 @@ export class InsightsConnection {
   public async importScratchpad(
     variableName: string,
     params: DataSourceFiles,
-    qeDisabled?: boolean,
+    qeEnabled?: boolean,
   ): Promise<void> {
     let dsTypeString = "";
     if (this.connected && this.connEndpoints) {
@@ -454,17 +454,11 @@ export class InsightsConnection {
           break;
         }
         case DataSourceTypes.QSQL: {
-          const assemblyParts =
-            params.dataSource.qsql.selectedTarget.split(" ");
-          const query = params.dataSource.qsql.query;
-
           body.params = generateQSqlBody(
-            {
-              assembly: assemblyParts[0],
-              query,
-              target: assemblyParts[1],
-            },
+            params.dataSource.qsql.query,
+            params.dataSource.qsql.selectedTarget,
             this.insightsVersion,
+            qeEnabled,
           );
 
           coreUrl = this.connEndpoints.scratchpad.importQsql;

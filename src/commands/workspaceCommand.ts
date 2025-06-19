@@ -35,6 +35,7 @@ import { ConnectionManagementService } from "../services/connectionManagerServic
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { kdbOutputLog, offerConnectAction } from "../utils/core";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
+import { sanitizeAssemblyTarget } from "../utils/utils";
 
 const connectionService = new ConnectionManagementService();
 
@@ -146,7 +147,8 @@ export function getTargetrForUri(uri: Uri) {
   uri = Uri.file(uri.path);
   const conf = workspace.getConfiguration("kdb", uri);
   const map = conf.get<{ [key: string]: string | undefined }>("targetMap", {});
-  return map[relativePath(uri)];
+  const target = map[relativePath(uri)];
+  return target ? sanitizeAssemblyTarget(target) : undefined;
 }
 
 export function getConnectionForUri(uri: Uri) {
@@ -211,7 +213,7 @@ export async function pickTarget(uri: Uri) {
   const target = getTargetrForUri(uri);
   if (target) {
     const exists = daps.some(
-      (value) => `${value.assembly}-qe ${value.instance}` === target,
+      (value) => `${value.assembly} ${value.instance}` === target,
     );
     if (!exists) {
       const [assembly, instance] = target.split(/\s+/);
@@ -222,7 +224,7 @@ export async function pickTarget(uri: Uri) {
   let picked = await window.showQuickPick(
     [
       "scratchpad",
-      ...daps.map((value) => `${value.assembly}-qe ${value.instance}`),
+      ...daps.map((value) => `${value.assembly} ${value.instance}`),
     ],
     {
       title: `Choose a target on ${server}`,

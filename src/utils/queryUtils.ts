@@ -16,6 +16,7 @@ import { join } from "path";
 
 import { ext } from "../extensionVariables";
 import { isBaseVersionGreaterOrEqual, kdbOutputLog } from "./core";
+import { sanitizeAssemblyTarget } from "./utils";
 import { DCDS, deserialize, isCompressed, uncompress } from "../ipc/c";
 import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
 import { Parse } from "../ipc/parse.qlist";
@@ -181,10 +182,10 @@ export function addIndexKey(input: any) {
       const newObj = { Index: index + 1 };
 
       if (typeof obj === "string") {
-        newObj["Value"] = obj;
+        (<any>newObj)["Value"] = obj;
       } else {
         for (const prop in obj) {
-          newObj[prop] = obj[prop];
+          (<any>newObj)[prop] = obj[prop];
         }
       }
 
@@ -207,13 +208,30 @@ export function getValueFromArray(results: DCDS): any {
 }
 
 export function generateQSqlBody(
-  {
-    assembly,
-    query,
-    target,
-  }: { assembly: string; query: string; target: string },
+  query: string,
+  assemblyTarget: string,
   version?: number,
+  qeEnabled?: boolean,
 ) {
+  query = query
+    .trim()
+    // Remove block comments
+    .replace(/^\/[^]*?^\\/gm, "")
+    // Remove single line comments
+    .replace(/^\/.*/gm, "")
+    // Remove line comments
+    .replace(/[ \t]+\/.*/gm, "")
+    // Replace end of statement
+    .replace(/(?<![; \t]\s*)(?:\r\n|\n)+(?![ \t])/gs, ";");
+
+  const [plainAssembly, target] =
+    sanitizeAssemblyTarget(assemblyTarget).split(/\s+/);
+
+  let assembly = plainAssembly;
+  if (qeEnabled) {
+    assembly += "-qe";
+  }
+
   if (version && isBaseVersionGreaterOrEqual(version, 1.13)) {
     return {
       query,
@@ -225,11 +243,7 @@ export function generateQSqlBody(
     };
   }
 
-  return {
-    query,
-    assembly,
-    target,
-  };
+  return { query, assembly, target };
 }
 
 export function generateQTypes(meta: { [key: string]: number }): any {
@@ -443,12 +457,4 @@ export function resultToBase64(result: any): string | undefined {
     return `data:image/png;base64,${Buffer.from(bytes).toString("base64")}`;
   }
   return undefined;
-}
-
-export function getAssemblyTarget(source: string, qeDisabled?: boolean) {
-  const [assembly, target] = source.split(/\s+/);
-  return {
-    assembly: qeDisabled ? assembly.replace(/-qe$/, "") : assembly,
-    target,
-  };
 }

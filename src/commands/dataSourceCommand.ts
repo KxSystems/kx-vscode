@@ -112,7 +112,7 @@ export async function populateScratchpad(
       await selectedConnection.importScratchpad(
         outputVariable!,
         dataSourceForm!,
-        !qenvEnabled,
+        qenvEnabled === "Enabled",
       );
     } else {
       kdbOutputLog(
@@ -171,7 +171,7 @@ export async function runDataSource(
         res = await runQsqlDataSource(
           fileContent,
           selectedConnection,
-          !selectedConnection.apiConfig?.queryEnvironmentsEnabled,
+          selectedConnection.apiConfig?.queryEnvironmentsEnabled,
         );
         break;
       case "UDA":
@@ -389,19 +389,13 @@ export function getApiBody(
 export async function runQsqlDataSource(
   fileContent: DataSourceFiles,
   selectedConn: InsightsConnection,
-  qeDisabled?: boolean,
+  qeEnabled?: boolean,
 ): Promise<any> {
-  const assembly = fileContent.dataSource.qsql.selectedTarget.slice(0, -4);
-  const target = fileContent.dataSource.qsql.selectedTarget.slice(-3);
-  const query = fileContent.dataSource.qsql.query;
-
   const qsqlBody = generateQSqlBody(
-    {
-      assembly,
-      query,
-      target,
-    },
+    fileContent.dataSource.qsql.query,
+    fileContent.dataSource.qsql.selectedTarget,
     selectedConn.insightsVersion,
+    qeEnabled,
   );
 
   const qsqlCall = await selectedConn.getDatasourceQuery(
