@@ -26,6 +26,7 @@ body {
 }
 
 .results-txt {
+  font-family: monospace;
   white-space: pre;
 }
 
