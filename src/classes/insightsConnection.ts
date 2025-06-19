@@ -44,7 +44,7 @@ import {
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
 import {
-  getAssemblyTarget,
+  generateQSqlBody,
   handleScratchpadTableRes,
   handleWSResults,
 } from "../utils/queryUtils";
@@ -454,13 +454,19 @@ export class InsightsConnection {
           break;
         }
         case DataSourceTypes.QSQL: {
-          body.params = {
-            ...getAssemblyTarget(
-              params.dataSource.qsql.selectedTarget,
-              qeDisabled,
-            ),
-            query: params.dataSource.qsql.query,
-          };
+          const assemblyParts =
+            params.dataSource.qsql.selectedTarget.split(" ");
+          const query = params.dataSource.qsql.query;
+
+          body.params = generateQSqlBody(
+            {
+              assembly: assemblyParts[0],
+              query,
+              target: assemblyParts[1],
+            },
+            this.insightsVersion,
+          );
+
           coreUrl = this.connEndpoints.scratchpad.importQsql;
           dsTypeString = "QSQL";
           break;

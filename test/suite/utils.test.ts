@@ -1082,6 +1082,29 @@ describe("Utils", () => {
       });
     });
 
+    describe("generateQSqlBody", () => {
+      let config;
+      beforeEach(() => {
+        config = {
+          assembly: "test-asm",
+          query: "test-query",
+          target: "test-target",
+        };
+      });
+
+      it("should use scope for 1.13", () => {
+        const output = queryUtils.generateQSqlBody(config, 1.13);
+        assert.equal(output.scope.assembly, config.assembly);
+        assert.equal(output.scope.tier, config.target);
+      });
+
+      it("should use legacy syntax for 1.12", () => {
+        const output = queryUtils.generateQSqlBody(config, 1.12);
+        assert.equal(output.assembly, config.assembly);
+        assert.equal(output.target, config.target);
+      });
+    });
+
     describe("handleWSResults", () => {
       afterEach(() => {
         sinon.restore();
