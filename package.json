@@ -520,7 +520,7 @@
       {
         "category": "KX",
         "command": "kdb.createNotebook",
-        "title": "Create new KX Notebook"
+        "title": "Create New KX Notebook"
       }
     ],
     "keybindings": [
@@ -573,9 +573,9 @@
       },
       {
         "command": "kdb.file.pickTarget",
-        "key": "ctrl+shift+t",
-        "mac": "cmd+shift+t",
-        "when": "editorLangId == q || editorLangId == python"
+        "key": "ctrl+alt+t",
+        "mac": "cmd+alt+t",
+        "when": "kdb.connected.active && (editorLangId == q || editorLangId == python)"
       }
     ],
     "snippets": [
