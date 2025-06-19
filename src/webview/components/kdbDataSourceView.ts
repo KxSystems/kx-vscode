@@ -37,7 +37,7 @@ import { DataSourceCommand, DataSourceMessage2 } from "../../models/messages";
 import { MetaObjectPayload } from "../../models/meta";
 import { ParamFieldType, UDA, UDAParam } from "../../models/uda";
 import "./custom-fields/date-time-nano-picker";
-import { sanitizeAssemblyTarget } from "../../utils/utils";
+import { normalizeAssemblyTarget } from "../../utils/shared";
 
 const MAX_RULES = 32;
 const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
@@ -200,7 +200,7 @@ export class KdbDataSourceView extends LitElement {
         this.groups = optional.groups;
         this.rowLimit = optional.rowLimit ? optional.rowLimit : false;
       }
-      this.qsqlTarget = sanitizeAssemblyTarget(
+      this.qsqlTarget = normalizeAssemblyTarget(
         ds.dataSource.qsql.selectedTarget,
       );
       this.qsql = ds.dataSource.qsql.query;

@@ -35,9 +35,7 @@ import { ConnectionManagementService } from "../services/connectionManagerServic
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { kdbOutputLog, offerConnectAction } from "../utils/core";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
-import { sanitizeAssemblyTarget } from "../utils/utils";
-
-const connectionService = new ConnectionManagementService();
+import { normalizeAssemblyTarget } from "../utils/shared";
 
 function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   if (editor) {
@@ -48,6 +46,10 @@ function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   } else {
     ext.activeTextEditor = undefined;
   }
+}
+
+export function getConnectionService() {
+  return new ConnectionManagementService();
 }
 
 export function getInsightsServers() {
@@ -143,12 +145,12 @@ export async function setTargetForUri(uri: Uri, target: string | undefined) {
   await conf.update("targetMap", map);
 }
 
-export function getTargetrForUri(uri: Uri) {
+export function getTargetForUri(uri: Uri) {
   uri = Uri.file(uri.path);
   const conf = workspace.getConfiguration("kdb", uri);
   const map = conf.get<{ [key: string]: string | undefined }>("targetMap", {});
   const target = map[relativePath(uri)];
-  return target ? sanitizeAssemblyTarget(target) : undefined;
+  return target ? normalizeAssemblyTarget(target) : undefined;
 }
 
 export function getConnectionForUri(uri: Uri) {
@@ -200,6 +202,7 @@ export async function pickTarget(uri: Uri) {
   let daps: MetaDap[] = [];
 
   if (!isPython(uri)) {
+    const connectionService = getConnectionService();
     const connected = connectionService.isConnected(conn.label);
     if (connected) {
       daps = JSON.parse(
@@ -210,7 +213,7 @@ export async function pickTarget(uri: Uri) {
     }
   }
 
-  const target = getTargetrForUri(uri);
+  const target = getTargetForUri(uri);
   if (target) {
     const exists = daps.some(
       (value) => `${value.assembly} ${value.instance}` === target,
@@ -283,7 +286,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
     const executorName =
       ext.activeTextEditor.document.fileName.split("/").pop() || "";
 
-    const target = isInsights ? getTargetrForUri(uri) : undefined;
+    const target = isInsights ? getTargetForUri(uri) : undefined;
 
     runQuery(
       type === undefined
@@ -335,7 +338,7 @@ export class ConnectionLensProvider implements CodeLensProvider {
       title: server ? `Run on ${server}` : "Choose Connection",
     });
 
-    const target = getTargetrForUri(document.uri);
+    const target = getTargetForUri(document.uri);
 
     if (server) {
       const conn = await getConnectionForServer(server);
@@ -384,7 +387,7 @@ export function connectWorkspaceCommands() {
     for (const { oldUri, newUri } of event.files) {
       await setServerForUri(newUri, getServerForUri(oldUri));
       await setServerForUri(oldUri, undefined);
-      await setTargetForUri(newUri, getTargetrForUri(oldUri));
+      await setTargetForUri(newUri, getTargetForUri(oldUri));
       await setTargetForUri(oldUri, undefined);
     }
   });

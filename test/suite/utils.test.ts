@@ -58,6 +58,7 @@ import { getUri } from "../../src/utils/getUri";
 import { openUrl } from "../../src/utils/openUrl";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { showRegistrationNotification } from "../../src/utils/registration";
+import * as shared from "../../src/utils/shared";
 import { killPid } from "../../src/utils/shell";
 import * as UDAUtils from "../../src/utils/uda";
 import {
@@ -2882,6 +2883,58 @@ describe("Utils", () => {
         });
         sinon.assert.notCalled(showSurveyDialogStub);
       });
+    });
+  });
+
+  describe("Shared with webview utils", () => {
+    describe("normalizeAssemblyTarget", () => {
+      it("should return qe assembly without -qe", () => {
+        const res = shared.normalizeAssemblyTarget("test-assembly-qe target");
+        assert.strictEqual(res, "test-assembly target");
+      });
+      it("should return normal assembly without -qe", () => {
+        const res = shared.normalizeAssemblyTarget("test-assembly target");
+        assert.strictEqual(res, "test-assembly target");
+      });
+    });
+  });
+
+  describe("sanitizeQsqlQuery", () => {
+    it("should trim query", () => {
+      const res = queryUtils.sanitizeQsqlQuery("  a:1  ");
+      assert.strictEqual(res, "a:1");
+    });
+    it("should remove block comment", () => {
+      let res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\n\\a:1");
+      assert.strictEqual(res, "a:1");
+      res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\r\n\\a:1");
+      assert.strictEqual(res, "a:1");
+    });
+    it("should remove single line comment", () => {
+      let res = queryUtils.sanitizeQsqlQuery("/ single line comment\na:1");
+      assert.strictEqual(res, "a:1");
+      res = queryUtils.sanitizeQsqlQuery("/ single line comment\r\na:1");
+      assert.strictEqual(res, "a:1");
+    });
+    it("should remove line comment", () => {
+      const res = queryUtils.sanitizeQsqlQuery("a:1 / line comment");
+      assert.strictEqual(res, "a:1");
+    });
+    it("should ignore line comment in a string", () => {
+      const res = queryUtils.sanitizeQsqlQuery('a:"1 / not line comment"');
+      assert.strictEqual(res, 'a:"1 / not line comment"');
+    });
+    it("should replace EOS with semicolon", () => {
+      let res = queryUtils.sanitizeQsqlQuery("a:1\na");
+      assert.strictEqual(res, "a:1;a");
+      res = queryUtils.sanitizeQsqlQuery("a:1\r\na");
+      assert.strictEqual(res, "a:1;a");
+    });
+    it("should not replace continuation with semicolon", () => {
+      let res = queryUtils.sanitizeQsqlQuery('a:"a\n \nb"');
+      assert.strictEqual(res, 'a:"a\n \nb"');
+      res = queryUtils.sanitizeQsqlQuery('a:"a\r\n \r\nb"');
+      assert.strictEqual(res, 'a:"a\r\n \r\nb"');
     });
   });
 });

@@ -2565,12 +2565,37 @@ describe("walkthroughCommand", () => {
 
 describe("workspaceCommand", () => {
   beforeEach(() => {
+    ext.serverProvider = <any>{
+      async getChildren() {
+        const node = new InsightsNode(
+          [],
+          "",
+          { alias: "connection1", auth: false, server: "" },
+          vscode.TreeItemCollapsibleState.Expanded,
+        );
+        return [node];
+      },
+    };
+    sinon
+      .stub(ConnectionManagementService.prototype, "isConnected")
+      .returns(true);
+    sinon
+      .stub(ConnectionManagementService.prototype, "retrieveMetaContent")
+      .returns(JSON.stringify([{ assembly: "assembly", target: "target" }]));
     sinon.stub(vscode.workspace, "getConfiguration").value(() => {
       return {
         get(key: string) {
           switch (key) {
             case "insightsEnterpriseConnections":
               return [{ alias: "connection1" }];
+            case "connectionMap":
+              return {
+                [vscode.Uri.file("test-target.q").path]: "connection1",
+              };
+            case "targetMap":
+              return {
+                [vscode.Uri.file("test-target.q").path]: "assembly target",
+              };
           }
           return {};
         },
@@ -2580,6 +2605,7 @@ describe("workspaceCommand", () => {
   });
   afterEach(() => {
     sinon.restore();
+    ext.serverProvider = <any>{};
   });
   describe("connectWorkspaceCommands", () => {
     it("should update views on delete and create", () => {
@@ -2635,6 +2661,15 @@ describe("workspaceCommand", () => {
         vscode.Uri.file("test.kdb.q"),
       );
       assert.strictEqual(result, undefined);
+    });
+  });
+  describe("pickTarget", () => {
+    it("should pick from available targets", async () => {
+      sinon.stub(vscode.window, "showQuickPick").value(async () => "test");
+      const result = await workspaceCommand.pickTarget(
+        vscode.Uri.file("test-target.q"),
+      );
+      assert.strictEqual(result, "test");
     });
   });
   describe("ConnectionLensProvider", () => {

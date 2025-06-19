@@ -16,7 +16,7 @@ import { join } from "path";
 
 import { ext } from "../extensionVariables";
 import { isBaseVersionGreaterOrEqual, kdbOutputLog } from "./core";
-import { sanitizeAssemblyTarget } from "./utils";
+import { normalizeAssemblyTarget } from "./shared";
 import { DCDS, deserialize, isCompressed, uncompress } from "../ipc/c";
 import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
 import { Parse } from "../ipc/parse.qlist";
@@ -208,25 +208,34 @@ export function getValueFromArray(results: DCDS): any {
   return results;
 }
 
+export function sanitizeQsqlQuery(query: string): string {
+  return (
+    query
+      .trim()
+      // Remove block comments
+      .replace(/^\/[^]*?^\\/gm, "")
+      // Remove single line comments
+      .replace(/^\/.*\r?\n/gm, "")
+      // Remove line comments
+      .replace(
+        /(?:("([^"\\]*(?:\\.[^"\\]*)*)")|([ \t]+\/.*))/gm,
+        (matched, isString) => (isString ? matched : ""),
+      )
+      // Replace end of statements
+      .replace(/(?<![; \t]\s*)(?:\r\n|\n)+(?![ \t])/gs, ";")
+  );
+}
+
 export function generateQSqlBody(
   query: string,
   assemblyTarget: string,
   version?: number,
   qeEnabled?: boolean,
 ) {
-  query = query
-    .trim()
-    // Remove block comments
-    .replace(/^\/[^]*?^\\/gm, "")
-    // Remove single line comments
-    .replace(/^\/.*/gm, "")
-    // Remove line comments
-    .replace(/[ \t]+\/.*/gm, "")
-    // Replace end of statement
-    .replace(/(?<![; \t]\s*)(?:\r\n|\n)+(?![ \t])/gs, ";");
+  query = sanitizeQsqlQuery(query);
 
   const [plainAssembly, target] =
-    sanitizeAssemblyTarget(assemblyTarget).split(/\s+/);
+    normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
 
   let assembly = plainAssembly;
   if (qeEnabled) {

@@ -11,8 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export function sanitizeAssemblyTarget(assemblyTarget: string) {
+export function normalizeAssemblyTarget(assemblyTarget: string) {
   const [dirtyAssembly, target] = assemblyTarget.split(/\s+/);
-  const assembly = dirtyAssembly.replace(/(?:-qe)+$/, "");
+  const assembly = dirtyAssembly.replace(/-qe$/gm, "");
   return `${assembly} ${target}`;
 }
