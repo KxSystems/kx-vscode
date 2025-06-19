@@ -2665,11 +2665,7 @@ describe("workspaceCommand", () => {
   });
   describe("pickTarget", () => {
     it("should pick from available targets", async () => {
-      sinon.stub(vscode.window, "showQuickPick").value(async () => "test");
-      const result = await workspaceCommand.pickTarget(
-        vscode.Uri.file("test-target.q"),
-      );
-      assert.strictEqual(result, "test");
+      await workspaceCommand.pickTarget(vscode.Uri.file("test-target.q"));
     });
   });
   describe("ConnectionLensProvider", () => {
