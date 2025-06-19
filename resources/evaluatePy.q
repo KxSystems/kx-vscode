@@ -1,88 +1,256 @@
-{[returnFormat;code;sample_fn;sample_size]
- if [`histogram in key `.qp;
- if [not `display2 in key `.qp; 
- .qp.display2: (')[{x[`output][`bytes]}; .qp.display]
- ]]; 
- if[()~key`.pykx;
- :(!). flip(
- (`result;::);
- (`errored;1b);
- (`error;".pykx is not defined: please load pykx"))];
- .pykx.pyexec "def _kx_execution_context():
- import traceback
- import sys
- import ast as ast
- from io import BytesIO
- import tokenize
- 
- def is_expr(code):
-  try:
-   ast.parse(code,mode='eval')
-   return True
-  except SyntaxError:
-   return False
-  
- def run_line(code):
-  return eval(code)if is_expr(code)else exec(code,globals(),globals())
- 
- def range_to_text(lines,range):
-  code=lines[range[0][0]:range[1][0]+1]
-  code[-1]=code[-1][:range[1][1]]
-  code[0]=code[0][range[0][1]:]
-  return code
- 
- def run(code,as_string):
-  code=code.py().decode('utf-8')
-  code+='\\n\\n'
-  starts=[(x.lineno-1,x.col_offset)for x in ast.parse(code).body]
-  if len(starts)==0:
-   return str(None).encode('UTF-8') if as_string else None
+// !!! WARNING
+// This file was automatically generated, and should not be manually edited.
+// Changes must be made to https://gitlab.com/kxdev/kxinsights/platform/scratchpad/-/blob/main/src/python.q
+// python.q - Python scratchpad
+// Copyright (c) 2022 Kx Systems Inc
+//
+// @namespace   .com_kx_edi
+// @category    Scratchpad
+//
+// @end
 
-  lines=str.splitlines(code)
-  starts.append((len(lines)-1,0))
-  ranges=list(zip(starts,starts[1:]))
+\d .com_kx_edi
 
-  [run_line('\\n'.join(range_to_text(lines,range))) for range in ranges[:-1]]
-  last_line='\\n'.join(range_to_text(lines,ranges[-1]))
-  result=run_line(last_line)
+// Set default conversion for objects when evaluated in Python
+// !!! Note
+//     This is required to ensure that ensure the scratchpad returns data as
+//     a q object rather than a numpy array which is PyKX's default
+.pykx.i.defaultConv:"k"
 
-  return str(result).encode('UTF-8') if as_string else result
- 
+// @overview
+// Checks if code is an expression (returns a value) or statement (doesn't return anything).
+// Separate functions are needed to evaluate each.
+//
+// @param code {string} Python code
+//
+// @returns {boolean}
+.pykx.pyexec "import traceback";
+.pykx.pyexec "import sys";
+.pykx.pyexec "import ast as com_kx_edi_ast";
+.pykx.pyexec "def com_kx_edi_is_expr(code):
+    try:
+        com_kx_edi_ast.parse(code, mode='eval')
+        return True
+    except SyntaxError:
+        return False";
+python.i.isExpr:{.pykx.qeval["com_kx_edi_is_expr"][x]};
 
- def run_wrapped(code,returnFormat):
-  try:
-   return{
-    'result': run(code,returnFormat),
-    'errored':False,
-    'error':''
-   }
-  except Exception as e:
-   type,error,tb=sys.exc_info()
-   stacktrace=traceback.extract_tb(tb)
-   offset=-1*(len(stacktrace)-3)
-   tb2=traceback.format_exception(type,error,tb,offset)
-   tb2=''.join(tb2)
-   tb2=tb2.rstrip()
-   return{
-    'result':None,
-    'errored':True,
-    'error':str(e),
-    'backtrace':tb2
-   }
+// @overview
+// Runs a logical line of Python code, supporting both expressions and statements
+//
+// @param code {string} Python code
+//
+// @returns {any}
+.pykx.pyexec "def com_kx_edi_run_line(code):
+    return eval(code) if com_kx_edi_is_expr(code) else exec(code, globals(), globals())";
 
- def find_strings(code):
-  tokens=tokenize.tokenize(BytesIO(code.py()).readline)
-  strings=filter(lambda x:x.type==tokenize.STRING,tokens)
-  return[(token.start[0]-1,token.end[0]-1)for token in strings]
+// @overview
+// Extracts a range from a list of lines
+//
+// @param lines {string[]}
+// @param range {Long[][]} A 0-indexed range ((line, col),(line, col)) where the end column is exclusive
+//
+// @returns {string[]}
+.pykx.pyexec "def com_kx_edi_range_to_text(lines, range):
+    code = lines[range[0][0]:range[1][0] + 1]
+    # The end must be removed first, as if the start is removed first,
+    # indices after it will have shifted
+    code[-1] = code[-1][:range[1][1]]
+    code[0] = code[0][range[0][1]:]
 
- return{
-  'run_wrapped':run_wrapped,
-  'run':run,
-  'find_strings':find_strings
- }";
- .pykx.pyexec"_kx_execution_context=_kx_execution_context()";
+    return code";
 
- .pykx.pyexec "def com_kx_edi_to_structured_text(data, length):
+// @overview
+// Runs Python code, supporting multiline inputs containing expressions and statements,
+// returning the result of the last line
+//
+// @param payload {string}
+// @param as_string {boolean} 1b to return a string, 0b to return the actual value
+//
+// @returns {any}
+.pykx.pyexec "def com_kx_edi_run(payload, as_string):
+
+    payload = payload.py().decode('utf-8')
+
+    # Adding newlines to the end makes it easier to extract the final expression
+    payload += '\\n\\n'
+
+    # Get the start of each expression/statement
+    def get_start_pos(node):
+        if  hasattr(node, 'decorator_list') and len(node.decorator_list):
+                return (min([x.lineno - 1 for x in node.decorator_list]), node.col_offset)
+        else:
+            return (node.lineno - 1, node.col_offset)
+
+    # Get the start of each expression/statement
+    starts = [get_start_pos(x) for x in com_kx_edi_ast.parse(payload).body]
+
+
+    if len(starts) == 0:
+        # encode('UTF-8') is to return a string, to avoid polluting the symbol table.
+        return str(None).encode('UTF-8') if as_string else None
+    
+    # Since ast.parse only returns the start of each expression,
+    # the ranges must be made by joining consecutive pairs.
+    # This means the end must be added manually
+    lines = str.splitlines(payload)
+    starts.append((len(lines) - 1, 0))
+
+    # Join consecutive pairs
+    ranges = list(zip(starts, starts[1:]))
+
+    # Run all expressions, except the last one
+    [com_kx_edi_run_line('\\n'.join(com_kx_edi_range_to_text(lines, bounds))) for bounds in ranges[:-1]]
+
+    # Run the last expression
+    last_line = '\\n'.join(com_kx_edi_range_to_text(lines, ranges[-1]))
+    result = com_kx_edi_run_line(last_line)
+
+    # Preserve the result of python query execution for cases it doesn't need to run again.
+    # ie tab changes in the scratchpad UI. 
+    global com_kx_edi_last_query
+    com_kx_edi_last_query = result
+
+    # encode('UTF-8') is to return a string, to avoid polluting the symbol table.
+    return str(result).encode('UTF-8') if as_string else result"
+
+// @overview
+// Runs arbitrary Python code, returning a stack trace for any errors
+//
+// @param code {string}
+// @param as_string {boolean} 1b to return a string, 0b to return the actual value
+//
+// @returns {any}
+.pykx.pyexec "def com_kx_edi_run_wrapped(code, as_string):
+    try:
+        return {
+            'error': False,
+            'errorMsg': '',
+            'data': com_kx_edi_run(code, as_string)
+        }
+
+    except Exception as e:
+        type, error, tb = sys.exc_info()
+        stacktrace = traceback.extract_tb(tb)
+
+        # The first four stack frames are internal, so omit these.
+        # When offset is negative, the top n frames will be shown
+        offset = -1 * (len(stacktrace) - 3)
+
+        formatted_tb = traceback.format_exception(type, error, tb, offset)
+        formatted_tb = ''.join(formatted_tb)
+        formatted_tb = formatted_tb.rstrip()
+
+        return {
+            'error': True,
+            'errorMsg': str(e.args),
+            'data': None,
+            'stacktrace': formatted_tb
+        }"
+
+python.i.run: .pykx.qeval "com_kx_edi_run_wrapped";
+
+// @overview
+// Finds lines containing either normal or multiline strings
+//
+// @param code {String} Python code
+//
+// @returns {long[][]} A list of pairs of the start and end line (0-indexed, inclusive) for each string
+.pykx.pyexec "from io import BytesIO as com_kx_edi_BytesIO";
+.pykx.pyexec "import tokenize as com_kx_edi_tokenize";
+.pykx.pyexec "def com_kx_edi_find_strings (code):
+    tokens = com_kx_edi_tokenize.tokenize(com_kx_edi_BytesIO(code.py()).readline)
+    strings = filter(lambda x: x.type == com_kx_edi_tokenize.STRING, tokens)
+    # The -1 is to convert line numbers to 0-indexed
+    return [(token.start[0] - 1, token.end[0] - 1) for token in strings]";
+python.i.findStrings:{.pykx.qeval["com_kx_edi_find_strings"][x]};
+
+// @overview
+// Removes extra indents to allow evaluating code inside indented regions
+//
+// @param code {string} Python code
+//
+// @returns {string} The code with extra indents removed
+python.i.removeExtraIndents: {[code]
+    // Calculate which lines have their leading whitespace in a multiline string,
+    // as these shouldn't be modified.
+    // Only tokenize code when it is required (i.e. when it has multiline strings),
+    // as tokenizing will error on inputs like "  1 + 2\n 1+3" where there is no indent to match the dedent
+    inStrings: $[   (count ss[code; "'''"]) or count ss[code; "\"\"\""];
+                    1 + raze {x + til y - x} ./: python.i.findStrings code;
+                    ()];
+
+    // Skip blank lines to avoid treating empty lines as lines with no indent
+    // Skip lines in multi-line strings so they are not modified
+    lines: "\n" vs code;
+    skippedLines: all each lines in " \t";
+    skippedLines[inStrings]: 1b;
+
+    // This removes leading whitespace for each line,
+    // up to the col of the least indented line seen up to that point.
+    // Since mixing tabs and spaces gives a compile error in Python,
+    // it isn't necessary to convert tabs to spaces for this.
+    // Skip newlines in multiline strings and skip whitespace-only lines
+    ii: where not skippedLines;
+    extraWS: &\[{(x in " \t")?0b} each lines ii];
+    lines[ii]: extraWS _' lines ii;
+
+    : "\n" sv lines;
+    }
+
+// @overview
+// Removes extra indents to allow evaluating code inside indented regions
+//
+// @param returnResult {boolean} If this is 0b, the function will return ""
+// @param asString     {boolean} 1b to return the value as a string
+// @param code         {string}  Python code
+//
+// @returns {dict} The result of running the expression
+python.run: {[returnResult; asString; code]
+    // This allows running indented code
+    code: python.i.removeExtraIndents code;
+    result: python.i.run[code; asString];
+    result[`errorMsg]: string result `errorMsg;
+
+    if [`stacktrace in key result;
+        result[`stacktrace]: string result `stacktrace];
+
+    result[`data]:
+        $[  result`error;
+                ::;
+            returnResult;
+                $[  asString;
+                    // The length of the string is capped to avoid sending arbitrarily large messages over the network.
+                    result[`data]: python.i.truncate () , result`data;
+                    result`data];
+            // else
+                $[  asString; ""; ::]];
+
+    result
+    }
+
+// @overview
+// Truncates any strings over a max size, replacing the truncated text with an ellipsis.
+//
+// @param text {string}
+//
+// @returns {string}
+python.i.truncate: {[text]
+    maxSize: 250000;
+    $[  count[text] > maxSize;
+        sublist[maxSize; text] , $["\n" in text; "\n.."; ".."];
+        text]
+    };
+
+// @overview
+// Converts any data to structured text
+//
+// @param data {Any} 
+// @param length {Int} The length of data, or 1 if length doesn't apply.
+//   This is passed in, since it needs to be the pre-sampling length.
+//
+// @returns Json representation of structured text, to be used in scratchpad display
+.pykx.pyexec "def com_kx_edi_to_structured_text(data, length):
     # Importing libraries needed for code execution inside the function
     import json
     import numpy as np
@@ -135,9 +303,18 @@
 
     # Strings returned from Python should be explicitly cast to strings.
     # Otherwise they will be added to the q symbol table for the life of the process
-    return kx.CharVector(json.dumps(finalData, ensure_ascii=False))";
+    return kx.CharVector(json.dumps(finalData, ensure_ascii=False))"
+python.i.to_structured_text: .pykx.qeval "com_kx_edi_to_structured_text";
 
- .pykx.pyexec "def com_kx_edi_generate_columns(isKey,data,name):
+// @overview
+// Generates the columns needed for structured Python text
+//
+// @param isKey {Boolean} 
+// @param data  {Any} 
+// @param name  {String} 
+//
+// @returns Dictionary containing column info for structured text
+.pykx.pyexec "def com_kx_edi_generate_columns(isKey,data,name):
     # Importing libraries needed for code execution inside the function
     import numpy as np
     import pandas as pd
@@ -169,7 +346,7 @@
     elif isinstance(data, Iterator):
         values = [str(data)]
     # Check for strings and ranges, stringify whole value instead of iterating
-    elif t.__name__ == 'str' or t.__name__ == 'range':
+    elif t.__name__ == 'str' or t.__name__ == 'range' or t.__name__ == 'CharVector':
         values = [str(data)]
     else:
         try:
@@ -177,12 +354,18 @@
         except:
             values = [str(data)]
 
-    if len(values) == 1 or isinstance(values, str):
+    if len(values) == 1 or isinstance(values, str) or ((isinstance(data, pykx.List) and (pykx.q.count(values) == 0).py())):
         order = [0]
     else:
         try:
-            # Axis is along which way to sort, axis 0 means just cols, but -1(default) is rows and cols, None is a flattened array
-            order = np.argsort(data, axis=None,kind='stable').tolist()
+            if isinstance(data, pd.Series):
+                order = np.argsort(data.fillna(np.inf), kind='stable').tolist()
+            elif  isinstance(data, pd.CategoricalIndex):
+                # Categorical indexes cannot have a axis when sorting
+                order = np.argsort(data, kind='stable').tolist()
+            else:
+                # Axis is along which way to sort, axis 0 means just cols, but -1(default) is rows and cols, None is a flattened array
+                order = np.argsort(data, axis=None,kind='stable').tolist()
 
             # For 2d lists, or lists of tuples, np.argsort flattens the array before sorting,
             # which isn't useful for our purposes.
@@ -203,9 +386,28 @@
     if isKey:
         result['isKey'] = True
 
-    return result";
+    return result"
 
- .pykx.pyexec "def com_kx_edi_sample(data, sample_fn, sample_size):
+// @overview
+// Samples Python data, used for structuredText queries where sampling is applied first before conversion,
+// returning the result of the sample
+//
+// @param   data        {any}    Python data structure
+// @param   sample_fn   {String} One of "first", "last", or "random"
+// @param   sample_size {Long}   The maximum number of records to return
+//
+// @returns data         {any}    The result of sampling
+// * NOTE Sampling first and last will not work with data that cannot be deterministic, e.g., sets
+// Current list of data types that were tested to work with sample. This is not an exhaustive list and related data types may work.
+// List
+// Dictionaries (only first and last, cannot sample random)
+// Sets, frozensets (only random)
+// Pandas dataframe, series, categorical indexes
+// Numpy vectors
+// Tuples, named tuples
+// Iterators, ranges
+//
+.pykx.pyexec "def com_kx_edi_sample(data, sample_fn, sample_size):
     
     from random import sample
     import pandas as pd 
@@ -250,10 +452,27 @@
 
     except:
 
-        return data"; 
-  
- .pykx.pyexec "def com_kx_edi_to_structured_text_wrapper(code, sample_fn, sample_size):
-    result = _kx_execution_context['run'](code, False)
+        return data";
+
+// @overview
+// Samples and converts to structured text in a single function.
+// Note: This is needed to avoid issues with returning q values back into python functions.
+// All python functions will still work in python
+//
+// @param code        {Any}    Python code
+// @param sample_fn   {String} One of "first", "last", or "random"
+// @param sample_size {Long}   The maximum number of records to return
+//
+// @returns {any} The structured text json string 
+.pykx.pyexec "def com_kx_edi_to_structured_text_wrapper(code, sample_fn, sample_size):
+
+    # Need to have these checks here because com_kx_edi_run does not support splayed or partitioned tables
+    if isinstance(code, pykx.wrappers.SplayedTable):
+        result = 'Splayed tables cannot be displayed in this view'
+    elif isinstance(code, pykx.wrappers.PartitionedTable):
+        result = 'Partitioned tables cannot be displayed in this view'
+    else:
+        result = com_kx_edi_run(code, False)
 
     # If length is not possible (e.g. functions) then assign length to 1 
     try:
@@ -266,68 +485,5 @@
     if sample_size < length or (sample_fn == 'random'):
         result = com_kx_edi_sample(result, str(sample_fn), int(sample_size))
 
-    try:
-      return{
-      'result': com_kx_edi_to_structured_text(result, length),
-      'errored': False,
-      'error':''
-      }
-    except Exception as e:
-      type,error,tb=sys.exc_info()
-      stacktrace=traceback.extract_tb(tb)
-      offset=-1*(len(stacktrace)-3)
-      tb2=traceback.format_exception(type,error,tb,offset)
-      tb2=''.join(tb2)
-      tb2=tb2.rstrip()
-      return{
-       'result':None,
-       'errored':True,
-      'error':str(e),
-      'backtrace':tb2
-      }";
-  
- run:{[returnResult;asString;code;sample_fn;sample_size]
- removeExtraIndents:{[code]
- if[1 ~ count code; code: enlist code];
- inStrings:$[(count ss[code;"'''"])or count ss[code;"\"\"\""];
- 1+raze{x+til y-x}./:.pykx.qeval["_kx_execution_context['find_strings']"]code;
- ()];
- lines:"\n" vs code;
- skippedLines:all each lines in " \t";
- skippedLines[inStrings]:1b;
- ii:where not skippedLines;
- extraWS:&\[{(x in" \t")?0b}each lines ii];
- lines[ii]:extraWS _'lines ii;
- "\n" sv lines
- };
- code:removeExtraIndents code;
- defaultConv:.pykx.util.defaultConv;
- .pykx.util.defaultConv:"k";
- result: $[asString ~ "text"; .pykx.qeval["_kx_execution_context['run_wrapped']"][code;1b];
-           asString ~ "serialized"; .pykx.qeval["_kx_execution_context['run_wrapped']"][code;0b];
-           asString ~ "structuredText"; .pykx.qeval["com_kx_edi_to_structured_text_wrapper"][code;sample_fn;sample_size];
-           // What should we return as the error case in which no return format is specified? I took this from db.q
-           `error`errorMsg`data!(1b; "Invalid returnFormat specified"; ::)
-    ];
- .pykx.util.defaultConv:defaultConv;
- result[`error]:string result`error;
- if [`backtrace in key result;
- result[`backtrace]:string result`backtrace];
- if[result `errored; :result];
- $[result`errored;
- ::;
- returnResult;
- $[asString ~ "string";
- result[`result]:{[text]
- maxSize:250000;
- $[count[text]>maxSize;
- sublist[maxSize;text],$["\n" in text;"\n..";".."];
- text],"\n"
- }(),result`result;
- result`result];
- // not sure what this line does if anything. why is it in here
- $[asString;"";::]];
- result
- };
- run[1b;returnFormat;code;sample_fn;sample_size]
- }
+    return com_kx_edi_to_structured_text(result, length)";
+python.i.to_structured_text_wrapper: .pykx.qeval "com_kx_edi_to_structured_text_wrapper";
