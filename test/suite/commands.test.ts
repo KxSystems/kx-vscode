@@ -2665,6 +2665,7 @@ describe("workspaceCommand", () => {
   });
   describe("pickTarget", () => {
     it("should pick from available targets", async () => {
+      sinon.stub(vscode.window, "showQuickPick").value(async () => "(none)");
       await workspaceCommand.pickTarget(vscode.Uri.file("test-target.q"));
     });
   });
