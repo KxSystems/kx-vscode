@@ -114,7 +114,8 @@ export function handleWSResults(ab: ArrayBuffer, isTableView?: boolean): any {
     if (des.qtype === 0 && des.values.length === 2) {
       des = des.values[1];
     }
-    res = Parse.reshape(des, ab).toLegacy();
+    res = Parse.reshape(des.dataSet || des, ab).toLegacy();
+
     if (res.rows.length === 0 && res.columns.length === 0) {
       return "No results found.";
     }

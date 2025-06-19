@@ -64,7 +64,7 @@ export class Parse {
 
   public static col(
     qStruct: c.Vector | c.SymList | c.GenericList | c.Dict,
-    dataView: DataView
+    dataView: DataView,
   ): TypeBase | QTable | QDict {
     // parse symbols, mixed and unary
     if (qStruct.qtype === -11) {
@@ -103,11 +103,11 @@ export class Parse {
   public static dict(dict: c.Dict, dataView: DataView): QDict {
     const keys = Parse.col(
       dict.keys as c.Vector | c.SymList | c.GenericList,
-      dataView
+      dataView,
     ) as TypeBase;
     const values = Parse.col(
       dict.values as c.Vector | c.SymList | c.GenericList,
-      dataView
+      dataView,
     );
     return new QDict(keys.length, keys, values as TypeBase, dict.qtype);
   }
@@ -118,7 +118,7 @@ export class Parse {
 
     return new QTable(
       Tools.times(keys.length, (i) => keys.toLegacy(i)),
-      Tools.times(values.length, (i) => Parse.col(values.getValue(i), dv))
+      Tools.times(values.length, (i) => Parse.col(values.getValue(i), dv)),
     );
   }
 
@@ -152,8 +152,8 @@ export class Parse {
         parseCol(
           t === -11
             ? new c.SymList(true, [(qObj as c.Atom).offset])
-            : new c.Vector(-t, true, 1, (qObj as c.Atom).offset)
-        )
+            : new c.Vector(-t, true, 1, (qObj as c.Atom).offset),
+        ),
       );
     } else if (t === 99) {
       const dict = qObj as c.Dict;
@@ -167,9 +167,9 @@ export class Parse {
           new c.GenericList(
             true,
             [bl],
-            bl.offset + bl.length * (c.getTypeSize(bl.qtype) as number)
-          )
-        )
+            bl.offset + bl.length * (c.getTypeSize(bl.qtype) as number),
+          ),
+        ),
       );
     } else if (t === 0) {
       const gl = qObj as c.GenericList;
@@ -188,8 +188,8 @@ export class Parse {
             parseCol(
               li.qtype === -11
                 ? new c.SymList(true, [(li as c.Atom).offset])
-                : new c.Vector(-li.qtype, true, 1, (li as c.Atom).offset)
-            )
+                : new c.Vector(-li.qtype, true, 1, (li as c.Atom).offset),
+            ),
           );
         } else {
           table.addParsedColumn(
@@ -203,9 +203,9 @@ export class Parse {
                     li.qtype === 10
                       ? (li as c.Vector).offset +
                         (c.getTypeSize(10) as number) * (li as c.Vector).length
-                      : (li as c.Atom).offset
-                  )
-            )
+                      : (li as c.Atom).offset,
+                  ),
+            ),
           );
         }
       });
@@ -214,7 +214,7 @@ export class Parse {
       sl.offsets.forEach((offset, i) => {
         table.addParsedColumn(
           (TypeBase.typeNames[sl.qtype] || "unknown") + i,
-          parseCol(new c.SymList(true, [offset]))
+          parseCol(new c.SymList(true, [offset])),
         );
       });
     } else if (0 <= t && t < 20) {
@@ -223,7 +223,7 @@ export class Parse {
       for (let i = 0; i < bl.length; i++) {
         table.addParsedColumn(
           (TypeBase.typeNames[bl.qtype] || "unknown") + i,
-          parseCol(new c.Vector(bl.qtype, true, 1, bl.offset + sz * i))
+          parseCol(new c.Vector(bl.qtype, true, 1, bl.offset + sz * i)),
         );
       }
     } else if (t === 101) {
@@ -251,32 +251,28 @@ export class Parse {
         ) {
           const keys = Parse.col(
             (dict.values as c.Dict).keys as c.SymList,
-            dv
+            dv,
           ) as TypeBase;
           const names = ["key"].concat(
-            Tools.times(keys.length, (i) => keys.toLegacy(i))
+            Tools.times(keys.length, (i) => keys.toLegacy(i)),
           );
           const cols = Parse.col(
             (dict.values as c.Dict).values as
               | c.Vector
               | c.SymList
               | c.GenericList,
-            dv
+            dv,
           ) as QList;
           return new QTable(
             names,
             [dict.keys as c.SymList]
               .concat(Tools.times(cols.length, (i) => cols.getValue(i)))
-              .map((x) => Parse.col(x, dv) as Vector)
+              .map((x) => Parse.col(x, dv) as Vector),
           );
-        } else {
-          return new QTable();
         }
       } else {
         return Parse.dict(qObj as c.Dict, dv);
       }
-    } else {
-      return new QTable();
     }
   }
 }
@@ -401,14 +397,14 @@ export class QList extends TypeBase {
     if (this.values[i].qtype === 98 || this.values[i].qtype === 99) {
       this.values[i] = Parse.table(
         this.values[i] as c.Dict,
-        new DataView(buffer)
+        new DataView(buffer),
       );
 
       return SparkMD5.hash(uBuffer);
     } else {
       this.values[i] = col = Parse.col(
         this.values[i] as c.Vector,
-        new DataView(buffer)
+        new DataView(buffer),
       );
 
       if (col.qtype === 10) {
@@ -458,7 +454,7 @@ export class QList extends TypeBase {
     _i: number,
     offset: number,
     qStruct: c.Typed,
-    dataView: DataView
+    dataView: DataView,
   ): void {
     if (qStruct.qtype === 0) {
       const l = qStruct as c.GenericList;
@@ -496,7 +492,7 @@ export class QList extends TypeBase {
 
     const thisFirstOriginal = this.getFirstOffset(
       arg.values.length,
-      this.dataView
+      this.dataView,
     );
 
     const thisOriginalSize = this.end - thisFirstOriginal;
@@ -506,11 +502,11 @@ export class QList extends TypeBase {
     const buffer = new ArrayBuffer(totalSize);
 
     new Uint8Array(buffer, 0, argSize).set(
-      new Uint8Array(arg.dataView.buffer, argOffsetStart, argSize)
+      new Uint8Array(arg.dataView.buffer, argOffsetStart, argSize),
     );
 
     new Uint8Array(buffer, argSize, thisOriginalSize).set(
-      new Uint8Array(this.dataView.buffer, thisFirstOriginal, thisOriginalSize)
+      new Uint8Array(this.dataView.buffer, thisFirstOriginal, thisOriginalSize),
     );
 
     for (let i = 0; i < arg.length; i++) {
@@ -529,7 +525,7 @@ export class QList extends TypeBase {
   public mergeKeyedPrimary(
     arg: QList,
     maxRows: number,
-    insertIndices: Array<number>
+    insertIndices: Array<number>,
   ): number {
     if (this.keyIndex === undefined) {
       const keyIndex: { [index: string]: number } = {};
@@ -573,7 +569,7 @@ export class QList extends TypeBase {
     arg: QList,
     indices: Array<number>,
     indexOffset: number,
-    _maxRows: number
+    _maxRows: number,
   ): void {
     if (this.values === undefined) {
       this.values = new Array(this.length);
