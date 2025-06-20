@@ -615,21 +615,21 @@ There are several ways to reset the scratchpad:
 
 3. Use the [MacOS or Windows shortcuts](#shortcuts) in the q file or in the workbook. Note that running the shortcuts in the q file resets the scratchpad for the active connection, while running them in the workbook resets the scratchpad for the connection chosen in the workbook.
 
-## Workbooks
+## Workbooks and source files
 
-Workbooks provide a convenient way to prototype and execute q and Python code against a q process and using variables [populated into the scratchpad](#populate-scratchpad) or DAPs (Data Access Processes) of a **kdb Insights Enterprise** deployment by data sources.
+kdb Insights Enterprise supports two modes of interactive code development in Visual Studio Code: Workbooks and Source Files. Both enable you to write and execute q and Python code against running kdb+ processes, but they offer different workflows and behaviors.
 
-Previously, only **.kdb.q** and **.kdb.py** workbook files supported connection association and execution. Now, all **.q** and **.py** files in your workspace support the same functionality, making it easier to develop and test code across different environments.
+### Workbooks
 
-Workbook files have the following features:
+Workbooks provide a convenient way to prototype and execute q and Python code against a q process and using variables [populated into the scratchpad](#populate-scratchpad) of a **kdb Insights Enterprise** deployment by data sources.
+
+Key features of Workbooks:
 
 - Are listed in the **WORKBOOKS** view in the primary sidebar
 - Can be associated with a connection
-- Support the **.kdb.q.**,  **kdb.py**, **.q**, or **.py** file extensions
+- Support the **.kdb.q.**,  **kdb.py** extensions
 - Are stored in a **.kx** folder at the root of your open folder
-- You can have multiple files open and running against different connections and endpoints at the same time.
-
-### Create a Workbook
+- You can have multiple Workbooks running against different connections at the same time
 
 To create a Workbook and run code against a specific connection:
 
@@ -648,39 +648,78 @@ To create a Workbook and run code against a specific connection:
          ![workbook links](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookrunlink.png)
 
       1. Select **Run** from the upper right of the editor. Using the dropdown next to the button you can choose any of the [**KX:** menu items](#kdb-process-executing-q-and-python-code) to run some, or all of the code in the workbook.
-         ![play dropdown](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/wortkbookplaydropdown.png)
+         ![play dropdown](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookplaydropdown.png)
 
       1. Click **Run** on the right-hand side of the status bar.
-         ![status bar run ](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookstatusbarrun.png)
+         ![status bar run](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookstatusbarrun.png)
 
       1. Right-click and choose **KX: Execute Entire File** from the menu.
 
-### Select connections and endpoints
+1. If you have not yet chosen a connection to associate with the workbook, you are asked to choose a connection before you execute the code.
 
-#### Unassociated files
+   ![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookconnectionlink.png)
+
+1. The results populate the kdb results window if it is active; otherwise the output window is populated.
+
+When you save a workbook file, the code and the connection details are stored. The workbook icon is green if it is associated with a connection and grey if there is no association.
+
+You can also change the connection associated with a workbook at any time by clicking on Choose Connection from above the first line of code in the workbook file.
+
+You can choose to execute an entire q file, the current selection, or the current block from the play dropdown.
+
+![execute q code](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookplaydropdown.png)
+
+### Source files
+
+Regular `.q` and `.py` files now support enhanced functionality similar to [Workbooks](#workbooks), allowing you to write, test, and execute code directly against kdb Insights connections and endpoints. 
+
+You can run code on either the [scratchpad](#run-and-populate-scratchpad) or directly on DAP processes — such as RDB or HDB — without needing to copy/paste or switch between special file types.
+
+Key differences:
+
+- Not listed in the WORKBOOKS sidebar
+- Do not require `.kdb.` in the filename
+- Stored anywhere in your workspace
+
+Key features of standard source files:
+
+- Run against the active connection if no specific association is made.
+- Can be explicitly associated with a connection using the **Choose Connection** code lens.
+- Once associated, allow execution against:
+   - Scratchpad (default for Insights)
+   - Any available DAP process (if the connection is an Insights type)
+
+This eliminates the need to copy code from files into the qSQL Data Source tab or Workbooks for testing against DAPs.
+
+For selecting connections and endpoints for unassociated files, consider the following:
 
 - When a `.q` or `.py` file is not associated with a connection, it shows a **Choose Connection** code lens at the top and runs on the active connected connection.
 - Clicking **Choose Connection** allows you to associate the file with a connection.
-- Once associated, the file will only execute on that connection.
+- Once associated, the file only executes on that connection.
 
    ![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/unassociated-file-workbook.png)
 
-#### Associated files
+For associated files, take into account the following:
 
 - When a file is associated with a kdb Insights connection, a **scratchpad** code lens appears.
+
 - Clicking this allows you to choose the execution endpoint:
+
    - Scratchpad (default)
    - Any available DAP (for example, RDB, HDB)
 
    ![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/associated-file-workbook.png)
 
-### Output and results
+### Multiple editors, multiple endpoints
 
-The results populate the kdb results window if it's active, otherwise the output window is populated.
+You can open the same file (Workbook or source file) in multiple editor tabs, and associate each with a different endpoint. 
 
-When you save a workbook file, the code and the connection details are stored. The workbook icon is green if it's associated with a connection and grey if there is no association.
+For example, if you want to run code on RDB and HDB DAPs, you have:
 
-You can also change the connection associated with a workbook at any time by clicking on **Choose Connection** from above the first line of code in the workbook file.
+- `da.q` in one tab connected to RDB
+- `da.q` in another tab connected to HDB
+
+Each editor instance maintains its own connection and endpoint context, allowing you to test and compare results side by side without switching connections.
 
 ## KX Notebooks in Visual Studio Code
 
