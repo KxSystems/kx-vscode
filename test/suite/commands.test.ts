@@ -2735,14 +2735,21 @@ describe("workspaceCommand", () => {
   });
   describe("ConnectionLensProvider", () => {
     describe("provideCodeLenses", () => {
-      it("should return lenses", async () => {
-        const document = await vscode.workspace.openTextDocument({
-          language: "q",
-          content: "a:1",
-        });
+      it("should return 1 lense", async () => {
+        const document: vscode.TextDocument = <any>{
+          uri: kdbUri,
+        };
         const provider = new workspaceCommand.ConnectionLensProvider();
         const result = await provider.provideCodeLenses(document);
-        assert.ok(result.length >= 1);
+        assert.strictEqual(result.length, 1);
+      });
+      it("should return 2 lenses", async () => {
+        const document: vscode.TextDocument = <any>{
+          uri: insightsUri,
+        };
+        const provider = new workspaceCommand.ConnectionLensProvider();
+        const result = await provider.provideCodeLenses(document);
+        assert.strictEqual(result.length, 2);
       });
     });
   });
