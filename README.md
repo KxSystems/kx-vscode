@@ -682,7 +682,7 @@ You can run code on either the [scratchpad](#run-and-populate-scratchpad) or dir
 - Do not require `.kdb.` in the filename
 - Stored anywhere in your workspace
 
-Key features of standard source files:
+**Key features** of standard source files:
 
 - Run against the active connection if no specific association is made.
 - Can be explicitly associated with a connection using the **Choose Connection** code lens.
