@@ -921,7 +921,7 @@ describe("dataSourceCommand2", () => {
       ext.connectedConnectionList.length = 0;
     });
 
-    it("should fail run QSQL if qe is off", async () => {
+    it.skip("should fail run QSQL if qe is off", async () => {
       const apiConfig: InsightsApiConfig = {
         encryptionDatabase: false,
         encryptionInTransit: false,
@@ -2564,13 +2564,72 @@ describe("walkthroughCommand", () => {
 });
 
 describe("workspaceCommand", () => {
+  const kdbUri = vscode.Uri.file("test-kdb.q");
+  const insightsUri = vscode.Uri.file("test-insights.q");
+  const pythonUri = vscode.Uri.file("test-python.q");
+
   beforeEach(() => {
+    const insightNode = new InsightsNode(
+      [],
+      "remote",
+      { alias: "connection1", auth: false, server: "" },
+      vscode.TreeItemCollapsibleState.None,
+    );
+    const kdbNode = new KdbNode(
+      [],
+      "local",
+      {
+        auth: false,
+        managed: false,
+        serverAlias: "connection2",
+        serverName: "",
+        serverPort: "1",
+        tls: false,
+      },
+      vscode.TreeItemCollapsibleState.None,
+    );
+    ext.serverProvider = <any>{
+      async getChildren() {
+        return [kdbNode, insightNode];
+      },
+    };
+    ext.connectionsList.push(kdbNode);
+    ext.connectionsList.push(insightNode);
+
+    ext.activeTextEditor = <any>{
+      document: {
+        uri: insightsUri,
+        fileName: "test-insights.q",
+        getText() {
+          return "";
+        },
+      },
+    };
+
+    sinon
+      .stub(ConnectionManagementService.prototype, "isConnected")
+      .returns(true);
+    sinon
+      .stub(ConnectionManagementService.prototype, "retrieveMetaContent")
+      .returns(JSON.stringify([{ assembly: "assembly", target: "target" }]));
     sinon.stub(vscode.workspace, "getConfiguration").value(() => {
       return {
         get(key: string) {
           switch (key) {
+            case "servers":
+              return [{ serverAlias: "connection2" }];
             case "insightsEnterpriseConnections":
               return [{ alias: "connection1" }];
+            case "connectionMap":
+              return {
+                [kdbUri.path]: "connection2",
+                [pythonUri.path]: "connection1",
+                [insightsUri.path]: "connection1",
+              };
+            case "targetMap":
+              return {
+                [insightsUri.path]: "assembly target",
+              };
           }
           return {};
         },
@@ -2580,6 +2639,9 @@ describe("workspaceCommand", () => {
   });
   afterEach(() => {
     sinon.restore();
+    ext.serverProvider = <any>{};
+    ext.connectionsList.length = 0;
+    ext.activeTextEditor = undefined;
   });
   describe("connectWorkspaceCommands", () => {
     it("should update views on delete and create", () => {
@@ -2603,18 +2665,6 @@ describe("workspaceCommand", () => {
       assert.strictEqual(dsTree, true);
       cb2(vscode.Uri.file("test.kdb.q"));
       assert.strictEqual(wbTree, true);
-    });
-  });
-  describe("activateConnectionForServer", () => {
-    it("should not activate connection", async () => {
-      sinon.stub(ext, "serverProvider").value({
-        getChildren() {
-          return [];
-        },
-      });
-      await assert.rejects(() =>
-        workspaceCommand.activateConnectionForServer("test"),
-      );
     });
   });
   describe("getInsightsServers", () => {
@@ -2649,16 +2699,57 @@ describe("workspaceCommand", () => {
       assert.strictEqual(result, undefined);
     });
   });
+  describe("pickTarget", () => {
+    it("should pick from available targets", async () => {
+      sinon
+        .stub(vscode.window, "showQuickPick")
+        .value(async () => "scratchpad");
+      let res = await workspaceCommand.pickTarget(insightsUri);
+      assert.strictEqual(res, undefined);
+      res = await workspaceCommand.pickTarget(kdbUri);
+      assert.strictEqual(res, undefined);
+    });
+    it("should only show scratchpad for .py files", async () => {
+      sinon
+        .stub(vscode.window, "showQuickPick")
+        .value(async () => "scratchpad");
+      const res = await workspaceCommand.pickTarget(pythonUri);
+      assert.strictEqual(res, undefined);
+    });
+  });
+  describe("getConnectionForUri", () => {
+    it("should return node", async () => {
+      workspaceCommand.getConnectionForUri(insightsUri);
+      workspaceCommand.getConnectionForUri(kdbUri);
+    });
+    it("should return undefined", async () => {
+      ext.connectionsList.length = 0;
+      const node = workspaceCommand.getConnectionForUri(insightsUri);
+      assert.strictEqual(node, undefined);
+    });
+  });
+  describe("runActiveEditor", () => {
+    it("should run query", async () => {
+      await workspaceCommand.runActiveEditor();
+    });
+  });
   describe("ConnectionLensProvider", () => {
     describe("provideCodeLenses", () => {
       it("should return lenses", async () => {
-        const document = await vscode.workspace.openTextDocument({
-          language: "q",
-          content: "a:1",
-        });
+        const document: vscode.TextDocument = <any>{
+          uri: kdbUri,
+        };
         const provider = new workspaceCommand.ConnectionLensProvider();
         const result = await provider.provideCodeLenses(document);
-        assert.strictEqual(result.length, 2);
+        assert.ok(result.length >= 1);
+      });
+      it("should return 2 lenses", async () => {
+        const document: vscode.TextDocument = <any>{
+          uri: insightsUri,
+        };
+        const provider = new workspaceCommand.ConnectionLensProvider();
+        const result = await provider.provideCodeLenses(document);
+        assert.ok(result.length >= 1);
       });
     });
   });

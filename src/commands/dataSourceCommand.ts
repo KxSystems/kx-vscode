@@ -85,22 +85,6 @@ export async function populateScratchpad(
   connLabel: string,
 ): Promise<void> {
   const connMngService = new ConnectionManagementService();
-  const qenvEnabled =
-    (await connMngService.retrieveInsightsConnQEEnabled(connLabel)) ?? "";
-  if (
-    dataSourceForm.dataSource.selectedType === DataSourceTypes.QSQL &&
-    qenvEnabled === "disabled"
-  ) {
-    window.showErrorMessage(
-      "The query enviroment(s) are disabled for this connection",
-    );
-    kdbOutputLog(
-      `[DATASOURCE]  The query enviroment(s) are disabled for this connection`,
-      "ERROR",
-      true,
-    );
-    return;
-  }
   const scratchpadVariable: InputBoxOptions = {
     prompt: scratchpadVariableInput.prompt,
     placeHolder: scratchpadVariableInput.placeholder,
@@ -121,9 +105,14 @@ export async function populateScratchpad(
         DataSourcesPanel.running = false;
         return;
       }
+
+      const qenvEnabled =
+        (await connMngService.retrieveInsightsConnQEEnabled(connLabel)) ?? "";
+
       await selectedConnection.importScratchpad(
         outputVariable!,
         dataSourceForm!,
+        qenvEnabled === "Enabled",
       );
     } else {
       kdbOutputLog(
@@ -179,18 +168,11 @@ export async function runDataSource(
         res = await runApiDataSource(fileContent, selectedConnection);
         break;
       case "QSQL":
-        if (selectedConnection.apiConfig?.queryEnvironmentsEnabled === false) {
-          window.showErrorMessage(
-            "The query enviroment(s) are disabled for this connection",
-          );
-          kdbOutputLog(
-            `[DATASOURCE]  The query enviroment(s) are disabled for this connection`,
-            "ERROR",
-            true,
-          );
-          return;
-        }
-        res = await runQsqlDataSource(fileContent, selectedConnection);
+        res = await runQsqlDataSource(
+          fileContent,
+          selectedConnection,
+          selectedConnection.apiConfig?.queryEnvironmentsEnabled,
+        );
         break;
       case "UDA":
         res = await runUDADataSource(fileContent, selectedConnection);
@@ -407,18 +389,13 @@ export function getApiBody(
 export async function runQsqlDataSource(
   fileContent: DataSourceFiles,
   selectedConn: InsightsConnection,
+  qeEnabled?: boolean,
 ): Promise<any> {
-  const assembly = fileContent.dataSource.qsql.selectedTarget.slice(0, -4);
-  const target = fileContent.dataSource.qsql.selectedTarget.slice(-3);
-  const query = fileContent.dataSource.qsql.query;
-
   const qsqlBody = generateQSqlBody(
-    {
-      assembly,
-      query,
-      target,
-    },
+    fileContent.dataSource.qsql.query,
+    fileContent.dataSource.qsql.selectedTarget,
     selectedConn.insightsVersion,
+    qeEnabled,
   );
 
   const qsqlCall = await selectedConn.getDatasourceQuery(

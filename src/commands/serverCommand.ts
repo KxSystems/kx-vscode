@@ -1004,6 +1004,7 @@ export function runQuery(
   executorName: string,
   isWorkbook: boolean,
   rerunQuery?: string,
+  target?: string,
 ) {
   const editor = ext.activeTextEditor;
   if (!editor) {
@@ -1039,7 +1040,23 @@ export function runQuery(
       break;
     }
   }
-  executeQuery(query, connLabel, executorName, context, isPython, isWorkbook);
+  if (target) {
+    runDataSource(
+      <DataSourceFiles>{
+        dataSource: {
+          selectedType: "QSQL",
+          qsql: {
+            query,
+            selectedTarget: target,
+          },
+        },
+      },
+      connLabel,
+      executorName,
+    );
+  } else {
+    executeQuery(query, connLabel, executorName, context, isPython, isWorkbook);
+  }
 }
 
 export function rerunQuery(rerunQueryElement: QueryHistory) {

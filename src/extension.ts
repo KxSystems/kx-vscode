@@ -58,6 +58,7 @@ import {
   connectWorkspaceCommands,
   importOldDSFiles,
   pickConnection,
+  pickTarget,
   resetScratchpadFromEditor,
   runActiveEditor,
   setServerForUri,
@@ -217,7 +218,7 @@ export async function activate(context: vscode.ExtensionContext) {
     ChartEditorProvider.register(context),
 
     vscode.languages.registerCodeLensProvider(
-      { pattern: "**/*.kdb.{q,py}" },
+      { pattern: "**/*.{q,py}" },
       new ConnectionLensProvider(),
     ),
 
@@ -936,6 +937,15 @@ function registerFileCommands(): CommandRegistration[] {
         const editor = ext.activeTextEditor;
         if (editor) {
           await pickConnection(editor.document.uri);
+        }
+      },
+    },
+    {
+      command: "kdb.file.pickTarget",
+      callback: async () => {
+        const editor = ext.activeTextEditor;
+        if (editor) {
+          await pickTarget(editor.document.uri);
         }
       },
     },

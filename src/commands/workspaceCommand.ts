@@ -17,7 +17,6 @@ import {
   CodeLensProvider,
   Command,
   ProgressLocation,
-  ProviderResult,
   Range,
   StatusBarAlignment,
   TextDocument,
@@ -31,14 +30,13 @@ import {
 import { ext } from "../extensionVariables";
 import { resetScratchpad, runQuery } from "./serverCommand";
 import { ExecutionTypes } from "../models/execution";
+import { MetaDap } from "../models/meta";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { kdbOutputLog, offerConnectAction } from "../utils/core";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
+import { normalizeAssemblyTarget } from "../utils/shared";
 
-const connectionService = new ConnectionManagementService();
-
-/* istanbul ignore next */
 function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   if (editor) {
     const scheme = editor.document.uri.scheme;
@@ -48,29 +46,6 @@ function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   } else {
     ext.activeTextEditor = undefined;
   }
-}
-
-/* istanbul ignore next */
-function activeEditorChanged(editor?: TextEditor | undefined) {
-  setRealActiveTextEditor(editor);
-  const item = ext.runScratchpadItem;
-  if (ext.activeTextEditor) {
-    const uri = ext.activeTextEditor.document.uri;
-    if (isScratchpad(uri)) {
-      const server = getServerForUri(uri);
-      setRunScratchpadItemText(server || "Run");
-      item.show();
-    } else {
-      item.hide();
-    }
-  } else {
-    item.hide();
-  }
-}
-
-/* istanbul ignore next */
-function setRunScratchpadItemText(text: string) {
-  ext.runScratchpadItem.text = `$(run) ${text}`;
 }
 
 export function getInsightsServers() {
@@ -96,7 +71,6 @@ function getServers() {
   ];
 }
 
-/* istanbul ignore next */
 export async function getConnectionForServer(
   server: string,
 ): Promise<InsightsNode | KdbNode | undefined> {
@@ -131,27 +105,6 @@ export async function getConnectionForServer(
   }
 }
 
-/* istanbul ignore next */
-async function waitForConnection(label: string) {
-  return new Promise<void>((resolve, reject) => {
-    let count = 0;
-    const retry = () => {
-      count++;
-      setTimeout(() => {
-        if (connectionService.isConnected(label)) {
-          resolve();
-        } else if (count < 5) {
-          retry();
-        } else {
-          reject(new Error(`Can not connect to ${label}`));
-        }
-      }, 50);
-    };
-    retry();
-  });
-}
-
-/* istanbul ignore next */
 function relativePath(uri: Uri) {
   return workspace.asRelativePath(uri, false);
 }
@@ -180,24 +133,37 @@ export function getServerForUri(uri: Uri) {
   return server && servers.includes(server) ? server : undefined;
 }
 
-/* istanbul ignore next */
+export async function setTargetForUri(uri: Uri, target: string | undefined) {
+  uri = Uri.file(uri.path);
+  const conf = workspace.getConfiguration("kdb", uri);
+  const map = conf.get<{ [key: string]: string | undefined }>("targetMap", {});
+  map[relativePath(uri)] = target;
+  await conf.update("targetMap", map);
+}
+
+export function getTargetForUri(uri: Uri) {
+  uri = Uri.file(uri.path);
+  const conf = workspace.getConfiguration("kdb", uri);
+  const map = conf.get<{ [key: string]: string | undefined }>("targetMap", {});
+  const target = map[relativePath(uri)];
+  return target ? normalizeAssemblyTarget(target) : undefined;
+}
+
 export function getConnectionForUri(uri: Uri) {
   const server = getServerForUri(uri);
   if (server) {
     return ext.connectionsList.find((item) => {
       if (item instanceof InsightsNode) {
         return item.details.alias === server;
-      } else if (item instanceof KdbNode) {
-        return item.details.serverAlias === server;
       }
-      return false;
+      return item.details.serverAlias === server;
     }) as KdbNode | InsightsNode;
   }
 }
 
 export async function pickConnection(uri: Uri) {
   const server = getServerForUri(uri);
-  const servers = isPython(uri) ? getInsightsServers() : getServers();
+  const servers = getServers();
 
   let picked = await window.showQuickPick(["(none)", ...servers], {
     title: "Choose a connection",
@@ -207,20 +173,75 @@ export async function pickConnection(uri: Uri) {
   if (picked) {
     if (picked === "(none)") {
       picked = undefined;
+      await setTargetForUri(uri, undefined);
     }
     await setServerForUri(uri, picked);
-    setRunScratchpadItemText(picked || "Run");
   }
 
   return picked;
 }
 
-/* istanbul ignore next */
+export async function pickTarget(uri: Uri) {
+  const server = getServerForUri(uri);
+  if (!server) {
+    return;
+  }
+
+  const conn = await getConnectionForServer(server);
+  const isInsights = conn instanceof InsightsNode;
+  if (!isInsights) {
+    return;
+  }
+
+  let daps: MetaDap[] = [];
+
+  if (!isPython(uri)) {
+    const connMngService = new ConnectionManagementService();
+    const connected = connMngService.isConnected(conn.label);
+    if (connected) {
+      daps = JSON.parse(connMngService.retrieveMetaContent(conn.label, "DAP"));
+    } else {
+      offerConnectAction(server);
+    }
+  }
+
+  const target = getTargetForUri(uri);
+  if (target) {
+    const exists = daps.some(
+      (value) => `${value.assembly} ${value.instance}` === target,
+    );
+    if (!exists) {
+      const [assembly, instance] = target.split(/\s+/);
+      daps.push({ assembly, instance } as MetaDap);
+    }
+  }
+
+  let picked = await window.showQuickPick(
+    [
+      "scratchpad",
+      ...daps.map((value) => `${value.assembly} ${value.instance}`),
+    ],
+    {
+      title: `Choose a target on ${server}`,
+      placeHolder: target,
+    },
+  );
+
+  if (picked) {
+    if (picked === "scratchpad") {
+      picked = undefined;
+    }
+    await setTargetForUri(uri, picked);
+  }
+
+  return picked;
+}
+
 function isPython(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".py");
 }
 
-function isScratchpad(uri: Uri | undefined) {
+function isWorkbook(uri: Uri | undefined) {
   return uri && (uri.path.endsWith(".kdb.q") || uri.path.endsWith(".kdb.py"));
 }
 
@@ -233,51 +254,32 @@ function isKxFolder(uri: Uri | undefined) {
   return uri && Path.basename(uri.path) === ".kx";
 }
 
-/* istanbul ignore next */
-export async function activateConnectionForServer(server: string) {
-  const connection = await getConnectionForServer(server);
-  if (connection) {
-    if (!connectionService.isConnected(connection.label)) {
-      const action = await window.showWarningMessage(
-        `${connection.label} is not connected`,
-        "Connect",
-      );
-      if (action === "Connect") {
-        await connectionService.connect(connection.label);
-        await waitForConnection(connection.label);
-      } else {
-        throw new Error(`${connection.label} is not connected`);
-      }
-    }
-    connectionService.setActiveConnection(connection);
-  } else {
-    throw new Error(`${server} is not found`);
-  }
-}
-
-/* istanbul ignore next */
 export async function runActiveEditor(type?: ExecutionTypes) {
   if (ext.activeTextEditor) {
     const connMngService = new ConnectionManagementService();
     const uri = ext.activeTextEditor.document.uri;
-    const isWorkbook = uri.path.endsWith(".kdb.q");
 
-    let server = getServerForUri(uri);
-    if (!server && isWorkbook) {
-      server = await pickConnection(uri);
+    let isInsights = false;
+    let server = getServerForUri(uri) || "";
+
+    if (server) {
+      const conn = await getConnectionForServer(server);
+      if (conn) {
+        isInsights = conn instanceof InsightsNode;
+        server = conn.label;
+        if (!connMngService.isConnected(server)) {
+          offerConnectAction(server);
+          return;
+        }
+      } else {
+        throw new Error("Connection for  not found");
+      }
     }
-    if (!server) {
-      server = "";
-    }
-    const connection = await getConnectionForServer(server);
-    server = connection?.label || "";
-    if (!connMngService.isConnected(server) && isScratchpad(uri)) {
-      offerConnectAction(server);
-      return;
-    }
-    const executorName = ext.activeTextEditor.document.fileName
-      .split("/")
-      .pop();
+
+    const executorName =
+      ext.activeTextEditor.document.fileName.split("/").pop() || "";
+
+    const target = isInsights ? getTargetForUri(uri) : undefined;
 
     runQuery(
       type === undefined
@@ -286,8 +288,10 @@ export async function runActiveEditor(type?: ExecutionTypes) {
           : ExecutionTypes.QueryFile
         : type,
       server,
-      executorName ? executorName : "",
-      isWorkbook,
+      executorName,
+      !isPython(uri),
+      undefined,
+      target,
     );
   }
 }
@@ -312,26 +316,35 @@ export async function resetScratchpadFromEditor(): Promise<void> {
 function update(uri: Uri) {
   if (isDataSource(uri)) {
     ext.dataSourceTreeProvider.reload();
-  } else if (isScratchpad(uri)) {
+  } else if (isWorkbook(uri)) {
     ext.scratchpadTreeProvider.reload();
   }
 }
 
 export class ConnectionLensProvider implements CodeLensProvider {
-  provideCodeLenses(document: TextDocument): ProviderResult<CodeLens[]> {
+  async provideCodeLenses(document: TextDocument) {
     const server = getServerForUri(document.uri);
     const top = new Range(0, 0, 0, 0);
-    const runScratchpad = new CodeLens(top, {
-      command: isPython(document.uri)
-        ? "kdb.scratchpad.python.run.file"
-        : "kdb.execute.fileQuery",
-      title: server ? `Run on ${server}` : "Run",
-    });
+
     const pickConnection = new CodeLens(top, {
       command: "kdb.file.pickConnection",
-      title: "Choose Connection",
+      title: server ? `Run on ${server}` : "Choose Connection",
     });
-    return [runScratchpad, pickConnection];
+
+    const target = getTargetForUri(document.uri);
+
+    if (server) {
+      const conn = await getConnectionForServer(server);
+      if (conn instanceof InsightsNode) {
+        const pickTarget = new CodeLens(top, {
+          command: "kdb.file.pickTarget",
+          title: target || "scratchpad",
+        });
+        return [pickConnection, pickTarget];
+      }
+    }
+
+    return [pickConnection];
   }
 }
 
@@ -349,9 +362,10 @@ export function connectWorkspaceCommands() {
     arguments: [],
   };
 
-  const watcher = workspace.createFileSystemWatcher("**/*.kdb.{json,q,py}");
+  const watcher = workspace.createFileSystemWatcher("**/*.{kdb.json,q,py}");
   watcher.onDidCreate(update);
   watcher.onDidDelete(update);
+
   /* istanbul ignore next */
   workspace.onDidDeleteFiles((event) => {
     for (const uri of event.files) {
@@ -362,20 +376,24 @@ export function connectWorkspaceCommands() {
       }
     }
   });
+
   /* istanbul ignore next */
   workspace.onDidRenameFiles(async (event) => {
     for (const { oldUri, newUri } of event.files) {
       await setServerForUri(newUri, getServerForUri(oldUri));
       await setServerForUri(oldUri, undefined);
+      await setTargetForUri(newUri, getTargetForUri(oldUri));
+      await setTargetForUri(oldUri, undefined);
     }
   });
+
   /* istanbul ignore next */
   workspace.onDidChangeWorkspaceFolders(() => {
     ext.dataSourceTreeProvider.reload();
     ext.scratchpadTreeProvider.reload();
   });
-  window.onDidChangeActiveTextEditor(activeEditorChanged);
-  activeEditorChanged(window.activeTextEditor);
+  window.onDidChangeActiveTextEditor(setRealActiveTextEditor);
+  setRealActiveTextEditor(window.activeTextEditor);
 }
 
 export function checkOldDatasourceFiles() {

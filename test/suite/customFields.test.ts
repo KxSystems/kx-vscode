@@ -41,14 +41,14 @@ describe("DateTimeNanoPicker (component)", () => {
     });
 
     it("should parse QDateTime string correctly", () => {
-      picker.parseQDateTime("2014.11.22D17:43:40.123456789");
+      picker.parseQDateTime("2014-11-22T17:43:40.123456789");
       assert.strictEqual(picker.date, "2014-11-22");
       assert.strictEqual(picker.time, "17:43:40");
       assert.strictEqual(picker.nanos, "123456789");
     });
 
     it("should pad nanoseconds to 9 digits", () => {
-      picker.parseQDateTime("2014.11.22D17:43:40.1");
+      picker.parseQDateTime("2014-11-22T17:43:40.1");
       assert.strictEqual(picker.nanos, "100000000");
     });
 
@@ -58,7 +58,7 @@ describe("DateTimeNanoPicker (component)", () => {
       picker.time = "12:34:56";
       picker.nanos = "987654321";
       picker.parseValuesToQDateTime();
-      assert.strictEqual(picker.value, "2020.01.02D12:34:56.987654321");
+      assert.strictEqual(picker.value, "2020-01-02T12:34:56.987654321");
     });
 
     it("should dispatch change event when value changes", () => {
@@ -71,7 +71,7 @@ describe("DateTimeNanoPicker (component)", () => {
       picker.time = "23:59:59";
       picker.nanos = "123";
       picker.parseValuesToQDateTime();
-      assert.strictEqual(eventValue, "2022.12.31D23:59:59.123000000");
+      assert.strictEqual(eventValue, "2022-12-31T23:59:59.123000000");
     });
   });
 
