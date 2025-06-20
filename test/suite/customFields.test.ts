@@ -41,14 +41,14 @@ describe("DateTimeNanoPicker (component)", () => {
     });
 
     it("should parse QDateTime string correctly", () => {
-      picker.parseQDateTime("2014.11.22D17:43:40.123456789");
+      picker.parseQDateTime("2014-11-22T17:43:40.123456789");
       assert.strictEqual(picker.date, "2014-11-22");
       assert.strictEqual(picker.time, "17:43:40");
       assert.strictEqual(picker.nanos, "123456789");
     });
 
     it("should pad nanoseconds to 9 digits", () => {
-      picker.parseQDateTime("2014.11.22D17:43:40.1");
+      picker.parseQDateTime("2014-11-22T17:43:40.1");
       assert.strictEqual(picker.nanos, "100000000");
     });
 

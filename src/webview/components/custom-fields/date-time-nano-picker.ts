@@ -51,7 +51,7 @@ export class DateTimeNanoPicker extends LitElement {
 
   parseQDateTime(qdt: string) {
     const match = qdt.match(
-      /^(\d{4})\.(\d{2})\.(\d{2})D(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?$/,
+      /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?$/,
     );
     if (match) {
       const [, yyyy, mm, dd, h, m, s, n = ""] = match;

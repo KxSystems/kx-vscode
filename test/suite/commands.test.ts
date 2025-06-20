@@ -2564,18 +2564,46 @@ describe("walkthroughCommand", () => {
 });
 
 describe("workspaceCommand", () => {
+  const kdbUri = vscode.Uri.file("test-kdb.q");
+  const insightsUri = vscode.Uri.file("test-insights.q");
+
   beforeEach(() => {
+    const insightNode = new InsightsNode(
+      [],
+      "remote",
+      { alias: "connection1", auth: false, server: "" },
+      vscode.TreeItemCollapsibleState.None,
+    );
+    const kdbNode = new KdbNode(
+      [],
+      "local",
+      {
+        auth: false,
+        managed: false,
+        serverAlias: "connection2",
+        serverName: "",
+        serverPort: "1",
+        tls: false,
+      },
+      vscode.TreeItemCollapsibleState.None,
+    );
     ext.serverProvider = <any>{
       async getChildren() {
-        const node = new InsightsNode(
-          [],
-          "",
-          { alias: "connection1", auth: false, server: "" },
-          vscode.TreeItemCollapsibleState.Expanded,
-        );
-        return [node];
+        return [kdbNode, insightNode];
       },
     };
+    ext.connectionsList.push(kdbNode);
+    ext.connectionsList.push(insightNode);
+    ext.activeTextEditor = <any>{
+      document: {
+        uri: insightsUri,
+        fileName: "test-insights.q",
+        getText() {
+          return "";
+        },
+      },
+    };
+
     sinon
       .stub(ConnectionManagementService.prototype, "isConnected")
       .returns(true);
@@ -2586,15 +2614,19 @@ describe("workspaceCommand", () => {
       return {
         get(key: string) {
           switch (key) {
+            case "servers":
+              return [{ serverAlias: "connection2" }];
             case "insightsEnterpriseConnections":
               return [{ alias: "connection1" }];
             case "connectionMap":
               return {
-                [vscode.Uri.file("test-target.q").path]: "connection1",
+                [kdbUri.path]: "connection2",
+                [insightsUri.path]: "connection1",
               };
             case "targetMap":
               return {
-                [vscode.Uri.file("test-target.q").path]: "assembly target",
+                [kdbUri.path]: "assembly target",
+                [insightsUri.path]: "assembly target",
               };
           }
           return {};
@@ -2606,6 +2638,8 @@ describe("workspaceCommand", () => {
   afterEach(() => {
     sinon.restore();
     ext.serverProvider = <any>{};
+    ext.connectionsList.length = 0;
+    ext.activeTextEditor = undefined;
   });
   describe("connectWorkspaceCommands", () => {
     it("should update views on delete and create", () => {
@@ -2665,8 +2699,26 @@ describe("workspaceCommand", () => {
   });
   describe("pickTarget", () => {
     it("should pick from available targets", async () => {
-      sinon.stub(vscode.window, "showQuickPick").value(async () => "(none)");
-      await workspaceCommand.pickTarget(vscode.Uri.file("test-target.q"));
+      sinon
+        .stub(vscode.window, "showQuickPick")
+        .value(async () => "scratchpad");
+      let res = await workspaceCommand.pickTarget(insightsUri);
+      assert.strictEqual(res, undefined);
+      res = await workspaceCommand.pickTarget(kdbUri);
+      assert.strictEqual(res, undefined);
+    });
+  });
+  describe("getConnectionForUri", () => {
+    it("should return node", async () => {
+      const insights = workspaceCommand.getConnectionForUri(insightsUri);
+      assert.ok(insights instanceof InsightsNode);
+      const kdb = workspaceCommand.getConnectionForUri(kdbUri);
+      assert.ok(kdb instanceof KdbNode);
+    });
+  });
+  describe("runActiveEditor", () => {
+    it("should run query", async () => {
+      await workspaceCommand.runActiveEditor();
     });
   });
   describe("ConnectionLensProvider", () => {

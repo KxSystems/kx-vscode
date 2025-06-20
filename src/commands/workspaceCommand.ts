@@ -48,10 +48,6 @@ function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   }
 }
 
-export function getConnectionService() {
-  return new ConnectionManagementService();
-}
-
 export function getInsightsServers() {
   const conf = workspace.getConfiguration("kdb");
   const servers = conf.get<{ [key: string]: { alias: string } }>(
@@ -202,12 +198,10 @@ export async function pickTarget(uri: Uri) {
   let daps: MetaDap[] = [];
 
   if (!isPython(uri)) {
-    const connectionService = getConnectionService();
-    const connected = connectionService.isConnected(conn.label);
+    const connMngService = new ConnectionManagementService();
+    const connected = connMngService.isConnected(conn.label);
     if (connected) {
-      daps = JSON.parse(
-        connectionService.retrieveMetaContent(conn.label, "DAP"),
-      );
+      daps = JSON.parse(connMngService.retrieveMetaContent(conn.label, "DAP"));
     } else {
       offerConnectAction(server);
     }
@@ -369,7 +363,7 @@ export function connectWorkspaceCommands() {
     arguments: [],
   };
 
-  const watcher = workspace.createFileSystemWatcher("**/*.kdb.{json,q,py}");
+  const watcher = workspace.createFileSystemWatcher("**/*.{kdb.json,q,py}");
   watcher.onDidCreate(update);
   watcher.onDidDelete(update);
 
