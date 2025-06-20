@@ -18,7 +18,7 @@ This guide provides information on the following:
 - [kdb language server](#kdb-language-server)
 - [Executing code](#execute-code)
 - [Data sources](#data-sources)
-- [Workbooks](#workbooks)
+- [Workbooks and source files](#workbooks)
 - [KX Notebooks](#kx-notebooks-in-visual-studio-code)
 - [Query History](#query-history)
 - [Viewing results](#view-results)
