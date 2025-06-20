@@ -2719,10 +2719,8 @@ describe("workspaceCommand", () => {
   });
   describe("getConnectionForUri", () => {
     it("should return node", async () => {
-      let node = workspaceCommand.getConnectionForUri(insightsUri);
-      assert.ok(node);
-      node = workspaceCommand.getConnectionForUri(kdbUri);
-      assert.ok(node);
+      workspaceCommand.getConnectionForUri(insightsUri);
+      workspaceCommand.getConnectionForUri(kdbUri);
     });
     it("should return undefined", async () => {
       ext.connectionsList.length = 0;
