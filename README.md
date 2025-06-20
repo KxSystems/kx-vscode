@@ -18,7 +18,7 @@ This guide provides information on the following:
 - [kdb language server](#kdb-language-server)
 - [Executing code](#execute-code)
 - [Data sources](#data-sources)
-- [Workbooks and source files](#workbooks)
+- [Workbooks and source files](#workbooks-and-source-files)
 - [KX Notebooks](#kx-notebooks-in-visual-studio-code)
 - [Query History](#query-history)
 - [Viewing results](#view-results)
@@ -645,6 +645,7 @@ To create a Workbook and run code against a specific connection:
    1. To run all the code in the file you can use one of the following methods:
 
       1. Click **Run** from above the first line of code in the workbook file.
+
          ![workbook links](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookrunlink.png)
 
       1. Select **Run** from the upper right of the editor. Using the dropdown next to the button you can choose any of the [**KX:** menu items](#kdb-process-executing-q-and-python-code) to run some, or all of the code in the workbook.
@@ -675,7 +676,7 @@ Regular `.q` and `.py` files now support enhanced functionality similar to [Work
 
 You can run code on either the [scratchpad](#run-and-populate-scratchpad) or directly on DAP processes — such as RDB or HDB — without needing to copy/paste or switch between special file types.
 
-Key differences:
+**Key differences**:
 
 - Not listed in the WORKBOOKS sidebar
 - Do not require `.kdb.` in the filename
