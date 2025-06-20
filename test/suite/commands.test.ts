@@ -2566,6 +2566,7 @@ describe("walkthroughCommand", () => {
 describe("workspaceCommand", () => {
   const kdbUri = vscode.Uri.file("test-kdb.q");
   const insightsUri = vscode.Uri.file("test-insights.q");
+  const pythonUri = vscode.Uri.file("test-python.q");
 
   beforeEach(() => {
     const insightNode = new InsightsNode(
@@ -2622,6 +2623,7 @@ describe("workspaceCommand", () => {
               return {
                 [kdbUri.path]: "connection2",
                 [insightsUri.path]: "connection1",
+                [pythonUri.path]: "connection1",
               };
             case "targetMap":
               return {
@@ -2703,17 +2705,29 @@ describe("workspaceCommand", () => {
         .stub(vscode.window, "showQuickPick")
         .value(async () => "scratchpad");
       let res = await workspaceCommand.pickTarget(insightsUri);
-      //assert.strictEqual(res, undefined);
+      assert.strictEqual(res, undefined);
       res = await workspaceCommand.pickTarget(kdbUri);
-      //assert.strictEqual(res, undefined);
+      assert.strictEqual(res, undefined);
+    });
+    it("should only show scratchpad for .py files", async () => {
+      sinon
+        .stub(vscode.window, "showQuickPick")
+        .value(async () => "scratchpad");
+      const res = await workspaceCommand.pickTarget(pythonUri);
+      assert.strictEqual(res, undefined);
     });
   });
   describe("getConnectionForUri", () => {
     it("should return node", async () => {
-      const insights = workspaceCommand.getConnectionForUri(insightsUri);
-      //assert.ok(insights instanceof InsightsNode);
-      const kdb = workspaceCommand.getConnectionForUri(kdbUri);
-      //assert.ok(kdb instanceof KdbNode);
+      let node = workspaceCommand.getConnectionForUri(insightsUri);
+      assert.ok(node);
+      node = workspaceCommand.getConnectionForUri(kdbUri);
+      assert.ok(node);
+    });
+    it("should return undefined", async () => {
+      ext.connectionsList.length = 0;
+      const node = workspaceCommand.getConnectionForUri(insightsUri);
+      assert.strictEqual(node, undefined);
     });
   });
   describe("runActiveEditor", () => {

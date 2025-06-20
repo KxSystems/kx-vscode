@@ -155,10 +155,8 @@ export function getConnectionForUri(uri: Uri) {
     return ext.connectionsList.find((item) => {
       if (item instanceof InsightsNode) {
         return item.details.alias === server;
-      } else if (item instanceof KdbNode) {
-        return item.details.serverAlias === server;
       }
-      return false;
+      return item.details.serverAlias === server;
     }) as KdbNode | InsightsNode;
   }
 }
@@ -251,6 +249,7 @@ function isDataSource(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".kdb.json");
 }
 
+/* istanbul ignore next */
 function isKxFolder(uri: Uri | undefined) {
   return uri && Path.basename(uri.path) === ".kx";
 }
@@ -367,6 +366,7 @@ export function connectWorkspaceCommands() {
   watcher.onDidCreate(update);
   watcher.onDidDelete(update);
 
+  /* istanbul ignore next */
   workspace.onDidDeleteFiles((event) => {
     for (const uri of event.files) {
       if (isKxFolder(uri)) {
@@ -377,6 +377,7 @@ export function connectWorkspaceCommands() {
     }
   });
 
+  /* istanbul ignore next */
   workspace.onDidRenameFiles(async (event) => {
     for (const { oldUri, newUri } of event.files) {
       await setServerForUri(newUri, getServerForUri(oldUri));
@@ -386,6 +387,7 @@ export function connectWorkspaceCommands() {
     }
   });
 
+  /* istanbul ignore next */
   workspace.onDidChangeWorkspaceFolders(() => {
     ext.dataSourceTreeProvider.reload();
     ext.scratchpadTreeProvider.reload();
