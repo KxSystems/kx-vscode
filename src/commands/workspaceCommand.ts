@@ -33,9 +33,12 @@ import { ExecutionTypes } from "../models/execution";
 import { MetaDap } from "../models/meta";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
-import { kdbOutputLog, offerConnectAction } from "../utils/core";
+import { offerConnectAction } from "../utils/core";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
+import { MessageKind, showMessage } from "../utils/notifications";
 import { normalizeAssemblyTarget } from "../utils/shared";
+
+const logger = "workspaceCommand";
 
 function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   if (editor) {
@@ -404,9 +407,7 @@ export async function importOldDSFiles() {
   if (ext.oldDSformatExists) {
     const folders = workspace.workspaceFolders;
     if (!folders) {
-      window.showErrorMessage(
-        "No workspace folder found. Please open a workspace folder.",
-      );
+      showMessage("No workspace folder found.", MessageKind.ERROR);
       return;
     }
     return await window.withProgress(
@@ -416,9 +417,10 @@ export async function importOldDSFiles() {
       },
       async (progress, token) => {
         token.onCancellationRequested(() => {
-          kdbOutputLog(
-            "[DATASOURCE] User cancelled the old DS files import.",
-            "INFO",
+          showMessage(
+            "User cancelled the old DS files import.",
+            MessageKind.DEBUG,
+            { logger },
           );
           return false;
         });
@@ -429,12 +431,10 @@ export async function importOldDSFiles() {
       },
     );
   } else {
-    window.showInformationMessage(
+    showMessage(
       "No old Datasource files found on your VSCODE.",
-    );
-    kdbOutputLog(
-      "[DATASOURCE] No old Datasource files found on your VSCODE.",
-      "INFO",
+      MessageKind.INFO,
+      { logger },
     );
   }
 }

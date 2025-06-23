@@ -14,7 +14,6 @@
 import axios, { AxiosRequestConfig } from "axios";
 import { jwtDecode } from "jwt-decode";
 import * as url from "url";
-import { ProgressLocation, window } from "vscode";
 
 import { ext } from "../extensionVariables";
 import { isCompressed, uncompress } from "../ipc/c";
@@ -39,10 +38,10 @@ import { InsightsNode } from "../services/kdbTreeProvider";
 import {
   isBaseVersionGreaterOrEqual,
   invalidUsernameJWT,
-  kdbOutputLog,
   tokenUndefinedError,
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
+import { MessageKind, Runner, showMessage } from "../utils/notifications";
 import {
   generateQSqlBody,
   handleScratchpadTableRes,
@@ -50,6 +49,8 @@ import {
 } from "../utils/queryUtils";
 import { Telemetry } from "../utils/telemetryClient";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
+
+const logger = "insightsConnection";
 
 const customHeadersOctet = {
   Accept: "application/octet-stream",
@@ -85,7 +86,7 @@ export class InsightsConnection {
         await this.getConfig();
         await this.getMeta();
         await this.getApiConfig();
-        await this.getScratchpadQuery("", undefined, false, true);
+        this.getScratchpadQuery("", undefined, false, true, false);
       }
     });
     return this.connected;
@@ -153,9 +154,10 @@ export class InsightsConnection {
 
   public returnMetaObject(metaType: MetaInfoType): string {
     if (!this.meta) {
-      kdbOutputLog(
+      showMessage(
         `Meta data is undefined for connection ${this.connLabel}`,
-        "ERROR",
+        MessageKind.ERROR,
+        { logger },
       );
       return "";
     }
@@ -182,7 +184,9 @@ export class InsightsConnection {
         objectToReturn = this.meta.payload.rc;
         break;
       default:
-        kdbOutputLog(`Invalid meta type: ${metaType}`, "ERROR");
+        showMessage(`Invalid meta type: ${metaType}`, MessageKind.ERROR, {
+          logger,
+        });
         return "";
     }
 
@@ -380,47 +384,39 @@ export class InsightsConnection {
         return undefined;
       }
       options.responseType = "arraybuffer";
-      const results = await window.withProgress(
-        {
-          location: ProgressLocation.Notification,
-          cancellable: true,
-        },
-        async (progress, token) => {
-          token.onCancellationRequested(() => {
-            kdbOutputLog(`User cancelled the Datasource Run.`, "WARNING");
+
+      const runner = Runner.create(async () => {
+        return await axios(options)
+          .then((response: any) => {
+            showMessage(
+              `Datasource run status: ${response.status}.`,
+              MessageKind.DEBUG,
+              { logger },
+            );
+            if (isCompressed(response.data)) {
+              response.data = uncompress(response.data);
+            }
+            return {
+              error: "",
+              arrayBuffer: response.data.buffer
+                ? response.data.buffer
+                : response.data,
+            };
+          })
+          .catch((error: any) => {
+            showMessage(
+              `Datasource run status: ${error.response.status}.`,
+              MessageKind.DEBUG,
+              { logger, params: [error] },
+            );
+            return {
+              error: { buffer: error.response.data },
+              arrayBuffer: undefined,
+            };
           });
-
-          progress.report({ message: "Query executing..." });
-
-          return await axios(options)
-            .then((response: any) => {
-              kdbOutputLog(
-                `[Datasource RUN] Status: ${response.status}.`,
-                "INFO",
-              );
-              if (isCompressed(response.data)) {
-                response.data = uncompress(response.data);
-              }
-              return {
-                error: "",
-                arrayBuffer: response.data.buffer
-                  ? response.data.buffer
-                  : response.data,
-              };
-            })
-            .catch((error: any) => {
-              kdbOutputLog(
-                `[Datasource RUN] Status: ${error.response.status}.`,
-                "INFO",
-              );
-              return {
-                error: { buffer: error.response.data },
-                arrayBuffer: undefined,
-              };
-            });
-        },
-      );
-      return results;
+      });
+      runner.title = "Executing query";
+      return await runner.execute();
     }
   }
 
@@ -470,9 +466,10 @@ export class InsightsConnection {
           const udaReqBody = await retrieveUDAtoCreateReqBody(uda, this);
 
           if (udaReqBody.error) {
-            kdbOutputLog(
-              `[SCRATCHPAD] Error occurred while creating UDA request body: ${udaReqBody.error}`,
-              "ERROR",
+            showMessage(
+              "Unable to create UDA request body.",
+              MessageKind.ERROR,
+              { logger, params: [udaReqBody.error] },
             );
             return;
           }
@@ -504,46 +501,27 @@ export class InsightsConnection {
         return;
       }
 
-      await window.withProgress(
-        {
-          location: ProgressLocation.Notification,
-          cancellable: false,
-        },
-        async (progress, token) => {
-          token.onCancellationRequested(() => {
-            kdbOutputLog(`User cancelled the scratchpad import.`, "WARNING");
-          });
-
-          progress.report({ message: "Populating scratchpad..." });
-
-          return await axios(options).then((response: any) => {
-            if (response.data.error) {
-              kdbOutputLog(
-                `[SCRATCHPAD] Error occured while populating scratchpad: ${response.data.errorMsg}`,
-                "ERROR",
-              );
-            } else {
-              kdbOutputLog(
-                `Executed successfully, stored in ${variableName}.`,
-                "INFO",
-              );
-              kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
-              kdbOutputLog(
-                `[SCRATCHPAD] Populated scratchpad with the following params: ${JSON.stringify(
-                  body.params,
-                )}`,
-                "INFO",
-              );
-              window.showInformationMessage(
-                `Executed successfully, stored in ${variableName}.`,
-              );
-              Telemetry.sendEvent(
-                "Datasource." + dsTypeString + ".Scratchpad.Populated",
-              );
-            }
-          });
-        },
-      );
+      const runner = Runner.create(async () => {
+        return await axios(options).then((response: any) => {
+          if (response.data.error) {
+            showMessage("Unable to populate scratchpad.", MessageKind.ERROR, {
+              logger,
+              params: [response.data.errorMsg],
+            });
+          } else {
+            showMessage(
+              `Populated scratchpad, stored in ${variableName}.`,
+              MessageKind.INFO,
+              { logger, params: [response.status, body.params] },
+            );
+            Telemetry.sendEvent(
+              "Datasource." + dsTypeString + ".Scratchpad.Populated",
+            );
+          }
+        });
+      });
+      runner.title = "Populating scratchpad...";
+      await runner.execute();
     } else {
       this.noConnectionOrEndpoints();
     }
@@ -601,36 +579,28 @@ export class InsightsConnection {
         return;
       }
 
-      const udaResponse = await window.withProgress(
-        {
-          location: ProgressLocation.Notification,
-          cancellable: false,
-        },
-        async (_progress, token) => {
-          token.onCancellationRequested(() => {
-            kdbOutputLog(`User cancelled the UDA execution.`, "WARNING");
-          });
-
-          const udaRes = await axios(options).then((response: any) => {
-            if (response.data.error) {
-              return response.data;
-            } else {
-              kdbOutputLog(`[UDA] Status: ${response.status}`, "INFO");
-              if (!response.data.error) {
-                if (isTableView) {
-                  response.data = JSON.parse(
-                    response.data.data,
-                  ) as StructuredTextResults;
-                }
-                return response.data;
+      const runner = Runner.create(async () => {
+        const udaRes = await axios(options).then((response: any) => {
+          if (response.data.error) {
+            return response.data;
+          } else {
+            showMessage(`Status: ${response.status}`, MessageKind.DEBUG, {
+              logger,
+            });
+            if (!response.data.error) {
+              if (isTableView) {
+                response.data = JSON.parse(
+                  response.data.data,
+                ) as StructuredTextResults;
               }
               return response.data;
             }
-          });
-          return udaRes;
-        },
-      );
-      return udaResponse;
+            return response.data;
+          }
+        });
+        return udaRes;
+      });
+      return await runner.execute();
     } else {
       this.noConnectionOrEndpoints();
     }
@@ -684,61 +654,54 @@ export class InsightsConnection {
         return;
       }
 
-      const spResponse = await window.withProgress(
-        {
-          location: ProgressLocation.Notification,
-          cancellable: false,
-        },
-        async (progress, token) => {
-          token.onCancellationRequested(() => {
-            kdbOutputLog(`User cancelled the scratchpad execution.`, "WARNING");
-          });
+      const runner = Runner.create(async (progress) => {
+        if (isStarting) {
+          progress.report({ message: "Starting scratchpad..." });
+        }
 
-          if (isStarting) {
-            progress.report({ message: "Starting scratchpad..." });
-          }
+        const spRes = await axios(options).then((response: any) => {
+          if (response.data.error) {
+            return response.data;
+          } else if (query === "") {
+            showMessage(
+              `Scratchpad created for connection: ${this.connLabel}.`,
+              MessageKind.DEBUG,
+              { logger },
+            );
+          } else {
+            showMessage(`Status: ${response.status}`, MessageKind.DEBUG, {
+              logger,
+            });
+            if (!response.data.error) {
+              if (isTableView) {
+                if (
+                  /* TODO: Workaround for Python structuredText bug */
+                  !isPython &&
+                  this.insightsVersion &&
+                  isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
+                ) {
+                  response.data = JSON.parse(
+                    response.data.data,
+                  ) as StructuredTextResults;
+                } else {
+                  const buffer = new Uint8Array(
+                    response.data.data.map((x: string) => parseInt(x, 16)),
+                  ).buffer;
 
-          const spRes = await axios(options).then((response: any) => {
-            if (response.data.error) {
-              return response.data;
-            } else if (query === "") {
-              kdbOutputLog(
-                `[SCRATCHPAD] scratchpad created for connection: ${this.connLabel}`,
-                "INFO",
-              );
-            } else {
-              kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
-              if (!response.data.error) {
-                if (isTableView) {
-                  if (
-                    /* TODO: Workaround for Python structuredText bug */
-                    !isPython &&
-                    this.insightsVersion &&
-                    isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
-                  ) {
-                    response.data = JSON.parse(
-                      response.data.data,
-                    ) as StructuredTextResults;
-                  } else {
-                    const buffer = new Uint8Array(
-                      response.data.data.map((x: string) => parseInt(x, 16)),
-                    ).buffer;
-
-                    response.data.data = handleWSResults(buffer, isTableView);
-                    response.data.data = handleScratchpadTableRes(
-                      response.data.data,
-                    );
-                  }
+                  response.data.data = handleWSResults(buffer, isTableView);
+                  response.data.data = handleScratchpadTableRes(
+                    response.data.data,
+                  );
                 }
-                return response.data;
               }
               return response.data;
             }
-          });
-          return spRes;
-        },
-      );
-      return spResponse;
+            return response.data;
+          }
+        });
+        return spRes;
+      });
+      return await runner.execute();
     } else {
       this.noConnectionOrEndpoints();
     }
@@ -763,43 +726,30 @@ export class InsightsConnection {
         return;
       }
 
-      return await window.withProgress(
-        {
-          location: ProgressLocation.Notification,
-          cancellable: false,
-        },
-        async (progress, token) => {
-          token.onCancellationRequested(() => {
-            kdbOutputLog(`User cancelled the scratchpad reset.`, "WARNING");
+      const runner = Runner.create(async (progress) => {
+        progress.report({ message: "Reseting scratchpad..." });
+        const res = await axios(options)
+          .then((_response: any) => {
+            showMessage(
+              `Executed successfully, scratchpad reset at ${this.connLabel} connection.`,
+              MessageKind.INFO,
+              { logger },
+            );
+            Telemetry.sendEvent("Scratchpad.Reseted");
+            return true;
+          })
+          .catch((_error: any) => {
+            showMessage(
+              `Error occurred while resetting scratchpad in connection ${this.connLabel}, try again.`,
+              MessageKind.ERROR,
+              { logger },
+            );
             return false;
           });
-          progress.report({ message: "Reseting scratchpad..." });
-          const res = await axios(options)
-            .then((_response: any) => {
-              kdbOutputLog(
-                `[SCRATCHPAD] Executed successfully, scratchpad reset at ${this.connLabel} connection.`,
-                "INFO",
-              );
-              window.showInformationMessage(
-                `Executed successfully, scratchpad reset at ${this.connLabel} connection.`,
-              );
-              Telemetry.sendEvent("Scratchpad.Reseted");
-              return true;
-            })
-            .catch((_error: any) => {
-              kdbOutputLog(
-                `[SCRATCHPAD] Error occurred while resetting scratchpad in connection ${this.connLabel}, try again.`,
-                "ERROR",
-              );
-              window.showErrorMessage(
-                "Error occurred while resetting scratchpad, try again.",
-              );
-              return false;
-            });
 
-          return res;
-        },
-      );
+        return res;
+      });
+      return await runner.execute();
     } else {
       this.noConnectionOrEndpoints();
       return false;
@@ -807,9 +757,10 @@ export class InsightsConnection {
   }
 
   public noConnectionOrEndpoints(): void {
-    kdbOutputLog(
+    showMessage(
       `No connection or endpoints defined for ${this.connLabel}`,
-      "ERROR",
+      MessageKind.ERROR,
+      { logger },
     );
   }
 }

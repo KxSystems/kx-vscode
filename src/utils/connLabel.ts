@@ -14,10 +14,12 @@
 import { workspace } from "vscode";
 
 import { ext } from "../extensionVariables";
-import { kdbOutputLog } from "./core";
+import { MessageKind, showMessage } from "./notifications";
 import { ConnectionLabel, Labels } from "../models/labels";
 import { NewConnectionPannel } from "../panels/newConnection";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
+
+const logger = "connLabel";
 
 export function getWorkspaceLabels() {
   const existingConnLbls = workspace
@@ -37,7 +39,7 @@ export function createNewLabel(name: string, colorName: string) {
     (color) => color.name.toLowerCase() === colorName.toLowerCase(),
   );
   if (name === "") {
-    kdbOutputLog("Label name can't be empty", "ERROR");
+    showMessage("Label name can't be empty.", MessageKind.ERROR, { logger });
   }
   if (color && name !== "") {
     const newLbl: Labels = {
@@ -49,7 +51,9 @@ export function createNewLabel(name: string, colorName: string) {
       .getConfiguration()
       .update("kdb.connectionLabels", ext.connLabelList, true);
   } else {
-    kdbOutputLog("No Color selected for the label", "ERROR");
+    showMessage("No Color selected for the label.", MessageKind.ERROR, {
+      logger,
+    });
   }
 }
 

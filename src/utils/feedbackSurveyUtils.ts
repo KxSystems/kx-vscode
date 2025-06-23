@@ -14,6 +14,7 @@
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
+import { MessageKind, showMessage } from "./notifications";
 
 export async function feedbackSurveyDialog(
   sawSurveyAlready: boolean,
@@ -47,8 +48,10 @@ export async function feedbackSurveyDialog(
 
 async function showSurveyDialog() {
   const SURVEY_URL = ext.urlLinks.survey;
-  const result = await vscode.window.showInformationMessage(
+  const result = await showMessage(
     "Got 2 Minutes? Help us make the KX extension even better for your workflows.",
+    MessageKind.INFO,
+    {},
     "Take Survey",
     "Don't show me this message next time",
   );

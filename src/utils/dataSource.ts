@@ -13,29 +13,33 @@
 
 import * as fs from "fs";
 import path from "path";
-import { workspace, window, Uri } from "vscode";
+import { workspace, Uri } from "vscode";
 
 import { InsightsConnection } from "../classes/insightsConnection";
 import { ext } from "../extensionVariables";
-import { kdbOutputLog } from "./core";
+import { MessageKind, showMessage } from "./notifications";
 import { Telemetry } from "./telemetryClient";
 import { DataSourceFiles } from "../models/dataSource";
 import { DataSourcesPanel } from "../panels/datasource";
+
+const logger = "dataSource";
 
 export function createKdbDataSourcesFolder(): string {
   const rootPath = ext.context.globalStorageUri.fsPath;
   const kdbDataSourcesFolderPath = path.join(rootPath, ext.kdbDataSourceFolder);
   if (!fs.existsSync(rootPath)) {
-    kdbOutputLog(
-      `[DATSOURCE] Directory created to the extension folder: ${rootPath}`,
-      "INFO",
+    showMessage(
+      `Directory created to the extension folder: ${rootPath}`,
+      MessageKind.DEBUG,
+      { logger },
     );
     fs.mkdirSync(rootPath);
   }
   if (!fs.existsSync(kdbDataSourcesFolderPath)) {
-    kdbOutputLog(
-      `[DATSOURCE] Directory created to the extension folder: ${kdbDataSourcesFolderPath}`,
-      "INFO",
+    showMessage(
+      `Directory created to the extension folder: ${kdbDataSourcesFolderPath}`,
+      MessageKind.DEBUG,
+      { logger },
     );
     fs.mkdirSync(kdbDataSourcesFolderPath);
   }
@@ -51,12 +55,10 @@ export function convertTimeToTimestamp(time: string): string {
     const timePart = parts[1].replace("Z", "0").padEnd(9, "0");
     return `${datePart}.${timePart}`;
   } catch (error) {
-    kdbOutputLog(
-      `The string param is in an incorrect format. Param: ${time} Error: ${error}`,
-      "ERROR",
-    );
-    console.error(
-      `The string param is in an incorrect format. Param: ${time} Error: ${error}`,
+    showMessage(
+      "The string param is in an incorrect format.",
+      MessageKind.ERROR,
+      { logger, params: [time, error] },
     );
     return "";
   }
@@ -151,7 +153,7 @@ export async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
       filePath = path.join(importToUri.fsPath, fileName);
     }
     fs.writeFileSync(filePath, JSON.stringify(ds));
-    window.showInformationMessage(`Datasource created.`);
+    showMessage(`Datasource created.`, MessageKind.INFO);
     Telemetry.sendEvent("Datasource.Created");
   }
 }

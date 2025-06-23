@@ -17,7 +17,6 @@ import {
   CustomTextEditorProvider,
   Disposable,
   ExtensionContext,
-  ProgressLocation,
   Range,
   TextDocument,
   Webview,
@@ -43,9 +42,10 @@ import {
 import { DataSourceCommand, DataSourceMessage2 } from "../models/messages";
 import { MetaObjectPayload } from "../models/meta";
 import { UDA } from "../models/uda";
-import { kdbOutputLog, offerConnectAction } from "../utils/core";
+import { offerConnectAction } from "../utils/core";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
+import { MessageKind, Runner, showMessage } from "../utils/notifications";
 import { parseUDAList } from "../utils/uda";
 
 export class DataSourceEditorProvider implements CustomTextEditorProvider {
@@ -92,16 +92,12 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
 
       this.cache.set(connLabel, meta);
     } catch {
-      window.showErrorMessage(
+      showMessage(
         "No database running in this Insights connection.",
+        MessageKind.ERROR,
       );
       meta = Promise.resolve(<MetaObjectPayload>{});
       this.cache.set(connLabel, meta);
-      kdbOutputLog(
-        "No database running in this Insights connection.",
-        "ERROR",
-        true,
-      );
     }
     return (await meta) || Promise.resolve(<MetaObjectPayload>{});
   }
@@ -193,22 +189,17 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
         }
         case DataSourceCommand.Refresh: {
           const selectedServer = getServerForUri(document.uri) || "";
-          if (!connMngService.isConnected(selectedServer)) {
-            offerConnectAction(selectedServer);
-            break;
-          }
-          await window.withProgress(
-            {
-              cancellable: false,
-              location: ProgressLocation.Notification,
-              title: "Refreshing meta data...",
-            },
-            async () => {
+          if (connMngService.isConnected(selectedServer)) {
+            const runner = Runner.create(async () => {
               await connMngService.refreshGetMeta(selectedServer);
               this.cache.delete(selectedServer);
               updateWebview();
-            },
-          );
+            });
+            runner.title = "Refreshing meta data";
+            await runner.execute();
+          } else {
+            offerConnectAction(selectedServer);
+          }
           break;
         }
         case DataSourceCommand.Run: {

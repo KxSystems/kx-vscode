@@ -33,17 +33,14 @@ import { scratchpadVariableInput } from "../models/items/server";
 import { UDARequestBody } from "../models/uda";
 import { DataSourcesPanel } from "../panels/datasource";
 import { ConnectionManagementService } from "../services/connectionManagerService";
-import {
-  kdbOutputLog,
-  noSelectedConnectionAction,
-  offerConnectAction,
-} from "../utils/core";
+import { noSelectedConnectionAction, offerConnectAction } from "../utils/core";
 import {
   checkIfTimeParamIsCorrect,
   convertTimeToTimestamp,
   createKdbDataSourcesFolder,
   getConnectedInsightsNode,
 } from "../utils/dataSource";
+import { MessageKind, showMessage } from "../utils/notifications";
 import {
   addQueryHistory,
   generateQSqlBody,
@@ -54,6 +51,8 @@ import {
 import { Telemetry } from "../utils/telemetryClient";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
+
+const logger = "dataSourceCommands";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -74,8 +73,10 @@ export async function addDataSource(): Promise<void> {
   defaultDataSourceContent.insightsNode = insightsNode;
 
   fs.writeFileSync(filePath, JSON.stringify(defaultDataSourceContent));
-  window.showInformationMessage(
+  showMessage(
     `Created ${fileName} in ${kdbDataSourcesFolderPath}.`,
+    MessageKind.INFO,
+    { logger },
   );
   Telemetry.sendEvent("Datasource.Created");
 }
@@ -115,9 +116,10 @@ export async function populateScratchpad(
         qenvEnabled === "Enabled",
       );
     } else {
-      kdbOutputLog(
-        `[DATASOURCE] Invalid scratchpad output variable name: ${outputVariable}`,
-        "ERROR",
+      showMessage(
+        `Invalid scratchpad output variable name: ${outputVariable}`,
+        MessageKind.ERROR,
+        { logger },
       );
     }
   });
@@ -155,9 +157,10 @@ export async function runDataSource(
     dataSourceForm.insightsNode = getConnectedInsightsNode();
     const fileContent = dataSourceForm;
 
-    kdbOutputLog(
-      `[DATASOURCE] Running ${fileContent.name} datasource...`,
-      "INFO",
+    showMessage(
+      `Running ${fileContent.name} datasource...`,
+      MessageKind.DEBUG,
+      { logger },
     );
     let res: any;
     const selectedType = getSelectedType(fileContent);
@@ -189,12 +192,17 @@ export async function runDataSource(
       const query = getQuery(fileContent, selectedType);
 
       if (!success) {
-        window.showErrorMessage(res.error);
+        showMessage("Datasource run failed.", MessageKind.ERROR, {
+          logger,
+          params: [res.error],
+        });
       }
       if (ext.isResultsTabVisible) {
         if (success) {
           const resultCount = typeof res === "string" ? "0" : res.rows.length;
-          kdbOutputLog(`[DATASOURCE] Results: ${resultCount} rows`, "INFO");
+          showMessage(`Results: ${resultCount} rows`, MessageKind.DEBUG, {
+            logger,
+          });
         } else if (!success) {
           res = res.errorMsg ? res.errorMsg : res.error;
         }
@@ -208,9 +216,10 @@ export async function runDataSource(
         );
       } else {
         if (success) {
-          kdbOutputLog(
-            `[DATASOURCE] Results is a string with length: ${res.length}`,
-            "INFO",
+          showMessage(
+            `Results is a string with length: ${res.length}`,
+            MessageKind.DEBUG,
+            { logger },
           );
         } else if (res.error) {
           res = res.errorMsg ? res.errorMsg : res.error;
@@ -228,8 +237,10 @@ export async function runDataSource(
       addDStoQueryHistory(dataSourceForm, success, connLabel, executorName);
     }
   } catch (error) {
-    window.showErrorMessage((error as Error).message);
-    kdbOutputLog(`[DATASOURCE]  ${(error as Error).message}`, "ERROR", true);
+    showMessage(`Datasource error: ${error}.`, MessageKind.ERROR, {
+      logger,
+      params: [error],
+    });
     DataSourcesPanel.running = false;
   } finally {
     DataSourcesPanel.running = false;
@@ -280,8 +291,9 @@ export async function runApiDataSource(
     fileContent.dataSource.api.endTS,
   );
   if (!isTimeCorrect) {
-    window.showErrorMessage(
-      "The time parameters(startTS and endTS) are not correct, please check the format or if the startTS is before the endTS",
+    showMessage(
+      "The time parameters (startTS and endTS) are not correct, please check the format or if the startTS is before the endTS",
+      MessageKind.ERROR,
     );
     return;
   }
@@ -444,7 +456,10 @@ export async function runUDADataSource(
   const udaReqBody = await retrieveUDAtoCreateReqBody(uda, selectedConn);
 
   if (udaReqBody.error) {
-    kdbOutputLog(`[DATASOURCE] Error: ${udaReqBody.error}`, "ERROR", true);
+    showMessage(`Datasource error.`, MessageKind.ERROR, {
+      logger,
+      params: [udaReqBody.error],
+    });
     return udaReqBody;
   }
 
@@ -491,11 +506,10 @@ export function parseError(error: GetDataError) {
   if (error instanceof Object && error.buffer) {
     return handleWSError(error.buffer);
   } else {
-    kdbOutputLog(
-      `[DATASOURCE] Error: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
-      "ERROR",
-      true,
-    );
+    showMessage(`Datasource error.`, MessageKind.ERROR, {
+      logger,
+      params: [error],
+    });
     return {
       error,
     };

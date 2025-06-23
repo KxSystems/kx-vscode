@@ -19,11 +19,12 @@ import { env } from "node:process";
 import { tmpdir } from "os";
 import { join } from "path";
 import * as semver from "semver";
-import { commands, ConfigurationTarget, Uri, window, workspace } from "vscode";
+import { commands, ConfigurationTarget, Uri, workspace } from "vscode";
 
 import { installTools } from "../commands/installTools";
 import { ext } from "../extensionVariables";
 import { tryExecuteCommand } from "./cpUtils";
+import { MessageKind, showMessage } from "./notifications";
 import { showRegistrationNotification } from "./registration";
 import { Telemetry } from "./telemetryClient";
 import {
@@ -34,8 +35,12 @@ import {
 } from "../models/connectionsModels";
 import { QueryResult } from "../models/queryResult";
 
+const logger = "core";
+
 export function log(childProcess: ChildProcess): void {
-  kdbOutputLog(`Process ${childProcess.pid} started`, "INFO");
+  showMessage(`Process ${childProcess.pid} started`, MessageKind.DEBUG, {
+    logger,
+  });
 }
 
 export async function checkOpenSslInstalled(): Promise<string | null> {
@@ -50,9 +55,10 @@ export async function checkOpenSslInstalled(): Promise<string | null> {
       const matcher = /(\d+.\d+.\d+)/;
       const installedVersion = result.cmdOutput.match(matcher);
 
-      kdbOutputLog(
+      showMessage(
         `Detected version ${installedVersion} of OpenSSL installed.`,
-        "INFO",
+        MessageKind.DEBUG,
+        { logger },
       );
 
       return semver.clean(installedVersion ? installedVersion[1] : "");
@@ -151,7 +157,11 @@ export function saveLocalProcessObj(
   childProcess: ChildProcess,
   args: string[],
 ): void {
-  kdbOutputLog(`Child process id ${childProcess.pid} saved in cache.`, "INFO");
+  showMessage(
+    `Child process id ${childProcess.pid} saved in cache.`,
+    MessageKind.DEBUG,
+    { logger },
+  );
   ext.localProcessObjects[args[2]] = childProcess;
 }
 
@@ -314,75 +324,61 @@ export function getServerAlias(serverList: ServerDetails[]): void {
   });
 }
 
-export function kdbOutputLog(
-  message: string,
-  type: string,
-  supressDialog?: boolean,
-): void {
-  const dateNow = new Date().toLocaleDateString();
-  const timeNow = new Date().toLocaleTimeString();
-  ext.outputChannel.appendLine(`[${dateNow} ${timeNow}] [${type}] ${message}`);
-  if (type === "ERROR" && !supressDialog) {
-    window.showErrorMessage(
-      `Error occured, check kdb output channel for details.`,
-    );
-  }
-}
-
 export function tokenUndefinedError(connLabel: string): void {
-  kdbOutputLog(
+  showMessage(
     `Error retrieving access token for Insights connection named: ${connLabel}`,
-    "ERROR",
+    MessageKind.ERROR,
   );
 }
 
 export function invalidUsernameJWT(connLabel: string): void {
-  kdbOutputLog(
+  showMessage(
     `JWT did not contain a valid preferred username for Insights connection: ${connLabel}`,
-    "ERROR",
+    MessageKind.ERROR,
   );
 }
 
 /* istanbul ignore next */
 export function offerConnectAction(connLabel: string): void {
-  window
-    .showInformationMessage(
-      `You aren't connected to ${connLabel}, would you like to connect? Once connected please try again.`,
-      "Connect",
-      "Cancel",
-    )
-    .then(async (result) => {
-      if (result === "Connect") {
-        await commands.executeCommand(
-          "kdb.connections.connect.via.dialog",
-          connLabel,
-        );
-      }
-    });
+  showMessage(
+    `You aren't connected to ${connLabel}, would you like to connect? Once connected please try again.`,
+    MessageKind.INFO,
+    {},
+    "Connect",
+    "Cancel",
+  ).then(async (result) => {
+    if (result === "Connect") {
+      await commands.executeCommand(
+        "kdb.connections.connect.via.dialog",
+        connLabel,
+      );
+    }
+  });
 }
 
 export function noSelectedConnectionAction(): void {
-  window.showInformationMessage(
+  showMessage(
     `You didn't selected any existing connection to execute this action, please select a connection and try again.`,
+    MessageKind.INFO,
   );
 }
 
 /* istanbul ignore next */
 export function offerReconnectionAfterEdit(connLabel: string): void {
-  window
-    .showInformationMessage(
-      `You are no longer connected to ${connLabel}, would you like to connect?`,
-      "Connect",
-      "Cancel",
-    )
-    .then(async (result) => {
-      if (result === "Connect") {
-        await commands.executeCommand(
-          "kdb.connections.connect.via.dialog",
-          connLabel,
-        );
-      }
-    });
+  showMessage(
+    `You are no longer connected to ${connLabel}, would you like to connect?`,
+    MessageKind.INFO,
+    {},
+    "Connect",
+    "Cancel",
+  ).then(async (result) => {
+    if (result === "Connect") {
+      await commands.executeCommand(
+        "kdb.connections.connect.via.dialog",
+        connLabel,
+      );
+    }
+  });
 }
 
 export function getInsightsAlias(insightsList: InsightDetails[]): void {
@@ -441,7 +437,7 @@ export async function checkLocalInstall(
   if (QHOME || env.QHOME) {
     env.QHOME = QHOME || env.QHOME;
     if (!pathExists(env.QHOME!)) {
-      kdbOutputLog("QHOME path stored is empty", "ERROR");
+      showMessage("QHOME path stored is empty.", MessageKind.ERROR);
     }
     await writeFile(
       join(__dirname, "qinstall.md"),
@@ -453,7 +449,11 @@ export async function checkLocalInstall(
       .getConfiguration()
       .update("kdb.qHomeDirectory", env.QHOME, ConfigurationTarget.Global);
 
-    kdbOutputLog(`Installation of q found here: ${env.QHOME}`, "INFO");
+    showMessage(
+      `Installation of q found here: ${env.QHOME}`,
+      MessageKind.DEBUG,
+      { logger },
+    );
 
     showRegistrationNotification();
 
@@ -461,8 +461,9 @@ export async function checkLocalInstall(
       .getConfiguration()
       .get<boolean>("kdb.hideInstallationNotification");
     if (!hideNotification) {
-      window.showInformationMessage(
+      showMessage(
         `Installation of q found here: ${env.QHOME}`,
+        MessageKind.INFO,
       );
     }
 
@@ -481,28 +482,24 @@ export async function checkLocalInstall(
   // set custom context that QHOME is not setup to control walkthrough visibility
   commands.executeCommand("setContext", "kdb.showInstallWalkthrough", true);
 
-  window
-    .showInformationMessage(
-      "Local q installation not found!",
-      "Install new instance",
-      "No",
-      "Never show again",
-    )
-    .then(async (installResult) => {
-      if (installResult === "Install new instance") {
-        await installTools();
-      } else if (installResult === "Never show again") {
-        await workspace
-          .getConfiguration()
-          .update(
-            "kdb.neverShowQInstallAgain",
-            true,
-            ConfigurationTarget.Global,
-          );
-      } else {
-        showRegistrationNotification();
-      }
-    });
+  showMessage(
+    "Local q installation not found!",
+    MessageKind.INFO,
+    {},
+    "Install new instance",
+    "No",
+    "Never show again",
+  ).then(async (installResult) => {
+    if (installResult === "Install new instance") {
+      await installTools();
+    } else if (installResult === "Never show again") {
+      await workspace
+        .getConfiguration()
+        .update("kdb.neverShowQInstallAgain", true, ConfigurationTarget.Global);
+    } else {
+      showRegistrationNotification();
+    }
+  });
 }
 
 export async function convertBase64License(
@@ -644,16 +641,16 @@ export function hasWorkspaceOrShowOption(action: string) {
   if (workspace.workspaceFolders && workspace.workspaceFolders.length > 0) {
     return true;
   }
-  window
-    .showWarningMessage(
-      `No workspace folder is open. Please open a folder to enable ${action}.`,
-      "Open",
-    )
-    .then((res) => {
-      if (res === "Open") {
-        commands.executeCommand("workbench.action.files.openFolder");
-      }
-    });
+  showMessage(
+    `No workspace folder is open. Please open a folder to enable ${action}.`,
+    MessageKind.WARNING,
+    {},
+    "Open",
+  ).then((res) => {
+    if (res === "Open") {
+      commands.executeCommand("workbench.action.files.openFolder");
+    }
+  });
   return false;
 }
 

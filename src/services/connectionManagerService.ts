@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { window, commands } from "vscode";
+import { commands } from "vscode";
 
 import { LocalConnection } from "../classes/localConnection";
 import { ext } from "../extensionVariables";
@@ -31,14 +31,16 @@ import {
   getKeyForServerName,
   getServerName,
   getServers,
-  kdbOutputLog,
   removeLocalConnectionContext,
   updateInsights,
   updateServers,
 } from "../utils/core";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
+import { MessageKind, showMessage } from "../utils/notifications";
 import { sanitizeQuery } from "../utils/queryUtils";
 import { Telemetry } from "../utils/telemetryClient";
+
+const logger = "connectionManagerService";
 
 export class ConnectionManagementService {
   public retrieveConnection(
@@ -144,14 +146,18 @@ export class ConnectionManagementService {
       );
       await localConnection.connect((err, conn) => {
         if (err) {
-          window.showErrorMessage(err.message);
+          showMessage(`Connection failed to: ${connLabel}`, MessageKind.ERROR, {
+            logger,
+            params: [err],
+          });
           this.isNotConnectedBehaviour(connLabel);
           return;
         }
         if (conn) {
-          kdbOutputLog(
+          showMessage(
             `Connection established successfully to: ${connLabel}`,
-            "CONNECTION",
+            MessageKind.DEBUG,
+            { logger },
           );
 
           Telemetry.sendEvent("Connection.Connected.QProcess");
@@ -170,13 +176,15 @@ export class ConnectionManagementService {
       await insightsConn.connect();
       if (insightsConn.connected) {
         Telemetry.sendEvent("Connection.Connected.Insights");
-        kdbOutputLog(
+        showMessage(
           `Connection established successfully to: ${connLabel}`,
-          "CONNECTION",
+          MessageKind.DEBUG,
+          { logger },
         );
-        kdbOutputLog(
+        showMessage(
           `${connLabel} connection insights version: ${insightsConn.insightsVersion}`,
-          "CONNECTION",
+          MessageKind.DEBUG,
+          { logger },
         );
         ext.connectedConnectionList.push(insightsConn);
         this.isConnectedBehaviour(connection);
@@ -288,7 +296,7 @@ export class ConnectionManagementService {
   }
 
   public isNotConnectedBehaviour(connLabel: string): void {
-    window.showErrorMessage(`Connection failed to: ${connLabel}`);
+    showMessage(`Connection failed to: ${connLabel}`, MessageKind.ERROR);
     Telemetry.sendEvent("Connection.Failed");
   }
 
@@ -316,9 +324,10 @@ export class ConnectionManagementService {
       commands.executeCommand("setContext", "kdb.pythonEnabled", false);
     }
     Telemetry.sendEvent("Connection.Disconnected." + connType);
-    kdbOutputLog(
-      `[CONNECTION] Connection closed: ${connection.connLabel}`,
-      "INFO",
+    showMessage(
+      `Connection closed: ${connection.connLabel}`,
+      MessageKind.DEBUG,
+      { logger },
     );
     ext.serverProvider.reload();
   }
@@ -368,9 +377,10 @@ export class ConnectionManagementService {
       if (retrievedConn instanceof InsightsConnection) {
         conn = retrievedConn;
       } else {
-        kdbOutputLog(
-          "[RESET SCRATCHPAD] Please connect to an Insights connection to use this feature.",
-          "ERROR",
+        showMessage(
+          "Please connect to an Insights connection to use this feature.",
+          MessageKind.ERROR,
+          { logger },
         );
         return;
       }
@@ -380,9 +390,10 @@ export class ConnectionManagementService {
         !ext.activeConnection ||
         !(ext.activeConnection instanceof InsightsConnection)
       ) {
-        kdbOutputLog(
-          "[RESET SCRATCHPAD] Please activate an Insights connection to use this feature.",
-          "ERROR",
+        showMessage(
+          "Please activate an Insights connection to use this feature.",
+          MessageKind.ERROR,
+          { logger },
         );
         return;
       }
@@ -394,8 +405,10 @@ export class ConnectionManagementService {
       isBaseVersionGreaterOrEqual(conn.insightsVersion, 1.13)
     ) {
       const confirmationPrompt = `Reset Scratchpad? All data in the ${conn.connLabel} Scratchpad will be lost, and variables will be reset.`;
-      const selection = await window.showInformationMessage(
+      const selection = await showMessage(
         confirmationPrompt,
+        MessageKind.INFO,
+        {},
         "Yes",
         "No",
       );
@@ -403,16 +416,18 @@ export class ConnectionManagementService {
       if (selection === "Yes") {
         await conn.resetScratchpad();
       } else {
-        kdbOutputLog(
-          "[RESET SCRATCHPAD] The user canceled the scratchpad reset.",
-          "INFO",
+        showMessage(
+          "The user canceled the scratchpad reset.",
+          MessageKind.DEBUG,
+          { logger },
         );
         return;
       }
     } else {
-      kdbOutputLog(
-        "[RESET SCRATCHPAD] Please connect to an Insights connection with version 1.13 or higher.",
-        "ERROR",
+      showMessage(
+        "Please connect to an Insights connection with version 1.13 or higher.",
+        MessageKind.ERROR,
+        { logger },
       );
     }
   }
@@ -445,24 +460,27 @@ export class ConnectionManagementService {
   ): string {
     const metaType = this.getMetaInfoType(metaTypeString.toUpperCase());
     if (!metaType) {
-      kdbOutputLog(
-        "[META] The meta info type that you try to open is not valid",
-        "ERROR",
+      showMessage(
+        "The meta info type that you try to open is not valid",
+        MessageKind.ERROR,
+        { logger },
       );
       return "";
     }
     const connection = this.retrieveConnectedConnection(connLabel);
     if (!connection) {
-      kdbOutputLog(
-        "[META] The connection that you try to open meta info is not connected",
-        "ERROR",
+      showMessage(
+        "The connection that you try to open meta info is not connected",
+        MessageKind.ERROR,
+        { logger },
       );
       return "";
     }
     if (connection instanceof LocalConnection) {
-      kdbOutputLog(
-        "[META] The connection that you try to open meta info is not an Insights connection",
-        "ERROR",
+      showMessage(
+        "The connection that you try to open meta info is not an Insights connection",
+        MessageKind.ERROR,
+        { logger },
       );
       return "";
     }

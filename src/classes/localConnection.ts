@@ -12,13 +12,16 @@
  */
 
 import * as nodeq from "node-q";
-import { commands, window } from "vscode";
+import { commands } from "vscode";
 
 import { ext } from "../extensionVariables";
 import { QueryResult, QueryResultType } from "../models/queryResult";
-import { delay, kdbOutputLog } from "../utils/core";
+import { delay } from "../utils/core";
 import { convertStringToArray, handleQueryResults } from "../utils/execution";
+import { MessageKind, showMessage } from "../utils/notifications";
 import { queryWrapper } from "../utils/queryUtils";
+
+const logger = "localConnection";
 
 export class LocalConnection {
   public connected: boolean;
@@ -84,38 +87,43 @@ export class LocalConnection {
         ext.serverProvider.reload();
 
         if (this.connLabel.endsWith("[local]")) {
-          window
-            .showErrorMessage(
-              `Connection to server ${this.options.host}:${this.options.port} failed.`,
-              "Start q process",
-            )
-            .then((res) => {
-              if (res) {
-                commands.executeCommand(
-                  "kdb.connections.localProcess.start",
-                  ext.connectionsList.find(
-                    (conn) => conn.label === this.connLabel,
-                  ),
-                );
-              }
-            });
-        } else {
-          window.showErrorMessage(
+          showMessage(
             `Connection to server ${this.options.host}:${this.options.port} failed.`,
+            MessageKind.ERROR,
+            {},
+            "Start q process",
+          ).then((res) => {
+            if (res) {
+              commands.executeCommand(
+                "kdb.connections.localProcess.start",
+                ext.connectionsList.find(
+                  (conn) => conn.label === this.connLabel,
+                ),
+              );
+            }
+          });
+        } else {
+          showMessage(
+            `Connection to server ${this.options.host}:${this.options.port} failed.`,
+            MessageKind.ERROR,
+            { logger },
           );
         }
 
-        kdbOutputLog(
-          `Connection to server ${this.options.host}:${this.options.port} failed!  Details: ${err?.message}`,
-          "CONNECTION",
+        showMessage(
+          `Connection to server ${this.options.host}:${this.options.port} failed.`,
+          MessageKind.ERROR,
+          { logger, params: [err] },
         );
+
         return;
       }
       conn.addListener("close", () => {
         commands.executeCommand("kdb.connections.disconnect", this.connLabel);
-        kdbOutputLog(
+        showMessage(
           `Connection closed: ${this.options.host}:${this.options.port}`,
-          "INFO",
+          MessageKind.DEBUG,
+          { logger },
         );
         ext.outputChannel.show();
       });
@@ -306,8 +314,10 @@ export class LocalConnection {
       '{[q] t:system"T";tm:@[{$[x>0;[system"T ",string x;1b];0b]};0;{0b}];r:$[tm;@[0;(q;::);{[tm; t; msgs] if[tm;system"T ",string t];\'msgs}[tm;t]];@[q;::;{\'x}]];if[tm;system"T ",string t];r}{do[1000;2+2];{@[{.z.ide.ns.r1:x;:.z.ide.ns.r1};x;{r:y;:r}[;x]]}({:x!{![sv[`;] each x cross `Tables`Functions`Variables; system each "afv" cross enlist[" "] cross enlist string x]} each x} [{raze x,.z.s\'[{x where{@[{1#get x};x;`]~1#.q}\'[x]}` sv\'x,\'key x]}`]),(enlist `.z)!flip (`.z.Tables`.z.Functions`.z.Variables)!(enlist 0#`;enlist `ac`bm`exit`pc`pd`pg`ph`pi`pm`po`pp`ps`pw`vs`ts`s`wc`wo`ws;enlist `a`b`e`f`h`i`k`K`l`o`q`u`w`W`x`X`n`N`p`P`z`Z`t`T`d`D`c`zd)}';
     this.connection?.k(globalQuery, (err, result) => {
       if (err) {
-        window.showErrorMessage(
-          `Failed to retrieve kdb+ global variables: '${err.message}`,
+        showMessage(
+          "Failed to retrieve kdb+ global variables.",
+          MessageKind.ERROR,
+          { logger, params: [err] },
         );
         return;
       }
@@ -350,8 +360,10 @@ export class LocalConnection {
     const reservedQuery = ".Q.res";
     this.connection?.k(reservedQuery, (err, result) => {
       if (err) {
-        window.showErrorMessage(
-          `Failed to retrieve kdb+ reserved keywords: '${err.message}`,
+        showMessage(
+          "Failed to retrieve kdb+ reserved keywords.",
+          MessageKind.ERROR,
+          { logger, params: [err] },
         );
         return;
       }

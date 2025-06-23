@@ -18,6 +18,7 @@ import {
   getHideDetailedConsoleQueryOutput,
   setOutputWordWrapper,
 } from "./core";
+import { MessageKind, showMessage } from "./notifications";
 import {
   addQueryHistory,
   checkIfIsDatasource,
@@ -180,7 +181,10 @@ export class ExecutionConsole {
         );
       }
     } else {
-      window.showErrorMessage(`Please connect to a KDB or Insights server`);
+      showMessage(
+        `Please connect to a KDB or Insights server`,
+        MessageKind.ERROR,
+      );
       this._console.appendLine(`Please connect to a KDB or Insights server`);
       commands.executeCommand("kdb.connections.disconnect");
       addQueryHistory(

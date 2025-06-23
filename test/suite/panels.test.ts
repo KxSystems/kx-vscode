@@ -24,8 +24,8 @@ import { DataSourcesPanel } from "../../src/panels/datasource";
 import { NewConnectionPannel } from "../../src/panels/newConnection";
 import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import { KdbResultsViewProvider } from "../../src/services/resultsPanelProvider";
-import * as coreUtils from "../../src/utils/core";
 import * as utils from "../../src/utils/execution";
+import * as loggers from "../../src/utils/loggers";
 import * as renderer from "../../src/utils/resultsRenderer";
 
 describe("WebPanels", () => {
@@ -496,7 +496,7 @@ describe("WebPanels", () => {
         } as any;
         postMessageStub = resultsPanel["_view"].webview
           .postMessage as sinon.SinonStub;
-        kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+        kdbOutputLogStub = sinon.stub(loggers, "kdbOutputLog");
         convertToGridStub = sinon.stub(renderer, "convertToGrid");
       });
 
@@ -509,7 +509,7 @@ describe("WebPanels", () => {
         resultsPanel.updateWebView("test");
         sinon.assert.calledWith(
           kdbOutputLogStub,
-          "[Results Tab] No view to update",
+          "[resultsPanelProvider] No view to update",
           "ERROR",
         );
       });

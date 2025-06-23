@@ -113,10 +113,10 @@ import {
   getServers,
   hasWorkspaceOrShowOption,
   initializeLocalServers,
-  kdbOutputLog,
 } from "./utils/core";
 import { runQFileTerminal } from "./utils/execution";
 import { handleFeedbackSurvey } from "./utils/feedbackSurveyUtils";
+import { MessageKind, showMessage } from "./utils/notifications";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
 import {
@@ -125,6 +125,8 @@ import {
   openWith,
   setUriContent,
 } from "./utils/workspace";
+
+const logger = "extension";
 
 let client: LanguageClient;
 
@@ -196,13 +198,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
   vscode.commands.executeCommand("kdb-results.focus");
 
-  kdbOutputLog("kdb extension is now active!", "INFO");
-
   try {
     // check for installed q runtime
     await checkLocalInstall(true);
   } catch (err) {
-    vscode.window.showErrorMessage(`${err}`);
+    showMessage(`${err}`, MessageKind.DEBUG, { logger });
   }
 
   registerAllExtensionCommands();
@@ -349,6 +349,8 @@ export async function activate(context: vscode.ExtensionContext) {
     }
   }
   handleFeedbackSurvey();
+
+  showMessage("kdb extension is now active.", MessageKind.DEBUG, { logger });
 }
 
 function registerHelpCommands(): CommandRegistration[] {
@@ -668,7 +670,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
             true,
           );
         } else {
-          kdbOutputLog("Connection label not found", "ERROR");
+          showMessage("Connection label not found", MessageKind.ERROR);
         }
       },
     },
@@ -885,7 +887,9 @@ function registerExecuteCommands(): CommandRegistration[] {
             );
             runQFileTerminal(`"${uri.fsPath}"`);
           } catch (error) {
-            kdbOutputLog(`Unable to write temp file: ${error}`, "ERROR");
+            showMessage(`Unable to write temp file.`, MessageKind.ERROR, {
+              params: [error],
+            });
           }
         }
       },

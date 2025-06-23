@@ -18,7 +18,6 @@ import * as url from "url";
 import {
   CancellationToken,
   Position,
-  ProgressLocation,
   Range,
   Uri,
   ViewColumn,
@@ -65,7 +64,6 @@ import {
   getKeyForServerName,
   getServerName,
   getServers,
-  kdbOutputLog,
   offerReconnectionAfterEdit,
   updateInsights,
   updateServers,
@@ -73,6 +71,7 @@ import {
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { decodeQUTF } from "../utils/decode";
 import { ExecutionConsole } from "../utils/executionConsole";
+import { MessageKind, Runner, showMessage } from "../utils/notifications";
 import { openUrl } from "../utils/openUrl";
 import {
   checkIfIsDatasource,
@@ -93,6 +92,8 @@ import {
   validateServerPort,
   validateServerUsername,
 } from "../validators/kdbValidator";
+
+const logger = "serverCommand";
 
 export async function addNewConnection(): Promise<void> {
   NewConnectionPannel.close();
@@ -115,7 +116,7 @@ export async function addInsightsConnection(
 ) {
   const aliasValidation = validateServerAlias(insightsData.alias, false);
   if (aliasValidation) {
-    window.showErrorMessage(aliasValidation);
+    showMessage(aliasValidation, MessageKind.ERROR);
     return;
   }
   if (insightsData.alias === undefined || insightsData.alias === "") {
@@ -128,8 +129,9 @@ export async function addInsightsConnection(
     insights != undefined &&
     insights[getKeyForServerName(insightsData.alias)]
   ) {
-    await window.showErrorMessage(
+    showMessage(
       `Insights instance named ${insightsData.alias} already exists.`,
+      MessageKind.ERROR,
     );
     return;
   } else {
@@ -169,8 +171,10 @@ export async function addInsightsConnection(
       ext.serverProvider.refreshInsights(newInsights);
       Telemetry.sendEvent("Connection.Created.Insights");
     }
-    window.showInformationMessage(
+
+    showMessage(
       `Added Insights connection: ${insightsData.alias}`,
+      MessageKind.INFO,
     );
 
     NewConnectionPannel.close();
@@ -188,7 +192,7 @@ export async function editInsightsConnection(
       ? undefined
       : validateServerAlias(insightsData.alias, false);
   if (aliasValidation) {
-    window.showErrorMessage(aliasValidation);
+    showMessage(aliasValidation, MessageKind.ERROR);
     return;
   }
   const isConnectedConn = isConnected(oldAlias);
@@ -205,14 +209,16 @@ export async function editInsightsConnection(
         ? insights[getKeyForServerName(insightsData.alias)]
         : undefined;
     if (newAliasExists) {
-      await window.showErrorMessage(
+      showMessage(
         `Insights instance named ${insightsData.alias} already exists.`,
+        MessageKind.ERROR,
       );
       return;
     } else {
       if (!oldInsights) {
-        await window.showErrorMessage(
+        showMessage(
           `Insights instance named ${oldAlias} does not exist.`,
+          MessageKind.ERROR,
         );
         return;
       } else {
@@ -263,8 +269,10 @@ export async function editInsightsConnection(
             offerReconnectionAfterEdit(insightsData.alias);
           }
         }
-        window.showInformationMessage(
+
+        showMessage(
           `Edited Insights connection: ${insightsData.alias}`,
+          MessageKind.INFO,
         );
 
         NewConnectionPannel.close();
@@ -282,7 +290,7 @@ export async function addAuthConnection(
 ): Promise<void> {
   const validUsername = validateServerUsername(username);
   if (validUsername) {
-    window.showErrorMessage(validUsername);
+    showMessage(validUsername, MessageKind.ERROR);
     return;
   }
   if (password?.trim()?.length) {
@@ -324,17 +332,17 @@ export async function enableTLS(serverKey: string): Promise<void> {
 
   // validate if TLS is possible
   if (ext.openSslVersion === null) {
-    window
-      .showErrorMessage(
-        "OpenSSL not found, please ensure this is installed",
-        "More Info",
-        "Cancel",
-      )
-      .then(async (result) => {
-        if (result === "More Info") {
-          await openUrl("https://code.kx.com/q/kb/ssl/");
-        }
-      });
+    showMessage(
+      "OpenSSL not found, please ensure this is installed",
+      MessageKind.ERROR,
+      {},
+      "More Info",
+      "Cancel",
+    ).then(async (result) => {
+      if (result === "More Info") {
+        await openUrl("https://code.kx.com/q/kb/ssl/");
+      }
+    });
     return;
   }
   if (servers && servers[serverKey]) {
@@ -346,8 +354,10 @@ export async function enableTLS(serverKey: string): Promise<void> {
     }
     return;
   }
-  window.showErrorMessage(
+  showMessage(
     "Server not found, please ensure this is a correct server",
+    MessageKind.ERROR,
+    {},
     "Cancel",
   );
 }
@@ -361,15 +371,15 @@ export async function addKdbConnection(
   const hostnameValidation = validateServerName(kdbData.serverName);
   const portValidation = validateServerPort(kdbData.serverPort);
   if (aliasValidation) {
-    window.showErrorMessage(aliasValidation);
+    showMessage(aliasValidation, MessageKind.ERROR);
     return;
   }
   if (hostnameValidation) {
-    window.showErrorMessage(hostnameValidation);
+    showMessage(hostnameValidation, MessageKind.ERROR);
     return;
   }
   if (portValidation) {
-    window.showErrorMessage(portValidation);
+    showMessage(portValidation, MessageKind.ERROR);
     return;
   }
   let servers: Server | undefined = getServers();
@@ -378,8 +388,9 @@ export async function addKdbConnection(
     servers != undefined &&
     servers[getKeyForServerName(kdbData.serverAlias || "")]
   ) {
-    await window.showErrorMessage(
+    showMessage(
       `Server name ${kdbData.serverAlias} already exists.`,
+      MessageKind.ERROR,
     );
   } else {
     const key = kdbData.serverAlias || "";
@@ -425,8 +436,10 @@ export async function addKdbConnection(
     if (kdbData.auth) {
       addAuthConnection(key, kdbData.username!, kdbData.password!);
     }
-    window.showInformationMessage(
+
+    showMessage(
       `Added kdb connection: ${kdbData.serverAlias}`,
+      MessageKind.INFO,
     );
 
     NewConnectionPannel.close();
@@ -448,15 +461,15 @@ export async function editKdbConnection(
   const hostnameValidation = validateServerName(kdbData.serverName);
   const portValidation = validateServerPort(kdbData.serverPort);
   if (aliasValidation) {
-    window.showErrorMessage(aliasValidation);
+    showMessage(aliasValidation, MessageKind.ERROR);
     return;
   }
   if (hostnameValidation) {
-    window.showErrorMessage(hostnameValidation);
+    showMessage(hostnameValidation, MessageKind.ERROR);
     return;
   }
   if (portValidation) {
-    window.showErrorMessage(portValidation);
+    showMessage(portValidation, MessageKind.ERROR);
     return;
   }
   const isConnectedConn = isConnected(oldAlias);
@@ -470,14 +483,16 @@ export async function editKdbConnection(
         ? servers[getKeyForServerName(kdbData.serverAlias)]
         : undefined;
     if (newAliasExists) {
-      await window.showErrorMessage(
+      showMessage(
         `KDB instance named ${kdbData.serverAlias} already exists.`,
+        MessageKind.ERROR,
       );
       return;
     } else {
       if (!oldServer) {
-        await window.showErrorMessage(
+        showMessage(
           `KDB instance named ${oldAlias} does not exist.`,
+          MessageKind.ERROR,
         );
         return;
       } else {
@@ -533,8 +548,10 @@ export async function editKdbConnection(
             offerReconnectionAfterEdit(connLabelToReconn);
           }
         }
-        window.showInformationMessage(
+
+        showMessage(
           `Edited KDB connection: ${kdbData.serverAlias}`,
+          MessageKind.INFO,
         );
         if (oldKey !== newKey) {
           removeConnFromLabels(oldKey);
@@ -571,7 +588,7 @@ export async function importConnections() {
 
   const fileUri = await window.showOpenDialog(options);
   if (!fileUri || fileUri.length === 0) {
-    kdbOutputLog("[IMPORT CONNECTION]No file selected", "ERROR");
+    showMessage("No file selected.", MessageKind.ERROR, { logger });
     return;
   }
   const filePath = fileUri[0].fsPath;
@@ -581,24 +598,24 @@ export async function importConnections() {
   try {
     importedConnections = JSON.parse(fileContent);
   } catch {
-    kdbOutputLog("[IMPORT CONNECTION]Invalid JSON format", "ERROR");
+    showMessage("Invalid JSON format.", MessageKind.ERROR, { logger });
     return;
   }
 
   if (!isValidExportedConnections(importedConnections)) {
-    kdbOutputLog(
-      "[IMPORT CONNECTION]JSON does not match the required format",
-      "ERROR",
-    );
+    showMessage("JSON does not match the required format.", MessageKind.ERROR, {
+      logger,
+    });
     return;
   }
   if (
     importedConnections.connections.KDB.length === 0 &&
     importedConnections.connections.Insights.length === 0
   ) {
-    kdbOutputLog(
-      "[IMPORT CONNECTION]There is no KDB or Insights connections to import in this JSON file",
-      "ERROR",
+    showMessage(
+      "There is no KDB or Insights connections to import in this JSON file.",
+      MessageKind.ERROR,
+      { logger },
     );
     return;
   }
@@ -630,8 +647,10 @@ export async function addImportedConnections(
 
   let res: "Duplicate" | "Overwrite" | "Cancel" | undefined = "Duplicate";
   if (hasDuplicates) {
-    res = await window.showInformationMessage(
+    res = await showMessage(
       "You are importing connections with the same name. Would you like to duplicate, overwrite or cancel the import?",
+      MessageKind.INFO,
+      {},
       "Duplicate",
       "Overwrite",
       "Cancel",
@@ -701,8 +720,9 @@ export async function addImportedConnections(
     ext.serverProvider.refresh(config);
   }
 
-  kdbOutputLog("[IMPORT CONNECTION]Connections imported successfully", "INFO");
-  window.showInformationMessage("Connections imported successfully");
+  showMessage("Connections imported successfully.", MessageKind.INFO, {
+    logger,
+  });
 }
 
 export async function removeConnection(viewItem: KdbNode | InsightsNode) {
@@ -720,7 +740,7 @@ export async function connect(connLabel: string): Promise<void> {
   ExecutionConsole.start();
   const viewItem = connMngService.retrieveConnection(connLabel);
   if (viewItem === undefined) {
-    window.showErrorMessage("Connection not found");
+    showMessage("Connection not found.", MessageKind.ERROR);
     return;
   }
 
@@ -729,17 +749,17 @@ export async function connect(connLabel: string): Promise<void> {
     // check for TLS support
     if (viewItem.details.tls) {
       if (!(await checkOpenSslInstalled())) {
-        window
-          .showInformationMessage(
-            "TLS support requires OpenSSL to be installed.",
-            "More Info",
-            "Cancel",
-          )
-          .then(async (result) => {
-            if (result === "More Info") {
-              await openUrl("https://code.kx.com/q/kb/ssl/");
-            }
-          });
+        showMessage(
+          "TLS support requires OpenSSL to be installed.",
+          MessageKind.INFO,
+          {},
+          "More Info",
+          "Cancel",
+        ).then(async (result) => {
+          if (result === "More Info") {
+            await openUrl("https://code.kx.com/q/kb/ssl/");
+          }
+        });
       }
     }
   }
@@ -796,25 +816,20 @@ export async function executeQuery(
   isWorkbook: boolean,
   isFromConnTree?: boolean,
 ): Promise<void> {
-  await window.withProgress(
-    {
-      cancellable: true,
-      location: ProgressLocation.Window,
-      title: `Executing query (${executorName})`,
-    },
-    async (_progress, token) => {
-      await _executeQuery(
-        query,
-        connLabel,
-        executorName,
-        context,
-        isPython,
-        isWorkbook,
-        isFromConnTree,
-        token,
-      );
-    },
+  const runner = Runner.create((_, token) =>
+    _executeQuery(
+      query,
+      connLabel,
+      executorName,
+      context,
+      isPython,
+      isWorkbook,
+      isFromConnTree,
+      token,
+    ),
   );
+  runner.title = `Executing query (${executorName})`;
+  await runner.execute();
 }
 
 export async function _executeQuery(
@@ -831,9 +846,9 @@ export async function _executeQuery(
   const queryConsole = ExecutionConsole.start();
   if (connLabel === "") {
     if (ext.activeConnection === undefined) {
-      kdbOutputLog(
+      showMessage(
         "No active connection found. Connect to one connection.",
-        "ERROR",
+        MessageKind.ERROR,
       );
       return undefined;
     } else {
@@ -842,8 +857,7 @@ export async function _executeQuery(
   }
   const isConnected = connMngService.isConnected(connLabel);
   if (!isConnected) {
-    window.showInformationMessage("The selected connection is not connected.");
-    kdbOutputLog("The selected connection is not connected.", "ERROR");
+    showMessage("The selected connection is not connected.", MessageKind.ERROR);
     return undefined;
   }
 
@@ -1090,7 +1104,7 @@ export function copyQuery(queryHistoryElement: QueryHistory) {
     typeof queryHistoryElement.query === "string"
   ) {
     env.clipboard.writeText(queryHistoryElement.query);
-    window.showInformationMessage("Query copied to clipboard.");
+    showMessage("Query copied to clipboard.", MessageKind.INFO);
   }
 }
 
@@ -1101,8 +1115,9 @@ export async function loadServerObjects(): Promise<ServerObject[]> {
     ext.activeConnection.connected === false ||
     ext.activeConnection instanceof InsightsConnection
   ) {
-    window.showInformationMessage(
+    showMessage(
       "Please connect to a KDB instance to view the objects",
+      MessageKind.INFO,
     );
     return new Array<ServerObject>();
   }
@@ -1138,7 +1153,9 @@ export async function openMeta(node: MetaObjectPayloadNode | InsightsMetaNode) {
       viewColumn: ViewColumn.One,
     });
   } else {
-    kdbOutputLog("[META] Meta content not found", "ERROR");
+    showMessage("Meta content not found.", MessageKind.ERROR, {
+      logger,
+    });
   }
 }
 
@@ -1150,9 +1167,10 @@ export async function exportConnections(connLabel?: string) {
   });
 
   if (!exportAuth) {
-    kdbOutputLog(
-      "[EXPORT CONNECTIONS] Export operation was cancelled by the user",
-      "INFO",
+    showMessage(
+      "Export operation was cancelled by the user.",
+      MessageKind.DEBUG,
+      { logger },
     );
     return;
   }
@@ -1174,11 +1192,9 @@ export async function exportConnections(connLabel?: string) {
     if (uri) {
       fs.writeFile(uri.fsPath, formattedDoc, (err) => {
         if (err) {
-          kdbOutputLog(
-            `[EXPORT CONNECTIONS] Error saving file: ${err.message}`,
-            "ERROR",
-          );
-          window.showErrorMessage(`Error saving file: ${err.message}`);
+          showMessage(`Error saving file: ${err.message}`, MessageKind.ERROR, {
+            logger,
+          });
         } else {
           workspace.openTextDocument(uri).then((document) => {
             window.showTextDocument(document, { preview: false });
@@ -1186,16 +1202,16 @@ export async function exportConnections(connLabel?: string) {
         }
       });
     } else {
-      kdbOutputLog(
-        "[EXPORT CONNECTIONS] Save operation was cancelled by the user",
-        "INFO",
+      showMessage(
+        "Save operation was cancelled by the user.",
+        MessageKind.DEBUG,
+        { logger },
       );
     }
   } else {
-    kdbOutputLog(
-      "[EXPORT CONNECTIONS] No connections found to be exported",
-      "ERROR",
-    );
+    showMessage("No connections found to be exported.", MessageKind.ERROR, {
+      logger,
+    });
   }
 }
 

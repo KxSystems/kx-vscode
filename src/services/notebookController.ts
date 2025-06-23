@@ -16,9 +16,11 @@ import * as vscode from "vscode";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { ext } from "../extensionVariables";
 import { ConnectionManagementService } from "../services/connectionManagerService";
-import { kdbOutputLog } from "../utils/core";
+import { MessageKind, showMessage, timeout } from "../utils/notifications";
 import { resultToBase64 } from "../utils/queryUtils";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
+
+const logger = "notebookController";
 
 export class KxNotebookController {
   readonly controllerId = "kx-notebook-1";
@@ -55,8 +57,10 @@ export class KxNotebookController {
   ): Promise<void> {
     const conn = ext.activeConnection;
     if (conn === undefined) {
-      vscode.window.showErrorMessage(
+      showMessage(
         "You aren't connected to any connection. Once connected please try again.",
+        MessageKind.ERROR,
+        { logger },
       );
       return;
     }
@@ -71,13 +75,25 @@ export class KxNotebookController {
       execution.start(Date.now());
 
       try {
-        const results = await manager.executeQuery(
-          cell.document.getText(),
-          conn.connLabel,
-          ".",
-          false,
-          isPython,
-        );
+        const results = await Promise.race([
+          await manager.executeQuery(
+            cell.document.getText(),
+            conn.connLabel,
+            ".",
+            false,
+            isPython,
+          ),
+          new Promise((_, reject) => {
+            const updateCancelled = () => {
+              if (execution.token.isCancellationRequested) {
+                reject(new vscode.CancellationError());
+              }
+            };
+            updateCancelled();
+            execution.token.onCancellationRequested(updateCancelled);
+          }),
+          timeout(),
+        ]);
 
         const rendered = render(results, isPython, isInsights, connVersion);
 
@@ -87,7 +103,10 @@ export class KxNotebookController {
           ]),
         ]);
       } catch (error) {
-        kdbOutputLog(`${error}`, "ERROR");
+        showMessage("Unable run code blocck.", MessageKind.ERROR, {
+          logger,
+          params: [error],
+        });
       } finally {
         execution.end(true, Date.now());
       }

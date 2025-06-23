@@ -71,8 +71,8 @@ import {
   QueryHistoryTreeItem,
 } from "../../src/services/queryHistoryProvider";
 import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider";
-import * as coreUtils from "../../src/utils/core";
 import * as utils from "../../src/utils/getUri";
+import * as loggers from "../../src/utils/loggers";
 import AuthSettings from "../../src/utils/secretStorage";
 import { Telemetry } from "../../src/utils/telemetryClient";
 
@@ -1361,7 +1361,7 @@ describe("connectionManagerService", () => {
         connMngService,
         "retrieveConnectedConnection",
       );
-      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+      kdbOutputLogStub = sinon.stub(loggers, "kdbOutputLog");
       showInformationMessageStub = sinon.stub(window, "showInformationMessage");
       _showErrorMessageStub = sinon.stub(window, "showErrorMessage");
     });
@@ -1375,7 +1375,7 @@ describe("connectionManagerService", () => {
       await connMngService.resetScratchpad();
       sinon.assert.calledWith(
         kdbOutputLogStub,
-        "[RESET SCRATCHPAD] Please activate an Insights connection to use this feature.",
+        "[connectionManagerService] Please activate an Insights connection to use this feature.",
         "ERROR",
       );
     });
@@ -1385,7 +1385,7 @@ describe("connectionManagerService", () => {
       await connMngService.resetScratchpad();
       sinon.assert.calledWith(
         kdbOutputLogStub,
-        "[RESET SCRATCHPAD] Please activate an Insights connection to use this feature.",
+        "[connectionManagerService] Please activate an Insights connection to use this feature.",
         "ERROR",
       );
     });
@@ -1413,8 +1413,8 @@ describe("connectionManagerService", () => {
       await connMngService.resetScratchpad("test");
       sinon.assert.calledWith(
         kdbOutputLogStub,
-        "[RESET SCRATCHPAD] The user canceled the scratchpad reset.",
-        "INFO",
+        "[connectionManagerService] The user canceled the scratchpad reset.",
+        "DEBUG",
       );
     });
 
@@ -1423,7 +1423,7 @@ describe("connectionManagerService", () => {
       await connMngService.resetScratchpad("test");
       sinon.assert.calledWith(
         kdbOutputLogStub,
-        "[RESET SCRATCHPAD] Please connect to an Insights connection to use this feature.",
+        "[connectionManagerService] Please connect to an Insights connection to use this feature.",
         "ERROR",
       );
     });

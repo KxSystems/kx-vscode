@@ -57,6 +57,7 @@ import * as coreUtils from "../../src/utils/core";
 import * as dsUtils from "../../src/utils/dataSource";
 import * as dataSourceUtils from "../../src/utils/dataSource";
 import { ExecutionConsole } from "../../src/utils/executionConsole";
+import * as loggers from "../../src/utils/loggers";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { MAX_STR_LEN } from "../../src/validators/kdbValidator";
 
@@ -1175,7 +1176,7 @@ describe("dataSourceCommand2", () => {
     let kdbOutputLogStub: sinon.SinonStub;
 
     beforeEach(() => {
-      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+      kdbOutputLogStub = sinon.stub(loggers, "kdbOutputLog");
     });
     afterEach(() => {
       sinon.restore();
@@ -1420,7 +1421,7 @@ describe("serverCommand", () => {
 
     beforeEach(() => {
       showOpenDialogStub = sinon.stub(vscode.window, "showOpenDialog");
-      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+      kdbOutputLogStub = sinon.stub(loggers, "kdbOutputLog");
       _addImportedConnectionsStub = sinon.stub(
         serverCommand,
         "addImportedConnections",
@@ -1439,8 +1440,9 @@ describe("serverCommand", () => {
 
       assert(
         kdbOutputLogStub.calledWith(
-          "[IMPORT CONNECTION]No file selected",
+          "[serverCommand] No file selected.",
           "ERROR",
+          true,
         ),
       );
     });
@@ -1503,7 +1505,7 @@ describe("serverCommand", () => {
         "addInsightsConnection",
       );
       addKdbConnectionStub = sinon.stub(serverCommand, "addKdbConnection");
-      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+      kdbOutputLogStub = sinon.stub(loggers, "kdbOutputLog");
       _getInsightsStub = sinon
         .stub(coreUtils, "getInsights")
         .returns(undefined);
@@ -1563,13 +1565,13 @@ describe("serverCommand", () => {
 
       assert(
         kdbOutputLogStub.calledWith(
-          "[IMPORT CONNECTION]Connections imported successfully",
+          "[serverCommand] Connections imported successfully.",
           "INFO",
         ),
       );
       assert(
         showInformationMessageStub.calledWith(
-          "Connections imported successfully",
+          "Connections imported successfully.",
         ),
       );
     });
@@ -2443,7 +2445,7 @@ describe("serverCommand", () => {
 
     beforeEach(() => {
       sandbox = sinon.createSandbox();
-      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+      kdbOutputLogStub = sinon.stub(loggers, "kdbOutputLog");
     });
 
     afterEach(() => {
@@ -2465,7 +2467,7 @@ describe("serverCommand", () => {
       sinon.assert.calledOnce(kdbOutputLogStub);
       sinon.assert.calledWith(
         kdbOutputLogStub,
-        "[EXPORT CONNECTIONS] No connections found to be exported",
+        "[serverCommand] No connections found to be exported.",
         "ERROR",
       );
 
@@ -2489,8 +2491,8 @@ describe("serverCommand", () => {
       sinon.assert.calledOnce(kdbOutputLogStub);
       sinon.assert.calledWith(
         kdbOutputLogStub,
-        "[EXPORT CONNECTIONS] Save operation was cancelled by the user",
-        "INFO",
+        "[serverCommand] Save operation was cancelled by the user.",
+        "DEBUG",
       );
 
       exportConnectionStub.restore();
@@ -2788,7 +2790,7 @@ describe("workspaceCommand", () => {
         task({}, token);
       });
 
-      kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+      kdbOutputLogStub = sinon.stub(loggers, "kdbOutputLog");
     });
     afterEach(() => {
       sinon.restore();
@@ -2834,8 +2836,8 @@ describe("workspaceCommand", () => {
       sinon.assert.calledOnce(kdbOutputLogStub);
       sinon.assert.calledWith(
         kdbOutputLogStub,
-        "[DATASOURCE] User cancelled the old DS files import.",
-        "INFO",
+        "[workspaceCommand] User cancelled the old DS files import.",
+        "DEBUG",
       );
     });
   });
