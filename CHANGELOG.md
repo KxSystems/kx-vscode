@@ -6,13 +6,21 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 ### Enhancements
 
-- Added **Help & Feedback** view at the activity bar
-- Added **Feedback Survey**
+- Added **KX Notebooks**, which allows you to compose and execute Q, Python, and Markdown code blocks in a single notebook
+- Workbook enhancements now allow connection association and target selection for all **q** and **py** files in the workspace
+- Added the **Help & Feedback** view to the activity bar, which provides quick links to documentation, feature suggestion, feedback, and bug reporting 
+- Added **Feedback Survey**, inviting you to provide feedback
 - Added **Copy Query** for query history when query is executed
 
 ### Fixes
 
 - Fixed Results tab theme change issue
+- Fix for Insights query-enabled servers: QSQL queries now execute correctly even when QE is disabled
+- Resolved an issue where datasources QSQL would not support displaying results other than `table` and `dict`
+- kdb+ MyQ connections now allow empty passwords even when a username is provided
+- VS Code scratchpad calls no longer routed through Service Broker; they now target Scratchpad Manager directly
+- Fixed issue where clicking a table in Meta Explorer did not display table contents for kdb+ connections
+- Resolved scratchpad population issue in VS Code with date columns on kdb Insights Enterprise 1.13.5
 
 ### Internal Improvements
 

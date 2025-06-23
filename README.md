@@ -954,8 +954,9 @@ If you choose to opt out permanently but wish to revert this, open VS Code setti
 | Ctrl + Shift + E      | Execute current block             |
 | Ctrl + Shift + D      | Execute entire file               |
 | Ctrl + Shift + R      | Run q file in new q instance      |
-| Ctrl + Shift + Y      | Toggle paramater cache for lambda |
+| Ctrl + Shift + Y      | Toggle parameter cache for lambda |
 | Ctrl + Shift + Delete | Reset scratchpad                  |
+| Ctrl + Alt + T        | Choose the execution target
 
 ### For MacOS
 
@@ -968,5 +969,6 @@ If you choose to opt out permanently but wish to revert this, open VS Code setti
 | ⌘ + Shift + E      | Execute current block             |
 | ⌘ + Shift + D      | Execute entire file               |
 | ⌘ + Shift + R      | Run q file in new q instance      |
-| ⌘ + Shift + Y      | Toggle paramater cache for lambda |
+| ⌘ + Shift + Y      | Toggle parameter cache for lambda |
 | ⌘ + Shift + Delete | Reset scratchpad                  |
+| ⌘ + Alt + T        | Choose the execution target
