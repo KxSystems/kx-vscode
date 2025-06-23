@@ -76,7 +76,7 @@ export class KxNotebookController {
 
       try {
         const results = await Promise.race([
-          await manager.executeQuery(
+          manager.executeQuery(
             cell.document.getText(),
             conn.connLabel,
             ".",
@@ -103,10 +103,11 @@ export class KxNotebookController {
           ]),
         ]);
       } catch (error) {
-        showMessage("Unable run code blocck.", MessageKind.ERROR, {
+        showMessage("Unable to run code block.", MessageKind.ERROR, {
           logger,
           params: [error],
         });
+        break;
       } finally {
         execution.end(true, Date.now());
       }

@@ -385,6 +385,11 @@ export class InsightsConnection {
       }
       options.responseType = "arraybuffer";
 
+      showMessage("Requesting datasource query.", MessageKind.DEBUG, {
+        logger,
+        params: [options.url, options.data],
+      });
+
       const runner = Runner.create(async () => {
         return await axios(options)
           .then((response: any) => {
