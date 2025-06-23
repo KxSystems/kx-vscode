@@ -8,7 +8,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 - Added **KX Notebooks**, which allows you to compose and execute Q, Python, and Markdown code blocks in a single notebook
 - Workbook enhancements now allow connection association and target selection for all **q** and **py** files in the workspace
-- Execute **q** code directly on kdb Insights Enterprise Databases from the editor
+- Execute **q** code directly on kdb Insights Enterprise DAPs processes from the editor
 - Added the **Help & Feedback** view to the activity bar, which provides quick links to documentation, feature suggestion, feedback, and bug reporting 
 - Added **Feedback Survey**, inviting you to provide feedback
 - Added **Copy Query** for query history when query is executed
