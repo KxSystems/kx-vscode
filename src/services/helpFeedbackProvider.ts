@@ -56,21 +56,11 @@ class HelpItem extends vscode.TreeItem {
     super(label, vscode.TreeItemCollapsibleState.None);
     this.command = { command: commandId, title: label };
     this.iconPath = {
-      light: path.join(
-        __filename,
-        "..",
-        "..",
-        "resources",
-        "light",
-        iconFileName,
+      light: vscode.Uri.file(
+        path.join(__dirname, "..", "resources", "light", iconFileName),
       ),
-      dark: path.join(
-        __filename,
-        "..",
-        "..",
-        "resources",
-        "dark",
-        iconFileName,
+      dark: vscode.Uri.file(
+        path.join(__dirname, "..", "resources", "dark", iconFileName),
       ),
     };
   }
