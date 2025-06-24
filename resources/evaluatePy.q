@@ -234,6 +234,10 @@
                 return data.sample(n=sample_size)
             elif isinstance(data, np.ndarray):
                 return np.random.choice(data, sample_size, replace=False)
+            elif isinstance(data, set):
+                return set(sample(list(data),sample_size))
+            elif isinstance(data, frozenset):
+                return frozenset(sample(list(data),sample_size))
             elif isinstance(data, dict):
                 return dict(sample(list(data.items()), sample_size))
             else:
