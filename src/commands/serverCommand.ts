@@ -1306,7 +1306,11 @@ export async function writeScratchpadResult(
 
     if (result.stacktrace) {
       errorMsg =
-        errorMsg + "\n" + formatScratchpadStacktrace(result.stacktrace);
+        errorMsg +
+        "\n" +
+        (Array.isArray(result.stacktrace)
+          ? formatScratchpadStacktrace(result.stacktrace)
+          : `${result.stacktrace}`);
     }
   }
 
