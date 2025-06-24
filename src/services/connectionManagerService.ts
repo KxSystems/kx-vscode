@@ -26,7 +26,7 @@ import {
 import { MetaInfoType } from "../models/meta";
 import { retrieveConnLabelsNames } from "../utils/connLabel";
 import {
-  compareVersions,
+  isBaseVersionGreaterOrEqual,
   getInsights,
   getKeyForServerName,
   getServerName,
@@ -357,7 +357,13 @@ export class ConnectionManagementService {
         isPython,
       );
     } else {
-      return await selectedConn.getScratchpadQuery(command, context, isPython);
+      return await selectedConn.getScratchpadQuery(
+        command,
+        context,
+        isPython,
+        false,
+        !stringify,
+      );
     }
   }
 
@@ -389,7 +395,10 @@ export class ConnectionManagementService {
       conn = ext.activeConnection;
     }
 
-    if (conn.insightsVersion && compareVersions(conn.insightsVersion, 1.13)) {
+    if (
+      conn.insightsVersion &&
+      isBaseVersionGreaterOrEqual(conn.insightsVersion, 1.13)
+    ) {
       const confirmationPrompt = `Reset Scratchpad? All data in the ${conn.connLabel} Scratchpad will be lost, and variables will be reset.`;
       const selection = await window.showInformationMessage(
         confirmationPrompt,

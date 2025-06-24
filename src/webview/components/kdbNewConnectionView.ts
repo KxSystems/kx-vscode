@@ -988,8 +988,7 @@ export class KdbNewConnectionView extends LitElement {
       default:
         this.kdbServer.username = this.kdbServer.username!.trim();
         this.kdbServer.password = this.kdbServer.password!.trim();
-        this.kdbServer.auth =
-          this.kdbServer.username !== "" && this.kdbServer.password !== "";
+        this.kdbServer.auth = this.kdbServer.username !== "";
         return this.kdbServer;
     }
   }

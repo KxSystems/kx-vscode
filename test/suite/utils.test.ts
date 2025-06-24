@@ -58,6 +58,7 @@ import { getUri } from "../../src/utils/getUri";
 import { openUrl } from "../../src/utils/openUrl";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { showRegistrationNotification } from "../../src/utils/registration";
+import * as shared from "../../src/utils/shared";
 import { killPid } from "../../src/utils/shell";
 import * as UDAUtils from "../../src/utils/uda";
 import {
@@ -1079,6 +1080,28 @@ describe("Utils", () => {
         const expectedOutput: any[] = [];
         const actualOutput = queryUtils.getValueFromArray(inputSample);
         assert.deepStrictEqual(actualOutput.rows, expectedOutput);
+      });
+    });
+
+    describe("generateQSqlBody", () => {
+      it("should use scope for 1.13", () => {
+        const output = queryUtils.generateQSqlBody(
+          "a:1",
+          "assembly target",
+          1.13,
+        );
+        assert.equal(output.scope.assembly, "assembly");
+        assert.equal(output.scope.tier, "target");
+      });
+
+      it("should use legacy syntax for 1.12", () => {
+        const output = queryUtils.generateQSqlBody(
+          "a:1",
+          "assembly target",
+          1.12,
+        );
+        assert.equal(output.assembly, "assembly");
+        assert.equal(output.target, "target");
       });
     });
 
@@ -2891,47 +2914,90 @@ describe("Utils", () => {
       it("should increment extSurveyTriggerCount and return immediately if hideSurvey is true", async () => {
         const result = await feedbackSurveyDialog(false, 0, true);
         assert.deepStrictEqual(result, {
-          sawSurveyTwice: false,
+          sawSurveyAlready: false,
           extSurveyTriggerCount: 1,
         });
         sinon.assert.notCalled(showSurveyDialogStub);
       });
 
-      it("should show survey dialog when extSurveyTriggerCount is 1 and sawSurveyTwice is false", async () => {
-        const result = await feedbackSurveyDialog(false, 0, false);
+      it("should set sawSurveyAlready to true and reset extSurveyTriggerCount when extSurveyTriggerCount >= 3 and sawSurveyAlready is false", async () => {
+        const result = await feedbackSurveyDialog(false, 3, false);
         assert.deepStrictEqual(result, {
-          sawSurveyTwice: false,
-          extSurveyTriggerCount: 1,
-        });
-        sinon.assert.calledOnce(showSurveyDialogStub);
-      });
-
-      it("should set sawSurveyTwice to true and reset extSurveyTriggerCount when extSurveyTriggerCount >= 4 and sawSurveyTwice is false", async () => {
-        const result = await feedbackSurveyDialog(false, 4, false);
-        assert.deepStrictEqual(result, {
-          sawSurveyTwice: true,
+          sawSurveyAlready: true,
           extSurveyTriggerCount: 0,
         });
         sinon.assert.calledOnce(showSurveyDialogStub);
       });
 
-      it("should reset extSurveyTriggerCount when extSurveyTriggerCount >= 5 and sawSurveyTwice is true", async () => {
+      it("should reset extSurveyTriggerCount when extSurveyTriggerCount >= 5 and sawSurveyAlready is true", async () => {
         const result = await feedbackSurveyDialog(true, 5, false);
         assert.deepStrictEqual(result, {
-          sawSurveyTwice: true,
+          sawSurveyAlready: true,
           extSurveyTriggerCount: 0,
         });
         sinon.assert.calledOnce(showSurveyDialogStub);
       });
 
       it("should increment extSurveyTriggerCount and not show survey dialog for other cases", async () => {
-        const result = await feedbackSurveyDialog(false, 2, false);
+        const result = await feedbackSurveyDialog(false, 1, false);
         assert.deepStrictEqual(result, {
-          sawSurveyTwice: false,
-          extSurveyTriggerCount: 3,
+          sawSurveyAlready: false,
+          extSurveyTriggerCount: 2,
         });
         sinon.assert.notCalled(showSurveyDialogStub);
       });
+    });
+  });
+
+  describe("Shared with webview utils", () => {
+    describe("normalizeAssemblyTarget", () => {
+      it("should return qe assembly without -qe", () => {
+        const res = shared.normalizeAssemblyTarget("test-assembly-qe target");
+        assert.strictEqual(res, "test-assembly target");
+      });
+      it("should return normal assembly without -qe", () => {
+        const res = shared.normalizeAssemblyTarget("test-assembly target");
+        assert.strictEqual(res, "test-assembly target");
+      });
+    });
+  });
+
+  describe("sanitizeQsqlQuery", () => {
+    it("should trim query", () => {
+      const res = queryUtils.sanitizeQsqlQuery("  a:1  ");
+      assert.strictEqual(res, "a:1");
+    });
+    it("should remove block comment", () => {
+      let res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\n\\a:1");
+      assert.strictEqual(res, "a:1");
+      res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\r\n\\a:1");
+      assert.strictEqual(res, "a:1");
+    });
+    it("should remove single line comment", () => {
+      let res = queryUtils.sanitizeQsqlQuery("/ single line comment\na:1");
+      assert.strictEqual(res, "a:1");
+      res = queryUtils.sanitizeQsqlQuery("/ single line comment\r\na:1");
+      assert.strictEqual(res, "a:1");
+    });
+    it("should remove line comment", () => {
+      const res = queryUtils.sanitizeQsqlQuery("a:1 / line comment");
+      assert.strictEqual(res, "a:1");
+    });
+    it("should ignore line comment in a string", () => {
+      const res = queryUtils.sanitizeQsqlQuery('a:"1 / not line comment"');
+      assert.strictEqual(res, 'a:"1 / not line comment"');
+    });
+    it("should replace EOS with semicolon", () => {
+      let res = queryUtils.sanitizeQsqlQuery("a:1\na");
+      assert.strictEqual(res, "a:1;a");
+      res = queryUtils.sanitizeQsqlQuery("a:1\r\na");
+      assert.strictEqual(res, "a:1;a");
+    });
+    it("should not replace continuation with semicolon", () => {
+      let res = queryUtils.sanitizeQsqlQuery('a:"a\n \nb"');
+      assert.strictEqual(res, 'a:"a\n \nb"');
+      res = queryUtils.sanitizeQsqlQuery('a:"a\r\n \r\nb"');
+      assert.strictEqual(res, 'a:"a\r\n \r\nb"');
     });
   });
 });

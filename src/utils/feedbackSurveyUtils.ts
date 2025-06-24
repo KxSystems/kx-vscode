@@ -17,38 +17,33 @@ import { ext } from "../extensionVariables";
 import { Telemetry } from "./telemetryClient";
 
 export async function feedbackSurveyDialog(
-  sawSurveyTwice: boolean,
+  sawSurveyAlready: boolean,
   extSurveyTriggerCount: number,
   hideSurvey: boolean,
 ): Promise<{
-  sawSurveyTwice: boolean;
+  sawSurveyAlready: boolean;
   extSurveyTriggerCount: number;
 }> {
   extSurveyTriggerCount += 1;
 
   if (hideSurvey) {
-    return { sawSurveyTwice, extSurveyTriggerCount };
+    return { sawSurveyAlready, extSurveyTriggerCount };
   }
 
-  if (!sawSurveyTwice && extSurveyTriggerCount === 1) {
-    await showSurveyDialog();
-    return { sawSurveyTwice, extSurveyTriggerCount };
-  }
-
-  if (!sawSurveyTwice && extSurveyTriggerCount >= 4) {
-    sawSurveyTwice = true;
+  if (!sawSurveyAlready && extSurveyTriggerCount >= 3) {
+    sawSurveyAlready = true;
     extSurveyTriggerCount = 0;
     await showSurveyDialog();
-    return { sawSurveyTwice, extSurveyTriggerCount };
+    return { sawSurveyAlready, extSurveyTriggerCount };
   }
 
-  if (sawSurveyTwice && extSurveyTriggerCount >= 5) {
+  if (sawSurveyAlready && extSurveyTriggerCount >= 5) {
     extSurveyTriggerCount = 0;
     await showSurveyDialog();
-    return { sawSurveyTwice, extSurveyTriggerCount };
+    return { sawSurveyAlready, extSurveyTriggerCount };
   }
 
-  return { sawSurveyTwice, extSurveyTriggerCount };
+  return { sawSurveyAlready, extSurveyTriggerCount };
 }
 
 async function showSurveyDialog() {
@@ -60,7 +55,7 @@ async function showSurveyDialog() {
   );
   if (result === "Take Survey") {
     vscode.env.openExternal(vscode.Uri.parse(SURVEY_URL));
-  } else {
+  } else if (result === "Don't show me this message next time") {
     Telemetry.sendEvent("Help&Feedback.Hide.Survey");
     await vscode.workspace
       .getConfiguration("kdb")
@@ -75,22 +70,22 @@ export async function handleFeedbackSurvey() {
   const hideSurvey = vscode.workspace
     .getConfiguration("kdb")
     .get<boolean>("hideSurvey", false);
-  const sawSurveyTwice = context.globalState.get<boolean>(
-    "sawSurveyTwice",
+  const sawSurveyAlready = context.globalState.get<boolean>(
+    "sawSurveyAlready",
     false,
   );
   const extSurveyTriggerCount =
     context.globalState.get<number>("extSurveyTriggerCount", 0) || 0;
 
   const updatedValues = await feedbackSurveyDialog(
-    sawSurveyTwice,
+    sawSurveyAlready,
     extSurveyTriggerCount,
     hideSurvey,
   );
 
   await context.globalState.update(
-    "sawSurveyTwice",
-    updatedValues.sawSurveyTwice,
+    "sawSurveyAlready",
+    updatedValues.sawSurveyAlready,
   );
   await context.globalState.update(
     "extSurveyTriggerCount",

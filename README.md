@@ -19,11 +19,13 @@ This guide provides information on the following:
 - [Executing code](#execute-code)
 - [Data sources](#data-sources)
 - [Workbooks](#workbooks)
+- [KX Notebooks](#kx-notebooks-in-visual-studio-code)
 - [Query History](#query-history)
 - [Viewing results](#view-results)
 - [AxLibraries](#axlibraries)
 - [q REPL](#q-repl)
 - [Settings](#settings)
+- [Help and feedback](#help-and-feedback)
 - [Shortcuts](#shortcuts)
 
 ## Benefits of kdb VS Code Extension
@@ -662,6 +664,34 @@ You can also change the connection associated with a workbook at any time by cli
 
 ![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookplaydropdown.png)
 
+## KX Notebooks in Visual Studio Code
+
+KX Notebooks provide an interactive environment within VS Code that allows you to compose and execute Q, Python, and Markdown code blocks in a single notebook, making development and testing more straightforward.
+
+You can easily create, edit, and share KX Notebooks, allowing for better collaboration.
+
+### Create a notebook
+
+To create a new notebook, open the Command Palette (`Ctrl+Shift+P` on Windows or `Cmd+Shift+P` on MacOS) and select `KX: Create New Notebook`. This opens a blank `.knb` notebook in the editor.
+
+From this view, you can add either Markdown or Code blocks to the notebook by clicking the toolbar buttons.
+
+![Add code blocks to notebook](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/add-notebook-code.png)
+
+To change the language of the code block, click on the language labels and select language from the Command Palette.
+
+![Select notebook language](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/select-notebook-language.png)
+
+### Execute code blocks
+
+Code blocks are executed using the active KX connection, and the results are displayed inline next to the code block. The execution state is preserved across code blocks, similar to Jupyter notebooks, allowing for progressive data analysis.
+
+![See notebook data](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/notebook-data.png)
+
+KX Notebooks detect [GGPlot2](#grammar-of-graphics) outputs. If the execution generates a plot, it is displayed inline for both q and PyKX.
+
+![See notebook plot](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/notebook-plot.png)
+
 ## Query History
 
 The **Query History** view in the primary sidebar captures each query execution and enables you to re-run any of the queries listed. Initially the query history view is empty but once you run a query it is captured and displayed in the window - with a separate row displayed for every execution. All information is stored in memory and not persisted upon application exit.
@@ -847,6 +877,25 @@ The following setting will change double click behaviour to select the whole ide
     "editor.wordSeparators": "`~!@#$%^&*()-=+[{]}\\|;:'\",<>/?"
   }
 ```
+
+## Help and feedback
+
+A **Help and Feedback** view is displayed in the primary sidebar of the kdb VS Code extension. This includes links to:
+
+- Extension documentation. This opens the kdb VS Code extension guide in a new tab in VS Code.
+- Suggest a feature. You are prompted with a pop-up confirmation before opening an external website.
+- Provide feedback. You are prompted with a pop-up confirmation before opening an external website.
+- Report a bug. Clicking this option opens GitHub directly.
+
+![Help and Feedback](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/helpandfeedback.png)
+
+### User feedback notification
+
+You may also see a prompt inside VS Code inviting you to provide feedback. This system notification appears after a few uses of the extension and helps us improve your experience. You can dismiss it or opt out permanently if preferred.
+
+If you choose to opt out permanently but wish to revert this, open VS Code settings, search for survey, and check the **Hide Survey** option, as shown below.
+
+![Hide Survey](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/extension-survey-dialog.png)
 
 ## Shortcuts
 

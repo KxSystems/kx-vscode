@@ -37,13 +37,17 @@ import {
 } from "../services/kdbInsights/codeFlowLogin";
 import { InsightsNode } from "../services/kdbTreeProvider";
 import {
-  compareVersions,
+  isBaseVersionGreaterOrEqual,
   invalidUsernameJWT,
   kdbOutputLog,
   tokenUndefinedError,
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
-import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
+import {
+  generateQSqlBody,
+  handleScratchpadTableRes,
+  handleWSResults,
+} from "../utils/queryUtils";
 import { Telemetry } from "../utils/telemetryClient";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 
@@ -209,7 +213,7 @@ export class InsightsConnection {
     if (
       this.connected &&
       this.insightsVersion &&
-      compareVersions(this.insightsVersion, 1.13)
+      isBaseVersionGreaterOrEqual(this.insightsVersion, 1.13)
     ) {
       const configUrl = new url.URL(
         ext.insightsAuthUrls.apiConfigUrl,
@@ -266,7 +270,7 @@ export class InsightsConnection {
   }
 
   public defineEndpoints() {
-    this.connEndpoints = {
+    const baseEndpoints = {
       scratchpad: {
         scratchpad: "servicebroker/scratchpad/display",
         import: "servicebroker/scratchpad/import/data",
@@ -283,26 +287,30 @@ export class InsightsConnection {
         udaBase: "servicegateway/",
       },
     };
-    // uncomment this WHEN the insights version is available
-    // if (this.insightsVersion) {
-    //   if (compareVersions(this.insightsVersion, 1.12)) {
-    //     this.connEndpoints = {
-    //       scratchpad: {
-    //         scratchpad: "scratchpad/execute/display",
-    //         import: "scratchpad/execute/import/data",
-    //         importSql: "scratchpad/execute/import/sql",
-    //         importQsql: "scratchpad/execute/import/qsql",
-    //         reset: "scratchpad/reset",
-    //       },
-    //       serviceGateway: {
-    //         meta: "servicegateway/meta",
-    //         data: "servicegateway/data",
-    //         sql: "servicegateway/qe/sql",
-    //         qsql: "servicegateway/qe/qsql",
-    //       },
-    //     };
-    //   }
-    // }
+
+    const updatedEndpoints = {
+      scratchpad: {
+        scratchpad: "scratchpadmanager/scratchpad/display",
+        import: "scratchpadmanager/scratchpad/import/data",
+        importSql: "scratchpadmanager/scratchpad/import/sql",
+        importQsql: "scratchpadmanager/scratchpad/import/qsql",
+        importUDA: "scratchpadmanager/scratchpad/import/uda",
+        reset: "scratchpadmanager/reset",
+      },
+      serviceGateway: {
+        meta: "servicegateway/meta",
+        data: "servicegateway/data",
+        sql: "servicegateway/qe/sql",
+        qsql: "servicegateway/qe/qsql",
+        udaBase: "servicegateway/",
+      },
+    };
+
+    this.connEndpoints =
+      this.insightsVersion &&
+      isBaseVersionGreaterOrEqual(this.insightsVersion, 1.11)
+        ? updatedEndpoints
+        : baseEndpoints;
   }
 
   public retrieveEndpoints(
@@ -375,7 +383,7 @@ export class InsightsConnection {
       const results = await window.withProgress(
         {
           location: ProgressLocation.Notification,
-          cancellable: false,
+          cancellable: true,
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
@@ -419,6 +427,7 @@ export class InsightsConnection {
   public async importScratchpad(
     variableName: string,
     params: DataSourceFiles,
+    qeEnabled?: boolean,
   ): Promise<void> {
     let dsTypeString = "";
     if (this.connected && this.connEndpoints) {
@@ -445,13 +454,13 @@ export class InsightsConnection {
           break;
         }
         case DataSourceTypes.QSQL: {
-          const assemblyParts =
-            params.dataSource.qsql.selectedTarget.split(" ");
-          body.params = {
-            assembly: assemblyParts[0],
-            target: assemblyParts[1],
-            query: params.dataSource.qsql.query,
-          };
+          body.params = generateQSqlBody(
+            params.dataSource.qsql.query,
+            params.dataSource.qsql.selectedTarget,
+            this.insightsVersion,
+            qeEnabled,
+          );
+
           coreUrl = this.connEndpoints.scratchpad.importQsql;
           dsTypeString = "QSQL";
           break;
@@ -636,9 +645,12 @@ export class InsightsConnection {
     context?: string,
     isPython?: boolean,
     isStarting?: boolean,
+    isTableView?: boolean,
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
-      const isTableView = ext.isResultsTabVisible;
+      if (isTableView === undefined) {
+        isTableView = ext.isResultsTabVisible;
+      }
       const scratchpadURL = new url.URL(
         this.connEndpoints.scratchpad.scratchpad,
         this.node.details.server,
@@ -653,7 +665,10 @@ export class InsightsConnection {
 
       if (this.insightsVersion) {
         /* TODO: Workaround for Python structuredText bug */
-        if (!isPython && compareVersions(this.insightsVersion, 1.12)) {
+        if (
+          !isPython &&
+          isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
+        ) {
           body.returnFormat = isTableView ? "structuredText" : "text";
         } else {
           body.isTableView = isTableView;
@@ -702,7 +717,7 @@ export class InsightsConnection {
                     /* TODO: Workaround for Python structuredText bug */
                     !isPython &&
                     this.insightsVersion &&
-                    compareVersions(this.insightsVersion, 1.12)
+                    isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
                   ) {
                     response.data = JSON.parse(
                       response.data.data,
@@ -712,7 +727,7 @@ export class InsightsConnection {
                       response.data.data.map((x: string) => parseInt(x, 16)),
                     ).buffer;
 
-                    response.data.data = handleWSResults(buffer);
+                    response.data.data = handleWSResults(buffer, isTableView);
                     response.data.data = handleScratchpadTableRes(
                       response.data.data,
                     );

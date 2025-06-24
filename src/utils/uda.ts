@@ -391,6 +391,5 @@ export async function retrieveUDAtoCreateReqBody(
     returnFormat,
   );
 
-  //TODO: remove the method bellow and send only the udaReqBody when nanoseconds are fixed
-  return fixTimeAtUDARequestBody(udaReqBody);
+  return udaReqBody;
 }

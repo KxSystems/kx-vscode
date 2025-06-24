@@ -279,7 +279,6 @@ describe("KdbDataSourceView", () => {
         };
         const result = view.renderUDACheckbox(param);
         assert.ok(result);
-        console.log(result.strings);
       });
 
       it("should render checkbox with value false", () => {

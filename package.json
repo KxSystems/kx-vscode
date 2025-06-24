@@ -5,7 +5,7 @@
   "publisher": "KX",
   "version": "1.12.0-rc",
   "engines": {
-    "vscode": "^1.86.0"
+    "vscode": "^1.97.2"
   },
   "icon": "resources/images/kx-logo-vs.png",
   "repository": {
@@ -194,6 +194,12 @@
           "default": {},
           "scope": "resource"
         },
+        "kdb.targetMap": {
+          "type": "object",
+          "description": "Connection map for workspace files",
+          "default": {},
+          "scope": "resource"
+        },
         "kdb.connectionLabels": {
           "type": "array",
           "description": "List of label names and colorset",
@@ -289,6 +295,11 @@
       },
       {
         "category": "KX",
+        "command": "kdb.file.pickTarget",
+        "title": "Pick target"
+      },
+      {
+        "category": "KX",
         "command": "kdb.scratchpad.run",
         "title": "Run workbook"
       },
@@ -378,6 +389,11 @@
         "category": "KX",
         "command": "kdb.queryHistory.rerun",
         "title": "Rerun query"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.queryHistory.copyQuery",
+        "title": "Copy query"
       },
       {
         "category": "KX",
@@ -500,6 +516,11 @@
         "category": "KX",
         "command": "kdb.help.reportBug",
         "title": "Report a Bug"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.createNotebook",
+        "title": "Create New KX Notebook"
       }
     ],
     "keybindings": [
@@ -518,19 +539,19 @@
         "command": "kdb.scratchpad.python.run",
         "key": "ctrl+d",
         "mac": "cmd+d",
-        "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
+        "when": "editorLangId == python"
       },
       {
         "command": "kdb.scratchpad.python.run.file",
         "key": "ctrl+shift+d",
         "mac": "cmd+shift+d",
-        "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
+        "when": "editorLangId == python"
       },
       {
         "command": "kdb.scratchpad.editor.reset",
         "key": "ctrl+shift+delete",
         "mac": "cmd+shift+delete",
-        "when": "(editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)) || editorLangId == q"
+        "when": "editorLangId == python || editorLangId == q"
       },
       {
         "command": "kdb.execute.terminal.run",
@@ -549,6 +570,12 @@
         "key": "ctrl+shift+y",
         "mac": "cmd+shift+y",
         "when": "editorLangId == q"
+      },
+      {
+        "command": "kdb.file.pickTarget",
+        "key": "ctrl+alt+t",
+        "mac": "cmd+alt+t",
+        "when": "kdb.connected.active && (editorLangId == q || editorLangId == python)"
       }
     ],
     "snippets": [
@@ -599,6 +626,19 @@
         "icon": {
           "dark": "./resources/dark/plot.svg",
           "light": "./resources/light/plot.svg"
+        }
+      },
+      {
+        "id": "kxnotebook",
+        "aliases": [
+          "kxnotebook"
+        ],
+        "extensions": [
+          ".kxnb"
+        ],
+        "icon": {
+          "dark": "./resources/dark/notebook.svg",
+          "light": "./resources/light/notebook.svg"
         }
       }
     ],
@@ -882,7 +922,12 @@
         {
           "command": "kdb.queryHistory.rerun",
           "when": "view == kdb-query-history",
-          "group": "queryHistory"
+          "group": "queryHistory@1"
+        },
+        {
+          "command": "kdb.queryHistory.copyQuery",
+          "when": "view == kdb-query-history && viewItem in kdb.kdbQHCopyList",
+          "group": "queryHistory@2"
         },
         {
           "command": "kdb.file.rename",
@@ -939,12 +984,12 @@
         {
           "command": "kdb.scratchpad.python.run.file",
           "group": "q@0",
-          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
+          "when": "editorLangId == python"
         },
         {
           "command": "kdb.scratchpad.python.run",
           "group": "q@1",
-          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
+          "when": "editorLangId == python"
         }
       ],
       "editor/context": [
@@ -971,12 +1016,12 @@
         {
           "command": "kdb.scratchpad.python.run.file",
           "group": "q@0",
-          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
+          "when": "editorLangId == python"
         },
         {
           "command": "kdb.scratchpad.python.run",
           "group": "q@1",
-          "when": "editorLangId == python && (resourceFilename =~ /.kdb.py/ || kdb.pythonEnabled)"
+          "when": "editorLangId == python"
         }
       ],
       "explorer/context": [
@@ -1013,6 +1058,17 @@
         ],
         "priority": "default"
       }
+    ],
+    "notebooks": [
+      {
+        "type": "kx-notebook",
+        "displayName": "KX Notebook",
+        "selector": [
+          {
+            "filenamePattern": "*.kxnb"
+          }
+        ]
+      }
     ]
   },
   "license": "MIT",
@@ -1021,18 +1077,21 @@
   },
   "homepage": "https://kx.com",
   "scripts": {
-    "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
-    "esbuild-base": "rimraf out && node ./esbuild.js",
     "build": "npm run -S esbuild-base -- --sourcemap",
-    "watch": "npm run -S esbuild-base -- --sourcemap --watch",
-    "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
-    "test": "tsc -p ./test && node ./out/test/runTest.js",
     "coverage": "tsc -p ./test && node ./out/test/runTest.js --coverage",
-    "package": "npx vsce package",
+    "esbuild-base": "rimraf out && node ./esbuild.js",
+    "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
+    "lint": "eslint $(git ls-files '*.ts' '*.q' '*.css') --fix --no-warn-ignored",
+    "package": "npx vsce package",
+    "preui-test": "rimraf out-test .test-extensions",
+    "preui-test-cmd": "tsc --outdir out-test -p ./test",
     "publish": "npx vsce publish",
-    "lint": "eslint 'src/**' 'test/suite/**' --fix",
-    "ui-test": "rimraf out-test .test-extensions && tsc --outdir out-test -p ./test && extest setup-and-run './out-test/test/ui/**/*.test.js' --code_version max --code_settings ./test/ui/fixtures/settings.json --extensions_dir .test-extensions -m ./test/ui/fixtures/mocha.json"
+    "test": "tsc -p ./test && node ./out/test/runTest.js",
+    "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js",
+    "ui-test-cmd": "extest setup-and-run --code_version 1.99.3 --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
+    "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
+    "watch": "npm run -S esbuild-base -- --sourcemap --watch"
   },
   "prettier": {
     "printWidth": 80,
@@ -1045,21 +1104,25 @@
     "@types/glob": "^8.1.0",
     "@types/graceful-fs": "^4.1.9",
     "@types/istanbul-lib-coverage": "^2.0.6",
+    "@types/istanbul-lib-instrument": "^1.7.7",
+    "@types/istanbul-lib-source-maps": "^4.0.4",
     "@types/istanbul-reports": "^3.0.4",
+    "@types/jsdom": "^21.1.7",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^22.10.1",
+    "@types/node": "^24.0.3",
     "@types/node-fetch": "^2.6.12",
-    "@types/semver": "^7.5.8",
+    "@types/semver": "^7.7.0",
     "@types/sinon": "^17.0.4",
-    "@types/vscode": "^1.86.0",
+    "@types/vscode": "^1.97.2",
+    "@types/vscode-notebook-renderer": "^1.72.3",
     "@types/vscode-webview": "^1.57.5",
-    "@typescript-eslint/eslint-plugin": "^8.27.0",
-    "@typescript-eslint/parser": "^8.27.0",
-    "@vscode/test-electron": "^2.4.1",
-    "esbuild": "^0.25.1",
-    "eslint": "^9.24.0",
+    "@typescript-eslint/eslint-plugin": "^8.34.1",
+    "@typescript-eslint/parser": "^8.34.1",
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.25.5",
+    "eslint": "^9.29.0",
     "eslint-plugin-header": "^3.1.1",
-    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-license-header": "^0.8.0",
     "eslint-plugin-unused-imports": "^4.1.4",
     "glob": "^8.1.0",
@@ -1068,40 +1131,41 @@
     "istanbul-lib-report": "^2.0.8",
     "istanbul-lib-source-maps": "^3.0.6",
     "istanbul-reports": "^3.1.7",
-    "lit": "^3.2.1",
-    "mocha": "^11.0.1",
+    "jsdom": "^26.1.0",
+    "lit": "^3.3.0",
+    "mocha": "^11.7.0",
     "mocha-junit-reporter": "^2.2.1",
     "mocha-multi-reporters": "^1.5.1",
-    "mock-fs": "^5.4.1",
-    "prettier": "^3.5.3",
+    "mock-fs": "^5.5.0",
+    "prettier": "^3.6.0",
     "rimraf": "^6.0.1",
-    "sinon": "^19.0.2",
+    "sinon": "^21.0.0",
     "typescript": "^5.8.3",
-    "typescript-eslint": "^8.30.1",
+    "typescript-eslint": "^8.34.1",
     "vscode-dts": "^0.3.3",
-    "vscode-extension-tester": "^8.14.1",
+    "vscode-extension-tester": "^8.15.0",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "^1.0.12",
     "vscode-test": "^1.6.1"
   },
   "dependencies": {
-    "@ag-grid-community/core": "^32.3.4",
+    "@ag-grid-community/core": "^32.3.5",
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "@windozer/node-q": "^2.6.0",
-    "ag-grid-community": "^33.2.1",
-    "axios": "^1.8.4",
+    "ag-grid-community": "^33.3.2",
+    "axios": "^1.10.0",
     "chevrotain": "^10.5.0",
     "extract-zip": "^2.0.1",
-    "fs-extra": "^11.2.0",
+    "fs-extra": "^11.3.0",
     "jwt-decode": "^4.0.0",
     "moment": "^2.30.1",
     "moment-duration-format": "^2.3.2",
-    "moment-timezone": "^0.5.46",
+    "moment-timezone": "^0.6.0",
     "node-fetch": "^2.7.0",
     "node-q": "^2.7.0",
     "pick-port": "^2.0.1",
-    "semver": "^7.7.1",
+    "semver": "^7.7.2",
     "vscode-extension-telemetry": "^0.4.5",
     "vscode-languageserver-textdocument": "^1.0.11",
     "vscode-uri": "^3.1.0"

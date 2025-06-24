@@ -98,21 +98,25 @@ export class FileTreeItem extends TreeItem {
     }
 
     this.iconPath = {
-      light: Path.join(
-        __filename,
-        "..",
-        "..",
-        "resources",
-        "light",
-        this.baseIcon + state + ".svg",
+      light: Uri.file(
+        Path.join(
+          __dirname,
+          "..",
+          "..",
+          "resources",
+          "light",
+          this.baseIcon + state + ".svg",
+        ),
       ),
-      dark: Path.join(
-        __filename,
-        "..",
-        "..",
-        "resources",
-        "dark",
-        this.baseIcon + state + ".svg",
+      dark: Uri.file(
+        Path.join(
+          __dirname,
+          "..",
+          "..",
+          "resources",
+          "dark",
+          this.baseIcon + state + ".svg",
+        ),
       ),
     };
   }

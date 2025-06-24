@@ -59,15 +59,16 @@ export class KdbTreeService {
 
   static async loadTables(ns: string): Promise<ServerObject[]> {
     const serverObjects = await loadServerObjects();
-    if (serverObjects !== undefined) {
-      const tables = serverObjects.filter((value) => {
-        return value.typeNum === 98 && !value.isNs && value.namespace === ns
-          ? value
-          : undefined;
-      });
-      return KdbTreeService.sortObjects(tables);
-    }
-    return new Array<ServerObject>();
+    if (!serverObjects) return [];
+
+    const tables = serverObjects.filter(
+      (value) =>
+        (value.typeNum === 98 || value.typeNum === 99) &&
+        !value.isNs &&
+        value.namespace === ns,
+    );
+
+    return KdbTreeService.sortObjects(tables);
   }
 
   static async loadVariables(ns: string): Promise<ServerObject[]> {

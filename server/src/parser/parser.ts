@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,7 +11,18 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { checkEscape } from "./checks";
+import { Control, Identifier, LSql, RSql } from "./keywords";
 import { QLexer } from "./lexer";
+import { CharLiteral, CommentLiteral } from "./literals";
+import {
+  CommentBegin,
+  CommentEnd,
+  ExitCommentBegin,
+  StringBegin,
+  StringEnd,
+  TestBegin,
+} from "./ranges";
 import {
   Command,
   Documentation,
@@ -35,18 +46,7 @@ import {
   Operator,
   Cond,
 } from "./tokens";
-import {
-  CommentBegin,
-  CommentEnd,
-  ExitCommentBegin,
-  StringBegin,
-  StringEnd,
-  TestBegin,
-} from "./ranges";
-import { CharLiteral, CommentLiteral } from "./literals";
 import { Token, inParam, testblock } from "./utils";
-import { Control, Identifier, LSql, RSql } from "./keywords";
-import { checkEscape } from "./checks";
 
 function isExpression(token: Token) {
   switch (token.tokenType) {
@@ -64,7 +64,9 @@ function isExpression(token: Token) {
 }
 
 function clear(tokens: Token[]) {
-  while (tokens.pop()) {}
+  while (tokens.pop()) {
+    // intentionally empty
+  }
 }
 
 function peek(tokens: Token[]): Token | undefined {

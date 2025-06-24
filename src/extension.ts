@@ -36,6 +36,7 @@ import {
   addKdbConnection,
   addNewConnection,
   connect,
+  copyQuery,
   disconnect,
   editConnection,
   editInsightsConnection,
@@ -57,6 +58,7 @@ import {
   connectWorkspaceCommands,
   importOldDSFiles,
   pickConnection,
+  pickTarget,
   resetScratchpadFromEditor,
   runActiveEditor,
   setServerForUri,
@@ -83,6 +85,8 @@ import {
   KdbTreeProvider,
   MetaObjectPayloadNode,
 } from "./services/kdbTreeProvider";
+import { KxNotebookController } from "./services/notebookController";
+import { KxNotebookSerializer } from "./services/notebookSerializer";
 import {
   QueryHistoryProvider,
   QueryHistoryTreeItem,
@@ -137,6 +141,7 @@ export async function activate(context: vscode.ExtensionContext) {
   vscode.commands.executeCommand("setContext", "kdb.connected.active", false);
   vscode.commands.executeCommand("setContext", "kdb.pythonEnabled", false);
   vscode.commands.executeCommand("setContext", "kdb.connected", []);
+  vscode.commands.executeCommand("setContext", "kdb.kdbQHCopyList", []);
 
   const servers: Server | undefined = getServers();
   const insights: Insights | undefined = getInsights();
@@ -213,7 +218,7 @@ export async function activate(context: vscode.ExtensionContext) {
     ChartEditorProvider.register(context),
 
     vscode.languages.registerCodeLensProvider(
-      { pattern: "**/*.kdb.{q,py}" },
+      { pattern: "**/*.{q,py}" },
       new ConnectionLensProvider(),
     ),
 
@@ -265,6 +270,14 @@ export async function activate(context: vscode.ExtensionContext) {
       { language: "q" },
       new CompletionProvider(),
     ),
+  );
+
+  context.subscriptions.push(
+    vscode.workspace.registerNotebookSerializer(
+      "kx-notebook",
+      new KxNotebookSerializer(),
+    ),
+    new KxNotebookController(),
   );
 
   connectWorkspaceCommands();
@@ -549,6 +562,12 @@ function registerQueryHistoryCommands(): CommandRegistration[] {
       command: "kdb.queryHistory.rerun",
       callback: async (viewItem: QueryHistoryTreeItem) => {
         rerunQuery(viewItem.details);
+      },
+    },
+    {
+      command: "kdb.queryHistory.copyQuery",
+      callback: async (viewItem: QueryHistoryTreeItem) => {
+        copyQuery(viewItem.details);
       },
     },
   ];
@@ -932,6 +951,15 @@ function registerFileCommands(): CommandRegistration[] {
         }
       },
     },
+    {
+      command: "kdb.file.pickTarget",
+      callback: async () => {
+        const editor = ext.activeTextEditor;
+        if (editor) {
+          await pickTarget(editor.document.uri);
+        }
+      },
+    },
   ];
 
   return fileCommands;
@@ -972,6 +1000,23 @@ function registerLSCommands(): CommandRegistration[] {
   return lsCommands;
 }
 
+function registerNotebookCommands(): CommandRegistration[] {
+  const notebookCommands: CommandRegistration[] = [
+    {
+      command: "kdb.createNotebook",
+      callback: async () => {
+        if (hasWorkspaceOrShowOption("adding notebook")) {
+          const uri = await addWorkspaceFile(undefined, "notebook", ".kxnb");
+          const notebook = await vscode.workspace.openNotebookDocument(uri);
+          await vscode.window.showNotebookDocument(notebook);
+        }
+      },
+    },
+  ];
+
+  return notebookCommands;
+}
+
 function registerAllExtensionCommands(): void {
   const allCommands: CommandRegistration[] = [
     ...registerHelpCommands(),
@@ -984,6 +1029,7 @@ function registerAllExtensionCommands(): void {
     ...registerFileCommands(),
     ...registerInstallCommands(),
     ...registerLSCommands(),
+    ...registerNotebookCommands(),
   ];
 
   allCommands.forEach((command) => {
