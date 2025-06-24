@@ -2602,15 +2602,19 @@ describe("HelpFeedbackProvider", () => {
         "light" in item.iconPath &&
         "dark" in item.iconPath
       ) {
+        console.log("uri:");
+        console.log(item.iconPath.light.toString());
+        console.log("expected end of uri:");
+        console.log(Path.join("resources", "light", expected[idx].icon));
         assert.ok(
-          String(item.iconPath.light).endsWith(
-            Path.join("resources", "light", expected[idx].icon),
-          ),
+          item.iconPath.light
+            .toString()
+            .endsWith(Path.join("resources", "light", expected[idx].icon)),
         );
         assert.ok(
-          String(item.iconPath.dark).endsWith(
-            Path.join("resources", "dark", expected[idx].icon),
-          ),
+          item.iconPath.dark
+            .toString()
+            .endsWith(Path.join("resources", "dark", expected[idx].icon)),
         );
       }
     });
