@@ -148,7 +148,7 @@ export class ConnectionManagementService {
         if (err) {
           showMessage(`Connection failed to: ${connLabel}`, MessageKind.ERROR, {
             logger,
-            params: [err],
+            params: err,
           });
           this.isNotConnectedBehaviour(connLabel);
           return;

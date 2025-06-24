@@ -387,7 +387,7 @@ export class InsightsConnection {
 
       showMessage("Requesting datasource query.", MessageKind.DEBUG, {
         logger,
-        params: [options.url, options.data],
+        params: { url: options.url, data: options.data },
       });
 
       const runner = Runner.create(async () => {
@@ -412,7 +412,7 @@ export class InsightsConnection {
             showMessage(
               `Datasource run status: ${error.response.status}.`,
               MessageKind.DEBUG,
-              { logger, params: [error] },
+              { logger, params: error },
             );
             return {
               error: { buffer: error.response.data },
@@ -474,7 +474,7 @@ export class InsightsConnection {
             showMessage(
               "Unable to create UDA request body.",
               MessageKind.ERROR,
-              { logger, params: [udaReqBody.error] },
+              { logger, params: udaReqBody.error },
             );
             return;
           }
@@ -511,13 +511,16 @@ export class InsightsConnection {
           if (response.data.error) {
             showMessage("Unable to populate scratchpad.", MessageKind.ERROR, {
               logger,
-              params: [response.data.errorMsg],
+              params: response.data.errorMsg,
             });
           } else {
             showMessage(
               `Populated scratchpad, stored in ${variableName}.`,
               MessageKind.INFO,
-              { logger, params: [response.status, body.params] },
+              {
+                logger,
+                params: { status: response.status, params: body.params },
+              },
             );
             Telemetry.sendEvent(
               "Datasource." + dsTypeString + ".Scratchpad.Populated",

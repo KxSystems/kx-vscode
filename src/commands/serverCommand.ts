@@ -847,7 +847,7 @@ export async function _executeQuery(
   if (connLabel === "") {
     if (ext.activeConnection === undefined) {
       showMessage(
-        "No active connection found. Connect to one connection.",
+        "You aren't connected to any connection. Once connected please try again.",
         MessageKind.ERROR,
       );
       return undefined;

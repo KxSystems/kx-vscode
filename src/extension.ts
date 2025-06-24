@@ -888,7 +888,7 @@ function registerExecuteCommands(): CommandRegistration[] {
             runQFileTerminal(`"${uri.fsPath}"`);
           } catch (error) {
             showMessage(`Unable to write temp file.`, MessageKind.ERROR, {
-              params: [error],
+              params: error,
             });
           }
         }

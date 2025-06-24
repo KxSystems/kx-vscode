@@ -14,6 +14,7 @@
 import * as vscode from "vscode";
 
 import { kdbOutputLog } from "./loggers";
+import { ext } from "../extensionVariables";
 
 const logger = "notifications";
 
@@ -98,24 +99,41 @@ export const enum MessageKind {
 export function showMessage<T extends string>(
   message: string,
   kind: MessageKind,
-  options: { logger?: string; params?: Array<any> } = {},
+  options: { logger?: string; params?: any } = {},
   ...items: T[]
 ): Thenable<T | undefined> {
+  message = stripUnprintableChars(message);
   if (options.logger) {
     const params = getParams(options.params);
     const log = `[${options.logger}] ${message} ${params}`.trim();
     kdbOutputLog(log, kind, true);
   }
-  switch (kind) {
-    case MessageKind.ERROR:
-      return vscode.window.showErrorMessage<T>(message, ...items);
-    case MessageKind.WARNING:
-      return vscode.window.showWarningMessage<T>(message, ...items);
-    case MessageKind.INFO:
-      return vscode.window.showInformationMessage<T>(message, ...items);
-    default:
-      return Promise.resolve(undefined);
+
+  let action: "Details" | "OK" | undefined;
+
+  if (items.length === 0) {
+    action = options.params ? "Details" : "OK";
+    items.push(<T>action);
   }
+
+  const dialog =
+    kind === MessageKind.ERROR
+      ? vscode.window.showErrorMessage<T>(message, ...items)
+      : kind === MessageKind.WARNING
+        ? vscode.window.showWarningMessage<T>(message, ...items)
+        : kind === MessageKind.INFO
+          ? vscode.window.showInformationMessage<T>(message, ...items)
+          : Promise.resolve(undefined);
+
+  if (action === "Details") {
+    dialog.then((res) => {
+      if (res === "Details") {
+        ext.outputChannel.show(true);
+      }
+    });
+  }
+
+  return dialog;
 }
 
 function getParams(params?: Array<any>) {
@@ -123,9 +141,16 @@ function getParams(params?: Array<any>) {
     try {
       return JSON.stringify(params);
     } catch (error) {
-      return JSON.stringify(error);
+      return `Parsing log params failed: ${error}`;
     }
   } else {
     return "";
   }
+}
+
+function stripUnprintableChars(text: string) {
+  return text
+    .replace(/\p{Cc}/gu, "")
+    .replace(/\p{Co}/gu, "")
+    .replace(/\p{Cn}/gu, "");
 }

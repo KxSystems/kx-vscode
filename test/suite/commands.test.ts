@@ -2526,6 +2526,7 @@ describe("serverCommand", () => {
       sinon.assert.calledOnceWithExactly(
         showInfoStub,
         "Query copied to clipboard.",
+        "OK",
       );
     });
 

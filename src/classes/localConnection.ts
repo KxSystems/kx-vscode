@@ -113,7 +113,7 @@ export class LocalConnection {
         showMessage(
           `Connection to server ${this.options.host}:${this.options.port} failed.`,
           MessageKind.ERROR,
-          { logger, params: [err] },
+          { logger, params: err },
         );
 
         return;
@@ -317,7 +317,7 @@ export class LocalConnection {
         showMessage(
           "Failed to retrieve kdb+ global variables.",
           MessageKind.ERROR,
-          { logger, params: [err] },
+          { logger, params: err },
         );
         return;
       }
@@ -363,7 +363,7 @@ export class LocalConnection {
         showMessage(
           "Failed to retrieve kdb+ reserved keywords.",
           MessageKind.ERROR,
-          { logger, params: [err] },
+          { logger, params: err },
         );
         return;
       }

@@ -58,7 +58,7 @@ export function convertTimeToTimestamp(time: string): string {
     showMessage(
       "The string param is in an incorrect format.",
       MessageKind.ERROR,
-      { logger, params: [time, error] },
+      { logger, params: { time, error } },
     );
     return "";
   }

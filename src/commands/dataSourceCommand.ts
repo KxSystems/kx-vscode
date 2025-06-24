@@ -194,7 +194,7 @@ export async function runDataSource(
       if (!success) {
         showMessage("Datasource run failed.", MessageKind.ERROR, {
           logger,
-          params: [res.error],
+          params: res.error,
         });
       }
       if (ext.isResultsTabVisible) {
@@ -239,7 +239,7 @@ export async function runDataSource(
   } catch (error) {
     showMessage(`Datasource error: ${error}.`, MessageKind.ERROR, {
       logger,
-      params: [error],
+      params: error,
     });
     DataSourcesPanel.running = false;
   } finally {
@@ -458,7 +458,7 @@ export async function runUDADataSource(
   if (udaReqBody.error) {
     showMessage(`Datasource error.`, MessageKind.ERROR, {
       logger,
-      params: [udaReqBody.error],
+      params: udaReqBody.error,
     });
     return udaReqBody;
   }
@@ -508,7 +508,7 @@ export function parseError(error: GetDataError) {
   } else {
     showMessage(`Datasource error.`, MessageKind.ERROR, {
       logger,
-      params: [error],
+      params: error,
     });
     return {
       error,

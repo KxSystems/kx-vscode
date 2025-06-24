@@ -60,7 +60,6 @@ export class KxNotebookController {
       showMessage(
         "You aren't connected to any connection. Once connected please try again.",
         MessageKind.ERROR,
-        { logger },
       );
       return;
     }
@@ -105,7 +104,7 @@ export class KxNotebookController {
       } catch (error) {
         showMessage("Unable to run code block.", MessageKind.ERROR, {
           logger,
-          params: [error],
+          params: error,
         });
         break;
       } finally {
