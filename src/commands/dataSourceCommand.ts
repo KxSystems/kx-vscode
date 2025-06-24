@@ -40,7 +40,7 @@ import {
   createKdbDataSourcesFolder,
   getConnectedInsightsNode,
 } from "../utils/dataSource";
-import { MessageKind, showMessage } from "../utils/notifications";
+import { MessageKind, notify } from "../utils/notifications";
 import {
   addQueryHistory,
   generateQSqlBody,
@@ -48,11 +48,10 @@ import {
   handleWSError,
   handleWSResults,
 } from "../utils/queryUtils";
-import { Telemetry } from "../utils/telemetryClient";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
 
-const logger = "dataSourceCommands";
+const logger = "dataSourceCommand";
 
 export async function addDataSource(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
@@ -73,12 +72,11 @@ export async function addDataSource(): Promise<void> {
   defaultDataSourceContent.insightsNode = insightsNode;
 
   fs.writeFileSync(filePath, JSON.stringify(defaultDataSourceContent));
-  showMessage(
+  notify(
     `Created ${fileName} in ${kdbDataSourcesFolderPath}.`,
     MessageKind.INFO,
-    { logger },
+    { logger, telemetry: "Datasource.Created" },
   );
-  Telemetry.sendEvent("Datasource.Created");
 }
 
 export async function populateScratchpad(
@@ -116,7 +114,7 @@ export async function populateScratchpad(
         qenvEnabled === "Enabled",
       );
     } else {
-      showMessage(
+      notify(
         `Invalid scratchpad output variable name: ${outputVariable}`,
         MessageKind.ERROR,
         { logger },
@@ -157,15 +155,15 @@ export async function runDataSource(
     dataSourceForm.insightsNode = getConnectedInsightsNode();
     const fileContent = dataSourceForm;
 
-    showMessage(
-      `Running ${fileContent.name} datasource...`,
-      MessageKind.DEBUG,
-      { logger },
-    );
     let res: any;
     const selectedType = getSelectedType(fileContent);
     ext.isDatasourceExecution = true;
-    Telemetry.sendEvent("Datasource." + selectedType + ".Run");
+
+    notify(`Running ${fileContent.name} datasource...`, MessageKind.DEBUG, {
+      logger,
+      telemetry: "Datasource." + selectedType + ".Run",
+    });
+
     switch (selectedType) {
       case "API":
         res = await runApiDataSource(fileContent, selectedConnection);
@@ -192,7 +190,7 @@ export async function runDataSource(
       const query = getQuery(fileContent, selectedType);
 
       if (!success) {
-        showMessage("Datasource run failed.", MessageKind.ERROR, {
+        notify("Datasource run failed.", MessageKind.ERROR, {
           logger,
           params: res.error,
         });
@@ -200,7 +198,7 @@ export async function runDataSource(
       if (ext.isResultsTabVisible) {
         if (success) {
           const resultCount = typeof res === "string" ? "0" : res.rows.length;
-          showMessage(`Results: ${resultCount} rows`, MessageKind.DEBUG, {
+          notify(`Results: ${resultCount} rows`, MessageKind.DEBUG, {
             logger,
           });
         } else if (!success) {
@@ -216,7 +214,7 @@ export async function runDataSource(
         );
       } else {
         if (success) {
-          showMessage(
+          notify(
             `Results is a string with length: ${res.length}`,
             MessageKind.DEBUG,
             { logger },
@@ -237,7 +235,7 @@ export async function runDataSource(
       addDStoQueryHistory(dataSourceForm, success, connLabel, executorName);
     }
   } catch (error) {
-    showMessage(`Datasource error: ${error}.`, MessageKind.ERROR, {
+    notify(`Datasource error: ${error}.`, MessageKind.ERROR, {
       logger,
       params: error,
     });
@@ -291,9 +289,10 @@ export async function runApiDataSource(
     fileContent.dataSource.api.endTS,
   );
   if (!isTimeCorrect) {
-    showMessage(
+    notify(
       "The time parameters (startTS and endTS) are not correct, please check the format or if the startTS is before the endTS",
       MessageKind.ERROR,
+      { logger },
     );
     return;
   }
@@ -456,7 +455,7 @@ export async function runUDADataSource(
   const udaReqBody = await retrieveUDAtoCreateReqBody(uda, selectedConn);
 
   if (udaReqBody.error) {
-    showMessage(`Datasource error.`, MessageKind.ERROR, {
+    notify(`Datasource error.`, MessageKind.ERROR, {
       logger,
       params: udaReqBody.error,
     });
@@ -506,7 +505,7 @@ export function parseError(error: GetDataError) {
   if (error instanceof Object && error.buffer) {
     return handleWSError(error.buffer);
   } else {
-    showMessage(`Datasource error.`, MessageKind.ERROR, {
+    notify(`Datasource error.`, MessageKind.ERROR, {
       logger,
       params: error,
     });

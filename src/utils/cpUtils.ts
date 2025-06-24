@@ -16,7 +16,7 @@ import * as os from "os";
 import { join } from "path";
 
 import { ext } from "../extensionVariables";
-import { MessageKind, showMessage } from "./notifications";
+import { MessageKind, notify } from "./notifications";
 
 const logger = "cpUtils";
 
@@ -38,7 +38,7 @@ export async function executeCommand(
       `Failed to run ${command} command.  Check output window for more details.`,
     );
   } else {
-    showMessage(
+    notify(
       `Finished running command: ${command} ${result.formattedArgs}`,
       MessageKind.DEBUG,
       { logger },
@@ -92,17 +92,17 @@ export async function tryExecuteCommand(
         data = data.toString();
         cmdOutput = cmdOutput.concat(data);
         cmdOutputIncludingStderr = cmdOutputIncludingStderr.concat(data);
-        showMessage(data, MessageKind.DEBUG, { logger });
+        notify(data, MessageKind.DEBUG, { logger });
       });
 
       childProc.stderr?.on("data", (data: string | Buffer) => {
         data = data.toString();
         cmdOutputIncludingStderr = cmdOutputIncludingStderr.concat(data);
-        showMessage(data, MessageKind.DEBUG, { logger });
+        notify(data, MessageKind.DEBUG, { logger });
       });
 
       childProc.on("error", (error) => {
-        showMessage(error.message, MessageKind.ERROR);
+        notify(error.message, MessageKind.ERROR, { logger });
         reject(error);
       });
 

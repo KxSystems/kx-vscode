@@ -17,7 +17,7 @@ import { workspace, Uri } from "vscode";
 
 import { InsightsConnection } from "../classes/insightsConnection";
 import { ext } from "../extensionVariables";
-import { MessageKind, showMessage } from "./notifications";
+import { MessageKind, notify } from "./notifications";
 import { Telemetry } from "./telemetryClient";
 import { DataSourceFiles } from "../models/dataSource";
 import { DataSourcesPanel } from "../panels/datasource";
@@ -28,7 +28,7 @@ export function createKdbDataSourcesFolder(): string {
   const rootPath = ext.context.globalStorageUri.fsPath;
   const kdbDataSourcesFolderPath = path.join(rootPath, ext.kdbDataSourceFolder);
   if (!fs.existsSync(rootPath)) {
-    showMessage(
+    notify(
       `Directory created to the extension folder: ${rootPath}`,
       MessageKind.DEBUG,
       { logger },
@@ -36,7 +36,7 @@ export function createKdbDataSourcesFolder(): string {
     fs.mkdirSync(rootPath);
   }
   if (!fs.existsSync(kdbDataSourcesFolderPath)) {
-    showMessage(
+    notify(
       `Directory created to the extension folder: ${kdbDataSourcesFolderPath}`,
       MessageKind.DEBUG,
       { logger },
@@ -55,11 +55,10 @@ export function convertTimeToTimestamp(time: string): string {
     const timePart = parts[1].replace("Z", "0").padEnd(9, "0");
     return `${datePart}.${timePart}`;
   } catch (error) {
-    showMessage(
-      "The string param is in an incorrect format.",
-      MessageKind.ERROR,
-      { logger, params: { time, error } },
-    );
+    notify("The string param is in an incorrect format.", MessageKind.ERROR, {
+      logger,
+      params: { time, error },
+    });
     return "";
   }
 }
@@ -153,7 +152,8 @@ export async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
       filePath = path.join(importToUri.fsPath, fileName);
     }
     fs.writeFileSync(filePath, JSON.stringify(ds));
-    showMessage(`Datasource created.`, MessageKind.INFO);
-    Telemetry.sendEvent("Datasource.Created");
+    notify(`Datasource created.`, MessageKind.INFO, {
+      telemetry: "Datasource.Created",
+    });
   }
 }

@@ -25,7 +25,7 @@ import { ext } from "../extensionVariables";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
-import { MessageKind, showMessage } from "../utils/notifications";
+import { MessageKind, notify } from "../utils/notifications";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
 
 const logger = "resultsPanelProvider";
@@ -103,12 +103,14 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
   exportToCsv() {
     if (ext.resultPanelCSV === "") {
-      showMessage("No results to export", MessageKind.ERROR);
+      notify("No results to export", MessageKind.ERROR, { logger });
       return;
     }
     const workspaceFolders = workspace.workspaceFolders;
     if (!workspaceFolders) {
-      showMessage("Open a folder to export results", MessageKind.ERROR);
+      notify("Open a folder to export results", MessageKind.ERROR, {
+        logger,
+      });
       return;
     }
     const workspaceUri = workspaceFolders[0].uri;
@@ -139,7 +141,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     let gridOptions = undefined;
 
     if (!this._view) {
-      showMessage("No view to update", MessageKind.ERROR, {
+      notify("No view to update", MessageKind.ERROR, {
         logger,
       });
       return;

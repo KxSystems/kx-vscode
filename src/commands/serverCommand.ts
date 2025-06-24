@@ -71,7 +71,7 @@ import {
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { decodeQUTF } from "../utils/decode";
 import { ExecutionConsole } from "../utils/executionConsole";
-import { MessageKind, Runner, showMessage } from "../utils/notifications";
+import { MessageKind, Runner, notify } from "../utils/notifications";
 import { openUrl } from "../utils/openUrl";
 import {
   checkIfIsDatasource,
@@ -79,7 +79,6 @@ import {
   formatScratchpadStacktrace,
   resultToBase64,
 } from "../utils/queryUtils";
-import { Telemetry } from "../utils/telemetryClient";
 import {
   addWorkspaceFile,
   openWith,
@@ -116,7 +115,7 @@ export async function addInsightsConnection(
 ) {
   const aliasValidation = validateServerAlias(insightsData.alias, false);
   if (aliasValidation) {
-    showMessage(aliasValidation, MessageKind.ERROR);
+    notify(aliasValidation, MessageKind.ERROR, { logger });
     return;
   }
   if (insightsData.alias === undefined || insightsData.alias === "") {
@@ -129,9 +128,10 @@ export async function addInsightsConnection(
     insights != undefined &&
     insights[getKeyForServerName(insightsData.alias)]
   ) {
-    showMessage(
+    notify(
       `Insights instance named ${insightsData.alias} already exists.`,
       MessageKind.ERROR,
+      { logger },
     );
     return;
   } else {
@@ -169,10 +169,12 @@ export async function addInsightsConnection(
         await handleLabelsConnMap(labels, insightsData.alias);
       }
       ext.serverProvider.refreshInsights(newInsights);
-      Telemetry.sendEvent("Connection.Created.Insights");
+      notify("Created Insights connection.", MessageKind.DEBUG, {
+        telemetry: "Connection.Created.Insights",
+      });
     }
 
-    showMessage(
+    notify(
       `Added Insights connection: ${insightsData.alias}`,
       MessageKind.INFO,
     );
@@ -192,7 +194,7 @@ export async function editInsightsConnection(
       ? undefined
       : validateServerAlias(insightsData.alias, false);
   if (aliasValidation) {
-    showMessage(aliasValidation, MessageKind.ERROR);
+    notify(aliasValidation, MessageKind.ERROR, { logger });
     return;
   }
   const isConnectedConn = isConnected(oldAlias);
@@ -209,16 +211,18 @@ export async function editInsightsConnection(
         ? insights[getKeyForServerName(insightsData.alias)]
         : undefined;
     if (newAliasExists) {
-      showMessage(
+      notify(
         `Insights instance named ${insightsData.alias} already exists.`,
         MessageKind.ERROR,
+        { logger },
       );
       return;
     } else {
       if (!oldInsights) {
-        showMessage(
+        notify(
           `Insights instance named ${oldAlias} does not exist.`,
           MessageKind.ERROR,
+          { logger },
         );
         return;
       } else {
@@ -264,13 +268,15 @@ export async function editInsightsConnection(
             removeConnFromLabels(insightsData.alias);
           }
           ext.serverProvider.refreshInsights(newInsights);
-          Telemetry.sendEvent("Connection.Edited.Insights");
+          notify("Edited Insights connection.", MessageKind.DEBUG, {
+            telemetry: "Connection.Edited.Insights",
+          });
           if (isConnectedConn) {
             offerReconnectionAfterEdit(insightsData.alias);
           }
         }
 
-        showMessage(
+        notify(
           `Edited Insights connection: ${insightsData.alias}`,
           MessageKind.INFO,
         );
@@ -290,7 +296,7 @@ export async function addAuthConnection(
 ): Promise<void> {
   const validUsername = validateServerUsername(username);
   if (validUsername) {
-    showMessage(validUsername, MessageKind.ERROR);
+    notify(validUsername, MessageKind.ERROR, { logger });
     return;
   }
   if (password?.trim()?.length) {
@@ -332,10 +338,10 @@ export async function enableTLS(serverKey: string): Promise<void> {
 
   // validate if TLS is possible
   if (ext.openSslVersion === null) {
-    showMessage(
+    notify(
       "OpenSSL not found, please ensure this is installed",
       MessageKind.ERROR,
-      {},
+      { logger },
       "More Info",
       "Cancel",
     ).then(async (result) => {
@@ -354,10 +360,10 @@ export async function enableTLS(serverKey: string): Promise<void> {
     }
     return;
   }
-  showMessage(
+  notify(
     "Server not found, please ensure this is a correct server",
     MessageKind.ERROR,
-    {},
+    { logger },
     "Cancel",
   );
 }
@@ -371,15 +377,15 @@ export async function addKdbConnection(
   const hostnameValidation = validateServerName(kdbData.serverName);
   const portValidation = validateServerPort(kdbData.serverPort);
   if (aliasValidation) {
-    showMessage(aliasValidation, MessageKind.ERROR);
+    notify(aliasValidation, MessageKind.ERROR, { logger });
     return;
   }
   if (hostnameValidation) {
-    showMessage(hostnameValidation, MessageKind.ERROR);
+    notify(hostnameValidation, MessageKind.ERROR, { logger });
     return;
   }
   if (portValidation) {
-    showMessage(portValidation, MessageKind.ERROR);
+    notify(portValidation, MessageKind.ERROR, { logger });
     return;
   }
   let servers: Server | undefined = getServers();
@@ -388,9 +394,10 @@ export async function addKdbConnection(
     servers != undefined &&
     servers[getKeyForServerName(kdbData.serverAlias || "")]
   ) {
-    showMessage(
+    notify(
       `Server name ${kdbData.serverAlias} already exists.`,
       MessageKind.ERROR,
+      { logger },
     );
   } else {
     const key = kdbData.serverAlias || "";
@@ -430,17 +437,16 @@ export async function addKdbConnection(
         ext.latestLblsChanged.push(...labels);
         await handleLabelsConnMap(labels, kdbData.serverAlias);
       }
-      Telemetry.sendEvent("Connection.Created.QProcess");
+      notify("Created kdb connection.", MessageKind.DEBUG, {
+        telemetry: "Connection.Created.QProcess",
+      });
       ext.serverProvider.refresh(newServers);
     }
     if (kdbData.auth) {
       addAuthConnection(key, kdbData.username!, kdbData.password!);
     }
 
-    showMessage(
-      `Added kdb connection: ${kdbData.serverAlias}`,
-      MessageKind.INFO,
-    );
+    notify(`Added kdb connection: ${kdbData.serverAlias}`, MessageKind.INFO);
 
     NewConnectionPannel.close();
   }
@@ -461,15 +467,15 @@ export async function editKdbConnection(
   const hostnameValidation = validateServerName(kdbData.serverName);
   const portValidation = validateServerPort(kdbData.serverPort);
   if (aliasValidation) {
-    showMessage(aliasValidation, MessageKind.ERROR);
+    notify(aliasValidation, MessageKind.ERROR, { logger });
     return;
   }
   if (hostnameValidation) {
-    showMessage(hostnameValidation, MessageKind.ERROR);
+    notify(hostnameValidation, MessageKind.ERROR, { logger });
     return;
   }
   if (portValidation) {
-    showMessage(portValidation, MessageKind.ERROR);
+    notify(portValidation, MessageKind.ERROR, { logger });
     return;
   }
   const isConnectedConn = isConnected(oldAlias);
@@ -483,16 +489,18 @@ export async function editKdbConnection(
         ? servers[getKeyForServerName(kdbData.serverAlias)]
         : undefined;
     if (newAliasExists) {
-      showMessage(
+      notify(
         `KDB instance named ${kdbData.serverAlias} already exists.`,
         MessageKind.ERROR,
+        { logger },
       );
       return;
     } else {
       if (!oldServer) {
-        showMessage(
+        notify(
           `KDB instance named ${oldAlias} does not exist.`,
           MessageKind.ERROR,
+          { logger },
         );
         return;
       } else {
@@ -542,14 +550,16 @@ export async function editKdbConnection(
             removeConnFromLabels(kdbData.serverAlias);
           }
           ext.serverProvider.refresh(newServers);
-          Telemetry.sendEvent("Connection.Edited.KDB");
+          notify("Edited kdb connection.", MessageKind.DEBUG, {
+            telemetry: "Connection.Edited.KDB",
+          });
           const connLabelToReconn = `${kdbData.serverName}:${kdbData.serverPort} [${kdbData.serverAlias}]`;
           if (isConnectedConn) {
             offerReconnectionAfterEdit(connLabelToReconn);
           }
         }
 
-        showMessage(
+        notify(
           `Edited KDB connection: ${kdbData.serverAlias}`,
           MessageKind.INFO,
         );
@@ -588,7 +598,7 @@ export async function importConnections() {
 
   const fileUri = await window.showOpenDialog(options);
   if (!fileUri || fileUri.length === 0) {
-    showMessage("No file selected.", MessageKind.ERROR, { logger });
+    notify("No file selected.", MessageKind.ERROR, { logger });
     return;
   }
   const filePath = fileUri[0].fsPath;
@@ -598,12 +608,12 @@ export async function importConnections() {
   try {
     importedConnections = JSON.parse(fileContent);
   } catch {
-    showMessage("Invalid JSON format.", MessageKind.ERROR, { logger });
+    notify("Invalid JSON format.", MessageKind.ERROR, { logger });
     return;
   }
 
   if (!isValidExportedConnections(importedConnections)) {
-    showMessage("JSON does not match the required format.", MessageKind.ERROR, {
+    notify("JSON does not match the required format.", MessageKind.ERROR, {
       logger,
     });
     return;
@@ -612,7 +622,7 @@ export async function importConnections() {
     importedConnections.connections.KDB.length === 0 &&
     importedConnections.connections.Insights.length === 0
   ) {
-    showMessage(
+    notify(
       "There is no KDB or Insights connections to import in this JSON file.",
       MessageKind.ERROR,
       { logger },
@@ -647,7 +657,7 @@ export async function addImportedConnections(
 
   let res: "Duplicate" | "Overwrite" | "Cancel" | undefined = "Duplicate";
   if (hasDuplicates) {
-    res = await showMessage(
+    res = await notify(
       "You are importing connections with the same name. Would you like to duplicate, overwrite or cancel the import?",
       MessageKind.INFO,
       {},
@@ -720,7 +730,7 @@ export async function addImportedConnections(
     ext.serverProvider.refresh(config);
   }
 
-  showMessage("Connections imported successfully.", MessageKind.INFO, {
+  notify("Connections imported successfully.", MessageKind.INFO, {
     logger,
   });
 }
@@ -740,7 +750,7 @@ export async function connect(connLabel: string): Promise<void> {
   ExecutionConsole.start();
   const viewItem = connMngService.retrieveConnection(connLabel);
   if (viewItem === undefined) {
-    showMessage("Connection not found.", MessageKind.ERROR);
+    notify("Connection not found.", MessageKind.ERROR, { logger });
     return;
   }
 
@@ -749,7 +759,7 @@ export async function connect(connLabel: string): Promise<void> {
     // check for TLS support
     if (viewItem.details.tls) {
       if (!(await checkOpenSslInstalled())) {
-        showMessage(
+        notify(
           "TLS support requires OpenSSL to be installed.",
           MessageKind.INFO,
           {},
@@ -846,9 +856,10 @@ export async function _executeQuery(
   const queryConsole = ExecutionConsole.start();
   if (connLabel === "") {
     if (ext.activeConnection === undefined) {
-      showMessage(
+      notify(
         "You aren't connected to any connection. Once connected please try again.",
         MessageKind.ERROR,
+        { logger },
       );
       return undefined;
     } else {
@@ -857,7 +868,9 @@ export async function _executeQuery(
   }
   const isConnected = connMngService.isConnected(connLabel);
   if (!isConnected) {
-    showMessage("The selected connection is not connected.", MessageKind.ERROR);
+    notify("The selected connection is not connected.", MessageKind.ERROR, {
+      logger,
+    });
     return undefined;
   }
 
@@ -1104,7 +1117,7 @@ export function copyQuery(queryHistoryElement: QueryHistory) {
     typeof queryHistoryElement.query === "string"
   ) {
     env.clipboard.writeText(queryHistoryElement.query);
-    showMessage("Query copied to clipboard.", MessageKind.INFO);
+    notify("Query copied to clipboard.", MessageKind.INFO);
   }
 }
 
@@ -1115,7 +1128,7 @@ export async function loadServerObjects(): Promise<ServerObject[]> {
     ext.activeConnection.connected === false ||
     ext.activeConnection instanceof InsightsConnection
   ) {
-    showMessage(
+    notify(
       "Please connect to a KDB instance to view the objects",
       MessageKind.INFO,
     );
@@ -1153,7 +1166,7 @@ export async function openMeta(node: MetaObjectPayloadNode | InsightsMetaNode) {
       viewColumn: ViewColumn.One,
     });
   } else {
-    showMessage("Meta content not found.", MessageKind.ERROR, {
+    notify("Meta content not found.", MessageKind.ERROR, {
       logger,
     });
   }
@@ -1167,11 +1180,9 @@ export async function exportConnections(connLabel?: string) {
   });
 
   if (!exportAuth) {
-    showMessage(
-      "Export operation was cancelled by the user.",
-      MessageKind.DEBUG,
-      { logger },
-    );
+    notify("Export operation was cancelled by the user.", MessageKind.DEBUG, {
+      logger,
+    });
     return;
   }
 
@@ -1192,7 +1203,7 @@ export async function exportConnections(connLabel?: string) {
     if (uri) {
       fs.writeFile(uri.fsPath, formattedDoc, (err) => {
         if (err) {
-          showMessage(`Error saving file: ${err.message}`, MessageKind.ERROR, {
+          notify(`Error saving file: ${err.message}`, MessageKind.ERROR, {
             logger,
           });
         } else {
@@ -1202,14 +1213,12 @@ export async function exportConnections(connLabel?: string) {
         }
       });
     } else {
-      showMessage(
-        "Save operation was cancelled by the user.",
-        MessageKind.DEBUG,
-        { logger },
-      );
+      notify("Save operation was cancelled by the user.", MessageKind.DEBUG, {
+        logger,
+      });
     }
   } else {
-    showMessage("No connections found to be exported.", MessageKind.ERROR, {
+    notify("No connections found to be exported.", MessageKind.ERROR, {
       logger,
     });
   }

@@ -116,7 +116,7 @@ import {
 } from "./utils/core";
 import { runQFileTerminal } from "./utils/execution";
 import { handleFeedbackSurvey } from "./utils/feedbackSurveyUtils";
-import { MessageKind, showMessage } from "./utils/notifications";
+import { MessageKind, notify } from "./utils/notifications";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
 import {
@@ -202,7 +202,7 @@ export async function activate(context: vscode.ExtensionContext) {
     // check for installed q runtime
     await checkLocalInstall(true);
   } catch (err) {
-    showMessage(`${err}`, MessageKind.DEBUG, { logger });
+    notify(`${err}`, MessageKind.DEBUG, { logger });
   }
 
   registerAllExtensionCommands();
@@ -312,7 +312,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   connectClientCommands(context, client);
 
-  Telemetry.sendEvent("Extension.Activated");
   const yamlExtension = vscode.extensions.getExtension("redhat.vscode-yaml");
   if (yamlExtension) {
     const actualSchema = await vscode.workspace
@@ -350,7 +349,10 @@ export async function activate(context: vscode.ExtensionContext) {
   }
   handleFeedbackSurvey();
 
-  showMessage("kdb extension is now active.", MessageKind.DEBUG, { logger });
+  notify("kdb extension is now active.", MessageKind.DEBUG, {
+    logger,
+    telemetry: "Extension.Activated",
+  });
 }
 
 function registerHelpCommands(): CommandRegistration[] {
@@ -670,7 +672,9 @@ function registerConnectionsCommands(): CommandRegistration[] {
             true,
           );
         } else {
-          showMessage("Connection label not found", MessageKind.ERROR);
+          notify("Connection label not found", MessageKind.ERROR, {
+            logger,
+          });
         }
       },
     },
@@ -887,7 +891,8 @@ function registerExecuteCommands(): CommandRegistration[] {
             );
             runQFileTerminal(`"${uri.fsPath}"`);
           } catch (error) {
-            showMessage(`Unable to write temp file.`, MessageKind.ERROR, {
+            notify(`Unable to write temp file.`, MessageKind.ERROR, {
+              logger,
               params: error,
             });
           }

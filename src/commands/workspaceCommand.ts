@@ -35,7 +35,7 @@ import { ConnectionManagementService } from "../services/connectionManagerServic
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { offerConnectAction } from "../utils/core";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
-import { MessageKind, showMessage } from "../utils/notifications";
+import { MessageKind, notify } from "../utils/notifications";
 import { normalizeAssemblyTarget } from "../utils/shared";
 
 const logger = "workspaceCommand";
@@ -407,7 +407,7 @@ export async function importOldDSFiles() {
   if (ext.oldDSformatExists) {
     const folders = workspace.workspaceFolders;
     if (!folders) {
-      showMessage("No workspace folder found.", MessageKind.ERROR);
+      notify("No workspace folder found.", MessageKind.ERROR, { logger });
       return;
     }
     return await window.withProgress(
@@ -417,11 +417,9 @@ export async function importOldDSFiles() {
       },
       async (progress, token) => {
         token.onCancellationRequested(() => {
-          showMessage(
-            "User cancelled the old DS files import.",
-            MessageKind.DEBUG,
-            { logger },
-          );
+          notify("User cancelled the old DS files import.", MessageKind.DEBUG, {
+            logger,
+          });
           return false;
         });
 
@@ -431,10 +429,8 @@ export async function importOldDSFiles() {
       },
     );
   } else {
-    showMessage(
-      "No old Datasource files found on your VSCODE.",
-      MessageKind.INFO,
-      { logger },
-    );
+    notify("No old Datasource files found on your VSCODE.", MessageKind.INFO, {
+      logger,
+    });
   }
 }

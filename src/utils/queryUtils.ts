@@ -16,7 +16,7 @@ import { join } from "path";
 
 import { ext } from "../extensionVariables";
 import { isBaseVersionGreaterOrEqual } from "./core";
-import { MessageKind, showMessage } from "./notifications";
+import { MessageKind, notify } from "./notifications";
 import { normalizeAssemblyTarget } from "./shared";
 import { DCDS, deserialize, isCompressed, uncompress } from "../ipc/c";
 import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
@@ -99,7 +99,7 @@ export function handleWSError(ab: ArrayBuffer): any {
     }
   }
 
-  showMessage(`Error : ${errorString}`, MessageKind.DEBUG, { logger });
+  notify(`Error : ${errorString}`, MessageKind.DEBUG, { logger });
 
   return { error: errorString };
 }

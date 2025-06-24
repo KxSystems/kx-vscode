@@ -45,8 +45,10 @@ import { UDA } from "../models/uda";
 import { offerConnectAction } from "../utils/core";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
-import { MessageKind, Runner, showMessage } from "../utils/notifications";
+import { MessageKind, Runner, notify } from "../utils/notifications";
 import { parseUDAList } from "../utils/uda";
+
+const logger = "dataSourceEditorProvider";
 
 export class DataSourceEditorProvider implements CustomTextEditorProvider {
   public filenname = "";
@@ -92,9 +94,10 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
 
       this.cache.set(connLabel, meta);
     } catch {
-      showMessage(
+      notify(
         "No database running in this Insights connection.",
         MessageKind.ERROR,
+        { logger },
       );
       meta = Promise.resolve(<MetaObjectPayload>{});
       this.cache.set(connLabel, meta);

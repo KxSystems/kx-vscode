@@ -13,11 +13,11 @@
 
 import { workspace } from "vscode";
 
-import { MessageKind, showMessage } from "../utils/notifications";
+import { MessageKind, notify } from "../utils/notifications";
 
 export async function showInstallationDetails(): Promise<void> {
   const QHOME = await workspace
     .getConfiguration()
     .get<string>("kdb.qHomeDirectory");
-  showMessage(`q runtime installed path: ${QHOME}`, MessageKind.INFO);
+  notify(`q runtime installed path: ${QHOME}`, MessageKind.INFO);
 }

@@ -14,14 +14,14 @@
 import { ChildProcess } from "node:child_process";
 
 import { ICommandResult, tryExecuteCommand } from "./cpUtils";
-import { MessageKind, showMessage } from "./notifications";
+import { MessageKind, notify } from "./notifications";
 
 const logger = "shell";
 
 const isWin = process.platform === "win32";
 
 export function log(childProcess: ChildProcess): void {
-  showMessage(`Process ${childProcess.pid} killed`, MessageKind.DEBUG, {
+  notify(`Process ${childProcess.pid} killed`, MessageKind.DEBUG, {
     logger,
   });
 }
@@ -37,7 +37,7 @@ export async function killPid(pid = NaN): Promise<void> {
   } else if (process.platform === "darwin") {
     result = await tryExecuteCommand("/bin", killPidCommand(pid), log);
   }
-  showMessage(`Destroying q process result: ${result}`, MessageKind.DEBUG, {
+  notify(`Destroying q process result: ${result}`, MessageKind.DEBUG, {
     logger,
   });
 }

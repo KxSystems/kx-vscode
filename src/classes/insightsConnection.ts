@@ -41,13 +41,12 @@ import {
   tokenUndefinedError,
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
-import { MessageKind, Runner, showMessage } from "../utils/notifications";
+import { MessageKind, Runner, notify } from "../utils/notifications";
 import {
   generateQSqlBody,
   handleScratchpadTableRes,
   handleWSResults,
 } from "../utils/queryUtils";
-import { Telemetry } from "../utils/telemetryClient";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 
 const logger = "insightsConnection";
@@ -154,7 +153,7 @@ export class InsightsConnection {
 
   public returnMetaObject(metaType: MetaInfoType): string {
     if (!this.meta) {
-      showMessage(
+      notify(
         `Meta data is undefined for connection ${this.connLabel}`,
         MessageKind.ERROR,
         { logger },
@@ -184,7 +183,7 @@ export class InsightsConnection {
         objectToReturn = this.meta.payload.rc;
         break;
       default:
-        showMessage(`Invalid meta type: ${metaType}`, MessageKind.ERROR, {
+        notify(`Invalid meta type: ${metaType}`, MessageKind.ERROR, {
           logger,
         });
         return "";
@@ -385,7 +384,7 @@ export class InsightsConnection {
       }
       options.responseType = "arraybuffer";
 
-      showMessage("Requesting datasource query.", MessageKind.DEBUG, {
+      notify("Requesting datasource query.", MessageKind.DEBUG, {
         logger,
         params: { url: options.url, data: options.data },
       });
@@ -393,7 +392,7 @@ export class InsightsConnection {
       const runner = Runner.create(async () => {
         return await axios(options)
           .then((response: any) => {
-            showMessage(
+            notify(
               `Datasource run status: ${response.status}.`,
               MessageKind.DEBUG,
               { logger },
@@ -409,7 +408,7 @@ export class InsightsConnection {
             };
           })
           .catch((error: any) => {
-            showMessage(
+            notify(
               `Datasource run status: ${error.response.status}.`,
               MessageKind.DEBUG,
               { logger, params: error },
@@ -471,11 +470,10 @@ export class InsightsConnection {
           const udaReqBody = await retrieveUDAtoCreateReqBody(uda, this);
 
           if (udaReqBody.error) {
-            showMessage(
-              "Unable to create UDA request body.",
-              MessageKind.ERROR,
-              { logger, params: udaReqBody.error },
-            );
+            notify("Unable to create UDA request body.", MessageKind.ERROR, {
+              logger,
+              params: udaReqBody.error,
+            });
             return;
           }
           body.params = udaReqBody.params;
@@ -509,21 +507,20 @@ export class InsightsConnection {
       const runner = Runner.create(async () => {
         return await axios(options).then((response: any) => {
           if (response.data.error) {
-            showMessage("Unable to populate scratchpad.", MessageKind.ERROR, {
+            notify("Unable to populate scratchpad.", MessageKind.ERROR, {
               logger,
               params: response.data.errorMsg,
             });
           } else {
-            showMessage(
+            notify(
               `Populated scratchpad, stored in ${variableName}.`,
               MessageKind.INFO,
               {
                 logger,
                 params: { status: response.status, params: body.params },
+                telemetry:
+                  "Datasource." + dsTypeString + ".Scratchpad.Populated",
               },
-            );
-            Telemetry.sendEvent(
-              "Datasource." + dsTypeString + ".Scratchpad.Populated",
             );
           }
         });
@@ -592,7 +589,7 @@ export class InsightsConnection {
           if (response.data.error) {
             return response.data;
           } else {
-            showMessage(`Status: ${response.status}`, MessageKind.DEBUG, {
+            notify(`Status: ${response.status}`, MessageKind.DEBUG, {
               logger,
             });
             if (!response.data.error) {
@@ -671,13 +668,13 @@ export class InsightsConnection {
           if (response.data.error) {
             return response.data;
           } else if (query === "") {
-            showMessage(
+            notify(
               `Scratchpad created for connection: ${this.connLabel}.`,
               MessageKind.DEBUG,
               { logger },
             );
           } else {
-            showMessage(`Status: ${response.status}`, MessageKind.DEBUG, {
+            notify(`Status: ${response.status}`, MessageKind.DEBUG, {
               logger,
             });
             if (!response.data.error) {
@@ -738,16 +735,15 @@ export class InsightsConnection {
         progress.report({ message: "Reseting scratchpad..." });
         const res = await axios(options)
           .then((_response: any) => {
-            showMessage(
+            notify(
               `Executed successfully, scratchpad reset at ${this.connLabel} connection.`,
               MessageKind.INFO,
-              { logger },
+              { logger, telemetry: "Scratchpad.Reseted" },
             );
-            Telemetry.sendEvent("Scratchpad.Reseted");
             return true;
           })
           .catch((_error: any) => {
-            showMessage(
+            notify(
               `Error occurred while resetting scratchpad in connection ${this.connLabel}, try again.`,
               MessageKind.ERROR,
               { logger },
@@ -765,7 +761,7 @@ export class InsightsConnection {
   }
 
   public noConnectionOrEndpoints(): void {
-    showMessage(
+    notify(
       `No connection or endpoints defined for ${this.connLabel}`,
       MessageKind.ERROR,
       { logger },

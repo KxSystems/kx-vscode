@@ -60,9 +60,8 @@ import {
   updateServers,
 } from "../utils/core";
 import { executeCommand } from "../utils/cpUtils";
-import { MessageKind, Runner, showMessage } from "../utils/notifications";
+import { MessageKind, Runner, notify } from "../utils/notifications";
 import { openUrl } from "../utils/openUrl";
-import { Telemetry } from "../utils/telemetryClient";
 import { validateServerPort } from "../validators/kdbValidator";
 
 const logger = "install";
@@ -82,7 +81,7 @@ export async function installTools(): Promise<void> {
   if (licenseTypeResult?.label === licenseAquire) {
     let licenseCancel;
     await openUrl(ext.kdbInstallUrl);
-    await showMessage(
+    await notify(
       licenseWorkflow.prompt,
       MessageKind.INFO,
       {},
@@ -133,7 +132,7 @@ export async function installTools(): Promise<void> {
 
   const runner = Runner.create(async (progress, token) => {
     token.onCancellationRequested(() => {
-      showMessage("User cancelled the installation.", MessageKind.DEBUG, {
+      notify("User cancelled the installation.", MessageKind.DEBUG, {
         logger,
       });
     });
@@ -144,13 +143,10 @@ export async function installTools(): Promise<void> {
     progress.report({ increment: 20, message: "Getting the binaries..." });
     const osFile = getOsFile();
     if (osFile === undefined) {
-      showMessage(
+      notify(
         "Unsupported operating system, unable to download binaries.",
         MessageKind.ERROR,
-        { logger },
-      );
-      Telemetry.sendException(
-        new Error("Unsupported operating system, unable to download binaries"),
+        { logger, telemetry: true },
       );
     } else {
       const gpath = join(ext.context.globalStorageUri.fsPath, osFile);
@@ -158,15 +154,11 @@ export async function installTools(): Promise<void> {
         const runtimeUrl = `${ext.kdbDownloadPrefixUrl}${osFile}`;
         const response = await fetch(runtimeUrl);
         if (response.status > 200) {
-          Telemetry.sendException(
-            new Error("Invalid or unavailable download url."),
-          );
-
-          showMessage(
-            `Invalid or unavailable download url: ${runtimeUrl}`,
-            MessageKind.ERROR,
-            { logger },
-          );
+          notify("Invalid or unavailable download url.", MessageKind.ERROR, {
+            logger,
+            params: runtimeUrl,
+            telemetry: true,
+          });
           exit(1);
         }
         await ensureDir(ext.context.globalStorageUri.fsPath);
@@ -204,7 +196,7 @@ export async function installTools(): Promise<void> {
     if (QHOME) {
       env.QHOME = QHOME;
       if (!pathExists(env.QHOME)) {
-        showMessage("QHOME path stored is empty", MessageKind.ERROR, {
+        notify("QHOME path stored is empty", MessageKind.ERROR, {
           logger,
         });
       }
@@ -212,14 +204,14 @@ export async function installTools(): Promise<void> {
         join(__dirname, "qinstall.md"),
         `# q runtime installed location: \n### ${QHOME}`,
       );
-      showMessage(`Installation of q found here: ${QHOME}`, MessageKind.DEBUG, {
+      notify(`Installation of q found here: ${QHOME}`, MessageKind.DEBUG, {
         logger,
       });
     }
   });
   runner.title = "Installing q...";
   runner.execute().then(async () => {
-    showMessage(
+    notify(
       onboardingWorkflow.prompt(ext.context.globalStorageUri.fsPath),
       MessageKind.INFO,
       {},
@@ -238,12 +230,10 @@ export async function installTools(): Promise<void> {
           if (port) {
             let servers: Server | undefined = getServers();
             if (servers != undefined && servers[getKeyForServerName("local")]) {
-              Telemetry.sendEvent(
-                `Server localhost:${port} already exists in configuration store.`,
-              );
-              showMessage(
-                `Server localhost:${port} already exists.`,
+              notify(
+                `Server localhost:${port} already exists in configuration store`,
                 MessageKind.ERROR,
+                { logger, telemetry: true },
               );
             } else {
               const key = "local";
@@ -309,7 +299,7 @@ export async function startLocalProcessByServerName(
     );
   } catch {
     await removeLocalConnectionStatus(serverName);
-    showMessage("Error starting q process.", MessageKind.ERROR);
+    notify("Error starting q process.", MessageKind.ERROR, { logger });
   }
 }
 
@@ -323,7 +313,7 @@ export async function startLocalProcess(viewItem: KdbNode): Promise<void> {
 
 export async function stopLocalProcess(viewItem: KdbNode): Promise<void> {
   ext.localProcessObjects[viewItem.children[0]].kill();
-  showMessage(
+  notify(
     `Child process id ${ext.localProcessObjects[viewItem.children[0]]
       .pid!} removed in cache.`,
     MessageKind.DEBUG,
@@ -336,7 +326,7 @@ export async function stopLocalProcessByServerName(
   serverName: string,
 ): Promise<void> {
   ext.localProcessObjects[serverName].kill();
-  showMessage(
+  notify(
     `Child process id ${ext.localProcessObjects[serverName].pid!} removed in cache.`,
     MessageKind.DEBUG,
     { logger },

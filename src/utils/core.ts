@@ -24,9 +24,8 @@ import { commands, ConfigurationTarget, Uri, workspace } from "vscode";
 import { installTools } from "../commands/installTools";
 import { ext } from "../extensionVariables";
 import { tryExecuteCommand } from "./cpUtils";
-import { MessageKind, showMessage } from "./notifications";
+import { MessageKind, notify } from "./notifications";
 import { showRegistrationNotification } from "./registration";
-import { Telemetry } from "./telemetryClient";
 import {
   InsightDetails,
   Insights,
@@ -38,7 +37,7 @@ import { QueryResult } from "../models/queryResult";
 const logger = "core";
 
 export function log(childProcess: ChildProcess): void {
-  showMessage(`Process ${childProcess.pid} started`, MessageKind.DEBUG, {
+  notify(`Process ${childProcess.pid} started`, MessageKind.DEBUG, {
     logger,
   });
 }
@@ -55,7 +54,7 @@ export async function checkOpenSslInstalled(): Promise<string | null> {
       const matcher = /(\d+.\d+.\d+)/;
       const installedVersion = result.cmdOutput.match(matcher);
 
-      showMessage(
+      notify(
         `Detected version ${installedVersion} of OpenSSL installed.`,
         MessageKind.DEBUG,
         { logger },
@@ -66,7 +65,9 @@ export async function checkOpenSslInstalled(): Promise<string | null> {
   } catch (err) {
     // Disabled the error, as it is not critical
     // kdbOutputLog(`Error in checking OpenSSL version: ${err}`, "ERROR");
-    Telemetry.sendException(err as Error);
+    notify("OpenSSL not found.", MessageKind.DEBUG, {
+      telemetry: err as Error,
+    });
   }
   return null;
 }
@@ -157,7 +158,7 @@ export function saveLocalProcessObj(
   childProcess: ChildProcess,
   args: string[],
 ): void {
-  showMessage(
+  notify(
     `Child process id ${childProcess.pid} saved in cache.`,
     MessageKind.DEBUG,
     { logger },
@@ -325,22 +326,24 @@ export function getServerAlias(serverList: ServerDetails[]): void {
 }
 
 export function tokenUndefinedError(connLabel: string): void {
-  showMessage(
+  notify(
     `Error retrieving access token for Insights connection named: ${connLabel}`,
     MessageKind.ERROR,
+    { logger },
   );
 }
 
 export function invalidUsernameJWT(connLabel: string): void {
-  showMessage(
+  notify(
     `JWT did not contain a valid preferred username for Insights connection: ${connLabel}`,
     MessageKind.ERROR,
+    { logger },
   );
 }
 
 /* istanbul ignore next */
 export function offerConnectAction(connLabel: string): void {
-  showMessage(
+  notify(
     `You aren't connected to ${connLabel}, would you like to connect? Once connected please try again.`,
     MessageKind.INFO,
     {},
@@ -357,7 +360,7 @@ export function offerConnectAction(connLabel: string): void {
 }
 
 export function noSelectedConnectionAction(): void {
-  showMessage(
+  notify(
     `You didn't selected any existing connection to execute this action, please select a connection and try again.`,
     MessageKind.INFO,
   );
@@ -365,7 +368,7 @@ export function noSelectedConnectionAction(): void {
 
 /* istanbul ignore next */
 export function offerReconnectionAfterEdit(connLabel: string): void {
-  showMessage(
+  notify(
     `You are no longer connected to ${connLabel}, would you like to connect?`,
     MessageKind.INFO,
     {},
@@ -437,7 +440,7 @@ export async function checkLocalInstall(
   if (QHOME || env.QHOME) {
     env.QHOME = QHOME || env.QHOME;
     if (!pathExists(env.QHOME!)) {
-      showMessage("QHOME path stored is empty.", MessageKind.ERROR);
+      notify("QHOME path stored is empty.", MessageKind.ERROR, { logger });
     }
     await writeFile(
       join(__dirname, "qinstall.md"),
@@ -449,11 +452,9 @@ export async function checkLocalInstall(
       .getConfiguration()
       .update("kdb.qHomeDirectory", env.QHOME, ConfigurationTarget.Global);
 
-    showMessage(
-      `Installation of q found here: ${env.QHOME}`,
-      MessageKind.DEBUG,
-      { logger },
-    );
+    notify(`Installation of q found here: ${env.QHOME}`, MessageKind.DEBUG, {
+      logger,
+    });
 
     showRegistrationNotification();
 
@@ -461,10 +462,7 @@ export async function checkLocalInstall(
       .getConfiguration()
       .get<boolean>("kdb.hideInstallationNotification");
     if (!hideNotification) {
-      showMessage(
-        `Installation of q found here: ${env.QHOME}`,
-        MessageKind.INFO,
-      );
+      notify(`Installation of q found here: ${env.QHOME}`, MessageKind.INFO);
     }
 
     // persist the notification seen option
@@ -482,7 +480,7 @@ export async function checkLocalInstall(
   // set custom context that QHOME is not setup to control walkthrough visibility
   commands.executeCommand("setContext", "kdb.showInstallWalkthrough", true);
 
-  showMessage(
+  notify(
     "Local q installation not found!",
     MessageKind.INFO,
     {},
@@ -641,7 +639,7 @@ export function hasWorkspaceOrShowOption(action: string) {
   if (workspace.workspaceFolders && workspace.workspaceFolders.length > 0) {
     return true;
   }
-  showMessage(
+  notify(
     `No workspace folder is open. Please open a folder to enable ${action}.`,
     MessageKind.WARNING,
     {},

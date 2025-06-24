@@ -14,7 +14,7 @@
 import { ConfigurationTarget, workspace } from "vscode";
 
 import { ext } from "../extensionVariables";
-import { MessageKind, showMessage } from "./notifications";
+import { MessageKind, notify } from "./notifications";
 import { openUrl } from "./openUrl";
 
 export function showRegistrationNotification(): void {
@@ -22,7 +22,7 @@ export function showRegistrationNotification(): void {
     .getConfiguration()
     .get<boolean | undefined>("kdb.hideSubscribeRegistrationNotification");
   if (setting !== undefined && setting === false) {
-    showMessage(
+    notify(
       "Subscribe to updates",
       MessageKind.INFO,
       {},

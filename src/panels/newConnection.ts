@@ -20,7 +20,9 @@ import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
 import { retrieveConnLabelsNames } from "../utils/connLabel";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
-import { MessageKind, showMessage } from "../utils/notifications";
+import { MessageKind, notify } from "../utils/notifications";
+
+const logger = "newConnection";
 
 export class NewConnectionPannel {
   public static currentPanel: NewConnectionPannel | undefined;
@@ -97,9 +99,10 @@ export class NewConnectionPannel {
     this._panel.webview.onDidReceiveMessage((message) => {
       if (message.command === "kdb.connections.add.bundleq") {
         if (ext.isBundleQCreated) {
-          showMessage(
+          notify(
             "Bundled Q is already created, please remove it first",
             MessageKind.ERROR,
+            { logger },
           );
         } else {
           vscode.commands.executeCommand(

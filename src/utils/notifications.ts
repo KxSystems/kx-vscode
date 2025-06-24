@@ -13,8 +13,9 @@
 
 import * as vscode from "vscode";
 
-import { kdbOutputLog } from "./loggers";
 import { ext } from "../extensionVariables";
+import { kdbOutputLog } from "./loggers";
+import { Telemetry } from "./telemetryClient";
 
 const logger = "notifications";
 
@@ -58,7 +59,7 @@ export class Runner<T> {
                 const updateCancelled = () => {
                   this._cancelled = token.isCancellationRequested;
                   if (this._cancelled) {
-                    showMessage(`${this.title} cancelled.`, MessageKind.DEBUG, {
+                    notify(`${this.title} cancelled.`, MessageKind.DEBUG, {
                       logger,
                     });
                     reject(new vscode.CancellationError());
@@ -96,22 +97,37 @@ export const enum MessageKind {
   ERROR = "ERROR",
 }
 
-export function showMessage<T extends string>(
+export function notify<T extends string>(
   message: string,
   kind: MessageKind,
-  options: { logger?: string; params?: any } = {},
+  options: {
+    logger?: string;
+    params?: any;
+    telemetry?: string | boolean | Error;
+  } = {},
   ...items: T[]
 ): Thenable<T | undefined> {
   message = stripUnprintableChars(message);
+
   if (options.logger) {
     const params = getParams(options.params);
     const log = `[${options.logger}] ${message} ${params}`.trim();
     kdbOutputLog(log, kind, true);
   }
 
+  if (options.telemetry) {
+    if (typeof options.telemetry === "boolean") {
+      Telemetry.sendException(new Error(message));
+    } else if (options.telemetry instanceof Error) {
+      Telemetry.sendException(options.telemetry);
+    } else {
+      Telemetry.sendEvent(options.telemetry);
+    }
+  }
+
   let action: "Details" | "OK" | undefined;
 
-  if (items.length === 0) {
+  if (items.length === 0 && kind !== MessageKind.DEBUG) {
     action = options.params ? "Details" : "OK";
     items.push(<T>action);
   }

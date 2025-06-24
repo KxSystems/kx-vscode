@@ -36,9 +36,8 @@ import {
   updateServers,
 } from "../utils/core";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
-import { MessageKind, showMessage } from "../utils/notifications";
+import { MessageKind, notify } from "../utils/notifications";
 import { sanitizeQuery } from "../utils/queryUtils";
-import { Telemetry } from "../utils/telemetryClient";
 
 const logger = "connectionManagerService";
 
@@ -146,7 +145,7 @@ export class ConnectionManagementService {
       );
       await localConnection.connect((err, conn) => {
         if (err) {
-          showMessage(`Connection failed to: ${connLabel}`, MessageKind.ERROR, {
+          notify(`Connection failed to: ${connLabel}`, MessageKind.ERROR, {
             logger,
             params: err,
           });
@@ -154,13 +153,11 @@ export class ConnectionManagementService {
           return;
         }
         if (conn) {
-          showMessage(
+          notify(
             `Connection established successfully to: ${connLabel}`,
             MessageKind.DEBUG,
-            { logger },
+            { logger, telemetry: "Connection.Connected.QProcess" },
           );
-
-          Telemetry.sendEvent("Connection.Connected.QProcess");
 
           ext.connectedConnectionList.push(localConnection);
 
@@ -175,13 +172,12 @@ export class ConnectionManagementService {
       );
       await insightsConn.connect();
       if (insightsConn.connected) {
-        Telemetry.sendEvent("Connection.Connected.Insights");
-        showMessage(
+        notify(
           `Connection established successfully to: ${connLabel}`,
           MessageKind.DEBUG,
-          { logger },
+          { logger, telemetry: "Connection.Connected.Insights" },
         );
-        showMessage(
+        notify(
           `${connLabel} connection insights version: ${insightsConn.insightsVersion}`,
           MessageKind.DEBUG,
           { logger },
@@ -203,7 +199,9 @@ export class ConnectionManagementService {
     commands.executeCommand("setContext", "kdb.connected.active", [
       `${node.label}`,
     ]);
-    Telemetry.sendEvent("Connection.Connected.Active");
+    notify("Connection activated.", MessageKind.DEBUG, {
+      telemetry: "Connection.Connected.Active",
+    });
     ext.activeConnection = connection;
 
     if (node instanceof InsightsNode) {
@@ -296,8 +294,10 @@ export class ConnectionManagementService {
   }
 
   public isNotConnectedBehaviour(connLabel: string): void {
-    showMessage(`Connection failed to: ${connLabel}`, MessageKind.ERROR);
-    Telemetry.sendEvent("Connection.Failed");
+    notify(`Connection failed to: ${connLabel}`, MessageKind.ERROR, {
+      logger,
+      telemetry: "Connection.Failed",
+    });
   }
 
   public disconnectBehaviour(
@@ -323,12 +323,10 @@ export class ConnectionManagementService {
       commands.executeCommand("setContext", "kdb.connected.active", false);
       commands.executeCommand("setContext", "kdb.pythonEnabled", false);
     }
-    Telemetry.sendEvent("Connection.Disconnected." + connType);
-    showMessage(
-      `Connection closed: ${connection.connLabel}`,
-      MessageKind.DEBUG,
-      { logger },
-    );
+    notify(`Connection closed: ${connection.connLabel}`, MessageKind.DEBUG, {
+      logger,
+      telemetry: "Connection.Disconnected." + connType,
+    });
     ext.serverProvider.reload();
   }
 
@@ -377,7 +375,7 @@ export class ConnectionManagementService {
       if (retrievedConn instanceof InsightsConnection) {
         conn = retrievedConn;
       } else {
-        showMessage(
+        notify(
           "Please connect to an Insights connection to use this feature.",
           MessageKind.ERROR,
           { logger },
@@ -390,7 +388,7 @@ export class ConnectionManagementService {
         !ext.activeConnection ||
         !(ext.activeConnection instanceof InsightsConnection)
       ) {
-        showMessage(
+        notify(
           "Please activate an Insights connection to use this feature.",
           MessageKind.ERROR,
           { logger },
@@ -405,7 +403,7 @@ export class ConnectionManagementService {
       isBaseVersionGreaterOrEqual(conn.insightsVersion, 1.13)
     ) {
       const confirmationPrompt = `Reset Scratchpad? All data in the ${conn.connLabel} Scratchpad will be lost, and variables will be reset.`;
-      const selection = await showMessage(
+      const selection = await notify(
         confirmationPrompt,
         MessageKind.INFO,
         {},
@@ -416,15 +414,13 @@ export class ConnectionManagementService {
       if (selection === "Yes") {
         await conn.resetScratchpad();
       } else {
-        showMessage(
-          "The user canceled the scratchpad reset.",
-          MessageKind.DEBUG,
-          { logger },
-        );
+        notify("The user canceled the scratchpad reset.", MessageKind.DEBUG, {
+          logger,
+        });
         return;
       }
     } else {
-      showMessage(
+      notify(
         "Please connect to an Insights connection with version 1.13 or higher.",
         MessageKind.ERROR,
         { logger },
@@ -460,7 +456,7 @@ export class ConnectionManagementService {
   ): string {
     const metaType = this.getMetaInfoType(metaTypeString.toUpperCase());
     if (!metaType) {
-      showMessage(
+      notify(
         "The meta info type that you try to open is not valid",
         MessageKind.ERROR,
         { logger },
@@ -469,7 +465,7 @@ export class ConnectionManagementService {
     }
     const connection = this.retrieveConnectedConnection(connLabel);
     if (!connection) {
-      showMessage(
+      notify(
         "The connection that you try to open meta info is not connected",
         MessageKind.ERROR,
         { logger },
@@ -477,7 +473,7 @@ export class ConnectionManagementService {
       return "";
     }
     if (connection instanceof LocalConnection) {
-      showMessage(
+      notify(
         "The connection that you try to open meta info is not an Insights connection",
         MessageKind.ERROR,
         { logger },

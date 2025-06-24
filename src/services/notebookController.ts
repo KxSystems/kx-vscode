@@ -16,7 +16,7 @@ import * as vscode from "vscode";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { ext } from "../extensionVariables";
 import { ConnectionManagementService } from "../services/connectionManagerService";
-import { MessageKind, showMessage, timeout } from "../utils/notifications";
+import { MessageKind, notify, timeout } from "../utils/notifications";
 import { resultToBase64 } from "../utils/queryUtils";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
 
@@ -57,9 +57,10 @@ export class KxNotebookController {
   ): Promise<void> {
     const conn = ext.activeConnection;
     if (conn === undefined) {
-      showMessage(
+      notify(
         "You aren't connected to any connection. Once connected please try again.",
         MessageKind.ERROR,
+        { logger },
       );
       return;
     }
@@ -102,7 +103,7 @@ export class KxNotebookController {
           ]),
         ]);
       } catch (error) {
-        showMessage("Unable to run code block.", MessageKind.ERROR, {
+        notify("Unable to run code block.", MessageKind.ERROR, {
           logger,
           params: error,
         });
