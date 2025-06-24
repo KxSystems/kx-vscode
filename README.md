@@ -18,7 +18,7 @@ This guide provides information on the following:
 - [kdb language server](#kdb-language-server)
 - [Executing code](#execute-code)
 - [Data sources](#data-sources)
-- [Workbooks](#workbooks)
+- [Workbooks and source files](#workbooks-and-source-files)
 - [KX Notebooks](#kx-notebooks-in-visual-studio-code)
 - [Query History](#query-history)
 - [Viewing results](#view-results)
@@ -615,23 +615,28 @@ There are several ways to reset the scratchpad:
 
 3. Use the [MacOS or Windows shortcuts](#shortcuts) in the q file or in the workbook. Note that running the shortcuts in the q file resets the scratchpad for the active connection, while running them in the workbook resets the scratchpad for the connection chosen in the workbook.
 
-## Workbooks
+## Workbooks and source files
 
-Workbooks provide a convenient way to prototype and execute q and python code against a q process and using the variables [populated into the scratchpad](#populate-scratchpad) of a **kdb Insights Enterprise** deployment by data sources.
+kdb Insights Enterprise supports two modes of interactive code development in Visual Studio Code: Workbooks and Source Files. Both enable you to write and execute q and Python code against running kdb+ processes, but they offer different workflows and behaviors.
 
-Standard **.q** and **.py** files only run on the active connection. Workbook files have the following features:
+### Workbooks
+
+Workbooks provide a convenient way to prototype and execute q and Python code. q Workbooks can execute against scratchpad or any available DAP in kdb Insights, while Python Workbooks are limited to scratchpad only.
+
+Key features of Workbooks:
 
 - Are listed in the **WORKBOOKS** view in the primary sidebar
 - Can be associated with a connection
-- Have the **.kdb.q.** or **kdb.py** extension
+- Support the **.kdb.q.**,  **kdb.py** extensions
 - Are stored in a **.kx** folder at the root of your open folder
+- You can have multiple Workbooks running against different connections at the same time
 
-This allows you to have multiple Workbooks running against different connections at the same time.
+To create a Workbook, either create a `.kdb.q` or `.kdb.py` file manually in the EXPLORER, or use the WORKBOOKS panel in the sidebar to quickly add one. Workbooks are listed in the WORKBOOKS view for convenient access.
 
-To create a Workbook and run code against a specific connection:
+Create a Workbook using the WORKBOOKS panel and run code against a specific connection, as follows:
 
 1. Ensure you have at least one folder open in VS Code.
-1. In the **WORKBOOKS** view in the primary sidebar, click the **+** for either a **New q workbook** or **New Python workbook**.
+1. In the **WORKBOOKS** view in the primary sidebar, click the **+** to create either a **New q workbook** or **New Python workbook**.
 
    ![new workbook](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/addnewworkbook.png)
 
@@ -642,27 +647,66 @@ To create a Workbook and run code against a specific connection:
    1. To run all the code in the file you can use one of the following methods:
 
       1. Click **Run** from above the first line of code in the workbook file.
+
          ![workbook links](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookrunlink.png)
 
       1. Select **Run** from the upper right of the editor. Using the dropdown next to the button you can choose any of the [**KX:** menu items](#kdb-process-executing-q-and-python-code) to run some, or all of the code in the workbook.
-         ![play dropdown](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/wortkbookplaydropdown.png)
-
-      1. Click **Run** on the right-hand side of the status bar.
-         ![status bar run ](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookstatusbarrun.png)
+         ![play dropdown](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookplaydropdown.png)
 
       1. Right-click and choose **KX: Execute Entire File** from the menu.
 
-1. If you have not yet chosen a connection to associate with the workbook you are asked to choose a connection before the code is executed.
+1. If you have not yet chosen a connection to associate with the workbook, you are asked to choose a connection before you execute the code.
 
    ![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookconnectionlink.png)
 
-1. The results populate the kdb results window if it is active, otherwise the output window is populated.
+1. The results populate the kdb results window if it is active; otherwise the output window is populated.
 
-When you save a workbook file the code and the connection details are stored. The workbook icon is green if it is associated with a connection and grey if there is no association.
+When you save a workbook file, the code and the connection details are stored. The workbook icon is green if it is associated with a connection and grey if there is no association.
 
-You can also change the connection associated with a workbook at any time by clicking on **Choose Connection** from above the first line of code in the workbook file.
+You can also change the connection associated with a workbook at any time by clicking on Choose Connection from above the first line of code in the workbook file.
 
-![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookplaydropdown.png)
+### Source files
+
+Regular `.q` and `.py` files now support enhanced functionality similar to [Workbooks](#workbooks), allowing you to write, test, and execute code directly against kdb Insights connections and endpoints. 
+
+You can run code on either the [scratchpad](#run-and-populate-scratchpad) or directly on DAP processes — such as RDB or HDB — without needing to copy/paste or switch between special file types.
+
+**Key differences**:
+
+- Not listed in the WORKBOOKS sidebar
+- Do not require `.kdb.` in the filename
+- Created using the EXPLORER like any other file, and stored anywhere in your workspace. Unlike Workbooks, they are not listed in the WORKBOOKS panel
+
+**Key features** of standard source files:
+
+- Run against the active connection if no specific association is made.
+- Can be explicitly associated with a connection using the **Choose Connection** code lens.
+- Once associated, allow execution against:
+   - Scratchpad (default for Insights)
+   - Any available DAP process (if the connection is an Insights type)
+
+This eliminates the need to copy code from files into the qSQL Data Source tab or Workbooks for testing against DAPs.
+
+**Note!** DAP targeting is available only for `.q` files. `.py` files run exclusively on the scratchpad, even when associated with an Insights connection.
+
+For selecting connections and endpoints for unassociated files, consider the following:
+
+- When a `.q` or `.py` file is not associated with a connection, it shows a **Choose Connection** code lens at the top and runs on the active connected connection.
+- Clicking **Choose Connection** allows you to associate the file with a connection.
+- Once associated, the file only executes on that connection.
+
+   ![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/unassociated-file-workbook.png)
+
+For associated files, take into account the following:
+
+- When a file is associated with a kdb Insights connection, a **scratchpad** code lens appears.
+
+- Clicking this allows you to choose the execution endpoint:
+
+   - Scratchpad (default)
+   - Any available DAP (for example, RDB, HDB)
+
+   ![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/associated-file-workbook.png)
 
 ## KX Notebooks in Visual Studio Code
 
@@ -910,8 +954,9 @@ If you choose to opt out permanently but wish to revert this, open VS Code setti
 | Ctrl + Shift + E      | Execute current block             |
 | Ctrl + Shift + D      | Execute entire file               |
 | Ctrl + Shift + R      | Run q file in new q instance      |
-| Ctrl + Shift + Y      | Toggle paramater cache for lambda |
+| Ctrl + Shift + Y      | Toggle parameter cache for lambda |
 | Ctrl + Shift + Delete | Reset scratchpad                  |
+| Ctrl + Alt + T        | Choose the execution target
 
 ### For MacOS
 
@@ -924,5 +969,6 @@ If you choose to opt out permanently but wish to revert this, open VS Code setti
 | ⌘ + Shift + E      | Execute current block             |
 | ⌘ + Shift + D      | Execute entire file               |
 | ⌘ + Shift + R      | Run q file in new q instance      |
-| ⌘ + Shift + Y      | Toggle paramater cache for lambda |
+| ⌘ + Shift + Y      | Toggle parameter cache for lambda |
 | ⌘ + Shift + Delete | Reset scratchpad                  |
+| ⌘ + Alt + T        | Choose the execution target
