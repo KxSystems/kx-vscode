@@ -850,7 +850,13 @@ export async function _executeQuery(
   const selectedConn = connMngService.retrieveConnectedConnection(connLabel);
   const isInsights = selectedConn instanceof InsightsConnection;
   const connVersion = isInsights ? (selectedConn.insightsVersion ?? 0) : 0;
+  const telemetryLangType = isPython ? ".Python" : ".q";
+  const telemetryBaseMsg = isWorkbook ? "Workbook" : "Scratchpad";
+  Telemetry.sendEvent(telemetryBaseMsg + ".Execute" + telemetryLangType);
   if (query.length === 0) {
+    Telemetry.sendEvent(
+      telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
+    );
     queryConsole.appendQueryError(
       query,
       "Query is empty",
@@ -900,6 +906,7 @@ export async function _executeQuery(
     if (ext.isResultsTabVisible) {
       const data = resultToBase64(results);
       if (data) {
+        Telemetry.sendEvent("GGPLOT.Display" + (isPython ? ".Python" : ".q"));
         const active = ext.activeTextEditor;
         if (active) {
           const plot = <Plot>{
@@ -1265,11 +1272,16 @@ export async function writeQueryResultsToView(
     isPython,
   );
   let isSuccess = true;
+  const telemetryLangType = isPython ? ".Python" : ".q";
+  const telemetryBaseMsg = type === "WORKBOOK" ? "Workbook" : "Scratchpad";
 
   if (!checkIfIsDatasource(type)) {
     if (typeof result === "string") {
       const res = decodeQUTF(result);
       if (res.startsWith(queryConstants.error)) {
+        Telemetry.sendEvent(
+          telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
+        );
         isSuccess = false;
       }
     }
@@ -1299,10 +1311,15 @@ export async function writeScratchpadResult(
   duration: string,
   connVersion: number,
 ): Promise<void> {
+  const telemetryLangType = isPython ? ".Python" : ".q";
+  const telemetryBaseMsg = isWorkbook ? "Workbook" : "Scratchpad";
   let errorMsg;
 
   if (result.error) {
     errorMsg = "Error: " + result.errorMsg;
+    Telemetry.sendEvent(
+      telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
+    );
 
     if (result.stacktrace) {
       errorMsg =

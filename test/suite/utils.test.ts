@@ -1903,55 +1903,118 @@ describe("Utils", () => {
       LabelsUtils.deleteLabel("label1");
       assert.strictEqual(ext.connLabelList.length, 0);
     });
-  });
 
-  describe("isLabelEmpty", () => {
-    beforeEach(() => {
-      ext.labelConnMapList.length = 0;
+    it("should get label statistics", () => {
+      ext.connLabelList.push(
+        { name: "Label1", color: { name: "Red", colorHex: "#FF0000" } },
+        { name: "Label2", color: { name: "Blue", colorHex: "#0000FF" } },
+        { name: "Label3", color: { name: "Red", colorHex: "#FF0000" } },
+      );
+
+      const stats = LabelsUtils.getLabelStatistics();
+
+      assert.strictEqual(stats.count, 3);
+      assert.strictEqual(stats.Red, 2);
+      assert.strictEqual(stats.Blue, 1);
+      assert.strictEqual(stats.Green, 0);
+      assert.strictEqual(stats.Yellow, 0);
+      assert.strictEqual(stats.Magenta, 0);
+      assert.strictEqual(stats.Cyan, 0);
     });
 
-    afterEach(() => {
-      ext.labelConnMapList.length = 0;
-    });
-    it("should return true if label is empty", () => {
-      ext.labelConnMapList.push({ labelName: "label1", connections: [] });
-      const result = LabelsUtils.isLabelEmpty("label1");
-      assert.strictEqual(result, true);
+    it("should get connection label statistics", () => {
+      ext.connLabelList.push(
+        { name: "Label1", color: { name: "Red", colorHex: "#FF0000" } },
+        { name: "Label2", color: { name: "Blue", colorHex: "#0000FF" } },
+        { name: "Label3", color: { name: "Red", colorHex: "#FF0000" } },
+      );
+
+      ext.labelConnMapList.push(
+        { labelName: "Label1", connections: ["conn1", "conn2"] },
+        { labelName: "Label2", connections: ["conn1"] },
+        { labelName: "Label3", connections: ["conn3"] },
+      );
+
+      const stats = LabelsUtils.getConnectionLabelStatistics("conn1");
+
+      assert.strictEqual(stats.count, 2);
+      assert.strictEqual(stats.Red, 1);
+      assert.strictEqual(stats.Blue, 1);
+      assert.strictEqual(stats.Green, 0);
+      assert.strictEqual(stats.Yellow, 0);
+      assert.strictEqual(stats.Magenta, 0);
+      assert.strictEqual(stats.Cyan, 0);
     });
 
-    it("should return false if label is not empty", () => {
-      ext.labelConnMapList.push({
-        labelName: "label1",
-        connections: ["conn1"],
+    it("should return zero statistics for a connection with no labels", () => {
+      ext.connLabelList.push(
+        { name: "Label1", color: { name: "Red", colorHex: "#FF0000" } },
+        { name: "Label2", color: { name: "Blue", colorHex: "#0000FF" } },
+      );
+
+      ext.labelConnMapList.push(
+        { labelName: "Label1", connections: ["conn2"] },
+        { labelName: "Label2", connections: ["conn3"] },
+      );
+
+      const stats = LabelsUtils.getConnectionLabelStatistics("conn1");
+
+      assert.strictEqual(stats.count, 0);
+      assert.strictEqual(stats.Red, 0);
+      assert.strictEqual(stats.Blue, 0);
+      assert.strictEqual(stats.Green, 0);
+      assert.strictEqual(stats.Yellow, 0);
+      assert.strictEqual(stats.Magenta, 0);
+      assert.strictEqual(stats.Cyan, 0);
+    });
+    describe("isLabelEmpty", () => {
+      beforeEach(() => {
+        ext.labelConnMapList.length = 0;
       });
-      const result = LabelsUtils.isLabelEmpty("label1");
-      assert.strictEqual(result, false);
+
+      afterEach(() => {
+        ext.labelConnMapList.length = 0;
+      });
+      it("should return true if label is empty", () => {
+        ext.labelConnMapList.push({ labelName: "label1", connections: [] });
+        const result = LabelsUtils.isLabelEmpty("label1");
+        assert.strictEqual(result, true);
+      });
+
+      it("should return false if label is not empty", () => {
+        ext.labelConnMapList.push({
+          labelName: "label1",
+          connections: ["conn1"],
+        });
+        const result = LabelsUtils.isLabelEmpty("label1");
+        assert.strictEqual(result, false);
+      });
+
+      it("should return false if label is empty if label not on map list", () => {
+        const result = LabelsUtils.isLabelEmpty("label1");
+        assert.strictEqual(result, true);
+      });
     });
 
-    it("should return false if label is empty if label not on map list", () => {
-      const result = LabelsUtils.isLabelEmpty("label1");
-      assert.strictEqual(result, true);
-    });
-  });
+    describe("isLabelContentChanged", () => {
+      beforeEach(() => {
+        ext.latestLblsChanged.length = 0;
+      });
 
-  describe("isLabelContentChanged", () => {
-    beforeEach(() => {
-      ext.latestLblsChanged.length = 0;
-    });
+      afterEach(() => {
+        ext.latestLblsChanged.length = 0;
+      });
 
-    afterEach(() => {
-      ext.latestLblsChanged.length = 0;
-    });
+      it("should return true if label content is changed", () => {
+        ext.latestLblsChanged.push("label1");
+        const result = LabelsUtils.isLabelContentChanged("label1");
+        assert.strictEqual(result, true);
+      });
 
-    it("should return true if label content is changed", () => {
-      ext.latestLblsChanged.push("label1");
-      const result = LabelsUtils.isLabelContentChanged("label1");
-      assert.strictEqual(result, true);
-    });
-
-    it("should return false if label content is not changed", () => {
-      const result = LabelsUtils.isLabelContentChanged("label1");
-      assert.strictEqual(result, false);
+      it("should return false if label content is not changed", () => {
+        const result = LabelsUtils.isLabelContentChanged("label1");
+        assert.strictEqual(result, false);
+      });
     });
   });
 
