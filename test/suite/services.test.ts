@@ -2590,6 +2590,10 @@ describe("HelpFeedbackProvider", () => {
       },
     ];
 
+    function normalizePath(p: string) {
+      return p.replace(/\\/g, "/");
+    }
+
     children.forEach((item, idx) => {
       assert.strictEqual(item.label, expected[idx].label);
       assert.deepStrictEqual(item.command, {
@@ -2602,20 +2606,16 @@ describe("HelpFeedbackProvider", () => {
         "light" in item.iconPath &&
         "dark" in item.iconPath
       ) {
-        console.log("uri:");
-        console.log(item.iconPath.light.toString());
-        console.log("expected end of uri:");
-        console.log(Path.join("resources", "light", expected[idx].icon));
-        assert.ok(
-          item.iconPath.light
-            .toString()
-            .endsWith(Path.join("resources", "light", expected[idx].icon)),
+        const actualLight = normalizePath(item.iconPath.light.toString());
+        const expectedLight = normalizePath(
+          Path.join("resources", "light", expected[idx].icon),
         );
-        assert.ok(
-          item.iconPath.dark
-            .toString()
-            .endsWith(Path.join("resources", "dark", expected[idx].icon)),
+        const actualDark = normalizePath(item.iconPath.dark.toString());
+        const expectedDark = normalizePath(
+          Path.join("resources", "dark", expected[idx].icon),
         );
+        assert.ok(actualLight.endsWith(expectedLight));
+        assert.ok(actualDark.endsWith(expectedDark));
       }
     });
   });
