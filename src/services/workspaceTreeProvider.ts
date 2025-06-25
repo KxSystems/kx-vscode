@@ -11,7 +11,6 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import Path from "path";
 import {
   Command,
   EventEmitter,
@@ -26,6 +25,7 @@ import {
 import { getConnectionForUri } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
 import { getWorkspaceIconsState } from "../utils/core";
+import { getIconPath } from "../utils/iconsUtils";
 
 export class WorkspaceTreeProvider implements TreeDataProvider<FileTreeItem> {
   private _onDidChangeTreeData = new EventEmitter<void>();
@@ -97,26 +97,7 @@ export class FileTreeItem extends TreeItem {
       }
     }
 
-    this.iconPath = {
-      light: Uri.file(
-        Path.join(
-          __dirname,
-          "..",
-          "resources",
-          "light",
-          this.baseIcon + state + ".svg",
-        ),
-      ),
-      dark: Uri.file(
-        Path.join(
-          __dirname,
-          "..",
-          "resources",
-          "dark",
-          this.baseIcon + state + ".svg",
-        ),
-      ),
-    };
+    this.iconPath = getIconPath(this.baseIcon + state + ".svg");
   }
 
   private getFileIconType(fileName: string) {

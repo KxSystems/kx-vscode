@@ -11,7 +11,6 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import * as path from "path";
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
@@ -39,6 +38,7 @@ import {
   getServerName,
   getStatus,
 } from "../utils/core";
+import { getIconPath } from "../utils/iconsUtils";
 
 export class KdbTreeProvider
   implements vscode.TreeDataProvider<vscode.TreeItem>
@@ -766,30 +766,7 @@ export class LabelNode extends vscode.TreeItem {
     this.contextValue = "label";
   }
 
-  iconPath = {
-    light: vscode.Uri.file(
-      path.join(
-        __filename,
-        "..",
-        "..",
-        "resources",
-        "light",
-        "labels",
-        `label-${this.source.color.name.toLowerCase()}.svg`,
-      ),
-    ),
-    dark: vscode.Uri.file(
-      path.join(
-        __filename,
-        "..",
-        "..",
-        "resources",
-        "dark",
-        "labels",
-        `label-${this.source.color.name.toLowerCase()}.svg`,
-      ),
-    ),
-  };
+  iconPath = getIconPath(`label-${this.source.color.name.toLowerCase()}.svg`);
 
   getCollapsibleState(labelName: string): vscode.TreeItemCollapsibleState {
     if (isLabelEmpty(labelName)) {
@@ -803,37 +780,11 @@ export class LabelNode extends vscode.TreeItem {
 }
 
 function getNamedIconPath(name: string, label: string) {
-  return {
-    light: vscode.Uri.file(
-      path.join(
-        __filename,
-        "..",
-        "..",
-        "resources",
-        "light",
-        name + getServerIconState(label) + ".svg",
-      ),
-    ),
-    dark: vscode.Uri.file(
-      path.join(
-        __filename,
-        "..",
-        "..",
-        "resources",
-        "dark",
-        name + getServerIconState(label) + ".svg",
-      ),
-    ),
-  };
+  const iconFileName = name + getServerIconState(label) + ".svg";
+
+  return getIconPath(iconFileName);
 }
 
 function getOtherIconPath(name: string) {
-  return {
-    light: vscode.Uri.file(
-      path.join(__filename, "..", "..", "resources", "light", name + ".svg"),
-    ),
-    dark: vscode.Uri.file(
-      path.join(__filename, "..", "..", "resources", "dark", name + ".svg"),
-    ),
-  };
+  return getIconPath(name + ".svg");
 }
