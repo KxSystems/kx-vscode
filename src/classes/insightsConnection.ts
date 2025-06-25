@@ -699,6 +699,8 @@ export class InsightsConnection {
 
           if (isStarting) {
             progress.report({ message: "Starting scratchpad..." });
+          } else {
+            progress.report({ message: "Query is running..." });
           }
 
           const spRes = await axios(options).then((response: any) => {

@@ -117,6 +117,7 @@ import {
 } from "./utils/core";
 import { runQFileTerminal } from "./utils/execution";
 import { handleFeedbackSurvey } from "./utils/feedbackSurveyUtils";
+import { getIconPath } from "./utils/iconsUtils";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
 import {
@@ -789,30 +790,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
         if (item) {
           const colors = ext.labelColors.map((color) => ({
             label: color.name,
-            iconPath: {
-              light: vscode.Uri.file(
-                path.join(
-                  __filename,
-                  "..",
-                  "..",
-                  "resources",
-                  "light",
-                  "labels",
-                  `label-${color.name.toLowerCase()}.svg`,
-                ),
-              ),
-              dark: vscode.Uri.file(
-                path.join(
-                  __filename,
-                  "..",
-                  "..",
-                  "resources",
-                  "dark",
-                  "labels",
-                  `label-${color.name.toLowerCase()}.svg`,
-                ),
-              ),
-            },
+            iconPath: getIconPath(`label-${color.name.toLowerCase()}.svg`),
           }));
           const picked = await vscode.window.showQuickPick(colors, {
             title: "Select label color",
