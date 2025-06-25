@@ -215,14 +215,13 @@ export function sanitizeQsqlQuery(query: string): string {
       // 1. Remove block comments (start with / and end with \ on a separate line)
       .replace(/\/[\s\S]*?\\/g, "")
 
-      // 2. Remove single-line comments (start with `/`, skip if inside string)
+      // 2. Remove single-line and inline comments (preserve quoted strings)
       .replace(
-        /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(^|[^:])\/[^\r\n]*/gm,
-        (_match, strLiteral, prefix) => (strLiteral ? strLiteral : prefix),
+        /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|[ \t]*\/[^\r\n]*(?:\r?\n|$)/g,
+        (_match, strLiteral) => (strLiteral ? strLiteral : ""),
       )
 
-      // 3. Replace line breaks with semicolon as statement delimiters
-      // Safely replaces newline with `;` only if not already ending in `;`
+      // 3. Replace line breaks with semicolon if not already ended with one
       .replace(/([^\s;])(?:\r?\n)+(?=\S)/g, "$1;")
   );
 }
