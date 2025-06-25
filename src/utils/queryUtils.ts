@@ -224,7 +224,7 @@ export function sanitizeQsqlQuery(query: string): string {
         i,
       ));
     } else if (isStringEnd(char, inString, stringChar)) {
-      ({ inString, result, i } = handleStringEnd(result, i));
+      ({ inString, result, i } = handleStringEnd(char, result, i));
     } else if (inString) {
       ({ result, i } = handleInsideString(char, result, i));
     } else if (isBlockCommentStart(char, query, i)) {
@@ -266,12 +266,13 @@ function isStringEnd(
 }
 
 function handleStringEnd(
+  char: string,
   result: string,
   i: number,
 ): { inString: boolean; result: string; i: number } {
   return {
     inString: false,
-    result: result + result[result.length - 1], // append last char again
+    result: result + char,
     i: i + 1,
   };
 }
