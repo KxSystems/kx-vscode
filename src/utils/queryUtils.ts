@@ -209,21 +209,68 @@ export function getValueFromArray(results: DCDS): any {
 }
 
 export function sanitizeQsqlQuery(query: string): string {
-  return (
-    query
-      .trim()
-      // 1. Remove block comments (start with / and end with \ on a separate line)
-      .replace(/\/[\s\S]*?\\/g, "")
+  let result = "";
+  let inString = false;
+  let stringChar = "";
+  let i = 0;
 
-      // 2. Remove single-line and inline comments (preserve quoted strings)
-      .replace(
-        /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|[ \t]*\/[^\r\n]*(?:\r?\n|$)/g,
-        (_match, strLiteral) => (strLiteral ? strLiteral : ""),
-      )
+  while (i < query.length) {
+    const char = query[i];
+    const _next = query[i + 1];
 
-      // 3. Replace line breaks with semicolon if not already ended with one
-      .replace(/([^\s;])(?:\r?\n)+(?=\S)/g, "$1;")
-  );
+    // Start of string
+    if (!inString && (char === '"' || char === "'")) {
+      inString = true;
+      stringChar = char;
+      result += char;
+      i++;
+      continue;
+    }
+
+    // End of string
+    if (inString && char === stringChar) {
+      inString = false;
+      result += char;
+      i++;
+      continue;
+    }
+
+    // Inside string: preserve escapes + content
+    if (inString) {
+      result += char;
+      i++;
+      continue;
+    }
+
+    // Block comment (starts with '/' and ends with '\')
+    if (char === "/" && query.slice(i).includes("\\")) {
+      const end = query.indexOf("\\", i);
+      if (end !== -1) {
+        i = end + 1;
+        continue;
+      }
+    }
+
+    // Line comment: starts with `/` and goes to end of line
+    if (char === "/") {
+      while (i < query.length && query[i] !== "\n" && query[i] !== "\r") {
+        i++;
+      }
+      // Consume newline if exists
+      if (query[i] === "\r" && query[i + 1] === "\n") i += 2;
+      else if (query[i] === "\n" || query[i] === "\r") i++;
+      continue;
+    }
+
+    // Regular char
+    result += char;
+    i++;
+  }
+
+  // Final pass: replace line breaks between statements with semicolon
+  result = result.replace(/([^\s;])(?:\r?\n)+(?=\S)/g, "$1;");
+
+  return result.trim();
 }
 
 export function generateQSqlBody(
