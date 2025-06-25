@@ -102,7 +102,6 @@ export class FileTreeItem extends TreeItem {
         Path.join(
           __dirname,
           "..",
-          "..",
           "resources",
           "light",
           this.baseIcon + state + ".svg",
@@ -111,7 +110,6 @@ export class FileTreeItem extends TreeItem {
       dark: Uri.file(
         Path.join(
           __dirname,
-          "..",
           "..",
           "resources",
           "dark",
