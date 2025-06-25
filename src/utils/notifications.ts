@@ -132,7 +132,7 @@ export function notify<T extends string>(
     items.push(<T>action);
   }
 
-  const dialog =
+  const notification =
     kind === MessageKind.ERROR
       ? vscode.window.showErrorMessage<T>(message, ...items)
       : kind === MessageKind.WARNING
@@ -142,17 +142,17 @@ export function notify<T extends string>(
           : Promise.resolve(undefined);
 
   if (action === "Details") {
-    dialog.then((res) => {
+    notification.then((res) => {
       if (res === "Details") {
         ext.outputChannel.show(true);
       }
     });
   }
 
-  return dialog;
+  return notification;
 }
 
-function getParams(params?: Array<any>) {
+function getParams(params?: any) {
   if (params) {
     try {
       return JSON.stringify(params);

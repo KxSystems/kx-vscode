@@ -170,6 +170,7 @@ export async function addInsightsConnection(
       }
       ext.serverProvider.refreshInsights(newInsights);
       notify("Created Insights connection.", MessageKind.DEBUG, {
+        logger,
         telemetry: "Connection.Created.Insights",
       });
     }
@@ -177,6 +178,7 @@ export async function addInsightsConnection(
     notify(
       `Added Insights connection: ${insightsData.alias}`,
       MessageKind.INFO,
+      { logger },
     );
 
     NewConnectionPannel.close();
@@ -269,6 +271,7 @@ export async function editInsightsConnection(
           }
           ext.serverProvider.refreshInsights(newInsights);
           notify("Edited Insights connection.", MessageKind.DEBUG, {
+            logger,
             telemetry: "Connection.Edited.Insights",
           });
           if (isConnectedConn) {
@@ -279,6 +282,7 @@ export async function editInsightsConnection(
         notify(
           `Edited Insights connection: ${insightsData.alias}`,
           MessageKind.INFO,
+          { logger },
         );
 
         NewConnectionPannel.close();
@@ -438,6 +442,7 @@ export async function addKdbConnection(
         await handleLabelsConnMap(labels, kdbData.serverAlias);
       }
       notify("Created kdb connection.", MessageKind.DEBUG, {
+        logger,
         telemetry: "Connection.Created.QProcess",
       });
       ext.serverProvider.refresh(newServers);
@@ -446,7 +451,9 @@ export async function addKdbConnection(
       addAuthConnection(key, kdbData.username!, kdbData.password!);
     }
 
-    notify(`Added kdb connection: ${kdbData.serverAlias}`, MessageKind.INFO);
+    notify(`Added kdb connection: ${kdbData.serverAlias}`, MessageKind.INFO, {
+      logger,
+    });
 
     NewConnectionPannel.close();
   }
@@ -551,6 +558,7 @@ export async function editKdbConnection(
           }
           ext.serverProvider.refresh(newServers);
           notify("Edited kdb connection.", MessageKind.DEBUG, {
+            logger,
             telemetry: "Connection.Edited.KDB",
           });
           const connLabelToReconn = `${kdbData.serverName}:${kdbData.serverPort} [${kdbData.serverAlias}]`;
@@ -562,6 +570,7 @@ export async function editKdbConnection(
         notify(
           `Edited KDB connection: ${kdbData.serverAlias}`,
           MessageKind.INFO,
+          { logger },
         );
         if (oldKey !== newKey) {
           removeConnFromLabels(oldKey);
@@ -762,7 +771,7 @@ export async function connect(connLabel: string): Promise<void> {
         notify(
           "TLS support requires OpenSSL to be installed.",
           MessageKind.INFO,
-          {},
+          { logger },
           "More Info",
           "Cancel",
         ).then(async (result) => {
@@ -1117,7 +1126,7 @@ export function copyQuery(queryHistoryElement: QueryHistory) {
     typeof queryHistoryElement.query === "string"
   ) {
     env.clipboard.writeText(queryHistoryElement.query);
-    notify("Query copied to clipboard.", MessageKind.INFO);
+    notify("Query copied to clipboard.", MessageKind.INFO, { logger });
   }
 }
 

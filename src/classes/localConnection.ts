@@ -90,7 +90,7 @@ export class LocalConnection {
           notify(
             `Connection to server ${this.options.host}:${this.options.port} failed.`,
             MessageKind.ERROR,
-            {},
+            { logger, params: err },
             "Start q process",
           ).then((res) => {
             if (res) {
@@ -106,15 +106,9 @@ export class LocalConnection {
           notify(
             `Connection to server ${this.options.host}:${this.options.port} failed.`,
             MessageKind.ERROR,
-            { logger },
+            { logger, params: err },
           );
         }
-
-        notify(
-          `Connection to server ${this.options.host}:${this.options.port} failed.`,
-          MessageKind.ERROR,
-          { logger, params: err },
-        );
 
         return;
       }

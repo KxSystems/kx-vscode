@@ -200,6 +200,7 @@ export class ConnectionManagementService {
       `${node.label}`,
     ]);
     notify("Connection activated.", MessageKind.DEBUG, {
+      logger,
       telemetry: "Connection.Connected.Active",
     });
     ext.activeConnection = connection;

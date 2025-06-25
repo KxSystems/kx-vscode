@@ -66,6 +66,7 @@ export async function checkOpenSslInstalled(): Promise<string | null> {
     // Disabled the error, as it is not critical
     // kdbOutputLog(`Error in checking OpenSSL version: ${err}`, "ERROR");
     notify("OpenSSL not found.", MessageKind.DEBUG, {
+      logger,
       telemetry: err as Error,
     });
   }
@@ -462,7 +463,9 @@ export async function checkLocalInstall(
       .getConfiguration()
       .get<boolean>("kdb.hideInstallationNotification");
     if (!hideNotification) {
-      notify(`Installation of q found here: ${env.QHOME}`, MessageKind.INFO);
+      notify(`Installation of q found here: ${env.QHOME}`, MessageKind.INFO, {
+        logger,
+      });
     }
 
     // persist the notification seen option
@@ -483,7 +486,7 @@ export async function checkLocalInstall(
   notify(
     "Local q installation not found!",
     MessageKind.INFO,
-    {},
+    { logger },
     "Install new instance",
     "No",
     "Never show again",

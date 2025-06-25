@@ -18,7 +18,6 @@ import { workspace, Uri } from "vscode";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { ext } from "../extensionVariables";
 import { MessageKind, notify } from "./notifications";
-import { Telemetry } from "./telemetryClient";
 import { DataSourceFiles } from "../models/dataSource";
 import { DataSourcesPanel } from "../panels/datasource";
 
@@ -153,6 +152,7 @@ export async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
     }
     fs.writeFileSync(filePath, JSON.stringify(ds));
     notify(`Datasource created.`, MessageKind.INFO, {
+      logger,
       telemetry: "Datasource.Created",
     });
   }
