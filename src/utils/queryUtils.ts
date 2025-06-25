@@ -212,17 +212,18 @@ export function sanitizeQsqlQuery(query: string): string {
   return (
     query
       .trim()
-      // Remove block comments
-      .replace(/^\/[^]*?^\\/gm, "")
-      // Remove single line comments
-      .replace(/^\/.*\r?\n/gm, "")
-      // Remove line comments
+      // 1. Remove block comments (start with / and end with \ on a separate line)
+      .replace(/\/[\s\S]*?\\/g, "")
+
+      // 2. Remove single-line comments (start with `/`, skip if inside string)
       .replace(
-        /(?:("([^"\\]*(?:\\.[^"\\]*)*)")|([ \t]+\/.*))/gm,
-        (matched, isString) => (isString ? matched : ""),
+        /("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(^|[^:])\/[^\r\n]*/gm,
+        (_match, strLiteral, prefix) => (strLiteral ? strLiteral : prefix),
       )
-      // Replace end of statements
-      .replace(/(?<![; \t]\s*)(?:\r\n|\n)+(?![ \t])/gs, ";")
+
+      // 3. Replace line breaks with semicolon as statement delimiters
+      // Safely replaces newline with `;` only if not already ending in `;`
+      .replace(/([^\s;])(?:\r?\n)+(?=\S)/g, "$1;")
   );
 }
 
