@@ -214,51 +214,103 @@ export function sanitizeQsqlQuery(query: string): string {
   let stringChar = "";
   let i = 0;
 
-  const isLineBreak = (c: string) => c === "\n" || c === "\r";
-
   while (i < query.length) {
     const char = query[i];
 
-    // Start or end of string
-    if (char === '"' || char === "'") {
-      if (!inString) {
-        inString = true;
-        stringChar = char;
-      } else if (char === stringChar) {
-        inString = false;
-      }
-      result += char;
-      i++;
-    }
-
-    // Inside string: preserve everything
-    else if (inString) {
-      result += char;
-      i++;
-    }
-
-    // Block comment: / ... \
-    else if (char === "/" && query.indexOf("\\", i) > i) {
-      const end = query.indexOf("\\", i);
-      i = end >= 0 ? end + 1 : query.length;
-    }
-
-    // Line comment: / to end of line
-    else if (char === "/") {
-      while (i < query.length && !isLineBreak(query[i])) i++;
-      if (query[i] === "\r" && query[i + 1] === "\n") i += 2;
-      else if (isLineBreak(query[i])) i++;
-    }
-
-    // Normal character
-    else {
+    if (isStringStart(char, inString)) {
+      ({ inString, stringChar, result, i } = handleStringStart(
+        char,
+        result,
+        i,
+      ));
+    } else if (isStringEnd(char, inString, stringChar)) {
+      ({ inString, result, i } = handleStringEnd(result, i));
+    } else if (inString) {
+      ({ result, i } = handleInsideString(char, result, i));
+    } else if (isBlockCommentStart(char, query, i)) {
+      i = skipBlockComment(query, i);
+    } else if (isLineCommentStart(char)) {
+      i = skipLineComment(query, i);
+    } else {
       result += char;
       i++;
     }
   }
 
-  // Final pass: normalize line breaks to ;
-  return result.replace(/([^\s;])(?:\r?\n)+(?=\S)/g, "$1;").trim();
+  return normalizeLineBreaks(result.trim());
+}
+
+function isStringStart(char: string, inString: boolean): boolean {
+  return !inString && (char === '"' || char === "'");
+}
+
+function handleStringStart(
+  char: string,
+  result: string,
+  i: number,
+): { inString: boolean; stringChar: string; result: string; i: number } {
+  return {
+    inString: true,
+    stringChar: char,
+    result: result + char,
+    i: i + 1,
+  };
+}
+
+function isStringEnd(
+  char: string,
+  inString: boolean,
+  stringChar: string,
+): boolean {
+  return inString && char === stringChar;
+}
+
+function handleStringEnd(
+  result: string,
+  i: number,
+): { inString: boolean; result: string; i: number } {
+  return {
+    inString: false,
+    result: result + result[result.length - 1], // append last char again
+    i: i + 1,
+  };
+}
+
+function handleInsideString(
+  char: string,
+  result: string,
+  i: number,
+): { result: string; i: number } {
+  return {
+    result: result + char,
+    i: i + 1,
+  };
+}
+
+function isBlockCommentStart(char: string, query: string, i: number): boolean {
+  return char === "/" && query.indexOf("\\", i) > i;
+}
+
+function skipBlockComment(query: string, i: number): number {
+  const end = query.indexOf("\\", i);
+  return end !== -1 ? end + 1 : query.length;
+}
+
+function isLineCommentStart(char: string): boolean {
+  return char === "/";
+}
+
+function skipLineComment(query: string, i: number): number {
+  while (i < query.length && query[i] !== "\n" && query[i] !== "\r") {
+    i++;
+  }
+  if (query[i] === "\r" && query[i + 1] === "\n") return i + 2;
+  if (query[i] === "\n" || query[i] === "\r") return i + 1;
+  return i;
+}
+
+function normalizeLineBreaks(input: string): string {
+  return input.replace(/([^\s;])(?:\r?\n)+(?=\S)/g, "$1;");
 }
 
 export function generateQSqlBody(
