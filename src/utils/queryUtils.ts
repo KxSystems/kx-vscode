@@ -214,63 +214,51 @@ export function sanitizeQsqlQuery(query: string): string {
   let stringChar = "";
   let i = 0;
 
+  const isLineBreak = (c: string) => c === "\n" || c === "\r";
+
   while (i < query.length) {
     const char = query[i];
-    const _next = query[i + 1];
 
-    // Start of string
-    if (!inString && (char === '"' || char === "'")) {
-      inString = true;
-      stringChar = char;
+    // Start or end of string
+    if (char === '"' || char === "'") {
+      if (!inString) {
+        inString = true;
+        stringChar = char;
+      } else if (char === stringChar) {
+        inString = false;
+      }
       result += char;
       i++;
-      continue;
     }
 
-    // End of string
-    if (inString && char === stringChar) {
-      inString = false;
+    // Inside string: preserve everything
+    else if (inString) {
       result += char;
       i++;
-      continue;
     }
 
-    // Inside string: preserve escapes + content
-    if (inString) {
-      result += char;
-      i++;
-      continue;
-    }
-
-    // Block comment (starts with '/' and ends with '\')
-    if (char === "/" && query.slice(i).includes("\\")) {
+    // Block comment: / ... \
+    else if (char === "/" && query.indexOf("\\", i) > i) {
       const end = query.indexOf("\\", i);
-      if (end !== -1) {
-        i = end + 1;
-        continue;
-      }
+      i = end >= 0 ? end + 1 : query.length;
     }
 
-    // Line comment: starts with `/` and goes to end of line
-    if (char === "/") {
-      while (i < query.length && query[i] !== "\n" && query[i] !== "\r") {
-        i++;
-      }
-      // Consume newline if exists
+    // Line comment: / to end of line
+    else if (char === "/") {
+      while (i < query.length && !isLineBreak(query[i])) i++;
       if (query[i] === "\r" && query[i + 1] === "\n") i += 2;
-      else if (query[i] === "\n" || query[i] === "\r") i++;
-      continue;
+      else if (isLineBreak(query[i])) i++;
     }
 
-    // Regular char
-    result += char;
-    i++;
+    // Normal character
+    else {
+      result += char;
+      i++;
+    }
   }
 
-  // Final pass: replace line breaks between statements with semicolon
-  result = result.replace(/([^\s;])(?:\r?\n)+(?=\S)/g, "$1;");
-
-  return result.trim();
+  // Final pass: normalize line breaks to ;
+  return result.replace(/([^\s;])(?:\r?\n)+(?=\S)/g, "$1;").trim();
 }
 
 export function generateQSqlBody(
