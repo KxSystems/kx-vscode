@@ -687,53 +687,65 @@ export class InsightsConnection {
         return;
       }
 
-      const runner = Runner.create(async (progress) => {
-        if (isStarting) {
-          progress.report({ message: "Starting scratchpad..." });
-        }
+      const spResponse = await window.withProgress(
+        {
+          location: ProgressLocation.Notification,
+          cancellable: false,
+        },
+        async (progress, token) => {
+          token.onCancellationRequested(() => {
+            kdbOutputLog(`User cancelled the scratchpad execution.`, "WARNING");
+          });
 
-        const spRes = await axios(options).then((response: any) => {
-          if (response.data.error) {
-            return response.data;
-          } else if (query === "") {
-            notify(
-              `Scratchpad created for connection: ${this.connLabel}.`,
-              MessageKind.DEBUG,
-              { logger },
-            );
+          if (isStarting) {
+            progress.report({ message: "Starting scratchpad..." });
           } else {
-            notify(`Status: ${response.status}`, MessageKind.DEBUG, {
-              logger,
-            });
-            if (!response.data.error) {
-              if (isTableView) {
-                if (
-                  /* TODO: Workaround for Python structuredText bug */
-                  !isPython &&
-                  this.insightsVersion &&
-                  isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
-                ) {
-                  response.data = JSON.parse(
-                    response.data.data,
-                  ) as StructuredTextResults;
-                } else {
-                  const buffer = new Uint8Array(
-                    response.data.data.map((x: string) => parseInt(x, 16)),
-                  ).buffer;
+            progress.report({ message: "Query is running..." });
+          }
 
-                  response.data.data = handleWSResults(buffer, isTableView);
-                  response.data.data = handleScratchpadTableRes(
-                    response.data.data,
-                  );
+          const spRes = await axios(options).then((response: any) => {
+            if (response.data.error) {
+              return response.data;
+            } else if (query === "") {
+              notify(
+                `Scratchpad created for connection: ${this.connLabel}.`,
+                MessageKind.DEBUG,
+                { logger },
+              );
+            } else {
+              notify(`Status: ${response.status}`, MessageKind.DEBUG, {
+                logger,
+              });
+              if (!response.data.error) {
+                if (isTableView) {
+                  if (
+                    /* TODO: Workaround for Python structuredText bug */
+                    !isPython &&
+                    this.insightsVersion &&
+                    isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
+                  ) {
+                    response.data = JSON.parse(
+                      response.data.data,
+                    ) as StructuredTextResults;
+                  } else {
+                    const buffer = new Uint8Array(
+                      response.data.data.map((x: string) => parseInt(x, 16)),
+                    ).buffer;
+
+                    response.data.data = handleWSResults(buffer, isTableView);
+                    response.data.data = handleScratchpadTableRes(
+                      response.data.data,
+                    );
+                  }
                 }
+                return response.data;
               }
               return response.data;
             }
-            return response.data;
-          }
-        });
-        return spRes;
-      });
+          });
+          return spRes;
+        },
+      );
       return await runner.execute();
     } else {
       this.noConnectionOrEndpoints();

@@ -11,8 +11,9 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import * as path from "path";
 import * as vscode from "vscode";
+
+import { getIconPath } from "../utils/iconsUtils";
 
 export class HelpFeedbackProvider implements vscode.TreeDataProvider<HelpItem> {
   private _onDidChangeTreeData: vscode.EventEmitter<
@@ -55,13 +56,6 @@ class HelpItem extends vscode.TreeItem {
   ) {
     super(label, vscode.TreeItemCollapsibleState.None);
     this.command = { command: commandId, title: label };
-    this.iconPath = {
-      light: vscode.Uri.file(
-        path.join(__dirname, "..", "resources", "light", iconFileName),
-      ),
-      dark: vscode.Uri.file(
-        path.join(__dirname, "..", "resources", "dark", iconFileName),
-      ),
-    };
+    this.iconPath = getIconPath(iconFileName);
   }
 }

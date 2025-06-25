@@ -336,6 +336,23 @@ export class KdbNewConnectionView extends LitElement {
     `;
   }
 
+  renderInsecureSSL() {
+    return html`
+      <div class="row mt-1">
+        <vscode-checkbox
+          .checked="${this.insightsServer.insecure}"
+          @change="${(event: Event) => {
+            /* istanbul ignore next */
+            this.insightsServer.insecure = (
+              event.target as HTMLInputElement
+            ).checked;
+          }}"
+          >Accept insecure SSL certifcates</vscode-checkbox
+        >
+      </div>
+    `;
+  }
+
   tabClickAction(tabNumber: number) {
     const config =
       this.tabConfig[tabNumber as keyof typeof this.tabConfig] ??
@@ -608,19 +625,7 @@ export class KdbNewConnectionView extends LitElement {
         <div class="col gap-0">
           <details>
             <summary>Advanced</summary>
-            ${this.renderRealm()}
-            <div class="row mt-1">
-              <vscode-checkbox
-                .checked="${this.insightsServer.insecure}"
-                @change="${(event: Event) => {
-                  /* istanbul ignore next */
-                  this.insightsServer.insecure = (
-                    event.target as HTMLInputElement
-                  ).checked;
-                }}"
-                >Accept insecure SSL certifcates</vscode-checkbox
-              >
-            </div>
+            ${this.renderRealm()} ${this.renderInsecureSSL()}
           </details>
         </div>
       </div>
@@ -946,6 +951,7 @@ export class KdbNewConnectionView extends LitElement {
       this.insightsServer.alias = this.connectionData.serverName;
       this.insightsServer.server = this.connectionData.serverAddress;
       this.insightsServer.realm = this.connectionData.realm ?? "";
+      this.insightsServer.insecure = this.connectionData.insecure ?? false;
     }
 
     return html`
@@ -964,7 +970,7 @@ export class KdbNewConnectionView extends LitElement {
           <div class="col gap-0">
             <details>
               <summary>Advanced</summary>
-              ${this.renderRealm()}
+              ${this.renderRealm()} ${this.renderInsecureSSL()}
             </details>
           </div>
         </div>

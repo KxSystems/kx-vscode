@@ -646,10 +646,6 @@ Create a Workbook using the WORKBOOKS panel and run code against a specific conn
 
    1. To run all the code in the file you can use one of the following methods:
 
-      1. Click **Run** from above the first line of code in the workbook file.
-
-         ![workbook links](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookrunlink.png)
-
       1. Select **Run** from the upper right of the editor. Using the dropdown next to the button you can choose any of the [**KX:** menu items](#kdb-process-executing-q-and-python-code) to run some, or all of the code in the workbook.
          ![play dropdown](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookplaydropdown.png)
 
@@ -663,7 +659,9 @@ Create a Workbook using the WORKBOOKS panel and run code against a specific conn
 
 When you save a workbook file, the code and the connection details are stored. The workbook icon is green if it is associated with a connection and grey if there is no association.
 
-You can also change the connection associated with a workbook at any time by clicking on Choose Connection from above the first line of code in the workbook file.
+You can also change the connection associated with a workbook at any time by clicking on the connection from above the first line of code in the workbook file.
+
+![change connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookchooseconnection.png)
 
 ### Source files
 
