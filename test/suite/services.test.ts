@@ -1276,7 +1276,7 @@ describe("connectionManagerService", () => {
 
       ext.serverProvider = undefined;
     });
-    it("isConnectedBehaviour", () => {
+    it("connectSuccessBehaviour", () => {
       const setActiveConnectionStub = sinon.stub(
         connectionManagerService,
         "setActiveConnection",
@@ -1284,7 +1284,7 @@ describe("connectionManagerService", () => {
       const executeCommandStub = sinon.stub(commands, "executeCommand");
       const reloadStub = sinon.stub(ext.serverProvider, "reload");
 
-      connectionManagerService.isConnectedBehaviour(insightNode);
+      connectionManagerService.connectSuccessBehaviour(insightNode);
 
       sinon.assert.calledOnce(setActiveConnectionStub);
       sinon.assert.calledOnce(reloadStub);
@@ -1296,19 +1296,19 @@ describe("connectionManagerService", () => {
       );
     });
 
-    it("isNotConnectedBehaviour", () => {
+    it("connectFailBehaviour", () => {
       const showErrorMessageStub = sinon.stub(window, "showErrorMessage");
       const sendEventStub = sinon.stub(Telemetry, "sendEvent");
 
       const testLabel = "testLabel";
 
-      connectionManagerService.isNotConnectedBehaviour(testLabel);
+      connectionManagerService.connectFailBehaviour(testLabel);
 
       sinon.assert.calledWith(
         showErrorMessageStub,
         `Connection failed to: ${testLabel}`,
       );
-      sinon.assert.calledWith(sendEventStub, "Connection.Failed");
+      sinon.assert.calledWith(sendEventStub, "Connection.Failed.KDB+");
     });
 
     it("disconnectBehaviour", () => {
@@ -2590,6 +2590,10 @@ describe("HelpFeedbackProvider", () => {
       },
     ];
 
+    function normalizePath(p: string) {
+      return p.replace(/\\/g, "/");
+    }
+
     children.forEach((item, idx) => {
       assert.strictEqual(item.label, expected[idx].label);
       assert.deepStrictEqual(item.command, {
@@ -2602,16 +2606,16 @@ describe("HelpFeedbackProvider", () => {
         "light" in item.iconPath &&
         "dark" in item.iconPath
       ) {
-        assert.ok(
-          String(item.iconPath.light).endsWith(
-            Path.join("resources", "light", expected[idx].icon),
-          ),
+        const actualLight = normalizePath(item.iconPath.light.toString());
+        const expectedLight = normalizePath(
+          Path.join("resources", "light", expected[idx].icon),
         );
-        assert.ok(
-          String(item.iconPath.dark).endsWith(
-            Path.join("resources", "dark", expected[idx].icon),
-          ),
+        const actualDark = normalizePath(item.iconPath.dark.toString());
+        const expectedDark = normalizePath(
+          Path.join("resources", "dark", expected[idx].icon),
         );
+        assert.ok(actualLight.endsWith(expectedLight));
+        assert.ok(actualDark.endsWith(expectedDark));
       }
     });
   });

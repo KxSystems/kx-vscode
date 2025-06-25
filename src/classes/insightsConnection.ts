@@ -383,44 +383,47 @@ export class InsightsConnection {
         return undefined;
       }
       options.responseType = "arraybuffer";
-
-      notify("Requesting datasource query.", MessageKind.DEBUG, {
-        logger,
-        params: { url: options.url, data: options.data },
-      });
-
-      const runner = Runner.create(async () => {
-        return await axios(options)
-          .then((response: any) => {
-            notify(
-              `Datasource run status: ${response.status}.`,
-              MessageKind.DEBUG,
-              { logger },
-            );
-            if (isCompressed(response.data)) {
-              response.data = uncompress(response.data);
-            }
-            return {
-              error: "",
-              arrayBuffer: response.data.buffer
-                ? response.data.buffer
-                : response.data,
-            };
-          })
-          .catch((error: any) => {
-            notify(
-              `Datasource run status: ${error.response.status}.`,
-              MessageKind.DEBUG,
-              { logger, params: error },
-            );
-            return {
-              error: { buffer: error.response.data },
-              arrayBuffer: undefined,
-            };
+      const results = await window.withProgress(
+        {
+          location: ProgressLocation.Notification,
+          cancellable: true,
+        },
+        async (progress, token) => {
+          token.onCancellationRequested(() => {
+            kdbOutputLog(`User cancelled the Datasource Run.`, "WARNING");
           });
-      });
-      runner.title = "Executing query";
-      return await runner.execute();
+
+          progress.report({ message: "Query executing..." });
+
+          return await axios(options)
+            .then((response: any) => {
+              kdbOutputLog(
+                `[Datasource RUN] Status: ${response.status}.`,
+                "INFO",
+              );
+              if (isCompressed(response.data)) {
+                response.data = uncompress(response.data);
+              }
+              return {
+                error: "",
+                arrayBuffer: response.data.buffer
+                  ? response.data.buffer
+                  : response.data,
+              };
+            })
+            .catch((error: any) => {
+              kdbOutputLog(
+                `[Datasource RUN] Status: ${error.response.status}.`,
+                "ERROR",
+              );
+              return {
+                error: { buffer: error.response.data },
+                arrayBuffer: undefined,
+              };
+            });
+        },
+      );
+      return results;
     }
   }
 
@@ -504,29 +507,49 @@ export class InsightsConnection {
         return;
       }
 
-      const runner = Runner.create(async () => {
-        return await axios(options).then((response: any) => {
-          if (response.data.error) {
-            notify("Unable to populate scratchpad.", MessageKind.ERROR, {
-              logger,
-              params: response.data.errorMsg,
-            });
-          } else {
-            notify(
-              `Populated scratchpad, stored in ${variableName}.`,
-              MessageKind.INFO,
-              {
-                logger,
-                params: { status: response.status, params: body.params },
-                telemetry:
-                  "Datasource." + dsTypeString + ".Scratchpad.Populated",
-              },
-            );
-          }
-        });
-      });
-      runner.title = "Populating scratchpad...";
-      await runner.execute();
+      await window.withProgress(
+        {
+          location: ProgressLocation.Notification,
+          cancellable: false,
+        },
+        async (progress, token) => {
+          token.onCancellationRequested(() => {
+            kdbOutputLog(`User cancelled the scratchpad import.`, "WARNING");
+          });
+
+          progress.report({ message: "Populating scratchpad..." });
+
+          return await axios(options).then((response: any) => {
+            if (response.data.error) {
+              kdbOutputLog(
+                `[SCRATCHPAD] Error occured while populating scratchpad: ${response.data.errorMsg}`,
+                "ERROR",
+              );
+              Telemetry.sendEvent(
+                "Datasource." + dsTypeString + ".Scratchpad.Populated.Errored",
+              );
+            } else {
+              kdbOutputLog(
+                `Executed successfully, stored in ${variableName}.`,
+                "INFO",
+              );
+              kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
+              kdbOutputLog(
+                `[SCRATCHPAD] Populated scratchpad with the following params: ${JSON.stringify(
+                  body.params,
+                )}`,
+                "INFO",
+              );
+              window.showInformationMessage(
+                `Executed successfully, stored in ${variableName}.`,
+              );
+              Telemetry.sendEvent(
+                "Datasource." + dsTypeString + ".Scratchpad.Populated",
+              );
+            }
+          });
+        },
+      );
     } else {
       this.noConnectionOrEndpoints();
     }

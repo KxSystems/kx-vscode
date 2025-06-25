@@ -14,7 +14,7 @@
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
-import { MessageKind, notify } from "./notifications";
+import { Telemetry } from "./telemetryClient";
 
 export async function feedbackSurveyDialog(
   sawSurveyAlready: boolean,
@@ -58,6 +58,7 @@ async function showSurveyDialog() {
   if (result === "Take Survey") {
     vscode.env.openExternal(vscode.Uri.parse(SURVEY_URL));
   } else if (result === "Don't show me this message next time") {
+    Telemetry.sendEvent("Help&Feedback.Hide.Survey");
     await vscode.workspace
       .getConfiguration("kdb")
       .update("hideSurvey", true, vscode.ConfigurationTarget.Global);
