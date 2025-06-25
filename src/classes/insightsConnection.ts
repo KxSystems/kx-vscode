@@ -14,6 +14,7 @@
 import axios, { AxiosRequestConfig } from "axios";
 import { jwtDecode } from "jwt-decode";
 import * as url from "url";
+import { ProgressLocation, window } from "vscode";
 
 import { ext } from "../extensionVariables";
 import { isCompressed, uncompress } from "../ipc/c";
@@ -390,16 +391,19 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            kdbOutputLog(`User cancelled the Datasource Run.`, "WARNING");
+            notify(`User cancelled the Datasource Run.`, MessageKind.DEBUG, {
+              logger,
+            });
           });
 
           progress.report({ message: "Query executing..." });
 
           return await axios(options)
             .then((response: any) => {
-              kdbOutputLog(
+              notify(
                 `[Datasource RUN] Status: ${response.status}.`,
-                "INFO",
+                MessageKind.DEBUG,
+                { logger },
               );
               if (isCompressed(response.data)) {
                 response.data = uncompress(response.data);
@@ -412,9 +416,10 @@ export class InsightsConnection {
               };
             })
             .catch((error: any) => {
-              kdbOutputLog(
+              notify(
                 `[Datasource RUN] Status: ${error.response.status}.`,
-                "ERROR",
+                MessageKind.ERROR,
+                { logger, params: error },
               );
               return {
                 error: { buffer: error.response.data },
@@ -514,37 +519,37 @@ export class InsightsConnection {
         },
         async (progress, token) => {
           token.onCancellationRequested(() => {
-            kdbOutputLog(`User cancelled the scratchpad import.`, "WARNING");
+            notify(`User cancelled the scratchpad import.`, MessageKind.DEBUG, {
+              logger,
+            });
           });
 
           progress.report({ message: "Populating scratchpad..." });
 
           return await axios(options).then((response: any) => {
             if (response.data.error) {
-              kdbOutputLog(
-                `[SCRATCHPAD] Error occured while populating scratchpad: ${response.data.errorMsg}`,
-                "ERROR",
-              );
-              Telemetry.sendEvent(
-                "Datasource." + dsTypeString + ".Scratchpad.Populated.Errored",
+              notify(
+                "Error occured while populating scratchpad.",
+                MessageKind.ERROR,
+                {
+                  logger,
+                  params: response.data.errorMsg,
+                  telemetry:
+                    "Datasource." +
+                    dsTypeString +
+                    ".Scratchpad.Populated.Errored",
+                },
               );
             } else {
-              kdbOutputLog(
+              notify(
                 `Executed successfully, stored in ${variableName}.`,
-                "INFO",
-              );
-              kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
-              kdbOutputLog(
-                `[SCRATCHPAD] Populated scratchpad with the following params: ${JSON.stringify(
-                  body.params,
-                )}`,
-                "INFO",
-              );
-              window.showInformationMessage(
-                `Executed successfully, stored in ${variableName}.`,
-              );
-              Telemetry.sendEvent(
-                "Datasource." + dsTypeString + ".Scratchpad.Populated",
+                MessageKind.INFO,
+                {
+                  logger,
+                  params: { status: response.status, params: body.params },
+                  telemetry:
+                    "Datasource." + dsTypeString + ".Scratchpad.Populated",
+                },
               );
             }
           });

@@ -38,6 +38,7 @@ import {
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
 import { sanitizeQuery } from "../utils/queryUtils";
+import { Telemetry } from "../utils/telemetryClient";
 
 const logger = "connectionManagerService";
 
@@ -145,7 +146,6 @@ export class ConnectionManagementService {
       );
       await localConnection.connect((err, conn) => {
         if (err) {
-          window.showErrorMessage(err.message);
           this.connectFailBehaviour(connLabel);
           return;
         }
@@ -153,11 +153,12 @@ export class ConnectionManagementService {
           notify(
             `Connection established successfully to: ${connLabel}`,
             MessageKind.DEBUG,
-            { logger, telemetry: "Connection.Connected.QProcess" },
-          );
-
-          Telemetry.sendEvent(
-            "Connection.Connected" + this.getTelemetryConnectionType(connLabel),
+            {
+              logger,
+              telemetry:
+                "Connection.Connected" +
+                this.getTelemetryConnectionType(connLabel),
+            },
           );
 
           ext.connectedConnectionList.push(localConnection);
@@ -176,7 +177,7 @@ export class ConnectionManagementService {
         Telemetry.sendEvent(
           "Connection.Connected" + this.getTelemetryConnectionType(connLabel),
         );
-        kdbOutputLog(
+        notify(
           `Connection established successfully to: ${connLabel}`,
           MessageKind.DEBUG,
           { logger, telemetry: "Connection.Connected.Insights" },
@@ -299,10 +300,11 @@ export class ConnectionManagementService {
   }
 
   public connectFailBehaviour(connLabel: string): void {
-    window.showErrorMessage(`Connection failed to: ${connLabel}`);
-    Telemetry.sendEvent(
-      "Connection.Failed" + this.getTelemetryConnectionType(connLabel),
-    );
+    notify(`Connection failed to: ${connLabel}`, MessageKind.ERROR, {
+      logger,
+      telemetry:
+        "Connection.Failed" + this.getTelemetryConnectionType(connLabel),
+    });
   }
 
   public disconnectBehaviour(

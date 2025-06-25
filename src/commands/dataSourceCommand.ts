@@ -190,8 +190,11 @@ export async function runDataSource(
       const query = getQuery(fileContent, selectedType);
 
       if (!success) {
-        Telemetry.sendEvent("Datasource." + selectedType + ".Run.Error");
-        window.showErrorMessage(res.error);
+        notify("Query execution failed.", MessageKind.ERROR, {
+          logger,
+          params: res.error,
+          telemetry: "Datasource." + selectedType + ".Run.Error",
+        });
       }
       if (ext.isResultsTabVisible) {
         if (success) {

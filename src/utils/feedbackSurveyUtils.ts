@@ -14,6 +14,7 @@
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
+import { MessageKind, notify } from "./notifications";
 import { Telemetry } from "./telemetryClient";
 
 export async function feedbackSurveyDialog(

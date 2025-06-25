@@ -14,7 +14,7 @@
 import { workspace } from "vscode";
 
 import { ext } from "../extensionVariables";
-import { kdbOutputLog } from "./core";
+import { MessageKind, notify } from "./notifications";
 import { Telemetry } from "./telemetryClient";
 import { ConnectionLabel, Labels } from "../models/labels";
 import { NewConnectionPannel } from "../panels/newConnection";

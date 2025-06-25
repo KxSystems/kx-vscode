@@ -79,6 +79,7 @@ import {
   formatScratchpadStacktrace,
   resultToBase64,
 } from "../utils/queryUtils";
+import { Telemetry } from "../utils/telemetryClient";
 import {
   addWorkspaceFile,
   openWith,
@@ -888,11 +889,15 @@ export async function _executeQuery(
   const connVersion = isInsights ? (selectedConn.insightsVersion ?? 0) : 0;
   const telemetryLangType = isPython ? ".Python" : ".q";
   const telemetryBaseMsg = isWorkbook ? "Workbook" : "Scratchpad";
-  Telemetry.sendEvent(telemetryBaseMsg + ".Execute" + telemetryLangType);
+  notify("Query execution.", MessageKind.DEBUG, {
+    logger,
+    telemetry: telemetryBaseMsg + ".Execute" + telemetryLangType,
+  });
   if (query.length === 0) {
-    Telemetry.sendEvent(
-      telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
-    );
+    notify("Empty query.", MessageKind.DEBUG, {
+      logger,
+      telemetry: telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
+    });
     queryConsole.appendQueryError(
       query,
       "Query is empty",
@@ -942,7 +947,10 @@ export async function _executeQuery(
     if (ext.isResultsTabVisible) {
       const data = resultToBase64(results);
       if (data) {
-        Telemetry.sendEvent("GGPLOT.Display" + (isPython ? ".Python" : ".q"));
+        notify("GG Plot displayed", MessageKind.DEBUG, {
+          logger,
+          telemetry: "GGPLOT.Display" + (isPython ? ".Python" : ".q"),
+        });
         const active = ext.activeTextEditor;
         if (active) {
           const plot = <Plot>{
@@ -1313,9 +1321,11 @@ export async function writeQueryResultsToView(
     if (typeof result === "string") {
       const res = decodeQUTF(result);
       if (res.startsWith(queryConstants.error)) {
-        Telemetry.sendEvent(
-          telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
-        );
+        notify("Telemetry", MessageKind.DEBUG, {
+          logger,
+          telemetry:
+            telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
+        });
         isSuccess = false;
       }
     }
