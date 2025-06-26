@@ -16,6 +16,7 @@ import * as vscode from "vscode";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { ext } from "../extensionVariables";
 import { ConnectionManagementService } from "../services/connectionManagerService";
+import { offerConnectAction } from "../utils/core";
 import { MessageKind, notify, timeout } from "../utils/notifications";
 import { resultToBase64 } from "../utils/queryUtils";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
@@ -57,11 +58,7 @@ export class KxNotebookController {
   ): Promise<void> {
     const conn = ext.activeConnection;
     if (conn === undefined) {
-      notify(
-        "You aren't connected to any connection. Once connected please try again.",
-        MessageKind.ERROR,
-        { logger },
-      );
+      offerConnectAction();
       return;
     }
     const manager = this.createConnectionManager();

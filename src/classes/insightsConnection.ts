@@ -41,7 +41,7 @@ import {
   tokenUndefinedError,
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
-import { MessageKind, Runner, notify } from "../utils/notifications";
+import { MessageKind, notify, Runner } from "../utils/notifications";
 import {
   generateQSqlBody,
   handleScratchpadTableRes,
@@ -85,7 +85,10 @@ export class InsightsConnection {
         await this.getConfig();
         await this.getMeta();
         await this.getApiConfig();
-        this.getScratchpadQuery("", undefined, false, true, false);
+
+        const runner = Runner.create(() => this.getScratchpadQuery(""));
+        runner.title = `Starting scratchpad on ${this.connLabel}.`;
+        runner.execute();
       }
     });
     return this.connected;
@@ -383,46 +386,35 @@ export class InsightsConnection {
         return undefined;
       }
       options.responseType = "arraybuffer";
-      const runner = Runner.create(async (progress, token) => {
-        token.onCancellationRequested(() => {
-          notify(`User cancelled the Datasource Run.`, MessageKind.DEBUG, {
-            logger,
-          });
+
+      return await axios(options)
+        .then((response: any) => {
+          notify(
+            `[Datasource RUN] Status: ${response.status}.`,
+            MessageKind.DEBUG,
+            { logger },
+          );
+          if (isCompressed(response.data)) {
+            response.data = uncompress(response.data);
+          }
+          return {
+            error: "",
+            arrayBuffer: response.data.buffer
+              ? response.data.buffer
+              : response.data,
+          };
+        })
+        .catch((error: any) => {
+          notify(
+            `[Datasource RUN] Status: ${error.response.status}.`,
+            MessageKind.ERROR,
+            { logger, params: error },
+          );
+          return {
+            error: { buffer: error.response.data },
+            arrayBuffer: undefined,
+          };
         });
-
-        progress.report({ message: "Query executing..." });
-
-        return await axios(options)
-          .then((response: any) => {
-            notify(
-              `[Datasource RUN] Status: ${response.status}.`,
-              MessageKind.DEBUG,
-              { logger },
-            );
-            if (isCompressed(response.data)) {
-              response.data = uncompress(response.data);
-            }
-            return {
-              error: "",
-              arrayBuffer: response.data.buffer
-                ? response.data.buffer
-                : response.data,
-            };
-          })
-          .catch((error: any) => {
-            notify(
-              `[Datasource RUN] Status: ${error.response.status}.`,
-              MessageKind.ERROR,
-              { logger, params: error },
-            );
-            return {
-              error: { buffer: error.response.data },
-              arrayBuffer: undefined,
-            };
-          });
-      });
-
-      return await runner.execute();
     }
   }
 
@@ -506,44 +498,30 @@ export class InsightsConnection {
         return;
       }
 
-      const runner = Runner.create(async (progress, token) => {
-        token.onCancellationRequested(() => {
-          notify(`User cancelled the scratchpad import.`, MessageKind.DEBUG, {
-            logger,
-          });
-        });
-
-        progress.report({ message: "Populating scratchpad..." });
-
-        return await axios(options).then((response: any) => {
-          if (response.data.error) {
-            notify(
-              "Error occured while populating scratchpad.",
-              MessageKind.ERROR,
-              {
-                logger,
-                params: response.data.errorMsg,
-                telemetry:
-                  "Datasource." +
-                  dsTypeString +
-                  ".Scratchpad.Populated.Errored",
-              },
-            );
-          } else {
-            notify(
-              `Executed successfully, stored in ${variableName}.`,
-              MessageKind.INFO,
-              {
-                logger,
-                params: { status: response.status, params: body.params },
-                telemetry:
-                  "Datasource." + dsTypeString + ".Scratchpad.Populated",
-              },
-            );
-          }
-        });
+      return await axios(options).then((response: any) => {
+        if (response.data.error) {
+          notify(
+            "Error occured while populating scratchpad.",
+            MessageKind.ERROR,
+            {
+              logger,
+              params: response.data.errorMsg,
+              telemetry:
+                "Datasource." + dsTypeString + ".Scratchpad.Populated.Errored",
+            },
+          );
+        } else {
+          notify(
+            `Executed successfully, stored in ${variableName}.`,
+            MessageKind.INFO,
+            {
+              logger,
+              params: { status: response.status, params: body.params },
+              telemetry: "Datasource." + dsTypeString + ".Scratchpad.Populated",
+            },
+          );
+        }
       });
-      await runner.execute();
     } else {
       this.noConnectionOrEndpoints();
     }
@@ -601,28 +579,24 @@ export class InsightsConnection {
         return;
       }
 
-      const runner = Runner.create(async () => {
-        const udaRes = await axios(options).then((response: any) => {
-          if (response.data.error) {
-            return response.data;
-          } else {
-            notify(`Status: ${response.status}`, MessageKind.DEBUG, {
-              logger,
-            });
-            if (!response.data.error) {
-              if (isTableView) {
-                response.data = JSON.parse(
-                  response.data.data,
-                ) as StructuredTextResults;
-              }
-              return response.data;
+      return await axios(options).then((response: any) => {
+        if (response.data.error) {
+          return response.data;
+        } else {
+          notify(`Status: ${response.status}`, MessageKind.DEBUG, {
+            logger,
+          });
+          if (!response.data.error) {
+            if (isTableView) {
+              response.data = JSON.parse(
+                response.data.data,
+              ) as StructuredTextResults;
             }
             return response.data;
           }
-        });
-        return udaRes;
+          return response.data;
+        }
       });
-      return await runner.execute();
     } else {
       this.noConnectionOrEndpoints();
     }
@@ -633,7 +607,6 @@ export class InsightsConnection {
     query: string,
     context?: string,
     isPython?: boolean,
-    isStarting?: boolean,
     isTableView?: boolean,
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
@@ -676,64 +649,46 @@ export class InsightsConnection {
         return;
       }
 
-      const runner = Runner.create(async (progress, token) => {
-        token.onCancellationRequested(() => {
+      return await axios(options).then((response: any) => {
+        if (response.data.error) {
+          return response.data;
+        } else if (query === "") {
           notify(
-            `User cancelled the scratchpad execution.`,
+            `Scratchpad created for connection: ${this.connLabel}.`,
             MessageKind.DEBUG,
             { logger },
           );
-        });
-
-        if (isStarting) {
-          progress.report({ message: "Starting scratchpad..." });
         } else {
-          progress.report({ message: "Query is running..." });
-        }
+          notify(`Status: ${response.status}`, MessageKind.DEBUG, {
+            logger,
+          });
+          if (!response.data.error) {
+            if (isTableView) {
+              if (
+                /* TODO: Workaround for Python structuredText bug */
+                !isPython &&
+                this.insightsVersion &&
+                isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
+              ) {
+                response.data = JSON.parse(
+                  response.data.data,
+                ) as StructuredTextResults;
+              } else {
+                const buffer = new Uint8Array(
+                  response.data.data.map((x: string) => parseInt(x, 16)),
+                ).buffer;
 
-        const spRes = await axios(options).then((response: any) => {
-          if (response.data.error) {
-            return response.data;
-          } else if (query === "") {
-            notify(
-              `Scratchpad created for connection: ${this.connLabel}.`,
-              MessageKind.DEBUG,
-              { logger },
-            );
-          } else {
-            notify(`Status: ${response.status}`, MessageKind.DEBUG, {
-              logger,
-            });
-            if (!response.data.error) {
-              if (isTableView) {
-                if (
-                  /* TODO: Workaround for Python structuredText bug */
-                  !isPython &&
-                  this.insightsVersion &&
-                  isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
-                ) {
-                  response.data = JSON.parse(
-                    response.data.data,
-                  ) as StructuredTextResults;
-                } else {
-                  const buffer = new Uint8Array(
-                    response.data.data.map((x: string) => parseInt(x, 16)),
-                  ).buffer;
-
-                  response.data.data = handleWSResults(buffer, isTableView);
-                  response.data.data = handleScratchpadTableRes(
-                    response.data.data,
-                  );
-                }
+                response.data.data = handleWSResults(buffer, isTableView);
+                response.data.data = handleScratchpadTableRes(
+                  response.data.data,
+                );
               }
-              return response.data;
             }
             return response.data;
           }
-        });
-        return spRes;
+          return response.data;
+        }
       });
-      return await runner.execute();
     } else {
       this.noConnectionOrEndpoints();
     }
@@ -758,29 +713,23 @@ export class InsightsConnection {
         return;
       }
 
-      const runner = Runner.create(async (progress) => {
-        progress.report({ message: "Reseting scratchpad..." });
-        const res = await axios(options)
-          .then((_response: any) => {
-            notify(
-              `Executed successfully, scratchpad reset at ${this.connLabel} connection.`,
-              MessageKind.INFO,
-              { logger, telemetry: "Scratchpad.Reseted" },
-            );
-            return true;
-          })
-          .catch((_error: any) => {
-            notify(
-              `Error occurred while resetting scratchpad in connection ${this.connLabel}, try again.`,
-              MessageKind.ERROR,
-              { logger },
-            );
-            return false;
-          });
-
-        return res;
-      });
-      return await runner.execute();
+      return await axios(options)
+        .then((_response: any) => {
+          notify(
+            `Executed successfully, scratchpad reset at ${this.connLabel} connection.`,
+            MessageKind.INFO,
+            { logger, telemetry: "Scratchpad.Reseted" },
+          );
+          return true;
+        })
+        .catch((_error: any) => {
+          notify(
+            `Error occurred while resetting scratchpad in connection ${this.connLabel}, try again.`,
+            MessageKind.ERROR,
+            { logger },
+          );
+          return false;
+        });
     } else {
       this.noConnectionOrEndpoints();
       return false;

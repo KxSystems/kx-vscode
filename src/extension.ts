@@ -117,7 +117,7 @@ import {
 import { runQFileTerminal } from "./utils/execution";
 import { handleFeedbackSurvey } from "./utils/feedbackSurveyUtils";
 import { getIconPath } from "./utils/iconsUtils";
-import { MessageKind, notify } from "./utils/notifications";
+import { MessageKind, notify, Runner } from "./utils/notifications";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
 import {
@@ -784,14 +784,22 @@ function registerConnectionsCommands(): CommandRegistration[] {
     {
       command: "kdb.connections.refresh.serverObjects",
       callback: async () => {
-        ext.serverProvider.reload();
-        await refreshGetMeta();
+        const runner = Runner.create(() => {
+          ext.serverProvider.reload();
+          return refreshGetMeta();
+        });
+        runner.location = vscode.ProgressLocation.Notification;
+        runner.title = "Refreshing server objects for all connections.";
+        await runner.execute();
       },
     },
     {
       command: "kdb.connections.refresh.meta",
       callback: async (viewItem: InsightsNode) => {
-        await refreshGetMeta(viewItem.label);
+        const runner = Runner.create(() => refreshGetMeta(viewItem.label));
+        runner.location = vscode.ProgressLocation.Notification;
+        runner.title = `Refreshing meta data for ${viewItem.label || "all connections"}.`;
+        await runner.execute();
       },
     },
     {

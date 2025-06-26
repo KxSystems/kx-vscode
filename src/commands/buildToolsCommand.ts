@@ -25,6 +25,7 @@ import {
 } from "vscode";
 
 import { ext } from "../extensionVariables";
+import { getBasename } from "../utils/core";
 import { Runner } from "../utils/notifications";
 
 const cache = new Map<string, Thenable<Diagnostic[]>>();
@@ -207,7 +208,7 @@ function lint(document: TextDocument) {
       throw new Error(`Linting Failed ${error}`);
     }
   });
-  runner.title = "Linting";
+  runner.title = `Linting ${getBasename(document.uri)}.`;
   return runner.execute();
 }
 

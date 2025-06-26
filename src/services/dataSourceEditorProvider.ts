@@ -17,6 +17,7 @@ import {
   CustomTextEditorProvider,
   Disposable,
   ExtensionContext,
+  ProgressLocation,
   Range,
   TextDocument,
   Webview,
@@ -42,7 +43,7 @@ import {
 import { DataSourceCommand, DataSourceMessage2 } from "../models/messages";
 import { MetaObjectPayload } from "../models/meta";
 import { UDA } from "../models/uda";
-import { offerConnectAction } from "../utils/core";
+import { getBasename, offerConnectAction } from "../utils/core";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
 import { MessageKind, Runner, notify } from "../utils/notifications";
@@ -164,6 +165,9 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
 
     /* istanbul ignore next */
     webview.onDidReceiveMessage(async (msg: DataSourceMessage2) => {
+      const selectedServer = getServerForUri(document.uri) || "";
+      const connected = connMngService.isConnected(selectedServer);
+
       switch (msg.command) {
         case DataSourceCommand.Server: {
           await setServerForUri(document.uri, msg.selectedServer);
@@ -191,14 +195,14 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           break;
         }
         case DataSourceCommand.Refresh: {
-          const selectedServer = getServerForUri(document.uri) || "";
-          if (connMngService.isConnected(selectedServer)) {
+          if (connected) {
             const runner = Runner.create(async () => {
               await connMngService.refreshGetMeta(selectedServer);
               this.cache.delete(selectedServer);
               updateWebview();
             });
-            runner.title = "Refreshing meta data";
+            runner.location = ProgressLocation.Notification;
+            runner.title = `Refreshing meta data for ${selectedServer}.`;
             await runner.execute();
           } else {
             offerConnectAction(selectedServer);
@@ -206,15 +210,32 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           break;
         }
         case DataSourceCommand.Run: {
-          await runDataSource(
-            msg.dataSourceFile,
-            msg.selectedServer,
-            this.filenname,
-          );
+          if (connected) {
+            const runner = Runner.create(() =>
+              runDataSource(
+                msg.dataSourceFile,
+                msg.selectedServer,
+                this.filenname,
+              ),
+            );
+            runner.location = ProgressLocation.Notification;
+            runner.title = `Running ${getBasename(document.uri)} on ${msg.selectedServer}.`;
+            await runner.execute();
+          } else {
+            offerConnectAction(selectedServer);
+          }
           break;
         }
         case DataSourceCommand.Populate: {
-          await populateScratchpad(msg.dataSourceFile, msg.selectedServer);
+          if (connected) {
+            const runner = Runner.create(() =>
+              populateScratchpad(msg.dataSourceFile, msg.selectedServer),
+            );
+            runner.title = "Populating scratchpad.";
+            await runner.execute();
+          } else {
+            offerConnectAction(selectedServer);
+          }
           break;
         }
       }

@@ -15,6 +15,7 @@ import { ChildProcess } from "child_process";
 import { createHash } from "crypto";
 import { writeFile } from "fs/promises";
 import { pathExists } from "fs-extra";
+import path from "node:path";
 import { env } from "node:process";
 import { tmpdir } from "os";
 import { join } from "path";
@@ -343,21 +344,29 @@ export function invalidUsernameJWT(connLabel: string): void {
 }
 
 /* istanbul ignore next */
-export function offerConnectAction(connLabel: string): void {
-  notify(
-    `You aren't connected to ${connLabel}, would you like to connect? Once connected please try again.`,
-    MessageKind.INFO,
-    {},
-    "Connect",
-    "Cancel",
-  ).then(async (result) => {
-    if (result === "Connect") {
-      await commands.executeCommand(
-        "kdb.connections.connect.via.dialog",
-        connLabel,
-      );
-    }
-  });
+export function offerConnectAction(connLabel?: string): void {
+  if (connLabel) {
+    notify(
+      `You aren't connected to ${connLabel}, would you like to connect? Once connected please try again.`,
+      MessageKind.WARNING,
+      {},
+      "Connect",
+      "Cancel",
+    ).then(async (result) => {
+      if (result === "Connect") {
+        await commands.executeCommand(
+          "kdb.connections.connect.via.dialog",
+          connLabel,
+        );
+      }
+    });
+  } else {
+    notify(
+      "You aren't connected to any connection. Once connected please try again.",
+      MessageKind.WARNING,
+      { logger },
+    );
+  }
 }
 
 export function noSelectedConnectionAction(): void {
@@ -700,4 +709,8 @@ export function isBaseVersionGreaterOrEqual(
   targetVersion: number,
 ): boolean {
   return semver.gte(`${baseVersion}.0`, `${targetVersion}.0`);
+}
+
+export function getBasename(uri: Uri): string {
+  return path.basename(uri.path);
 }

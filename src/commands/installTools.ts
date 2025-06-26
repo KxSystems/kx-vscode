@@ -209,7 +209,7 @@ export async function installTools(): Promise<void> {
       });
     }
   });
-  runner.title = "Installing q...";
+  runner.title = "Installing q.";
   runner.execute().then(async () => {
     notify(
       onboardingWorkflow.prompt(ext.context.globalStorageUri.fsPath),

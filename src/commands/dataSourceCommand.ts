@@ -33,7 +33,7 @@ import { scratchpadVariableInput } from "../models/items/server";
 import { UDARequestBody } from "../models/uda";
 import { DataSourcesPanel } from "../panels/datasource";
 import { ConnectionManagementService } from "../services/connectionManagerService";
-import { noSelectedConnectionAction, offerConnectAction } from "../utils/core";
+import { noSelectedConnectionAction } from "../utils/core";
 import {
   checkIfTimeParamIsCorrect,
   convertTimeToTimestamp,
@@ -100,7 +100,6 @@ export async function populateScratchpad(
         selectedConnection instanceof LocalConnection ||
         !selectedConnection
       ) {
-        offerConnectAction(connLabel);
         DataSourcesPanel.running = false;
         return;
       }
@@ -144,7 +143,6 @@ export async function runDataSource(
 
   try {
     if (selectedConnection instanceof LocalConnection || !selectedConnection) {
-      offerConnectAction(connLabel);
       return;
     }
     selectedConnection.getMeta();

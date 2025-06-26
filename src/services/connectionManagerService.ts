@@ -366,7 +366,6 @@ export class ConnectionManagementService {
         command,
         context,
         isPython,
-        false,
         !stringify,
       );
     }

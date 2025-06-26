@@ -25,6 +25,7 @@ import {
   window,
   workspace,
   env,
+  ProgressLocation,
 } from "vscode";
 
 import { ext } from "../extensionVariables";
@@ -834,42 +835,12 @@ export async function executeQuery(
   isPython: boolean,
   isWorkbook: boolean,
   isFromConnTree?: boolean,
-): Promise<void> {
-  const runner = Runner.create((_, token) =>
-    _executeQuery(
-      query,
-      connLabel,
-      executorName,
-      context,
-      isPython,
-      isWorkbook,
-      isFromConnTree,
-      token,
-    ),
-  );
-  runner.title = `Executing query (${executorName})`;
-  await runner.execute();
-}
-
-export async function _executeQuery(
-  query: string,
-  connLabel: string,
-  executorName: string,
-  context: string,
-  isPython: boolean,
-  isWorkbook: boolean,
-  isFromConnTree?: boolean,
   token?: CancellationToken,
 ): Promise<void> {
   const connMngService = new ConnectionManagementService();
   const queryConsole = ExecutionConsole.start();
   if (connLabel === "") {
     if (ext.activeConnection === undefined) {
-      notify(
-        "You aren't connected to any connection. Once connected please try again.",
-        MessageKind.ERROR,
-        { logger },
-      );
       return undefined;
     } else {
       connLabel = ext.activeConnection.connLabel;
@@ -877,7 +848,7 @@ export async function _executeQuery(
   }
   const isConnected = connMngService.isConnected(connLabel);
   if (!isConnected) {
-    notify("The selected connection is not connected.", MessageKind.ERROR, {
+    notify(`Connection ${connLabel} is not connected.`, MessageKind.ERROR, {
       logger,
     });
     return undefined;
@@ -1090,23 +1061,35 @@ export function runQuery(
       break;
     }
   }
-  if (target) {
-    runDataSource(
-      <DataSourceFiles>{
-        dataSource: {
-          selectedType: "QSQL",
-          qsql: {
-            query,
-            selectedTarget: target,
+
+  const runner = Runner.create(() => {
+    return target
+      ? runDataSource(
+          <DataSourceFiles>{
+            dataSource: {
+              selectedType: "QSQL",
+              qsql: {
+                query,
+                selectedTarget: target,
+              },
+            },
           },
-        },
-      },
-      connLabel,
-      executorName,
-    );
-  } else {
-    executeQuery(query, connLabel, executorName, context, isPython, isWorkbook);
-  }
+          connLabel,
+          executorName,
+        )
+      : executeQuery(
+          query,
+          connLabel,
+          executorName,
+          context,
+          isPython,
+          isWorkbook,
+        );
+  });
+
+  runner.location = ProgressLocation.Notification;
+  runner.title = `Executing ${executorName} on ${connLabel || "active connection"}.`;
+  runner.execute();
 }
 
 export function rerunQuery(rerunQueryElement: QueryHistory) {
