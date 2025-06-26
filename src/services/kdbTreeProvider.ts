@@ -11,16 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import * as path from "path";
-import {
-  Event,
-  EventEmitter,
-  MarkdownString,
-  TreeDataProvider,
-  TreeItem,
-  TreeItemCollapsibleState,
-  commands,
-} from "vscode";
+import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
 import { ConnectionManagementService } from "./connectionManagerService";
@@ -47,12 +38,15 @@ import {
   getServerName,
   getStatus,
 } from "../utils/core";
+import { getIconPath } from "../utils/iconsUtils";
 
-export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
-  private _onDidChangeTreeData: EventEmitter<
+export class KdbTreeProvider
+  implements vscode.TreeDataProvider<vscode.TreeItem>
+{
+  private _onDidChangeTreeData: vscode.EventEmitter<
     KdbNode | InsightsNode | undefined | void
-  > = new EventEmitter<KdbNode | InsightsNode | undefined | void>();
-  readonly onDidChangeTreeData: Event<
+  > = new vscode.EventEmitter<KdbNode | InsightsNode | undefined | void>();
+  readonly onDidChangeTreeData: vscode.Event<
     KdbNode | InsightsNode | undefined | void
   > = this._onDidChangeTreeData.event;
 
@@ -68,7 +62,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
   refresh(serverList: Server): void {
     ext.isBundleQCreated = false;
     this.serverList = serverList;
-    commands.executeCommand(
+    vscode.commands.executeCommand(
       "setContext",
       "kdb.selectContentNodesContext",
       ext.selectContentNodesContext,
@@ -81,7 +75,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     this._onDidChangeTreeData.fire();
   }
 
-  getTreeItem(element: KdbNode | InsightsNode): TreeItem {
+  getTreeItem(element: KdbNode | InsightsNode): vscode.TreeItem {
     if (
       element instanceof KdbNode &&
       element.details.managed &&
@@ -94,7 +88,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
       element instanceof MetaObjectPayloadNode
     ) {
       element.command = {
-        command: "kdb.open.meta",
+        command: "kdb.connections.open.meta",
         title: "Open Meta Object",
         arguments: [element],
       };
@@ -105,7 +99,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     return element;
   }
 
-  async getChildren(element?: TreeItem): Promise<TreeItem[]> {
+  async getChildren(element?: vscode.TreeItem): Promise<vscode.TreeItem[]> {
     if (!this.serverList || !this.insightsList) {
       return [];
     }
@@ -114,7 +108,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
       getWorkspaceLabels();
       getWorkspaceLabelsConnMap();
 
-      const orphans: TreeItem[] = [];
+      const orphans: vscode.TreeItem[] = [];
       const nodes = ext.connLabelList.map((label) => new LabelNode(label));
       const items = this.getMergedElements(element);
 
@@ -166,7 +160,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     }
   }
 
-  private getMergedElements(_element?: TreeItem): TreeItem[] {
+  private getMergedElements(_element?: vscode.TreeItem): vscode.TreeItem[] {
     ext.connectionsList.length = 0;
     const servers = this.getChildElements(_element);
     const insights = this.getInsightsChildElements();
@@ -177,12 +171,10 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     return [...servers, ...insights];
   }
 
-   
-  private getChildElements(_element?: TreeItem): KdbNode[] {
+  private getChildElements(_element?: vscode.TreeItem): KdbNode[] {
     return this.createLeafItems(this.serverList);
   }
 
-   
   private getInsightsChildElements(_element?: InsightsNode): InsightsNode[] {
     return this.createInsightLeafItems(this.insightsList);
   }
@@ -197,7 +189,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
           [],
           "meta",
           "",
-          TreeItemCollapsibleState.Collapsed,
+          vscode.TreeItemCollapsibleState.Collapsed,
           connLabel,
         ),
       ];
@@ -215,7 +207,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
           [],
           x.name,
           "",
-          TreeItemCollapsibleState.Collapsed,
+          vscode.TreeItemCollapsibleState.Collapsed,
           x.fname,
           connLabel ?? "",
         ),
@@ -249,7 +241,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
           x,
           "",
           ns ?? "",
-          TreeItemCollapsibleState.Collapsed,
+          vscode.TreeItemCollapsibleState.Collapsed,
           connLabel ?? "",
         ),
     );
@@ -258,7 +250,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
 
   /* istanbul ignore next */
   private async getServerObjects(
-    serverType: QCategoryNode | TreeItem,
+    serverType: QCategoryNode | vscode.TreeItem,
   ): Promise<QServerNode[] | QNamespaceNode[]> {
     if (serverType === undefined) return new Array<QServerNode>();
     const ns = serverType.contextValue ?? "";
@@ -275,7 +267,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             [],
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
-            TreeItemCollapsibleState.None,
+            vscode.TreeItemCollapsibleState.None,
             "dictionaries",
             connLabel,
           ),
@@ -296,7 +288,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             [],
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
-            TreeItemCollapsibleState.None,
+            vscode.TreeItemCollapsibleState.None,
             "functions",
             connLabel,
           ),
@@ -317,7 +309,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             [],
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
-            TreeItemCollapsibleState.None,
+            vscode.TreeItemCollapsibleState.None,
             "tables",
             connLabel,
           ),
@@ -338,7 +330,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             [],
             `${ns === "." ? "" : ns + "."}${x.name}`,
             "",
-            TreeItemCollapsibleState.None,
+            vscode.TreeItemCollapsibleState.None,
             "variables",
             connLabel,
           ),
@@ -357,7 +349,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             [],
             `${ns === "." ? "" : "."}${x}`,
             "",
-            TreeItemCollapsibleState.None,
+            vscode.TreeItemCollapsibleState.None,
             "views",
             connLabel,
           ),
@@ -378,7 +370,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
     //         [],
     //         x.fname,
     //         "",
-    //         TreeItemCollapsibleState.Collapsed,
+    //         vscode.TreeItemCollapsibleState.Collapsed,
     //         x.fname,
     //         connLabel,
     //       ),
@@ -411,7 +403,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             [],
             "schema",
             "",
-            TreeItemCollapsibleState.None,
+            vscode.TreeItemCollapsibleState.None,
             "schemaicon",
             connLabel,
           ),
@@ -423,7 +415,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             [],
             "api",
             "",
-            TreeItemCollapsibleState.None,
+            vscode.TreeItemCollapsibleState.None,
             "apiicon",
             connLabel,
           ),
@@ -435,7 +427,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             [],
             "dap",
             "",
-            TreeItemCollapsibleState.None,
+            vscode.TreeItemCollapsibleState.None,
             "dapicon",
             connLabel,
           ),
@@ -447,7 +439,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             [],
             "rc",
             "",
-            TreeItemCollapsibleState.None,
+            vscode.TreeItemCollapsibleState.None,
             "rcicon",
             connLabel,
           ),
@@ -459,7 +451,7 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
             [],
             "agg",
             "",
-            TreeItemCollapsibleState.None,
+            vscode.TreeItemCollapsibleState.None,
             "aggicon",
             connLabel,
           ),
@@ -481,8 +473,8 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
           `${servers[x].serverName}:${servers[x].serverPort}`,
           servers[x],
           ext.connectionNode?.label === getServerName(servers[x])
-            ? TreeItemCollapsibleState.Collapsed
-            : TreeItemCollapsibleState.None,
+            ? vscode.TreeItemCollapsibleState.Collapsed
+            : vscode.TreeItemCollapsibleState.None,
         ),
     );
   }
@@ -499,19 +491,19 @@ export class KdbTreeProvider implements TreeDataProvider<TreeItem> {
         insights[x].alias,
         insights[x],
         isConnected
-          ? TreeItemCollapsibleState.Collapsed
-          : TreeItemCollapsibleState.None,
+          ? vscode.TreeItemCollapsibleState.Collapsed
+          : vscode.TreeItemCollapsibleState.None,
       );
     });
   }
 }
 
-export class KdbNode extends TreeItem {
+export class KdbNode extends vscode.TreeItem {
   constructor(
     public readonly children: string[],
     public readonly label: string,
     public readonly details: ServerDetails,
-    public readonly collapsibleState: TreeItemCollapsibleState,
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState,
   ) {
     if (details.serverAlias != "") {
       label = label + ` [${details.serverAlias}]`;
@@ -520,14 +512,18 @@ export class KdbNode extends TreeItem {
     // set context for root nodes
     if (ext.kdbrootNodes.indexOf(label) === -1) {
       ext.kdbrootNodes.push(label);
-      commands.executeCommand("setContext", "kdb.rootNodes", ext.kdbrootNodes);
+      vscode.commands.executeCommand(
+        "setContext",
+        "kdb.rootNodes",
+        ext.kdbrootNodes,
+      );
     }
 
     // set context for nodes without auth
     if (details.auth === false) {
       if (ext.kdbNodesWithoutAuth.indexOf(label) === -1) {
         ext.kdbNodesWithoutAuth.push(label);
-        commands.executeCommand(
+        vscode.commands.executeCommand(
           "setContext",
           "kdb.kdbNodesWithoutAuth",
           ext.kdbNodesWithoutAuth,
@@ -537,7 +533,7 @@ export class KdbNode extends TreeItem {
       const index = ext.kdbNodesWithoutAuth.indexOf(label);
       if (index !== -1) {
         ext.kdbNodesWithoutAuth.splice(index, 1);
-        commands.executeCommand(
+        vscode.commands.executeCommand(
           "setContext",
           "kdb.kdbNodesWithoutAuth",
           ext.kdbNodesWithoutAuth,
@@ -549,7 +545,7 @@ export class KdbNode extends TreeItem {
     if (details.tls === false) {
       if (ext.kdbNodesWithoutTls.indexOf(label) === -1) {
         ext.kdbNodesWithoutTls.push(label);
-        commands.executeCommand(
+        vscode.commands.executeCommand(
           "setContext",
           "kdb.kdbNodesWithoutTls",
           ext.kdbNodesWithoutTls,
@@ -559,7 +555,7 @@ export class KdbNode extends TreeItem {
       const index = ext.kdbNodesWithoutTls.indexOf(label);
       if (index !== -1) {
         ext.kdbNodesWithoutTls.splice(index, 1);
-        commands.executeCommand(
+        vscode.commands.executeCommand(
           "setContext",
           "kdb.kdbNodesWithoutTls",
           ext.kdbNodesWithoutTls,
@@ -572,8 +568,8 @@ export class KdbNode extends TreeItem {
     this.tooltip = this.getTooltip();
   }
 
-  getTooltip(): MarkdownString {
-    const tooltipMd = new MarkdownString();
+  getTooltip(): vscode.MarkdownString {
+    const tooltipMd = new vscode.MarkdownString();
     const title = `${this.details.serverAlias} ${getStatus(this.label)}`;
     tooltipMd.appendMarkdown(`### ${title}\n`);
     tooltipMd.appendMarkdown(
@@ -583,7 +579,7 @@ export class KdbNode extends TreeItem {
   }
 
   getDescription(): string {
-    return this.collapsibleState === TreeItemCollapsibleState.None &&
+    return this.collapsibleState === vscode.TreeItemCollapsibleState.None &&
       this.children.length > 2
       ? `${this.children[2]}:${"*".repeat(this.children[3].length)}`
       : "";
@@ -594,12 +590,12 @@ export class KdbNode extends TreeItem {
   contextValue = this.label; // "root";
 }
 
-export class InsightsNode extends TreeItem {
+export class InsightsNode extends vscode.TreeItem {
   constructor(
     public readonly children: string[],
     public readonly label: string,
     public readonly details: InsightDetails,
-    public readonly collapsibleState: TreeItemCollapsibleState,
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState,
   ) {
     super(label, collapsibleState);
     this.initializeNode();
@@ -613,7 +609,7 @@ export class InsightsNode extends TreeItem {
         ext.kdbinsightsNodes.splice(indexOriginalLabel, 1);
       }
       ext.kdbinsightsNodes.push(this.label);
-      commands.executeCommand(
+      vscode.commands.executeCommand(
         "setContext",
         "kdb.insightsNodes",
         ext.kdbinsightsNodes,
@@ -624,9 +620,9 @@ export class InsightsNode extends TreeItem {
     this.description = this.getDescription();
   }
 
-  async getTooltip(): Promise<MarkdownString> {
+  async getTooltip(): Promise<vscode.MarkdownString> {
     const connService = new ConnectionManagementService();
-    const tooltipMd = new MarkdownString();
+    const tooltipMd = new vscode.MarkdownString();
     const title = `${this.label} ${getStatus(this.label)}`;
     tooltipMd.appendMarkdown(`### ${title} \n`);
     tooltipMd.appendMarkdown(
@@ -647,7 +643,7 @@ export class InsightsNode extends TreeItem {
   }
 
   getDescription(): string {
-    return this.collapsibleState === TreeItemCollapsibleState.None &&
+    return this.collapsibleState === vscode.TreeItemCollapsibleState.None &&
       this.children.length > 2
       ? `${this.children[2]}:${"*".repeat(this.children[3].length)}`
       : "";
@@ -658,12 +654,12 @@ export class InsightsNode extends TreeItem {
   contextValue = this.label; // "root";
 }
 
-export class InsightsMetaNode extends TreeItem {
+export class InsightsMetaNode extends vscode.TreeItem {
   constructor(
     public readonly children: string[],
     public readonly label: string,
     public readonly details: string,
-    public readonly collapsibleState: TreeItemCollapsibleState,
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly connLabel: string,
   ) {
     super(label, collapsibleState);
@@ -678,12 +674,12 @@ export class InsightsMetaNode extends TreeItem {
   contextValue = "meta";
 }
 
-export class QNamespaceNode extends TreeItem {
+export class QNamespaceNode extends vscode.TreeItem {
   constructor(
     public readonly children: string[],
     public readonly label: string,
     public readonly details: string,
-    public readonly collapsibleState: TreeItemCollapsibleState,
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly fullName: string,
     public readonly connLabel: string,
   ) {
@@ -700,13 +696,13 @@ export class QNamespaceNode extends TreeItem {
   contextValue = "ns";
 }
 
-export class QCategoryNode extends TreeItem {
+export class QCategoryNode extends vscode.TreeItem {
   constructor(
     public readonly children: string[],
     public readonly label: string,
     public readonly details: string,
     public readonly ns: string,
-    public readonly collapsibleState: TreeItemCollapsibleState,
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly connLabel: string,
   ) {
     details = "";
@@ -722,12 +718,12 @@ export class QCategoryNode extends TreeItem {
   contextValue = this.ns; // "category";
 }
 
-export class MetaObjectPayloadNode extends TreeItem {
+export class MetaObjectPayloadNode extends vscode.TreeItem {
   constructor(
     public readonly children: string[],
     public readonly label: string,
     public readonly details: string,
-    public readonly collapsibleState: TreeItemCollapsibleState,
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly coreIcon: string,
     public readonly connLabel: string,
   ) {
@@ -737,12 +733,12 @@ export class MetaObjectPayloadNode extends TreeItem {
   iconPath = getOtherIconPath(this.coreIcon);
 }
 
-export class QServerNode extends TreeItem {
+export class QServerNode extends vscode.TreeItem {
   constructor(
     public readonly children: string[],
     public readonly label: string,
     public readonly details: string,
-    public readonly collapsibleState: TreeItemCollapsibleState,
+    public readonly collapsibleState: vscode.TreeItemCollapsibleState,
     public readonly coreIcon: string,
     public readonly connLabel: string,
   ) {
@@ -759,8 +755,8 @@ export class QServerNode extends TreeItem {
   contextValue = this.label;
 }
 
-export class LabelNode extends TreeItem {
-  readonly children: TreeItem[] = [];
+export class LabelNode extends vscode.TreeItem {
+  readonly children: vscode.TreeItem[] = [];
   static id = 0;
 
   constructor(public readonly source: Labels) {
@@ -770,69 +766,25 @@ export class LabelNode extends TreeItem {
     this.contextValue = "label";
   }
 
-  iconPath = {
-    light: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "light",
-      "labels",
-      `label-${this.source.color.name.toLowerCase()}.svg`,
-    ),
-    dark: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "dark",
-      "labels",
-      `label-${this.source.color.name.toLowerCase()}.svg`,
-    ),
-  };
+  iconPath = getIconPath(`label-${this.source.color.name.toLowerCase()}.svg`);
 
-  getCollapsibleState(labelName: string): TreeItemCollapsibleState {
+  getCollapsibleState(labelName: string): vscode.TreeItemCollapsibleState {
     if (isLabelEmpty(labelName)) {
-      return TreeItemCollapsibleState.None;
+      return vscode.TreeItemCollapsibleState.None;
     }
     if (isLabelContentChanged(labelName)) {
-      return TreeItemCollapsibleState.Expanded;
+      return vscode.TreeItemCollapsibleState.Expanded;
     }
-    return TreeItemCollapsibleState.Collapsed;
+    return vscode.TreeItemCollapsibleState.Collapsed;
   }
 }
 
 function getNamedIconPath(name: string, label: string) {
-  return {
-    light: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "light",
-      name + getServerIconState(label) + ".svg",
-    ),
-    dark: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "dark",
-      name + getServerIconState(label) + ".svg",
-    ),
-  };
+  const iconFileName = name + getServerIconState(label) + ".svg";
+
+  return getIconPath(iconFileName);
 }
 
 function getOtherIconPath(name: string) {
-  return {
-    light: path.join(
-      __filename,
-      "..",
-      "..",
-      "resources",
-      "light",
-      name + ".svg",
-    ),
-    dark: path.join(__filename, "..", "..", "resources", "dark", name + ".svg"),
-  };
+  return getIconPath(name + ".svg");
 }

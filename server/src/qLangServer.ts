@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,7 +11,9 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Position, TextDocument } from "vscode-languageserver-textdocument";
+import { sync as glob } from "glob";
+import { readFileSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   CallHierarchyIncomingCall,
   CallHierarchyIncomingCallsParams,
@@ -51,8 +53,9 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver/node";
-import { sync as glob } from "glob";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { Position, TextDocument } from "vscode-languageserver-textdocument";
+
+import { lint } from "./linter";
 import {
   FindKind,
   Token,
@@ -74,11 +77,9 @@ import {
   WhiteSpace,
   RCurly,
   local,
-  LCurly,
   lamdaDefinition,
 } from "./parser";
-import { lint } from "./linter";
-import { readFileSync } from "node:fs";
+
 
 interface Settings {
   debug: boolean;
@@ -472,7 +473,7 @@ export default class QLangServer {
     let delta = 0;
     for (const token of tokens) {
       if (assignable(token)) {
-        let kind = lamdaDefinition(token) ? 1 : local(token, tokens) ? 0 : -1;
+        const kind = lamdaDefinition(token) ? 1 : local(token, tokens) ? 0 : -1;
         if (kind >= 0) {
           line = range.start.line;
           character = range.start.character;

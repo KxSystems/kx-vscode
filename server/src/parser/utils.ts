@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 Kx Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -12,6 +12,9 @@
  */
 
 import { IToken, TokenType } from "chevrotain";
+
+import { Identifier, LSql } from "./keywords";
+import { TestBegin } from "./ranges";
 import {
   DoubleColon,
   LBracket,
@@ -20,8 +23,6 @@ import {
   TestBlock,
   TestLambdaBlock,
 } from "./tokens";
-import { Identifier, LSql } from "./keywords";
-import { TestBegin } from "./ranges";
 
 export const enum SyntaxError {
   InvalidEscape,
@@ -233,9 +234,13 @@ export function findIdentifiers(
               (amended(token) || !inLambda(token)),
           );
       result.forEach((token) => {
-        !completions.find(
-          (target) => identifier(token) === identifier(target),
-        ) && completions.push(token);
+        if (
+          !completions.find(
+            (target) => identifier(token) === identifier(target),
+          )
+        ) {
+          completions.push(token);
+        }
       });
       return completions;
     }

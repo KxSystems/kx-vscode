@@ -88,6 +88,21 @@ export const shoelaceStyles = css`
     background: none;
     border: none;
   }
+
+  .nanoseconds-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    min-width: 500px;
+    & p {
+      margin-top: 0;
+      margin-bottom: 0;
+    }
+  }
+
+  .nanoseconds-timestamp-display::part(base) {
+    width: 225px;
+  }
 `;
 
 export const dataSourceStyles = css`

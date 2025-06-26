@@ -22,7 +22,6 @@ import { Telemetry } from "./telemetryClient";
 import { DataSourceFiles } from "../models/dataSource";
 import { DataSourcesPanel } from "../panels/datasource";
 
-
 export function createKdbDataSourcesFolder(): string {
   const rootPath = ext.context.globalStorageUri.fsPath;
   const kdbDataSourcesFolderPath = path.join(rootPath, ext.kdbDataSourceFolder);
@@ -121,7 +120,6 @@ export function oldFilesExists(): boolean {
 export async function importOldDsFiles(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
   const files = fs.readdirSync(kdbDataSourcesFolderPath);
-  console.log(files.toString());
   for (const file of files) {
     const fileData = fs.readFileSync(path.join(kdbDataSourcesFolderPath, file));
     const fileContent: DataSourceFiles = JSON.parse(fileData.toString());

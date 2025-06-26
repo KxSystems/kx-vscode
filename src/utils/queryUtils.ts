@@ -15,7 +15,8 @@ import { readFileSync } from "fs";
 import { join } from "path";
 
 import { ext } from "../extensionVariables";
-import { kdbOutputLog } from "./core";
+import { isBaseVersionGreaterOrEqual, kdbOutputLog } from "./core";
+import { normalizeAssemblyTarget } from "./shared";
 import { DCDS, deserialize, isCompressed, uncompress } from "../ipc/c";
 import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
 import { Parse } from "../ipc/parse.qlist";
@@ -100,7 +101,10 @@ export function handleWSError(ab: ArrayBuffer): any {
   return { error: errorString };
 }
 
-export function handleWSResults(ab: ArrayBuffer): any {
+export function handleWSResults(ab: ArrayBuffer, isTableView?: boolean): any {
+  if (isTableView === undefined) {
+    isTableView = ext.isResultsTabVisible;
+  }
   let res: any;
   try {
     if (isCompressed(ab)) {
@@ -110,11 +114,12 @@ export function handleWSResults(ab: ArrayBuffer): any {
     if (des.qtype === 0 && des.values.length === 2) {
       des = des.values[1];
     }
-    res = Parse.reshape(des, ab).toLegacy();
+    res = Parse.reshape(des.dataSet || des, ab).toLegacy();
+
     if (res.rows.length === 0 && res.columns.length === 0) {
       return "No results found.";
     }
-    if (ext.isResultsTabVisible) {
+    if (isTableView) {
       return getValueFromArray(res);
     }
     return convertRows(res.rows);
@@ -178,10 +183,10 @@ export function addIndexKey(input: any) {
       const newObj = { Index: index + 1 };
 
       if (typeof obj === "string") {
-        newObj["Value"] = obj;
+        (<any>newObj)["Value"] = obj;
       } else {
         for (const prop in obj) {
-          newObj[prop] = obj[prop];
+          (<any>newObj)[prop] = obj[prop];
         }
       }
 
@@ -201,6 +206,54 @@ export function getValueFromArray(results: DCDS): any {
   }
   results.meta = generateQTypes(results.meta);
   return results;
+}
+
+export function sanitizeQsqlQuery(query: string): string {
+  return (
+    query
+      .trim()
+      // Remove block comments
+      .replace(/^\/[^]*?^\\/gm, "")
+      // Remove single line comments
+      .replace(/^\/.*\r?\n/gm, "")
+      // Remove line comments
+      .replace(
+        /(?:("([^"\\]*(?:\\.[^"\\]*)*)")|([ \t]+\/.*))/gm,
+        (matched, isString) => (isString ? matched : ""),
+      )
+      // Replace end of statements
+      .replace(/(?<![; \t]\s*)(?:\r\n|\n)+(?![ \t])/gs, ";")
+  );
+}
+
+export function generateQSqlBody(
+  query: string,
+  assemblyTarget: string,
+  version?: number,
+  qeEnabled?: boolean,
+) {
+  query = sanitizeQsqlQuery(query);
+
+  const [plainAssembly, target] =
+    normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
+
+  let assembly = plainAssembly;
+  if (qeEnabled) {
+    assembly += "-qe";
+  }
+
+  if (version && isBaseVersionGreaterOrEqual(version, 1.13)) {
+    return {
+      query,
+      scope: {
+        affinity: "soft",
+        assembly,
+        tier: target,
+      },
+    };
+  }
+
+  return { query, assembly, target };
 }
 
 export function generateQTypes(meta: { [key: string]: number }): any {
@@ -401,6 +454,7 @@ const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
 
 export function resultToBase64(result: any): string | undefined {
   const bytes =
+    (Array.isArray(result?.data?.rows) && result?.data?.rows[0].Value) ||
     (Array.isArray(result?.columns) && result.columns[0]?.values) ||
     result?.columns?.values ||
     result;

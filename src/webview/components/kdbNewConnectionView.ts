@@ -336,6 +336,23 @@ export class KdbNewConnectionView extends LitElement {
     `;
   }
 
+  renderInsecureSSL() {
+    return html`
+      <div class="row mt-1">
+        <vscode-checkbox
+          .checked="${this.insightsServer.insecure}"
+          @change="${(event: Event) => {
+            /* istanbul ignore next */
+            this.insightsServer.insecure = (
+              event.target as HTMLInputElement
+            ).checked;
+          }}"
+          >Accept insecure SSL certifcates</vscode-checkbox
+        >
+      </div>
+    `;
+  }
+
   tabClickAction(tabNumber: number) {
     const config =
       this.tabConfig[tabNumber as keyof typeof this.tabConfig] ??
@@ -608,19 +625,7 @@ export class KdbNewConnectionView extends LitElement {
         <div class="col gap-0">
           <details>
             <summary>Advanced</summary>
-            ${this.renderRealm()}
-            <div class="row mt-1">
-              <vscode-checkbox
-                .checked="${this.insightsServer.insecure}"
-                @change="${(event: Event) => {
-                  /* istanbul ignore next */
-                  this.insightsServer.insecure = (
-                    event.target as HTMLInputElement
-                  ).checked;
-                }}"
-                >Accept insecure SSL certifcates</vscode-checkbox
-              >
-            </div>
+            ${this.renderRealm()} ${this.renderInsecureSSL()}
           </details>
         </div>
       </div>
@@ -946,6 +951,7 @@ export class KdbNewConnectionView extends LitElement {
       this.insightsServer.alias = this.connectionData.serverName;
       this.insightsServer.server = this.connectionData.serverAddress;
       this.insightsServer.realm = this.connectionData.realm ?? "";
+      this.insightsServer.insecure = this.connectionData.insecure ?? false;
     }
 
     return html`
@@ -964,7 +970,7 @@ export class KdbNewConnectionView extends LitElement {
           <div class="col gap-0">
             <details>
               <summary>Advanced</summary>
-              ${this.renderRealm()}
+              ${this.renderRealm()} ${this.renderInsecureSSL()}
             </details>
           </div>
         </div>
@@ -988,8 +994,7 @@ export class KdbNewConnectionView extends LitElement {
       default:
         this.kdbServer.username = this.kdbServer.username!.trim();
         this.kdbServer.password = this.kdbServer.password!.trim();
-        this.kdbServer.auth =
-          this.kdbServer.username !== "" && this.kdbServer.password !== "";
+        this.kdbServer.auth = this.kdbServer.username !== "";
         return this.kdbServer;
     }
   }
@@ -998,19 +1003,19 @@ export class KdbNewConnectionView extends LitElement {
     this.removeBlankLabels();
     if (this.isBundledQ) {
       this.vscode.postMessage({
-        command: "kdb.newConnection.createNewBundledConnection",
+        command: "kdb.connections.add.bundleq",
         data: this.bundledServer,
         labels: this.labels,
       });
     } else if (this.serverType === ServerType.INSIGHTS) {
       this.vscode.postMessage({
-        command: "kdb.newConnection.createNewInsightConnection",
+        command: "kdb.connections.add.insights",
         data: this.data,
         labels: this.labels,
       });
     } else {
       this.vscode.postMessage({
-        command: "kdb.newConnection.createNewConnection",
+        command: "kdb.connections.add.kdb",
         data: this.data,
         labels: this.labels,
       });
@@ -1019,7 +1024,7 @@ export class KdbNewConnectionView extends LitElement {
 
   private createLabel() {
     this.vscode.postMessage({
-      command: "kdb.labels.create",
+      command: "kdb.connections.labels.add",
       data: {
         name: this.newLblName,
         colorName: this.newLblColorName,
@@ -1039,14 +1044,14 @@ export class KdbNewConnectionView extends LitElement {
     this.removeBlankLabels();
     if (this.connectionData.connType === 0) {
       this.vscode.postMessage({
-        command: "kdb.newConnection.editBundledConnection",
+        command: "kdb.connections.edit.bundleq",
         data: this.bundledServer,
         oldAlias: "local",
         labels: this.labels,
       });
     } else if (this.connectionData.connType === 1) {
       this.vscode.postMessage({
-        command: "kdb.newConnection.editMyQConnection",
+        command: "kdb.connections.edit.kdb",
         data: this.data,
         oldAlias: this.oldAlias,
         editAuth: this.editAuth,
@@ -1054,7 +1059,7 @@ export class KdbNewConnectionView extends LitElement {
       });
     } else {
       this.vscode.postMessage({
-        command: "kdb.newConnection.editInsightsConnection",
+        command: "kdb.connections.edit.insights",
         data: this.data,
         oldAlias: this.oldAlias,
         labels: this.labels,

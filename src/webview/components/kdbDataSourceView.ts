@@ -36,6 +36,8 @@ import {
 import { DataSourceCommand, DataSourceMessage2 } from "../../models/messages";
 import { MetaObjectPayload } from "../../models/meta";
 import { ParamFieldType, UDA, UDAParam } from "../../models/uda";
+import "./custom-fields/date-time-nano-picker";
+import { normalizeAssemblyTarget } from "../../utils/shared";
 
 const MAX_RULES = 32;
 const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
@@ -198,7 +200,9 @@ export class KdbDataSourceView extends LitElement {
         this.groups = optional.groups;
         this.rowLimit = optional.rowLimit ? optional.rowLimit : false;
       }
-      this.qsqlTarget = ds.dataSource.qsql.selectedTarget;
+      this.qsqlTarget = normalizeAssemblyTarget(
+        ds.dataSource.qsql.selectedTarget,
+      );
       this.qsql = ds.dataSource.qsql.query;
       this.sql = ds.dataSource.sql.query;
       // for the UDAs, it will optional for this moment
@@ -355,13 +359,18 @@ export class KdbDataSourceView extends LitElement {
   }
 
   renderRowCountOptions() {
-    const compareVersions = (v1: string, v2: string) =>
+    const isBaseVersionGreaterOrEqual = (v1: string, v2: string) =>
       v1
         .split(".")
         .map(Number)
         .reduce((acc, num, i) => acc || num - Number(v2.split(".")[i] || 0), 0);
 
-    if (compareVersions(this.selectedServerVersion.toString(), "1.11") >= 0) {
+    if (
+      isBaseVersionGreaterOrEqual(
+        this.selectedServerVersion.toString(),
+        "1.11",
+      ) >= 0
+    ) {
       return html`
         <div class="row align-bottom">
           <sl-checkbox
@@ -451,7 +460,7 @@ export class KdbDataSourceView extends LitElement {
   renderTargetOptions() {
     if (this.isInsights && this.isMetaLoaded) {
       return this.insightsMeta.dap.map((dap) => {
-        const value = `${dap.assembly}-qe ${dap.instance}`;
+        const value = `${dap.assembly} ${dap.instance}`;
         if (!this.qsqlTarget) {
           this.qsqlTarget = value;
         }
@@ -1421,27 +1430,41 @@ export class KdbDataSourceView extends LitElement {
     return html`
       <div class="opt-param-field">
         <div class="${inputFieldWrapperWidth} row align-top">
-          <sl-input
-            class="reset-widths-limit width-100-pct"
-            .type="${type as
-              | "number"
-              | "date"
-              | "datetime-local"
-              | "email"
-              | "password"
-              | "search"
-              | "tel"
-              | "text"
-              | "time"
-              | "url"}"
-            label="${param.name + isReq}"
-            .helpText="${helpText}"
-            .value="${live(value)}"
-            @input="${(event: Event) => {
-              param.value = (event.target as HTMLInputElement).value;
-              this.requestChange();
-            }}">
-          </sl-input>
+          ${type === "datetime-local" || type === "date"
+            ? html`
+                <date-time-nano-picker
+                  class="reset-widths-limit width-100-pct"
+                  .label="${param.name}"
+                  .required="${isReq === "*"}"
+                  .helpText="${helpText}"
+                  .value="${live(value)}"
+                  @change="${(event: CustomEvent) => {
+                    param.value = event.detail.value;
+                    this.requestChange();
+                  }}">
+                </date-time-nano-picker>
+              `
+            : html`
+                <sl-input
+                  class="reset-widths-limit width-100-pct"
+                  .type="${type as
+                    | "number"
+                    | "email"
+                    | "password"
+                    | "search"
+                    | "tel"
+                    | "text"
+                    | "time"
+                    | "url"}"
+                  label="${param.name + isReq}"
+                  .helpText="${helpText}"
+                  .value="${live(value)}"
+                  @input="${(event: Event) => {
+                    param.value = (event.target as HTMLInputElement).value;
+                    this.requestChange();
+                  }}">
+                </sl-input>
+              `}
         </div>
         <div class="${renderDeleteParam ? "width-10-pct" : "display-none"}">
           ${this.renderDeleteUDAParamButton(param)}

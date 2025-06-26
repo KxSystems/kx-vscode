@@ -353,7 +353,10 @@ export function offerConnectAction(connLabel: string): void {
     )
     .then(async (result) => {
       if (result === "Connect") {
-        await commands.executeCommand("kdb.connect.via.dialog", connLabel);
+        await commands.executeCommand(
+          "kdb.connections.connect.via.dialog",
+          connLabel,
+        );
       }
     });
 }
@@ -374,7 +377,10 @@ export function offerReconnectionAfterEdit(connLabel: string): void {
     )
     .then(async (result) => {
       if (result === "Connect") {
-        await commands.executeCommand("kdb.connect.via.dialog", connLabel);
+        await commands.executeCommand(
+          "kdb.connections.connect.via.dialog",
+          connLabel,
+        );
       }
     });
 }
@@ -691,6 +697,9 @@ function map(xs: any, f: any) {
   }
 }
 
-export function compareVersions(version1: number, version2: number): boolean {
-  return semver.gte(`${version1}.0`, `${version2}.0`);
+export function isBaseVersionGreaterOrEqual(
+  baseVersion: number,
+  targetVersion: number,
+): boolean {
+  return semver.gte(`${baseVersion}.0`, `${targetVersion}.0`);
 }

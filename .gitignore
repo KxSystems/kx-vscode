@@ -12,3 +12,7 @@ node_modules
 out/
 out-cov/
 coverage-reports/
+
+out-test/
+.test-extensions/
+.test-folder/

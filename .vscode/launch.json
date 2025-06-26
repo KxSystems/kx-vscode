@@ -34,6 +34,27 @@
       ],
       "outFiles": ["${workspaceFolder}/test/out/**/*.js"],
       "preLaunchTask": "${defaultBuildTask}"
+    },
+    {
+      "name": "Extension UI Tests",
+      "request": "launch",
+      "runtimeArgs": ["run", "ui-test"],
+      "runtimeExecutable": "npm",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "node"
+    },
+    {
+      "name": "UI Test Selected File",
+      "request": "launch",
+      "runtimeArgs": [
+        "run",
+        "ui-test-cmd",
+        "./out-test/test/ui/${fileBasenameNoExtension}.js"
+      ],
+      "runtimeExecutable": "npm",
+      "skipFiles": ["<node_internals>/**"],
+      "type": "node",
+      "presentation": { "hidden": true }
     }
   ],
   "compounds": [

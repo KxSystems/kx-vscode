@@ -26,7 +26,7 @@ import {
 import { MetaInfoType } from "../models/meta";
 import { retrieveConnLabelsNames } from "../utils/connLabel";
 import {
-  compareVersions,
+  isBaseVersionGreaterOrEqual,
   getInsights,
   getKeyForServerName,
   getServerName,
@@ -145,7 +145,7 @@ export class ConnectionManagementService {
       await localConnection.connect((err, conn) => {
         if (err) {
           window.showErrorMessage(err.message);
-          this.isNotConnectedBehaviour(connLabel);
+          this.connectFailBehaviour(connLabel);
           return;
         }
         if (conn) {
@@ -154,11 +154,13 @@ export class ConnectionManagementService {
             "CONNECTION",
           );
 
-          Telemetry.sendEvent("Connection.Connected.QProcess");
+          Telemetry.sendEvent(
+            "Connection.Connected" + this.getTelemetryConnectionType(connLabel),
+          );
 
           ext.connectedConnectionList.push(localConnection);
 
-          this.isConnectedBehaviour(connection);
+          this.connectSuccessBehaviour(connection);
         }
       });
     } else {
@@ -169,7 +171,9 @@ export class ConnectionManagementService {
       );
       await insightsConn.connect();
       if (insightsConn.connected) {
-        Telemetry.sendEvent("Connection.Connected.Insights");
+        Telemetry.sendEvent(
+          "Connection.Connected" + this.getTelemetryConnectionType(connLabel),
+        );
         kdbOutputLog(
           `Connection established successfully to: ${connLabel}`,
           "CONNECTION",
@@ -179,9 +183,9 @@ export class ConnectionManagementService {
           "CONNECTION",
         );
         ext.connectedConnectionList.push(insightsConn);
-        this.isConnectedBehaviour(connection);
+        this.connectSuccessBehaviour(connection);
       } else {
-        this.isNotConnectedBehaviour(connLabel);
+        this.connectFailBehaviour(connLabel);
       }
       refreshDataSourcesPanel();
     }
@@ -273,7 +277,7 @@ export class ConnectionManagementService {
     }
   }
 
-  public isConnectedBehaviour(connNode: KdbNode | InsightsNode): void {
+  public connectSuccessBehaviour(connNode: KdbNode | InsightsNode): void {
     ext.latestLblsChanged.length = 0;
     ext.latestLblsChanged.push(...retrieveConnLabelsNames(connNode));
     ext.connectedContextStrings.push(connNode.label);
@@ -287,9 +291,11 @@ export class ConnectionManagementService {
     ext.serverProvider.reload();
   }
 
-  public isNotConnectedBehaviour(connLabel: string): void {
+  public connectFailBehaviour(connLabel: string): void {
     window.showErrorMessage(`Connection failed to: ${connLabel}`);
-    Telemetry.sendEvent("Connection.Failed");
+    Telemetry.sendEvent(
+      "Connection.Failed" + this.getTelemetryConnectionType(connLabel),
+    );
   }
 
   public disconnectBehaviour(
@@ -351,7 +357,13 @@ export class ConnectionManagementService {
         isPython,
       );
     } else {
-      return await selectedConn.getScratchpadQuery(command, context, isPython);
+      return await selectedConn.getScratchpadQuery(
+        command,
+        context,
+        isPython,
+        false,
+        !stringify,
+      );
     }
   }
 
@@ -383,7 +395,10 @@ export class ConnectionManagementService {
       conn = ext.activeConnection;
     }
 
-    if (conn.insightsVersion && compareVersions(conn.insightsVersion, 1.13)) {
+    if (
+      conn.insightsVersion &&
+      isBaseVersionGreaterOrEqual(conn.insightsVersion, 1.13)
+    ) {
       const confirmationPrompt = `Reset Scratchpad? All data in the ${conn.connLabel} Scratchpad will be lost, and variables will be reset.`;
       const selection = await window.showInformationMessage(
         confirmationPrompt,
@@ -556,5 +571,18 @@ export class ConnectionManagementService {
       exportedContent.connections.KDB.length === 0
       ? ""
       : JSON.stringify(exportedContent, null, 2);
+  }
+
+  public getTelemetryConnectionType(connLabel: string): string {
+    const connection = this.retrieveConnection(connLabel);
+
+    if (connection instanceof InsightsNode) {
+      return ".Insights";
+    }
+    const isCustom = ext.customAuth ? ".CustomAuth" : "";
+    if (connLabel === "local") {
+      return isCustom + ".KDB+.Local";
+    }
+    return isCustom + ".KDB+";
   }
 }

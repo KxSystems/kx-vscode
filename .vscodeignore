@@ -13,3 +13,10 @@ test/
 img/
 esbuild.js
 sonar-project.properties
+.snyk 
+eslint.config.cjs
+release_process.md
+.github/
+out-test/
+.test-extensions/
+.test-folder/

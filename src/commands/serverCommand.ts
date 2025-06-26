@@ -25,6 +25,7 @@ import {
   commands,
   window,
   workspace,
+  env,
 } from "vscode";
 
 import { ext } from "../extensionVariables";
@@ -284,16 +285,11 @@ export async function addAuthConnection(
     window.showErrorMessage(validUsername);
     return;
   }
-  if (password === undefined || password === "") {
-    window.showErrorMessage("Password cannot be empty");
-    return;
-  }
   if (password?.trim()?.length) {
     const servers: Server | undefined = getServers();
     // store secrets
     if (
       (username != undefined || username != "") &&
-      (password != undefined || password != "") &&
       servers &&
       servers[serverKey]
     ) {
@@ -821,7 +817,7 @@ export async function executeQuery(
   );
 }
 
-async function _executeQuery(
+export async function _executeQuery(
   query: string,
   connLabel: string,
   executorName: string,
@@ -854,7 +850,13 @@ async function _executeQuery(
   const selectedConn = connMngService.retrieveConnectedConnection(connLabel);
   const isInsights = selectedConn instanceof InsightsConnection;
   const connVersion = isInsights ? (selectedConn.insightsVersion ?? 0) : 0;
+  const telemetryLangType = isPython ? ".Python" : ".q";
+  const telemetryBaseMsg = isWorkbook ? "Workbook" : "Scratchpad";
+  Telemetry.sendEvent(telemetryBaseMsg + ".Execute" + telemetryLangType);
   if (query.length === 0) {
+    Telemetry.sendEvent(
+      telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
+    );
     queryConsole.appendQueryError(
       query,
       "Query is empty",
@@ -904,6 +906,7 @@ async function _executeQuery(
     if (ext.isResultsTabVisible) {
       const data = resultToBase64(results);
       if (data) {
+        Telemetry.sendEvent("GGPLOT.Display" + (isPython ? ".Python" : ".q"));
         const active = ext.activeTextEditor;
         if (active) {
           const plot = <Plot>{
@@ -1008,6 +1011,7 @@ export function runQuery(
   executorName: string,
   isWorkbook: boolean,
   rerunQuery?: string,
+  target?: string,
 ) {
   const editor = ext.activeTextEditor;
   if (!editor) {
@@ -1043,7 +1047,23 @@ export function runQuery(
       break;
     }
   }
-  executeQuery(query, connLabel, executorName, context, isPython, isWorkbook);
+  if (target) {
+    runDataSource(
+      <DataSourceFiles>{
+        dataSource: {
+          selectedType: "QSQL",
+          qsql: {
+            query,
+            selectedTarget: target,
+          },
+        },
+      },
+      connLabel,
+      executorName,
+    );
+  } else {
+    executeQuery(query, connLabel, executorName, context, isPython, isWorkbook);
+  }
 }
 
 export function rerunQuery(rerunQueryElement: QueryHistory) {
@@ -1068,6 +1088,16 @@ export function rerunQuery(rerunQueryElement: QueryHistory) {
       rerunQueryElement.connectionName,
       rerunQueryElement.executorName,
     );
+  }
+}
+
+export function copyQuery(queryHistoryElement: QueryHistory) {
+  if (
+    !queryHistoryElement.isDatasource &&
+    typeof queryHistoryElement.query === "string"
+  ) {
+    env.clipboard.writeText(queryHistoryElement.query);
+    window.showInformationMessage("Query copied to clipboard.");
   }
 }
 
@@ -1242,11 +1272,16 @@ export async function writeQueryResultsToView(
     isPython,
   );
   let isSuccess = true;
+  const telemetryLangType = isPython ? ".Python" : ".q";
+  const telemetryBaseMsg = type === "WORKBOOK" ? "Workbook" : "Scratchpad";
 
   if (!checkIfIsDatasource(type)) {
     if (typeof result === "string") {
       const res = decodeQUTF(result);
       if (res.startsWith(queryConstants.error)) {
+        Telemetry.sendEvent(
+          telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
+        );
         isSuccess = false;
       }
     }
@@ -1276,14 +1311,23 @@ export async function writeScratchpadResult(
   duration: string,
   connVersion: number,
 ): Promise<void> {
+  const telemetryLangType = isPython ? ".Python" : ".q";
+  const telemetryBaseMsg = isWorkbook ? "Workbook" : "Scratchpad";
   let errorMsg;
 
   if (result.error) {
     errorMsg = "Error: " + result.errorMsg;
+    Telemetry.sendEvent(
+      telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
+    );
 
     if (result.stacktrace) {
       errorMsg =
-        errorMsg + "\n" + formatScratchpadStacktrace(result.stacktrace);
+        errorMsg +
+        "\n" +
+        (Array.isArray(result.stacktrace)
+          ? formatScratchpadStacktrace(result.stacktrace)
+          : `${result.stacktrace}`);
     }
   }
 

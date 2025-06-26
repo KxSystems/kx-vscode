@@ -1,11 +1,10 @@
 # This workflow runs the tests across Linux, Mac, Windows
 
-name: KX VS Code CI Testing
+name: KX VScode CI Main Testing
 
 on:
   pull_request:
     branches:
-      - dev
       - main
     paths-ignore: ["**/*.md"]
 

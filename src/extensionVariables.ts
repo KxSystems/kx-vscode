@@ -44,6 +44,9 @@ import AuthSettings from "./utils/secretStorage";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
+  export const EXTENSION_VERSION =
+    extensions.getExtension("KX.kdb")?.packageJSON.version || "unknown";
+  export const isRCExtension = EXTENSION_VERSION.includes("rc");
   export let activeTextEditor: TextEditor | undefined;
   export let context: ExtensionContext;
   export let outputChannel: OutputChannel;
@@ -71,6 +74,7 @@ export namespace ext {
     LocalConnection | InsightsConnection
   > = [];
   export const connectedContextStrings: Array<string> = [];
+  export const queryHistoryAvailableToCopy: Array<string> = [];
   export const connectionsList: Array<KdbNode | InsightsNode> = [];
   export let hideDetailedConsoleQueryOutput: boolean;
   export let networkChangesWatcher: boolean;
@@ -111,6 +115,11 @@ export namespace ext {
     return "C:\\Users\\caleteet\\Downloads\\w64\\w64\\q.exe";
   }
 
+  export const urlLinks = {
+    survey: "https://t.maze.co/333268148",
+    suggestFeature: "https://kx-features.ideas.aha.io/ideas/new",
+    reportBug: "https://github.com/KxSystems/kx-vscode/issues/new?labels=bug",
+  };
   export const localProcessObjects: LocalProcess = {};
   // eslint-disable-next-line prefer-const
   export let localConnectionContexts: Array<string> = [];

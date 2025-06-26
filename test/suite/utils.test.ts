@@ -52,11 +52,13 @@ import * as dataSourceUtils from "../../src/utils/dataSource";
 import * as decodeUtils from "../../src/utils/decode";
 import * as executionUtils from "../../src/utils/execution";
 import * as executionConsoleUtils from "../../src/utils/executionConsole";
+import { feedbackSurveyDialog } from "../../src/utils/feedbackSurveyUtils";
 import { getNonce } from "../../src/utils/getNonce";
 import { getUri } from "../../src/utils/getUri";
 import { openUrl } from "../../src/utils/openUrl";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { showRegistrationNotification } from "../../src/utils/registration";
+import * as shared from "../../src/utils/shared";
 import { killPid } from "../../src/utils/shell";
 import * as UDAUtils from "../../src/utils/uda";
 import {
@@ -152,6 +154,7 @@ describe("Utils", () => {
 
       afterEach(() => {
         getConfigurationStub.restore();
+        sinon.restore();
       });
 
       it("should update configuration and set hideDetailedConsoleQueryOutput to true when setting is undefined", async () => {
@@ -1080,6 +1083,28 @@ describe("Utils", () => {
       });
     });
 
+    describe("generateQSqlBody", () => {
+      it("should use scope for 1.13", () => {
+        const output = queryUtils.generateQSqlBody(
+          "a:1",
+          "assembly target",
+          1.13,
+        );
+        assert.equal(output.scope.assembly, "assembly");
+        assert.equal(output.scope.tier, "target");
+      });
+
+      it("should use legacy syntax for 1.12", () => {
+        const output = queryUtils.generateQSqlBody(
+          "a:1",
+          "assembly target",
+          1.12,
+        );
+        assert.equal(output.assembly, "assembly");
+        assert.equal(output.target, "target");
+      });
+    });
+
     describe("handleWSResults", () => {
       afterEach(() => {
         sinon.restore();
@@ -1878,55 +1903,118 @@ describe("Utils", () => {
       LabelsUtils.deleteLabel("label1");
       assert.strictEqual(ext.connLabelList.length, 0);
     });
-  });
 
-  describe("isLabelEmpty", () => {
-    beforeEach(() => {
-      ext.labelConnMapList.length = 0;
+    it("should get label statistics", () => {
+      ext.connLabelList.push(
+        { name: "Label1", color: { name: "Red", colorHex: "#FF0000" } },
+        { name: "Label2", color: { name: "Blue", colorHex: "#0000FF" } },
+        { name: "Label3", color: { name: "Red", colorHex: "#FF0000" } },
+      );
+
+      const stats = LabelsUtils.getLabelStatistics();
+
+      assert.strictEqual(stats.count, 3);
+      assert.strictEqual(stats.Red, 2);
+      assert.strictEqual(stats.Blue, 1);
+      assert.strictEqual(stats.Green, 0);
+      assert.strictEqual(stats.Yellow, 0);
+      assert.strictEqual(stats.Magenta, 0);
+      assert.strictEqual(stats.Cyan, 0);
     });
 
-    afterEach(() => {
-      ext.labelConnMapList.length = 0;
-    });
-    it("should return true if label is empty", () => {
-      ext.labelConnMapList.push({ labelName: "label1", connections: [] });
-      const result = LabelsUtils.isLabelEmpty("label1");
-      assert.strictEqual(result, true);
+    it("should get connection label statistics", () => {
+      ext.connLabelList.push(
+        { name: "Label1", color: { name: "Red", colorHex: "#FF0000" } },
+        { name: "Label2", color: { name: "Blue", colorHex: "#0000FF" } },
+        { name: "Label3", color: { name: "Red", colorHex: "#FF0000" } },
+      );
+
+      ext.labelConnMapList.push(
+        { labelName: "Label1", connections: ["conn1", "conn2"] },
+        { labelName: "Label2", connections: ["conn1"] },
+        { labelName: "Label3", connections: ["conn3"] },
+      );
+
+      const stats = LabelsUtils.getConnectionLabelStatistics("conn1");
+
+      assert.strictEqual(stats.count, 2);
+      assert.strictEqual(stats.Red, 1);
+      assert.strictEqual(stats.Blue, 1);
+      assert.strictEqual(stats.Green, 0);
+      assert.strictEqual(stats.Yellow, 0);
+      assert.strictEqual(stats.Magenta, 0);
+      assert.strictEqual(stats.Cyan, 0);
     });
 
-    it("should return false if label is not empty", () => {
-      ext.labelConnMapList.push({
-        labelName: "label1",
-        connections: ["conn1"],
+    it("should return zero statistics for a connection with no labels", () => {
+      ext.connLabelList.push(
+        { name: "Label1", color: { name: "Red", colorHex: "#FF0000" } },
+        { name: "Label2", color: { name: "Blue", colorHex: "#0000FF" } },
+      );
+
+      ext.labelConnMapList.push(
+        { labelName: "Label1", connections: ["conn2"] },
+        { labelName: "Label2", connections: ["conn3"] },
+      );
+
+      const stats = LabelsUtils.getConnectionLabelStatistics("conn1");
+
+      assert.strictEqual(stats.count, 0);
+      assert.strictEqual(stats.Red, 0);
+      assert.strictEqual(stats.Blue, 0);
+      assert.strictEqual(stats.Green, 0);
+      assert.strictEqual(stats.Yellow, 0);
+      assert.strictEqual(stats.Magenta, 0);
+      assert.strictEqual(stats.Cyan, 0);
+    });
+    describe("isLabelEmpty", () => {
+      beforeEach(() => {
+        ext.labelConnMapList.length = 0;
       });
-      const result = LabelsUtils.isLabelEmpty("label1");
-      assert.strictEqual(result, false);
+
+      afterEach(() => {
+        ext.labelConnMapList.length = 0;
+      });
+      it("should return true if label is empty", () => {
+        ext.labelConnMapList.push({ labelName: "label1", connections: [] });
+        const result = LabelsUtils.isLabelEmpty("label1");
+        assert.strictEqual(result, true);
+      });
+
+      it("should return false if label is not empty", () => {
+        ext.labelConnMapList.push({
+          labelName: "label1",
+          connections: ["conn1"],
+        });
+        const result = LabelsUtils.isLabelEmpty("label1");
+        assert.strictEqual(result, false);
+      });
+
+      it("should return false if label is empty if label not on map list", () => {
+        const result = LabelsUtils.isLabelEmpty("label1");
+        assert.strictEqual(result, true);
+      });
     });
 
-    it("should return false if label is empty if label not on map list", () => {
-      const result = LabelsUtils.isLabelEmpty("label1");
-      assert.strictEqual(result, true);
-    });
-  });
+    describe("isLabelContentChanged", () => {
+      beforeEach(() => {
+        ext.latestLblsChanged.length = 0;
+      });
 
-  describe("isLabelContentChanged", () => {
-    beforeEach(() => {
-      ext.latestLblsChanged.length = 0;
-    });
+      afterEach(() => {
+        ext.latestLblsChanged.length = 0;
+      });
 
-    afterEach(() => {
-      ext.latestLblsChanged.length = 0;
-    });
+      it("should return true if label content is changed", () => {
+        ext.latestLblsChanged.push("label1");
+        const result = LabelsUtils.isLabelContentChanged("label1");
+        assert.strictEqual(result, true);
+      });
 
-    it("should return true if label content is changed", () => {
-      ext.latestLblsChanged.push("label1");
-      const result = LabelsUtils.isLabelContentChanged("label1");
-      assert.strictEqual(result, true);
-    });
-
-    it("should return false if label content is not changed", () => {
-      const result = LabelsUtils.isLabelContentChanged("label1");
-      assert.strictEqual(result, false);
+      it("should return false if label content is not changed", () => {
+        const result = LabelsUtils.isLabelContentChanged("label1");
+        assert.strictEqual(result, false);
+      });
     });
   });
 
@@ -2806,6 +2894,110 @@ describe("Utils", () => {
           ),
         );
       });
+    });
+  });
+  describe("FeedbackSurveyUtils", () => {
+    describe("feedbackSurveyDialog", () => {
+      let showSurveyDialogStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        // Stub the showSurveyDialog function
+        showSurveyDialogStub = sinon
+          .stub(vscode.window, "showInformationMessage")
+          .resolves();
+      });
+
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("should increment extSurveyTriggerCount and return immediately if hideSurvey is true", async () => {
+        const result = await feedbackSurveyDialog(false, 0, true);
+        assert.deepStrictEqual(result, {
+          sawSurveyAlready: false,
+          extSurveyTriggerCount: 1,
+        });
+        sinon.assert.notCalled(showSurveyDialogStub);
+      });
+
+      it("should set sawSurveyAlready to true and reset extSurveyTriggerCount when extSurveyTriggerCount >= 3 and sawSurveyAlready is false", async () => {
+        const result = await feedbackSurveyDialog(false, 3, false);
+        assert.deepStrictEqual(result, {
+          sawSurveyAlready: true,
+          extSurveyTriggerCount: 0,
+        });
+        sinon.assert.calledOnce(showSurveyDialogStub);
+      });
+
+      it("should reset extSurveyTriggerCount when extSurveyTriggerCount >= 5 and sawSurveyAlready is true", async () => {
+        const result = await feedbackSurveyDialog(true, 5, false);
+        assert.deepStrictEqual(result, {
+          sawSurveyAlready: true,
+          extSurveyTriggerCount: 0,
+        });
+        sinon.assert.calledOnce(showSurveyDialogStub);
+      });
+
+      it("should increment extSurveyTriggerCount and not show survey dialog for other cases", async () => {
+        const result = await feedbackSurveyDialog(false, 1, false);
+        assert.deepStrictEqual(result, {
+          sawSurveyAlready: false,
+          extSurveyTriggerCount: 2,
+        });
+        sinon.assert.notCalled(showSurveyDialogStub);
+      });
+    });
+  });
+
+  describe("Shared with webview utils", () => {
+    describe("normalizeAssemblyTarget", () => {
+      it("should return qe assembly without -qe", () => {
+        const res = shared.normalizeAssemblyTarget("test-assembly-qe target");
+        assert.strictEqual(res, "test-assembly target");
+      });
+      it("should return normal assembly without -qe", () => {
+        const res = shared.normalizeAssemblyTarget("test-assembly target");
+        assert.strictEqual(res, "test-assembly target");
+      });
+    });
+  });
+
+  describe("sanitizeQsqlQuery", () => {
+    it("should trim query", () => {
+      const res = queryUtils.sanitizeQsqlQuery("  a:1  ");
+      assert.strictEqual(res, "a:1");
+    });
+    it("should remove block comment", () => {
+      let res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\n\\a:1");
+      assert.strictEqual(res, "a:1");
+      res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\r\n\\a:1");
+      assert.strictEqual(res, "a:1");
+    });
+    it("should remove single line comment", () => {
+      let res = queryUtils.sanitizeQsqlQuery("/ single line comment\na:1");
+      assert.strictEqual(res, "a:1");
+      res = queryUtils.sanitizeQsqlQuery("/ single line comment\r\na:1");
+      assert.strictEqual(res, "a:1");
+    });
+    it("should remove line comment", () => {
+      const res = queryUtils.sanitizeQsqlQuery("a:1 / line comment");
+      assert.strictEqual(res, "a:1");
+    });
+    it("should ignore line comment in a string", () => {
+      const res = queryUtils.sanitizeQsqlQuery('a:"1 / not line comment"');
+      assert.strictEqual(res, 'a:"1 / not line comment"');
+    });
+    it("should replace EOS with semicolon", () => {
+      let res = queryUtils.sanitizeQsqlQuery("a:1\na");
+      assert.strictEqual(res, "a:1;a");
+      res = queryUtils.sanitizeQsqlQuery("a:1\r\na");
+      assert.strictEqual(res, "a:1;a");
+    });
+    it("should not replace continuation with semicolon", () => {
+      let res = queryUtils.sanitizeQsqlQuery('a:"a\n \nb"');
+      assert.strictEqual(res, 'a:"a\n \nb"');
+      res = queryUtils.sanitizeQsqlQuery('a:"a\r\n \r\nb"');
+      assert.strictEqual(res, 'a:"a\r\n \r\nb"');
     });
   });
 });
