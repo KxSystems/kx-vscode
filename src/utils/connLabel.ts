@@ -15,7 +15,6 @@ import { workspace } from "vscode";
 
 import { ext } from "../extensionVariables";
 import { MessageKind, notify } from "./notifications";
-import { Telemetry } from "./telemetryClient";
 import { ConnectionLabel, Labels } from "../models/labels";
 import { NewConnectionPannel } from "../panels/newConnection";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
@@ -51,7 +50,12 @@ export function createNewLabel(name: string, colorName: string) {
     workspace
       .getConfiguration()
       .update("kdb.connectionLabels", ext.connLabelList, true);
-    Telemetry.sendEvent("Label.Create", {}, getLabelStatistics());
+
+    notify("Connection label created.", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Label.Create",
+      measurements: getLabelStatistics(),
+    });
   } else {
     notify("No Color selected for the label.", MessageKind.ERROR, {
       logger,
@@ -96,11 +100,11 @@ export function addConnToLabel(labelName: string, connName: string) {
         connections: [connName],
       });
     }
-    Telemetry.sendEvent(
-      "Label.Assign.Connection",
-      {},
-      getConnectionLabelStatistics(connName),
-    );
+    notify("Connection assigned to label.", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Label.Assign.Connection",
+      measurements: getConnectionLabelStatistics(connName),
+    });
   }
 }
 
@@ -115,11 +119,12 @@ export function removeConnFromLabels(connName: string) {
   workspace
     .getConfiguration()
     .update("kdb.labelsConnectionMap", ext.labelConnMapList, true);
-  Telemetry.sendEvent(
-    "Label.Remove.Connection",
-    {},
-    getConnectionLabelStatistics(connName),
-  );
+
+  notify("Connection removed from label.", MessageKind.DEBUG, {
+    logger,
+    telemetry: "Label.Remove.Connection",
+    measurements: getConnectionLabelStatistics(connName),
+  });
 }
 
 export async function handleLabelsConnMap(labels: string[], connName: string) {
@@ -192,7 +197,12 @@ export function deleteLabel(name: string) {
   workspace
     .getConfiguration()
     .update("kdb.connectionLabels", ext.connLabelList, true);
-  Telemetry.sendEvent("Label.Delete", {}, getLabelStatistics());
+
+  notify("Connection label deleted.", MessageKind.DEBUG, {
+    logger,
+    telemetry: "Label.Delete",
+    measurements: getLabelStatistics(),
+  });
 
   NewConnectionPannel.refreshLabels();
 }

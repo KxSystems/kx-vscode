@@ -79,7 +79,6 @@ import {
   formatScratchpadStacktrace,
   resultToBase64,
 } from "../utils/queryUtils";
-import { Telemetry } from "../utils/telemetryClient";
 import {
   addWorkspaceFile,
   openWith,
@@ -1361,9 +1360,11 @@ export async function writeScratchpadResult(
 
   if (result.error) {
     errorMsg = "Error: " + result.errorMsg;
-    Telemetry.sendEvent(
-      telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
-    );
+
+    notify("Scratchpad query returned error", MessageKind.DEBUG, {
+      logger,
+      telemetry: telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
+    });
 
     if (result.stacktrace) {
       errorMsg =

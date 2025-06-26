@@ -38,7 +38,6 @@ import {
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
 import { sanitizeQuery } from "../utils/queryUtils";
-import { Telemetry } from "../utils/telemetryClient";
 
 const logger = "connectionManagerService";
 
@@ -174,18 +173,16 @@ export class ConnectionManagementService {
       );
       await insightsConn.connect();
       if (insightsConn.connected) {
-        Telemetry.sendEvent(
-          "Connection.Connected" + this.getTelemetryConnectionType(connLabel),
-        );
         notify(
           `Connection established successfully to: ${connLabel}`,
           MessageKind.DEBUG,
-          { logger, telemetry: "Connection.Connected.Insights" },
-        );
-        notify(
-          `${connLabel} connection insights version: ${insightsConn.insightsVersion}`,
-          MessageKind.DEBUG,
-          { logger },
+          {
+            logger,
+            params: { insightsVersion: insightsConn.insightsVersion },
+            telemetry:
+              "Connection.Connected" +
+              this.getTelemetryConnectionType(connLabel),
+          },
         );
         ext.connectedConnectionList.push(insightsConn);
         this.connectSuccessBehaviour(connection);

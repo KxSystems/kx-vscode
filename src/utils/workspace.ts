@@ -22,7 +22,9 @@ import {
   WorkspaceEdit,
 } from "vscode";
 
-import { Telemetry } from "./telemetryClient";
+import { MessageKind, notify } from "./notifications";
+
+const logger = "workspace";
 
 export function getWorkspaceRoot(
   ignoreException: boolean = false,
@@ -93,7 +95,11 @@ export async function addWorkspaceFile(
       const telemetryStats = await getWorkbookStatistics(ext, directory);
       const isPython = ext === ".kdb.py" ? ".Python" : ".q";
 
-      Telemetry.sendEvent("Workbook.Create" + isPython, {}, telemetryStats);
+      notify("Workbook created.", MessageKind.DEBUG, {
+        logger,
+        telemetry: "Workbook.Create" + isPython,
+        measurements: telemetryStats,
+      });
 
       return uri;
     }

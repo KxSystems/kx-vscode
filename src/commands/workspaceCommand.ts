@@ -16,7 +16,6 @@ import {
   CodeLens,
   CodeLensProvider,
   Command,
-  ProgressLocation,
   Range,
   StatusBarAlignment,
   TextDocument,
@@ -35,7 +34,7 @@ import { ConnectionManagementService } from "../services/connectionManagerServic
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { offerConnectAction } from "../utils/core";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
-import { MessageKind, notify } from "../utils/notifications";
+import { MessageKind, notify, Runner } from "../utils/notifications";
 import { normalizeAssemblyTarget } from "../utils/shared";
 
 const logger = "workspaceCommand";
@@ -410,24 +409,19 @@ export async function importOldDSFiles() {
       notify("No workspace folder found.", MessageKind.ERROR, { logger });
       return;
     }
-    return await window.withProgress(
-      {
-        location: ProgressLocation.Notification,
-        cancellable: false,
-      },
-      async (progress, token) => {
-        token.onCancellationRequested(() => {
-          notify("User cancelled the old DS files import.", MessageKind.DEBUG, {
-            logger,
-          });
-          return false;
+    const runner = Runner.create(async (progress, token) => {
+      token.onCancellationRequested(() => {
+        notify("User cancelled the old DS files import.", MessageKind.DEBUG, {
+          logger,
         });
+        return false;
+      });
 
-        progress.report({ message: "Importing old DS files..." });
-        await importOldDsFiles();
-        return;
-      },
-    );
+      progress.report({ message: "Importing old DS files..." });
+      await importOldDsFiles();
+      return;
+    });
+    return await runner.execute();
   } else {
     notify("No old Datasource files found on your VSCODE.", MessageKind.INFO, {
       logger,

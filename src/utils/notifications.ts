@@ -104,6 +104,8 @@ export function notify<T extends string>(
     logger?: string;
     params?: any;
     telemetry?: string | boolean | Error;
+    properties?: { [key: string]: string };
+    measurements?: { [key: string]: number };
   } = {},
   ...items: T[]
 ): Thenable<T | undefined> {
@@ -121,7 +123,11 @@ export function notify<T extends string>(
     } else if (options.telemetry instanceof Error) {
       Telemetry.sendException(options.telemetry);
     } else {
-      Telemetry.sendEvent(options.telemetry);
+      Telemetry.sendEvent(
+        options.telemetry,
+        options.properties,
+        options.measurements,
+      );
     }
   }
 
