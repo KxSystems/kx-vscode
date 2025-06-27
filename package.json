@@ -1142,7 +1142,6 @@
     "sinon": "^21.0.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.34.1",
-    "vscode-dts": "^0.3.3",
     "vscode-extension-tester": "^8.15.0",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
@@ -1150,6 +1149,7 @@
   },
   "dependencies": {
     "@ag-grid-community/core": "^32.3.5",
+    "@vscode/dts": "^0.4.1",
     "@vscode/extension-telemetry": "^1.0.0",
     "@windozer/node-q": "^2.6.0",
     "ag-grid-community": "^33.3.2",
