@@ -1145,12 +1145,12 @@
     "vscode-dts": "^0.3.3",
     "vscode-extension-tester": "^8.15.0",
     "vscode-languageclient": "^9.0.1",
-    "vscode-languageserver": "^9.0.1"
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12"
   },
   "dependencies": {
     "@ag-grid-community/core": "^32.3.5",
     "@vscode/extension-telemetry": "^1.0.0",
-    "@vscode/webview-ui-toolkit": "^1.4.0",
     "@windozer/node-q": "^2.6.0",
     "ag-grid-community": "^33.3.2",
     "axios": "^1.10.0",
@@ -1165,6 +1165,7 @@
     "node-q": "^2.7.0",
     "pick-port": "^2.0.1",
     "semver": "^7.7.2",
+    "vscode-languageserver-textdocument": "^1.0.12",
     "vscode-uri": "^3.1.0"
   }
 }
