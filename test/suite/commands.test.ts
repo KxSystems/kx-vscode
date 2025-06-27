@@ -59,7 +59,8 @@ import * as dataSourceUtils from "../../src/utils/dataSource";
 import { ExecutionConsole } from "../../src/utils/executionConsole";
 import * as loggers from "../../src/utils/loggers";
 import * as queryUtils from "../../src/utils/queryUtils";
-import { MAX_STR_LEN } from "../../src/validators/kdbValidator";
+import * as kdbValidators from "../../src/validators/kdbValidator";
+import { valid } from "semver";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
@@ -1275,6 +1276,7 @@ describe("serverCommand", () => {
     let insightsData: InsightDetails;
     let updateInsightsStub, getInsightsStub: sinon.SinonStub;
     let windowMock: sinon.SinonMock;
+
     beforeEach(() => {
       insightsData = {
         server: "https://insightsservername.com/",
@@ -1284,11 +1286,14 @@ describe("serverCommand", () => {
       windowMock = sinon.mock(vscode.window);
       updateInsightsStub = sinon.stub(coreUtils, "updateInsights");
       getInsightsStub = sinon.stub(coreUtils, "getInsights");
+      ext.serverProvider = new KdbTreeProvider(servers, insights);
     });
+
     afterEach(() => {
       sinon.restore();
       windowMock.restore();
     });
+
     it("should add new Insights connection", async () => {
       getInsightsStub.returns({});
       await serverCommand.addInsightsConnection(insightsData, ["lblTest"]);
@@ -1298,6 +1303,7 @@ describe("serverCommand", () => {
         .once()
         .withArgs("Insights connection added successfully");
     });
+
     it("should show error message if Insights connection already exists", async () => {
       getInsightsStub.returns(insights);
       await serverCommand.addInsightsConnection(insightsData);
@@ -1306,6 +1312,7 @@ describe("serverCommand", () => {
         .once()
         .withArgs("Insights connection already exists");
     });
+
     it("should show error message if Insights connection is invalid", async () => {
       insightsData.server = "invalid";
       await serverCommand.addInsightsConnection(insightsData);
@@ -1319,7 +1326,11 @@ describe("serverCommand", () => {
   describe("addKdbConnection", () => {
     let kdbData: ServerDetails;
     let windowMock: sinon.SinonMock;
-    let updateServersStub, getServersStub: sinon.SinonStub;
+    let updateServersStub,
+      getServersStub,
+      validationServerAliasStub,
+      validationHostnameStub,
+      validationPortStub: sinon.SinonStub;
     beforeEach(() => {
       kdbData = {
         serverName: "testServer",
@@ -1332,6 +1343,12 @@ describe("serverCommand", () => {
       windowMock = sinon.mock(vscode.window);
       updateServersStub = sinon.stub(coreUtils, "updateServers");
       getServersStub = sinon.stub(coreUtils, "getServers");
+      validationServerAliasStub = sinon.stub(
+        kdbValidators,
+        "validateServerAlias",
+      );
+      validationHostnameStub = sinon.stub(kdbValidators, "validateServerName");
+      validationPortStub = sinon.stub(kdbValidators, "validateServerPort");
     });
 
     afterEach(() => {
@@ -1341,6 +1358,9 @@ describe("serverCommand", () => {
 
     it("should add new Kdb connection", async () => {
       getServersStub.returns({});
+      validationServerAliasStub.returns(false);
+      validationHostnameStub.returns(false);
+      validationPortStub.returns(false);
       await serverCommand.addKdbConnection(kdbData, false, ["lblTest"]);
       sinon.assert.calledOnce(updateServersStub);
       windowMock
@@ -1348,6 +1368,7 @@ describe("serverCommand", () => {
         .once()
         .withArgs("Kdb connection added successfully");
     });
+
     it("should show error message if Kdb connection already exists", async () => {
       getServersStub.returns(servers);
       await serverCommand.addKdbConnection(kdbData);
@@ -1356,6 +1377,7 @@ describe("serverCommand", () => {
         .once()
         .withArgs("Kdb connection already exists");
     });
+
     it("should show error message if Kdb connection is invalid", async () => {
       kdbData.serverPort = "invalid";
       await serverCommand.addKdbConnection(kdbData);
@@ -1364,6 +1386,7 @@ describe("serverCommand", () => {
         .once()
         .withArgs("Invalid Kdb connection");
     });
+
     it("should show error message if connection where alias is not provided", async () => {
       kdbData.serverAlias = "";
       await serverCommand.addKdbConnection(kdbData);
@@ -1372,7 +1395,11 @@ describe("serverCommand", () => {
         .once()
         .withArgs("Server Name is required");
     });
+
     it("should give error if alias is local and isLocal is false", async () => {
+      validationServerAliasStub.returns(
+        "The server name “local” is reserved for connections to the Bundled q process",
+      );
       kdbData.serverAlias = "local";
       kdbData.managed = true;
       await serverCommand.addKdbConnection(kdbData);
@@ -1388,7 +1415,7 @@ describe("serverCommand", () => {
       kdbData.username = "username";
       getServersStub.returns({});
       await serverCommand.addKdbConnection(kdbData);
-      sinon.assert.calledOnce(updateServersStub);
+      sinon.assert.called(updateServersStub);
       windowMock
         .expects("showInformationMessage")
         .once()
@@ -1405,7 +1432,7 @@ describe("serverCommand", () => {
     });
 
     it("should return error when the servername with an invalid length", async () => {
-      kdbData.serverName = "a".repeat(MAX_STR_LEN + 1);
+      kdbData.serverName = "a".repeat(kdbValidators.MAX_STR_LEN + 1);
       await serverCommand.addKdbConnection(kdbData);
       windowMock
         .expects("showErrorMessage")

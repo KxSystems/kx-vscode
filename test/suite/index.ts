@@ -11,13 +11,13 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import glob from "glob";
+import { glob } from "glob";
 import Mocha from "mocha";
 import * as path from "path";
 
 import { createReport } from "../coverage";
 
-export function run(): Promise<void> {
+export async function run(): Promise<void> {
   const options: Mocha.MochaOptions = {
     ui: "bdd",
     color: true,
@@ -33,30 +33,26 @@ export function run(): Promise<void> {
   const mocha = new Mocha(options);
   const testsRoot = path.join(__dirname, "..");
 
-  return new Promise<void>((c, e) => {
-    glob("**/suite/**.test.js", { cwd: testsRoot }, (err, files) => {
-      if (err) {
-        return e(err);
-      }
+  try {
+    const files = await glob("**/suite/**.test.js", { cwd: testsRoot });
 
-      files.forEach((f) => mocha.addFile(path.join(testsRoot, f)));
+    files.forEach((f) => mocha.addFile(path.join(testsRoot, f)));
 
-      try {
-        mocha.run((failures) => {
-          if (failures > 0) {
-            e(new Error(`${failures} tests failed.`));
-          } else {
-            c();
-          }
-        });
-      } catch (err) {
-        console.error(err);
-        e(err);
+    return new Promise<void>((resolve, reject) => {
+      mocha.run((failures) => {
+        if (failures > 0) {
+          reject(new Error(`${failures} tests failed.`));
+        } else {
+          resolve();
+        }
+      });
+    }).then(() => {
+      if (process.env["GENERATE_COVERAGE"]) {
+        createReport();
       }
     });
-  }).then(() => {
-    if (process.env["GENERATE_COVERAGE"]) {
-      createReport();
-    }
-  });
+  } catch (err) {
+    console.error(err);
+    throw err;
+  }
 }

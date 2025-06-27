@@ -80,18 +80,19 @@ describe("Notebooks", () => {
       instance = undefined;
     });
 
+    it("should show warning message if not connected", async () => {
+      activeConnectionStub.value(undefined);
+      const msg = sinon.stub(vscode.window, "showWarningMessage");
+      await instance.execute(cells, notebook, <vscode.NotebookController>{});
+      assert.ok(msg.calledOnce);
+    });
+
     it("should end execution on error", async () => {
       activeConnectionStub.value({});
       executeQueryStub.resolves({});
       const end = sinon.stub(executor, "end");
       await instance.execute(cells, notebook, <vscode.NotebookController>{});
       assert.ok(end.calledOnce);
-    });
-
-    it("should show warning message if not connected", async () => {
-      const msg = sinon.stub(vscode.window, "showWarningMessage");
-      await instance.execute(cells, notebook, <vscode.NotebookController>{});
-      assert.ok(msg.calledOnce);
     });
 
     it("should execute code for number result", async () => {

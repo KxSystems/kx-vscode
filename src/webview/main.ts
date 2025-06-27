@@ -32,12 +32,6 @@ import "@shoelace-style/shoelace/dist/components/menu/menu.js";
 import "@shoelace-style/shoelace/dist/components/menu-item/menu-item.js";
 import "@shoelace-style/shoelace/dist/components/tooltip/tooltip.js";
 
-import {
-  allComponents,
-  provideVSCodeDesignSystem,
-} from "@vscode/webview-ui-toolkit";
 import "./components/kdbDataSourceView";
 import "./components/kdbNewConnectionView";
 import "./components/kdbChartView";
-
-provideVSCodeDesignSystem().register(allComponents);
