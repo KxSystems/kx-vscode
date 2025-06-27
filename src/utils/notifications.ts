@@ -155,7 +155,7 @@ function getParams(params?: any) {
   if (params) {
     try {
       if (params instanceof Error) {
-        return JSON.stringify({ message: params.message });
+        return JSON.stringify({ name: params.name, message: params.message });
       }
       return JSON.stringify(params);
     } catch (error) {
