@@ -1145,9 +1145,7 @@
     "vscode-dts": "^0.3.3",
     "vscode-extension-tester": "^8.15.0",
     "vscode-languageclient": "^9.0.1",
-    "vscode-languageserver": "^9.0.1",
-    "vscode-languageserver-textdocument": "^1.0.12",
-    "vscode-test": "^1.6.1"
+    "vscode-languageserver": "^9.0.1"
   },
   "dependencies": {
     "@ag-grid-community/core": "^32.3.5",
@@ -1167,7 +1165,6 @@
     "node-q": "^2.7.0",
     "pick-port": "^2.0.1",
     "semver": "^7.7.2",
-    "vscode-languageserver-textdocument": "^1.0.11",
     "vscode-uri": "^3.1.0"
   }
 }
