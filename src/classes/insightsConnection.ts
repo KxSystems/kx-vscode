@@ -716,7 +716,7 @@ export class InsightsConnection {
       return await axios(options)
         .then((_response: any) => {
           notify(
-            `Executed successfully, scratchpad reset at ${this.connLabel} connection.`,
+            `Scratchpad reset for ${this.connLabel} executed successfully.`,
             MessageKind.INFO,
             { logger, telemetry: "Scratchpad.Reseted" },
           );
@@ -724,7 +724,7 @@ export class InsightsConnection {
         })
         .catch((_error: any) => {
           notify(
-            `Error occurred while resetting scratchpad in connection ${this.connLabel}, try again.`,
+            `Error occurred while resetting scratchpad for ${this.connLabel}, try again.`,
             MessageKind.ERROR,
             { logger },
           );

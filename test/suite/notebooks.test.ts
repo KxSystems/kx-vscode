@@ -15,12 +15,24 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
+import * as serverCommand from "../../src/commands/serverCommand";
 import { ext } from "../../src/extensionVariables";
-import { ConnectionManagementService } from "../../src/services/connectionManagerService";
 import * as controlller from "../../src/services/notebookController";
 import * as serializer from "../../src/services/notebookSerializer";
 
 describe("Notebooks", () => {
+  const notebook = <vscode.NotebookDocument>{
+    uri: vscode.Uri.file("/test.kxnb"),
+  };
+
+  let activeConnectionStub: sinon.SinonStub;
+  let executeQueryStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    activeConnectionStub = sinon.stub(ext, "activeConnection");
+    executeQueryStub = sinon.stub(serverCommand, "executeQuery");
+  });
+
   afterEach(() => {
     sinon.restore();
   });
@@ -51,17 +63,6 @@ describe("Notebooks", () => {
 
     let instance: controlller.KxNotebookController;
 
-    function createResult(result: any) {
-      sinon.stub(ext, "activeConnection").value({ connLabel: "test" });
-      sinon.stub(instance, "createConnectionManager").returns(<
-        ConnectionManagementService
-      >(<unknown>{
-        executeQuery() {
-          return result;
-        },
-      }));
-    }
-
     beforeEach(() => {
       sinon.stub(vscode.notebooks, "createNotebookController").returns(<
         vscode.NotebookController
@@ -79,45 +80,31 @@ describe("Notebooks", () => {
       instance = undefined;
     });
 
-    it("should show create connection manager", async () => {
-      const manager = instance.createConnectionManager();
-      assert.ok(manager);
-    });
-
     it("should end execution on error", async () => {
-      createResult({});
+      activeConnectionStub.value({});
+      executeQueryStub.resolves({});
       const end = sinon.stub(executor, "end");
-      await instance.execute(
-        cells,
-        <vscode.NotebookDocument>{},
-        <vscode.NotebookController>{},
-      );
+      await instance.execute(cells, notebook, <vscode.NotebookController>{});
       assert.ok(end.calledOnce);
     });
 
-    it("should show error message if not connected", async () => {
-      const msg = sinon.stub(vscode.window, "showErrorMessage");
-      await instance.execute(
-        cells,
-        <vscode.NotebookDocument>{},
-        <vscode.NotebookController>{},
-      );
+    it("should show warning message if not connected", async () => {
+      const msg = sinon.stub(vscode.window, "showWarningMessage");
+      await instance.execute(cells, notebook, <vscode.NotebookController>{});
       assert.ok(msg.calledOnce);
     });
 
     it("should execute code for number result", async () => {
-      createResult(1);
+      activeConnectionStub.value({});
+      executeQueryStub.resolves(1);
       const res = sinon.stub(executor, "replaceOutput");
-      await instance.execute(
-        cells,
-        <vscode.NotebookDocument>{},
-        <vscode.NotebookController>{},
-      );
+      await instance.execute(cells, notebook, <vscode.NotebookController>{});
       assert.ok(res.calledOnce);
     });
 
     it("should execute code for plot result", async () => {
-      createResult({
+      activeConnectionStub.value({});
+      executeQueryStub.resolves({
         count: 50046,
         columns: [
           {
@@ -138,36 +125,26 @@ describe("Notebooks", () => {
         ],
       });
       const res = sinon.stub(executor, "replaceOutput");
-      await instance.execute(
-        cells,
-        <vscode.NotebookDocument>{},
-        <vscode.NotebookController>{},
-      );
+      await instance.execute(cells, notebook, <vscode.NotebookController>{});
       assert.ok(res.calledOnce);
     });
 
     it("should execute code for string result", async () => {
-      createResult("result");
+      activeConnectionStub.value({});
+      executeQueryStub.resolves("result");
       const res = sinon.stub(executor, "replaceOutput");
-      await instance.execute(
-        cells,
-        <vscode.NotebookDocument>{},
-        <vscode.NotebookController>{},
-      );
+      await instance.execute(cells, notebook, <vscode.NotebookController>{});
       assert.ok(res.calledOnce);
     });
 
     it("should execute code for table result", async () => {
-      createResult({
+      activeConnectionStub.value({});
+      executeQueryStub.resolves({
         count: 1,
         columns: [{ name: "values", type: "long", values: ["1"], order: [0] }],
       });
       const res = sinon.stub(executor, "replaceOutput");
-      await instance.execute(
-        cells,
-        <vscode.NotebookDocument>{},
-        <vscode.NotebookController>{},
-      );
+      await instance.execute(cells, notebook, <vscode.NotebookController>{});
       assert.ok(res.calledOnce);
     });
   });

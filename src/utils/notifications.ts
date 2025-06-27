@@ -68,7 +68,6 @@ export class Runner<T> {
                 token.onCancellationRequested(updateCancelled);
                 updateCancelled();
               }),
-              timeout<T>(),
             ])
           : this.executor(progress, token);
       },
@@ -82,12 +81,6 @@ export class Runner<T> {
 
 export function sleep(ms: number): Promise<void> {
   return new Promise<void>((resolve, _) => setTimeout(() => resolve(), ms));
-}
-
-export function timeout<T = void>(ms = 1000 * 60 * 5): Promise<T> {
-  return new Promise<T>((_, reject) =>
-    setTimeout(() => reject(new vscode.CancellationError()), ms),
-  );
 }
 
 export const enum MessageKind {
@@ -161,6 +154,9 @@ export function notify<T extends string>(
 function getParams(params?: any) {
   if (params) {
     try {
+      if (params instanceof Error) {
+        return JSON.stringify({ message: params.message });
+      }
       return JSON.stringify(params);
     } catch (error) {
       return `Parsing log params failed: ${error}`;

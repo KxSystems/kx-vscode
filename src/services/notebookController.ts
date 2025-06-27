@@ -14,10 +14,10 @@
 import * as vscode from "vscode";
 
 import { InsightsConnection } from "../classes/insightsConnection";
+import { executeQuery } from "../commands/serverCommand";
 import { ext } from "../extensionVariables";
-import { ConnectionManagementService } from "../services/connectionManagerService";
-import { offerConnectAction } from "../utils/core";
-import { MessageKind, notify, timeout } from "../utils/notifications";
+import { getBasename, offerConnectAction } from "../utils/core";
+import { MessageKind, notify } from "../utils/notifications";
 import { resultToBase64 } from "../utils/queryUtils";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
 
@@ -47,13 +47,9 @@ export class KxNotebookController {
     this.controller.dispose();
   }
 
-  createConnectionManager() {
-    return new ConnectionManagementService();
-  }
-
   async execute(
     cells: vscode.NotebookCell[],
-    _notebook: vscode.NotebookDocument,
+    notebook: vscode.NotebookDocument,
     _controller: vscode.NotebookController,
   ): Promise<void> {
     const conn = ext.activeConnection;
@@ -61,7 +57,6 @@ export class KxNotebookController {
       offerConnectAction();
       return;
     }
-    const manager = this.createConnectionManager();
     const isInsights = conn instanceof InsightsConnection;
     const connVersion = isInsights ? (conn.insightsVersion ?? 0) : 0;
 
@@ -73,12 +68,15 @@ export class KxNotebookController {
 
       try {
         const results = await Promise.race([
-          manager.executeQuery(
+          executeQuery(
             cell.document.getText(),
             conn.connLabel,
+            getBasename(notebook.uri),
             ".",
-            false,
             isPython,
+            false,
+            false,
+            execution.token,
           ),
           new Promise((_, reject) => {
             const updateCancelled = () => {
@@ -89,7 +87,6 @@ export class KxNotebookController {
             updateCancelled();
             execution.token.onCancellationRequested(updateCancelled);
           }),
-          timeout(),
         ]);
 
         const rendered = render(results, isPython, isInsights, connVersion);
@@ -100,7 +97,7 @@ export class KxNotebookController {
           ]),
         ]);
       } catch (error) {
-        notify("Unable to run code block.", MessageKind.ERROR, {
+        notify("Notebook execution stopped.", MessageKind.DEBUG, {
           logger,
           params: error,
         });

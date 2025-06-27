@@ -836,7 +836,7 @@ export async function executeQuery(
   isWorkbook: boolean,
   isFromConnTree?: boolean,
   token?: CancellationToken,
-): Promise<void> {
+): Promise<any> {
   const connMngService = new ConnectionManagementService();
   const queryConsole = ExecutionConsole.start();
   if (connLabel === "") {
@@ -883,7 +883,8 @@ export async function executeQuery(
     );
     return undefined;
   }
-  const isStringfy = !ext.isResultsTabVisible;
+  const isNotebook = executorName.endsWith(".kxnb");
+  const isStringfy = isNotebook ? false : !ext.isResultsTabVisible;
   const startTime = Date.now();
   const results = await connMngService.executeQuery(
     query,
@@ -902,7 +903,7 @@ export async function executeQuery(
 
   // set context for root nodes
   if (selectedConn instanceof InsightsConnection) {
-    await writeScratchpadResult(
+    const res = await writeScratchpadResult(
       results,
       query,
       connLabel,
@@ -912,6 +913,11 @@ export async function executeQuery(
       duration,
       connVersion,
     );
+    if (isNotebook) {
+      return res;
+    }
+  } else if (isNotebook) {
+    return results;
   } else {
     /* istanbul ignore next */
     if (ext.isResultsTabVisible) {
@@ -1062,7 +1068,7 @@ export function runQuery(
     }
   }
 
-  const runner = Runner.create(() => {
+  const runner = Runner.create((_, token) => {
     return target
       ? runDataSource(
           <DataSourceFiles>{
@@ -1084,6 +1090,8 @@ export function runQuery(
           context,
           isPython,
           isWorkbook,
+          false,
+          token,
         );
   });
 
@@ -1336,7 +1344,7 @@ export async function writeScratchpadResult(
   isWorkbook: boolean,
   duration: string,
   connVersion: number,
-): Promise<void> {
+): Promise<any> {
   const telemetryLangType = isPython ? ".Python" : ".q";
   const telemetryBaseMsg = isWorkbook ? "Workbook" : "Scratchpad";
   let errorMsg;
@@ -1357,6 +1365,10 @@ export async function writeScratchpadResult(
           ? formatScratchpadStacktrace(result.stacktrace)
           : `${result.stacktrace}`);
     }
+  }
+
+  if (executorName.endsWith(".kxnb")) {
+    return errorMsg ?? result;
   }
 
   if (ext.isResultsTabVisible) {
