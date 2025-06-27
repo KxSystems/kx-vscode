@@ -69,11 +69,13 @@ class ExtensionTelemetry {
     properties?: { [key: string]: string },
     measurements?: { [key: string]: number },
   ): void {
-    const props = Object.assign({}, this.defaultProperties, properties, {
+    const props = {
+      ...this.defaultProperties,
+      ...properties,
       message: error.message,
       name: error.name,
-      stack: error.stack || "",
-    });
+      stack: error.stack ?? "",
+    };
 
     if (this.reporter) {
       this.reporter.sendTelemetryErrorEvent(error.name, props, measurements);
