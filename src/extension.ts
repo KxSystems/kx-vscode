@@ -1024,11 +1024,19 @@ function registerNotebookCommands(): CommandRegistration[] {
     {
       command: "kdb.createNotebook",
       callback: async () => {
-        if (hasWorkspaceOrShowOption("adding notebook")) {
-          const uri = await addWorkspaceFile(undefined, "notebook", ".kxnb");
-          const notebook = await vscode.workspace.openNotebookDocument(uri);
-          await vscode.window.showNotebookDocument(notebook);
-        }
+        const notebook = await vscode.workspace.openNotebookDocument(
+          "kx-notebook",
+          {
+            cells: [
+              {
+                kind: 2,
+                value: "",
+                languageId: "q",
+              },
+            ],
+          },
+        );
+        await vscode.window.showNotebookDocument(notebook);
       },
     },
   ];
