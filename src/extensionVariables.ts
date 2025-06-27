@@ -142,9 +142,7 @@ export namespace ext {
 
   const extensionId = "kx.kdb";
   const packageJSON = extensions.getExtension(extensionId)!.packageJSON;
-  export const extensionName = packageJSON.name;
-  export const extensionVersion = packageJSON.version;
-  export const extensionKey = packageJSON.aiKey;
+  export const extAIConnString = packageJSON.aiConnString;
 
   export const localhost = "127.0.0.1";
   export const networkProtocols = {

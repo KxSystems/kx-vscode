@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite including the q programming language",
   "publisher": "KX",
-  "version": "1.12.0-rc",
+  "version": "1.13.0-rc",
   "engines": {
     "vscode": "^1.96.0"
   },
@@ -12,7 +12,7 @@
     "type": "git",
     "url": "https://github.com/KxSystems/kx-vscode.git"
   },
-  "aiKey": "93119af7-5d98-45d0-abf8-5074976a1472",
+  "aiConnString": "InstrumentationKey=93119af7-5d98-45d0-abf8-5074976a1472;IngestionEndpoint=https://eastus-8.in.applicationinsights.azure.com/;LiveEndpoint=https://eastus.livediagnostics.monitor.azure.com/;ApplicationId=a9021bff-f365-4b98-a81f-d393a5cb76de",
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": true
@@ -1151,6 +1151,7 @@
   },
   "dependencies": {
     "@ag-grid-community/core": "^32.3.5",
+    "@vscode/extension-telemetry": "^1.0.0",
     "@vscode/webview-ui-toolkit": "^1.4.0",
     "@windozer/node-q": "^2.6.0",
     "ag-grid-community": "^33.3.2",
@@ -1166,7 +1167,6 @@
     "node-q": "^2.7.0",
     "pick-port": "^2.0.1",
     "semver": "^7.7.2",
-    "vscode-extension-telemetry": "^0.4.5",
     "vscode-languageserver-textdocument": "^1.0.11",
     "vscode-uri": "^3.1.0"
   }
