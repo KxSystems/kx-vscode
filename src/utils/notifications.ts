@@ -112,9 +112,9 @@ export function notify<T extends string>(
 
   if (options.telemetry) {
     if (typeof options.telemetry === "boolean") {
-      Telemetry.sendException(new Error(message));
+      Telemetry.sendError(new Error(message));
     } else if (options.telemetry instanceof Error) {
-      Telemetry.sendException(options.telemetry);
+      Telemetry.sendError(options.telemetry);
     } else {
       Telemetry.sendEvent(
         options.telemetry,
