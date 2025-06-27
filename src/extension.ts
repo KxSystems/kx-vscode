@@ -113,11 +113,11 @@ import {
   getServers,
   hasWorkspaceOrShowOption,
   initializeLocalServers,
-  kdbOutputLog,
 } from "./utils/core";
 import { runQFileTerminal } from "./utils/execution";
 import { handleFeedbackSurvey } from "./utils/feedbackSurveyUtils";
 import { getIconPath } from "./utils/iconsUtils";
+import { MessageKind, notify, Runner } from "./utils/notifications";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
 import {
@@ -126,6 +126,8 @@ import {
   openWith,
   setUriContent,
 } from "./utils/workspace";
+
+const logger = "extension";
 
 let client: LanguageClient;
 
@@ -197,13 +199,11 @@ export async function activate(context: vscode.ExtensionContext) {
 
   vscode.commands.executeCommand("kdb-results.focus");
 
-  kdbOutputLog("kdb extension is now active!", "INFO");
-
   try {
     // check for installed q runtime
     await checkLocalInstall(true);
   } catch (err) {
-    vscode.window.showErrorMessage(`${err}`);
+    notify(`${err}`, MessageKind.DEBUG, { logger });
   }
 
   registerAllExtensionCommands();
@@ -313,7 +313,6 @@ export async function activate(context: vscode.ExtensionContext) {
 
   connectClientCommands(context, client);
 
-  Telemetry.sendEvent("Extension.Activated");
   const yamlExtension = vscode.extensions.getExtension("redhat.vscode-yaml");
   if (yamlExtension) {
     const actualSchema = await vscode.workspace
@@ -346,11 +345,19 @@ export async function activate(context: vscode.ExtensionContext) {
   if (authExtension) {
     const api = await authExtension.activate();
     if ("auth" in api) {
-      Telemetry.sendEvent("CustomAuth.Extension.Actived");
+      notify("Custom authentication activated.", MessageKind.DEBUG, {
+        logger,
+        telemetry: "CustomAuth.Extension.Actived",
+      });
       ext.customAuth = api;
     }
   }
   handleFeedbackSurvey();
+
+  notify("kdb extension is now active.", MessageKind.DEBUG, {
+    logger,
+    telemetry: "Extension.Activated",
+  });
 }
 
 function registerHelpCommands(): CommandRegistration[] {
@@ -364,7 +371,10 @@ function registerHelpCommands(): CommandRegistration[] {
             "KX.kdb",
           )
           .then(undefined, () => {
-            Telemetry.sendEvent("Help&Feedback.Open.ExtensionDocumentation");
+            notify("Help&Feedback documentation selected.", MessageKind.DEBUG, {
+              logger,
+              telemetry: "Help&Feedback.Open.ExtensionDocumentation",
+            });
             vscode.commands.executeCommand("extension.open", "KX.kdb");
           });
       },
@@ -372,21 +382,30 @@ function registerHelpCommands(): CommandRegistration[] {
     {
       command: "kdb.help.suggestFeature",
       callback: () => {
-        Telemetry.sendEvent("Help&Feedback.Open.SuggestFeature");
+        notify("Help&Feedback suggest a feature selected.", MessageKind.DEBUG, {
+          logger,
+          telemetry: "Help&Feedback.Open.SuggestFeature",
+        });
         vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.suggestFeature));
       },
     },
     {
       command: "kdb.help.provideFeedback",
       callback: () => {
-        Telemetry.sendEvent("Help&Feedback.Open.Survey");
+        notify("Help&Feedback survey selected.", MessageKind.DEBUG, {
+          logger,
+          telemetry: "Help&Feedback.Open.Survey",
+        });
         vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.survey));
       },
     },
     {
       command: "kdb.help.reportBug",
       callback: () => {
-        Telemetry.sendEvent("Help&Feedback.Open.ReportBug");
+        notify("Help&Feedback report a bug selected.", MessageKind.DEBUG, {
+          logger,
+          telemetry: "Help&Feedback.Open.ReportBug",
+        });
         vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.reportBug));
       },
     },
@@ -644,21 +663,30 @@ function registerConnectionsCommands(): CommandRegistration[] {
     {
       command: "kdb.connections.export.all",
       callback: () => {
-        Telemetry.sendEvent("Connections.Export.All");
+        notify("Export all conections.", MessageKind.DEBUG, {
+          logger,
+          telemetry: "Connections.Export.All",
+        });
         exportConnections();
       },
     },
     {
       command: "kdb.connections.export.single",
       callback: async (viewItem: KdbNode | InsightsNode) => {
-        Telemetry.sendEvent("Connections.Export.Single");
+        notify("Export single conection.", MessageKind.DEBUG, {
+          logger,
+          telemetry: "Connections.Export.Single",
+        });
         exportConnections(viewItem.label);
       },
     },
     {
       command: "kdb.connections.import",
       callback: async () => {
-        Telemetry.sendEvent("Connections.Import");
+        notify("Import conections.", MessageKind.DEBUG, {
+          logger,
+          telemetry: "Connections.Import",
+        });
         await importConnections();
       },
     },
@@ -680,7 +708,9 @@ function registerConnectionsCommands(): CommandRegistration[] {
             true,
           );
         } else {
-          kdbOutputLog("Connection label not found", "ERROR");
+          notify("Connection label not found", MessageKind.ERROR, {
+            logger,
+          });
         }
       },
     },
@@ -754,14 +784,22 @@ function registerConnectionsCommands(): CommandRegistration[] {
     {
       command: "kdb.connections.refresh.serverObjects",
       callback: async () => {
-        ext.serverProvider.reload();
-        await refreshGetMeta();
+        const runner = Runner.create(() => {
+          ext.serverProvider.reload();
+          return refreshGetMeta();
+        });
+        runner.location = vscode.ProgressLocation.Notification;
+        runner.title = "Refreshing server objects for all connections.";
+        await runner.execute();
       },
     },
     {
       command: "kdb.connections.refresh.meta",
       callback: async (viewItem: InsightsNode) => {
-        await refreshGetMeta(viewItem.label);
+        const runner = Runner.create(() => refreshGetMeta(viewItem.label));
+        runner.location = vscode.ProgressLocation.Notification;
+        runner.title = `Refreshing meta data for ${viewItem.label || "all connections"}.`;
+        await runner.execute();
       },
     },
     {
@@ -874,7 +912,10 @@ function registerExecuteCommands(): CommandRegistration[] {
             );
             runQFileTerminal(`"${uri.fsPath}"`);
           } catch (error) {
-            kdbOutputLog(`Unable to write temp file: ${error}`, "ERROR");
+            notify(`Unable to write temp file.`, MessageKind.ERROR, {
+              logger,
+              params: error,
+            });
           }
         }
       },

@@ -16,7 +16,9 @@ import * as os from "os";
 import { join } from "path";
 
 import { ext } from "../extensionVariables";
-import { kdbOutputLog } from "./core";
+import { MessageKind, notify } from "./notifications";
+
+const logger = "cpUtils";
 
 export async function executeCommand(
   workingDirectory: string | undefined,
@@ -36,9 +38,10 @@ export async function executeCommand(
       `Failed to run ${command} command.  Check output window for more details.`,
     );
   } else {
-    kdbOutputLog(
+    notify(
       `Finished running command: ${command} ${result.formattedArgs}`,
-      "INFO",
+      MessageKind.DEBUG,
+      { logger },
     );
   }
   return result.cmdOutput;
@@ -89,17 +92,17 @@ export async function tryExecuteCommand(
         data = data.toString();
         cmdOutput = cmdOutput.concat(data);
         cmdOutputIncludingStderr = cmdOutputIncludingStderr.concat(data);
-        kdbOutputLog(data, "INFO");
+        notify(data, MessageKind.DEBUG, { logger });
       });
 
       childProc.stderr?.on("data", (data: string | Buffer) => {
         data = data.toString();
         cmdOutputIncludingStderr = cmdOutputIncludingStderr.concat(data);
-        kdbOutputLog(data, "INFO");
+        notify(data, MessageKind.DEBUG, { logger });
       });
 
       childProc.on("error", (error) => {
-        kdbOutputLog(error.message, "ERROR");
+        notify(error.message, MessageKind.ERROR, { logger });
         reject(error);
       });
 

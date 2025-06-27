@@ -55,6 +55,7 @@ import * as executionConsoleUtils from "../../src/utils/executionConsole";
 import { feedbackSurveyDialog } from "../../src/utils/feedbackSurveyUtils";
 import { getNonce } from "../../src/utils/getNonce";
 import { getUri } from "../../src/utils/getUri";
+import * as loggers from "../../src/utils/loggers";
 import { openUrl } from "../../src/utils/openUrl";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { showRegistrationNotification } from "../../src/utils/registration";
@@ -92,7 +93,7 @@ describe("Utils", () => {
       let kdbOutputLogStub: sinon.SinonStub;
       beforeEach(() => {
         tryExecuteCommandStub = sinon.stub(cpUtils, "tryExecuteCommand");
-        kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+        kdbOutputLogStub = sinon.stub(loggers, "kdbOutputLog");
       });
 
       afterEach(() => {
@@ -319,7 +320,7 @@ describe("Utils", () => {
         const message = "test message";
         const type = "INFO";
 
-        coreUtils.kdbOutputLog(message, type);
+        loggers.kdbOutputLog(message, type);
 
         appendLineSpy.calledOnce;
         appendLineSpy.calledWithMatch(message);
@@ -330,7 +331,7 @@ describe("Utils", () => {
         const message = "test message";
         const type = "ERROR";
 
-        coreUtils.kdbOutputLog(message, type);
+        loggers.kdbOutputLog(message, type);
 
         appendLineSpy.calledOnce;
         showErrorMessageSpy.calledOnce;
@@ -1758,11 +1759,15 @@ describe("Utils", () => {
         get: sinon.stub(),
         update: sinon.stub(),
       });
-      const logStub = sinon.stub(coreUtils, "kdbOutputLog");
+      const logStub = sinon.stub(loggers, "kdbOutputLog");
 
       LabelsUtils.createNewLabel("", "red");
 
-      sinon.assert.calledWith(logStub, "Label name can't be empty", "ERROR");
+      sinon.assert.calledWith(
+        logStub,
+        "[connLabel] Label name can't be empty.",
+        "ERROR",
+      );
     });
 
     it("should handle no color selected", () => {
@@ -1770,13 +1775,13 @@ describe("Utils", () => {
         get: sinon.stub(),
         update: sinon.stub(),
       });
-      const logStub = sinon.stub(coreUtils, "kdbOutputLog");
+      const logStub = sinon.stub(loggers, "kdbOutputLog");
 
       LabelsUtils.createNewLabel("label1", "randomColorName");
 
       sinon.assert.calledWith(
         logStub,
-        "No Color selected for the label",
+        "[connLabel] No Color selected for the label.",
         "ERROR",
       );
     });

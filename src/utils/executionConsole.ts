@@ -18,12 +18,15 @@ import {
   getHideDetailedConsoleQueryOutput,
   setOutputWordWrapper,
 } from "./core";
+import { MessageKind, notify } from "./notifications";
 import {
   addQueryHistory,
   checkIfIsDatasource,
   convertRowsToConsole,
 } from "./queryUtils";
 import { ServerType } from "../models/connectionsModels";
+
+const logger = "executionConsole";
 
 export class ExecutionConsole {
   public static current: ExecutionConsole | undefined;
@@ -180,7 +183,9 @@ export class ExecutionConsole {
         );
       }
     } else {
-      window.showErrorMessage(`Please connect to a KDB or Insights server`);
+      notify(`Please connect to a KDB or Insights server`, MessageKind.ERROR, {
+        logger,
+      });
       this._console.appendLine(`Please connect to a KDB or Insights server`);
       commands.executeCommand("kdb.connections.disconnect");
       addQueryHistory(

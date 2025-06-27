@@ -16,7 +16,6 @@ import {
   CodeLens,
   CodeLensProvider,
   Command,
-  ProgressLocation,
   Range,
   StatusBarAlignment,
   TextDocument,
@@ -33,9 +32,12 @@ import { ExecutionTypes } from "../models/execution";
 import { MetaDap } from "../models/meta";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
-import { kdbOutputLog, offerConnectAction } from "../utils/core";
+import { getBasename, offerConnectAction } from "../utils/core";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
+import { MessageKind, notify, Runner } from "../utils/notifications";
 import { normalizeAssemblyTarget } from "../utils/shared";
+
+const logger = "workspaceCommand";
 
 function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   if (editor) {
@@ -195,14 +197,11 @@ export async function pickTarget(uri: Uri) {
 
   let daps: MetaDap[] = [];
 
-  if (!isPython(uri)) {
-    const connMngService = new ConnectionManagementService();
-    const connected = connMngService.isConnected(conn.label);
-    if (connected) {
-      daps = JSON.parse(connMngService.retrieveMetaContent(conn.label, "DAP"));
-    } else {
-      offerConnectAction(server);
-    }
+  const connMngService = new ConnectionManagementService();
+  const connected = connMngService.isConnected(conn.label);
+
+  if (!isPython(uri) && connected) {
+    daps = JSON.parse(connMngService.retrieveMetaContent(conn.label, "DAP"));
   }
 
   const target = getTargetForUri(uri);
@@ -210,9 +209,9 @@ export async function pickTarget(uri: Uri) {
     const exists = daps.some(
       (value) => `${value.assembly} ${value.instance}` === target,
     );
-    if (!exists) {
+    if (!exists && !connected) {
       const [assembly, instance] = target.split(/\s+/);
-      daps.push({ assembly, instance } as MetaDap);
+      daps.unshift({ assembly, instance } as MetaDap);
     }
   }
 
@@ -222,7 +221,7 @@ export async function pickTarget(uri: Uri) {
       ...daps.map((value) => `${value.assembly} ${value.instance}`),
     ],
     {
-      title: `Choose a target on ${server}`,
+      title: `Choose a target on ${server} (${connected ? "Connected" : "Disconnected"})`,
       placeHolder: target,
     },
   );
@@ -274,12 +273,13 @@ export async function runActiveEditor(type?: ExecutionTypes) {
       } else {
         throw new Error("Connection for  not found");
       }
+    } else if (ext.activeConnection === undefined) {
+      offerConnectAction();
+      return;
     }
 
-    const executorName =
-      ext.activeTextEditor.document.fileName.split("/").pop() || "";
-
     const target = isInsights ? getTargetForUri(uri) : undefined;
+    const executorName = getBasename(ext.activeTextEditor.document.uri);
 
     runQuery(
       type === undefined
@@ -404,37 +404,24 @@ export async function importOldDSFiles() {
   if (ext.oldDSformatExists) {
     const folders = workspace.workspaceFolders;
     if (!folders) {
-      window.showErrorMessage(
-        "No workspace folder found. Please open a workspace folder.",
-      );
+      notify("No workspace folder found.", MessageKind.ERROR, { logger });
       return;
     }
-    return await window.withProgress(
-      {
-        location: ProgressLocation.Notification,
-        cancellable: false,
-      },
-      async (progress, token) => {
-        token.onCancellationRequested(() => {
-          kdbOutputLog(
-            "[DATASOURCE] User cancelled the old DS files import.",
-            "INFO",
-          );
-          return false;
+    const runner = Runner.create(async (_, token) => {
+      token.onCancellationRequested(() => {
+        notify("User cancelled the old DS files import.", MessageKind.DEBUG, {
+          logger,
         });
+        return false;
+      });
 
-        progress.report({ message: "Importing old DS files..." });
-        await importOldDsFiles();
-        return;
-      },
-    );
+      await importOldDsFiles();
+    });
+    runner.title = "Importing old DS files.";
+    return await runner.execute();
   } else {
-    window.showInformationMessage(
-      "No old Datasource files found on your VSCODE.",
-    );
-    kdbOutputLog(
-      "[DATASOURCE] No old Datasource files found on your VSCODE.",
-      "INFO",
-    );
+    notify("No old Datasource files found on your VSCODE.", MessageKind.INFO, {
+      logger,
+    });
   }
 }

@@ -16,8 +16,10 @@ import path from "path";
 import { Uri, window, workspace } from "vscode";
 
 import { ext } from "../extensionVariables";
-import { kdbOutputLog } from "./core";
+import { MessageKind, notify } from "./notifications";
 import { QueryResultType } from "../models/queryResult";
+
+const logger = "execution";
 
 interface tblHeader {
   label: string;
@@ -130,12 +132,15 @@ export async function exportToCsv(workspaceUri: Uri): Promise<void> {
 
   try {
     await workspace.fs.writeFile(filePath, Buffer.from(ext.resultPanelCSV));
-    kdbOutputLog("file located at: " + filePath.fsPath, "INFO");
+    notify("file located at: " + filePath.fsPath, MessageKind.DEBUG, {
+      logger,
+    });
     window.showTextDocument(filePath, { preview: false });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    kdbOutputLog(`Error writing file: ${errorMessage}`, "ERROR");
-    window.showErrorMessage(`Failed to write file: ${errorMessage}`);
+    notify(`Failed to write file: ${errorMessage}`, MessageKind.ERROR, {
+      logger,
+    });
   }
 }
 

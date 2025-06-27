@@ -11,13 +11,21 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { workspace } from "vscode";
+import * as vscode from "vscode";
 
-import { MessageKind, notify } from "../utils/notifications";
+import { ext } from "../extensionVariables";
 
-export async function showInstallationDetails(): Promise<void> {
-  const QHOME = await workspace
-    .getConfiguration()
-    .get<string>("kdb.qHomeDirectory");
-  notify(`q runtime installed path: ${QHOME}`, MessageKind.INFO);
+export function kdbOutputLog(
+  message: string,
+  type: string,
+  supressDialog?: boolean,
+): void {
+  const dateNow = new Date().toLocaleDateString();
+  const timeNow = new Date().toLocaleTimeString();
+  ext.outputChannel.appendLine(`[${dateNow} ${timeNow}] [${type}] ${message}`);
+  if (type === "ERROR" && !supressDialog) {
+    vscode.window.showErrorMessage(
+      `Error occured, check kdb output channel for details.`,
+    );
+  }
 }

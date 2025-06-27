@@ -22,11 +22,13 @@ import {
 } from "vscode";
 
 import { ext } from "../extensionVariables";
-import { kdbOutputLog } from "../utils/core";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
+import { MessageKind, notify } from "../utils/notifications";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
+
+const logger = "resultsPanelProvider";
 
 export class KdbResultsViewProvider implements WebviewViewProvider {
   public static readonly viewType = "kdb-results";
@@ -101,12 +103,14 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
   exportToCsv() {
     if (ext.resultPanelCSV === "") {
-      window.showErrorMessage("No results to export");
+      notify("No results to export", MessageKind.ERROR, { logger });
       return;
     }
     const workspaceFolders = workspace.workspaceFolders;
     if (!workspaceFolders) {
-      window.showErrorMessage("Open a folder to export results");
+      notify("Open a folder to export results", MessageKind.ERROR, {
+        logger,
+      });
       return;
     }
     const workspaceUri = workspaceFolders[0].uri;
@@ -137,7 +141,9 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     let gridOptions = undefined;
 
     if (!this._view) {
-      kdbOutputLog("[Results Tab] No view to update", "ERROR");
+      notify("No view to update", MessageKind.ERROR, {
+        logger,
+      });
       return;
     }
 

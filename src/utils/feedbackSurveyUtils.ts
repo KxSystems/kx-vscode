@@ -14,7 +14,9 @@
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
-import { Telemetry } from "./telemetryClient";
+import { MessageKind, notify } from "./notifications";
+
+const logger = "feedbackSurveyUtils";
 
 export async function feedbackSurveyDialog(
   sawSurveyAlready: boolean,
@@ -48,15 +50,21 @@ export async function feedbackSurveyDialog(
 
 async function showSurveyDialog() {
   const SURVEY_URL = ext.urlLinks.survey;
-  const result = await vscode.window.showInformationMessage(
+  const result = await notify(
     "Got 2 Minutes? Help us make the KX extension even better for your workflows.",
+    MessageKind.INFO,
+    {},
     "Take Survey",
     "Don't show me this message next time",
   );
   if (result === "Take Survey") {
     vscode.env.openExternal(vscode.Uri.parse(SURVEY_URL));
   } else if (result === "Don't show me this message next time") {
-    Telemetry.sendEvent("Help&Feedback.Hide.Survey");
+    notify("Take survey message silenced.", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Help&Feedback.Hide.Survey",
+    });
+
     await vscode.workspace
       .getConfiguration("kdb")
       .update("hideSurvey", true, vscode.ConfigurationTarget.Global);

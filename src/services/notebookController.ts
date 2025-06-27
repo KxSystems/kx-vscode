@@ -14,11 +14,14 @@
 import * as vscode from "vscode";
 
 import { InsightsConnection } from "../classes/insightsConnection";
+import { executeQuery } from "../commands/serverCommand";
 import { ext } from "../extensionVariables";
-import { ConnectionManagementService } from "../services/connectionManagerService";
-import { kdbOutputLog } from "../utils/core";
+import { getBasename, offerConnectAction } from "../utils/core";
+import { MessageKind, notify } from "../utils/notifications";
 import { resultToBase64 } from "../utils/queryUtils";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
+
+const logger = "notebookController";
 
 export class KxNotebookController {
   readonly controllerId = "kx-notebook-1";
@@ -44,23 +47,16 @@ export class KxNotebookController {
     this.controller.dispose();
   }
 
-  createConnectionManager() {
-    return new ConnectionManagementService();
-  }
-
   async execute(
     cells: vscode.NotebookCell[],
-    _notebook: vscode.NotebookDocument,
+    notebook: vscode.NotebookDocument,
     _controller: vscode.NotebookController,
   ): Promise<void> {
     const conn = ext.activeConnection;
     if (conn === undefined) {
-      vscode.window.showErrorMessage(
-        "You aren't connected to any connection. Once connected please try again.",
-      );
+      offerConnectAction();
       return;
     }
-    const manager = this.createConnectionManager();
     const isInsights = conn instanceof InsightsConnection;
     const connVersion = isInsights ? (conn.insightsVersion ?? 0) : 0;
 
@@ -71,13 +67,27 @@ export class KxNotebookController {
       execution.start(Date.now());
 
       try {
-        const results = await manager.executeQuery(
-          cell.document.getText(),
-          conn.connLabel,
-          ".",
-          false,
-          isPython,
-        );
+        const results = await Promise.race([
+          executeQuery(
+            cell.document.getText(),
+            conn.connLabel,
+            getBasename(notebook.uri),
+            ".",
+            isPython,
+            false,
+            false,
+            execution.token,
+          ),
+          new Promise((_, reject) => {
+            const updateCancelled = () => {
+              if (execution.token.isCancellationRequested) {
+                reject(new vscode.CancellationError());
+              }
+            };
+            updateCancelled();
+            execution.token.onCancellationRequested(updateCancelled);
+          }),
+        ]);
 
         const rendered = render(results, isPython, isInsights, connVersion);
 
@@ -87,7 +97,11 @@ export class KxNotebookController {
           ]),
         ]);
       } catch (error) {
-        kdbOutputLog(`${error}`, "ERROR");
+        notify("Notebook execution stopped.", MessageKind.DEBUG, {
+          logger,
+          params: error,
+        });
+        break;
       } finally {
         execution.end(true, Date.now());
       }

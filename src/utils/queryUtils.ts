@@ -15,7 +15,8 @@ import { readFileSync } from "fs";
 import { join } from "path";
 
 import { ext } from "../extensionVariables";
-import { isBaseVersionGreaterOrEqual, kdbOutputLog } from "./core";
+import { isBaseVersionGreaterOrEqual } from "./core";
+import { MessageKind, notify } from "./notifications";
 import { normalizeAssemblyTarget } from "./shared";
 import { DCDS, deserialize, isCompressed, uncompress } from "../ipc/c";
 import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
@@ -25,6 +26,8 @@ import { ServerType } from "../models/connectionsModels";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { QueryHistory } from "../models/queryHistory";
 import { ScratchpadStacktrace } from "../models/scratchpadResult";
+
+const logger = "queryUtils";
 
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {
@@ -96,7 +99,7 @@ export function handleWSError(ab: ArrayBuffer): any {
     }
   }
 
-  kdbOutputLog(`Error : ${errorString}`, "ERROR", true);
+  notify(`Error : ${errorString}`, MessageKind.DEBUG, { logger });
 
   return { error: errorString };
 }
