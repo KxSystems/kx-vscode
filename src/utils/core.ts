@@ -205,7 +205,15 @@ export async function getWorkspaceFolder(
 }
 
 export function getServers(): Server | undefined {
-  return workspace.getConfiguration().get("kdb.servers");
+  const servers = workspace.getConfiguration().get<Server>("kdb.servers");
+
+  return servers
+    ? Object.fromEntries(
+        Object.entries(servers).sort(([, a], [, b]) =>
+          a.serverAlias.localeCompare(b.serverAlias),
+        ),
+      )
+    : servers;
 }
 
 // TODO: Remove this on 1.9.0 release
@@ -292,9 +300,18 @@ export function getInsights(): Insights | undefined {
     "kdb.insightsEnterpriseConnections",
   );
 
-  return insights && Object.keys(insights).length > 0
-    ? insights
-    : configuration.get("kdb.insights");
+  const insightsList: Insights | undefined =
+    insights && Object.keys(insights).length > 0
+      ? insights
+      : configuration.get("kdb.insights");
+
+  return insightsList
+    ? Object.fromEntries(
+        Object.entries(insightsList).sort(([, a], [, b]) =>
+          a.alias.localeCompare(b.alias),
+        ),
+      )
+    : insightsList;
 }
 
 export async function updateServers(servers: Server): Promise<void> {

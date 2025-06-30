@@ -34,7 +34,6 @@ import {
   ServerType,
 } from "../../src/models/connectionsModels";
 import { DataSourceTypes } from "../../src/models/dataSource";
-import { Labels } from "../../src/models/labels";
 import { MetaObjectPayload } from "../../src/models/meta";
 import { QueryResultType } from "../../src/models/queryResult";
 import {
@@ -1990,13 +1989,20 @@ describe("Utils", () => {
       const labels: Labels[] = [
         { name: "label1", color: { name: "red", colorHex: "#FF0000" } },
       ];
+
+      const getStub = sinon.stub();
+      getStub.withArgs("kdb.connectionLabels").returns(labels);
+      getStub.withArgs("kdb.labelsConnectionMap").returns([]);
+
       getConfigurationStub.returns({
-        get: sinon.stub().returns(labels),
+        get: getStub,
         update: sinon.stub().returns(Promise.resolve()),
       });
+
       LabelsUtils.renameLabel("label1", "label2");
+
       assert.strictEqual(ext.connLabelList.length, 1);
-      assert.deepStrictEqual(ext.connLabelList[0].name, "label2");
+      assert.strictEqual(ext.connLabelList[0].name, "label2");
     });
 
     it("should set label color", () => {
