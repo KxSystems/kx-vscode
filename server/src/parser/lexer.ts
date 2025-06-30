@@ -139,5 +139,5 @@ export const QLexer = new Lexer(
       exit_comment_mode: [CommentEndOfLine, WhiteSpace, CommentLiteral],
     },
   },
-  { safeMode: true },
+  { safeMode: true, skipValidations: true },
 );
