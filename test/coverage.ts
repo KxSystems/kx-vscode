@@ -21,7 +21,15 @@ import * as path from "path";
 const REPO_ROOT = path.join(__dirname, "../..");
 
 export function instrument() {
-  const instrumenter = createInstrumenter();
+  const instrumenter = createInstrumenter({
+    coverageVariable: "__coverage__",
+    preserveComments: true,
+    compact: false,
+    esModules: true,
+    autoWrap: true,
+    produceSourceMap: true,
+  });
+
   const files = rreaddir(path.resolve(REPO_ROOT, "out"));
 
   for (let i = 0; i < files.length; i++) {
@@ -46,11 +54,16 @@ export function instrument() {
       // missing source map - map remains undefined
     }
 
+    const sourceCode = fs.readFileSync(inputPath).toString();
+
+    const relativePath = path.relative(REPO_ROOT, inputPath);
+
     const instrumentedCode = instrumenter.instrumentSync(
-      fs.readFileSync(inputPath).toString(),
-      inputPath,
+      sourceCode,
+      relativePath,
       map,
     );
+
     safeWriteFile(outputPath, instrumentedCode);
   }
 }
