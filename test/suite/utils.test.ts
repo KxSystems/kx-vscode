@@ -34,6 +34,7 @@ import {
   ServerType,
 } from "../../src/models/connectionsModels";
 import { DataSourceTypes } from "../../src/models/dataSource";
+import { Labels } from "../../src/models/labels";
 import { MetaObjectPayload } from "../../src/models/meta";
 import { QueryResultType } from "../../src/models/queryResult";
 import {
@@ -67,7 +68,6 @@ import {
   showQuickPick,
 } from "../../src/utils/userInteraction";
 import { validateUtils } from "../../src/utils/validateUtils";
-import { Labels } from "../../src/models/labels";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;
@@ -118,6 +118,7 @@ describe("Utils", () => {
         assert.strictEqual(result, null);
       });
     });
+
     describe("setOutputWordWrapper", () => {
       let getConfigurationStub: sinon.SinonStub;
       beforeEach(() => {
@@ -393,6 +394,618 @@ describe("Utils", () => {
           .resolves();
         coreUtils.noSelectedConnectionAction();
         assert.ok(stub.calledOnce);
+      });
+    });
+
+    describe("getServers", () => {
+      let workspaceStub: sinon.SinonStub;
+      let _getConfigurationStub: sinon.SinonStub;
+      let getStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        getStub = sinon.stub();
+        _getConfigurationStub = sinon.stub().returns({ get: getStub });
+        workspaceStub = sinon
+          .stub(vscode.workspace, "getConfiguration")
+          .returns({
+            get: getStub,
+            has: function (_section: string): boolean {
+              throw new Error("Function not implemented.");
+            },
+            inspect: function <T>(_section: string):
+              | {
+                  key: string;
+                  defaultValue?: T;
+                  globalValue?: T;
+                  workspaceValue?: T;
+                  workspaceFolderValue?: T;
+                  defaultLanguageValue?: T;
+                  globalLanguageValue?: T;
+                  workspaceLanguageValue?: T;
+                  workspaceFolderLanguageValue?: T;
+                  languageIds?: string[];
+                }
+              | undefined {
+              throw new Error("Function not implemented.");
+            },
+            update: function (
+              _section: string,
+              _value: any,
+              _configurationTarget?:
+                | vscode.ConfigurationTarget
+                | boolean
+                | null,
+              _overrideInLanguage?: boolean,
+            ): Thenable<void> {
+              throw new Error("Function not implemented.");
+            },
+          });
+      });
+
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("should return undefined when no servers are configured", () => {
+        getStub.returns(undefined);
+
+        const result = coreUtils.getServers();
+
+        assert.strictEqual(result, undefined);
+        assert.ok(getStub.calledWith("kdb.servers"));
+      });
+
+      it("should return servers sorted alphabetically by serverAlias", () => {
+        const mockServers = {
+          server3: {
+            serverName: "localhost",
+            serverPort: "5003",
+            serverAlias: "Charlie Server",
+            auth: false,
+            managed: false,
+            tls: false,
+          },
+          server1: {
+            serverName: "localhost",
+            serverPort: "5001",
+            serverAlias: "Alpha Server",
+            auth: false,
+            managed: false,
+            tls: false,
+          },
+          server2: {
+            serverName: "localhost",
+            serverPort: "5002",
+            serverAlias: "Beta Server",
+            auth: true,
+            managed: true,
+            tls: true,
+          },
+        };
+
+        getStub.returns(mockServers);
+
+        const result = coreUtils.getServers();
+
+        assert.ok(result);
+        const serverKeys = Object.keys(result);
+        const serverAliases = serverKeys.map((key) => result[key].serverAlias);
+
+        assert.deepStrictEqual(serverAliases, [
+          "Alpha Server",
+          "Beta Server",
+          "Charlie Server",
+        ]);
+
+        assert.strictEqual(result[serverKeys[0]].serverName, "localhost");
+        assert.strictEqual(result[serverKeys[0]].serverPort, "5001");
+        assert.strictEqual(result[serverKeys[0]].auth, false);
+        assert.strictEqual(result[serverKeys[1]].managed, true);
+        assert.strictEqual(result[serverKeys[2]].tls, false);
+      });
+
+      it("should handle single server correctly", () => {
+        const mockServers = {
+          onlyServer: {
+            serverName: "remote-host",
+            serverPort: "6000",
+            serverAlias: "Single Server",
+            auth: true,
+            managed: false,
+            tls: true,
+          },
+        };
+
+        getStub.returns(mockServers);
+
+        const result = coreUtils.getServers();
+
+        assert.ok(result);
+        const serverKeys = Object.keys(result);
+        assert.strictEqual(serverKeys.length, 1);
+        assert.strictEqual(result[serverKeys[0]].serverAlias, "Single Server");
+        assert.strictEqual(result[serverKeys[0]].serverName, "remote-host");
+      });
+
+      it("should handle servers with identical serverAlias", () => {
+        const mockServers = {
+          server1: {
+            serverName: "host1",
+            serverPort: "5001",
+            serverAlias: "Same Name",
+            auth: false,
+            managed: false,
+            tls: false,
+          },
+          server2: {
+            serverName: "host2",
+            serverPort: "5002",
+            serverAlias: "Same Name",
+            auth: false,
+            managed: false,
+            tls: false,
+          },
+        };
+
+        getStub.returns(mockServers);
+
+        const result = coreUtils.getServers();
+
+        assert.ok(result);
+        const serverKeys = Object.keys(result);
+        assert.strictEqual(serverKeys.length, 2);
+
+        serverKeys.forEach((key) => {
+          assert.strictEqual(result[key].serverAlias, "Same Name");
+        });
+      });
+
+      it("should handle empty servers object", () => {
+        const mockServers = {};
+
+        getStub.returns(mockServers);
+
+        const result = coreUtils.getServers();
+
+        assert.ok(result);
+        assert.strictEqual(Object.keys(result).length, 0);
+      });
+
+      it("should handle servers with special characters in serverAlias", () => {
+        const mockServers = {
+          server1: {
+            serverName: "localhost",
+            serverPort: "5001",
+            serverAlias: "!Special Server",
+            auth: false,
+            managed: false,
+            tls: false,
+          },
+          server2: {
+            serverName: "localhost",
+            serverPort: "5002",
+            serverAlias: "123 Numeric Server",
+            auth: false,
+            managed: false,
+            tls: false,
+          },
+          server3: {
+            serverName: "localhost",
+            serverPort: "5003",
+            serverAlias: "Åccented Server",
+            auth: false,
+            managed: false,
+            tls: false,
+          },
+        };
+
+        getStub.returns(mockServers);
+
+        const result = coreUtils.getServers();
+
+        assert.ok(result);
+        const serverKeys = Object.keys(result);
+        const serverAliases = serverKeys.map((key) => result[key].serverAlias);
+
+        assert.strictEqual(serverAliases[0], "!Special Server");
+        assert.strictEqual(serverAliases[1], "123 Numeric Server");
+        assert.strictEqual(serverAliases[2], "Åccented Server");
+      });
+
+      it("should call workspace.getConfiguration without parameters", () => {
+        getStub.returns(undefined);
+
+        coreUtils.getServers();
+
+        assert.ok(workspaceStub.calledOnce);
+        assert.ok(workspaceStub.calledWith());
+      });
+
+      it("should call get method with correct parameter", () => {
+        getStub.returns(undefined);
+
+        coreUtils.getServers();
+
+        assert.ok(getStub.calledOnce);
+        assert.ok(getStub.calledWith("kdb.servers"));
+      });
+    });
+
+    describe("getInsights", () => {
+      let workspaceStub: sinon.SinonStub;
+      let _getConfigurationStub: sinon.SinonStub;
+      let getStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        getStub = sinon.stub();
+        _getConfigurationStub = sinon.stub().returns({ get: getStub });
+        workspaceStub = sinon
+          .stub(vscode.workspace, "getConfiguration")
+          .returns({
+            get: getStub,
+            has: function (_section: string): boolean {
+              throw new Error("Function not implemented.");
+            },
+            inspect: function <T>(_section: string):
+              | {
+                  key: string;
+                  defaultValue?: T;
+                  globalValue?: T;
+                  workspaceValue?: T;
+                  workspaceFolderValue?: T;
+                  defaultLanguageValue?: T;
+                  globalLanguageValue?: T;
+                  workspaceLanguageValue?: T;
+                  workspaceFolderLanguageValue?: T;
+                  languageIds?: string[];
+                }
+              | undefined {
+              throw new Error("Function not implemented.");
+            },
+            update: function (
+              _section: string,
+              _value: any,
+              _configurationTarget?:
+                | vscode.ConfigurationTarget
+                | boolean
+                | null,
+              _overrideInLanguage?: boolean,
+            ): Thenable<void> {
+              throw new Error("Function not implemented.");
+            },
+          });
+      });
+
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("should return undefined when no insights are configured", () => {
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(undefined);
+        getStub.withArgs("kdb.insights").returns(undefined);
+
+        const result = coreUtils.getInsights();
+
+        assert.strictEqual(result, undefined);
+        assert.ok(getStub.calledWith("kdb.insightsEnterpriseConnections"));
+        assert.ok(getStub.calledWith("kdb.insights"));
+      });
+
+      it("should return insightsEnterpriseConnections when available and not empty", () => {
+        const mockInsights = {
+          insight3: {
+            alias: "Charlie Insight",
+            server: "https://charlie.insights.com",
+            auth: true,
+            realm: "charlie-realm",
+            insecure: false,
+          },
+          insight1: {
+            alias: "Alpha Insight",
+            server: "https://alpha.insights.com",
+            auth: false,
+            insecure: true,
+          },
+          insight2: {
+            alias: "Beta Insight",
+            server: "https://beta.insights.com",
+            auth: true,
+            realm: "beta-realm",
+            insecure: false,
+          },
+        };
+
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(mockInsights);
+        getStub.withArgs("kdb.insights").returns(undefined);
+
+        const result = coreUtils.getInsights();
+
+        assert.ok(result);
+        const insightKeys = Object.keys(result);
+        const insightAliases = insightKeys.map((key) => result[key].alias);
+
+        assert.deepStrictEqual(insightAliases, [
+          "Alpha Insight",
+          "Beta Insight",
+          "Charlie Insight",
+        ]);
+
+        assert.strictEqual(
+          result[insightKeys[0]].server,
+          "https://alpha.insights.com",
+        );
+        assert.strictEqual(result[insightKeys[0]].auth, false);
+        assert.strictEqual(result[insightKeys[1]].realm, "beta-realm");
+        assert.strictEqual(result[insightKeys[2]].insecure, false);
+
+        assert.ok(getStub.calledWith("kdb.insightsEnterpriseConnections"));
+        assert.ok(!getStub.calledWith("kdb.insights"));
+      });
+
+      it("should fallback to kdb.insights when insightsEnterpriseConnections is empty", () => {
+        const mockFallbackInsights = {
+          fallback2: {
+            alias: "Fallback Beta",
+            server: "https://fallback-beta.com",
+            auth: true,
+          },
+          fallback1: {
+            alias: "Fallback Alpha",
+            server: "https://fallback-alpha.com",
+            auth: false,
+          },
+        };
+
+        getStub.withArgs("kdb.insightsEnterpriseConnections").returns({});
+        getStub.withArgs("kdb.insights").returns(mockFallbackInsights);
+
+        const result = coreUtils.getInsights();
+
+        assert.ok(result);
+        const insightKeys = Object.keys(result);
+        const insightAliases = insightKeys.map((key) => result[key].alias);
+
+        assert.deepStrictEqual(insightAliases, [
+          "Fallback Alpha",
+          "Fallback Beta",
+        ]);
+
+        assert.ok(getStub.calledWith("kdb.insightsEnterpriseConnections"));
+        assert.ok(getStub.calledWith("kdb.insights"));
+      });
+
+      it("should fallback to kdb.insights when insightsEnterpriseConnections is undefined", () => {
+        const mockFallbackInsights = {
+          single: {
+            alias: "Single Fallback",
+            server: "https://single-fallback.com",
+            auth: true,
+            realm: "single-realm",
+          },
+        };
+
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(undefined);
+        getStub.withArgs("kdb.insights").returns(mockFallbackInsights);
+
+        const result = coreUtils.getInsights();
+
+        assert.ok(result);
+        const insightKeys = Object.keys(result);
+        assert.strictEqual(insightKeys.length, 1);
+        assert.strictEqual(result[insightKeys[0]].alias, "Single Fallback");
+
+        assert.ok(getStub.calledWith("kdb.insightsEnterpriseConnections"));
+        assert.ok(getStub.calledWith("kdb.insights"));
+      });
+
+      it("should return undefined when both sources are empty", () => {
+        getStub.withArgs("kdb.insightsEnterpriseConnections").returns({});
+        getStub.withArgs("kdb.insights").returns({});
+
+        const result = coreUtils.getInsights();
+
+        assert.strictEqual(result, undefined);
+        assert.ok(getStub.calledWith("kdb.insightsEnterpriseConnections"));
+        assert.ok(getStub.calledWith("kdb.insights"));
+      });
+
+      it("should handle single insight correctly", () => {
+        const mockInsights = {
+          onlyInsight: {
+            alias: "Only Insight",
+            server: "https://only.insights.com",
+            auth: true,
+            realm: "only-realm",
+            insecure: false,
+          },
+        };
+
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(mockInsights);
+
+        const result = coreUtils.getInsights();
+
+        assert.ok(result);
+        const insightKeys = Object.keys(result);
+        assert.strictEqual(insightKeys.length, 1);
+        assert.strictEqual(result[insightKeys[0]].alias, "Only Insight");
+        assert.strictEqual(
+          result[insightKeys[0]].server,
+          "https://only.insights.com",
+        );
+      });
+
+      it("should handle insights with identical aliases", () => {
+        const mockInsights = {
+          insight1: {
+            alias: "Same Name",
+            server: "https://server1.com",
+            auth: false,
+          },
+          insight2: {
+            alias: "Same Name",
+            server: "https://server2.com",
+            auth: true,
+          },
+        };
+
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(mockInsights);
+
+        const result = coreUtils.getInsights();
+
+        assert.ok(result);
+        const insightKeys = Object.keys(result);
+        assert.strictEqual(insightKeys.length, 2);
+
+        insightKeys.forEach((key) => {
+          assert.strictEqual(result[key].alias, "Same Name");
+        });
+      });
+
+      it("should handle insights with special characters in alias", () => {
+        const mockInsights = {
+          insight1: {
+            alias: "!Special Insight",
+            server: "https://special.com",
+            auth: false,
+          },
+          insight2: {
+            alias: "123 Numeric Insight",
+            server: "https://numeric.com",
+            auth: false,
+          },
+          insight3: {
+            alias: "Åccented Insight",
+            server: "https://accented.com",
+            auth: false,
+          },
+        };
+
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(mockInsights);
+
+        const result = coreUtils.getInsights();
+
+        assert.ok(result);
+        const insightKeys = Object.keys(result);
+        const insightAliases = insightKeys.map((key) => result[key].alias);
+
+        assert.strictEqual(insightAliases[0], "!Special Insight");
+        assert.strictEqual(insightAliases[1], "123 Numeric Insight");
+        assert.strictEqual(insightAliases[2], "Åccented Insight");
+      });
+
+      it("should prefer insightsEnterpriseConnections over fallback when both exist", () => {
+        const mockPrimaryInsights = {
+          primary: {
+            alias: "Primary Insight",
+            server: "https://primary.com",
+            auth: true,
+          },
+        };
+
+        const mockFallbackInsights = {
+          fallback: {
+            alias: "Fallback Insight",
+            server: "https://fallback.com",
+            auth: false,
+          },
+        };
+
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(mockPrimaryInsights);
+        getStub.withArgs("kdb.insights").returns(mockFallbackInsights);
+
+        const result = coreUtils.getInsights();
+
+        assert.ok(result);
+        const insightKeys = Object.keys(result);
+        assert.strictEqual(insightKeys.length, 1);
+        assert.strictEqual(result[insightKeys[0]].alias, "Primary Insight");
+        assert.strictEqual(
+          result[insightKeys[0]].server,
+          "https://primary.com",
+        );
+
+        assert.ok(getStub.calledWith("kdb.insightsEnterpriseConnections"));
+        assert.ok(!getStub.calledWith("kdb.insights"));
+      });
+
+      it("should call workspace.getConfiguration without parameters", () => {
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(undefined);
+        getStub.withArgs("kdb.insights").returns(undefined);
+
+        coreUtils.getInsights();
+
+        assert.ok(workspaceStub.calledOnce);
+        assert.ok(workspaceStub.calledWith());
+      });
+
+      it("should call get method with correct parameters", () => {
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(undefined);
+        getStub.withArgs("kdb.insights").returns(undefined);
+
+        coreUtils.getInsights();
+
+        assert.ok(getStub.calledWith("kdb.insightsEnterpriseConnections"));
+        assert.ok(getStub.calledWith("kdb.insights"));
+      });
+
+      it("should handle insights with optional properties", () => {
+        const mockInsights = {
+          insight1: {
+            alias: "Basic Insight",
+            server: "https://basic.com",
+            auth: false,
+          },
+          insight2: {
+            alias: "Full Insight",
+            server: "https://full.com",
+            auth: true,
+            realm: "full-realm",
+            insecure: true,
+          },
+        };
+
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(mockInsights);
+
+        const result = coreUtils.getInsights();
+
+        assert.ok(result);
+        const insightKeys = Object.keys(result);
+        assert.strictEqual(insightKeys.length, 2);
+
+        const basicInsight = Object.values(result).find(
+          (i) => i.alias === "Basic Insight",
+        );
+        const fullInsight = Object.values(result).find(
+          (i) => i.alias === "Full Insight",
+        );
+
+        assert.ok(basicInsight);
+        assert.strictEqual(basicInsight.realm, undefined);
+        assert.strictEqual(basicInsight.insecure, undefined);
+
+        assert.ok(fullInsight);
+        assert.strictEqual(fullInsight.realm, "full-realm");
+        assert.strictEqual(fullInsight.insecure, true);
       });
     });
   });

@@ -305,6 +305,10 @@ export function getInsights(): Insights | undefined {
       ? insights
       : configuration.get("kdb.insights");
 
+  if (!insightsList || Object.keys(insightsList).length === 0) {
+    return undefined;
+  }
+
   return insightsList
     ? Object.fromEntries(
         Object.entries(insightsList).sort(([, a], [, b]) =>
