@@ -67,6 +67,7 @@ import {
   showQuickPick,
 } from "../../src/utils/userInteraction";
 import { validateUtils } from "../../src/utils/validateUtils";
+import { Labels } from "../../src/models/labels";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;
