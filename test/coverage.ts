@@ -56,10 +56,9 @@ export function instrument() {
 
     const sourceCode = fs.readFileSync(inputPath).toString();
 
-    const relativePath = files[i]
-      .replace(/\.js$/, ".ts")
-      .replace(/^src\//, "src/");
-    const sourceFilePath = `src/${relativePath}`;
+    let sourceFilePath = files[i];
+
+    sourceFilePath = sourceFilePath.replace(/\.js$/, ".ts");
 
     const instrumentedCode = instrumenter.instrumentSync(
       sourceCode,
@@ -81,7 +80,12 @@ export function createReport(): void {
 
   const coverageMap = createCoverageMap(global.__coverage__);
 
-  // Use the simpler approach that we know works
+  console.log("=== COVERAGE DEBUG ===");
+  console.log("Original coverage files:");
+  coverageMap.files().forEach((file) => {
+    console.log(`  ${file}`);
+  });
+
   const context = createContext({
     dir: path.join(REPO_ROOT, `coverage-reports`),
     coverageMap: coverageMap,
@@ -98,13 +102,102 @@ export function createReport(): void {
   reports.forEach((report) => {
     try {
       report.execute(context);
+      console.log(
+        `✅ Generated ${report.constructor.name} report successfully`,
+      );
     } catch (err) {
       console.error(
-        `Failed to generate ${report.constructor.name} report:`,
+        `❌ Failed to generate ${report.constructor.name} report:`,
         err,
       );
     }
   });
+
+  const summary = coverageMap.getCoverageSummary();
+  console.log("\n=== COVERAGE SUMMARY ===");
+  console.log(
+    `Lines: ${summary.lines.pct}% (${summary.lines.covered}/${summary.lines.total})`,
+  );
+  console.log(
+    `Functions: ${summary.functions.pct}% (${summary.functions.covered}/${summary.functions.total})`,
+  );
+}
+
+export function fixLcovPaths(): void {
+  const lcovPath = path.join(REPO_ROOT, "coverage-reports", "lcov.info");
+
+  if (!fs.existsSync(lcovPath)) {
+    console.warn("❌ lcov.info file not found");
+    return;
+  }
+
+  let content = fs.readFileSync(lcovPath, "utf8");
+
+  console.log("\n=== FIXING LCOV PATHS ===");
+
+  const originalSfLines = content.match(/^SF:.*$/gm);
+  if (originalSfLines) {
+    console.log("Original SF lines (first 5):");
+    originalSfLines.slice(0, 5).forEach((line) => console.log(`  ${line}`));
+  }
+
+  content = content.replace(/\\/g, "/");
+
+  const repoRootEscaped = REPO_ROOT.replace(/[/\\]/g, "[/\\\\]");
+  content = content.replace(
+    new RegExp(`^SF:.*${repoRootEscaped}[/\\\\](.*)$`, "gm"),
+    "SF:$1",
+  );
+
+  content = content.replace(/^SF:.*\/out\/(.*?)\.js$/gm, "SF:$1.ts");
+
+  content = content.replace(/^SF:(src|server)\/(.*?)\.js$/gm, "SF:$1/$2.ts");
+
+  content = content.replace(/^SF:(.*?)\.js$/gm, "SF:$1.ts");
+
+  content = content.replace(/^SF:(src)\/\1\//gm, "SF:$1/");
+  content = content.replace(/^SF:(server)\/\1\//gm, "SF:$1/");
+
+  fs.writeFileSync(lcovPath, content);
+
+  const fixedSfLines = content.match(/^SF:.*$/gm);
+  if (fixedSfLines) {
+    console.log("Fixed SF lines (first 5):");
+    fixedSfLines.slice(0, 5).forEach((line) => console.log(`  ${line}`));
+  }
+
+  console.log("✅ Fixed lcov.info paths");
+}
+
+export function debugLcov(): void {
+  const lcovPath = path.join(REPO_ROOT, "coverage-reports", "lcov.info");
+
+  if (!fs.existsSync(lcovPath)) {
+    console.warn("❌ lcov.info file not found");
+    return;
+  }
+
+  const content = fs.readFileSync(lcovPath, "utf8");
+
+  console.log("\n=== LCOV DEBUG ===");
+
+  // Mostrar arquivos encontrados
+  const sfLines = content.match(/^SF:.*$/gm);
+  if (sfLines) {
+    console.log(`Found ${sfLines.length} source files:`);
+    sfLines.forEach((line) => console.log(`  ${line}`));
+  } else {
+    console.log("❌ No SF (Source File) lines found in lcov.info");
+  }
+}
+
+export function generateCoverageReport(): void {
+  console.log("🚀 Starting coverage report generation...");
+  instrument();
+  createReport();
+  fixLcovPaths();
+  debugLcov();
+  console.log("✅ Coverage report generation completed!");
 }
 
 function copyFile(inputPath: string, outputPath: string): void {
