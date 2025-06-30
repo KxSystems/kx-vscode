@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { sync as glob } from "glob";
+import { globSync } from "glob";
 import { readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
@@ -79,7 +79,6 @@ import {
   local,
   lamdaDefinition,
 } from "./parser";
-
 
 interface Settings {
   debug: boolean;
@@ -499,7 +498,7 @@ export default class QLangServer {
       try {
         for (const folder of folders) {
           this.parseFiles(
-            glob("**/*.{q,quke}", {
+            globSync("**/*.{q,quke}", {
               dot: true,
               absolute: true,
               nodir: true,

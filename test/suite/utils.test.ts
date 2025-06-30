@@ -904,81 +904,6 @@ describe("Utils", () => {
         );
       });
     });
-
-    it("addQueryHistory", () => {
-      const query = "SELECT * FROM table";
-      const connectionName = "test";
-      const connectionType = ServerType.KDB;
-
-      ext.kdbQueryHistoryList.length = 0;
-
-      queryUtils.addQueryHistory(
-        query,
-        "fileName",
-        connectionName,
-        connectionType,
-        true,
-      );
-      assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
-    });
-
-    it("addQueryHistory in python", () => {
-      const query = "SELECT * FROM table";
-      const connectionName = "test";
-      const connectionType = ServerType.KDB;
-
-      ext.kdbQueryHistoryList.length = 0;
-
-      queryUtils.addQueryHistory(
-        query,
-        connectionName,
-        "fileName",
-        connectionType,
-        true,
-        true,
-      );
-      assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
-    });
-
-    it("should format a Scratchpad stacktrace correctly", () => {
-      const stacktrace = [
-        { name: "g", isNested: false, text: ["{a:x*2;a", "+y}"] },
-        { name: "f", isNested: false, text: ["{", "g[x;2#y]}"] },
-        { name: "", isNested: false, text: ["", 'f[3;"hello"]'] },
-      ];
-
-      const formatted = queryUtils.formatScratchpadStacktrace(stacktrace);
-      assert.strictEqual(
-        formatted,
-        '[2] g{a:x*2;a+y}\n             ^\n[1] f{g[x;2#y]}\n      ^\n[0] f[3;"hello"]\n    ^',
-      );
-    });
-
-    it("should format a Scratchpad stacktrace with nested function correctly", () => {
-      const stacktrace = [
-        { name: "f", isNested: true, text: ["{a:x*2;a", "+y}"] },
-        { name: "f", isNested: false, text: ["{", "{a:x*2;a+y}[x;2#y]}"] },
-        { name: "", isNested: false, text: ["", 'f[3;"hello"]'] },
-      ];
-
-      const formatted = queryUtils.formatScratchpadStacktrace(stacktrace);
-      assert.strictEqual(
-        formatted,
-        '[2] f @ {a:x*2;a+y}\n                ^\n[1] f{{a:x*2;a+y}[x;2#y]}\n      ^\n[0] f[3;"hello"]\n    ^',
-      );
-    });
-  });
-
-  describe("selectDSType", () => {
-    it("should return correct DataSourceTypes for given input", function () {
-      assert.equal(queryUtils.selectDSType("API"), DataSourceTypes.API);
-      assert.equal(queryUtils.selectDSType("QSQL"), DataSourceTypes.QSQL);
-      assert.equal(queryUtils.selectDSType("SQL"), DataSourceTypes.SQL);
-    });
-
-    it("should return undefined for unknown input", function () {
-      assert.equal(queryUtils.selectDSType("unknown"), undefined);
-    });
   });
 
   describe("getNonce", () => {
@@ -1387,6 +1312,196 @@ describe("Utils", () => {
           error:
             "\u00006\u0000\u0000\u0000Unexpected error (n10) encountered executing .kxi.qsql\u0000\u0000\u0000\u0000\u0000",
         });
+      });
+    });
+
+    describe("addQueryHistory", () => {
+      it("addQueryHistory", () => {
+        const query = "SELECT * FROM table";
+        const connectionName = "test";
+        const connectionType = ServerType.KDB;
+
+        ext.kdbQueryHistoryList.length = 0;
+
+        queryUtils.addQueryHistory(
+          query,
+          "fileName",
+          connectionName,
+          connectionType,
+          true,
+        );
+        assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+      });
+
+      it("addQueryHistory in python", () => {
+        const query = "SELECT * FROM table";
+        const connectionName = "test";
+        const connectionType = ServerType.KDB;
+
+        ext.kdbQueryHistoryList.length = 0;
+
+        queryUtils.addQueryHistory(
+          query,
+          connectionName,
+          "fileName",
+          connectionType,
+          true,
+          true,
+        );
+        assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+      });
+    });
+
+    describe("formatScratchpadStacktrace", () => {
+      it("should format a Scratchpad stacktrace correctly", () => {
+        const stacktrace = [
+          { name: "g", isNested: false, text: ["{a:x*2;a", "+y}"] },
+          { name: "f", isNested: false, text: ["{", "g[x;2#y]}"] },
+          { name: "", isNested: false, text: ["", 'f[3;"hello"]'] },
+        ];
+
+        const formatted = queryUtils.formatScratchpadStacktrace(stacktrace);
+        assert.strictEqual(
+          formatted,
+          '[2] g{a:x*2;a+y}\n             ^\n[1] f{g[x;2#y]}\n      ^\n[0] f[3;"hello"]\n    ^',
+        );
+      });
+
+      it("should format a Scratchpad stacktrace with nested function correctly", () => {
+        const stacktrace = [
+          { name: "f", isNested: true, text: ["{a:x*2;a", "+y}"] },
+          { name: "f", isNested: false, text: ["{", "{a:x*2;a+y}[x;2#y]}"] },
+          { name: "", isNested: false, text: ["", 'f[3;"hello"]'] },
+        ];
+
+        const formatted = queryUtils.formatScratchpadStacktrace(stacktrace);
+        assert.strictEqual(
+          formatted,
+          '[2] f @ {a:x*2;a+y}\n                ^\n[1] f{{a:x*2;a+y}[x;2#y]}\n      ^\n[0] f[3;"hello"]\n    ^',
+        );
+      });
+    });
+
+    describe("selectDSType", () => {
+      it("should return correct DataSourceTypes for given input", function () {
+        assert.equal(queryUtils.selectDSType("API"), DataSourceTypes.API);
+        assert.equal(queryUtils.selectDSType("QSQL"), DataSourceTypes.QSQL);
+        assert.equal(queryUtils.selectDSType("SQL"), DataSourceTypes.SQL);
+      });
+
+      it("should return undefined for unknown input", function () {
+        assert.equal(queryUtils.selectDSType("unknown"), undefined);
+      });
+    });
+
+    describe("sanitizeQsqlQuery", () => {
+      it("should trim query", () => {
+        const res = queryUtils.sanitizeQsqlQuery("  a:1  ");
+        assert.strictEqual(res, "a:1");
+      });
+      it("should remove block comment", () => {
+        let res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\n\\a:1");
+        assert.strictEqual(res, "a:1");
+        res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\r\n\\a:1");
+        assert.strictEqual(res, "a:1");
+      });
+      it("should remove single line comment", () => {
+        let res = queryUtils.sanitizeQsqlQuery("/ single line comment\na:1");
+        assert.strictEqual(res, "a:1");
+        res = queryUtils.sanitizeQsqlQuery("/ single line comment\r\na:1");
+        assert.strictEqual(res, "a:1");
+      });
+      it("should remove line comment", () => {
+        const res = queryUtils.sanitizeQsqlQuery("a:1 / line comment");
+        assert.strictEqual(res, "a:1");
+      });
+      it("should ignore line comment in a string", () => {
+        const res = queryUtils.sanitizeQsqlQuery('a:"1 / not line comment"');
+        assert.strictEqual(res, 'a:"1 / not line comment"');
+      });
+      it("should replace EOS with semicolon", () => {
+        let res = queryUtils.sanitizeQsqlQuery("a:1\na");
+        assert.strictEqual(res, "a:1;a");
+        res = queryUtils.sanitizeQsqlQuery("a:1\r\na");
+        assert.strictEqual(res, "a:1;a");
+      });
+      it("should not replace continuation with semicolon", () => {
+        let res = queryUtils.sanitizeQsqlQuery('a:"a\n \nb"');
+        assert.strictEqual(res, 'a:"a\n \nb"');
+        res = queryUtils.sanitizeQsqlQuery('a:"a\r\n \r\nb"');
+        assert.strictEqual(res, 'a:"a\r\n \r\nb"');
+      });
+    });
+
+    describe("resultToBase64", () => {
+      const png = [
+        "0x89",
+        "0x50",
+        "0x4e",
+        "0x47",
+        "0x0d",
+        "0x0a",
+        "0x1a",
+        "0x0a",
+      ];
+      const img = Array.from({ length: 59 }, () => "0x00");
+
+      it("should return undefined for undefined", () => {
+        const result = queryUtils.resultToBase64(undefined);
+        assert.strictEqual(result, undefined);
+      });
+      it("should return undefined for just signature", () => {
+        const result = queryUtils.resultToBase64(png);
+        assert.strictEqual(result, undefined);
+      });
+      it("should return undefined for bad signature", () => {
+        const result = queryUtils.resultToBase64([
+          ...png.map((v) => parseInt(v, 16) + 1),
+          ...img,
+        ]);
+        assert.strictEqual(result, undefined);
+      });
+      it("should return base64 for minimum img str", () => {
+        const result = queryUtils.resultToBase64([...png, ...img]);
+        assert.ok(result);
+      });
+      it("should return base64 for minimum img num", () => {
+        const result = queryUtils.resultToBase64([
+          ...png.map((v) => parseInt(v, 16)),
+          ...img.map((v) => parseInt(v, 16)),
+        ]);
+        assert.ok(result);
+      });
+      it("should return base64 for minimum img str for structuredText", () => {
+        const result = queryUtils.resultToBase64({
+          columns: { values: [...png, ...img] },
+        });
+        assert.ok(result);
+      });
+      it("should return base64 for minimum img str for structuredText v2", () => {
+        const result = queryUtils.resultToBase64({
+          columns: [{ values: [...png, ...img] }],
+        });
+        assert.ok(result);
+      });
+      it("should return undefined for bogus structuredText", () => {
+        const result = queryUtils.resultToBase64({
+          columns: {},
+        });
+        assert.strictEqual(result, undefined);
+      });
+      it("should return undefined for bogus structuredText v2", () => {
+        const result = queryUtils.resultToBase64({
+          columns: [],
+        });
+        assert.strictEqual(result, undefined);
+      });
+      it("should return base64 from windows q server", () => {
+        const result = queryUtils.resultToBase64([
+          ...png.map((v) => `${v}\r`),
+          ...img.map((v) => `${v}\r`),
+        ]);
+        assert.ok(result);
       });
     });
   });
@@ -2097,77 +2212,6 @@ describe("Utils", () => {
     });
   });
 
-  describe("resultToBase64", () => {
-    const png = [
-      "0x89",
-      "0x50",
-      "0x4e",
-      "0x47",
-      "0x0d",
-      "0x0a",
-      "0x1a",
-      "0x0a",
-    ];
-    const img = Array.from({ length: 59 }, () => "0x00");
-
-    it("should return undefined for undefined", () => {
-      const result = queryUtils.resultToBase64(undefined);
-      assert.strictEqual(result, undefined);
-    });
-    it("should return undefined for just signature", () => {
-      const result = queryUtils.resultToBase64(png);
-      assert.strictEqual(result, undefined);
-    });
-    it("should return undefined for bad signature", () => {
-      const result = queryUtils.resultToBase64([
-        ...png.map((v) => parseInt(v, 16) + 1),
-        ...img,
-      ]);
-      assert.strictEqual(result, undefined);
-    });
-    it("should return base64 for minimum img str", () => {
-      const result = queryUtils.resultToBase64([...png, ...img]);
-      assert.ok(result);
-    });
-    it("should return base64 for minimum img num", () => {
-      const result = queryUtils.resultToBase64([
-        ...png.map((v) => parseInt(v, 16)),
-        ...img.map((v) => parseInt(v, 16)),
-      ]);
-      assert.ok(result);
-    });
-    it("should return base64 for minimum img str for structuredText", () => {
-      const result = queryUtils.resultToBase64({
-        columns: { values: [...png, ...img] },
-      });
-      assert.ok(result);
-    });
-    it("should return base64 for minimum img str for structuredText v2", () => {
-      const result = queryUtils.resultToBase64({
-        columns: [{ values: [...png, ...img] }],
-      });
-      assert.ok(result);
-    });
-    it("should return undefined for bogus structuredText", () => {
-      const result = queryUtils.resultToBase64({
-        columns: {},
-      });
-      assert.strictEqual(result, undefined);
-    });
-    it("should return undefined for bogus structuredText v2", () => {
-      const result = queryUtils.resultToBase64({
-        columns: [],
-      });
-      assert.strictEqual(result, undefined);
-    });
-    it("should return base64 from windows q server", () => {
-      const result = queryUtils.resultToBase64([
-        ...png.map((v) => `${v}\r`),
-        ...img.map((v) => `${v}\r`),
-      ]);
-      assert.ok(result);
-    });
-  });
   describe("UDAUtils", () => {
     describe("filterUDAParamsValidTypes", () => {
       it("should filter valid types", () => {
@@ -2964,45 +3008,6 @@ describe("Utils", () => {
         const res = shared.normalizeAssemblyTarget("test-assembly target");
         assert.strictEqual(res, "test-assembly target");
       });
-    });
-  });
-
-  describe("sanitizeQsqlQuery", () => {
-    it("should trim query", () => {
-      const res = queryUtils.sanitizeQsqlQuery("  a:1  ");
-      assert.strictEqual(res, "a:1");
-    });
-    it("should remove block comment", () => {
-      let res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\n\\a:1");
-      assert.strictEqual(res, "a:1");
-      res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\r\n\\a:1");
-      assert.strictEqual(res, "a:1");
-    });
-    it("should remove single line comment", () => {
-      let res = queryUtils.sanitizeQsqlQuery("/ single line comment\na:1");
-      assert.strictEqual(res, "a:1");
-      res = queryUtils.sanitizeQsqlQuery("/ single line comment\r\na:1");
-      assert.strictEqual(res, "a:1");
-    });
-    it("should remove line comment", () => {
-      const res = queryUtils.sanitizeQsqlQuery("a:1 / line comment");
-      assert.strictEqual(res, "a:1");
-    });
-    it("should ignore line comment in a string", () => {
-      const res = queryUtils.sanitizeQsqlQuery('a:"1 / not line comment"');
-      assert.strictEqual(res, 'a:"1 / not line comment"');
-    });
-    it("should replace EOS with semicolon", () => {
-      let res = queryUtils.sanitizeQsqlQuery("a:1\na");
-      assert.strictEqual(res, "a:1;a");
-      res = queryUtils.sanitizeQsqlQuery("a:1\r\na");
-      assert.strictEqual(res, "a:1;a");
-    });
-    it("should not replace continuation with semicolon", () => {
-      let res = queryUtils.sanitizeQsqlQuery('a:"a\n \nb"');
-      assert.strictEqual(res, 'a:"a\n \nb"');
-      res = queryUtils.sanitizeQsqlQuery('a:"a\r\n \r\nb"');
-      assert.strictEqual(res, 'a:"a\r\n \r\nb"');
     });
   });
 });
