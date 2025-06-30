@@ -13,17 +13,17 @@
 
 import * as fs from "fs";
 import { createCoverageMap } from "istanbul-lib-coverage";
+import { createInstrumenter } from "istanbul-lib-instrument";
+import { createContext } from "istanbul-lib-report";
 import { create } from "istanbul-reports";
 import * as path from "path";
 
 const REPO_ROOT = path.join(__dirname, "../..");
 
 export function instrument() {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const iLibInstrument = require("istanbul-lib-instrument");
-
-  const instrumenter = iLibInstrument.createInstrumenter();
+  const instrumenter = createInstrumenter();
   const files = rreaddir(path.resolve(REPO_ROOT, "out"));
+
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     if (/\.js\.map$/.test(file)) {
@@ -38,11 +38,12 @@ export function instrument() {
       continue;
     }
 
-    let map = null;
+    let map = undefined;
     try {
-      map = JSON.parse(fs.readFileSync(`${inputPath}.map`).toString());
+      const mapContent = fs.readFileSync(`${inputPath}.map`).toString();
+      map = JSON.parse(mapContent);
     } catch {
-      // missing source map
+      // missing source map - map remains undefined
     }
 
     const instrumentedCode = instrumenter.instrumentSync(
@@ -55,20 +56,19 @@ export function instrument() {
 }
 
 export function createReport(): void {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const iLibSourceMaps = require("istanbul-lib-source-maps");
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const iLibReport = require("istanbul-lib-report");
-
   const global = new Function("return this")();
 
-  const mapStore = iLibSourceMaps.createSourceMapStore();
-  const coverageMap = createCoverageMap(global.__coverage__);
-  const transformed = mapStore.transformCoverage(coverageMap);
+  if (!global.__coverage__ || Object.keys(global.__coverage__).length === 0) {
+    console.warn("No coverage data available to generate report");
+    return;
+  }
 
-  const tree = iLibReport.summarizers.flat(transformed.map);
-  const context = iLibReport.createContext({
+  const coverageMap = createCoverageMap(global.__coverage__);
+
+  // Use the simpler approach that we know works
+  const context = createContext({
     dir: path.join(REPO_ROOT, `coverage-reports`),
+    coverageMap: coverageMap,
   });
 
   const reports = [
@@ -78,7 +78,17 @@ export function createReport(): void {
     create("html"),
     create("text"),
   ];
-  reports.forEach((report) => tree.visit(report, context));
+
+  reports.forEach((report) => {
+    try {
+      report.execute(context);
+    } catch (err) {
+      console.error(
+        `Failed to generate ${report.constructor.name} report:`,
+        err,
+      );
+    }
+  });
 }
 
 function copyFile(inputPath: string, outputPath: string): void {
