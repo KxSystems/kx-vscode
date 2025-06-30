@@ -56,11 +56,14 @@ export function instrument() {
 
     const sourceCode = fs.readFileSync(inputPath).toString();
 
-    const relativePath = path.relative(REPO_ROOT, inputPath);
+    const relativePath = files[i]
+      .replace(/\.js$/, ".ts")
+      .replace(/^src\//, "src/");
+    const sourceFilePath = `src/${relativePath}`;
 
     const instrumentedCode = instrumenter.instrumentSync(
       sourceCode,
-      relativePath,
+      sourceFilePath,
       map,
     );
 
