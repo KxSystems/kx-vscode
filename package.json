@@ -300,6 +300,17 @@
       },
       {
         "category": "KX",
+        "command": "kdb.file.inputVariable",
+        "title": "Input Variable Name"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.file.populateScratchpad",
+        "title": "KX: Populate Scratchpad",
+        "icon": "$(run)"
+      },
+      {
+        "category": "KX",
         "command": "kdb.scratchpad.run",
         "title": "Run workbook"
       },
@@ -977,8 +988,13 @@
           "when": "editorLangId == q"
         },
         {
-          "command": "kdb.execute.terminal.run",
+          "command": "kdb.file.populateScratchpad",
           "group": "q@3",
+          "when": "editorLangId == q"
+        },
+        {
+          "command": "kdb.execute.terminal.run",
+          "group": "q@4",
           "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
         },
         {

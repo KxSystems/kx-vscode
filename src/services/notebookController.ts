@@ -14,6 +14,11 @@
 import * as vscode from "vscode";
 
 import { InsightsConnection } from "../classes/insightsConnection";
+import {
+  getQsqlDatasourceFile,
+  populateScratchpad,
+  runDataSource,
+} from "../commands/dataSourceCommand";
 import { executeQuery } from "../commands/serverCommand";
 import { ext } from "../extensionVariables";
 import { getBasename, offerConnectAction } from "../utils/core";
@@ -63,21 +68,36 @@ export class KxNotebookController {
     for (const cell of cells) {
       const isPython = cell.document.languageId === "python";
       const execution = this.controller.createNotebookCellExecution(cell);
+
       execution.executionOrder = ++this.order;
       execution.start(Date.now());
 
+      const executorName = getBasename(notebook.uri);
+      let executor = Promise.reject<any>();
+
+      const target = cell.metadata?.target;
+      if (target) {
+        const params = getQsqlDatasourceFile(cell.document.getText(), target);
+        const variable = cell.metadata?.variable;
+        executor = variable
+          ? populateScratchpad(params, conn.connLabel, variable)
+          : runDataSource(params, conn.connLabel, executorName);
+      } else {
+        executor = executeQuery(
+          cell.document.getText(),
+          conn.connLabel,
+          executorName,
+          ".",
+          isPython,
+          false,
+          false,
+          execution.token,
+        );
+      }
+
       try {
         const results = await Promise.race([
-          executeQuery(
-            cell.document.getText(),
-            conn.connLabel,
-            getBasename(notebook.uri),
-            ".",
-            isPython,
-            false,
-            false,
-            execution.token,
-          ),
+          executor,
           new Promise((_, reject) => {
             const updateCancelled = () => {
               if (execution.token.isCancellationRequested) {
@@ -89,7 +109,10 @@ export class KxNotebookController {
           }),
         ]);
 
-        const rendered = render(results, isPython, isInsights, connVersion);
+        const rendered = target
+          ? // TODO When connVersion is passed for datasource queries it fails.
+            render(results, isPython, isInsights)
+          : render(results, isPython, isInsights, connVersion);
 
         execution.replaceOutput([
           new vscode.NotebookCellOutput([
@@ -97,10 +120,25 @@ export class KxNotebookController {
           ]),
         ]);
       } catch (error) {
-        notify("Notebook execution stopped.", MessageKind.DEBUG, {
-          logger,
-          params: error,
-        });
+        if (error instanceof vscode.CancellationError) {
+          notify(
+            `Executing ${executorName} on ${conn.connLabel} cancelled.`,
+            MessageKind.DEBUG,
+            {
+              logger,
+              params: error,
+            },
+          );
+        } else {
+          notify(
+            `Executing ${executorName} on ${conn.connLabel} failed.`,
+            MessageKind.ERROR,
+            {
+              logger,
+              params: error,
+            },
+          );
+        }
         break;
       } finally {
         execution.end(true, Date.now());
@@ -118,7 +156,7 @@ function render(
   results: any,
   isPython: boolean,
   isInsights: boolean,
-  connVersion: number,
+  connVersion?: number,
 ): Rendered {
   let text = "No results.";
   let mime = "text/plain";

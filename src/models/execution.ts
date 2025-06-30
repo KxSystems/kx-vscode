@@ -17,4 +17,5 @@ export enum ExecutionTypes {
   ReRunQuery,
   PythonQuerySelection,
   PythonQueryFile,
+  PopulateScratchpad,
 }

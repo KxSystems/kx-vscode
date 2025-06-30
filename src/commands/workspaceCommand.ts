@@ -16,6 +16,7 @@ import {
   CodeLens,
   CodeLensProvider,
   Command,
+  NotebookCell,
   Range,
   StatusBarAlignment,
   TextDocument,
@@ -32,6 +33,7 @@ import { ExecutionTypes } from "../models/execution";
 import { MetaDap } from "../models/meta";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
+import { updateCellMetadata } from "../services/notebookProviders";
 import { getBasename, offerConnectAction } from "../utils/core";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
 import { MessageKind, notify, Runner } from "../utils/notifications";
@@ -183,28 +185,27 @@ export async function pickConnection(uri: Uri) {
   return picked;
 }
 
-export async function pickTarget(uri: Uri) {
-  const server = getServerForUri(uri);
-  if (!server) {
-    return;
-  }
+export async function pickTarget(uri: Uri, cell?: NotebookCell) {
+  const server = cell ? ext.activeConnection?.connLabel : getServerForUri(uri);
+  const conn = await getConnectionForServer(server || "");
+  const connMngService = new ConnectionManagementService();
 
-  const conn = await getConnectionForServer(server);
-  const isInsights = conn instanceof InsightsNode;
-  if (!isInsights) {
-    return;
-  }
+  const connected = conn
+    ? connMngService.isConnected(conn.label)
+    : !!ext.activeConnection;
 
   let daps: MetaDap[] = [];
 
-  const connMngService = new ConnectionManagementService();
-  const connected = connMngService.isConnected(conn.label);
-
-  if (!isPython(uri) && connected) {
-    daps = JSON.parse(connMngService.retrieveMetaContent(conn.label, "DAP"));
+  if (conn instanceof InsightsNode) {
+    if (
+      connected &&
+      (!isPython(uri) || cell?.document.languageId !== "Python")
+    ) {
+      daps = JSON.parse(connMngService.retrieveMetaContent(conn.label, "DAP"));
+    }
   }
 
-  const target = getTargetForUri(uri);
+  const target = cell?.metadata.target || getTargetForUri(uri);
   if (target) {
     const exists = daps.some(
       (value) => `${value.assembly} ${value.instance}` === target,
@@ -221,8 +222,8 @@ export async function pickTarget(uri: Uri) {
       ...daps.map((value) => `${value.assembly} ${value.instance}`),
     ],
     {
-      title: `Choose a target on ${server} (${connected ? "Connected" : "Disconnected"})`,
-      placeHolder: target,
+      title: `Choose Target ${server ? `(${server} - ` : "("}${connected ? "Connected" : "Disconnected"})`,
+      placeHolder: target || "scratchpad",
     },
   );
 
@@ -230,7 +231,14 @@ export async function pickTarget(uri: Uri) {
     if (picked === "scratchpad") {
       picked = undefined;
     }
-    await setTargetForUri(uri, picked);
+    if (cell) {
+      await updateCellMetadata(cell, {
+        target: picked,
+        variable: (picked && cell.metadata.variable) || undefined,
+      });
+    } else {
+      await setTargetForUri(uri, picked);
+    }
   }
 
   return picked;
@@ -281,18 +289,29 @@ export async function runActiveEditor(type?: ExecutionTypes) {
     const target = isInsights ? getTargetForUri(uri) : undefined;
     const executorName = getBasename(ext.activeTextEditor.document.uri);
 
-    runQuery(
-      type === undefined
-        ? isPython(uri)
-          ? ExecutionTypes.PythonQueryFile
-          : ExecutionTypes.QueryFile
-        : type,
-      server,
-      executorName,
-      !isPython(uri),
-      undefined,
-      target,
-    );
+    try {
+      await runQuery(
+        type === undefined
+          ? isPython(uri)
+            ? ExecutionTypes.PythonQueryFile
+            : ExecutionTypes.QueryFile
+          : type,
+        server,
+        executorName,
+        !isPython(uri),
+        undefined,
+        target,
+      );
+    } catch (error) {
+      notify(
+        `Executing ${executorName} on ${server} failed.`,
+        MessageKind.ERROR,
+        {
+          logger,
+          params: error,
+        },
+      );
+    }
   }
 }
 

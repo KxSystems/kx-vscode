@@ -88,7 +88,16 @@ export class InsightsConnection {
 
         const runner = Runner.create(() => this.getScratchpadQuery(""));
         runner.title = `Starting scratchpad on ${this.connLabel}.`;
-        runner.execute();
+        runner.execute().catch((error) => {
+          notify(
+            `Starting scratchpad on ${this.connLabel} failed.`,
+            MessageKind.WARNING,
+            {
+              logger,
+              params: error,
+            },
+          );
+        });
       }
     });
     return this.connected;

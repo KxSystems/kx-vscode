@@ -86,6 +86,10 @@ import {
   MetaObjectPayloadNode,
 } from "./services/kdbTreeProvider";
 import { KxNotebookController } from "./services/notebookController";
+import {
+  inputVariable,
+  KxNotebookTargetActionProvider,
+} from "./services/notebookProviders";
 import { KxNotebookSerializer } from "./services/notebookSerializer";
 import {
   QueryHistoryProvider,
@@ -279,6 +283,13 @@ export async function activate(context: vscode.ExtensionContext) {
       new KxNotebookSerializer(),
     ),
     new KxNotebookController(),
+  );
+
+  context.subscriptions.push(
+    vscode.notebooks.registerNotebookCellStatusBarItemProvider(
+      "kx-notebook",
+      new KxNotebookTargetActionProvider(),
+    ),
   );
 
   connectWorkspaceCommands();
@@ -531,10 +542,7 @@ function registerScratchpadCommands(): CommandRegistration[] {
     },
     {
       command: "kdb.scratchpad.python.run.file",
-      callback: async (item) => {
-        if (item instanceof vscode.Uri) {
-          await activateTextDocument(item);
-        }
+      callback: async () => {
         await runActiveEditor(ExecutionTypes.PythonQueryFile);
       },
     },
@@ -972,11 +980,23 @@ function registerFileCommands(): CommandRegistration[] {
     },
     {
       command: "kdb.file.pickTarget",
-      callback: async () => {
+      callback: async (cell?: vscode.NotebookCell) => {
         const editor = ext.activeTextEditor;
         if (editor) {
-          await pickTarget(editor.document.uri);
+          await pickTarget(editor.document.uri, cell);
         }
+      },
+    },
+    {
+      command: "kdb.file.inputVariable",
+      callback: async (cell: vscode.NotebookCell) => {
+        await inputVariable(cell);
+      },
+    },
+    {
+      command: "kdb.file.populateScratchpad",
+      callback: async () => {
+        await runActiveEditor(ExecutionTypes.PopulateScratchpad);
       },
     },
   ];

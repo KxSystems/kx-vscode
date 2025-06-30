@@ -29,7 +29,11 @@ import {
 } from "vscode";
 
 import { ext } from "../extensionVariables";
-import { runDataSource } from "./dataSourceCommand";
+import {
+  getQsqlDatasourceFile,
+  populateScratchpad,
+  runDataSource,
+} from "./dataSourceCommand";
 import { InsightsConnection } from "../classes/insightsConnection";
 import {
   ExportedConnections,
@@ -57,6 +61,7 @@ import {
   MetaObjectPayloadNode,
 } from "../services/kdbTreeProvider";
 import { MetaContentProvider } from "../services/metaContentProvider";
+import { inputVariable } from "../services/notebookProviders";
 import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
 import {
   addLocalConnectionContexts,
@@ -1025,7 +1030,7 @@ export function getConextForRerunQuery(query: string): string {
   return context;
 }
 
-export function runQuery(
+export async function runQuery(
   type: ExecutionTypes,
   connLabel: string,
   executorName: string,
@@ -1037,9 +1042,12 @@ export function runQuery(
   if (!editor) {
     return false;
   }
+
   let context;
   let query;
   let isPython = false;
+  let variable: string | undefined = undefined;
+
   switch (type) {
     case ExecutionTypes.QuerySelection:
     case ExecutionTypes.PythonQuerySelection: {
@@ -1068,21 +1076,23 @@ export function runQuery(
     }
   }
 
+  if (type === ExecutionTypes.PopulateScratchpad) {
+    variable = await inputVariable();
+  }
+
   const runner = Runner.create((_, token) => {
     return target
-      ? runDataSource(
-          <DataSourceFiles>{
-            dataSource: {
-              selectedType: "QSQL",
-              qsql: {
-                query,
-                selectedTarget: target,
-              },
-            },
-          },
-          connLabel,
-          executorName,
-        )
+      ? variable
+        ? populateScratchpad(
+            getQsqlDatasourceFile(query, target),
+            connLabel,
+            variable,
+          )
+        : runDataSource(
+            getQsqlDatasourceFile(query, target),
+            connLabel,
+            executorName,
+          )
       : executeQuery(
           query,
           connLabel,
@@ -1097,7 +1107,7 @@ export function runQuery(
 
   runner.location = ProgressLocation.Notification;
   runner.title = `Executing ${executorName} on ${connLabel || "active connection"}.`;
-  runner.execute();
+  return runner.execute();
 }
 
 export function rerunQuery(rerunQueryElement: QueryHistory) {

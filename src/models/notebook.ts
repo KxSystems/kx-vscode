@@ -22,6 +22,8 @@ export interface KxNotebookCell {
   value: string;
   languageId: string;
   outputs: KxNotebookOutput[];
+  target?: string;
+  variable?: string;
 }
 
 export interface KxNotebookOutput {

@@ -44,34 +44,49 @@ export class Runner<T> {
     return this._cancelled;
   }
 
-  public execute() {
-    return vscode.window.withProgress(
-      {
-        title: this.title,
-        location: this.location,
-        cancellable: this.cancellable !== Cancellable.NONE,
-      },
-      (progress, token) => {
-        return this.cancellable === Cancellable.RUNNER
-          ? Promise.race<T>([
-              this.executor(progress, token),
-              new Promise((_, reject) => {
-                const updateCancelled = () => {
-                  this._cancelled = token.isCancellationRequested;
-                  if (this._cancelled) {
-                    notify(`${this.title} cancelled.`, MessageKind.DEBUG, {
-                      logger,
-                    });
-                    reject(new vscode.CancellationError());
-                  }
-                };
-                token.onCancellationRequested(updateCancelled);
-                updateCancelled();
-              }),
-            ])
-          : this.executor(progress, token);
-      },
-    );
+  public execute(): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      vscode.window
+        .withProgress(
+          {
+            title: this.title,
+            location: this.location,
+            cancellable: this.cancellable !== Cancellable.NONE,
+          },
+          (progress, token) => {
+            return this.cancellable === Cancellable.RUNNER
+              ? Promise.race<T>([
+                  this.executor(progress, token),
+                  new Promise((_, reject) => {
+                    const updateCancelled = () => {
+                      this._cancelled = token.isCancellationRequested;
+                      if (this._cancelled) {
+                        notify(`${this.title} cancelled.`, MessageKind.DEBUG, {
+                          logger,
+                        });
+                        reject(new vscode.CancellationError());
+                      }
+                    };
+                    token.onCancellationRequested(updateCancelled);
+                    updateCancelled();
+                  }),
+                ])
+              : this.executor(progress, token);
+          },
+        )
+        .then(
+          (result: T) => {
+            resolve(result);
+          },
+          (error) => {
+            notify("Runner failed.", MessageKind.DEBUG, {
+              logger,
+              params: error,
+            });
+            reject(error);
+          },
+        );
+    });
   }
 
   public static create<T>(executor: Executor<T>): Runner<T> {
