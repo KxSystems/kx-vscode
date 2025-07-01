@@ -47,8 +47,30 @@ export async function run(): Promise<void> {
         }
       });
     }).then(() => {
+      console.log("=== COVERAGE DEBUG ===");
+      console.log(
+        `GENERATE_COVERAGE env var: ${process.env["GENERATE_COVERAGE"]}`,
+      );
+      console.log(
+        `__coverage__ exists: ${typeof (global as any).__coverage__ !== "undefined"}`,
+      );
+      console.log(
+        `__coverage__ keys: ${typeof (global as any).__coverage__ !== "undefined" ? Object.keys((global as any).__coverage__).length : "N/A"}`,
+      );
+
       if (process.env["GENERATE_COVERAGE"]) {
-        generateCoverageReport();
+        console.log("🔄 Starting coverage generation...");
+        try {
+          generateCoverageReport();
+          console.log("✅ Coverage generation completed successfully");
+        } catch (error) {
+          console.error("❌ Coverage generation failed:", error);
+          throw error;
+        }
+      } else {
+        console.log(
+          "❌ GENERATE_COVERAGE not set, skipping coverage generation",
+        );
       }
     });
   } catch (err) {

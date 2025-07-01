@@ -187,10 +187,53 @@ export function debugLcov(): void {
 
 export function generateCoverageReport(): void {
   console.log("🚀 Starting coverage report generation...");
-  instrument();
+  console.log(`Current working directory: ${process.cwd()}`);
+  console.log(`REPO_ROOT: ${REPO_ROOT}`);
+
+  const coverageReportsDir = path.join(REPO_ROOT, "coverage-reports");
+  console.log(`Coverage reports dir: ${coverageReportsDir}`);
+
+  const global = new Function("return this")();
+  if (!global.__coverage__ || Object.keys(global.__coverage__).length === 0) {
+    console.warn("❌ No coverage data available to generate report");
+    console.warn("This might be because:");
+    console.warn("1. Tests are not running with instrumented code");
+    console.warn("2. No tests are actually executing the source code");
+    console.warn("3. The coverage variable is not being set correctly");
+    return;
+  }
+
+  console.log(
+    `✅ Coverage data found with ${Object.keys(global.__coverage__).length} files`,
+  );
+
+  if (!fs.existsSync(coverageReportsDir)) {
+    console.log(`Creating coverage reports directory: ${coverageReportsDir}`);
+    fs.mkdirSync(coverageReportsDir, { recursive: true });
+  }
+
   createReport();
+
+  const lcovPath = path.join(coverageReportsDir, "lcov.info");
+  if (!fs.existsSync(lcovPath)) {
+    console.error(`❌ lcov.info was not created at ${lcovPath}`);
+    return;
+  }
+
+  console.log(`✅ lcov.info created at ${lcovPath}`);
+  const stats = fs.statSync(lcovPath);
+  console.log(`File size: ${stats.size} bytes`);
+
   fixLcovPaths();
   debugLcov();
+
+  if (fs.existsSync(lcovPath)) {
+    const finalStats = fs.statSync(lcovPath);
+    console.log(`✅ Final lcov.info size: ${finalStats.size} bytes`);
+  } else {
+    console.error(`❌ lcov.info missing after processing!`);
+  }
+
   console.log("✅ Coverage report generation completed!");
 }
 
