@@ -15,7 +15,7 @@ import { glob } from "glob";
 import Mocha from "mocha";
 import * as path from "path";
 
-import { createReport } from "../coverage";
+import { generateCoverageReport } from "../coverage";
 
 export async function run(): Promise<void> {
   const options: Mocha.MochaOptions = {
@@ -48,7 +48,7 @@ export async function run(): Promise<void> {
       });
     }).then(() => {
       if (process.env["GENERATE_COVERAGE"]) {
-        createReport();
+        generateCoverageReport();
       }
     });
   } catch (err) {
