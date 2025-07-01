@@ -15,7 +15,7 @@ import { glob } from "glob";
 import Mocha from "mocha";
 import * as path from "path";
 
-import { createReport } from "../coverage";
+import { generateCoverageReport } from "../coverage";
 
 export async function run(): Promise<void> {
   const options: Mocha.MochaOptions = {
@@ -48,7 +48,17 @@ export async function run(): Promise<void> {
       });
     }).then(() => {
       if (process.env["GENERATE_COVERAGE"]) {
-        createReport();
+        try {
+          generateCoverageReport();
+          console.log("✅ Coverage generation completed successfully");
+        } catch (error) {
+          console.error("❌ Coverage generation failed:", error);
+          throw error;
+        }
+      } else {
+        console.log(
+          "❌ GENERATE_COVERAGE not set, skipping coverage generation",
+        );
       }
     });
   } catch (err) {

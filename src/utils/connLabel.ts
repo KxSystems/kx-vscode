@@ -27,7 +27,10 @@ export function getWorkspaceLabels() {
     .get<Labels[]>("kdb.connectionLabels");
   ext.connLabelList.length = 0;
   if (existingConnLbls && existingConnLbls.length > 0) {
-    existingConnLbls.forEach((label: Labels) => {
+    const sortedLabels = existingConnLbls.sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+    sortedLabels.forEach((label: Labels) => {
       ext.connLabelList.push(label);
     });
   }
@@ -46,7 +49,10 @@ export function createNewLabel(name: string, colorName: string) {
       name: name,
       color: color,
     };
+
     ext.connLabelList.push(newLbl);
+    ext.connLabelList.sort((a, b) => a.name.localeCompare(b.name));
+
     workspace
       .getConfiguration()
       .update("kdb.connectionLabels", ext.connLabelList, true);
@@ -70,7 +76,14 @@ export function getWorkspaceLabelsConnMap() {
   ext.labelConnMapList.length = 0;
   if (existingLabelConnMaps && existingLabelConnMaps.length > 0) {
     existingLabelConnMaps.forEach((labelConnMap: ConnectionLabel) => {
-      ext.labelConnMapList.push(labelConnMap);
+      const sortedLabelConnMap: ConnectionLabel = {
+        labelName: labelConnMap.labelName,
+        connections: labelConnMap.connections.sort((a, b) =>
+          a.localeCompare(b),
+        ),
+      };
+
+      ext.labelConnMapList.push(sortedLabelConnMap);
     });
   }
 }
