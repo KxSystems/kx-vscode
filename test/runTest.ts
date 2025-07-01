@@ -18,22 +18,13 @@ import { instrument } from "./coverage";
 
 async function main() {
   try {
-    console.log("=== RUN TEST DEBUG ===");
-    console.log(`Process arguments: ${process.argv.join(" ")}`);
-    console.log(`Current working directory: ${process.cwd()}`);
-
     const extensionDevelopmentPath = path.join(__dirname, "../../");
-    console.log(`Extension development path: ${extensionDevelopmentPath}`);
 
     let extensionTestsPath = path.join(__dirname, "./suite/index");
-    console.log(`Default extension tests path: ${extensionTestsPath}`);
 
     const hasCoverageFlag = process.argv.indexOf("--coverage") >= 0;
-    console.log(`Has --coverage flag: ${hasCoverageFlag}`);
 
     if (hasCoverageFlag) {
-      console.log("🔧 Coverage mode enabled, instrumenting code...");
-
       try {
         instrument();
         console.log("✅ Code instrumentation completed");
@@ -46,22 +37,16 @@ async function main() {
         __dirname,
         "../../out-cov/test/suite/index",
       );
-      console.log(`Instrumented extension tests path: ${extensionTestsPath}`);
 
       process.env["GENERATE_COVERAGE"] = "1";
-      console.log(
-        `✅ GENERATE_COVERAGE set to: ${process.env["GENERATE_COVERAGE"]}`,
-      );
     } else {
       console.log("⚠️ Coverage mode disabled, running normal tests");
     }
 
-    console.log("🚀 Starting VS Code tests...");
     await runTests({
       extensionDevelopmentPath,
       extensionTestsPath,
     });
-    console.log("✅ VS Code tests completed");
   } catch (err) {
     console.log(err);
     console.error("Failed to run tests.");

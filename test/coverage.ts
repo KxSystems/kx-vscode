@@ -127,13 +127,13 @@ export function fixLcovPaths(): void {
 
   let content = fs.readFileSync(lcovPath, "utf8");
 
-  console.log("\n=== FIXING LCOV PATHS ===");
+  // console.log("\n=== FIXING LCOV PATHS ===");
 
-  const originalSfLines = content.match(/^SF:.*$/gm);
-  if (originalSfLines) {
-    console.log("Original SF lines (first 5):");
-    originalSfLines.slice(0, 5).forEach((line) => console.log(`  ${line}`));
-  }
+  // const originalSfLines = content.match(/^SF:.*$/gm);
+  // if (originalSfLines) {
+  //   console.log("Original SF lines (first 5):");
+  //   originalSfLines.slice(0, 5).forEach((line) => console.log(`  ${line}`));
+  // }
 
   content = content.replace(/\\/g, "/");
 
@@ -154,11 +154,11 @@ export function fixLcovPaths(): void {
 
   fs.writeFileSync(lcovPath, content);
 
-  const fixedSfLines = content.match(/^SF:.*$/gm);
-  if (fixedSfLines) {
-    console.log("Fixed SF lines (first 5):");
-    fixedSfLines.slice(0, 5).forEach((line) => console.log(`  ${line}`));
-  }
+  // const fixedSfLines = content.match(/^SF:.*$/gm);
+  // if (fixedSfLines) {
+  //   console.log("Fixed SF lines (first 5):");
+  //   fixedSfLines.slice(0, 5).forEach((line) => console.log(`  ${line}`));
+  // }
 
   console.log("✅ Fixed lcov.info paths");
 }
@@ -175,7 +175,6 @@ export function debugLcov(): void {
 
   console.log("\n=== LCOV DEBUG ===");
 
-  // Mostrar arquivos encontrados
   const sfLines = content.match(/^SF:.*$/gm);
   if (sfLines) {
     console.log(`Found ${sfLines.length} source files:`);
@@ -186,12 +185,7 @@ export function debugLcov(): void {
 }
 
 export function generateCoverageReport(): void {
-  console.log("🚀 Starting coverage report generation...");
-  console.log(`Current working directory: ${process.cwd()}`);
-  console.log(`REPO_ROOT: ${REPO_ROOT}`);
-
   const coverageReportsDir = path.join(REPO_ROOT, "coverage-reports");
-  console.log(`Coverage reports dir: ${coverageReportsDir}`);
 
   const global = new Function("return this")();
   if (!global.__coverage__ || Object.keys(global.__coverage__).length === 0) {
@@ -202,10 +196,6 @@ export function generateCoverageReport(): void {
     console.warn("3. The coverage variable is not being set correctly");
     return;
   }
-
-  console.log(
-    `✅ Coverage data found with ${Object.keys(global.__coverage__).length} files`,
-  );
 
   if (!fs.existsSync(coverageReportsDir)) {
     console.log(`Creating coverage reports directory: ${coverageReportsDir}`);
@@ -225,7 +215,6 @@ export function generateCoverageReport(): void {
   console.log(`File size: ${stats.size} bytes`);
 
   fixLcovPaths();
-  debugLcov();
 
   if (fs.existsSync(lcovPath)) {
     const finalStats = fs.statSync(lcovPath);
