@@ -291,12 +291,12 @@
       {
         "category": "KX",
         "command": "kdb.file.pickConnection",
-        "title": "Pick connection"
+        "title": "Choose Connection"
       },
       {
         "category": "KX",
         "command": "kdb.file.pickTarget",
-        "title": "Pick target"
+        "title": "Choose Target"
       },
       {
         "category": "KX",
@@ -1038,6 +1038,12 @@
           "command": "kdb.scratchpad.python.run",
           "group": "q@1",
           "when": "editorLangId == python"
+        }
+      ],
+      "notebook/toolbar": [
+        {
+          "command": "kdb.file.pickConnection",
+          "when": "resourceExtname == .kxnb"
         }
       ],
       "explorer/context": [

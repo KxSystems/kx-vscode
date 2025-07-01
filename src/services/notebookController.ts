@@ -14,13 +14,19 @@
 import * as vscode from "vscode";
 
 import { InsightsConnection } from "../classes/insightsConnection";
+import { LocalConnection } from "../classes/localConnection";
 import {
   getQsqlDatasourceFile,
   populateScratchpad,
   runDataSource,
 } from "../commands/dataSourceCommand";
 import { executeQuery } from "../commands/serverCommand";
+import {
+  getConnectionForServer,
+  getServerForUri,
+} from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
+import { ConnectionManagementService } from "./connectionManagerService";
 import { getBasename, offerConnectAction } from "../utils/core";
 import { MessageKind, notify } from "../utils/notifications";
 import { resultToBase64 } from "../utils/queryUtils";
@@ -57,13 +63,30 @@ export class KxNotebookController {
     notebook: vscode.NotebookDocument,
     _controller: vscode.NotebookController,
   ): Promise<void> {
-    const conn = ext.activeConnection;
+    const manager = new ConnectionManagementService();
+    const server = getServerForUri(notebook.uri);
+
+    let conn: LocalConnection | InsightsConnection | undefined;
+    if (server) {
+      const node = await getConnectionForServer(server);
+      if (node) {
+        conn = manager.retrieveConnectedConnection(node.label);
+      }
+    } else {
+      conn = ext.activeConnection;
+    }
+
     if (conn === undefined) {
-      offerConnectAction();
+      offerConnectAction(server);
       return;
     }
-    const isInsights = conn instanceof InsightsConnection;
-    const connVersion = isInsights ? (conn.insightsVersion ?? 0) : 0;
+
+    let isInsights = false;
+    let connVersion = 0;
+    if (conn instanceof InsightsConnection) {
+      isInsights = true;
+      connVersion = conn.insightsVersion ?? 0;
+    }
 
     for (const cell of cells) {
       const isPython = cell.document.languageId === "python";

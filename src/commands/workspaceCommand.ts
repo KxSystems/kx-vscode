@@ -21,7 +21,6 @@ import {
   StatusBarAlignment,
   TextDocument,
   TextEditor,
-  ThemeColor,
   Uri,
   window,
   workspace,
@@ -50,6 +49,27 @@ function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   } else {
     ext.activeTextEditor = undefined;
   }
+}
+
+function activeEditorChanged(editor?: TextEditor | undefined) {
+  setRealActiveTextEditor(editor);
+  const item = ext.runScratchpadItem;
+  if (ext.activeTextEditor) {
+    const uri = ext.activeTextEditor.document.uri;
+    const server = getServerForUri(uri);
+    if (server) {
+      setRunScratchpadItemText(server);
+      item.show();
+    } else {
+      item.hide();
+    }
+  } else {
+    item.hide();
+  }
+}
+
+function setRunScratchpadItemText(text: string) {
+  ext.runScratchpadItem.text = text;
 }
 
 export function getInsightsServers() {
@@ -170,7 +190,7 @@ export async function pickConnection(uri: Uri) {
   const servers = getServers();
 
   let picked = await window.showQuickPick(["(none)", ...servers], {
-    title: "Choose a connection",
+    title: `Choose Connection (${getBasename(uri)})`,
     placeHolder: server,
   });
 
@@ -178,6 +198,12 @@ export async function pickConnection(uri: Uri) {
     if (picked === "(none)") {
       picked = undefined;
       await setTargetForUri(uri, undefined);
+    }
+    if (picked) {
+      setRunScratchpadItemText(picked);
+      ext.runScratchpadItem.show();
+    } else {
+      ext.runScratchpadItem.hide();
     }
     await setServerForUri(uri, picked);
   }
@@ -372,14 +398,12 @@ export function connectWorkspaceCommands() {
     StatusBarAlignment.Right,
     10000,
   );
-  ext.runScratchpadItem.backgroundColor = new ThemeColor(
-    "statusBarItem.warningBackground",
-  );
   ext.runScratchpadItem.command = <Command>{
     title: "",
-    command: "kdb.scratchpad.run",
+    command: "kdb.file.pickConnection",
     arguments: [],
   };
+  ext.runScratchpadItem.tooltip = "Pick Connection";
 
   const watcher = workspace.createFileSystemWatcher("**/*.{kdb.json,q,py}");
   watcher.onDidCreate(update);
@@ -411,8 +435,10 @@ export function connectWorkspaceCommands() {
     ext.dataSourceTreeProvider.reload();
     ext.scratchpadTreeProvider.reload();
   });
-  window.onDidChangeActiveTextEditor(setRealActiveTextEditor);
-  setRealActiveTextEditor(window.activeTextEditor);
+  //window.onDidChangeActiveTextEditor(setRealActiveTextEditor);
+  //setRealActiveTextEditor(window.activeTextEditor);
+  window.onDidChangeActiveTextEditor(activeEditorChanged);
+  activeEditorChanged(window.activeTextEditor);
 }
 
 export function checkOldDatasourceFiles() {

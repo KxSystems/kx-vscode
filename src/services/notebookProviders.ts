@@ -100,7 +100,7 @@ export async function updateCellMetadata(
   const edit = new vscode.WorkspaceEdit();
   edit.set(cell.notebook.uri, [
     vscode.NotebookEdit.updateCellMetadata(cell.index, {
-      target: metadata.target,
+      target: metadata.target || undefined,
       variable: metadata.variable || undefined,
     }),
   ]);
