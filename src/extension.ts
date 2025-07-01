@@ -223,7 +223,7 @@ export async function activate(context: vscode.ExtensionContext) {
     ChartEditorProvider.register(context),
 
     vscode.languages.registerCodeLensProvider(
-      { pattern: "**/*.{q,py}" },
+      { pattern: "**/*.{q,py,sql}" },
       new ConnectionLensProvider(),
     ),
 
@@ -542,6 +542,12 @@ function registerScratchpadCommands(): CommandRegistration[] {
     },
     {
       command: "kdb.scratchpad.python.run.file",
+      callback: async () => {
+        await runActiveEditor(ExecutionTypes.PythonQueryFile);
+      },
+    },
+    {
+      command: "kdb.execute.sql",
       callback: async () => {
         await runActiveEditor(ExecutionTypes.PythonQueryFile);
       },
