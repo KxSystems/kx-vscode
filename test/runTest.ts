@@ -21,18 +21,26 @@ async function main() {
     const extensionDevelopmentPath = path.join(__dirname, "../../");
 
     let extensionTestsPath = path.join(__dirname, "./suite/index");
-    if (process.argv.indexOf("--coverage") >= 0) {
-      // generate instrumented files at out-cov
-      instrument();
 
-      // load the instrumented files
+    const hasCoverageFlag = process.argv.indexOf("--coverage") >= 0;
+
+    if (hasCoverageFlag) {
+      try {
+        instrument();
+        console.log("✅ Code instrumentation completed");
+      } catch (error) {
+        console.error("❌ Code instrumentation failed:", error);
+        throw error;
+      }
+
       extensionTestsPath = path.join(
         __dirname,
-        "../../out-cov/test/suite/index"
+        "../../out-cov/test/suite/index",
       );
 
-      // signal that the coverage data should be gathered
       process.env["GENERATE_COVERAGE"] = "1";
+    } else {
+      console.log("⚠️ Coverage mode disabled, running normal tests");
     }
 
     await runTests({
