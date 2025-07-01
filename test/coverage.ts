@@ -80,12 +80,6 @@ export function createReport(): void {
 
   const coverageMap = createCoverageMap(global.__coverage__);
 
-  console.log("=== COVERAGE DEBUG ===");
-  console.log("Original coverage files:");
-  coverageMap.files().forEach((file) => {
-    console.log(`  ${file}`);
-  });
-
   const context = createContext({
     dir: path.join(REPO_ROOT, `coverage-reports`),
     coverageMap: coverageMap,
