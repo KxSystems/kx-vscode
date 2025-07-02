@@ -75,7 +75,6 @@ After you install **kdb VS Code extension**, if q is not already installed the e
    ![installnewinstance](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/installnewinstance.jpg)
 
 1. A dropdown is displayed with the two options:
-
    - **Select/Enter a license** - If you have already registered for any of the [versions of q available](#versions-available) choose this to enter the license details.
    - **Acquire license** - If you haven't yet registered for q, click this to open a dialog with a redirect link to register for [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/).
 
@@ -126,7 +125,6 @@ To add connections:
    ![connecttoakdbserver](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/connecttoakdbserver.png)
 
    This opens the **Add a new connection** screen which has three tabs; one for each of the three connection types.
-
    - [Bundled q](#bundled-q): This is a managed q session, which uses the q installed as part of the **kdb VS Code extension** installation. It runs a child q process from within the extension and is fully managed by the extension.
    - [My q](#my-q): This is an unmanaged q session and is a connection to a remote q process.
    - [Insights](#insights-connection): This accesses **kdb Insights Enterprise** API endpoints and a user-specific scratchpad process within a **kdb Insights Enterprise** deployment.
@@ -485,7 +483,6 @@ To create a data source and run it against a specific connection:
 1. The results are populated in the **KDB Results** window, if it is active.
 
    ![KDB Results](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/datasource-kdbresults.png)
-
    - Otherwise the **Output** window is populated.
 
      ![Output](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/datasource-output.png)
@@ -627,7 +624,7 @@ Key features of Workbooks:
 
 - Are listed in the **WORKBOOKS** view in the primary sidebar
 - Can be associated with a connection
-- Support the **.kdb.q.**,  **kdb.py** extensions
+- Support the **.kdb.q.**, **kdb.py** extensions
 - Are stored in a **.kx** folder at the root of your open folder
 - You can have multiple Workbooks running against different connections at the same time
 
@@ -643,9 +640,7 @@ Create a Workbook using the WORKBOOKS panel and run code against a specific conn
 1. Write the code you wish to execute.
 
 1. Run the code:
-
    1. To run all the code in the file you can use one of the following methods:
-
       1. Select **Run** from the upper right of the editor. Using the dropdown next to the button you can choose any of the [**KX:** menu items](#kdb-process-executing-q-and-python-code) to run some, or all of the code in the workbook.
          ![play dropdown](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookplaydropdown.png)
 
@@ -665,7 +660,7 @@ You can also change the connection associated with a workbook at any time by cli
 
 ### Source files
 
-Regular `.q` and `.py` files now support enhanced functionality similar to [Workbooks](#workbooks), allowing you to write, test, and execute code directly against kdb Insights connections and endpoints. 
+Regular `.q` and `.py` files now support enhanced functionality similar to [Workbooks](#workbooks), allowing you to write, test, and execute code directly against kdb Insights connections and endpoints.
 
 You can run code on either the [scratchpad](#run-and-populate-scratchpad) or directly on DAP processes — such as RDB or HDB — without needing to copy/paste or switch between special file types.
 
@@ -680,8 +675,8 @@ You can run code on either the [scratchpad](#run-and-populate-scratchpad) or dir
 - Run against the active connection if no specific association is made.
 - Can be explicitly associated with a connection using the **Choose Connection** code lens.
 - Once associated, allow execution against:
-   - Scratchpad (default for Insights)
-   - Any available DAP process (if the connection is an Insights type)
+  - Scratchpad (default for Insights)
+  - Any available DAP process (if the connection is an Insights type)
 
 This eliminates the need to copy code from files into the qSQL Data Source tab or Workbooks for testing against DAPs.
 
@@ -693,18 +688,17 @@ For selecting connections and endpoints for unassociated files, consider the fol
 - Clicking **Choose Connection** allows you to associate the file with a connection.
 - Once associated, the file only executes on that connection.
 
-   ![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/unassociated-file-workbook.png)
+  ![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/unassociated-file-workbook.png)
 
 For associated files, take into account the following:
 
 - When a file is associated with a kdb Insights connection, a **scratchpad** code lens appears.
 
 - Clicking this allows you to choose the execution endpoint:
+  - Scratchpad (default)
+  - Any available DAP (for example, RDB, HDB)
 
-   - Scratchpad (default)
-   - Any available DAP (for example, RDB, HDB)
-
-   ![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/associated-file-workbook.png)
+  ![choose connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/associated-file-workbook.png)
 
 ## KX Notebooks in Visual Studio Code
 
@@ -954,7 +948,7 @@ If you choose to opt out permanently but wish to revert this, open VS Code setti
 | Ctrl + Shift + R      | Run q file in new q instance      |
 | Ctrl + Shift + Y      | Toggle parameter cache for lambda |
 | Ctrl + Shift + Delete | Reset scratchpad                  |
-| Ctrl + Alt + T        | Choose the execution target
+| Ctrl + Alt + T        | Choose the execution target       |
 
 ### For MacOS
 
@@ -969,4 +963,8 @@ If you choose to opt out permanently but wish to revert this, open VS Code setti
 | ⌘ + Shift + R      | Run q file in new q instance      |
 | ⌘ + Shift + Y      | Toggle parameter cache for lambda |
 | ⌘ + Shift + Delete | Reset scratchpad                  |
-| ⌘ + Alt + T        | Choose the execution target
+| ⌘ + Alt + T        | Choose the execution target       |
+
+## Data and telemetry
+
+The KX kdb Extension for Visual Studio Code collects usage data and sends it to KX to help improve our products and services. Read our ![privacy statement](https://kx.com/privacy-policy/) to learn more. This extension respects the telemetry.enableTelemetry setting which you can learn more about at https://code.visualstudio.com/docs/supporting/faq#_how-to-disable-telemetry-reporting.
