@@ -336,8 +336,8 @@ export async function updateInsights(insights: Insights): Promise<void> {
 
 export function getServerName(server: ServerDetails): string {
   return server.serverAlias != ""
-    ? `${server.serverName}:${server.serverPort} [${server.serverAlias}]`
-    : `${server.serverName}:${server.serverPort}`;
+    ? `${server.serverAlias} [${server.serverName}:${server.serverPort}]`
+    : `[${server.serverName}:${server.serverPort}]`;
 }
 
 export function getServerAlias(serverList: ServerDetails[]): void {

@@ -340,28 +340,7 @@ describe("kdbTreeProvider", () => {
   it("Should return a new KdbNode", () => {
     const kdbNode = new KdbNode(
       [],
-      "kdbnode1",
-      {
-        serverName: "kdbservername",
-        serverAlias: "kdbserveralias",
-        serverPort: "5001",
-        managed: false,
-        auth: false,
-        tls: false,
-      },
-      TreeItemCollapsibleState.None,
-    );
-    assert.strictEqual(
-      kdbNode.label,
-      "kdbnode1 [kdbserveralias]",
-      "KdbNode node creation failed",
-    );
-  });
-
-  it("Should return a new KdbNode with no static alias", () => {
-    const kdbNode = new KdbNode(
-      [],
-      "kdbnode1",
+      "",
       {
         serverName: "kdbservername",
         serverAlias: "",
@@ -374,7 +353,28 @@ describe("kdbTreeProvider", () => {
     );
     assert.strictEqual(
       kdbNode.label,
-      "kdbnode1",
+      "[kdbservername:5001]",
+      "KdbNode node creation failed",
+    );
+  });
+
+  it("Should return a new KdbNode with no static alias", () => {
+    const kdbNode = new KdbNode(
+      [],
+      "",
+      {
+        serverName: "kdbservername",
+        serverAlias: "",
+        serverPort: "5001",
+        managed: false,
+        auth: false,
+        tls: false,
+      },
+      TreeItemCollapsibleState.None,
+    );
+    assert.strictEqual(
+      kdbNode.label,
+      "[kdbservername:5001]",
       "KdbNode node creation failed",
     );
   });
@@ -382,7 +382,7 @@ describe("kdbTreeProvider", () => {
   it("Should return a new KdbNode with children", () => {
     const kdbNode = new KdbNode(
       ["node1", "node2", "node3", "node4"],
-      "kdbnode1",
+      "kdbserveralias",
       {
         serverName: "kdbservername",
         serverAlias: "kdbserveralias",
@@ -395,7 +395,7 @@ describe("kdbTreeProvider", () => {
     );
     assert.strictEqual(
       kdbNode.label,
-      "kdbnode1 [kdbserveralias]",
+      "kdbserveralias [kdbservername:5001]",
       "KdbNode node creation failed",
     );
   });
@@ -403,7 +403,7 @@ describe("kdbTreeProvider", () => {
   it("Should return a new KdbNode that is connected", () => {
     const kdbNode = new KdbNode(
       [],
-      "kdbnode1",
+      "kdbserveralias",
       {
         serverName: "kdbservername",
         serverAlias: "kdbserveralias",
@@ -417,12 +417,21 @@ describe("kdbTreeProvider", () => {
 
     ext.connectionNode = kdbNode;
 
-    const kdbNode1 = new KdbNode(
+    assert.strictEqual(
+      kdbNode.label,
+      "kdbserveralias [kdbservername:5001]",
+      "KdbNode node creation failed",
+    );
+  });
+
+  it("Should add node to no tls list", () => {
+    ext.kdbNodesWithoutTls.length = 0;
+    new KdbNode(
       [],
-      "kdbnode1",
+      "testServer",
       {
-        serverName: "kdbservername",
-        serverAlias: "kdbserveralias",
+        serverName: "testServername",
+        serverAlias: "testServerAlias",
         serverPort: "5001",
         managed: false,
         auth: false,
@@ -430,23 +439,12 @@ describe("kdbTreeProvider", () => {
       },
       TreeItemCollapsibleState.None,
     );
-
-    assert.strictEqual(
-      kdbNode1.label,
-      "kdbnode1 [kdbserveralias]",
-      "KdbNode node creation failed",
-    );
-  });
-
-  it("Should add node to no tls list", () => {
-    ext.kdbNodesWithoutTls.length = 0;
-    ext.kdbNodesWithoutTls.push("testServer [testServerAlias]");
     assert.equal(ext.kdbNodesWithoutTls.length, 1);
   });
 
   it("Should remove node from no tls list", () => {
     ext.kdbNodesWithoutTls.length = 0;
-    ext.kdbNodesWithoutTls.push("testServer [testServerAlias]");
+    ext.kdbNodesWithoutTls.push("testServer [testServername:5001]");
     new KdbNode(
       [],
       "testServer",
@@ -465,7 +463,6 @@ describe("kdbTreeProvider", () => {
 
   it("Should add node to no auth list", () => {
     ext.kdbNodesWithoutAuth.length = 0;
-    ext.kdbNodesWithoutAuth.push("testServer [testServerAlias]");
     new KdbNode(
       [],
       "testServer",
@@ -484,7 +481,7 @@ describe("kdbTreeProvider", () => {
 
   it("Should remove node from no auth list", () => {
     ext.kdbNodesWithoutAuth.length = 0;
-    ext.kdbNodesWithoutAuth.push("testServer [testServerAlias]");
+    ext.kdbNodesWithoutAuth.push("testServer [testServername:5001]");
     new KdbNode(
       [],
       "testServer",
@@ -498,7 +495,7 @@ describe("kdbTreeProvider", () => {
       },
       TreeItemCollapsibleState.None,
     );
-    assert.equal(ext.kdbNodesWithoutAuth, 0);
+    assert.equal(ext.kdbNodesWithoutAuth.length, 0);
   });
   it("Should retun a new InsightsNode", () => {
     const insightsNode = new InsightsNode(

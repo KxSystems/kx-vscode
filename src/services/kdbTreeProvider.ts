@@ -470,7 +470,7 @@ export class KdbTreeProvider
       (x) =>
         new KdbNode(
           x.split(":"),
-          `${servers[x].serverName}:${servers[x].serverPort}`,
+          x,
           servers[x],
           ext.connectionNode?.label === getServerName(servers[x])
             ? vscode.TreeItemCollapsibleState.Collapsed
@@ -506,8 +506,9 @@ export class KdbNode extends vscode.TreeItem {
     public readonly collapsibleState: vscode.TreeItemCollapsibleState,
   ) {
     if (details.serverAlias != "") {
-      label = label + ` [${details.serverAlias}]`;
+      label = label + ` `;
     }
+    label = label + `[${details.serverName}:${details.serverPort}]`;
 
     // set context for root nodes
     if (ext.kdbrootNodes.indexOf(label) === -1) {
