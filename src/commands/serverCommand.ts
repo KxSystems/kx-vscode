@@ -1046,7 +1046,7 @@ export async function runQuery(
   let context;
   let query;
   let isPython = false;
-  let variable: string | undefined = undefined;
+  let variable: string | undefined;
 
   switch (type) {
     case ExecutionTypes.QuerySelection:
@@ -1080,16 +1080,18 @@ export async function runQuery(
     variable = await inputVariable();
   }
 
+  const isSql = executorName.endsWith(".sql");
+
   const runner = Runner.create((_, token) => {
-    return target
+    return target || isSql
       ? variable
         ? populateScratchpad(
-            getQsqlDatasourceFile(query, target),
+            getQsqlDatasourceFile(query, target, isSql),
             connLabel,
             variable,
           )
         : runDataSource(
-            getQsqlDatasourceFile(query, target),
+            getQsqlDatasourceFile(query, target, isSql),
             connLabel,
             executorName,
           )

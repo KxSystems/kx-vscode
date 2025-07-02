@@ -181,7 +181,11 @@ export async function runDataSource(
         break;
       case "SQL":
       default:
-        res = await runSqlDataSource(fileContent, selectedConnection);
+        res = await runSqlDataSource(
+          fileContent,
+          selectedConnection,
+          isNotebook || undefined,
+        );
         break;
     }
 
@@ -435,6 +439,7 @@ export async function runQsqlDataSource(
 export async function runSqlDataSource(
   fileContent: DataSourceFiles,
   selectedConn: InsightsConnection,
+  isTableView?: boolean,
 ): Promise<any> {
   const sqlBody = {
     query: fileContent.dataSource.sql.query,
@@ -447,7 +452,7 @@ export async function runSqlDataSource(
   if (sqlCall?.error) {
     return parseError(sqlCall.error);
   } else if (sqlCall?.arrayBuffer) {
-    const results = handleWSResults(sqlCall.arrayBuffer);
+    const results = handleWSResults(sqlCall.arrayBuffer, isTableView);
     return handleScratchpadTableRes(results);
   } else {
     return { error: "Datasource SQL call failed" };
@@ -523,11 +528,22 @@ export function parseError(error: GetDataError) {
   }
 }
 
-export function getQsqlDatasourceFile(query: string, selectedTarget: string) {
-  return <DataSourceFiles>{
-    dataSource: {
-      selectedType: "QSQL",
-      qsql: { query, selectedTarget },
-    },
-  };
+export function getQsqlDatasourceFile(
+  query: string,
+  selectedTarget?: string,
+  isSql?: boolean,
+) {
+  return isSql
+    ? <DataSourceFiles>{
+        dataSource: {
+          selectedType: "SQL",
+          sql: { query },
+        },
+      }
+    : <DataSourceFiles>{
+        dataSource: {
+          selectedType: "QSQL",
+          qsql: { query, selectedTarget },
+        },
+      };
 }

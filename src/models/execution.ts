@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export enum ExecutionTypes {
+export const enum ExecutionTypes {
   QuerySelection,
   QueryFile,
   ReRunQuery,

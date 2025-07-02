@@ -549,7 +549,7 @@ function registerScratchpadCommands(): CommandRegistration[] {
     {
       command: "kdb.execute.sql",
       callback: async () => {
-        await runActiveEditor(ExecutionTypes.PythonQueryFile);
+        await runActiveEditor(ExecutionTypes.QueryFile);
       },
     },
     {

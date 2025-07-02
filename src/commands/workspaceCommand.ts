@@ -58,7 +58,7 @@ function activeEditorChanged(editor?: TextEditor | undefined) {
     const uri = ext.activeTextEditor.document.uri;
     const server = getServerForUri(uri);
     if (server) {
-      setRunScratchpadItemText(server);
+      setRunScratchpadItemText(uri, server);
       item.show();
     } else {
       item.hide();
@@ -68,8 +68,9 @@ function activeEditorChanged(editor?: TextEditor | undefined) {
   }
 }
 
-function setRunScratchpadItemText(text: string) {
-  ext.runScratchpadItem.text = text;
+function setRunScratchpadItemText(uri: Uri, text: string) {
+  ext.runScratchpadItem.text = `$(cloud) ${text}`;
+  ext.runScratchpadItem.tooltip = `KX: Choose connection for ${getBasename(uri)}`;
 }
 
 export function getInsightsServers() {
@@ -200,7 +201,7 @@ export async function pickConnection(uri: Uri) {
       await setTargetForUri(uri, undefined);
     }
     if (picked) {
-      setRunScratchpadItemText(picked);
+      setRunScratchpadItemText(uri, picked);
       ext.runScratchpadItem.show();
     } else {
       ext.runScratchpadItem.hide();
@@ -268,6 +269,10 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
   }
 
   return picked;
+}
+
+function isSql(uri: Uri | undefined) {
+  return uri && uri.path.endsWith(".sql");
 }
 
 function isPython(uri: Uri | undefined) {
@@ -380,7 +385,7 @@ export class ConnectionLensProvider implements CodeLensProvider {
 
     if (server) {
       const conn = await getConnectionForServer(server);
-      if (conn instanceof InsightsNode) {
+      if (!isSql(document.uri) && conn instanceof InsightsNode) {
         const pickTarget = new CodeLens(top, {
           command: "kdb.file.pickTarget",
           title: target || "scratchpad",
@@ -399,13 +404,12 @@ export function connectWorkspaceCommands() {
     10000,
   );
   ext.runScratchpadItem.command = <Command>{
-    title: "",
+    title: "Choose Connection",
     command: "kdb.file.pickConnection",
     arguments: [],
   };
-  ext.runScratchpadItem.tooltip = "Pick Connection";
 
-  const watcher = workspace.createFileSystemWatcher("**/*.{kdb.json,q,py}");
+  const watcher = workspace.createFileSystemWatcher("**/*.{kdb.json,q,py,sql}");
   watcher.onDidCreate(update);
   watcher.onDidDelete(update);
 
@@ -435,8 +439,6 @@ export function connectWorkspaceCommands() {
     ext.dataSourceTreeProvider.reload();
     ext.scratchpadTreeProvider.reload();
   });
-  //window.onDidChangeActiveTextEditor(setRealActiveTextEditor);
-  //setRealActiveTextEditor(window.activeTextEditor);
   window.onDidChangeActiveTextEditor(activeEditorChanged);
   activeEditorChanged(window.activeTextEditor);
 }

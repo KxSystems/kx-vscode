@@ -38,7 +38,7 @@ export class KxNotebookController {
   readonly controllerId = "kx-notebook-1";
   readonly notebookType = "kx-notebook";
   readonly label = "KX Notebook";
-  readonly supportedLanguages = ["q", "python"];
+  readonly supportedLanguages = ["q", "python", "sql"];
 
   protected readonly controller: vscode.NotebookController;
   protected order = 0;
@@ -90,6 +90,7 @@ export class KxNotebookController {
 
     for (const cell of cells) {
       const isPython = cell.document.languageId === "python";
+      const isSql = cell.document.languageId === "sql";
       const execution = this.controller.createNotebookCellExecution(cell);
 
       execution.executionOrder = ++this.order;
@@ -99,9 +100,14 @@ export class KxNotebookController {
       let executor = Promise.reject<any>();
 
       const target = cell.metadata?.target;
-      if (target) {
-        const params = getQsqlDatasourceFile(cell.document.getText(), target);
-        const variable = cell.metadata?.variable;
+      const variable = cell.metadata?.variable;
+
+      if (target || isSql) {
+        const params = getQsqlDatasourceFile(
+          cell.document.getText(),
+          target,
+          isSql,
+        );
         executor = variable
           ? populateScratchpad(params, conn.connLabel, variable)
           : runDataSource(params, conn.connLabel, executorName);
@@ -119,7 +125,7 @@ export class KxNotebookController {
       }
 
       try {
-        const results = await Promise.race([
+        let results = await Promise.race([
           executor,
           new Promise((_, reject) => {
             const updateCancelled = () => {
@@ -132,10 +138,14 @@ export class KxNotebookController {
           }),
         ]);
 
-        const rendered = target
-          ? // TODO When connVersion is passed for datasource queries it fails.
-            render(results, isPython, isInsights)
-          : render(results, isPython, isInsights, connVersion);
+        if (variable) {
+          results = `Scratchpad variable (${variable}) populated.`;
+        }
+
+        const rendered =
+          target || isSql
+            ? render(results, isPython, isInsights)
+            : render(results, isPython, isInsights, connVersion);
 
         execution.replaceOutput([
           new vscode.NotebookCellOutput([
