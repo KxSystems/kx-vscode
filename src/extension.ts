@@ -547,12 +547,6 @@ function registerScratchpadCommands(): CommandRegistration[] {
       },
     },
     {
-      command: "kdb.execute.sql",
-      callback: async () => {
-        await runActiveEditor(ExecutionTypes.QueryFile);
-      },
-    },
-    {
       command: "kdb.scratchpad.python.create",
       callback: async (item: FileTreeItem) => {
         if (hasWorkspaceOrShowOption("adding workbooks")) {

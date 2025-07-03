@@ -399,7 +399,7 @@ export class InsightsConnection {
       return await axios(options)
         .then((response: any) => {
           notify(
-            `[Datasource RUN] Status: ${response.status}.`,
+            `Datasource execution status: ${response.status}.`,
             MessageKind.DEBUG,
             { logger },
           );
@@ -415,8 +415,8 @@ export class InsightsConnection {
         })
         .catch((error: any) => {
           notify(
-            `[Datasource RUN] Status: ${error.response.status}.`,
-            MessageKind.ERROR,
+            `Datasource execution status: ${error.response.status}.`,
+            MessageKind.DEBUG,
             { logger, params: error },
           );
           return {

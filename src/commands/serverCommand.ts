@@ -30,7 +30,7 @@ import {
 
 import { ext } from "../extensionVariables";
 import {
-  getQsqlDatasourceFile,
+  getPartialDatasourceFile,
   populateScratchpad,
   runDataSource,
 } from "./dataSourceCommand";
@@ -1086,12 +1086,12 @@ export async function runQuery(
     return target || isSql
       ? variable
         ? populateScratchpad(
-            getQsqlDatasourceFile(query, target, isSql),
+            getPartialDatasourceFile(query, target, isSql),
             connLabel,
             variable,
           )
         : runDataSource(
-            getQsqlDatasourceFile(query, target, isSql),
+            getPartialDatasourceFile(query, target, isSql),
             connLabel,
             executorName,
           )

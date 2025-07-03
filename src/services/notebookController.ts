@@ -16,7 +16,7 @@ import * as vscode from "vscode";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
 import {
-  getQsqlDatasourceFile,
+  getPartialDatasourceFile,
   populateScratchpad,
   runDataSource,
 } from "../commands/dataSourceCommand";
@@ -103,7 +103,7 @@ export class KxNotebookController {
       const variable = cell.metadata?.variable;
 
       if (target || isSql) {
-        const params = getQsqlDatasourceFile(
+        const params = getPartialDatasourceFile(
           cell.document.getText(),
           target,
           isSql,
@@ -153,25 +153,19 @@ export class KxNotebookController {
           ]),
         ]);
       } catch (error) {
-        if (error instanceof vscode.CancellationError) {
-          notify(
-            `Executing ${executorName} on ${conn.connLabel} cancelled.`,
-            MessageKind.DEBUG,
-            {
-              logger,
-              params: error,
-            },
-          );
-        } else {
-          notify(
-            `Executing ${executorName} on ${conn.connLabel} failed.`,
-            MessageKind.ERROR,
-            {
-              logger,
-              params: error,
-            },
-          );
-        }
+        notify(
+          `Executing ${executorName} on ${conn.connLabel} errored.`,
+          MessageKind.DEBUG,
+          {
+            logger,
+            params: error,
+          },
+        );
+        execution.replaceOutput([
+          new vscode.NotebookCellOutput([
+            vscode.NotebookCellOutputItem.text(`Execution stopped (${error}).`),
+          ]),
+        ]);
         break;
       } finally {
         execution.end(true, Date.now());

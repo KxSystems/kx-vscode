@@ -70,7 +70,7 @@ function activeEditorChanged(editor?: TextEditor | undefined) {
 
 function setRunScratchpadItemText(uri: Uri, text: string) {
   ext.runScratchpadItem.text = `$(cloud) ${text}`;
-  ext.runScratchpadItem.tooltip = `KX: Choose connection for ${getBasename(uri)}`;
+  ext.runScratchpadItem.tooltip = `KX: Choose connection for '${getBasename(uri)}'`;
 }
 
 export function getInsightsServers() {

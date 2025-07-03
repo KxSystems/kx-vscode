@@ -195,7 +195,7 @@ export async function runDataSource(
       const query = getQuery(fileContent, selectedType);
 
       if (!success) {
-        notify("Query execution failed.", MessageKind.ERROR, {
+        notify("Query execution failed.", MessageKind.DEBUG, {
           logger,
           params: res.error,
           telemetry: "Datasource." + selectedType + ".Run.Error",
@@ -246,7 +246,7 @@ export async function runDataSource(
       addDStoQueryHistory(dataSourceForm, success, connLabel, executorName);
     }
   } catch (error) {
-    notify(`Datasource error: ${error}.`, MessageKind.ERROR, {
+    notify(`Datasource error: ${error}.`, MessageKind.DEBUG, {
       logger,
       params: error,
     });
@@ -468,7 +468,7 @@ export async function runUDADataSource(
   const udaReqBody = await retrieveUDAtoCreateReqBody(uda, selectedConn);
 
   if (udaReqBody.error) {
-    notify(`Datasource error.`, MessageKind.ERROR, {
+    notify(`Datasource error.`, MessageKind.DEBUG, {
       logger,
       params: udaReqBody.error,
     });
@@ -518,7 +518,7 @@ export function parseError(error: GetDataError) {
   if (error instanceof Object && error.buffer) {
     return handleWSError(error.buffer);
   } else {
-    notify(`Datasource error.`, MessageKind.ERROR, {
+    notify(`Datasource error.`, MessageKind.DEBUG, {
       logger,
       params: error,
     });
@@ -528,7 +528,7 @@ export function parseError(error: GetDataError) {
   }
 }
 
-export function getQsqlDatasourceFile(
+export function getPartialDatasourceFile(
   query: string,
   selectedTarget?: string,
   isSql?: boolean,

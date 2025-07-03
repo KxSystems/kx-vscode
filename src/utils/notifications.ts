@@ -15,6 +15,7 @@ import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
 import { kdbOutputLog } from "./loggers";
+import { stripUnprintableChars } from "./shared";
 import { Telemetry } from "./telemetryClient";
 
 const logger = "notifications";
@@ -179,11 +180,4 @@ function getParams(params?: any) {
   } else {
     return "";
   }
-}
-
-function stripUnprintableChars(text: string) {
-  return text
-    .replace(/\p{Cc}/gu, "")
-    .replace(/\p{Co}/gu, "")
-    .replace(/\p{Cn}/gu, "");
 }
