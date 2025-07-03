@@ -310,7 +310,10 @@ export async function runActiveEditor(type?: ExecutionTypes) {
           return;
         }
       } else {
-        throw new Error("Connection for  not found");
+        notify(`Connection ${server} not found.`, MessageKind.ERROR, {
+          logger,
+        });
+        return;
       }
     } else if (ext.activeConnection === undefined) {
       offerConnectAction();
@@ -327,7 +330,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
             ? ExecutionTypes.PythonQueryFile
             : ExecutionTypes.QueryFile
           : type,
-        server,
+        server || ext.activeConnection?.connLabel || "",
         executorName,
         !isPython(uri),
         undefined,
