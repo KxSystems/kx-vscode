@@ -34,3 +34,10 @@ export interface KxNotebookOutputItem {
   data: string;
   mime: string;
 }
+
+export const enum CellKind {
+  MARKDOWN,
+  Q,
+  PYTHON,
+  SQL,
+}

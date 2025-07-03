@@ -18,6 +18,7 @@ import {
   getConnectionForServer,
   getServerForUri,
 } from "../commands/workspaceCommand";
+import { CellKind } from "../models/notebook";
 
 export class KxNotebookTargetActionProvider
   implements vscode.NotebookCellStatusBarItemProvider
@@ -51,10 +52,10 @@ export class KxNotebookTargetActionProvider
     }
 
     const actions: vscode.NotebookCellStatusBarItem[] = [];
-    const languageId = cell.document.languageId;
-    const target = cell.metadata?.target;
+    const kind = getCellKind(cell);
+    const target = kind === CellKind.Q ? cell.metadata?.target : undefined;
 
-    if (languageId === "q") {
+    if (kind === CellKind.Q) {
       const targetItem = new vscode.NotebookCellStatusBarItem(
         target || "scratchpad",
         vscode.NotebookCellStatusBarAlignment.Right,
@@ -71,7 +72,7 @@ export class KxNotebookTargetActionProvider
       actions.push(targetItem);
     }
 
-    if (target || languageId === "sql") {
+    if (target || kind === CellKind.SQL) {
       const variableNameItem = new vscode.NotebookCellStatusBarItem(
         `(${cell.metadata?.variable || "none"})`,
         vscode.NotebookCellStatusBarAlignment.Right,
@@ -137,4 +138,17 @@ export async function updateCellMetadata(
     }),
   ]);
   await vscode.workspace.applyEdit(edit);
+}
+
+export function getCellKind(cell: vscode.NotebookCell) {
+  switch (cell.document.languageId) {
+    case "q":
+      return CellKind.Q;
+    case "python":
+      return CellKind.PYTHON;
+    case "sql":
+      return CellKind.SQL;
+    default:
+      return CellKind.MARKDOWN;
+  }
 }

@@ -27,6 +27,8 @@ import {
 } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
 import { ConnectionManagementService } from "./connectionManagerService";
+import { getCellKind } from "./notebookProviders";
+import { CellKind } from "../models/notebook";
 import { getBasename, offerConnectAction } from "../utils/core";
 import { MessageKind, notify } from "../utils/notifications";
 import { resultToBase64 } from "../utils/queryUtils";
@@ -89,8 +91,7 @@ export class KxNotebookController {
     }
 
     for (const cell of cells) {
-      const isPython = cell.document.languageId === "python";
-      const isSql = cell.document.languageId === "sql";
+      const kind = getCellKind(cell);
       const execution = this.controller.createNotebookCellExecution(cell);
 
       execution.executionOrder = ++this.order;
@@ -99,14 +100,16 @@ export class KxNotebookController {
       const executorName = getBasename(notebook.uri);
       let executor = Promise.reject<any>();
 
-      const target = cell.metadata?.target;
-      const variable = cell.metadata?.variable;
+      const target = kind == CellKind.Q ? cell.metadata?.target : undefined;
 
-      if (target || isSql) {
+      const variable =
+        target || kind === CellKind.SQL ? cell.metadata?.variable : undefined;
+
+      if (target || kind === CellKind.SQL) {
         const params = getPartialDatasourceFile(
           cell.document.getText(),
           target,
-          isSql,
+          kind === CellKind.SQL,
         );
         executor = variable
           ? populateScratchpad(params, conn.connLabel, variable)
@@ -117,7 +120,7 @@ export class KxNotebookController {
           conn.connLabel,
           executorName,
           ".",
-          isPython,
+          kind === CellKind.PYTHON,
           false,
           false,
           execution.token,
@@ -143,9 +146,14 @@ export class KxNotebookController {
         }
 
         const rendered =
-          target || isSql
-            ? render(results, isPython, isInsights)
-            : render(results, isPython, isInsights, connVersion);
+          target || kind === CellKind.SQL
+            ? render(results, kind === CellKind.PYTHON, isInsights)
+            : render(
+                results,
+                kind === CellKind.PYTHON,
+                isInsights,
+                connVersion,
+              );
 
         execution.replaceOutput([
           new vscode.NotebookCellOutput([
