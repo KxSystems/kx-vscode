@@ -13,33 +13,65 @@
 
 import * as vscode from "vscode";
 
+import { InsightsNode } from "./kdbTreeProvider";
+import {
+  getConnectionForServer,
+  getServerForUri,
+} from "../commands/workspaceCommand";
+
 export class KxNotebookTargetActionProvider
   implements vscode.NotebookCellStatusBarItemProvider
 {
-  onDidChangeCellStatusBarItems?: vscode.Event<void> | undefined;
+  private readonly _onDidChangeCellStatusBarItems =
+    new vscode.EventEmitter<void>();
+  readonly onDidChangeCellStatusBarItems =
+    this._onDidChangeCellStatusBarItems.event;
 
-  provideCellStatusBarItems(
+  constructor() {
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("kdb.connectionMap")) {
+        this._onDidChangeCellStatusBarItems.fire();
+      }
+    });
+  }
+
+  async provideCellStatusBarItems(
     cell: vscode.NotebookCell,
     _token: vscode.CancellationToken,
-  ): vscode.ProviderResult<
-    vscode.NotebookCellStatusBarItem | vscode.NotebookCellStatusBarItem[]
-  > {
+  ) {
+    const server = getServerForUri(cell.notebook.uri);
+    if (!server) {
+      return [];
+    }
+
+    const conn = await getConnectionForServer(server);
+    const isInsights = conn instanceof InsightsNode;
+    if (!isInsights) {
+      return [];
+    }
+
+    const actions: vscode.NotebookCellStatusBarItem[] = [];
+    const languageId = cell.document.languageId;
     const target = cell.metadata?.target;
 
-    const targetItem = new vscode.NotebookCellStatusBarItem(
-      target || "scratchpad",
-      vscode.NotebookCellStatusBarAlignment.Right,
-    );
+    if (languageId === "q") {
+      const targetItem = new vscode.NotebookCellStatusBarItem(
+        target || "scratchpad",
+        vscode.NotebookCellStatusBarAlignment.Right,
+      );
 
-    targetItem.command = {
-      title: "Choose Target",
-      command: "kdb.file.pickTarget",
-      arguments: [cell],
-    };
+      targetItem.command = {
+        title: "Choose Target",
+        command: "kdb.file.pickTarget",
+        arguments: [cell],
+      };
 
-    targetItem.tooltip = "Execution Target";
+      targetItem.tooltip = "Execution Target";
 
-    if (target) {
+      actions.push(targetItem);
+    }
+
+    if (target || languageId === "sql") {
       const variableNameItem = new vscode.NotebookCellStatusBarItem(
         `(${cell.metadata?.variable || "none"})`,
         vscode.NotebookCellStatusBarAlignment.Right,
@@ -53,10 +85,10 @@ export class KxNotebookTargetActionProvider
         arguments: [cell],
       };
 
-      return [targetItem, variableNameItem];
+      actions.push(variableNameItem);
     }
 
-    return [targetItem];
+    return actions;
   }
 }
 

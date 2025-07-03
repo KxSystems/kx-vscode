@@ -213,23 +213,23 @@ export async function pickConnection(uri: Uri) {
 }
 
 export async function pickTarget(uri: Uri, cell?: NotebookCell) {
-  const server = cell ? ext.activeConnection?.connLabel : getServerForUri(uri);
-  const conn = await getConnectionForServer(server || "");
-  const connMngService = new ConnectionManagementService();
+  const server = getServerForUri(uri);
+  if (!server) {
+    return;
+  }
 
-  const connected = conn
-    ? connMngService.isConnected(conn.label)
-    : !!ext.activeConnection;
+  const conn = await getConnectionForServer(server);
+  const isInsights = conn instanceof InsightsNode;
+  if (!isInsights) {
+    return;
+  }
 
   let daps: MetaDap[] = [];
 
-  if (conn instanceof InsightsNode) {
-    if (
-      connected &&
-      (!isPython(uri) || cell?.document.languageId !== "Python")
-    ) {
-      daps = JSON.parse(connMngService.retrieveMetaContent(conn.label, "DAP"));
-    }
+  const connMngService = new ConnectionManagementService();
+  const connected = connMngService.isConnected(conn.label);
+  if (connected) {
+    daps = JSON.parse(connMngService.retrieveMetaContent(conn.label, "DAP"));
   }
 
   const target = cell?.metadata.target || getTargetForUri(uri);
