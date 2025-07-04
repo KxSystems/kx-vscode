@@ -16,8 +16,11 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 
 import * as serverCommand from "../../src/commands/serverCommand";
+import * as workspaceCommand from "../../src/commands/workspaceCommand";
 import { ext } from "../../src/extensionVariables";
+import { InsightsNode } from "../../src/services/kdbTreeProvider";
 import * as controlller from "../../src/services/notebookController";
+import * as providers from "../../src/services/notebookProviders";
 import * as serializer from "../../src/services/notebookSerializer";
 
 describe("Notebooks", () => {
@@ -218,6 +221,123 @@ describe("Notebooks", () => {
           }
         }
       }
+    });
+  });
+
+  describe("Providers", () => {
+    it("getCellKind should return correct kind", () => {
+      ["markdown", "q", "python", "sql"].map((languageId, index) => {
+        const res = providers.getCellKind(<vscode.NotebookCell>{
+          document: { languageId },
+        });
+        assert.strictEqual(res, index);
+      });
+    });
+
+    it("updateCellMetadata should apply workspace edit", () => {
+      const stub = sinon.stub(vscode.workspace, "applyEdit");
+      providers.updateCellMetadata(
+        <vscode.NotebookCell>{
+          index: 0,
+          notebook: { uri: vscode.Uri.file("test") },
+        },
+        {
+          target: "target",
+          variable: "variable",
+        },
+      );
+      sinon.assert.calledOnce(stub);
+    });
+
+    it("validateInput should return input variable", async () => {
+      sinon.stub(vscode.window, "showInputBox").resolves("variable");
+      const res = await providers.inputVariable();
+      assert.strictEqual(res, "variable");
+    });
+
+    describe("validateInput", () => {
+      it("should return undefined for valid input", () => {
+        assert.strictEqual(providers.validateInput(".ns.var"), undefined);
+      });
+      it("should return undefined for empty input", () => {
+        assert.strictEqual(providers.validateInput(""), undefined);
+      });
+      it("should return undefined for undefined input", () => {
+        assert.strictEqual(providers.validateInput(), undefined);
+      });
+      it("should return message for input length > 32", () => {
+        assert.ok(providers.validateInput("a".repeat(33)));
+      });
+      it("should return message for input starting with a number", () => {
+        assert.ok(providers.validateInput("1variable"));
+      });
+      it("should return message for input starting with an underscore", () => {
+        assert.ok(providers.validateInput("_variable"));
+      });
+      it("should return message for input with invalid characters", () => {
+        assert.ok(providers.validateInput("\u011f"));
+      });
+    });
+
+    describe("KxNotebookTargetActionProvider", () => {
+      const token = <vscode.CancellationToken>{};
+      let provider: providers.KxNotebookTargetActionProvider;
+
+      function createCell(languageId: string, metadata = {}) {
+        return <vscode.NotebookCell>{
+          document: { languageId },
+          notebook: { uri: vscode.Uri.file("test") },
+          metadata,
+        };
+      }
+
+      beforeEach(() => {
+        sinon.stub(workspaceCommand, "getServerForUri").returns("server");
+        sinon
+          .stub(workspaceCommand, "getConnectionForServer")
+          .resolves(sinon.createStubInstance(InsightsNode));
+
+        provider = new providers.KxNotebookTargetActionProvider();
+      });
+
+      it("should return only scratchpad", async () => {
+        const cell = createCell("q");
+        const res = await provider.provideCellStatusBarItems(cell, token);
+        assert.strictEqual(res.length, 1);
+        assert.strictEqual(res[0].text, "scratchpad");
+      });
+
+      it("should return scratchpad and variable", async () => {
+        const cell = createCell("q", {
+          target: "target",
+          variable: "variable",
+        });
+        const res = await provider.provideCellStatusBarItems(cell, token);
+        assert.strictEqual(res.length, 2);
+        assert.strictEqual(res[0].text, "target");
+        assert.strictEqual(res[1].text, "(variable)");
+      });
+
+      it("should return only variable", async () => {
+        const cell = createCell("sql", {
+          variable: "variable",
+        });
+        const res = await provider.provideCellStatusBarItems(cell, token);
+        assert.strictEqual(res.length, 1);
+        assert.strictEqual(res[0].text, "(variable)");
+      });
+
+      it("should return none for Markdown", async () => {
+        const cell = createCell("markdown");
+        const res = await provider.provideCellStatusBarItems(cell, token);
+        assert.strictEqual(res.length, 0);
+      });
+
+      it("should return none for Python", async () => {
+        const cell = createCell("python");
+        const res = await provider.provideCellStatusBarItems(cell, token);
+        assert.strictEqual(res.length, 0);
+      });
     });
   });
 });

@@ -83,6 +83,7 @@ export async function populateScratchpad(
   dataSourceForm: DataSourceFiles,
   connLabel: string,
   outputVariable?: string,
+  silent?: boolean,
 ): Promise<void> {
   const connMngService = new ConnectionManagementService();
 
@@ -112,6 +113,7 @@ export async function populateScratchpad(
       outputVariable,
       dataSourceForm,
       qenvEnabled === "Enabled",
+      silent,
     );
   } else {
     notify(

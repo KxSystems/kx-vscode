@@ -110,7 +110,7 @@ export async function inputVariable(cell?: vscode.NotebookCell) {
   }
 }
 
-function validateInput(value?: string) {
+export function validateInput(value?: string) {
   if (value === undefined) {
     return undefined;
   }

@@ -13,6 +13,7 @@
 
 import * as vscode from "vscode";
 
+import { ConnectionManagementService } from "./connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
 import {
@@ -26,7 +27,6 @@ import {
   getServerForUri,
 } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
-import { ConnectionManagementService } from "./connectionManagerService";
 import { getCellKind } from "./notebookProviders";
 import { CellKind } from "../models/notebook";
 import { getBasename, offerConnectAction } from "../utils/core";
@@ -65,29 +65,38 @@ export class KxNotebookController {
     notebook: vscode.NotebookDocument,
     _controller: vscode.NotebookController,
   ): Promise<void> {
-    const manager = new ConnectionManagementService();
-    const server = getServerForUri(notebook.uri);
-
-    let conn: LocalConnection | InsightsConnection | undefined;
-    if (server) {
-      const node = await getConnectionForServer(server);
-      if (node) {
-        conn = manager.retrieveConnectedConnection(node.label);
-      }
-    } else {
-      conn = ext.activeConnection;
-    }
-
-    if (conn === undefined) {
-      offerConnectAction(server);
-      return;
-    }
+    const connMngService = new ConnectionManagementService();
 
     let isInsights = false;
     let connVersion = 0;
-    if (conn instanceof InsightsConnection) {
-      isInsights = true;
-      connVersion = conn.insightsVersion ?? 0;
+    let conn: InsightsConnection | LocalConnection | undefined;
+    let server = getServerForUri(notebook.uri) || "";
+
+    if (server) {
+      const node = await getConnectionForServer(server);
+      if (node) {
+        server = node.label;
+        conn = connMngService.retrieveConnectedConnection(server);
+        if (conn === undefined) {
+          offerConnectAction(server);
+          return;
+        } else if (conn instanceof InsightsConnection) {
+          isInsights = true;
+          connVersion = conn.insightsVersion ?? 0;
+        }
+      } else {
+        notify(`Connection ${server} not found.`, MessageKind.ERROR, {
+          logger,
+        });
+        return;
+      }
+    } else {
+      if (ext.activeConnection) {
+        conn = ext.activeConnection;
+      } else {
+        offerConnectAction();
+        return;
+      }
     }
 
     for (const cell of cells) {
@@ -98,7 +107,7 @@ export class KxNotebookController {
       execution.start(Date.now());
 
       const executorName = getBasename(notebook.uri);
-      let executor = Promise.reject<any>();
+      let executor: Promise<any>;
 
       const target = kind == CellKind.Q ? cell.metadata?.target : undefined;
 
@@ -112,7 +121,7 @@ export class KxNotebookController {
           kind === CellKind.SQL,
         );
         executor = variable
-          ? populateScratchpad(params, conn.connLabel, variable)
+          ? populateScratchpad(params, conn.connLabel, variable, true)
           : runDataSource(params, conn.connLabel, executorName);
       } else {
         executor = executeQuery(

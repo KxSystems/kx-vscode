@@ -216,6 +216,11 @@ export class InsightsConnection {
         return undefined;
       }
 
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: metaUrl.toString(), data: options.data },
+      });
+
       const metaResponse = await axios.post(metaUrl.toString(), {}, options);
       const meta: MetaObject = metaResponse.data;
       this.meta = meta;
@@ -244,6 +249,12 @@ export class InsightsConnection {
       if (options === undefined) {
         return undefined;
       }
+
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url, data: options.data },
+      });
+
       const configResponse = await axios(options);
 
       this.apiConfig = configResponse.data;
@@ -266,6 +277,11 @@ export class InsightsConnection {
       if (options === undefined) {
         return undefined;
       }
+
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url, data: options.data },
+      });
 
       const configResponse = await axios(options);
 
@@ -396,6 +412,11 @@ export class InsightsConnection {
       }
       options.responseType = "arraybuffer";
 
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url, data: options.data },
+      });
+
       return await axios(options)
         .then((response: any) => {
           notify(
@@ -431,6 +452,7 @@ export class InsightsConnection {
     variableName: string,
     params: DataSourceFiles,
     qeEnabled?: boolean,
+    silent?: boolean,
   ): Promise<void> {
     let dsTypeString = "";
     if (this.connected && this.connEndpoints) {
@@ -507,11 +529,16 @@ export class InsightsConnection {
         return;
       }
 
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url, data: options.data },
+      });
+
       return await axios(options).then((response: any) => {
         if (response.data.error) {
           notify(
             "Error occured while populating scratchpad.",
-            MessageKind.ERROR,
+            silent ? MessageKind.DEBUG : MessageKind.ERROR,
             {
               logger,
               params: response.data.errorMsg,
@@ -521,8 +548,8 @@ export class InsightsConnection {
           );
         } else {
           notify(
-            `Executed successfully, stored in ${variableName}.`,
-            MessageKind.INFO,
+            `Scratchpad variable (${variableName}) populated.`,
+            silent ? MessageKind.DEBUG : MessageKind.INFO,
             {
               logger,
               params: { status: response.status, params: body.params },
@@ -587,6 +614,11 @@ export class InsightsConnection {
       if (!options) {
         return;
       }
+
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url, data: options.data },
+      });
 
       return await axios(options).then((response: any) => {
         if (response.data.error) {
@@ -658,6 +690,11 @@ export class InsightsConnection {
         return;
       }
 
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url, data: options.data },
+      });
+
       return await axios(options).then((response: any) => {
         if (response.data.error) {
           return response.data;
@@ -721,6 +758,11 @@ export class InsightsConnection {
       if (!options) {
         return;
       }
+
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url, data: options.data },
+      });
 
       return await axios(options)
         .then((_response: any) => {
