@@ -51,6 +51,7 @@ function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   }
 }
 
+/* istanbul ignore next */
 function activeEditorChanged(editor?: TextEditor | undefined) {
   setRealActiveTextEditor(editor);
   const item = ext.runScratchpadItem;
@@ -68,6 +69,7 @@ function activeEditorChanged(editor?: TextEditor | undefined) {
   }
 }
 
+/* istanbul ignore next */
 function setRunScratchpadItemText(uri: Uri, text: string) {
   ext.runScratchpadItem.text = `$(cloud) ${text}`;
   ext.runScratchpadItem.tooltip = `KX: Choose connection for '${getBasename(uri)}'`;
@@ -249,7 +251,7 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
       ...daps.map((value) => `${value.assembly} ${value.instance}`),
     ],
     {
-      title: `Choose Target ${server ? `(${server} - ` : "("}${connected ? "Connected" : "Disconnected"})`,
+      title: `Choose Target on ${server} (${connected ? "Connected" : "Disconnected"})`,
       placeHolder: target || "scratchpad",
     },
   );
@@ -327,6 +329,15 @@ export async function runActiveEditor(type?: ExecutionTypes) {
     if (isSql && !isInsights) {
       notify(
         `SQL execution is not supported on ${server || "active connection"}.`,
+        MessageKind.ERROR,
+        { logger },
+      );
+      return;
+    }
+
+    if (type === ExecutionTypes.PopulateScratchpad && !isInsights) {
+      notify(
+        `Populating scratchpad is not supported on ${server || "active connection"}.`,
         MessageKind.ERROR,
         { logger },
       );

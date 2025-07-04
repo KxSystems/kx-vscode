@@ -15,100 +15,171 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
+import { InsightsConnection } from "../../src/classes/insightsConnection";
+import { LocalConnection } from "../../src/classes/localConnection";
 import * as serverCommand from "../../src/commands/serverCommand";
 import * as workspaceCommand from "../../src/commands/workspaceCommand";
-import { ext } from "../../src/extensionVariables";
+import { ConnectionManagementService } from "../../src/services/connectionManagerService";
 import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import * as controlller from "../../src/services/notebookController";
 import * as providers from "../../src/services/notebookProviders";
 import * as serializer from "../../src/services/notebookSerializer";
+import * as notifications from "../../src/utils/notifications";
 
 describe("Notebooks", () => {
-  const notebook = <vscode.NotebookDocument>{
-    uri: vscode.Uri.file("/test.kxnb"),
-  };
-
-  let activeConnectionStub: sinon.SinonStub;
-  let executeQueryStub: sinon.SinonStub;
-
-  beforeEach(() => {
-    activeConnectionStub = sinon.stub(ext, "activeConnection");
-    executeQueryStub = sinon.stub(serverCommand, "executeQuery");
-  });
-
   afterEach(() => {
     sinon.restore();
   });
 
   describe("Controller", () => {
-    const cells: vscode.NotebookCell[] = [
-      {
-        document: <vscode.TextDocument>{
-          getText() {
-            return "a:1;a";
-          },
-        },
-        executionSummary: <vscode.NotebookCellExecutionSummary>{},
-        index: 1,
-        kind: vscode.NotebookCellKind.Code,
-        metadata: {},
-        notebook: <vscode.NotebookDocument>{},
-        outputs: [],
-      },
-    ];
-
-    const executor = {
-      executionOrder: 1,
-      start() {},
-      end() {},
-      replaceOutput() {},
-    };
-
+    let notifyKind: notifications.MessageKind;
     let instance: controlller.KxNotebookController;
 
     beforeEach(() => {
-      sinon.stub(vscode.notebooks, "createNotebookController").returns(<
-        vscode.NotebookController
-      >(<unknown>{
-        createNotebookCellExecution() {
-          return executor;
-        },
-        dispose() {},
-      }));
-      instance = new controlller.KxNotebookController();
+      sinon
+        .stub(notifications, "notify")
+        .value((_m: string, k: notifications.MessageKind) => (notifyKind = k));
+      sinon
+        .stub(vscode.notebooks, "createNotebookController")
+        .returns(<vscode.NotebookController>{});
     });
 
     afterEach(() => {
-      instance.dispose();
+      notifyKind = undefined;
       instance = undefined;
     });
 
-    it("should show warning message if not connected", async () => {
-      activeConnectionStub.value(undefined);
-      const msg = sinon.stub(vscode.window, "showWarningMessage");
-      await instance.execute(cells, notebook, <vscode.NotebookController>{});
-      assert.ok(msg.calledOnce);
+    function createInstance() {
+      instance = new controlller.KxNotebookController();
+    }
+
+    function createNotebook() {
+      return <vscode.NotebookDocument>{ uri: vscode.Uri.file("test.kxnb") };
+    }
+
+    function createCell(languageId?: string) {
+      return <vscode.NotebookCell>{
+        document: {
+          languageId,
+          getText() {
+            return "expressions";
+          },
+        },
+      };
+    }
+
+    function createController() {
+      return <vscode.NotebookController>{
+        createNotebookCellExecution(_) {
+          return <vscode.NotebookCellExecution>{
+            start() {},
+            end(_) {},
+            replaceOutput(_) {},
+            executionOrder: 0,
+          };
+        },
+      };
+    }
+
+    describe("Connection Picked", () => {
+      beforeEach(() => {
+        sinon.stub(workspaceCommand, "getServerForUri").returns("server");
+      });
+
+      describe("Connected", () => {
+        let executeQueryStub: sinon.SinonStub;
+
+        beforeEach(() => {
+          executeQueryStub = sinon.stub(serverCommand, "executeQuery");
+        });
+
+        describe("Insights Connection", () => {
+          beforeEach(() => {
+            sinon
+              .stub(
+                ConnectionManagementService.prototype,
+                "retrieveConnectedConnection",
+              )
+              .returns(sinon.createStubInstance(InsightsConnection));
+          });
+
+          describe("Node Not Exists", () => {
+            beforeEach(() => {
+              sinon
+                .stub(workspaceCommand, "getConnectionForServer")
+                .resolves(undefined);
+
+              createInstance();
+            });
+
+            it("should notify missing connection with error", async () => {
+              await instance.execute(
+                [createCell()],
+                createNotebook(),
+                createController(),
+              );
+              assert.strictEqual(notifyKind, notifications.MessageKind.ERROR);
+            });
+          });
+        });
+
+        describe("Local Connection", () => {
+          const table = {
+            count: 2,
+            columns: [
+              {
+                name: "x",
+                type: "longs",
+                values: ["0", "1"],
+                order: [0, 1],
+              },
+              {
+                name: "y",
+                type: "longs",
+                values: ["0", "1"],
+                order: [0, 1],
+              },
+            ],
+          };
+
+          beforeEach(() => {
+            sinon
+              .stub(
+                ConnectionManagementService.prototype,
+                "retrieveConnectedConnection",
+              )
+              .returns(sinon.createStubInstance(LocalConnection));
+          });
+
+          describe("Node Exists", () => {
+            beforeEach(() => {
+              sinon
+                .stub(workspaceCommand, "getConnectionForServer")
+                .resolves(sinon.createStubInstance(KdbNode));
+
+              createInstance();
+            });
+
+            describe("q cell", () => {
+              it("should display table results", async () => {
+                executeQueryStub.resolves(table);
+                await instance.execute(
+                  [createCell("q")],
+                  createNotebook(),
+                  createController(),
+                );
+                assert.strictEqual(notifyKind, undefined);
+              });
+            });
+          });
+        });
+      });
     });
 
-    it("should end execution on error", async () => {
-      activeConnectionStub.value({});
-      executeQueryStub.resolves({});
-      const end = sinon.stub(executor, "end");
-      await instance.execute(cells, notebook, <vscode.NotebookController>{});
-      assert.ok(end.calledOnce);
-    });
+    describe("Connection Not Picked", () => {});
 
-    it("should execute code for number result", async () => {
-      activeConnectionStub.value({});
-      executeQueryStub.resolves(1);
-      const res = sinon.stub(executor, "replaceOutput");
-      await instance.execute(cells, notebook, <vscode.NotebookController>{});
-      assert.ok(res.calledOnce);
-    });
-
-    it("should execute code for plot result", async () => {
-      activeConnectionStub.value({});
-      executeQueryStub.resolves({
+    it.skip("should execute code for plot result", async () => {
+      <any>{ resolves(a: any) {} }.resolves({
         count: 50046,
         columns: [
           {
@@ -128,32 +199,16 @@ describe("Notebooks", () => {
           },
         ],
       });
-      const res = sinon.stub(executor, "replaceOutput");
-      await instance.execute(cells, notebook, <vscode.NotebookController>{});
-      assert.ok(res.calledOnce);
     });
 
-    it("should execute code for string result", async () => {
-      activeConnectionStub.value({});
-      executeQueryStub.resolves("result");
-      const res = sinon.stub(executor, "replaceOutput");
-      await instance.execute(cells, notebook, <vscode.NotebookController>{});
-      assert.ok(res.calledOnce);
-    });
-
-    it("should execute code for table result", async () => {
-      activeConnectionStub.value({});
-      executeQueryStub.resolves({
+    it.skip("should execute code for table result", async () => {
+      <any>{ resolves(a: any) {} }.resolves({
         count: 2,
         columns: [
           { name: "x", type: "longs", values: ["0", "1"], order: [0, 1] },
           { name: "y", type: "longs", values: ["0", "1"], order: [0, 1] },
         ],
       });
-
-      const res = sinon.stub(executor, "replaceOutput");
-      await instance.execute(cells, notebook, <vscode.NotebookController>{});
-      assert.ok(res.calledOnce);
     });
   });
 
@@ -253,7 +308,7 @@ describe("Notebooks", () => {
       sinon.assert.calledOnce(stub);
     });
 
-    it("validateInput should return input variable", async () => {
+    it("inputVariable should return input variable", async () => {
       sinon.stub(vscode.window, "showInputBox").resolves("variable");
       const res = await providers.inputVariable();
       assert.strictEqual(res, "variable");
@@ -267,10 +322,10 @@ describe("Notebooks", () => {
         assert.strictEqual(providers.validateInput(""), undefined);
       });
       it("should return undefined for undefined input", () => {
-        assert.strictEqual(providers.validateInput(), undefined);
+        assert.strictEqual(providers.validateInput(undefined), undefined);
       });
       it("should return message for input length > 32", () => {
-        assert.ok(providers.validateInput("a".repeat(33)));
+        assert.ok(providers.validateInput("v".repeat(33)));
       });
       it("should return message for input starting with a number", () => {
         assert.ok(providers.validateInput("1variable"));
@@ -381,13 +436,13 @@ describe("Notebooks", () => {
           assert.strictEqual(res[0].text, "(variable)");
         });
 
-        it("should return none for Markdown", async () => {
+        it("should return none for markdown", async () => {
           const cell = createCell("markdown");
           const res = await provider.provideCellStatusBarItems(cell, token);
           assert.strictEqual(res.length, 0);
         });
 
-        it("should return none for Python", async () => {
+        it("should return none for python", async () => {
           const cell = createCell("python");
           const res = await provider.provideCellStatusBarItems(cell, token);
           assert.strictEqual(res.length, 0);

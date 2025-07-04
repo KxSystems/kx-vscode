@@ -1159,7 +1159,7 @@
     "publish": "npx vsce publish",
     "test": "tsc -p ./test && node ./out/test/runTest.js",
     "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js",
-    "ui-test-cmd": "extest setup-and-run --code_version 1.99.3 --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
+    "ui-test-cmd": "extest setup-and-run --code_version 1.101.2 --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
     "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
     "watch": "npm run -S esbuild-base -- --sourcemap --watch"
   },

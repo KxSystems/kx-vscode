@@ -80,11 +80,15 @@ export class Runner<T> {
             resolve(result);
           },
           (error) => {
-            notify("Runner failed.", MessageKind.DEBUG, {
-              logger,
-              params: error,
-            });
-            reject(error);
+            notify(
+              `Runner (${this.title || "untitled"}) failed.`,
+              MessageKind.DEBUG,
+              {
+                logger,
+                params: error,
+              },
+            );
+            reject(new Error(`${error}`));
           },
         );
     });

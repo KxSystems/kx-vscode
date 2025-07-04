@@ -60,11 +60,10 @@ export class KxNotebookController {
     this.controller.dispose();
   }
 
-  /* istanbul ignore next */
   async execute(
     cells: vscode.NotebookCell[],
     notebook: vscode.NotebookDocument,
-    _controller: vscode.NotebookController,
+    controller: vscode.NotebookController,
   ): Promise<void> {
     const connMngService = new ConnectionManagementService();
 
@@ -102,7 +101,7 @@ export class KxNotebookController {
 
     for (const cell of cells) {
       const kind = getCellKind(cell);
-      const execution = this.controller.createNotebookCellExecution(cell);
+      const execution = controller.createNotebookCellExecution(cell);
 
       execution.executionOrder = ++this.order;
       execution.start(Date.now());
@@ -179,6 +178,7 @@ export class KxNotebookController {
             vscode.NotebookCellOutputItem.text(rendered.text, rendered.mime),
           ]),
         ]);
+        execution.end(true, Date.now());
       } catch (error) {
         notify(`Execution on ${conn.connLabel} stopped.`, MessageKind.DEBUG, {
           logger,
@@ -192,9 +192,8 @@ export class KxNotebookController {
             ),
           ]),
         ]);
+        execution.end(false, Date.now());
         break;
-      } finally {
-        execution.end(true, Date.now());
       }
     }
   }
