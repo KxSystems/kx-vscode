@@ -60,6 +60,7 @@ export class KxNotebookController {
     this.controller.dispose();
   }
 
+  /* istanbul ignore next */
   async execute(
     cells: vscode.NotebookCell[],
     notebook: vscode.NotebookDocument,

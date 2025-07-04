@@ -286,9 +286,13 @@ describe("Notebooks", () => {
     describe("KxNotebookTargetActionProvider", () => {
       const token = <vscode.CancellationToken>{};
       let provider: providers.KxNotebookTargetActionProvider;
+      let changeConfigCallback: any;
 
       beforeEach(() => {
         sinon.stub(workspaceCommand, "getServerForUri").returns("server");
+        sinon
+          .stub(vscode.workspace, "onDidChangeConfiguration")
+          .value((callback: any) => (changeConfigCallback = callback));
         provider = new providers.KxNotebookTargetActionProvider();
       });
 
@@ -299,6 +303,14 @@ describe("Notebooks", () => {
           metadata,
         };
       }
+
+      it("should update on config change", () => {
+        let fired = false;
+        provider.onDidChangeCellStatusBarItems(() => (fired = true));
+        assert.ok(changeConfigCallback);
+        changeConfigCallback({ affectsConfiguration: () => true });
+        assert.ok(fired);
+      });
 
       describe("Local Connection", () => {
         beforeEach(() => {
