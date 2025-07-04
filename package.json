@@ -41,7 +41,8 @@
     "onCommand:kdb.connections.labels.create",
     "onView:kdb-datasources-explorer",
     "onTerminalProfile:kdb.q-terminal",
-    "onLanguage:python"
+    "onLanguage:python",
+    "onLanguage:sql"
   ],
   "main": "./out/extension.js",
   "contributes": {

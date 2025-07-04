@@ -18,7 +18,7 @@ import * as vscode from "vscode";
 import * as serverCommand from "../../src/commands/serverCommand";
 import * as workspaceCommand from "../../src/commands/workspaceCommand";
 import { ext } from "../../src/extensionVariables";
-import { InsightsNode } from "../../src/services/kdbTreeProvider";
+import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import * as controlller from "../../src/services/notebookController";
 import * as providers from "../../src/services/notebookProviders";
 import * as serializer from "../../src/services/notebookSerializer";
@@ -283,6 +283,11 @@ describe("Notebooks", () => {
       const token = <vscode.CancellationToken>{};
       let provider: providers.KxNotebookTargetActionProvider;
 
+      beforeEach(() => {
+        sinon.stub(workspaceCommand, "getServerForUri").returns("server");
+        provider = new providers.KxNotebookTargetActionProvider();
+      });
+
       function createCell(languageId: string, metadata = {}) {
         return <vscode.NotebookCell>{
           document: { languageId },
@@ -291,52 +296,86 @@ describe("Notebooks", () => {
         };
       }
 
-      beforeEach(() => {
-        sinon.stub(workspaceCommand, "getServerForUri").returns("server");
-        sinon
-          .stub(workspaceCommand, "getConnectionForServer")
-          .resolves(sinon.createStubInstance(InsightsNode));
-
-        provider = new providers.KxNotebookTargetActionProvider();
-      });
-
-      it("should return only scratchpad", async () => {
-        const cell = createCell("q");
-        const res = await provider.provideCellStatusBarItems(cell, token);
-        assert.strictEqual(res.length, 1);
-        assert.strictEqual(res[0].text, "scratchpad");
-      });
-
-      it("should return scratchpad and variable", async () => {
-        const cell = createCell("q", {
-          target: "target",
-          variable: "variable",
+      describe("Local Connection", () => {
+        beforeEach(() => {
+          sinon
+            .stub(workspaceCommand, "getConnectionForServer")
+            .resolves(sinon.createStubInstance(KdbNode));
         });
-        const res = await provider.provideCellStatusBarItems(cell, token);
-        assert.strictEqual(res.length, 2);
-        assert.strictEqual(res[0].text, "target");
-        assert.strictEqual(res[1].text, "(variable)");
-      });
 
-      it("should return only variable", async () => {
-        const cell = createCell("sql", {
-          variable: "variable",
+        it("should return none", async () => {
+          const cell = createCell("q", {
+            target: "target",
+            variable: "variable",
+          });
+          const res = await provider.provideCellStatusBarItems(cell, token);
+          assert.strictEqual(res.length, 0);
         });
-        const res = await provider.provideCellStatusBarItems(cell, token);
-        assert.strictEqual(res.length, 1);
-        assert.strictEqual(res[0].text, "(variable)");
+
+        it("should return none", async () => {
+          const cell = createCell("python", {
+            target: "target",
+            variable: "variable",
+          });
+          const res = await provider.provideCellStatusBarItems(cell, token);
+          assert.strictEqual(res.length, 0);
+        });
+
+        it("should return none", async () => {
+          const cell = createCell("sql", {
+            target: "target",
+            variable: "variable",
+          });
+          const res = await provider.provideCellStatusBarItems(cell, token);
+          assert.strictEqual(res.length, 0);
+        });
       });
 
-      it("should return none for Markdown", async () => {
-        const cell = createCell("markdown");
-        const res = await provider.provideCellStatusBarItems(cell, token);
-        assert.strictEqual(res.length, 0);
-      });
+      describe("Insights Connection", () => {
+        beforeEach(() => {
+          sinon
+            .stub(workspaceCommand, "getConnectionForServer")
+            .resolves(sinon.createStubInstance(InsightsNode));
+        });
 
-      it("should return none for Python", async () => {
-        const cell = createCell("python");
-        const res = await provider.provideCellStatusBarItems(cell, token);
-        assert.strictEqual(res.length, 0);
+        it("should return only scratchpad", async () => {
+          const cell = createCell("q");
+          const res = await provider.provideCellStatusBarItems(cell, token);
+          assert.strictEqual(res.length, 1);
+          assert.strictEqual(res[0].text, "scratchpad");
+        });
+
+        it("should return scratchpad and variable", async () => {
+          const cell = createCell("q", {
+            target: "target",
+            variable: "variable",
+          });
+          const res = await provider.provideCellStatusBarItems(cell, token);
+          assert.strictEqual(res.length, 2);
+          assert.strictEqual(res[0].text, "target");
+          assert.strictEqual(res[1].text, "(variable)");
+        });
+
+        it("should return only variable", async () => {
+          const cell = createCell("sql", {
+            variable: "variable",
+          });
+          const res = await provider.provideCellStatusBarItems(cell, token);
+          assert.strictEqual(res.length, 1);
+          assert.strictEqual(res[0].text, "(variable)");
+        });
+
+        it("should return none for Markdown", async () => {
+          const cell = createCell("markdown");
+          const res = await provider.provideCellStatusBarItems(cell, token);
+          assert.strictEqual(res.length, 0);
+        });
+
+        it("should return none for Python", async () => {
+          const cell = createCell("python");
+          const res = await provider.provideCellStatusBarItems(cell, token);
+          assert.strictEqual(res.length, 0);
+        });
       });
     });
   });
