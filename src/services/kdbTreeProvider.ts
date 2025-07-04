@@ -301,7 +301,7 @@ export class KdbTreeProvider
       return null;
     }
 
-    return conn as LocalConnection;
+    return conn;
   }
 
   private async loadObjectsByCategory(
