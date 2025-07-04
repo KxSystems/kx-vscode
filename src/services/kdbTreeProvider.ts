@@ -40,6 +40,7 @@ import {
 } from "../utils/core";
 import { getIconPath } from "../utils/iconsUtils";
 import { MessageKind, notify } from "../utils/notifications";
+import { LocalConnection } from "../classes/localConnection";
 
 export class KdbTreeProvider
   implements vscode.TreeDataProvider<vscode.TreeItem>
@@ -262,157 +263,180 @@ export class KdbTreeProvider
     return result;
   }
 
-  /* istanbul ignore next */
   private async getServerObjects(
     serverType: QCategoryNode | vscode.TreeItem,
   ): Promise<QServerNode[] | QNamespaceNode[]> {
     if (serverType === undefined) return new Array<QServerNode>();
+
+    const conn = this.validateAndGetConnection(serverType);
+    if (!conn) {
+      return new Array<QServerNode>();
+    }
+
     const ns = serverType.contextValue ?? "";
+    const connLabel =
+      serverType instanceof QCategoryNode ? serverType.connLabel : "";
+
+    return this.loadObjectsByCategory(serverType, conn, ns, connLabel);
+  }
+
+  private validateAndGetConnection(
+    serverType: QCategoryNode | vscode.TreeItem,
+  ): LocalConnection | null {
     const connLabel =
       serverType instanceof QCategoryNode ? serverType.connLabel : "";
     const connMng = new ConnectionManagementService();
     const conn = connMng.retrieveConnectedConnection(connLabel);
+
     if (!conn) {
-      return new Array<QServerNode>();
+      return null;
     }
+
     if (conn instanceof InsightsConnection) {
-      // For Insights connections, namespaces are not applicable for now
+      // For Insights connections server objects are not applicable now
       notify(
         "Please connect to a KDB instance to view the objects",
         MessageKind.INFO,
       );
-      return new Array<QServerNode>();
+      return null;
     }
-    if (serverType.label === ext.qObjectCategories[0]) {
-      // dictionaries
-      const dicts = await KdbTreeService.loadDictionaries(
-        conn,
-        serverType.contextValue ?? "",
-      );
-      const result = dicts.map(
-        (x) =>
-          new QServerNode(
-            [],
-            `${ns === "." ? "" : ns + "."}${x.name}`,
-            "",
-            vscode.TreeItemCollapsibleState.None,
-            "dictionaries",
-            connLabel,
-          ),
-      );
-      if (result !== undefined) {
-        return result;
-      } else {
+
+    return conn as LocalConnection;
+  }
+
+  private async loadObjectsByCategory(
+    serverType: QCategoryNode | vscode.TreeItem,
+    conn: LocalConnection,
+    ns: string,
+    connLabel: string,
+  ): Promise<QServerNode[]> {
+    const categoryIndex = ext.qObjectCategories.indexOf(
+      serverType.label as string,
+    );
+
+    switch (categoryIndex) {
+      case 0: // dictionaries
+        return this.loadDictionaries(
+          conn,
+          serverType.contextValue ?? "",
+          ns,
+          connLabel,
+        );
+      case 1: // functions
+        return this.loadFunctions(
+          conn,
+          serverType.contextValue ?? "",
+          ns,
+          connLabel,
+        );
+      case 2: // tables
+        return this.loadTables(
+          conn,
+          serverType.contextValue ?? "",
+          ns,
+          connLabel,
+        );
+      case 3: // variables
+        return this.loadVariables(
+          conn,
+          serverType.contextValue ?? "",
+          ns,
+          connLabel,
+        );
+      case 4: // views
+        return this.loadViews(conn, ns, connLabel);
+      default:
         return new Array<QServerNode>();
-      }
-    } else if (serverType.label === ext.qObjectCategories[1]) {
-      // functions
-      const funcs = await KdbTreeService.loadFunctions(
-        conn,
-        serverType.contextValue ?? "",
-      );
-      const result = funcs.map(
-        (x) =>
-          new QServerNode(
-            [],
-            `${ns === "." ? "" : ns + "."}${x.name}`,
-            "",
-            vscode.TreeItemCollapsibleState.None,
-            "functions",
-            connLabel,
-          ),
-      );
-      if (result !== undefined) {
-        return result;
-      } else {
-        return new Array<QServerNode>();
-      }
-    } else if (serverType.label === ext.qObjectCategories[2]) {
-      // tables
-      const tables = await KdbTreeService.loadTables(
-        conn,
-        serverType.contextValue ?? "",
-      );
-      const result = tables.map(
-        (x) =>
-          new QServerNode(
-            [],
-            `${ns === "." ? "" : ns + "."}${x.name}`,
-            "",
-            vscode.TreeItemCollapsibleState.None,
-            "tables",
-            connLabel,
-          ),
-      );
-      if (result !== undefined) {
-        return result;
-      } else {
-        return new Array<QServerNode>();
-      }
-    } else if (serverType.label === ext.qObjectCategories[3]) {
-      // variables
-      const vars = await KdbTreeService.loadVariables(
-        conn,
-        serverType.contextValue ?? "",
-      );
-      const result = vars.map(
-        (x) =>
-          new QServerNode(
-            [],
-            `${ns === "." ? "" : ns + "."}${x.name}`,
-            "",
-            vscode.TreeItemCollapsibleState.None,
-            "variables",
-            connLabel,
-          ),
-      );
-      if (result !== undefined) {
-        return result;
-      } else {
-        return new Array<QServerNode>();
-      }
-    } else if (serverType.label === ext.qObjectCategories[4]) {
-      // views
-      const views = await KdbTreeService.loadViews(conn);
-      const result = views.map(
-        (x) =>
-          new QServerNode(
-            [],
-            `${ns === "." ? "" : "."}${x}`,
-            "",
-            vscode.TreeItemCollapsibleState.None,
-            "views",
-            connLabel,
-          ),
-      );
-      if (result !== undefined) {
-        return result;
-      } else {
-        return new Array<QServerNode>();
-      }
     }
-    // Remove this for this moment, to investigate
-    // else if (serverType.label === ext.qObjectCategories[5]) {
-    //   // nested namespaces
-    //   const namespaces = await loadNamespaces(ns);
-    //   const result = namespaces.map(
-    //     (x) =>
-    //       new QNamespaceNode(
-    //         [],
-    //         x.fname,
-    //         "",
-    //         vscode.TreeItemCollapsibleState.Collapsed,
-    //         x.fname,
-    //         connLabel,
-    //       ),
-    //   );
-    //   if (result !== undefined) {
-    //     return result;
-    //   } else {
-    //     return Array<QNamespaceNode>();
-    //   }
-    // }
-    return new Array<QServerNode>();
+  }
+
+  private async loadDictionaries(
+    conn: LocalConnection,
+    namespace: string,
+    ns: string,
+    connLabel: string,
+  ): Promise<QServerNode[]> {
+    const dicts = await KdbTreeService.loadDictionaries(conn, namespace);
+    return this.createQServerNodes(dicts, ns, connLabel, "dictionaries");
+  }
+
+  private async loadFunctions(
+    conn: LocalConnection,
+    namespace: string,
+    ns: string,
+    connLabel: string,
+  ): Promise<QServerNode[]> {
+    const funcs = await KdbTreeService.loadFunctions(conn, namespace);
+    return this.createQServerNodes(funcs, ns, connLabel, "functions");
+  }
+
+  private async loadTables(
+    conn: LocalConnection,
+    namespace: string,
+    ns: string,
+    connLabel: string,
+  ): Promise<QServerNode[]> {
+    const tables = await KdbTreeService.loadTables(conn, namespace);
+    return this.createQServerNodes(tables, ns, connLabel, "tables");
+  }
+
+  private async loadVariables(
+    conn: LocalConnection,
+    namespace: string,
+    ns: string,
+    connLabel: string,
+  ): Promise<QServerNode[]> {
+    const vars = await KdbTreeService.loadVariables(conn, namespace);
+    return this.createQServerNodes(vars, ns, connLabel, "variables");
+  }
+
+  private async loadViews(
+    conn: LocalConnection,
+    ns: string,
+    connLabel: string,
+  ): Promise<QServerNode[]> {
+    const views = await KdbTreeService.loadViews(conn);
+    return views.map(
+      (x) =>
+        new QServerNode(
+          [],
+          `${ns === "." ? "" : "."}${x}`,
+          "",
+          vscode.TreeItemCollapsibleState.None,
+          "views",
+          connLabel,
+        ),
+    );
+  }
+
+  // Nested namespaces are not currently supported in the tree view
+  // private async loadNestedNamespaces(
+  //   conn: LocalConnection,
+  //   ns: string,
+  //   connLabel: string,
+  // ): Promise<QServerNode[]> {
+  //   const nns = await KdbTreeService.loadNamespaces(conn);
+  //   return this.createQServerNodes(nns, ns, connLabel, "namespaces");
+  // }
+
+  /* istanbul ignore next */
+  private createQServerNodes(
+    objects: any[],
+    ns: string,
+    connLabel: string,
+    iconType: string,
+  ): QServerNode[] {
+    return objects.map(
+      (x) =>
+        new QServerNode(
+          [],
+          `${ns === "." ? "" : ns + "."}${x.name}`,
+          "",
+          vscode.TreeItemCollapsibleState.None,
+          iconType,
+          connLabel,
+        ),
+    );
   }
 
   /* istanbul ignore next */
