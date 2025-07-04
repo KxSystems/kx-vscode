@@ -2285,255 +2285,294 @@ describe("MetaContentProvider", () => {
 });
 
 describe("kdbTreeService", () => {
-  it("Should return empty ServerObjects array when none are loaded", async () => {
-    sinon.stub(serverCommand, "loadServerObjects").resolves(undefined);
-    const result = await KdbTreeService.loadNamespaces("");
-    assert.strictEqual(result.length, 0, "Namespaces returned should be zero.");
-    sinon.restore();
+  const localConn = new LocalConnection("localhost:5001", "server1", []);
+
+  describe("loadNamespaces", () => {
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("Should return empty ServerObjects array when none are loaded", async () => {
+      sinon.stub(localConn, "loadServerObjects").resolves(undefined);
+      const result = await KdbTreeService.loadNamespaces(localConn, "");
+      assert.strictEqual(
+        result.length,
+        0,
+        "Namespaces returned should be zero.",
+      );
+    });
+
+    it("Should return a single server object that ia a namespace", async () => {
+      const testObject: ServerObject[] = [
+        {
+          id: 1,
+          pid: 1,
+          name: "test",
+          fname: "test1",
+          typeNum: 1,
+          namespace: ".",
+          context: {},
+          isNs: true,
+        },
+        {
+          id: 2,
+          pid: 2,
+          name: "test",
+          fname: "test2",
+          typeNum: 1,
+          namespace: ".",
+          context: {},
+          isNs: true,
+        },
+      ];
+      sinon.stub(localConn, "loadServerObjects").resolves(testObject);
+      const result = await KdbTreeService.loadNamespaces(localConn);
+      assert.strictEqual(
+        result[0],
+        testObject[0],
+        "Single server object that is a namespace should be returned.",
+      );
+    });
+
+    it("Should return a single server object that ia a namespace (reverse sort)", async () => {
+      const testObject0: ServerObject[] = [
+        {
+          id: 1,
+          pid: 1,
+          name: "test",
+          fname: "test",
+          typeNum: 1,
+          namespace: ".",
+          context: {},
+          isNs: true,
+        },
+        {
+          id: 0,
+          pid: 0,
+          name: "test",
+          fname: "test0",
+          typeNum: 1,
+          namespace: ".",
+          context: {},
+          isNs: true,
+        },
+      ];
+      sinon.stub(localConn, "loadServerObjects").resolves(testObject0);
+      const result = await KdbTreeService.loadNamespaces(localConn);
+      assert.strictEqual(
+        result[0],
+        testObject0[0],
+        "Single server object that is a namespace should be returned.",
+      );
+      sinon.restore();
+    });
+
+    it("Should return a single server object that ia a namespace", async () => {
+      const testObject2: ServerObject[] = [
+        {
+          id: 1,
+          pid: 1,
+          name: "test",
+          fname: "test",
+          typeNum: 1,
+          namespace: ".",
+          context: {},
+          isNs: true,
+        },
+      ];
+      sinon.stub(localConn, "loadServerObjects").resolves(testObject2);
+      const result = await KdbTreeService.loadNamespaces(localConn, ".");
+      assert.strictEqual(
+        result[0],
+        testObject2[0],
+        `Single server object that is a namespace should be returned: ${JSON.stringify(
+          result,
+        )}`,
+      );
+      sinon.restore();
+    });
   });
 
-  it("Should return a single server object that ia a namespace", async () => {
-    const testObject: ServerObject[] = [
-      {
-        id: 1,
-        pid: 1,
-        name: "test",
-        fname: "test1",
-        typeNum: 1,
-        namespace: ".",
-        context: {},
-        isNs: true,
-      },
-      {
-        id: 2,
-        pid: 2,
-        name: "test",
-        fname: "test2",
-        typeNum: 1,
-        namespace: ".",
-        context: {},
-        isNs: true,
-      },
-    ];
-    sinon.stub(serverCommand, "loadServerObjects").resolves(testObject);
-    const result = await KdbTreeService.loadNamespaces();
-    assert.strictEqual(
-      result[0],
-      testObject[0],
-      "Single server object that is a namespace should be returned.",
-    );
-    sinon.restore();
+  describe("loadDictionaries", () => {
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("Should return empty ServerObjects array when none are loaded", async () => {
+      sinon.stub(localConn, "loadServerObjects").resolves(undefined);
+      const result = await KdbTreeService.loadDictionaries(localConn, "");
+      assert.strictEqual(
+        result.length,
+        0,
+        "ServerObjects returned should be zero.",
+      );
+    });
+
+    it("Should return a single server object that ia a dictionary", async () => {
+      const testObject: ServerObject[] = [
+        {
+          id: 1,
+          pid: 1,
+          name: "test",
+          fname: "test",
+          typeNum: 99,
+          namespace: ".",
+          context: {},
+          isNs: false,
+        },
+      ];
+      sinon.stub(localConn, "loadServerObjects").resolves(testObject);
+      const result = await KdbTreeService.loadDictionaries(localConn, ".");
+      assert.strictEqual(
+        result[0],
+        testObject[0],
+        "Single server object that is a namespace should be returned.",
+      );
+    });
   });
 
-  it("Should return a single server object that ia a namespace (reverse sort)", async () => {
-    const testObject0: ServerObject[] = [
-      {
-        id: 1,
-        pid: 1,
-        name: "test",
-        fname: "test",
-        typeNum: 1,
-        namespace: ".",
-        context: {},
-        isNs: true,
-      },
-      {
-        id: 0,
-        pid: 0,
-        name: "test",
-        fname: "test0",
-        typeNum: 1,
-        namespace: ".",
-        context: {},
-        isNs: true,
-      },
-    ];
-    sinon.stub(serverCommand, "loadServerObjects").resolves(testObject0);
-    const result = await KdbTreeService.loadNamespaces();
-    assert.strictEqual(
-      result[0],
-      testObject0[0],
-      "Single server object that is a namespace should be returned.",
-    );
-    sinon.restore();
+  describe("loadFunctions", () => {
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("Should return empty ServerObjects array when none are loaded", async () => {
+      sinon.stub(localConn, "loadServerObjects").resolves(undefined);
+      const result = await KdbTreeService.loadFunctions(localConn, ".");
+      assert.strictEqual(
+        result.length,
+        0,
+        "ServerObjects returned should be zero.",
+      );
+    });
+
+    it("Should return a single server object that ia a function", async () => {
+      const testObject: ServerObject[] = [
+        {
+          id: 1,
+          pid: 1,
+          name: "test",
+          fname: "test",
+          typeNum: 100,
+          namespace: ".",
+          context: {},
+          isNs: false,
+        },
+      ];
+      sinon.stub(localConn, "loadServerObjects").resolves(testObject);
+      const result = await KdbTreeService.loadFunctions(localConn, ".");
+      assert.strictEqual(
+        result[0],
+        testObject[0],
+        "Single server object that is a namespace should be returned.",
+      );
+    });
   });
 
-  it("Should return a single server object that ia a namespace", async () => {
-    const testObject2: ServerObject[] = [
-      {
-        id: 1,
-        pid: 1,
-        name: "test",
-        fname: "test",
-        typeNum: 1,
-        namespace: ".",
-        context: {},
-        isNs: true,
-      },
-    ];
-    sinon.stub(serverCommand, "loadServerObjects").resolves(testObject2);
-    const result = await KdbTreeService.loadNamespaces(".");
-    assert.strictEqual(
-      result[0],
-      testObject2[0],
-      `Single server object that is a namespace should be returned: ${JSON.stringify(
-        result,
-      )}`,
-    );
-    sinon.restore();
+  describe("loadTables", () => {
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("Should return empty ServerObjects array when none are loaded", async () => {
+      sinon.stub(localConn, "loadServerObjects").resolves(undefined);
+      const result = await KdbTreeService.loadTables(localConn, ".");
+      assert.strictEqual(
+        result.length,
+        0,
+        "ServerObjects returned should be zero.",
+      );
+    });
+
+    it("Should return a single server object that ia a table", async () => {
+      const testObject: ServerObject[] = [
+        {
+          id: 1,
+          pid: 1,
+          name: "test",
+          fname: "test",
+          typeNum: 98,
+          namespace: ".",
+          context: {},
+          isNs: false,
+        },
+      ];
+      sinon.stub(localConn, "loadServerObjects").resolves(testObject);
+      const result = await KdbTreeService.loadTables(localConn, ".");
+      assert.strictEqual(
+        result[0],
+        testObject[0],
+        "Single server object that is a namespace should be returned.",
+      );
+    });
   });
 
-  it("Should return empty ServerObjects array when none are loaded", async () => {
-    sinon.stub(serverCommand, "loadServerObjects").resolves(undefined);
-    const result = await KdbTreeService.loadDictionaries("");
-    assert.strictEqual(
-      result.length,
-      0,
-      "ServerObjects returned should be zero.",
-    );
-    sinon.restore();
+  describe("loadVariables", () => {
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("Should return empty ServerObjects array when none are loaded", async () => {
+      sinon.stub(localConn, "loadServerObjects").resolves(undefined);
+      sinon.stub(KdbTreeService, "loadViews").resolves([]);
+      const result = await KdbTreeService.loadVariables(localConn, ".");
+      assert.strictEqual(
+        result.length,
+        0,
+        "ServerObjects returned should be zero.",
+      );
+    });
+
+    it("Should return a single server object that ia a variable", async () => {
+      const testObject: ServerObject[] = [
+        {
+          id: 1,
+          pid: 1,
+          name: "test",
+          fname: "test",
+          typeNum: -7,
+          namespace: ".",
+          context: {},
+          isNs: false,
+        },
+      ];
+      sinon.stub(localConn, "loadServerObjects").resolves(testObject);
+      sinon.stub(KdbTreeService, "loadViews").resolves([]);
+      const result = await KdbTreeService.loadVariables(localConn, ".");
+      assert.strictEqual(
+        result[0],
+        testObject[0],
+        "Single server object that is a namespace should be returned.",
+      );
+    });
   });
 
-  it("Should return a single server object that ia a dictionary", async () => {
-    const testObject: ServerObject[] = [
-      {
-        id: 1,
-        pid: 1,
-        name: "test",
-        fname: "test",
-        typeNum: 99,
-        namespace: ".",
-        context: {},
-        isNs: false,
-      },
-    ];
-    sinon.stub(serverCommand, "loadServerObjects").resolves(testObject);
-    const result = await KdbTreeService.loadDictionaries(".");
-    assert.strictEqual(
-      result[0],
-      testObject[0],
-      "Single server object that is a namespace should be returned.",
-    );
-    sinon.restore();
-  });
+  describe("loadViews", () => {
+    afterEach(() => {
+      sinon.restore();
+    });
 
-  it("Should return empty ServerObjects array when none are loaded", async () => {
-    sinon.stub(serverCommand, "loadServerObjects").resolves(undefined);
-    const result = await KdbTreeService.loadFunctions(".");
-    assert.strictEqual(
-      result.length,
-      0,
-      "ServerObjects returned should be zero.",
-    );
-    sinon.restore();
-  });
+    it("Should return sorted views", async () => {
+      ext.activeConnection = new LocalConnection(
+        "localhost:5001",
+        "server1",
+        [],
+      );
+      sinon.stub(localConn, "executeQuery").resolves(["vw1", "vw2"]);
+      const result = await KdbTreeService.loadViews(localConn);
+      assert.strictEqual(result[0], "vw1", "Should return the first view");
+    });
 
-  it("Should return a single server object that ia a function", async () => {
-    const testObject: ServerObject[] = [
-      {
-        id: 1,
-        pid: 1,
-        name: "test",
-        fname: "test",
-        typeNum: 100,
-        namespace: ".",
-        context: {},
-        isNs: false,
-      },
-    ];
-    sinon.stub(serverCommand, "loadServerObjects").resolves(testObject);
-    const result = await KdbTreeService.loadFunctions(".");
-    assert.strictEqual(
-      result[0],
-      testObject[0],
-      "Single server object that is a namespace should be returned.",
-    );
-    sinon.restore();
-  });
-
-  it("Should return empty ServerObjects array when none are loaded", async () => {
-    sinon.stub(serverCommand, "loadServerObjects").resolves(undefined);
-    const result = await KdbTreeService.loadTables(".");
-    assert.strictEqual(
-      result.length,
-      0,
-      "ServerObjects returned should be zero.",
-    );
-    sinon.restore();
-  });
-
-  it("Should return a single server object that ia a table", async () => {
-    const testObject: ServerObject[] = [
-      {
-        id: 1,
-        pid: 1,
-        name: "test",
-        fname: "test",
-        typeNum: 98,
-        namespace: ".",
-        context: {},
-        isNs: false,
-      },
-    ];
-    sinon.stub(serverCommand, "loadServerObjects").resolves(testObject);
-    const result = await KdbTreeService.loadTables(".");
-    assert.strictEqual(
-      result[0],
-      testObject[0],
-      "Single server object that is a namespace should be returned.",
-    );
-    sinon.restore();
-  });
-
-  it("Should return empty ServerObjects array when none are loaded", async () => {
-    sinon.stub(serverCommand, "loadServerObjects").resolves(undefined);
-    const result = await KdbTreeService.loadVariables(".");
-    assert.strictEqual(
-      result.length,
-      0,
-      "ServerObjects returned should be zero.",
-    );
-    sinon.restore();
-  });
-
-  it("Should return a single server object that ia a variable", async () => {
-    const testObject: ServerObject[] = [
-      {
-        id: 1,
-        pid: 1,
-        name: "test",
-        fname: "test",
-        typeNum: -7,
-        namespace: ".",
-        context: {},
-        isNs: false,
-      },
-    ];
-    sinon.stub(serverCommand, "loadServerObjects").resolves(testObject);
-    sinon.stub(KdbTreeService, "loadViews").resolves([]);
-    const result = await KdbTreeService.loadVariables(".");
-    assert.strictEqual(
-      result[0],
-      testObject[0],
-      "Single server object that is a namespace should be returned.",
-    );
-    sinon.restore();
-  });
-
-  it("Should return sorted views", async () => {
-    ext.activeConnection = new LocalConnection("localhost:5001", "server1", []);
-    sinon.stub(ext.activeConnection, "executeQuery").resolves(["vw1", "vw2"]);
-    const result = await KdbTreeService.loadViews();
-    assert.strictEqual(result[0], "vw1", "Should return the first view");
-    sinon.restore();
-  });
-
-  it("Should return sorted views (reverse order)", async () => {
-    ext.activeConnection = new LocalConnection("localhost:5001", "server1", []);
-    sinon.stub(ext.activeConnection, "executeQuery").resolves(["vw1", "vw2"]);
-    const result = await KdbTreeService.loadViews();
-    assert.strictEqual(result[0], "vw1", "Should return the first view");
-    sinon.restore();
+    it("Should return sorted views (reverse order)", async () => {
+      ext.activeConnection = new LocalConnection(
+        "localhost:5001",
+        "server1",
+        [],
+      );
+      sinon.stub(localConn, "executeQuery").resolves(["vw1", "vw2"]);
+      const result = await KdbTreeService.loadViews(localConn);
+      assert.strictEqual(result[0], "vw1", "Should return the first view");
+    });
   });
 });
 

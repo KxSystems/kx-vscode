@@ -12,13 +12,14 @@
  */
 
 import { LocalConnection } from "../classes/localConnection";
-import { loadServerObjects } from "../commands/serverCommand";
-import { ext } from "../extensionVariables";
 import { ServerObject } from "../models/serverObject";
 
 export class KdbTreeService {
-  static async loadNamespaces(root?: string): Promise<ServerObject[]> {
-    const serverObjects = await loadServerObjects();
+  static async loadNamespaces(
+    conn: LocalConnection,
+    root?: string,
+  ): Promise<ServerObject[]> {
+    const serverObjects = await conn.loadServerObjects();
     if (serverObjects !== undefined) {
       const ns = serverObjects.filter((value) => {
         return value.isNs ? value : undefined;
@@ -31,8 +32,11 @@ export class KdbTreeService {
     return new Array<ServerObject>();
   }
 
-  static async loadDictionaries(ns: string): Promise<ServerObject[]> {
-    const serverObjects = await loadServerObjects();
+  static async loadDictionaries(
+    conn: LocalConnection,
+    ns: string,
+  ): Promise<ServerObject[]> {
+    const serverObjects = await conn.loadServerObjects();
     if (serverObjects !== undefined) {
       const dicts = serverObjects.filter((value) => {
         return value.typeNum === 99 && !value.isNs && value.namespace === ns
@@ -44,8 +48,11 @@ export class KdbTreeService {
     return new Array<ServerObject>();
   }
 
-  static async loadFunctions(ns: string): Promise<ServerObject[]> {
-    const serverObjects = await loadServerObjects();
+  static async loadFunctions(
+    conn: LocalConnection,
+    ns: string,
+  ): Promise<ServerObject[]> {
+    const serverObjects = await conn.loadServerObjects();
     if (serverObjects !== undefined) {
       const funcs = serverObjects.filter((value) => {
         return value.typeNum === 100 && !value.isNs && value.namespace === ns
@@ -57,8 +64,11 @@ export class KdbTreeService {
     return new Array<ServerObject>();
   }
 
-  static async loadTables(ns: string): Promise<ServerObject[]> {
-    const serverObjects = await loadServerObjects();
+  static async loadTables(
+    conn: LocalConnection,
+    ns: string,
+  ): Promise<ServerObject[]> {
+    const serverObjects = await conn.loadServerObjects();
     if (!serverObjects) return [];
 
     const tables = serverObjects.filter(
@@ -71,9 +81,12 @@ export class KdbTreeService {
     return KdbTreeService.sortObjects(tables);
   }
 
-  static async loadVariables(ns: string): Promise<ServerObject[]> {
-    const serverObjects = await loadServerObjects();
-    const views = await KdbTreeService.loadViews();
+  static async loadVariables(
+    conn: LocalConnection,
+    ns: string,
+  ): Promise<ServerObject[]> {
+    const serverObjects = await conn.loadServerObjects();
+    const views = await KdbTreeService.loadViews(conn);
 
     if (serverObjects !== undefined) {
       const vars = serverObjects.filter((value) => {
@@ -89,23 +102,20 @@ export class KdbTreeService {
     return new Array<ServerObject>();
   }
 
-  static async loadViews(): Promise<string[]> {
-    if (ext.activeConnection instanceof LocalConnection) {
-      const rawViewArray = await ext.activeConnection?.executeQuery("views`");
-      const views = rawViewArray?.filter((item: any) => {
-        return item !== "s#" && item !== "" && item !== ",";
-      });
-      const sorted = views?.sort((object1: any, object2: any) => {
-        if (object1 < object2) {
-          return -1;
-        } else if (object1 > object2) {
-          return 1;
-        }
-        return 0;
-      });
-      return sorted ?? new Array<string>();
-    }
-    return new Array<string>();
+  static async loadViews(conn: LocalConnection): Promise<string[]> {
+    const rawViewArray = await conn.executeQuery("views`");
+    const views = rawViewArray?.filter((item: any) => {
+      return item !== "s#" && item !== "" && item !== ",";
+    });
+    const sorted = views?.sort((object1: any, object2: any) => {
+      if (object1 < object2) {
+        return -1;
+      } else if (object1 > object2) {
+        return 1;
+      }
+      return 0;
+    });
+    return sorted ?? new Array<string>();
   }
 
   private static getNamespaces(

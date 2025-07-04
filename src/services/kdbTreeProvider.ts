@@ -39,6 +39,7 @@ import {
   getStatus,
 } from "../utils/core";
 import { getIconPath } from "../utils/iconsUtils";
+import { MessageKind, notify } from "../utils/notifications";
 
 export class KdbTreeProvider
   implements vscode.TreeDataProvider<vscode.TreeItem>
@@ -199,8 +200,21 @@ export class KdbTreeProvider
   }
 
   /* istanbul ignore next */
-  private async getNamespaces(connLabel?: string): Promise<QNamespaceNode[]> {
-    const ns = await KdbTreeService.loadNamespaces();
+  private async getNamespaces(connLabel: string): Promise<QNamespaceNode[]> {
+    const connMng = new ConnectionManagementService();
+    const conn = connMng.retrieveConnectedConnection(connLabel);
+    if (!conn) {
+      return new Array<QNamespaceNode>();
+    }
+    if (conn instanceof InsightsConnection) {
+      // For Insights connections, namespaces are not applicable for now
+      notify(
+        "Please connect to a KDB instance to view the objects",
+        MessageKind.INFO,
+      );
+      return new Array<QNamespaceNode>();
+    }
+    const ns = await KdbTreeService.loadNamespaces(conn);
     const result = ns.map(
       (x) =>
         new QNamespaceNode(
@@ -256,9 +270,23 @@ export class KdbTreeProvider
     const ns = serverType.contextValue ?? "";
     const connLabel =
       serverType instanceof QCategoryNode ? serverType.connLabel : "";
+    const connMng = new ConnectionManagementService();
+    const conn = connMng.retrieveConnectedConnection(connLabel);
+    if (!conn) {
+      return new Array<QServerNode>();
+    }
+    if (conn instanceof InsightsConnection) {
+      // For Insights connections, namespaces are not applicable for now
+      notify(
+        "Please connect to a KDB instance to view the objects",
+        MessageKind.INFO,
+      );
+      return new Array<QServerNode>();
+    }
     if (serverType.label === ext.qObjectCategories[0]) {
       // dictionaries
       const dicts = await KdbTreeService.loadDictionaries(
+        conn,
         serverType.contextValue ?? "",
       );
       const result = dicts.map(
@@ -280,6 +308,7 @@ export class KdbTreeProvider
     } else if (serverType.label === ext.qObjectCategories[1]) {
       // functions
       const funcs = await KdbTreeService.loadFunctions(
+        conn,
         serverType.contextValue ?? "",
       );
       const result = funcs.map(
@@ -301,6 +330,7 @@ export class KdbTreeProvider
     } else if (serverType.label === ext.qObjectCategories[2]) {
       // tables
       const tables = await KdbTreeService.loadTables(
+        conn,
         serverType.contextValue ?? "",
       );
       const result = tables.map(
@@ -322,6 +352,7 @@ export class KdbTreeProvider
     } else if (serverType.label === ext.qObjectCategories[3]) {
       // variables
       const vars = await KdbTreeService.loadVariables(
+        conn,
         serverType.contextValue ?? "",
       );
       const result = vars.map(
@@ -342,7 +373,7 @@ export class KdbTreeProvider
       }
     } else if (serverType.label === ext.qObjectCategories[4]) {
       // views
-      const views = await KdbTreeService.loadViews();
+      const views = await KdbTreeService.loadViews(conn);
       const result = views.map(
         (x) =>
           new QServerNode(
