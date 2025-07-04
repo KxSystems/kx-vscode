@@ -29,7 +29,6 @@ import {
 
 import { InsightsConnection } from "../../src/classes/insightsConnection";
 import { LocalConnection } from "../../src/classes/localConnection";
-import * as serverCommand from "../../src/commands/serverCommand";
 import { ext } from "../../src/extensionVariables";
 import { InsightsApiConfig } from "../../src/models/config";
 import {
