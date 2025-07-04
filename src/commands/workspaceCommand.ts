@@ -320,8 +320,18 @@ export async function runActiveEditor(type?: ExecutionTypes) {
       return;
     }
 
-    const target = isInsights ? getTargetForUri(uri) : undefined;
     const executorName = getBasename(ext.activeTextEditor.document.uri);
+    const target = isInsights ? getTargetForUri(uri) : undefined;
+    const isSql = executorName.endsWith(".sql");
+
+    if (isSql && !isInsights) {
+      notify(
+        `SQL execution is not supported on ${server || "active connection"}.`,
+        MessageKind.ERROR,
+        { logger },
+      );
+      return;
+    }
 
     try {
       await runQuery(
@@ -335,6 +345,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
         !isPython(uri),
         undefined,
         target,
+        isSql,
       );
     } catch (error) {
       notify(

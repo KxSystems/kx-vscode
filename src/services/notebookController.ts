@@ -106,37 +106,46 @@ export class KxNotebookController {
       execution.executionOrder = ++this.order;
       execution.start(Date.now());
 
-      const executorName = getBasename(notebook.uri);
-      let executor: Promise<any>;
-
-      const target = kind == CellKind.Q ? cell.metadata?.target : undefined;
-
-      const variable =
-        target || kind === CellKind.SQL ? cell.metadata?.variable : undefined;
-
-      if (target || kind === CellKind.SQL) {
-        const params = getPartialDatasourceFile(
-          cell.document.getText(),
-          target,
-          kind === CellKind.SQL,
-        );
-        executor = variable
-          ? populateScratchpad(params, conn.connLabel, variable, true)
-          : runDataSource(params, conn.connLabel, executorName);
-      } else {
-        executor = executeQuery(
-          cell.document.getText(),
-          conn.connLabel,
-          executorName,
-          ".",
-          kind === CellKind.PYTHON,
-          false,
-          false,
-          execution.token,
-        );
-      }
-
       try {
+        const executorName = getBasename(notebook.uri);
+        let executor: Promise<any>;
+
+        const target =
+          isInsights && kind == CellKind.Q ? cell.metadata?.target : undefined;
+
+        const variable =
+          isInsights && (target || kind === CellKind.SQL)
+            ? cell.metadata?.variable
+            : undefined;
+
+        if (kind === CellKind.SQL && !isInsights) {
+          throw new Error(
+            `SQL is not supported on ${server || "active connection"}`,
+          );
+        }
+
+        if (target || kind === CellKind.SQL) {
+          const params = getPartialDatasourceFile(
+            cell.document.getText(),
+            target,
+            kind === CellKind.SQL,
+          );
+          executor = variable
+            ? populateScratchpad(params, conn.connLabel, variable, true)
+            : runDataSource(params, conn.connLabel, executorName);
+        } else {
+          executor = executeQuery(
+            cell.document.getText(),
+            conn.connLabel,
+            executorName,
+            ".",
+            kind === CellKind.PYTHON,
+            false,
+            false,
+            execution.token,
+          );
+        }
+
         let results = await Promise.race([
           executor,
           new Promise((_, reject) => {
@@ -170,17 +179,16 @@ export class KxNotebookController {
           ]),
         ]);
       } catch (error) {
-        notify(
-          `Executing ${executorName} on ${conn.connLabel} errored.`,
-          MessageKind.DEBUG,
-          {
-            logger,
-            params: error,
-          },
-        );
+        notify(`Execution on ${conn.connLabel} stopped.`, MessageKind.DEBUG, {
+          logger,
+          params: error,
+        });
         execution.replaceOutput([
           new vscode.NotebookCellOutput([
-            vscode.NotebookCellOutputItem.text(`Execution stopped (${error}).`),
+            vscode.NotebookCellOutputItem.text(
+              `<p>Execution stopped (${error}).</p>`,
+              "text/html",
+            ),
           ]),
         ]);
         break;

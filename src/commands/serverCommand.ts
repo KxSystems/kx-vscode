@@ -1037,6 +1037,7 @@ export async function runQuery(
   isWorkbook: boolean,
   rerunQuery?: string,
   target?: string,
+  isSql?: boolean,
 ) {
   const editor = ext.activeTextEditor;
   if (!editor) {
@@ -1079,8 +1080,6 @@ export async function runQuery(
   if (type === ExecutionTypes.PopulateScratchpad) {
     variable = await inputVariable();
   }
-
-  const isSql = executorName.endsWith(".sql");
 
   const runner = Runner.create((_, token) => {
     return target || isSql

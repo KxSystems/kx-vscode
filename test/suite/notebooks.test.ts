@@ -144,9 +144,13 @@ describe("Notebooks", () => {
     it("should execute code for table result", async () => {
       activeConnectionStub.value({});
       executeQueryStub.resolves({
-        count: 1,
-        columns: [{ name: "values", type: "long", values: ["1"], order: [0] }],
+        count: 2,
+        columns: [
+          { name: "x", type: "longs", values: ["0", "1"], order: [0, 1] },
+          { name: "y", type: "longs", values: ["0", "1"], order: [0, 1] },
+        ],
       });
+
       const res = sinon.stub(executor, "replaceOutput");
       await instance.execute(cells, notebook, <vscode.NotebookController>{});
       assert.ok(res.calledOnce);
