@@ -19,6 +19,7 @@ import { InsightsConnection } from "../../src/classes/insightsConnection";
 import { LocalConnection } from "../../src/classes/localConnection";
 import * as serverCommand from "../../src/commands/serverCommand";
 import * as workspaceCommand from "../../src/commands/workspaceCommand";
+import { ext } from "../../src/extensionVariables";
 import { ConnectionManagementService } from "../../src/services/connectionManagerService";
 import { InsightsNode, KdbNode } from "../../src/services/kdbTreeProvider";
 import * as controlller from "../../src/services/notebookController";
@@ -32,20 +33,62 @@ describe("Notebooks", () => {
   });
 
   describe("Controller", () => {
-    let notifyKind: notifications.MessageKind;
+    const result = {
+      table: {
+        count: 2,
+        columns: [
+          {
+            name: "x",
+            type: "longs",
+            values: ["0", "1"],
+            order: [0, 1],
+          },
+          {
+            name: "y",
+            type: "longs",
+            values: ["0", "1"],
+            order: [0, 1],
+          },
+        ],
+      },
+
+      png: {
+        count: 66,
+        columns: [
+          {
+            name: "values",
+            type: "bytes",
+            values: [
+              "0x89",
+              "0x50",
+              "0x4e",
+              "0x47",
+              "0x0d",
+              "0x0a",
+              "0x1a",
+              "0x0a",
+              ..."0x00,".repeat(58).split(","),
+            ],
+          },
+        ],
+      },
+
+      text: "results",
+    };
+
+    let executeQueryStub: sinon.SinonStub;
+    let notifyStub: sinon.SinonStub;
     let instance: controlller.KxNotebookController;
 
     beforeEach(() => {
-      sinon
-        .stub(notifications, "notify")
-        .value((_m: string, k: notifications.MessageKind) => (notifyKind = k));
+      executeQueryStub = sinon.stub(serverCommand, "executeQuery");
+      notifyStub = sinon.stub(notifications, "notify");
       sinon
         .stub(vscode.notebooks, "createNotebookController")
         .returns(<vscode.NotebookController>{});
     });
 
     afterEach(() => {
-      notifyKind = undefined;
       instance = undefined;
     });
 
@@ -87,12 +130,6 @@ describe("Notebooks", () => {
       });
 
       describe("Connected", () => {
-        let executeQueryStub: sinon.SinonStub;
-
-        beforeEach(() => {
-          executeQueryStub = sinon.stub(serverCommand, "executeQuery");
-        });
-
         describe("Insights Connection", () => {
           beforeEach(() => {
             sinon
@@ -118,7 +155,12 @@ describe("Notebooks", () => {
                 createNotebook(),
                 createController(),
               );
-              assert.strictEqual(notifyKind, notifications.MessageKind.ERROR);
+              sinon.assert.calledOnceWithMatch(
+                notifyStub,
+                sinon.match.any,
+                notifications.MessageKind.ERROR,
+                sinon.match.any,
+              );
             });
           });
         });
@@ -143,75 +185,34 @@ describe("Notebooks", () => {
             });
 
             describe("q cell", () => {
-              const table = {
-                count: 2,
-                columns: [
-                  {
-                    name: "x",
-                    type: "longs",
-                    values: ["0", "1"],
-                    order: [0, 1],
-                  },
-                  {
-                    name: "y",
-                    type: "longs",
-                    values: ["0", "1"],
-                    order: [0, 1],
-                  },
-                ],
-              };
-
-              const png = {
-                count: 66,
-                columns: [
-                  {
-                    name: "values",
-                    type: "bytes",
-                    values: [
-                      "0x89",
-                      "0x50",
-                      "0x4e",
-                      "0x47",
-                      "0x0d",
-                      "0x0a",
-                      "0x1a",
-                      "0x0a",
-                      ..."0x00,".repeat(58).split(","),
-                    ],
-                  },
-                ],
-              };
-
-              const text = "results";
-
               it("should display table results", async () => {
-                executeQueryStub.resolves(table);
+                executeQueryStub.resolves(result.table);
                 await instance.execute(
                   [createCell("q")],
                   createNotebook(),
                   createController(),
                 );
-                assert.strictEqual(notifyKind, undefined);
+                sinon.assert.notCalled(notifyStub);
               });
 
               it("should display png results", async () => {
-                executeQueryStub.resolves(png);
+                executeQueryStub.resolves(result.png);
                 await instance.execute(
                   [createCell("q")],
                   createNotebook(),
                   createController(),
                 );
-                assert.strictEqual(notifyKind, undefined);
+                sinon.assert.notCalled(notifyStub);
               });
 
               it("should display text results", async () => {
-                executeQueryStub.resolves(text);
+                executeQueryStub.resolves(result.text);
                 await instance.execute(
                   [createCell("q")],
                   createNotebook(),
                   createController(),
                 );
-                assert.strictEqual(notifyKind, undefined);
+                sinon.assert.notCalled(notifyStub);
               });
             });
 
@@ -225,7 +226,7 @@ describe("Notebooks", () => {
                   createNotebook(),
                   createController(),
                 );
-                assert.strictEqual(notifyKind, undefined);
+                sinon.assert.notCalled(notifyStub);
               });
             });
 
@@ -237,7 +238,12 @@ describe("Notebooks", () => {
                   createNotebook(),
                   createController(),
                 );
-                assert.strictEqual(notifyKind, notifications.MessageKind.DEBUG);
+                sinon.assert.calledOnceWithExactly(
+                  notifyStub,
+                  sinon.match.string,
+                  notifications.MessageKind.DEBUG,
+                  sinon.match.any,
+                );
               });
             });
           });
@@ -257,35 +263,72 @@ describe("Notebooks", () => {
                 createNotebook(),
                 createController(),
               );
-              assert.strictEqual(notifyKind, notifications.MessageKind.ERROR);
+              sinon.assert.calledOnceWithExactly(
+                notifyStub,
+                sinon.match.string,
+                notifications.MessageKind.ERROR,
+                sinon.match.any,
+              );
             });
           });
         });
       });
     });
 
-    describe("Connection Not Picked", () => {});
+    describe("Connection Not Picked", () => {
+      beforeEach(() => {
+        sinon.stub(workspaceCommand, "getServerForUri").returns(undefined);
+      });
 
-    it.skip("should execute code for plot result", async () => {
-      <any>{ resolves(a: any) {} }.resolves({
-        count: 66,
-        columns: [
-          {
-            name: "values",
-            type: "bytes",
-            values: [
-              "0x89",
-              "0x50",
-              "0x4e",
-              "0x47",
-              "0x0d",
-              "0x0a",
-              "0x1a",
-              "0x0a",
-              ..."0x00,".repeat(58).split(","),
-            ],
-          },
-        ],
+      describe("Connected", () => {
+        const text = "results";
+
+        afterEach(() => {
+          ext.activeConnection = undefined;
+        });
+
+        describe("LocalConnection", () => {
+          beforeEach(() => {
+            ext.activeConnection = sinon.createStubInstance(LocalConnection);
+            createInstance();
+          });
+
+          describe("q cell", () => {
+            it("should display results", async () => {
+              executeQueryStub.resolves(text);
+              await instance.execute(
+                [createCell("q")],
+                createNotebook(),
+                createController(),
+              );
+              sinon.assert.notCalled(notifyStub);
+            });
+          });
+        });
+      });
+
+      describe("Disconnected", () => {
+        beforeEach(() => {
+          createInstance();
+        });
+
+        describe("LocalConnection", () => {
+          describe("q cell", async () => {
+            it("should show warning message", async () => {
+              await instance.execute(
+                [createCell("q")],
+                createNotebook(),
+                createController(),
+              );
+              sinon.assert.calledOnceWithExactly(
+                notifyStub,
+                sinon.match.string,
+                notifications.MessageKind.WARNING,
+                sinon.match.any,
+              );
+            });
+          });
+        });
       });
     });
   });
