@@ -12,8 +12,6 @@
  */
 
 import * as fs from "fs";
-import { readFileSync } from "fs-extra";
-import { join } from "path";
 import * as url from "url";
 import {
   CancellationToken,
@@ -45,7 +43,6 @@ import { Plot } from "../models/plot";
 import { QueryHistory } from "../models/queryHistory";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
-import { ServerObject } from "../models/serverObject";
 import { DataSourcesPanel } from "../panels/datasource";
 import { NewConnectionPannel } from "../panels/newConnection";
 import { ChartEditorProvider } from "../services/chartEditorProvider";
@@ -1132,36 +1129,6 @@ export function copyQuery(queryHistoryElement: QueryHistory) {
   ) {
     env.clipboard.writeText(queryHistoryElement.query);
     notify("Query copied to clipboard.", MessageKind.INFO, { logger });
-  }
-}
-
-export async function loadServerObjects(): Promise<ServerObject[]> {
-  // check for valid connection
-  if (
-    ext.activeConnection === undefined ||
-    ext.activeConnection.connected === false ||
-    ext.activeConnection instanceof InsightsConnection
-  ) {
-    notify(
-      "Please connect to a KDB instance to view the objects",
-      MessageKind.INFO,
-    );
-    return new Array<ServerObject>();
-  }
-
-  const script = readFileSync(
-    ext.context.asAbsolutePath(join("resources", "list_mem.q")),
-  ).toString();
-  const cc = "\n" + script + "(::)";
-  const result = await ext.activeConnection?.executeQueryRaw(cc);
-  if (result !== undefined) {
-    const result2: ServerObject[] = (0, eval)(result); // eval(result);
-    const result3: ServerObject[] = result2.filter((item) => {
-      return ext.qNamespaceFilters.indexOf(item.name) === -1;
-    });
-    return result3;
-  } else {
-    return new Array<ServerObject>();
   }
 }
 

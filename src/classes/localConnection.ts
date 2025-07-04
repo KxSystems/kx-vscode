@@ -11,11 +11,14 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { readFileSync } from "fs-extra";
 import * as nodeq from "node-q";
+import { join } from "path";
 import { commands } from "vscode";
 
 import { ext } from "../extensionVariables";
 import { QueryResult, QueryResultType } from "../models/queryResult";
+import { ServerObject } from "../models/serverObject";
 import { delay } from "../utils/core";
 import { convertStringToArray, handleQueryResults } from "../utils/execution";
 import { MessageKind, notify } from "../utils/notifications";
@@ -269,6 +272,30 @@ export class LocalConnection {
     }
 
     return result;
+  }
+
+  public async loadServerObjects(): Promise<ServerObject[]> {
+    if (!this.connection) {
+      notify(
+        "Please connect to a KDB instance to view the objects",
+        MessageKind.INFO,
+      );
+      return new Array<ServerObject>();
+    }
+    const script = readFileSync(
+      ext.context.asAbsolutePath(join("resources", "list_mem.q")),
+    ).toString();
+    const cc = "\n" + script + "(::)";
+    const result = await this.executeQueryRaw(cc);
+    if (result !== undefined) {
+      const result2: ServerObject[] = (0, eval)(result);
+      const result3: ServerObject[] = result2.filter((item) => {
+        return ext.qNamespaceFilters.indexOf(item.name) === -1;
+      });
+      return result3;
+    } else {
+      return new Array<ServerObject>();
+    }
   }
 
   private async waitForConnection(): Promise<void> {
