@@ -124,24 +124,6 @@ describe("Notebooks", () => {
         });
 
         describe("Local Connection", () => {
-          const table = {
-            count: 2,
-            columns: [
-              {
-                name: "x",
-                type: "longs",
-                values: ["0", "1"],
-                order: [0, 1],
-              },
-              {
-                name: "y",
-                type: "longs",
-                values: ["0", "1"],
-                order: [0, 1],
-              },
-            ],
-          };
-
           beforeEach(() => {
             sinon
               .stub(
@@ -161,6 +143,47 @@ describe("Notebooks", () => {
             });
 
             describe("q cell", () => {
+              const table = {
+                count: 2,
+                columns: [
+                  {
+                    name: "x",
+                    type: "longs",
+                    values: ["0", "1"],
+                    order: [0, 1],
+                  },
+                  {
+                    name: "y",
+                    type: "longs",
+                    values: ["0", "1"],
+                    order: [0, 1],
+                  },
+                ],
+              };
+
+              const png = {
+                count: 66,
+                columns: [
+                  {
+                    name: "values",
+                    type: "bytes",
+                    values: [
+                      "0x89",
+                      "0x50",
+                      "0x4e",
+                      "0x47",
+                      "0x0d",
+                      "0x0a",
+                      "0x1a",
+                      "0x0a",
+                      ..."0x00,".repeat(58).split(","),
+                    ],
+                  },
+                ],
+              };
+
+              const text = "results";
+
               it("should display table results", async () => {
                 executeQueryStub.resolves(table);
                 await instance.execute(
@@ -170,6 +193,71 @@ describe("Notebooks", () => {
                 );
                 assert.strictEqual(notifyKind, undefined);
               });
+
+              it("should display png results", async () => {
+                executeQueryStub.resolves(png);
+                await instance.execute(
+                  [createCell("q")],
+                  createNotebook(),
+                  createController(),
+                );
+                assert.strictEqual(notifyKind, undefined);
+              });
+
+              it("should display text results", async () => {
+                executeQueryStub.resolves(text);
+                await instance.execute(
+                  [createCell("q")],
+                  createNotebook(),
+                  createController(),
+                );
+                assert.strictEqual(notifyKind, undefined);
+              });
+            });
+
+            describe("python cell", () => {
+              const text = "results";
+
+              it("should display text results", async () => {
+                executeQueryStub.resolves(text);
+                await instance.execute(
+                  [createCell("python")],
+                  createNotebook(),
+                  createController(),
+                );
+                assert.strictEqual(notifyKind, undefined);
+              });
+            });
+
+            describe("sql cell", () => {
+              it("should display not supported", async () => {
+                executeQueryStub.resolves({});
+                await instance.execute(
+                  [createCell("sql")],
+                  createNotebook(),
+                  createController(),
+                );
+                assert.strictEqual(notifyKind, notifications.MessageKind.DEBUG);
+              });
+            });
+          });
+
+          describe("Node Not Exists", () => {
+            beforeEach(() => {
+              sinon
+                .stub(workspaceCommand, "getConnectionForServer")
+                .resolves(undefined);
+
+              createInstance();
+            });
+
+            it("should notify missing connection with error", async () => {
+              await instance.execute(
+                [createCell()],
+                createNotebook(),
+                createController(),
+              );
+              assert.strictEqual(notifyKind, notifications.MessageKind.ERROR);
             });
           });
         });
@@ -180,7 +268,7 @@ describe("Notebooks", () => {
 
     it.skip("should execute code for plot result", async () => {
       <any>{ resolves(a: any) {} }.resolves({
-        count: 50046,
+        count: 66,
         columns: [
           {
             name: "values",
@@ -197,16 +285,6 @@ describe("Notebooks", () => {
               ..."0x00,".repeat(58).split(","),
             ],
           },
-        ],
-      });
-    });
-
-    it.skip("should execute code for table result", async () => {
-      <any>{ resolves(a: any) {} }.resolves({
-        count: 2,
-        columns: [
-          { name: "x", type: "longs", values: ["0", "1"], order: [0, 1] },
-          { name: "y", type: "longs", values: ["0", "1"], order: [0, 1] },
         ],
       });
     });
