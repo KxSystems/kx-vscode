@@ -227,10 +227,8 @@ describe("Notebooks", () => {
             });
 
             describe("python cell", () => {
-              const text = "results";
-
               it("should display text results", async () => {
-                executeQueryStub.resolves(text);
+                executeQueryStub.resolves(result.text);
                 await instance.execute(
                   [createCell("python")],
                   createNotebook(),

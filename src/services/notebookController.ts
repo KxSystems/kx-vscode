@@ -90,13 +90,11 @@ export class KxNotebookController {
         });
         return;
       }
+    } else if (ext.activeConnection) {
+      conn = ext.activeConnection;
     } else {
-      if (ext.activeConnection) {
-        conn = ext.activeConnection;
-      } else {
-        offerConnectAction();
-        return;
-      }
+      offerConnectAction();
+      return;
     }
 
     for (const cell of cells) {
