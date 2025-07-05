@@ -111,16 +111,17 @@ export async function inputVariable(cell?: vscode.NotebookCell) {
 }
 
 export function validateInput(value?: string) {
-  if (value !== undefined) {
-    if (value.length > 32) {
-      return "Variable name should be less than or equal to 32 characters.";
-    }
-    if (value.match(/^[_0-9]/gs)) {
-      return "Variable name can't start with a number or underscore.";
-    }
-    if (value.match(/[^a-zA-Z_0-9.]/gs)) {
-      return "Variable name contains invalid characters.";
-    }
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value.length > 32) {
+    return "Variable name should be less than or equal to 32 characters.";
+  }
+  if (value.match(/^[_0-9]/gs)) {
+    return "Variable name can't start with a number or underscore.";
+  }
+  if (value.match(/[^a-zA-Z_0-9.]/gs)) {
+    return "Variable name contains invalid characters.";
   }
   return undefined;
 }
