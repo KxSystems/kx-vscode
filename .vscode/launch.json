@@ -30,10 +30,10 @@
       "request": "launch",
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}",
-        "--extensionTestsPath=${workspaceFolder}/test/out/suite/index"
+        "--extensionTestsPath=${workspaceFolder}/out/test/suite/index"
       ],
-      "outFiles": ["${workspaceFolder}/test/out/**/*.js"],
-      "preLaunchTask": "${defaultBuildTask}"
+      "outFiles": ["${workspaceFolder}/out/**/*.js"],
+      "preLaunchTask": "npm: pretest"
     },
     {
       "name": "Extension UI Tests",

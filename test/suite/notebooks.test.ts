@@ -28,57 +28,75 @@ import * as serializer from "../../src/services/notebookSerializer";
 import * as notifications from "../../src/utils/notifications";
 
 describe("Notebooks", () => {
+  const result = {
+    table: {
+      count: 2,
+      columns: [
+        {
+          name: "x",
+          type: "longs",
+          values: ["0", "1"],
+          order: [0, 1],
+        },
+        {
+          name: "y",
+          type: "longs",
+          values: ["0", "1"],
+          order: [0, 1],
+        },
+      ],
+    },
+
+    png: {
+      count: 66,
+      columns: [
+        {
+          name: "values",
+          type: "bytes",
+          values: [
+            "0x89",
+            "0x50",
+            "0x4e",
+            "0x47",
+            "0x0d",
+            "0x0a",
+            "0x1a",
+            "0x0a",
+            ..."0x00,".repeat(58).split(","),
+          ],
+        },
+      ],
+    },
+
+    text: "text result",
+  };
+
+  function createNotebook() {
+    return <vscode.NotebookDocument>{ uri: vscode.Uri.file("test.kxnb") };
+  }
+
+  function createCell(languageId?: string, metadata = {}) {
+    return <vscode.NotebookCell>{
+      document: {
+        languageId,
+        getText() {
+          return "expressions";
+        },
+      },
+      notebook: { uri: vscode.Uri.file("test") },
+      metadata,
+    };
+  }
+
   afterEach(() => {
     sinon.restore();
   });
 
   describe("Controller", () => {
-    const result = {
-      table: {
-        count: 2,
-        columns: [
-          {
-            name: "x",
-            type: "longs",
-            values: ["0", "1"],
-            order: [0, 1],
-          },
-          {
-            name: "y",
-            type: "longs",
-            values: ["0", "1"],
-            order: [0, 1],
-          },
-        ],
-      },
-
-      png: {
-        count: 66,
-        columns: [
-          {
-            name: "values",
-            type: "bytes",
-            values: [
-              "0x89",
-              "0x50",
-              "0x4e",
-              "0x47",
-              "0x0d",
-              "0x0a",
-              "0x1a",
-              "0x0a",
-              ..."0x00,".repeat(58).split(","),
-            ],
-          },
-        ],
-      },
-
-      text: "results",
-    };
-
     let executeQueryStub: sinon.SinonStub;
     let notifyStub: sinon.SinonStub;
     let instance: controlller.KxNotebookController;
+    let success: boolean;
 
     beforeEach(() => {
       executeQueryStub = sinon.stub(serverCommand, "executeQuery");
@@ -90,25 +108,11 @@ describe("Notebooks", () => {
 
     afterEach(() => {
       instance = undefined;
+      success = undefined;
     });
 
     function createInstance() {
       instance = new controlller.KxNotebookController();
-    }
-
-    function createNotebook() {
-      return <vscode.NotebookDocument>{ uri: vscode.Uri.file("test.kxnb") };
-    }
-
-    function createCell(languageId?: string) {
-      return <vscode.NotebookCell>{
-        document: {
-          languageId,
-          getText() {
-            return "expressions";
-          },
-        },
-      };
     }
 
     function createController() {
@@ -116,7 +120,9 @@ describe("Notebooks", () => {
         createNotebookCellExecution(_) {
           return <vscode.NotebookCellExecution>{
             start() {},
-            end(_) {},
+            end(status) {
+              success = status;
+            },
             replaceOutput(_) {},
             executionOrder: 0,
           };
@@ -126,7 +132,7 @@ describe("Notebooks", () => {
 
     describe("Connection Picked", () => {
       beforeEach(() => {
-        sinon.stub(workspaceCommand, "getServerForUri").returns("server");
+        sinon.stub(workspaceCommand, "getServerForUri").returns("picked");
       });
 
       describe("Connected", () => {
@@ -157,10 +163,11 @@ describe("Notebooks", () => {
               );
               sinon.assert.calledOnceWithMatch(
                 notifyStub,
-                sinon.match.any,
+                sinon.match.string,
                 notifications.MessageKind.ERROR,
                 sinon.match.any,
               );
+              assert.strictEqual(success, undefined);
             });
           });
         });
@@ -193,6 +200,7 @@ describe("Notebooks", () => {
                   createController(),
                 );
                 sinon.assert.notCalled(notifyStub);
+                assert.strictEqual(success, true);
               });
 
               it("should display png results", async () => {
@@ -203,6 +211,7 @@ describe("Notebooks", () => {
                   createController(),
                 );
                 sinon.assert.notCalled(notifyStub);
+                assert.strictEqual(success, true);
               });
 
               it("should display text results", async () => {
@@ -213,6 +222,7 @@ describe("Notebooks", () => {
                   createController(),
                 );
                 sinon.assert.notCalled(notifyStub);
+                assert.strictEqual(success, true);
               });
             });
 
@@ -227,6 +237,7 @@ describe("Notebooks", () => {
                   createController(),
                 );
                 sinon.assert.notCalled(notifyStub);
+                assert.strictEqual(success, true);
               });
             });
 
@@ -244,6 +255,7 @@ describe("Notebooks", () => {
                   notifications.MessageKind.DEBUG,
                   sinon.match.any,
                 );
+                assert.strictEqual(success, false);
               });
             });
           });
@@ -269,6 +281,7 @@ describe("Notebooks", () => {
                 notifications.MessageKind.ERROR,
                 sinon.match.any,
               );
+              assert.strictEqual(success, undefined);
             });
           });
         });
@@ -302,6 +315,7 @@ describe("Notebooks", () => {
                 createController(),
               );
               sinon.assert.notCalled(notifyStub);
+              assert.strictEqual(success, true);
             });
           });
         });
@@ -326,6 +340,7 @@ describe("Notebooks", () => {
                 notifications.MessageKind.WARNING,
                 sinon.match.any,
               );
+              assert.strictEqual(success, undefined);
             });
           });
         });
@@ -461,28 +476,25 @@ describe("Notebooks", () => {
 
     describe("KxNotebookTargetActionProvider", () => {
       const token = <vscode.CancellationToken>{};
-      let provider: providers.KxNotebookTargetActionProvider;
+      let instance: providers.KxNotebookTargetActionProvider;
       let changeConfigCallback: any;
 
+      function createInstance() {
+        instance = new providers.KxNotebookTargetActionProvider();
+      }
+
       beforeEach(() => {
-        sinon.stub(workspaceCommand, "getServerForUri").returns("server");
+        sinon.stub(workspaceCommand, "getServerForUri").returns("picked");
         sinon
           .stub(vscode.workspace, "onDidChangeConfiguration")
           .value((callback: any) => (changeConfigCallback = callback));
-        provider = new providers.KxNotebookTargetActionProvider();
-      });
 
-      function createCell(languageId: string, metadata = {}) {
-        return <vscode.NotebookCell>{
-          document: { languageId },
-          notebook: { uri: vscode.Uri.file("test") },
-          metadata,
-        };
-      }
+        createInstance();
+      });
 
       it("should update on config change", () => {
         let fired = false;
-        provider.onDidChangeCellStatusBarItems(() => (fired = true));
+        instance.onDidChangeCellStatusBarItems(() => (fired = true));
         assert.ok(changeConfigCallback);
         changeConfigCallback({ affectsConfiguration: () => true });
         assert.ok(fired);
@@ -500,7 +512,7 @@ describe("Notebooks", () => {
             target: "target",
             variable: "variable",
           });
-          const res = await provider.provideCellStatusBarItems(cell, token);
+          const res = await instance.provideCellStatusBarItems(cell, token);
           assert.strictEqual(res.length, 0);
         });
 
@@ -509,7 +521,7 @@ describe("Notebooks", () => {
             target: "target",
             variable: "variable",
           });
-          const res = await provider.provideCellStatusBarItems(cell, token);
+          const res = await instance.provideCellStatusBarItems(cell, token);
           assert.strictEqual(res.length, 0);
         });
 
@@ -518,7 +530,7 @@ describe("Notebooks", () => {
             target: "target",
             variable: "variable",
           });
-          const res = await provider.provideCellStatusBarItems(cell, token);
+          const res = await instance.provideCellStatusBarItems(cell, token);
           assert.strictEqual(res.length, 0);
         });
       });
@@ -532,7 +544,7 @@ describe("Notebooks", () => {
 
         it("should return only scratchpad", async () => {
           const cell = createCell("q");
-          const res = await provider.provideCellStatusBarItems(cell, token);
+          const res = await instance.provideCellStatusBarItems(cell, token);
           assert.strictEqual(res.length, 1);
           assert.strictEqual(res[0].text, "scratchpad");
         });
@@ -542,7 +554,7 @@ describe("Notebooks", () => {
             target: "target",
             variable: "variable",
           });
-          const res = await provider.provideCellStatusBarItems(cell, token);
+          const res = await instance.provideCellStatusBarItems(cell, token);
           assert.strictEqual(res.length, 2);
           assert.strictEqual(res[0].text, "target");
           assert.strictEqual(res[1].text, "(variable)");
@@ -552,20 +564,20 @@ describe("Notebooks", () => {
           const cell = createCell("sql", {
             variable: "variable",
           });
-          const res = await provider.provideCellStatusBarItems(cell, token);
+          const res = await instance.provideCellStatusBarItems(cell, token);
           assert.strictEqual(res.length, 1);
           assert.strictEqual(res[0].text, "(variable)");
         });
 
         it("should return none for markdown", async () => {
           const cell = createCell("markdown");
-          const res = await provider.provideCellStatusBarItems(cell, token);
+          const res = await instance.provideCellStatusBarItems(cell, token);
           assert.strictEqual(res.length, 0);
         });
 
         it("should return none for python", async () => {
           const cell = createCell("python");
-          const res = await provider.provideCellStatusBarItems(cell, token);
+          const res = await instance.provideCellStatusBarItems(cell, token);
           assert.strictEqual(res.length, 0);
         });
       });
