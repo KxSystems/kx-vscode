@@ -29,6 +29,7 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
+        "--profile=Extension Tests",
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--extensionTestsPath=${workspaceFolder}/out/test/suite/index"
       ],
