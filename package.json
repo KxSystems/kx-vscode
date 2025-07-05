@@ -1148,7 +1148,6 @@
   "homepage": "https://kx.com",
   "scripts": {
     "build": "npm run -S esbuild-base -- --sourcemap",
-    "coverage": "tsc -p ./test && node ./out/test/runTest.js --coverage",
     "esbuild-base": "rimraf out && node ./esbuild.js",
     "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
@@ -1159,6 +1158,7 @@
     "publish": "npx vsce publish",
     "pretest": "tsc -p ./test",
     "test": "node ./out/test/runTest.js",
+    "coverage": "npm run test -- --coverage",
     "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js",
     "ui-test-cmd": "extest setup-and-run --code_version 1.101.2 --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
     "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
