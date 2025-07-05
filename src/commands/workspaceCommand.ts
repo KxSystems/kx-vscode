@@ -16,11 +16,11 @@ import {
   CodeLens,
   CodeLensProvider,
   Command,
+  NotebookCell,
   Range,
   StatusBarAlignment,
   TextDocument,
   TextEditor,
-  ThemeColor,
   Uri,
   window,
   workspace,
@@ -32,6 +32,7 @@ import { ExecutionTypes } from "../models/execution";
 import { MetaDap } from "../models/meta";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
+import { updateCellMetadata } from "../services/notebookProviders";
 import { getBasename, offerConnectAction } from "../utils/core";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
 import { MessageKind, notify, Runner } from "../utils/notifications";
@@ -48,6 +49,30 @@ function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   } else {
     ext.activeTextEditor = undefined;
   }
+}
+
+/* istanbul ignore next */
+function activeEditorChanged(editor?: TextEditor | undefined) {
+  setRealActiveTextEditor(editor);
+  const item = ext.runScratchpadItem;
+  if (ext.activeTextEditor) {
+    const uri = ext.activeTextEditor.document.uri;
+    const server = getServerForUri(uri);
+    if (server) {
+      setRunScratchpadItemText(uri, server);
+      item.show();
+    } else {
+      item.hide();
+    }
+  } else {
+    item.hide();
+  }
+}
+
+/* istanbul ignore next */
+function setRunScratchpadItemText(uri: Uri, text: string) {
+  ext.runScratchpadItem.text = `$(cloud) ${text}`;
+  ext.runScratchpadItem.tooltip = `KX: Choose connection for '${getBasename(uri)}'`;
 }
 
 export function getInsightsServers() {
@@ -168,7 +193,7 @@ export async function pickConnection(uri: Uri) {
   const servers = getServers();
 
   let picked = await window.showQuickPick(["(none)", ...servers], {
-    title: "Choose a connection",
+    title: `Choose Connection (${getBasename(uri)})`,
     placeHolder: server,
   });
 
@@ -177,13 +202,19 @@ export async function pickConnection(uri: Uri) {
       picked = undefined;
       await setTargetForUri(uri, undefined);
     }
+    if (picked) {
+      setRunScratchpadItemText(uri, picked);
+      ext.runScratchpadItem.show();
+    } else {
+      ext.runScratchpadItem.hide();
+    }
     await setServerForUri(uri, picked);
   }
 
   return picked;
 }
 
-export async function pickTarget(uri: Uri) {
+export async function pickTarget(uri: Uri, cell?: NotebookCell) {
   const server = getServerForUri(uri);
   if (!server) {
     return;
@@ -199,12 +230,11 @@ export async function pickTarget(uri: Uri) {
 
   const connMngService = new ConnectionManagementService();
   const connected = connMngService.isConnected(conn.label);
-
-  if (!isPython(uri) && connected) {
+  if (connected) {
     daps = JSON.parse(connMngService.retrieveMetaContent(conn.label, "DAP"));
   }
 
-  const target = getTargetForUri(uri);
+  const target = cell?.metadata.target || getTargetForUri(uri);
   if (target) {
     const exists = daps.some(
       (value) => `${value.assembly} ${value.instance}` === target,
@@ -221,8 +251,8 @@ export async function pickTarget(uri: Uri) {
       ...daps.map((value) => `${value.assembly} ${value.instance}`),
     ],
     {
-      title: `Choose a target on ${server} (${connected ? "Connected" : "Disconnected"})`,
-      placeHolder: target,
+      title: `Choose Target on ${server} (${connected ? "Connected" : "Disconnected"})`,
+      placeHolder: target || "scratchpad",
     },
   );
 
@@ -230,10 +260,21 @@ export async function pickTarget(uri: Uri) {
     if (picked === "scratchpad") {
       picked = undefined;
     }
-    await setTargetForUri(uri, picked);
+    if (cell) {
+      await updateCellMetadata(cell, {
+        target: picked,
+        variable: (picked && cell.metadata.variable) || undefined,
+      });
+    } else {
+      await setTargetForUri(uri, picked);
+    }
   }
 
   return picked;
+}
+
+function isSql(uri: Uri | undefined) {
+  return uri && uri.path.endsWith(".sql");
 }
 
 function isPython(uri: Uri | undefined) {
@@ -271,28 +312,62 @@ export async function runActiveEditor(type?: ExecutionTypes) {
           return;
         }
       } else {
-        throw new Error("Connection for  not found");
+        notify(`Connection ${server} not found.`, MessageKind.ERROR, {
+          logger,
+        });
+        return;
       }
     } else if (ext.activeConnection === undefined) {
       offerConnectAction();
       return;
     }
 
-    const target = isInsights ? getTargetForUri(uri) : undefined;
     const executorName = getBasename(ext.activeTextEditor.document.uri);
+    const target = isInsights ? getTargetForUri(uri) : undefined;
+    const isSql = executorName.endsWith(".sql");
 
-    runQuery(
-      type === undefined
-        ? isPython(uri)
-          ? ExecutionTypes.PythonQueryFile
-          : ExecutionTypes.QueryFile
-        : type,
-      server,
-      executorName,
-      !isPython(uri),
-      undefined,
-      target,
-    );
+    if (isSql && !isInsights) {
+      notify(
+        `SQL execution is not supported on ${server || "active connection"}.`,
+        MessageKind.ERROR,
+        { logger },
+      );
+      return;
+    }
+
+    if (type === ExecutionTypes.PopulateScratchpad && !isInsights) {
+      notify(
+        `Populating scratchpad is not supported on ${server || "active connection"}.`,
+        MessageKind.ERROR,
+        { logger },
+      );
+      return;
+    }
+
+    try {
+      await runQuery(
+        type === undefined
+          ? isPython(uri)
+            ? ExecutionTypes.PythonQueryFile
+            : ExecutionTypes.QueryFile
+          : type,
+        server || ext.activeConnection?.connLabel || "",
+        executorName,
+        !isPython(uri),
+        undefined,
+        target,
+        isSql,
+      );
+    } catch (error) {
+      notify(
+        `Executing ${executorName} on ${server} failed.`,
+        MessageKind.ERROR,
+        {
+          logger,
+          params: error,
+        },
+      );
+    }
   }
 }
 
@@ -335,7 +410,7 @@ export class ConnectionLensProvider implements CodeLensProvider {
 
     if (server) {
       const conn = await getConnectionForServer(server);
-      if (conn instanceof InsightsNode) {
+      if (!isSql(document.uri) && conn instanceof InsightsNode) {
         const pickTarget = new CodeLens(top, {
           command: "kdb.file.pickTarget",
           title: target || "scratchpad",
@@ -353,16 +428,13 @@ export function connectWorkspaceCommands() {
     StatusBarAlignment.Right,
     10000,
   );
-  ext.runScratchpadItem.backgroundColor = new ThemeColor(
-    "statusBarItem.warningBackground",
-  );
   ext.runScratchpadItem.command = <Command>{
-    title: "",
-    command: "kdb.scratchpad.run",
+    title: "Choose Connection",
+    command: "kdb.file.pickConnection",
     arguments: [],
   };
 
-  const watcher = workspace.createFileSystemWatcher("**/*.{kdb.json,q,py}");
+  const watcher = workspace.createFileSystemWatcher("**/*.{kdb.json,q,py,sql}");
   watcher.onDidCreate(update);
   watcher.onDidDelete(update);
 
@@ -392,8 +464,8 @@ export function connectWorkspaceCommands() {
     ext.dataSourceTreeProvider.reload();
     ext.scratchpadTreeProvider.reload();
   });
-  window.onDidChangeActiveTextEditor(setRealActiveTextEditor);
-  setRealActiveTextEditor(window.activeTextEditor);
+  window.onDidChangeActiveTextEditor(activeEditorChanged);
+  activeEditorChanged(window.activeTextEditor);
 }
 
 export function checkOldDatasourceFiles() {

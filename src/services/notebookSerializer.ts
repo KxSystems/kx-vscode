@@ -34,6 +34,7 @@ export class KxNotebookSerializer implements vscode.NotebookSerializer {
           cell.value,
           cell.languageId,
         );
+        target.metadata = { target: cell.target, variable: cell.variable };
         target.outputs = cell.outputs.map((output) => {
           return new vscode.NotebookCellOutput(
             output.items.map((item) => {
@@ -61,6 +62,8 @@ export class KxNotebookSerializer implements vscode.NotebookSerializer {
           kind: cell.kind,
           value: cell.value,
           languageId: cell.languageId,
+          target: cell.metadata?.target,
+          variable: cell.metadata?.variable,
           outputs: (cell.outputs || []).map((output) => {
             return {
               items: output.items.map((item) => {

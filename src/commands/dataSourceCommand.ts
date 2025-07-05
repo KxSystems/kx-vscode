@@ -82,51 +82,53 @@ export async function addDataSource(): Promise<void> {
 export async function populateScratchpad(
   dataSourceForm: DataSourceFiles,
   connLabel: string,
+  outputVariable?: string,
+  silent?: boolean,
 ): Promise<void> {
   const connMngService = new ConnectionManagementService();
-  const scratchpadVariable: InputBoxOptions = {
-    prompt: scratchpadVariableInput.prompt,
-    placeHolder: scratchpadVariableInput.placeholder,
-    validateInput: (value: string | undefined) =>
-      validateScratchpadOutputVariableName(value),
-  };
-  /* istanbul ignore next */
-  window.showInputBox(scratchpadVariable).then(async (outputVariable) => {
-    if (outputVariable !== undefined && outputVariable !== "") {
-      const selectedConnection =
-        connMngService.retrieveConnectedConnection(connLabel);
 
-      if (
-        selectedConnection instanceof LocalConnection ||
-        !selectedConnection
-      ) {
-        DataSourcesPanel.running = false;
-        return;
-      }
+  if (!outputVariable) {
+    const scratchpadVariable: InputBoxOptions = {
+      prompt: scratchpadVariableInput.prompt,
+      placeHolder: scratchpadVariableInput.placeholder,
+      validateInput: (value: string | undefined) =>
+        validateScratchpadOutputVariableName(value),
+    };
+    outputVariable = await window.showInputBox(scratchpadVariable);
+  }
 
-      const qenvEnabled =
-        (await connMngService.retrieveInsightsConnQEEnabled(connLabel)) ?? "";
+  if (outputVariable !== undefined && outputVariable !== "") {
+    const selectedConnection =
+      connMngService.retrieveConnectedConnection(connLabel);
 
-      await selectedConnection.importScratchpad(
-        outputVariable!,
-        dataSourceForm!,
-        qenvEnabled === "Enabled",
-      );
-    } else {
-      notify(
-        `Invalid scratchpad output variable name: ${outputVariable}`,
-        MessageKind.ERROR,
-        { logger },
-      );
+    if (selectedConnection instanceof LocalConnection || !selectedConnection) {
+      DataSourcesPanel.running = false;
+      return;
     }
-  });
+
+    const qenvEnabled =
+      (await connMngService.retrieveInsightsConnQEEnabled(connLabel)) ?? "";
+
+    await selectedConnection.importScratchpad(
+      outputVariable,
+      dataSourceForm,
+      qenvEnabled === "Enabled",
+      silent,
+    );
+  } else {
+    notify(
+      `Invalid scratchpad output variable name: ${outputVariable}`,
+      MessageKind.ERROR,
+      { logger },
+    );
+  }
 }
 
 export async function runDataSource(
   dataSourceForm: DataSourceFiles,
   connLabel: string,
   executorName: string,
-): Promise<void> {
+): Promise<any> {
   if (DataSourcesPanel.running) {
     return;
   }
@@ -162,6 +164,8 @@ export async function runDataSource(
       telemetry: "Datasource." + selectedType + ".Run",
     });
 
+    const isNotebook = executorName.endsWith(".kxnb");
+
     switch (selectedType) {
       case "API":
         res = await runApiDataSource(fileContent, selectedConnection);
@@ -171,6 +175,7 @@ export async function runDataSource(
           fileContent,
           selectedConnection,
           selectedConnection.apiConfig?.queryEnvironmentsEnabled,
+          isNotebook || undefined,
         );
         break;
       case "UDA":
@@ -178,7 +183,11 @@ export async function runDataSource(
         break;
       case "SQL":
       default:
-        res = await runSqlDataSource(fileContent, selectedConnection);
+        res = await runSqlDataSource(
+          fileContent,
+          selectedConnection,
+          isNotebook || undefined,
+        );
         break;
     }
 
@@ -188,13 +197,13 @@ export async function runDataSource(
       const query = getQuery(fileContent, selectedType);
 
       if (!success) {
-        notify("Query execution failed.", MessageKind.ERROR, {
+        notify("Query execution failed.", MessageKind.DEBUG, {
           logger,
           params: res.error,
           telemetry: "Datasource." + selectedType + ".Run.Error",
         });
       }
-      if (ext.isResultsTabVisible) {
+      if (isNotebook || ext.isResultsTabVisible) {
         if (success) {
           const resultCount = typeof res === "string" ? "0" : res.rows.length;
           notify(`Results: ${resultCount} rows`, MessageKind.DEBUG, {
@@ -203,6 +212,11 @@ export async function runDataSource(
         } else if (!success) {
           res = res.errorMsg ? res.errorMsg : res.error;
         }
+
+        if (isNotebook) {
+          return res;
+        }
+
         await writeQueryResultsToView(
           res,
           query,
@@ -234,7 +248,7 @@ export async function runDataSource(
       addDStoQueryHistory(dataSourceForm, success, connLabel, executorName);
     }
   } catch (error) {
-    notify(`Datasource error: ${error}.`, MessageKind.ERROR, {
+    notify(`Datasource error: ${error}.`, MessageKind.DEBUG, {
       logger,
       params: error,
     });
@@ -400,6 +414,7 @@ export async function runQsqlDataSource(
   fileContent: DataSourceFiles,
   selectedConn: InsightsConnection,
   qeEnabled?: boolean,
+  isTableView?: boolean,
 ): Promise<any> {
   const qsqlBody = generateQSqlBody(
     fileContent.dataSource.qsql.query,
@@ -416,7 +431,7 @@ export async function runQsqlDataSource(
   if (qsqlCall?.error) {
     return parseError(qsqlCall.error);
   } else if (qsqlCall?.arrayBuffer) {
-    const results = handleWSResults(qsqlCall.arrayBuffer);
+    const results = handleWSResults(qsqlCall.arrayBuffer, isTableView);
     return handleScratchpadTableRes(results);
   } else {
     return { error: "Datasource QSQL call failed" };
@@ -426,6 +441,7 @@ export async function runQsqlDataSource(
 export async function runSqlDataSource(
   fileContent: DataSourceFiles,
   selectedConn: InsightsConnection,
+  isTableView?: boolean,
 ): Promise<any> {
   const sqlBody = {
     query: fileContent.dataSource.sql.query,
@@ -438,7 +454,7 @@ export async function runSqlDataSource(
   if (sqlCall?.error) {
     return parseError(sqlCall.error);
   } else if (sqlCall?.arrayBuffer) {
-    const results = handleWSResults(sqlCall.arrayBuffer);
+    const results = handleWSResults(sqlCall.arrayBuffer, isTableView);
     return handleScratchpadTableRes(results);
   } else {
     return { error: "Datasource SQL call failed" };
@@ -454,7 +470,7 @@ export async function runUDADataSource(
   const udaReqBody = await retrieveUDAtoCreateReqBody(uda, selectedConn);
 
   if (udaReqBody.error) {
-    notify(`Datasource error.`, MessageKind.ERROR, {
+    notify(`Datasource error.`, MessageKind.DEBUG, {
       logger,
       params: udaReqBody.error,
     });
@@ -504,7 +520,7 @@ export function parseError(error: GetDataError) {
   if (error instanceof Object && error.buffer) {
     return handleWSError(error.buffer);
   } else {
-    notify(`Datasource error.`, MessageKind.ERROR, {
+    notify(`Datasource error.`, MessageKind.DEBUG, {
       logger,
       params: error,
     });
@@ -512,4 +528,24 @@ export function parseError(error: GetDataError) {
       error,
     };
   }
+}
+
+export function getPartialDatasourceFile(
+  query: string,
+  selectedTarget?: string,
+  isSql?: boolean,
+) {
+  return isSql
+    ? <DataSourceFiles>{
+        dataSource: {
+          selectedType: "SQL",
+          sql: { query },
+        },
+      }
+    : <DataSourceFiles>{
+        dataSource: {
+          selectedType: "QSQL",
+          qsql: { query, selectedTarget },
+        },
+      };
 }
