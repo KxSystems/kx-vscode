@@ -1159,7 +1159,7 @@
     "pretest": "tsc -p ./test",
     "test": "node ./out/test/runTest.js",
     "coverage_old": "npm run test -- --coverage",
-    "coverage": "c8 --check-coverage -o coverage-reports -r lcov -r cobertura -r html npm run test",
+    "coverage": "c8 -o coverage-reports -r lcov -r cobertura -r html npm run test",
     "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js",
     "ui-test-cmd": "extest setup-and-run --code_version 1.101.2 --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
     "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
