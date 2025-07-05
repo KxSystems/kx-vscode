@@ -178,10 +178,13 @@ export class KxNotebookController {
         ]);
         execution.end(true, Date.now());
       } catch (error) {
+        execution.end(false, Date.now());
+
         notify(`Execution on ${conn.connLabel} stopped.`, MessageKind.DEBUG, {
           logger,
           params: error,
         });
+
         execution.replaceOutput([
           new vscode.NotebookCellOutput([
             vscode.NotebookCellOutputItem.text(
@@ -190,7 +193,6 @@ export class KxNotebookController {
             ),
           ]),
         ]);
-        execution.end(false, Date.now());
         break;
       }
     }

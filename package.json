@@ -80,12 +80,12 @@
           {
             "id": "addConnection",
             "title": "Add a connection",
-            "description": "You can configure connections for multiple kdb servers \n[Add connection](command:kdb.addConnection)",
+            "description": "You can configure connections for multiple kdb servers \n[Add connection](command:kdb.connections.add)",
             "media": {
               "markdown": "resources/walkthrough/add_connection.md"
             },
             "completionEvents": [
-              "command:kdb.addConnection"
+              "command:kdb.connections.add"
             ],
             "when": "!kdb.showInstallWalkthrough"
           },
@@ -727,7 +727,7 @@
     "viewsWelcome": [
       {
         "view": "kdb-servers",
-        "contents": "No connections registered.\n[Add Connection](command:kdb.addConnection)"
+        "contents": "No connections registered.\n[Add Connection](command:kdb.connections.add)"
       }
     ],
     "menus": {
@@ -1161,7 +1161,7 @@
     "coverage_old": "npm run test -- --coverage",
     "coverage": "c8 -o coverage-reports -r lcov -r cobertura -r html npm run test",
     "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js",
-    "ui-test-cmd": "extest setup-and-run --code_version 1.101.2 --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
+    "ui-test-cmd": "extest setup-and-run --code_version 1.96.0 --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
     "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
     "watch": "npm run -S esbuild-base -- --sourcemap --watch"
   },

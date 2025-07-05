@@ -18,11 +18,13 @@ import * as path from "path";
 import { generateCoverageReport } from "../coverage";
 
 export async function run(): Promise<void> {
+  const headless = !!process.env.CI;
+
   const options: Mocha.MochaOptions = {
     ui: "bdd",
     color: true,
     reporter: "mocha-multi-reporters",
-    timeout: 600000,
+    timeout: headless ? 2_000 : 600_000,
     reporterOptions: {
       reporterEnabled: "spec, mocha-junit-reporter",
       mochaJunitReporterReporterOptions: {

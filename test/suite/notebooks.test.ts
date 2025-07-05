@@ -83,7 +83,7 @@ describe("Notebooks", () => {
           return "expressions";
         },
       },
-      notebook: { uri: vscode.Uri.file("test") },
+      notebook: { uri: vscode.Uri.file("test.kxnb") },
       metadata,
     };
   }
@@ -161,7 +161,7 @@ describe("Notebooks", () => {
                 createNotebook(),
                 createController(),
               );
-              sinon.assert.calledOnceWithMatch(
+              sinon.assert.calledOnceWithExactly(
                 notifyStub,
                 sinon.match.string,
                 notifications.MessageKind.ERROR,
