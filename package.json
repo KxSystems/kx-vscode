@@ -1156,7 +1156,7 @@
     "preui-test": "rimraf out-test .test-extensions",
     "preui-test-cmd": "tsc --outdir out-test -p ./test",
     "publish": "npx vsce publish",
-    "pretest": "tsc -p ./test",
+    "pretest": "rimraf out && tsc -p ./test",
     "test": "node ./out/test/runTest.js",
     "coverage_old": "npm run test -- --coverage",
     "coverage": "c8 -o coverage-reports -r lcov -r cobertura -r html npm run test",
