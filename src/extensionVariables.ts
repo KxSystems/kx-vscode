@@ -77,6 +77,7 @@ export namespace ext {
   export const queryHistoryAvailableToCopy: Array<string> = [];
   export const connectionsList: Array<KdbNode | InsightsNode> = [];
   export let hideDetailedConsoleQueryOutput: boolean;
+  export let autoFocusOutputOnEntry: boolean;
   export let networkChangesWatcher: boolean;
   export let insightsHydrate: boolean;
   export let connectionNode: KdbNode | InsightsNode | undefined;

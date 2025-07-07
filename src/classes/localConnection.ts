@@ -11,11 +11,14 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { readFileSync } from "fs-extra";
 import * as nodeq from "node-q";
+import { join } from "path";
 import { commands } from "vscode";
 
 import { ext } from "../extensionVariables";
 import { QueryResult, QueryResultType } from "../models/queryResult";
+import { ServerObject } from "../models/serverObject";
 import { delay } from "../utils/core";
 import { convertStringToArray, handleQueryResults } from "../utils/execution";
 import { MessageKind, notify } from "../utils/notifications";
@@ -119,7 +122,9 @@ export class LocalConnection {
           MessageKind.DEBUG,
           { logger },
         );
-        ext.outputChannel.show();
+        if (ext.autoFocusOutputOnEntry) {
+          ext.outputChannel.show();
+        }
       });
 
       if (this.connection && this.connected) {
@@ -250,7 +255,7 @@ export class LocalConnection {
     return result;
   }
 
-  public async executeQueryRaw(command: string): Promise<string> {
+  public async executeQueryRaw(command: string): Promise<any> {
     let result;
     let retryCount = 0;
     let error;
@@ -261,7 +266,7 @@ export class LocalConnection {
       await delay(500);
       retryCount++;
     }
-    this.connection.k(command, (err: Error, res: string) => {
+    this.connection.k(command, (err: Error, res: any) => {
       if (err) {
         error = err;
         result = "";
@@ -279,6 +284,30 @@ export class LocalConnection {
     }
 
     return result;
+  }
+
+  public async loadServerObjects(): Promise<ServerObject[]> {
+    if (!this.connection) {
+      notify(
+        "Please connect to a KDB instance to view the objects",
+        MessageKind.INFO,
+      );
+      return new Array<ServerObject>();
+    }
+    const script = readFileSync(
+      ext.context.asAbsolutePath(join("resources", "list_mem.q")),
+    ).toString();
+    const cc = "\n" + script + "(::)";
+    const result = await this.executeQueryRaw(cc);
+    if (result !== undefined) {
+      const result2: ServerObject[] = (0, eval)(result);
+      const result3: ServerObject[] = result2.filter((item) => {
+        return ext.qNamespaceFilters.indexOf(item.name) === -1;
+      });
+      return result3;
+    } else {
+      return new Array<ServerObject>();
+    }
   }
 
   private async waitForConnection(): Promise<void> {
