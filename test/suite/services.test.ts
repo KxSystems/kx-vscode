@@ -496,6 +496,7 @@ describe("kdbTreeProvider", () => {
     );
     assert.equal(ext.kdbNodesWithoutAuth.length, 0);
   });
+
   it("Should retun a new InsightsNode", () => {
     const insightsNode = new InsightsNode(
       [],
@@ -753,6 +754,555 @@ describe("kdbTreeProvider", () => {
       const provider = new KdbTreeProvider(servers, insights);
       const result = await provider.getChildren();
       assert.strictEqual(result.length, 1);
+    });
+  });
+
+  describe("KdbTreeProvider private methods", () => {
+    let provider: KdbTreeProvider;
+    let servers: Server;
+    let insights: Insights;
+    let mockLocalConn: LocalConnection;
+    let mockInsightsConn: InsightsConnection;
+    let connMngStub: sinon.SinonStub;
+
+    const createMockServerObject = (
+      id: number,
+      name: string,
+      typeNum: number,
+      namespace: string = ".",
+      isNs: boolean = false,
+    ): ServerObject => ({
+      id,
+      pid: id,
+      name,
+      fname: name,
+      typeNum,
+      namespace,
+      context: {},
+      isNs,
+    });
+
+    beforeEach(() => {
+      servers = {
+        testServer: {
+          serverAlias: "testServerAlias",
+          serverName: "testServerName",
+          serverPort: "5001",
+          tls: false,
+          auth: false,
+          managed: false,
+        },
+      };
+      insights = {
+        testInsight: {
+          alias: "testInsightsAlias",
+          server: "testInsightsName",
+          auth: false,
+        },
+      };
+
+      provider = new KdbTreeProvider(servers, insights);
+      mockLocalConn = sinon.createStubInstance(LocalConnection);
+      mockInsightsConn = sinon.createStubInstance(InsightsConnection);
+
+      // Mock ConnectionManagementService
+      connMngStub = sinon.stub(
+        ConnectionManagementService.prototype,
+        "retrieveConnectedConnection",
+      );
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    describe("validateAndGetConnection", () => {
+      it("should return null when connection is not found", () => {
+        const serverType = new QCategoryNode(
+          [],
+          "test",
+          "",
+          ".",
+          TreeItemCollapsibleState.None,
+          "testLabel",
+        );
+        connMngStub.returns(undefined);
+
+        const result = (provider as any).validateAndGetConnection(serverType);
+
+        assert.strictEqual(result, null);
+      });
+
+      it("should return null for InsightsConnection", () => {
+        const serverType = new QCategoryNode(
+          [],
+          "test",
+          "",
+          ".",
+          TreeItemCollapsibleState.None,
+          "testLabel",
+        );
+        connMngStub.returns(mockInsightsConn);
+
+        const result = (provider as any).validateAndGetConnection(serverType);
+
+        assert.strictEqual(result, null);
+      });
+
+      it("should return LocalConnection when valid", () => {
+        const serverType = new QCategoryNode(
+          [],
+          "test",
+          "",
+          ".",
+          TreeItemCollapsibleState.None,
+          "testLabel",
+        );
+        connMngStub.returns(mockLocalConn);
+
+        const result = (provider as any).validateAndGetConnection(serverType);
+
+        assert.strictEqual(result, mockLocalConn);
+      });
+
+      it("should extract connLabel from QCategoryNode", () => {
+        const serverType = new QCategoryNode(
+          [],
+          "test",
+          "",
+          ".",
+          TreeItemCollapsibleState.None,
+          "testConnLabel",
+        );
+        connMngStub.returns(mockLocalConn);
+
+        (provider as any).validateAndGetConnection(serverType);
+
+        sinon.assert.calledWith(connMngStub, "testConnLabel");
+      });
+
+      it("should handle non-QCategoryNode TreeItem", () => {
+        const serverType = { contextValue: "test" } as any;
+        connMngStub.returns(mockLocalConn);
+
+        (provider as any).validateAndGetConnection(serverType);
+
+        sinon.assert.calledWith(connMngStub, "");
+      });
+    });
+
+    describe("getServerObjects", () => {
+      it("should return empty array when serverType is undefined", async () => {
+        const result = await (provider as any).getServerObjects(undefined);
+
+        assert.deepStrictEqual(result, []);
+      });
+
+      it("should return empty array when connection validation fails", async () => {
+        const serverType = new QCategoryNode(
+          [],
+          "test",
+          "",
+          ".",
+          TreeItemCollapsibleState.None,
+          "",
+        );
+        connMngStub.returns(undefined);
+
+        const result = await (provider as any).getServerObjects(serverType);
+
+        assert.deepStrictEqual(result, []);
+      });
+
+      it("should call loadObjectsByCategory when connection is valid", async () => {
+        const serverType = new QCategoryNode(
+          [],
+          "Dictionaries",
+          "",
+          ".",
+          TreeItemCollapsibleState.None,
+          "testLabel",
+        );
+        connMngStub.returns(mockLocalConn);
+
+        const loadObjectsByCategoryStub = sinon
+          .stub(provider as any, "loadObjectsByCategory")
+          .resolves([]);
+
+        await (provider as any).getServerObjects(serverType);
+
+        sinon.assert.calledOnce(loadObjectsByCategoryStub);
+        sinon.assert.calledWith(
+          loadObjectsByCategoryStub,
+          serverType,
+          mockLocalConn,
+          ".",
+          "testLabel",
+        );
+      });
+    });
+
+    describe("loadObjectsByCategory", () => {
+      it("should load dictionaries for category index 0", async () => {
+        const serverType = new QCategoryNode(
+          [],
+          "Dictionaries",
+          "",
+          ".",
+          TreeItemCollapsibleState.None,
+          "testLabel",
+        );
+        const loadDictionariesStub = sinon
+          .stub(provider as any, "loadDictionaries")
+          .resolves([]);
+
+        await (provider as any).loadObjectsByCategory(
+          serverType,
+          mockLocalConn,
+          ".",
+          "testLabel",
+        );
+
+        sinon.assert.calledOnce(loadDictionariesStub);
+        sinon.assert.calledWith(
+          loadDictionariesStub,
+          mockLocalConn,
+          ".",
+          ".",
+          "testLabel",
+        );
+      });
+
+      it("should load functions for category index 1", async () => {
+        const serverType = new QCategoryNode(
+          [],
+          "Functions",
+          "",
+          ".",
+          TreeItemCollapsibleState.None,
+          "testLabel",
+        );
+        const loadFunctionsStub = sinon
+          .stub(provider as any, "loadFunctions")
+          .resolves([]);
+
+        await (provider as any).loadObjectsByCategory(
+          serverType,
+          mockLocalConn,
+          ".",
+          "testLabel",
+        );
+
+        sinon.assert.calledOnce(loadFunctionsStub);
+      });
+
+      it("should load tables for category index 2", async () => {
+        const serverType = new QCategoryNode(
+          [],
+          "Tables",
+          "",
+          ".",
+          TreeItemCollapsibleState.None,
+          "testLabel",
+        );
+        const loadTablesStub = sinon
+          .stub(provider as any, "loadTables")
+          .resolves([]);
+
+        await (provider as any).loadObjectsByCategory(
+          serverType,
+          mockLocalConn,
+          ".",
+          "testLabel",
+        );
+
+        sinon.assert.calledOnce(loadTablesStub);
+      });
+
+      it("should load variables for category index 3", async () => {
+        const serverType = new QCategoryNode(
+          [],
+          "Variables",
+          "",
+          ".",
+          TreeItemCollapsibleState.None,
+          "testLabel",
+        );
+        const loadVariablesStub = sinon
+          .stub(provider as any, "loadVariables")
+          .resolves([]);
+
+        await (provider as any).loadObjectsByCategory(
+          serverType,
+          mockLocalConn,
+          ".",
+          "testLabel",
+        );
+
+        sinon.assert.calledOnce(loadVariablesStub);
+      });
+
+      it("should load views for category index 4", async () => {
+        const serverType = new QCategoryNode(
+          [],
+          "Views",
+          "",
+          ".",
+          TreeItemCollapsibleState.None,
+          "testLabel",
+        );
+        const loadViewsStub = sinon
+          .stub(provider as any, "loadViews")
+          .resolves([]);
+
+        await (provider as any).loadObjectsByCategory(
+          serverType,
+          mockLocalConn,
+          ".",
+          "testLabel",
+        );
+
+        sinon.assert.calledOnce(loadViewsStub);
+      });
+
+      it("should return empty array for unknown category", async () => {
+        const serverType = new QCategoryNode(
+          [],
+          "Unknown",
+          "",
+          ".",
+          TreeItemCollapsibleState.None,
+          "testLabel",
+        );
+
+        const result = await (provider as any).loadObjectsByCategory(
+          serverType,
+          mockLocalConn,
+          ".",
+          "testLabel",
+        );
+
+        assert.deepStrictEqual(result, []);
+      });
+    });
+
+    describe("loadDictionaries", () => {
+      it("should load dictionaries and create QServerNodes", async () => {
+        const mockDicts = [
+          createMockServerObject(1, "dict1", 99),
+          createMockServerObject(2, "dict2", 99),
+        ];
+
+        const kdbTreeServiceStub = sinon
+          .stub(KdbTreeService, "loadDictionaries")
+          .resolves(mockDicts);
+        const createQServerNodesStub = sinon
+          .stub(provider as any, "createQServerNodes")
+          .returns([]);
+
+        await (provider as any).loadDictionaries(
+          mockLocalConn,
+          "namespace",
+          ".",
+          "connLabel",
+        );
+
+        sinon.assert.calledWith(kdbTreeServiceStub, mockLocalConn, "namespace");
+        sinon.assert.calledWith(
+          createQServerNodesStub,
+          mockDicts,
+          ".",
+          "connLabel",
+          "dictionaries",
+        );
+      });
+    });
+
+    describe("loadFunctions", () => {
+      it("should load functions and create QServerNodes", async () => {
+        const mockFuncs = [
+          createMockServerObject(1, "func1", 100),
+          createMockServerObject(2, "func2", 100),
+        ];
+
+        const kdbTreeServiceStub = sinon
+          .stub(KdbTreeService, "loadFunctions")
+          .resolves(mockFuncs);
+        const createQServerNodesStub = sinon
+          .stub(provider as any, "createQServerNodes")
+          .returns([]);
+
+        await (provider as any).loadFunctions(
+          mockLocalConn,
+          "namespace",
+          ".",
+          "connLabel",
+        );
+
+        sinon.assert.calledWith(kdbTreeServiceStub, mockLocalConn, "namespace");
+        sinon.assert.calledWith(
+          createQServerNodesStub,
+          mockFuncs,
+          ".",
+          "connLabel",
+          "functions",
+        );
+      });
+    });
+
+    describe("loadTables", () => {
+      it("should load tables and create QServerNodes", async () => {
+        const mockTables = [
+          createMockServerObject(1, "table1", 98),
+          createMockServerObject(2, "table2", 98),
+        ];
+        const kdbTreeServiceStub = sinon
+          .stub(KdbTreeService, "loadTables")
+          .resolves(mockTables);
+        const createQServerNodesStub = sinon
+          .stub(provider as any, "createQServerNodes")
+          .returns([]);
+
+        await (provider as any).loadTables(
+          mockLocalConn,
+          "namespace",
+          ".",
+          "connLabel",
+        );
+
+        sinon.assert.calledWith(kdbTreeServiceStub, mockLocalConn, "namespace");
+        sinon.assert.calledWith(
+          createQServerNodesStub,
+          mockTables,
+          ".",
+          "connLabel",
+          "tables",
+        );
+      });
+    });
+
+    describe("loadVariables", () => {
+      it("should load variables and create QServerNodes", async () => {
+        const mockVars = [
+          createMockServerObject(1, "var1", -7),
+          createMockServerObject(2, "var2", 11),
+        ];
+        const kdbTreeServiceStub = sinon
+          .stub(KdbTreeService, "loadVariables")
+          .resolves(mockVars);
+        const createQServerNodesStub = sinon
+          .stub(provider as any, "createQServerNodes")
+          .returns([]);
+
+        await (provider as any).loadVariables(
+          mockLocalConn,
+          "namespace",
+          ".",
+          "connLabel",
+        );
+
+        sinon.assert.calledWith(kdbTreeServiceStub, mockLocalConn, "namespace");
+        sinon.assert.calledWith(
+          createQServerNodesStub,
+          mockVars,
+          ".",
+          "connLabel",
+          "variables",
+        );
+      });
+    });
+
+    describe("loadViews", () => {
+      it("should load views and create QServerNodes with correct labels for root namespace", async () => {
+        const mockViews = ["view1", "view2"];
+        const kdbTreeServiceStub = sinon
+          .stub(KdbTreeService, "loadViews")
+          .resolves(mockViews);
+
+        const result = await (provider as any).loadViews(
+          mockLocalConn,
+          ".",
+          "connLabel",
+        );
+
+        sinon.assert.calledWith(kdbTreeServiceStub, mockLocalConn);
+        assert.strictEqual(result.length, 2);
+        assert.strictEqual(result[0].label, "view1");
+        assert.strictEqual(result[1].label, "view2");
+        assert.strictEqual(result[0].coreIcon, "views");
+      });
+
+      it("should load views and create QServerNodes with dot prefix for non-root namespace", async () => {
+        const mockViews = ["view1"];
+        sinon.stub(KdbTreeService, "loadViews").resolves(mockViews);
+
+        const result = await (provider as any).loadViews(
+          mockLocalConn,
+          "myns",
+          "connLabel",
+        );
+
+        assert.strictEqual(result[0].label, ".view1");
+      });
+    });
+
+    describe("createQServerNodes", () => {
+      it("should create QServerNodes correctly for root namespace", () => {
+        const objects = [{ name: "test1" }, { name: "test2" }];
+
+        const result = (provider as any).createQServerNodes(
+          objects,
+          ".",
+          "connLabel",
+          "tables",
+        );
+
+        assert.strictEqual(result.length, 2);
+        assert.strictEqual(result[0].label, "test1");
+        assert.strictEqual(result[1].label, "test2");
+        assert.strictEqual(result[0].coreIcon, "tables");
+        assert.strictEqual(result[0].connLabel, "connLabel");
+      });
+
+      it("should create QServerNodes with namespace prefix for non-root namespace", () => {
+        const objects = [{ name: "test1" }];
+
+        const result = (provider as any).createQServerNodes(
+          objects,
+          "myns",
+          "connLabel",
+          "functions",
+        );
+
+        assert.strictEqual(result[0].label, "myns.test1");
+      });
+
+      it("should handle empty objects array", () => {
+        const result = (provider as any).createQServerNodes(
+          [],
+          ".",
+          "connLabel",
+          "variables",
+        );
+
+        assert.deepStrictEqual(result, []);
+      });
+
+      it("should set correct TreeItemCollapsibleState", () => {
+        const objects = [{ name: "test1" }];
+
+        const result = (provider as any).createQServerNodes(
+          objects,
+          ".",
+          "connLabel",
+          "dictionaries",
+        );
+
+        assert.strictEqual(
+          result[0].collapsibleState,
+          TreeItemCollapsibleState.None,
+        );
+      });
     });
   });
 });
