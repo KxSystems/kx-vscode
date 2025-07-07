@@ -122,7 +122,7 @@ export class LocalConnection {
           MessageKind.DEBUG,
           { logger },
         );
-        ext.outputChannel.show();
+        ext.outputChannel.show(ext.autoFocusOutputOnEntry);
       });
 
       if (this.connection && this.connected) {

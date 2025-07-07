@@ -162,6 +162,11 @@
           "description": "Hide detailed console query output",
           "default": true
         },
+        "kdb.autoFocusOutputOnEntry": {
+          "type": "boolean",
+          "description": "Automatically focus the output console when running a query without an active results tab or receive log entry",
+          "default": true
+        },
         "kdb.qHomeDirectory": {
           "type": "string",
           "description": "QHOME directory for q runtime"

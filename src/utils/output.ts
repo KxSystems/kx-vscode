@@ -13,6 +13,8 @@
 
 import { OutputChannel, window } from "vscode";
 
+import { ext } from "../extensionVariables";
+
 export class Output {
   public static output(label: string, message: string): void {
     this._outputChannel.append(this.formatMessage(label, message));
@@ -23,7 +25,7 @@ export class Output {
   }
 
   public static show(): void {
-    this._outputChannel.show();
+    this._outputChannel.show(ext.autoFocusOutputOnEntry);
   }
 
   public static hide(): void {
@@ -37,7 +39,6 @@ export class Output {
   public static _outputChannel: OutputChannel =
     window.createOutputChannel("kdb-telemetry");
 
-   
   private static formatMessage(label = "", message = ""): string {
     return `${label ? `[${label}] ` : ""}${message}`;
   }

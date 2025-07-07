@@ -32,7 +32,7 @@ export async function executeCommand(
     spawnCallback,
     ...args,
   );
-  ext.outputChannel.show();
+  ext.outputChannel.show(ext.autoFocusOutputOnEntry);
   if (result.code !== 0) {
     throw new Error(
       `Failed to run ${command} command.  Check output window for more details.`,
