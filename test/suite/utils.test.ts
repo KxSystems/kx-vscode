@@ -208,7 +208,7 @@ describe("Utils", () => {
         await coreUtils.getAutoFocusOutputOnEntry();
 
         sinon.assert.calledTwice(getConfigurationStub);
-        assert.strictEqual(ext.hideDetailedConsoleQueryOutput, true);
+        assert.strictEqual(ext.autoFocusOutputOnEntry, true);
       });
 
       it("should set autoFocusOutputOnEntry to setting when setting is defined", async () => {
