@@ -29,6 +29,8 @@ import { ScratchpadStacktrace } from "../models/scratchpadResult";
 
 const logger = "queryUtils";
 
+const QUERY_LIMIT = 250_000;
+
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {
     query = query + " ";
@@ -38,12 +40,12 @@ export function sanitizeQuery(query: string): string {
   return query;
 }
 
-export function queryWrapper(isPython: boolean): string {
-  const filename = isPython ? "evaluatePy.q" : "evaluate.q";
-
-  return readFileSync(
-    ext.context.asAbsolutePath(join("resources", filename)),
-  ).toString();
+export function readQueryWrapper(resouce: string): string {
+  return sanitizeQsqlQuery(
+    readFileSync(
+      ext.context.asAbsolutePath(join("resources", resouce)),
+    ).toString(),
+  );
 }
 
 export function handleWSError(ab: ArrayBuffer): any {
@@ -212,20 +214,30 @@ export function getValueFromArray(results: DCDS): any {
 }
 
 export function sanitizeQsqlQuery(query: string): string {
+  if (query.length > QUERY_LIMIT) {
+    notify(`Query length limit (${QUERY_LIMIT}) reached.`, MessageKind.ERROR, {
+      logger,
+    });
+    return "";
+  }
   return (
     query
       .trim()
       // Remove block comments
-      .replace(/^\/[^]*?^\\/gm, "")
+      .replace(/^\/[^]*?^\\[\t ]*$/gm, "")
       // Remove single line comments
-      .replace(/^\/.*\r?\n/gm, "")
+      .replace(/^\/.*/gm, "")
       // Remove line comments
       .replace(
         /(?:("([^"\\]*(?:\\.[^"\\]*)*)")|([ \t]+\/.*))/gm,
         (matched, isString) => (isString ? matched : ""),
       )
+      // Replace system commands
+      .replace(/^\\([a-zA-Z]+)[\t ]*(.*)/gm, 'system"$1 $2"')
       // Replace end of statements
-      .replace(/(?<![; \t]\s*)(?:\r\n|\n)+(?![ \t])/gs, ";")
+      .replace(/(?:\r\n|\n)+(?!\s*[\t ])/gs, ";")
+      // Remove end of file
+      .replace(/[;\s]+$/gs, "")
   );
 }
 

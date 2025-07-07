@@ -2013,16 +2013,16 @@ describe("Utils", () => {
         assert.strictEqual(res, "a:1");
       });
       it("should remove block comment", () => {
-        let res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\n\\a:1");
-        assert.strictEqual(res, "a:1");
-        res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\r\n\\a:1");
-        assert.strictEqual(res, "a:1");
+        let res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\n\\\na:1");
+        assert.strictEqual(res, ";a:1");
+        res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\r\n\\\r\na:1");
+        assert.strictEqual(res, ";a:1");
       });
       it("should remove single line comment", () => {
         let res = queryUtils.sanitizeQsqlQuery("/ single line comment\na:1");
-        assert.strictEqual(res, "a:1");
+        assert.strictEqual(res, ";a:1");
         res = queryUtils.sanitizeQsqlQuery("/ single line comment\r\na:1");
-        assert.strictEqual(res, "a:1");
+        assert.strictEqual(res, ";a:1");
       });
       it("should remove line comment", () => {
         const res = queryUtils.sanitizeQsqlQuery("a:1 / line comment");
@@ -2040,9 +2040,9 @@ describe("Utils", () => {
       });
       it("should not replace continuation with semicolon", () => {
         let res = queryUtils.sanitizeQsqlQuery('a:"a\n \nb"');
-        assert.strictEqual(res, 'a:"a\n \nb"');
+        assert.strictEqual(res, 'a:"a\n ;b"');
         res = queryUtils.sanitizeQsqlQuery('a:"a\r\n \r\nb"');
-        assert.strictEqual(res, 'a:"a\r\n \r\nb"');
+        assert.strictEqual(res, 'a:"a\r\n ;b"');
       });
     });
 

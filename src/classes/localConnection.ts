@@ -19,7 +19,7 @@ import { QueryResult, QueryResultType } from "../models/queryResult";
 import { delay } from "../utils/core";
 import { convertStringToArray, handleQueryResults } from "../utils/execution";
 import { MessageKind, notify } from "../utils/notifications";
-import { queryWrapper } from "../utils/queryUtils";
+import { readQueryWrapper, sanitizeQsqlQuery } from "../utils/queryUtils";
 
 const logger = "localConnection";
 
@@ -190,12 +190,22 @@ export class LocalConnection {
       return "timeout";
     }
     const args: any[] = [];
-    const wrapper = queryWrapper(!!isPython);
+
+    let wrapper = "";
 
     if (isPython) {
-      args.push(stringify ? "text" : "serialized", command, "first", 10000);
+      wrapper = readQueryWrapper("evaluatePyEx.q");
+      args.push(stringify ? "text" : "serialized");
+      // TODO
+      args.push(sanitizeQsqlQuery(command));
+      args.push("first");
+      args.push(10000);
     } else {
-      args.push(context ?? ".", command, stringify ? "text" : "structuredText");
+      wrapper = readQueryWrapper("evaluateEx.q");
+      args.push(context ?? ".");
+      // TODO
+      args.push(sanitizeQsqlQuery(command));
+      args.push(stringify ? "text" : "structuredText");
     }
 
     args.push((err: Error, res: QueryResult) => {
@@ -366,15 +376,34 @@ export class LocalConnection {
   }
 
   private onConnect(
-    err: Error | undefined,
+    error: Error | undefined,
     conn: nodeq.Connection,
     callback: nodeq.AsyncValueCallback<LocalConnection>,
   ): void {
     this.connected = true;
     this.connection = conn;
 
-    this.update();
-    callback(err, this);
+    this.connection.k(
+      '{system"d .com_kx_edi";eval parse x;if[`pykx in key`;eval parse y];system"d ."}',
+      readQueryWrapper("evaluate.q"),
+      readQueryWrapper("evaluatePy.q"),
+      (err: Error) => {
+        if (err) {
+          notify("Failed to install query wrappers.", MessageKind.ERROR, {
+            logger,
+            params: err,
+          });
+        } else {
+          notify(
+            `Query wrappers installed on ${this.connLabel}`,
+            MessageKind.DEBUG,
+            { logger },
+          );
+        }
+        this.update();
+        callback(err || error, this);
+      },
+    );
   }
 
   async getCustomAuthOptions(): Promise<nodeq.ConnectionParameters> {
