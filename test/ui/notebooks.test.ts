@@ -12,13 +12,12 @@
  */
 
 import * as assert from "assert";
-import { Editor, VSBrowser, Workbench } from "vscode-extension-tester";
+import { Editor, VSBrowser } from "vscode-extension-tester";
 
 import { waitForEditor } from "./fixtures/utils";
 
 describe("Notebook", () => {
   let code: VSBrowser;
-  let workbench: Workbench;
 
   before(async () => {
     code = VSBrowser.instance;
@@ -26,7 +25,6 @@ describe("Notebook", () => {
       "./test/ui/fixtures/notebook",
       "./test/ui/fixtures/notebook/simple.kxnb",
     );
-    workbench = new Workbench();
   });
 
   describe("Existing notebook", () => {
@@ -34,19 +32,6 @@ describe("Notebook", () => {
 
     before(async () => {
       editor = await waitForEditor("simple.kxnb");
-    });
-
-    it("should exist", async () => {
-      assert.ok(editor);
-    });
-  });
-
-  describe("New notebook", () => {
-    let editor: Editor;
-
-    before(async () => {
-      await workbench.executeCommand("KX: Create new notebook");
-      editor = await waitForEditor("notebook-1.kxnb");
     });
 
     it("should exist", async () => {

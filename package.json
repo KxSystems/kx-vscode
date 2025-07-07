@@ -41,7 +41,8 @@
     "onCommand:kdb.connections.labels.create",
     "onView:kdb-datasources-explorer",
     "onTerminalProfile:kdb.q-terminal",
-    "onLanguage:python"
+    "onLanguage:python",
+    "onLanguage:sql"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -79,12 +80,12 @@
           {
             "id": "addConnection",
             "title": "Add a connection",
-            "description": "You can configure connections for multiple kdb servers \n[Add connection](command:kdb.addConnection)",
+            "description": "You can configure connections for multiple kdb servers \n[Add connection](command:kdb.connections.add)",
             "media": {
               "markdown": "resources/walkthrough/add_connection.md"
             },
             "completionEvents": [
-              "command:kdb.addConnection"
+              "command:kdb.connections.add"
             ],
             "when": "!kdb.showInstallWalkthrough"
           },
@@ -291,12 +292,27 @@
       {
         "category": "KX",
         "command": "kdb.file.pickConnection",
-        "title": "Pick connection"
+        "title": "Chooses Connection",
+        "shortTitle": "Connection",
+        "icon": "$(cloud)"
       },
       {
         "category": "KX",
         "command": "kdb.file.pickTarget",
-        "title": "Pick target"
+        "title": "Choose Target",
+        "shortTitle": "Target",
+        "icon": "$(target)"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.file.inputVariable",
+        "title": "Input Variable Name"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.file.populateScratchpad",
+        "title": "KX: Populate Scratchpad",
+        "icon": "$(run)"
       },
       {
         "category": "KX",
@@ -424,7 +440,7 @@
       {
         "category": "KX",
         "command": "kdb.execute.terminal.run",
-        "title": "KX: Run q file in a new q instance",
+        "title": "KX: Run File in New q Instance",
         "icon": "$(debug-alt)"
       },
       {
@@ -435,25 +451,25 @@
       {
         "category": "KX",
         "command": "kdb.execute.selectedQuery",
-        "title": "KX: Execute Current q Selection",
-        "icon": "$(run-below)"
+        "title": "KX: Execute Current Selection",
+        "icon": "$(run)"
       },
       {
         "category": "KX",
         "command": "kdb.execute.fileQuery",
-        "title": "KX: Execute Entire q File",
+        "title": "KX: Execute Entire File",
         "icon": "$(run)"
       },
       {
         "category": "KX",
         "command": "kdb.scratchpad.python.run",
-        "title": "KX: Execute Current Python Selection",
-        "icon": "$(run-below)"
+        "title": "KX: Execute Current Selection",
+        "icon": "$(run)"
       },
       {
         "category": "KX",
         "command": "kdb.scratchpad.python.run.file",
-        "title": "KX: Execute Entire Python File",
+        "title": "KX: Execute Entire File",
         "icon": "$(run)"
       },
       {
@@ -474,8 +490,8 @@
       {
         "category": "KX",
         "command": "kdb.execute.block",
-        "title": "KX: Execute Current q Block",
-        "icon": "$(run-above)"
+        "title": "KX: Execute Current Block",
+        "icon": "$(run)"
       },
       {
         "category": "KX",
@@ -528,54 +544,61 @@
         "command": "kdb.execute.selectedQuery",
         "key": "ctrl+d",
         "mac": "cmd+d",
-        "when": "editorLangId == q"
+        "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
       },
       {
         "command": "kdb.execute.fileQuery",
         "key": "ctrl+shift+d",
-        "mac": "cmd+shift+d"
+        "mac": "cmd+shift+d",
+        "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
       },
       {
         "command": "kdb.scratchpad.python.run",
         "key": "ctrl+d",
         "mac": "cmd+d",
-        "when": "editorLangId == python"
+        "when": "resourceFilename =~ /\\.(?:py)$/i"
       },
       {
         "command": "kdb.scratchpad.python.run.file",
         "key": "ctrl+shift+d",
         "mac": "cmd+shift+d",
-        "when": "editorLangId == python"
+        "when": "resourceFilename =~ /\\.(?:py)$/i"
       },
       {
         "command": "kdb.scratchpad.editor.reset",
         "key": "ctrl+shift+delete",
         "mac": "cmd+shift+delete",
-        "when": "editorLangId == python || editorLangId == q"
+        "when": "resourceFilename =~ /\\.(?:q|py|sql)$/i"
+      },
+      {
+        "command": "kdb.file.populateScratchpad",
+        "key": "alt+ctrl+shift+p",
+        "mac": "alt+cmd+shift+p",
+        "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
       },
       {
         "command": "kdb.execute.terminal.run",
         "key": "ctrl+shift+r",
         "mac": "cmd+shift+r",
-        "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
+        "when": "resourceFilename =~ /\\.(?:q)$/i"
       },
       {
         "command": "kdb.execute.block",
         "key": "ctrl+shift+e",
         "mac": "cmd+shift+e",
-        "when": "editorLangId == q"
+        "when": "resourceFilename =~ /\\.(?:q)$/i"
       },
       {
         "command": "kdb.toggleParameterCache",
         "key": "ctrl+shift+y",
         "mac": "cmd+shift+y",
-        "when": "editorLangId == q"
+        "when": "resourceFilename =~ /\\.(?:q|quke)$/i"
       },
       {
         "command": "kdb.file.pickTarget",
         "key": "ctrl+alt+t",
         "mac": "cmd+alt+t",
-        "when": "kdb.connected.active && (editorLangId == q || editorLangId == python)"
+        "when": "kdb.connected.active && resourceFilename =~ /\\.(?:q)$/i"
       }
     ],
     "snippets": [
@@ -704,7 +727,7 @@
     "viewsWelcome": [
       {
         "view": "kdb-servers",
-        "contents": "No connections registered.\n[Add Connection](command:kdb.addConnection)"
+        "contents": "No connections registered.\n[Add Connection](command:kdb.connections.add)"
       }
     ],
     "menus": {
@@ -964,22 +987,27 @@
         {
           "command": "kdb.execute.fileQuery",
           "group": "q@0",
-          "when": "editorLangId == q"
+          "when": "editorLangId == q && !(resourceFilename =~ /\\.quke$/)"
         },
         {
           "command": "kdb.execute.selectedQuery",
           "group": "q@1",
-          "when": "editorLangId == q"
+          "when": "editorLangId == q && !(resourceFilename =~ /\\.quke$/)"
         },
         {
           "command": "kdb.execute.block",
           "group": "q@2",
-          "when": "editorLangId == q"
+          "when": "editorLangId == q && !(resourceFilename =~ /\\.quke$/)"
+        },
+        {
+          "command": "kdb.file.populateScratchpad",
+          "group": "q@3",
+          "when": "editorLangId == q && !(resourceFilename =~ /\\.quke$/)"
         },
         {
           "command": "kdb.execute.terminal.run",
-          "group": "q@3",
-          "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
+          "group": "q@4",
+          "when": "editorLangId == q && !(resourceFilename =~ /\\.quke$/)"
         },
         {
           "command": "kdb.scratchpad.python.run.file",
@@ -990,28 +1018,48 @@
           "command": "kdb.scratchpad.python.run",
           "group": "q@1",
           "when": "editorLangId == python"
+        },
+        {
+          "command": "kdb.execute.fileQuery",
+          "group": "q@0",
+          "when": "editorLangId == sql"
+        },
+        {
+          "command": "kdb.execute.selectedQuery",
+          "group": "q@1",
+          "when": "editorLangId == sql"
+        },
+        {
+          "command": "kdb.file.populateScratchpad",
+          "group": "q@2",
+          "when": "editorLangId == sql"
         }
       ],
       "editor/context": [
         {
           "command": "kdb.execute.fileQuery",
           "group": "q@0",
-          "when": "editorLangId == q"
+          "when": "editorLangId == q && !(resourceFilename =~ /\\.quke$/)"
         },
         {
           "command": "kdb.execute.selectedQuery",
           "group": "q@1",
-          "when": "editorLangId == q"
+          "when": "editorLangId == q && !(resourceFilename =~ /\\.quke$/)"
         },
         {
           "command": "kdb.execute.block",
           "group": "q@2",
-          "when": "editorLangId == q"
+          "when": "editorLangId == q && !(resourceFilename =~ /\\.quke$/)"
+        },
+        {
+          "command": "kdb.file.populateScratchpad",
+          "group": "q@3",
+          "when": "editorLangId == q && !(resourceFilename =~ /\\.quke$/)"
         },
         {
           "command": "kdb.execute.terminal.run",
-          "group": "q@3",
-          "when": "editorLangId == q && !(resourceFilename =~ /.kdb.q/)"
+          "group": "q@4",
+          "when": "editorLangId == q && !(resourceFilename =~ /\\.quke$/)"
         },
         {
           "command": "kdb.scratchpad.python.run.file",
@@ -1022,6 +1070,28 @@
           "command": "kdb.scratchpad.python.run",
           "group": "q@1",
           "when": "editorLangId == python"
+        },
+        {
+          "command": "kdb.execute.fileQuery",
+          "group": "q@0",
+          "when": "editorLangId == sql"
+        },
+        {
+          "command": "kdb.execute.selectedQuery",
+          "group": "q@1",
+          "when": "editorLangId == sql"
+        },
+        {
+          "command": "kdb.file.populateScratchpad",
+          "group": "q@2",
+          "when": "editorLangId == sql"
+        }
+      ],
+      "notebook/toolbar": [
+        {
+          "command": "kdb.file.pickConnection",
+          "when": "resourceExtname == .kxnb",
+          "group": "navigation/execute@-1"
         }
       ],
       "explorer/context": [
@@ -1078,7 +1148,6 @@
   "homepage": "https://kx.com",
   "scripts": {
     "build": "npm run -S esbuild-base -- --sourcemap",
-    "coverage": "tsc -p ./test && node ./out/test/runTest.js --coverage",
     "esbuild-base": "rimraf out && node ./esbuild.js",
     "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
@@ -1087,9 +1156,12 @@
     "preui-test": "rimraf out-test .test-extensions",
     "preui-test-cmd": "tsc --outdir out-test -p ./test",
     "publish": "npx vsce publish",
-    "test": "tsc -p ./test && node ./out/test/runTest.js",
+    "pretest": "rimraf out && tsc -p ./test",
+    "test": "node ./out/test/runTest.js",
+    "coverage_old": "npm run test -- --coverage",
+    "coverage": "c8 -o coverage-reports -r lcov -r cobertura -r html npm run test",
     "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js",
-    "ui-test-cmd": "extest setup-and-run --code_version 1.99.3 --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
+    "ui-test-cmd": "extest setup-and-run --code_version 1.96.0 --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
     "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
     "watch": "npm run -S esbuild-base -- --sourcemap --watch"
   },
@@ -1119,6 +1191,7 @@
     "@typescript-eslint/eslint-plugin": "^8.34.1",
     "@typescript-eslint/parser": "^8.34.1",
     "@vscode/test-electron": "^2.5.2",
+    "c8": "^10.1.3",
     "esbuild": "^0.25.5",
     "eslint": "^9.29.0",
     "eslint-plugin-header": "^3.1.1",

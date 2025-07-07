@@ -16,3 +16,10 @@ export function normalizeAssemblyTarget(assemblyTarget: string) {
   const assembly = dirtyAssembly.replace(/-qe$/gm, "");
   return `${assembly} ${target}`;
 }
+
+export function stripUnprintableChars(text: string): string {
+  return text
+    .replace(/\p{Cc}/gu, "")
+    .replace(/\p{Co}/gu, "")
+    .replace(/\p{Cn}/gu, "");
+}

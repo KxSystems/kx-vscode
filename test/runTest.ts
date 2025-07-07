@@ -40,7 +40,7 @@ async function main() {
 
       process.env["GENERATE_COVERAGE"] = "1";
     } else {
-      console.log("⚠️ Coverage mode disabled, running normal tests");
+      //console.log("⚠️ Coverage mode disabled, running normal tests");
     }
 
     await runTests({
