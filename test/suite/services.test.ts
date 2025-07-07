@@ -2557,7 +2557,7 @@ describe("kdbTreeService", () => {
         "server1",
         [],
       );
-      sinon.stub(localConn, "executeQuery").resolves(["vw1", "vw2"]);
+      sinon.stub(localConn, "executeQueryRaw").resolves(["vw1", "vw2"]);
       const result = await KdbTreeService.loadViews(localConn);
       assert.strictEqual(result[0], "vw1", "Should return the first view");
     });
@@ -2568,7 +2568,7 @@ describe("kdbTreeService", () => {
         "server1",
         [],
       );
-      sinon.stub(localConn, "executeQuery").resolves(["vw1", "vw2"]);
+      sinon.stub(localConn, "executeQueryRaw").resolves(["vw1", "vw2"]);
       const result = await KdbTreeService.loadViews(localConn);
       assert.strictEqual(result[0], "vw1", "Should return the first view");
     });
