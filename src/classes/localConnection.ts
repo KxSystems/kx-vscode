@@ -243,7 +243,7 @@ export class LocalConnection {
     return result;
   }
 
-  public async executeQueryRaw(command: string): Promise<string> {
+  public async executeQueryRaw(command: string): Promise<any> {
     let result;
     let retryCount = 0;
     let error;
@@ -254,7 +254,7 @@ export class LocalConnection {
       await delay(500);
       retryCount++;
     }
-    this.connection.k(command, (err: Error, res: string) => {
+    this.connection.k(command, (err: Error, res: any) => {
       if (err) {
         error = err;
         result = "";
