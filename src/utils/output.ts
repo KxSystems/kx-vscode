@@ -25,7 +25,9 @@ export class Output {
   }
 
   public static show(): void {
-    this._outputChannel.show(ext.autoFocusOutputOnEntry);
+    if (ext.autoFocusOutputOnEntry) {
+      this._outputChannel.show();
+    }
   }
 
   public static hide(): void {

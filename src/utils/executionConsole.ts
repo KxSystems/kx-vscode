@@ -90,7 +90,9 @@ export class ExecutionConsole {
     const hideDetails = ext.hideDetailedConsoleQueryOutput;
     output = this.checkOutput(output, query);
     let dataSourceRes: string[] = [];
-    this._console.show(ext.autoFocusOutputOnEntry);
+    if (ext.autoFocusOutputOnEntry) {
+      this._console.show();
+    }
 
     if (Array.isArray(output)) {
       dataSourceRes = convertRowsToConsole(output);
@@ -149,7 +151,9 @@ export class ExecutionConsole {
   ): void {
     updateTheWorkspaceSettings();
     const hideDetails = ext.hideDetailedConsoleQueryOutput;
-    this._console.show(ext.autoFocusOutputOnEntry);
+    if (ext.autoFocusOutputOnEntry) {
+      this._console.show();
+    }
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
     if (!hideDetails) {

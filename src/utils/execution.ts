@@ -39,7 +39,9 @@ export function runQFileTerminal(filename?: string): void {
   });
   const terminal = window.createTerminal(terminalName);
   if (env.QHOME) {
-    terminal.show(ext.autoFocusOutputOnEntry);
+    if (ext.autoFocusOutputOnEntry) {
+      terminal.show();
+    }
     terminal.sendText(command);
   }
 }
