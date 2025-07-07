@@ -17,6 +17,7 @@ import { ext } from "../extensionVariables";
 import { ConnectionManagementService } from "./connectionManagerService";
 import { KdbTreeService } from "./kdbTreeService";
 import { InsightsConnection } from "../classes/insightsConnection";
+import { LocalConnection } from "../classes/localConnection";
 import {
   InsightDetails,
   Insights,
@@ -40,7 +41,6 @@ import {
 } from "../utils/core";
 import { getIconPath } from "../utils/iconsUtils";
 import { MessageKind, notify } from "../utils/notifications";
-import { LocalConnection } from "../classes/localConnection";
 
 export class KdbTreeProvider
   implements vscode.TreeDataProvider<vscode.TreeItem>

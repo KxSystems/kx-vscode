@@ -11,8 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import * as assert from "assert";
 import axios from "axios";
-import assert from "node:assert";
 import Path from "path";
 import sinon from "sinon";
 import {
@@ -2270,7 +2270,7 @@ describe("MetaContentProvider", () => {
       metaContentProvider.provideTextDocumentContent(uri),
       content,
     );
-    assert(spy.calledOnceWith(uri));
+    assert.ok(spy.calledOnceWith(uri));
   });
 
   it("should provide text document content", () => {
@@ -2585,7 +2585,7 @@ describe("HelpFeedbackProvider", () => {
   it("should return all help items in getChildren", () => {
     const children = provider.getChildren();
     assert.strictEqual(children.length, 4);
-    assert(children[0] instanceof TreeItem);
+    assert.ok(children[0] instanceof TreeItem);
     assert.strictEqual(children[0].label, "Extension Documentation");
     assert.strictEqual(children[1].label, "Suggest a Feature");
     assert.strictEqual(children[2].label, "Provide Feedback");
