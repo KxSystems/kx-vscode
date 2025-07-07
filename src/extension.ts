@@ -201,8 +201,6 @@ export async function activate(context: vscode.ExtensionContext) {
   AuthSettings.init(context);
   ext.secretSettings = AuthSettings.instance;
 
-  vscode.commands.executeCommand("kdb-results.focus");
-
   try {
     // check for installed q runtime
     await checkLocalInstall(true);
