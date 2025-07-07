@@ -162,8 +162,8 @@ export function notify<T extends string>(
 
   if (action === "Details") {
     notification.then((res) => {
-      if (res === "Details") {
-        ext.outputChannel.show(true);
+      if (res === "Details" && ext.autoFocusOutputOnEntry) {
+        ext.outputChannel.show();
       }
     });
   }

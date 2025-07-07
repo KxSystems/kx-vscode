@@ -184,6 +184,46 @@ describe("Utils", () => {
       });
     });
 
+    describe("getAutoFocusOutputOnEntry", () => {
+      let getConfigurationStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        getConfigurationStub = sinon.stub(
+          vscode.workspace,
+          "getConfiguration",
+        ) as sinon.SinonStub;
+      });
+
+      afterEach(() => {
+        getConfigurationStub.restore();
+        sinon.restore();
+      });
+
+      it("should update configuration and set autoFocusOutputOnEntry to true when setting is undefined", async () => {
+        getConfigurationStub.returns({
+          get: sinon.stub().returns(undefined),
+          update: sinon.stub(),
+        });
+
+        await coreUtils.getAutoFocusOutputOnEntry();
+
+        sinon.assert.calledTwice(getConfigurationStub);
+        assert.strictEqual(ext.autoFocusOutputOnEntry, true);
+      });
+
+      it("should set autoFocusOutputOnEntry to setting when setting is defined", async () => {
+        getConfigurationStub.returns({
+          get: sinon.stub().returns(false),
+          update: sinon.stub(),
+        });
+
+        await coreUtils.getAutoFocusOutputOnEntry();
+
+        sinon.assert.calledOnce(getConfigurationStub);
+        assert.strictEqual(ext.autoFocusOutputOnEntry, false);
+      });
+    });
+
     describe("server alias", () => {
       beforeEach(() => {
         ext.kdbConnectionAliasList.length = 0;

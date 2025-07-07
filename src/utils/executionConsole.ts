@@ -14,10 +14,7 @@
 import { OutputChannel, commands, window } from "vscode";
 
 import { ext } from "../extensionVariables";
-import {
-  getHideDetailedConsoleQueryOutput,
-  setOutputWordWrapper,
-} from "./core";
+import { updateTheWorkspaceSettings, setOutputWordWrapper } from "./core";
 import { MessageKind, notify } from "./notifications";
 import {
   addQueryHistory,
@@ -89,11 +86,13 @@ export class ExecutionConsole {
     duration?: string,
     isFromConnTree?: boolean,
   ): void {
-    getHideDetailedConsoleQueryOutput();
+    updateTheWorkspaceSettings();
     const hideDetails = ext.hideDetailedConsoleQueryOutput;
     output = this.checkOutput(output, query);
     let dataSourceRes: string[] = [];
-    this._console.show(true);
+    if (ext.autoFocusOutputOnEntry) {
+      this._console.show();
+    }
 
     if (Array.isArray(output)) {
       dataSourceRes = convertRowsToConsole(output);
@@ -150,9 +149,11 @@ export class ExecutionConsole {
     duration?: string,
     isFromConnTree?: boolean,
   ): void {
-    getHideDetailedConsoleQueryOutput();
+    updateTheWorkspaceSettings();
     const hideDetails = ext.hideDetailedConsoleQueryOutput;
-    this._console.show(true);
+    if (ext.autoFocusOutputOnEntry) {
+      this._console.show();
+    }
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
     if (!hideDetails) {

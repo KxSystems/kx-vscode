@@ -274,6 +274,25 @@ export function getHideDetailedConsoleQueryOutput(): void {
   }
 }
 
+export function getAutoFocusOutputOnEntry(): void {
+  const setting = workspace
+    .getConfiguration()
+    .get<boolean | undefined>("kdb.autoFocusOutputOnEntry");
+  if (setting === undefined) {
+    workspace
+      .getConfiguration()
+      .update("kdb.autoFocusOutputOnEntry", true, ConfigurationTarget.Global);
+    ext.autoFocusOutputOnEntry = true;
+  } else {
+    ext.autoFocusOutputOnEntry = setting;
+  }
+}
+
+export function updateTheWorkspaceSettings(): void {
+  getAutoFocusOutputOnEntry();
+  getHideDetailedConsoleQueryOutput();
+}
+
 export function setOutputWordWrapper(): void {
   let existWrap = false;
   const logConfig = workspace.getConfiguration("[Log]");
