@@ -13,9 +13,22 @@
 
 import * as vscode from "vscode";
 
+import { ConnectionManagementService } from "./connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
+import { LocalConnection } from "../classes/localConnection";
+import {
+  getPartialDatasourceFile,
+  populateScratchpad,
+  runDataSource,
+} from "../commands/dataSourceCommand";
 import { executeQuery } from "../commands/serverCommand";
+import {
+  getConnectionForServer,
+  getServerForUri,
+} from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
+import { getCellKind } from "./notebookProviders";
+import { CellKind } from "../models/notebook";
 import { getBasename, offerConnectAction } from "../utils/core";
 import { MessageKind, notify } from "../utils/notifications";
 import { resultToBase64 } from "../utils/queryUtils";
@@ -27,7 +40,7 @@ export class KxNotebookController {
   readonly controllerId = "kx-notebook-1";
   readonly notebookType = "kx-notebook";
   readonly label = "KX Notebook";
-  readonly supportedLanguages = ["q", "python"];
+  readonly supportedLanguages = ["q", "python", "sql"];
 
   protected readonly controller: vscode.NotebookController;
   protected order = 0;
@@ -50,34 +63,89 @@ export class KxNotebookController {
   async execute(
     cells: vscode.NotebookCell[],
     notebook: vscode.NotebookDocument,
-    _controller: vscode.NotebookController,
+    controller: vscode.NotebookController,
   ): Promise<void> {
-    const conn = ext.activeConnection;
-    if (conn === undefined) {
+    const connMngService = new ConnectionManagementService();
+
+    let isInsights = false;
+    let connVersion = 0;
+    let conn: InsightsConnection | LocalConnection | undefined;
+    let server = getServerForUri(notebook.uri) || "";
+
+    if (server) {
+      const node = await getConnectionForServer(server);
+      if (node) {
+        server = node.label;
+        conn = connMngService.retrieveConnectedConnection(server);
+        if (conn === undefined) {
+          offerConnectAction(server);
+          return;
+        } else if (conn instanceof InsightsConnection) {
+          isInsights = true;
+          connVersion = conn.insightsVersion ?? 0;
+        }
+      } else {
+        notify(`Connection ${server} not found.`, MessageKind.ERROR, {
+          logger,
+        });
+        return;
+      }
+    } else if (ext.activeConnection) {
+      conn = ext.activeConnection;
+    } else {
       offerConnectAction();
       return;
     }
-    const isInsights = conn instanceof InsightsConnection;
-    const connVersion = isInsights ? (conn.insightsVersion ?? 0) : 0;
 
     for (const cell of cells) {
-      const isPython = cell.document.languageId === "python";
-      const execution = this.controller.createNotebookCellExecution(cell);
+      const kind = getCellKind(cell);
+      const execution = controller.createNotebookCellExecution(cell);
+
       execution.executionOrder = ++this.order;
       execution.start(Date.now());
 
       try {
-        const results = await Promise.race([
-          executeQuery(
+        const executorName = getBasename(notebook.uri);
+        let executor: Promise<any>;
+
+        const target =
+          isInsights && kind == CellKind.Q ? cell.metadata?.target : undefined;
+
+        const variable =
+          isInsights && (target || kind === CellKind.SQL)
+            ? cell.metadata?.variable
+            : undefined;
+
+        if (kind === CellKind.SQL && !isInsights) {
+          throw new Error(
+            `SQL is not supported on ${server || "active connection"}`,
+          );
+        }
+
+        if (target || kind === CellKind.SQL) {
+          const params = getPartialDatasourceFile(
+            cell.document.getText(),
+            target,
+            kind === CellKind.SQL,
+          );
+          executor = variable
+            ? populateScratchpad(params, conn.connLabel, variable, true)
+            : runDataSource(params, conn.connLabel, executorName);
+        } else {
+          executor = executeQuery(
             cell.document.getText(),
             conn.connLabel,
-            getBasename(notebook.uri),
+            executorName,
             ".",
-            isPython,
+            kind === CellKind.PYTHON,
             false,
             false,
             execution.token,
-          ),
+          );
+        }
+
+        let results = await Promise.race([
+          executor,
           new Promise((_, reject) => {
             const updateCancelled = () => {
               if (execution.token.isCancellationRequested) {
@@ -89,21 +157,43 @@ export class KxNotebookController {
           }),
         ]);
 
-        const rendered = render(results, isPython, isInsights, connVersion);
+        if (variable) {
+          results = `Scratchpad variable (${variable}) populated.`;
+        }
+
+        const rendered =
+          target || kind === CellKind.SQL
+            ? render(results, kind === CellKind.PYTHON, isInsights)
+            : render(
+                results,
+                kind === CellKind.PYTHON,
+                isInsights,
+                connVersion,
+              );
 
         execution.replaceOutput([
           new vscode.NotebookCellOutput([
             vscode.NotebookCellOutputItem.text(rendered.text, rendered.mime),
           ]),
         ]);
+        execution.end(true, Date.now());
       } catch (error) {
-        notify("Notebook execution stopped.", MessageKind.DEBUG, {
+        execution.end(false, Date.now());
+
+        notify(`Execution on ${conn.connLabel} stopped.`, MessageKind.DEBUG, {
           logger,
           params: error,
         });
+
+        execution.replaceOutput([
+          new vscode.NotebookCellOutput([
+            vscode.NotebookCellOutputItem.text(
+              `<p>Execution stopped (${error}).</p>`,
+              "text/html",
+            ),
+          ]),
+        ]);
         break;
-      } finally {
-        execution.end(true, Date.now());
       }
     }
   }
@@ -118,7 +208,7 @@ function render(
   results: any,
   isPython: boolean,
   isInsights: boolean,
-  connVersion: number,
+  connVersion?: number,
 ): Rendered {
   let text = "No results.";
   let mime = "text/plain";

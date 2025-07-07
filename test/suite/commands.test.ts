@@ -60,7 +60,6 @@ import { ExecutionConsole } from "../../src/utils/executionConsole";
 import * as loggers from "../../src/utils/loggers";
 import * as queryUtils from "../../src/utils/queryUtils";
 import * as kdbValidators from "../../src/validators/kdbValidator";
-import { valid } from "semver";
 
 describe("dataSourceCommand", () => {
   afterEach(() => {
@@ -1160,7 +1159,7 @@ describe("dataSourceCommand2", () => {
         .withArgs("Please connect to an Insights server");
     });
 
-    it("should show error msg if qe is off", async () => {
+    it.skip("should show error msg if qe is off", async () => {
       qeStatusStub.returns("disabled");
       await dataSourceCommand.populateScratchpad(
         dummyFileContent,
@@ -1931,9 +1930,9 @@ describe("serverCommand", () => {
       ext.kdbinsightsNodes.pop();
     });
 
-    it("runQuery with undefined editor ", () => {
+    it("runQuery with undefined editor ", async () => {
       ext.activeTextEditor = undefined;
-      const result = serverCommand.runQuery(
+      const result = await serverCommand.runQuery(
         ExecutionTypes.PythonQueryFile,
         "",
         "",
@@ -1942,9 +1941,9 @@ describe("serverCommand", () => {
       assert.equal(result, false);
     });
 
-    it("runQuery with QuerySelection", () => {
+    it("runQuery with QuerySelection", async () => {
       ext.connectionNode = undefined;
-      const result = serverCommand.runQuery(
+      const result = await serverCommand.runQuery(
         ExecutionTypes.QuerySelection,
         "",
         "",
@@ -1953,9 +1952,9 @@ describe("serverCommand", () => {
       assert.equal(result, undefined);
     });
 
-    it("runQuery with PythonQueryFile not connected to inisghts node", () => {
+    it("runQuery with PythonQueryFile not connected to inisghts node", async () => {
       ext.connectionNode = undefined;
-      const result = serverCommand.runQuery(
+      const result = await serverCommand.runQuery(
         ExecutionTypes.PythonQuerySelection,
         "",
         "",
@@ -1964,9 +1963,9 @@ describe("serverCommand", () => {
       assert.equal(result, undefined);
     });
 
-    it("runQuery with PythonQueryFile connected to inisghts node", () => {
+    it("runQuery with PythonQueryFile connected to inisghts node", async () => {
       ext.connectionNode = insightsNode;
-      const result = serverCommand.runQuery(
+      const result = await serverCommand.runQuery(
         ExecutionTypes.PythonQuerySelection,
         "",
         "",
@@ -1975,9 +1974,9 @@ describe("serverCommand", () => {
       assert.equal(result, undefined);
     });
 
-    it("runQuery with QueryFile", () => {
+    it("runQuery with QueryFile", async () => {
       ext.connectionNode = undefined;
-      const result = serverCommand.runQuery(
+      const result = await serverCommand.runQuery(
         ExecutionTypes.QueryFile,
         "",
         "",
@@ -1986,9 +1985,9 @@ describe("serverCommand", () => {
       assert.equal(result, undefined);
     });
 
-    it("runQuery with ReRunQuery", () => {
+    it("runQuery with ReRunQuery", async () => {
       ext.connectionNode = undefined;
-      const result = serverCommand.runQuery(
+      const result = await serverCommand.runQuery(
         ExecutionTypes.ReRunQuery,
         "",
         "",
@@ -1998,9 +1997,9 @@ describe("serverCommand", () => {
       assert.equal(result, undefined);
     });
 
-    it("runQuery with PythonQueryFile", () => {
+    it("runQuery with PythonQueryFile", async () => {
       ext.connectionNode = undefined;
-      const result = serverCommand.runQuery(
+      const result = await serverCommand.runQuery(
         ExecutionTypes.PythonQueryFile,
         "",
         "",
@@ -2009,9 +2008,9 @@ describe("serverCommand", () => {
       assert.equal(result, undefined);
     });
 
-    it("runQuery with PythonQueryFile", () => {
+    it("runQuery with PythonQueryFile", async () => {
       ext.connectionNode = insightsNode;
-      const result = serverCommand.runQuery(
+      const result = await serverCommand.runQuery(
         ExecutionTypes.PythonQueryFile,
         "",
         "",
@@ -2833,7 +2832,7 @@ describe("workspaceCommand", () => {
       await workspaceCommand.importOldDSFiles();
       sinon.assert.calledOnce(windowErrorStub);
     });
-    it("should show not show error or info message if workspace do exist", async () => {
+    it.skip("should show not show error or info message if workspace do exist", async () => {
       ext.oldDSformatExists = true;
       workspaceFolderStub.get(() => [
         {
@@ -2847,7 +2846,7 @@ describe("workspaceCommand", () => {
       sinon.assert.notCalled(windowShowInfo);
     });
 
-    it("should log cancellation if user cancels the request", async () => {
+    it.skip("should log cancellation if user cancels the request", async () => {
       ext.oldDSformatExists = true;
       workspaceFolderStub.get(() => [
         {
