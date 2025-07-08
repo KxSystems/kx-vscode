@@ -106,8 +106,7 @@ export class KxNotebookController {
       execution.executionOrder = ++this.order;
       execution.start(Date.now());
 
-      // Make Sonar happy
-      let success: boolean | undefined;
+      let success = false;
 
       try {
         const executorName = getBasename(notebook.uri);
@@ -183,8 +182,6 @@ export class KxNotebookController {
         ]);
         success = true;
       } catch (error) {
-        success = false;
-
         notify(`Execution on ${conn.connLabel} stopped.`, MessageKind.DEBUG, {
           logger,
           params: error,
