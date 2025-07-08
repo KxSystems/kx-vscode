@@ -65,39 +65,11 @@ export class KxNotebookController {
     notebook: vscode.NotebookDocument,
     controller: vscode.NotebookController,
   ): Promise<void> {
-    const connMngService = new ConnectionManagementService();
-
-    let isInsights = false;
-    let connVersion = 0;
-    let conn: InsightsConnection | LocalConnection | undefined;
-    let server = getServerForUri(notebook.uri) || "";
-
-    if (server) {
-      const node = await getConnectionForServer(server);
-      if (node) {
-        server = node.label;
-        conn = connMngService.retrieveConnectedConnection(server);
-        if (conn === undefined) {
-          offerConnectAction(server);
-          return;
-        }
-      } else {
-        notify(`Connection ${server} not found.`, MessageKind.ERROR, {
-          logger,
-        });
-        return;
-      }
-    } else if (ext.activeConnection) {
-      conn = ext.activeConnection;
-    } else {
-      offerConnectAction();
+    const conn = await this.findConnection(notebook.uri);
+    if (!conn) {
       return;
     }
-
-    if (conn instanceof InsightsConnection) {
-      isInsights = true;
-      connVersion = conn.insightsVersion ?? 0;
-    }
+    const { isInsights, connVersion } = this.getInsightProps(conn);
 
     for (const cell of cells) {
       const kind = getCellKind(cell);
@@ -122,7 +94,7 @@ export class KxNotebookController {
 
         if (kind === CellKind.SQL && !isInsights) {
           throw new Error(
-            `SQL is not supported on ${server || "active connection"}`,
+            `SQL is not supported on ${conn.connLabel || "active connection"}`,
           );
         }
 
@@ -175,30 +147,72 @@ export class KxNotebookController {
                 connVersion,
               );
 
-        execution.replaceOutput([
-          new vscode.NotebookCellOutput([
-            vscode.NotebookCellOutputItem.text(rendered.text, rendered.mime),
-          ]),
-        ]);
+        this.replaceOutput(execution, rendered);
         success = true;
       } catch (error) {
         notify(`Execution on ${conn.connLabel} stopped.`, MessageKind.DEBUG, {
           logger,
           params: error,
         });
-        execution.replaceOutput([
-          new vscode.NotebookCellOutput([
-            vscode.NotebookCellOutputItem.text(
-              `<p>Execution stopped (${error instanceof Error ? error.message : error}).</p>`,
-              "text/html",
-            ),
-          ]),
-        ]);
+        this.replaceOutput(execution, {
+          text: `<p>Execution stopped (${error instanceof Error ? error.message : error}).</p>`,
+          mime: "text/html",
+        });
         break;
       } finally {
         execution.end(success, Date.now());
       }
     }
+  }
+
+  async findConnection(uri: vscode.Uri) {
+    const connMngService = new ConnectionManagementService();
+
+    let conn: InsightsConnection | LocalConnection | undefined;
+    let server = getServerForUri(uri) || "";
+
+    if (server) {
+      const node = await getConnectionForServer(server);
+      if (node) {
+        server = node.label;
+        conn = connMngService.retrieveConnectedConnection(server);
+        if (conn === undefined) {
+          offerConnectAction(server);
+          return;
+        }
+      } else {
+        notify(`Connection ${server} not found.`, MessageKind.ERROR, {
+          logger,
+        });
+        return;
+      }
+    } else if (ext.activeConnection) {
+      conn = ext.activeConnection;
+    } else {
+      offerConnectAction();
+      return;
+    }
+    return conn;
+  }
+
+  getInsightProps(conn: LocalConnection | InsightsConnection) {
+    let isInsights = false;
+    let connVersion = 0;
+
+    if (conn instanceof InsightsConnection) {
+      isInsights = true;
+      connVersion = conn.insightsVersion ?? 0;
+    }
+
+    return { isInsights, connVersion };
+  }
+
+  replaceOutput(execution: vscode.NotebookCellExecution, rendered: Rendered) {
+    execution.replaceOutput([
+      new vscode.NotebookCellOutput([
+        vscode.NotebookCellOutputItem.text(rendered.text, rendered.mime),
+      ]),
+    ]);
   }
 }
 
