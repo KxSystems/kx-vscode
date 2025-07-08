@@ -106,7 +106,8 @@ export class KxNotebookController {
       execution.executionOrder = ++this.order;
       execution.start(Date.now());
 
-      let success = true;
+      // Make Sonar happy
+      let success: boolean | undefined;
 
       try {
         const executorName = getBasename(notebook.uri);
@@ -180,6 +181,7 @@ export class KxNotebookController {
             vscode.NotebookCellOutputItem.text(rendered.text, rendered.mime),
           ]),
         ]);
+        success = true;
       } catch (error) {
         success = false;
 
