@@ -79,11 +79,9 @@ export class KxNotebookController {
       execution.start(Date.now());
 
       let success = false;
+      let cancellationDisposable: vscode.Disposable | undefined;
 
       try {
-        const executorName = getBasename(notebook.uri);
-        let executor: Promise<any>;
-
         const target =
           isInsights && kind == CellKind.Q ? cell.metadata?.target : undefined;
 
@@ -98,27 +96,13 @@ export class KxNotebookController {
           );
         }
 
-        if (target || kind === CellKind.SQL) {
-          const params = getPartialDatasourceFile(
-            cell.document.getText(),
-            target,
-            kind === CellKind.SQL,
-          );
-          executor = variable
-            ? populateScratchpad(params, conn.connLabel, variable, true)
-            : runDataSource(params, conn.connLabel, executorName);
-        } else {
-          executor = executeQuery(
-            cell.document.getText(),
-            conn.connLabel,
-            executorName,
-            ".",
-            kind === CellKind.PYTHON,
-            false,
-            false,
-            execution.token,
-          );
-        }
+        const executor = this.getQueryExecutor(
+          conn,
+          execution,
+          cell,
+          target,
+          variable,
+        );
 
         let results = await Promise.race([
           executor,
@@ -129,7 +113,8 @@ export class KxNotebookController {
               }
             };
             updateCancelled();
-            execution.token.onCancellationRequested(updateCancelled);
+            cancellationDisposable =
+              execution.token.onCancellationRequested(updateCancelled);
           }),
         ]);
 
@@ -160,6 +145,7 @@ export class KxNotebookController {
         });
         break;
       } finally {
+        cancellationDisposable?.dispose();
         execution.end(success, Date.now());
       }
     }
@@ -207,7 +193,43 @@ export class KxNotebookController {
     return { isInsights, connVersion };
   }
 
-  replaceOutput(execution: vscode.NotebookCellExecution, rendered: Rendered) {
+  getQueryExecutor(
+    conn: LocalConnection | InsightsConnection,
+    execution: vscode.NotebookCellExecution,
+    cell: vscode.NotebookCell,
+    target?: string,
+    variable?: string,
+  ): Promise<any> {
+    const kind = getCellKind(cell);
+    const executorName = getBasename(cell.notebook.uri);
+
+    if (target || kind === CellKind.SQL) {
+      const params = getPartialDatasourceFile(
+        cell.document.getText(),
+        target,
+        kind === CellKind.SQL,
+      );
+      return variable
+        ? populateScratchpad(params, conn.connLabel, variable, true)
+        : runDataSource(params, conn.connLabel, executorName);
+    } else {
+      return executeQuery(
+        cell.document.getText(),
+        conn.connLabel,
+        executorName,
+        ".",
+        kind === CellKind.PYTHON,
+        false,
+        false,
+        execution.token,
+      );
+    }
+  }
+
+  replaceOutput(
+    execution: vscode.NotebookCellExecution,
+    rendered: Rendered,
+  ): void {
     execution.replaceOutput([
       new vscode.NotebookCellOutput([
         vscode.NotebookCellOutputItem.text(rendered.text, rendered.mime),
