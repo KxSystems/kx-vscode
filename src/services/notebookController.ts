@@ -65,84 +65,44 @@ export class KxNotebookController {
     notebook: vscode.NotebookDocument,
     controller: vscode.NotebookController,
   ): Promise<void> {
-    const connMngService = new ConnectionManagementService();
-
-    let isInsights = false;
-    let connVersion = 0;
-    let conn: InsightsConnection | LocalConnection | undefined;
-    let server = getServerForUri(notebook.uri) || "";
-
-    if (server) {
-      const node = await getConnectionForServer(server);
-      if (node) {
-        server = node.label;
-        conn = connMngService.retrieveConnectedConnection(server);
-        if (conn === undefined) {
-          offerConnectAction(server);
-          return;
-        } else if (conn instanceof InsightsConnection) {
-          isInsights = true;
-          connVersion = conn.insightsVersion ?? 0;
-        }
-      } else {
-        notify(`Connection ${server} not found.`, MessageKind.ERROR, {
-          logger,
-        });
-        return;
-      }
-    } else if (ext.activeConnection) {
-      conn = ext.activeConnection;
-    } else {
-      offerConnectAction();
+    const conn = await this.findConnection(notebook.uri);
+    if (!conn) {
       return;
     }
+    const { isInsights, connVersion } = this.getInsightProps(conn);
 
     for (const cell of cells) {
-      const kind = getCellKind(cell);
       const execution = controller.createNotebookCellExecution(cell);
 
       execution.executionOrder = ++this.order;
       execution.start(Date.now());
 
+      let success = false;
+      let cancellationDisposable: vscode.Disposable | undefined;
+
       try {
-        const executorName = getBasename(notebook.uri);
-        let executor: Promise<any>;
-
-        const target =
-          isInsights && kind == CellKind.Q ? cell.metadata?.target : undefined;
-
-        const variable =
-          isInsights && (target || kind === CellKind.SQL)
-            ? cell.metadata?.variable
-            : undefined;
+        const kind = getCellKind(cell);
 
         if (kind === CellKind.SQL && !isInsights) {
           throw new Error(
-            `SQL is not supported on ${server || "active connection"}`,
+            `SQL is not supported on ${conn.connLabel || "active connection"}`,
           );
         }
 
-        if (target || kind === CellKind.SQL) {
-          const params = getPartialDatasourceFile(
-            cell.document.getText(),
-            target,
-            kind === CellKind.SQL,
-          );
-          executor = variable
-            ? populateScratchpad(params, conn.connLabel, variable, true)
-            : runDataSource(params, conn.connLabel, executorName);
-        } else {
-          executor = executeQuery(
-            cell.document.getText(),
-            conn.connLabel,
-            executorName,
-            ".",
-            kind === CellKind.PYTHON,
-            false,
-            false,
-            execution.token,
-          );
-        }
+        const { target, variable } = this.getCellMetadata(
+          cell,
+          kind,
+          isInsights,
+        );
+
+        const executor = this.getQueryExecutor(
+          conn,
+          execution,
+          cell,
+          kind,
+          target,
+          variable,
+        );
 
         let results = await Promise.race([
           executor,
@@ -153,7 +113,8 @@ export class KxNotebookController {
               }
             };
             updateCancelled();
-            execution.token.onCancellationRequested(updateCancelled);
+            cancellationDisposable =
+              execution.token.onCancellationRequested(updateCancelled);
           }),
         ]);
 
@@ -171,31 +132,125 @@ export class KxNotebookController {
                 connVersion,
               );
 
-        execution.replaceOutput([
-          new vscode.NotebookCellOutput([
-            vscode.NotebookCellOutputItem.text(rendered.text, rendered.mime),
-          ]),
-        ]);
-        execution.end(true, Date.now());
+        this.replaceOutput(execution, rendered);
+        success = true;
       } catch (error) {
-        execution.end(false, Date.now());
-
         notify(`Execution on ${conn.connLabel} stopped.`, MessageKind.DEBUG, {
           logger,
           params: error,
         });
-
-        execution.replaceOutput([
-          new vscode.NotebookCellOutput([
-            vscode.NotebookCellOutputItem.text(
-              `<p>Execution stopped (${error}).</p>`,
-              "text/html",
-            ),
-          ]),
-        ]);
+        this.replaceOutput(execution, {
+          text: `<p>Execution stopped (${error instanceof Error ? error.message : error}).</p>`,
+          mime: "text/html",
+        });
         break;
+      } finally {
+        cancellationDisposable?.dispose();
+        execution.end(success, Date.now());
       }
     }
+  }
+
+  async findConnection(uri: vscode.Uri) {
+    const connMngService = new ConnectionManagementService();
+
+    let conn: InsightsConnection | LocalConnection | undefined;
+    let server = getServerForUri(uri) ?? "";
+
+    if (server) {
+      const node = await getConnectionForServer(server);
+      if (node) {
+        server = node.label;
+        conn = connMngService.retrieveConnectedConnection(server);
+        if (conn === undefined) {
+          offerConnectAction(server);
+          return;
+        }
+      } else {
+        notify(`Connection ${server} not found.`, MessageKind.ERROR, {
+          logger,
+        });
+        return;
+      }
+    } else if (ext.activeConnection) {
+      conn = ext.activeConnection;
+    } else {
+      offerConnectAction();
+      return;
+    }
+    return conn;
+  }
+
+  getInsightProps(conn: LocalConnection | InsightsConnection) {
+    let isInsights = false;
+    let connVersion = 0;
+
+    if (conn instanceof InsightsConnection) {
+      isInsights = true;
+      connVersion = conn.insightsVersion ?? 0;
+    }
+
+    return { isInsights, connVersion };
+  }
+
+  getCellMetadata(
+    cell: vscode.NotebookCell,
+    kind: CellKind,
+    isInsights: boolean,
+  ): { target?: string; variable?: string } {
+    const target =
+      isInsights && kind == CellKind.Q ? cell.metadata?.target : undefined;
+
+    const variable =
+      isInsights && (target || kind === CellKind.SQL)
+        ? cell.metadata?.variable
+        : undefined;
+
+    return { target, variable };
+  }
+
+  getQueryExecutor(
+    conn: LocalConnection | InsightsConnection,
+    execution: vscode.NotebookCellExecution,
+    cell: vscode.NotebookCell,
+    kind: CellKind,
+    target?: string,
+    variable?: string,
+  ): Promise<any> {
+    const executorName = getBasename(cell.notebook.uri);
+
+    if (target || kind === CellKind.SQL) {
+      const params = getPartialDatasourceFile(
+        cell.document.getText(),
+        target,
+        kind === CellKind.SQL,
+      );
+      return variable
+        ? populateScratchpad(params, conn.connLabel, variable, true)
+        : runDataSource(params, conn.connLabel, executorName);
+    } else {
+      return executeQuery(
+        cell.document.getText(),
+        conn.connLabel,
+        executorName,
+        ".",
+        kind === CellKind.PYTHON,
+        false,
+        false,
+        execution.token,
+      );
+    }
+  }
+
+  replaceOutput(
+    execution: vscode.NotebookCellExecution,
+    rendered: Rendered,
+  ): void {
+    execution.replaceOutput([
+      new vscode.NotebookCellOutput([
+        vscode.NotebookCellOutputItem.text(rendered.text, rendered.mime),
+      ]),
+    ]);
   }
 }
 

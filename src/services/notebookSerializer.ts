@@ -62,8 +62,8 @@ export class KxNotebookSerializer implements vscode.NotebookSerializer {
           kind: cell.kind,
           value: cell.value,
           languageId: cell.languageId,
-          target: cell.metadata?.target,
-          variable: cell.metadata?.variable,
+          target: cell.metadata?.target || undefined,
+          variable: cell.metadata?.variable || undefined,
           outputs: (cell.outputs || []).map((output) => {
             return {
               items: output.items.map((item) => {
