@@ -80,9 +80,6 @@ export class KxNotebookController {
         if (conn === undefined) {
           offerConnectAction(server);
           return;
-        } else if (conn instanceof InsightsConnection) {
-          isInsights = true;
-          connVersion = conn.insightsVersion ?? 0;
         }
       } else {
         notify(`Connection ${server} not found.`, MessageKind.ERROR, {
@@ -97,12 +94,19 @@ export class KxNotebookController {
       return;
     }
 
+    if (conn instanceof InsightsConnection) {
+      isInsights = true;
+      connVersion = conn.insightsVersion ?? 0;
+    }
+
     for (const cell of cells) {
       const kind = getCellKind(cell);
       const execution = controller.createNotebookCellExecution(cell);
 
       execution.executionOrder = ++this.order;
       execution.start(Date.now());
+
+      let success = true;
 
       try {
         const executorName = getBasename(notebook.uri);
@@ -176,24 +180,24 @@ export class KxNotebookController {
             vscode.NotebookCellOutputItem.text(rendered.text, rendered.mime),
           ]),
         ]);
-        execution.end(true, Date.now());
       } catch (error) {
-        execution.end(false, Date.now());
+        success = false;
 
         notify(`Execution on ${conn.connLabel} stopped.`, MessageKind.DEBUG, {
           logger,
           params: error,
         });
-
         execution.replaceOutput([
           new vscode.NotebookCellOutput([
             vscode.NotebookCellOutputItem.text(
-              `<p>Execution stopped (${error}).</p>`,
+              `<p>Execution stopped (${error instanceof Error ? error.message : error}).</p>`,
               "text/html",
             ),
           ]),
         ]);
         break;
+      } finally {
+        execution.end(success, Date.now());
       }
     }
   }
