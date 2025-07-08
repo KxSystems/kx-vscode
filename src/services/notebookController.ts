@@ -72,7 +72,6 @@ export class KxNotebookController {
     const { isInsights, connVersion } = this.getInsightProps(conn);
 
     for (const cell of cells) {
-      const kind = getCellKind(cell);
       const execution = controller.createNotebookCellExecution(cell);
 
       execution.executionOrder = ++this.order;
@@ -82,13 +81,7 @@ export class KxNotebookController {
       let cancellationDisposable: vscode.Disposable | undefined;
 
       try {
-        const target =
-          isInsights && kind == CellKind.Q ? cell.metadata?.target : undefined;
-
-        const variable =
-          isInsights && (target || kind === CellKind.SQL)
-            ? cell.metadata?.variable
-            : undefined;
+        const kind = getCellKind(cell);
 
         if (kind === CellKind.SQL && !isInsights) {
           throw new Error(
@@ -96,10 +89,17 @@ export class KxNotebookController {
           );
         }
 
+        const { target, variable } = this.getCellMetadata(
+          cell,
+          kind,
+          isInsights,
+        );
+
         const executor = this.getQueryExecutor(
           conn,
           execution,
           cell,
+          kind,
           target,
           variable,
         );
@@ -155,7 +155,7 @@ export class KxNotebookController {
     const connMngService = new ConnectionManagementService();
 
     let conn: InsightsConnection | LocalConnection | undefined;
-    let server = getServerForUri(uri) || "";
+    let server = getServerForUri(uri) ?? "";
 
     if (server) {
       const node = await getConnectionForServer(server);
@@ -193,14 +193,30 @@ export class KxNotebookController {
     return { isInsights, connVersion };
   }
 
+  getCellMetadata(
+    cell: vscode.NotebookCell,
+    kind: CellKind,
+    isInsights: boolean,
+  ): { target?: string; variable?: string } {
+    const target =
+      isInsights && kind == CellKind.Q ? cell.metadata?.target : undefined;
+
+    const variable =
+      isInsights && (target || kind === CellKind.SQL)
+        ? cell.metadata?.variable
+        : undefined;
+
+    return { target, variable };
+  }
+
   getQueryExecutor(
     conn: LocalConnection | InsightsConnection,
     execution: vscode.NotebookCellExecution,
     cell: vscode.NotebookCell,
+    kind: CellKind,
     target?: string,
     variable?: string,
   ): Promise<any> {
-    const kind = getCellKind(cell);
     const executorName = getBasename(cell.notebook.uri);
 
     if (target || kind === CellKind.SQL) {
