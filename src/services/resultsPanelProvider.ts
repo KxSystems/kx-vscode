@@ -50,7 +50,8 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         this.savedParamStates.isPython,
       );
     });
-    ext.isResultsTabVisible = true;
+
+    ext.isResultsTabVisible = this._view?.visible || false;
   }
 
   /* istanbul ignore next */
