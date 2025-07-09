@@ -16,6 +16,7 @@ import * as os from "os";
 import { join } from "path";
 
 import { ext } from "../extensionVariables";
+import { updateTheWorkspaceSettings } from "./core";
 import { MessageKind, notify } from "./notifications";
 
 const logger = "cpUtils";
@@ -26,6 +27,7 @@ export async function executeCommand(
   spawnCallback: (cp: cp.ChildProcess, args: string[]) => void,
   ...args: string[]
 ): Promise<string> {
+  updateTheWorkspaceSettings();
   const result: ICommandResult = await tryExecuteCommand(
     workingDirectory,
     command,

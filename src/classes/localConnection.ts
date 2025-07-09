@@ -19,7 +19,7 @@ import { commands } from "vscode";
 import { ext } from "../extensionVariables";
 import { QueryResult, QueryResultType } from "../models/queryResult";
 import { ServerObject } from "../models/serverObject";
-import { delay } from "../utils/core";
+import { delay, updateTheWorkspaceSettings } from "../utils/core";
 import { convertStringToArray, handleQueryResults } from "../utils/execution";
 import { MessageKind, notify } from "../utils/notifications";
 import { queryWrapper } from "../utils/queryUtils";
@@ -116,6 +116,7 @@ export class LocalConnection {
         return;
       }
       conn.addListener("close", () => {
+        updateTheWorkspaceSettings();
         commands.executeCommand("kdb.connections.disconnect", this.connLabel);
         notify(
           `Connection closed: ${this.options.host}:${this.options.port}`,
@@ -134,6 +135,8 @@ export class LocalConnection {
       } else {
         this.onConnect(err, conn, callback);
       }
+
+      this.connected = false;
     });
   }
 

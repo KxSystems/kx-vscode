@@ -16,6 +16,7 @@ import path from "path";
 import { Uri, window, workspace } from "vscode";
 
 import { ext } from "../extensionVariables";
+import { updateTheWorkspaceSettings } from "./core";
 import { MessageKind, notify } from "./notifications";
 import { QueryResultType } from "../models/queryResult";
 
@@ -39,6 +40,7 @@ export function runQFileTerminal(filename?: string): void {
   });
   const terminal = window.createTerminal(terminalName);
   if (env.QHOME) {
+    updateTheWorkspaceSettings();
     if (ext.autoFocusOutputOnEntry) {
       terminal.show();
     }

@@ -14,6 +14,7 @@
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
+import { updateTheWorkspaceSettings } from "./core";
 import { kdbOutputLog } from "./loggers";
 import { stripUnprintableChars } from "./shared";
 import { Telemetry } from "./telemetryClient";
@@ -162,6 +163,7 @@ export function notify<T extends string>(
 
   if (action === "Details") {
     notification.then((res) => {
+      updateTheWorkspaceSettings();
       if (res === "Details" && ext.autoFocusOutputOnEntry) {
         ext.outputChannel.show();
       }

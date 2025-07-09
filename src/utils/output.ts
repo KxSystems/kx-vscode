@@ -14,6 +14,7 @@
 import { OutputChannel, window } from "vscode";
 
 import { ext } from "../extensionVariables";
+import { updateTheWorkspaceSettings } from "./core";
 
 export class Output {
   public static output(label: string, message: string): void {
@@ -25,6 +26,7 @@ export class Output {
   }
 
   public static show(): void {
+    updateTheWorkspaceSettings();
     if (ext.autoFocusOutputOnEntry) {
       this._outputChannel.show();
     }
