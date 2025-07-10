@@ -202,8 +202,8 @@ export function getQExecutablePath() {
     );
   }
 
-  if (process.env.QHOME) {
-    return path.join(process.env.QHOME, folder, "q");
+  if (env.QHOME) {
+    return path.join(env.QHOME, folder, "q");
   } else {
     const home = workspace
       .getConfiguration("kdb")

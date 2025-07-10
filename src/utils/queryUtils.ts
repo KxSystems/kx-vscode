@@ -225,7 +225,7 @@ export function sanitizeQsqlQuery(query: string): string {
       // Remove block comments
       .replace(/^\/[\t ]*$[^]*?^\\[\t ]*$/gm, "")
       // Remove terminate comments
-      .replace(/^\\[\t ]*(?:\r\n|\n)[^]*/gm, "")
+      .replace(/^\\[\t ]*(?:\r\n|[\r\n])[^]*/gm, "")
       // Remove single line comments
       .replace(/^\/.+/gm, "")
       // Remove line comments
@@ -235,20 +235,20 @@ export function sanitizeQsqlQuery(query: string): string {
       )
       // Replace new lines in strings
       .replace(/"(?:[^"\\]*(?:\\.[^"\\]*)*)"/gs, (matched) =>
-        matched.replace(/(\r\n|\n)/gs, "\\n"),
+        matched.replace(/(\r\n|[\r\n])/gs, "\\n"),
       )
       // Replace system commands
       .replace(/^\\([a-zA-Z_1-2\\]+)[\t ]*(.*)/gm, (matched, command, args) =>
         matched === "\\\\" ? 'system"\\\\"' : `system"${command} ${args}"`,
       )
       // Replace end of statements
-      .replace(/(?<!;[\t ]*)(?:\r\n|\n)+(?!\s*[\t ])/gs, ";")
+      .replace(/(?<!;[\t ]*)(?:\r\n|[\r\n])+(?!\s*[\t ])/gs, ";")
       // Remove start of file
       .replace(/^[;\s]+/gs, "")
       // Remove end of file
       .replace(/[;\s]+$/gs, "")
       // Remove remaining new lines
-      .replace(/(?:\r\n|\n)/gs, "")
+      .replace(/(?:\r\n|[\r\n])/gs, "")
   );
 }
 

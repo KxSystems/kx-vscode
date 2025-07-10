@@ -25,7 +25,7 @@ const ANSI = {
   FAINTOFF: "\x1b[22m",
 };
 
-const ENC = {
+const CONTROL = {
   CR: "%0D",
   BS: "%08",
   BSMAC: "%7F",
@@ -125,6 +125,7 @@ export class ReplConnection {
     this.inputIndex = command.length;
     this.showPrompt();
   }
+
   private dispose(): void {
     this.exited = true;
     ReplConnection.instance = undefined;
@@ -185,12 +186,17 @@ export class ReplConnection {
     if (this.exited) {
       return;
     }
+    if (data.length > 1 && /(?:\r\n|[\r\n])/gs.test(data)) {
+      this.executeQuery(data);
+      return;
+    }
+
     const encoded = encodeURIComponent(data);
 
     let command: string;
 
     switch (encoded) {
-      case ENC.CR:
+      case CONTROL.CR:
         if (this.input.length > 0) {
           command = this.input.join(ANSI.EMPTY);
           this.sendToProcess(command + ANSI.CRLF);
@@ -202,39 +208,42 @@ export class ReplConnection {
         this.sendToTerminal(ANSI.CRLF);
         this.showPrompt();
         break;
-      case ENC.BS:
-      case ENC.BSMAC:
+      case CONTROL.BS:
+      case CONTROL.BSMAC:
         if (this.input.pop()) {
           this.inputIndex--;
           this.showPrompt();
         }
         break;
-      case ENC.RIGHT:
-        if (this.inputIndex < this.input.length) {
-          // TODO
-        }
+      case CONTROL.DEL:
+        // TODO
         break;
-      case ENC.LEFT:
+      case CONTROL.LEFT:
         if (this.inputIndex > 0) {
           // TODO
         }
         break;
-      case ENC.UP:
-        if (this.historyIndex < this.history.length) {
-          this.historyIndex++;
+      case CONTROL.RIGHT:
+        if (this.inputIndex < this.input.length) {
+          // TODO
+        }
+        break;
+      case CONTROL.DOWN:
+        if (this.historyIndex > 0) {
+          this.historyIndex--;
           this.recall();
         }
         break;
-      case ENC.DOWN:
-        if (this.historyIndex > 0) {
-          this.historyIndex--;
+      case CONTROL.UP:
+        if (this.historyIndex < this.history.length) {
+          this.historyIndex++;
           this.recall();
         }
         break;
       default:
         if (!/[^\P{Cc}]/gsu.test(data)) {
           this.input.splice(this.inputIndex, 0, data);
-          this.inputIndex++;
+          this.inputIndex += data.length;
           this.showPrompt();
         }
         break;
