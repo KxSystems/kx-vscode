@@ -21,11 +21,9 @@ import { sanitizeQsqlQuery } from "../utils/queryUtils";
 const ANSI = {
   EMPTY: "",
   CRLF: "\r\n",
+  LINESTART: "\x1b[0G",
   FAINTON: "\x1b[2m",
   FAINTOFF: "\x1b[22m",
-  NORMAL: "\x1b[0m",
-  MAGENTA: "\x1b[35m",
-  CYAN: "\x1b[36m",
 };
 
 const ENC = {
@@ -48,6 +46,7 @@ export class ReplConnection {
   private history: string[] = [];
   private input: string[] = [];
   private prompt = "q)";
+  private exited = false;
 
   private historyIndex = 0;
   private inputIndex = 0;
@@ -88,7 +87,8 @@ export class ReplConnection {
     }
     const target = path.resolve(home, folder, "q");
     const child = spawn(target);
-    child.on("exit", () => this.terminal.dispose());
+    child.on("exit", this.onExit.bind(this));
+    child.on("error", this.onError.bind(this));
     child.stdout.on("data", this.handleOutput.bind(this));
     child.stderr.on("data", this.handleError.bind(this));
     return child;
@@ -113,6 +113,44 @@ export class ReplConnection {
     return data.replace(/\r?\n/gs, ANSI.CRLF);
   }
 
+  private showOutput(decoded: string) {
+    this.sendToTerminal(ANSI.CRLF + this.normalize(decoded));
+    this.showPrompt();
+  }
+
+  private showPrompt(prompt?: string) {
+    prompt = prompt === undefined ? this.prompt : prompt;
+
+    this.sendToTerminal(
+      `\x1b[0G${ANSI.FAINTON}${prompt} ${ANSI.FAINTOFF}${this.input.join(ANSI.EMPTY)}\x1b[K\x1b[${this.inputIndex + prompt.length + 2}G`,
+    );
+  }
+
+  private recall(): void {
+    const index = this.history.length - this.historyIndex;
+    const command = this.history[index] ?? ANSI.EMPTY;
+    this.input = [...command];
+    this.inputIndex = command.length;
+    this.showPrompt();
+  }
+  private dispose(): void {
+    this.exited = true;
+    ReplConnection.instance = undefined;
+  }
+
+  private onError(error: Error) {
+    this.showPrompt("spawn)");
+    this.showOutput(error.message);
+  }
+
+  private onExit() {
+    this.showPrompt("exit)");
+    this.showOutput(`q process exited.${ANSI.CRLF}`);
+    this.showPrompt(ANSI.EMPTY);
+    this.sendToTerminal(ANSI.LINESTART);
+    this.dispose();
+  }
+
   private open(dimensions: vscode.TerminalDimensions | undefined): void {
     if (dimensions) {
       this.setDimensions(dimensions);
@@ -127,7 +165,6 @@ export class ReplConnection {
 
   private close(): void {
     this.process.kill();
-    ReplConnection.instance = undefined;
   }
 
   private handleOutput(data: any) {
@@ -142,27 +179,12 @@ export class ReplConnection {
     this.showOutput(decoded);
   }
 
-  private showOutput(decoded: string) {
-    this.sendToTerminal(ANSI.CRLF + this.normalize(decoded));
-    this.showPrompt();
-  }
-
-  private showPrompt(prompt?: string) {
-    this.sendToTerminal(
-      `\x1b[0G${ANSI.FAINTON}${prompt ? prompt : this.prompt} ${ANSI.FAINTOFF}${this.input.join(ANSI.EMPTY)}\x1b[K\x1b[${this.inputIndex + this.prompt.length + 2}G`,
-    );
-  }
-
-  private recall() {
-    const index = this.history.length - this.historyIndex;
-    const command = this.history[index] ?? ANSI.EMPTY;
-    this.input = [...command];
-    this.inputIndex = command.length;
-    this.showPrompt();
-  }
-
   private handleInput(data: string): void {
+    if (this.exited) {
+      return;
+    }
     const encoded = encodeURIComponent(data);
+
     let command: string;
 
     switch (encoded) {
@@ -231,7 +253,7 @@ export class ReplConnection {
   private static instance?: ReplConnection;
 
   static getOrCreateInstance() {
-    if (!this.instance) {
+    if (!this.instance || this.instance.exited) {
       this.instance = new ReplConnection();
     }
     return this.instance;
