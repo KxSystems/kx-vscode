@@ -163,8 +163,7 @@ export function notify<T extends string>(
 
   if (action === "Details") {
     notification.then((res) => {
-      updateTheWorkspaceSettings();
-      if (res === "Details" && ext.autoFocusOutputOnEntry) {
+      if (res === "Details") {
         ext.outputChannel.show();
       }
     });
