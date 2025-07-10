@@ -43,17 +43,12 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     this._colorTheme = window.activeColorTheme;
     window.onDidChangeActiveColorTheme(() => {
       this._colorTheme = window.activeColorTheme;
-      if (
-        this.savedParamStates &&
-        this.savedParamStates.queryResults !== undefined
-      ) {
-        this.updateResults(
-          this.savedParamStates.queryResults,
-          this.savedParamStates.isInsights,
-          this.savedParamStates.connVersion,
-          this.savedParamStates.isPython,
-        );
-      }
+      this.updateResults(
+        this.savedParamStates.queryResults,
+        this.savedParamStates.isInsights,
+        this.savedParamStates.connVersion,
+        this.savedParamStates.isPython,
+      );
     });
   }
 
