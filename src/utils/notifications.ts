@@ -14,7 +14,6 @@
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
-import { updateTheWorkspaceSettings } from "./core";
 import { kdbOutputLog } from "./loggers";
 import { stripUnprintableChars } from "./shared";
 import { Telemetry } from "./telemetryClient";
