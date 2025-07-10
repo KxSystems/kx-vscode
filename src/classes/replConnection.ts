@@ -12,10 +12,9 @@
  */
 
 import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
-import path from "node:path";
 import * as vscode from "vscode";
 
-import { getPlatformFolder } from "../utils/core";
+import { getQExecutablePath } from "../utils/core";
 import { sanitizeQsqlQuery } from "../utils/queryUtils";
 
 const ANSI = {
@@ -28,8 +27,8 @@ const ANSI = {
 
 const ENC = {
   CR: "%0D",
-  BSMAC: "%7F",
   BS: "%08",
+  BSMAC: "%7F",
   DEL: "%1B%5B3~",
   UP: "%1B%5BA",
   DOWN: "%1B%5BB",
@@ -40,12 +39,15 @@ const ENC = {
 export class ReplConnection {
   private readonly onDidWrite: vscode.EventEmitter<string>;
   private readonly decoder: TextDecoder;
-  private readonly process: ChildProcessWithoutNullStreams;
   private readonly terminal: vscode.Terminal;
+  private readonly process: ChildProcessWithoutNullStreams;
 
+  private buffer: string[] = [];
   private history: string[] = [];
   private input: string[] = [];
+
   private prompt = "q)";
+  private opened = false;
   private exited = false;
 
   private historyIndex = 0;
@@ -56,8 +58,8 @@ export class ReplConnection {
   private constructor() {
     this.onDidWrite = new vscode.EventEmitter<string>();
     this.decoder = new TextDecoder("utf8");
-    this.process = this.createProcess();
     this.terminal = this.createTerminal();
+    this.process = this.createProcess();
   }
 
   private createTerminal() {
@@ -75,30 +77,14 @@ export class ReplConnection {
   }
 
   private createProcess() {
-    const folder = getPlatformFolder(process.platform);
-    if (!folder) {
-      throw new Error(`Unsupported platform (${process.platform}).`);
-    }
-    const home = this.getHome();
-    if (!home) {
-      throw new Error(
-        `Neither QHOME environment variable nor qHomeDirectory is set.`,
-      );
-    }
-    const target = path.resolve(home, folder, "q");
-    const child = spawn(target);
-    child.on("exit", this.onExit.bind(this));
+    const child = spawn(getQExecutablePath());
     child.on("error", this.onError.bind(this));
+    child.on("close", this.onClose.bind(this));
     child.stdout.on("data", this.handleOutput.bind(this));
+    child.stdout.on("error", this.onError.bind(this));
     child.stderr.on("data", this.handleError.bind(this));
+    child.stderr.on("error", this.onError.bind(this));
     return child;
-  }
-
-  private getHome() {
-    return (
-      process.env.QHOME ||
-      vscode.workspace.getConfiguration("kdb").get<string>("qHomeDirectory", "")
-    );
   }
 
   private sendToProcess(data: string) {
@@ -114,8 +100,14 @@ export class ReplConnection {
   }
 
   private showOutput(decoded: string) {
-    this.sendToTerminal(ANSI.CRLF + this.normalize(decoded));
-    this.showPrompt();
+    const output = ANSI.CRLF + this.normalize(decoded);
+
+    if (this.opened) {
+      this.sendToTerminal(output);
+      this.showPrompt();
+    } else {
+      this.buffer.push(output);
+    }
   }
 
   private showPrompt(prompt?: string) {
@@ -143,9 +135,9 @@ export class ReplConnection {
     this.showOutput(error.message);
   }
 
-  private onExit() {
+  private onClose(code?: number) {
     this.showPrompt("exit)");
-    this.showOutput(`q process exited.${ANSI.CRLF}`);
+    this.showOutput(`q process exited with code (${code}).${ANSI.CRLF}`);
     this.showPrompt(ANSI.EMPTY);
     this.sendToTerminal(ANSI.LINESTART);
     this.dispose();
@@ -154,6 +146,16 @@ export class ReplConnection {
   private open(dimensions: vscode.TerminalDimensions | undefined): void {
     if (dimensions) {
       this.setDimensions(dimensions);
+    }
+
+    if (this.buffer.length > 0) {
+      this.sendToTerminal(this.buffer.join(ANSI.EMPTY) + ANSI.CRLF);
+      this.buffer = [];
+    }
+    this.opened = true;
+
+    if (this.exited) {
+      return;
     }
     this.showPrompt();
   }
