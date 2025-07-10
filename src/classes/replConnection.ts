@@ -19,9 +19,8 @@ import { getPlatformFolder } from "../utils/core";
 import { sanitizeQsqlQuery } from "../utils/queryUtils";
 
 const ANSI = {
+  EMPTY: "",
   CRLF: "\r\n",
-  ERASELINE: "\x1b[2K",
-  LINESTART: "\x1b[1G",
   FAINTON: "\x1b[2m",
   FAINTOFF: "\x1b[22m",
   NORMAL: "\x1b[0m",
@@ -48,14 +47,12 @@ export class ReplConnection {
 
   private history: string[] = [];
   private input: string[] = [];
-  private promptFromInput = false;
+  private prompt = "q)";
 
-  private h = 0;
-  private i = 0;
-  private c = 0;
-  private r = 0;
-  private dc = 0;
-  private dr = 0;
+  private historyIndex = 0;
+  private inputIndex = 0;
+  private columns = 0;
+  private lines = 0;
 
   private constructor() {
     this.onDidWrite = new vscode.EventEmitter<string>();
@@ -112,30 +109,20 @@ export class ReplConnection {
     this.onDidWrite.fire(data);
   }
 
-  private clearPrompt() {
-    this.sendToTerminal(ANSI.ERASELINE);
-    this.sendToTerminal(ANSI.LINESTART);
-  }
-
-  private showPrompt(command: string = "") {
-    this.sendToTerminal(`${ANSI.FAINTON}q)${ANSI.FAINTOFF} ${command}`);
-  }
-
   private normalize(data: string) {
     return data.replace(/\r?\n/gs, ANSI.CRLF);
   }
 
   private open(dimensions: vscode.TerminalDimensions | undefined): void {
     if (dimensions) {
-      this.dc = dimensions.columns;
-      this.dr = dimensions.rows;
+      this.setDimensions(dimensions);
     }
     this.showPrompt();
   }
 
   private setDimensions(dimensions: vscode.TerminalDimensions): void {
-    this.dc = dimensions.columns;
-    this.dr = dimensions.rows;
+    this.columns = dimensions.columns;
+    this.lines = dimensions.rows;
   }
 
   private close(): void {
@@ -145,32 +132,33 @@ export class ReplConnection {
 
   private handleOutput(data: any) {
     const decoded = this.decoder.decode(data);
+    this.showPrompt("result)");
     this.showOutput(decoded);
   }
 
   private handleError(data: any) {
     const decoded = this.decoder.decode(data);
-    this.showOutput(ANSI.CYAN + decoded + ANSI.NORMAL);
+    this.showPrompt("error)");
+    this.showOutput(decoded);
   }
 
   private showOutput(decoded: string) {
-    if (this.promptFromInput) {
-      this.clearPrompt();
-      this.promptFromInput = false;
-      this.sendToTerminal(this.normalize(decoded));
-    } else {
-      this.sendToTerminal(ANSI.CRLF + this.normalize(decoded));
-    }
+    this.sendToTerminal(ANSI.CRLF + this.normalize(decoded));
     this.showPrompt();
   }
 
+  private showPrompt(prompt?: string) {
+    this.sendToTerminal(
+      `\x1b[0G${ANSI.FAINTON}${prompt ? prompt : this.prompt} ${ANSI.FAINTOFF}${this.input.join(ANSI.EMPTY)}\x1b[K\x1b[${this.inputIndex + this.prompt.length + 2}G`,
+    );
+  }
+
   private recall() {
-    const index = this.history.length - this.h;
-    const command = this.history[index] ?? "";
+    const index = this.history.length - this.historyIndex;
+    const command = this.history[index] ?? ANSI.EMPTY;
     this.input = [...command];
-    this.clearPrompt();
-    this.showPrompt(command);
-    this.i = command.length;
+    this.inputIndex = command.length;
+    this.showPrompt();
   }
 
   private handleInput(data: string): void {
@@ -180,13 +168,12 @@ export class ReplConnection {
     switch (encoded) {
       case ENC.CR:
         if (this.input.length > 0) {
-          command = this.input.join("");
+          command = this.input.join(ANSI.EMPTY);
           this.sendToProcess(command + ANSI.CRLF);
           this.history.push(command);
           this.input = [];
-          this.promptFromInput = true;
-          this.h = 0;
-          this.i = 0;
+          this.historyIndex = 0;
+          this.inputIndex = 0;
         }
         this.sendToTerminal(ANSI.CRLF);
         this.showPrompt();
@@ -194,45 +181,37 @@ export class ReplConnection {
       case ENC.BS:
       case ENC.BSMAC:
         if (this.input.pop()) {
-          this.clearPrompt();
-          this.showPrompt(this.input.join(""));
-          this.i--;
+          this.inputIndex--;
+          this.showPrompt();
+        }
+        break;
+      case ENC.RIGHT:
+        if (this.inputIndex < this.input.length) {
+          // TODO
+        }
+        break;
+      case ENC.LEFT:
+        if (this.inputIndex > 0) {
+          // TODO
         }
         break;
       case ENC.UP:
-        if (this.h < this.history.length) {
-          this.h++;
+        if (this.historyIndex < this.history.length) {
+          this.historyIndex++;
           this.recall();
         }
         break;
       case ENC.DOWN:
-        if (this.h > 0) {
-          this.h--;
+        if (this.historyIndex > 0) {
+          this.historyIndex--;
           this.recall();
-        }
-        break;
-      case ENC.RIGHT:
-        if (this.i < this.input.length) {
-          this.i++;
-          this.sendToTerminal(data);
-        }
-        break;
-      case ENC.LEFT:
-        if (this.i > 0) {
-          this.i--;
-          this.sendToTerminal(data);
         }
         break;
       default:
         if (!/[^\P{Cc}]/gsu.test(data)) {
-          this.input.splice(this.i, 0, data);
-          const inserted = this.input.slice(this.i).join("");
-          this.sendToTerminal(
-            inserted.length > 1
-              ? `${inserted}\x1b[${inserted.length - 1}D`
-              : inserted,
-          );
-          this.i++;
+          this.input.splice(this.inputIndex, 0, data);
+          this.inputIndex++;
+          this.showPrompt();
         }
         break;
     }
