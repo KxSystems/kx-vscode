@@ -29,6 +29,8 @@ import { ScratchpadStacktrace } from "../models/scratchpadResult";
 
 const logger = "queryUtils";
 
+const QUERY_LIMIT = 250_000;
+
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {
     query = query + " ";
@@ -212,20 +214,41 @@ export function getValueFromArray(results: DCDS): any {
 }
 
 export function sanitizeQsqlQuery(query: string): string {
+  if (query.length > QUERY_LIMIT) {
+    notify(`Query length limit (${QUERY_LIMIT}) reached.`, MessageKind.ERROR, {
+      logger,
+    });
+    return "";
+  }
   return (
     query
-      .trim()
       // Remove block comments
-      .replace(/^\/[^]*?^\\/gm, "")
+      .replace(/^\/[\t ]*$[^]*?^\\[\t ]*$/gm, "")
+      // Remove terminate comments
+      .replace(/^\\[\t ]*(?:\r\n|\n)[^]*/gm, "")
       // Remove single line comments
-      .replace(/^\/.*\r?\n/gm, "")
+      .replace(/^\/.+/gm, "")
       // Remove line comments
       .replace(
         /(?:("([^"\\]*(?:\\.[^"\\]*)*)")|([ \t]+\/.*))/gm,
         (matched, isString) => (isString ? matched : ""),
       )
+      // Replace new lines in strings
+      .replace(/"(?:[^"\\]*(?:\\.[^"\\]*)*)"/gs, (matched) =>
+        matched.replace(/(\r\n|\n)/gs, "\\n"),
+      )
+      // Replace system commands
+      .replace(/^\\([a-zA-Z_1-2\\]+)[\t ]*(.*)/gm, (matched, command, args) =>
+        matched === "\\\\" ? 'system"\\\\"' : `system"${command} ${args}"`,
+      )
       // Replace end of statements
-      .replace(/(?<![; \t]\s*)(?:\r\n|\n)+(?![ \t])/gs, ";")
+      .replace(/(?<!;[\t ]*)(?:\r\n|\n)+(?!\s*[\t ])/gs, ";")
+      // Remove start of file
+      .replace(/^[;\s]+/gs, "")
+      // Remove end of file
+      .replace(/[;\s]+$/gs, "")
+      // Remove remaining new lines
+      .replace(/(?:\r\n|\n)/gs, "")
   );
 }
 

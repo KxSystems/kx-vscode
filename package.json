@@ -450,8 +450,8 @@
       },
       {
         "category": "KX",
-        "command": "kdb.execute.terminal.run.file",
-        "title": "Start REPL"
+        "command": "kdb.start.repl",
+        "title": "Start q REPL"
       },
       {
         "category": "KX",
@@ -1006,12 +1006,7 @@
         },
         {
           "command": "kdb.file.populateScratchpad",
-          "group": "q@3",
-          "when": "editorLangId == q && !(resourceFilename =~ /\\.quke$/)"
-        },
-        {
-          "command": "kdb.execute.terminal.run",
-          "group": "q@4",
+          "group": "q2@0",
           "when": "editorLangId == q && !(resourceFilename =~ /\\.quke$/)"
         },
         {
@@ -1036,7 +1031,7 @@
         },
         {
           "command": "kdb.file.populateScratchpad",
-          "group": "q@2",
+          "group": "q2@0",
           "when": "editorLangId == sql"
         }
       ],
@@ -1058,12 +1053,7 @@
         },
         {
           "command": "kdb.file.populateScratchpad",
-          "group": "q@3",
-          "when": "editorLangId == q && !(resourceFilename =~ /\\.quke$/)"
-        },
-        {
-          "command": "kdb.execute.terminal.run",
-          "group": "q@4",
+          "group": "q2@0",
           "when": "editorLangId == q && !(resourceFilename =~ /\\.quke$/)"
         },
         {
@@ -1088,7 +1078,7 @@
         },
         {
           "command": "kdb.file.populateScratchpad",
-          "group": "q@2",
+          "group": "q2@0",
           "when": "editorLangId == sql"
         }
       ],

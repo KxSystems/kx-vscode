@@ -62,6 +62,7 @@ import {
   resetScratchpadFromEditor,
   runActiveEditor,
   setServerForUri,
+  startRepl,
 } from "./commands/workspaceCommand";
 import { ext } from "./extensionVariables";
 import { CommandRegistration } from "./models/commandRegistration";
@@ -900,6 +901,12 @@ function registerExecuteCommands(): CommandRegistration[] {
         } else {
           checkLocalInstall();
         }
+      },
+    },
+    {
+      command: "kdb.start.repl",
+      callback: () => {
+        startRepl();
       },
     },
     {
