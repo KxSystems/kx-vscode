@@ -6,8 +6,6 @@ The **kdb Visual Studio Code extension** provides developers with an extensive s
 
 This extension can be used with [kdb Insights Enterprise](https://code.kx.com/insights/enterprise/index.html) when using a shared kdb process.
 
-> Please email vscode-questions@kx.com to raise any questions or provide feedback.
-
 ## Contents
 
 This guide provides information on the following:
