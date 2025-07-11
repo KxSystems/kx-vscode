@@ -748,13 +748,23 @@ export async function addImportedConnections(
 }
 
 export async function removeConnection(viewItem: KdbNode | InsightsNode) {
-  const connMngService = new ConnectionManagementService();
-  removeConnFromLabels(
-    viewItem instanceof KdbNode
-      ? viewItem.details.serverAlias
-      : viewItem.details.alias,
-  );
-  await connMngService.removeConnection(viewItem);
+  notify(
+    `You are going to remove ${viewItem.label}, would you like to proceed?`,
+    MessageKind.INFO,
+    {},
+    "Proceed",
+    "Cancel",
+  ).then(async (result) => {
+    if (result === "Proceed") {
+      const connMngService = new ConnectionManagementService();
+      removeConnFromLabels(
+        viewItem instanceof KdbNode
+          ? viewItem.details.serverAlias
+          : viewItem.details.alias,
+      );
+      await connMngService.removeConnection(viewItem);
+    }
+  });
 }
 
 export async function connect(connLabel: string): Promise<void> {
