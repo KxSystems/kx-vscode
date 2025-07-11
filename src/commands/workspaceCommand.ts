@@ -17,7 +17,6 @@ import {
   CodeLensProvider,
   Command,
   NotebookCell,
-  ProgressLocation,
   Range,
   StatusBarAlignment,
   TextDocument,
@@ -346,7 +345,7 @@ async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
     const runner = Runner.create(async () => {
       ReplConnection.getOrCreateInstance().executeQuery(text);
     });
-    runner.location = ProgressLocation.Notification;
+    //runner.location = ProgressLocation.Notification;
     runner.title = `Executing ${basename} on q REPL.`;
     await runner.execute();
   } catch (error) {
