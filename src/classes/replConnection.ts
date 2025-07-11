@@ -20,8 +20,10 @@ import { sanitizeQsqlQuery } from "../utils/queryUtils";
 
 const ANSI = {
   EMPTY: "",
+  SPACE: " ",
   CRLF: "\r\n",
   LINESTART: "\x1b[0G",
+  ERASEINLINE: "\x1b[K",
   FAINTON: "\x1b[2m",
   FAINTOFF: "\x1b[22m",
 };
@@ -44,7 +46,7 @@ export class ReplConnection {
   private readonly process: ChildProcessWithoutNullStreams;
 
   private buffer: string[] = [
-    "KDB+ Copyright (C) 1993-2024 Kx Systems",
+    "KDB+ Copyright (C) 1993-2025 Kx Systems",
     ANSI.CRLF,
   ];
   private history: string[] = [];
@@ -103,6 +105,18 @@ export class ReplConnection {
     return data.replace(/\r?\n/gs, ANSI.CRLF);
   }
 
+  private ansiMoveCursorToColumn(column: number) {
+    return `\x1b[${column}G`;
+  }
+
+  private recall() {
+    const index = this.history.length - this.historyIndex;
+    const command = this.history[index] ?? ANSI.EMPTY;
+    this.input = [...command];
+    this.inputIndex = command.length;
+    this.showPrompt();
+  }
+
   private showOutput(decoded: string) {
     const output = ANSI.CRLF + this.normalize(decoded);
 
@@ -118,16 +132,15 @@ export class ReplConnection {
     prompt = prompt === undefined ? this.prompt : prompt;
 
     this.sendToTerminal(
-      `\x1b[0G${ANSI.FAINTON}${prompt} ${ANSI.FAINTOFF}${this.input.join(ANSI.EMPTY)}\x1b[K\x1b[${this.inputIndex + prompt.length + 2}G`,
+      ANSI.LINESTART +
+        ANSI.FAINTON +
+        prompt +
+        ANSI.FAINTOFF +
+        ANSI.SPACE +
+        this.input.join(ANSI.EMPTY) +
+        ANSI.ERASEINLINE +
+        this.ansiMoveCursorToColumn(this.inputIndex + prompt.length + 2),
     );
-  }
-
-  private recall() {
-    const index = this.history.length - this.historyIndex;
-    const command = this.history[index] ?? ANSI.EMPTY;
-    this.input = [...command];
-    this.inputIndex = command.length;
-    this.showPrompt();
   }
 
   private show() {
@@ -175,7 +188,7 @@ export class ReplConnection {
 
     if (this.buffer.length > 0) {
       this.showPrompt(ANSI.EMPTY);
-      this.sendToTerminal("\x1b[0G");
+      this.sendToTerminal(ANSI.LINESTART);
       this.sendToTerminal(this.buffer.join(ANSI.EMPTY) + ANSI.CRLF);
       this.buffer = [];
     }

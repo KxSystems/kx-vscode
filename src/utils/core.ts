@@ -37,6 +37,9 @@ import { QueryResult } from "../models/queryResult";
 
 const logger = "core";
 
+// TODO 2: Workaround, remove when TODO 1 is complete
+const REAL_QHOME = process.env.QHOME;
+
 export function log(childProcess: ChildProcess): void {
   notify(`Process ${childProcess.pid} started`, MessageKind.DEBUG, {
     logger,
@@ -202,16 +205,12 @@ export function getQExecutablePath() {
     );
   }
 
-  if (env.QHOME) {
-    return path.join(env.QHOME, folder, "q");
-  } else {
-    const home = workspace
-      .getConfiguration("kdb")
-      .get<string>("qHomeDirectory", "");
+  const home =
+    REAL_QHOME ||
+    workspace.getConfiguration("kdb").get<string>("qHomeDirectory", "");
 
-    if (home) {
-      return path.join(home, "q");
-    }
+  if (home) {
+    return path.join(home, folder, "q");
   }
 
   throw new Error(
@@ -516,6 +515,7 @@ export async function checkLocalInstall(
     }
   }
   if (QHOME || env.QHOME) {
+    // TODO 1: This is wrong, env vars should be read only.
     env.QHOME = QHOME || env.QHOME;
     if (!pathExists(env.QHOME!)) {
       notify("QHOME path stored is empty.", MessageKind.ERROR, { logger });
