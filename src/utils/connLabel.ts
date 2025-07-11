@@ -36,6 +36,50 @@ export function getWorkspaceLabels() {
   }
 }
 
+export function clearWorkspaceLabels() {
+  getWorkspaceLabels();
+  getWorkspaceLabelsConnMap();
+
+  if (ext.connLabelList.length === 0) {
+    notify(
+      "Cleaning connection mappings for nonexistent labels.",
+      MessageKind.DEBUG,
+      {
+        logger,
+        telemetry: "Label.Cleanup.NoLabels",
+      },
+    );
+    workspace.getConfiguration().update("kdb.labelsConnectionMap", [], true);
+    return;
+  }
+
+  const validLabelNames = new Set(ext.connLabelList.map((label) => label.name));
+  const initialLength = ext.labelConnMapList.length;
+
+  for (let i = ext.labelConnMapList.length - 1; i >= 0; i--) {
+    if (!validLabelNames.has(ext.labelConnMapList[i].labelName)) {
+      ext.labelConnMapList.splice(i, 1);
+    }
+  }
+
+  const removedCount = initialLength - ext.labelConnMapList.length;
+  if (removedCount > 0) {
+    workspace
+      .getConfiguration()
+      .update("kdb.labelsConnectionMap", ext.labelConnMapList, true);
+
+    notify(
+      `Removed ${removedCount} orphaned label connection mapping${removedCount > 1 ? "s" : ""}.`,
+      MessageKind.DEBUG,
+      {
+        logger,
+        telemetry: "Label.Cleanup.OrphanedMappings",
+        measurements: { removedMappings: removedCount },
+      },
+    );
+  }
+}
+
 export function createNewLabel(name: string, colorName: string) {
   getWorkspaceLabels();
   const color = ext.labelColors.find(
