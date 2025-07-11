@@ -750,7 +750,7 @@ export async function addImportedConnections(
 export async function removeConnection(viewItem: KdbNode | InsightsNode) {
   notify(
     `You are going to remove ${viewItem.label}, would you like to proceed?`,
-    MessageKind.INFO,
+    MessageKind.WARNING,
     {},
     "Proceed",
     "Cancel",
