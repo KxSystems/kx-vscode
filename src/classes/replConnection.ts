@@ -14,7 +14,8 @@
 import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import * as vscode from "vscode";
 
-import { getQExecutablePath } from "../utils/core";
+import { ext } from "../extensionVariables";
+import { getQExecutablePath, updateTheWorkspaceSettings } from "../utils/core";
 import { sanitizeQsqlQuery } from "../utils/queryUtils";
 
 const ANSI = {
@@ -127,6 +128,14 @@ export class ReplConnection {
     this.input = [...command];
     this.inputIndex = command.length;
     this.showPrompt();
+  }
+
+  private show() {
+    // TODO: Do not cache autoFocusOutputOnEntry in ext, there is no point caching on every read.
+    updateTheWorkspaceSettings();
+    if (ext.autoFocusOutputOnEntry) {
+      this.terminal.show();
+    }
   }
 
   private dispose() {
@@ -255,7 +264,7 @@ export class ReplConnection {
     }
   }
 
-  show() {
+  start() {
     this.terminal.show();
   }
 

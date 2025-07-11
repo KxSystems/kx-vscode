@@ -312,7 +312,7 @@ function isKxFolder(uri: Uri | undefined) {
 
 export async function startRepl() {
   try {
-    ReplConnection.getOrCreateInstance().show();
+    ReplConnection.getOrCreateInstance().start();
   } catch (error) {
     notify(errorMessage(error), MessageKind.ERROR, {
       logger,
