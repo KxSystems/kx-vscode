@@ -83,7 +83,9 @@ export class ReplConnection {
   }
 
   private createProcess() {
-    const child = spawn(getQExecutablePath());
+    const child = spawn(getQExecutablePath(), {
+      env: { QHOME: ext.REAL_QHOME },
+    });
     child.on("error", this.handleError.bind(this));
     child.on("close", this.handleClose.bind(this));
     child.stdout.on("data", this.handleOutput.bind(this));

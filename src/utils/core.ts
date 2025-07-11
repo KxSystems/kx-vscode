@@ -37,9 +37,6 @@ import { QueryResult } from "../models/queryResult";
 
 const logger = "core";
 
-// TODO 2: Workaround, remove when TODO 1 is complete
-const REAL_QHOME = process.env.QHOME;
-
 export function log(childProcess: ChildProcess): void {
   notify(`Process ${childProcess.pid} started`, MessageKind.DEBUG, {
     logger,
@@ -206,7 +203,7 @@ export function getQExecutablePath() {
   }
 
   const home =
-    REAL_QHOME ||
+    ext.REAL_QHOME ||
     workspace.getConfiguration("kdb").get<string>("qHomeDirectory", "");
 
   if (home) {
