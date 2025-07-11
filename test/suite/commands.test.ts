@@ -58,6 +58,7 @@ import * as dsUtils from "../../src/utils/dataSource";
 import * as dataSourceUtils from "../../src/utils/dataSource";
 import { ExecutionConsole } from "../../src/utils/executionConsole";
 import * as loggers from "../../src/utils/loggers";
+import * as notifications from "../../src/utils/notifications";
 import * as queryUtils from "../../src/utils/queryUtils";
 import * as kdbValidators from "../../src/validators/kdbValidator";
 
@@ -2299,7 +2300,8 @@ describe("serverCommand", () => {
       getInsightsStub,
       removeLocalConnectionContextStub,
       updateServersStub,
-      refreshStub: sinon.SinonStub;
+      refreshStub,
+      notifyStub: sinon.SinonStub;
 
     beforeEach(() => {
       indexOfStub = sinon.stub(ext.connectedContextStrings, "indexOf");
@@ -2314,6 +2316,8 @@ describe("serverCommand", () => {
       );
       updateServersStub = sinon.stub(coreUtils, "updateServers");
       refreshStub = sinon.stub(ext.serverProvider, "refresh");
+
+      notifyStub = sinon.stub(notifications, "notify");
     });
 
     afterEach(() => {
@@ -2323,12 +2327,16 @@ describe("serverCommand", () => {
       ext.connectedContextStrings.length = 0;
     });
 
-    it("should remove connection and refresh server provider", async () => {
+    it("should remove connection and refresh server provider when user clicks Proceed", async () => {
+      notifyStub.resolves("Proceed");
+
       indexOfStub.returns(1);
       getServersStub.returns({ testKey: {} });
       getKeyStub.returns("testKey");
 
       await serverCommand.removeConnection(kdbNode);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       assert.ok(
         removeLocalConnectionContextStub.calledWith(
@@ -2339,24 +2347,65 @@ describe("serverCommand", () => {
       assert.ok(refreshStub.calledOnce);
     });
 
-    it("should remove connection, but disconnect it before", async () => {
+    it("should remove connection, but disconnect it before when user clicks Proceed", async () => {
+      notifyStub.resolves("Proceed");
+
       ext.connectedContextStrings.push(kdbNode.label);
       indexOfStub.returns(1);
       getServersStub.returns({ testKey: {} });
       getKeyStub.returns("testKey");
 
       await serverCommand.removeConnection(kdbNode);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
       assert.ok(updateServersStub.calledOnce);
     });
-    it("should remove connection Insights, but disconnect it before", async () => {
+
+    it("should remove connection Insights, but disconnect it before when user clicks Proceed", async () => {
+      notifyStub.resolves("Proceed");
+
       ext.connectedContextStrings.push(insightsNode.label);
       indexOfStub.returns(1);
       getInsightsStub.returns({ testKey: {} });
       getHashStub.returns("testKey");
 
       await serverCommand.removeConnection(insightsNode);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
       assert.ok(updateServersStub.notCalled);
     }).timeout(5000);
+
+    it("should not remove connection when user clicks Cancel", async () => {
+      notifyStub.resolves("Cancel");
+
+      getServersStub.returns({ testKey: {} });
+      getKeyStub.returns("testKey");
+
+      await serverCommand.removeConnection(kdbNode);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      assert.ok(removeLocalConnectionContextStub.notCalled);
+      assert.ok(updateServersStub.notCalled);
+      assert.ok(refreshStub.notCalled);
+    });
+
+    it("should not remove connection when user dismisses dialog", async () => {
+      notifyStub.resolves(undefined);
+
+      getServersStub.returns({ testKey: {} });
+      getKeyStub.returns("testKey");
+
+      await serverCommand.removeConnection(kdbNode);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      assert.ok(removeLocalConnectionContextStub.notCalled);
+      assert.ok(updateServersStub.notCalled);
+      assert.ok(refreshStub.notCalled);
+    });
   });
 
   describe("connect", () => {
