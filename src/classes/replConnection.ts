@@ -42,7 +42,10 @@ export class ReplConnection {
   private readonly terminal: vscode.Terminal;
   private readonly process: ChildProcessWithoutNullStreams;
 
-  private buffer: string[] = [];
+  private buffer: string[] = [
+    "KDB+ Copyright (C) 1993-2024 Kx Systems",
+    ANSI.CRLF,
+  ];
   private history: string[] = [];
   private input: string[] = [];
 
@@ -53,7 +56,7 @@ export class ReplConnection {
   private historyIndex = 0;
   private inputIndex = 0;
   private columns = 0;
-  private lines = 0;
+  private rows = 0;
 
   private constructor() {
     this.onDidWrite = new vscode.EventEmitter<string>();
@@ -78,12 +81,12 @@ export class ReplConnection {
 
   private createProcess() {
     const child = spawn(getQExecutablePath());
-    child.on("error", this.onError.bind(this));
-    child.on("close", this.onClose.bind(this));
+    child.on("error", this.handleError.bind(this));
+    child.on("close", this.handleClose.bind(this));
     child.stdout.on("data", this.handleOutput.bind(this));
-    child.stdout.on("error", this.onError.bind(this));
-    child.stderr.on("data", this.handleError.bind(this));
-    child.stderr.on("error", this.onError.bind(this));
+    child.stdout.on("error", this.handleError.bind(this));
+    child.stderr.on("data", this.handleErrorOutput.bind(this));
+    child.stderr.on("error", this.handleError.bind(this));
     return child;
   }
 
@@ -118,7 +121,7 @@ export class ReplConnection {
     );
   }
 
-  private recall(): void {
+  private recall() {
     const index = this.history.length - this.historyIndex;
     const command = this.history[index] ?? ANSI.EMPTY;
     this.input = [...command];
@@ -126,30 +129,44 @@ export class ReplConnection {
     this.showPrompt();
   }
 
-  private dispose(): void {
+  private dispose() {
     this.exited = true;
     ReplConnection.instance = undefined;
   }
 
-  private onError(error: Error) {
+  private handleError(error: Error) {
     this.showPrompt("spawn)");
     this.showOutput(error.message);
   }
 
-  private onClose(code?: number) {
+  private handleClose(code: number | null) {
     this.showPrompt("exit)");
-    this.showOutput(`q process exited with code (${code}).${ANSI.CRLF}`);
+    this.showOutput(`q process exited with code (${code || 0}).${ANSI.CRLF}`);
     this.showPrompt(ANSI.EMPTY);
     this.sendToTerminal(ANSI.LINESTART);
     this.dispose();
   }
 
-  private open(dimensions: vscode.TerminalDimensions | undefined): void {
+  private handleOutput(data: any) {
+    const decoded = this.decoder.decode(data);
+    this.showPrompt("result)");
+    this.showOutput(decoded);
+  }
+
+  private handleErrorOutput(data: any) {
+    const decoded = this.decoder.decode(data);
+    this.showPrompt("error)");
+    this.showOutput(decoded);
+  }
+
+  private open(dimensions: vscode.TerminalDimensions | undefined) {
     if (dimensions) {
       this.setDimensions(dimensions);
     }
 
     if (this.buffer.length > 0) {
+      this.showPrompt(ANSI.EMPTY);
+      this.sendToTerminal("\x1b[0G");
       this.sendToTerminal(this.buffer.join(ANSI.EMPTY) + ANSI.CRLF);
       this.buffer = [];
     }
@@ -161,28 +178,17 @@ export class ReplConnection {
     this.showPrompt();
   }
 
-  private setDimensions(dimensions: vscode.TerminalDimensions): void {
+  private setDimensions(dimensions: vscode.TerminalDimensions) {
     this.columns = dimensions.columns;
-    this.lines = dimensions.rows;
+    this.rows = dimensions.rows;
+    this.showPrompt();
   }
 
-  private close(): void {
+  private close() {
     this.process.kill();
   }
 
-  private handleOutput(data: any) {
-    const decoded = this.decoder.decode(data);
-    this.showPrompt("result)");
-    this.showOutput(decoded);
-  }
-
-  private handleError(data: any) {
-    const decoded = this.decoder.decode(data);
-    this.showPrompt("error)");
-    this.showOutput(decoded);
-  }
-
-  private handleInput(data: string): void {
+  private handleInput(data: string) {
     if (this.exited) {
       return;
     }
@@ -190,7 +196,6 @@ export class ReplConnection {
       this.executeQuery(data);
       return;
     }
-
     const encoded = encodeURIComponent(data);
 
     let command: string;
