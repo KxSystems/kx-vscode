@@ -36,7 +36,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
   public isPython = false;
   public _colorTheme: any;
   private _view?: WebviewView;
-  private savedParamStates: any;
+  private savedParamStates: any = {};
   private _results: string | string[] = "";
 
   constructor(private readonly _extensionUri: Uri) {
@@ -50,7 +50,6 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         this.savedParamStates.isPython,
       );
     });
-    ext.isResultsTabVisible = true;
   }
 
   /* istanbul ignore next */
@@ -63,6 +62,9 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     };
 
     webviewView.webview.html = this._getWebviewContent();
+
+    ext.isResultsTabVisible = this._view?.visible || false;
+
     this.updateWebView("");
 
     webviewView.webview.onDidReceiveMessage((data) => {
