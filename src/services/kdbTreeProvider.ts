@@ -26,8 +26,7 @@ import {
 } from "../models/connectionsModels";
 import { Labels } from "../models/labels";
 import {
-  getWorkspaceLabels,
-  getWorkspaceLabelsConnMap,
+  clearWorkspaceLabels,
   isLabelContentChanged,
   isLabelEmpty,
   retrieveConnLabelsNames,
@@ -102,14 +101,12 @@ export class KdbTreeProvider
   }
 
   async getChildren(element?: vscode.TreeItem): Promise<vscode.TreeItem[]> {
+    clearWorkspaceLabels();
     if (!this.serverList || !this.insightsList) {
       return [];
     }
 
     if (!element) {
-      getWorkspaceLabels();
-      getWorkspaceLabelsConnMap();
-
       const orphans: vscode.TreeItem[] = [];
       const nodes = ext.connLabelList.map((label) => new LabelNode(label));
       const items = this.getMergedElements(element);

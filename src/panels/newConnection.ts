@@ -17,7 +17,10 @@ import { ext } from "../extensionVariables";
 import { ConnectionType } from "../models/connectionsModels";
 import { EditConnectionMessage } from "../models/messages";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
-import { retrieveConnLabelsNames } from "../utils/connLabel";
+import {
+  clearWorkspaceLabels,
+  retrieveConnLabelsNames,
+} from "../utils/connLabel";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
 import { MessageKind, notify } from "../utils/notifications";
@@ -35,6 +38,7 @@ export class NewConnectionPannel {
       NewConnectionPannel.currentPanel._panel.dispose();
       return;
     }
+    clearWorkspaceLabels();
 
     const panel = vscode.window.createWebviewPanel(
       "kdbNewConnection",
