@@ -67,7 +67,6 @@ export class ReplConnection {
   private errors: string[] = [];
   private executions?: Execution[] = [];
 
-  private executing = false;
   private exited = false;
   private context = CTX.Q;
   private namespace = ANSI.EMPTY;
@@ -77,6 +76,7 @@ export class ReplConnection {
   private inputIndex = 0;
   private columns = 0;
   private rows = 0;
+  private executing = 0;
 
   private constructor() {
     this.onDidWrite = new vscode.EventEmitter<string>();
@@ -115,7 +115,7 @@ export class ReplConnection {
   private sendToProcess(data: string) {
     this.process.stdin.write(data + ANSI.CRLF, (error) => {
       if (error) {
-        this.executing = false;
+        this.executing--;
       } else {
         this.process.stdin.write(
           ANSI.QUOTE +
@@ -126,7 +126,7 @@ export class ReplConnection {
         );
       }
     });
-    this.executing = true;
+    this.executing++;
   }
 
   private sendToTerminal(data: string) {
@@ -162,9 +162,11 @@ export class ReplConnection {
 
     const res = regex.exec(decoded);
     if (res?.[0]) {
-      this.executing = false;
+      this.executing--;
       this.namespace = res[1] ? `.${res[1]}` : "";
-      this.showPrompt();
+      if (this.executing === 0) {
+        this.showPrompt();
+      }
     }
   }
 
@@ -343,7 +345,7 @@ export class ReplConnection {
   executeQuery(text: string) {
     const execution = () => {
       this.sendToProcess(sanitizeQsqlQuery(text));
-      this.showPrompt("execution");
+      this.showPrompt(`execution:${this.executing}`);
       this.sendToTerminal(ANSI.CRLF);
       this.show();
     };
