@@ -43,8 +43,6 @@ import { errorMessage, normalizeAssemblyTarget } from "../utils/shared";
 
 const logger = "workspaceCommand";
 
-const Q_REPL = "q REPL";
-
 function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   if (editor) {
     const scheme = editor.document.uri.scheme;
@@ -162,7 +160,7 @@ export function getServerForUri(uri: Uri) {
   const server = map[relativePath(uri)];
   const servers = getServers();
 
-  return server && (server === Q_REPL || servers.includes(server))
+  return server && (server === ext.REPL || servers.includes(server))
     ? server
     : undefined;
 }
@@ -201,7 +199,7 @@ export async function pickConnection(uri: Uri) {
 
   const items = ["(none)"];
   if (isQ(uri)) {
-    items.push(Q_REPL);
+    items.push(ext.REPL);
   }
   items.push(...servers);
 
@@ -359,7 +357,7 @@ async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
 export async function runActiveEditor(type?: ExecutionTypes) {
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
-    if (getServerForUri(uri) === Q_REPL) {
+    if (getServerForUri(uri) === ext.REPL) {
       runOnRepl(ext.activeTextEditor, type);
       return;
     }

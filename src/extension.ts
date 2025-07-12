@@ -125,12 +125,7 @@ import { getIconPath } from "./utils/iconsUtils";
 import { MessageKind, notify, Runner } from "./utils/notifications";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
-import {
-  activateTextDocument,
-  addWorkspaceFile,
-  openWith,
-  setUriContent,
-} from "./utils/workspace";
+import { addWorkspaceFile, openWith, setUriContent } from "./utils/workspace";
 
 const logger = "extension";
 
@@ -888,10 +883,7 @@ function registerExecuteCommands(): CommandRegistration[] {
     },
     {
       command: "kdb.execute.fileQuery",
-      callback: async (item) => {
-        if (item instanceof vscode.Uri) {
-          await activateTextDocument(item);
-        }
+      callback: async () => {
         await runActiveEditor(ExecutionTypes.QueryFile);
       },
     },

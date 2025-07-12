@@ -48,6 +48,7 @@ export namespace ext {
   export const EXTENSION_VERSION =
     extensions.getExtension("KX.kdb")?.packageJSON.version || "unknown";
   export const isRCExtension = EXTENSION_VERSION.includes("rc");
+  export const REPL = "REPL";
   export let activeTextEditor: TextEditor | undefined;
   export let context: ExtensionContext;
   export let outputChannel: OutputChannel;

@@ -41,12 +41,21 @@ const CONTROL = {
   RIGHT: "%1B%5BC",
 };
 
+const CTX = {
+  Q: "q",
+  K: "k",
+};
+
 type Execution = () => void;
 
 export class ReplConnection {
-  private readonly uid = crypto.randomUUID();
+  private readonly serial = crypto.randomUUID();
   private readonly token =
-    ANSI.QUOTE + this.uid + ".([a-zA-Z_.]*)" + ANSI.QUOTE + "[\r\n]*";
+    ANSI.QUOTE +
+    this.serial +
+    ".([a-zA-Z_.]*)" +
+    ANSI.QUOTE +
+    `[${ANSI.CRLF}]*`;
 
   private readonly onDidWrite: vscode.EventEmitter<string>;
   private readonly decoder: TextDecoder;
@@ -60,8 +69,8 @@ export class ReplConnection {
 
   private executing = false;
   private exited = false;
-  private context = "q";
-  private namespace = "";
+  private context = CTX.Q;
+  private namespace = ANSI.EMPTY;
   private prompt = ")";
 
   private historyIndex = 0;
@@ -78,7 +87,7 @@ export class ReplConnection {
 
   private createTerminal() {
     const opts: vscode.ExtensionTerminalOptions = {
-      name: "q REPL",
+      name: `kdb+ ${ext.REPL}`,
       pty: {
         open: this.open.bind(this),
         close: this.close.bind(this),
@@ -110,9 +119,9 @@ export class ReplConnection {
       } else {
         this.process.stdin.write(
           ANSI.QUOTE +
-            this.uid +
+            this.serial +
             ANSI.QUOTE +
-            (this.context === "q" ? ',string system"d"' : ',$:."\\\\d"') +
+            (this.context === CTX.Q ? ',string system"d"' : ',$:."\\\\d"') +
             ANSI.CRLF,
         );
       }
@@ -222,7 +231,7 @@ export class ReplConnection {
     }
 
     this.sendToTerminal(
-      "KDB+ Copyright (C) 1993-2025 Kx Systems" + ANSI.CRLF.repeat(2),
+      "kdb+ REPL Copyright (C) 1993-2025 KX Systems" + ANSI.CRLF.repeat(2),
     );
 
     if (this.errors.length > 0) {
@@ -273,7 +282,7 @@ export class ReplConnection {
         if (this.input.length > 0) {
           command = this.input.join(ANSI.EMPTY);
           if (command === "\\") {
-            this.context = this.context === "k" ? "q" : "k";
+            this.context = this.context === CTX.K ? CTX.Q : CTX.K;
           }
           this.sendToProcess(command);
           this.history.push(command);
