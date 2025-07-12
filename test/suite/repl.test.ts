@@ -11,19 +11,26 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export function normalizeAssemblyTarget(assemblyTarget: string) {
-  const [dirtyAssembly, target] = assemblyTarget.split(/\s+/);
-  const assembly = dirtyAssembly.replace(/-qe$/gm, "");
-  return `${assembly} ${target}`;
-}
+import assert from "node:assert";
+import * as child_process from "node:child_process";
+import sinon from "sinon";
 
-export function stripUnprintableChars(text: string): string {
-  return text
-    .replace(/\p{Cc}/gu, "")
-    .replace(/\p{Co}/gu, "")
-    .replace(/\p{Cn}/gu, "");
-}
+import * as repl from "../../src/classes/replConnection";
 
-export function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : `${error}`;
-}
+describe("REPL", () => {
+  describe("", () => {
+    let conn: repl.ReplConnection;
+
+    beforeEach(() => {
+      sinon
+        .stub(child_process, "spawn")
+        .value(() => <child_process.ChildProcess>{});
+      sinon.stub(process, "env").returns({ QHOME: "/path/to/q/home" });
+      conn = repl.ReplConnection.getOrCreateInstance();
+    });
+
+    it("TRAP", () => {
+      assert.ok(conn);
+    });
+  });
+});

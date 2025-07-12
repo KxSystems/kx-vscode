@@ -62,6 +62,7 @@ import {
   resetScratchpadFromEditor,
   runActiveEditor,
   setServerForUri,
+  startRepl,
 } from "./commands/workspaceCommand";
 import { ext } from "./extensionVariables";
 import { CommandRegistration } from "./models/commandRegistration";
@@ -124,18 +125,15 @@ import { getIconPath } from "./utils/iconsUtils";
 import { MessageKind, notify, Runner } from "./utils/notifications";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
-import {
-  activateTextDocument,
-  addWorkspaceFile,
-  openWith,
-  setUriContent,
-} from "./utils/workspace";
+import { addWorkspaceFile, openWith, setUriContent } from "./utils/workspace";
 
 const logger = "extension";
 
 let client: LanguageClient;
 
 export async function activate(context: vscode.ExtensionContext) {
+  // TODO 2: Workaround, remove when TODO 1 is complete
+  ext.REAL_QHOME = process.env.QHOME;
   ext.context = context;
   ext.outputChannel = vscode.window.createOutputChannel("kdb");
   ext.openSslVersion = await checkOpenSslInstalled();
@@ -885,10 +883,7 @@ function registerExecuteCommands(): CommandRegistration[] {
     },
     {
       command: "kdb.execute.fileQuery",
-      callback: async (item) => {
-        if (item instanceof vscode.Uri) {
-          await activateTextDocument(item);
-        }
+      callback: async () => {
         await runActiveEditor(ExecutionTypes.QueryFile);
       },
     },
@@ -900,6 +895,12 @@ function registerExecuteCommands(): CommandRegistration[] {
         } else {
           checkLocalInstall();
         }
+      },
+    },
+    {
+      command: "kdb.start.repl",
+      callback: () => {
+        startRepl();
       },
     },
     {

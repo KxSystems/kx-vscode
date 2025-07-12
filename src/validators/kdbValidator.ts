@@ -45,6 +45,10 @@ export function validateServerAlias(
     if (!isLocal && input.toLowerCase() === "local") {
       return "The server name “local” is reserved for connections to the Bundled q process";
     }
+
+    if (input.toUpperCase() === ext.REPL) {
+      return `The server name '${input}' is reserved for connections to the REPL`;
+    }
   }
   return undefined;
 }

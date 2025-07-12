@@ -182,6 +182,7 @@ export async function installTools(): Promise<void> {
       message: "Setting up environment...",
     });
     await delay(500);
+    // TODO 1: This is wrong, env vars should be read only.
     env.QHOME = ext.context.globalStorageUri.fsPath;
 
     // persist the QHOME to global settings
@@ -194,6 +195,7 @@ export async function installTools(): Promise<void> {
       .getConfiguration()
       .get<string>("kdb.qHomeDirectory");
     if (QHOME) {
+      // TODO 1: This is wrong, env vars should be read only.
       env.QHOME = QHOME;
       if (!pathExists(env.QHOME)) {
         notify("QHOME path stored is empty", MessageKind.ERROR, {
