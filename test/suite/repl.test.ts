@@ -11,26 +11,182 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import assert from "node:assert";
-import * as child_process from "node:child_process";
-import sinon from "sinon";
+import * as assert from "node:assert";
+import * as sinon from "sinon";
+import * as vscode from "vscode";
 
 import * as repl from "../../src/classes/replConnection";
+import * as ext from "../../src/extensionVariables";
+import * as core from "../../src/utils/core";
 
 describe("REPL", () => {
-  describe("", () => {
-    let conn: repl.ReplConnection;
+  let stdinChunk: string;
+  let stdinWriteCallback: (error: Error) => void;
+  let instance: repl.ReplConnection;
+
+  const target = {
+    on(_: string) {},
+    stdout: { on(_: string) {} },
+    stderr: { on(_: string) {} },
+    stdin: {
+      write(chunk: any, callback: (error: Error) => void) {
+        stdinChunk = chunk;
+        stdinWriteCallback = callback;
+      },
+    },
+  };
+  const terminal = <vscode.Terminal>{ show() {} };
+
+  beforeEach(() => {
+    sinon
+      .stub(repl.ReplConnection.prototype, <any>"createProcess")
+      .returns(target);
+    sinon.stub(vscode.window, "createTerminal").returns(terminal);
+    sinon.stub(core, "updateTheWorkspaceSettings");
+    instance = repl.ReplConnection.getOrCreateInstance();
+  });
+
+  afterEach(() => {
+    sinon.restore();
+    stdinChunk = undefined;
+    stdinWriteCallback = undefined;
+    instance = undefined;
+  });
+
+  describe("connect", () => {
+    it("should listen error on target", () => {
+      const stub = sinon.stub(target, "on");
+      instance["connect"]();
+      sinon.assert.calledWithMatch(stub, "error");
+    });
+    it("should listen exit on target", () => {
+      const stub = sinon.stub(target, "on");
+      instance["connect"]();
+      sinon.assert.calledWithMatch(stub, "exit");
+    });
+    it("should listen data on target stdout", () => {
+      const stub = sinon.stub(target.stdout, "on");
+      instance["connect"]();
+      sinon.assert.calledWithMatch(stub, "data");
+    });
+    it("should listen error on target stdout", () => {
+      const stub = sinon.stub(target.stdout, "on");
+      instance["connect"]();
+      sinon.assert.calledWithMatch(stub, "error");
+    });
+    it("should listen data on target stderr", () => {
+      const stub = sinon.stub(target.stderr, "on");
+      instance["connect"]();
+      sinon.assert.calledWithMatch(stub, "data");
+    });
+    it("should listen error on target stderr", () => {
+      const stub = sinon.stub(target.stderr, "on");
+      instance["connect"]();
+      sinon.assert.calledWithMatch(stub, "error");
+    });
+  });
+
+  describe("sendToProcess", () => {
+    it("should write data to stdin with CRLF", () => {
+      instance["sendToProcess"]("a:1");
+      assert.strictEqual(stdinChunk, "a:1\r\n");
+    });
+    it("should send token with data when no error on q", () => {
+      instance["sendToProcess"]("a:1");
+      stdinWriteCallback(null);
+      assert.ok(stdinChunk.endsWith(',string system"d"\r\n'));
+    });
+    it("should send token with data when no error on k", () => {
+      instance["context"] = "k";
+      instance["sendToProcess"]("a:1");
+      stdinWriteCallback(null);
+      assert.ok(stdinChunk.endsWith(',$:."\\\\d"\r\n'));
+    });
+    it("should decrease execution count on error", () => {
+      instance["executing"] = 0;
+      instance["sendToProcess"]("a:1");
+      stdinWriteCallback(new Error());
+      assert.strictEqual(instance["executing"], 0);
+    });
+  });
+
+  describe("sendToTerminal", () => {
+    let data: string;
 
     beforeEach(() => {
-      sinon
-        .stub(child_process, "spawn")
-        .value(() => <child_process.ChildProcess>{});
-      sinon.stub(process, "env").returns({ QHOME: "/path/to/q/home" });
-      conn = repl.ReplConnection.getOrCreateInstance();
+      sinon.stub(instance, <any>"onDidWrite").value({
+        fire(_data: string) {
+          data = _data;
+        },
+      });
     });
 
-    it("TRAP", () => {
-      assert.ok(conn);
+    afterEach(() => {
+      data = undefined;
+    });
+
+    it("should fire onDidWrite", () => {
+      instance["sendToTerminal"]("test");
+      assert.strictEqual(data, "test");
+    });
+  });
+
+  describe("normalize", () => {
+    it("should replace CR, LF and CRLF with CRLF", () => {
+      const res = instance["normalize"]("\r \n \r\n");
+      assert.strictEqual(res, "\r\n \r\n \r\n");
+    });
+  });
+
+  describe("moveCursorToColumn", () => {
+    it("should return ANSİ code for moving cursor", () => {
+      const res = instance["moveCursorToColumn"](1);
+      assert.strictEqual(res, "\x1B[1G");
+    });
+  });
+
+  describe("Output", () => {
+    let sendToTerminalSub: sinon.SinonStub;
+
+    beforeEach(() => {
+      sendToTerminalSub = sinon.stub(instance, <any>"sendToTerminal");
+    });
+
+    describe("showPrompt", () => {
+      it("should not output to terminal if exited", () => {
+        sinon.stub(instance, <any>"exited").value(true);
+        instance["showPrompt"]();
+        sinon.assert.notCalled(sendToTerminalSub);
+      });
+    });
+
+    describe("showOutput", () => {
+      it("should not output to terminal if exited", () => {
+        sinon.stub(instance, <any>"executions").value(undefined);
+        sinon.stub(instance, <any>"exited").value(true);
+        instance["showOutput"]("test");
+        sinon.assert.notCalled(sendToTerminalSub);
+      });
+    });
+  });
+
+  describe("show", () => {
+    let showStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      showStub = sinon.stub(terminal, "show");
+    });
+
+    it("should show REPL when autofocus is enabled", () => {
+      sinon.stub(ext.ext, "autoFocusOutputOnEntry").value(true);
+      instance["show"]();
+      sinon.assert.calledOnce(showStub);
+    });
+
+    it("should not show REPL when autofocus is disabled", () => {
+      sinon.stub(ext.ext, "autoFocusOutputOnEntry").value(false);
+      instance["show"]();
+      sinon.assert.notCalled(showStub);
     });
   });
 });

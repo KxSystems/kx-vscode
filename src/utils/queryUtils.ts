@@ -213,7 +213,7 @@ export function getValueFromArray(results: DCDS): any {
   return results;
 }
 
-export function sanitizeQsqlQuery(query: string): string {
+export function normalizeQuery(query: string): string {
   if (query.length > QUERY_LIMIT) {
     notify(`Query length limit (${QUERY_LIMIT}) reached.`, MessageKind.ERROR, {
       logger,
@@ -235,20 +235,30 @@ export function sanitizeQsqlQuery(query: string): string {
       )
       // Replace new lines in strings
       .replace(/"(?:[^"\\]*(?:\\.[^"\\]*)*)"/gs, (matched) =>
-        matched.replace(/(\r\n|[\r\n])/gs, "\\n"),
+        matched.replace(/(?:\r\n|[\r\n])/gs, "\\n"),
       )
+      // Remove none end of statement new lines
+      .replace(/(?:\r\n|[\r\n])+(?=[\t ])/gs, "")
+      // Normalize new lines
+      .replace(/(?:\r\n|[\r\n])+/gs, "\r\n")
+  );
+}
+
+export function sanitizeQsqlQuery(query: string): string {
+  return (
+    normalizeQuery(query)
       // Replace system commands
       .replace(/^\\([a-zA-Z_1-2\\]+)[\t ]*(.*)/gm, (matched, command, args) =>
-        matched === "\\\\" ? 'system"\\\\"' : `system"${command} ${args}"`,
+        matched === "\\\\"
+          ? 'system"\\\\"'
+          : `system"${command} ${args.trim()}"`,
       )
       // Replace end of statements
-      .replace(/(?<!;[\t ]*)(?:\r\n|[\r\n])+(?!\s*[\t ])/gs, ";")
+      .replace(/\r\n/gs, ";")
       // Remove start of file
       .replace(/^[;\s]+/gs, "")
       // Remove end of file
       .replace(/[;\s]+$/gs, "")
-      // Remove remaining new lines
-      .replace(/(?:\r\n|[\r\n])/gs, "")
   );
 }
 

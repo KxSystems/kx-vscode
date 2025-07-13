@@ -332,7 +332,7 @@ async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
       break;
     default:
       notify(
-        `Executing ${basename} on q REPL is not supported.`,
+        `Executing ${basename} on ${ext.REPL} is not supported.`,
         MessageKind.ERROR,
         { logger },
       );
@@ -343,8 +343,7 @@ async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
     const runner = Runner.create(async () => {
       ReplConnection.getOrCreateInstance().executeQuery(text);
     });
-    //runner.location = ProgressLocation.Notification;
-    runner.title = `Executing ${basename} on q REPL.`;
+    runner.title = `Executing ${basename} on ${ext.REPL}.`;
     await runner.execute();
   } catch (error) {
     notify(errorMessage(error), MessageKind.ERROR, {
