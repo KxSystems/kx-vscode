@@ -309,6 +309,8 @@ To export a connection:
 
 To verify the export is successful navigate to the saved location and open the configuration file to check its contents.
 
+**Important to note!** When exporting a connection configuration, the **password is not included** in the export file. Upon importing the connection, you are prompted to enter the password to re-establish the connection. This was introduced as a best practice as exporting credentials introduces significant security risks.
+
 ## Connection Labels
 
 Connection Labels allow you to categorize and organize your connections by assigning them distinct names and colors, making it easier to manage and locate specific connections within the application.
