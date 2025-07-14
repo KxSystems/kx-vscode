@@ -43,6 +43,8 @@ const CTRL = {
   DOWN: "%1B%5BB",
   LEFT: "%1B%5BD",
   RIGHT: "%1B%5BC",
+  HOME: "%01",
+  END: "%05",
 };
 
 const CTX = {
@@ -78,10 +80,10 @@ export class ReplConnection {
   private readonly terminal: vscode.Terminal;
   private readonly process: ChildProcessWithoutNullStreams;
 
+  private messages: string[] = [];
   private buffer: string[] = [];
   private input: string[] = [];
   private history: string[] = [];
-  private messages: string[] = [];
   private executions?: Callable[] = [];
 
   private context = CTX.Q;
@@ -103,6 +105,12 @@ export class ReplConnection {
     this.terminal = this.createTerminal();
     this.process = this.createProcess();
     this.connect();
+  }
+
+  private get visibleInputIndex() {
+    return this.input.length > this.maxInputIndex
+      ? this.maxInputIndex
+      : this.input.length;
   }
 
   private createTerminal() {
@@ -163,7 +171,7 @@ export class ReplConnection {
       (context === undefined ? this.context : context).length +
       this.namespace.length +
       this.prompt.length +
-      (index === undefined ? this.maxInputIndex : index);
+      (index === undefined ? this.visibleInputIndex : index);
 
     const lines = Math.ceil(length / this.columns);
     const column = length % this.columns;
@@ -171,14 +179,19 @@ export class ReplConnection {
     return { length, lines, column };
   }
 
-  private updateMaxInputIndex() {
-    const { length } = this.promptProperties(this.context, 0);
-    const max = this.columns * this.rows;
-    this.maxInputIndex = (max > MAX_INPUT ? MAX_INPUT : max) - length;
+  private updateInputIndex(data?: string) {
+    this.inputIndex += data?.length || 0;
 
     if (this.inputIndex > this.maxInputIndex) {
       this.inputIndex = this.maxInputIndex;
     }
+  }
+
+  private updateMaxInputIndex() {
+    const { length } = this.promptProperties(this.context, 0);
+    const max = this.columns * this.rows;
+    this.maxInputIndex = (max > MAX_INPUT ? MAX_INPUT : max) - length;
+    this.updateInputIndex();
   }
 
   private moveCursorToColumn(column: number) {
@@ -207,7 +220,7 @@ export class ReplConnection {
         this.prompt +
         ANSI.SPACE +
         ANSI.FAINTOFF +
-        this.input.slice(0, this.maxInputIndex).join(ANSI.EMPTY) +
+        this.input.slice(0, this.visibleInputIndex).join(ANSI.EMPTY) +
         ANSI.ERASETOEND +
         this.moveCursorToContext(context, this.inputIndex),
     );
@@ -279,8 +292,7 @@ export class ReplConnection {
     const index = this.history.length - this.historyIndex;
     const command = this.history[index] ?? ANSI.EMPTY;
     this.input = [...command];
-    this.inputIndex = command.length;
-    this.updateMaxInputIndex();
+    this.inputIndex = this.visibleInputIndex;
     this.showPrompt();
   }
 
@@ -305,9 +317,7 @@ export class ReplConnection {
 
   private open(dimensions?: vscode.TerminalDimensions) {
     if (dimensions) {
-      this.columns = dimensions.columns;
-      this.rows = dimensions.rows;
-      this.updateMaxInputIndex();
+      this.setDimensions(dimensions);
     }
 
     this.sendToTerminal(
@@ -327,10 +337,7 @@ export class ReplConnection {
     this.columns = dimensions.columns;
     this.rows = dimensions.rows;
     this.updateMaxInputIndex();
-
-    if (!this.executing) {
-      this.showPrompt(false);
-    }
+    if (!this.executions && !this.executing) this.showPrompt();
   }
 
   private close() {
@@ -358,6 +365,7 @@ export class ReplConnection {
     }
 
     const encoded = encodeURIComponent(data);
+
     let command: string;
 
     switch (encoded) {
@@ -368,11 +376,11 @@ export class ReplConnection {
             this.context = this.context === CTX.K ? CTX.Q : CTX.K;
           }
           this.sendToProcess(command);
-          this.showPrompt(false);
           this.history.push(command);
+          this.inputIndex = this.visibleInputIndex;
+          this.showPrompt();
           this.input = [];
-          this.historyIndex = 0;
-          this.inputIndex = 0;
+          this.historyIndex = this.inputIndex = 0;
         } else {
           this.sendToProcess(ANSI.EMPTY);
         }
@@ -390,6 +398,14 @@ export class ReplConnection {
           this.showPrompt();
         }
         break;
+      case CTRL.HOME:
+        this.inputIndex = 0;
+        this.showPrompt();
+        break;
+      case CTRL.END:
+        this.inputIndex = this.visibleInputIndex;
+        this.showPrompt();
+        break;
       case CTRL.LEFT:
         if (this.inputIndex > 0) {
           this.inputIndex--;
@@ -397,7 +413,7 @@ export class ReplConnection {
         }
         break;
       case CTRL.RIGHT:
-        if (this.inputIndex < this.maxInputIndex) {
+        if (this.inputIndex < this.visibleInputIndex) {
           this.inputIndex++;
           this.showPrompt();
         }
@@ -418,8 +434,7 @@ export class ReplConnection {
         if (data.length < MAX_INPUT) {
           const target = data.replace(/[^\P{Cc}]/gsu, "");
           this.input.splice(this.inputIndex, 0, ...target);
-          this.inputIndex += target.length;
-          this.updateMaxInputIndex();
+          this.updateInputIndex(target);
           this.showPrompt();
         }
         break;

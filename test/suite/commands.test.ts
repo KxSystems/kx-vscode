@@ -2941,7 +2941,10 @@ describe("workspaceCommand", () => {
         sinon.assert.calledOnce(executeStub);
       });
       it("should notify for other execution types", async () => {
-        await workspaceCommand.runOnRepl(editor);
+        await workspaceCommand.runOnRepl(
+          editor,
+          ExecutionTypes.PopulateScratchpad,
+        );
         sinon.assert.calledOnce(notifyStub);
       });
       it("should notify execution error", async () => {

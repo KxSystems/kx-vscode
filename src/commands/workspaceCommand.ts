@@ -318,25 +318,22 @@ export async function startRepl() {
   }
 }
 
-export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
+export async function runOnRepl(editor: TextEditor, type: ExecutionTypes) {
   const basename = getBasename(editor.document.uri);
 
   let text: string;
 
-  switch (type) {
-    case ExecutionTypes.QueryFile:
-      text = editor.document.getText();
-      break;
-    case ExecutionTypes.QuerySelection:
-      text = editor.document.getText(editor.selection);
-      break;
-    default:
-      notify(
-        `Executing ${basename} on ${ext.REPL} is not supported.`,
-        MessageKind.ERROR,
-        { logger },
-      );
-      return;
+  if (type === ExecutionTypes.QueryFile) {
+    text = editor.document.getText();
+  } else if (type === ExecutionTypes.QuerySelection) {
+    text = editor.document.getText(editor.selection);
+  } else {
+    notify(
+      `Executing ${basename} on ${ext.REPL} is not supported.`,
+      MessageKind.ERROR,
+      { logger },
+    );
+    return;
   }
 
   try {
@@ -357,7 +354,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
     if (getServerForUri(uri) === ext.REPL) {
-      runOnRepl(ext.activeTextEditor, type);
+      runOnRepl(ext.activeTextEditor, ExecutionTypes.QueryFile);
       return;
     }
     const conn = await findConnection(uri);

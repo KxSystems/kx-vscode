@@ -1051,7 +1051,13 @@ describe("Utils", () => {
     });
 
     describe("getQExecutablePath", () => {
+      it("should return path", () => {
+        ext.REAL_QHOME = "QHOME";
+        const res = coreUtils.getQExecutablePath();
+        assert.ok(res);
+      });
       it("should throw when env vars are not set", () => {
+        ext.REAL_QHOME = "";
         assert.throws(
           () => coreUtils.getQExecutablePath(),
           new Error(
@@ -2167,6 +2173,19 @@ describe("Utils", () => {
           ...img.map((v) => `${v}\r`),
         ]);
         assert.ok(result);
+      });
+    });
+
+    describe("normalizeQuery", () => {
+      it("should return normalized query under query limit", () => {
+        const query = "1234567890".repeat(25000);
+        const res = queryUtils.normalizeQuery(query);
+        assert.strictEqual(res, query);
+      });
+      it("should return empty query when limit reached", () => {
+        const query = "1234567890".repeat(25000) + "1";
+        const res = queryUtils.normalizeQuery(query);
+        assert.strictEqual(res, "");
       });
     });
   });
