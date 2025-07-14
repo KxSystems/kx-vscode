@@ -59,10 +59,10 @@ describe("REPL", () => {
       instance["connect"]();
       sinon.assert.calledWithMatch(stub, "error");
     });
-    it("should listen exit on target", () => {
+    it("should listen close on target", () => {
       const stub = sinon.stub(target, "on");
       instance["connect"]();
-      sinon.assert.calledWithMatch(stub, "exit");
+      sinon.assert.calledWithMatch(stub, "close");
     });
     it("should listen data on target stdout", () => {
       const stub = sinon.stub(target.stdout, "on");

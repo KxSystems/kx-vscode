@@ -102,6 +102,11 @@ export class ReplConnection {
     this.connect();
   }
 
+  private get multiline() {
+    const { lines } = this.promptProperties();
+    return lines <= this.rows;
+  }
+
   private createTerminal() {
     return vscode.window.createTerminal({
       pty: {
@@ -123,7 +128,7 @@ export class ReplConnection {
 
   private connect() {
     this.process.on("error", this.handleError.bind(this));
-    this.process.on("exit", this.handleExit.bind(this));
+    this.process.on("close", this.handleClose.bind(this));
     this.process.stdout.on("data", this.handleOutput.bind(this));
     this.process.stdout.on("error", this.handleError.bind(this));
     this.process.stderr.on("data", this.handleErrorOutput.bind(this));
@@ -158,25 +163,31 @@ export class ReplConnection {
     return data.replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
   }
 
-  private moveCursorToColumn(column: number) {
-    return `\x1b[${column}G`;
-  }
-
-  private moveCursorTo(context?: string, length?: number) {
+  private promptProperties(context?: string, length?: number) {
     const len =
       1 +
       (context === undefined ? this.context : context).length +
       this.namespace.length +
       this.prompt.length +
       (length === undefined ? this.input.length : length);
-    const row = Math.ceil(len / this.columns);
-    const col = len % this.columns;
 
+    const lines = Math.ceil(len / this.columns);
+    const column = len % this.columns;
+
+    return { lines, column };
+  }
+
+  private moveCursorTo(context?: string, length?: number) {
+    const { lines, column } = this.promptProperties(context, length);
     return (
       ANSI.RESTORE +
-      ANSI.DOWN.repeat(row - (col === 0 ? 0 : 1)) +
-      this.moveCursorToColumn(col + 1)
+      ANSI.DOWN.repeat(lines - (column === 0 ? 0 : 1)) +
+      this.moveCursorToColumn(column + 1)
     );
+  }
+
+  private moveCursorToColumn(column: number) {
+    return `\x1b[${column}G`;
   }
 
   private showPrompt(create?: boolean, context?: string) {
@@ -206,7 +217,7 @@ export class ReplConnection {
 
   private showMessage(message: string) {
     if (this.executions) {
-      this.buffer.push(message);
+      this.messages.push(message);
     } else {
       this.sendToTerminal(message);
     }
@@ -218,7 +229,13 @@ export class ReplConnection {
     }
 
     this.token.lastIndex = 0;
-    this.buffer.push(this.normalize(decoded.replace(this.token, ANSI.EMPTY)));
+    const output = this.normalize(decoded.replace(this.token, ANSI.EMPTY));
+
+    if (this.executions) {
+      this.messages.push(output);
+      return;
+    }
+    this.buffer.push(output);
 
     this.token.lastIndex = 0;
     let match: RegExpMatchArray | null;
@@ -259,21 +276,13 @@ export class ReplConnection {
     }
   }
 
-  private dispose() {
-    if (ReplConnection.instance === this) {
-      ReplConnection.instance = undefined;
-    }
-    this.onDidWrite.dispose();
-  }
-
   private handleError(error: Error) {
     this.showMessage(error.message + ANSI.CRLF);
   }
 
-  private handleExit(code: number | null) {
+  private handleClose(code: number | null) {
     const message = `Process exited with code (${code || 0}).${ANSI.CRLF}`;
     this.showMessage(message);
-    this.dispose();
     this.exited = true;
   }
 
@@ -295,17 +304,13 @@ export class ReplConnection {
       "kdb+ REPL Copyright (C) 1993-2025 KX Systems" + ANSI.CRLF.repeat(2),
     );
 
-    if (this.messages.length > 0) {
-      this.messages.forEach((error) => this.sendToTerminal(error + ANSI.CRLF));
-      this.messages = [];
-    }
+    this.messages.forEach((message) => this.sendToTerminal(message));
+    this.messages = [];
 
     this.showPrompt(true);
 
-    if (this.executions) {
-      this.executions.forEach((execution) => execution());
-      this.executions = undefined;
-    }
+    (this.executions || []).forEach((execution) => execution());
+    this.executions = undefined;
   }
 
   private setDimensions(dimensions: vscode.TerminalDimensions) {
@@ -314,8 +319,12 @@ export class ReplConnection {
   }
 
   private close() {
+    if (ReplConnection.instance === this) {
+      ReplConnection.instance = undefined;
+    }
     this.exited = true;
     this.process.kill();
+    this.onDidWrite.dispose();
   }
 
   private handleInput(data: string) {
@@ -362,18 +371,18 @@ export class ReplConnection {
         }
         break;
       case CONTROL.DEL:
-        if (this.input.splice(this.inputIndex, 1)) {
+        if (this.multiline && this.input.splice(this.inputIndex, 1)) {
           this.showPrompt();
         }
         break;
       case CONTROL.LEFT:
-        if (this.inputIndex > 0) {
+        if (this.multiline && this.inputIndex > 0) {
           this.inputIndex--;
           this.showPrompt();
         }
         break;
       case CONTROL.RIGHT:
-        if (this.inputIndex < this.input.length) {
+        if (this.multiline && this.inputIndex < this.input.length) {
           this.inputIndex++;
           this.showPrompt();
         }
