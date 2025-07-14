@@ -234,7 +234,7 @@ To edit an existing connection, right-click the connection you wish to edit and 
 
 ![Edit connection option](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/select-edit-connection.png)
 
-> NOTE: Editing an **active connection** may require you to **restart** the connection. If so, you will be prompted to reconnect after saving your changes.
+> NOTE: Editing an **active connection** may require you to **restart** the connection. If so, you are prompted to reconnect after saving your changes.
 
 ![Edit connected connection dialog](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/edit-connected-connection-dialog.png)
 
@@ -314,6 +314,8 @@ To verify the export is successful navigate to the saved location and open the c
 ## Connection Labels
 
 Connection Labels allow you to categorize and organize your connections by assigning them distinct names and colors, making it easier to manage and locate specific connections within the application.
+
+Connections are organized in alphabetical order, with connections first sorted by type, then by label within each type, and finally, if there are multiple connections under a label, those are also listed alphabetically.
 
 ![Connection Tree With Labels](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/conn-labels-tree.png)
 
@@ -810,11 +812,11 @@ q REPL can be started from the command prompt by searching **q REPL**.
 
 ## Logs
 
-Any error or info will be posted at **OUTPUT** in **kdb** tab
+Any error or info is posted at **OUTPUT** in **kdb** tab
 
 ![LOG](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/log-sample.png)
 
-The format will be:
+The format is:
 
 `[DATE TIME] [INFO or ERROR] Message`
 
@@ -904,7 +906,7 @@ If you only need to apply the refactorings to the currently opened files, you ca
 
 ### Double Click Selection
 
-The following setting will change double click behaviour to select the whole identifier including dots:
+The following setting changes double click behavior to select the whole identifier including dots:
 
 ```JSON
  "[q]": {
