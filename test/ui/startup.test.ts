@@ -90,4 +90,16 @@ describe("Start Up", () => {
       assert.ok(section);
     });
   });
+
+  describe("Help and Feedback Section", () => {
+    let section: ViewSection;
+
+    before(async () => {
+      section = await sideBar.getContent().getSection("Help and Feedback");
+    });
+
+    it("should exist", async () => {
+      assert.ok(section);
+    });
+  });
 });

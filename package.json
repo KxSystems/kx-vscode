@@ -1151,6 +1151,9 @@
     "url": "https://github.com/KxSystems/kx-vscode/issues"
   },
   "homepage": "https://kx.com",
+  "config": {
+    "ui_test_vscode_version": "1.102.0"
+  },
   "scripts": {
     "build": "npm run -S esbuild-base -- --sourcemap",
     "esbuild-base": "rimraf out && node ./esbuild.js",
@@ -1166,7 +1169,7 @@
     "coverage_old": "npm run test -- --coverage",
     "coverage": "c8 -o coverage-reports -r lcov -r cobertura -r html npm run test",
     "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js",
-    "ui-test-cmd": "extest setup-and-run --code_version 1.96.0 --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
+    "ui-test-cmd": "extest setup-and-run --code_version $npm_package_config_ui_test_vscode_version --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
     "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
     "watch": "npm run -S esbuild-base -- --sourcemap --watch"
   },
@@ -1220,7 +1223,7 @@
     "sinon": "^21.0.0",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.34.1",
-    "vscode-extension-tester": "^8.15.0",
+    "vscode-extension-tester": "^8.16.2",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
     "vscode-languageserver-textdocument": "^1.0.12"
