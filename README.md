@@ -678,8 +678,6 @@ You can run code on either the [scratchpad](#run-and-populate-scratchpad) or dir
 
 This eliminates the need to copy code from files into the qSQL Data Source tab or Workbooks for testing against DAPs.
 
-**Note!** DAP targeting is available only for `.q` files. `.py` files run exclusively on the scratchpad, even when associated with an Insights connection.
-
 For selecting connections and endpoints for unassociated files, consider the following:
 
 - When a `.q` or `.py` file is not associated with a connection, it shows a **Choose Connection** code lens at the top and runs on the active connected connection.
