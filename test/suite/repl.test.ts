@@ -131,13 +131,6 @@ describe("REPL", () => {
     });
   });
 
-  describe("normalize", () => {
-    it("should replace CR, LF and CRLF with CRLF", () => {
-      const res = instance["normalize"]("\r \n \r\n");
-      assert.strictEqual(res, "\r\n \r\n \r\n");
-    });
-  });
-
   describe("moveCursorToColumn", () => {
     it("should return ANSİ code for moving cursor", () => {
       const res = instance["moveCursorToColumn"](1);

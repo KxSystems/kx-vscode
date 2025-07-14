@@ -203,7 +203,7 @@ export function getQExecutablePath() {
   }
 
   const home =
-    ext.REAL_QHOME ||
+    ext.REAL_QHOME ??
     workspace.getConfiguration("kdb").get<string>("qHomeDirectory", "");
 
   if (home) {

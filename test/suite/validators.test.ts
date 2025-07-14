@@ -116,6 +116,15 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail if using restricted keyword", () => {
+    const result = kdbValidators.validateServerAlias("REPL", false);
+    assert.strictEqual(
+      result,
+      "The server name 'REPL' is reserved for connections to the REPL",
+      "Input contained restricted keyword.",
+    );
+  });
+
+  it("Should return fail if using restricted keyword", () => {
     const result = kdbValidators.validateServerAlias("local", false);
     assert.strictEqual(
       result,

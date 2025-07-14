@@ -56,6 +56,7 @@ import { feedbackSurveyDialog } from "../../src/utils/feedbackSurveyUtils";
 import { getNonce } from "../../src/utils/getNonce";
 import { getUri } from "../../src/utils/getUri";
 import * as loggers from "../../src/utils/loggers";
+import * as notifications from "../../src/utils/notifications";
 import { openUrl } from "../../src/utils/openUrl";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { showRegistrationNotification } from "../../src/utils/registration";
@@ -68,7 +69,6 @@ import {
   showQuickPick,
 } from "../../src/utils/userInteraction";
 import { validateUtils } from "../../src/utils/validateUtils";
-import * as notifications from "../../src/utils/notifications";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;
@@ -1047,6 +1047,17 @@ describe("Utils", () => {
         assert.ok(fullInsight);
         assert.strictEqual(fullInsight.realm, "full-realm");
         assert.strictEqual(fullInsight.insecure, true);
+      });
+    });
+
+    describe("getQExecutablePath", () => {
+      it("should throw when env vars are not set", () => {
+        assert.throws(
+          () => coreUtils.getQExecutablePath(),
+          new Error(
+            "Neither QHOME environment variable nor qHomeDirectory is set.",
+          ),
+        );
       });
     });
   });

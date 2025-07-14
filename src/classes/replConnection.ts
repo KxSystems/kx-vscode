@@ -55,9 +55,9 @@ const NS = {
   K: ',$:."\\\\d"',
 };
 
-const MAX_INPUT_LENGTH = 80 * 40;
+const MAX_INPUT = 80 * 40;
 
-type Execution = () => void;
+type Callable = () => void;
 
 export class ReplConnection {
   private readonly identity = crypto.randomUUID();
@@ -82,19 +82,19 @@ export class ReplConnection {
   private input: string[] = [];
   private history: string[] = [];
   private messages: string[] = [];
-  private executions?: Execution[] = [];
+  private executions?: Callable[] = [];
 
   private context = CTX.Q;
   private namespace = ANSI.EMPTY;
   private prompt = ")";
 
   private historyIndex = 0;
+  private maxInputIndex = 0;
   private inputIndex = 0;
   private columns = 0;
   private rows = 0;
-  private maxInputLength = 0;
-  private executing = 0;
   private serial = 0;
+  private executing = 0;
   private exited = false;
 
   private constructor() {
@@ -103,11 +103,6 @@ export class ReplConnection {
     this.terminal = this.createTerminal();
     this.process = this.createProcess();
     this.connect();
-  }
-
-  private get multiline() {
-    this.updateMaxInputIndex();
-    return this.input.length < this.maxInputLength;
   }
 
   private createTerminal() {
@@ -162,17 +157,13 @@ export class ReplConnection {
     this.onDidWrite.fire(data);
   }
 
-  private normalize(data: string) {
-    return data.replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
-  }
-
   private promptProperties(context?: string, index?: number) {
     const length =
       1 +
       (context === undefined ? this.context : context).length +
       this.namespace.length +
       this.prompt.length +
-      (index === undefined ? this.input.length : index);
+      (index === undefined ? this.maxInputIndex : index);
 
     const lines = Math.ceil(length / this.columns);
     const column = length % this.columns;
@@ -182,26 +173,26 @@ export class ReplConnection {
 
   private updateMaxInputIndex() {
     const { length } = this.promptProperties(this.context, 0);
-    const max = this.columns * this.rows - length;
-    this.maxInputLength = max > MAX_INPUT_LENGTH ? MAX_INPUT_LENGTH : max;
+    const max = this.columns * this.rows;
+    this.maxInputIndex = (max > MAX_INPUT ? MAX_INPUT : max) - length;
 
-    if (this.input.length > this.maxInputLength) {
-      this.input.length = this.maxInputLength;
-      this.inputIndex = this.maxInputLength;
+    if (this.inputIndex > this.maxInputIndex) {
+      this.inputIndex = this.maxInputIndex;
     }
   }
 
-  private moveCursorTo(context?: string, length?: number) {
+  private moveCursorToColumn(column: number) {
+    return `\x1b[${column}G`;
+  }
+
+  private moveCursorToContext(context?: string, length?: number) {
     const { lines, column } = this.promptProperties(context, length);
+
     return (
       ANSI.RESTORE +
       ANSI.DOWN.repeat(lines - (column === 0 ? 0 : 1)) +
       this.moveCursorToColumn(column + 1)
     );
-  }
-
-  private moveCursorToColumn(column: number) {
-    return `\x1b[${column}G`;
   }
 
   private showPrompt(create?: boolean, context?: string) {
@@ -216,9 +207,9 @@ export class ReplConnection {
         this.prompt +
         ANSI.SPACE +
         ANSI.FAINTOFF +
-        this.input.join(ANSI.EMPTY) +
+        this.input.slice(0, this.maxInputIndex).join(ANSI.EMPTY) +
         ANSI.ERASETOEND +
-        this.moveCursorTo(context, this.inputIndex),
+        this.moveCursorToContext(context, this.inputIndex),
     );
   }
 
@@ -243,7 +234,9 @@ export class ReplConnection {
     }
 
     this.token.lastIndex = 0;
-    const output = this.normalize(decoded.replace(this.token, ANSI.EMPTY));
+    const output = decoded
+      .replace(this.token, ANSI.EMPTY)
+      .replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
 
     if (this.executions) {
       this.messages.push(output);
@@ -275,20 +268,20 @@ export class ReplConnection {
     }
   }
 
-  private recall() {
-    const index = this.history.length - this.historyIndex;
-    const command = this.history[index] ?? ANSI.EMPTY;
-    const target = command.slice(0, this.maxInputLength - this.input.length);
-    this.input = [...target];
-    this.inputIndex = target.length;
-    this.showPrompt();
-  }
-
   private show() {
     updateTheWorkspaceSettings();
     if (ext.autoFocusOutputOnEntry) {
       this.terminal.show();
     }
+  }
+
+  private recall() {
+    const index = this.history.length - this.historyIndex;
+    const command = this.history[index] ?? ANSI.EMPTY;
+    this.input = [...command];
+    this.inputIndex = command.length;
+    this.updateMaxInputIndex();
+    this.showPrompt();
   }
 
   private handleError(error: Error) {
@@ -310,9 +303,11 @@ export class ReplConnection {
     this.handleOutput(data);
   }
 
-  private open(dimensions: vscode.TerminalDimensions | undefined) {
+  private open(dimensions?: vscode.TerminalDimensions) {
     if (dimensions) {
-      this.setDimensions(dimensions);
+      this.columns = dimensions.columns;
+      this.rows = dimensions.rows;
+      this.updateMaxInputIndex();
     }
 
     this.sendToTerminal(
@@ -332,6 +327,10 @@ export class ReplConnection {
     this.columns = dimensions.columns;
     this.rows = dimensions.rows;
     this.updateMaxInputIndex();
+
+    if (!this.executing) {
+      this.showPrompt(false);
+    }
   }
 
   private close() {
@@ -357,8 +356,8 @@ export class ReplConnection {
       this.executeQuery(data);
       return;
     }
-    const encoded = encodeURIComponent(data);
 
+    const encoded = encodeURIComponent(data);
     let command: string;
 
     switch (encoded) {
@@ -369,7 +368,7 @@ export class ReplConnection {
             this.context = this.context === CTX.K ? CTX.Q : CTX.K;
           }
           this.sendToProcess(command);
-          this.sendToTerminal(this.moveCursorTo());
+          this.showPrompt(false);
           this.history.push(command);
           this.input = [];
           this.historyIndex = 0;
@@ -387,18 +386,18 @@ export class ReplConnection {
         }
         break;
       case CTRL.DEL:
-        if (this.multiline && this.input.splice(this.inputIndex, 1)) {
+        if (this.input.splice(this.inputIndex, 1)) {
           this.showPrompt();
         }
         break;
       case CTRL.LEFT:
-        if (this.multiline && this.inputIndex > 0) {
+        if (this.inputIndex > 0) {
           this.inputIndex--;
           this.showPrompt();
         }
         break;
       case CTRL.RIGHT:
-        if (this.multiline && this.inputIndex < this.input.length) {
+        if (this.inputIndex < this.maxInputIndex) {
           this.inputIndex++;
           this.showPrompt();
         }
@@ -416,12 +415,11 @@ export class ReplConnection {
         }
         break;
       default:
-        if (this.multiline) {
-          const target = data
-            .replace(/[^\P{Cc}]/gsu, "")
-            .slice(0, this.maxInputLength - this.input.length);
+        if (data.length < MAX_INPUT) {
+          const target = data.replace(/[^\P{Cc}]/gsu, "");
           this.input.splice(this.inputIndex, 0, ...target);
           this.inputIndex += target.length;
+          this.updateMaxInputIndex();
           this.showPrompt();
         }
         break;
