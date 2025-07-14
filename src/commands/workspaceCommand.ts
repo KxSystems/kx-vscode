@@ -318,7 +318,7 @@ export async function startRepl() {
   }
 }
 
-async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
+export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   const basename = getBasename(editor.document.uri);
 
   let text: string;

@@ -34,7 +34,7 @@ const ANSI = {
   FAINTOFF: "\x1b[22m",
 };
 
-const CONTROL = {
+const CTRL = {
   CR: "%0D",
   BS: "%08",
   BSMAC: "%7F",
@@ -54,6 +54,8 @@ const NS = {
   Q: ',string system"d"',
   K: ',$:."\\\\d"',
 };
+
+const MAX_INPUT_LENGTH = 80 * 40;
 
 type Execution = () => void;
 
@@ -90,6 +92,7 @@ export class ReplConnection {
   private inputIndex = 0;
   private columns = 0;
   private rows = 0;
+  private maxInputLength = 0;
   private executing = 0;
   private serial = 0;
   private exited = false;
@@ -103,8 +106,8 @@ export class ReplConnection {
   }
 
   private get multiline() {
-    const { lines } = this.promptProperties();
-    return lines <= this.rows;
+    this.updateMaxInputIndex();
+    return this.input.length < this.maxInputLength;
   }
 
   private createTerminal() {
@@ -163,18 +166,29 @@ export class ReplConnection {
     return data.replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
   }
 
-  private promptProperties(context?: string, length?: number) {
-    const len =
+  private promptProperties(context?: string, index?: number) {
+    const length =
       1 +
       (context === undefined ? this.context : context).length +
       this.namespace.length +
       this.prompt.length +
-      (length === undefined ? this.input.length : length);
+      (index === undefined ? this.input.length : index);
 
-    const lines = Math.ceil(len / this.columns);
-    const column = len % this.columns;
+    const lines = Math.ceil(length / this.columns);
+    const column = length % this.columns;
 
-    return { lines, column };
+    return { length, lines, column };
+  }
+
+  private updateMaxInputIndex() {
+    const { length } = this.promptProperties(this.context, 0);
+    const max = this.columns * this.rows - length;
+    this.maxInputLength = max > MAX_INPUT_LENGTH ? MAX_INPUT_LENGTH : max;
+
+    if (this.input.length > this.maxInputLength) {
+      this.input.length = this.maxInputLength;
+      this.inputIndex = this.maxInputLength;
+    }
   }
 
   private moveCursorTo(context?: string, length?: number) {
@@ -264,8 +278,9 @@ export class ReplConnection {
   private recall() {
     const index = this.history.length - this.historyIndex;
     const command = this.history[index] ?? ANSI.EMPTY;
-    this.input = [...command];
-    this.inputIndex = command.length;
+    const target = command.slice(0, this.maxInputLength - this.input.length);
+    this.input = [...target];
+    this.inputIndex = target.length;
     this.showPrompt();
   }
 
@@ -281,7 +296,7 @@ export class ReplConnection {
   }
 
   private handleClose(code: number | null) {
-    const message = `Process exited with code (${code || 0}).${ANSI.CRLF}`;
+    const message = `kdb+ exited with code (${code || 0}).${ANSI.CRLF}`;
     this.showMessage(message);
     this.exited = true;
   }
@@ -316,6 +331,7 @@ export class ReplConnection {
   private setDimensions(dimensions: vscode.TerminalDimensions) {
     this.columns = dimensions.columns;
     this.rows = dimensions.rows;
+    this.updateMaxInputIndex();
   }
 
   private close() {
@@ -346,7 +362,7 @@ export class ReplConnection {
     let command: string;
 
     switch (encoded) {
-      case CONTROL.CR:
+      case CTRL.CR:
         if (this.input.length > 0) {
           command = this.input.join(ANSI.EMPTY);
           if (/^(?:\\[\t ]|\\$)/m.exec(command)) {
@@ -363,46 +379,49 @@ export class ReplConnection {
         }
         this.sendToTerminal(ANSI.CRLF);
         break;
-      case CONTROL.BS:
-      case CONTROL.BSMAC:
+      case CTRL.BS:
+      case CTRL.BSMAC:
         if (this.inputIndex > 0 && this.input.splice(this.inputIndex - 1, 1)) {
           this.inputIndex--;
           this.showPrompt();
         }
         break;
-      case CONTROL.DEL:
+      case CTRL.DEL:
         if (this.multiline && this.input.splice(this.inputIndex, 1)) {
           this.showPrompt();
         }
         break;
-      case CONTROL.LEFT:
+      case CTRL.LEFT:
         if (this.multiline && this.inputIndex > 0) {
           this.inputIndex--;
           this.showPrompt();
         }
         break;
-      case CONTROL.RIGHT:
+      case CTRL.RIGHT:
         if (this.multiline && this.inputIndex < this.input.length) {
           this.inputIndex++;
           this.showPrompt();
         }
         break;
-      case CONTROL.DOWN:
+      case CTRL.DOWN:
         if (this.historyIndex > 0) {
           this.historyIndex--;
           this.recall();
         }
         break;
-      case CONTROL.UP:
+      case CTRL.UP:
         if (this.historyIndex < this.history.length) {
           this.historyIndex++;
           this.recall();
         }
         break;
       default:
-        if (!/[^\P{Cc}]/gsu.test(data)) {
-          this.input.splice(this.inputIndex, 0, ...data);
-          this.inputIndex += data.length;
+        if (this.multiline) {
+          const target = data
+            .replace(/[^\P{Cc}]/gsu, "")
+            .slice(0, this.maxInputLength - this.input.length);
+          this.input.splice(this.inputIndex, 0, ...target);
+          this.inputIndex += target.length;
           this.showPrompt();
         }
         break;
