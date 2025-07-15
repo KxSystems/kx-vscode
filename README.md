@@ -523,6 +523,8 @@ This function runs an SQL query.
 .com_kx_edi.sql[query]
 ```
 
+You can run SQL files against any kdb Insights Enterprise connections and select to [populate the Scratchpad](#populate-scratchpad) if you wish.
+
 Refer to the [SQL documentation](https://code.kx.com/insights/api/database/query/sql.html) for more details.
 
 ### UDA queries
