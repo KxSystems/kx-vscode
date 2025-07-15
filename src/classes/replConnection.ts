@@ -25,26 +25,34 @@ const ANSI = {
   AT: "@",
   CR: "\r",
   CRLF: "\r\n",
-  DOWN: "\x1b[1B",
-  SAVE: "\x1b[s",
-  RESTORE: "\x1b[u",
-  ERASETOEND: "\x1b[0J",
-  LINESTART: "\x1b[0G",
-  FAINTON: "\x1b[2m",
-  FAINTOFF: "\x1b[22m",
+  DOWN: "\x1B[1B",
+  SAVE: "\x1B[s",
+  RESTORE: "\x1B[u",
+  ERASETOEND: "\x1B[0J",
+  LINESTART: "\x1B[0G",
+  FAINTON: "\x1B[2m",
+  FAINTOFF: "\x1B[22m",
 };
 
-const CTRL = {
-  CR: "%0D",
-  BS: "%08",
-  BSMAC: "%7F",
-  DEL: "%1B%5B3~",
-  UP: "%1B%5BA",
-  DOWN: "%1B%5BB",
-  LEFT: "%1B%5BD",
-  RIGHT: "%1B%5BC",
-  HOME: "%01",
-  END: "%05",
+const KEY = {
+  CR: "\r",
+  BS: "\b",
+  BSMAC: "\x7F",
+  DEL: "\x1B[3~",
+  UP: "\x1B[A",
+  DOWN: "\x1B[B",
+  LEFT: "\x1B[D",
+  RIGHT: "\x1B[C",
+  HOME: "\x1B[H",
+  HOMEMAC: "\x01",
+  END: "\x1B[F",
+  ENDMAC: "\x05",
+  ALTHOME: "\x1B[1;5A",
+  ALTEND: "\x1B[1;5B",
+  SHIFTUP: "\x1B[1;2A",
+  SHIFTDOWN: "\x1B[1;2B",
+  SHIFTLEFT: "\x1B[1;2D",
+  SHIFTRIGHT: "\x1B[1;2C",
 };
 
 const CTX = {
@@ -57,7 +65,10 @@ const NS = {
   K: ',$:."\\\\d"',
 };
 
-const MAX_INPUT = 80 * 40;
+const CONF = {
+  PROMPT: ")",
+  MAX_INPUT: 80 * 40,
+};
 
 type Callable = () => void;
 
@@ -86,15 +97,15 @@ export class ReplConnection {
   private history: string[] = [];
   private executions?: Callable[] = [];
 
-  private context = CTX.Q;
-  private namespace = ANSI.EMPTY;
-  private prompt = ")";
+  private _context = CTX.Q;
+  private _namespace = ANSI.EMPTY;
+  private columns = 0;
+  private rows = 0;
 
   private historyIndex = 0;
   private maxInputIndex = 0;
   private inputIndex = 0;
-  private columns = 0;
-  private rows = 0;
+
   private serial = 0;
   private executing = 0;
   private exited = false;
@@ -107,10 +118,32 @@ export class ReplConnection {
     this.connect();
   }
 
+  private get context() {
+    return this._context;
+  }
+
+  private set context(context: string) {
+    this._context = context;
+    this.updateMaxInputIndex();
+  }
+
+  private get namespace() {
+    return this._namespace;
+  }
+
+  private set namespace(namespace: string) {
+    this._namespace = namespace;
+    this.updateMaxInputIndex();
+  }
+
   private get visibleInputIndex() {
     return this.input.length > this.maxInputIndex
       ? this.maxInputIndex
       : this.input.length;
+  }
+
+  private get inputText() {
+    return this.input.join(ANSI.EMPTY);
   }
 
   private createTerminal() {
@@ -168,10 +201,10 @@ export class ReplConnection {
   private promptProperties(context?: string, index?: number) {
     const length =
       1 +
-      (context === undefined ? this.context : context).length +
+      (context ?? this.context).length +
       this.namespace.length +
-      this.prompt.length +
-      (index === undefined ? this.visibleInputIndex : index);
+      CONF.PROMPT.length +
+      (index ?? this.visibleInputIndex);
 
     const lines = Math.ceil(length / this.columns);
     const column = length % this.columns;
@@ -180,17 +213,17 @@ export class ReplConnection {
   }
 
   private updateInputIndex(data?: string) {
-    this.inputIndex += data?.length || 0;
+    this.inputIndex += data?.length ?? 0;
 
     if (this.inputIndex > this.maxInputIndex) {
-      this.inputIndex = this.maxInputIndex;
+      this.inputIndex = this.maxInputIndex - 1;
     }
   }
 
   private updateMaxInputIndex() {
     const { length } = this.promptProperties(this.context, 0);
     const max = this.columns * this.rows;
-    this.maxInputIndex = (max > MAX_INPUT ? MAX_INPUT : max) - length;
+    this.maxInputIndex = (max > CONF.MAX_INPUT ? CONF.MAX_INPUT : max) - length;
     this.updateInputIndex();
   }
 
@@ -215,9 +248,9 @@ export class ReplConnection {
     this.sendToTerminal(
       (create ? ANSI.SAVE : ANSI.RESTORE) +
         ANSI.FAINTON +
-        (context === undefined ? this.context : context) +
+        (context ?? this.context) +
         this.namespace +
-        this.prompt +
+        CONF.PROMPT +
         ANSI.SPACE +
         ANSI.FAINTOFF +
         this.input.slice(0, this.visibleInputIndex).join(ANSI.EMPTY) +
@@ -227,9 +260,10 @@ export class ReplConnection {
   }
 
   private showExecutionPrompt() {
-    const prompt =
-      this.executing > 1 ? `execution-${this.executing}` : "execution";
-    this.showPrompt(false, prompt);
+    this.showPrompt(
+      false,
+      this.executing > 1 ? `execution-${this.executing}` : "execution",
+    );
     this.sendToTerminal(ANSI.CRLF);
   }
 
@@ -273,6 +307,9 @@ export class ReplConnection {
 
         this.executing--;
         if (this.executing === 0) {
+          this.input = [];
+          this.inputIndex = 0;
+          this.updateInputIndex();
           this.showPrompt(true);
         } else {
           this.showExecutionPrompt();
@@ -283,25 +320,35 @@ export class ReplConnection {
 
   private show() {
     updateTheWorkspaceSettings();
-    if (ext.autoFocusOutputOnEntry) {
-      this.terminal.show();
+    if (ext.autoFocusOutputOnEntry) this.terminal.show();
+  }
+
+  private push(reset = false) {
+    const input = this.inputText;
+    if (input) {
+      const top = this.history[this.history.length - 1];
+      if (top && top === input) return;
+      this.history.push(input);
+      if (reset) this.historyIndex = 0;
     }
   }
 
-  private recall() {
-    const index = this.history.length - this.historyIndex;
-    const command = this.history[index] ?? ANSI.EMPTY;
-    this.input = [...command];
-    this.inputIndex = this.visibleInputIndex;
-    this.showPrompt();
+  private pop() {
+    const input = this.history[this.history.length - this.historyIndex];
+    if (input) {
+      this.input = [...input];
+      this.inputIndex = 0;
+      this.updateInputIndex(input);
+      this.showPrompt();
+    }
   }
 
   private handleError(error: Error) {
     this.showMessage(error.message + ANSI.CRLF);
   }
 
-  private handleClose(code: number | null) {
-    const message = `kdb+ exited with code (${code || 0}).${ANSI.CRLF}`;
+  private handleClose(code?: number) {
+    const message = `kdb+ exited with code (${code ?? 0}).${ANSI.CRLF}`;
     this.showMessage(message);
     this.exited = true;
   }
@@ -353,92 +400,112 @@ export class ReplConnection {
     if (this.exited) {
       return;
     }
-    if (this.executing) {
-      if (data === ANSI.CR) {
-        this.sendToTerminal(ANSI.CRLF);
-      }
-      return;
-    }
-    if (data.length > 1 && /(?:\r\n|[\r\n])/s.test(data)) {
-      this.executeQuery(data);
+
+    if (this.executing && data === KEY.CR) {
+      this.sendToTerminal(ANSI.CRLF);
       return;
     }
 
-    const encoded = encodeURIComponent(data);
-
-    let command: string;
-
-    switch (encoded) {
-      case CTRL.CR:
+    switch (data) {
+      case KEY.CR:
         if (this.input.length > 0) {
-          command = this.input.join(ANSI.EMPTY);
-          if (/^(?:\\[\t ]|\\$)/m.exec(command)) {
+          const input = this.inputText;
+          if (/^(?:\\[\t ]|\\$)/m.test(input)) {
             this.context = this.context === CTX.K ? CTX.Q : CTX.K;
           }
-          this.sendToProcess(command);
-          this.history.push(command);
+          this.sendToProcess(input);
+          this.push(true);
           this.inputIndex = this.visibleInputIndex;
           this.showPrompt();
-          this.input = [];
-          this.historyIndex = this.inputIndex = 0;
         } else {
           this.sendToProcess(ANSI.EMPTY);
         }
         this.sendToTerminal(ANSI.CRLF);
         break;
-      case CTRL.BS:
-      case CTRL.BSMAC:
+      case KEY.BS:
+      case KEY.BSMAC:
         if (this.inputIndex > 0 && this.input.splice(this.inputIndex - 1, 1)) {
           this.inputIndex--;
           this.showPrompt();
         }
         break;
-      case CTRL.DEL:
+      case KEY.DEL:
         if (this.input.splice(this.inputIndex, 1)) {
           this.showPrompt();
         }
         break;
-      case CTRL.HOME:
+      case KEY.HOME:
+      case KEY.HOMEMAC:
         this.inputIndex = 0;
         this.showPrompt();
         break;
-      case CTRL.END:
-        this.inputIndex = this.visibleInputIndex;
+      case KEY.END:
+      case KEY.ENDMAC:
+        this.inputIndex = this.visibleInputIndex - 1;
         this.showPrompt();
         break;
-      case CTRL.LEFT:
+      case KEY.ALTHOME:
+      case KEY.SHIFTUP:
+        if (this.inputIndex >= this.columns) {
+          this.inputIndex -= this.columns;
+          this.showPrompt();
+        }
+        break;
+      case KEY.ALTEND:
+      case KEY.SHIFTDOWN:
+        if (this.inputIndex <= this.visibleInputIndex - this.columns) {
+          this.inputIndex += this.columns;
+          this.showPrompt();
+        }
+        break;
+      case KEY.LEFT:
+      case KEY.SHIFTLEFT:
         if (this.inputIndex > 0) {
           this.inputIndex--;
           this.showPrompt();
         }
         break;
-      case CTRL.RIGHT:
+      case KEY.RIGHT:
+      case KEY.SHIFTRIGHT:
         if (this.inputIndex < this.visibleInputIndex) {
           this.inputIndex++;
           this.showPrompt();
         }
         break;
-      case CTRL.DOWN:
+      case KEY.DOWN:
         if (this.historyIndex > 0) {
           this.historyIndex--;
-          this.recall();
+          this.pop();
         }
         break;
-      case CTRL.UP:
+      case KEY.UP:
+        if (this.historyIndex === 0) {
+          this.push();
+          this.historyIndex++;
+        }
         if (this.historyIndex < this.history.length) {
           this.historyIndex++;
-          this.recall();
+          this.pop();
         }
         break;
       default:
-        if (data.length < MAX_INPUT) {
-          const target = data.replace(/[^\P{Cc}]/gsu, "");
+        if (/(?:\r\n|[\r\n])/s.test(data)) {
+          this.executeQuery(data);
+          break;
+        }
+        if (data.length < CONF.MAX_INPUT) {
+          const target = data.replace(/[^\P{Cc}]/gsu, ANSI.EMPTY);
           this.input.splice(this.inputIndex, 0, ...target);
           this.updateInputIndex(target);
           this.showPrompt();
         }
         break;
     }
+  }
+
+  clearHistory() {
+    this.history = [];
+    this.historyIndex = 0;
   }
 
   start() {
