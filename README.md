@@ -837,6 +837,7 @@ To update kdb VS Code settings, search for **kdb** from _Preferences_ > _Setting
 | **Refactoring**                                                | Choose refactoring scope                                            |
 | **QHOME directory for q runtime**                              | Display location path of q installation                             |
 | **Servers**                                                    | [edit JSON settings](#servers)                                      |
+| **Auto focus output on entry**                                 | yes/no; default yes
 
 ### Refactoring
 
@@ -917,6 +918,12 @@ The following setting changes double click behavior to select the whole identifi
     "editor.wordSeparators": "`~!@#$%^&*()-=+[{]}\\|;:'\",<>/?"
   }
 ```
+
+### Auto focus output on entry
+
+This setting automatically focuses the output console when running a query without an active results tab or receive log entry. This means that, when the setting is enabled, executing a query shows the q console in the output window even if the q console is not open in the output window.
+
+You can disable this option at any time in **Settings** if you do not want to auto-focus.
 
 ## Help and feedback
 
