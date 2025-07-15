@@ -73,6 +73,7 @@ const CONF = {
 type Callable = () => void;
 
 export class ReplConnection {
+  private readonly history = new History();
   private readonly identity = crypto.randomUUID();
   private readonly token = new RegExp(
     ANSI.QUOTE +
@@ -94,15 +95,12 @@ export class ReplConnection {
   private messages: string[] = [];
   private buffer: string[] = [];
   private input: string[] = [];
-  private history: string[] = [];
   private executions?: Callable[] = [];
 
   private _context = CTX.Q;
   private _namespace = ANSI.EMPTY;
   private columns = 0;
   private rows = 0;
-
-  private historyIndex = 0;
   private maxInputIndex = 0;
   private inputIndex = 0;
 
@@ -323,24 +321,12 @@ export class ReplConnection {
     if (ext.autoFocusOutputOnEntry) this.terminal.show();
   }
 
-  private push(reset = false) {
-    const input = this.inputText;
-    if (input) {
-      const top = this.history[this.history.length - 1];
-      if (top && top === input) return;
-      this.history.push(input);
-      if (reset) this.historyIndex = 0;
-    }
-  }
-
-  private pop() {
-    const input = this.history[this.history.length - this.historyIndex];
-    if (input) {
-      this.input = [...input];
-      this.inputIndex = 0;
-      this.updateInputIndex(input);
-      this.showPrompt();
-    }
+  private recall(history?: HistoryItem) {
+    const input = history?.input || ANSI.EMPTY;
+    this.input = [...input];
+    this.inputIndex = 0;
+    this.updateInputIndex(input);
+    this.showPrompt();
   }
 
   private handleError(error: Error) {
@@ -414,12 +400,13 @@ export class ReplConnection {
             this.context = this.context === CTX.K ? CTX.Q : CTX.K;
           }
           this.sendToProcess(input);
-          this.push(true);
+          this.history.push(new HistoryItem(input));
           this.inputIndex = this.visibleInputIndex;
           this.showPrompt();
         } else {
           this.sendToProcess(ANSI.EMPTY);
         }
+        this.history.reset();
         this.sendToTerminal(ANSI.CRLF);
         break;
       case KEY.BS:
@@ -473,20 +460,10 @@ export class ReplConnection {
         }
         break;
       case KEY.DOWN:
-        if (this.historyIndex > 0) {
-          this.historyIndex--;
-          this.pop();
-        }
+        this.recall(this.history.prev);
         break;
       case KEY.UP:
-        if (this.historyIndex === 0) {
-          this.push();
-          this.historyIndex++;
-        }
-        if (this.historyIndex < this.history.length) {
-          this.historyIndex++;
-          this.pop();
-        }
+        this.recall(this.history.next);
         break;
       default:
         if (/(?:\r\n|[\r\n])/s.test(data)) {
@@ -504,8 +481,7 @@ export class ReplConnection {
   }
 
   clearHistory() {
-    this.history = [];
-    this.historyIndex = 0;
+    this.history.clear();
   }
 
   start() {
@@ -532,5 +508,42 @@ export class ReplConnection {
       this.instance = new ReplConnection();
     }
     return this.instance;
+  }
+}
+
+class HistoryItem {
+  prev?: HistoryItem;
+  next?: HistoryItem;
+  constructor(readonly input: string) {}
+}
+
+class History {
+  private head?: HistoryItem;
+  private item?: HistoryItem;
+
+  push(item: HistoryItem) {
+    if (this.head) {
+      item.next = this.head;
+      this.head.prev = item;
+    }
+    this.head = item;
+  }
+
+  get next() {
+    this.item = this.item === undefined ? this.head : this.item.next;
+    return this.item;
+  }
+
+  get prev() {
+    this.item = this.item === undefined ? this.head : this.item.prev;
+    return this.item;
+  }
+
+  reset() {
+    this.item = undefined;
+  }
+
+  clear() {
+    this.head = undefined;
   }
 }
