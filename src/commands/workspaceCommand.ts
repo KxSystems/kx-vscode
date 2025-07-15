@@ -28,6 +28,9 @@ import {
 
 import { ext } from "../extensionVariables";
 import { resetScratchpad, runQuery } from "./serverCommand";
+import { InsightsConnection } from "../classes/insightsConnection";
+import { LocalConnection } from "../classes/localConnection";
+import { ReplConnection } from "../classes/replConnection";
 import { ExecutionTypes } from "../models/execution";
 import { MetaDap } from "../models/meta";
 import { ConnectionManagementService } from "../services/connectionManagerService";
@@ -36,7 +39,7 @@ import { updateCellMetadata } from "../services/notebookProviders";
 import { getBasename, offerConnectAction } from "../utils/core";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
 import { MessageKind, notify, Runner } from "../utils/notifications";
-import { normalizeAssemblyTarget } from "../utils/shared";
+import { errorMessage, normalizeAssemblyTarget } from "../utils/shared";
 
 const logger = "workspaceCommand";
 
@@ -157,7 +160,9 @@ export function getServerForUri(uri: Uri) {
   const server = map[relativePath(uri)];
   const servers = getServers();
 
-  return server && servers.includes(server) ? server : undefined;
+  return server && (server === ext.REPL || servers.includes(server))
+    ? server
+    : undefined;
 }
 
 export async function setTargetForUri(uri: Uri, target: string | undefined) {
@@ -192,7 +197,13 @@ export async function pickConnection(uri: Uri) {
   const server = getServerForUri(uri);
   const servers = getServers();
 
-  let picked = await window.showQuickPick(["(none)", ...servers], {
+  const items = ["(none)"];
+  if (isQ(uri)) {
+    items.push(ext.REPL);
+  }
+  items.push(...servers);
+
+  let picked = await window.showQuickPick(items, {
     title: `Choose Connection (${getBasename(uri)})`,
     placeHolder: server,
   });
@@ -210,7 +221,6 @@ export async function pickConnection(uri: Uri) {
     }
     await setServerForUri(uri, picked);
   }
-
   return picked;
 }
 
@@ -277,6 +287,10 @@ function isSql(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".sql");
 }
 
+function isQ(uri: Uri | undefined) {
+  return uri && uri.path.endsWith(".q");
+}
+
 function isPython(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".py");
 }
@@ -289,46 +303,73 @@ function isDataSource(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".kdb.json");
 }
 
-/* istanbul ignore next */
 function isKxFolder(uri: Uri | undefined) {
   return uri && Path.basename(uri.path) === ".kx";
 }
 
+export async function startRepl() {
+  try {
+    ReplConnection.getOrCreateInstance().start();
+  } catch (error) {
+    notify(errorMessage(error), MessageKind.ERROR, {
+      logger,
+      params: error,
+    });
+  }
+}
+
+export async function runOnRepl(editor: TextEditor, type: ExecutionTypes) {
+  const basename = getBasename(editor.document.uri);
+
+  let text: string;
+
+  if (type === ExecutionTypes.QueryFile) {
+    text = editor.document.getText();
+  } else if (type === ExecutionTypes.QuerySelection) {
+    text = editor.document.getText(editor.selection);
+  } else {
+    notify(
+      `Executing ${basename} on ${ext.REPL} is not supported.`,
+      MessageKind.ERROR,
+      { logger },
+    );
+    return;
+  }
+
+  try {
+    const runner = Runner.create(async () => {
+      ReplConnection.getOrCreateInstance().executeQuery(text);
+    });
+    runner.title = `Executing ${basename} on ${ext.REPL}.`;
+    await runner.execute();
+  } catch (error) {
+    notify(errorMessage(error), MessageKind.ERROR, {
+      logger,
+      params: error,
+    });
+  }
+}
+
 export async function runActiveEditor(type?: ExecutionTypes) {
   if (ext.activeTextEditor) {
-    const connMngService = new ConnectionManagementService();
     const uri = ext.activeTextEditor.document.uri;
-
-    let isInsights = false;
-    let server = getServerForUri(uri) || "";
-
-    if (server) {
-      const conn = await getConnectionForServer(server);
-      if (conn) {
-        isInsights = conn instanceof InsightsNode;
-        server = conn.label;
-        if (!connMngService.isConnected(server)) {
-          offerConnectAction(server);
-          return;
-        }
-      } else {
-        notify(`Connection ${server} not found.`, MessageKind.ERROR, {
-          logger,
-        });
-        return;
-      }
-    } else if (ext.activeConnection === undefined) {
-      offerConnectAction();
+    if (getServerForUri(uri) === ext.REPL) {
+      runOnRepl(ext.activeTextEditor, ExecutionTypes.QueryFile);
+      return;
+    }
+    const conn = await findConnection(uri);
+    if (!conn) {
       return;
     }
 
+    const isInsights = conn instanceof InsightsConnection;
     const executorName = getBasename(ext.activeTextEditor.document.uri);
     const target = isInsights ? getTargetForUri(uri) : undefined;
     const isSql = executorName.endsWith(".sql");
 
     if (isSql && !isInsights) {
       notify(
-        `SQL execution is not supported on ${server || "active connection"}.`,
+        `SQL execution is not supported on ${conn.connLabel}.`,
         MessageKind.ERROR,
         { logger },
       );
@@ -337,7 +378,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
 
     if (type === ExecutionTypes.PopulateScratchpad && !isInsights) {
       notify(
-        `Populating scratchpad is not supported on ${server || "active connection"}.`,
+        `Populating scratchpad is not supported on ${conn.connLabel}.`,
         MessageKind.ERROR,
         { logger },
       );
@@ -351,7 +392,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
             ? ExecutionTypes.PythonQueryFile
             : ExecutionTypes.QueryFile
           : type,
-        server || ext.activeConnection?.connLabel || "",
+        conn.connLabel,
         executorName,
         !isPython(uri),
         undefined,
@@ -360,7 +401,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
       );
     } catch (error) {
       notify(
-        `Executing ${executorName} on ${server} failed.`,
+        `Executing ${executorName} on ${conn.connLabel} failed.`,
         MessageKind.ERROR,
         {
           logger,
@@ -496,4 +537,34 @@ export async function importOldDSFiles() {
       logger,
     });
   }
+}
+
+export async function findConnection(uri: Uri) {
+  const connMngService = new ConnectionManagementService();
+
+  let conn: InsightsConnection | LocalConnection | undefined;
+  let server = getServerForUri(uri) ?? "";
+
+  if (server) {
+    const node = await getConnectionForServer(server);
+    if (node) {
+      server = node.label;
+      conn = connMngService.retrieveConnectedConnection(server);
+      if (conn === undefined) {
+        offerConnectAction(server);
+        return;
+      }
+    } else {
+      notify(`Connection ${server} not found.`, MessageKind.ERROR, {
+        logger,
+      });
+      return;
+    }
+  } else if (ext.activeConnection) {
+    conn = ext.activeConnection;
+  } else {
+    offerConnectAction();
+    return;
+  }
+  return conn;
 }

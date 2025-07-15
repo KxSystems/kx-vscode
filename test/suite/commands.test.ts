@@ -19,6 +19,7 @@ import { LanguageClient } from "vscode-languageclient/node";
 
 import { InsightsConnection } from "../../src/classes/insightsConnection";
 import { LocalConnection } from "../../src/classes/localConnection";
+import { ReplConnection } from "../../src/classes/replConnection";
 import * as clientCommand from "../../src/commands/clientCommands";
 import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
 import * as installTools from "../../src/commands/installTools";
@@ -2833,7 +2834,6 @@ describe("workspaceCommand", () => {
   });
   describe("checkOldDatasourceFiles", () => {
     let oldFilesExistsStub: sinon.SinonStub;
-
     beforeEach(() => {
       oldFilesExistsStub = sinon.stub(dataSourceUtils, "oldFilesExists");
     });
@@ -2915,6 +2915,54 @@ describe("workspaceCommand", () => {
         "[workspaceCommand] User cancelled the old DS files import.",
         "DEBUG",
       );
+    });
+    describe("runOnRepl", () => {
+      const editor = <vscode.TextEditor>{
+        document: {
+          uri: kdbUri,
+          getText() {
+            return "a:1;a";
+          },
+        },
+        selection: new vscode.Range(0, 0, 0, 0),
+      };
+      let notifyStub: sinon.SinonStub;
+      let executeStub: sinon.SinonStub;
+      beforeEach(() => {
+        notifyStub = sinon.stub(notifications, "notify");
+        executeStub = sinon.stub(notifications.Runner.prototype, "execute");
+      });
+      it("should execute q file", async () => {
+        await workspaceCommand.runOnRepl(editor, ExecutionTypes.QueryFile);
+        sinon.assert.calledOnce(executeStub);
+      });
+      it("should execute q selection", async () => {
+        await workspaceCommand.runOnRepl(editor, ExecutionTypes.QuerySelection);
+        sinon.assert.calledOnce(executeStub);
+      });
+      it("should notify for other execution types", async () => {
+        await workspaceCommand.runOnRepl(
+          editor,
+          ExecutionTypes.PopulateScratchpad,
+        );
+        sinon.assert.calledOnce(notifyStub);
+      });
+      it("should notify execution error", async () => {
+        executeStub.rejects(new Error("Test"));
+        await workspaceCommand.runOnRepl(editor, ExecutionTypes.QueryFile);
+        sinon.assert.calledOnce(notifyStub);
+      });
+      describe("startRepl", () => {
+        const conn = <ReplConnection>{ start() {} };
+        beforeEach(() => {
+          sinon.stub(ReplConnection, "getOrCreateInstance").returns(conn);
+        });
+        it("should notify error", async () => {
+          sinon.stub(conn, "start").throws(new Error("Test"));
+          await workspaceCommand.startRepl();
+          sinon.assert.calledOnce(notifyStub);
+        });
+      });
     });
   });
 

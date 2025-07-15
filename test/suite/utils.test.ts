@@ -56,6 +56,7 @@ import { feedbackSurveyDialog } from "../../src/utils/feedbackSurveyUtils";
 import { getNonce } from "../../src/utils/getNonce";
 import { getUri } from "../../src/utils/getUri";
 import * as loggers from "../../src/utils/loggers";
+import * as notifications from "../../src/utils/notifications";
 import { openUrl } from "../../src/utils/openUrl";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { showRegistrationNotification } from "../../src/utils/registration";
@@ -68,7 +69,6 @@ import {
   showQuickPick,
 } from "../../src/utils/userInteraction";
 import { validateUtils } from "../../src/utils/validateUtils";
-import * as notifications from "../../src/utils/notifications";
 
 interface ITestItem extends vscode.QuickPickItem {
   id: number;
@@ -1047,6 +1047,23 @@ describe("Utils", () => {
         assert.ok(fullInsight);
         assert.strictEqual(fullInsight.realm, "full-realm");
         assert.strictEqual(fullInsight.insecure, true);
+      });
+    });
+
+    describe("getQExecutablePath", () => {
+      it("should return path", () => {
+        ext.REAL_QHOME = "QHOME";
+        const res = coreUtils.getQExecutablePath();
+        assert.ok(res);
+      });
+      it("should throw when env vars are not set", () => {
+        ext.REAL_QHOME = "";
+        assert.throws(
+          () => coreUtils.getQExecutablePath(),
+          new Error(
+            "Neither QHOME environment variable nor qHomeDirectory is set.",
+          ),
+        );
       });
     });
   });
@@ -2054,9 +2071,9 @@ describe("Utils", () => {
         assert.strictEqual(res, "a:1");
       });
       it("should remove block comment", () => {
-        let res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\n\\a:1");
+        let res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\n\\\na:1");
         assert.strictEqual(res, "a:1");
-        res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\r\n\\a:1");
+        res = queryUtils.sanitizeQsqlQuery("/\r\nBlock Comment\r\n\\\r\na:1");
         assert.strictEqual(res, "a:1");
       });
       it("should remove single line comment", () => {
@@ -2079,11 +2096,11 @@ describe("Utils", () => {
         res = queryUtils.sanitizeQsqlQuery("a:1\r\na");
         assert.strictEqual(res, "a:1;a");
       });
-      it("should not replace continuation with semicolon", () => {
+      it("should escpae new lines in strings", () => {
         let res = queryUtils.sanitizeQsqlQuery('a:"a\n \nb"');
-        assert.strictEqual(res, 'a:"a\n \nb"');
+        assert.strictEqual(res, 'a:"a\\n \\nb"');
         res = queryUtils.sanitizeQsqlQuery('a:"a\r\n \r\nb"');
-        assert.strictEqual(res, 'a:"a\r\n \r\nb"');
+        assert.strictEqual(res, 'a:"a\\n \\nb"');
       });
     });
 
@@ -2156,6 +2173,19 @@ describe("Utils", () => {
           ...img.map((v) => `${v}\r`),
         ]);
         assert.ok(result);
+      });
+    });
+
+    describe("normalizeQuery", () => {
+      it("should return normalized query under query limit", () => {
+        const query = "1234567890".repeat(25000);
+        const res = queryUtils.normalizeQuery(query);
+        assert.strictEqual(res, query);
+      });
+      it("should return empty query when limit reached", () => {
+        const query = "1234567890".repeat(25000) + "1";
+        const res = queryUtils.normalizeQuery(query);
+        assert.strictEqual(res, "");
       });
     });
   });
