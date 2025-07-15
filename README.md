@@ -451,6 +451,16 @@ When executing Python code against kdb+ connections, **note** the following:
 
 Similarly, you can execute arbitrary code against **kdb Insights Enterprise**. The code is executed on a user-specific scratchpad process within the **kdb Insights Enterprise deploy**. The scratchpad is instantiated upon the first request to execute code when connected to a **kdb Insights Enterprise** connection. It remains active until timed out or until you log out.
 
+### Concurrent code execution and querying
+
+kdb VSCode now allows users to target specific replicas within the RDB, IDB, and HDB tiers when executing queries. To select a replica for query execution, simply choose the desired tier (RDB, IDB, HDB) and then select the specific replica from the list of available options, such as `demo-ui-fx rdb-0`, `demo-ui-fx idb-1`. Once selected, queries execute on that specific replica, ensuring better load distribution and minimizing execution time across the cluster.
+
+Within each tier, multiple processes are available to handle queries, ensuring that queries can be run simultaneously across these processes. For example, if the RDB tier has three processes (process 0, process 1, process 2), queries are directed to whichever process is available, allowing multiple users to execute their queries in parallel. As soon as a process becomes available, it handles the next incoming query, ensuring efficient resource utilization and minimal delays.
+
+when connecting to a kdb Insights server version 1.14.2 or higher, you can now see detailed information about the available replicas for each database (RDB, IDB, HDB). This allows you to choose a specific replica for your query.
+
+If you are connecting to an older kdb Insights version (1.14.1 or lower), replica information is not available. However, you can still run queries on a general group of databases (RDB, IDB, HDB), but don’t have the option to target a specific replica. This ensures that the feature works even if you are using older versions of Insights.
+
 ## Data sources
 
 KX data source files allow you to build queries within VS Code, associate them with a connection and run them against the [kdb Insights Enterprise API endpoints](https://code.kx.com/insights/api/index.html). These are workspace specific files that have the following features:
