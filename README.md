@@ -714,15 +714,19 @@ From this view, you can add either Markdown or Code blocks to the notebook by cl
 
 ![Add code blocks to notebook](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/add-notebook-code.png)
 
-To change the language of the code block, click on the language labels and select language from the Command Palette.
+In KX Notebooks, you can select a target and a variable name to populate the Scratchpad. When you select a connection, clicking on the Scratchpad tab displays a list where you can change between the Scratchpad and one of the DAPs (RDB, IDB, or HDB). Note that this functionality currently works for `q` only.
 
-![Select notebook language](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/select-notebook-language.png)
+Next to the Scratchpad tab, there is a language option. To change the language of the code block, click on the language labels and select language from the Command Palette. You can select between q, Python, Markdown, or MS SQL.
+
+When selecting a variable, the default option is **(none)**. You can click on **(none)** and enter a variable name, such as `mydata`. If you execute this, it populates the scratchpad with the variable. You can also choose a different tier to run the query and populate the scratchpad accordingly. If you don't enter any variable, only the results are displayed.
 
 ### Execute code blocks
 
 Code blocks are executed using the active KX connection, and the results are displayed inline next to the code block. The execution state is preserved across code blocks, similar to Jupyter notebooks, allowing for progressive data analysis.
 
 ![See notebook data](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/notebook-data.png)
+
+You can run SQL queries on a tier and populate the Scratchpad with the SQL results. This functionality connects to the Q SQL endpoint and imports the data into the Scratchpad as a variable. Although Python is supported in KX Notebooks, Python execution on the DAPs (RDB, IDB, HDB) is not yet supported, so Python can only be executed outside the Data Access Process (DAP).
 
 KX Notebooks detect [GGPlot2](#grammar-of-graphics) outputs. If the execution generates a plot, it is displayed inline for both q and PyKX.
 
