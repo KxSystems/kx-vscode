@@ -837,7 +837,7 @@ To update kdb VS Code settings, search for **kdb** from _Preferences_ > _Setting
 | **Refactoring**                                                | Choose refactoring scope                                            |
 | **QHOME directory for q runtime**                              | Display location path of q installation                             |
 | **Servers**                                                    | [edit JSON settings](#servers)                                      |
-| **Auto focus output on entry**                                 | yes/no; default yes
+| **Auto focus output on entry**                                 | yes/no; default yes                                                 |
 
 ### Refactoring
 
