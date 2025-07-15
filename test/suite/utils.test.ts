@@ -56,6 +56,7 @@ import { feedbackSurveyDialog } from "../../src/utils/feedbackSurveyUtils";
 import { getNonce } from "../../src/utils/getNonce";
 import { getUri } from "../../src/utils/getUri";
 import * as loggers from "../../src/utils/loggers";
+import * as notifications from "../../src/utils/notifications";
 import { openUrl } from "../../src/utils/openUrl";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { showRegistrationNotification } from "../../src/utils/registration";
@@ -1046,6 +1047,23 @@ describe("Utils", () => {
         assert.ok(fullInsight);
         assert.strictEqual(fullInsight.realm, "full-realm");
         assert.strictEqual(fullInsight.insecure, true);
+      });
+    });
+
+    describe("getQExecutablePath", () => {
+      it("should return path", () => {
+        ext.REAL_QHOME = "QHOME";
+        const res = coreUtils.getQExecutablePath();
+        assert.ok(res);
+      });
+      it("should throw when env vars are not set", () => {
+        ext.REAL_QHOME = "";
+        assert.throws(
+          () => coreUtils.getQExecutablePath(),
+          new Error(
+            "Neither QHOME environment variable nor qHomeDirectory is set.",
+          ),
+        );
       });
     });
   });
@@ -2053,9 +2071,9 @@ describe("Utils", () => {
         assert.strictEqual(res, "a:1");
       });
       it("should remove block comment", () => {
-        let res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\n\\a:1");
+        let res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\n\\\na:1");
         assert.strictEqual(res, "a:1");
-        res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\r\n\\a:1");
+        res = queryUtils.sanitizeQsqlQuery("/\r\nBlock Comment\r\n\\\r\na:1");
         assert.strictEqual(res, "a:1");
       });
       it("should remove single line comment", () => {
@@ -2078,11 +2096,11 @@ describe("Utils", () => {
         res = queryUtils.sanitizeQsqlQuery("a:1\r\na");
         assert.strictEqual(res, "a:1;a");
       });
-      it("should not replace continuation with semicolon", () => {
+      it("should escpae new lines in strings", () => {
         let res = queryUtils.sanitizeQsqlQuery('a:"a\n \nb"');
-        assert.strictEqual(res, 'a:"a\n \nb"');
+        assert.strictEqual(res, 'a:"a\\n \\nb"');
         res = queryUtils.sanitizeQsqlQuery('a:"a\r\n \r\nb"');
-        assert.strictEqual(res, 'a:"a\r\n \r\nb"');
+        assert.strictEqual(res, 'a:"a\\n \\nb"');
       });
     });
 
@@ -2155,6 +2173,19 @@ describe("Utils", () => {
           ...img.map((v) => `${v}\r`),
         ]);
         assert.ok(result);
+      });
+    });
+
+    describe("normalizeQuery", () => {
+      it("should return normalized query under query limit", () => {
+        const query = "1234567890".repeat(25000);
+        const res = queryUtils.normalizeQuery(query);
+        assert.strictEqual(res, query);
+      });
+      it("should return empty query when limit reached", () => {
+        const query = "1234567890".repeat(25000) + "1";
+        const res = queryUtils.normalizeQuery(query);
+        assert.strictEqual(res, "");
       });
     });
   });
@@ -2747,6 +2778,247 @@ describe("Utils", () => {
       assert.strictEqual(stats.Magenta, 0);
       assert.strictEqual(stats.Cyan, 0);
     });
+
+    describe("clearWorkspaceLabels", () => {
+      let notifyStub: sinon.SinonStub;
+      let updateStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        notifyStub = sinon.stub(notifications, "notify");
+        updateStub = sinon.stub();
+        ext.connLabelList.length = 0;
+        ext.labelConnMapList.length = 0;
+      });
+
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("should clear all connection mappings when no labels exist", () => {
+        const getStub = sinon.stub();
+        getStub.withArgs("kdb.connectionLabels").returns([]);
+        getStub.withArgs("kdb.labelsConnectionMap").returns([
+          { labelName: "nonexistent1", connections: ["conn1"] },
+          { labelName: "nonexistent2", connections: ["conn2"] },
+        ]);
+
+        getConfigurationStub.returns({
+          get: getStub,
+          update: updateStub,
+        });
+
+        LabelsUtils.clearWorkspaceLabels();
+
+        sinon.assert.calledWith(
+          notifyStub,
+          "Cleaning connection mappings for nonexistent labels.",
+          notifications.MessageKind.DEBUG,
+          {
+            logger: "connLabel",
+            telemetry: "Label.Cleanup.NoLabels",
+          },
+        );
+
+        sinon.assert.calledWith(
+          updateStub,
+          "kdb.labelsConnectionMap",
+          [],
+          true,
+        );
+      });
+
+      it("should remove orphaned label connection mappings", () => {
+        const validLabels = [
+          { name: "label1", color: { name: "Red", colorHex: "#FF0000" } },
+          { name: "label2", color: { name: "Blue", colorHex: "#0000FF" } },
+        ];
+
+        const connectionMappings = [
+          { labelName: "label1", connections: ["conn1", "conn2"] },
+          { labelName: "orphaned1", connections: ["conn3"] },
+          { labelName: "label2", connections: ["conn4"] },
+          { labelName: "orphaned2", connections: ["conn5", "conn6"] },
+        ];
+
+        const getStub = sinon.stub();
+        getStub.withArgs("kdb.connectionLabels").returns(validLabels);
+        getStub.withArgs("kdb.labelsConnectionMap").returns(connectionMappings);
+
+        getConfigurationStub.returns({
+          get: getStub,
+          update: updateStub,
+        });
+
+        LabelsUtils.clearWorkspaceLabels();
+
+        assert.strictEqual(ext.labelConnMapList.length, 2);
+        assert.deepStrictEqual(ext.labelConnMapList, [
+          { labelName: "label1", connections: ["conn1", "conn2"] },
+          { labelName: "label2", connections: ["conn4"] },
+        ]);
+
+        sinon.assert.calledWith(
+          notifyStub,
+          "Removed 2 orphaned label connection mappings.",
+          notifications.MessageKind.DEBUG,
+          {
+            logger: "connLabel",
+            telemetry: "Label.Cleanup.OrphanedMappings",
+            measurements: { removedMappings: 2 },
+          },
+        );
+
+        sinon.assert.calledWith(
+          updateStub,
+          "kdb.labelsConnectionMap",
+          ext.labelConnMapList,
+          true,
+        );
+      });
+
+      it("should remove single orphaned label connection mapping", () => {
+        const validLabels = [
+          { name: "label1", color: { name: "Red", colorHex: "#FF0000" } },
+        ];
+
+        const connectionMappings = [
+          { labelName: "label1", connections: ["conn1"] },
+          { labelName: "orphaned1", connections: ["conn2"] },
+        ];
+
+        const getStub = sinon.stub();
+        getStub.withArgs("kdb.connectionLabels").returns(validLabels);
+        getStub.withArgs("kdb.labelsConnectionMap").returns(connectionMappings);
+
+        getConfigurationStub.returns({
+          get: getStub,
+          update: updateStub,
+        });
+
+        LabelsUtils.clearWorkspaceLabels();
+
+        assert.strictEqual(ext.labelConnMapList.length, 1);
+        assert.deepStrictEqual(ext.labelConnMapList, [
+          { labelName: "label1", connections: ["conn1"] },
+        ]);
+
+        sinon.assert.calledWith(
+          notifyStub,
+          "Removed 1 orphaned label connection mapping.",
+          notifications.MessageKind.DEBUG,
+          {
+            logger: "connLabel",
+            telemetry: "Label.Cleanup.OrphanedMappings",
+            measurements: { removedMappings: 1 },
+          },
+        );
+      });
+
+      it("should not remove anything when all mappings are valid", () => {
+        const validLabels = [
+          { name: "label1", color: { name: "Red", colorHex: "#FF0000" } },
+          { name: "label2", color: { name: "Blue", colorHex: "#0000FF" } },
+        ];
+
+        const connectionMappings = [
+          { labelName: "label1", connections: ["conn1"] },
+          { labelName: "label2", connections: ["conn2"] },
+        ];
+
+        const getStub = sinon.stub();
+        getStub.withArgs("kdb.connectionLabels").returns(validLabels);
+        getStub.withArgs("kdb.labelsConnectionMap").returns(connectionMappings);
+
+        getConfigurationStub.returns({
+          get: getStub,
+          update: updateStub,
+        });
+
+        LabelsUtils.clearWorkspaceLabels();
+
+        assert.strictEqual(ext.labelConnMapList.length, 2);
+        assert.deepStrictEqual(ext.labelConnMapList, connectionMappings);
+
+        sinon.assert.neverCalledWith(
+          notifyStub,
+          sinon.match.string,
+          notifications.MessageKind.DEBUG,
+          sinon.match.has("telemetry", "Label.Cleanup.OrphanedMappings"),
+        );
+
+        sinon.assert.neverCalledWith(
+          updateStub,
+          "kdb.labelsConnectionMap",
+          sinon.match.array,
+          true,
+        );
+      });
+
+      it("should handle empty connection mappings", () => {
+        const validLabels = [
+          { name: "label1", color: { name: "Red", colorHex: "#FF0000" } },
+        ];
+
+        const getStub = sinon.stub();
+        getStub.withArgs("kdb.connectionLabels").returns(validLabels);
+        getStub.withArgs("kdb.labelsConnectionMap").returns([]);
+
+        getConfigurationStub.returns({
+          get: getStub,
+          update: updateStub,
+        });
+
+        LabelsUtils.clearWorkspaceLabels();
+
+        assert.strictEqual(ext.labelConnMapList.length, 0);
+
+        sinon.assert.neverCalledWith(
+          notifyStub,
+          sinon.match.string,
+          notifications.MessageKind.DEBUG,
+        );
+
+        sinon.assert.notCalled(updateStub);
+      });
+
+      it("should handle case-sensitive label name matching", () => {
+        const validLabels = [
+          { name: "Label1", color: { name: "Red", colorHex: "#FF0000" } },
+        ];
+
+        const connectionMappings = [
+          { labelName: "Label1", connections: ["conn1"] },
+          { labelName: "label1", connections: ["conn2"] },
+          { labelName: "LABEL1", connections: ["conn3"] },
+        ];
+
+        const getStub = sinon.stub();
+        getStub.withArgs("kdb.connectionLabels").returns(validLabels);
+        getStub.withArgs("kdb.labelsConnectionMap").returns(connectionMappings);
+
+        getConfigurationStub.returns({
+          get: getStub,
+          update: updateStub,
+        });
+
+        LabelsUtils.clearWorkspaceLabels();
+
+        assert.strictEqual(ext.labelConnMapList.length, 1);
+        assert.strictEqual(ext.labelConnMapList[0].labelName, "Label1");
+
+        sinon.assert.calledWith(
+          notifyStub,
+          "Removed 2 orphaned label connection mappings.",
+          notifications.MessageKind.DEBUG,
+          {
+            logger: "connLabel",
+            telemetry: "Label.Cleanup.OrphanedMappings",
+            measurements: { removedMappings: 2 },
+          },
+        );
+      });
+    });
+
     describe("isLabelEmpty", () => {
       beforeEach(() => {
         ext.labelConnMapList.length = 0;

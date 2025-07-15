@@ -180,15 +180,39 @@ export function getOsFile(): string | undefined {
   }
 }
 
-export function getPlatformFolder(platform: string): string | undefined {
+export function getPlatformFolder(
+  platform: string,
+  arch?: string,
+): string | undefined {
   if (platform === "win32") {
     return "w64";
   } else if (platform === "darwin") {
     return "m64";
   } else if (platform === "linux") {
-    return "l64";
+    return arch === "arm64" ? "l64arm" : "l64";
   }
   return undefined;
+}
+
+export function getQExecutablePath() {
+  const folder = getPlatformFolder(process.platform, process.arch);
+  if (!folder) {
+    throw new Error(
+      `Unsupported platform (${process.platform}) or architecture (${process.arch}).`,
+    );
+  }
+
+  const home =
+    ext.REAL_QHOME ??
+    workspace.getConfiguration("kdb").get<string>("qHomeDirectory", "");
+
+  if (home) {
+    return path.join(home, folder, "q");
+  }
+
+  throw new Error(
+    `Neither QHOME environment variable nor qHomeDirectory is set.`,
+  );
 }
 
 export async function getWorkspaceFolder(
@@ -488,6 +512,7 @@ export async function checkLocalInstall(
     }
   }
   if (QHOME || env.QHOME) {
+    // TODO 1: This is wrong, env vars should be read only.
     env.QHOME = QHOME || env.QHOME;
     if (!pathExists(env.QHOME!)) {
       notify("QHOME path stored is empty.", MessageKind.ERROR, { logger });

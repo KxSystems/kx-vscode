@@ -23,3 +23,7 @@ export function stripUnprintableChars(text: string): string {
     .replace(/\p{Co}/gu, "")
     .replace(/\p{Cn}/gu, "");
 }
+
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : `${error}`;
+}

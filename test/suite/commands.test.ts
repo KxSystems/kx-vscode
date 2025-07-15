@@ -19,6 +19,7 @@ import { LanguageClient } from "vscode-languageclient/node";
 
 import { InsightsConnection } from "../../src/classes/insightsConnection";
 import { LocalConnection } from "../../src/classes/localConnection";
+import { ReplConnection } from "../../src/classes/replConnection";
 import * as clientCommand from "../../src/commands/clientCommands";
 import * as dataSourceCommand from "../../src/commands/dataSourceCommand";
 import * as installTools from "../../src/commands/installTools";
@@ -58,6 +59,7 @@ import * as dsUtils from "../../src/utils/dataSource";
 import * as dataSourceUtils from "../../src/utils/dataSource";
 import { ExecutionConsole } from "../../src/utils/executionConsole";
 import * as loggers from "../../src/utils/loggers";
+import * as notifications from "../../src/utils/notifications";
 import * as queryUtils from "../../src/utils/queryUtils";
 import * as kdbValidators from "../../src/validators/kdbValidator";
 
@@ -2299,7 +2301,8 @@ describe("serverCommand", () => {
       getInsightsStub,
       removeLocalConnectionContextStub,
       updateServersStub,
-      refreshStub: sinon.SinonStub;
+      refreshStub,
+      notifyStub: sinon.SinonStub;
 
     beforeEach(() => {
       indexOfStub = sinon.stub(ext.connectedContextStrings, "indexOf");
@@ -2314,6 +2317,8 @@ describe("serverCommand", () => {
       );
       updateServersStub = sinon.stub(coreUtils, "updateServers");
       refreshStub = sinon.stub(ext.serverProvider, "refresh");
+
+      notifyStub = sinon.stub(notifications, "notify");
     });
 
     afterEach(() => {
@@ -2323,12 +2328,16 @@ describe("serverCommand", () => {
       ext.connectedContextStrings.length = 0;
     });
 
-    it("should remove connection and refresh server provider", async () => {
+    it("should remove connection and refresh server provider when user clicks Proceed", async () => {
+      notifyStub.resolves("Proceed");
+
       indexOfStub.returns(1);
       getServersStub.returns({ testKey: {} });
       getKeyStub.returns("testKey");
 
       await serverCommand.removeConnection(kdbNode);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       assert.ok(
         removeLocalConnectionContextStub.calledWith(
@@ -2339,24 +2348,65 @@ describe("serverCommand", () => {
       assert.ok(refreshStub.calledOnce);
     });
 
-    it("should remove connection, but disconnect it before", async () => {
+    it("should remove connection, but disconnect it before when user clicks Proceed", async () => {
+      notifyStub.resolves("Proceed");
+
       ext.connectedContextStrings.push(kdbNode.label);
       indexOfStub.returns(1);
       getServersStub.returns({ testKey: {} });
       getKeyStub.returns("testKey");
 
       await serverCommand.removeConnection(kdbNode);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
       assert.ok(updateServersStub.calledOnce);
     });
-    it("should remove connection Insights, but disconnect it before", async () => {
+
+    it("should remove connection Insights, but disconnect it before when user clicks Proceed", async () => {
+      notifyStub.resolves("Proceed");
+
       ext.connectedContextStrings.push(insightsNode.label);
       indexOfStub.returns(1);
       getInsightsStub.returns({ testKey: {} });
       getHashStub.returns("testKey");
 
       await serverCommand.removeConnection(insightsNode);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
       assert.ok(updateServersStub.notCalled);
     }).timeout(5000);
+
+    it("should not remove connection when user clicks Cancel", async () => {
+      notifyStub.resolves("Cancel");
+
+      getServersStub.returns({ testKey: {} });
+      getKeyStub.returns("testKey");
+
+      await serverCommand.removeConnection(kdbNode);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      assert.ok(removeLocalConnectionContextStub.notCalled);
+      assert.ok(updateServersStub.notCalled);
+      assert.ok(refreshStub.notCalled);
+    });
+
+    it("should not remove connection when user dismisses dialog", async () => {
+      notifyStub.resolves(undefined);
+
+      getServersStub.returns({ testKey: {} });
+      getKeyStub.returns("testKey");
+
+      await serverCommand.removeConnection(kdbNode);
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      assert.ok(removeLocalConnectionContextStub.notCalled);
+      assert.ok(updateServersStub.notCalled);
+      assert.ok(refreshStub.notCalled);
+    });
   });
 
   describe("connect", () => {
@@ -2784,7 +2834,6 @@ describe("workspaceCommand", () => {
   });
   describe("checkOldDatasourceFiles", () => {
     let oldFilesExistsStub: sinon.SinonStub;
-
     beforeEach(() => {
       oldFilesExistsStub = sinon.stub(dataSourceUtils, "oldFilesExists");
     });
@@ -2866,6 +2915,54 @@ describe("workspaceCommand", () => {
         "[workspaceCommand] User cancelled the old DS files import.",
         "DEBUG",
       );
+    });
+    describe("runOnRepl", () => {
+      const editor = <vscode.TextEditor>{
+        document: {
+          uri: kdbUri,
+          getText() {
+            return "a:1;a";
+          },
+        },
+        selection: new vscode.Range(0, 0, 0, 0),
+      };
+      let notifyStub: sinon.SinonStub;
+      let executeStub: sinon.SinonStub;
+      beforeEach(() => {
+        notifyStub = sinon.stub(notifications, "notify");
+        executeStub = sinon.stub(notifications.Runner.prototype, "execute");
+      });
+      it("should execute q file", async () => {
+        await workspaceCommand.runOnRepl(editor, ExecutionTypes.QueryFile);
+        sinon.assert.calledOnce(executeStub);
+      });
+      it("should execute q selection", async () => {
+        await workspaceCommand.runOnRepl(editor, ExecutionTypes.QuerySelection);
+        sinon.assert.calledOnce(executeStub);
+      });
+      it("should notify for other execution types", async () => {
+        await workspaceCommand.runOnRepl(
+          editor,
+          ExecutionTypes.PopulateScratchpad,
+        );
+        sinon.assert.calledOnce(notifyStub);
+      });
+      it("should notify execution error", async () => {
+        executeStub.rejects(new Error("Test"));
+        await workspaceCommand.runOnRepl(editor, ExecutionTypes.QueryFile);
+        sinon.assert.calledOnce(notifyStub);
+      });
+      describe("startRepl", () => {
+        const conn = <ReplConnection>{ start() {} };
+        beforeEach(() => {
+          sinon.stub(ReplConnection, "getOrCreateInstance").returns(conn);
+        });
+        it("should notify error", async () => {
+          sinon.stub(conn, "start").throws(new Error("Test"));
+          await workspaceCommand.startRepl();
+          sinon.assert.calledOnce(notifyStub);
+        });
+      });
     });
   });
 

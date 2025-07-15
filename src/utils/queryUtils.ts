@@ -29,6 +29,8 @@ import { ScratchpadStacktrace } from "../models/scratchpadResult";
 
 const logger = "queryUtils";
 
+const QUERY_LIMIT = 250_000;
+
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {
     query = query + " ";
@@ -211,21 +213,52 @@ export function getValueFromArray(results: DCDS): any {
   return results;
 }
 
-export function sanitizeQsqlQuery(query: string): string {
+export function normalizeQuery(query: string): string {
+  if (query.length > QUERY_LIMIT) {
+    notify(`Query length limit (${QUERY_LIMIT}) reached.`, MessageKind.ERROR, {
+      logger,
+    });
+    return "";
+  }
   return (
     query
-      .trim()
       // Remove block comments
-      .replace(/^\/[^]*?^\\/gm, "")
+      .replace(/^\/[\t ]*$[^]*?^\\[\t ]*$/gm, "")
+      // Remove terminate comments
+      .replace(/^\\[\t ]*(?:\r\n|[\r\n])[^]*/gm, "")
       // Remove single line comments
-      .replace(/^\/.*\r?\n/gm, "")
+      .replace(/^\/.+/gm, "")
       // Remove line comments
       .replace(
         /(?:("([^"\\]*(?:\\.[^"\\]*)*)")|([ \t]+\/.*))/gm,
         (matched, isString) => (isString ? matched : ""),
       )
+      // Replace new lines in strings
+      .replace(/"(?:[^"\\]*(?:\\.[^"\\]*)*)"/gs, (matched) =>
+        matched.replace(/(?:\r\n|[\r\n])/gs, "\\n"),
+      )
+      // Remove none end of statement new lines
+      .replace(/(?:\r\n|[\r\n])+(?=[\t ])/gs, "")
+      // Normalize new lines
+      .replace(/(?:\r\n|[\r\n])+/gs, "\r\n")
+  );
+}
+
+export function sanitizeQsqlQuery(query: string): string {
+  return (
+    normalizeQuery(query)
+      // Replace system commands
+      .replace(/^\\([a-zA-Z_1-2\\]+)[\t ]*(.*)/gm, (matched, command, args) =>
+        matched === "\\\\"
+          ? 'system"\\\\"'
+          : `system"${command} ${args.trim()}"`,
+      )
       // Replace end of statements
-      .replace(/(?<![; \t]\s*)(?:\r\n|\n)+(?![ \t])/gs, ";")
+      .replace(/\r\n/gs, ";")
+      // Remove start of file
+      .replace(/^[;\s]+/gs, "")
+      // Remove end of file
+      .replace(/[;\s]+$/gs, "")
   );
 }
 
