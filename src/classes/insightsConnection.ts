@@ -218,7 +218,7 @@ export class InsightsConnection {
 
       notify("REST", MessageKind.DEBUG, {
         logger,
-        params: { url: metaUrl.toString(), data: options.data },
+        params: { url: metaUrl.toString() },
       });
 
       const metaResponse = await axios.post(metaUrl.toString(), {}, options);
@@ -252,7 +252,7 @@ export class InsightsConnection {
 
       notify("REST", MessageKind.DEBUG, {
         logger,
-        params: { url: options.url, data: options.data },
+        params: { url: options.url },
       });
 
       const configResponse = await axios(options);
@@ -280,7 +280,7 @@ export class InsightsConnection {
 
       notify("REST", MessageKind.DEBUG, {
         logger,
-        params: { url: options.url, data: options.data },
+        params: { url: options.url },
       });
 
       const configResponse = await axios(options);
@@ -414,7 +414,7 @@ export class InsightsConnection {
 
       notify("REST", MessageKind.DEBUG, {
         logger,
-        params: { url: options.url, data: options.data },
+        params: { url: options.url },
       });
 
       return await axios(options)
@@ -531,7 +531,7 @@ export class InsightsConnection {
 
       notify("REST", MessageKind.DEBUG, {
         logger,
-        params: { url: options.url, data: options.data },
+        params: { url: options.url },
       });
 
       return await axios(options).then((response: any) => {
@@ -541,7 +541,7 @@ export class InsightsConnection {
             silent ? MessageKind.DEBUG : MessageKind.ERROR,
             {
               logger,
-              params: response.data.errorMsg,
+              params: { status: response.status },
               telemetry:
                 "Datasource." + dsTypeString + ".Scratchpad.Populated.Errored",
             },
@@ -552,7 +552,7 @@ export class InsightsConnection {
             silent ? MessageKind.DEBUG : MessageKind.INFO,
             {
               logger,
-              params: { status: response.status, params: body.params },
+              params: { status: response.status },
               telemetry: "Datasource." + dsTypeString + ".Scratchpad.Populated",
             },
           );
@@ -617,7 +617,7 @@ export class InsightsConnection {
 
       notify("REST", MessageKind.DEBUG, {
         logger,
-        params: { url: options.url, data: options.data },
+        params: { url: options.url },
       });
 
       return await axios(options).then((response: any) => {
@@ -692,7 +692,7 @@ export class InsightsConnection {
 
       notify("REST", MessageKind.DEBUG, {
         logger,
-        params: { url: options.url, data: options.data },
+        params: { url: options.url },
       });
 
       return await axios(options).then((response: any) => {
@@ -761,7 +761,7 @@ export class InsightsConnection {
 
       notify("REST", MessageKind.DEBUG, {
         logger,
-        params: { url: options.url, data: options.data },
+        params: { url: options.url },
       });
 
       return await axios(options)
