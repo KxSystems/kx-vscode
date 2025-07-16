@@ -506,31 +506,31 @@ describe("Notebooks", () => {
               .resolves(sinon.createStubInstance(KdbNode));
           });
 
-          it("should return none", async () => {
+          it("should return 2", async () => {
             const cell = createCell("q", {
               target: "target",
               variable: "variable",
             });
             const res = await instance.provideCellStatusBarItems(cell, token);
-            assert.strictEqual(res.length, 0);
+            assert.strictEqual(res.length, 2);
           });
 
-          it("should return none", async () => {
+          it("should return 2", async () => {
             const cell = createCell("python", {
               target: "target",
               variable: "variable",
             });
             const res = await instance.provideCellStatusBarItems(cell, token);
-            assert.strictEqual(res.length, 0);
+            assert.strictEqual(res.length, 2);
           });
 
-          it("should return none", async () => {
+          it("should return 1", async () => {
             const cell = createCell("sql", {
               target: "target",
               variable: "variable",
             });
             const res = await instance.provideCellStatusBarItems(cell, token);
-            assert.strictEqual(res.length, 0);
+            assert.strictEqual(res.length, 1);
           });
         });
 
@@ -588,10 +588,10 @@ describe("Notebooks", () => {
           createInstance();
         });
 
-        it("should return none", async () => {
+        it("should return 1", async () => {
           const cell = createCell("q");
           const res = await instance.provideCellStatusBarItems(cell, token);
-          assert.strictEqual(res.length, 0);
+          assert.strictEqual(res.length, 1);
         });
       });
     });
