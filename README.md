@@ -861,6 +861,8 @@ To execute a q file in q REPL:
 
 The results are shown in the terminal and you can continue to work either in your q file or directly in the terminal.
 
+Refer to the [REPL shortcuts table](https://github.com/KxSystems/kx-vscode/wiki/REPL) for information on the keyboard shortcuts you can use.
+
 ## Logs
 
 Any error or info is posted at **OUTPUT** in **kdb** tab
