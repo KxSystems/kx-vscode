@@ -98,11 +98,11 @@ export type MetaColumns = {
 };
 
 export type MetaDap = {
-  dap: string;
+  dap?: string;
   assembly: string;
   startTS: string;
   endTS: string;
-  labels: string[];
+  labels?: string[];
   instance: string;
 };
 

@@ -216,12 +216,16 @@ export class InsightsConnection {
         return undefined;
       }
 
+      options.data = { advanced: true };
+      options.method = "POST";
+      options.url = metaUrl.toString();
+
       notify("REST", MessageKind.DEBUG, {
         logger,
-        params: { url: metaUrl.toString() },
+        params: { url: options.url, data: options.data },
       });
 
-      const metaResponse = await axios.post(metaUrl.toString(), {}, options);
+      const metaResponse = await axios(options);
       const meta: MetaObject = metaResponse.data;
       this.meta = meta;
       return meta.payload;
