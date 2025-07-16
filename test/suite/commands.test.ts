@@ -3089,4 +3089,19 @@ describe("clientCommands", () => {
       assert.strictEqual(edit.size, 1);
     });
   });
+
+  describe("getPartialDatasourceFile", () => {
+    it("should return qsql datatsource", () => {
+      const res = dataSourceCommand.getPartialDatasourceFile("query");
+      assert.strictEqual(res.dataSource.selectedType, "QSQL");
+    });
+    it("should return sql datatsource", () => {
+      const res = dataSourceCommand.getPartialDatasourceFile(
+        "query",
+        "dap",
+        true,
+      );
+      assert.strictEqual(res.dataSource.selectedType, "SQL");
+    });
+  });
 });
