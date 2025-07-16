@@ -579,7 +579,7 @@
         "command": "kdb.file.populateScratchpad",
         "key": "alt+ctrl+shift+p",
         "mac": "alt+cmd+shift+p",
-        "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
+        "when": "resourceFilename =~ /\\.(?:q|py|sql)$/i"
       },
       {
         "command": "kdb.execute.terminal.run",
@@ -1016,7 +1016,7 @@
         {
           "command": "kdb.file.populateScratchpad",
           "group": "q2@0",
-          "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
+          "when": "resourceFilename =~ /\\.(?:q|py|sql)$/i"
         }
       ],
       "editor/context": [
@@ -1038,7 +1038,7 @@
         {
           "command": "kdb.file.populateScratchpad",
           "group": "q2@0",
-          "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
+          "when": "resourceFilename =~ /\\.(?:q|py|sql)$/i"
         },
         {
           "command": "kdb.scratchpad.python.run.file",

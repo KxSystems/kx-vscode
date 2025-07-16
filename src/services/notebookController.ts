@@ -198,13 +198,12 @@ export class KxNotebookController {
     kind: CellKind,
     isInsights: boolean,
   ): { target?: string; variable?: string } {
-    const target =
-      isInsights && kind == CellKind.Q ? cell.metadata?.target : undefined;
+    let target, variable: string | undefined;
 
-    const variable =
-      isInsights && (target || kind === CellKind.SQL)
-        ? cell.metadata?.variable
-        : undefined;
+    if (isInsights && (kind === CellKind.Q || kind === CellKind.PYTHON)) {
+      target = cell.metadata?.target;
+      variable = cell.metadata?.variable;
+    }
 
     return { target, variable };
   }
@@ -224,6 +223,7 @@ export class KxNotebookController {
         cell.document.getText(),
         target,
         kind === CellKind.SQL,
+        kind === CellKind.PYTHON,
       );
       return variable
         ? populateScratchpad(params, conn.connLabel, variable, true)

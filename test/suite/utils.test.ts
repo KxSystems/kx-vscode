@@ -2065,41 +2065,41 @@ describe("Utils", () => {
       });
     });
 
-    describe("sanitizeQsqlQuery", () => {
+    describe("normalizeQSQLQuery", () => {
       it("should trim query", () => {
-        const res = queryUtils.sanitizeQsqlQuery("  a:1  ");
+        const res = queryUtils.normalizeQSQLQuery("  a:1  ");
         assert.strictEqual(res, "a:1");
       });
       it("should remove block comment", () => {
-        let res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\n\\\na:1");
+        let res = queryUtils.normalizeQSQLQuery("/\nBlock Comment\n\\\na:1");
         assert.strictEqual(res, "a:1");
-        res = queryUtils.sanitizeQsqlQuery("/\r\nBlock Comment\r\n\\\r\na:1");
+        res = queryUtils.normalizeQSQLQuery("/\r\nBlock Comment\r\n\\\r\na:1");
         assert.strictEqual(res, "a:1");
       });
       it("should remove single line comment", () => {
-        let res = queryUtils.sanitizeQsqlQuery("/ single line comment\na:1");
+        let res = queryUtils.normalizeQSQLQuery("/ single line comment\na:1");
         assert.strictEqual(res, "a:1");
-        res = queryUtils.sanitizeQsqlQuery("/ single line comment\r\na:1");
+        res = queryUtils.normalizeQSQLQuery("/ single line comment\r\na:1");
         assert.strictEqual(res, "a:1");
       });
       it("should remove line comment", () => {
-        const res = queryUtils.sanitizeQsqlQuery("a:1 / line comment");
+        const res = queryUtils.normalizeQSQLQuery("a:1 / line comment");
         assert.strictEqual(res, "a:1");
       });
       it("should ignore line comment in a string", () => {
-        const res = queryUtils.sanitizeQsqlQuery('a:"1 / not line comment"');
+        const res = queryUtils.normalizeQSQLQuery('a:"1 / not line comment"');
         assert.strictEqual(res, 'a:"1 / not line comment"');
       });
       it("should replace EOS with semicolon", () => {
-        let res = queryUtils.sanitizeQsqlQuery("a:1\na");
+        let res = queryUtils.normalizeQSQLQuery("a:1\na");
         assert.strictEqual(res, "a:1;a");
-        res = queryUtils.sanitizeQsqlQuery("a:1\r\na");
+        res = queryUtils.normalizeQSQLQuery("a:1\r\na");
         assert.strictEqual(res, "a:1;a");
       });
       it("should escpae new lines in strings", () => {
-        let res = queryUtils.sanitizeQsqlQuery('a:"a\n \nb"');
+        let res = queryUtils.normalizeQSQLQuery('a:"a\n \nb"');
         assert.strictEqual(res, 'a:"a\\n \\nb"');
-        res = queryUtils.sanitizeQsqlQuery('a:"a\r\n \r\nb"');
+        res = queryUtils.normalizeQSQLQuery('a:"a\r\n \r\nb"');
         assert.strictEqual(res, 'a:"a\\n \\nb"');
       });
     });
@@ -2182,10 +2182,9 @@ describe("Utils", () => {
         const res = queryUtils.normalizeQuery(query);
         assert.strictEqual(res, query);
       });
-      it("should return empty query when limit reached", () => {
+      it("should throw when limit reached", () => {
         const query = "1234567890".repeat(25000) + "1";
-        const res = queryUtils.normalizeQuery(query);
-        assert.strictEqual(res, "");
+        assert.throws(() => queryUtils.normalizeQuery(query));
       });
     });
   });

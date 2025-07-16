@@ -1085,6 +1085,9 @@ export async function runQuery(
   }
 
   if (type === ExecutionTypes.PopulateScratchpad) {
+    if (executorName.endsWith(".py")) {
+      isPython = true;
+    }
     variable = await inputVariable();
   }
 
@@ -1092,12 +1095,12 @@ export async function runQuery(
     return target || isSql
       ? variable
         ? populateScratchpad(
-            getPartialDatasourceFile(query, target, isSql),
+            getPartialDatasourceFile(query, target, isSql, isPython),
             connLabel,
             variable,
           )
         : runDataSource(
-            getPartialDatasourceFile(query, target, isSql),
+            getPartialDatasourceFile(query, target, isSql, isPython),
             connLabel,
             executorName,
           )

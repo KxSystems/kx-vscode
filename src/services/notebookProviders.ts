@@ -53,9 +53,9 @@ export class KxNotebookTargetActionProvider
 
     const actions: vscode.NotebookCellStatusBarItem[] = [];
     const kind = getCellKind(cell);
-    const target = kind === CellKind.Q ? cell.metadata?.target : undefined;
+    const target = cell.metadata?.target;
 
-    if (kind === CellKind.Q) {
+    if (kind === CellKind.Q || kind === CellKind.PYTHON) {
       const targetItem = new vscode.NotebookCellStatusBarItem(
         target || "scratchpad",
         vscode.NotebookCellStatusBarAlignment.Right,
