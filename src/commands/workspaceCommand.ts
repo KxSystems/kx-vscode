@@ -318,7 +318,7 @@ export async function startRepl() {
   }
 }
 
-export async function runOnRepl(editor: TextEditor, type: ExecutionTypes) {
+export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   const basename = getBasename(editor.document.uri);
 
   let text: string;
@@ -354,7 +354,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
     if (getServerForUri(uri) === ext.REPL) {
-      runOnRepl(ext.activeTextEditor, ExecutionTypes.QueryFile);
+      runOnRepl(ext.activeTextEditor, type);
       return;
     }
     const conn = await findConnection(uri);
