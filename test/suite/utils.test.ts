@@ -2187,6 +2187,31 @@ describe("Utils", () => {
         assert.throws(() => queryUtils.normalizeQuery(query));
       });
     });
+
+    describe("normalizePyQuery", () => {
+      it("should escape double quotes", () => {
+        const res = queryUtils.normalizePyQuery('a="test"');
+        assert.strictEqual(res, 'a=\\"test\\"');
+      });
+    });
+    describe("getQSQLWrapper", () => {
+      let queryWrappeStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        //queryWrappeStub = sinon.stub(queryUtils, "queryWrapper");
+      });
+
+      it("should normalize q code", () => {
+        const res = queryUtils.getQSQLWrapper("a:1;\na");
+        assert.strictEqual(res, "a:1;;a");
+      });
+      it("should normalize python code using wrapper", () => {
+        assert.throws(() => {
+          queryUtils.getQSQLWrapper(``, true);
+          sinon.assert.calledOnce(queryWrappeStub);
+        });
+      });
+    });
   });
 
   describe("Registration", () => {
