@@ -574,10 +574,10 @@ describe("Notebooks", () => {
             assert.strictEqual(res.length, 0);
           });
 
-          it("should return none for python", async () => {
+          it("should return target for python", async () => {
             const cell = createCell("python");
             const res = await instance.provideCellStatusBarItems(cell, token);
-            assert.strictEqual(res.length, 0);
+            assert.strictEqual(res.length, 1);
           });
         });
       });

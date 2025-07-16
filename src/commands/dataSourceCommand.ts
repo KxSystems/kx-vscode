@@ -44,6 +44,7 @@ import { MessageKind, notify } from "../utils/notifications";
 import {
   addQueryHistory,
   generateQSqlBody,
+  getQSQLWrapper,
   handleScratchpadTableRes,
   handleWSError,
   handleWSResults,
@@ -534,6 +535,7 @@ export function getPartialDatasourceFile(
   query: string,
   selectedTarget?: string,
   isSql?: boolean,
+  isPython?: boolean,
 ) {
   return isSql
     ? <DataSourceFiles>{
@@ -545,7 +547,7 @@ export function getPartialDatasourceFile(
     : <DataSourceFiles>{
         dataSource: {
           selectedType: "QSQL",
-          qsql: { query, selectedTarget },
+          qsql: { query: getQSQLWrapper(query, isPython), selectedTarget },
         },
       };
 }

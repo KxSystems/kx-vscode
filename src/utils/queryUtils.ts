@@ -213,15 +213,16 @@ export function getValueFromArray(results: DCDS): any {
   return results;
 }
 
-export function normalizeQuery(query: string): string {
+function queryLimitCheck(query: string): string {
   if (query.length > QUERY_LIMIT) {
-    notify(`Query length limit (${QUERY_LIMIT}) reached.`, MessageKind.ERROR, {
-      logger,
-    });
-    return "";
+    throw new Error(`Query length limit (${QUERY_LIMIT}) reached.`);
   }
+  return query;
+}
+
+export function normalizeQuery(query: string): string {
   return (
-    query
+    queryLimitCheck(query)
       // Remove block comments
       .replace(/^\/[\t ]*$[^]*?^\\[\t ]*$/gm, "")
       // Remove terminate comments
@@ -244,7 +245,7 @@ export function normalizeQuery(query: string): string {
   );
 }
 
-export function sanitizeQsqlQuery(query: string): string {
+export function normalizeQSQLQuery(query: string): string {
   return (
     normalizeQuery(query)
       // Replace system commands
@@ -262,14 +263,34 @@ export function sanitizeQsqlQuery(query: string): string {
   );
 }
 
+export function normalizePyQuery(query: string): string {
+  return (
+    queryLimitCheck(query)
+      // Replace double quotes
+      .replace(/"/gs, '\\"')
+  );
+}
+
+export function getQSQLWrapper(query: string, isPython?: boolean): string {
+  if (isPython) {
+    const wrapper = normalizeQSQLQuery(queryWrapper(true));
+    const args = {
+      returnFormat: <"serialized" | "text" | "structuredText">"serialized",
+      code: normalizePyQuery(query),
+      sample_fn: "first",
+      sample_size: 10000,
+    };
+    return `${wrapper}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]\`result`;
+  }
+  return normalizeQSQLQuery(query);
+}
+
 export function generateQSqlBody(
   query: string,
   assemblyTarget: string,
   version?: number,
   qeEnabled?: boolean,
 ) {
-  query = sanitizeQsqlQuery(query);
-
   const [plainAssembly, target] =
     normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
 
