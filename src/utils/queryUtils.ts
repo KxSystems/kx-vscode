@@ -526,15 +526,17 @@ export function resultToBase64(result: any): string | undefined {
   return undefined;
 }
 
-const scratchpadStarted = new Set<string>();
-
 export function needsScratchpad<T>(connLabel: string, target: Promise<T>) {
-  if (!scratchpadStarted.has(connLabel)) {
+  if (!ext.scratchpadStarted.has(connLabel)) {
     const runner = Runner.create(() =>
-      target.then(() => scratchpadStarted.add(connLabel)),
+      target.then(() => ext.scratchpadStarted.add(connLabel)),
     );
     runner.title = `Starting scratchpad on ${connLabel}.`;
     runner.execute();
   }
   return target;
+}
+
+export function resetScratchpadStarted(connLabel: string) {
+  ext.scratchpadStarted.delete(connLabel);
 }

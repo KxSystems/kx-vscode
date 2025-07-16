@@ -1120,7 +1120,7 @@ export async function runQuery(
   runner.location = ProgressLocation.Notification;
   runner.title = `Executing ${executorName} on ${connLabel || "active connection"}.`;
 
-  return target || variable || isSql
+  return (target || isSql) && !variable
     ? runner.execute()
     : needsScratchpad(connLabel, runner.execute());
 }
