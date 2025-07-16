@@ -81,6 +81,7 @@ import {
   addQueryHistory,
   formatScratchpadStacktrace,
   resultToBase64,
+  needsScratchpad,
 } from "../utils/queryUtils";
 import {
   addWorkspaceFile,
@@ -1118,7 +1119,10 @@ export async function runQuery(
 
   runner.location = ProgressLocation.Notification;
   runner.title = `Executing ${executorName} on ${connLabel || "active connection"}.`;
-  return runner.execute();
+
+  return target || variable || isSql
+    ? runner.execute()
+    : needsScratchpad(connLabel, runner.execute());
 }
 
 export function rerunQuery(rerunQueryElement: QueryHistory) {

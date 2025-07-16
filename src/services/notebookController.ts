@@ -31,7 +31,7 @@ import { getCellKind } from "./notebookProviders";
 import { CellKind } from "../models/notebook";
 import { getBasename, offerConnectAction } from "../utils/core";
 import { MessageKind, notify } from "../utils/notifications";
-import { resultToBase64 } from "../utils/queryUtils";
+import { resultToBase64, needsScratchpad } from "../utils/queryUtils";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
 
 const logger = "notebookController";
@@ -105,7 +105,9 @@ export class KxNotebookController {
         );
 
         let results = await Promise.race([
-          executor,
+          target || variable || kind === CellKind.SQL
+            ? executor
+            : needsScratchpad(conn.connLabel, executor),
           new Promise((_, reject) => {
             const updateCancelled = () => {
               if (execution.token.isCancellationRequested) {
