@@ -843,9 +843,23 @@ You can make changes to the script before exporting the plot. Re-running the scr
 
 ## q REPL
 
+REPL stands for **Read-Eval-Print Loop**, which is an interactive programming environment used in many languages. REPLs are particularly useful for interactive development, debugging, and testing because users can write and run code snippets in real-time, seeing immediate feedback.
+
+**q REPL** refers to an interactive q terminal that allows you to execute q queries directly from the kdb VSCode extension.
+
 q REPL can be started from the command prompt by searching **q REPL**.
 
 ![REPL](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/repl.png)
+
+**Important!** Before running code in the q interactive terminal, ensure that your [Q Home Directory](#using-q-outside-of-vs-code) is correctly configured in VSCode. This setting is required to set up the q runtime environment for the interactive terminal. To configure the Q Home Directory, go to **VSCode Settings > Extension > kdb** and enter the path for the `q` runtime.
+
+To execute a q file in q REPL:
+
+1. Click **Choose Connection**
+1. Select **q REPL** from the list
+1. Execute your q file
+
+The results are shown in the terminal and you can continue to work either in your q file or directly in the terminal.
 
 ## Logs
 
