@@ -254,7 +254,7 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
       ...daps.map((value) => `${value.assembly} ${value.instance}`),
     ],
     {
-      title: `Choose Execution Target (${conn?.connLabel || "Not Connected"})`,
+      title: `Choose Execution Target (${conn?.connLabel ?? "Not Connected"})`,
       placeHolder: target || (isInsights ? "scratchpad" : "default"),
     },
   );
