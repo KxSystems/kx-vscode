@@ -21,7 +21,7 @@ This guide provides information on the following:
 - [Query History](#query-history)
 - [Viewing results](#view-results)
 - [AxLibraries](#axlibraries)
-- [q REPL](#q-repl)
+- [REPL](#repl)
 - [Settings](#settings)
 - [Help and feedback](#help-and-feedback)
 - [Shortcuts](#shortcuts)
@@ -747,7 +747,7 @@ From this view, you can add either Markdown or Code blocks to the notebook by cl
 
 ![Add code blocks to notebook](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/add-notebook-code.png)
 
-In KX Notebooks, you can select a target and a variable name to populate the Scratchpad. When you select a connection, clicking on the Scratchpad tab displays a list where you can change between the Scratchpad and one of the DAPs (RDB, IDB, or HDB). Note that this functionality currently works for `q` only.
+In KX Notebooks, you can select a target and a variable name to populate the Scratchpad. When you select a connection, clicking on the Scratchpad tab displays a list where you can change between the Scratchpad and one of the DAPs (RDB, IDB, or HDB).
 
 Next to the Scratchpad tab, there is a language option. To change the language of the code block, click on the language labels and select language from the Command Palette. You can select between q, Python, Markdown, or MS SQL.
 
@@ -759,7 +759,7 @@ Code blocks are executed using the active KX connection, and the results are dis
 
 ![See notebook data](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/notebook-data.png)
 
-You can run SQL queries on a tier and populate the Scratchpad with the SQL results. This functionality connects to the Q SQL endpoint and imports the data into the Scratchpad as a variable. Although Python is supported in KX Notebooks, Python execution on the DAPs (RDB, IDB, HDB) is not yet supported, so Python can only be executed outside the Data Access Process (DAP).
+You can run SQL queries on a tier and populate the Scratchpad with the SQL results. This functionality connects to the Q SQL endpoint and imports the data into the Scratchpad as a variable.
 
 KX Notebooks detect [GGPlot2](#grammar-of-graphics) outputs. If the execution generates a plot, it is displayed inline for both q and PyKX.
 
@@ -841,22 +841,20 @@ You can make changes to the script before exporting the plot. Re-running the scr
 
 **Note**: When executing GG script commands, select the `KDB RESULTS` tab to display the plot.
 
-## q REPL
+## REPL
 
 REPL stands for **Read-Eval-Print Loop**, which is an interactive programming environment used in many languages. REPLs are particularly useful for interactive development, debugging, and testing because users can write and run code snippets in real-time, seeing immediate feedback.
 
-**q REPL** refers to an interactive q terminal that allows you to execute q queries directly from the kdb VSCode extension.
-
-q REPL can be started from the command prompt by searching **q REPL**.
+REPL can be started from the command prompt by searching **>repl**.
 
 ![REPL](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/repl.png)
 
-**Important!** Before running code in the q interactive terminal, ensure that your [Q Home Directory](#using-q-outside-of-vs-code) is correctly configured in VSCode. This setting is required to set up the q runtime environment for the interactive terminal. To configure the Q Home Directory, go to **VSCode Settings > Extension > kdb** and enter the path for the `q` runtime.
+**Important!** Before running code in the REPL interactive terminal, ensure that your [Q Home Directory](#using-q-outside-of-vs-code) is correctly configured in VSCode. This setting is required to set up the q runtime environment for the interactive terminal. To configure the Q Home Directory, go to **VSCode Settings > Extension > kdb** and enter the path for the `q` runtime.
 
-To execute a q file in q REPL:
+To execute a q file in REPL:
 
 1. Click **Choose Connection**
-1. Select **q REPL** from the list
+1. Select **REPL** from the list
 1. Execute your q file
 
 The results are shown in the terminal and you can continue to work either in your q file or directly in the terminal.
