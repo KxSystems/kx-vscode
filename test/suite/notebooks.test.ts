@@ -316,6 +316,30 @@ describe("Notebooks", () => {
               assert.strictEqual(success, true);
             });
           });
+
+          describe("q cell with target", () => {
+            it("should error", async () => {
+              executeQueryStub.resolves(text);
+              await instance.execute(
+                [createCell("q", { target: "target" })],
+                createNotebook(),
+                createController(),
+              );
+              sinon.assert.called(notifyStub);
+            });
+          });
+
+          describe("q cell with variable", () => {
+            it("should error", async () => {
+              executeQueryStub.resolves(text);
+              await instance.execute(
+                [createCell("q", { variable: "variable" })],
+                createNotebook(),
+                createController(),
+              );
+              sinon.assert.called(notifyStub);
+            });
+          });
         });
       });
 
