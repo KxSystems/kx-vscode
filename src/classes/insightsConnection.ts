@@ -85,19 +85,6 @@ export class InsightsConnection {
         await this.getConfig();
         await this.getMeta();
         await this.getApiConfig();
-
-        const runner = Runner.create(() => this.getScratchpadQuery(""));
-        runner.title = `Starting scratchpad on ${this.connLabel}.`;
-        runner.execute().catch((error) => {
-          notify(
-            `Starting scratchpad on ${this.connLabel} failed.`,
-            MessageKind.WARNING,
-            {
-              logger,
-              params: error,
-            },
-          );
-        });
       }
     });
     return this.connected;

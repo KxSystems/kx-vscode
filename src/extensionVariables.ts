@@ -111,6 +111,7 @@ export namespace ext {
   export const jsonTypes = new Set([
     0, 1, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 77, 98, 99,
   ]);
+  export const scratchpadStarted = new Set<string>();
 
   export let secretSettings: AuthSettings;
 

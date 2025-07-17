@@ -37,7 +37,7 @@ import {
 } from "../utils/core";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
-import { sanitizeQuery } from "../utils/queryUtils";
+import { resetScratchpadStarted, sanitizeQuery } from "../utils/queryUtils";
 
 const logger = "connectionManagerService";
 
@@ -416,6 +416,7 @@ export class ConnectionManagementService {
 
       if (selection === "Yes") {
         await conn.resetScratchpad();
+        resetScratchpadStarted(conn.connLabel);
       } else {
         notify("The user canceled the scratchpad reset.", MessageKind.DEBUG, {
           logger,

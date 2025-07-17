@@ -13,7 +13,7 @@
 
 import * as vscode from "vscode";
 
-import { ConnectionManagementService } from "./connectionManagerService";
+import { getCellKind } from "./notebookProviders";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
 import {
@@ -22,16 +22,11 @@ import {
   runDataSource,
 } from "../commands/dataSourceCommand";
 import { executeQuery } from "../commands/serverCommand";
-import {
-  getConnectionForServer,
-  getServerForUri,
-} from "../commands/workspaceCommand";
-import { ext } from "../extensionVariables";
-import { getCellKind } from "./notebookProviders";
+import { findConnection } from "../commands/workspaceCommand";
 import { CellKind } from "../models/notebook";
-import { getBasename, offerConnectAction } from "../utils/core";
+import { getBasename } from "../utils/core";
 import { MessageKind, notify } from "../utils/notifications";
-import { resultToBase64 } from "../utils/queryUtils";
+import { resultToBase64, needsScratchpad } from "../utils/queryUtils";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
 
 const logger = "notebookController";
@@ -65,7 +60,7 @@ export class KxNotebookController {
     notebook: vscode.NotebookDocument,
     controller: vscode.NotebookController,
   ): Promise<void> {
-    const conn = await this.findConnection(notebook.uri);
+    const conn = await findConnection(notebook.uri);
     if (!conn) {
       return;
     }
@@ -83,16 +78,11 @@ export class KxNotebookController {
       try {
         const kind = getCellKind(cell);
 
-        if (kind === CellKind.SQL && !isInsights) {
-          throw new Error(
-            `SQL is not supported on ${conn.connLabel || "active connection"}`,
-          );
-        }
-
         const { target, variable } = this.getCellMetadata(
           cell,
           kind,
           isInsights,
+          conn,
         );
 
         const executor = this.getQueryExecutor(
@@ -105,7 +95,9 @@ export class KxNotebookController {
         );
 
         let results = await Promise.race([
-          executor,
+          (target || kind === CellKind.SQL) && !variable
+            ? executor
+            : needsScratchpad(conn.connLabel, executor),
           new Promise((_, reject) => {
             const updateCancelled = () => {
               if (execution.token.isCancellationRequested) {
@@ -140,7 +132,7 @@ export class KxNotebookController {
           params: error,
         });
         this.replaceOutput(execution, {
-          text: `<p>Execution stopped (${error instanceof Error ? error.message : error}).</p>`,
+          text: `<p>Execution stopped.</p><p>${error instanceof Error ? error.message : error}</p>`,
           mime: "text/html",
         });
         break;
@@ -149,36 +141,6 @@ export class KxNotebookController {
         execution.end(success, Date.now());
       }
     }
-  }
-
-  async findConnection(uri: vscode.Uri) {
-    const connMngService = new ConnectionManagementService();
-
-    let conn: InsightsConnection | LocalConnection | undefined;
-    let server = getServerForUri(uri) ?? "";
-
-    if (server) {
-      const node = await getConnectionForServer(server);
-      if (node) {
-        server = node.label;
-        conn = connMngService.retrieveConnectedConnection(server);
-        if (conn === undefined) {
-          offerConnectAction(server);
-          return;
-        }
-      } else {
-        notify(`Connection ${server} not found.`, MessageKind.ERROR, {
-          logger,
-        });
-        return;
-      }
-    } else if (ext.activeConnection) {
-      conn = ext.activeConnection;
-    } else {
-      offerConnectAction();
-      return;
-    }
-    return conn;
   }
 
   getInsightProps(conn: LocalConnection | InsightsConnection) {
@@ -197,12 +159,25 @@ export class KxNotebookController {
     cell: vscode.NotebookCell,
     kind: CellKind,
     isInsights: boolean,
+    conn: InsightsConnection | LocalConnection,
   ): { target?: string; variable?: string } {
-    let target, variable: string | undefined;
+    const target = cell.metadata?.target;
+    const variable = cell.metadata?.variable;
 
-    if (isInsights && (kind === CellKind.Q || kind === CellKind.PYTHON)) {
-      target = cell.metadata?.target;
-      variable = cell.metadata?.variable;
+    if (!isInsights) {
+      if (kind === CellKind.SQL) {
+        throw new Error(`SQL is not supported on ${conn.connLabel}`);
+      }
+      if (target) {
+        throw new Error(
+          `Setting execution target (${target}) is not supported on ${conn.connLabel}.`,
+        );
+      }
+      if (variable) {
+        throw new Error(
+          `Setting output variable ${variable} is not supported on ${conn.connLabel}.`,
+        );
+      }
     }
 
     return { target, variable };

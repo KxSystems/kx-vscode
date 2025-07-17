@@ -16,7 +16,7 @@ import { join } from "path";
 
 import { ext } from "../extensionVariables";
 import { isBaseVersionGreaterOrEqual } from "./core";
-import { MessageKind, notify } from "./notifications";
+import { MessageKind, notify, Runner } from "./notifications";
 import { normalizeAssemblyTarget } from "./shared";
 import { DCDS, deserialize, isCompressed, uncompress } from "../ipc/c";
 import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
@@ -524,4 +524,19 @@ export function resultToBase64(result: any): string | undefined {
     return `data:image/png;base64,${Buffer.from(bytes).toString("base64")}`;
   }
   return undefined;
+}
+
+export function needsScratchpad<T>(connLabel: string, target: Promise<T>) {
+  if (!ext.scratchpadStarted.has(connLabel)) {
+    const runner = Runner.create(() =>
+      target.then(() => ext.scratchpadStarted.add(connLabel)),
+    );
+    runner.title = `Starting scratchpad on ${connLabel}.`;
+    runner.execute();
+  }
+  return target;
+}
+
+export function resetScratchpadStarted(connLabel: string) {
+  ext.scratchpadStarted.delete(connLabel);
 }
