@@ -225,19 +225,16 @@ export async function pickConnection(uri: Uri) {
 }
 
 export async function pickTarget(uri: Uri, cell?: NotebookCell) {
-  const server = getServerForUri(uri);
-  const conn = server ? await getConnectionForServer(server) : undefined;
-  const isInsights = conn instanceof InsightsNode;
+  const conn = await findConnection(uri);
+  const isInsights = conn instanceof InsightsConnection;
 
   let daps: MetaDap[] = [];
-  let connected = false;
 
-  if (conn) {
+  if (isInsights) {
     const connMngService = new ConnectionManagementService();
-    connected = connMngService.isConnected(conn.label);
-    if (connected) {
-      daps = JSON.parse(connMngService.retrieveMetaContent(conn.label, "DAP"));
-    }
+    daps = JSON.parse(
+      connMngService.retrieveMetaContent(conn.connLabel, "DAP"),
+    );
   }
 
   const target = cell?.metadata.target || getTargetForUri(uri);
@@ -245,7 +242,7 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
     const exists = daps.some(
       (value) => `${value.assembly} ${value.instance}` === target,
     );
-    if (!exists && !connected) {
+    if (!exists && !conn) {
       const [assembly, instance] = target.split(/\s+/);
       daps.unshift({ assembly, instance } as MetaDap);
     }
@@ -257,7 +254,7 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
       ...daps.map((value) => `${value.assembly} ${value.instance}`),
     ],
     {
-      title: `Choose Execution Target (${server || "No Connection"})`,
+      title: `Choose Execution Target (${conn?.connLabel || "Not Connected"})`,
       placeHolder: target || (isInsights ? "scratchpad" : "default"),
     },
   );
