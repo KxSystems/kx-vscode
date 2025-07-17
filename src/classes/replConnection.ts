@@ -15,7 +15,10 @@ import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
-import { getQExecutablePath, updateTheWorkspaceSettings } from "../utils/core";
+import {
+  getAutoFocusOutputOnEntrySetting,
+  getQExecutablePath,
+} from "../utils/core";
 import { normalizeQuery } from "../utils/queryUtils";
 
 const ANSI = {
@@ -317,8 +320,7 @@ export class ReplConnection {
   }
 
   private show() {
-    updateTheWorkspaceSettings();
-    if (ext.autoFocusOutputOnEntry) this.terminal.show();
+    if (getAutoFocusOutputOnEntrySetting()) this.terminal.show(true);
   }
 
   private recall(history?: HistoryItem) {
