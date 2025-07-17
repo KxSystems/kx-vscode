@@ -34,7 +34,7 @@ export async function executeCommand(
     ...args,
   );
   if (getAutoFocusOutputOnEntrySetting()) {
-    ext.outputChannel.show();
+    ext.outputChannel.show(true);
   }
   if (result.code !== 0) {
     throw new Error(
