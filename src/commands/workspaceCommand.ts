@@ -251,9 +251,8 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
   let picked = await window.showQuickPick(
     [
       isInsights ? "scratchpad" : "default",
-      ...daps.map(
-        (value) =>
-          `${value.assembly} ${value.instance}${value.dap ? ` ${value.dap}` : ""}`,
+      ...daps.map((value) =>
+        [value.assembly, value.instance, value.dap].filter(Boolean).join(" "),
       ),
     ],
     {

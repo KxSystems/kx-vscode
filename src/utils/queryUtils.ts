@@ -306,7 +306,7 @@ export function generateQSqlBody(
         affinity: "soft",
         assembly,
         tier: dap ? undefined : target,
-        dap: dap ? dap : undefined,
+        dap: dap,
       },
     };
   }
