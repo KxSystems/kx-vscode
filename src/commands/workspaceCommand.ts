@@ -225,23 +225,16 @@ export async function pickConnection(uri: Uri) {
 }
 
 export async function pickTarget(uri: Uri, cell?: NotebookCell) {
-  const server = getServerForUri(uri);
-  if (!server) {
-    return;
-  }
-
-  const conn = await getConnectionForServer(server);
-  const isInsights = conn instanceof InsightsNode;
-  if (!isInsights) {
-    return;
-  }
+  const conn = await findConnection(uri);
+  const isInsights = conn instanceof InsightsConnection;
 
   let daps: MetaDap[] = [];
 
-  const connMngService = new ConnectionManagementService();
-  const connected = connMngService.isConnected(conn.label);
-  if (connected) {
-    daps = JSON.parse(connMngService.retrieveMetaContent(conn.label, "DAP"));
+  if (isInsights) {
+    const connMngService = new ConnectionManagementService();
+    daps = JSON.parse(
+      connMngService.retrieveMetaContent(conn.connLabel, "DAP"),
+    );
   }
 
   const target = cell?.metadata.target || getTargetForUri(uri);
@@ -249,7 +242,7 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
     const exists = daps.some(
       (value) => `${value.assembly} ${value.instance}` === target,
     );
-    if (!exists && !connected) {
+    if (!exists && !conn) {
       const [assembly, instance] = target.split(/\s+/);
       daps.unshift({ assembly, instance } as MetaDap);
     }
@@ -257,26 +250,26 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
 
   let picked = await window.showQuickPick(
     [
-      "scratchpad",
+      isInsights ? "scratchpad" : "default",
       ...daps.map(
         (value) =>
           `${value.assembly} ${value.instance}${value.dap ? ` ${value.dap}` : ""}`,
       ),
     ],
     {
-      title: `Choose Target on ${server} (${connected ? "Connected" : "Disconnected"})`,
-      placeHolder: target || "scratchpad",
+      title: `Choose Execution Target (${conn?.connLabel ?? "Not Connected"})`,
+      placeHolder: target || (isInsights ? "scratchpad" : "default"),
     },
   );
 
   if (picked) {
-    if (picked === "scratchpad") {
+    if (picked === "scratchpad" || picked === "default") {
       picked = undefined;
     }
     if (cell) {
       await updateCellMetadata(cell, {
         target: picked,
-        variable: (picked && cell.metadata.variable) || undefined,
+        variable: picked && cell.metadata.variable,
       });
     } else {
       await setTargetForUri(uri, picked);

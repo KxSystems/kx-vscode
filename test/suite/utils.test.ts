@@ -2212,6 +2212,21 @@ describe("Utils", () => {
         });
       });
     });
+
+    describe("needsScratchpad", () => {
+      it("should return the promise", async () => {
+        const res = await queryUtils.needsScratchpad(
+          "test",
+          Promise.resolve("test"),
+        );
+        assert.strictEqual(res, "test");
+      });
+      it("should reset scratchpad started status", async () => {
+        ext.scratchpadStarted.add("test");
+        queryUtils.resetScratchpadStarted("test");
+        assert.strictEqual(ext.scratchpadStarted.has("test"), false);
+      });
+    });
   });
 
   describe("Registration", () => {

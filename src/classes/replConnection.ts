@@ -25,34 +25,34 @@ const ANSI = {
   AT: "@",
   CR: "\r",
   CRLF: "\r\n",
-  DOWN: "\x1B[1B",
-  SAVE: "\x1B[s",
-  RESTORE: "\x1B[u",
-  ERASETOEND: "\x1B[0J",
-  LINESTART: "\x1B[0G",
-  FAINTON: "\x1B[2m",
-  FAINTOFF: "\x1B[22m",
+  DOWN: "\x1b[1B",
+  SAVE: "\x1b[s",
+  RESTORE: "\x1b[u",
+  ERASETOEND: "\x1b[0J",
+  LINESTART: "\x1b[0G",
+  FAINTON: "\x1b[2m",
+  FAINTOFF: "\x1b[22m",
 };
 
 const KEY = {
   CR: "\r",
   BS: "\b",
-  BSMAC: "\x7F",
-  DEL: "\x1B[3~",
-  UP: "\x1B[A",
-  DOWN: "\x1B[B",
-  LEFT: "\x1B[D",
-  RIGHT: "\x1B[C",
-  HOME: "\x1B[H",
+  BSMAC: "\x7f",
+  DEL: "\x1b[3~",
+  UP: "\x1b[A",
+  DOWN: "\x1b[B",
+  LEFT: "\x1b[D",
+  RIGHT: "\x1b[C",
+  HOME: "\x1b[H",
   HOMEMAC: "\x01",
-  END: "\x1B[F",
+  END: "\x1b[F",
   ENDMAC: "\x05",
-  ALTHOME: "\x1B[1;5A",
-  ALTEND: "\x1B[1;5B",
-  SHIFTUP: "\x1B[1;2A",
-  SHIFTDOWN: "\x1B[1;2B",
-  SHIFTLEFT: "\x1B[1;2D",
-  SHIFTRIGHT: "\x1B[1;2C",
+  ALTHOME: "\x1b[1;5A",
+  ALTEND: "\x1b[1;5B",
+  SHIFTUP: "\x1b[1;2A",
+  SHIFTDOWN: "\x1b[1;2B",
+  SHIFTLEFT: "\x1b[1;2D",
+  SHIFTRIGHT: "\x1b[1;2C",
 };
 
 const CTX = {
@@ -406,7 +406,7 @@ export class ReplConnection {
         } else {
           this.sendToProcess(ANSI.EMPTY);
         }
-        this.history.reset();
+        this.history.rewind();
         this.sendToTerminal(ANSI.CRLF);
         break;
       case KEY.BS:
@@ -428,8 +428,10 @@ export class ReplConnection {
         break;
       case KEY.END:
       case KEY.ENDMAC:
-        this.inputIndex = this.visibleInputIndex - 1;
-        this.showPrompt();
+        if (this.visibleInputIndex > 0) {
+          this.inputIndex = this.visibleInputIndex - 1;
+          this.showPrompt();
+        }
         break;
       case KEY.ALTHOME:
       case KEY.SHIFTUP:
@@ -526,6 +528,7 @@ class History {
       item.next = this.head;
       this.head.prev = item;
     }
+    item.prev = undefined;
     this.head = item;
   }
 
@@ -535,15 +538,16 @@ class History {
   }
 
   get prev() {
-    this.item = this.item === undefined ? this.head : this.item.prev;
+    this.item = this.item?.prev;
     return this.item;
   }
 
-  reset() {
+  rewind() {
     this.item = undefined;
   }
 
   clear() {
     this.head = undefined;
+    this.rewind();
   }
 }

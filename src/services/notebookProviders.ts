@@ -41,15 +41,8 @@ export class KxNotebookTargetActionProvider
     _token: vscode.CancellationToken,
   ) {
     const server = getServerForUri(cell.notebook.uri);
-    if (!server) {
-      return [];
-    }
-
-    const conn = await getConnectionForServer(server);
+    const conn = server ? await getConnectionForServer(server) : undefined;
     const isInsights = conn instanceof InsightsNode;
-    if (!isInsights) {
-      return [];
-    }
 
     const actions: vscode.NotebookCellStatusBarItem[] = [];
     const kind = getCellKind(cell);
@@ -57,7 +50,7 @@ export class KxNotebookTargetActionProvider
 
     if (kind === CellKind.Q || kind === CellKind.PYTHON) {
       const targetItem = new vscode.NotebookCellStatusBarItem(
-        target || "scratchpad",
+        target || (isInsights ? "scratchpad" : "default"),
         vscode.NotebookCellStatusBarAlignment.Right,
       );
 
@@ -95,7 +88,7 @@ export class KxNotebookTargetActionProvider
 
 export async function inputVariable(cell?: vscode.NotebookCell) {
   const variable = await vscode.window.showInputBox({
-    title: "Enter output variable name for scratchpad:",
+    title: "Enter Output Variable Name",
     value: cell?.metadata?.variable,
     validateInput,
   });
@@ -103,7 +96,7 @@ export async function inputVariable(cell?: vscode.NotebookCell) {
     if (cell) {
       await updateCellMetadata(cell, {
         target: cell.metadata?.target,
-        variable: variable || undefined,
+        variable: variable,
       });
     }
     return variable;
@@ -117,10 +110,10 @@ export function validateInput(value?: string) {
   if (value.length > 32) {
     return "Variable name should be less than or equal to 32 characters.";
   }
-  if (value.match(/^[_0-9]/gs)) {
+  if (/^[_0-9]/s.test(value)) {
     return "Variable name can't start with a number or underscore.";
   }
-  if (value.match(/[^a-zA-Z_0-9.]/gs)) {
+  if (/[^a-zA-Z_0-9.]/s.test(value)) {
     return "Variable name contains invalid characters.";
   }
   return undefined;
