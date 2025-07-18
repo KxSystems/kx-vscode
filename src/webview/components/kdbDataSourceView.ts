@@ -460,7 +460,9 @@ export class KdbDataSourceView extends LitElement {
   renderTargetOptions() {
     if (this.isInsights && this.isMetaLoaded) {
       return this.insightsMeta.dap.map((dap) => {
-        const value = `${dap.assembly} ${dap.instance}`;
+        const value = [dap.assembly, dap.instance, dap.dap]
+          .filter(Boolean)
+          .join(" ");
         if (!this.qsqlTarget) {
           this.qsqlTarget = value;
         }
@@ -965,6 +967,7 @@ export class KdbDataSourceView extends LitElement {
         <sl-select
           label="Target"
           .value="${live(encodeURIComponent(this.qsqlTarget))}"
+          class="reset-widths-limit width-97-pct"
           @sl-change="${(event: Event) => {
             this.qsqlTarget = decodeURIComponent(
               (event.target as HTMLSelectElement).value,
