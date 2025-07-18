@@ -15,7 +15,6 @@ import { ChildProcess } from "child_process";
 import { createHash } from "crypto";
 import { writeFile } from "fs/promises";
 import { pathExists } from "fs-extra";
-import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { env } from "node:process";
 import { tmpdir } from "os";
@@ -29,6 +28,7 @@ import { tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
 import { showRegistrationNotification } from "./registration";
 import { errorMessage } from "./shared";
+import { which } from "./shell";
 import {
   InsightDetails,
   Insights,
@@ -214,8 +214,7 @@ export function getQExecutablePath() {
     let targets: string[] = [];
     try {
       // KDB-X works only on WSL, Linux and MacOS
-      const which = execFileSync("/usr/bin/which", ["-a", "q"]);
-      targets = new TextDecoder().decode(which).split(/(?:\r\n|[\r\n])/gs);
+      targets = which("q");
     } catch (error) {
       notify(errorMessage(error), MessageKind.DEBUG, { logger });
     }

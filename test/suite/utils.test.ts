@@ -61,6 +61,7 @@ import { openUrl } from "../../src/utils/openUrl";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { showRegistrationNotification } from "../../src/utils/registration";
 import * as shared from "../../src/utils/shared";
+import * as shell from "../../src/utils/shell";
 import { killPid } from "../../src/utils/shell";
 import * as UDAUtils from "../../src/utils/uda";
 import {
@@ -971,10 +972,36 @@ describe("Utils", () => {
     });
 
     describe("getQExecutablePath", () => {
-      it("should return path", () => {
+      afterEach(() => {
+        sinon.restore();
+      });
+      it("should return KDB+", () => {
         ext.REAL_QHOME = "QHOME";
         const res = coreUtils.getQExecutablePath();
-        assert.ok(res);
+        assert.ok(res.endsWith("/q"));
+      });
+      it("should return KDB-X", () => {
+        ext.REAL_QHOME = "";
+        sinon.stub(shell, "which").returns(["/bin/q"]);
+        const res = coreUtils.getQExecutablePath();
+        assert.ok(res.endsWith("/q"));
+      });
+      it("should return qHomeDirectory", () => {
+        ext.REAL_QHOME = "";
+        sinon.stub(shell, "which").throws();
+        sinon.stub(vscode.workspace, "getConfiguration").value(() => {
+          return { get: () => "/m64/q" };
+        });
+        const res = coreUtils.getQExecutablePath();
+        assert.ok(res.endsWith("/q"));
+      });
+      it("should throw if q not found", () => {
+        ext.REAL_QHOME = "";
+        sinon.stub(shell, "which").throws();
+        sinon.stub(vscode.workspace, "getConfiguration").value(() => {
+          return { get: () => undefined };
+        });
+        assert.throws(() => coreUtils.getQExecutablePath());
       });
     });
   });
