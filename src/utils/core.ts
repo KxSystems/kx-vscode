@@ -207,15 +207,12 @@ export function getQExecutablePath() {
   if (ext.REAL_QHOME) {
     return path.join(ext.REAL_QHOME, folder, "q");
   } else {
-    let targets: string[] = [];
     try {
-      // KDB-X works only on WSL, Linux and MacOS
-      targets = which("q");
+      for (const target of which("q")) {
+        if (target.endsWith("/bin/q")) return target;
+      }
     } catch (error) {
       notify(errorMessage(error), MessageKind.DEBUG, { logger });
-    }
-    for (const target of targets) {
-      if (target.endsWith("/bin/q")) return target;
     }
   }
 
