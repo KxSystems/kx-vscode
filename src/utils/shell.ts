@@ -12,6 +12,7 @@
  */
 
 import { ChildProcess, execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 
 import { ICommandResult, tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
@@ -51,4 +52,9 @@ function killPidCommand(pid: number): string {
 export function which(cmd: string): string[] {
   const res = execFileSync("/usr/bin/which", ["-a", cmd]);
   return new TextDecoder().decode(res).split(/(?:\r\n|[\r\n])/gs);
+}
+
+/* istanbul ignore next */
+export function stat(path: string): boolean {
+  return existsSync(path);
 }

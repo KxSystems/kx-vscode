@@ -28,7 +28,7 @@ import { tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
 import { showRegistrationNotification } from "./registration";
 import { errorMessage } from "./shared";
-import { which } from "./shell";
+import { stat, which } from "./shell";
 import {
   InsightDetails,
   Insights,
@@ -205,7 +205,8 @@ export function getQExecutablePath() {
   }
 
   if (ext.REAL_QHOME) {
-    return path.join(ext.REAL_QHOME, folder, "q");
+    const q = path.join(ext.REAL_QHOME, "bin", "q");
+    return stat(q) ? q : path.join(ext.REAL_QHOME, folder, "q");
   } else {
     try {
       for (const target of which("q")) {
@@ -216,12 +217,10 @@ export function getQExecutablePath() {
     }
   }
 
-  const home = workspace
-    .getConfiguration("kdb")
-    .get<string>("qHomeDirectory", "");
+  const q = workspace.getConfiguration("kdb").get<string>("qHomeDirectory", "");
 
-  if (home) {
-    return path.join(home, folder, "q");
+  if (q) {
+    return path.join(q, folder, "q");
   }
 
   throw new Error(

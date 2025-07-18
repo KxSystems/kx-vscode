@@ -13,6 +13,7 @@
 
 import * as assert from "assert";
 import mock from "mock-fs";
+import path from "node:path";
 import { env } from "node:process";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
@@ -977,20 +978,28 @@ describe("Utils", () => {
       });
       it("should return KDB+", () => {
         ext.REAL_QHOME = "QHOME";
+        sinon.stub(shell, "stat").returns(false);
         const res = coreUtils.getQExecutablePath();
-        assert.ok(res);
+        assert.strictEqual(res, path.join("QHOME", "m64", "q"));
+      });
+      it("should return KDB-X", () => {
+        ext.REAL_QHOME = "QHOME";
+        sinon.stub(shell, "stat").returns(true);
+        const res = coreUtils.getQExecutablePath();
+        assert.strictEqual(res, path.join("QHOME", "bin", "q"));
       });
       it("should return KDB-X", () => {
         ext.REAL_QHOME = "";
-        sinon.stub(shell, "which").returns(["/bin/q"]);
+        const target = path.join("QHOME", "bin", "q");
+        sinon.stub(shell, "which").returns([target]);
         const res = coreUtils.getQExecutablePath();
-        assert.ok(res);
+        assert.strictEqual(res, target);
       });
       it("should return qHomeDirectory", () => {
         ext.REAL_QHOME = "";
         sinon.stub(shell, "which").throws();
         sinon.stub(vscode.workspace, "getConfiguration").value(() => {
-          return { get: () => "/m64/q" };
+          return { get: () => "QHOME" };
         });
         const res = coreUtils.getQExecutablePath();
         assert.ok(res);
@@ -999,7 +1008,7 @@ describe("Utils", () => {
         ext.REAL_QHOME = "";
         sinon.stub(shell, "which").throws();
         sinon.stub(vscode.workspace, "getConfiguration").value(() => {
-          return { get: () => undefined };
+          return { get: () => "" };
         });
         assert.throws(() => coreUtils.getQExecutablePath());
       });
