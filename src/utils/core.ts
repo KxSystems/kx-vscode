@@ -15,6 +15,7 @@ import { ChildProcess } from "child_process";
 import { createHash } from "crypto";
 import { writeFile } from "fs/promises";
 import { pathExists } from "fs-extra";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { env } from "node:process";
 import { tmpdir } from "os";
@@ -27,6 +28,7 @@ import { ext } from "../extensionVariables";
 import { tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
 import { showRegistrationNotification } from "./registration";
+import { errorMessage } from "./shared";
 import {
   InsightDetails,
   Insights,
@@ -195,14 +197,19 @@ export function getPlatformFolder(
 }
 
 export function isKdbX(target: string) {
-  const q = path.join(target, "q");
-  return /[/\\]{1,2}bin[/\\]{1,2}q$/s.test(q) ? q : undefined;
+  return /\/bin\/q$/s.test(target) ? target : undefined;
 }
 
 export function getQExecutablePath() {
-  // KDB-X Support
-  if (!ext.REAL_QHOME && process.env.PATH) {
-    const targets = process.env.PATH.split(/:+/gs);
+  // KDB-X works only on WSL, Linux and MacOS
+  if (!ext.REAL_QHOME) {
+    let targets: string[] = [];
+    try {
+      const which = execFileSync("which", ["-a", "q"]);
+      targets = new TextDecoder().decode(which).split(/(?:\r\n|[\r\n])/gs);
+    } catch (error) {
+      notify(errorMessage(error), MessageKind.DEBUG, { logger });
+    }
     for (const target of targets) {
       const kdbx = isKdbX(target);
       if (kdbx) return kdbx;
