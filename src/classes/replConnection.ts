@@ -67,6 +67,8 @@ const NS = {
 };
 
 const CONF = {
+  KDBP: "KDB+",
+  KDBX: "KDB-X",
   PROMPT: ")",
   MAX_INPUT: 80 * 40,
 };
@@ -97,6 +99,7 @@ export class ReplConnection {
   private buffer: string[] = [];
   private input: string[] = [];
   private executions?: Callable[] = [];
+  private title = CONF.KDBP;
 
   private _context = CTX.Q;
   private _namespace = ANSI.EMPTY;
@@ -112,8 +115,8 @@ export class ReplConnection {
   private constructor() {
     this.onDidWrite = new vscode.EventEmitter<string>();
     this.decoder = new TextDecoder("utf8");
-    this.terminal = this.createTerminal();
     this.process = this.createProcess();
+    this.terminal = this.createTerminal();
     this.connect();
   }
 
@@ -154,12 +157,14 @@ export class ReplConnection {
         handleInput: this.handleInput.bind(this),
         onDidWrite: this.onDidWrite.event,
       },
-      name: `kdb+ ${ext.REPL}`,
+      name: `${this.title} ${ext.REPL}`,
     });
   }
 
   private createProcess() {
-    return spawn(getQExecutablePath(), {
+    const q = getQExecutablePath();
+    if (q.endsWith("/bin/q")) this.title = CONF.KDBX;
+    return spawn(q, {
       env: { ...process.env, QHOME: ext.REAL_QHOME },
     });
   }
@@ -335,7 +340,7 @@ export class ReplConnection {
   }
 
   private handleClose(code?: number) {
-    const message = `kdb+ exited with code (${code ?? 0}).${ANSI.CRLF}`;
+    const message = `${this.title} exited with code (${code ?? 0}).${ANSI.CRLF}`;
     this.showMessage(message);
     this.exited = true;
   }
@@ -355,7 +360,8 @@ export class ReplConnection {
     }
 
     this.sendToTerminal(
-      "kdb+ REPL Copyright (C) 1993-2025 KX Systems" + ANSI.CRLF.repeat(2),
+      `${this.title} REPL Copyright (C) 1993-2025 Kx Systems` +
+        ANSI.CRLF.repeat(2),
     );
 
     this.messages.forEach((message) => this.sendToTerminal(message));

@@ -451,7 +451,7 @@
       {
         "category": "KX",
         "command": "kdb.start.repl",
-        "title": "Start kdb+ REPL"
+        "title": "Start REPL"
       },
       {
         "category": "KX",

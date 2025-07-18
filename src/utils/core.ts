@@ -195,6 +195,15 @@ export function getPlatformFolder(
 }
 
 export function getQExecutablePath() {
+  // KDB-X Support
+  if (!ext.REAL_QHOME && process.env.PATH) {
+    const targets = process.env.PATH.split(/:+/gs);
+    for (const target of targets) {
+      const q = `${target}/q`;
+      if (/\/+bin\/+q$/s.test(q)) return q;
+    }
+  }
+
   const folder = getPlatformFolder(process.platform, process.arch);
   if (!folder) {
     throw new Error(
