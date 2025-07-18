@@ -18,6 +18,7 @@ import { ext } from "../extensionVariables";
 import {
   getAutoFocusOutputOnEntrySetting,
   getQExecutablePath,
+  isKdbX,
 } from "../utils/core";
 import { normalizeQuery } from "../utils/queryUtils";
 
@@ -166,7 +167,7 @@ export class ReplConnection {
 
   private createProcess() {
     const q = getQExecutablePath();
-    if (/[/\\]+bin[/\\]+q$/s.test(q)) this.title = CONF.KDBX;
+    if (isKdbX(q)) this.title = CONF.KDBX;
     return spawn(q, {
       env: { ...process.env, QHOME: ext.REAL_QHOME },
     });

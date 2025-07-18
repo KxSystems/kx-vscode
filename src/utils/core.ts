@@ -194,13 +194,18 @@ export function getPlatformFolder(
   return undefined;
 }
 
+export function isKdbX(target: string) {
+  const q = path.join(target, "q");
+  return /[/\\]{1,2}bin[/\\]{1,2}q$/s.test(q) ? q : undefined;
+}
+
 export function getQExecutablePath() {
   // KDB-X Support
   if (!ext.REAL_QHOME && process.env.PATH) {
     const targets = process.env.PATH.split(/:+/gs);
     for (const target of targets) {
-      const q = `${target}/q`;
-      if (/[/\\]+bin[/\\]+q$/s.test(q)) return q;
+      const kdbx = isKdbX(target);
+      if (kdbx) return kdbx;
     }
   }
 
