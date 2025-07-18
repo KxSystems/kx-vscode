@@ -181,6 +181,10 @@ export class ReplConnection {
     this.process.stderr.on("error", this.handleError.bind(this));
   }
 
+  private executeCommand(data: string) {
+    this.process.stdin.write(data + ANSI.CRLF);
+  }
+
   private sendToProcess(data: string) {
     this.process.stdin.write(data + ANSI.CRLF, (error) => {
       if (error) {
@@ -379,6 +383,7 @@ export class ReplConnection {
     this.columns = dimensions.columns;
     this.rows = dimensions.rows;
     this.updateMaxInputIndex();
+    this.executeCommand(`\\c ${this.rows} ${this.columns}`);
     if (!this.executions && !this.executing) this.showPrompt();
   }
 
