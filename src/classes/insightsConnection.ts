@@ -197,15 +197,17 @@ export class InsightsConnection {
         ext.insightsServiceGatewayUrls.meta,
         this.node.details.server,
       );
-      const options = await this.getOptions();
+      const options = await this.getOptions(
+        false,
+        undefined,
+        "POST",
+        metaUrl.toString(),
+        { advanced: true },
+      );
 
       if (!options) {
         return undefined;
       }
-
-      options.data = { advanced: true };
-      options.method = "POST";
-      options.url = metaUrl.toString();
 
       notify("REST", MessageKind.DEBUG, {
         logger,
