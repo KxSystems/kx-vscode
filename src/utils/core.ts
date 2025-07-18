@@ -200,7 +200,7 @@ export function getQExecutablePath() {
     const targets = process.env.PATH.split(/:+/gs);
     for (const target of targets) {
       const q = `${target}/q`;
-      if (/\/+bin\/+q$/s.test(q)) return q;
+      if (/[/\\]+bin[/\\]+q$/s.test(q)) return q;
     }
   }
 
