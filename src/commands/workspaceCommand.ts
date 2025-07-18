@@ -258,7 +258,10 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
   let picked = await window.showQuickPick(
     [
       "scratchpad",
-      ...daps.map((value) => `${value.assembly} ${value.instance}`),
+      ...daps.map(
+        (value) =>
+          `${value.assembly} ${value.instance}${value.dap ? ` ${value.dap}` : ""}`,
+      ),
     ],
     {
       title: `Choose Target on ${server} (${connected ? "Connected" : "Disconnected"})`,

@@ -291,7 +291,7 @@ export function generateQSqlBody(
   version?: number,
   qeEnabled?: boolean,
 ) {
-  const [plainAssembly, target] =
+  const [plainAssembly, target, dap] =
     normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
 
   let assembly = plainAssembly;
@@ -305,7 +305,8 @@ export function generateQSqlBody(
       scope: {
         affinity: "soft",
         assembly,
-        tier: target,
+        tier: dap ? undefined : target,
+        dap: dap ? dap : undefined,
       },
     };
   }
