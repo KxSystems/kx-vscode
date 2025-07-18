@@ -16,7 +16,7 @@ import * as os from "os";
 import { join } from "path";
 
 import { ext } from "../extensionVariables";
-import { updateTheWorkspaceSettings } from "./core";
+import { getAutoFocusOutputOnEntrySetting } from "./core";
 import { MessageKind, notify } from "./notifications";
 
 const logger = "cpUtils";
@@ -27,15 +27,14 @@ export async function executeCommand(
   spawnCallback: (cp: cp.ChildProcess, args: string[]) => void,
   ...args: string[]
 ): Promise<string> {
-  updateTheWorkspaceSettings();
   const result: ICommandResult = await tryExecuteCommand(
     workingDirectory,
     command,
     spawnCallback,
     ...args,
   );
-  if (ext.autoFocusOutputOnEntry) {
-    ext.outputChannel.show();
+  if (getAutoFocusOutputOnEntrySetting()) {
+    ext.outputChannel.show(true);
   }
   if (result.code !== 0) {
     throw new Error(
