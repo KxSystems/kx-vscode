@@ -163,7 +163,7 @@ export function notify<T extends string>(
   if (action === "Details") {
     notification.then((res) => {
       if (res === "Details") {
-        ext.outputChannel.show();
+        ext.outputChannel.show(true);
       }
     });
   }

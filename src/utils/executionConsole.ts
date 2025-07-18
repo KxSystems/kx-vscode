@@ -13,8 +13,11 @@
 
 import { OutputChannel, commands, window } from "vscode";
 
-import { ext } from "../extensionVariables";
-import { updateTheWorkspaceSettings, setOutputWordWrapper } from "./core";
+import {
+  setOutputWordWrapper,
+  getAutoFocusOutputOnEntrySetting,
+  getHideDetailedConsoleQueryOutputSetting,
+} from "./core";
 import { MessageKind, notify } from "./notifications";
 import {
   addQueryHistory,
@@ -86,12 +89,11 @@ export class ExecutionConsole {
     duration?: string,
     isFromConnTree?: boolean,
   ): void {
-    updateTheWorkspaceSettings();
-    const hideDetails = ext.hideDetailedConsoleQueryOutput;
+    const hideDetails = getHideDetailedConsoleQueryOutputSetting();
     output = this.checkOutput(output, query);
     let dataSourceRes: string[] = [];
-    if (ext.autoFocusOutputOnEntry) {
-      this._console.show();
+    if (getAutoFocusOutputOnEntrySetting()) {
+      this._console.show(true);
     }
 
     if (Array.isArray(output)) {
@@ -149,10 +151,9 @@ export class ExecutionConsole {
     duration?: string,
     isFromConnTree?: boolean,
   ): void {
-    updateTheWorkspaceSettings();
-    const hideDetails = ext.hideDetailedConsoleQueryOutput;
-    if (ext.autoFocusOutputOnEntry) {
-      this._console.show();
+    const hideDetails = getHideDetailedConsoleQueryOutputSetting();
+    if (getAutoFocusOutputOnEntrySetting()) {
+      this._console.show(true);
     }
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();

@@ -289,41 +289,16 @@ export function fixUnnamedAlias(): void {
   }
 }
 
-export function getHideDetailedConsoleQueryOutput(): void {
-  const setting = workspace
-    .getConfiguration()
-    .get<boolean | undefined>("kdb.hideDetailedConsoleQueryOutput");
-  if (setting === undefined) {
-    workspace
-      .getConfiguration()
-      .update(
-        "kdb.hideDetailedConsoleQueryOutput",
-        true,
-        ConfigurationTarget.Global,
-      );
-    ext.hideDetailedConsoleQueryOutput = true;
-  } else {
-    ext.hideDetailedConsoleQueryOutput = setting;
-  }
+export function getAutoFocusOutputOnEntrySetting(): boolean {
+  return workspace
+    .getConfiguration("kdb")
+    .get<boolean>("autoFocusOutputOnEntry", true);
 }
 
-export function getAutoFocusOutputOnEntry(): void {
-  const setting = workspace
-    .getConfiguration()
-    .get<boolean | undefined>("kdb.autoFocusOutputOnEntry");
-  if (setting === undefined) {
-    workspace
-      .getConfiguration()
-      .update("kdb.autoFocusOutputOnEntry", true, ConfigurationTarget.Global);
-    ext.autoFocusOutputOnEntry = true;
-  } else {
-    ext.autoFocusOutputOnEntry = setting;
-  }
-}
-
-export function updateTheWorkspaceSettings(): void {
-  getAutoFocusOutputOnEntry();
-  getHideDetailedConsoleQueryOutput();
+export function getHideDetailedConsoleQueryOutputSetting(): boolean {
+  return workspace
+    .getConfiguration("kdb")
+    .get<boolean>("hideDetailedConsoleQueryOutput", true);
 }
 
 export function setOutputWordWrapper(): void {
