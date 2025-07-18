@@ -201,10 +201,19 @@ export function isKdbX(target: string) {
 }
 
 export function getQExecutablePath() {
-  // KDB-X works only on WSL, Linux and MacOS
-  if (!ext.REAL_QHOME) {
+  const folder = getPlatformFolder(process.platform, process.arch);
+  if (!folder) {
+    throw new Error(
+      `Unsupported platform (${process.platform}) or architecture (${process.arch}).`,
+    );
+  }
+
+  if (ext.REAL_QHOME) {
+    return path.join(ext.REAL_QHOME, folder, "q");
+  } else {
     let targets: string[] = [];
     try {
+      // KDB-X works only on WSL, Linux and MacOS
       const which = execFileSync("which", ["-a", "q"]);
       targets = new TextDecoder().decode(which).split(/(?:\r\n|[\r\n])/gs);
     } catch (error) {
@@ -216,16 +225,9 @@ export function getQExecutablePath() {
     }
   }
 
-  const folder = getPlatformFolder(process.platform, process.arch);
-  if (!folder) {
-    throw new Error(
-      `Unsupported platform (${process.platform}) or architecture (${process.arch}).`,
-    );
-  }
-
-  const home =
-    ext.REAL_QHOME ??
-    workspace.getConfiguration("kdb").get<string>("qHomeDirectory", "");
+  const home = workspace
+    .getConfiguration("kdb")
+    .get<string>("qHomeDirectory", "");
 
   if (home) {
     return path.join(home, folder, "q");
