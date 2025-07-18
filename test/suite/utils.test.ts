@@ -971,19 +971,23 @@ describe("Utils", () => {
     });
 
     describe("getQExecutablePath", () => {
+      let path: string;
+      beforeEach(() => {
+        path = process.env.PATH;
+      });
+      afterEach(() => {
+        process.env.PATH = path;
+      });
       it("should return path", () => {
         ext.REAL_QHOME = "QHOME";
         const res = coreUtils.getQExecutablePath();
         assert.ok(res);
       });
-      it("should throw when env vars are not set", () => {
+      it("should return KDB-X path when QHOME is unset", () => {
         ext.REAL_QHOME = "";
-        assert.throws(
-          () => coreUtils.getQExecutablePath(),
-          new Error(
-            "Neither QHOME environment variable nor qHomeDirectory is set.",
-          ),
-        );
+        process.env.PATH = "~/.kx/bin";
+        const res = coreUtils.getQExecutablePath();
+        assert.strictEqual(res, "~/.kx/bin/q");
       });
     });
   });
