@@ -41,7 +41,7 @@ import {
   tokenUndefinedError,
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
-import { MessageKind, notify, Runner } from "../utils/notifications";
+import { MessageKind, notify } from "../utils/notifications";
 import {
   generateQSqlBody,
   handleScratchpadTableRes,
@@ -209,7 +209,7 @@ export class InsightsConnection {
 
       notify("REST", MessageKind.DEBUG, {
         logger,
-        params: { url: options.url, data: options.data },
+        params: { url: options.url },
       });
 
       const metaResponse = await axios(options);
