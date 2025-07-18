@@ -198,6 +198,7 @@ export function getPlatformFolder(
 
 export function getQExecutablePath() {
   const folder = getPlatformFolder(process.platform, process.arch);
+
   if (!folder) {
     throw new Error(
       `Unsupported platform (${process.platform}) or architecture (${process.arch}).`,
@@ -217,10 +218,12 @@ export function getQExecutablePath() {
     }
   }
 
-  const q = workspace.getConfiguration("kdb").get<string>("qHomeDirectory", "");
+  const qHomeDirectory = workspace
+    .getConfiguration("kdb")
+    .get<string>("qHomeDirectory", "");
 
-  if (q) {
-    return path.join(q, folder, "q");
+  if (qHomeDirectory) {
+    return path.join(qHomeDirectory, folder, "q");
   }
 
   throw new Error(

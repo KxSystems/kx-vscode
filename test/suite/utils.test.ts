@@ -990,10 +990,9 @@ describe("Utils", () => {
       });
       it("should return KDB-X", () => {
         ext.REAL_QHOME = "";
-        const target = path.join("QHOME", "bin", "q");
-        sinon.stub(shell, "which").returns([target]);
+        sinon.stub(shell, "which").returns(["QHOME/bin/q"]);
         const res = coreUtils.getQExecutablePath();
-        assert.strictEqual(res, target);
+        assert.strictEqual(res, "QHOME/bin/q");
       });
       it("should return qHomeDirectory", () => {
         ext.REAL_QHOME = "";
