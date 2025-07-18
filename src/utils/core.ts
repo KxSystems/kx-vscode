@@ -214,7 +214,7 @@ export function getQExecutablePath() {
     let targets: string[] = [];
     try {
       // KDB-X works only on WSL, Linux and MacOS
-      const which = execFileSync("which", ["-a", "q"]);
+      const which = execFileSync("/usr/bin/which", ["-a", "q"]);
       targets = new TextDecoder().decode(which).split(/(?:\r\n|[\r\n])/gs);
     } catch (error) {
       notify(errorMessage(error), MessageKind.DEBUG, { logger });
