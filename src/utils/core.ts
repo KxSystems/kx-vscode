@@ -196,10 +196,6 @@ export function getPlatformFolder(
   return undefined;
 }
 
-export function isKdbX(target: string) {
-  return /\/bin\/q$/s.test(target) ? target : undefined;
-}
-
 export function getQExecutablePath() {
   const folder = getPlatformFolder(process.platform, process.arch);
   if (!folder) {
@@ -219,8 +215,7 @@ export function getQExecutablePath() {
       notify(errorMessage(error), MessageKind.DEBUG, { logger });
     }
     for (const target of targets) {
-      const kdbx = isKdbX(target);
-      if (kdbx) return kdbx;
+      if (target.endsWith("/bin/q")) return target;
     }
   }
 
