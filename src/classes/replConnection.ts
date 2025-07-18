@@ -36,6 +36,7 @@ const ANSI = {
 
 const KEY = {
   CR: "\r",
+  CTRLC: "\x03",
   BS: "\b",
   BSMAC: "\x7f",
   DEL: "\x1b[3~",
@@ -377,9 +378,10 @@ export class ReplConnection {
     if (ReplConnection.instance === this) {
       ReplConnection.instance = undefined;
     }
-    this.exited = true;
-    this.process.kill();
+    this.process.kill("SIGINT");
+    this.process.kill("SIGTERM");
     this.onDidWrite.dispose();
+    this.exited = true;
   }
 
   private handleInput(data: string) {
@@ -408,6 +410,11 @@ export class ReplConnection {
         }
         this.history.rewind();
         this.sendToTerminal(ANSI.CRLF);
+        break;
+      case KEY.CTRLC:
+        if (this.executing) {
+          this.process.kill("SIGINT");
+        }
         break;
       case KEY.BS:
       case KEY.BSMAC:
