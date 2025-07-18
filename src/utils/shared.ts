@@ -12,9 +12,9 @@
  */
 
 export function normalizeAssemblyTarget(assemblyTarget: string) {
-  const [dirtyAssembly, target] = assemblyTarget.split(/\s+/);
+  const [dirtyAssembly, target, dap] = assemblyTarget.split(/\s+/);
   const assembly = dirtyAssembly.replace(/-qe$/gm, "");
-  return `${assembly} ${target}`;
+  return `${assembly} ${target}${dap ? ` ${dap}` : ""}`;
 }
 
 export function stripUnprintableChars(text: string): string {
