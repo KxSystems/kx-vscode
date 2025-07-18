@@ -21,7 +21,7 @@ This guide provides information on the following:
 - [Query History](#query-history)
 - [Viewing results](#view-results)
 - [AxLibraries](#axlibraries)
-- [q REPL](#q-repl)
+- [REPL](#repl)
 - [Settings](#settings)
 - [Help and feedback](#help-and-feedback)
 - [Shortcuts](#shortcuts)
@@ -234,7 +234,7 @@ To edit an existing connection, right-click the connection you wish to edit and 
 
 ![Edit connection option](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/select-edit-connection.png)
 
-> NOTE: Editing an **active connection** may require you to **restart** the connection. If so, you will be prompted to reconnect after saving your changes.
+> NOTE: Editing an **active connection** may require you to **restart** the connection. If so, you are prompted to reconnect after saving your changes.
 
 ![Edit connected connection dialog](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/edit-connected-connection-dialog.png)
 
@@ -309,9 +309,13 @@ To export a connection:
 
 To verify the export is successful navigate to the saved location and open the configuration file to check its contents.
 
+**Important to note!** When exporting a connection configuration, the **password and username are not included** in the export file. Upon importing the connection, you are prompted to enter the login details to re-establish the connection. This was introduced as a best practice as exporting credentials introduces significant security risks.
+
 ## Connection Labels
 
 Connection Labels allow you to categorize and organize your connections by assigning them distinct names and colors, making it easier to manage and locate specific connections within the application.
+
+Connections are organized in alphabetical order, with connections first sorted by type, then by label within each type, and finally, if there are multiple connections under a label, those are also listed alphabetically.
 
 ![Connection Tree With Labels](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/conn-labels-tree.png)
 
@@ -447,6 +451,37 @@ When executing Python code against kdb+ connections, **note** the following:
 
 Similarly, you can execute arbitrary code against **kdb Insights Enterprise**. The code is executed on a user-specific scratchpad process within the **kdb Insights Enterprise deploy**. The scratchpad is instantiated upon the first request to execute code when connected to a **kdb Insights Enterprise** connection. It remains active until timed out or until you log out.
 
+### Concurrent code execution and querying
+
+kdb VSCode allows users to execute code on a specific Data Access Process (DAP). That allows you to target specific replicas within the RDB, IDB, and HDB tiers when executing queries. To select a replica for query execution, simply choose the desired tier (RDB, IDB, HDB) and then select the specific replica from the list of available options, such as `demo-ui-fx rdb-0`, `demo-ui-fx idb-1`. Once selected, queries execute on that specific replica, ensuring better load distribution and minimizing execution time across the cluster.
+
+Within each tier, multiple processes are available to handle queries, ensuring that queries can be run simultaneously across these processes. For example, if the RDB tier has three processes (process 0, process 1, process 2), queries are directed to whichever process is available, allowing multiple users to execute their queries in parallel. As soon as a process becomes available, it handles the next incoming query, ensuring efficient resource utilization and minimal delays.
+
+When connecting to a kdb Insights server version 1.14.2 or higher, you can see detailed information about the available replicas for each database (RDB, IDB, HDB). This allows you to choose a specific replica for your query.
+
+The list includes specific targeting of replicas and looks similar to the example below:
+
+```
+- scratchpad
+- demo-ui-fx idb
+- demo-ui-fx rdb
+- demo-ui-fx hdb
+- demo-ui-fx idb-0
+- demo-ui-fx idb-1
+- demo-ui-fx idb-2
+- …
+- demo-ui-fx rdb-0
+- demo-ui-fx rdb-1
+- demo-ui-fx rdb-2
+- …
+- demo-ui-fx hdb-0
+- demo-ui-fx hdb-1
+- demo-ui-fx hdb-2
+- …
+```
+
+If you are connecting to an older kdb Insights version (1.14.1 or lower), replica information is not available. However, you can still run queries on a general group of databases (RDB, IDB, HDB), but don’t have the option to target a specific replica. This ensures that the feature works even if you are using older versions of Insights.
+
 ## Data sources
 
 KX data source files allow you to build queries within VS Code, associate them with a connection and run them against the [kdb Insights Enterprise API endpoints](https://code.kx.com/insights/api/index.html). These are workspace specific files that have the following features:
@@ -518,6 +553,8 @@ This function runs an SQL query.
 ```
 .com_kx_edi.sql[query]
 ```
+
+You can run SQL files against any kdb Insights Enterprise connections and select to [populate the Scratchpad](#populate-scratchpad) if you wish.
 
 Refer to the [SQL documentation](https://code.kx.com/insights/api/database/query/sql.html) for more details.
 
@@ -678,8 +715,6 @@ You can run code on either the [scratchpad](#run-and-populate-scratchpad) or dir
 
 This eliminates the need to copy code from files into the qSQL Data Source tab or Workbooks for testing against DAPs.
 
-**Note!** DAP targeting is available only for `.q` files. `.py` files run exclusively on the scratchpad, even when associated with an Insights connection.
-
 For selecting connections and endpoints for unassociated files, consider the following:
 
 - When a `.q` or `.py` file is not associated with a connection, it shows a **Choose Connection** code lens at the top and runs on the active connected connection.
@@ -712,15 +747,19 @@ From this view, you can add either Markdown or Code blocks to the notebook by cl
 
 ![Add code blocks to notebook](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/add-notebook-code.png)
 
-To change the language of the code block, click on the language labels and select language from the Command Palette.
+In KX Notebooks, you can select a target and a variable name to populate the Scratchpad. When you select a connection, clicking on the Scratchpad tab displays a list where you can change between the Scratchpad and one of the DAPs (RDB, IDB, or HDB).
 
-![Select notebook language](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/select-notebook-language.png)
+Next to the Scratchpad tab, there is a language option. To change the language of the code block, click on the language labels and select language from the Command Palette. You can select between q, Python, Markdown, or MS SQL.
+
+When selecting a variable, the default option is **(none)**. You can click on **(none)** and enter a variable name, such as `mydata`. If you execute this, it populates the scratchpad with the variable. You can also choose a different tier to run the query and populate the scratchpad accordingly. If you don't enter any variable, only the results are displayed.
 
 ### Execute code blocks
 
 Code blocks are executed using the active KX connection, and the results are displayed inline next to the code block. The execution state is preserved across code blocks, similar to Jupyter notebooks, allowing for progressive data analysis.
 
 ![See notebook data](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/notebook-data.png)
+
+You can run SQL queries on a tier and populate the Scratchpad with the SQL results. This functionality connects to the Q SQL endpoint and imports the data into the Scratchpad as a variable.
 
 KX Notebooks detect [GGPlot2](#grammar-of-graphics) outputs. If the execution generates a plot, it is displayed inline for both q and PyKX.
 
@@ -802,19 +841,33 @@ You can make changes to the script before exporting the plot. Re-running the scr
 
 **Note**: When executing GG script commands, select the `KDB RESULTS` tab to display the plot.
 
-## q REPL
+## REPL
 
-q REPL can be started from the command prompt by searching **q REPL**.
+REPL stands for **Read-Eval-Print Loop**, which is an interactive programming environment used in many languages. REPLs are particularly useful for interactive development, debugging, and testing because users can write and run code snippets in real-time, seeing immediate feedback.
+
+REPL can be started from the command prompt by searching **>repl**.
 
 ![REPL](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/repl.png)
 
+**Important!** Before running code in the REPL interactive terminal, ensure that your [Q Home Directory](#using-q-outside-of-vs-code) is correctly configured in VSCode. This setting is required to set up the q runtime environment for the interactive terminal. To configure the Q Home Directory, go to **VSCode Settings > Extension > kdb** and enter the path for the `q` runtime.
+
+To execute a q file in REPL:
+
+1. Click **Choose Connection**
+1. Select **REPL** from the list
+1. Execute your q file
+
+The results are shown in the terminal and you can continue to work either in your q file or directly in the terminal.
+
+Refer to the [REPL shortcuts table](https://github.com/KxSystems/kx-vscode/wiki/REPL) for information on the keyboard shortcuts you can use.
+
 ## Logs
 
-Any error or info will be posted at **OUTPUT** in **kdb** tab
+Any error or info is posted at **OUTPUT** in **kdb** tab
 
 ![LOG](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/log-sample.png)
 
-The format will be:
+The format is:
 
 `[DATE TIME] [INFO or ERROR] Message`
 
@@ -831,6 +884,7 @@ To update kdb VS Code settings, search for **kdb** from _Preferences_ > _Setting
 | **Refactoring**                                                | Choose refactoring scope                                            |
 | **QHOME directory for q runtime**                              | Display location path of q installation                             |
 | **Servers**                                                    | [edit JSON settings](#servers)                                      |
+| **Auto focus output on entry**                                 | yes/no; default yes                                                 |
 
 ### Refactoring
 
@@ -904,13 +958,19 @@ If you only need to apply the refactorings to the currently opened files, you ca
 
 ### Double Click Selection
 
-The following setting will change double click behaviour to select the whole identifier including dots:
+The following setting changes double click behavior to select the whole identifier including dots:
 
 ```JSON
  "[q]": {
     "editor.wordSeparators": "`~!@#$%^&*()-=+[{]}\\|;:'\",<>/?"
   }
 ```
+
+### Auto focus output on entry
+
+This setting automatically focuses the output console when running a query without an active results tab or receive log entry. This means that, when the setting is enabled, executing a query shows the q console in the output window even if the q console is not open in the output window.
+
+You can disable this option at any time in **Settings** if you do not want to auto-focus.
 
 ## Help and feedback
 

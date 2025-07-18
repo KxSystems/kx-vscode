@@ -2,6 +2,42 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.13.0
+
+### Enhancements
+
+- Added a new setting to prevent focus change when executing a query
+- Introduced SQL code block support in notebooks
+- Enabled connection association and execution for plain SQL files
+- Notebooks now support DAP targets and automatically populate scratchpad
+- Workbook enhancements to allow Python files to target specific DAPs on kdb Insights connections
+- Improved the q REPL command functionality
+- Extended qsql API to allow targeting specific DAP processes, not just tiers
+
+### Fixes
+
+- Fixed an issue where opening "Edit Connection" on multiple connections grouped them under a single label
+- Added confirmation prompt when removing a connection
+- Resolved an issue where the selected tab changed on startup
+- Fixed broken **Add Connection** action in the welcome view
+- Addressed issue where the "Create KX Notebook" command failed if an unsaved notebook already existed
+- Improved naming consistency for VSCode kdb+ connections
+- Ensured connections are sorted alphabetically in VSCode
+- Made notebook error messages on IE connections more descriptive, matching kdb+ standards
+- Added separate connection checks for `getData` and scratchpad in VSCode
+- Fixed issue where the "Enable TLS" checkbox state was not saved
+- Resolved problems with previewing local kdb variables
+- Corrected the displayed result count cap of KDB Results (now accurately reflects the 10,000 limit)
+
+### Internal Improvements
+
+- Updated dependencies for better performance and security
+- Added support for debugging unit tests
+- Switched to the `c8` coverage tool for improved test coverage reporting
+- Resolved Chevrotain (LS Server package) warnings related to test coverage
+- Migrated from deprecated telemetry to the current standard
+- Unified progress tracking, logging, telemetry, and notifications for consistency
+
 # v1.12.0
 
 This release requires VS Code version 1.96.0 or higher.
