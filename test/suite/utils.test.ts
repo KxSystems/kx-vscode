@@ -13,6 +13,7 @@
 
 import * as assert from "assert";
 import mock from "mock-fs";
+import path from "node:path";
 import { env } from "node:process";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
@@ -971,12 +972,12 @@ describe("Utils", () => {
     });
 
     describe("getQExecutablePath", () => {
-      let path: string;
+      let PATH: string;
       beforeEach(() => {
-        path = process.env.PATH;
+        PATH = process.env.PATH;
       });
       afterEach(() => {
-        process.env.PATH = path;
+        process.env.PATH = PATH;
       });
       it("should return path", () => {
         ext.REAL_QHOME = "QHOME";
@@ -985,9 +986,19 @@ describe("Utils", () => {
       });
       it("should return KDB-X path when QHOME is unset", () => {
         ext.REAL_QHOME = "";
-        process.env.PATH = "~/.kx/bin";
+        process.env.PATH = path.join(".kx", "bin");
         const res = coreUtils.getQExecutablePath();
-        assert.strictEqual(res, "~/.kx/bin/q");
+        assert.strictEqual(res, path.join(".kx", "bin", "q"));
+      });
+      it("should throw when env vars are not set", () => {
+        ext.REAL_QHOME = "";
+        process.env.PATH = "";
+        assert.throws(
+          () => coreUtils.getQExecutablePath(),
+          new Error(
+            "Neither QHOME environment variable nor qHomeDirectory is set.",
+          ),
+        );
       });
     });
   });
