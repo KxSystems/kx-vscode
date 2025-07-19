@@ -181,6 +181,20 @@ export class ReplConnection {
     this.process.stdin.write(data + ANSI.CRLF);
   }
 
+  private sendDimensions() {
+    const LINES = process.env.LINES ?? this.rows.toString();
+    let rows = parseInt(LINES.replace(/[^0-9]+/gs, "0") || "0");
+    if (rows < 25) rows = 25;
+    if (rows > 500) rows = 500;
+
+    const COLUMNS = process.env.COLUMNS ?? this.columns.toString();
+    let columns = parseInt(COLUMNS.replace(/[^0-9]+/gs, "") || "0");
+    if (columns < 50) columns = 50;
+    if (columns > 320) columns = 320;
+
+    this.executeCommand(`\\c ${rows} ${columns}`);
+  }
+
   private sendToProcess(data: string) {
     this.process.stdin.write(data + ANSI.CRLF, (error) => {
       if (error) {
@@ -378,9 +392,7 @@ export class ReplConnection {
     this.rows = dimensions.rows;
     this.columns = dimensions.columns;
     this.updateMaxInputIndex();
-    const rows = process.env.LINES ?? this.rows;
-    const columns = process.env.COLUMNS ?? this.columns;
-    this.executeCommand(`\\c ${rows} ${columns}`);
+    this.sendDimensions();
     if (!this.executions && !this.executing) this.showPrompt();
   }
 
