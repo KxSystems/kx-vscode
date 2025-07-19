@@ -50,6 +50,7 @@ function killPidCommand(pid: number): string {
 
 /* istanbul ignore next */
 export function which(cmd: string): string[] {
+  // This works on WSL, MacOS, Linux
   const res = execFileSync("/usr/bin/which", ["-a", cmd]);
   return new TextDecoder().decode(res).split(/(?:\r\n|[\r\n])/gs);
 }

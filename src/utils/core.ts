@@ -211,7 +211,7 @@ export function getQExecutablePath() {
   } else {
     try {
       for (const target of which("q")) {
-        if (target.endsWith("/bin/q")) return target;
+        if (target.endsWith(path.join("bin", "q"))) return target;
       }
     } catch (error) {
       notify(errorMessage(error), MessageKind.DEBUG, { logger });

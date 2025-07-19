@@ -70,8 +70,7 @@ const NS = {
 };
 
 const CONF = {
-  KDBP: "KDB+",
-  KDBX: "KDB-X",
+  TITLE: `KX ${ext.REPL}`,
   PROMPT: ")",
   MAX_INPUT: 80 * 40,
 };
@@ -102,7 +101,6 @@ export class ReplConnection {
   private buffer: string[] = [];
   private input: string[] = [];
   private executions?: Callable[] = [];
-  private title = CONF.KDBP;
 
   private _context = CTX.Q;
   private _namespace = ANSI.EMPTY;
@@ -118,8 +116,8 @@ export class ReplConnection {
   private constructor() {
     this.onDidWrite = new vscode.EventEmitter<string>();
     this.decoder = new TextDecoder("utf8");
-    this.process = this.createProcess();
     this.terminal = this.createTerminal();
+    this.process = this.createProcess();
     this.connect();
   }
 
@@ -160,14 +158,12 @@ export class ReplConnection {
         handleInput: this.handleInput.bind(this),
         onDidWrite: this.onDidWrite.event,
       },
-      name: `${this.title} ${ext.REPL}`,
+      name: CONF.TITLE,
     });
   }
 
   private createProcess() {
-    const q = getQExecutablePath();
-    if (q.endsWith("/bin/q")) this.title = CONF.KDBX;
-    return spawn(q, {
+    return spawn(getQExecutablePath(), {
       env: { ...process.env, QHOME: ext.REAL_QHOME },
     });
   }
@@ -346,7 +342,7 @@ export class ReplConnection {
   }
 
   private handleClose(code?: number) {
-    const message = `${this.title} exited with code (${code ?? 0}).${ANSI.CRLF}`;
+    const message = `${CONF.TITLE} exited with code (${code ?? 0}).${ANSI.CRLF}`;
     this.showMessage(message);
     this.exited = true;
   }
@@ -366,8 +362,7 @@ export class ReplConnection {
     }
 
     this.sendToTerminal(
-      `${this.title} REPL Copyright (C) 1993-2025 Kx Systems` +
-        ANSI.CRLF.repeat(2),
+      `${CONF.TITLE} Copyright (C) 1993-2025 Kx Systems` + ANSI.CRLF.repeat(2),
     );
 
     this.messages.forEach((message) => this.sendToTerminal(message));
@@ -380,10 +375,12 @@ export class ReplConnection {
   }
 
   private setDimensions(dimensions: vscode.TerminalDimensions) {
-    this.columns = dimensions.columns;
     this.rows = dimensions.rows;
+    this.columns = dimensions.columns;
     this.updateMaxInputIndex();
-    this.executeCommand(`\\c ${this.rows} ${this.columns}`);
+    const rows = process.env.LINES ?? this.rows;
+    const columns = process.env.COLUMNS ?? this.columns;
+    this.executeCommand(`\\c ${rows} ${columns}`);
     if (!this.executions && !this.executing) this.showPrompt();
   }
 
@@ -415,7 +412,7 @@ export class ReplConnection {
             this.context = this.context === CTX.K ? CTX.Q : CTX.K;
           }
           this.sendToProcess(input);
-          this.history.push(new HistoryItem(input));
+          this.history.push(input);
           this.inputIndex = this.visibleInputIndex;
           this.showPrompt();
         } else {
@@ -543,12 +540,15 @@ class History {
   private head?: HistoryItem;
   private item?: HistoryItem;
 
-  push(item: HistoryItem) {
+  push(input: string) {
+    if (input === this.head?.input) {
+      return;
+    }
+    const item = new HistoryItem(input);
     if (this.head) {
       item.next = this.head;
       this.head.prev = item;
     }
-    item.prev = undefined;
     this.head = item;
   }
 
