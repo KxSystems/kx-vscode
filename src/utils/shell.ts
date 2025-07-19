@@ -48,14 +48,14 @@ function killPidCommand(pid: number): string {
   // return process.platform === 'win32' ? `taskkill /PID ${pid} /T /F` : `kill -9 ${pid}`;
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 export function which(cmd: string): string[] {
   // This works on WSL, MacOS, Linux
   const res = execFileSync("/usr/bin/which", ["-a", cmd]);
   return new TextDecoder().decode(res).split(/(?:\r\n|[\r\n])/gs);
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 export function stat(path: string): boolean {
   return existsSync(path);
 }
