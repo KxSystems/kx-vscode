@@ -50,6 +50,7 @@ import {
   TestBlock,
   TestLambdaBlock,
   Cond,
+  CutDrop,
 } from "./tokens";
 
 const includes = [
@@ -192,7 +193,7 @@ const repository = {
       },
       {
         name: "keyword.other.q",
-        match: `\\b${_(Keyword)}\\b`,
+        match: `${_(Keyword)}\\b`,
       },
       {
         name: "variable.other.q",
@@ -217,6 +218,10 @@ const repository = {
       {
         name: "punctuation.assignment.q",
         match: _(DoubleColon),
+      },
+      {
+        name: "keyword.operator.arithmetic.q",
+        match: _(CutDrop),
       },
       {
         name: "keyword.operator.arithmetic.q",

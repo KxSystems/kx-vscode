@@ -305,7 +305,11 @@ export async function activate(context: vscode.ExtensionContext) {
   const clientOptions: LanguageClientOptions = {
     documentSelector: [{ language: "q" }],
     synchronize: {
-      fileEvents: vscode.workspace.createFileSystemWatcher("**/*.{q,quke}"),
+      fileEvents: vscode.workspace.createFileSystemWatcher(
+        "**/*.{q,quke,k}",
+        true,
+        true,
+      ),
     },
   };
 
@@ -314,6 +318,12 @@ export async function activate(context: vscode.ExtensionContext) {
     "kdb Language Server",
     serverOptions,
     clientOptions,
+  );
+
+  context.subscriptions.push(
+    client.onNotification("notify", (params) =>
+      notify(params.message, params.kind, params.options, params.telemetry),
+    ),
   );
 
   await client.start();

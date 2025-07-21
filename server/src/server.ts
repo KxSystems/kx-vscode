@@ -35,13 +35,6 @@ connection.onInitialized(() => {
   connection.client.register(DidChangeConfigurationNotification.type, {
     section: "kdb",
   });
-
-  connection.workspace.getConfiguration("kdb").then((settings) => {
-    if (server) {
-      server.setSettings(settings);
-      server.scan();
-    }
-  });
 });
 
 connection.listen();

@@ -146,8 +146,15 @@ export async function setServerForUri(uri: Uri, server: string | undefined) {
     "connectionMap",
     {},
   );
-  map[relativePath(uri)] = server;
-  await conf.update("connectionMap", map);
+  const relative = relativePath(uri);
+  if (relative.startsWith("/")) {
+    notify(`Document (${uri.path}) is not in workspace.`, MessageKind.ERROR, {
+      logger,
+    });
+  } else {
+    map[relative] = server;
+    await conf.update("connectionMap", map);
+  }
 }
 
 export function getServerForUri(uri: Uri) {

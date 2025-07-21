@@ -183,7 +183,8 @@
         "kdb.linting": {
           "type": "boolean",
           "description": "Enable linting for q and quke files",
-          "default": false
+          "default": false,
+          "scope": "resource"
         },
         "kdb.refactoring": {
           "type": "string",
@@ -192,7 +193,8 @@
             "Window"
           ],
           "description": "Enable refactoring across files",
-          "default": "Workspace"
+          "default": "Workspace",
+          "scope": "resource"
         },
         "kdb.connectionMap": {
           "type": "object",

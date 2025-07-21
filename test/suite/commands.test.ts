@@ -2598,11 +2598,11 @@ describe("serverCommand", () => {
         success: true,
       };
 
-      await serverCommand.copyQuery(queryHistory);
+      serverCommand.copyQuery(queryHistory);
       sinon.assert.calledOnceWithExactly(
         showInfoStub,
         "Query copied to clipboard.",
-        "OK",
+        "Dismiss",
       );
     });
 
