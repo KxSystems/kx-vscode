@@ -248,13 +248,29 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
     }
   }
 
+  const tierMap = new Map<string, MetaDap[]>();
+
+  daps.forEach((value) => {
+    const tierKey = `${value.assembly} ${value.instance}`;
+    if (!tierMap.has(tierKey)) {
+      tierMap.set(tierKey, []);
+    }
+    tierMap.get(tierKey)!.push(value);
+  });
+
+  const options: string[] = [];
+
+  tierMap.forEach((processes, tierKey) => {
+    options.push(tierKey);
+    processes.forEach((process) => {
+      if (process.dap) {
+        options.push(`${tierKey} ${process.dap}`);
+      }
+    });
+  });
+
   let picked = await window.showQuickPick(
-    [
-      isInsights ? "scratchpad" : "default",
-      ...daps.map((value) =>
-        [value.assembly, value.instance, value.dap].filter(Boolean).join(" "),
-      ),
-    ],
+    [isInsights ? "scratchpad" : "default", ...options],
     {
       title: `Choose Execution Target (${conn?.connLabel ?? "Not Connected"})`,
       placeHolder: target || (isInsights ? "scratchpad" : "default"),

@@ -459,17 +459,42 @@ export class KdbDataSourceView extends LitElement {
 
   renderTargetOptions() {
     if (this.isInsights && this.isMetaLoaded) {
-      return this.insightsMeta.dap.map((dap) => {
-        const value = [dap.assembly, dap.instance, dap.dap]
-          .filter(Boolean)
-          .join(" ");
-        if (!this.qsqlTarget) {
-          this.qsqlTarget = value;
+      const tierMap = new Map<string, typeof this.insightsMeta.dap>();
+
+      this.insightsMeta.dap.forEach((dap) => {
+        const tierKey = `${dap.assembly} ${dap.instance}`;
+        if (!tierMap.has(tierKey)) {
+          tierMap.set(tierKey, []);
         }
-        return html`<sl-option value="${encodeURIComponent(value)}"
-          >${value}</sl-option
-        >`;
+        tierMap.get(tierKey)!.push(dap);
       });
+
+      const options: any[] = [];
+
+      tierMap.forEach((processes, tierKey) => {
+        const tierValue = tierKey;
+        if (!this.qsqlTarget) {
+          this.qsqlTarget = tierValue;
+        }
+        options.push(
+          html`<sl-option value="${encodeURIComponent(tierValue)}"
+            >${tierValue}</sl-option
+          >`,
+        );
+
+        processes.forEach((process) => {
+          if (process.dap) {
+            const processValue = `${tierKey} ${process.dap}`;
+            options.push(
+              html`<sl-option value="${encodeURIComponent(processValue)}"
+                >${processValue}</sl-option
+              >`,
+            );
+          }
+        });
+      });
+
+      return options;
     }
     return [];
   }
