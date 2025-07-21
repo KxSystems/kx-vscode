@@ -181,12 +181,12 @@ export class ReplConnection {
 
   private sendDimensions() {
     const LINES = process.env.LINES ?? this.rows.toString();
-    let rows = parseInt(LINES.replace(/[^0-9]+/gs, "0") || "0");
+    let rows = parseInt(LINES.replace(/\D+/gs, "0") || "0");
     if (rows < 25) rows = 25;
     if (rows > 500) rows = 500;
 
     const COLUMNS = process.env.COLUMNS ?? this.columns.toString();
-    let columns = parseInt(COLUMNS.replace(/[^0-9]+/gs, "") || "0");
+    let columns = parseInt(COLUMNS.replace(/\D+/gs, "") || "0");
     if (columns < 50) columns = 50;
     if (columns > 320) columns = 320;
 
@@ -311,7 +311,7 @@ export class ReplConnection {
   }
 
   private recall(history?: HistoryItem) {
-    const input = history?.input || ANSI.EMPTY;
+    const input = history?.input ?? ANSI.EMPTY;
     this.input = [...input];
     this.inputIndex = 0;
     this.updateInputIndex(input);
