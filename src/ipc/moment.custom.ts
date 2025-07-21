@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -60,10 +60,10 @@ const padLeft = (input: string, length: number, padChar: string) => {
 
 moment.duration.fn.kdbType = moment.prototype.kdbType = function (type) {
   if (type !== undefined && type !== null) {
-    // eslint-disable-next-line no-underscore-dangle
+     
     this._kdbType = type;
   } else {
-    // eslint-disable-next-line no-underscore-dangle
+     
     return this._kdbType || null;
   }
 };
@@ -74,10 +74,10 @@ moment.duration.fn.nanosecond =
   moment.prototype.nanoseconds =
     function (value) {
       if (value !== undefined && value !== null) {
-        // eslint-disable-next-line no-underscore-dangle
+         
         this._n = value;
       } else {
-        // eslint-disable-next-line no-underscore-dangle
+         
         return this._n || 0;
       }
     };
@@ -249,7 +249,7 @@ moment.duration.fn.toISOStringNano = function () {
 moment.duration.fn.valueOfNano = moment.prototype.valueOfNano = function () {
   let value = this.valueOf() * 1000000;
 
-  // eslint-disable-next-line no-underscore-dangle
+   
   if (typeof this._n === "number") {
     value += this.nanoseconds();
   }
