@@ -91,13 +91,13 @@ describe("REPL", () => {
     it("should send token with data when no error on q", () => {
       instance["sendToProcess"]("a:1");
       stdinWriteCallback(null);
-      assert.ok(stdinChunk.endsWith(',string system"d"\r\n'));
+      assert.ok(stdinChunk.endsWith(',string system"d";\r\n'));
     });
     it("should send token with data when no error on k", () => {
       instance["context"] = "k";
       instance["sendToProcess"]("a:1");
       stdinWriteCallback(null);
-      assert.ok(stdinChunk.endsWith(',$:."\\\\d"\r\n'));
+      assert.ok(stdinChunk.endsWith(',$:."\\\\d";\r\n'));
     });
     it("should decrease execution count on error", () => {
       instance["executing"] = 0;

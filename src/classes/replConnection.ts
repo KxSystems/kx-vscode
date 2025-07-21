@@ -81,13 +81,11 @@ export class ReplConnection {
   private readonly history = new History();
   private readonly identity = crypto.randomUUID();
   private readonly token = new RegExp(
-    ANSI.QUOTE +
-      this.identity +
+    this.identity +
       ANSI.AT +
       "(\\d+)" +
       ANSI.AT +
       ".([0-9a-zA-Z_`]*)" +
-      ANSI.QUOTE +
       `[${ANSI.CRLF}]*`,
     "gs",
   );
@@ -201,13 +199,15 @@ export class ReplConnection {
         this.executing--;
       } else {
         this.process.stdin.write(
-          ANSI.QUOTE +
+          "2 {x}" +
+            ANSI.QUOTE +
             this.identity +
             ANSI.AT +
             this.serial++ +
             ANSI.AT +
             ANSI.QUOTE +
             (this.context === CTX.Q ? NS.Q : NS.K) +
+            ";" +
             ANSI.CRLF,
         );
       }
@@ -300,43 +300,10 @@ export class ReplConnection {
     if (this.exited) {
       return;
     }
+    const output = decoded.replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
 
-    this.token.lastIndex = 0;
-    const output = decoded
-      .replace(this.token, ANSI.EMPTY)
-      .replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
-
-    if (this.executions) {
-      this.messages.push(output);
-      return;
-    }
-    this.buffer.push(output);
-
-    this.token.lastIndex = 0;
-    let match: RegExpMatchArray | null;
-
-    while ((match = this.token.exec(decoded))) {
-      if (match[0]) {
-        this.namespace = match[2] ? `.${match[2]}` : ANSI.EMPTY;
-
-        const serial = parseInt(match[1]);
-        if (serial + 1 === this.serial) {
-          const output = this.buffer.join(ANSI.EMPTY);
-          this.sendToTerminal(output);
-          this.buffer = [];
-        }
-
-        this.executing--;
-        if (this.executing === 0) {
-          this.input = [];
-          this.inputIndex = 0;
-          this.updateInputIndex();
-          this.showPrompt(true);
-        } else {
-          this.showExecutionPrompt();
-        }
-      }
-    }
+    if (this.executions) this.messages.push(output);
+    else this.buffer.push(output);
   }
 
   private show() {
@@ -367,7 +334,36 @@ export class ReplConnection {
   }
 
   private handleErrorOutput(data: any) {
-    this.handleOutput(data);
+    const decoded = this.decoder.decode(data);
+    this.token.lastIndex = 0;
+    const output = decoded.replace(this.token, ANSI.EMPTY);
+    this.showOutput(output);
+
+    this.token.lastIndex = 0;
+    let match: RegExpMatchArray | null;
+
+    while ((match = this.token.exec(decoded))) {
+      if (match[0]) {
+        this.namespace = match[2] ? `.${match[2]}` : ANSI.EMPTY;
+
+        const serial = parseInt(match[1]);
+        if (serial + 1 === this.serial) {
+          const output = this.buffer.join(ANSI.EMPTY);
+          this.sendToTerminal(output);
+          this.buffer = [];
+        }
+
+        this.executing--;
+        if (this.executing === 0) {
+          this.input = [];
+          this.inputIndex = 0;
+          this.updateInputIndex();
+          this.showPrompt(true);
+        } else {
+          this.showExecutionPrompt();
+        }
+      }
+    }
   }
 
   private open(dimensions?: vscode.TerminalDimensions) {
@@ -376,7 +372,7 @@ export class ReplConnection {
     }
 
     this.sendToTerminal(
-      `${CONF.TITLE} Copyright (C) 1993-2025 Kx Systems` + ANSI.CRLF.repeat(2),
+      `${CONF.TITLE} Copyright (C) 1993-2025 KX Systems` + ANSI.CRLF.repeat(2),
     );
 
     this.messages.forEach((message) => this.sendToTerminal(message));
@@ -420,13 +416,13 @@ export class ReplConnection {
       case KEY.CR:
         if (this.input.length > 0) {
           const input = this.inputText;
-          if (/^(?:\\[\t ]|\\$)/m.test(input)) {
-            this.context = this.context === CTX.K ? CTX.Q : CTX.K;
-          }
           this.sendToProcess(input);
           this.history.push(input);
           this.inputIndex = this.visibleInputIndex;
           this.showPrompt();
+          if (/^(?:\\[\t ]|\\$)/m.test(input)) {
+            this.context = this.context === CTX.K ? CTX.Q : CTX.K;
+          }
         } else {
           this.sendToProcess(ANSI.EMPTY);
         }
