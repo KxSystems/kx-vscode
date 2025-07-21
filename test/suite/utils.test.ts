@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -142,86 +142,6 @@ describe("Utils", () => {
         getConfigurationStub.returns({ "editor.wordWrap": "on" });
         coreUtils.setOutputWordWrapper();
         sinon.assert.calledOnce(getConfigurationStub);
-      });
-    });
-
-    describe("getHideDetailedConsoleQueryOutput", () => {
-      let getConfigurationStub: sinon.SinonStub;
-
-      beforeEach(() => {
-        getConfigurationStub = sinon.stub(
-          vscode.workspace,
-          "getConfiguration",
-        ) as sinon.SinonStub;
-      });
-
-      afterEach(() => {
-        getConfigurationStub.restore();
-        sinon.restore();
-      });
-
-      it("should update configuration and set hideDetailedConsoleQueryOutput to true when setting is undefined", async () => {
-        getConfigurationStub.returns({
-          get: sinon.stub().returns(undefined),
-          update: sinon.stub(),
-        });
-
-        await coreUtils.getHideDetailedConsoleQueryOutput();
-
-        sinon.assert.calledTwice(getConfigurationStub);
-        assert.strictEqual(ext.hideDetailedConsoleQueryOutput, true);
-      });
-
-      it("should set hideDetailedConsoleQueryOutput to setting when setting is defined", async () => {
-        getConfigurationStub.returns({
-          get: sinon.stub().returns(false),
-          update: sinon.stub(),
-        });
-
-        await coreUtils.getHideDetailedConsoleQueryOutput();
-
-        sinon.assert.calledOnce(getConfigurationStub);
-        assert.strictEqual(ext.hideDetailedConsoleQueryOutput, false);
-      });
-    });
-
-    describe("getAutoFocusOutputOnEntry", () => {
-      let getConfigurationStub: sinon.SinonStub;
-
-      beforeEach(() => {
-        getConfigurationStub = sinon.stub(
-          vscode.workspace,
-          "getConfiguration",
-        ) as sinon.SinonStub;
-      });
-
-      afterEach(() => {
-        getConfigurationStub.restore();
-        sinon.restore();
-      });
-
-      it("should update configuration and set autoFocusOutputOnEntry to true when setting is undefined", async () => {
-        getConfigurationStub.returns({
-          get: sinon.stub().returns(undefined),
-          update: sinon.stub(),
-        });
-
-        await coreUtils.getAutoFocusOutputOnEntry();
-
-        sinon.assert.calledTwice(getConfigurationStub);
-        assert.strictEqual(ext.autoFocusOutputOnEntry, true);
-      });
-
-      it("should set autoFocusOutputOnEntry to setting when setting is defined", async () => {
-        getConfigurationStub.returns({
-          get: sinon.stub().returns(false),
-          update: sinon.stub(),
-        });
-
-        await coreUtils.getAutoFocusOutputOnEntry();
-
-        sinon.assert.calledOnce(getConfigurationStub);
-        assert.strictEqual(ext.autoFocusOutputOnEntry, false);
       });
     });
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -19,7 +19,7 @@ import { commands } from "vscode";
 import { ext } from "../extensionVariables";
 import { QueryResult, QueryResultType } from "../models/queryResult";
 import { ServerObject } from "../models/serverObject";
-import { delay, updateTheWorkspaceSettings } from "../utils/core";
+import { delay, getAutoFocusOutputOnEntrySetting } from "../utils/core";
 import { convertStringToArray, handleQueryResults } from "../utils/execution";
 import { MessageKind, notify } from "../utils/notifications";
 import { queryWrapper } from "../utils/queryUtils";
@@ -116,15 +116,14 @@ export class LocalConnection {
         return;
       }
       conn.addListener("close", () => {
-        updateTheWorkspaceSettings();
         commands.executeCommand("kdb.connections.disconnect", this.connLabel);
         notify(
           `Connection closed: ${this.options.host}:${this.options.port}`,
           MessageKind.DEBUG,
           { logger },
         );
-        if (ext.autoFocusOutputOnEntry) {
-          ext.outputChannel.show();
+        if (getAutoFocusOutputOnEntrySetting()) {
+          ext.outputChannel.show(true);
         }
       });
 

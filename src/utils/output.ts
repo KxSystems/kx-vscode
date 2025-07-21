@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -13,8 +13,7 @@
 
 import { OutputChannel, window } from "vscode";
 
-import { ext } from "../extensionVariables";
-import { updateTheWorkspaceSettings } from "./core";
+import { getAutoFocusOutputOnEntrySetting } from "./core";
 
 export class Output {
   public static output(label: string, message: string): void {
@@ -26,9 +25,8 @@ export class Output {
   }
 
   public static show(): void {
-    updateTheWorkspaceSettings();
-    if (ext.autoFocusOutputOnEntry) {
-      this._outputChannel.show();
+    if (getAutoFocusOutputOnEntrySetting()) {
+      this._outputChannel.show(true);
     }
   }
 

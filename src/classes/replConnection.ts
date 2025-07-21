@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -15,7 +15,10 @@ import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
-import { getQExecutablePath, updateTheWorkspaceSettings } from "../utils/core";
+import {
+  getAutoFocusOutputOnEntrySetting,
+  getQExecutablePath,
+} from "../utils/core";
 import { normalizeQuery } from "../utils/queryUtils";
 
 const ANSI = {
@@ -36,6 +39,7 @@ const ANSI = {
 
 const KEY = {
   CR: "\r",
+  CTRLC: "\x03",
   BS: "\b",
   BSMAC: "\x7f",
   DEL: "\x1b[3~",
@@ -317,8 +321,7 @@ export class ReplConnection {
   }
 
   private show() {
-    updateTheWorkspaceSettings();
-    if (ext.autoFocusOutputOnEntry) this.terminal.show();
+    if (getAutoFocusOutputOnEntrySetting()) this.terminal.show(true);
   }
 
   private recall(history?: HistoryItem) {
@@ -377,9 +380,10 @@ export class ReplConnection {
     if (ReplConnection.instance === this) {
       ReplConnection.instance = undefined;
     }
-    this.exited = true;
-    this.process.kill();
+    this.process.kill("SIGINT");
+    this.process.kill("SIGTERM");
     this.onDidWrite.dispose();
+    this.exited = true;
   }
 
   private handleInput(data: string) {
@@ -408,6 +412,11 @@ export class ReplConnection {
         }
         this.history.rewind();
         this.sendToTerminal(ANSI.CRLF);
+        break;
+      case KEY.CTRLC:
+        if (this.executing) {
+          this.process.kill("SIGINT");
+        }
         break;
       case KEY.BS:
       case KEY.BSMAC:

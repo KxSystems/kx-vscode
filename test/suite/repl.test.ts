@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -16,8 +16,6 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 
 import * as repl from "../../src/classes/replConnection";
-import * as ext from "../../src/extensionVariables";
-import * as core from "../../src/utils/core";
 
 describe("REPL", () => {
   let stdinChunk: string;
@@ -42,7 +40,6 @@ describe("REPL", () => {
       .stub(repl.ReplConnection.prototype, <any>"createProcess")
       .returns(target);
     sinon.stub(vscode.window, "createTerminal").returns(terminal);
-    sinon.stub(core, "updateTheWorkspaceSettings");
     instance = repl.ReplConnection.getOrCreateInstance();
   });
 
@@ -171,13 +168,18 @@ describe("REPL", () => {
     });
 
     it("should show REPL when autofocus is enabled", () => {
-      sinon.stub(ext.ext, "autoFocusOutputOnEntry").value(true);
       instance["show"]();
       sinon.assert.calledOnce(showStub);
     });
 
     it("should not show REPL when autofocus is disabled", () => {
-      sinon.stub(ext.ext, "autoFocusOutputOnEntry").value(false);
+      sinon.stub(vscode.workspace, "getConfiguration").value(() => {
+        return {
+          get() {
+            return false;
+          },
+        };
+      });
       instance["show"]();
       sinon.assert.notCalled(showStub);
     });

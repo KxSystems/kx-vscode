@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -16,7 +16,7 @@ import path from "path";
 import { Uri, window, workspace } from "vscode";
 
 import { ext } from "../extensionVariables";
-import { updateTheWorkspaceSettings } from "./core";
+import { getAutoFocusOutputOnEntrySetting } from "./core";
 import { MessageKind, notify } from "./notifications";
 import { QueryResultType } from "../models/queryResult";
 
@@ -40,9 +40,8 @@ export function runQFileTerminal(filename?: string): void {
   });
   const terminal = window.createTerminal(terminalName);
   if (env.QHOME) {
-    updateTheWorkspaceSettings();
-    if (ext.autoFocusOutputOnEntry) {
-      terminal.show();
+    if (getAutoFocusOutputOnEntrySetting()) {
+      terminal.show(true);
     }
     terminal.sendText(command);
   }
