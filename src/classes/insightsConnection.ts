@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -41,7 +41,7 @@ import {
   tokenUndefinedError,
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
-import { MessageKind, notify, Runner } from "../utils/notifications";
+import { MessageKind, notify } from "../utils/notifications";
 import {
   generateQSqlBody,
   handleScratchpadTableRes,
