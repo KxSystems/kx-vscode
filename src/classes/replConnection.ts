@@ -193,8 +193,16 @@ export class ReplConnection {
     this.executeCommand(`\\c ${rows} ${columns}`);
   }
 
+  private stub(query: string) {
+    return query.replace(
+      // Stub read0
+      /(?<![A-Za-z0-9.])(?:read0(?![A-Za-z0-9.])|0::)/gs,
+      '{$[x~0;"";0::[x]]}',
+    );
+  }
+
   private sendToProcess(data: string) {
-    this.process.stdin.write(data + ANSI.CRLF, (error) => {
+    this.process.stdin.write(this.stub(data + ANSI.CRLF), (error) => {
       if (error) {
         this.executing--;
       } else {
