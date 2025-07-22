@@ -238,24 +238,71 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
   }
 
   const target = cell?.metadata.target || getTargetForUri(uri);
-  if (target) {
-    const exists = daps.some(
-      (value) => `${value.assembly} ${value.instance}` === target,
-    );
-    if (!exists && !conn) {
-      const [assembly, instance] = target.split(/\s+/);
-      daps.unshift({ assembly, instance } as MetaDap);
+
+  if (target && !targetExists(target, daps) && !conn) {
+    daps.unshift(createMetaDapFromTarget(target));
+  }
+
+  const options = buildTierOptions(daps);
+  const defaultOption = isInsights ? "scratchpad" : "default";
+
+  let picked = await window.showQuickPick([defaultOption, ...options], {
+    title: `Choose Execution Target (${conn?.connLabel ?? "Not Connected"})`,
+    placeHolder: target || defaultOption,
+  });
+
+  if (picked) {
+    if (picked === "scratchpad" || picked === "default") {
+      picked = undefined;
+    }
+
+    if (cell) {
+      await updateCellMetadata(cell, {
+        target: picked,
+        variable: picked && cell.metadata.variable,
+      });
+    } else {
+      await setTargetForUri(uri, picked);
     }
   }
 
+  return picked;
+}
+
+function createTierKey(dap: MetaDap): string {
+  return `${dap.assembly} ${dap.instance}`;
+}
+
+function createProcessKey(dap: MetaDap): string | null {
+  return dap.dap ? `${createTierKey(dap)} ${dap.dap}` : null;
+}
+
+function targetExists(target: string, daps: MetaDap[]): boolean {
+  return daps.some((dap) => {
+    const tierKey = createTierKey(dap);
+    const processKey = createProcessKey(dap);
+    return tierKey === target || processKey === target;
+  });
+}
+
+function createMetaDapFromTarget(target: string): MetaDap {
+  const parts = target.split(/\s+/);
+  const [assembly, instance, ...dapParts] = parts;
+
+  return dapParts.length > 0
+    ? ({ assembly, instance, dap: dapParts.join(" ") } as MetaDap)
+    : ({ assembly, instance } as MetaDap);
+}
+
+function buildTierOptions(daps: MetaDap[]): string[] {
   const tierMap = new Map<string, MetaDap[]>();
 
-  daps.forEach((value) => {
-    const tierKey = `${value.assembly} ${value.instance}`;
+  daps.forEach((dap) => {
+    const tierKey = createTierKey(dap);
     if (!tierMap.has(tierKey)) {
       tierMap.set(tierKey, []);
     }
-    tierMap.get(tierKey)!.push(value);
+    tierMap.get(tierKey)!.push(dap);
   });
 
   const options: string[] = [];
@@ -269,29 +316,7 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
     });
   });
 
-  let picked = await window.showQuickPick(
-    [isInsights ? "scratchpad" : "default", ...options],
-    {
-      title: `Choose Execution Target (${conn?.connLabel ?? "Not Connected"})`,
-      placeHolder: target || (isInsights ? "scratchpad" : "default"),
-    },
-  );
-
-  if (picked) {
-    if (picked === "scratchpad" || picked === "default") {
-      picked = undefined;
-    }
-    if (cell) {
-      await updateCellMetadata(cell, {
-        target: picked,
-        variable: picked && cell.metadata.variable,
-      });
-    } else {
-      await setTargetForUri(uri, picked);
-    }
-  }
-
-  return picked;
+  return options;
 }
 
 function isSql(uri: Uri | undefined) {
