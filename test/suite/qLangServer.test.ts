@@ -509,9 +509,10 @@ describe("qLangServer", () => {
   describe("onDidChangeContent", () => {
     it("should lint", async () => {
       const stub = sinon.stub(linter, "lint").returns([]);
+      sinon.stub(server, <any>"parse").returns([]);
       sinon.stub(connection.workspace, "getConfiguration").resolves(<any>true);
       await server["onDidChangeContent"]({
-        document: <TextDocument>{ uri: "file:///test.q" },
+        document: <TextDocument>{ uri: "file:///test/test.q" },
       });
       sinon.assert.calledOnce(stub);
     });
