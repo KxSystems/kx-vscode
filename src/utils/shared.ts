@@ -12,15 +12,7 @@
  */
 
 export function normalizeAssemblyTarget(assemblyTarget: string): string {
-  if (!assemblyTarget?.trim()) {
-    return "";
-  }
-
-  const parts = assemblyTarget.trim().split(/\s+/);
-  const [dirtyAssembly, ...rest] = parts;
-  const assembly = dirtyAssembly.replace(/-qe$/, "");
-
-  return [assembly, ...rest].join(" ");
+  return assemblyTarget?.trim().replace(/\s+/g, " ") || "";
 }
 
 export function stripUnprintableChars(text: string): string {

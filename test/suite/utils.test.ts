@@ -3892,13 +3892,92 @@ describe("Utils", () => {
 
   describe("Shared with webview utils", () => {
     describe("normalizeAssemblyTarget", () => {
-      it("should return qe assembly without -qe", () => {
-        const res = shared.normalizeAssemblyTarget("test-assembly-qe target");
-        assert.strictEqual(res, "test-assembly target");
+      it("should return qe assembly -qe", () => {
+        const res = shared.normalizeAssemblyTarget(
+          "test-assembly-qe tier dapProcess",
+        );
+        assert.strictEqual(res, "test-assembly-qe tier dapProcess");
       });
+
       it("should return normal assembly without -qe", () => {
-        const res = shared.normalizeAssemblyTarget("test-assembly target");
-        assert.strictEqual(res, "test-assembly target");
+        const res = shared.normalizeAssemblyTarget(
+          "test-assembly  tier dapProcess",
+        );
+        assert.strictEqual(res, "test-assembly tier dapProcess");
+      });
+
+      it("should return empty string for null input", () => {
+        const res = shared.normalizeAssemblyTarget(null as any);
+        assert.strictEqual(res, "");
+      });
+
+      it("should return empty string for undefined input", () => {
+        const res = shared.normalizeAssemblyTarget(undefined as any);
+        assert.strictEqual(res, "");
+      });
+
+      it("should return empty string for empty string", () => {
+        const res = shared.normalizeAssemblyTarget("");
+        assert.strictEqual(res, "");
+      });
+
+      it("should return empty string for whitespace-only string", () => {
+        const res = shared.normalizeAssemblyTarget("   ");
+        assert.strictEqual(res, "");
+      });
+
+      it("should handle single word input", () => {
+        const res = shared.normalizeAssemblyTarget("assembly");
+        assert.strictEqual(res, "assembly");
+      });
+
+      it("should handle single word with -qe suffix", () => {
+        const res = shared.normalizeAssemblyTarget("assembly-qe");
+        assert.strictEqual(res, "assembly-qe");
+      });
+
+      it("should normalize multiple consecutive spaces", () => {
+        const res = shared.normalizeAssemblyTarget("assembly    tier    dap");
+        assert.strictEqual(res, "assembly tier dap");
+      });
+
+      it("should normalize tabs and mixed whitespace", () => {
+        const res = shared.normalizeAssemblyTarget("assembly\t\ttier\n\ndap");
+        assert.strictEqual(res, "assembly tier dap");
+      });
+
+      it("should trim leading and trailing spaces", () => {
+        const res = shared.normalizeAssemblyTarget("  assembly tier dap  ");
+        assert.strictEqual(res, "assembly tier dap");
+      });
+
+      it("should handle complex whitespace normalization", () => {
+        const res = shared.normalizeAssemblyTarget(
+          "  \t assembly-qe   \n  tier   \t dap  \n  ",
+        );
+        assert.strictEqual(res, "assembly-qe tier dap");
+      });
+
+      it("should handle input with only spaces between words", () => {
+        const res = shared.normalizeAssemblyTarget("assembly tier");
+        assert.strictEqual(res, "assembly tier");
+      });
+
+      it("should preserve -qe in middle of assembly name", () => {
+        const res = shared.normalizeAssemblyTarget("test-qe-assembly  tier");
+        assert.strictEqual(res, "test-qe-assembly tier");
+      });
+
+      it("should handle special characters in assembly name", () => {
+        const res = shared.normalizeAssemblyTarget(
+          "test_assembly-qe:v1.0   tier   dap",
+        );
+        assert.strictEqual(res, "test_assembly-qe:v1.0 tier dap");
+      });
+
+      it("should normalize newlines and carriage returns", () => {
+        const res = shared.normalizeAssemblyTarget("assembly\r\ntier\rdap\n");
+        assert.strictEqual(res, "assembly tier dap");
       });
     });
   });

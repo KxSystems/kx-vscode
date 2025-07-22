@@ -175,7 +175,6 @@ export async function runDataSource(
         res = await runQsqlDataSource(
           fileContent,
           selectedConnection,
-          selectedConnection.apiConfig?.queryEnvironmentsEnabled,
           isNotebook || undefined,
         );
         break;
@@ -414,14 +413,12 @@ export function getApiBody(
 export async function runQsqlDataSource(
   fileContent: DataSourceFiles,
   selectedConn: InsightsConnection,
-  qeEnabled?: boolean,
   isTableView?: boolean,
 ): Promise<any> {
   const qsqlBody = generateQSqlBody(
     fileContent.dataSource.qsql.query,
     fileContent.dataSource.qsql.selectedTarget,
     selectedConn.insightsVersion,
-    qeEnabled,
   );
 
   const qsqlCall = await selectedConn.getDatasourceQuery(

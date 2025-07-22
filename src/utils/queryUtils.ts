@@ -289,15 +289,11 @@ export function generateQSqlBody(
   query: string,
   assemblyTarget: string,
   version?: number,
-  qeEnabled?: boolean,
 ) {
   const [plainAssembly, tier, dap] =
     normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
 
-  let assembly = plainAssembly;
-  if (qeEnabled) {
-    assembly += "-qe";
-  }
+  const assembly = plainAssembly;
 
   if (version && isBaseVersionGreaterOrEqual(version, 1.13)) {
     return {

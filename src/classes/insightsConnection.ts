@@ -83,8 +83,8 @@ export class InsightsConnection {
       this.connected = token ? true : false;
       if (token) {
         await this.getConfig();
-        await this.getMeta();
         await this.getApiConfig();
+        await this.getMeta();
       }
     });
     return this.connected;
@@ -192,9 +192,9 @@ export class InsightsConnection {
   }
 
   public async getMeta(): Promise<MetaObjectPayload | undefined> {
-    if (this.connected) {
+    if (this.connected && this.connEndpoints) {
       const metaUrl = new url.URL(
-        ext.insightsServiceGatewayUrls.meta,
+        this.connEndpoints?.serviceGateway.meta,
         this.node.details.server,
       );
       const options = await this.getOptions(
@@ -251,6 +251,7 @@ export class InsightsConnection {
       const configResponse = await axios(options);
 
       this.apiConfig = configResponse.data;
+      this.defineEndpoints();
     }
   }
 
@@ -280,7 +281,6 @@ export class InsightsConnection {
 
       this.config = configResponse.data;
       this.getInsightsVersion();
-      this.defineEndpoints();
     }
   }
 
@@ -294,47 +294,76 @@ export class InsightsConnection {
   }
 
   public defineEndpoints() {
-    const baseEndpoints = {
-      scratchpad: {
-        scratchpad: "servicebroker/scratchpad/display",
-        import: "servicebroker/scratchpad/import/data",
-        importSql: "servicebroker/scratchpad/import/sql",
-        importQsql: "servicebroker/scratchpad/import/qsql",
-        importUDA: "servicebroker/scratchpad/import/uda",
-        reset: "scratchpadmanager/reset",
-      },
-      serviceGateway: {
-        meta: "servicegateway/meta",
-        data: "servicegateway/data",
-        sql: "servicegateway/qe/sql",
-        qsql: "servicegateway/qe/qsql",
-        udaBase: "servicegateway/",
-      },
+    const scratchpadEndpoints = {
+      scratchpad: "scratchpadmanager/scratchpad/display",
+      import: "scratchpadmanager/scratchpad/import/data",
+      importSql: "scratchpadmanager/scratchpad/import/sql",
+      importQsql: "scratchpadmanager/scratchpad/import/qsql",
+      importUDA: "scratchpadmanager/scratchpad/import/uda",
+      reset: "scratchpadmanager/reset",
     };
 
-    const updatedEndpoints = {
-      scratchpad: {
-        scratchpad: "scratchpadmanager/scratchpad/display",
-        import: "scratchpadmanager/scratchpad/import/data",
-        importSql: "scratchpadmanager/scratchpad/import/sql",
-        importQsql: "scratchpadmanager/scratchpad/import/qsql",
-        importUDA: "scratchpadmanager/scratchpad/import/uda",
-        reset: "scratchpadmanager/reset",
-      },
-      serviceGateway: {
-        meta: "servicegateway/meta",
-        data: "servicegateway/data",
-        sql: "servicegateway/qe/sql",
-        qsql: "servicegateway/qe/qsql",
-        udaBase: "servicegateway/",
-      },
+    const getVersionGroup = (): string => {
+      if (
+        !this.insightsVersion ||
+        !isBaseVersionGreaterOrEqual(this.insightsVersion, 1.11)
+      ) {
+        return "pre-1.11";
+      }
+      if (!isBaseVersionGreaterOrEqual(this.insightsVersion, 1.14)) {
+        return "v1.11-1.13";
+      }
+      return "v1.14+";
     };
 
-    this.connEndpoints =
-      this.insightsVersion &&
-      isBaseVersionGreaterOrEqual(this.insightsVersion, 1.11)
-        ? updatedEndpoints
-        : baseEndpoints;
+    const versionGroup = getVersionGroup();
+    let serviceGatewayEndpoints;
+    const qePrefix = this.apiConfig?.queryEnvironmentsEnabled ? "qe/" : "";
+
+    switch (versionGroup) {
+      case "pre-1.11":
+        scratchpadEndpoints.scratchpad = "servicebroker/scratchpad/display";
+        scratchpadEndpoints.import = "servicebroker/scratchpad/import/data";
+        scratchpadEndpoints.importSql = "servicebroker/scratchpad/import/sql";
+        scratchpadEndpoints.importQsql = "servicebroker/scratchpad/import/qsql";
+        scratchpadEndpoints.importUDA = "servicebroker/scratchpad/import/uda";
+        scratchpadEndpoints.reset = "scratchpadmanager/reset";
+
+        serviceGatewayEndpoints = {
+          meta: "servicegateway/meta",
+          data: "servicegateway/data",
+          sql: "servicegateway/qe/sql",
+          qsql: "servicegateway/qe/qsql",
+          udaBase: "servicegateway/",
+        };
+        break;
+
+      case "v1.11-1.13":
+        serviceGatewayEndpoints = {
+          meta: "servicegateway/meta",
+          data: "servicegateway/data",
+          sql: "servicegateway/qe/sql",
+          qsql: "servicegateway/qe/qsql",
+          udaBase: "servicegateway/",
+        };
+        break;
+
+      case "v1.14+":
+      default:
+        serviceGatewayEndpoints = {
+          meta: `servicegateway/${qePrefix}api/v3/meta`,
+          data: "servicegateway/data",
+          sql: `servicegateway/${qePrefix}kxi/sql`,
+          qsql: `servicegateway/${qePrefix}kxi/qsql`,
+          udaBase: "servicegateway/",
+        };
+        break;
+    }
+
+    this.connEndpoints = {
+      scratchpad: scratchpadEndpoints,
+      serviceGateway: serviceGatewayEndpoints,
+    };
   }
 
   public retrieveEndpoints(
@@ -476,7 +505,6 @@ export class InsightsConnection {
             params.dataSource.qsql.query,
             params.dataSource.qsql.selectedTarget,
             this.insightsVersion,
-            qeEnabled,
           );
 
           coreUrl = this.connEndpoints.scratchpad.importQsql;
