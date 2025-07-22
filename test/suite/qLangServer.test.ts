@@ -23,6 +23,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import * as linter from "../../server/src/linter";
 import QLangServer from "../../server/src/qLangServer";
 
 const context = { includeDeclaration: true };
@@ -82,6 +83,7 @@ describe("qLangServer", () => {
         },
       },
       sendDiagnostics() {},
+      sendNotification() {},
     });
 
     const params = <InitializeParams>{
@@ -411,11 +413,117 @@ describe("qLangServer", () => {
     });
   });
 
+  describe("onDidOpen", () => {
+    it("should add to opened", () => {
+      server.onDidOpen({ document: <TextDocument>{ uri: "test" } });
+      assert.ok(server["opened"].has("test"));
+    });
+  });
+
   describe("onDidClose", () => {
     it("should send epmty diagnostics", () => {
       const stub = sinon.stub(connection, "sendDiagnostics");
       server.onDidClose({ document: <TextDocument>{ uri: "" } });
       assert.ok(stub.calledOnce);
+    });
+  });
+
+  describe("Settings", () => {
+    describe("getDebug", () => {
+      it("should return false", async () => {
+        const res = await server["getDebug"]("");
+        assert.strictEqual(res, false);
+      });
+      it("should return true", async () => {
+        sinon
+          .stub(connection.workspace, "getConfiguration")
+          .resolves(<any>true);
+        const res = await server["getDebug"]("");
+        assert.strictEqual(res, true);
+      });
+    });
+    describe("getLinting", () => {
+      it("should return false", async () => {
+        const res = await server["getLinting"]("");
+        assert.strictEqual(res, false);
+      });
+      it("should return true", async () => {
+        sinon
+          .stub(connection.workspace, "getConfiguration")
+          .resolves(<any>true);
+        const res = await server["getLinting"]("");
+        assert.strictEqual(res, true);
+      });
+    });
+    describe("getRefactoring", () => {
+      it("should return Workspace", async () => {
+        const res = await server["getRefactoring"]("");
+        assert.strictEqual(res, "Workspace");
+      });
+      it("should return Window", async () => {
+        sinon
+          .stub(connection.workspace, "getConfiguration")
+          .resolves(<any>"Window");
+        const res = await server["getRefactoring"]("");
+        assert.strictEqual(res, "Window");
+      });
+    });
+    describe("getConnectionMap", () => {
+      it("should return empty map", async () => {
+        const res = await server["getConnectionMap"]("");
+        assert.deepEqual(res, {});
+      });
+      it("should return true", async () => {
+        sinon
+          .stub(connection.workspace, "getConfiguration")
+          .resolves(<any>{ "test.q": "REPL" });
+        const res = await server["getConnectionMap"]("");
+        assert.deepEqual(res, { "test.q": "REPL" });
+      });
+    });
+  });
+
+  describe("notify", () => {
+    it("", () => {
+      const stub = sinon.stub(connection, "sendNotification");
+      server["notify"]("test", <any>"DEBUG", {}, true);
+      sinon.assert.calledOnceWithExactly(stub, "notify", <any>{
+        message: "test",
+        kind: "DEBUG",
+        options: {},
+        telemetry: true,
+      });
+    });
+  });
+
+  describe("onDidChangeWatchedFiles", () => {
+    it("should remove from cached", () => {
+      const stub = new Map();
+      stub.set("test", "test");
+      sinon.stub(server, <any>"cached").value(stub);
+      server["onDidChangeWatchedFiles"](<any>{ changes: [{ uri: "test" }] });
+      assert.strictEqual(stub.get("test"), undefined);
+    });
+  });
+
+  describe("onDidChangeContent", () => {
+    it("should lint", async () => {
+      const stub = sinon.stub(linter, "lint").returns([]);
+      sinon.stub(connection.workspace, "getConfiguration").resolves(<any>true);
+      await server["onDidChangeContent"]({
+        document: <TextDocument>{ uri: "file:///test.q" },
+      });
+      sinon.assert.calledOnce(stub);
+    });
+  });
+
+  describe("related", () => {
+    it("should return related files", async () => {
+      sinon.stub(connection.workspace, "getConfiguration").resolves(<any>true);
+      sinon
+        .stub(connection.workspace, "getWorkspaceFolders")
+        .resolves(<any>[{ uri: "file:///test" }]);
+      await server["related"]("file:///test/test.q");
     });
   });
 });
