@@ -340,10 +340,10 @@ export class InsightsConnection {
 
       case "v1.11-1.13":
         serviceGatewayEndpoints = {
-          meta: "servicegateway/meta",
+          meta: `servicegateway/${qePrefix}api/v3/meta`,
           data: "servicegateway/data",
-          sql: "servicegateway/qe/sql",
-          qsql: "servicegateway/qe/qsql",
+          sql: `servicegateway/${qePrefix}sql`,
+          qsql: `servicegateway/${qePrefix}qsql`,
           udaBase: "servicegateway/",
         };
         break;
