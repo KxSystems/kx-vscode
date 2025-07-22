@@ -72,7 +72,6 @@ import {
   WhiteSpace,
   RCurly,
   local,
-  lamdaDefinition,
 } from "./parser";
 
 const logger = "qLangServer";
@@ -496,7 +495,7 @@ export default class QLangServer {
     let delta = 0;
     for (const token of tokens) {
       if (assignable(token)) {
-        const kind = lamdaDefinition(token) ? 1 : local(token, tokens) ? 0 : -1;
+        const kind = local(token, tokens) ? 0 : -1;
         if (kind >= 0) {
           line = range.start.line;
           character = range.start.character;
