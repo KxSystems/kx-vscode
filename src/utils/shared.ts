@@ -25,3 +25,11 @@ export function stripUnprintableChars(text: string): string {
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : `${error}`;
 }
+
+export function cleanDapName(dapName: string): string {
+  return dapName.replace(/:\d+$/, "");
+}
+
+export function cleanAssemblyName(assemblyName: string): string {
+  return assemblyName.replace(/-qe$/, "");
+}

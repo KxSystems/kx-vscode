@@ -17,6 +17,8 @@ import {
   CodeLensProvider,
   Command,
   NotebookCell,
+  QuickPickItem,
+  QuickPickItemKind,
   Range,
   StatusBarAlignment,
   TextDocument,
@@ -39,7 +41,12 @@ import { updateCellMetadata } from "../services/notebookProviders";
 import { getBasename, offerConnectAction } from "../utils/core";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
 import { MessageKind, notify, Runner } from "../utils/notifications";
-import { errorMessage, normalizeAssemblyTarget } from "../utils/shared";
+import {
+  cleanAssemblyName,
+  cleanDapName,
+  errorMessage,
+  normalizeAssemblyTarget,
+} from "../utils/shared";
 
 const logger = "workspaceCommand";
 
@@ -250,38 +257,43 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
     daps.unshift(createMetaDapFromTarget(target));
   }
 
-  const options = buildTierOptions(daps);
+  const tierItems = buildTierOptionsWithSeparators(daps);
   const defaultOption = isInsights ? "scratchpad" : "default";
 
-  let picked = await window.showQuickPick([defaultOption, ...options], {
+  const items: QuickPickItem[] = [{ label: defaultOption }];
+
+  if (tierItems.length > 0) {
+    items.push(...tierItems);
+  }
+
+  const picked = await window.showQuickPick(items, {
     title: `Choose Execution Target (${conn?.connLabel ?? "Not Connected"})`,
     placeHolder: target || defaultOption,
   });
 
-  if (picked) {
-    if (picked === "scratchpad" || picked === "default") {
-      picked = undefined;
+  let selectedValue = picked?.label;
+
+  if (selectedValue) {
+    if (selectedValue === "scratchpad" || selectedValue === "default") {
+      selectedValue = undefined;
     }
 
     if (cell) {
       await updateCellMetadata(cell, {
-        target: picked,
-        variable: picked && cell.metadata.variable,
+        target: selectedValue,
+        variable: selectedValue && cell.metadata.variable,
       });
     } else {
-      await setTargetForUri(uri, picked);
+      await setTargetForUri(uri, selectedValue);
     }
   }
 
-  return picked;
+  return selectedValue;
 }
 
 function createTierKey(dap: MetaDap): string {
-  return `${dap.assembly} ${dap.instance}`;
-}
-
-function createProcessKey(dap: MetaDap): string | null {
-  return dap.dap ? `${createTierKey(dap)} ${dap.dap}` : null;
+  const cleanedAssembly = cleanAssemblyName(dap.assembly);
+  return `${cleanedAssembly} ${dap.instance}`;
 }
 
 function targetExists(target: string, daps: MetaDap[]): boolean {
@@ -301,29 +313,56 @@ function createMetaDapFromTarget(target: string): MetaDap {
     : ({ assembly, instance } as MetaDap);
 }
 
-function buildTierOptions(daps: MetaDap[]): string[] {
-  const tierMap = new Map<string, MetaDap[]>();
+function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
+  const items: QuickPickItem[] = [];
+
+  const tierSet = new Set<string>();
+  const processItems: QuickPickItem[] = [];
 
   daps.forEach((dap) => {
-    const tierKey = createTierKey(dap);
-    if (!tierMap.has(tierKey)) {
-      tierMap.set(tierKey, []);
+    const cleanedAssembly = cleanAssemblyName(dap.assembly);
+    const tierKey = `${cleanedAssembly} ${dap.instance}`;
+    tierSet.add(tierKey);
+
+    if (dap.dap) {
+      const cleanedDapName = cleanDapName(dap.dap);
+      processItems.push({ label: `${tierKey} ${cleanedDapName}` });
     }
-    tierMap.get(tierKey)!.push(dap);
   });
 
-  const options: string[] = [];
-
-  tierMap.forEach((processes, tierKey) => {
-    options.push(tierKey);
-    processes.forEach((process) => {
-      if (process.dap) {
-        options.push(`${tierKey} ${process.dap}`);
-      }
+  if (tierSet.size > 0) {
+    items.push({
+      kind: QuickPickItemKind.Separator,
+      label: "Tiers",
     });
-  });
 
-  return options;
+    const sortedTiers = Array.from(tierSet).sort();
+    sortedTiers.forEach((tier) => {
+      items.push({ label: tier });
+    });
+  }
+
+  if (processItems.length > 0) {
+    items.push({
+      kind: QuickPickItemKind.Separator,
+      label: "DAP Processes",
+    });
+
+    processItems
+      .sort((a, b) => a.label.localeCompare(b.label))
+      .forEach((item) => {
+        items.push(item);
+      });
+  }
+
+  return items;
+}
+
+function createProcessKey(dap: MetaDap): string | null {
+  if (!dap.dap) return null;
+
+  const cleanedDapName = cleanDapName(dap.dap);
+  return `${createTierKey(dap)} ${cleanedDapName}`;
 }
 
 function isSql(uri: Uri | undefined) {
