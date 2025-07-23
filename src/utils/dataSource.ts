@@ -116,7 +116,7 @@ export function oldFilesExists(): boolean {
   return files.length > 0;
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 export async function importOldDsFiles(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
   const files = fs.readdirSync(kdbDataSourcesFolderPath);
@@ -135,7 +135,7 @@ export async function importOldDsFiles(): Promise<void> {
   ext.oldDSformatExists = false;
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 export async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
   const folders = workspace.workspaceFolders;
   if (folders) {

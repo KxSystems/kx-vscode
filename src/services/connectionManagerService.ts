@@ -125,7 +125,7 @@ export class ConnectionManagementService {
     }
   }
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   public async connect(connLabel: string): Promise<void> {
     const connection = this.retrieveConnection(connLabel);
     if (!connection) {
@@ -231,7 +231,7 @@ export class ConnectionManagementService {
     if (!connection || !connectionNode) {
       return;
     }
-    /* istanbul ignore next */
+    /* c8 ignore next */
     connection.disconnect();
     this.disconnectBehaviour(connection);
   }

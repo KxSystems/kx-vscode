@@ -189,7 +189,7 @@ export async function addInsightsConnection(
   }
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 export async function editInsightsConnection(
   insightsData: InsightDetails,
   oldAlias: string,
@@ -296,7 +296,7 @@ export async function editInsightsConnection(
 }
 
 // Not possible to test secrets
-/* istanbul ignore next */
+/* c8 ignore next */
 export async function addAuthConnection(
   serverKey: string,
   username: string,
@@ -327,7 +327,7 @@ export async function addAuthConnection(
 }
 
 // Not possible to test secrets
-/* istanbul ignore next */
+/* c8 ignore next */
 function removeAuthConnection(serverKey: string) {
   if (
     Object.prototype.hasOwnProperty.call(
@@ -463,7 +463,7 @@ export async function addKdbConnection(
   }
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 export async function editKdbConnection(
   kdbData: ServerDetails,
   oldAlias: string,
@@ -598,7 +598,7 @@ export async function editKdbConnection(
 }
 
 // test fs readFileSync unit tests are flaky, no correct way to test them
-/* istanbul ignore next */
+/* c8 ignore next */
 export async function importConnections() {
   const options = {
     canSelectMany: false,
@@ -909,7 +909,7 @@ export async function executeQuery(
   const endTime = Date.now();
   const duration = (endTime - startTime).toString();
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   if (token?.isCancellationRequested) {
     return undefined;
   }
@@ -932,7 +932,7 @@ export async function executeQuery(
   } else if (isNotebook) {
     return results;
   } else {
-    /* istanbul ignore next */
+    /* c8 ignore next */
     if (ext.isResultsTabVisible) {
       const data = resultToBase64(results);
       if (data) {

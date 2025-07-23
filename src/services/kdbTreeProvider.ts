@@ -178,7 +178,7 @@ export class KdbTreeProvider
     return this.createInsightLeafItems(this.insightsList);
   }
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   private async getMetas(connLabel: string): Promise<InsightsMetaNode[]> {
     const connMng = new ConnectionManagementService();
     const conn = connMng.retrieveConnectedConnection(connLabel);
@@ -197,7 +197,7 @@ export class KdbTreeProvider
     }
   }
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   private async getNamespaces(connLabel: string): Promise<QNamespaceNode[]> {
     const connMng = new ConnectionManagementService();
     const conn = connMng.retrieveConnectedConnection(connLabel);
@@ -231,7 +231,7 @@ export class KdbTreeProvider
     }
   }
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   private async getCategories(
     ns: string | undefined,
     objectCategories: string[],
@@ -416,7 +416,7 @@ export class KdbTreeProvider
   //   return this.createQServerNodes(nns, ns, connLabel, "namespaces");
   // }
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   private createQServerNodes(
     objects: any[],
     ns: string,
@@ -436,7 +436,7 @@ export class KdbTreeProvider
     );
   }
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   private async getMetaObjects(
     connLabel: string,
   ): Promise<MetaObjectPayloadNode[]> {

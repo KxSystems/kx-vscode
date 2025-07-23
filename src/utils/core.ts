@@ -257,7 +257,7 @@ export function getServers(): Server | undefined {
 }
 
 // TODO: Remove this on 1.9.0 release
-/* istanbul ignore next */
+/* c8 ignore next */
 export function fixUnnamedAlias(): void {
   const servers = getServers();
   const insights = getInsights();
@@ -398,7 +398,7 @@ export function invalidUsernameJWT(connLabel: string): void {
   );
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 export function offerConnectAction(connLabel?: string): void {
   if (connLabel) {
     notify(
@@ -431,7 +431,7 @@ export function noSelectedConnectionAction(): void {
   );
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 export function offerReconnectionAfterEdit(connLabel: string): void {
   notify(
     `You are no longer connected to ${connLabel}, would you like to connect?`,
