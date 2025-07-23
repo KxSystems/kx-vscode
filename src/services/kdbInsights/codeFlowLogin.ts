@@ -134,7 +134,7 @@ export async function refreshToken(
   });
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 export async function getCurrentToken(
   serverName: string,
   serverAlias: string,
@@ -173,7 +173,7 @@ export async function getCurrentToken(
   return token;
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 async function getToken(
   insightsUrl: string,
   realm: string,
@@ -235,7 +235,7 @@ function queryString(options: any): string {
     .replace(/%2B/g, "+");
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 function createServer() {
   let deferredCode: IDeferred<string>;
   const codePromise = new Promise<string>(

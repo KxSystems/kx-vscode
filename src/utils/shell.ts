@@ -11,7 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { ChildProcess } from "node:child_process";
+import { ChildProcess, execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 
 import { ICommandResult, tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
@@ -45,4 +46,16 @@ export async function killPid(pid = NaN): Promise<void> {
 function killPidCommand(pid: number): string {
   return `kill ${pid}`;
   // return process.platform === 'win32' ? `taskkill /PID ${pid} /T /F` : `kill -9 ${pid}`;
+}
+
+/* c8 ignore next */
+export function which(cmd: string): string[] {
+  // This works on WSL, MacOS, Linux
+  const res = execFileSync("/usr/bin/which", ["-a", cmd]);
+  return new TextDecoder().decode(res).split(/(?:\r\n|[\r\n])/gs);
+}
+
+/* c8 ignore next */
+export function stat(path: string): boolean {
+  return existsSync(path);
 }

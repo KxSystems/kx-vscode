@@ -306,7 +306,7 @@ export class KdbDataSourceView extends LitElement {
     `;
   }
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   postMessage(msg: Partial<DataSourceMessage2>) {
     this.vscode.postMessage(msg);
   }

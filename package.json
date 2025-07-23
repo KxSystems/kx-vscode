@@ -142,48 +142,58 @@
       "properties": {
         "kdb.servers": {
           "type": "object",
-          "description": "kdb servers for explorer"
+          "description": "kdb servers for explorer",
+          "scope": "application"
         },
         "kdb.insights": {
           "deprecationMessage": "This setting is deprecated, use kdb.insightsEnterpriseConnections instead",
           "type": "object",
-          "description": "kdb insights for explorer"
+          "description": "kdb insights for explorer",
+          "scope": "application"
         },
         "kdb.insightsEnterpriseConnections": {
           "type": "object",
-          "description": "kdb insights enterprise connections for explorer"
+          "description": "kdb insights enterprise connections for explorer",
+          "scope": "application"
         },
         "kdb.hideInstallationNotification": {
           "type": "boolean",
-          "description": "Hide notification for installation path, after first install"
+          "description": "Hide notification for installation path, after first install",
+          "scope": "application"
         },
         "kdb.hideDetailedConsoleQueryOutput": {
           "type": "boolean",
           "description": "Hide detailed console query output",
-          "default": true
+          "default": true,
+          "scope": "application"
         },
         "kdb.autoFocusOutputOnEntry": {
           "type": "boolean",
           "description": "Automatically focus the output console when running a query without an active results tab or receive log entry",
-          "default": true
+          "default": true,
+          "scope": "application"
         },
         "kdb.qHomeDirectory": {
           "type": "string",
-          "description": "QHOME directory for q runtime"
+          "description": "QHOME directory for q runtime",
+          "scope": "application"
         },
         "kdb.neverShowQInstallAgain": {
           "type": "boolean",
-          "description": "Never show q install walkthrough again"
+          "description": "Never show q install walkthrough again",
+          "scope": "application"
         },
         "kdb.hideSubscribeRegistrationNotification": {
           "type": "boolean",
           "description": "Hide subscribe for registration notification",
-          "default": false
+          "default": false,
+          "scope": "application"
         },
         "kdb.linting": {
           "type": "boolean",
           "description": "Enable linting for q and quke files",
-          "default": false
+          "default": false,
+          "scope": "resource"
         },
         "kdb.refactoring": {
           "type": "string",
@@ -192,7 +202,8 @@
             "Window"
           ],
           "description": "Enable refactoring across files",
-          "default": "Workspace"
+          "default": "Workspace",
+          "scope": "resource"
         },
         "kdb.connectionMap": {
           "type": "object",
@@ -210,18 +221,19 @@
           "type": "array",
           "description": "List of label names and colorset",
           "default": [],
-          "scope": "resource"
+          "scope": "application"
         },
         "kdb.labelsConnectionMap": {
           "type": "array",
           "description": "Labels connection map",
           "default": [],
-          "scope": "resource"
+          "scope": "application"
         },
         "kdb.hideSurvey": {
           "type": "boolean",
           "default": false,
-          "description": "Hide the extension survey dialog box"
+          "description": "Hide the extension survey dialog box",
+          "scope": "application"
         }
       }
     },
@@ -451,7 +463,7 @@
       {
         "category": "KX",
         "command": "kdb.start.repl",
-        "title": "Start kdb+ REPL"
+        "title": "Start REPL"
       },
       {
         "category": "KX",

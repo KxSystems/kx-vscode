@@ -70,6 +70,7 @@ const NS = {
 };
 
 const CONF = {
+  TITLE: `KX ${ext.REPL}`,
   PROMPT: ")",
   MAX_INPUT: 80 * 40,
 };
@@ -80,13 +81,11 @@ export class ReplConnection {
   private readonly history = new History();
   private readonly identity = crypto.randomUUID();
   private readonly token = new RegExp(
-    ANSI.QUOTE +
-      this.identity +
+    this.identity +
       ANSI.AT +
       "(\\d+)" +
       ANSI.AT +
       ".([0-9a-zA-Z_`]*)" +
-      ANSI.QUOTE +
       `[${ANSI.CRLF}]*`,
     "gs",
   );
@@ -157,7 +156,7 @@ export class ReplConnection {
         handleInput: this.handleInput.bind(this),
         onDidWrite: this.onDidWrite.event,
       },
-      name: `kdb+ ${ext.REPL}`,
+      name: CONF.TITLE,
     });
   }
 
@@ -176,19 +175,47 @@ export class ReplConnection {
     this.process.stderr.on("error", this.handleError.bind(this));
   }
 
+  private executeCommand(data: string) {
+    this.process.stdin.write(data + ANSI.CRLF);
+  }
+
+  private sendDimensions() {
+    const LINES = process.env.LINES ?? this.rows.toString();
+    let rows = parseInt(LINES.replace(/\D+/gs, "0") || "0");
+    if (rows < 25) rows = 25;
+    if (rows > 500) rows = 500;
+
+    const COLUMNS = process.env.COLUMNS ?? this.columns.toString();
+    let columns = parseInt(COLUMNS.replace(/\D+/gs, "") || "0");
+    if (columns < 50) columns = 50;
+    if (columns > 320) columns = 320;
+
+    this.executeCommand(`\\c ${rows} ${columns}`);
+  }
+
+  private stub(query: string) {
+    return query.replace(
+      // Stub read0
+      /(?<![A-Za-z0-9.])(?:read0(?![A-Za-z0-9.])|0::)/gs,
+      '{$[x~0;"";0::[x]]}',
+    );
+  }
+
   private sendToProcess(data: string) {
-    this.process.stdin.write(data + ANSI.CRLF, (error) => {
+    this.process.stdin.write(this.stub(data + ANSI.CRLF), (error) => {
       if (error) {
         this.executing--;
       } else {
         this.process.stdin.write(
-          ANSI.QUOTE +
+          "2 {x}" +
+            ANSI.QUOTE +
             this.identity +
             ANSI.AT +
             this.serial++ +
             ANSI.AT +
             ANSI.QUOTE +
             (this.context === CTX.Q ? NS.Q : NS.K) +
+            ";" +
             ANSI.CRLF,
         );
       }
@@ -281,17 +308,44 @@ export class ReplConnection {
     if (this.exited) {
       return;
     }
+    const output = decoded.replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
 
+    if (this.executions) this.messages.push(output);
+    else this.buffer.push(output);
+  }
+
+  private show() {
+    if (getAutoFocusOutputOnEntrySetting()) this.terminal.show(true);
+  }
+
+  private recall(history?: HistoryItem) {
+    const input = history?.input ?? ANSI.EMPTY;
+    this.input = [...input];
+    this.inputIndex = 0;
+    this.updateInputIndex(input);
+    this.showPrompt();
+  }
+
+  private handleError(error: Error) {
+    this.showMessage(error.message + ANSI.CRLF);
+  }
+
+  private handleClose(code?: number) {
+    const message = `${CONF.TITLE} exited with code (${code ?? 0}).${ANSI.CRLF}`;
+    this.showMessage(message);
+    this.exited = true;
+  }
+
+  private handleOutput(data: any) {
+    const decoded = this.decoder.decode(data);
+    this.showOutput(decoded);
+  }
+
+  private handleErrorOutput(data: any) {
+    const decoded = this.decoder.decode(data);
     this.token.lastIndex = 0;
-    const output = decoded
-      .replace(this.token, ANSI.EMPTY)
-      .replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
-
-    if (this.executions) {
-      this.messages.push(output);
-      return;
-    }
-    this.buffer.push(output);
+    const output = decoded.replace(this.token, ANSI.EMPTY);
+    this.showOutput(output);
 
     this.token.lastIndex = 0;
     let match: RegExpMatchArray | null;
@@ -320,44 +374,13 @@ export class ReplConnection {
     }
   }
 
-  private show() {
-    if (getAutoFocusOutputOnEntrySetting()) this.terminal.show(true);
-  }
-
-  private recall(history?: HistoryItem) {
-    const input = history?.input || ANSI.EMPTY;
-    this.input = [...input];
-    this.inputIndex = 0;
-    this.updateInputIndex(input);
-    this.showPrompt();
-  }
-
-  private handleError(error: Error) {
-    this.showMessage(error.message + ANSI.CRLF);
-  }
-
-  private handleClose(code?: number) {
-    const message = `kdb+ exited with code (${code ?? 0}).${ANSI.CRLF}`;
-    this.showMessage(message);
-    this.exited = true;
-  }
-
-  private handleOutput(data: any) {
-    const decoded = this.decoder.decode(data);
-    this.showOutput(decoded);
-  }
-
-  private handleErrorOutput(data: any) {
-    this.handleOutput(data);
-  }
-
   private open(dimensions?: vscode.TerminalDimensions) {
     if (dimensions) {
       this.setDimensions(dimensions);
     }
 
     this.sendToTerminal(
-      "kdb+ REPL Copyright (C) 1993-2025 KX Systems" + ANSI.CRLF.repeat(2),
+      `${CONF.TITLE} Copyright (C) 1993-2025 KX Systems` + ANSI.CRLF.repeat(2),
     );
 
     this.messages.forEach((message) => this.sendToTerminal(message));
@@ -370,9 +393,10 @@ export class ReplConnection {
   }
 
   private setDimensions(dimensions: vscode.TerminalDimensions) {
-    this.columns = dimensions.columns;
     this.rows = dimensions.rows;
+    this.columns = dimensions.columns;
     this.updateMaxInputIndex();
+    this.sendDimensions();
     if (!this.executions && !this.executing) this.showPrompt();
   }
 
@@ -400,13 +424,13 @@ export class ReplConnection {
       case KEY.CR:
         if (this.input.length > 0) {
           const input = this.inputText;
+          this.sendToProcess(input);
+          this.history.push(input);
+          this.inputIndex = this.visibleInputIndex;
+          this.showPrompt();
           if (/^(?:\\[\t ]|\\$)/m.test(input)) {
             this.context = this.context === CTX.K ? CTX.Q : CTX.K;
           }
-          this.sendToProcess(input);
-          this.history.push(new HistoryItem(input));
-          this.inputIndex = this.visibleInputIndex;
-          this.showPrompt();
         } else {
           this.sendToProcess(ANSI.EMPTY);
         }
@@ -532,12 +556,15 @@ class History {
   private head?: HistoryItem;
   private item?: HistoryItem;
 
-  push(item: HistoryItem) {
+  push(input: string) {
+    if (input === this.head?.input) {
+      return;
+    }
+    const item = new HistoryItem(input);
     if (this.head) {
       item.next = this.head;
       this.head.prev = item;
     }
-    item.prev = undefined;
     this.head = item;
   }
 

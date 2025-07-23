@@ -67,6 +67,7 @@ import {
   CommentEndOfLine,
   TestLambdaBlock,
   Cond,
+  CutDrop,
 } from "./tokens";
 
 const Language = [
@@ -90,6 +91,7 @@ const Language = [
   Keyword,
   Reserved,
   Identifier,
+  CutDrop,
   Iterator,
   Comparator,
   DoubleColon,

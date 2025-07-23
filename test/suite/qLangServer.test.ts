@@ -23,6 +23,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import * as linter from "../../server/src/linter";
 import QLangServer from "../../server/src/qLangServer";
 
 const context = { includeDeclaration: true };
@@ -67,6 +68,9 @@ describe("qLangServer", () => {
         async getWorkspaceFolders() {
           return [];
         },
+        async getConfiguration() {
+          return undefined;
+        },
       },
       languages: {
         callHierarchy: {
@@ -79,6 +83,7 @@ describe("qLangServer", () => {
         },
       },
       sendDiagnostics() {},
+      sendNotification() {},
     });
 
     const params = <InitializeParams>{
@@ -108,189 +113,192 @@ describe("qLangServer", () => {
   });
 
   describe("onDocumentSymbol", () => {
-    it("should return symbols", () => {
+    it("should return symbols", async () => {
       const params = createDocument("a:1;b:{[c]d:c+1;e::1;d}");
-      const result = server.onDocumentSymbol(params);
+      const result = await server.onDocumentSymbol(params);
       assert.strictEqual(result.length, 3);
     });
-    it("should skip table and sql", () => {
+    it("should skip table and sql", async () => {
       const params = createDocument(")([]a:1;b:2);select a:1 from(");
-      const result = server.onDocumentSymbol(params);
+      const result = await server.onDocumentSymbol(params);
       assert.strictEqual(result.length, 0);
     });
-    it("should account for \\d can be only one level deep", () => {
+    it("should account for \\d can be only one level deep", async () => {
       const params = createDocument("\\d .foo.bar\na:1");
-      const result = server.onDocumentSymbol(params);
+      const result = await server.onDocumentSymbol(params);
       assert.strictEqual(result.length, 1);
       assert.strictEqual(result[0].name, ".foo.a");
     });
-    it("should account for bogus \\d", () => {
+    it("should account for bogus \\d", async () => {
       const params = createDocument("\\d\na:1");
-      const result = server.onDocumentSymbol(params);
+      const result = await server.onDocumentSymbol(params);
       assert.strictEqual(result.length, 1);
       assert.strictEqual(result[0].name, "a");
     });
-    it("should account for bogus \\d foo", () => {
+    it("should account for bogus \\d foo", async () => {
       const params = createDocument("\\d foo\na:1");
-      const result = server.onDocumentSymbol(params);
+      const result = await server.onDocumentSymbol(params);
       assert.strictEqual(result.length, 1);
       assert.strictEqual(result[0].name, "a");
     });
-    it('should account for bogus system"d', () => {
+    it('should account for bogus system"d', async () => {
       const params = createDocument('system"d";a:1');
-      const result = server.onDocumentSymbol(params);
+      const result = await server.onDocumentSymbol(params);
       assert.strictEqual(result.length, 1);
       assert.strictEqual(result[0].name, "a");
     });
-    it('should account for bogus system"d', () => {
+    it('should account for bogus system"d', async () => {
       const params = createDocument("a:1;system");
-      const result = server.onDocumentSymbol(params);
+      const result = await server.onDocumentSymbol(params);
       assert.strictEqual(result.length, 1);
     });
-    it('should account for only static system"d', () => {
+    it('should account for only static system"d', async () => {
       const params = createDocument('a:1;system"d .foo";b:1');
-      const result = server.onDocumentSymbol(params);
+      const result = await server.onDocumentSymbol(params);
       assert.strictEqual(result.length, 2);
       assert.strictEqual(result[1].name, "b");
     });
   });
 
   describe("onReferences", () => {
-    it("should return empty array for no text", () => {
+    it("should return empty array for no text", async () => {
       const params = createDocument("");
-      const result = server.onReferences({ ...params, context });
+      const result = await server.onReferences({ ...params, context });
       assert.strictEqual(result.length, 0);
     });
-    it("should return empty array for bogus assignment", () => {
+    it("should return empty array for bogus assignment", async () => {
       const params = createDocument(":");
-      const result = server.onReferences({ ...params, context });
+      const result = await server.onReferences({ ...params, context });
       assert.strictEqual(result.length, 0);
     });
-    it("should return empty array for bogus function", () => {
+    it("should return empty array for bogus function", async () => {
       const params = createDocument("{");
-      const result = server.onReferences({ ...params, context });
+      const result = await server.onReferences({ ...params, context });
       assert.strictEqual(result.length, 0);
     });
-    it("should return references in anonymous functions", () => {
+    it("should return references in anonymous functions", async () => {
       const params = createDocument("{a:1;a");
-      const result = server.onReferences({ ...params, context });
+      const result = await server.onReferences({ ...params, context });
       assert.strictEqual(result.length, 2);
     });
-    it("should support imlplicit arguments", () => {
+    it("should support imlplicit arguments", async () => {
       const params = createDocument("x:1;y:1;z:1;{x+y+z};x");
-      const result = server.onReferences({ ...params, context });
+      const result = await server.onReferences({ ...params, context });
       assert.strictEqual(result.length, 2);
     });
-    it("should find globals in functions", () => {
+    it("should find globals in functions", async () => {
       const params = createDocument("a:1;{a");
-      const result = server.onReferences({ ...params, context });
+      const result = await server.onReferences({ ...params, context });
       assert.strictEqual(result.length, 2);
     });
-    it("should find locals in functions", () => {
+    it("should find locals in functions", async () => {
       const params = createDocument("a:1;{a:2;a");
-      const result = server.onReferences({ ...params, context });
+      const result = await server.onReferences({ ...params, context });
       assert.strictEqual(result.length, 2);
     });
-    it("should apply namespace to globals in functions", () => {
+    it("should apply namespace to globals in functions", async () => {
       const params = createDocument(
         "\\d .foo\na:1;f:{a::2};\\d .\n.foo.f[];.foo.a",
       );
-      const result = server.onReferences({ ...params, context });
+      const result = await server.onReferences({ ...params, context });
       assert.strictEqual(result.length, 3);
     });
-    it("should return references for quke", () => {
+    it("should return references for quke", async () => {
       const params = createDocument("FEATURE\nfeature\nshould\nEXPECT\na:1;a");
-      const result = server.onReferences({ ...params, context });
+      const result = await server.onReferences({ ...params, context });
       assert.strictEqual(result.length, 2);
     });
   });
 
   describe("onDefinition", () => {
-    it("should return definitions", () => {
+    it("should return definitions", async () => {
       const params = createDocument("a:1;b:{[c]d:c+1;d};b");
-      const result = server.onDefinition(params);
+      const result = await server.onDefinition(params);
       assert.strictEqual(result.length, 1);
     });
-    it("should return local definitions", () => {
+    it("should return local definitions", async () => {
       const params = createDocument("a:1;b:{[c]d:1;d");
-      const result = server.onDefinition(params);
+      const result = await server.onDefinition(params);
       assert.strictEqual(result.length, 1);
     });
   });
 
   describe("onRenameRequest", () => {
-    it("should rename identifiers", () => {
+    it("should rename identifiers", async () => {
       const params = createDocument("a:1;b:{[c]d:c+1;d};b");
-      const result = server.onRenameRequest({ ...params, newName: "newName" });
+      const result = await server.onRenameRequest({
+        ...params,
+        newName: "newName",
+      });
       assert.ok(result);
       assert.strictEqual(result.changes[params.textDocument.uri].length, 2);
     });
   });
 
   describe("onCompletion", () => {
-    it("should complete identifiers", () => {
+    it("should complete identifiers", async () => {
       const params = createDocument("a:1;b:{[c]d:c+1;d};b");
-      const result = server.onCompletion(params);
+      const result = await server.onCompletion(params);
       assert.strictEqual(result.length, 2);
     });
   });
 
   describe("onExpressionRange", () => {
-    it("should return the range of the expression", () => {
+    it("should return the range of the expression", async () => {
       const params = createDocument("a:1;");
-      const result = server.onExpressionRange(params);
+      const result = await server.onExpressionRange(params);
       assert.strictEqual(result.start.line, 0);
       assert.strictEqual(result.start.character, 0);
       assert.strictEqual(result.end.line, 0);
       assert.strictEqual(result.end.character, 3);
     });
-    it("should return the range of the expression", () => {
+    it("should return the range of the expression", async () => {
       const params = createDocument("a");
-      const result = server.onExpressionRange(params);
+      const result = await server.onExpressionRange(params);
       assert.strictEqual(result.start.line, 0);
       assert.strictEqual(result.start.character, 0);
       assert.strictEqual(result.end.line, 0);
       assert.strictEqual(result.end.character, 1);
     });
-    it("should return null", () => {
+    it("should return null", async () => {
       const params = createDocument("");
-      const result = server.onExpressionRange(params);
+      const result = await server.onExpressionRange(params);
       assert.strictEqual(result, null);
     });
-    it("should return null", () => {
+    it("should return null", async () => {
       const params = createDocument(";");
-      const result = server.onExpressionRange(params);
+      const result = await server.onExpressionRange(params);
       assert.strictEqual(result, null);
     });
-    it("should return null", () => {
+    it("should return null", async () => {
       const params = createDocument("/a:1");
-      const result = server.onExpressionRange(params);
+      const result = await server.onExpressionRange(params);
       assert.strictEqual(result, null);
     });
   });
 
   describe("onExpressionRange", () => {
-    it("should return range for simple expression", () => {
+    it("should return range for simple expression", async () => {
       const params = createDocument("a:1;");
-      const result = server.onExpressionRange(params);
+      const result = await server.onExpressionRange(params);
       assert.ok(result);
       assert.strictEqual(result.start.line, 0);
       assert.strictEqual(result.start.character, 0);
       assert.strictEqual(result.end.line, 0);
       assert.strictEqual(result.end.character, 3);
     });
-    it("should return range for lambda", () => {
+    it("should return range for lambda", async () => {
       const params = createDocument("a:{b:1;b};");
-      const result = server.onExpressionRange(params);
+      const result = await server.onExpressionRange(params);
       assert.ok(result);
       assert.strictEqual(result.start.line, 0);
       assert.strictEqual(result.start.character, 0);
       assert.strictEqual(result.end.line, 0);
       assert.strictEqual(result.end.character, 9);
     });
-    it("should skip comments", () => {
+    it("should skip comments", async () => {
       const params = createDocument("a:1 /comment", 1);
-      const result = server.onExpressionRange(params);
+      const result = await server.onExpressionRange(params);
       assert.ok(result);
       assert.strictEqual(result.start.line, 0);
       assert.strictEqual(result.start.character, 0);
@@ -300,9 +308,9 @@ describe("qLangServer", () => {
   });
 
   describe("omParameterCache", () => {
-    it("should cache paramater", () => {
+    it("should cache paramater", async () => {
       const params = createDocument("{[a;b]}");
-      const result = server.onParameterCache(params);
+      const result = await server.onParameterCache(params);
       assert.ok(result);
       assert.deepEqual(result.params, ["a", "b"]);
       assert.strictEqual(result.start.line, 0);
@@ -310,9 +318,9 @@ describe("qLangServer", () => {
       assert.strictEqual(result.end.line, 0);
       assert.strictEqual(result.end.character, 6);
     });
-    it("should cache paramater", () => {
+    it("should cache paramater", async () => {
       const params = createDocument("{[a;b]\n }");
-      const result = server.onParameterCache(params);
+      const result = await server.onParameterCache(params);
       assert.ok(result);
       assert.deepEqual(result.params, ["a", "b"]);
       assert.strictEqual(result.start.line, 0);
@@ -320,32 +328,32 @@ describe("qLangServer", () => {
       assert.strictEqual(result.end.line, 1);
       assert.strictEqual(result.end.character, 1);
     });
-    it("should return null", () => {
+    it("should return null", async () => {
       const params = createDocument("{[]}");
-      const result = server.onParameterCache(params);
+      const result = await server.onParameterCache(params);
       assert.strictEqual(result, null);
     });
-    it("should return null", () => {
+    it("should return null", async () => {
       const params = createDocument("{}");
-      const result = server.onParameterCache(params);
+      const result = await server.onParameterCache(params);
       assert.strictEqual(result, null);
     });
-    it("should return null", () => {
+    it("should return null", async () => {
       const params = createDocument("a:1;");
-      const result = server.onParameterCache(params);
+      const result = await server.onParameterCache(params);
       assert.strictEqual(result, null);
     });
-    it("should return null", () => {
+    it("should return null", async () => {
       const params = createDocument("");
-      const result = server.onParameterCache(params);
+      const result = await server.onParameterCache(params);
       assert.strictEqual(result, null);
     });
   });
 
   describe("onSelectionRanges", () => {
-    it("should return identifier range", () => {
+    it("should return identifier range", async () => {
       const params = createDocument(".test.ref");
-      const result = server.onSelectionRanges({
+      const result = await server.onSelectionRanges({
         textDocument: params.textDocument,
         positions: [params.position],
       });
@@ -356,64 +364,59 @@ describe("qLangServer", () => {
   });
 
   describe("onPrepareCallHierarchy", () => {
-    it("should prepare call hierarchy", () => {
+    it("should prepare call hierarchy", async () => {
       const params = createDocument("a:1;a");
-      const result = server.onPrepareCallHierarchy(params);
+      const result = await server.onPrepareCallHierarchy(params);
       assert.strictEqual(result.length, 1);
     });
   });
 
   describe("onIncomingCallsCallHierarchy", () => {
-    it("should return incoming calls", () => {
+    it("should return incoming calls", async () => {
       const params = createDocument("a:1;a");
-      const items = server.onPrepareCallHierarchy(params);
-      const result = server.onIncomingCallsCallHierarchy({ item: items[0] });
+      const items = await server.onPrepareCallHierarchy(params);
+      const result = await server.onIncomingCallsCallHierarchy({
+        item: items[0],
+      });
       assert.strictEqual(result.length, 1);
     });
   });
 
   describe("onOutgoingCallsCallHierarchy", () => {
-    it("should return outgoing calls", () => {
+    it("should return outgoing calls", async () => {
       const params = createDocument("a:1;{a");
-      const items = server.onPrepareCallHierarchy(params);
-      const result = server.onOutgoingCallsCallHierarchy({ item: items[0] });
+      const items = await server.onPrepareCallHierarchy(params);
+      const result = await server.onOutgoingCallsCallHierarchy({
+        item: items[0],
+      });
       assert.strictEqual(result.length, 1);
     });
   });
 
   describe("onSemanticTokens", () => {
-    it("should tokenize local variables", () => {
+    it("should tokenize local variables", async () => {
       const params = createDocument("a:{[b;c]d:1;b*c*d}");
-      const result = server.onSemanticTokens(params);
+      const result = await server.onSemanticTokens(params);
       assert.strictEqual(result.data.length, 35);
     });
 
-    it("should ignore qualified variables", () => {
+    it("should ignore qualified variables", async () => {
       const params = createDocument("a:{.ns.b:1;.ns.b}");
-      const result = server.onSemanticTokens(params);
+      const result = await server.onSemanticTokens(params);
       assert.strictEqual(result.data.length, 5);
     });
 
-    it("should detect empty lists", () => {
+    it("should detect empty lists", async () => {
       const params = createDocument("a:{b:();b}");
-      const result = server.onSemanticTokens(params);
+      const result = await server.onSemanticTokens(params);
       assert.strictEqual(result.data.length, 15);
     });
   });
 
-  describe("setSettings", () => {
-    const defaultSettings = {
-      debug: false,
-      linting: false,
-      refactoring: "Workspace",
-    };
-    it("should use default settings for empty", () => {
-      server.setSettings({});
-      assert.deepEqual(server["settings"], defaultSettings);
-    });
-    it("should use default settings for empty coming from client", () => {
-      server.onDidChangeConfiguration({ settings: { kdb: {} } });
-      assert.deepEqual(server["settings"], defaultSettings);
+  describe("onDidOpen", () => {
+    it("should add to opened", () => {
+      server.onDidOpen({ document: <TextDocument>{ uri: "test" } });
+      assert.ok(server["opened"].has("test"));
     });
   });
 
@@ -425,23 +428,103 @@ describe("qLangServer", () => {
     });
   });
 
-  describe("scan", () => {
-    it("should scan empty workspace", () => {
-      sinon
-        .stub(connection.workspace, "getWorkspaceFolders")
-        .value(async () => []);
-      server.scan();
-      assert.strictEqual(server["cached"].size, 0);
+  describe("Settings", () => {
+    describe("getDebug", () => {
+      it("should return false", async () => {
+        const res = await server["getDebug"]("");
+        assert.strictEqual(res, false);
+      });
+      it("should return true", async () => {
+        sinon
+          .stub(connection.workspace, "getConfiguration")
+          .resolves(<any>true);
+        const res = await server["getDebug"]("");
+        assert.strictEqual(res, true);
+      });
+    });
+    describe("getLinting", () => {
+      it("should return false", async () => {
+        const res = await server["getLinting"]("");
+        assert.strictEqual(res, false);
+      });
+      it("should return true", async () => {
+        sinon
+          .stub(connection.workspace, "getConfiguration")
+          .resolves(<any>true);
+        const res = await server["getLinting"]("");
+        assert.strictEqual(res, true);
+      });
+    });
+    describe("getRefactoring", () => {
+      it("should return Workspace", async () => {
+        const res = await server["getRefactoring"]("");
+        assert.strictEqual(res, "Workspace");
+      });
+      it("should return Window", async () => {
+        sinon
+          .stub(connection.workspace, "getConfiguration")
+          .resolves(<any>"Window");
+        const res = await server["getRefactoring"]("");
+        assert.strictEqual(res, "Window");
+      });
+    });
+    describe("getConnectionMap", () => {
+      it("should return empty map", async () => {
+        const res = await server["getConnectionMap"]("");
+        assert.deepEqual(res, {});
+      });
+      it("should return true", async () => {
+        sinon
+          .stub(connection.workspace, "getConfiguration")
+          .resolves(<any>{ "test.q": "REPL" });
+        const res = await server["getConnectionMap"]("");
+        assert.deepEqual(res, { "test.q": "REPL" });
+      });
+    });
+  });
+
+  describe("notify", () => {
+    it("", () => {
+      const stub = sinon.stub(connection, "sendNotification");
+      server["notify"]("test", <any>"DEBUG", {}, true);
+      sinon.assert.calledOnceWithExactly(stub, "notify", <any>{
+        message: "test",
+        kind: "DEBUG",
+        options: {},
+        telemetry: true,
+      });
     });
   });
 
   describe("onDidChangeWatchedFiles", () => {
-    it("should parse empty match", () => {
+    it("should remove from cached", () => {
+      const stub = new Map();
+      stub.set("test", "test");
+      sinon.stub(server, <any>"cached").value(stub);
+      server["onDidChangeWatchedFiles"](<any>{ changes: [{ uri: "test" }] });
+      assert.strictEqual(stub.get("test"), undefined);
+    });
+  });
+
+  describe("onDidChangeContent", () => {
+    it("should lint", async () => {
+      const stub = sinon.stub(linter, "lint").returns([]);
+      sinon.stub(server, <any>"parse").returns([]);
+      sinon.stub(connection.workspace, "getConfiguration").resolves(<any>true);
+      await server["onDidChangeContent"]({
+        document: <TextDocument>{ uri: "file:///test/test.q" },
+      });
+      sinon.assert.calledOnce(stub);
+    });
+  });
+
+  describe("related", () => {
+    it("should return related files", async () => {
+      sinon.stub(connection.workspace, "getConfiguration").resolves(<any>true);
       sinon
         .stub(connection.workspace, "getWorkspaceFolders")
-        .value(async () => []);
-      server.onDidChangeWatchedFiles({ changes: [] });
-      assert.strictEqual(server["cached"].size, 0);
+        .resolves(<any>[{ uri: "file:///test" }]);
+      await server["related"]("file:///test/test.q");
     });
   });
 });

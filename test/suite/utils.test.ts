@@ -13,6 +13,7 @@
 
 import * as assert from "assert";
 import mock from "mock-fs";
+import path from "node:path";
 import { env } from "node:process";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
@@ -61,6 +62,7 @@ import { openUrl } from "../../src/utils/openUrl";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { showRegistrationNotification } from "../../src/utils/registration";
 import * as shared from "../../src/utils/shared";
+import * as shell from "../../src/utils/shell";
 import { killPid } from "../../src/utils/shell";
 import * as UDAUtils from "../../src/utils/uda";
 import {
@@ -971,19 +973,44 @@ describe("Utils", () => {
     });
 
     describe("getQExecutablePath", () => {
-      it("should return path", () => {
+      afterEach(() => {
+        sinon.restore();
+      });
+      it("should return KDB+", () => {
         ext.REAL_QHOME = "QHOME";
+        sinon.stub(shell, "stat").returns(false);
         const res = coreUtils.getQExecutablePath();
         assert.ok(res);
       });
-      it("should throw when env vars are not set", () => {
+      it("should return KDB-X", () => {
+        ext.REAL_QHOME = "QHOME";
+        sinon.stub(shell, "stat").returns(true);
+        const res = coreUtils.getQExecutablePath();
+        assert.strictEqual(res, path.join("QHOME", "bin", "q"));
+      });
+      it("should return KDB-X", () => {
         ext.REAL_QHOME = "";
-        assert.throws(
-          () => coreUtils.getQExecutablePath(),
-          new Error(
-            "Neither QHOME environment variable nor qHomeDirectory is set.",
-          ),
-        );
+        const target = path.join("QHOME", "bin", "q");
+        sinon.stub(shell, "which").returns([target]);
+        const res = coreUtils.getQExecutablePath();
+        assert.strictEqual(res, target);
+      });
+      it("should return qHomeDirectory", () => {
+        ext.REAL_QHOME = "";
+        sinon.stub(shell, "which").throws();
+        sinon.stub(vscode.workspace, "getConfiguration").value(() => {
+          return { get: () => "QHOME" };
+        });
+        const res = coreUtils.getQExecutablePath();
+        assert.ok(res);
+      });
+      it("should throw if q not found", () => {
+        ext.REAL_QHOME = "";
+        sinon.stub(shell, "which").throws();
+        sinon.stub(vscode.workspace, "getConfiguration").value(() => {
+          return { get: () => "" };
+        });
+        assert.throws(() => coreUtils.getQExecutablePath());
       });
     });
   });

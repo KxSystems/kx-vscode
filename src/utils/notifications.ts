@@ -144,10 +144,10 @@ export function notify<T extends string>(
     }
   }
 
-  let action: "Details" | "OK" | undefined;
+  let action: "Details" | "Dismiss" | undefined;
 
   if (items.length === 0 && kind !== MessageKind.DEBUG) {
-    action = options.params ? "Details" : "OK";
+    action = options.params ? "Details" : "Dismiss";
     items.push(<T>action);
   }
 
