@@ -430,9 +430,9 @@ export class InsightsConnection {
   public retrieveCorrectAssemblyName(
     plainAssembly: string,
   ): string | undefined {
-    if (this.meta && this.meta.payload.dap) {
-      const foundDap = this.meta.payload.dap.find(
-        (dap: any) => dap.assembly && dap.assembly.startsWith(plainAssembly),
+    if (this.meta?.payload?.dap) {
+      const foundDap = this.meta.payload.dap.find((dap: any) =>
+        dap.assembly?.startsWith(plainAssembly),
       );
 
       return foundDap ? foundDap.assembly : undefined;
@@ -444,9 +444,9 @@ export class InsightsConnection {
   public retrieveCorrectDAPName(
     plainDAP: string | undefined,
   ): string | undefined {
-    if (this.meta && this.meta.payload.dap && plainDAP) {
-      const foundDap = this.meta.payload.dap.find(
-        (dap: any) => dap.dap && dap.dap.startsWith(plainDAP),
+    if (this.meta?.payload?.dap && plainDAP) {
+      const foundDap = this.meta.payload.dap.find((dap: any) =>
+        dap.dap?.startsWith(plainDAP),
       );
 
       return foundDap ? foundDap.dap : undefined;
