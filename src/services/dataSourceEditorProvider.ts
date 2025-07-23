@@ -138,7 +138,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       }
     };
 
-    /* istanbul ignore next */
+    /* c8 ignore next */
     workspace.onDidChangeConfiguration((event) => {
       if ((event.affectsConfiguration("kdb.connectionMap"), document)) {
         updateWebview();
@@ -163,7 +163,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       changeDocumentSubscription.dispose();
     });
 
-    /* istanbul ignore next */
+    /* c8 ignore next */
     webview.onDidReceiveMessage(async (msg: DataSourceMessage2) => {
       const selectedServer = getServerForUri(document.uri) || "";
       const connected = connMngService.isConnected(selectedServer);

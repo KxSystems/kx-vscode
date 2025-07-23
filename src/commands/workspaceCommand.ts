@@ -54,7 +54,7 @@ function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   }
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 function activeEditorChanged(editor?: TextEditor | undefined) {
   setRealActiveTextEditor(editor);
   const item = ext.runScratchpadItem;
@@ -72,7 +72,7 @@ function activeEditorChanged(editor?: TextEditor | undefined) {
   }
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 function setRunScratchpadItemText(uri: Uri, text: string) {
   ext.runScratchpadItem.text = `$(cloud) ${text}`;
   ext.runScratchpadItem.tooltip = `KX: Choose connection for '${getBasename(uri)}'`;
@@ -479,7 +479,7 @@ export function connectWorkspaceCommands() {
   watcher.onDidCreate(update);
   watcher.onDidDelete(update);
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   workspace.onDidDeleteFiles((event) => {
     for (const uri of event.files) {
       if (isKxFolder(uri)) {
@@ -490,7 +490,7 @@ export function connectWorkspaceCommands() {
     }
   });
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   workspace.onDidRenameFiles(async (event) => {
     for (const { oldUri, newUri } of event.files) {
       await setServerForUri(newUri, getServerForUri(oldUri));
@@ -500,7 +500,7 @@ export function connectWorkspaceCommands() {
     }
   });
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   workspace.onDidChangeWorkspaceFolders(() => {
     ext.dataSourceTreeProvider.reload();
     ext.scratchpadTreeProvider.reload();

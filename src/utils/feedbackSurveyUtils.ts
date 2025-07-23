@@ -71,7 +71,7 @@ async function showSurveyDialog() {
   }
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 export async function handleFeedbackSurvey() {
   const context = ext.context;
 

@@ -52,7 +52,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     });
   }
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   public resolveWebviewView(webviewView: WebviewView) {
     this._view = webviewView;
 

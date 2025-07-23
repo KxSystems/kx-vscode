@@ -40,7 +40,7 @@ export class DateTimeNanoPicker extends LitElement {
     };
   }
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   connectedCallback() {
     super.connectedCallback();
     if (this.value) {
@@ -80,7 +80,7 @@ export class DateTimeNanoPicker extends LitElement {
     );
   }
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   render() {
     return html`
       <div class="nanoseconds-row">
