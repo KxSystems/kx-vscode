@@ -37,7 +37,11 @@ import { DataSourceCommand, DataSourceMessage2 } from "../../models/messages";
 import { MetaObjectPayload } from "../../models/meta";
 import { ParamFieldType, UDA, UDAParam } from "../../models/uda";
 import "./custom-fields/date-time-nano-picker";
-import { normalizeAssemblyTarget } from "../../utils/shared";
+import {
+  cleanAssemblyName,
+  cleanDapName,
+  normalizeAssemblyTarget,
+} from "../../utils/shared";
 
 const MAX_RULES = 32;
 const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
@@ -462,30 +466,26 @@ export class KdbDataSourceView extends LitElement {
       const tierMap = new Map<string, typeof this.insightsMeta.dap>();
 
       this.insightsMeta.dap.forEach((dap) => {
-        const tierKey = `${dap.assembly} ${dap.instance}`;
+        const tierKey = `${cleanAssemblyName(dap.assembly)} ${dap.instance}`;
         if (!tierMap.has(tierKey)) {
           tierMap.set(tierKey, []);
         }
         tierMap.get(tierKey)!.push(dap);
       });
 
-      const options: any[] = [];
+      const tierOptions: any[] = [];
+      const dapOptions: any[] = [];
 
       tierMap.forEach((processes, tierKey) => {
-        const tierValue = tierKey;
-        if (!this.qsqlTarget) {
-          this.qsqlTarget = tierValue;
-        }
-        options.push(
-          html`<sl-option value="${encodeURIComponent(tierValue)}"
-            >${tierValue}</sl-option
+        tierOptions.push(
+          html`<sl-option value="${encodeURIComponent(tierKey)}"
+            >${tierKey}</sl-option
           >`,
         );
-
         processes.forEach((process) => {
           if (process.dap) {
-            const processValue = `${tierKey} ${process.dap}`;
-            options.push(
+            const processValue = `${tierKey} ${cleanDapName(process.dap)}`;
+            dapOptions.push(
               html`<sl-option value="${encodeURIComponent(processValue)}"
                 >${processValue}</sl-option
               >`,
@@ -494,7 +494,18 @@ export class KdbDataSourceView extends LitElement {
         });
       });
 
-      return options;
+      if (!this.qsqlTarget && tierOptions.length > 0) {
+        this.qsqlTarget = decodeURIComponent(
+          tierOptions[0].getAttribute("value") || "",
+        );
+      }
+
+      return [
+        html`<small>Tiers</small>`,
+        ...tierOptions,
+        html`<small>DAP Process</small>`,
+        ...dapOptions,
+      ];
     }
     return [];
   }
@@ -1004,9 +1015,7 @@ export class KdbDataSourceView extends LitElement {
             .selected="${live(true)}"
             >${this.qsqlTarget || "(none)"}</sl-option
           >
-          <small
-            >${this.isMetaLoaded ? "Meta Targets" : "Meta Not Loaded"}</small
-          >
+          ${this.isMetaLoaded ? "" : html`<small>Meta Not Loaded</small>`}
           ${this.renderTargetOptions()}
         </sl-select>
         <sl-textarea
