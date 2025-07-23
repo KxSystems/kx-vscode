@@ -765,6 +765,8 @@ KX Notebooks detect [GGPlot2](#grammar-of-graphics) outputs. If the execution ge
 
 ![See notebook plot](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/notebook-plot.png)
 
+Sample notebooks are available on [Developer Wiki](https://github.com/KxSystems/kx-vscode/wiki/Sample-KX-Notebooks).
+
 ## Query History
 
 The **Query History** view in the primary sidebar captures each query execution and enables you to re-run any of the queries listed. Initially the query history view is empty but once you run a query it is captured and displayed in the window - with a separate row displayed for every execution. All information is stored in memory and not persisted upon application exit.
