@@ -27,6 +27,8 @@ import { ext } from "../extensionVariables";
 import { tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
 import { showRegistrationNotification } from "./registration";
+import { errorMessage } from "./shared";
+import { stat, which } from "./shell";
 import {
   InsightDetails,
   Insights,
@@ -196,18 +198,32 @@ export function getPlatformFolder(
 
 export function getQExecutablePath() {
   const folder = getPlatformFolder(process.platform, process.arch);
+
   if (!folder) {
     throw new Error(
       `Unsupported platform (${process.platform}) or architecture (${process.arch}).`,
     );
   }
 
-  const home =
-    ext.REAL_QHOME ??
-    workspace.getConfiguration("kdb").get<string>("qHomeDirectory", "");
+  if (ext.REAL_QHOME) {
+    const q = path.join(ext.REAL_QHOME, "bin", "q");
+    return stat(q) ? q : path.join(ext.REAL_QHOME, folder, "q");
+  } else {
+    try {
+      for (const target of which("q")) {
+        if (target.endsWith(path.join("bin", "q"))) return target;
+      }
+    } catch (error) {
+      notify(errorMessage(error), MessageKind.DEBUG, { logger });
+    }
+  }
 
-  if (home) {
-    return path.join(home, folder, "q");
+  const qHomeDirectory = workspace
+    .getConfiguration("kdb")
+    .get<string>("qHomeDirectory", "");
+
+  if (qHomeDirectory) {
+    return path.join(qHomeDirectory, folder, "q");
   }
 
   throw new Error(
