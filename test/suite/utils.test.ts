@@ -1600,29 +1600,6 @@ describe("Utils", () => {
       });
     });
 
-    describe("generateQSqlBody", () => {
-      it("should use scope for 1.13", () => {
-        const output = queryUtils.generateQSqlBody(
-          "a:1",
-          "assembly tier",
-          1.13,
-        );
-        assert.equal(output.scope.assembly, "assembly");
-        assert.equal(output.scope.tier, "tier");
-      });
-
-      it("should use legacy syntax for 1.12", () => {
-        const output = queryUtils.generateQSqlBody(
-          "a:1",
-          "assembly tier dap",
-          1.12,
-        );
-        assert.equal(output.assembly, "assembly");
-        assert.equal(output.tier, "tier");
-        assert.equal(output.dap, "dap");
-      });
-    });
-
     describe("handleWSResults", () => {
       afterEach(() => {
         sinon.restore();

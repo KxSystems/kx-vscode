@@ -43,7 +43,6 @@ import {
 import { MessageKind, notify } from "../utils/notifications";
 import {
   addQueryHistory,
-  generateQSqlBody,
   getQSQLWrapper,
   handleScratchpadTableRes,
   handleWSError,
@@ -107,13 +106,9 @@ export async function populateScratchpad(
       return;
     }
 
-    const qenvEnabled =
-      (await connMngService.retrieveInsightsConnQEEnabled(connLabel)) ?? "";
-
     await selectedConnection.importScratchpad(
       outputVariable,
       dataSourceForm,
-      qenvEnabled === "Enabled",
       silent,
     );
   } else {
@@ -415,7 +410,7 @@ export async function runQsqlDataSource(
   selectedConn: InsightsConnection,
   isTableView?: boolean,
 ): Promise<any> {
-  const qsqlBody = generateQSqlBody(
+  const qsqlBody = selectedConn.generateQSqlBody(
     fileContent.dataSource.qsql.query,
     fileContent.dataSource.qsql.selectedTarget,
     selectedConn.insightsVersion,

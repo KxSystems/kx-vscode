@@ -42,11 +42,8 @@ import {
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
-import {
-  generateQSqlBody,
-  handleScratchpadTableRes,
-  handleWSResults,
-} from "../utils/queryUtils";
+import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
+import { normalizeAssemblyTarget } from "../utils/shared";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 
 const logger = "insightsConnection";
@@ -404,6 +401,60 @@ export class InsightsConnection {
     return new url.URL(endpoint, this.node.details.server).toString();
   }
 
+  public generateQSqlBody(
+    query: string,
+    assemblyTarget: string,
+    version?: number,
+  ) {
+    const [plainAssembly, tier, plainDap] =
+      normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
+
+    const assembly = this.retrieveCorrectAssemblyName(plainAssembly);
+    const dap = this.retrieveCorrectDAPName(plainDap);
+
+    if (version && isBaseVersionGreaterOrEqual(version, 1.13)) {
+      return {
+        query,
+        scope: {
+          affinity: "soft",
+          assembly,
+          tier: dap ? undefined : tier,
+          dap: dap,
+        },
+      };
+    }
+
+    return { query, assembly, tier, dap };
+  }
+
+  public retrieveCorrectAssemblyName(
+    plainAssembly: string,
+  ): string | undefined {
+    if (this.meta && this.meta.payload.dap) {
+      const foundDap = this.meta.payload.dap.find(
+        (dap: any) => dap.assembly && dap.assembly.startsWith(plainAssembly),
+      );
+
+      return foundDap ? foundDap.assembly : undefined;
+    } else {
+      return;
+    }
+  }
+
+  public retrieveCorrectDAPName(
+    plainDAP: string | undefined,
+  ): string | undefined {
+    if (this.meta && this.meta.payload.dap && plainDAP) {
+      const foundDap = this.meta.payload.dap.find(
+        (dap: any) => dap.dap && dap.dap.startsWith(plainDAP),
+      );
+
+      return foundDap ? foundDap.dap : undefined;
+    } else {
+      return;
+    }
+  }
+
   public async getDatasourceQuery(
     type: DataSourceTypes,
     body: any,
@@ -473,7 +524,6 @@ export class InsightsConnection {
   public async importScratchpad(
     variableName: string,
     params: DataSourceFiles,
-    qeEnabled?: boolean,
     silent?: boolean,
   ): Promise<void> {
     let dsTypeString = "";
@@ -501,7 +551,7 @@ export class InsightsConnection {
           break;
         }
         case DataSourceTypes.QSQL: {
-          body.params = generateQSqlBody(
+          body.params = this.generateQSqlBody(
             params.dataSource.qsql.query,
             params.dataSource.qsql.selectedTarget,
             this.insightsVersion,
