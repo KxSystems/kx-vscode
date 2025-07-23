@@ -50,6 +50,7 @@ import {
   TestBlock,
   TestLambdaBlock,
   Cond,
+  CutDrop,
 } from "./tokens";
 
 const includes = [
@@ -184,19 +185,19 @@ const repository = {
     patterns: [
       {
         name: "keyword.control.q",
-        match: `${_(Control)}\\b`,
+        match: `${__(Control)}`,
       },
       {
         name: "keyword.other.reserved.q",
-        match: `${_(Reserved)}\\b`,
+        match: `${__(Reserved)}`,
       },
       {
         name: "keyword.other.q",
-        match: `\\b${_(Keyword)}\\b`,
+        match: `${__(Keyword)}`,
       },
       {
         name: "variable.other.q",
-        match: `${_(Identifier)}\\b`,
+        match: `${__(Identifier)}`,
       },
     ],
   },
@@ -217,6 +218,10 @@ const repository = {
       {
         name: "punctuation.assignment.q",
         match: _(DoubleColon),
+      },
+      {
+        name: "keyword.operator.arithmetic.q",
+        match: _(CutDrop),
       },
       {
         name: "keyword.operator.arithmetic.q",
@@ -260,10 +265,14 @@ function _(token: TokenType | RegExp) {
   return options ? `(?${options})${result}` : result;
 }
 
+function __(token: TokenType | RegExp) {
+  return `(?<![A-Za-z0-9.])${_(token)}(?![A-Za-z0-9.])`;
+}
+
 export function generateTextMateGrammar() {
   const grammar = JSON.stringify(language, null, 2);
   writeFileSync(
-    resolve(__dirname, "../".repeat(4), "syntaxes", "q.tmLanguage.json"),
+    resolve(__dirname, "..", "..", "..", "..", "syntaxes", "q.tmLanguage.json"),
     grammar,
   );
   return grammar;
