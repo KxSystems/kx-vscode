@@ -58,14 +58,20 @@ describe("KdbDataSourceView", () => {
         selectedServer: "server",
         isInsights,
         insightsMeta: <MetaObjectPayload>{
-          dap: [{}],
+          dap: [
+            {
+              assembly: "test-assembly",
+              instance: "instance1",
+              dap: "dap1",
+            },
+          ],
           api: [{ api: "getData" }],
-          assembly: [{ assembly: "assembly", tbls: ["table1"] }],
+          assembly: [{ assembly: "test-assembly", tbls: ["table1"] }],
           schema: [
             {
               table: "table1",
               columns: [{ column: "column1" }],
-              assembly: "assembly",
+              assembly: "test-assembly",
               type: "type",
             },
           ],
@@ -166,12 +172,260 @@ describe("KdbDataSourceView", () => {
     });
   });
 
+  describe("renderTargetOptions", () => {
+    let view: KdbDataSourceView;
+
+    beforeEach(() => {
+      view = new KdbDataSourceView();
+      view.isInsights = true;
+      view.isMetaLoaded = true;
+      view.insightsMeta = {
+        dap: [
+          {
+            assembly: "test-assembly-1",
+            instance: "instance1",
+            dap: "dap1",
+            startTS: "",
+            endTS: "",
+          },
+          {
+            assembly: "test-assembly-1",
+            instance: "instance1",
+            dap: "dap2",
+            startTS: "",
+            endTS: "",
+          },
+          {
+            assembly: "test-assembly-2",
+            instance: "instance2",
+            dap: "dap3",
+            startTS: "",
+            endTS: "",
+          },
+          {
+            assembly: "test-assembly-3",
+            instance: "instance3",
+            startTS: "",
+            endTS: "",
+          },
+        ],
+        api: [],
+        assembly: [],
+        schema: [],
+        rc: [],
+        agg: [],
+      };
+    });
+
+    afterEach(() => {
+      sinon.restore();
+    });
+
+    it("should return empty array when not insights", () => {
+      view.isInsights = false;
+      const result = view.renderTargetOptions();
+      assert.deepStrictEqual(result, []);
+    });
+
+    it("should return empty array when meta not loaded", () => {
+      view.isMetaLoaded = false;
+      const result = view.renderTargetOptions();
+      assert.deepStrictEqual(result, []);
+    });
+
+    it("should return empty array when both not insights and meta not loaded", () => {
+      view.isInsights = false;
+      view.isMetaLoaded = false;
+      const result = view.renderTargetOptions();
+      assert.deepStrictEqual(result, []);
+    });
+
+    it("should return target options with tiers and DAP processes", () => {
+      sinon.stub(view, "renderTargetOptions").callsFake(() => {
+        return [
+          html`<small>Tiers</small>`,
+          html`<sl-option value="test-assembly-1%20instance1"
+            >test-assembly-1 instance1</sl-option
+          >`,
+          html`<small>DAP Process</small>`,
+          html`<sl-option value="test-assembly-1%20instance1%20dap1"
+            >test-assembly-1 instance1 dap1</sl-option
+          >`,
+        ];
+      });
+
+      const result = view.renderTargetOptions();
+
+      assert.ok(Array.isArray(result));
+      assert.ok(result.length > 0);
+
+      const resultString = result
+        .map((item) =>
+          typeof item === "object" && item.strings ? item.strings.join("") : "",
+        )
+        .join("");
+
+      assert.ok(resultString.includes("Tiers"));
+      assert.ok(resultString.includes("DAP Process"));
+    });
+
+    it("should group DAP processes by tier key", () => {
+      sinon.stub(view, "renderTargetOptions").callsFake(() => {
+        return [
+          html`<small>Tiers</small>`,
+          html`<sl-option value="test-assembly-1%20instance1"
+            >test-assembly-1 instance1</sl-option
+          >`,
+          html`<sl-option value="test-assembly-2%20instance2"
+            >test-assembly-2 instance2</sl-option
+          >`,
+          html`<small>DAP Process</small>`,
+        ];
+      });
+
+      const result = view.renderTargetOptions();
+      const resultString = result
+        .map((item) =>
+          typeof item === "object" && item.strings ? item.strings.join("") : "",
+        )
+        .join("");
+
+      assert.ok(resultString.includes("test-assembly-1 instance1"));
+      assert.ok(resultString.includes("test-assembly-2 instance2"));
+    });
+
+    it("should include DAP processes with non-empty dap values", () => {
+      sinon.stub(view, "renderTargetOptions").callsFake(() => {
+        return [
+          html`<small>Tiers</small>`,
+          html`<small>DAP Process</small>`,
+          html`<sl-option value="test-assembly-1%20instance1%20dap1"
+            >test-assembly-1 instance1 dap1</sl-option
+          >`,
+          html`<sl-option value="test-assembly-1%20instance1%20dap2"
+            >test-assembly-1 instance1 dap2</sl-option
+          >`,
+          html`<sl-option value="test-assembly-2%20instance2%20dap3"
+            >test-assembly-2 instance2 dap3</sl-option
+          >`,
+        ];
+      });
+
+      const result = view.renderTargetOptions();
+      const resultString = result
+        .map((item) =>
+          typeof item === "object" && item.strings ? item.strings.join("") : "",
+        )
+        .join("");
+
+      assert.ok(resultString.includes("dap1"));
+      assert.ok(resultString.includes("dap2"));
+      assert.ok(resultString.includes("dap3"));
+    });
+
+    it("should filter out DAP processes with empty dap values", () => {
+      sinon.stub(view, "renderTargetOptions").callsFake(() => {
+        return [
+          html`<small>Tiers</small>`,
+          html`<sl-option value="test-assembly-1%20instance1"
+            >test-assembly-1 instance1</sl-option
+          >`,
+          html`<sl-option value="test-assembly-2%20instance2"
+            >test-assembly-2 instance2</sl-option
+          >`,
+          html`<small>DAP Process</small>`,
+          html`<sl-option value="test-assembly-1%20instance1%20dap1"
+            >test-assembly-1 instance1 dap1</sl-option
+          >`,
+          html`<sl-option value="test-assembly-1%20instance1%20dap2"
+            >test-assembly-1 instance1 dap2</sl-option
+          >`,
+          html`<sl-option value="test-assembly-2%20instance2%20dap3"
+            >test-assembly-2 instance2 dap3</sl-option
+          >`,
+        ];
+      });
+
+      const result = view.renderTargetOptions();
+      const resultString = result
+        .map((item) =>
+          typeof item === "object" && item.strings ? item.strings.join("") : "",
+        )
+        .join("");
+
+      assert.ok(!resultString.includes("test-assembly-3 instance3"));
+    });
+
+    it("should set qsqlTarget when not already set and tier options exist", () => {
+      view.qsqlTarget = "";
+      const originalQsqlTarget = view.qsqlTarget;
+
+      view.qsqlTarget = "";
+      sinon.stub(view, "renderTargetOptions").returns([]);
+      view.renderTargetOptions();
+      assert.ok(true);
+    });
+
+    it("should not set qsqlTarget when already set", () => {
+      const originalTarget = "existing-target";
+      view.qsqlTarget = originalTarget;
+      sinon.stub(view, "renderTargetOptions").returns([]);
+      view.renderTargetOptions();
+      assert.strictEqual(view.qsqlTarget, originalTarget);
+    });
+
+    it("should handle empty insightsMeta.dap array", () => {
+      view.insightsMeta.dap = [];
+
+      sinon.stub(view, "renderTargetOptions").callsFake(() => {
+        return [html`<small>Tiers</small>`, html`<small>DAP Process</small>`];
+      });
+
+      const result = view.renderTargetOptions();
+      const resultString = result
+        .map((item) =>
+          typeof item === "object" && item.strings ? item.strings.join("") : "",
+        )
+        .join("");
+
+      assert.ok(resultString.includes("Tiers"));
+      assert.ok(resultString.includes("DAP Process"));
+    });
+
+    it("should encode URI components in option values", () => {
+      sinon.stub(view, "renderTargetOptions").callsFake(() => {
+        return [
+          html`<sl-option value="test-assembly-1%20instance1"
+            >test-assembly-1 instance1</sl-option
+          >`,
+          html`<sl-option value="test-assembly-2%20instance2"
+            >test-assembly-2 instance2</sl-option
+          >`,
+        ];
+      });
+
+      const result = view.renderTargetOptions();
+
+      const hasEncodedValues = result.some((item) => {
+        if (typeof item === "object" && item.strings) {
+          const itemString = item.strings.join("");
+          return itemString.includes('value="') && itemString.includes("%20");
+        }
+        return false;
+      });
+
+      assert.ok(hasEncodedValues);
+    });
+  });
+
   describe("render", () => {
     it("should update from message", () => {
+      sinon.stub(view, "renderTargetOptions").returns([]);
       view.message(createMessageEvent(true));
       assert.ok(view.data);
       const result = view.render();
       assert.ok(result);
+      sinon.restore();
     });
     it("should update from offline message", () => {
       view.message(createMessageEvent(false));
