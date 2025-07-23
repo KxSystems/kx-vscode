@@ -336,7 +336,7 @@ function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
       label: "Tiers",
     });
 
-    const sortedTiers = Array.from(tierSet).sort();
+    const sortedTiers = Array.from(tierSet).sort((a, b) => a.localeCompare(b));
     sortedTiers.forEach((tier) => {
       items.push({ label: tier });
     });
@@ -348,11 +348,12 @@ function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
       label: "DAP Processes",
     });
 
-    processItems
-      .sort((a, b) => a.label.localeCompare(b.label))
-      .forEach((item) => {
-        items.push(item);
-      });
+    const sortedProcessItems = processItems
+      .slice()
+      .sort((a, b) => a.label.localeCompare(b.label));
+    sortedProcessItems.forEach((item) => {
+      items.push(item);
+    });
   }
 
   return items;
