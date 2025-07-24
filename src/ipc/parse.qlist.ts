@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import * as c from "./c";
 import QBoolean from "./QBoolean";
 import QByte from "./QByte";
 import QChar from "./QChar";
@@ -33,7 +34,6 @@ import QTimespan from "./QTimespan";
 import QTimestamp from "./QTimestamp";
 import QUnary from "./QUnary";
 import SparkMD5 from "./SparkMD5";
-import * as c from "./c";
 import Tools from "./tools";
 import { TypeBase } from "./typeBase";
 import Vector from "./vector";
@@ -364,7 +364,7 @@ export class QList extends TypeBase {
     return qa.offset + (c.getTypeSize(Math.abs(qa.qtype)) as number);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   getValue(i: number): any {
     if (!this.dataView) {
       return this.values[(i + this.indexOffset) % this.length];
@@ -598,7 +598,7 @@ export class QList extends TypeBase {
     this.indexOffset = indexOffset;
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   toLegacy(i: number): any {
     const qCol = this.values[i];
     if (!this.dataView) {

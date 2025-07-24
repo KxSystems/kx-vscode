@@ -43,7 +43,6 @@ import {
 import { MessageKind, notify } from "../utils/notifications";
 import {
   addQueryHistory,
-  generateQSqlBody,
   getQSQLWrapper,
   handleScratchpadTableRes,
   handleWSError,
@@ -107,13 +106,9 @@ export async function populateScratchpad(
       return;
     }
 
-    const qenvEnabled =
-      (await connMngService.retrieveInsightsConnQEEnabled(connLabel)) ?? "";
-
     await selectedConnection.importScratchpad(
       outputVariable,
       dataSourceForm,
-      qenvEnabled === "Enabled",
       silent,
     );
   } else {
@@ -175,7 +170,6 @@ export async function runDataSource(
         res = await runQsqlDataSource(
           fileContent,
           selectedConnection,
-          selectedConnection.apiConfig?.queryEnvironmentsEnabled,
           isNotebook || undefined,
         );
         break;
@@ -414,14 +408,12 @@ export function getApiBody(
 export async function runQsqlDataSource(
   fileContent: DataSourceFiles,
   selectedConn: InsightsConnection,
-  qeEnabled?: boolean,
   isTableView?: boolean,
 ): Promise<any> {
-  const qsqlBody = generateQSqlBody(
+  const qsqlBody = selectedConn.generateQSqlBody(
     fileContent.dataSource.qsql.query,
     fileContent.dataSource.qsql.selectedTarget,
     selectedConn.insightsVersion,
-    qeEnabled,
   );
 
   const qsqlCall = await selectedConn.getDatasourceQuery(

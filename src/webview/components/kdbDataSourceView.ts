@@ -37,7 +37,11 @@ import { DataSourceCommand, DataSourceMessage2 } from "../../models/messages";
 import { MetaObjectPayload } from "../../models/meta";
 import { ParamFieldType, UDA, UDAParam } from "../../models/uda";
 import "./custom-fields/date-time-nano-picker";
-import { normalizeAssemblyTarget } from "../../utils/shared";
+import {
+  cleanAssemblyName,
+  cleanDapName,
+  normalizeAssemblyTarget,
+} from "../../utils/shared";
 
 const MAX_RULES = 32;
 const UDA_DISTINGUISED_PARAMS: UDAParam[] = [
@@ -154,6 +158,31 @@ export class KdbDataSourceView extends LitElement {
   servers: string[] = [];
   selectedServer = "";
   updating = 0;
+  view: {
+    dap: (
+      | {
+          assembly: string;
+          instance: string;
+          dap: string;
+          startTS: string;
+          endTS: string;
+        }
+      | {
+          assembly: string;
+          instance: string;
+          startTS: string;
+          endTS: string;
+        }
+    )[];
+    api: any[];
+    assembly: any[];
+    schema: any[];
+  } = {
+    dap: [],
+    api: [],
+    assembly: [],
+    schema: [],
+  };
 
   connectedCallback() {
     super.connectedCallback();
@@ -457,17 +486,124 @@ export class KdbDataSourceView extends LitElement {
     return [];
   }
 
+  // TODO: Remove in 1.14 if decided to not use it
+  // Options separated by tiers and DAP processes
+  // renderTargetOptions() {
+  //   if (
+  //     this.isInsights &&
+  //     this.isMetaLoaded &&
+  //     this.insightsMeta.dap.length > 0
+  //   ) {
+  //     const tierMap = new Map<string, typeof this.insightsMeta.dap>();
+
+  //     this.insightsMeta.dap.forEach((dap) => {
+  //       const tierKey = `${cleanAssemblyName(dap.assembly)} ${dap.instance}`;
+  //       if (!tierMap.has(tierKey)) {
+  //         tierMap.set(tierKey, []);
+  //       }
+  //       tierMap.get(tierKey)!.push(dap);
+  //     });
+
+  //     const tierOptions: any[] = [];
+  //     const dapOptions: any[] = [];
+
+  //     tierMap.forEach((processes, tierKey) => {
+  //       tierOptions.push(
+  //         html`<sl-option value="${encodeURIComponent(tierKey)}"
+  //           >${tierKey}</sl-option
+  //         >`,
+  //       );
+  //       processes.forEach((process) => {
+  //         if (process.dap) {
+  //           const processValue = `${tierKey} ${cleanDapName(process.dap)}`;
+  //           dapOptions.push(
+  //             html`<sl-option value="${encodeURIComponent(processValue)}"
+  //               >${processValue}</sl-option
+  //             >`,
+  //           );
+  //         }
+  //       });
+  //     });
+
+  //     if (!this.qsqlTarget && tierOptions.length > 0) {
+  //       this.qsqlTarget = decodeURIComponent(tierOptions[0]["values"][1] || "");
+  //     }
+
+  //     const resOptions = [html`<small>Tiers</small>`, ...tierOptions];
+
+  //     if (dapOptions.length > 0) {
+  //       resOptions.push(html`<small>DAP Process</small>`, ...dapOptions);
+  //     }
+
+  //     return resOptions;
+  //   }
+  //   return [];
+  // }
+
+  // Options separated by assembly
   renderTargetOptions() {
-    if (this.isInsights && this.isMetaLoaded) {
-      return this.insightsMeta.dap.map((dap) => {
-        const value = `${dap.assembly} ${dap.instance}`;
-        if (!this.qsqlTarget) {
-          this.qsqlTarget = value;
+    if (
+      this.isInsights &&
+      this.isMetaLoaded &&
+      this.insightsMeta.dap.length > 0
+    ) {
+      const assemblyMap = new Map<
+        string,
+        Map<string, typeof this.insightsMeta.dap>
+      >();
+
+      this.insightsMeta.dap.forEach((dap) => {
+        const assemblyName = cleanAssemblyName(dap.assembly);
+        const tierKey = `${assemblyName} ${dap.instance}`;
+
+        if (!assemblyMap.has(assemblyName)) {
+          assemblyMap.set(assemblyName, new Map());
         }
-        return html`<sl-option value="${encodeURIComponent(value)}"
-          >${value}</sl-option
-        >`;
+
+        const tierMap = assemblyMap.get(assemblyName)!;
+        if (!tierMap.has(tierKey)) {
+          tierMap.set(tierKey, []);
+        }
+        tierMap.get(tierKey)!.push(dap);
       });
+
+      const resOptions: any[] = [];
+      let firstTierOption: any = null;
+
+      assemblyMap.forEach((tierMap, assemblyName) => {
+        resOptions.push(html`<small>${assemblyName}</small>`);
+
+        tierMap.forEach((processes, tierKey) => {
+          const tierOption = html`<sl-option
+            value="${encodeURIComponent(tierKey)}"
+            >${tierKey}</sl-option
+          >`;
+          resOptions.push(tierOption);
+
+          if (!firstTierOption) {
+            firstTierOption = tierOption;
+          }
+
+          processes.forEach((process) => {
+            if (process.dap) {
+              const processValue = `${tierKey} ${cleanDapName(process.dap)}`;
+              resOptions.push(
+                html`<sl-option value="${encodeURIComponent(processValue)}"
+                  >${processValue}</sl-option
+                >`,
+              );
+            }
+          });
+        });
+      });
+
+      if (!this.qsqlTarget && firstTierOption) {
+        this.qsqlTarget = decodeURIComponent(
+          firstTierOption["values"][1] || "",
+        );
+      }
+
+      return resOptions;
     }
     return [];
   }
@@ -965,6 +1101,7 @@ export class KdbDataSourceView extends LitElement {
         <sl-select
           label="Target"
           .value="${live(encodeURIComponent(this.qsqlTarget))}"
+          class="reset-widths-limit width-97-pct"
           @sl-change="${(event: Event) => {
             this.qsqlTarget = decodeURIComponent(
               (event.target as HTMLSelectElement).value,
@@ -976,9 +1113,7 @@ export class KdbDataSourceView extends LitElement {
             .selected="${live(true)}"
             >${this.qsqlTarget || "(none)"}</sl-option
           >
-          <small
-            >${this.isMetaLoaded ? "Meta Targets" : "Meta Not Loaded"}</small
-          >
+          ${this.isMetaLoaded ? "" : html`<small>Meta Not Loaded</small>`}
           ${this.renderTargetOptions()}
         </sl-select>
         <sl-textarea
