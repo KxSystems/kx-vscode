@@ -1046,6 +1046,7 @@ export async function runQuery(
   rerunQuery?: string,
   target?: string,
   isSql?: boolean,
+  isInsights?: boolean,
 ) {
   const editor = ext.activeTextEditor;
   if (!editor) {
@@ -1117,7 +1118,9 @@ export async function runQuery(
         );
   });
 
-  runner.location = ProgressLocation.Notification;
+  if (isInsights) {
+    runner.location = ProgressLocation.Notification;
+  }
   runner.title = `Executing ${executorName} on ${connLabel || "active connection"}.`;
 
   return (target || isSql) && !variable
