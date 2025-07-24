@@ -326,7 +326,10 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   if (type === ExecutionTypes.QueryFile) {
     text = editor.document.getText();
   } else if (type === ExecutionTypes.QuerySelection) {
-    text = editor.document.getText(editor.selection);
+    const selection = editor.selection;
+    text = selection.isEmpty
+      ? editor.document.lineAt(selection.active.line).text
+      : editor.document.getText(selection);
   } else {
     notify(
       `Executing ${basename} on ${ext.REPL} is not supported.`,
@@ -398,6 +401,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
         undefined,
         target,
         isSql,
+        conn instanceof InsightsConnection,
       );
     } catch (error) {
       notify(

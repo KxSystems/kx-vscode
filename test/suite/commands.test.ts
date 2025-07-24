@@ -2918,13 +2918,16 @@ describe("workspaceCommand", () => {
     });
     describe("runOnRepl", () => {
       const editor = <vscode.TextEditor>{
-        document: {
+        document: <any>{
           uri: kdbUri,
+          lineAt() {
+            return "a:1;a";
+          },
           getText() {
             return "a:1;a";
           },
         },
-        selection: new vscode.Range(0, 0, 0, 0),
+        selection: { active: { line: 0 } },
       };
       let notifyStub: sinon.SinonStub;
       let executeStub: sinon.SinonStub;
