@@ -313,48 +313,110 @@ function createMetaDapFromTarget(target: string): MetaDap {
     : ({ assembly, instance } as MetaDap);
 }
 
-function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
-  const items: QuickPickItem[] = [];
+// TODO: Remove it if this don't going to be used from 1.14
+// Options separated by ties and DAP processes
+// function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
+//   const items: QuickPickItem[] = [];
 
-  const tierSet = new Set<string>();
-  const processItems: QuickPickItem[] = [];
+//   const tierSet = new Set<string>();
+//   const processItems: QuickPickItem[] = [];
+
+//   daps.forEach((dap) => {
+//     const cleanedAssembly = cleanAssemblyName(dap.assembly);
+//     const tierKey = `${cleanedAssembly} ${dap.instance}`;
+//     tierSet.add(tierKey);
+
+//     if (dap.dap) {
+//       const cleanedDapName = cleanDapName(dap.dap);
+//       processItems.push({ label: `${tierKey} ${cleanedDapName}` });
+//     }
+//   });
+
+//   if (tierSet.size > 0) {
+//     items.push({
+//       kind: QuickPickItemKind.Separator,
+//       label: "Tiers",
+//     });
+
+//     const sortedTiers = Array.from(tierSet).sort((a, b) => a.localeCompare(b));
+//     sortedTiers.forEach((tier) => {
+//       items.push({ label: tier });
+//     });
+//   }
+
+//   if (processItems.length > 0) {
+//     items.push({
+//       kind: QuickPickItemKind.Separator,
+//       label: "DAP Processes",
+//     });
+
+//     const sortedProcessItems = processItems
+//       .slice()
+//       .sort((a, b) => a.label.localeCompare(b.label));
+//     sortedProcessItems.forEach((item) => {
+//       items.push(item);
+//     });
+//   }
+
+//   return items;
+// }
+
+// Options separated by Assembly
+function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
+  const assemblyMap = new Map<string, Map<string, MetaDap[]>>();
 
   daps.forEach((dap) => {
-    const cleanedAssembly = cleanAssemblyName(dap.assembly);
-    const tierKey = `${cleanedAssembly} ${dap.instance}`;
-    tierSet.add(tierKey);
-
-    if (dap.dap) {
-      const cleanedDapName = cleanDapName(dap.dap);
-      processItems.push({ label: `${tierKey} ${cleanedDapName}` });
+    if (!assemblyMap.has(dap.assembly)) {
+      assemblyMap.set(dap.assembly, new Map<string, MetaDap[]>());
     }
+
+    const tierKey = `${dap.assembly} ${dap.instance}`;
+    const tierMap = assemblyMap.get(dap.assembly)!;
+    const cleanedDap = { ...dap };
+
+    if (!tierMap.has(tierKey)) {
+      tierMap.set(tierKey, []);
+    }
+    if (cleanedDap.dap) {
+      cleanedDap.dap = cleanDapName(cleanedDap.dap);
+    }
+
+    tierMap.get(tierKey)!.push(cleanedDap);
   });
 
-  if (tierSet.size > 0) {
-    items.push({
-      kind: QuickPickItemKind.Separator,
-      label: "Tiers",
-    });
+  const items: QuickPickItem[] = [];
+  const sortedAssemblies = Array.from(assemblyMap.keys()).sort();
 
-    const sortedTiers = Array.from(tierSet).sort((a, b) => a.localeCompare(b));
-    sortedTiers.forEach((tier) => {
-      items.push({ label: tier });
-    });
-  }
+  sortedAssemblies.forEach((assembly, index) => {
+    if (index > 0 || items.length > 1) {
+      items.push({
+        kind: QuickPickItemKind.Separator,
+        label: `${assembly}`,
+      });
+    } else {
+      items.push({
+        kind: QuickPickItemKind.Separator,
+        label: `${assembly}`,
+      });
+    }
 
-  if (processItems.length > 0) {
-    items.push({
-      kind: QuickPickItemKind.Separator,
-      label: "DAP Processes",
-    });
+    const tierMap = assemblyMap.get(assembly)!;
+    const sortedTierKeys = Array.from(tierMap.keys()).sort();
 
-    const sortedProcessItems = processItems
-      .slice()
-      .sort((a, b) => a.label.localeCompare(b.label));
-    sortedProcessItems.forEach((item) => {
-      items.push(item);
+    sortedTierKeys.forEach((tierKey) => {
+      const processes = tierMap.get(tierKey)!;
+
+      items.push({ label: tierKey });
+
+      const sortedProcesses = processes
+        .filter((process) => process.dap)
+        .sort((a, b) => a.dap!.localeCompare(b.dap!));
+
+      sortedProcesses.forEach((process) => {
+        items.push({ label: `${tierKey} ${process.dap}` });
+      });
     });
-  }
+  });
 
   return items;
 }

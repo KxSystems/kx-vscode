@@ -237,18 +237,6 @@ describe("KdbDataSourceView", () => {
       sinon.restore();
     });
 
-    it("should return target options with tiers and DAP processes", () => {
-      const result = view.renderTargetOptions();
-      const resultString = result
-        .map((item) => templateResultToString(item))
-        .join("");
-
-      assert.ok(Array.isArray(result));
-      assert.ok(result.length > 0);
-      assert.ok(resultString.includes("Tiers"));
-      assert.ok(resultString.includes("DAP Process"));
-    });
-
     it("should group DAP processes by tier key", () => {
       const result = view.renderTargetOptions();
       const resultString = result

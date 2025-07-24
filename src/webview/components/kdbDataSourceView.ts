@@ -486,51 +486,121 @@ export class KdbDataSourceView extends LitElement {
     return [];
   }
 
+  // TODO: Remove in 1.14 if decided to not use it
+  // Options separated by tiers and DAP processes
+  // renderTargetOptions() {
+  //   if (
+  //     this.isInsights &&
+  //     this.isMetaLoaded &&
+  //     this.insightsMeta.dap.length > 0
+  //   ) {
+  //     const tierMap = new Map<string, typeof this.insightsMeta.dap>();
+
+  //     this.insightsMeta.dap.forEach((dap) => {
+  //       const tierKey = `${cleanAssemblyName(dap.assembly)} ${dap.instance}`;
+  //       if (!tierMap.has(tierKey)) {
+  //         tierMap.set(tierKey, []);
+  //       }
+  //       tierMap.get(tierKey)!.push(dap);
+  //     });
+
+  //     const tierOptions: any[] = [];
+  //     const dapOptions: any[] = [];
+
+  //     tierMap.forEach((processes, tierKey) => {
+  //       tierOptions.push(
+  //         html`<sl-option value="${encodeURIComponent(tierKey)}"
+  //           >${tierKey}</sl-option
+  //         >`,
+  //       );
+  //       processes.forEach((process) => {
+  //         if (process.dap) {
+  //           const processValue = `${tierKey} ${cleanDapName(process.dap)}`;
+  //           dapOptions.push(
+  //             html`<sl-option value="${encodeURIComponent(processValue)}"
+  //               >${processValue}</sl-option
+  //             >`,
+  //           );
+  //         }
+  //       });
+  //     });
+
+  //     if (!this.qsqlTarget && tierOptions.length > 0) {
+  //       this.qsqlTarget = decodeURIComponent(tierOptions[0]["values"][1] || "");
+  //     }
+
+  //     const resOptions = [html`<small>Tiers</small>`, ...tierOptions];
+
+  //     if (dapOptions.length > 0) {
+  //       resOptions.push(html`<small>DAP Process</small>`, ...dapOptions);
+  //     }
+
+  //     return resOptions;
+  //   }
+  //   return [];
+  // }
+
+  // Options separated by assembly
   renderTargetOptions() {
     if (
       this.isInsights &&
       this.isMetaLoaded &&
       this.insightsMeta.dap.length > 0
     ) {
-      const tierMap = new Map<string, typeof this.insightsMeta.dap>();
+      const assemblyMap = new Map<
+        string,
+        Map<string, typeof this.insightsMeta.dap>
+      >();
 
       this.insightsMeta.dap.forEach((dap) => {
-        const tierKey = `${cleanAssemblyName(dap.assembly)} ${dap.instance}`;
+        const assemblyName = cleanAssemblyName(dap.assembly);
+        const tierKey = `${assemblyName} ${dap.instance}`;
+
+        if (!assemblyMap.has(assemblyName)) {
+          assemblyMap.set(assemblyName, new Map());
+        }
+
+        const tierMap = assemblyMap.get(assemblyName)!;
         if (!tierMap.has(tierKey)) {
           tierMap.set(tierKey, []);
         }
         tierMap.get(tierKey)!.push(dap);
       });
 
-      const tierOptions: any[] = [];
-      const dapOptions: any[] = [];
+      const resOptions: any[] = [];
+      let firstTierOption: any = null;
 
-      tierMap.forEach((processes, tierKey) => {
-        tierOptions.push(
-          html`<sl-option value="${encodeURIComponent(tierKey)}"
+      assemblyMap.forEach((tierMap, assemblyName) => {
+        resOptions.push(html`<small>${assemblyName}</small>`);
+
+        tierMap.forEach((processes, tierKey) => {
+          const tierOption = html`<sl-option
+            value="${encodeURIComponent(tierKey)}"
             >${tierKey}</sl-option
-          >`,
-        );
-        processes.forEach((process) => {
-          if (process.dap) {
-            const processValue = `${tierKey} ${cleanDapName(process.dap)}`;
-            dapOptions.push(
-              html`<sl-option value="${encodeURIComponent(processValue)}"
-                >${processValue}</sl-option
-              >`,
-            );
+          >`;
+          resOptions.push(tierOption);
+
+          if (!firstTierOption) {
+            firstTierOption = tierOption;
           }
+
+          processes.forEach((process) => {
+            if (process.dap) {
+              const processValue = `${tierKey} ${cleanDapName(process.dap)}`;
+              resOptions.push(
+                html`<sl-option value="${encodeURIComponent(processValue)}"
+                  >${processValue}</sl-option
+                >`,
+              );
+            }
+          });
         });
       });
 
-      if (!this.qsqlTarget && tierOptions.length > 0) {
-        this.qsqlTarget = decodeURIComponent(tierOptions[0]["values"][1] || "");
-      }
-
-      const resOptions = [html`<small>Tiers</small>`, ...tierOptions];
-
-      if (dapOptions.length > 0) {
-        resOptions.push(html`<small>DAP Process</small>`, ...dapOptions);
+      if (!this.qsqlTarget && firstTierOption) {
+        this.qsqlTarget = decodeURIComponent(
+          firstTierOption["values"][1] || "",
+        );
       }
 
       return resOptions;
