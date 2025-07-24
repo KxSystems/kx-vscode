@@ -221,25 +221,6 @@ describe("KdbDataSourceView", () => {
       sinon.restore();
     });
 
-    it("should return empty array when not insights", () => {
-      view.isInsights = false;
-      const result = view.renderTargetOptions();
-      assert.deepStrictEqual(result, []);
-    });
-
-    it("should return empty array when meta not loaded", () => {
-      view.isMetaLoaded = false;
-      const result = view.renderTargetOptions();
-      assert.deepStrictEqual(result, []);
-    });
-
-    it("should return empty array when both not insights and meta not loaded", () => {
-      view.isInsights = false;
-      view.isMetaLoaded = false;
-      const result = view.renderTargetOptions();
-      assert.deepStrictEqual(result, []);
-    });
-
     it("should return target options with tiers and DAP processes", () => {
       sinon.stub(view, "renderTargetOptions").callsFake(() => {
         return [

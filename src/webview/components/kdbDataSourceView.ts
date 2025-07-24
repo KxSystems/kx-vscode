@@ -158,6 +158,27 @@ export class KdbDataSourceView extends LitElement {
   servers: string[] = [];
   selectedServer = "";
   updating = 0;
+  view: {
+    dap: (
+      | {
+          assembly: string;
+          instance: string;
+          dap: string;
+          startTS: string;
+          endTS: string;
+        }
+      | {
+          assembly: string;
+          instance: string;
+          startTS: string;
+          endTS: string;
+          dap?: undefined;
+        }
+    )[];
+    api: any[];
+    assembly: any[];
+    schema: any[];
+  };
 
   connectedCallback() {
     super.connectedCallback();
@@ -462,52 +483,51 @@ export class KdbDataSourceView extends LitElement {
   }
 
   renderTargetOptions() {
-    if (this.isInsights && this.isMetaLoaded) {
-      const tierMap = new Map<string, typeof this.insightsMeta.dap>();
+    console.log("entrou aqui");
+    console.log("passou aqui");
+    const tierMap = new Map<string, typeof this.insightsMeta.dap>();
 
-      this.insightsMeta.dap.forEach((dap) => {
-        const tierKey = `${cleanAssemblyName(dap.assembly)} ${dap.instance}`;
-        if (!tierMap.has(tierKey)) {
-          tierMap.set(tierKey, []);
-        }
-        tierMap.get(tierKey)!.push(dap);
-      });
-
-      const tierOptions: any[] = [];
-      const dapOptions: any[] = [];
-
-      tierMap.forEach((processes, tierKey) => {
-        tierOptions.push(
-          html`<sl-option value="${encodeURIComponent(tierKey)}"
-            >${tierKey}</sl-option
-          >`,
-        );
-        processes.forEach((process) => {
-          if (process.dap) {
-            const processValue = `${tierKey} ${cleanDapName(process.dap)}`;
-            dapOptions.push(
-              html`<sl-option value="${encodeURIComponent(processValue)}"
-                >${processValue}</sl-option
-              >`,
-            );
-          }
-        });
-      });
-
-      if (!this.qsqlTarget && tierOptions.length > 0) {
-        this.qsqlTarget = decodeURIComponent(
-          tierOptions[0].getAttribute("value") || "",
-        );
+    this.insightsMeta.dap.forEach((dap) => {
+      const tierKey = `${cleanAssemblyName(dap.assembly)} ${dap.instance}`;
+      if (!tierMap.has(tierKey)) {
+        tierMap.set(tierKey, []);
       }
+      tierMap.get(tierKey)!.push(dap);
+    });
 
-      return [
-        html`<small>Tiers</small>`,
-        ...tierOptions,
-        html`<small>DAP Process</small>`,
-        ...dapOptions,
-      ];
+    const tierOptions: any[] = [];
+    const dapOptions: any[] = [];
+
+    tierMap.forEach((processes, tierKey) => {
+      tierOptions.push(
+        html`<sl-option value="${encodeURIComponent(tierKey)}"
+          >${tierKey}</sl-option
+        >`,
+      );
+      processes.forEach((process) => {
+        if (process.dap) {
+          const processValue = `${tierKey} ${cleanDapName(process.dap)}`;
+          dapOptions.push(
+            html`<sl-option value="${encodeURIComponent(processValue)}"
+              >${processValue}</sl-option
+            >`,
+          );
+        }
+      });
+    });
+
+    if (!this.qsqlTarget && tierOptions.length > 0) {
+      this.qsqlTarget = decodeURIComponent(
+        tierOptions[0].getAttribute("value") || "",
+      );
     }
-    return [];
+
+    return [
+      html`<small>Tiers</small>`,
+      ...tierOptions,
+      html`<small>DAP Process</small>`,
+      ...dapOptions,
+    ];
   }
 
   renderFilter(filter: Filter) {
@@ -1016,7 +1036,9 @@ export class KdbDataSourceView extends LitElement {
             >${this.qsqlTarget || "(none)"}</sl-option
           >
           ${this.isMetaLoaded ? "" : html`<small>Meta Not Loaded</small>`}
-          ${this.renderTargetOptions()}
+          ${this.isMetaLoaded && this.isInsights
+            ? this.renderTargetOptions()
+            : []}
         </sl-select>
         <sl-textarea
           label="Query"
