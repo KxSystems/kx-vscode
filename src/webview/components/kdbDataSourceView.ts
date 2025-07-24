@@ -172,12 +172,16 @@ export class KdbDataSourceView extends LitElement {
           instance: string;
           startTS: string;
           endTS: string;
-          dap?: undefined;
         }
     )[];
     api: any[];
     assembly: any[];
     schema: any[];
+  } = {
+    dap: [],
+    api: [],
+    assembly: [],
+    schema: [],
   };
 
   connectedCallback() {
