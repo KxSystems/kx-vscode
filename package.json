@@ -1137,7 +1137,7 @@
     "preui-test": "rimraf out-test .test-extensions",
     "preui-test-cmd": "tsc --outdir out-test -p ./test",
     "publish": "npx vsce publish",
-    "pretest": "rimraf out-test && tsc --outdir out-test -p ./test",
+    "pretest": "rimraf out && tsc -p ./test",
     "test": "node ./out-test/test/runTest.js",
     "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js",
     "ui-test-cmd": "extest setup-and-run --code_version $npm_package_config_ui_test_vscode_version --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
