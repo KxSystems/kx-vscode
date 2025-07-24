@@ -370,7 +370,7 @@ function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
       assemblyMap.set(dap.assembly, new Map<string, MetaDap[]>());
     }
 
-    const tierKey = `${dap.assembly} ${dap.instance}`;
+    const tierKey = `${cleanAssemblyName(dap.assembly)} ${dap.instance}`;
     const tierMap = assemblyMap.get(dap.assembly)!;
     const cleanedDap = { ...dap };
 
@@ -385,23 +385,20 @@ function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
   });
 
   const items: QuickPickItem[] = [];
-  const sortedAssemblies = Array.from(assemblyMap.keys()).sort();
+  const sortedAssemblies = Array.from(assemblyMap.keys()).sort((a, b) =>
+    a.localeCompare(b),
+  );
 
-  sortedAssemblies.forEach((assembly, index) => {
-    if (index > 0 || items.length > 1) {
-      items.push({
-        kind: QuickPickItemKind.Separator,
-        label: `${assembly}`,
-      });
-    } else {
-      items.push({
-        kind: QuickPickItemKind.Separator,
-        label: `${assembly}`,
-      });
-    }
+  sortedAssemblies.forEach((assembly) => {
+    items.push({
+      kind: QuickPickItemKind.Separator,
+      label: `${assembly}`,
+    });
 
     const tierMap = assemblyMap.get(assembly)!;
-    const sortedTierKeys = Array.from(tierMap.keys()).sort();
+    const sortedTierKeys = Array.from(tierMap.keys()).sort((a, b) =>
+      a.localeCompare(b),
+    );
 
     sortedTierKeys.forEach((tierKey) => {
       const processes = tierMap.get(tierKey)!;
