@@ -513,7 +513,7 @@
       {
         "category": "KX",
         "command": "kdb.toggleParameterCache",
-        "title": "KX: Toggle parameter cache"
+        "title": "Toggle Parameter Cache"
       },
       {
         "category": "KX",

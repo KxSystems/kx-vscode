@@ -51,6 +51,7 @@ import {
   TestLambdaBlock,
   Cond,
   CutDrop,
+  Dict,
 } from "./tokens";
 
 const includes = [
@@ -222,6 +223,10 @@ const repository = {
       {
         name: "keyword.operator.arithmetic.q",
         match: _(CutDrop),
+      },
+      {
+        name: "keyword.operator.arithmetic.q",
+        match: _(Dict),
       },
       {
         name: "keyword.operator.arithmetic.q",

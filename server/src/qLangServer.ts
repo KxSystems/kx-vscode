@@ -25,13 +25,12 @@ import {
   CompletionParams,
   Connection,
   DefinitionParams,
-  Diagnostic,
-  DiagnosticSeverity,
   DidChangeWatchedFilesParams,
   DocumentSymbol,
   DocumentSymbolParams,
   InitializeParams,
   Location,
+  NotebookDocuments,
   Range,
   ReferenceParams,
   RenameParams,
@@ -48,31 +47,20 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver/node";
-import { Position, TextDocument } from "vscode-languageserver-textdocument";
+import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { lint } from "./linter";
+import { RCurly, LCurly, RBracket, Callable } from "./parser";
 import {
-  FindKind,
+  Name,
+  Namespace,
+  Param,
+  Peek,
+  RangeFrom,
+  Relative,
+  Scope,
+  Source,
   Token,
-  findIdentifiers,
-  inLambda,
-  amended,
-  parse,
-  identifier,
-  tokenId,
-  assigned,
-  lambda,
-  assignable,
-  inParam,
-  namespace,
-  relative,
-  testblock,
-  EndOfLine,
-  SemiColon,
-  WhiteSpace,
-  RCurly,
-  local,
-  lamdaDefinition,
+  Type,
 } from "./parser";
 
 const logger = "qLangServer";
@@ -84,17 +72,13 @@ const enum MessageKind {
   ERROR = "ERROR",
 }
 
-interface Tokenized {
-  uri: string;
-  tokens: Token[];
-}
-
 export default class QLangServer {
   declare private connection: Connection;
   declare private params: InitializeParams;
   declare private opened: Set<string>;
-  declare private cached: Map<string, Token[]>;
+  declare private cached: Map<string, Source>;
   declare public documents: TextDocuments<TextDocument>;
+  declare public notebooks: NotebookDocuments<TextDocument>;
 
   constructor(connection: Connection, params: InitializeParams) {
     this.connection = connection;
@@ -106,6 +90,8 @@ export default class QLangServer {
     this.documents.onDidOpen(this.onDidOpen.bind(this));
     this.documents.onDidClose(this.onDidClose.bind(this));
     this.documents.onDidChangeContent(this.onDidChangeContent.bind(this));
+    this.notebooks = new NotebookDocuments(this.documents);
+    this.notebooks.listen(this.connection);
     this.connection.onDocumentSymbol(this.onDocumentSymbol.bind(this));
     this.connection.onReferences(this.onReferences.bind(this));
     this.connection.onDefinition(this.onDefinition.bind(this));
@@ -148,21 +134,21 @@ export default class QLangServer {
       selectionRangeProvider: true,
       callHierarchyProvider: true,
       semanticTokensProvider: {
-        full: true,
         legend: {
           tokenTypes: ["variable", "function"],
           tokenModifiers: ["declaration", "readonly"],
         },
+        full: true,
+      },
+      notebookDocumentSync: {
+        notebookSelector: [
+          {
+            notebook: { notebookType: "kx-notebook" },
+            cells: [{ language: "q" }],
+          },
+        ],
       },
     };
-  }
-
-  private async getDebug(uri: string): Promise<boolean> {
-    const res = await this.connection.workspace.getConfiguration({
-      scopeUri: uri,
-      section: "kdb.debug",
-    });
-    return res ?? false;
   }
 
   private async getLinting(uri: string): Promise<boolean> {
@@ -191,7 +177,7 @@ export default class QLangServer {
     return res ?? {};
   }
 
-  notify(
+  private notify(
     message: string,
     kind: MessageKind,
     options: {
@@ -227,15 +213,10 @@ export default class QLangServer {
     else this.cached.delete(uri);
 
     if (await this.getLinting(uri)) {
-      const diagnostics = lint(await this.parse(uri)).map((item) =>
-        Diagnostic.create(
-          rangeFromToken(item.token),
-          item.message,
-          item.severity as DiagnosticSeverity,
-          item.code,
-          item.source,
-        ),
-      );
+      const source = await this.getSource(uri);
+      const diagnostics = source.errors
+        .filter((token) => token.error)
+        .map((token) => token.error!);
       this.connection.sendDiagnostics({ uri, diagnostics });
     }
   }
@@ -245,68 +226,68 @@ export default class QLangServer {
   }
 
   public async onDocumentSymbol({
-    textDocument,
+    textDocument: { uri },
   }: DocumentSymbolParams): Promise<DocumentSymbol[]> {
-    const tokens = await this.parse(textDocument.uri);
-    if (await this.getDebug(textDocument.uri)) {
-      return tokens.map((token) => createDebugSymbol(token));
-    }
-    return tokens
-      .filter(
-        (token) =>
-          !inLambda(token) &&
-          ((assignable(token) && assigned(token)) || lambda(token)),
-      )
-      .map((token) => createSymbol(token, tokens));
+    const source = await this.getSource(uri);
+    return source.symbols.map((token) => createSymbol(token, source));
   }
 
   public async onReferences({
-    textDocument,
+    textDocument: { uri },
     position,
   }: ReferenceParams): Promise<Location[]> {
-    const tokens = await this.parse(textDocument.uri);
-    const source = positionToToken(tokens, position);
-    return (await this.context(textDocument.uri))
-      .map((document) =>
-        findIdentifiers(FindKind.Reference, document.tokens, source).map(
-          (token) => Location.create(document.uri, rangeFromToken(token)),
-        ),
+    const source = await this.getSource(uri);
+    const target = source.tokenAt(position);
+
+    return (await this.getSources(uri))
+      .map((source) =>
+        source.references
+          .filter(
+            (token) =>
+              token.scope === Scope(target) && Name(token) === Name(target),
+          )
+          .map((token) => Location.create(source.uri, RangeFrom(token))),
       )
       .flat();
   }
 
   public async onDefinition({
-    textDocument,
+    textDocument: { uri },
     position,
   }: DefinitionParams): Promise<Location[]> {
-    const tokens = await this.parse(textDocument.uri);
-    const source = positionToToken(tokens, position);
-    return (await this.context(textDocument.uri))
-      .map((document) =>
-        findIdentifiers(FindKind.Definition, document.tokens, source).map(
-          (token) => Location.create(document.uri, rangeFromToken(token)),
-        ),
+    const source = await this.getSource(uri);
+    const target = source.tokenAt(position);
+
+    return (await this.getSources(uri))
+      .map((source) =>
+        source.definitions
+          .filter(
+            (token) =>
+              token.scope === Scope(target) && Name(token) === Name(target),
+          )
+          .map((token) => Location.create(source.uri, RangeFrom(token))),
       )
       .flat();
   }
 
   public async onRenameRequest({
-    textDocument,
+    textDocument: { uri },
     position,
     newName,
   }: RenameParams): Promise<WorkspaceEdit> {
-    const tokens = await this.parse(textDocument.uri);
-    const source = positionToToken(tokens, position);
-    return (await this.context(textDocument.uri)).reduce(
-      (edit, document) => {
-        const refs = findIdentifiers(FindKind.Rename, document.tokens, source);
-        if (refs.length > 0) {
+    const source = await this.getSource(uri);
+    const target = source.tokenAt(position);
+
+    return (await this.getSources(uri)).reduce(
+      (edit, source) => {
+        const references = source.references;
+        if (references.length > 0) {
           const name = <Token>{
             image: newName,
-            namespace: source?.namespace,
+            namespace: target?.namespace,
           };
-          edit.changes![document.uri] = refs.map((token) =>
-            TextEdit.replace(rangeFromToken(token), relative(name, token)),
+          edit.changes![source.uri] = references.map((token) =>
+            TextEdit.replace(RangeFrom(token), Relative(token, name)),
           );
         }
         return edit;
@@ -316,114 +297,116 @@ export default class QLangServer {
   }
 
   public async onCompletion({
-    textDocument,
+    textDocument: { uri },
     position,
   }: CompletionParams): Promise<CompletionItem[]> {
-    const tokens = await this.parse(textDocument.uri);
-    const source = positionToToken(tokens, position);
-    return (await this.context(textDocument.uri))
-      .map((document) =>
-        findIdentifiers(FindKind.Completion, document.tokens, source).map(
-          (token) => {
-            return {
-              label: token.image,
-              labelDetails: {
-                detail: ` .${namespace(token)}`,
-              },
-              kind: CompletionItemKind.Variable,
-              insertText: relative(token, source),
-            };
-          },
-        ),
+    const source = await this.getSource(uri);
+    const target = source.tokenAt(position);
+
+    return (await this.getSources(uri))
+      .map((source) =>
+        source.references.map((token) => {
+          return {
+            label: token.image,
+            labelDetails: {
+              detail: ` .${Namespace(token)}`,
+            },
+            kind: CompletionItemKind.Variable,
+            insertText: Relative(token, target),
+          };
+        }),
       )
       .flat();
   }
 
   public async onExpressionRange({
-    textDocument,
+    textDocument: { uri },
     position,
   }: TextDocumentPositionParams) {
-    const tokens = await this.parse(textDocument.uri);
-    const source = positionToToken(tokens, position);
-    if (!source || !source.exprs) {
-      return null;
-    }
-    return expressionToRange(tokens, source.exprs);
+    const source = await this.getSource(uri);
+    const target = source.tokenAt(position);
+
+    const tokens = source.tokens.filter(
+      (token) => token.index === target?.index,
+    );
+
+    const start = RangeFrom(tokens[0]);
+    const end = RangeFrom(Peek(tokens)!);
+
+    return Range.create(start.start, end.end);
   }
 
   public async onParameterCache({
-    textDocument,
+    textDocument: { uri },
     position,
   }: TextDocumentPositionParams) {
-    const tokens = await this.parse(textDocument.uri);
-    const source = positionToToken(tokens, position);
-    if (!source) {
+    const source = await this.getSource(uri);
+    const target = source.tokenAt(position);
+    if (!target) {
       return null;
     }
-    const lambda = inLambda(source);
-    if (!lambda) {
+    const scope = Scope(target);
+    if (!scope) {
       return null;
     }
-    const scoped = tokens.filter((token) => inLambda(token) === lambda);
-    if (scoped.length === 0) {
-      return null;
+    const curly = source.tokens.find(
+      (token) => Type(token) === RCurly && Scope(token) === scope,
+    );
+    if (!curly) {
+      return;
     }
-    const curly = scoped[scoped.length - 1];
-    if (!curly || curly.tokenType !== RCurly) {
-      return null;
-    }
-    const params = scoped.filter((token) => inParam(token));
-    if (params.length === 0) {
-      return null;
-    }
-    const bracket = params[params.length - 1];
+    const bracket = source.tokens.find(
+      (token) =>
+        Scope(token) === scope && Param(token) && Type(token) === RBracket,
+    );
     if (!bracket) {
-      return null;
+      return;
     }
-    const args = params
-      .filter((token) => assigned(token))
-      .map((token) => token.image);
+    const args = source.definitions.filter(
+      (token) => Scope(token) === scope && Param(token),
+    );
     if (args.length === 0) {
       return null;
     }
     return {
       params: args,
-      start: rangeFromToken(bracket).end,
-      end: rangeFromToken(curly).start,
+      start: RangeFrom(bracket).end,
+      end: RangeFrom(curly).start,
     };
   }
 
   public async onSelectionRanges({
-    textDocument,
+    textDocument: { uri },
     positions,
   }: SelectionRangeParams): Promise<SelectionRange[]> {
-    const tokens = await this.parse(textDocument.uri);
+    const source = await this.getSource(uri);
     const ranges: SelectionRange[] = [];
 
     for (const position of positions) {
-      const source = positionToToken(tokens, position);
-      if (source) {
-        ranges.push(SelectionRange.create(rangeFromToken(source)));
+      const target = source.tokenAt(position);
+      if (target) {
+        ranges.push(SelectionRange.create(RangeFrom(target)));
       }
     }
     return ranges;
   }
 
   public async onPrepareCallHierarchy({
-    textDocument,
+    textDocument: { uri },
     position,
   }: CallHierarchyPrepareParams): Promise<CallHierarchyItem[]> {
-    const tokens = await this.parse(textDocument.uri);
-    const source = positionToToken(tokens, position);
-    if (source && assignable(source)) {
+    const source = await this.getSource(uri);
+    const target = source.tokenAt(position);
+
+    if (Callable(target)) {
       return [
         {
           data: true,
           kind: SymbolKind.Variable,
-          name: source.image,
-          uri: textDocument.uri,
-          range: rangeFromToken(source),
-          selectionRange: rangeFromToken(source),
+          name: Name(target),
+          uri: uri,
+          range: RangeFrom(target!),
+          selectionRange: RangeFrom(target!),
         },
       ];
     }
@@ -431,117 +414,84 @@ export default class QLangServer {
   }
 
   public async onIncomingCallsCallHierarchy({
-    item,
+    item: { data, uri, name },
   }: CallHierarchyIncomingCallsParams): Promise<CallHierarchyIncomingCall[]> {
-    const tokens = await this.parse(item.uri);
-    const source = positionToToken(tokens, item.range.end);
-    return item.data
-      ? (await this.context(item.uri))
-          .map((document) =>
-            findIdentifiers(FindKind.Reference, document.tokens, source)
-              .filter((token) => !assigned(token))
-              .map((token) => {
-                const lambda = inLambda(token);
-                return {
-                  from: {
-                    kind: lambda ? SymbolKind.Object : SymbolKind.Function,
-                    name: token.image,
-                    uri: document.uri,
-                    range: rangeFromToken(lambda || token),
-                    selectionRange: rangeFromToken(token),
-                  },
-                  fromRanges: [],
-                } as CallHierarchyIncomingCall;
-              }),
-          )
-          .flat()
-      : [];
+    const incoming: CallHierarchyIncomingCall[] = [];
+
+    if (!data) return incoming;
+
+    for (const source of await this.getSources(uri)) {
+      source.references.forEach((token) => {
+        if (Name(token) === name) {
+          const call = <CallHierarchyIncomingCall>{
+            from: {
+              data: false,
+              kind: SymbolKind.Variable,
+              name: Name(token),
+              uri: source.uri,
+              range: RangeFrom(token),
+              selectionRange: RangeFrom(token),
+            },
+            fromRanges: [],
+          };
+          incoming.push(call);
+        }
+      });
+    }
+
+    return incoming;
   }
 
   public async onOutgoingCallsCallHierarchy({
     item,
   }: CallHierarchyOutgoingCallsParams): Promise<CallHierarchyOutgoingCall[]> {
-    const tokens = await this.parse(item.uri);
-    const source = positionToToken(tokens, item.range.end);
-    return item.data
-      ? (await this.context(item.uri))
-          .map((document) =>
-            findIdentifiers(FindKind.Reference, document.tokens, source)
-              .filter((token) => inLambda(token) && !assigned(token))
-              .map((token) => {
-                return {
-                  to: {
-                    kind: SymbolKind.Object,
-                    name: token.image,
-                    uri: document.uri,
-                    range: rangeFromToken(inLambda(token)!),
-                    selectionRange: rangeFromToken(token),
-                  },
-                  fromRanges: [],
-                } as CallHierarchyOutgoingCall;
-              }),
-          )
-          .flat()
-      : [];
+    return [];
   }
 
   public async onSemanticTokens({
-    textDocument,
+    textDocument: { uri },
   }: SemanticTokensParams): Promise<SemanticTokens> {
-    const tokens = await this.parse(textDocument.uri);
+    const source = await this.getSource(uri);
     const result = { data: [] } as SemanticTokens;
+
     let range: Range = Range.create(0, 0, 0, 0);
     let line = 0;
     let character = 0;
     let delta = 0;
-    for (const token of tokens) {
-      if (assignable(token)) {
-        const kind = lamdaDefinition(token) ? 1 : local(token, tokens) ? 0 : -1;
-        if (kind >= 0) {
-          line = range.start.line;
-          character = range.start.character;
-          range = rangeFromToken(token);
-          delta = range.start.line - line;
-          result.data.push(
-            delta,
-            delta ? range.start.character : range.start.character - character,
-            token.image.length,
-            kind,
-            3,
-          );
-        }
+
+    for (const token of source.references) {
+      if (Scope(token)) {
+        line = range.start.line;
+        character = range.start.character;
+        range = RangeFrom(token);
+        delta = range.start.line - line;
+        result.data.push(
+          delta,
+          delta ? range.start.character : range.start.character - character,
+          token.image.length,
+          0,
+          3,
+        );
       }
     }
     return result;
   }
 
-  private async parse(uri: string): Promise<Token[]> {
-    let tokens = this.cached.get(uri);
-    if (!tokens) {
-      const document = this.documents.get(uri);
-      let text: string;
-      if (document) {
-        text = document.getText();
-      } else {
-        const path = fileURLToPath(uri);
-        try {
-          text = await readFile(path, { encoding: "utf8" });
-        } catch (error) {
-          this.notify(`Unable to read '${path}'.`, MessageKind.DEBUG, {
-            logger,
-            params: `${error}`,
-          });
-          text = "";
-        }
-      }
-      tokens = text ? parse(text) : [];
-      this.cached.set(uri, tokens);
-    }
-    return tokens;
-  }
-
   private async related(uri: string): Promise<string[]> {
-    let res = [uri];
+    const res = [uri];
+
+    if (uri.startsWith("vscode-notebook-cell:")) {
+      const notebook = this.notebooks.getNotebookDocument(
+        uri.replace(/^vscode-notebook-cell:([^#]*).*$/, "file://$1"),
+      );
+      if (notebook) {
+        for (const cell of notebook?.cells || []) {
+          res.push(cell.document);
+        }
+        uri = notebook.uri;
+      }
+    }
+
     const folders = await this.connection.workspace.getWorkspaceFolders();
 
     if (!folders) {
@@ -579,113 +529,69 @@ export default class QLangServer {
     }
 
     if (current) {
-      res = connections.get(current) || res;
+      res.push(...(connections.get(current) || []));
     }
 
     return res;
   }
 
-  private async context(uri: string): Promise<Tokenized[]> {
-    const res: Tokenized[] = [];
-    const refactoring = await this.getRefactoring(uri);
-    if (refactoring === "Workspace") {
-      for (const item of await this.related(uri)) {
-        res.push({ uri: item, tokens: await this.parse(item) });
+  private async getSource(uri: string): Promise<Source> {
+    let source = this.cached.get(uri);
+    if (!source) {
+      const document = this.documents.get(uri);
+      let text = "";
+      if (document) {
+        text = document.getText();
+      } else if (uri.startsWith("file:")) {
+        const file = fileURLToPath(uri);
+        try {
+          text = await readFile(file, { encoding: "utf8" });
+        } catch (error) {
+          this.notify(`Unable to read '${file}'.`, MessageKind.DEBUG, {
+            logger,
+            params: `${error}`,
+          });
+          text = "";
+        }
       }
-    } else if (refactoring === "Window") {
-      for (const item of this.documents.all()) {
-        res.push({ uri: item.uri, tokens: await this.parse(item.uri) });
-      }
+      source = Source.create(uri, text);
+      this.cached.set(uri, source);
+    }
+    return source;
+  }
+
+  private async getSources(uri: string): Promise<Source[]> {
+    const res: Source[] = [];
+
+    switch (await this.getRefactoring(uri)) {
+      case "Workspace":
+        for (const target of await this.related(uri)) {
+          res.push(await this.getSource(target));
+        }
+        break;
+      case "Window":
+        for (const target of this.documents.all()) {
+          res.push(await this.getSource(target.uri));
+        }
+        break;
     }
     return res;
   }
 }
 
-function rangeFromToken(token: Token): Range {
-  return Range.create(
-    (token.startLine || 1) - 1,
-    (token.startColumn || 1) - 1,
-    (token.endLine || 1) - 1,
-    token.endColumn || 1,
-  );
-}
-
-function positionToToken(tokens: Token[], position: Position) {
-  return tokens.find((token) => {
-    const { start, end } = rangeFromToken(token);
-    return (
-      start.line <= position.line &&
-      end.line >= position.line &&
-      start.character <= position.character &&
-      end.character >= position.character
-    );
-  });
-}
-
-function expressionToRange(tokens: Token[], expression: number) {
-  const exprs = tokens.filter(
-    (token) =>
-      token.exprs === expression &&
-      token.tokenType !== EndOfLine &&
-      token.tokenType !== SemiColon &&
-      token.tokenType !== WhiteSpace,
-  );
-  const first = exprs[0];
-  if (!first) {
-    return null;
-  }
-  const last = exprs[exprs.length - 1];
-  const start = rangeFromToken(first);
-  const end = last ? rangeFromToken(last) : start;
-
-  return Range.create(start.start, end.end);
-}
-
-function createSymbol(token: Token, tokens: Token[]): DocumentSymbol {
-  const range = rangeFromToken(token);
+function createSymbol(token: Token, source: Source): DocumentSymbol {
   return DocumentSymbol.create(
-    lambda(token)
-      ? testblock(token)
-        ? token.image.trim()
-        : " "
-      : inLambda(token) && !amended(token)
-        ? token.image
-        : identifier(token),
-    (amended(token) && "Amend") || undefined,
-    lambda(token)
+    Type(token) === LCurly ? " " : Scope(token) ? token.image : Name(token),
+    undefined,
+    Type(token) === LCurly
       ? SymbolKind.Object
-      : inParam(token)
+      : Param(token)
         ? SymbolKind.Array
         : SymbolKind.Variable,
-    range,
-    range,
-    tokens
-      .filter(
-        (child) =>
-          inLambda(child) === token &&
-          ((assigned(child) && assignable(child)) || lambda(child)),
-      )
-      .map((child) => createSymbol(child, tokens)),
-  );
-}
-
-function createDebugSymbol(token: Token): DocumentSymbol {
-  const range = rangeFromToken(token);
-  return DocumentSymbol.create(
-    tokenId(token),
-    `${token.tokenType.name} ${token.namespace ? `(${token.namespace})` : ""} ${
-      token.error !== undefined ? `E=${token.error}` : ""
-    } ${
-      token.exprs ? `X=${token.exprs}` : ""
-    } ${token.order ? `O=${token.order}` : ""} ${
-      token.tangled ? `T=${tokenId(token.tangled)}` : ""
-    } ${token.scope ? `S=${tokenId(token.scope)}` : ""} ${
-      token.assignment
-        ? `A=${token.assignment.map((token) => tokenId(token)).join(" ")}`
-        : ""
-    }`,
-    SymbolKind.Variable,
-    range,
-    range,
+    RangeFrom(token),
+    RangeFrom(token),
+    source.definitions
+      .filter((value) => value.scope === token)
+      .map((value) => createSymbol(value, source)),
   );
 }

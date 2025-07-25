@@ -303,7 +303,15 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   };
   const clientOptions: LanguageClientOptions = {
-    documentSelector: [{ language: "q" }],
+    documentSelector: [
+      {
+        language: "q",
+      },
+      {
+        language: "q",
+        notebook: { notebookType: "kx-notebook" },
+      },
+    ],
     synchronize: {
       fileEvents: vscode.workspace.createFileSystemWatcher(
         "**/*.{q,quke,k}",

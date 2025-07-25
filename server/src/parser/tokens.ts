@@ -84,9 +84,14 @@ export const CutDrop = createToken({
   pattern: /(?<![a-zA-Z])_/,
 });
 
+export const Dict = createToken({
+  name: "CutDrop",
+  pattern: /!/,
+});
+
 export const Operator = createToken({
   name: "Operator",
-  pattern: /[\\.,'|^?!#@&%*+-]/,
+  pattern: /[\\.,'|^?#@&%*+-]/,
 });
 
 export const Cond = createToken({

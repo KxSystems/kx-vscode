@@ -7,5 +7,7 @@
   },
   "[xml]": {
     "editor.defaultFormatter": "redhat.vscode-xml"
-  }
+  },
+  "kdb.connectionMap": {},
+  "kdb.targetMap": {}
 }
