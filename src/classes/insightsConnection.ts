@@ -410,7 +410,7 @@ export class InsightsConnection {
       normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
 
     const assembly = this.retrieveCorrectAssemblyName(plainAssembly);
-    const dap = this.retrieveCorrectDAPName(plainDap);
+    const dap = this.retrieveCorrectDAPName(plainDap, tier);
 
     if (version && isBaseVersionGreaterOrEqual(version, 1.13)) {
       return {
@@ -443,10 +443,11 @@ export class InsightsConnection {
 
   public retrieveCorrectDAPName(
     plainDAP: string | undefined,
+    tier: string | undefined,
   ): string | undefined {
     if (this.meta?.payload?.dap && plainDAP) {
-      const foundDap = this.meta.payload.dap.find((dap: any) =>
-        dap.dap?.startsWith(plainDAP),
+      const foundDap = this.meta.payload.dap.find(
+        (dap: any) => dap.dap?.startsWith(plainDAP) && dap.instance === tier,
       );
 
       return foundDap ? foundDap.dap : undefined;
