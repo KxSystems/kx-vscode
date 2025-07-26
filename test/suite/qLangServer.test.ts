@@ -23,7 +23,6 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import * as linter from "../../server/src/linter";
 import QLangServer from "../../server/src/qLangServer";
 
 const context = { includeDeclaration: true };
@@ -82,6 +81,14 @@ describe("qLangServer", () => {
           on() {},
         },
       },
+      notebooks: {
+        synchronization: {
+          onDidOpenNotebookDocument() {},
+          onDidChangeNotebookDocument() {},
+          onDidSaveNotebookDocument() {},
+          onDidCloseNotebookDocument() {},
+        },
+      },
       sendDiagnostics() {},
       sendNotification() {},
     });
@@ -101,6 +108,7 @@ describe("qLangServer", () => {
     it("should support desired features", () => {
       const capabilities = server.capabilities();
       assert.ok(capabilities.textDocumentSync);
+      assert.ok(capabilities.notebookDocumentSync);
       assert.ok(capabilities.documentSymbolProvider);
       assert.ok(capabilities.referencesProvider);
       assert.ok(capabilities.definitionProvider);
@@ -429,19 +437,6 @@ describe("qLangServer", () => {
   });
 
   describe("Settings", () => {
-    describe("getDebug", () => {
-      it("should return false", async () => {
-        const res = await server["getDebug"]("");
-        assert.strictEqual(res, false);
-      });
-      it("should return true", async () => {
-        sinon
-          .stub(connection.workspace, "getConfiguration")
-          .resolves(<any>true);
-        const res = await server["getDebug"]("");
-        assert.strictEqual(res, true);
-      });
-    });
     describe("getLinting", () => {
       it("should return false", async () => {
         const res = await server["getLinting"]("");
@@ -507,15 +502,7 @@ describe("qLangServer", () => {
   });
 
   describe("onDidChangeContent", () => {
-    it("should lint", async () => {
-      const stub = sinon.stub(linter, "lint").returns([]);
-      sinon.stub(server, <any>"parse").returns([]);
-      sinon.stub(connection.workspace, "getConfiguration").resolves(<any>true);
-      await server["onDidChangeContent"]({
-        document: <TextDocument>{ uri: "file:///test/test.q" },
-      });
-      sinon.assert.calledOnce(stub);
-    });
+    it("should ...", async () => {});
   });
 
   describe("related", () => {

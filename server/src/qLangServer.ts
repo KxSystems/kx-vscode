@@ -263,7 +263,7 @@ export default class QLangServer {
         source.definitions
           .filter(
             (token) =>
-              token.scope === Scope(target) && Name(token) === Name(target),
+              Scope(token) === Scope(target) && Name(token) === Name(target),
           )
           .map((token) => Location.create(source.uri, RangeFrom(token))),
       )
@@ -282,10 +282,10 @@ export default class QLangServer {
       (edit, source) => {
         const references = source.references;
         if (references.length > 0) {
-          const name = <Token>{
+          const name = Token({
             image: newName,
             namespace: target?.namespace,
-          };
+          });
           edit.changes![source.uri] = references.map((token) =>
             TextEdit.replace(RangeFrom(token), Relative(token, name)),
           );
@@ -401,7 +401,7 @@ export default class QLangServer {
     if (Callable(target)) {
       return [
         {
-          data: true,
+          data: target,
           kind: SymbolKind.Variable,
           name: Name(target),
           uri: uri,
@@ -443,9 +443,32 @@ export default class QLangServer {
   }
 
   public async onOutgoingCallsCallHierarchy({
-    item,
+    item: { data, uri, name },
   }: CallHierarchyOutgoingCallsParams): Promise<CallHierarchyOutgoingCall[]> {
-    return [];
+    const outgoing: CallHierarchyOutgoingCall[] = [];
+
+    if (!data) return outgoing;
+
+    for (const source of await this.getSources(uri)) {
+      source.references.forEach((token) => {
+        if (Name(token) === name) {
+          const call = <CallHierarchyOutgoingCall>{
+            to: {
+              data: false,
+              kind: SymbolKind.Variable,
+              name: Name(token),
+              uri: source.uri,
+              range: RangeFrom(token),
+              selectionRange: RangeFrom(token),
+            },
+            fromRanges: [],
+          };
+          outgoing.push(call);
+        }
+      });
+    }
+
+    return outgoing;
   }
 
   public async onSemanticTokens({
@@ -485,10 +508,12 @@ export default class QLangServer {
         uri.replace(/^vscode-notebook-cell:([^#]*).*$/, "file://$1"),
       );
       if (notebook) {
-        for (const cell of notebook?.cells || []) {
+        for (const cell of notebook.cells) {
           res.push(cell.document);
         }
         uri = notebook.uri;
+      } else {
+        return res;
       }
     }
 
@@ -529,7 +554,12 @@ export default class QLangServer {
     }
 
     if (current) {
-      res.push(...(connections.get(current) || []));
+      const related = connections.get(current);
+      if (related) {
+        for (const target of related) {
+          if (target !== uri) res.push(target);
+        }
+      }
     }
 
     return res;

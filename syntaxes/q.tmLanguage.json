@@ -196,7 +196,11 @@
         },
         {
           "name": "keyword.operator.arithmetic.q",
-          "match": "[\\\\.,'|^?!#@&%*+-]"
+          "match": "!"
+        },
+        {
+          "name": "keyword.operator.arithmetic.q",
+          "match": "[\\\\.,'|^?#@&%*+-]"
         },
         {
           "name": "keyword.operator.arithmetic.q",

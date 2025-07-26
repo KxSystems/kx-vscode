@@ -257,9 +257,12 @@ export class Source {
   }
 }
 
-function Seek(tokens: Token[], index: number, step: number): Token | undefined {
+function Seek(tokens: Token[], index: number, step = 1): Token | undefined {
   index += step;
-  while (tokens[index] && tokens[index].tokenType === WhiteSpace) {
+  while (
+    tokens[index] &&
+    (Type(tokens[index]) === WhiteSpace || Type(tokens[index]) === EndOfLine)
+  ) {
     index += step;
   }
   return tokens[index];
@@ -291,6 +294,10 @@ export function Param(token?: Token) {
 
 export function Callable(token?: Token) {
   return !!token?.call;
+}
+
+export function Token(token: Partial<Token>) {
+  return token as Token;
 }
 
 export function RangeFrom(token: Token): Range {
