@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,11 +11,11 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import F64 from "./F64";
-import QDouble from "./QDouble";
 import { DDateTimeClass } from "./cClasses";
 import Constants from "./constants";
+import F64 from "./F64";
 import moment from "./moment.custom";
+import QDouble from "./QDouble";
 import Tools from "./tools";
 import { TypeBase, TypeNum } from "./typeBase";
 

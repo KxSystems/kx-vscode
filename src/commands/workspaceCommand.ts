@@ -17,6 +17,8 @@ import {
   CodeLensProvider,
   Command,
   NotebookCell,
+  QuickPickItem,
+  QuickPickItemKind,
   Range,
   StatusBarAlignment,
   TextDocument,
@@ -39,7 +41,12 @@ import { updateCellMetadata } from "../services/notebookProviders";
 import { getBasename, offerConnectAction } from "../utils/core";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
 import { MessageKind, notify, Runner } from "../utils/notifications";
-import { errorMessage, normalizeAssemblyTarget } from "../utils/shared";
+import {
+  cleanAssemblyName,
+  cleanDapName,
+  errorMessage,
+  normalizeAssemblyTarget,
+} from "../utils/shared";
 
 const logger = "workspaceCommand";
 
@@ -245,42 +252,177 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
   }
 
   const target = cell?.metadata.target || getTargetForUri(uri);
-  if (target) {
-    const exists = daps.some(
-      (value) => `${value.assembly} ${value.instance}` === target,
-    );
-    if (!exists && !conn) {
-      const [assembly, instance] = target.split(/\s+/);
-      daps.unshift({ assembly, instance } as MetaDap);
-    }
+
+  if (target && !targetExists(target, daps) && !conn) {
+    daps.unshift(createMetaDapFromTarget(target));
   }
 
-  let picked = await window.showQuickPick(
-    [
-      isInsights ? "scratchpad" : "default",
-      ...daps.map((value) => `${value.assembly} ${value.instance}`),
-    ],
-    {
-      title: `Choose Execution Target (${conn?.connLabel ?? "Not Connected"})`,
-      placeHolder: target || (isInsights ? "scratchpad" : "default"),
-    },
-  );
+  const tierItems = buildTierOptionsWithSeparators(daps);
+  const defaultOption = isInsights ? "scratchpad" : "default";
 
-  if (picked) {
-    if (picked === "scratchpad" || picked === "default") {
-      picked = undefined;
+  const items: QuickPickItem[] = [{ label: defaultOption }];
+
+  if (tierItems.length > 0) {
+    items.push(...tierItems);
+  }
+
+  const picked = await window.showQuickPick(items, {
+    title: `Choose Execution Target (${conn?.connLabel ?? "Not Connected"})`,
+    placeHolder: target || defaultOption,
+  });
+
+  let selectedValue = picked?.label;
+
+  if (selectedValue) {
+    if (selectedValue === "scratchpad" || selectedValue === "default") {
+      selectedValue = undefined;
     }
+
     if (cell) {
       await updateCellMetadata(cell, {
-        target: picked,
-        variable: picked && cell.metadata.variable,
+        target: selectedValue,
+        variable: selectedValue && cell.metadata.variable,
       });
     } else {
-      await setTargetForUri(uri, picked);
+      await setTargetForUri(uri, selectedValue);
     }
   }
 
-  return picked;
+  return selectedValue;
+}
+
+function createTierKey(dap: MetaDap): string {
+  const cleanedAssembly = cleanAssemblyName(dap.assembly);
+  return `${cleanedAssembly} ${dap.instance}`;
+}
+
+function targetExists(target: string, daps: MetaDap[]): boolean {
+  return daps.some((dap) => {
+    const tierKey = createTierKey(dap);
+    const processKey = createProcessKey(dap);
+    return tierKey === target || processKey === target;
+  });
+}
+
+function createMetaDapFromTarget(target: string): MetaDap {
+  const parts = target.split(/\s+/);
+  const [assembly, instance, ...dapParts] = parts;
+
+  return dapParts.length > 0
+    ? ({ assembly, instance, dap: dapParts.join(" ") } as MetaDap)
+    : ({ assembly, instance } as MetaDap);
+}
+
+// TODO: Remove it if this don't going to be used from 1.14
+// Options separated by ties and DAP processes
+// function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
+//   const items: QuickPickItem[] = [];
+
+//   const tierSet = new Set<string>();
+//   const processItems: QuickPickItem[] = [];
+
+//   daps.forEach((dap) => {
+//     const cleanedAssembly = cleanAssemblyName(dap.assembly);
+//     const tierKey = `${cleanedAssembly} ${dap.instance}`;
+//     tierSet.add(tierKey);
+
+//     if (dap.dap) {
+//       const cleanedDapName = cleanDapName(dap.dap);
+//       processItems.push({ label: `${tierKey} ${cleanedDapName}` });
+//     }
+//   });
+
+//   if (tierSet.size > 0) {
+//     items.push({
+//       kind: QuickPickItemKind.Separator,
+//       label: "Tiers",
+//     });
+
+//     const sortedTiers = Array.from(tierSet).sort((a, b) => a.localeCompare(b));
+//     sortedTiers.forEach((tier) => {
+//       items.push({ label: tier });
+//     });
+//   }
+
+//   if (processItems.length > 0) {
+//     items.push({
+//       kind: QuickPickItemKind.Separator,
+//       label: "DAP Processes",
+//     });
+
+//     const sortedProcessItems = processItems
+//       .slice()
+//       .sort((a, b) => a.label.localeCompare(b.label));
+//     sortedProcessItems.forEach((item) => {
+//       items.push(item);
+//     });
+//   }
+
+//   return items;
+// }
+
+// Options separated by Assembly
+function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
+  const assemblyMap = new Map<string, Map<string, MetaDap[]>>();
+
+  daps.forEach((dap) => {
+    if (!assemblyMap.has(dap.assembly)) {
+      assemblyMap.set(dap.assembly, new Map<string, MetaDap[]>());
+    }
+
+    const tierKey = `${cleanAssemblyName(dap.assembly)} ${dap.instance}`;
+    const tierMap = assemblyMap.get(dap.assembly)!;
+    const cleanedDap = { ...dap };
+
+    if (!tierMap.has(tierKey)) {
+      tierMap.set(tierKey, []);
+    }
+    if (cleanedDap.dap) {
+      cleanedDap.dap = cleanDapName(cleanedDap.dap);
+    }
+
+    tierMap.get(tierKey)!.push(cleanedDap);
+  });
+
+  const items: QuickPickItem[] = [];
+  const sortedAssemblies = Array.from(assemblyMap.keys()).sort((a, b) =>
+    a.localeCompare(b),
+  );
+
+  sortedAssemblies.forEach((assembly) => {
+    items.push({
+      kind: QuickPickItemKind.Separator,
+      label: `${assembly}`,
+    });
+
+    const tierMap = assemblyMap.get(assembly)!;
+    const sortedTierKeys = Array.from(tierMap.keys()).sort((a, b) =>
+      a.localeCompare(b),
+    );
+
+    sortedTierKeys.forEach((tierKey) => {
+      const processes = tierMap.get(tierKey)!;
+
+      items.push({ label: tierKey });
+
+      const sortedProcesses = processes
+        .filter((process) => process.dap)
+        .sort((a, b) => a.dap!.localeCompare(b.dap!));
+
+      sortedProcesses.forEach((process) => {
+        items.push({ label: `${tierKey} ${process.dap}` });
+      });
+    });
+  });
+
+  return items;
+}
+
+function createProcessKey(dap: MetaDap): string | null {
+  if (!dap.dap) return null;
+
+  const cleanedDapName = cleanDapName(dap.dap);
+  return `${createTierKey(dap)} ${cleanedDapName}`;
 }
 
 function isSql(uri: Uri | undefined) {
@@ -326,7 +468,10 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   if (type === ExecutionTypes.QueryFile) {
     text = editor.document.getText();
   } else if (type === ExecutionTypes.QuerySelection) {
-    text = editor.document.getText(editor.selection);
+    const selection = editor.selection;
+    text = selection.isEmpty
+      ? editor.document.lineAt(selection.active.line).text
+      : editor.document.getText(selection);
   } else {
     notify(
       `Executing ${basename} on ${ext.REPL} is not supported.`,
@@ -398,6 +543,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
         undefined,
         target,
         isSql,
+        conn instanceof InsightsConnection,
       );
     } catch (error) {
       notify(

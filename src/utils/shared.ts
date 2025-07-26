@@ -11,10 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export function normalizeAssemblyTarget(assemblyTarget: string) {
-  const [dirtyAssembly, target] = assemblyTarget.split(/\s+/);
-  const assembly = dirtyAssembly.replace(/-qe$/gm, "");
-  return `${assembly} ${target}`;
+export function normalizeAssemblyTarget(assemblyTarget: string): string {
+  return assemblyTarget?.trim().replace(/\s+/g, " ") || "";
 }
 
 export function stripUnprintableChars(text: string): string {
@@ -26,4 +24,12 @@ export function stripUnprintableChars(text: string): string {
 
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : `${error}`;
+}
+
+export function cleanDapName(dapName: string): string {
+  return dapName.replace(/:\d+$/, "");
+}
+
+export function cleanAssemblyName(assemblyName: string): string {
+  return assemblyName.replace(/-qe$/, "");
 }

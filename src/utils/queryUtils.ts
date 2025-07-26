@@ -15,9 +15,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 
 import { ext } from "../extensionVariables";
-import { isBaseVersionGreaterOrEqual } from "./core";
 import { MessageKind, notify, Runner } from "./notifications";
-import { normalizeAssemblyTarget } from "./shared";
 import { DCDS, deserialize, isCompressed, uncompress } from "../ipc/c";
 import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
 import { Parse } from "../ipc/parse.qlist";
@@ -283,34 +281,6 @@ export function getQSQLWrapper(query: string, isPython?: boolean): string {
     return `${wrapper}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]\`result`;
   }
   return normalizeQSQLQuery(query);
-}
-
-export function generateQSqlBody(
-  query: string,
-  assemblyTarget: string,
-  version?: number,
-  qeEnabled?: boolean,
-) {
-  const [plainAssembly, target] =
-    normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
-
-  let assembly = plainAssembly;
-  if (qeEnabled) {
-    assembly += "-qe";
-  }
-
-  if (version && isBaseVersionGreaterOrEqual(version, 1.13)) {
-    return {
-      query,
-      scope: {
-        affinity: "soft",
-        assembly,
-        tier: target,
-      },
-    };
-  }
-
-  return { query, assembly, target };
 }
 
 export function generateQTypes(meta: { [key: string]: number }): any {

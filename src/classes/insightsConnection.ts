@@ -42,11 +42,8 @@ import {
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
-import {
-  generateQSqlBody,
-  handleScratchpadTableRes,
-  handleWSResults,
-} from "../utils/queryUtils";
+import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
+import { normalizeAssemblyTarget } from "../utils/shared";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 
 const logger = "insightsConnection";
@@ -83,8 +80,8 @@ export class InsightsConnection {
       this.connected = token ? true : false;
       if (token) {
         await this.getConfig();
-        await this.getMeta();
         await this.getApiConfig();
+        await this.getMeta();
       }
     });
     return this.connected;
@@ -192,12 +189,18 @@ export class InsightsConnection {
   }
 
   public async getMeta(): Promise<MetaObjectPayload | undefined> {
-    if (this.connected) {
+    if (this.connected && this.connEndpoints) {
       const metaUrl = new url.URL(
-        ext.insightsServiceGatewayUrls.meta,
+        this.connEndpoints?.serviceGateway.meta,
         this.node.details.server,
       );
-      const options = await this.getOptions();
+      const options = await this.getOptions(
+        false,
+        undefined,
+        "POST",
+        metaUrl.toString(),
+        { advanced: true },
+      );
 
       if (!options) {
         return undefined;
@@ -205,10 +208,10 @@ export class InsightsConnection {
 
       notify("REST", MessageKind.DEBUG, {
         logger,
-        params: { url: metaUrl.toString() },
+        params: { url: options.url },
       });
 
-      const metaResponse = await axios.post(metaUrl.toString(), {}, options);
+      const metaResponse = await axios(options);
       const meta: MetaObject = metaResponse.data;
       this.meta = meta;
       return meta.payload;
@@ -245,6 +248,7 @@ export class InsightsConnection {
       const configResponse = await axios(options);
 
       this.apiConfig = configResponse.data;
+      this.defineEndpoints();
     }
   }
 
@@ -274,7 +278,6 @@ export class InsightsConnection {
 
       this.config = configResponse.data;
       this.getInsightsVersion();
-      this.defineEndpoints();
     }
   }
 
@@ -288,47 +291,76 @@ export class InsightsConnection {
   }
 
   public defineEndpoints() {
-    const baseEndpoints = {
-      scratchpad: {
-        scratchpad: "servicebroker/scratchpad/display",
-        import: "servicebroker/scratchpad/import/data",
-        importSql: "servicebroker/scratchpad/import/sql",
-        importQsql: "servicebroker/scratchpad/import/qsql",
-        importUDA: "servicebroker/scratchpad/import/uda",
-        reset: "scratchpadmanager/reset",
-      },
-      serviceGateway: {
-        meta: "servicegateway/meta",
-        data: "servicegateway/data",
-        sql: "servicegateway/qe/sql",
-        qsql: "servicegateway/qe/qsql",
-        udaBase: "servicegateway/",
-      },
+    const scratchpadEndpoints = {
+      scratchpad: "scratchpadmanager/scratchpad/display",
+      import: "scratchpadmanager/scratchpad/import/data",
+      importSql: "scratchpadmanager/scratchpad/import/sql",
+      importQsql: "scratchpadmanager/scratchpad/import/qsql",
+      importUDA: "scratchpadmanager/scratchpad/import/uda",
+      reset: "scratchpadmanager/reset",
     };
 
-    const updatedEndpoints = {
-      scratchpad: {
-        scratchpad: "scratchpadmanager/scratchpad/display",
-        import: "scratchpadmanager/scratchpad/import/data",
-        importSql: "scratchpadmanager/scratchpad/import/sql",
-        importQsql: "scratchpadmanager/scratchpad/import/qsql",
-        importUDA: "scratchpadmanager/scratchpad/import/uda",
-        reset: "scratchpadmanager/reset",
-      },
-      serviceGateway: {
-        meta: "servicegateway/meta",
-        data: "servicegateway/data",
-        sql: "servicegateway/qe/sql",
-        qsql: "servicegateway/qe/qsql",
-        udaBase: "servicegateway/",
-      },
+    const getVersionGroup = (): string => {
+      if (
+        !this.insightsVersion ||
+        !isBaseVersionGreaterOrEqual(this.insightsVersion, 1.11)
+      ) {
+        return "pre-1.11";
+      }
+      if (!isBaseVersionGreaterOrEqual(this.insightsVersion, 1.14)) {
+        return "v1.11-1.13";
+      }
+      return "v1.14+";
     };
 
-    this.connEndpoints =
-      this.insightsVersion &&
-      isBaseVersionGreaterOrEqual(this.insightsVersion, 1.11)
-        ? updatedEndpoints
-        : baseEndpoints;
+    const versionGroup = getVersionGroup();
+    let serviceGatewayEndpoints;
+    const qePrefix = this.apiConfig?.queryEnvironmentsEnabled ? "qe/" : "";
+
+    switch (versionGroup) {
+      case "pre-1.11":
+        scratchpadEndpoints.scratchpad = "servicebroker/scratchpad/display";
+        scratchpadEndpoints.import = "servicebroker/scratchpad/import/data";
+        scratchpadEndpoints.importSql = "servicebroker/scratchpad/import/sql";
+        scratchpadEndpoints.importQsql = "servicebroker/scratchpad/import/qsql";
+        scratchpadEndpoints.importUDA = "servicebroker/scratchpad/import/uda";
+        scratchpadEndpoints.reset = "scratchpadmanager/reset";
+
+        serviceGatewayEndpoints = {
+          meta: "servicegateway/meta",
+          data: "servicegateway/data",
+          sql: "servicegateway/qe/sql",
+          qsql: "servicegateway/qe/qsql",
+          udaBase: "servicegateway/",
+        };
+        break;
+
+      case "v1.11-1.13":
+        serviceGatewayEndpoints = {
+          meta: `servicegateway/${qePrefix}api/v3/meta`,
+          data: "servicegateway/data",
+          sql: `servicegateway/${qePrefix}sql`,
+          qsql: `servicegateway/${qePrefix}qsql`,
+          udaBase: "servicegateway/",
+        };
+        break;
+
+      case "v1.14+":
+      default:
+        serviceGatewayEndpoints = {
+          meta: `servicegateway/${qePrefix}api/v3/meta`,
+          data: "servicegateway/data",
+          sql: `servicegateway/${qePrefix}kxi/sql`,
+          qsql: `servicegateway/${qePrefix}kxi/qsql`,
+          udaBase: "servicegateway/",
+        };
+        break;
+    }
+
+    this.connEndpoints = {
+      scratchpad: scratchpadEndpoints,
+      serviceGateway: serviceGatewayEndpoints,
+    };
   }
 
   public retrieveEndpoints(
@@ -367,6 +399,61 @@ export class InsightsConnection {
         break;
     }
     return new url.URL(endpoint, this.node.details.server).toString();
+  }
+
+  public generateQSqlBody(
+    query: string,
+    assemblyTarget: string,
+    version?: number,
+  ) {
+    const [plainAssembly, tier, plainDap] =
+      normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
+
+    const assembly = this.retrieveCorrectAssemblyName(plainAssembly);
+    const dap = this.retrieveCorrectDAPName(plainDap, tier);
+
+    if (version && isBaseVersionGreaterOrEqual(version, 1.13)) {
+      return {
+        query,
+        scope: {
+          affinity: "soft",
+          assembly,
+          tier: dap ? undefined : tier,
+          dap: dap,
+        },
+      };
+    }
+
+    return { query, assembly, tier, dap };
+  }
+
+  public retrieveCorrectAssemblyName(
+    plainAssembly: string,
+  ): string | undefined {
+    if (this.meta?.payload?.dap) {
+      const foundDap = this.meta.payload.dap.find((dap: any) =>
+        dap.assembly?.startsWith(plainAssembly),
+      );
+
+      return foundDap ? foundDap.assembly : undefined;
+    } else {
+      return;
+    }
+  }
+
+  public retrieveCorrectDAPName(
+    plainDAP: string | undefined,
+    tier: string | undefined,
+  ): string | undefined {
+    if (this.meta?.payload?.dap && plainDAP) {
+      const foundDap = this.meta.payload.dap.find(
+        (dap: any) => dap.dap?.startsWith(plainDAP) && dap.instance === tier,
+      );
+
+      return foundDap ? foundDap.dap : undefined;
+    } else {
+      return;
+    }
   }
 
   public async getDatasourceQuery(
@@ -438,7 +525,6 @@ export class InsightsConnection {
   public async importScratchpad(
     variableName: string,
     params: DataSourceFiles,
-    qeEnabled?: boolean,
     silent?: boolean,
   ): Promise<void> {
     let dsTypeString = "";
@@ -466,11 +552,10 @@ export class InsightsConnection {
           break;
         }
         case DataSourceTypes.QSQL: {
-          body.params = generateQSqlBody(
+          body.params = this.generateQSqlBody(
             params.dataSource.qsql.query,
             params.dataSource.qsql.selectedTarget,
             this.insightsVersion,
-            qeEnabled,
           );
 
           coreUrl = this.connEndpoints.scratchpad.importQsql;
