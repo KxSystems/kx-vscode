@@ -30,8 +30,8 @@ import * as shell from "../../../src/utils/shell";
 
 describe("core", () => {
   describe("checkOpenSslInstalled", () => {
-    let tryExecuteCommandStub: sinon.SinonStub;
-    let kdbOutputLogStub: sinon.SinonStub;
+    let tryExecuteCommandStub, kdbOutputLogStub: sinon.SinonStub;
+
     beforeEach(() => {
       tryExecuteCommandStub = sinon.stub(cpUtils, "tryExecuteCommand");
       kdbOutputLogStub = sinon.stub(loggers, "kdbOutputLog");
@@ -44,7 +44,6 @@ describe("core", () => {
 
     it("should return null if OpenSSL is not installed", async () => {
       tryExecuteCommandStub.resolves({ code: 1, cmdOutput: "" });
-
       const result = await coreUtils.checkOpenSslInstalled();
 
       assert.strictEqual(result, null);
@@ -62,6 +61,7 @@ describe("core", () => {
 
   describe("setOutputWordWrapper", () => {
     let getConfigurationStub: sinon.SinonStub;
+
     beforeEach(() => {
       getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
     });
@@ -299,9 +299,7 @@ describe("core", () => {
   });
 
   describe("getServers", () => {
-    let workspaceStub: sinon.SinonStub;
-    let _getConfigurationStub: sinon.SinonStub;
-    let getStub: sinon.SinonStub;
+    let workspaceStub, _getConfigurationStub, getStub: sinon.SinonStub;
 
     beforeEach(() => {
       getStub = sinon.stub();
@@ -344,7 +342,6 @@ describe("core", () => {
 
     it("should return undefined when no servers are configured", () => {
       getStub.returns(undefined);
-
       const result = coreUtils.getServers();
 
       assert.strictEqual(result, undefined);
@@ -528,9 +525,7 @@ describe("core", () => {
   });
 
   describe("getInsights", () => {
-    let workspaceStub: sinon.SinonStub;
-    let _getConfigurationStub: sinon.SinonStub;
-    let getStub: sinon.SinonStub;
+    let workspaceStub, _getConfigurationStub, getStub: sinon.SinonStub;
 
     beforeEach(() => {
       getStub = sinon.stub();
@@ -932,10 +927,10 @@ describe("core", () => {
   });
 
   describe("checkLocalInstall", () => {
-    let getConfigurationStub: sinon.SinonStub;
-    let updateConfigurationStub: sinon.SinonStub;
-    let showInformationMessageStub: sinon.SinonStub;
-    let executeCommandStub: sinon.SinonStub;
+    let getConfigurationStub,
+      updateConfigurationStub,
+      showInformationMessageStub,
+      executeCommandStub: sinon.SinonStub;
     let QHOME = "";
 
     beforeEach(() => {

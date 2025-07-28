@@ -32,6 +32,7 @@ describe("queryUtils", () => {
     const query2 = "select from t;";
     const sanitizedQuery1 = queryUtils.sanitizeQuery(query1);
     const sanitizedQuery2 = queryUtils.sanitizeQuery(query2);
+
     assert.strictEqual(sanitizedQuery1, "`select from t ");
     assert.strictEqual(sanitizedQuery2, "select from t");
   });
@@ -51,6 +52,7 @@ describe("queryUtils", () => {
       inputSample.rows = [{ Value: "hello" }];
       const expectedOutput = [{ Value: "hello" }];
       const actualOutput = queryUtils.getValueFromArray(inputSample);
+
       assert.deepEqual(actualOutput.rows, expectedOutput);
     });
 
@@ -58,12 +60,14 @@ describe("queryUtils", () => {
       inputSample.rows = [{ Value: "hello" }, { Value: "world" }];
       const expectedOutput = [{ Value: "hello" }, { Value: "world" }];
       const actualOutput = queryUtils.getValueFromArray(inputSample);
+
       assert.deepStrictEqual(actualOutput.rows, expectedOutput);
     });
 
     it("should return the input array if it is an empty array", () => {
       const expectedOutput: any[] = [];
       const actualOutput = queryUtils.getValueFromArray(inputSample);
+
       assert.deepStrictEqual(actualOutput.rows, expectedOutput);
     });
   });
@@ -77,6 +81,7 @@ describe("queryUtils", () => {
     it("should return no results found", () => {
       const ab = new ArrayBuffer(128);
       const result = queryUtils.handleWSResults(ab);
+
       assert.strictEqual(result, "No results found.");
     });
 
@@ -88,10 +93,12 @@ describe("queryUtils", () => {
         meta: { Value: 7 },
         rows: [{ Value: "10" }],
       };
+
       ext.isResultsTabVisible = true;
       sinon.stub(QTable.default, "toLegacy").returns(expectedOutput);
       const convertRowsSpy = sinon.spy(queryUtils, "convertRows");
       const result = queryUtils.handleWSResults(ab);
+
       sinon.assert.notCalled(convertRowsSpy);
       assert.strictEqual(result, expectedOutput);
     });
@@ -118,6 +125,7 @@ describe("queryUtils", () => {
         { Index: 2, key3: 456, key4: "value4" },
       ];
       const result = queryUtils.handleScratchpadTableRes(inputSample);
+
       assert.deepStrictEqual(result.rows, expected);
     });
 
@@ -127,22 +135,26 @@ describe("queryUtils", () => {
         { key3: "value3", key4: "value4" },
       ];
       const result = queryUtils.handleScratchpadTableRes(inputSample);
+
       assert.deepStrictEqual(result.rows, inputSample.rows);
     });
 
     it("should return case results is string type", () => {
       const result = queryUtils.handleScratchpadTableRes("test");
+
       assert.strictEqual(result, "test");
     });
 
     it("should return same results case results.rows is undefined", () => {
       inputSample.rows = undefined;
       const result = queryUtils.handleScratchpadTableRes(inputSample);
+
       assert.strictEqual(result, inputSample);
     });
 
     it("should return same results case results.rows is an empty array", () => {
       const result = queryUtils.handleScratchpadTableRes(inputSample);
+
       assert.strictEqual(result, inputSample);
     });
   });
@@ -151,24 +163,24 @@ describe("queryUtils", () => {
     it("should return string representation of DTimestampClass instance", () => {
       const input = { Value: new DTimestampClass(978350400000, 0) };
       const expectedOutput = input.Value.toString();
-
       const output = queryUtils.checkIfIsQDateTypes(input);
+
       assert.strictEqual(output, expectedOutput);
     });
 
     it("should return string representation of DDateTimeClass instance", () => {
       const input = { Value: new DDateTimeClass(978350400000) };
       const expectedOutput = input.Value.toString();
-
       const output = queryUtils.checkIfIsQDateTypes(input);
+
       assert.strictEqual(output, expectedOutput);
     });
 
     it("should return string representation of DDateClass instance", () => {
       const input = { Value: new DDateClass(978350400000) };
       const expectedOutput = input.Value.toString();
-
       const output = queryUtils.checkIfIsQDateTypes(input);
+
       assert.strictEqual(output, expectedOutput);
     });
 
@@ -177,8 +189,8 @@ describe("queryUtils", () => {
         Value:
           "not an instance of DTimestampClass, DDateTimeClass, or DDateClass",
       };
-
       const output = queryUtils.checkIfIsQDateTypes(input);
+
       assert.deepStrictEqual(output, input);
     });
   });
@@ -189,49 +201,44 @@ describe("queryUtils", () => {
         { prop1: "value1", prop2: "value2" },
         { prop1: "value3", prop2: "value4" },
       ];
-
       const expectedOutput = [
         { Index: 1, prop1: "value1", prop2: "value2" },
         { Index: 2, prop1: "value3", prop2: "value4" },
       ];
-
       const output = queryUtils.addIndexKey(input);
+
       assert.deepStrictEqual(output, expectedOutput);
     });
 
     it("should add index key to single object", () => {
       const input = { prop1: "value1", prop2: "value2" };
-
       const expectedOutput = [{ Index: 1, prop1: "value1", prop2: "value2" }];
-
       const output = queryUtils.addIndexKey(input);
+
       assert.deepStrictEqual(output, expectedOutput);
     });
 
     it("should return empty array when input is empty array", () => {
       const input = [];
-
       const expectedOutput = [];
-
       const output = queryUtils.addIndexKey(input);
+
       assert.deepStrictEqual(output, expectedOutput);
     });
 
     it("should not add index key when it already exists", () => {
       const input = [{ Index: 5, prop1: "value1", prop2: "value2" }];
-
       const expectedOutput = [{ Index: 5, prop1: "value1", prop2: "value2" }];
-
       const output = queryUtils.addIndexKey(input);
+
       assert.deepStrictEqual(output, expectedOutput);
     });
 
     it("should add index key to non-array input", () => {
       const input = "not an array";
-
       const expectedOutput = [{ Index: 1, Value: "not an array" }];
-
       const output = queryUtils.addIndexKey(input);
+
       assert.deepStrictEqual(output, expectedOutput);
     });
   });
@@ -249,6 +256,7 @@ describe("queryUtils", () => {
     ];
     const expectedRes = ["a  b  \n------\n1  2  \n3  4  \n\n"].toString();
     const result = queryUtils.convertRows(rows);
+
     assert.equal(result, expectedRes);
   });
 
@@ -257,12 +265,15 @@ describe("queryUtils", () => {
       const rows = ["a#$#;header;#$#b", "1#$#;#$#2", "3#$#;#$#4"];
       const expectedRes = ["a  b  ", "------", "1  2  ", "3  4  "];
       const result = queryUtils.convertRowsToConsole(rows);
+
       assert.deepEqual(result, expectedRes);
     });
+
     it("should work without headers", () => {
       const rows = ["a#$#;#$#1", "b#$#;#$#2", "c#$#;#$#3"];
       const expectedRes = ["a| 1  ", "b| 2  ", "c| 3  "];
       const result = queryUtils.convertRowsToConsole(rows);
+
       assert.deepEqual(result, expectedRes);
     });
 
@@ -270,6 +281,7 @@ describe("queryUtils", () => {
       const rows = [];
       const expectedRes = [];
       const result = queryUtils.convertRowsToConsole(rows);
+
       assert.deepEqual(result, expectedRes);
     });
   });
@@ -281,8 +293,10 @@ describe("queryUtils", () => {
       ServerType.undefined,
     ];
     const expectedRes = ["insights", "kdb", "undefined"];
+
     for (let i = 0; i < params.length; i++) {
       const result = queryUtils.getConnectionType(params[i]);
+
       assert.equal(result, expectedRes[i]);
     }
   });
@@ -312,6 +326,7 @@ describe("queryUtils", () => {
       117, 110, 116, 101, 114, 101, 100, 32, 101, 120, 101, 99, 117, 116, 105,
       110, 103, 32, 46, 107, 120, 105, 46, 113, 115, 113, 108, 0, 0, 0, 0, 0, 0,
     ]);
+
     beforeEach(() => {
       sandbox = sinon.createSandbox();
     });
@@ -322,7 +337,6 @@ describe("queryUtils", () => {
 
     it("should handle qe/sql & gateway/data error", () => {
       const ab = new ArrayBuffer(10);
-
       const result = queryUtils.handleWSError(ab);
 
       assert.deepStrictEqual(result, { error: "Query error" });
@@ -330,7 +344,6 @@ describe("queryUtils", () => {
 
     it("should handle unknown error", () => {
       const ab = new ArrayBuffer(8);
-
       const result = queryUtils.handleWSError(ab);
 
       assert.deepStrictEqual(result, { error: "Query error" });
@@ -338,6 +351,7 @@ describe("queryUtils", () => {
 
     it("should handle qe/sql error", () => {
       const result = queryUtils.handleWSError(abTest.buffer);
+
       assert.deepStrictEqual(result, {
         error: "Unexpected error (n10) encountered executing .kxi.qsql",
       });
@@ -388,8 +402,8 @@ describe("queryUtils", () => {
         { name: "f", isNested: false, text: ["{", "g[x;2#y]}"] },
         { name: "", isNested: false, text: ["", 'f[3;"hello"]'] },
       ];
-
       const formatted = queryUtils.formatScratchpadStacktrace(stacktrace);
+
       assert.strictEqual(
         formatted,
         '[2] g{a:x*2;a+y}\n             ^\n[1] f{g[x;2#y]}\n      ^\n[0] f[3;"hello"]\n    ^',
@@ -402,8 +416,8 @@ describe("queryUtils", () => {
         { name: "f", isNested: false, text: ["{", "{a:x*2;a+y}[x;2#y]}"] },
         { name: "", isNested: false, text: ["", 'f[3;"hello"]'] },
       ];
-
       const formatted = queryUtils.formatScratchpadStacktrace(stacktrace);
+
       assert.strictEqual(
         formatted,
         '[2] f @ {a:x*2;a+y}\n                ^\n[1] f{{a:x*2;a+y}[x;2#y]}\n      ^\n[0] f[3;"hello"]\n    ^',
@@ -426,34 +440,43 @@ describe("queryUtils", () => {
   describe("normalizeQSQLQuery", () => {
     it("should trim query", () => {
       const res = queryUtils.normalizeQSQLQuery("  a:1  ");
+
       assert.strictEqual(res, "a:1");
     });
+
     it("should remove block comment", () => {
       let res = queryUtils.normalizeQSQLQuery("/\nBlock Comment\n\\\na:1");
       assert.strictEqual(res, "a:1");
       res = queryUtils.normalizeQSQLQuery("/\r\nBlock Comment\r\n\\\r\na:1");
       assert.strictEqual(res, "a:1");
     });
+
     it("should remove single line comment", () => {
       let res = queryUtils.normalizeQSQLQuery("/ single line comment\na:1");
       assert.strictEqual(res, "a:1");
       res = queryUtils.normalizeQSQLQuery("/ single line comment\r\na:1");
       assert.strictEqual(res, "a:1");
     });
+
     it("should remove line comment", () => {
       const res = queryUtils.normalizeQSQLQuery("a:1 / line comment");
+
       assert.strictEqual(res, "a:1");
     });
+
     it("should ignore line comment in a string", () => {
       const res = queryUtils.normalizeQSQLQuery('a:"1 / not line comment"');
+
       assert.strictEqual(res, 'a:"1 / not line comment"');
     });
+
     it("should replace EOS with semicolon", () => {
       let res = queryUtils.normalizeQSQLQuery("a:1\na");
       assert.strictEqual(res, "a:1;a");
       res = queryUtils.normalizeQSQLQuery("a:1\r\na");
       assert.strictEqual(res, "a:1;a");
     });
+
     it("should escpae new lines in strings", () => {
       let res = queryUtils.normalizeQSQLQuery('a:"a\n \nb"');
       assert.strictEqual(res, 'a:"a\\n \\nb"');
@@ -477,59 +500,78 @@ describe("queryUtils", () => {
 
     it("should return undefined for undefined", () => {
       const result = queryUtils.resultToBase64(undefined);
+
       assert.strictEqual(result, undefined);
     });
+
     it("should return undefined for just signature", () => {
       const result = queryUtils.resultToBase64(png);
+
       assert.strictEqual(result, undefined);
     });
+
     it("should return undefined for bad signature", () => {
       const result = queryUtils.resultToBase64([
         ...png.map((v) => parseInt(v, 16) + 1),
         ...img,
       ]);
+
       assert.strictEqual(result, undefined);
     });
+
     it("should return base64 for minimum img str", () => {
       const result = queryUtils.resultToBase64([...png, ...img]);
+
       assert.ok(result);
     });
+
     it("should return base64 for minimum img num", () => {
       const result = queryUtils.resultToBase64([
         ...png.map((v) => parseInt(v, 16)),
         ...img.map((v) => parseInt(v, 16)),
       ]);
+
       assert.ok(result);
     });
+
     it("should return base64 for minimum img str for structuredText", () => {
       const result = queryUtils.resultToBase64({
         columns: { values: [...png, ...img] },
       });
+
       assert.ok(result);
     });
+
     it("should return base64 for minimum img str for structuredText v2", () => {
       const result = queryUtils.resultToBase64({
         columns: [{ values: [...png, ...img] }],
       });
+
       assert.ok(result);
     });
+
     it("should return undefined for bogus structuredText", () => {
       const result = queryUtils.resultToBase64({
         columns: {},
       });
+
       assert.strictEqual(result, undefined);
     });
+
     it("should return undefined for bogus structuredText v2", () => {
       const result = queryUtils.resultToBase64({
         columns: [],
       });
+
       assert.strictEqual(result, undefined);
     });
+
     it("should return base64 from windows q server", () => {
       const result = queryUtils.resultToBase64([
         ...png.map((v) => `${v}\r`),
         ...img.map((v) => `${v}\r`),
       ]);
+
       assert.ok(result);
     });
   });
@@ -538,10 +580,13 @@ describe("queryUtils", () => {
     it("should return normalized query under query limit", () => {
       const query = "1234567890".repeat(25000);
       const res = queryUtils.normalizeQuery(query);
+
       assert.strictEqual(res, query);
     });
+
     it("should throw when limit reached", () => {
       const query = "1234567890".repeat(25000) + "1";
+
       assert.throws(() => queryUtils.normalizeQuery(query));
     });
   });
@@ -549,16 +594,20 @@ describe("queryUtils", () => {
   describe("normalizePyQuery", () => {
     it("should escape double quotes", () => {
       const res = queryUtils.normalizePyQuery('a="test"');
+
       assert.strictEqual(res, 'a=\\"test\\"');
     });
   });
+
   describe("getQSQLWrapper", () => {
     let queryWrappeStub: sinon.SinonStub;
 
     it("should normalize q code", () => {
       const res = queryUtils.getQSQLWrapper("a:1;\na");
+
       assert.strictEqual(res, "a:1;;a");
     });
+
     it("should normalize python code using wrapper", () => {
       assert.throws(() => {
         queryUtils.getQSQLWrapper(``, true);
@@ -573,8 +622,10 @@ describe("queryUtils", () => {
         "test",
         Promise.resolve("test"),
       );
+
       assert.strictEqual(res, "test");
     });
+
     it("should reset scratchpad started status", async () => {
       ext.scratchpadStarted.add("test");
       queryUtils.resetScratchpadStarted("test");

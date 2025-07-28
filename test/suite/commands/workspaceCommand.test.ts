@@ -326,6 +326,7 @@ describe("workspaceCommand", () => {
     });
 
     describe("runOnRepl", () => {
+      let notifyStub, executeStub: sinon.SinonStub;
       const editor = <vscode.TextEditor>{
         document: <any>{
           uri: kdbUri,
@@ -338,8 +339,6 @@ describe("workspaceCommand", () => {
         },
         selection: { active: { line: 0 } },
       };
-      let notifyStub: sinon.SinonStub;
-      let executeStub: sinon.SinonStub;
 
       beforeEach(() => {
         notifyStub = sinon.stub(notifications, "notify");
@@ -387,10 +386,10 @@ describe("workspaceCommand", () => {
   });
 
   describe("resetScratchpadFromEditor", () => {
-    let getServerForUriStub: sinon.SinonStub;
-    let pickConnectionStub: sinon.SinonStub;
-    let _getConnectionForServerStub: sinon.SinonStub;
-    let resetScratchpadStub: sinon.SinonStub;
+    let getServerForUriStub,
+      pickConnectionStub,
+      _getConnectionForServerStub,
+      resetScratchpadStub: sinon.SinonStub;
 
     const insightsNode = new InsightsNode(
       [],

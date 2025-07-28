@@ -291,8 +291,7 @@ describe("connLabels", () => {
   });
 
   describe("clearWorkspaceLabels", () => {
-    let notifyStub: sinon.SinonStub;
-    let updateStub: sinon.SinonStub;
+    let notifyStub, updateStub: sinon.SinonStub;
 
     beforeEach(() => {
       notifyStub = sinon.stub(notifications, "notify");

@@ -125,8 +125,7 @@ describe("serverCommand", () => {
 
   describe("addInsightsConnection", () => {
     let insightsData: InsightDetails;
-    let updateInsightsStub, getInsightsStub: sinon.SinonStub;
-    let notifyStub: sinon.SinonStub;
+    let updateInsightsStub, getInsightsStub, notifyStub: sinon.SinonStub;
 
     beforeEach(() => {
       insightsData = {
@@ -319,9 +318,9 @@ describe("serverCommand", () => {
   });
 
   describe("importConnections", () => {
-    let showOpenDialogStub: sinon.SinonStub;
-    let kdbOutputLogStub: sinon.SinonStub;
-    let _addImportedConnectionsStub: sinon.SinonStub;
+    let showOpenDialogStub,
+      kdbOutputLogStub,
+      _addImportedConnectionsStub: sinon.SinonStub;
 
     beforeEach(() => {
       showOpenDialogStub = sinon.stub(vscode.window, "showOpenDialog");
@@ -353,13 +352,14 @@ describe("serverCommand", () => {
   });
 
   describe("addImportedConnections", async () => {
-    let addInsightsConnectionStub: sinon.SinonStub;
-    let addKdbConnectionStub: sinon.SinonStub;
-    let kdbOutputLogStub: sinon.SinonStub;
-    let showInformationMessageStub: sinon.SinonStub;
-    let _getInsightsStub: sinon.SinonStub;
-    let _getServersStub: sinon.SinonStub;
-    let retrieveVersionStub: sinon.SinonStub;
+    let addInsightsConnectionStub,
+      addKdbConnectionStub,
+      kdbOutputLogStub,
+      showInformationMessageStub,
+      _getInsightsStub,
+      _getServersStub,
+      retrieveVersionStub: sinon.SinonStub;
+
     const kdbNodeImport1: KdbNode = {
       label: "local",
       details: {
@@ -588,9 +588,9 @@ describe("serverCommand", () => {
   });
 
   describe("enableTLS", () => {
-    let getServersStub: sinon.SinonStub;
-    let updateServersStub: sinon.SinonStub;
-    let showErrorMessageStub: sinon.SinonStub;
+    let getServersStub,
+      updateServersStub,
+      showErrorMessageStub: sinon.SinonStub;
 
     beforeEach(() => {
       getServersStub = sinon.stub(coreUtils, "getServers");
@@ -675,13 +675,14 @@ describe("serverCommand", () => {
     const _console = vscode.window.createOutputChannel("q Console Output");
     const executionConsole = new ExecutionConsole(_console);
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
+
     ext.resultsViewProvider = new KdbResultsViewProvider(uriTest);
-    let _executionConsoleStub: sinon.SinonStub;
     let scratchpadResult: ScratchpadResult;
-    let queryConsoleErrorStub: sinon.SinonStub;
-    let writeQueryResultsToViewStub: sinon.SinonStub;
-    let writeQueryResultsToConsoleStub: sinon.SinonStub;
-    let isVisibleStub: sinon.SinonStub;
+    let _executionConsoleStub,
+      queryConsoleErrorStub,
+      writeQueryResultsToViewStub,
+      writeQueryResultsToConsoleStub,
+      isVisibleStub: sinon.SinonStub;
 
     beforeEach(() => {
       _executionConsoleStub = sinon
@@ -910,6 +911,7 @@ describe("serverCommand", () => {
       insightsNode,
     );
     const localConn = new LocalConnection("localhost:5001", "server1", []);
+
     beforeEach(() => {
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
       executeQueryStub = sinon.stub(connMangService, "executeQuery");
@@ -926,12 +928,14 @@ describe("serverCommand", () => {
         "writeScratchpadResult",
       );
     });
+
     afterEach(() => {
       ext.activeConnection = undefined;
       ext.connectedConnectionList.length = 0;
       ext.connectedContextStrings.length = 0;
       sinon.restore();
     });
+
     it("should fail if connLabel is empty and activeConnection is undefined", async () => {
       serverCommand.executeQuery(
         "SELECT * FROM table",
@@ -1068,6 +1072,7 @@ describe("serverCommand", () => {
 
   describe("rerunQuery", function () {
     let executeQueryStub, runDataSourceStub: sinon.SinonStub;
+
     beforeEach(() => {
       runDataSourceStub = sinon
         .stub(dataSourceCommand, "runDataSource")
@@ -1075,9 +1080,11 @@ describe("serverCommand", () => {
 
       executeQueryStub = sinon.stub(serverCommand, "executeQuery").resolves();
     });
+
     this.afterEach(() => {
       sinon.restore();
     });
+
     it("should execute query for non-datasource query", async function () {
       const rerunQueryElement: QueryHistory = {
         executorName: "test",
@@ -1143,8 +1150,7 @@ describe("serverCommand", () => {
   });
 
   describe("disconnect", () => {
-    let findStub: sinon.SinonStub;
-    let disconnectStub: sinon.SinonStub;
+    let findStub, disconnectStub: sinon.SinonStub;
 
     beforeEach(() => {
       findStub = sinon.stub(ext.kdbinsightsNodes, "find");
@@ -1309,6 +1315,7 @@ describe("serverCommand", () => {
 
   describe("refreshGetMeta", () => {
     let refreshGetMetaStub, refreshAllGetMetasStub: sinon.SinonStub;
+
     beforeEach(() => {
       refreshGetMetaStub = sinon.stub(
         ConnectionManagementService.prototype,
