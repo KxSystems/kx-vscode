@@ -22,7 +22,7 @@ import {
 } from "vscode-languageclient/node";
 
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
-import { connectClientCommands } from "./commands/clientCommands";
+import { connectClientCommands } from "./commands/clientCommand";
 import {
   installTools,
   startLocalProcess,

@@ -16,7 +16,7 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 
-import * as clientCommand from "../../../src/commands/clientCommands";
+import * as clientCommand from "../../../src/commands/clientCommand";
 import * as dataSourceCommand from "../../../src/commands/dataSourceCommand";
 import * as workspaceCommand from "../../../src/commands/workspaceCommand";
 import { ext } from "../../../src/extensionVariables";

@@ -17,11 +17,11 @@ import Path from "path";
 import * as sinon from "sinon";
 import { Range, Uri, workspace } from "vscode";
 
-import * as tools from "../../src/commands/buildToolsCommand";
-import { CompletionProvider } from "../../src/services/completionProvider";
-import { QuickFixProvider } from "../../src/services/quickFixProvider";
+import * as tools from "../../../src/commands/buildToolsCommand";
+import { CompletionProvider } from "../../../src/services/completionProvider";
+import { QuickFixProvider } from "../../../src/services/quickFixProvider";
 
-describe("buildTools", () => {
+describe("buildToolsCommand", () => {
   function setQHome(path: string) {
     sinon
       .stub(workspace, "getConfiguration")
