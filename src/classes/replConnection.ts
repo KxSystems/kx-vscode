@@ -109,6 +109,7 @@ export class ReplConnection {
 
   private serial = 0;
   private executing = 0;
+  private running = 0;
   private exited = false;
 
   private constructor() {
@@ -201,24 +202,27 @@ export class ReplConnection {
     );
   }
 
+  private createToken(pipe: 1 | 2) {
+    return (
+      `${pipe} {x}` +
+      ANSI.QUOTE +
+      this.identity +
+      ANSI.AT +
+      this.serial++ +
+      ANSI.AT +
+      ANSI.QUOTE +
+      (this.context === CTX.Q ? NS.Q : NS.K) +
+      ";" +
+      ANSI.CRLF
+    );
+  }
+
   private sendToProcess(data: string) {
-    this.process.stdin.write(this.stub(data + ANSI.CRLF), (error) => {
-      if (error) {
-        this.executing--;
-      } else {
-        this.process.stdin.write(
-          "2 {x}" +
-            ANSI.QUOTE +
-            this.identity +
-            ANSI.AT +
-            this.serial++ +
-            ANSI.AT +
-            ANSI.QUOTE +
-            (this.context === CTX.Q ? NS.Q : NS.K) +
-            ";" +
-            ANSI.CRLF,
-        );
-      }
+    const stdin = this.process.stdin;
+    stdin.write(this.stub(data + ANSI.CRLF), () => {
+      stdin.write(this.createToken(1), () => {
+        stdin.write(this.createToken(2));
+      });
     });
     this.executing++;
   }
@@ -337,11 +341,19 @@ export class ReplConnection {
   }
 
   private handleOutput(data: any) {
+    if (this.running) {
+      return;
+    }
     const decoded = this.decoder.decode(data);
-    this.showOutput(decoded);
+    this.token.lastIndex = 0;
+    const output = decoded.replace(this.token, ANSI.EMPTY);
+    this.showOutput(output);
   }
 
   private handleErrorOutput(data: any) {
+    if (this.running) {
+      return;
+    }
     const decoded = this.decoder.decode(data);
     this.token.lastIndex = 0;
     const output = decoded.replace(this.token, ANSI.EMPTY);
@@ -534,6 +546,67 @@ export class ReplConnection {
     } else {
       execution();
     }
+  }
+
+  private decode(data: any, buffer = this.buffer) {
+    this.token.lastIndex = 0;
+    const decoded = this.decoder.decode(data);
+    buffer.push(
+      decoded
+        .replace(this.token, ANSI.EMPTY)
+        .replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF),
+    );
+    return decoded;
+  }
+
+  private getToken(decoded: string) {
+    this.token.lastIndex = 0;
+    return this.token.exec(decoded);
+  }
+
+  executeQueryBackground(text: string) {
+    return new Promise<string>((resolve, reject) => {
+      if (this.running || this.executing) {
+        reject(new Error("REPL is busy."));
+        return;
+      }
+      const buffer: string[] = [];
+      let outdone = false;
+      let errdone = false;
+
+      const done = () => {
+        if (outdone && errdone) {
+          this.running--;
+          this.executing--;
+          resolve(buffer.join(ANSI.EMPTY));
+        }
+      };
+
+      const out = (data: any) => {
+        const decoded = this.decode(data, buffer);
+        const match = this.getToken(decoded);
+        if (match) {
+          this.process.stdout.off("data", out);
+          outdone = true;
+          done();
+        }
+      };
+
+      const err = (data: any) => {
+        const decoded = this.decode(data, buffer);
+        const match = this.getToken(decoded);
+        if (match) {
+          this.process.stderr.off("data", err);
+          errdone = true;
+          done();
+        }
+      };
+
+      this.running++;
+      this.process.stdout.on("data", out);
+      this.process.stderr.on("data", err);
+      this.sendToProcess(normalizeQuery(text));
+    });
   }
 
   private static instance?: ReplConnection;
