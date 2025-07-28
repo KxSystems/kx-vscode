@@ -12,11 +12,7 @@
  */
 
 import { IRule } from "./rule";
-import { HasLowerCase } from "./validationFunctions/hasLowerCase";
-import { HasNoForbiddenChar } from "./validationFunctions/hasNoForbiddenChar";
-import { HasSpecialChar } from "./validationFunctions/hasSpecialChar";
-import { IsNotEmpty } from "./validationFunctions/isNotEmpty";
-import { LengthRange } from "./validationFunctions/lengthRange";
+import { ValidatorFunctions } from "./validatorFunctions";
 
 export class Validator {
   private errors: Set<string> = new Set();
@@ -28,30 +24,42 @@ export class Validator {
   }
 
   public isNotEmpty(): Validator {
-    this.validateSync(new IsNotEmpty());
+    this.validateSync(ValidatorFunctions.createIsNotEmptyRule());
     return this;
   }
 
   public hasSpecialChar(specialChars: RegExp): Validator {
-    this.validateSync(new HasSpecialChar(specialChars));
+    this.validateSync(
+      ValidatorFunctions.createHasSpecialCharRule(specialChars),
+    );
     return this;
   }
 
   public hasNoForbiddenChar(
     forbiddenChars: RegExp,
-    errorMessage: string
+    errorMessage: string,
   ): Validator {
-    this.validateSync(new HasNoForbiddenChar(forbiddenChars, errorMessage));
+    this.validateSync(
+      ValidatorFunctions.createHasNoForbiddenCharRule(
+        forbiddenChars,
+        errorMessage,
+      ),
+    );
     return this;
   }
 
   public inLengthRange(min: number, max: number): Validator {
-    this.validateSync(new LengthRange(min, max));
+    this.validateSync(ValidatorFunctions.createLengthRangeRule(min, max));
     return this;
   }
 
   public hasLowerCase(): Validator {
-    this.validateSync(new HasLowerCase());
+    this.validateSync(ValidatorFunctions.createHasLowerCaseRule());
+    return this;
+  }
+
+  public hasUpperCase(): Validator {
+    this.validateSync(ValidatorFunctions.createHasUpperCaseRule());
     return this;
   }
 
