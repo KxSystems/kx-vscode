@@ -15,7 +15,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
-import * as notebookTestUtils from "./notebookTestUtils.test";
+import * as notebookTestUtils from "./notebookTest.utils.test";
 import * as workspaceCommand from "../../../../src/commands/workspaceCommand";
 import {
   InsightsNode,

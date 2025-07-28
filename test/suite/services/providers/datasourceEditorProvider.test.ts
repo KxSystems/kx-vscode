@@ -15,7 +15,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
-import { createPanel } from "./providerUtils.test";
+import { createPanel } from "./provider.utils.test";
 import { InsightsConnection } from "../../../../src/classes/insightsConnection";
 import { LocalConnection } from "../../../../src/classes/localConnection";
 import { ext } from "../../../../src/extensionVariables";

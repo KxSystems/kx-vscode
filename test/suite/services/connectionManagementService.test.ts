@@ -15,7 +15,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
-import { dummyMeta } from "./servicesUtils.test";
+import { dummyMeta } from "./services.utils.test";
 import { InsightsConnection } from "../../../src/classes/insightsConnection";
 import { LocalConnection } from "../../../src/classes/localConnection";
 import { ext } from "../../../src/extensionVariables";
@@ -31,7 +31,7 @@ import * as loggers from "../../../src/utils/loggers";
 import AuthSettings from "../../../src/utils/secretStorage";
 import { Telemetry } from "../../../src/utils/telemetryClient";
 
-describe("connectionManagementService", () => {
+describe("ConnectionManagementService", () => {
   const connectionManagerService = new ConnectionManagementService();
   const servers = {
     testServer: {

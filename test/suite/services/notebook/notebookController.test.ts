@@ -15,7 +15,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
-import * as notebookTestUtils from "./notebookTestUtils.test";
+import * as notebookTestUtils from "./notebookTest.utils.test";
 import { InsightsConnection } from "../../../../src/classes/insightsConnection";
 import { LocalConnection } from "../../../../src/classes/localConnection";
 import * as serverCommand from "../../../../src/commands/serverCommand";

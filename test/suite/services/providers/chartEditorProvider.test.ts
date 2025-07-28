@@ -15,7 +15,7 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
-import { createPanel } from "./providerUtils.test";
+import { createPanel } from "./provider.utils.test";
 import { ChartEditorProvider } from "../../../../src/services/chartEditorProvider";
 import * as utils from "../../../../src/utils/uriUtils";
 

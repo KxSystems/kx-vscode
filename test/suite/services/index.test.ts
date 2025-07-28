@@ -11,21 +11,58 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { readdirSync } from "fs";
+import { readdirSync, statSync } from "fs";
 import { join } from "path";
 
-describe("Services", () => {
-  const testFiles = readdirSync(__dirname)
-    .filter(
-      (file) =>
-        file.endsWith(".test.js") &&
-        file !== "index.test.js" &&
-        file !== "servicesUtils.test.js",
+function toCamelCase(str: string): string {
+  return str
+    .split(/[-_\s]/)
+    .map((word, index) =>
+      index === 0
+        ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+        : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
     )
-    .sort((a, b) => a.localeCompare(b));
+    .join("");
+}
+
+function isTestFile(fileName: string): boolean {
+  return (
+    fileName.endsWith(".test.js") &&
+    fileName !== "index.test.js" &&
+    !fileName.endsWith(".utils.test.js")
+  );
+}
+
+function loadTestsFromDirectory(dirPath: string): void {
+  const items = readdirSync(dirPath).sort((a, b) => a.localeCompare(b));
+
+  // First, load direct test files
+  const testFiles = items.filter((item) => {
+    const itemPath = join(dirPath, item);
+    return statSync(itemPath).isFile() && isTestFile(item);
+  });
 
   testFiles.forEach((file) => {
-    const filePath = join(__dirname, file);
+    const filePath = join(dirPath, file);
     eval("require")(filePath);
   });
+
+  // Then, process subdirectories
+  const directories = items.filter((item) => {
+    const itemPath = join(dirPath, item);
+    return statSync(itemPath).isDirectory();
+  });
+
+  directories.forEach((dir) => {
+    const subDirPath = join(dirPath, dir);
+    const camelCaseName = toCamelCase(dir);
+
+    describe(camelCaseName, () => {
+      loadTestsFromDirectory(subDirPath);
+    });
+  });
+}
+
+describe("Services", () => {
+  loadTestsFromDirectory(__dirname);
 });

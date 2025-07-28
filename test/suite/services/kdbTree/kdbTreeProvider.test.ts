@@ -34,7 +34,7 @@ import {
   QServerNode,
 } from "../../../../src/services/kdbTreeProvider";
 import { KdbTreeService } from "../../../../src/services/kdbTreeService";
-import { dummyMeta } from "../servicesUtils.test";
+import { dummyMeta } from "../services.utils.test";
 
 describe("kdbTreeProvider", () => {
   let servers: Server;
