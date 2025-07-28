@@ -13,19 +13,20 @@
 
 import { readdirSync } from "fs";
 import { join } from "path";
-
 describe("Services", () => {
-  const testFiles = readdirSync(__dirname)
-    .filter(
-      (file) =>
-        file.endsWith(".test.js") &&
-        file !== "index.test.js" &&
-        file !== "servicesUtils.test.js",
-    )
-    .sort((a, b) => a.localeCompare(b));
+  describe("Providers", () => {
+    const testFiles = readdirSync(__dirname)
+      .filter(
+        (file) =>
+          file.endsWith(".test.js") &&
+          file !== "index.test.js" &&
+          file !== "providerUtils.test.js",
+      )
+      .sort((a, b) => a.localeCompare(b));
 
-  testFiles.forEach((file) => {
-    const filePath = join(__dirname, file);
-    eval("require")(filePath);
+    testFiles.forEach((file) => {
+      const filePath = join(__dirname, file);
+      eval("require")(filePath);
+    });
   });
 });
