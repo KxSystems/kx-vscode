@@ -19,7 +19,7 @@ import { DataSourceMessage } from "../models/messages";
 import { UDA } from "../models/uda";
 import { InsightsNode } from "../services/kdbTreeProvider";
 import { getNonce } from "../utils/getNonce";
-import { getUri } from "../utils/getUri";
+import { getUri } from "../utils/uriUtils";
 
 let running = false;
 
