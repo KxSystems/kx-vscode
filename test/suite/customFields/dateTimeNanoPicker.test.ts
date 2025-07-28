@@ -14,7 +14,7 @@
 import assert from "assert";
 import { JSDOM } from "jsdom";
 
-import { DateTimeNanoPicker } from "../../src/webview/components/custom-fields/date-time-nano-picker";
+import { DateTimeNanoPicker } from "../../../src/webview/components/custom-fields/date-time-nano-picker";
 
 const { window } = new JSDOM("<!doctype html><html><body></body></html>");
 (global as any).window = window;
