@@ -12,6 +12,7 @@
  */
 
 import assert from "assert";
+
 import * as validatorFuncs from "../../../src/validators/validatorFunctions";
 
 describe("ValidatorFunctions", () => {
