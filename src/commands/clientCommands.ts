@@ -17,7 +17,6 @@ import {
   ExtensionContext,
   Position,
   Range,
-  Selection,
   WorkspaceEdit,
   commands,
   workspace,
@@ -25,24 +24,13 @@ import {
 import { LanguageClient } from "vscode-languageclient/node";
 
 import { ext } from "../extensionVariables";
-import { runActiveEditor } from "./workspaceCommand";
-import { ExecutionTypes } from "../models/execution";
 
-async function executeBlock(client: LanguageClient) {
+async function currentBlock(client: LanguageClient) {
   if (ext.activeTextEditor) {
-    const range = await client.sendRequest<Range>("kdb.qls.expressionRange", {
+    return await client.sendRequest<Range>("kdb.qls.expressionRange", {
       textDocument: { uri: `${ext.activeTextEditor.document.uri}` },
       position: ext.activeTextEditor.selection.active,
     });
-    if (range) {
-      ext.activeTextEditor.selection = new Selection(
-        range.start.line,
-        range.start.character,
-        range.end.line,
-        range.end.character,
-      );
-      await runActiveEditor(ExecutionTypes.QuerySelection);
-    }
   }
 }
 
@@ -110,11 +98,11 @@ export function connectClientCommands(
   let mutex = false;
 
   context.subscriptions.push(
-    commands.registerCommand("kdb.execute.block", async () => {
+    commands.registerCommand("kdb.current.block", async () => {
       if (!mutex) {
         mutex = true;
         try {
-          await executeBlock(client);
+          return await currentBlock(client);
         } finally {
           mutex = false;
         }

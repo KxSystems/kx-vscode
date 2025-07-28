@@ -14,7 +14,9 @@
 import {
   commands,
   Range,
+  Selection,
   TextDocumentShowOptions,
+  TextEditor,
   Uri,
   ViewColumn,
   window,
@@ -137,4 +139,23 @@ export async function getWorkbookStatistics(
     return { count: files.length };
   }
   throw new Error("No workspace has been opened");
+}
+
+export async function getQuerySelectedText(editor: TextEditor) {
+  if (editor.selection.isEmpty) {
+    const range = await commands.executeCommand<Range | undefined>(
+      "kdb.current.block",
+    );
+    if (range) {
+      editor.selection = new Selection(
+        range.start.line,
+        range.start.character,
+        range.end.line,
+        range.end.character,
+      );
+    }
+  }
+  return editor.selection.isEmpty
+    ? editor.document.lineAt(editor.selection.active.line).text
+    : editor.document.getText(editor.selection);
 }

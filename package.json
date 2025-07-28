@@ -468,7 +468,7 @@
       {
         "category": "KX",
         "command": "kdb.execute.selectedQuery",
-        "title": "KX: Execute Current Selection",
+        "title": "KX: Execute Selection",
         "icon": "$(run-above)"
       },
       {
@@ -506,9 +506,8 @@
       },
       {
         "category": "KX",
-        "command": "kdb.execute.block",
-        "title": "KX: Execute Current Block",
-        "icon": "$(run-below)"
+        "command": "kdb.current.block",
+        "title": "Get current q statement"
       },
       {
         "category": "KX",
@@ -597,12 +596,6 @@
         "command": "kdb.execute.terminal.run",
         "key": "ctrl+shift+r",
         "mac": "cmd+shift+r",
-        "when": "resourceFilename =~ /\\.(?:q)$/i"
-      },
-      {
-        "command": "kdb.execute.block",
-        "key": "ctrl+shift+e",
-        "mac": "cmd+shift+e",
         "when": "resourceFilename =~ /\\.(?:q)$/i"
       },
       {
@@ -816,6 +809,10 @@
         {
           "command": "kdb.connections.content.selectView",
           "when": "false"
+        },
+        {
+          "command": "kdb.current.block",
+          "when": "false"
         }
       ],
       "webview/context": [
@@ -1021,11 +1018,6 @@
           "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
         },
         {
-          "command": "kdb.execute.block",
-          "group": "q1@2",
-          "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
-        },
-        {
           "command": "kdb.file.populateScratchpad",
           "group": "q2@0",
           "when": "resourceFilename =~ /\\.(?:q|py|sql)$/i"
@@ -1040,11 +1032,6 @@
         {
           "command": "kdb.execute.selectedQuery",
           "group": "q@1",
-          "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
-        },
-        {
-          "command": "kdb.execute.block",
-          "group": "q@2",
           "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
         },
         {

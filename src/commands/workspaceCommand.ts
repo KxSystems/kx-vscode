@@ -47,6 +47,7 @@ import {
   errorMessage,
   normalizeAssemblyTarget,
 } from "../utils/shared";
+import { getQuerySelectedText } from "../utils/workspace";
 
 const logger = "workspaceCommand";
 
@@ -468,10 +469,7 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   if (type === ExecutionTypes.QueryFile) {
     text = editor.document.getText();
   } else if (type === ExecutionTypes.QuerySelection) {
-    const selection = editor.selection;
-    text = selection.isEmpty
-      ? editor.document.lineAt(selection.active.line).text
-      : editor.document.getText(selection);
+    text = await getQuerySelectedText(editor);
   } else {
     notify(
       `Executing ${basename} on ${ext.REPL} is not supported.`,

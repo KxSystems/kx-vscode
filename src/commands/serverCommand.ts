@@ -85,6 +85,7 @@ import {
 } from "../utils/queryUtils";
 import {
   addWorkspaceFile,
+  getQuerySelectedText,
   openWith,
   setUriContent,
   workspaceHas,
@@ -1062,9 +1063,7 @@ export async function runQuery(
     case ExecutionTypes.QuerySelection:
     case ExecutionTypes.PythonQuerySelection: {
       const selection = editor.selection;
-      query = selection.isEmpty
-        ? editor.document.lineAt(selection.active.line).text
-        : editor.document.getText(selection);
+      query = await getQuerySelectedText(editor);
       context = getQueryContext(selection.end.line);
       if (type === ExecutionTypes.PythonQuerySelection) {
         isPython = true;
