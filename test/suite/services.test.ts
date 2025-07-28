@@ -70,10 +70,10 @@ import {
   QueryHistoryTreeItem,
 } from "../../src/services/queryHistoryProvider";
 import { WorkspaceTreeProvider } from "../../src/services/workspaceTreeProvider";
-import * as utils from "../../src/utils/getUri";
 import * as loggers from "../../src/utils/loggers";
 import AuthSettings from "../../src/utils/secretStorage";
 import { Telemetry } from "../../src/utils/telemetryClient";
+import * as utils from "../../src/utils/uriUtils";
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const codeFlow = require("../../src/services/kdbInsights/codeFlowLogin");

@@ -37,9 +37,16 @@ export async function run(): Promise<void> {
   const testsRoot = path.join(__dirname, "..");
 
   try {
-    const files = await glob("**/suite/**.test.js", { cwd: testsRoot });
+    const indexFiles = await glob("**/suite/**/index.test.js", {
+      cwd: testsRoot,
+    });
 
-    files.forEach((f) => mocha.addFile(path.join(testsRoot, f)));
+    if (indexFiles.length === 0) {
+      const allFiles = await glob("**/suite/**/**.test.js", { cwd: testsRoot });
+      allFiles.forEach((f) => mocha.addFile(path.join(testsRoot, f)));
+    } else {
+      indexFiles.forEach((f) => mocha.addFile(path.join(testsRoot, f)));
+    }
 
     return new Promise<void>((resolve, reject) => {
       mocha.run((failures) => {
