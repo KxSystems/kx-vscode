@@ -11,7 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { IRule } from "./rule";
+import { IRule } from "../models/rule";
 
 export class ValidatorFunctions {
   private forbiddenChars?: RegExp;

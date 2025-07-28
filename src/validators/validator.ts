@@ -11,8 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { IRule } from "./rule";
 import { ValidatorFunctions } from "./validatorFunctions";
+import { IRule } from "../models/rule";
 
 export class Validator {
   private errors: Set<string> = new Set();
