@@ -31,8 +31,8 @@ describe("kdbNewConnectionPanel", () => {
   let postMessageStub: sinon.SinonStub;
   let onDidReceiveMessageStub: sinon.SinonStub;
   let clearWorkspaceLabelsStub: sinon.SinonStub;
-  let retrieveConnLabelsNamesStub: sinon.SinonStub;
-  let kdbOutputLogStub: sinon.SinonStub;
+  let _retrieveConnLabelsNamesStub: sinon.SinonStub;
+  let _kdbOutputLogStub: sinon.SinonStub;
 
   const uriTest: vscode.Uri = vscode.Uri.parse("test");
   const insightsNode = new InsightsNode(
@@ -118,10 +118,10 @@ describe("kdbNewConnectionPanel", () => {
 
     // Stub utility functions
     clearWorkspaceLabelsStub = sinon.stub(connLabel, "clearWorkspaceLabels");
-    retrieveConnLabelsNamesStub = sinon
+    _retrieveConnLabelsNamesStub = sinon
       .stub(connLabel, "retrieveConnLabelsNames")
       .returns([]);
-    kdbOutputLogStub = sinon.stub(loggers, "kdbOutputLog");
+    _kdbOutputLogStub = sinon.stub(loggers, "kdbOutputLog");
   });
 
   afterEach(() => {
