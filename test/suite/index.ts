@@ -43,7 +43,7 @@ export async function run(): Promise<void> {
 
     if (testFile) {
       pattern = `**/suite/**/${testFile}.test.js`;
-      console.log(`🧪 Running specific test file: ${testFile}`);
+      console.log(`🧪 Running specific test file: ${testFile}.test.js`);
     } else if (testFolder) {
       pattern = `**/suite/${testFolder}/**/*.test.js`;
       console.log(`🧪 Running tests in folder: ${testFolder}`);
