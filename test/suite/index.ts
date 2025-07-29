@@ -19,6 +19,8 @@ import { generateCoverageReport } from "../coverage";
 
 export async function run(): Promise<void> {
   const headless = !!process.env.CI;
+  const testFolder = process.env.TEST_FOLDER;
+  const testFile = process.env.TEST_FILE;
 
   const options: Mocha.MochaOptions = {
     ui: "bdd",
@@ -37,16 +39,34 @@ export async function run(): Promise<void> {
   const testsRoot = path.join(__dirname, "..");
 
   try {
-    const indexFiles = await glob("**/suite/**/index.test.js", {
-      cwd: testsRoot,
-    });
+    let pattern: string;
 
-    if (indexFiles.length === 0) {
-      const allFiles = await glob("**/suite/**/**.test.js", { cwd: testsRoot });
-      allFiles.forEach((f) => mocha.addFile(path.join(testsRoot, f)));
+    if (testFile) {
+      pattern = `**/suite/**/${testFile}.test.js`;
+      console.log(`🧪 Running specific test file: ${testFile}`);
+    } else if (testFolder) {
+      pattern = `**/suite/${testFolder}/**/*.test.js`;
+      console.log(`🧪 Running tests in folder: ${testFolder}`);
     } else {
-      indexFiles.forEach((f) => mocha.addFile(path.join(testsRoot, f)));
+      pattern = "**/suite/**/**.test.js";
+      console.log("🧪 Running all tests");
     }
+
+    const allFiles = await glob(pattern, { cwd: testsRoot });
+
+    const testFiles = allFiles.filter(
+      (file) => !file.endsWith(".util.test.js"),
+    );
+
+    if (testFiles.length === 0) {
+      const target = testFile || testFolder || "any tests";
+      throw new Error(`❌ No test files found for: ${target}`);
+    }
+
+    console.log(`📁 Found ${testFiles.length} test file(s):`);
+    testFiles.forEach((file) => console.log(`  - ${file}`));
+
+    testFiles.forEach((f) => mocha.addFile(path.join(testsRoot, f)));
 
     return new Promise<void>((resolve, reject) => {
       mocha.run((failures) => {
@@ -65,10 +85,6 @@ export async function run(): Promise<void> {
           console.error("❌ Coverage generation failed:", error);
           throw error;
         }
-      } else {
-        // console.log(
-        //   "❌ GENERATE_COVERAGE not set, skipping coverage generation",
-        // );
       }
     });
   } catch (err) {

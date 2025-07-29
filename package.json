@@ -1139,6 +1139,8 @@
     "publish": "npx vsce publish",
     "pretest": "rimraf out-test && tsc --outdir out-test -p ./test",
     "test": "node ./out-test/test/runTest.js",
+    "test:file": "cross-env TEST_FILE=$1 npm run test",
+    "test:folder": "cross-env TEST_FOLDER=$1 npm run test",
     "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js",
     "ui-test-cmd": "extest setup-and-run --code_version $npm_package_config_ui_test_vscode_version --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
     "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
