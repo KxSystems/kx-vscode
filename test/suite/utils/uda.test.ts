@@ -704,7 +704,7 @@ describe("UDA", () => {
         name: "param4",
         description: "Test parameter",
         isReq: false,
-        type: undefined as any, // Simula um caso inválido
+        type: undefined as any,
       };
 
       assert.throws(
@@ -720,7 +720,7 @@ describe("UDA", () => {
         name: "param5",
         description: "Test parameter",
         isReq: false,
-        type: null as any, // Simula um caso inválido
+        type: null as any,
       };
 
       assert.throws(
@@ -736,7 +736,7 @@ describe("UDA", () => {
         name: "param6",
         description: "Test parameter",
         isReq: true,
-        type: "invalidType" as any, // Simula um caso inválido
+        type: "invalidType" as any,
       };
 
       assert.throws(

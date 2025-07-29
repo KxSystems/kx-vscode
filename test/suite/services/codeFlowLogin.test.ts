@@ -32,7 +32,6 @@ describe("CodeFlowLogin", () => {
       store: sinon.stub(),
     };
 
-    // Mock extension context
     ext.context = {
       secrets: secretsStub,
       asAbsolutePath: sinon.stub().returns("/mock/path"),
@@ -302,7 +301,6 @@ describe("CodeFlowLogin", () => {
 
   describe("signIn", () => {
     it("should handle successful sign in flow", async () => {
-      // Mock server creation and token exchange
       const mockResponse = {
         data: {
           access_token: "access_token_123",
@@ -313,10 +311,6 @@ describe("CodeFlowLogin", () => {
       axiosStub.resolves(mockResponse);
       envStub.resolves();
 
-      // Mock server behavior - this is complex due to the server creation
-      // For now, we'll test the parts we can isolate
-
-      // Test that the function exists and can be called
       assert.ok(typeof codeFlow.signIn === "function");
     });
   });
@@ -327,7 +321,7 @@ describe("CodeFlowLogin", () => {
         data: {
           access_token: "token",
           refresh_token: "refresh",
-          expires_in: 3600, // 1 hour
+          expires_in: 3600,
         },
       };
       axiosStub.resolves(mockResponse);
@@ -341,7 +335,6 @@ describe("CodeFlowLogin", () => {
       );
       const afterTime = new Date();
 
-      // The expiration should be approximately 1 hour from now
       const expectedMin = new Date(beforeTime.getTime() + 3600 * 1000);
       const expectedMax = new Date(afterTime.getTime() + 3600 * 1000);
 
@@ -355,7 +348,6 @@ describe("CodeFlowLogin", () => {
         data: {
           access_token: "token",
           refresh_token: "refresh",
-          // no expires_in field
         },
       };
       axiosStub.resolves(mockResponse);
@@ -373,9 +365,7 @@ describe("CodeFlowLogin", () => {
 
   describe("URL construction", () => {
     it("should construct correct auth URL", () => {
-      // Test indirectly by checking that signIn would call the right endpoints
-      // This is tested through the axios calls in other tests
-      assert.ok(true); // URLs are constructed correctly based on other test evidence
+      assert.ok(true);
     });
   });
 

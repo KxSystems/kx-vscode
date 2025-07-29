@@ -330,10 +330,8 @@ describe("dataSourceCommand", () => {
     });
 
     it("should show an error message if the time parameters are incorrect", async () => {
-      // Set up the stub to return false BEFORE calling the function
       checkIfTimeParamIsCorrectStub.returns(false);
 
-      // Mock the window.showErrorMessage method BEFORE calling the function
       const showErrorMessageStub = sinon.stub(
         vscode.window,
         "showErrorMessage",
@@ -344,7 +342,6 @@ describe("dataSourceCommand", () => {
         insightsConn,
       );
 
-      // Now verify the mock was called correctly - note the space before (startTS
       sinon.assert.calledOnce(showErrorMessageStub);
       sinon.assert.calledWith(
         showErrorMessageStub,

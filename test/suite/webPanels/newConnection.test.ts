@@ -73,9 +73,7 @@ describe("kdbNewConnectionPanel", () => {
   );
 
   beforeEach(() => {
-    // Create dispose stub that simulates the real behavior
     disposeStub = sinon.stub().callsFake(() => {
-      // Simulate the real dispose behavior: set currentPanel to undefined
       (NewConnectionPannel as any).currentPanel = undefined;
     });
 
@@ -83,7 +81,6 @@ describe("kdbNewConnectionPanel", () => {
     postMessageStub = sinon.stub();
     onDidReceiveMessageStub = sinon.stub();
 
-    // Mock webview
     mockWebview = {
       html: "",
       asWebviewUri: sinon.stub().returns(vscode.Uri.parse("file://test")),
@@ -92,7 +89,6 @@ describe("kdbNewConnectionPanel", () => {
       cspSource: "test-csp-source",
     };
 
-    // Mock webview panel with dispose behavior that clears currentPanel
     mockWebviewPanel = {
       webview: mockWebview,
       title: "",
@@ -104,19 +100,16 @@ describe("kdbNewConnectionPanel", () => {
       viewColumn: vscode.ViewColumn.One,
     };
 
-    // Stub createWebviewPanel
     createWebviewPanelStub = sinon
       .stub(vscode.window, "createWebviewPanel")
       .returns(mockWebviewPanel);
 
-    // Setup ext mock
     Object.assign(ext, {
       connLabelList: [],
       labelColors: [],
       isBundleQCreated: false,
     });
 
-    // Stub utility functions
     clearWorkspaceLabelsStub = sinon.stub(connLabel, "clearWorkspaceLabels");
     _retrieveConnLabelsNamesStub = sinon
       .stub(connLabel, "retrieveConnLabelsNames")
@@ -125,7 +118,6 @@ describe("kdbNewConnectionPanel", () => {
   });
 
   afterEach(() => {
-    // Clear currentPanel first to avoid disposal loops
     if (NewConnectionPannel.currentPanel) {
       (NewConnectionPannel as any).currentPanel = undefined;
     }
@@ -164,16 +156,12 @@ describe("kdbNewConnectionPanel", () => {
       "First panel should be created",
     );
 
-    // Reset call count for dispose stub
     disposeStub.resetHistory();
 
-    // Call render again - should dispose first panel
     NewConnectionPannel.render(uriTest);
 
-    // Verify first panel's dispose was called
     assert.ok(disposeStub.calledOnce, "First panel dispose should be called");
 
-    // After dispose is called, currentPanel should be undefined
     assert.strictEqual(
       NewConnectionPannel.currentPanel,
       undefined,
@@ -210,7 +198,6 @@ describe("kdbNewConnectionPanel", () => {
     const expectedHtml = `<kdb-new-connection-view/>`;
     const actualHtml = mockWebview.html;
 
-    // Verify editConnection message was posted
     assert.ok(
       postMessageStub.calledWith(
         sinon.match({
@@ -231,7 +218,6 @@ describe("kdbNewConnectionPanel", () => {
     const expectedHtml = `<kdb-new-connection-view/>`;
     const actualHtml = mockWebview.html;
 
-    // Verify editConnection message was posted
     assert.ok(
       postMessageStub.calledWith(
         sinon.match({
@@ -252,7 +238,6 @@ describe("kdbNewConnectionPanel", () => {
     const expectedHtml = `<kdb-new-connection-view/>`;
     const actualHtml = mockWebview.html;
 
-    // Verify editConnection message was posted
     assert.ok(
       postMessageStub.calledWith(
         sinon.match({
@@ -270,7 +255,7 @@ describe("kdbNewConnectionPanel", () => {
 
   it("should refreshLabels", () => {
     NewConnectionPannel.render(uriTest);
-    postMessageStub.resetHistory(); // Clear previous calls
+    postMessageStub.resetHistory();
 
     NewConnectionPannel.refreshLabels();
 
@@ -296,13 +281,11 @@ describe("kdbNewConnectionPanel", () => {
     assert.ok(panel, "Panel should be created");
     assert.ok(onDidDisposeStub.calledOnce, "onDidDispose should be registered");
 
-    // Test that the dispose method exists and is callable
     assert.ok(
       typeof panel.dispose === "function",
       "dispose method should exist",
     );
 
-    // Call the actual dispose method to test behavior
     panel.dispose();
 
     assert.strictEqual(
@@ -313,10 +296,8 @@ describe("kdbNewConnectionPanel", () => {
   });
 
   it("should not refresh labels when no current panel", () => {
-    // Don't create a panel
     NewConnectionPannel.refreshLabels();
 
-    // postMessage should not be called since there's no panel
     assert.ok(
       postMessageStub.notCalled,
       "postMessage should not be called when no panel exists",
@@ -326,13 +307,11 @@ describe("kdbNewConnectionPanel", () => {
   it("should handle webview message reception", () => {
     NewConnectionPannel.render(uriTest);
 
-    // Verify onDidReceiveMessage was registered
     assert.ok(
       onDidReceiveMessageStub.calledOnce,
       "onDidReceiveMessage should be registered",
     );
 
-    // Get the message handler
     const messageHandler = onDidReceiveMessageStub.getCall(0).args[0];
     assert.ok(
       typeof messageHandler === "function",
@@ -341,10 +320,8 @@ describe("kdbNewConnectionPanel", () => {
   });
 
   it("should handle close when no panel exists", () => {
-    // Try to close without creating a panel
     NewConnectionPannel.close();
 
-    // Should not crash or throw
     assert.ok(
       disposeStub.notCalled,
       "dispose should not be called when no panel exists",
@@ -354,13 +331,11 @@ describe("kdbNewConnectionPanel", () => {
   it("should register onDidDispose handler", () => {
     NewConnectionPannel.render(uriTest);
 
-    // Verify onDidDispose was called to register the handler
     assert.ok(
       onDidDisposeStub.calledOnce,
       "onDidDispose should be called to register disposal handler",
     );
 
-    // Verify it was called with a function
     const disposeHandler = onDidDisposeStub.getCall(0).args[0];
     assert.ok(
       typeof disposeHandler === "function",
@@ -369,7 +344,6 @@ describe("kdbNewConnectionPanel", () => {
   });
 
   it("should handle webview panel title correctly", () => {
-    // Test new connection title
     NewConnectionPannel.render(uriTest);
     assert.ok(
       createWebviewPanelStub.calledWith(
@@ -381,7 +355,6 @@ describe("kdbNewConnectionPanel", () => {
       "Should create panel with 'New Connection' title",
     );
 
-    // Clear and test edit connection title
     (NewConnectionPannel as any).currentPanel = undefined;
     createWebviewPanelStub.resetHistory();
 

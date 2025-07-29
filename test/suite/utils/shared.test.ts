@@ -126,7 +126,6 @@ describe("Shared", () => {
     });
 
     it("should remove unassigned characters", () => {
-      // U+0378 is unassigned
       const input = "abc\u0378def";
       const result = sharedUtils.stripUnprintableChars(input);
       assert.strictEqual(result, "abcdef");

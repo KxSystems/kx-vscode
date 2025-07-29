@@ -96,12 +96,7 @@ describe("Controller", () => {
               notebookTestUtils.createNotebook(),
               createController(),
             );
-            // sinon.assert.calledOnceWithExactly(
-            //   notifyStub,
-            //   sinon.match.string,
-            //   notifications.MessageKind.ERROR,
-            //   sinon.match.any,
-            // );
+
             assert.strictEqual(success, undefined);
           });
         });
@@ -228,12 +223,7 @@ describe("Controller", () => {
               notebookTestUtils.createNotebook(),
               createController(),
             );
-            // sinon.assert.calledOnceWithExactly(
-            //   notifyStub,
-            //   sinon.match.string,
-            //   notifications.MessageKind.ERROR,
-            //   sinon.match.any,
-            // );
+
             assert.strictEqual(success, undefined);
           });
         });

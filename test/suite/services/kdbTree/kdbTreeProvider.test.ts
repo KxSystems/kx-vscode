@@ -706,7 +706,6 @@ describe("kdbTreeProvider", () => {
       mockLocalConn = sinon.createStubInstance(LocalConnection);
       mockInsightsConn = sinon.createStubInstance(InsightsConnection);
 
-      // Mock ConnectionManagementService
       connMngStub = sinon.stub(
         ConnectionManagementService.prototype,
         "retrieveConnectedConnection",

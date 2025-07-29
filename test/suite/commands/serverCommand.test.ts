@@ -1369,17 +1369,13 @@ describe("serverCommand", () => {
       openTextDocumentCallCount = 0;
       showTextDocumentCallCount = 0;
 
-      // Não usar spy, mas sim stub que conta as chamadas
       sandbox
         .stub(vscode.workspace, "registerTextDocumentContentProvider")
         .callsFake(
           (scheme: string, provider: vscode.TextDocumentContentProvider) => {
             registerProviderCallCount++;
-            // Retornar um disposable mock simples
             return {
-              dispose: () => {
-                // Mock dispose que não faz nada
-              },
+              dispose: () => {},
             } as vscode.Disposable;
           },
         );

@@ -737,7 +737,6 @@ describe("KdbNewConnectionView", () => {
 
       sinon.assert.calledOnce(postMessageStub);
 
-      // Avança o tempo em 500ms
       clock.tick(500);
 
       assert.equal(view.labels[0], "Test Label");

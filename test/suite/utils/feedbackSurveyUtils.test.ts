@@ -22,7 +22,6 @@ describe("FeedbackSurveyUtils", () => {
     let showSurveyDialogStub: sinon.SinonStub;
 
     beforeEach(() => {
-      // Stub the showSurveyDialog function
       showSurveyDialogStub = sinon
         .stub(vscode.window, "showInformationMessage")
         .resolves();

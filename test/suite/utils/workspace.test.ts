@@ -15,10 +15,10 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
-import * as workspaceHelper from "../../src/utils/workspace";
+import * as loggers from "../../../src/utils/loggers";
+import * as workspaceHelper from "../../../src/utils/workspace";
 
 describe("Workspace tests", () => {
-   
   const testWorkspaceFolder: any[] = [
     {
       uri: vscode.Uri.file("testPath1"),
@@ -27,7 +27,7 @@ describe("Workspace tests", () => {
       uri: vscode.Uri.file("testPath2"),
     },
   ];
-   
+
   let workspaceMock: sinon.SinonStub<any[], any>;
 
   beforeEach(() => {
@@ -82,6 +82,7 @@ describe("Workspace tests", () => {
       );
     });
     it("should return file uri", async () => {
+      sinon.stub(loggers, "kdbOutputLog");
       workspaceMock.value(testWorkspaceFolder);
       sinon
         .stub(vscode.workspace, "getWorkspaceFolder")
@@ -89,6 +90,7 @@ describe("Workspace tests", () => {
       const uri = vscode.Uri.file("test.q");
       const result = await workspaceHelper.addWorkspaceFile(uri, "test", ".q");
       assert.ok(result.fsPath.endsWith("test-1.q"));
+      sinon.restore();
     });
   });
 

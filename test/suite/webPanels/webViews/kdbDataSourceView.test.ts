@@ -454,7 +454,7 @@ describe("KdbDataSourceView", () => {
         };
         const result = view.renderUDACheckbox(param);
         assert.ok(result);
-        assert.ok(!result.strings[0].includes("Description:")); // Verifica que não há descrição
+        assert.ok(!result.strings[0].includes("Description:"));
       });
 
       it("should render checkbox with value and default undefined", () => {
@@ -483,7 +483,6 @@ describe("KdbDataSourceView", () => {
         const requestChangeSpy = sinon.spy(view, "requestChange");
         const result = view.renderUDACheckbox(param);
 
-        // Simula o evento de mudança
         const event = new Event("sl-change");
         Object.defineProperty(event, "target", {
           value: { checked: true },
@@ -495,8 +494,8 @@ describe("KdbDataSourceView", () => {
           checkbox(event);
         }
 
-        assert.strictEqual(param.value, true); // Verifica que o valor foi atualizado
-        assert.ok(requestChangeSpy.calledOnce); // Verifica que requestChange foi chamado
+        assert.strictEqual(param.value, true);
+        assert.ok(requestChangeSpy.calledOnce);
         requestChangeSpy.restore();
       });
 
@@ -514,7 +513,7 @@ describe("KdbDataSourceView", () => {
         const result = view.renderUDACheckbox(param);
 
         assert.ok(result);
-        assert.ok(renderDeleteSpy.calledOnceWith(param)); // Verifica que o botão de exclusão foi renderizado
+        assert.ok(renderDeleteSpy.calledOnceWith(param));
         renderDeleteSpy.restore();
       });
     });
