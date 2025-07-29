@@ -530,7 +530,7 @@ Refer to the [`getData` API](https://code.kx.com/insights/api/database/query/get
 
 ### QSQL queries
 
-The `.com_kx_edi.qsql` API is a QSQL query builder that assembles QSQL queries based on a q expression. It is a developer tool that allows running freeform q code against a specific database tier.
+The `.com_kx_edi.qsql` API is a QSQL query builder that assembles QSQL queries based on a q expression. It is a developer tool that allows running freeform q code against a specific database tier and if required against a specific data access process.
 
 This function runs an QSQL query.
 
@@ -538,11 +538,11 @@ This function runs an QSQL query.
 .com_kx_edi.qsql[args]
 ```
 
-**Note**: Along with the query itself, you must also specify the target database and tier.
+**Note**: Along with the query itself, you must also specify the target database and you can choose to specify the database tier and specific data access process if required.
 
 Refer to the [QSQL documentation](https://code.kx.com/insights/api/database/query/qsql.html) for more details.
 
-**Warning!** Starting with kdb Insights Enterprise version 1.13, QSQL queries and populating QSQL only work if the Query Environment (QE) is enabled. Ensure you have enabled QEs to use QSQL; they are disabled by default in kdb VS Code. Refer to [Query Environments](https://code.kx.com/insights/enterprise/configuration/base.html#query-environments) for more details.
+**Warning!** Starting with kdb Insights Enterprise version 1.13, QSQL queries and populating QSQL only work if the Query Environment (QE) is enabled. Ensure you have enabled QEs to use QSQL; they are disabled by default in kdb Insights Enterprise from version 1.13 onwards. Refer to [Query Environments](https://code.kx.com/insights/enterprise/configuration/base.html#query-environments) for more details.
 
 ### SQL queries
 
@@ -747,7 +747,7 @@ From this view, you can add either Markdown or Code blocks to the notebook by cl
 
 ![Add code blocks to notebook](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/add-notebook-code.png)
 
-In KX Notebooks, you can select a target and a variable name to populate the Scratchpad. When you select a connection, clicking on the Scratchpad tab displays a list where you can change between the Scratchpad and one of the DAPs (RDB, IDB, or HDB).
+In KX Notebooks, you can select a target and a variable name to populate the Scratchpad. When you select a connection, clicking on the Scratchpad tab displays a list where you can change between the Scratchpad and one of the database tiers (RDB, IDB, or HDB) or a specific database process on one of the tiers.
 
 Next to the Scratchpad tab, there is a language option. To change the language of the code block, click on the language labels and select language from the Command Palette. You can select between q, Python, Markdown, or MS SQL.
 
