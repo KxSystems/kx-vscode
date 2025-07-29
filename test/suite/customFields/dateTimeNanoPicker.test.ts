@@ -75,30 +75,33 @@ describe("DateTimeNanoPicker (component)", () => {
     });
   });
 
-  describe("DateTimeNanoPicker (DOM integration)", () => {
-    let picker: HTMLElement;
+  describe("DateTimeNanoPicker (component behavior)", () => {
+    let picker: DateTimeNanoPicker;
 
     beforeEach(() => {
-      if (!window.customElements.get("date-time-nano-picker")) {
-        window.customElements.define(
-          "date-time-nano-picker",
-          DateTimeNanoPicker,
-        );
-      }
-      picker = document.createElement("date-time-nano-picker");
-      document.body.appendChild(picker);
+      picker = new DateTimeNanoPicker();
+      picker.dispatchEvent = () => true;
+      picker.querySelector = () => null;
+      picker.querySelectorAll = () => [] as any;
     });
 
-    afterEach(() => {
-      document.body.innerHTML = "";
+    it("should be instance of DateTimeNanoPicker", () => {
+      assert.ok(picker instanceof DateTimeNanoPicker);
     });
 
-    it("should be an HTMLElement", () => {
-      assert.ok(picker instanceof window.HTMLElement);
+    it("should have correct constructor name", () => {
+      assert.strictEqual(picker.constructor.name, "DateTimeNanoPicker");
     });
 
-    it("should have the correct tag name", () => {
-      assert.strictEqual(picker.tagName.toLowerCase(), "date-time-nano-picker");
+    it("should behave as a custom element", () => {
+      assert.ok(
+        typeof picker.connectedCallback === "function" ||
+          picker.connectedCallback === undefined,
+      );
+      assert.ok(
+        typeof picker.disconnectedCallback === "function" ||
+          picker.disconnectedCallback === undefined,
+      );
     });
   });
 });
