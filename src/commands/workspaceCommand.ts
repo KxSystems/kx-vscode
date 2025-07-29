@@ -482,10 +482,10 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   }
 
   try {
-    const runner = Runner.create(() => {
+    const runner = Runner.create(async (_, token) => {
       const repl = ReplConnection.getOrCreateInstance();
+      await repl.executeQuery(text, token);
       repl.show();
-      return repl.executeQuery(text);
     });
     runner.title = `Executing ${basename} on ${ext.REPL}.`;
     await runner.execute();

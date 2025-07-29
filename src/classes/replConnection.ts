@@ -420,11 +420,15 @@ export class ReplConnection {
     if (this.opened && !this.executing) this.showPrompt();
   }
 
+  private cancel() {
+    this.process.kill("SIGINT");
+  }
+
   private close() {
     if (ReplConnection.instance === this) {
       ReplConnection.instance = undefined;
     }
-    this.process.kill("SIGINT");
+    this.cancel();
     this.process.kill("SIGTERM");
     this.onDidWrite.dispose();
     this.exited = true;
@@ -458,9 +462,7 @@ export class ReplConnection {
         this.sendToTerminal(ANSI.CRLF);
         break;
       case KEY.CTRLC:
-        if (this.executing) {
-          this.process.kill("SIGINT");
-        }
+        this.cancel();
         break;
       case KEY.BS:
       case KEY.BSMAC:
@@ -548,12 +550,14 @@ export class ReplConnection {
     if (getAutoFocusOutputOnEntrySetting()) this.terminal.show(true);
   }
 
-  executeQuery(text: string) {
+  executeQuery(text: string, token: vscode.CancellationToken) {
     return new Promise<string>((resolve, reject) => {
       if (this.running || this.executing) {
         reject(new Error("REPL is busy."));
         return;
       }
+      token.onCancellationRequested(() => this.cancel());
+
       const buffer: string[] = [];
       let outdone = false;
       let errdone = false;
