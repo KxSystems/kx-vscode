@@ -63,9 +63,6 @@ export async function run(): Promise<void> {
       throw new Error(`❌ No test files found for: ${target}`);
     }
 
-    console.log(`📁 Found ${testFiles.length} test file(s):`);
-    testFiles.forEach((file) => console.log(`  - ${file}`));
-
     testFiles.forEach((f) => mocha.addFile(path.join(testsRoot, f)));
 
     return new Promise<void>((resolve, reject) => {
