@@ -78,7 +78,7 @@ export class KxNotebookController {
         if (kind === CellKind.PYTHON) {
           throw new Error("Python is not supported on REPL.");
         }
-        const text = await repl.executeQueryBackground(cell.document.getText());
+        const text = await repl.executeQuery(cell.document.getText());
         this.replaceOutput(execution, { text, mime: "text/plain" });
         success = true;
       } catch (error) {

@@ -75,8 +75,6 @@ const CONF = {
   MAX_INPUT: 80 * 40,
 };
 
-type Callable = () => void;
-
 export class ReplConnection {
   private readonly history = new History();
   private readonly identity = crypto.randomUUID();
@@ -98,7 +96,6 @@ export class ReplConnection {
   private messages: string[] = [];
   private buffer: string[] = [];
   private input: string[] = [];
-  private executions?: Callable[] = [];
 
   private _context = CTX.Q;
   private _namespace = ANSI.EMPTY;
@@ -110,6 +107,7 @@ export class ReplConnection {
   private serial = 0;
   private executing = 0;
   private running = 0;
+  private opened = false;
   private exited = false;
 
   private constructor() {
@@ -301,10 +299,10 @@ export class ReplConnection {
   }
 
   private showMessage(message: string) {
-    if (this.executions) {
-      this.messages.push(message);
-    } else {
+    if (this.opened) {
       this.sendToTerminal(message);
+    } else {
+      this.messages.push(message);
     }
   }
 
@@ -314,12 +312,24 @@ export class ReplConnection {
     }
     const output = decoded.replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
 
-    if (this.executions) this.messages.push(output);
-    else this.buffer.push(output);
+    if (this.opened) this.buffer.push(output);
+    else this.messages.push(output);
   }
 
-  private show() {
-    if (getAutoFocusOutputOnEntrySetting()) this.terminal.show(true);
+  private decode(data: any, buffer = this.buffer) {
+    this.token.lastIndex = 0;
+    const decoded = this.decoder.decode(data);
+    buffer.push(
+      decoded
+        .replace(this.token, ANSI.EMPTY)
+        .replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF),
+    );
+    return decoded;
+  }
+
+  private getToken(decoded: string) {
+    this.token.lastIndex = 0;
+    return this.token.exec(decoded);
   }
 
   private recall(history?: HistoryItem) {
@@ -397,11 +407,9 @@ export class ReplConnection {
 
     this.messages.forEach((message) => this.sendToTerminal(message));
     this.messages = [];
+    this.opened = true;
 
     this.showPrompt(true);
-
-    (this.executions || []).forEach((execution) => execution());
-    this.executions = undefined;
   }
 
   private setDimensions(dimensions: vscode.TerminalDimensions) {
@@ -409,7 +417,7 @@ export class ReplConnection {
     this.columns = dimensions.columns;
     this.updateMaxInputIndex();
     this.sendDimensions();
-    if (!this.executions && !this.executing) this.showPrompt();
+    if (this.opened && !this.executing) this.showPrompt();
   }
 
   private close() {
@@ -514,7 +522,8 @@ export class ReplConnection {
         break;
       default:
         if (/(?:\r\n|[\r\n])/s.test(data)) {
-          this.executeQuery(data);
+          this.sendToTerminal(ANSI.CRLF);
+          this.sendToProcess(normalizeQuery(data));
           break;
         }
         if (data.length < CONF.MAX_INPUT) {
@@ -535,36 +544,11 @@ export class ReplConnection {
     this.terminal.show();
   }
 
+  show() {
+    if (getAutoFocusOutputOnEntrySetting()) this.terminal.show(true);
+  }
+
   executeQuery(text: string) {
-    const execution = () => {
-      this.sendToProcess(normalizeQuery(text));
-      this.showExecutionPrompt();
-      this.show();
-    };
-    if (this.executions) {
-      this.executions.push(execution);
-    } else {
-      execution();
-    }
-  }
-
-  private decode(data: any, buffer = this.buffer) {
-    this.token.lastIndex = 0;
-    const decoded = this.decoder.decode(data);
-    buffer.push(
-      decoded
-        .replace(this.token, ANSI.EMPTY)
-        .replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF),
-    );
-    return decoded;
-  }
-
-  private getToken(decoded: string) {
-    this.token.lastIndex = 0;
-    return this.token.exec(decoded);
-  }
-
-  executeQueryBackground(text: string) {
     return new Promise<string>((resolve, reject) => {
       if (this.running || this.executing) {
         reject(new Error("REPL is busy."));
@@ -578,7 +562,9 @@ export class ReplConnection {
         if (outdone && errdone) {
           this.running--;
           this.executing--;
-          resolve(buffer.join(ANSI.EMPTY));
+          const output = buffer.join(ANSI.EMPTY);
+          resolve(output);
+          this.showMessage(output);
         }
       };
 
