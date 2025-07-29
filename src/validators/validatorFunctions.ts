@@ -14,11 +14,11 @@
 import { IRule } from "../models/rule";
 
 export class ValidatorFunctions {
-  private forbiddenChars?: RegExp;
-  private forbiddenCharsErrorMessage?: string;
-  private specialChars?: RegExp;
-  private minLength?: number;
-  private maxLength?: number;
+  private readonly forbiddenChars?: RegExp;
+  private readonly forbiddenCharsErrorMessage?: string;
+  private readonly specialChars?: RegExp;
+  private readonly minLength?: number;
+  private readonly maxLength?: number;
 
   constructor(options?: {
     forbiddenChars?: RegExp;
@@ -83,7 +83,7 @@ export class ValidatorFunctions {
   ): string | null {
     const inRange = value.length >= min && value.length <= max;
     const defaultMessage = `Length must be between ${min} and ${max} characters`;
-    return inRange ? null : errorMessage || defaultMessage;
+    return inRange ? null : (errorMessage ?? defaultMessage);
   }
 
   public validateHasLowerCase(
@@ -101,11 +101,11 @@ export class ValidatorFunctions {
       return "forbiddenChars must be configured";
     }
     const defaultMessage =
-      this.forbiddenCharsErrorMessage || "Contains forbidden characters";
+      this.forbiddenCharsErrorMessage ?? "Contains forbidden characters";
     return ValidatorFunctions.hasNoForbiddenChar(
       value,
       this.forbiddenChars,
-      errorMessage || defaultMessage,
+      errorMessage ?? defaultMessage,
     );
   }
 

@@ -23,15 +23,12 @@ export class Validator {
     return Array.from(this.errors).join("\r\n") || null;
   }
 
-  public isNotEmpty(errorMessage?: string): Validator {
+  public isNotEmpty(errorMessage?: string): this {
     this.validateSync(ValidatorFunctions.createIsNotEmptyRule(errorMessage));
     return this;
   }
 
-  public hasSpecialChar(
-    specialChars: RegExp,
-    errorMessage?: string,
-  ): Validator {
+  public hasSpecialChar(specialChars: RegExp, errorMessage?: string): this {
     this.validateSync(
       ValidatorFunctions.createHasSpecialCharRule(specialChars, errorMessage),
     );
@@ -41,33 +38,29 @@ export class Validator {
   public hasNoForbiddenChar(
     forbiddenChars: RegExp,
     errorMessage?: string,
-  ): Validator {
+  ): this {
     this.validateSync(
       ValidatorFunctions.createHasNoForbiddenCharRule(
         forbiddenChars,
-        errorMessage || "Contains forbidden characters",
+        errorMessage ?? "Contains forbidden characters",
       ),
     );
     return this;
   }
 
-  public inLengthRange(
-    min: number,
-    max: number,
-    errorMessage?: string,
-  ): Validator {
+  public inLengthRange(min: number, max: number, errorMessage?: string): this {
     this.validateSync(
       ValidatorFunctions.createLengthRangeRule(min, max, errorMessage),
     );
     return this;
   }
 
-  public hasLowerCase(errorMessage?: string): Validator {
+  public hasLowerCase(errorMessage?: string): this {
     this.validateSync(ValidatorFunctions.createHasLowerCaseRule(errorMessage));
     return this;
   }
 
-  public hasUpperCase(errorMessage?: string): Validator {
+  public hasUpperCase(errorMessage?: string): this {
     this.validateSync(ValidatorFunctions.createHasUpperCaseRule(errorMessage));
     return this;
   }
