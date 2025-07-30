@@ -19,6 +19,7 @@ import {
   getAutoFocusOutputOnEntrySetting,
   getQExecutablePath,
 } from "../utils/core";
+import { Runner } from "../utils/notifications";
 import { normalizeQuery } from "../utils/queryUtils";
 
 const ANSI = {
@@ -216,13 +217,10 @@ export class ReplConnection {
   }
 
   private sendToProcess(data: string) {
-    const stdin = this.process.stdin;
-    stdin.write(this.stub(data + ANSI.CRLF), () => {
-      stdin.write(this.createToken(1), () => {
-        stdin.write(this.createToken(2));
-      });
-    });
-    this.executing++;
+    this.process.stdin.write(
+      this.stub(data) + ANSI.CRLF + this.createToken(1) + this.createToken(2),
+      () => this.executing++,
+    );
   }
 
   private sendToTerminal(data: string) {
@@ -317,8 +315,8 @@ export class ReplConnection {
   }
 
   private decode(data: any, buffer = this.buffer) {
-    this.token.lastIndex = 0;
     const decoded = this.decoder.decode(data);
+    this.token.lastIndex = 0;
     buffer.push(
       decoded
         .replace(this.token, ANSI.EMPTY)
@@ -420,15 +418,22 @@ export class ReplConnection {
     if (this.opened && !this.executing) this.showPrompt();
   }
 
-  private cancel() {
+  private cancel(all = false) {
     this.process.kill("SIGINT");
+    if (all) {
+      setTimeout(() => {
+        if (this.running || this.executing) {
+          this.cancel(true);
+        }
+      }, 10);
+    }
   }
 
   private close() {
     if (ReplConnection.instance === this) {
       ReplConnection.instance = undefined;
     }
-    this.cancel();
+    this.cancel(true);
     this.process.kill("SIGTERM");
     this.onDidWrite.dispose();
     this.exited = true;
@@ -436,6 +441,9 @@ export class ReplConnection {
 
   private handleInput(data: string) {
     if (this.exited) {
+      return;
+    }
+    if (this.running) {
       return;
     }
 
@@ -462,7 +470,7 @@ export class ReplConnection {
         this.sendToTerminal(ANSI.CRLF);
         break;
       case KEY.CTRLC:
-        this.cancel();
+        this.cancel(true);
         break;
       case KEY.BS:
       case KEY.BSMAC:
@@ -524,8 +532,11 @@ export class ReplConnection {
         break;
       default:
         if (/(?:\r\n|[\r\n])/s.test(data)) {
-          this.sendToTerminal(ANSI.CRLF);
-          this.sendToProcess(normalizeQuery(data));
+          const runner = Runner.create((_, token) =>
+            this.executeQuery(data, token),
+          );
+          runner.title = "Executing code on REPL.";
+          runner.execute();
           break;
         }
         if (data.length < CONF.MAX_INPUT) {
@@ -553,49 +564,75 @@ export class ReplConnection {
   executeQuery(text: string, token: vscode.CancellationToken) {
     return new Promise<string>((resolve, reject) => {
       if (this.running || this.executing) {
-        reject(new Error("REPL is busy."));
+        reject(new Error("REPL is already executing code."));
         return;
       }
-      token.onCancellationRequested(() => this.cancel());
+      this.running++;
 
+      const lines = normalizeQuery(text).split(ANSI.CRLF);
       const buffer: string[] = [];
+      const line: string[] = [];
+
       let outdone = false;
       let errdone = false;
+      let index = 0;
+      let cancelled = token.isCancellationRequested;
+
+      token.onCancellationRequested(() => {
+        cancelled = true;
+        this.cancel();
+      });
 
       const done = () => {
         if (outdone && errdone) {
-          this.running--;
-          this.executing--;
-          const output = buffer.join(ANSI.EMPTY);
-          resolve(output);
+          const output = line.join(ANSI.EMPTY);
+          buffer.push(output);
           this.showMessage(output);
+          this.executing--;
+          if (cancelled) {
+            disconnect();
+          } else if (index < lines.length - 1) {
+            index++;
+            line.length = 0;
+            outdone = false;
+            errdone = false;
+            this.sendToProcess(lines[index]);
+          } else {
+            disconnect();
+          }
         }
       };
 
       const out = (data: any) => {
-        const decoded = this.decode(data, buffer);
+        const decoded = this.decode(data, line);
         const match = this.getToken(decoded);
         if (match) {
-          this.process.stdout.off("data", out);
           outdone = true;
           done();
         }
       };
 
       const err = (data: any) => {
-        const decoded = this.decode(data, buffer);
+        const decoded = this.decode(data, line);
         const match = this.getToken(decoded);
         if (match) {
-          this.process.stderr.off("data", err);
           errdone = true;
           done();
         }
       };
 
-      this.running++;
+      const disconnect = () => {
+        this.process.stdout.off("data", out);
+        this.process.stderr.off("data", err);
+        resolve(buffer.join(ANSI.EMPTY));
+        this.running--;
+        setTimeout(() => this.showPrompt(true));
+      };
+
       this.process.stdout.on("data", out);
       this.process.stderr.on("data", err);
-      this.sendToProcess(normalizeQuery(text));
+      this.showMessage(ANSI.CRLF);
+      this.sendToProcess(lines[index]);
     });
   }
 
