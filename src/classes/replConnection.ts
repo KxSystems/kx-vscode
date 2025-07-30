@@ -93,6 +93,7 @@ export class ReplConnection {
   private readonly decoder: TextDecoder;
   private readonly terminal: vscode.Terminal;
   private readonly process: ChildProcessWithoutNullStreams;
+  private readonly tokens: vscode.CancellationTokenSource[] = [];
 
   private messages? = [
     `${CONF.TITLE} Copyright (C) 1993-2025 KX Systems` + ANSI.CRLF.repeat(2),
@@ -405,25 +406,28 @@ export class ReplConnection {
     if (!this.messages && !this.executing) this.showPrompt();
   }
 
+  private sendSignalToProcess(signal: NodeJS.Signals = "SIGINT") {
+    this.process.kill(signal);
+  }
+
   private cancel() {
-    this.process.kill("SIGINT");
+    let token: vscode.CancellationTokenSource | undefined;
+    while ((token = this.tokens.shift())) {
+      token.cancel();
+    }
   }
 
   private close() {
     if (ReplConnection.instance === this) {
       ReplConnection.instance = undefined;
     }
-    this.cancel();
-    this.process.kill("SIGTERM");
+    this.sendSignalToProcess("SIGTERM");
     this.onDidWrite.dispose();
     this.exited = true;
   }
 
   private handleInput(data: string) {
     if (this.exited) {
-      return;
-    }
-    if (this.running) {
       return;
     }
 
@@ -548,6 +552,8 @@ export class ReplConnection {
         return;
       }
       this.running++;
+      const source = new vscode.CancellationTokenSource();
+      this.tokens.unshift(source);
 
       const buff: string[] = [];
       const lines = normalizeQuery(text).split(ANSI.CRLF);
@@ -556,12 +562,16 @@ export class ReplConnection {
       let doneErr = false;
       let index = 0;
       let line: string[] = [];
-      let cancelled = token.isCancellationRequested;
 
-      token.onCancellationRequested(() => {
-        cancelled = true;
-        this.cancel();
-      });
+      let cancelled =
+        token.isCancellationRequested || source.token.isCancellationRequested;
+
+      [token, source.token].forEach((token) =>
+        token.onCancellationRequested(() => {
+          cancelled = true;
+          this.sendSignalToProcess();
+        }),
+      );
 
       const check = () => {
         if (doneOut && doneErr) {
@@ -585,7 +595,7 @@ export class ReplConnection {
         }
       };
 
-      const handleOut = (data: any) => {
+      const handleOutput = (data: any) => {
         const decoded = this.decode(data, line);
         const match = this.getToken(decoded);
         if (match) {
@@ -594,7 +604,7 @@ export class ReplConnection {
         }
       };
 
-      const handleErr = (data: any) => {
+      const handleErrorOutput = (data: any) => {
         const decoded = this.decode(data, line);
         const match = this.getToken(decoded);
         if (match) {
@@ -604,15 +614,16 @@ export class ReplConnection {
       };
 
       const done = () => {
-        this.process.stdout.off("data", handleOut);
-        this.process.stderr.off("data", handleErr);
+        this.process.stdout.off("data", handleOutput);
+        this.process.stderr.off("data", handleErrorOutput);
         resolve(buff.join(ANSI.EMPTY));
         this.running--;
+        this.tokens.shift()?.dispose();
         this.showPrompt(true);
       };
 
-      this.process.stdout.on("data", handleOut);
-      this.process.stderr.on("data", handleErr);
+      this.process.stdout.on("data", handleOutput);
+      this.process.stderr.on("data", handleErrorOutput);
       this.sendToTerminal(ANSI.CRLF);
       this.sendToProcess(lines[index]);
     });
