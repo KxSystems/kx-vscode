@@ -515,7 +515,7 @@ export class ReplConnection {
           const runner = Runner.create((_, token) =>
             this.executeQuery(data, token),
           );
-          runner.title = "Executing code on REPL.";
+          runner.title = "Executing clipboard on REPL.";
           runner.execute();
           break;
         }
@@ -549,13 +549,13 @@ export class ReplConnection {
       }
       this.running++;
 
+      const buff: string[] = [];
       const lines = normalizeQuery(text).split(ANSI.CRLF);
-      const buffer: string[] = [];
-      const line: string[] = [];
 
-      let outdone = false;
-      let errdone = false;
+      let doneOut = false;
+      let doneErr = false;
       let index = 0;
+      let line: string[] = [];
       let cancelled = token.isCancellationRequested;
 
       token.onCancellationRequested(() => {
@@ -564,10 +564,10 @@ export class ReplConnection {
       });
 
       const check = () => {
-        if (outdone && errdone) {
+        if (doneOut && doneErr) {
           const output = line.join(ANSI.EMPTY);
           if (output) {
-            buffer.push(output);
+            buff.push(output);
             this.sendToTerminal(output);
           }
           this.executing--;
@@ -575,9 +575,9 @@ export class ReplConnection {
             done();
           } else if (index < lines.length - 1) {
             index++;
-            line.length = 0;
-            outdone = false;
-            errdone = false;
+            line = [];
+            doneOut = false;
+            doneErr = false;
             this.sendToProcess(lines[index]);
           } else {
             done();
@@ -589,7 +589,7 @@ export class ReplConnection {
         const decoded = this.decode(data, line);
         const match = this.getToken(decoded);
         if (match) {
-          outdone = true;
+          doneOut = true;
           check();
         }
       };
@@ -598,7 +598,7 @@ export class ReplConnection {
         const decoded = this.decode(data, line);
         const match = this.getToken(decoded);
         if (match) {
-          errdone = true;
+          doneErr = true;
           check();
         }
       };
@@ -606,9 +606,9 @@ export class ReplConnection {
       const done = () => {
         this.process.stdout.off("data", handleOut);
         this.process.stderr.off("data", handleErr);
-        resolve(buffer.join(ANSI.EMPTY));
+        resolve(buff.join(ANSI.EMPTY));
         this.running--;
-        setTimeout(() => this.showPrompt(true));
+        this.showPrompt(true);
       };
 
       this.process.stdout.on("data", handleOut);
