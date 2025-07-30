@@ -94,9 +94,9 @@ export class ReplConnection {
   private readonly terminal: vscode.Terminal;
   private readonly process: ChildProcessWithoutNullStreams;
 
-  private messages: string[] = [];
-  private buffer: string[] = [];
-  private input: string[] = [];
+  private messages? = [
+    `${CONF.TITLE} Copyright (C) 1993-2025 KX Systems` + ANSI.CRLF.repeat(2),
+  ];
 
   private _context = CTX.Q;
   private _namespace = ANSI.EMPTY;
@@ -105,10 +105,11 @@ export class ReplConnection {
   private maxInputIndex = 0;
   private inputIndex = 0;
 
+  private buffer: string[] = [];
+  private input: string[] = [];
   private serial = 0;
   private executing = 0;
   private running = 0;
-  private opened = false;
   private exited = false;
 
   private constructor() {
@@ -224,7 +225,8 @@ export class ReplConnection {
   }
 
   private sendToTerminal(data: string) {
-    this.onDidWrite.fire(data);
+    if (this.messages) this.messages.push(data);
+    else this.onDidWrite.fire(data);
   }
 
   private promptProperties(context?: string, index?: number) {
@@ -296,22 +298,14 @@ export class ReplConnection {
     this.sendToTerminal(ANSI.CRLF);
   }
 
-  private showMessage(message: string) {
-    if (this.opened) {
-      this.sendToTerminal(message);
-    } else {
-      this.messages.push(message);
-    }
-  }
-
   private showOutput(decoded: string) {
     if (this.exited) {
       return;
     }
     const output = decoded.replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
 
-    if (this.opened) this.buffer.push(output);
-    else this.messages.push(output);
+    if (this.messages) this.messages.push(output);
+    else this.buffer.push(output);
   }
 
   private decode(data: any, buffer = this.buffer) {
@@ -339,12 +333,12 @@ export class ReplConnection {
   }
 
   private handleError(error: Error) {
-    this.showMessage(error.message + ANSI.CRLF);
+    this.sendToTerminal(error.message + ANSI.CRLF);
   }
 
   private handleClose(code?: number) {
     const message = `${CONF.TITLE} exited with code (${code ?? 0}).${ANSI.CRLF}`;
-    this.showMessage(message);
+    this.sendToTerminal(message);
     this.exited = true;
   }
 
@@ -395,18 +389,11 @@ export class ReplConnection {
   }
 
   private open(dimensions?: vscode.TerminalDimensions) {
-    if (dimensions) {
-      this.setDimensions(dimensions);
+    if (dimensions) this.setDimensions(dimensions);
+    if (this.messages) {
+      this.messages.forEach((message) => this.onDidWrite.fire(message));
+      this.messages = undefined;
     }
-
-    this.sendToTerminal(
-      `${CONF.TITLE} Copyright (C) 1993-2025 KX Systems` + ANSI.CRLF.repeat(2),
-    );
-
-    this.messages.forEach((message) => this.sendToTerminal(message));
-    this.messages = [];
-    this.opened = true;
-
     this.showPrompt(true);
   }
 
@@ -415,25 +402,18 @@ export class ReplConnection {
     this.columns = dimensions.columns;
     this.updateMaxInputIndex();
     this.sendDimensions();
-    if (this.opened && !this.executing) this.showPrompt();
+    if (!this.messages && !this.executing) this.showPrompt();
   }
 
-  private cancel(all = false) {
+  private cancel() {
     this.process.kill("SIGINT");
-    if (all) {
-      setTimeout(() => {
-        if (this.running || this.executing) {
-          this.cancel(true);
-        }
-      }, 10);
-    }
   }
 
   private close() {
     if (ReplConnection.instance === this) {
       ReplConnection.instance = undefined;
     }
-    this.cancel(true);
+    this.cancel();
     this.process.kill("SIGTERM");
     this.onDidWrite.dispose();
     this.exited = true;
@@ -470,7 +450,7 @@ export class ReplConnection {
         this.sendToTerminal(ANSI.CRLF);
         break;
       case KEY.CTRLC:
-        this.cancel(true);
+        this.cancel();
         break;
       case KEY.BS:
       case KEY.BSMAC:
@@ -583,14 +563,16 @@ export class ReplConnection {
         this.cancel();
       });
 
-      const done = () => {
+      const check = () => {
         if (outdone && errdone) {
           const output = line.join(ANSI.EMPTY);
-          buffer.push(output);
-          this.showMessage(output);
+          if (output) {
+            buffer.push(output);
+            this.sendToTerminal(output);
+          }
           this.executing--;
           if (cancelled) {
-            disconnect();
+            done();
           } else if (index < lines.length - 1) {
             index++;
             line.length = 0;
@@ -598,40 +580,40 @@ export class ReplConnection {
             errdone = false;
             this.sendToProcess(lines[index]);
           } else {
-            disconnect();
+            done();
           }
         }
       };
 
-      const out = (data: any) => {
+      const handleOut = (data: any) => {
         const decoded = this.decode(data, line);
         const match = this.getToken(decoded);
         if (match) {
           outdone = true;
-          done();
+          check();
         }
       };
 
-      const err = (data: any) => {
+      const handleErr = (data: any) => {
         const decoded = this.decode(data, line);
         const match = this.getToken(decoded);
         if (match) {
           errdone = true;
-          done();
+          check();
         }
       };
 
-      const disconnect = () => {
-        this.process.stdout.off("data", out);
-        this.process.stderr.off("data", err);
+      const done = () => {
+        this.process.stdout.off("data", handleOut);
+        this.process.stderr.off("data", handleErr);
         resolve(buffer.join(ANSI.EMPTY));
         this.running--;
         setTimeout(() => this.showPrompt(true));
       };
 
-      this.process.stdout.on("data", out);
-      this.process.stderr.on("data", err);
-      this.showMessage(ANSI.CRLF);
+      this.process.stdout.on("data", handleOut);
+      this.process.stderr.on("data", handleErr);
+      this.sendToTerminal(ANSI.CRLF);
       this.sendToProcess(lines[index]);
     });
   }
