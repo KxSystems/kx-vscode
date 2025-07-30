@@ -2533,6 +2533,26 @@ describe("Utils", () => {
       );
     });
 
+    it("should handle with same other label name", () => {
+      getConfigurationStub.returns({
+        get: sinon.stub().returns([
+          {
+            name: "testeLabel1",
+            color: { name: "red", colorHex: "#FF0000" },
+          },
+        ]),
+        update: sinon.stub(),
+      });
+      const logStub = sinon.stub(loggers, "kdbOutputLog");
+      LabelsUtils.createNewLabel("testeLabel1", "red");
+
+      sinon.assert.calledWith(
+        logStub,
+        "[connLabel] Label with this name already exists.",
+        "ERROR",
+      );
+    });
+
     it("should handle no color selected", () => {
       getConfigurationStub.returns({
         get: sinon.stub(),
@@ -2652,6 +2672,39 @@ describe("Utils", () => {
 
       assert.strictEqual(ext.connLabelList.length, 1);
       assert.strictEqual(ext.connLabelList[0].name, "label2");
+    });
+
+    it("should not rename a label if the name is the same of other label", () => {
+      getConfigurationStub.returns({
+        get: sinon.stub().returns([
+          {
+            name: "label2",
+            color: { name: "red", colorHex: "#FF0000" },
+          },
+        ]),
+        update: sinon.stub().returns(Promise.resolve()),
+      });
+
+      const logStub = sinon.stub(loggers, "kdbOutputLog");
+      LabelsUtils.renameLabel("label1", "label2");
+      sinon.assert.calledWith(
+        logStub,
+        "[connLabel] Label with this name already exists.",
+        "ERROR",
+      );
+    });
+
+    it("should not rename a label if the name is empty or the same of original label name", () => {
+      getConfigurationStub.returns({
+        get: sinon.stub(),
+        update: sinon.stub().returns(Promise.resolve()),
+      });
+
+      LabelsUtils.renameLabel("label1", "");
+      sinon.assert.notCalled(getConfigurationStub);
+
+      LabelsUtils.renameLabel("label1", "label1");
+      sinon.assert.notCalled(getConfigurationStub);
     });
 
     it("should set label color", () => {
