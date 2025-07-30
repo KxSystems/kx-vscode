@@ -453,9 +453,9 @@ Similarly, you can execute arbitrary code against **kdb Insights Enterprise**. T
 
 ### Concurrent code execution and querying
 
-kdb VSCode allows users to execute code on a specific Data Access Process (DAP). That allows you to target specific replicas within the RDB, IDB, and HDB tiers when executing queries. To select a replica for query execution, simply choose the desired tier (RDB, IDB, HDB) and then select the specific replica from the list of available options, such as `demo-ui-fx rdb-0`, `demo-ui-fx idb-1`. Once selected, queries execute on that specific replica, ensuring better load distribution and minimizing execution time across the cluster.
+Within each tier, multiple processes are available to handle queries, ensuring that queries can be run simultaneously across these processes. For example, if the RDB tier has three processes (process 0, process 1, process 2), and the specific replica is not being targeted the queries are directed to whichever process is available, allowing multiple users to execute their queries in parallel. As soon as a process becomes available, it handles the next incoming query, ensuring efficient resource utilization and minimal delays.
 
-Within each tier, multiple processes are available to handle queries, ensuring that queries can be run simultaneously across these processes. For example, if the RDB tier has three processes (process 0, process 1, process 2), queries are directed to whichever process is available, allowing multiple users to execute their queries in parallel. As soon as a process becomes available, it handles the next incoming query, ensuring efficient resource utilization and minimal delays.
+kdb VSCode allows users to execute code on a specific Data Access Process (DAP). That allows you to target specific replicas within the RDB, IDB, and HDB tiers when executing queries. To select a replica for query execution, simply choose the desired tier (RDB, IDB, HDB) and then select the specific replica from the list of available options, such as `demo-ui-fx rdb-0`, `demo-ui-fx idb-1`. Once selected, queries execute on that specific replica, ensuring better load distribution and minimizing execution time across the cluster.
 
 When connecting to a kdb Insights server version 1.14.2 or higher, you can see detailed information about the available replicas for each database (RDB, IDB, HDB). This allows you to choose a specific replica for your query.
 
@@ -530,7 +530,7 @@ Refer to the [`getData` API](https://code.kx.com/insights/api/database/query/get
 
 ### QSQL queries
 
-The `.com_kx_edi.qsql` API is a QSQL query builder that assembles QSQL queries based on a q expression. It is a developer tool that allows running freeform q code against a specific database tier.
+The `.com_kx_edi.qsql` API is a QSQL query builder that assembles QSQL queries based on a q expression. It is a developer tool that allows running freeform q code against a specific database tier and if required against a specific data access process.
 
 This function runs an QSQL query.
 
@@ -538,11 +538,11 @@ This function runs an QSQL query.
 .com_kx_edi.qsql[args]
 ```
 
-**Note**: Along with the query itself, you must also specify the target database and tier.
+**Note**: Along with the query itself, you must also specify the target database and you can choose to specify the database tier and specific data access process if required.
 
 Refer to the [QSQL documentation](https://code.kx.com/insights/api/database/query/qsql.html) for more details.
 
-**Warning!** Starting with kdb Insights Enterprise version 1.13, QSQL queries and populating QSQL only work if the Query Environment (QE) is enabled. Ensure you have enabled QEs to use QSQL; they are disabled by default in kdb VS Code. Refer to [Query Environments](https://code.kx.com/insights/enterprise/configuration/base.html#query-environments) for more details.
+**Warning!** Starting with kdb Insights Enterprise version 1.13, QSQL queries and populating QSQL only work if the Query Environment (QE) is enabled. Ensure you have enabled QEs to use QSQL; they are disabled by default in kdb Insights Enterprise from version 1.13 onwards. Refer to [Query Environments](https://code.kx.com/insights/enterprise/configuration/base.html#query-environments) for more details.
 
 ### SQL queries
 
@@ -747,7 +747,7 @@ From this view, you can add either Markdown or Code blocks to the notebook by cl
 
 ![Add code blocks to notebook](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/add-notebook-code.png)
 
-In KX Notebooks, you can select a target and a variable name to populate the Scratchpad. When you select a connection, clicking on the Scratchpad tab displays a list where you can change between the Scratchpad and one of the DAPs (RDB, IDB, or HDB).
+In KX Notebooks, you can select a target and a variable name to populate the Scratchpad. When you select a connection, clicking on the Scratchpad tab displays a list where you can change between the Scratchpad and one of the database tiers (RDB, IDB, or HDB) or a specific database process on one of the tiers.
 
 Next to the Scratchpad tab, there is a language option. To change the language of the code block, click on the language labels and select language from the Command Palette. You can select between q, Python, Markdown, or MS SQL.
 
