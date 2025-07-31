@@ -877,16 +877,23 @@ The format is:
 
 To update kdb VS Code settings, search for **kdb** from _Preferences_ > _Settings_, or right-click the settings icon in kdb VS Code marketplace panel and choose **Extension Settings**.
 
-| Setting                                                        | Action                                                              |
-| -------------------------------------------------------------- | ------------------------------------------------------------------- |
-| **Hide notification of installation path after first install** | yes/no; default no                                                  |
-| **Hide subscription to newsletter after first install**        | yes/no; default no                                                  |
-| **Insights Enterprise Connections for Explorer**               | [edit JSON settings](#insights-enterprise-connections-for-explorer) |
-| **Linting**                                                    | Enable linting for q and quke files                                 |
-| **Refactoring**                                                | Choose refactoring scope                                            |
-| **QHOME directory for q runtime**                              | Display location path of q installation                             |
-| **Servers**                                                    | [edit JSON settings](#servers)                                      |
-| **Auto focus output on entry**                                 | yes/no; default yes                                                 |
+| Setting                                                                                                            | Action                                                                  |
+| ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| **Hide notification for installation path, after first install**                                                   | yes/no; default no                                                      |
+| **Hide subscribe for registration notification**                                                                   | yes/no; default no                                                      |
+| **Hide the extension survey dialog box**                                                                           | yes/no; default no                                                      |
+| **Hide detailed console query output**                                                                             | yes/no; default yes                                                     |
+| **kdb Insights Enterprise connections for explorer**                                                               | [edit JSON settings](#kdb-insights-enterprise-connections-for-explorer) |
+| **Linting**                                                                                                        | Enable linting for q and quke files                                     |
+| **Refactoring**                                                                                                    | Choose refactoring scope                                                |
+| **QHOME directory for q runtime**                                                                                  | Display location path of q installation                                 |
+| **Never show q install walkthrough again**                                                                         | yes/no; default no                                                      |
+| **kdb servers for explorer**                                                                                       | [edit JSON settings](#servers)                                          |
+| **Automatically focus the output console when running a query without an active results tab or receive log entry** | yes/no; default yes                                                     |
+| **Connection map for workspace files**                                                                             | edit JSON settings                                                      |
+| **Target map for workspace files**                                                                                 | edit JSON settings                                                      |
+| **List of label names and colorset**                                                                               | edit JSON settings                                                      |
+| **Labels connection map**                                                                                          | edit JSON settings                                                      |
 
 ### Refactoring
 

@@ -213,7 +213,7 @@
         },
         "kdb.targetMap": {
           "type": "object",
-          "description": "Connection map for workspace files",
+          "description": "Target map for workspace files",
           "default": {},
           "scope": "resource"
         },
