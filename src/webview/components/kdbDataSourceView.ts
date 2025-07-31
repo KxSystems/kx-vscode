@@ -443,7 +443,7 @@ export class KdbDataSourceView extends LitElement {
         .filter(
           (api) =>
             (api.api === ".kxi.getData" || !api.api.startsWith(".kxi.")) &&
-            api.custom === false,
+            api.uda === false,
         )
         .map((api) => {
           const value =
