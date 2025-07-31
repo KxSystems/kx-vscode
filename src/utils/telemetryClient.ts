@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,10 +11,10 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { TelemetryReporter } from "@vscode/extension-telemetry";
 import * as crypto from "crypto";
 import * as os from "os";
 import { OutputChannel, window, workspace } from "vscode";
-import TelemetryReporter from "vscode-extension-telemetry";
 
 import { ext } from "../extensionVariables";
 
@@ -36,11 +36,7 @@ class ExtensionTelemetry {
         this.output = window.createOutputChannel("telemetry-client-test");
       } else {
         try {
-          this.reporter = new TelemetryReporter(
-            ext.extensionName,
-            ext.extensionVersion,
-            ext.extensionKey,
-          );
+          this.reporter = new TelemetryReporter(ext.extAIConnString);
           this.defaultProperties["common.vscodemachineid"] =
             generateMachineId();
           this.defaultProperties["common.vscodesessionid"] =
@@ -68,22 +64,26 @@ class ExtensionTelemetry {
     }
   }
 
-  public sendException(
-    exception: Error,
+  public sendError(
+    error: Error,
     properties?: { [key: string]: string },
     measurements?: { [key: string]: number },
   ): void {
-    const props = Object.assign({}, this.defaultProperties, properties);
-    const error = new Error(exception.message);
-    error.stack = "";
+    const props = {
+      ...this.defaultProperties,
+      ...properties,
+      message: error.message,
+      name: error.name,
+      stack: error.stack ?? "",
+    };
 
     if (this.reporter) {
-      this.reporter.sendTelemetryException(error, props, measurements);
+      this.reporter.sendTelemetryErrorEvent(error.name, props, measurements);
     }
 
     if (this.output) {
       this.output.appendLine(
-        `telemetry/${error}${JSON.stringify({ props, measurements })}`,
+        `telemetry/exception ${JSON.stringify({ props, measurements })}`,
       );
     }
   }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -18,15 +18,15 @@ import Path from "path";
 import {
   Diagnostic,
   DiagnosticSeverity,
-  ProgressLocation,
   Range,
   TextDocument,
   Uri,
-  window,
   workspace,
 } from "vscode";
 
 import { ext } from "../extensionVariables";
+import { getBasename } from "../utils/core";
+import { Runner } from "../utils/notifications";
 
 const cache = new Map<string, Thenable<Diagnostic[]>>();
 
@@ -182,39 +182,34 @@ const severity: { [key: string]: DiagnosticSeverity } = {
 };
 
 function lint(document: TextDocument) {
-  return window.withProgress(
-    {
-      title: "Linting",
-      location: ProgressLocation.Window,
-      cancellable: true,
-    },
-    async (_progress, token) => {
-      try {
-        const results = await getLinterResults(document.uri);
-        if (token.isCancellationRequested) {
-          cache.delete(document.uri.path);
-          return [];
-        }
-        return results.map((result) => {
-          const diagnostic = new Diagnostic(
-            new Range(
-              result.startLine - 1,
-              result.startCol - 1,
-              result.endLine - 1,
-              result.endCol,
-            ),
-            result.description,
-            severity[result.errorClass],
-          );
-          diagnostic.source = "qlint";
-          diagnostic.code = result.label;
-          return diagnostic;
-        });
-      } catch (error) {
-        throw new Error(`Linting Failed ${error}`);
+  const runner = Runner.create(async (_, token) => {
+    try {
+      const results = await getLinterResults(document.uri);
+      if (token.isCancellationRequested) {
+        cache.delete(document.uri.path);
+        return [];
       }
-    },
-  );
+      return results.map((result) => {
+        const diagnostic = new Diagnostic(
+          new Range(
+            result.startLine - 1,
+            result.startCol - 1,
+            result.endLine - 1,
+            result.endCol,
+          ),
+          result.description,
+          severity[result.errorClass],
+        );
+        diagnostic.source = "qlint";
+        diagnostic.code = result.label;
+        return diagnostic;
+      });
+    } catch (error) {
+      throw new Error(`Linting Failed ${error}`);
+    }
+  });
+  runner.title = `Linting ${getBasename(document.uri)}.`;
+  return runner.execute();
 }
 
 async function setDiagnostics(document: TextDocument) {

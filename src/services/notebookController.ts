@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -13,18 +13,29 @@
 
 import * as vscode from "vscode";
 
+import { getCellKind } from "./notebookProviders";
 import { InsightsConnection } from "../classes/insightsConnection";
-import { ext } from "../extensionVariables";
-import { ConnectionManagementService } from "../services/connectionManagerService";
-import { kdbOutputLog } from "../utils/core";
-import { resultToBase64 } from "../utils/queryUtils";
+import { LocalConnection } from "../classes/localConnection";
+import {
+  getPartialDatasourceFile,
+  populateScratchpad,
+  runDataSource,
+} from "../commands/dataSourceCommand";
+import { executeQuery } from "../commands/serverCommand";
+import { findConnection } from "../commands/workspaceCommand";
+import { CellKind } from "../models/notebook";
+import { getBasename } from "../utils/core";
+import { MessageKind, notify } from "../utils/notifications";
+import { resultToBase64, needsScratchpad } from "../utils/queryUtils";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
+
+const logger = "notebookController";
 
 export class KxNotebookController {
   readonly controllerId = "kx-notebook-1";
   readonly notebookType = "kx-notebook";
   readonly label = "KX Notebook";
-  readonly supportedLanguages = ["q", "python"];
+  readonly supportedLanguages = ["q", "python", "sql"];
 
   protected readonly controller: vscode.NotebookController;
   protected order = 0;
@@ -44,54 +55,177 @@ export class KxNotebookController {
     this.controller.dispose();
   }
 
-  createConnectionManager() {
-    return new ConnectionManagementService();
-  }
-
   async execute(
     cells: vscode.NotebookCell[],
-    _notebook: vscode.NotebookDocument,
-    _controller: vscode.NotebookController,
+    notebook: vscode.NotebookDocument,
+    controller: vscode.NotebookController,
   ): Promise<void> {
-    const conn = ext.activeConnection;
-    if (conn === undefined) {
-      vscode.window.showErrorMessage(
-        "You aren't connected to any connection. Once connected please try again.",
-      );
+    const conn = await findConnection(notebook.uri);
+    if (!conn) {
       return;
     }
-    const manager = this.createConnectionManager();
-    const isInsights = conn instanceof InsightsConnection;
-    const connVersion = isInsights ? (conn.insightsVersion ?? 0) : 0;
+    const { isInsights, connVersion } = this.getInsightProps(conn);
 
     for (const cell of cells) {
-      const isPython = cell.document.languageId === "python";
-      const execution = this.controller.createNotebookCellExecution(cell);
+      const execution = controller.createNotebookCellExecution(cell);
+
       execution.executionOrder = ++this.order;
       execution.start(Date.now());
 
+      let success = false;
+      let cancellationDisposable: vscode.Disposable | undefined;
+
       try {
-        const results = await manager.executeQuery(
-          cell.document.getText(),
-          conn.connLabel,
-          ".",
-          false,
-          isPython,
+        const kind = getCellKind(cell);
+
+        const { target, variable } = this.getCellMetadata(
+          cell,
+          kind,
+          isInsights,
+          conn,
         );
 
-        const rendered = render(results, isPython, isInsights, connVersion);
+        const executor = this.getQueryExecutor(
+          conn,
+          execution,
+          cell,
+          kind,
+          target,
+          variable,
+        );
 
-        execution.replaceOutput([
-          new vscode.NotebookCellOutput([
-            vscode.NotebookCellOutputItem.text(rendered.text, rendered.mime),
-          ]),
+        let results = await Promise.race([
+          (target || kind === CellKind.SQL) && !variable
+            ? executor
+            : needsScratchpad(conn.connLabel, executor),
+          new Promise((_, reject) => {
+            const updateCancelled = () => {
+              if (execution.token.isCancellationRequested) {
+                reject(new vscode.CancellationError());
+              }
+            };
+            updateCancelled();
+            cancellationDisposable =
+              execution.token.onCancellationRequested(updateCancelled);
+          }),
         ]);
+
+        if (variable) {
+          results = `Scratchpad variable (${variable}) populated.`;
+        }
+
+        const rendered =
+          target || kind === CellKind.SQL
+            ? render(results, kind === CellKind.PYTHON, isInsights)
+            : render(
+                results,
+                kind === CellKind.PYTHON,
+                isInsights,
+                connVersion,
+              );
+
+        this.replaceOutput(execution, rendered);
+        success = true;
       } catch (error) {
-        kdbOutputLog(`${error}`, "ERROR");
+        notify(`Execution on ${conn.connLabel} stopped.`, MessageKind.DEBUG, {
+          logger,
+          params: error,
+        });
+        this.replaceOutput(execution, {
+          text: `<p>Execution stopped.</p><p>${error instanceof Error ? error.message : error}</p>`,
+          mime: "text/html",
+        });
+        break;
       } finally {
-        execution.end(true, Date.now());
+        cancellationDisposable?.dispose();
+        execution.end(success, Date.now());
       }
     }
+  }
+
+  getInsightProps(conn: LocalConnection | InsightsConnection) {
+    let isInsights = false;
+    let connVersion = 0;
+
+    if (conn instanceof InsightsConnection) {
+      isInsights = true;
+      connVersion = conn.insightsVersion ?? 0;
+    }
+
+    return { isInsights, connVersion };
+  }
+
+  getCellMetadata(
+    cell: vscode.NotebookCell,
+    kind: CellKind,
+    isInsights: boolean,
+    conn: InsightsConnection | LocalConnection,
+  ): { target?: string; variable?: string } {
+    const target = cell.metadata?.target;
+    const variable = cell.metadata?.variable;
+
+    if (!isInsights) {
+      if (kind === CellKind.SQL) {
+        throw new Error(`SQL is not supported on ${conn.connLabel}`);
+      }
+      if (target) {
+        throw new Error(
+          `Setting execution target (${target}) is not supported on ${conn.connLabel}.`,
+        );
+      }
+      if (variable) {
+        throw new Error(
+          `Setting output variable ${variable} is not supported on ${conn.connLabel}.`,
+        );
+      }
+    }
+
+    return { target, variable };
+  }
+
+  getQueryExecutor(
+    conn: LocalConnection | InsightsConnection,
+    execution: vscode.NotebookCellExecution,
+    cell: vscode.NotebookCell,
+    kind: CellKind,
+    target?: string,
+    variable?: string,
+  ): Promise<any> {
+    const executorName = getBasename(cell.notebook.uri);
+
+    if (target || kind === CellKind.SQL) {
+      const params = getPartialDatasourceFile(
+        cell.document.getText(),
+        target,
+        kind === CellKind.SQL,
+        kind === CellKind.PYTHON,
+      );
+      return variable
+        ? populateScratchpad(params, conn.connLabel, variable, true)
+        : runDataSource(params, conn.connLabel, executorName);
+    } else {
+      return executeQuery(
+        cell.document.getText(),
+        conn.connLabel,
+        executorName,
+        ".",
+        kind === CellKind.PYTHON,
+        false,
+        false,
+        execution.token,
+      );
+    }
+  }
+
+  replaceOutput(
+    execution: vscode.NotebookCellExecution,
+    rendered: Rendered,
+  ): void {
+    execution.replaceOutput([
+      new vscode.NotebookCellOutput([
+        vscode.NotebookCellOutputItem.text(rendered.text, rendered.mime),
+      ]),
+    ]);
   }
 }
 
@@ -104,7 +238,7 @@ function render(
   results: any,
   isPython: boolean,
   isInsights: boolean,
-  connVersion: number,
+  connVersion?: number,
 ): Rendered {
   let text = "No results.";
   let mime = "text/plain";

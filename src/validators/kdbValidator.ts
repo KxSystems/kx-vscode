@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -44,6 +44,10 @@ export function validateServerAlias(
 
     if (!isLocal && input.toLowerCase() === "local") {
       return "The server name “local” is reserved for connections to the Bundled q process";
+    }
+
+    if (input.toUpperCase() === ext.REPL) {
+      return `The server name '${input}' is reserved for connections to the REPL`;
     }
   }
   return undefined;

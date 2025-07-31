@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,9 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { sync as glob } from "glob";
-import { readFileSync } from "node:fs";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { readFile } from "fs/promises";
+import { fileURLToPath } from "url";
 import {
   CallHierarchyIncomingCall,
   CallHierarchyIncomingCallsParams,
@@ -28,13 +27,10 @@ import {
   DefinitionParams,
   Diagnostic,
   DiagnosticSeverity,
-  DidChangeConfigurationParams,
   DidChangeWatchedFilesParams,
   DocumentSymbol,
   DocumentSymbolParams,
-  FileChangeType,
   InitializeParams,
-  LSPAny,
   Location,
   Range,
   ReferenceParams,
@@ -46,7 +42,6 @@ import {
   ServerCapabilities,
   SymbolKind,
   TextDocumentChangeEvent,
-  TextDocumentIdentifier,
   TextDocumentPositionParams,
   TextDocumentSyncKind,
   TextDocuments,
@@ -80,18 +75,14 @@ import {
   lamdaDefinition,
 } from "./parser";
 
+const logger = "qLangServer";
 
-interface Settings {
-  debug: boolean;
-  linting: boolean;
-  refactoring: "Workspace" | "Window";
+const enum MessageKind {
+  DEBUG = "DEBUG",
+  INFO = "INFO",
+  WARNING = "WARNING",
+  ERROR = "ERROR",
 }
-
-const defaultSettings: Settings = {
-  debug: false,
-  linting: false,
-  refactoring: "Workspace",
-};
 
 interface Tokenized {
   uri: string;
@@ -101,17 +92,18 @@ interface Tokenized {
 export default class QLangServer {
   declare private connection: Connection;
   declare private params: InitializeParams;
-  declare private settings: Settings;
+  declare private opened: Set<string>;
   declare private cached: Map<string, Token[]>;
   declare public documents: TextDocuments<TextDocument>;
 
   constructor(connection: Connection, params: InitializeParams) {
     this.connection = connection;
     this.params = params;
-    this.settings = defaultSettings;
+    this.opened = new Set();
     this.cached = new Map();
     this.documents = new TextDocuments(TextDocument);
     this.documents.listen(this.connection);
+    this.documents.onDidOpen(this.onDidOpen.bind(this));
     this.documents.onDidClose(this.onDidClose.bind(this));
     this.documents.onDidChangeContent(this.onDidChangeContent.bind(this));
     this.connection.onDocumentSymbol(this.onDocumentSymbol.bind(this));
@@ -119,9 +111,6 @@ export default class QLangServer {
     this.connection.onDefinition(this.onDefinition.bind(this));
     this.connection.onRenameRequest(this.onRenameRequest.bind(this));
     this.connection.onCompletion(this.onCompletion.bind(this));
-    this.connection.onDidChangeWatchedFiles(
-      this.onDidChangeWatchedFiles.bind(this),
-    );
     this.connection.languages.callHierarchy.onPrepare(
       this.onPrepareCallHierarchy.bind(this),
     );
@@ -134,8 +123,8 @@ export default class QLangServer {
     this.connection.languages.semanticTokens.on(
       this.onSemanticTokens.bind(this),
     );
-    this.connection.onDidChangeConfiguration(
-      this.onDidChangeConfiguration.bind(this),
+    this.connection.onDidChangeWatchedFiles(
+      this.onDidChangeWatchedFiles.bind(this),
     );
     this.connection.onRequest(
       "kdb.qls.expressionRange",
@@ -150,7 +139,7 @@ export default class QLangServer {
 
   public capabilities(): ServerCapabilities {
     return {
-      textDocumentSync: TextDocumentSyncKind.Full,
+      textDocumentSync: TextDocumentSyncKind.Incremental,
       documentSymbolProvider: true,
       referencesProvider: true,
       definitionProvider: true,
@@ -168,45 +157,77 @@ export default class QLangServer {
     };
   }
 
-  public setSettings(settings: LSPAny) {
-    this.settings = {
-      debug: settings.debug_parser || false,
-      linting: settings.linting || false,
-      refactoring: settings.refactoring || "Workspace",
-    };
+  private async getDebug(uri: string): Promise<boolean> {
+    const res = await this.connection.workspace.getConfiguration({
+      scopeUri: uri,
+      section: "kdb.debug",
+    });
+    return res ?? false;
   }
 
-  public onDidChangeConfiguration({ settings }: DidChangeConfigurationParams) {
-    if ("kdb" in settings) {
-      this.setSettings(settings.kdb);
-    }
+  private async getLinting(uri: string): Promise<boolean> {
+    const res = await this.connection.workspace.getConfiguration({
+      scopeUri: uri,
+      section: "kdb.linting",
+    });
+    return res ?? false;
   }
 
-  /* istanbul ignore next */
+  private async getRefactoring(uri: string): Promise<"Workspace" | "Window"> {
+    const res = await this.connection.workspace.getConfiguration({
+      scopeUri: uri,
+      section: "kdb.refactoring",
+    });
+    return res ?? "Workspace";
+  }
+
+  private async getConnectionMap(
+    uri: string,
+  ): Promise<{ [key: string]: string }> {
+    const res = await this.connection.workspace.getConfiguration({
+      scopeUri: uri,
+      section: "kdb.connectionMap",
+    });
+    return res ?? {};
+  }
+
+  notify(
+    message: string,
+    kind: MessageKind,
+    options: {
+      logger?: string;
+      params?: any;
+    } = {},
+    telemetry?: string | boolean,
+  ) {
+    this.connection.sendNotification("notify", {
+      message,
+      kind,
+      options,
+      telemetry,
+    });
+  }
+
   public onDidChangeWatchedFiles({ changes }: DidChangeWatchedFilesParams) {
-    try {
-      this.parseFiles(
-        changes.reduce((matches, change) => {
-          if (change.type === FileChangeType.Deleted) {
-            this.cached.delete(change.uri);
-          } else {
-            matches.push(fileURLToPath(change.uri));
-          }
-          return matches;
-        }, [] as string[]),
-      );
-    } catch (error) {
-      this.connection.window.showErrorMessage(`${error}`);
+    for (const change of changes) {
+      this.cached.delete(change.uri);
     }
   }
 
-  public onDidChangeContent({
+  public onDidOpen({ document }: TextDocumentChangeEvent<TextDocument>) {
+    this.opened.add(document.uri);
+  }
+
+  public async onDidChangeContent({
     document,
   }: TextDocumentChangeEvent<TextDocument>) {
     const uri = document.uri;
-    this.cached.delete(uri);
-    if (this.settings.linting) {
-      const diagnostics = lint(this.parse(document)).map((item) =>
+
+    if (this.opened.has(uri)) this.opened.delete(uri);
+    else this.cached.delete(uri);
+
+    if (await this.getLinting(uri)) {
+      const diagnostics = lint(await this.parse(uri)).map((item) =>
         Diagnostic.create(
           rangeFromToken(item.token),
           item.message,
@@ -223,11 +244,11 @@ export default class QLangServer {
     this.connection.sendDiagnostics({ uri: document.uri, diagnostics: [] });
   }
 
-  public onDocumentSymbol({
+  public async onDocumentSymbol({
     textDocument,
-  }: DocumentSymbolParams): DocumentSymbol[] {
-    const tokens = this.parse(textDocument);
-    if (this.settings.debug) {
+  }: DocumentSymbolParams): Promise<DocumentSymbol[]> {
+    const tokens = await this.parse(textDocument.uri);
+    if (await this.getDebug(textDocument.uri)) {
       return tokens.map((token) => createDebugSymbol(token));
     }
     return tokens
@@ -239,10 +260,13 @@ export default class QLangServer {
       .map((token) => createSymbol(token, tokens));
   }
 
-  public onReferences({ textDocument, position }: ReferenceParams): Location[] {
-    const tokens = this.parse(textDocument);
+  public async onReferences({
+    textDocument,
+    position,
+  }: ReferenceParams): Promise<Location[]> {
+    const tokens = await this.parse(textDocument.uri);
     const source = positionToToken(tokens, position);
-    return this.context({ uri: textDocument.uri, tokens })
+    return (await this.context(textDocument.uri))
       .map((document) =>
         findIdentifiers(FindKind.Reference, document.tokens, source).map(
           (token) => Location.create(document.uri, rangeFromToken(token)),
@@ -251,13 +275,13 @@ export default class QLangServer {
       .flat();
   }
 
-  public onDefinition({
+  public async onDefinition({
     textDocument,
     position,
-  }: DefinitionParams): Location[] {
-    const tokens = this.parse(textDocument);
+  }: DefinitionParams): Promise<Location[]> {
+    const tokens = await this.parse(textDocument.uri);
     const source = positionToToken(tokens, position);
-    return this.context({ uri: textDocument.uri, tokens })
+    return (await this.context(textDocument.uri))
       .map((document) =>
         findIdentifiers(FindKind.Definition, document.tokens, source).map(
           (token) => Location.create(document.uri, rangeFromToken(token)),
@@ -266,15 +290,14 @@ export default class QLangServer {
       .flat();
   }
 
-  public onRenameRequest({
+  public async onRenameRequest({
     textDocument,
     position,
     newName,
-  }: RenameParams): WorkspaceEdit {
-    const tokens = this.parse(textDocument);
+  }: RenameParams): Promise<WorkspaceEdit> {
+    const tokens = await this.parse(textDocument.uri);
     const source = positionToToken(tokens, position);
-    const all = this.settings.refactoring === "Workspace";
-    return this.context({ uri: textDocument.uri, tokens }, all).reduce(
+    return (await this.context(textDocument.uri)).reduce(
       (edit, document) => {
         const refs = findIdentifiers(FindKind.Rename, document.tokens, source);
         if (refs.length > 0) {
@@ -292,13 +315,13 @@ export default class QLangServer {
     );
   }
 
-  public onCompletion({
+  public async onCompletion({
     textDocument,
     position,
-  }: CompletionParams): CompletionItem[] {
-    const tokens = this.parse(textDocument);
+  }: CompletionParams): Promise<CompletionItem[]> {
+    const tokens = await this.parse(textDocument.uri);
     const source = positionToToken(tokens, position);
-    return this.context({ uri: textDocument.uri, tokens })
+    return (await this.context(textDocument.uri))
       .map((document) =>
         findIdentifiers(FindKind.Completion, document.tokens, source).map(
           (token) => {
@@ -316,11 +339,11 @@ export default class QLangServer {
       .flat();
   }
 
-  public onExpressionRange({
+  public async onExpressionRange({
     textDocument,
     position,
   }: TextDocumentPositionParams) {
-    const tokens = this.parse(textDocument);
+    const tokens = await this.parse(textDocument.uri);
     const source = positionToToken(tokens, position);
     if (!source || !source.exprs) {
       return null;
@@ -328,11 +351,11 @@ export default class QLangServer {
     return expressionToRange(tokens, source.exprs);
   }
 
-  public onParameterCache({
+  public async onParameterCache({
     textDocument,
     position,
   }: TextDocumentPositionParams) {
-    const tokens = this.parse(textDocument);
+    const tokens = await this.parse(textDocument.uri);
     const source = positionToToken(tokens, position);
     if (!source) {
       return null;
@@ -370,11 +393,11 @@ export default class QLangServer {
     };
   }
 
-  public onSelectionRanges({
+  public async onSelectionRanges({
     textDocument,
     positions,
-  }: SelectionRangeParams): SelectionRange[] {
-    const tokens = this.parse(textDocument);
+  }: SelectionRangeParams): Promise<SelectionRange[]> {
+    const tokens = await this.parse(textDocument.uri);
     const ranges: SelectionRange[] = [];
 
     for (const position of positions) {
@@ -386,11 +409,11 @@ export default class QLangServer {
     return ranges;
   }
 
-  public onPrepareCallHierarchy({
+  public async onPrepareCallHierarchy({
     textDocument,
     position,
-  }: CallHierarchyPrepareParams): CallHierarchyItem[] {
-    const tokens = this.parse(textDocument);
+  }: CallHierarchyPrepareParams): Promise<CallHierarchyItem[]> {
+    const tokens = await this.parse(textDocument.uri);
     const source = positionToToken(tokens, position);
     if (source && assignable(source)) {
       return [
@@ -407,13 +430,13 @@ export default class QLangServer {
     return [];
   }
 
-  public onIncomingCallsCallHierarchy({
+  public async onIncomingCallsCallHierarchy({
     item,
-  }: CallHierarchyIncomingCallsParams): CallHierarchyIncomingCall[] {
-    const tokens = this.parse({ uri: item.uri });
+  }: CallHierarchyIncomingCallsParams): Promise<CallHierarchyIncomingCall[]> {
+    const tokens = await this.parse(item.uri);
     const source = positionToToken(tokens, item.range.end);
     return item.data
-      ? this.context({ uri: item.uri, tokens })
+      ? (await this.context(item.uri))
           .map((document) =>
             findIdentifiers(FindKind.Reference, document.tokens, source)
               .filter((token) => !assigned(token))
@@ -435,13 +458,13 @@ export default class QLangServer {
       : [];
   }
 
-  public onOutgoingCallsCallHierarchy({
+  public async onOutgoingCallsCallHierarchy({
     item,
-  }: CallHierarchyOutgoingCallsParams): CallHierarchyOutgoingCall[] {
-    const tokens = this.parse({ uri: item.uri });
+  }: CallHierarchyOutgoingCallsParams): Promise<CallHierarchyOutgoingCall[]> {
+    const tokens = await this.parse(item.uri);
     const source = positionToToken(tokens, item.range.end);
     return item.data
-      ? this.context({ uri: item.uri, tokens })
+      ? (await this.context(item.uri))
           .map((document) =>
             findIdentifiers(FindKind.Reference, document.tokens, source)
               .filter((token) => inLambda(token) && !assigned(token))
@@ -462,10 +485,10 @@ export default class QLangServer {
       : [];
   }
 
-  public onSemanticTokens({
+  public async onSemanticTokens({
     textDocument,
-  }: SemanticTokensParams): SemanticTokens {
-    const tokens = this.parse({ uri: textDocument.uri });
+  }: SemanticTokensParams): Promise<SemanticTokens> {
+    const tokens = await this.parse(textDocument.uri);
     const result = { data: [] } as SemanticTokens;
     let range: Range = Range.create(0, 0, 0, 0);
     let line = 0;
@@ -492,71 +515,89 @@ export default class QLangServer {
     return result;
   }
 
-  /* istanbul ignore next */
-  public scan() {
-    const folders = this.params.workspaceFolders;
-    if (folders) {
-      try {
-        for (const folder of folders) {
-          this.parseFiles(
-            glob("**/*.{q,quke}", {
-              dot: true,
-              absolute: true,
-              nodir: true,
-              follow: false,
-              ignore: ["**/node_modules/**/*", "**/build/**/*"],
-              cwd: fileURLToPath(folder.uri),
-            }),
-          );
-        }
-      } catch (error) {
-        this.connection.window.showErrorMessage(`${error}`);
-      }
-    }
-  }
-
-  /* istanbul ignore next */
-  private parseFiles(matches: string[]) {
-    for (const match of matches) {
-      const file = readFileSync(match, "utf-8");
-      this.cached.set(pathToFileURL(match).toString(), parse(file));
-    }
-  }
-
-  private parse(textDocument: TextDocumentIdentifier): Token[] {
-    const uri = textDocument.uri;
+  private async parse(uri: string): Promise<Token[]> {
     let tokens = this.cached.get(uri);
     if (!tokens) {
       const document = this.documents.get(uri);
-      if (!document) {
-        return [];
+      let text: string;
+      if (document) {
+        text = document.getText();
+      } else {
+        const path = fileURLToPath(uri);
+        try {
+          text = await readFile(path, { encoding: "utf8" });
+        } catch (error) {
+          this.notify(`Unable to read '${path}'.`, MessageKind.DEBUG, {
+            logger,
+            params: `${error}`,
+          });
+          text = "";
+        }
       }
-      tokens = parse(document.getText());
+      tokens = text ? parse(text) : [];
       this.cached.set(uri, tokens);
     }
     return tokens;
   }
 
-  private context({ uri, tokens }: Tokenized, all = true): Tokenized[] {
-    if (all) {
-      this.documents.all().forEach((document) => {
-        const path = document.uri.startsWith("file://")
-          ? fileURLToPath(document.uri)
-          : "";
-        this.cached.set(
-          path ? pathToFileURL(path).toString() : document.uri,
-          document.uri === uri ? tokens : parse(document.getText()),
-        );
-      });
-      return Array.from(this.cached.entries(), (entry) => ({
-        uri: entry[0],
-        tokens: entry[1],
-      }));
+  private async related(uri: string): Promise<string[]> {
+    let res = [uri];
+    const folders = await this.connection.workspace.getWorkspaceFolders();
+
+    if (!folders) {
+      return res;
     }
-    return this.documents.all().map((document) => ({
-      uri: document.uri,
-      tokens: document.uri === uri ? tokens : parse(document.getText()),
-    }));
+
+    let workspace: string | undefined;
+
+    for (const folder of folders) {
+      if (uri.replace(folder.uri, "").startsWith("/")) {
+        workspace = folder.uri;
+        break;
+      }
+    }
+
+    if (!workspace) {
+      return res;
+    }
+
+    const map = await this.getConnectionMap(uri);
+    const connections = new Map<string, string[]>();
+    let current: string | undefined;
+
+    for (const key of Object.keys(map)) {
+      const target = map[key];
+      let uris = connections.get(target);
+
+      if (!uris) {
+        uris = [];
+        connections.set(target, uris);
+      }
+      uris.push(workspace + "/" + key);
+
+      if (uri.endsWith(key)) current = target;
+    }
+
+    if (current) {
+      res = connections.get(current) || res;
+    }
+
+    return res;
+  }
+
+  private async context(uri: string): Promise<Tokenized[]> {
+    const res: Tokenized[] = [];
+    const refactoring = await this.getRefactoring(uri);
+    if (refactoring === "Workspace") {
+      for (const item of await this.related(uri)) {
+        res.push({ uri: item, tokens: await this.parse(item) });
+      }
+    } else if (refactoring === "Window") {
+      for (const item of this.documents.all()) {
+        res.push({ uri: item.uri, tokens: await this.parse(item.uri) });
+      }
+    }
+    return res;
   }
 }
 

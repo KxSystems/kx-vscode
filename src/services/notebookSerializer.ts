@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -34,6 +34,7 @@ export class KxNotebookSerializer implements vscode.NotebookSerializer {
           cell.value,
           cell.languageId,
         );
+        target.metadata = { target: cell.target, variable: cell.variable };
         target.outputs = cell.outputs.map((output) => {
           return new vscode.NotebookCellOutput(
             output.items.map((item) => {
@@ -61,6 +62,8 @@ export class KxNotebookSerializer implements vscode.NotebookSerializer {
           kind: cell.kind,
           value: cell.value,
           languageId: cell.languageId,
+          target: cell.metadata?.target || undefined,
+          variable: cell.metadata?.variable || undefined,
           outputs: (cell.outputs || []).map((output) => {
             return {
               items: output.items.map((item) => {

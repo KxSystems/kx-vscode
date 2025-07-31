@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -38,7 +38,7 @@ export const LineComment = createToken({
 
 export const Command = createToken({
   name: "Command",
-  pattern: /(?<!.)\\(?:cd|ts|[abBcCdefglopPrsStTuvwWxz12_\\]).*/,
+  pattern: /(?<!.)\\(?:cd|ts|[abBcCdefglopPrsStTuvwWxz12_\\])(?:(?! \/).)*/,
 });
 
 export const WhiteSpace = createToken({
@@ -79,9 +79,14 @@ export const Comparator = createToken({
   pattern: /(?:<=|>=|<>|[>=<~])/,
 });
 
+export const CutDrop = createToken({
+  name: "CutDrop",
+  pattern: /(?<![a-zA-Z])_/,
+});
+
 export const Operator = createToken({
   name: "Operator",
-  pattern: /[\\.,'|^?!#@&_%*+-]/,
+  pattern: /[\\.,'|^?!#@&%*+-]/,
 });
 
 export const Cond = createToken({

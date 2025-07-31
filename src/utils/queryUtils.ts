@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -15,8 +15,7 @@ import { readFileSync } from "fs";
 import { join } from "path";
 
 import { ext } from "../extensionVariables";
-import { isBaseVersionGreaterOrEqual, kdbOutputLog } from "./core";
-import { normalizeAssemblyTarget } from "./shared";
+import { MessageKind, notify, Runner } from "./notifications";
 import { DCDS, deserialize, isCompressed, uncompress } from "../ipc/c";
 import { DDateClass, DDateTimeClass, DTimestampClass } from "../ipc/cClasses";
 import { Parse } from "../ipc/parse.qlist";
@@ -25,6 +24,10 @@ import { ServerType } from "../models/connectionsModels";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { QueryHistory } from "../models/queryHistory";
 import { ScratchpadStacktrace } from "../models/scratchpadResult";
+
+const logger = "queryUtils";
+
+const QUERY_LIMIT = 250_000;
 
 export function sanitizeQuery(query: string): string {
   if (query[0] === "`") {
@@ -96,7 +99,7 @@ export function handleWSError(ab: ArrayBuffer): any {
     }
   }
 
-  kdbOutputLog(`Error : ${errorString}`, "ERROR", true);
+  notify(`Error : ${errorString}`, MessageKind.DEBUG, { logger });
 
   return { error: errorString };
 }
@@ -208,52 +211,76 @@ export function getValueFromArray(results: DCDS): any {
   return results;
 }
 
-export function sanitizeQsqlQuery(query: string): string {
+function queryLimitCheck(query: string): string {
+  if (query.length > QUERY_LIMIT) {
+    throw new Error(`Query length limit (${QUERY_LIMIT}) reached.`);
+  }
+  return query;
+}
+
+export function normalizeQuery(query: string): string {
   return (
-    query
-      .trim()
+    queryLimitCheck(query)
       // Remove block comments
-      .replace(/^\/[^]*?^\\/gm, "")
+      .replace(/^\/[\t ]*$[^]*?^\\[\t ]*$/gm, "")
+      // Remove terminate comments
+      .replace(/^\\[\t ]*(?:\r\n|[\r\n])[^]*/gm, "")
       // Remove single line comments
-      .replace(/^\/.*\r?\n/gm, "")
+      .replace(/^\/.+/gm, "")
       // Remove line comments
       .replace(
         /(?:("([^"\\]*(?:\\.[^"\\]*)*)")|([ \t]+\/.*))/gm,
         (matched, isString) => (isString ? matched : ""),
       )
-      // Replace end of statements
-      .replace(/(?<![; \t]\s*)(?:\r\n|\n)+(?![ \t])/gs, ";")
+      // Replace new lines in strings
+      .replace(/"(?:[^"\\]*(?:\\.[^"\\]*)*)"/gs, (matched) =>
+        matched.replace(/(?:\r\n|[\r\n])/gs, "\\n"),
+      )
+      // Remove none end of statement new lines
+      .replace(/(?:\r\n|[\r\n])+(?=[\t ])/gs, "")
+      // Normalize new lines
+      .replace(/(?:\r\n|[\r\n])+/gs, "\r\n")
   );
 }
 
-export function generateQSqlBody(
-  query: string,
-  assemblyTarget: string,
-  version?: number,
-  qeEnabled?: boolean,
-) {
-  query = sanitizeQsqlQuery(query);
+export function normalizeQSQLQuery(query: string): string {
+  return (
+    normalizeQuery(query)
+      // Replace system commands
+      .replace(/^\\([a-zA-Z_1-2\\]+)[\t ]*(.*)/gm, (matched, command, args) =>
+        matched === "\\\\"
+          ? 'system"\\\\"'
+          : `system"${command} ${args.trim()}"`,
+      )
+      // Replace end of statements
+      .replace(/\r\n/gs, ";")
+      // Remove start of file
+      .replace(/^[;\s]+/gs, "")
+      // Remove end of file
+      .replace(/[;\s]+$/gs, "")
+  );
+}
 
-  const [plainAssembly, target] =
-    normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
+export function normalizePyQuery(query: string): string {
+  return (
+    queryLimitCheck(query)
+      // Replace double quotes
+      .replace(/"/gs, '\\"')
+  );
+}
 
-  let assembly = plainAssembly;
-  if (qeEnabled) {
-    assembly += "-qe";
-  }
-
-  if (version && isBaseVersionGreaterOrEqual(version, 1.13)) {
-    return {
-      query,
-      scope: {
-        affinity: "soft",
-        assembly,
-        tier: target,
-      },
+export function getQSQLWrapper(query: string, isPython?: boolean): string {
+  if (isPython) {
+    const wrapper = normalizeQSQLQuery(queryWrapper(true));
+    const args = {
+      returnFormat: <"serialized" | "text" | "structuredText">"serialized",
+      code: normalizePyQuery(query),
+      sample_fn: "first",
+      sample_size: 10000,
     };
+    return `${wrapper}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]\`result`;
   }
-
-  return { query, assembly, target };
+  return normalizeQSQLQuery(query);
 }
 
 export function generateQTypes(meta: { [key: string]: number }): any {
@@ -467,4 +494,19 @@ export function resultToBase64(result: any): string | undefined {
     return `data:image/png;base64,${Buffer.from(bytes).toString("base64")}`;
   }
   return undefined;
+}
+
+export function needsScratchpad<T>(connLabel: string, target: Promise<T>) {
+  if (!ext.scratchpadStarted.has(connLabel)) {
+    const runner = Runner.create(() =>
+      target.then(() => ext.scratchpadStarted.add(connLabel)),
+    );
+    runner.title = `Starting scratchpad on ${connLabel}.`;
+    runner.execute();
+  }
+  return target;
+}
+
+export function resetScratchpadStarted(connLabel: string) {
+  ext.scratchpadStarted.delete(connLabel);
 }

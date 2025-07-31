@@ -2,6 +2,46 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.13.0
+
+### Enhancements
+
+- Added a new setting to prevent focus change when executing a query
+- Introduced SQL code block support in notebooks
+- Enabled connection association and execution for plain SQL files
+- Notebooks now support DAP targets and automatically populate scratchpad
+- Starting from Insights Enterprise `version 1.14`, workbook enhancements enable you to target specific `tiers` and `DAP processes` within kdb Insights connections.
+- Improved the q REPL command functionality
+- Extended qsql API to allow targeting specific DAP processes, not just tiers
+- Refactorings are connection aware
+
+### Fixes
+
+- Fixed an issue where opening "Edit Connection" on multiple connections grouped them under a single label
+- Added confirmation prompt when removing a connection
+- Resolved an issue where the selected tab changed on startup
+- Fixed broken **Add Connection** action in the welcome view
+- Addressed issue where the "Create KX Notebook" command failed if an unsaved notebook already existed
+- Improved naming consistency for VSCode kdb+ connections
+- Ensured connections are sorted alphabetically in VSCode
+- Made notebook error messages on IE connections more descriptive, matching kdb+ standards
+- Added separate connection checks for `getData` and scratchpad in VSCode
+- Fixed issue where the "Enable TLS" checkbox state was not saved
+- Resolved problems with previewing local kdb variables
+- Corrected the displayed result count cap of KDB Results (now accurately reflects the 10,000 limit)
+- Fixed keywords after underscore operator is not identified
+- Fixed line comments syntax highlighting is wrong after system commands
+
+### Internal Improvements
+
+- Updated dependencies for better performance and security
+- Added support for debugging unit tests
+- Switched to the `c8` coverage tool for improved test coverage reporting
+- Resolved Chevrotain (LS Server package) warnings related to test coverage
+- Migrated from deprecated telemetry to the current standard
+- Unified progress tracking, logging, telemetry, and notifications for consistency
+- The extension now automatically detects the appropriate endpoint for `Query Environment-enabled` IE connections.
+
 # v1.12.0
 
 This release requires VS Code version 1.96.0 or higher.
@@ -11,7 +51,7 @@ This release requires VS Code version 1.96.0 or higher.
 - Added **KX Notebooks**, which allows you to compose and execute Q, Python, and Markdown code blocks in a single notebook
 - Workspace enhancements now allow connection association for all **q** and **py** files and target selection for all **q** files.
 - Execute **q** code directly on kdb Insights Enterprise DAPs processes from the editor
-- Added the **Help & Feedback** view to the activity bar, which provides quick links to documentation, feature suggestion, feedback, and bug reporting 
+- Added the **Help & Feedback** view to the activity bar, which provides quick links to documentation, feature suggestion, feedback, and bug reporting
 - Added **Feedback Survey**, inviting you to provide feedback
 - Added **Copy Query** for query history when query is executed
 
@@ -293,7 +333,6 @@ This release requires VS Code version 1.86.0 or higher.
 ### Fixes
 
 - Ability to switch users connected to a kdb Insights Enterprise URL. The new flow to switch users when you are already logged in is as follows:
-
   - Disconnect from the URL.
   - Log into the URL using browser and log out of environment.
   - On reconnecting you are asked to enter your login details and you can chose a different user.
@@ -305,18 +344,15 @@ This release requires VS Code version 1.86.0 or higher.
 - Ensure the "Execute Entire File" button works even if the cursor is not in the code editor window.
 
 - Fixes for the Data Sources:
-
   - Custom APIs are no longer listed, these will be added in a future release when the execution of a Custom API is supported.
   - The "Run" button will be greyed out while a Data Source is executing, to ensure there are no concurrent executions.
   - To see Data Source results within the "Output" tab, ensure that the output is from "q Console Output".
 
 - Fixes for the tree:
-
   - The only variables being displayed were longs.
   - Connections were string queries were forbidden broke the tree
 
 - Fixes for KDB Results:
-
   - incorrect display of empty tables
   - not displaying results for non-tables or non-atoms.
 

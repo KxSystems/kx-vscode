@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -34,13 +34,6 @@ connection.onInitialize((params) => {
 connection.onInitialized(() => {
   connection.client.register(DidChangeConfigurationNotification.type, {
     section: "kdb",
-  });
-
-  connection.workspace.getConfiguration("kdb").then((settings) => {
-    if (server) {
-      server.setSettings(settings);
-      server.scan();
-    }
   });
 });
 

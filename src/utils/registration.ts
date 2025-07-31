@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,9 +11,10 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { ConfigurationTarget, window, workspace } from "vscode";
+import { ConfigurationTarget, workspace } from "vscode";
 
 import { ext } from "../extensionVariables";
+import { MessageKind, notify } from "./notifications";
 import { openUrl } from "./openUrl";
 
 export function showRegistrationNotification(): void {
@@ -21,13 +22,17 @@ export function showRegistrationNotification(): void {
     .getConfiguration()
     .get<boolean | undefined>("kdb.hideSubscribeRegistrationNotification");
   if (setting !== undefined && setting === false) {
-    window
-      .showInformationMessage("Subscribe to updates", "Opt-In", "Ignore")
-      .then((result) => {
-        if (result === "Opt-In") {
-          openUrl(ext.kdbNewsletterUrl);
-        }
-      });
+    notify(
+      "Subscribe to updates",
+      MessageKind.INFO,
+      {},
+      "Opt-In",
+      "Ignore",
+    ).then((result) => {
+      if (result === "Opt-In") {
+        openUrl(ext.kdbNewsletterUrl);
+      }
+    });
   }
 
   // hide notification for future extension use
@@ -36,6 +41,6 @@ export function showRegistrationNotification(): void {
     .update(
       "kdb.hideSubscribeRegistrationNotification",
       true,
-      ConfigurationTarget.Global
+      ConfigurationTarget.Global,
     );
 }

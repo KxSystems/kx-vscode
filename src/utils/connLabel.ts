@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -14,11 +14,12 @@
 import { workspace } from "vscode";
 
 import { ext } from "../extensionVariables";
-import { kdbOutputLog } from "./core";
-import { Telemetry } from "./telemetryClient";
+import { MessageKind, notify } from "./notifications";
 import { ConnectionLabel, Labels } from "../models/labels";
 import { NewConnectionPannel } from "../panels/newConnection";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
+
+const logger = "connLabel";
 
 export function getWorkspaceLabels() {
   const existingConnLbls = workspace
@@ -26,9 +27,56 @@ export function getWorkspaceLabels() {
     .get<Labels[]>("kdb.connectionLabels");
   ext.connLabelList.length = 0;
   if (existingConnLbls && existingConnLbls.length > 0) {
-    existingConnLbls.forEach((label: Labels) => {
+    const sortedLabels = existingConnLbls.sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+    sortedLabels.forEach((label: Labels) => {
       ext.connLabelList.push(label);
     });
+  }
+}
+
+export function clearWorkspaceLabels() {
+  getWorkspaceLabels();
+  getWorkspaceLabelsConnMap();
+
+  if (ext.connLabelList.length === 0) {
+    notify(
+      "Cleaning connection mappings for nonexistent labels.",
+      MessageKind.DEBUG,
+      {
+        logger,
+        telemetry: "Label.Cleanup.NoLabels",
+      },
+    );
+    workspace.getConfiguration().update("kdb.labelsConnectionMap", [], true);
+    return;
+  }
+
+  const validLabelNames = new Set(ext.connLabelList.map((label) => label.name));
+  const initialLength = ext.labelConnMapList.length;
+
+  for (let i = ext.labelConnMapList.length - 1; i >= 0; i--) {
+    if (!validLabelNames.has(ext.labelConnMapList[i].labelName)) {
+      ext.labelConnMapList.splice(i, 1);
+    }
+  }
+
+  const removedCount = initialLength - ext.labelConnMapList.length;
+  if (removedCount > 0) {
+    workspace
+      .getConfiguration()
+      .update("kdb.labelsConnectionMap", ext.labelConnMapList, true);
+
+    notify(
+      `Removed ${removedCount} orphaned label connection mapping${removedCount > 1 ? "s" : ""}.`,
+      MessageKind.DEBUG,
+      {
+        logger,
+        telemetry: "Label.Cleanup.OrphanedMappings",
+        measurements: { removedMappings: removedCount },
+      },
+    );
   }
 }
 
@@ -38,20 +86,38 @@ export function createNewLabel(name: string, colorName: string) {
     (color) => color.name.toLowerCase() === colorName.toLowerCase(),
   );
   if (name === "") {
-    kdbOutputLog("Label name can't be empty", "ERROR");
+    notify("Label name can't be empty.", MessageKind.ERROR, { logger });
+    return;
+  }
+  if (checkIfLabelExists(name)) {
+    notify("Label with this name already exists.", MessageKind.ERROR, {
+      logger,
+      telemetry: "Label.Create.Exists",
+    });
+    return;
   }
   if (color && name !== "") {
     const newLbl: Labels = {
       name: name,
       color: color,
     };
+
     ext.connLabelList.push(newLbl);
+    ext.connLabelList.sort((a, b) => a.name.localeCompare(b.name));
+
     workspace
       .getConfiguration()
       .update("kdb.connectionLabels", ext.connLabelList, true);
-    Telemetry.sendEvent("Label.Create", {}, getLabelStatistics());
+
+    notify("Connection label created.", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Label.Create",
+      measurements: getLabelStatistics(),
+    });
   } else {
-    kdbOutputLog("No Color selected for the label", "ERROR");
+    notify("No Color selected for the label.", MessageKind.ERROR, {
+      logger,
+    });
   }
 }
 
@@ -62,7 +128,14 @@ export function getWorkspaceLabelsConnMap() {
   ext.labelConnMapList.length = 0;
   if (existingLabelConnMaps && existingLabelConnMaps.length > 0) {
     existingLabelConnMaps.forEach((labelConnMap: ConnectionLabel) => {
-      ext.labelConnMapList.push(labelConnMap);
+      const sortedLabelConnMap: ConnectionLabel = {
+        labelName: labelConnMap.labelName,
+        connections: labelConnMap.connections.sort((a, b) =>
+          a.localeCompare(b),
+        ),
+      };
+
+      ext.labelConnMapList.push(sortedLabelConnMap);
     });
   }
 }
@@ -92,11 +165,11 @@ export function addConnToLabel(labelName: string, connName: string) {
         connections: [connName],
       });
     }
-    Telemetry.sendEvent(
-      "Label.Assign.Connection",
-      {},
-      getConnectionLabelStatistics(connName),
-    );
+    notify("Connection assigned to label.", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Label.Assign.Connection",
+      measurements: getConnectionLabelStatistics(connName),
+    });
   }
 }
 
@@ -111,11 +184,12 @@ export function removeConnFromLabels(connName: string) {
   workspace
     .getConfiguration()
     .update("kdb.labelsConnectionMap", ext.labelConnMapList, true);
-  Telemetry.sendEvent(
-    "Label.Remove.Connection",
-    {},
-    getConnectionLabelStatistics(connName),
-  );
+
+  notify("Connection removed from label.", MessageKind.DEBUG, {
+    logger,
+    telemetry: "Label.Remove.Connection",
+    measurements: getConnectionLabelStatistics(connName),
+  });
 }
 
 export async function handleLabelsConnMap(labels: string[], connName: string) {
@@ -143,7 +217,17 @@ export function retrieveConnLabelsNames(
 }
 
 export function renameLabel(name: string, newName: string) {
+  if (name === newName || newName === "") {
+    return;
+  }
   getWorkspaceLabels();
+  if (checkIfLabelExists(newName)) {
+    notify("Label with this name already exists.", MessageKind.ERROR, {
+      logger,
+      telemetry: "Label.Rename.Exists",
+    });
+    return;
+  }
   const found = ext.connLabelList.find((item) => item.name === name);
   if (found) {
     found.name = newName;
@@ -188,7 +272,12 @@ export function deleteLabel(name: string) {
   workspace
     .getConfiguration()
     .update("kdb.connectionLabels", ext.connLabelList, true);
-  Telemetry.sendEvent("Label.Delete", {}, getLabelStatistics());
+
+  notify("Connection label deleted.", MessageKind.DEBUG, {
+    logger,
+    telemetry: "Label.Delete",
+    measurements: getLabelStatistics(),
+  });
 
   NewConnectionPannel.refreshLabels();
 }
@@ -250,4 +339,8 @@ export function getConnectionLabelStatistics(
   });
 
   return statistics;
+}
+
+export function checkIfLabelExists(name: string): boolean {
+  return ext.connLabelList.some((label) => label.name === name);
 }

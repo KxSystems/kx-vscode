@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -40,7 +40,7 @@ export class DateTimeNanoPicker extends LitElement {
     };
   }
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   connectedCallback() {
     super.connectedCallback();
     if (this.value) {
@@ -80,7 +80,7 @@ export class DateTimeNanoPicker extends LitElement {
     );
   }
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   render() {
     return html`
       <div class="nanoseconds-row">

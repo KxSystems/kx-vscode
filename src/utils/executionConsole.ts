@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -13,17 +13,20 @@
 
 import { OutputChannel, commands, window } from "vscode";
 
-import { ext } from "../extensionVariables";
 import {
-  getHideDetailedConsoleQueryOutput,
   setOutputWordWrapper,
+  getAutoFocusOutputOnEntrySetting,
+  getHideDetailedConsoleQueryOutputSetting,
 } from "./core";
+import { MessageKind, notify } from "./notifications";
 import {
   addQueryHistory,
   checkIfIsDatasource,
   convertRowsToConsole,
 } from "./queryUtils";
 import { ServerType } from "../models/connectionsModels";
+
+const logger = "executionConsole";
 
 export class ExecutionConsole {
   public static current: ExecutionConsole | undefined;
@@ -86,11 +89,12 @@ export class ExecutionConsole {
     duration?: string,
     isFromConnTree?: boolean,
   ): void {
-    getHideDetailedConsoleQueryOutput();
-    const hideDetails = ext.hideDetailedConsoleQueryOutput;
+    const hideDetails = getHideDetailedConsoleQueryOutputSetting();
     output = this.checkOutput(output, query);
     let dataSourceRes: string[] = [];
-    this._console.show(true);
+    if (getAutoFocusOutputOnEntrySetting()) {
+      this._console.show(true);
+    }
 
     if (Array.isArray(output)) {
       dataSourceRes = convertRowsToConsole(output);
@@ -147,9 +151,10 @@ export class ExecutionConsole {
     duration?: string,
     isFromConnTree?: boolean,
   ): void {
-    getHideDetailedConsoleQueryOutput();
-    const hideDetails = ext.hideDetailedConsoleQueryOutput;
-    this._console.show(true);
+    const hideDetails = getHideDetailedConsoleQueryOutputSetting();
+    if (getAutoFocusOutputOnEntrySetting()) {
+      this._console.show(true);
+    }
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
     if (!hideDetails) {
@@ -180,7 +185,9 @@ export class ExecutionConsole {
         );
       }
     } else {
-      window.showErrorMessage(`Please connect to a KDB or Insights server`);
+      notify(`Please connect to a KDB or Insights server`, MessageKind.ERROR, {
+        logger,
+      });
       this._console.appendLine(`Please connect to a KDB or Insights server`);
       commands.executeCommand("kdb.connections.disconnect");
       addQueryHistory(

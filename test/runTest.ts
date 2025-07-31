@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -21,18 +21,26 @@ async function main() {
     const extensionDevelopmentPath = path.join(__dirname, "../../");
 
     let extensionTestsPath = path.join(__dirname, "./suite/index");
-    if (process.argv.indexOf("--coverage") >= 0) {
-      // generate instrumented files at out-cov
-      instrument();
 
-      // load the instrumented files
+    const hasCoverageFlag = process.argv.indexOf("--coverage") >= 0;
+
+    if (hasCoverageFlag) {
+      try {
+        instrument();
+        console.log("✅ Code instrumentation completed");
+      } catch (error) {
+        console.error("❌ Code instrumentation failed:", error);
+        throw error;
+      }
+
       extensionTestsPath = path.join(
         __dirname,
-        "../../out-cov/test/suite/index"
+        "../../out-cov/test/suite/index",
       );
 
-      // signal that the coverage data should be gathered
       process.env["GENERATE_COVERAGE"] = "1";
+    } else {
+      //console.log("⚠️ Coverage mode disabled, running normal tests");
     }
 
     await runTests({

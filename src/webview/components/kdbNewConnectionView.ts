@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -181,7 +181,7 @@ export class KdbNewConnectionView extends LitElement {
         >`;
   }
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   renderServerNameField(serverType: ServerType, isBundleQ?: boolean) {
     return isBundleQ
       ? html`<sl-input
@@ -244,9 +244,9 @@ export class KdbNewConnectionView extends LitElement {
               : this.kdbServer.serverPort,
           )}"
           @input="${(event: Event) => {
-            /* istanbul ignore next */
+            /* c8 ignore next */
             const value = (event.target as HTMLInputElement).value;
-            /* istanbul ignore next */
+            /* c8 ignore next */
             if (isBundleQ) {
               this.bundledServer.serverPort = value;
             } else {
@@ -297,9 +297,9 @@ export class KdbNewConnectionView extends LitElement {
                   : this.insightsServer.server,
               )}"
               @input="${(event: Event) => {
-                /* istanbul ignore next */
+                /* c8 ignore next */
                 const value = (event.target as HTMLInputElement).value;
-                /* istanbul ignore next */
+                /* c8 ignore next */
                 if (serverType === ServerType.KDB) {
                   this.kdbServer.serverName = value;
                 } else {
@@ -322,9 +322,9 @@ export class KdbNewConnectionView extends LitElement {
           value="${live(this.insightsServer.realm ?? "")}"
           placeholder="insights"
           @input="${(event: Event) => {
-            /* istanbul ignore next */
+            /* c8 ignore next */
             const value = (event.target as HTMLInputElement).value;
-            /* istanbul ignore next */
+            /* c8 ignore next */
             this.insightsServer.realm = value;
           }}"
           label="Define Realm (optional)"></sl-input>
@@ -339,16 +339,16 @@ export class KdbNewConnectionView extends LitElement {
   renderInsecureSSL() {
     return html`
       <div class="row mt-1">
-        <vscode-checkbox
-          .checked="${this.insightsServer.insecure}"
-          @change="${(event: Event) => {
-            /* istanbul ignore next */
+        <sl-checkbox
+          .checked="${this.insightsServer.insecure ?? false}"
+          @sl-change="${(event: Event) => {
+            /* c8 ignore next */
             this.insightsServer.insecure = (
               event.target as HTMLInputElement
             ).checked;
-          }}"
-          >Accept insecure SSL certifcates</vscode-checkbox
-        >
+          }}">
+          Accept insecure SSL certifcates
+        </sl-checkbox>
       </div>
     `;
   }
@@ -449,9 +449,9 @@ export class KdbNewConnectionView extends LitElement {
               class="text-field larger"
               value="${live(this.newLblName)}"
               @sl-input="${(event: Event) => {
-                /* istanbul ignore next */
+                /* c8 ignore next */
                 this.newLblName = (event.target as HTMLInputElement).value;
-                /* istanbul ignore next */
+                /* c8 ignore next */
                 this.requestUpdate();
               }}"
               id="label-name"></sl-input>
@@ -464,9 +464,9 @@ export class KdbNewConnectionView extends LitElement {
               id="label-color"
               value="${live(this.newLblColorName)}"
               @sl-change="${(event: Event) => {
-                /* istanbul ignore next */
+                /* c8 ignore next */
                 this.newLblColorName = (event.target as HTMLInputElement).value;
-                /* istanbul ignore next */
+                /* c8 ignore next */
                 this.requestUpdate();
               }}"
               class="dropdown"
@@ -548,7 +548,7 @@ export class KdbNewConnectionView extends LitElement {
     `;
   }
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   renderNewMyQConnectionForm() {
     return html`<div class="col">
       <div class="row">
@@ -564,27 +564,25 @@ export class KdbNewConnectionView extends LitElement {
       <div class="row">
         <div class="col gap-0">
           <div class="row">
-            <vscode-text-field
+            <sl-input
               class="text-field larger option-title"
-              value="${this.kdbServer.username ? this.kdbServer.username : ""}"
-              @input="${(event: Event) =>
+              label="Username"
+              .value="${this.kdbServer.username || ""}"
+              @sl-input="${(event: Event) =>
                 (this.kdbServer.username = (
-                  event.target as HTMLSelectElement
-                ).value)}"
-              >Username</vscode-text-field
-            >
+                  event.target as HTMLInputElement
+                ).value)}"></sl-input>
           </div>
           <div class="row">
-            <vscode-text-field
+            <sl-input
               type="password"
               class="text-field larger option-title"
-              value="${this.kdbServer.password ? this.kdbServer.password : ""}"
-              @input="${(event: Event) =>
+              label="Password"
+              .value="${this.kdbServer.password || ""}"
+              @sl-input="${(event: Event) =>
                 (this.kdbServer.password = (
-                  event.target as HTMLSelectElement
-                ).value)}"
-              >Password</vscode-text-field
-            >
+                  event.target as HTMLInputElement
+                ).value)}"></sl-input>
           </div>
           <div class="row option-description  option-help">
             Add required authentication to get access to the server connection
@@ -596,11 +594,11 @@ export class KdbNewConnectionView extends LitElement {
         <div class="col gap-0">
           <div class="row option-title">Optional: Enable TLS Encryption</div>
           <div class="row">
-            <vscode-checkbox
-              value="${this.kdbServer.tls}"
-              @click="${() => this.changeTLS()}"
-              >Enable TLS Encryption on the kdb connection</vscode-checkbox
-            >
+            <sl-checkbox
+              .checked="${this.kdbServer.tls}"
+              @sl-change="${() => this.changeTLS()}">
+              Enable TLS Encryption on the kdb connection
+            </sl-checkbox>
           </div>
         </div>
       </div>
@@ -679,7 +677,7 @@ export class KdbNewConnectionView extends LitElement {
                     this.selectedTab === ConnectionType.BundledQ,
                   )}"
                   @click="${() => {
-                    /* istanbul ignore next */
+                    /* c8 ignore next */
                     this.selectedTab = ConnectionType.BundledQ;
                     this.serverType = ServerType.KDB;
                     this.isBundledQ = true;
@@ -691,7 +689,7 @@ export class KdbNewConnectionView extends LitElement {
                   panel="${ConnectionType.Kdb}"
                   ?active="${live(this.selectedTab === ConnectionType.Kdb)}"
                   @click="${() => {
-                    /* istanbul ignore next */
+                    /* c8 ignore next */
                     this.isBundledQ = false;
                     this.serverType = ServerType.KDB;
                     this.selectedTab = ConnectionType.Kdb;
@@ -705,7 +703,7 @@ export class KdbNewConnectionView extends LitElement {
                     this.selectedTab === ConnectionType.Insights,
                   )}"
                   @click="${() => {
-                    /* istanbul ignore next */
+                    /* c8 ignore next */
                     this.isBundledQ = false;
                     this.serverType = ServerType.INSIGHTS;
                     this.selectedTab = ConnectionType.Insights;
@@ -878,11 +876,11 @@ export class KdbNewConnectionView extends LitElement {
           <div class="col gap-0">
             <div class="row option-title">Optional: Edit Auth options</div>
             <div class="row">
-              <vscode-checkbox
-                value="${this.editAuth}"
-                @click="${() => this.editAuthOfConn()}"
-                >Edit existing auth on the kdb connection</vscode-checkbox
-              >
+              <sl-checkbox
+                .checked="${this.editAuth}"
+                @sl-change="${() => this.editAuthOfConn()}">
+                Edit existing auth on the kdb connection
+              </sl-checkbox>
             </div>
           </div>
         </div>
@@ -891,31 +889,25 @@ export class KdbNewConnectionView extends LitElement {
               <div class="row">
                 <div class="col gap-0">
                   <div class="row">
-                    <vscode-text-field
+                    <sl-input
                       class="text-field larger option-title"
-                      value="${this.kdbServer.username
-                        ? this.kdbServer.username
-                        : ""}"
-                      @input="${(event: Event) =>
+                      label="Username"
+                      .value="${this.kdbServer.username || ""}"
+                      @sl-input="${(event: Event) =>
                         (this.kdbServer.username = (
-                          event.target as HTMLSelectElement
-                        ).value)}"
-                      >Username</vscode-text-field
-                    >
+                          event.target as HTMLInputElement
+                        ).value)}"></sl-input>
                   </div>
                   <div class="row">
-                    <vscode-text-field
+                    <sl-input
                       type="password"
                       class="text-field larger option-title"
-                      value="${this.kdbServer.password
-                        ? this.kdbServer.password
-                        : ""}"
-                      @input="${(event: Event) =>
+                      label="Password"
+                      .value="${this.kdbServer.password || ""}"
+                      @sl-input="${(event: Event) =>
                         (this.kdbServer.password = (
-                          event.target as HTMLSelectElement
-                        ).value)}"
-                      >Password</vscode-text-field
-                    >
+                          event.target as HTMLInputElement
+                        ).value)}"></sl-input>
                   </div>
                   <div class="row option-description  option-help">
                     Add required authentication to get access to the server
@@ -929,11 +921,11 @@ export class KdbNewConnectionView extends LitElement {
           <div class="col gap-0">
             <div class="row option-title">Optional: Enable TLS Encryption</div>
             <div class="row">
-              <vscode-checkbox
-                value="${this.kdbServer.tls}"
-                @click="${() => this.changeTLS()}"
-                >Enable TLS Encryption on the kdb connection</vscode-checkbox
-              >
+              <sl-checkbox
+                .checked="${this.kdbServer.tls}"
+                @sl-change="${() => this.changeTLS()}">
+                Enable TLS Encryption on the kdb connection
+              </sl-checkbox>
             </div>
           </div>
         </div>

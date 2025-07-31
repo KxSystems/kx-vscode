@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -62,6 +62,7 @@ import {
   resetScratchpadFromEditor,
   runActiveEditor,
   setServerForUri,
+  startRepl,
 } from "./commands/workspaceCommand";
 import { ext } from "./extensionVariables";
 import { CommandRegistration } from "./models/commandRegistration";
@@ -86,6 +87,10 @@ import {
   MetaObjectPayloadNode,
 } from "./services/kdbTreeProvider";
 import { KxNotebookController } from "./services/notebookController";
+import {
+  inputVariable,
+  KxNotebookTargetActionProvider,
+} from "./services/notebookProviders";
 import { KxNotebookSerializer } from "./services/notebookSerializer";
 import {
   QueryHistoryProvider,
@@ -113,23 +118,22 @@ import {
   getServers,
   hasWorkspaceOrShowOption,
   initializeLocalServers,
-  kdbOutputLog,
 } from "./utils/core";
 import { runQFileTerminal } from "./utils/execution";
 import { handleFeedbackSurvey } from "./utils/feedbackSurveyUtils";
 import { getIconPath } from "./utils/iconsUtils";
+import { MessageKind, notify, Runner } from "./utils/notifications";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
-import {
-  activateTextDocument,
-  addWorkspaceFile,
-  openWith,
-  setUriContent,
-} from "./utils/workspace";
+import { addWorkspaceFile, openWith, setUriContent } from "./utils/workspace";
+
+const logger = "extension";
 
 let client: LanguageClient;
 
 export async function activate(context: vscode.ExtensionContext) {
+  // TODO 2: Workaround, remove when TODO 1 is complete
+  ext.REAL_QHOME = process.env.QHOME;
   ext.context = context;
   ext.outputChannel = vscode.window.createOutputChannel("kdb");
   ext.openSslVersion = await checkOpenSslInstalled();
@@ -195,15 +199,11 @@ export async function activate(context: vscode.ExtensionContext) {
   AuthSettings.init(context);
   ext.secretSettings = AuthSettings.instance;
 
-  vscode.commands.executeCommand("kdb-results.focus");
-
-  kdbOutputLog("kdb extension is now active!", "INFO");
-
   try {
     // check for installed q runtime
     await checkLocalInstall(true);
   } catch (err) {
-    vscode.window.showErrorMessage(`${err}`);
+    notify(`${err}`, MessageKind.DEBUG, { logger });
   }
 
   registerAllExtensionCommands();
@@ -219,7 +219,7 @@ export async function activate(context: vscode.ExtensionContext) {
     ChartEditorProvider.register(context),
 
     vscode.languages.registerCodeLensProvider(
-      { pattern: "**/*.{q,py}" },
+      { pattern: "**/*.{q,py,sql}" },
       new ConnectionLensProvider(),
     ),
 
@@ -281,6 +281,13 @@ export async function activate(context: vscode.ExtensionContext) {
     new KxNotebookController(),
   );
 
+  context.subscriptions.push(
+    vscode.notebooks.registerNotebookCellStatusBarItemProvider(
+      "kx-notebook",
+      new KxNotebookTargetActionProvider(),
+    ),
+  );
+
   connectWorkspaceCommands();
   await connectBuildTools();
 
@@ -298,7 +305,11 @@ export async function activate(context: vscode.ExtensionContext) {
   const clientOptions: LanguageClientOptions = {
     documentSelector: [{ language: "q" }],
     synchronize: {
-      fileEvents: vscode.workspace.createFileSystemWatcher("**/*.{q,quke}"),
+      fileEvents: vscode.workspace.createFileSystemWatcher(
+        "**/*.{q,quke,k}",
+        true,
+        true,
+      ),
     },
   };
 
@@ -309,11 +320,16 @@ export async function activate(context: vscode.ExtensionContext) {
     clientOptions,
   );
 
+  context.subscriptions.push(
+    client.onNotification("notify", (params) =>
+      notify(params.message, params.kind, params.options, params.telemetry),
+    ),
+  );
+
   await client.start();
 
   connectClientCommands(context, client);
 
-  Telemetry.sendEvent("Extension.Activated");
   const yamlExtension = vscode.extensions.getExtension("redhat.vscode-yaml");
   if (yamlExtension) {
     const actualSchema = await vscode.workspace
@@ -346,11 +362,19 @@ export async function activate(context: vscode.ExtensionContext) {
   if (authExtension) {
     const api = await authExtension.activate();
     if ("auth" in api) {
-      Telemetry.sendEvent("CustomAuth.Extension.Actived");
+      notify("Custom authentication activated.", MessageKind.DEBUG, {
+        logger,
+        telemetry: "CustomAuth.Extension.Actived",
+      });
       ext.customAuth = api;
     }
   }
   handleFeedbackSurvey();
+
+  notify("kdb extension is now active.", MessageKind.DEBUG, {
+    logger,
+    telemetry: "Extension.Activated",
+  });
 }
 
 function registerHelpCommands(): CommandRegistration[] {
@@ -364,7 +388,10 @@ function registerHelpCommands(): CommandRegistration[] {
             "KX.kdb",
           )
           .then(undefined, () => {
-            Telemetry.sendEvent("Help&Feedback.Open.ExtensionDocumentation");
+            notify("Help&Feedback documentation selected.", MessageKind.DEBUG, {
+              logger,
+              telemetry: "Help&Feedback.Open.ExtensionDocumentation",
+            });
             vscode.commands.executeCommand("extension.open", "KX.kdb");
           });
       },
@@ -372,21 +399,30 @@ function registerHelpCommands(): CommandRegistration[] {
     {
       command: "kdb.help.suggestFeature",
       callback: () => {
-        Telemetry.sendEvent("Help&Feedback.Open.SuggestFeature");
+        notify("Help&Feedback suggest a feature selected.", MessageKind.DEBUG, {
+          logger,
+          telemetry: "Help&Feedback.Open.SuggestFeature",
+        });
         vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.suggestFeature));
       },
     },
     {
       command: "kdb.help.provideFeedback",
       callback: () => {
-        Telemetry.sendEvent("Help&Feedback.Open.Survey");
+        notify("Help&Feedback survey selected.", MessageKind.DEBUG, {
+          logger,
+          telemetry: "Help&Feedback.Open.Survey",
+        });
         vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.survey));
       },
     },
     {
       command: "kdb.help.reportBug",
       callback: () => {
-        Telemetry.sendEvent("Help&Feedback.Open.ReportBug");
+        notify("Help&Feedback report a bug selected.", MessageKind.DEBUG, {
+          logger,
+          telemetry: "Help&Feedback.Open.ReportBug",
+        });
         vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.reportBug));
       },
     },
@@ -512,10 +548,7 @@ function registerScratchpadCommands(): CommandRegistration[] {
     },
     {
       command: "kdb.scratchpad.python.run.file",
-      callback: async (item) => {
-        if (item instanceof vscode.Uri) {
-          await activateTextDocument(item);
-        }
+      callback: async () => {
         await runActiveEditor(ExecutionTypes.PythonQueryFile);
       },
     },
@@ -644,30 +677,37 @@ function registerConnectionsCommands(): CommandRegistration[] {
     {
       command: "kdb.connections.export.all",
       callback: () => {
-        Telemetry.sendEvent("Connections.Export.All");
+        notify("Export all conections.", MessageKind.DEBUG, {
+          logger,
+          telemetry: "Connections.Export.All",
+        });
         exportConnections();
       },
     },
     {
       command: "kdb.connections.export.single",
       callback: async (viewItem: KdbNode | InsightsNode) => {
-        Telemetry.sendEvent("Connections.Export.Single");
+        notify("Export single conection.", MessageKind.DEBUG, {
+          logger,
+          telemetry: "Connections.Export.Single",
+        });
         exportConnections(viewItem.label);
       },
     },
     {
       command: "kdb.connections.import",
       callback: async () => {
-        Telemetry.sendEvent("Connections.Import");
+        notify("Import conections.", MessageKind.DEBUG, {
+          logger,
+          telemetry: "Connections.Import",
+        });
         await importConnections();
       },
     },
     {
       command: "kdb.connections.content.selectView",
       callback: async (viewItem) => {
-        const connLabel = viewItem.connLabel
-          ? viewItem.connLabel.split("[")[1].split("]")[0]
-          : undefined;
+        const connLabel = viewItem.connLabel;
         if (connLabel) {
           const executorName = viewItem.coreIcon.substring(2);
           executeQuery(
@@ -680,7 +720,9 @@ function registerConnectionsCommands(): CommandRegistration[] {
             true,
           );
         } else {
-          kdbOutputLog("Connection label not found", "ERROR");
+          notify("Connection label not found", MessageKind.ERROR, {
+            logger,
+          });
         }
       },
     },
@@ -754,14 +796,22 @@ function registerConnectionsCommands(): CommandRegistration[] {
     {
       command: "kdb.connections.refresh.serverObjects",
       callback: async () => {
-        ext.serverProvider.reload();
-        await refreshGetMeta();
+        const runner = Runner.create(() => {
+          ext.serverProvider.reload();
+          return refreshGetMeta();
+        });
+        runner.location = vscode.ProgressLocation.Notification;
+        runner.title = "Refreshing server objects for all connections.";
+        await runner.execute();
       },
     },
     {
       command: "kdb.connections.refresh.meta",
       callback: async (viewItem: InsightsNode) => {
-        await refreshGetMeta(viewItem.label);
+        const runner = Runner.create(() => refreshGetMeta(viewItem.label));
+        runner.location = vscode.ProgressLocation.Notification;
+        runner.title = `Refreshing meta data for ${viewItem.label || "all connections"}.`;
+        await runner.execute();
       },
     },
     {
@@ -841,10 +891,7 @@ function registerExecuteCommands(): CommandRegistration[] {
     },
     {
       command: "kdb.execute.fileQuery",
-      callback: async (item) => {
-        if (item instanceof vscode.Uri) {
-          await activateTextDocument(item);
-        }
+      callback: async () => {
         await runActiveEditor(ExecutionTypes.QueryFile);
       },
     },
@@ -856,6 +903,12 @@ function registerExecuteCommands(): CommandRegistration[] {
         } else {
           checkLocalInstall();
         }
+      },
+    },
+    {
+      command: "kdb.start.repl",
+      callback: () => {
+        startRepl();
       },
     },
     {
@@ -874,7 +927,10 @@ function registerExecuteCommands(): CommandRegistration[] {
             );
             runQFileTerminal(`"${uri.fsPath}"`);
           } catch (error) {
-            kdbOutputLog(`Unable to write temp file: ${error}`, "ERROR");
+            notify(`Unable to write temp file.`, MessageKind.ERROR, {
+              logger,
+              params: error,
+            });
           }
         }
       },
@@ -931,11 +987,23 @@ function registerFileCommands(): CommandRegistration[] {
     },
     {
       command: "kdb.file.pickTarget",
-      callback: async () => {
+      callback: async (cell?: vscode.NotebookCell) => {
         const editor = ext.activeTextEditor;
         if (editor) {
-          await pickTarget(editor.document.uri);
+          await pickTarget(editor.document.uri, cell);
         }
+      },
+    },
+    {
+      command: "kdb.file.inputVariable",
+      callback: async (cell: vscode.NotebookCell) => {
+        await inputVariable(cell);
+      },
+    },
+    {
+      command: "kdb.file.populateScratchpad",
+      callback: async () => {
+        await runActiveEditor(ExecutionTypes.PopulateScratchpad);
       },
     },
   ];
@@ -983,11 +1051,19 @@ function registerNotebookCommands(): CommandRegistration[] {
     {
       command: "kdb.createNotebook",
       callback: async () => {
-        if (hasWorkspaceOrShowOption("adding notebook")) {
-          const uri = await addWorkspaceFile(undefined, "notebook", ".kxnb");
-          const notebook = await vscode.workspace.openNotebookDocument(uri);
-          await vscode.window.showNotebookDocument(notebook);
-        }
+        const notebook = await vscode.workspace.openNotebookDocument(
+          "kx-notebook",
+          {
+            cells: [
+              {
+                kind: 2,
+                value: "",
+                languageId: "q",
+              },
+            ],
+          },
+        );
+        await vscode.window.showNotebookDocument(notebook);
       },
     },
   ];

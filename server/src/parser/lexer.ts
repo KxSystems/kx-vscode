@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -67,6 +67,7 @@ import {
   CommentEndOfLine,
   TestLambdaBlock,
   Cond,
+  CutDrop,
 } from "./tokens";
 
 const Language = [
@@ -90,6 +91,7 @@ const Language = [
   Keyword,
   Reserved,
   Identifier,
+  CutDrop,
   Iterator,
   Comparator,
   DoubleColon,
@@ -139,5 +141,5 @@ export const QLexer = new Lexer(
       exit_comment_mode: [CommentEndOfLine, WhiteSpace, CommentLiteral],
     },
   },
-  { safeMode: true },
+  { safeMode: true, skipValidations: true },
 );

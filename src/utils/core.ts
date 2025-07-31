@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -15,17 +15,20 @@ import { ChildProcess } from "child_process";
 import { createHash } from "crypto";
 import { writeFile } from "fs/promises";
 import { pathExists } from "fs-extra";
+import path from "node:path";
 import { env } from "node:process";
 import { tmpdir } from "os";
 import { join } from "path";
 import * as semver from "semver";
-import { commands, ConfigurationTarget, Uri, window, workspace } from "vscode";
+import { commands, ConfigurationTarget, Uri, workspace } from "vscode";
 
 import { installTools } from "../commands/installTools";
 import { ext } from "../extensionVariables";
 import { tryExecuteCommand } from "./cpUtils";
+import { MessageKind, notify } from "./notifications";
 import { showRegistrationNotification } from "./registration";
-import { Telemetry } from "./telemetryClient";
+import { errorMessage } from "./shared";
+import { stat, which } from "./shell";
 import {
   InsightDetails,
   Insights,
@@ -34,8 +37,12 @@ import {
 } from "../models/connectionsModels";
 import { QueryResult } from "../models/queryResult";
 
+const logger = "core";
+
 export function log(childProcess: ChildProcess): void {
-  kdbOutputLog(`Process ${childProcess.pid} started`, "INFO");
+  notify(`Process ${childProcess.pid} started`, MessageKind.DEBUG, {
+    logger,
+  });
 }
 
 export async function checkOpenSslInstalled(): Promise<string | null> {
@@ -50,9 +57,10 @@ export async function checkOpenSslInstalled(): Promise<string | null> {
       const matcher = /(\d+.\d+.\d+)/;
       const installedVersion = result.cmdOutput.match(matcher);
 
-      kdbOutputLog(
+      notify(
         `Detected version ${installedVersion} of OpenSSL installed.`,
-        "INFO",
+        MessageKind.DEBUG,
+        { logger },
       );
 
       return semver.clean(installedVersion ? installedVersion[1] : "");
@@ -60,7 +68,10 @@ export async function checkOpenSslInstalled(): Promise<string | null> {
   } catch (err) {
     // Disabled the error, as it is not critical
     // kdbOutputLog(`Error in checking OpenSSL version: ${err}`, "ERROR");
-    Telemetry.sendException(err as Error);
+    notify("OpenSSL not found.", MessageKind.DEBUG, {
+      logger,
+      telemetry: err as Error,
+    });
   }
   return null;
 }
@@ -151,7 +162,11 @@ export function saveLocalProcessObj(
   childProcess: ChildProcess,
   args: string[],
 ): void {
-  kdbOutputLog(`Child process id ${childProcess.pid} saved in cache.`, "INFO");
+  notify(
+    `Child process id ${childProcess.pid} saved in cache.`,
+    MessageKind.DEBUG,
+    { logger },
+  );
   ext.localProcessObjects[args[2]] = childProcess;
 }
 
@@ -167,15 +182,53 @@ export function getOsFile(): string | undefined {
   }
 }
 
-export function getPlatformFolder(platform: string): string | undefined {
+export function getPlatformFolder(
+  platform: string,
+  arch?: string,
+): string | undefined {
   if (platform === "win32") {
     return "w64";
   } else if (platform === "darwin") {
     return "m64";
   } else if (platform === "linux") {
-    return "l64";
+    return arch === "arm64" ? "l64arm" : "l64";
   }
   return undefined;
+}
+
+export function getQExecutablePath() {
+  const folder = getPlatformFolder(process.platform, process.arch);
+
+  if (!folder) {
+    throw new Error(
+      `Unsupported platform (${process.platform}) or architecture (${process.arch}).`,
+    );
+  }
+
+  if (ext.REAL_QHOME) {
+    const q = path.join(ext.REAL_QHOME, "bin", "q");
+    return stat(q) ? q : path.join(ext.REAL_QHOME, folder, "q");
+  } else {
+    try {
+      for (const target of which("q")) {
+        if (target.endsWith(path.join("bin", "q"))) return target;
+      }
+    } catch (error) {
+      notify(errorMessage(error), MessageKind.DEBUG, { logger });
+    }
+  }
+
+  const qHomeDirectory = workspace
+    .getConfiguration("kdb")
+    .get<string>("qHomeDirectory", "");
+
+  if (qHomeDirectory) {
+    return path.join(qHomeDirectory, folder, "q");
+  }
+
+  throw new Error(
+    `Neither QHOME environment variable nor qHomeDirectory is set.`,
+  );
 }
 
 export async function getWorkspaceFolder(
@@ -192,11 +245,19 @@ export async function getWorkspaceFolder(
 }
 
 export function getServers(): Server | undefined {
-  return workspace.getConfiguration().get("kdb.servers");
+  const servers = workspace.getConfiguration().get<Server>("kdb.servers");
+
+  return servers
+    ? Object.fromEntries(
+        Object.entries(servers).sort(([, a], [, b]) =>
+          a.serverAlias.localeCompare(b.serverAlias),
+        ),
+      )
+    : servers;
 }
 
 // TODO: Remove this on 1.9.0 release
-/* istanbul ignore next */
+/* c8 ignore next */
 export function fixUnnamedAlias(): void {
   const servers = getServers();
   const insights = getInsights();
@@ -235,22 +296,16 @@ export function fixUnnamedAlias(): void {
   }
 }
 
-export function getHideDetailedConsoleQueryOutput(): void {
-  const setting = workspace
-    .getConfiguration()
-    .get<boolean | undefined>("kdb.hideDetailedConsoleQueryOutput");
-  if (setting === undefined) {
-    workspace
-      .getConfiguration()
-      .update(
-        "kdb.hideDetailedConsoleQueryOutput",
-        true,
-        ConfigurationTarget.Global,
-      );
-    ext.hideDetailedConsoleQueryOutput = true;
-  } else {
-    ext.hideDetailedConsoleQueryOutput = setting;
-  }
+export function getAutoFocusOutputOnEntrySetting(): boolean {
+  return workspace
+    .getConfiguration("kdb")
+    .get<boolean>("autoFocusOutputOnEntry", true);
+}
+
+export function getHideDetailedConsoleQueryOutputSetting(): boolean {
+  return workspace
+    .getConfiguration("kdb")
+    .get<boolean>("hideDetailedConsoleQueryOutput", true);
 }
 
 export function setOutputWordWrapper(): void {
@@ -279,9 +334,22 @@ export function getInsights(): Insights | undefined {
     "kdb.insightsEnterpriseConnections",
   );
 
-  return insights && Object.keys(insights).length > 0
-    ? insights
-    : configuration.get("kdb.insights");
+  const insightsList: Insights | undefined =
+    insights && Object.keys(insights).length > 0
+      ? insights
+      : configuration.get("kdb.insights");
+
+  if (!insightsList || Object.keys(insightsList).length === 0) {
+    return undefined;
+  }
+
+  return insightsList
+    ? Object.fromEntries(
+        Object.entries(insightsList).sort(([, a], [, b]) =>
+          a.alias.localeCompare(b.alias),
+        ),
+      )
+    : insightsList;
 }
 
 export async function updateServers(servers: Server): Promise<void> {
@@ -302,8 +370,8 @@ export async function updateInsights(insights: Insights): Promise<void> {
 
 export function getServerName(server: ServerDetails): string {
   return server.serverAlias != ""
-    ? `${server.serverName}:${server.serverPort} [${server.serverAlias}]`
-    : `${server.serverName}:${server.serverPort}`;
+    ? `${server.serverAlias} [${server.serverName}:${server.serverPort}]`
+    : `[${server.serverName}:${server.serverPort}]`;
 }
 
 export function getServerAlias(serverList: ServerDetails[]): void {
@@ -314,44 +382,32 @@ export function getServerAlias(serverList: ServerDetails[]): void {
   });
 }
 
-export function kdbOutputLog(
-  message: string,
-  type: string,
-  supressDialog?: boolean,
-): void {
-  const dateNow = new Date().toLocaleDateString();
-  const timeNow = new Date().toLocaleTimeString();
-  ext.outputChannel.appendLine(`[${dateNow} ${timeNow}] [${type}] ${message}`);
-  if (type === "ERROR" && !supressDialog) {
-    window.showErrorMessage(
-      `Error occured, check kdb output channel for details.`,
-    );
-  }
-}
-
 export function tokenUndefinedError(connLabel: string): void {
-  kdbOutputLog(
+  notify(
     `Error retrieving access token for Insights connection named: ${connLabel}`,
-    "ERROR",
+    MessageKind.ERROR,
+    { logger },
   );
 }
 
 export function invalidUsernameJWT(connLabel: string): void {
-  kdbOutputLog(
+  notify(
     `JWT did not contain a valid preferred username for Insights connection: ${connLabel}`,
-    "ERROR",
+    MessageKind.ERROR,
+    { logger },
   );
 }
 
-/* istanbul ignore next */
-export function offerConnectAction(connLabel: string): void {
-  window
-    .showInformationMessage(
+/* c8 ignore next */
+export function offerConnectAction(connLabel?: string): void {
+  if (connLabel) {
+    notify(
       `You aren't connected to ${connLabel}, would you like to connect? Once connected please try again.`,
+      MessageKind.WARNING,
+      {},
       "Connect",
       "Cancel",
-    )
-    .then(async (result) => {
+    ).then(async (result) => {
       if (result === "Connect") {
         await commands.executeCommand(
           "kdb.connections.connect.via.dialog",
@@ -359,30 +415,38 @@ export function offerConnectAction(connLabel: string): void {
         );
       }
     });
+  } else {
+    notify(
+      "You aren't connected to any connection. Once connected please try again.",
+      MessageKind.WARNING,
+      { logger },
+    );
+  }
 }
 
 export function noSelectedConnectionAction(): void {
-  window.showInformationMessage(
+  notify(
     `You didn't selected any existing connection to execute this action, please select a connection and try again.`,
+    MessageKind.INFO,
   );
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 export function offerReconnectionAfterEdit(connLabel: string): void {
-  window
-    .showInformationMessage(
-      `You are no longer connected to ${connLabel}, would you like to connect?`,
-      "Connect",
-      "Cancel",
-    )
-    .then(async (result) => {
-      if (result === "Connect") {
-        await commands.executeCommand(
-          "kdb.connections.connect.via.dialog",
-          connLabel,
-        );
-      }
-    });
+  notify(
+    `You are no longer connected to ${connLabel}, would you like to connect?`,
+    MessageKind.INFO,
+    {},
+    "Connect",
+    "Cancel",
+  ).then(async (result) => {
+    if (result === "Connect") {
+      await commands.executeCommand(
+        "kdb.connections.connect.via.dialog",
+        connLabel,
+      );
+    }
+  });
 }
 
 export function getInsightsAlias(insightsList: InsightDetails[]): void {
@@ -439,9 +503,10 @@ export async function checkLocalInstall(
     }
   }
   if (QHOME || env.QHOME) {
+    // TODO 1: This is wrong, env vars should be read only.
     env.QHOME = QHOME || env.QHOME;
     if (!pathExists(env.QHOME!)) {
-      kdbOutputLog("QHOME path stored is empty", "ERROR");
+      notify("QHOME path stored is empty.", MessageKind.ERROR, { logger });
     }
     await writeFile(
       join(__dirname, "qinstall.md"),
@@ -453,7 +518,9 @@ export async function checkLocalInstall(
       .getConfiguration()
       .update("kdb.qHomeDirectory", env.QHOME, ConfigurationTarget.Global);
 
-    kdbOutputLog(`Installation of q found here: ${env.QHOME}`, "INFO");
+    notify(`Installation of q found here: ${env.QHOME}`, MessageKind.DEBUG, {
+      logger,
+    });
 
     showRegistrationNotification();
 
@@ -461,9 +528,9 @@ export async function checkLocalInstall(
       .getConfiguration()
       .get<boolean>("kdb.hideInstallationNotification");
     if (!hideNotification) {
-      window.showInformationMessage(
-        `Installation of q found here: ${env.QHOME}`,
-      );
+      notify(`Installation of q found here: ${env.QHOME}`, MessageKind.INFO, {
+        logger,
+      });
     }
 
     // persist the notification seen option
@@ -481,28 +548,24 @@ export async function checkLocalInstall(
   // set custom context that QHOME is not setup to control walkthrough visibility
   commands.executeCommand("setContext", "kdb.showInstallWalkthrough", true);
 
-  window
-    .showInformationMessage(
-      "Local q installation not found!",
-      "Install new instance",
-      "No",
-      "Never show again",
-    )
-    .then(async (installResult) => {
-      if (installResult === "Install new instance") {
-        await installTools();
-      } else if (installResult === "Never show again") {
-        await workspace
-          .getConfiguration()
-          .update(
-            "kdb.neverShowQInstallAgain",
-            true,
-            ConfigurationTarget.Global,
-          );
-      } else {
-        showRegistrationNotification();
-      }
-    });
+  notify(
+    "Local q installation not found!",
+    MessageKind.INFO,
+    { logger },
+    "Install new instance",
+    "No",
+    "Never show again",
+  ).then(async (installResult) => {
+    if (installResult === "Install new instance") {
+      await installTools();
+    } else if (installResult === "Never show again") {
+      await workspace
+        .getConfiguration()
+        .update("kdb.neverShowQInstallAgain", true, ConfigurationTarget.Global);
+    } else {
+      showRegistrationNotification();
+    }
+  });
 }
 
 export async function convertBase64License(
@@ -644,16 +707,16 @@ export function hasWorkspaceOrShowOption(action: string) {
   if (workspace.workspaceFolders && workspace.workspaceFolders.length > 0) {
     return true;
   }
-  window
-    .showWarningMessage(
-      `No workspace folder is open. Please open a folder to enable ${action}.`,
-      "Open",
-    )
-    .then((res) => {
-      if (res === "Open") {
-        commands.executeCommand("workbench.action.files.openFolder");
-      }
-    });
+  notify(
+    `No workspace folder is open. Please open a folder to enable ${action}.`,
+    MessageKind.WARNING,
+    {},
+    "Open",
+  ).then((res) => {
+    if (res === "Open") {
+      commands.executeCommand("workbench.action.files.openFolder");
+    }
+  });
   return false;
 }
 
@@ -702,4 +765,8 @@ export function isBaseVersionGreaterOrEqual(
   targetVersion: number,
 ): boolean {
   return semver.gte(`${baseVersion}.0`, `${targetVersion}.0`);
+}
+
+export function getBasename(uri: Uri): string {
+  return path.basename(uri.path);
 }

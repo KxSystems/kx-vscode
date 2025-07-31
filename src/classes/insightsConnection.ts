@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -14,7 +14,6 @@
 import axios, { AxiosRequestConfig } from "axios";
 import { jwtDecode } from "jwt-decode";
 import * as url from "url";
-import { ProgressLocation, window } from "vscode";
 
 import { ext } from "../extensionVariables";
 import { isCompressed, uncompress } from "../ipc/c";
@@ -39,17 +38,15 @@ import { InsightsNode } from "../services/kdbTreeProvider";
 import {
   isBaseVersionGreaterOrEqual,
   invalidUsernameJWT,
-  kdbOutputLog,
   tokenUndefinedError,
 } from "../utils/core";
 import { convertTimeToTimestamp } from "../utils/dataSource";
-import {
-  generateQSqlBody,
-  handleScratchpadTableRes,
-  handleWSResults,
-} from "../utils/queryUtils";
-import { Telemetry } from "../utils/telemetryClient";
+import { MessageKind, notify } from "../utils/notifications";
+import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
+import { normalizeAssemblyTarget } from "../utils/shared";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
+
+const logger = "insightsConnection";
 
 const customHeadersOctet = {
   Accept: "application/octet-stream",
@@ -83,9 +80,8 @@ export class InsightsConnection {
       this.connected = token ? true : false;
       if (token) {
         await this.getConfig();
-        await this.getMeta();
         await this.getApiConfig();
-        await this.getScratchpadQuery("", undefined, false, true);
+        await this.getMeta();
       }
     });
     return this.connected;
@@ -153,9 +149,10 @@ export class InsightsConnection {
 
   public returnMetaObject(metaType: MetaInfoType): string {
     if (!this.meta) {
-      kdbOutputLog(
+      notify(
         `Meta data is undefined for connection ${this.connLabel}`,
-        "ERROR",
+        MessageKind.ERROR,
+        { logger },
       );
       return "";
     }
@@ -182,7 +179,9 @@ export class InsightsConnection {
         objectToReturn = this.meta.payload.rc;
         break;
       default:
-        kdbOutputLog(`Invalid meta type: ${metaType}`, "ERROR");
+        notify(`Invalid meta type: ${metaType}`, MessageKind.ERROR, {
+          logger,
+        });
         return "";
     }
 
@@ -190,18 +189,29 @@ export class InsightsConnection {
   }
 
   public async getMeta(): Promise<MetaObjectPayload | undefined> {
-    if (this.connected) {
+    if (this.connected && this.connEndpoints) {
       const metaUrl = new url.URL(
-        ext.insightsServiceGatewayUrls.meta,
+        this.connEndpoints?.serviceGateway.meta,
         this.node.details.server,
       );
-      const options = await this.getOptions();
+      const options = await this.getOptions(
+        false,
+        undefined,
+        "POST",
+        metaUrl.toString(),
+        { advanced: true },
+      );
 
       if (!options) {
         return undefined;
       }
 
-      const metaResponse = await axios.post(metaUrl.toString(), {}, options);
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url },
+      });
+
+      const metaResponse = await axios(options);
       const meta: MetaObject = metaResponse.data;
       this.meta = meta;
       return meta.payload;
@@ -229,9 +239,16 @@ export class InsightsConnection {
       if (options === undefined) {
         return undefined;
       }
+
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url },
+      });
+
       const configResponse = await axios(options);
 
       this.apiConfig = configResponse.data;
+      this.defineEndpoints();
     }
   }
 
@@ -252,11 +269,15 @@ export class InsightsConnection {
         return undefined;
       }
 
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url },
+      });
+
       const configResponse = await axios(options);
 
       this.config = configResponse.data;
       this.getInsightsVersion();
-      this.defineEndpoints();
     }
   }
 
@@ -270,47 +291,76 @@ export class InsightsConnection {
   }
 
   public defineEndpoints() {
-    const baseEndpoints = {
-      scratchpad: {
-        scratchpad: "servicebroker/scratchpad/display",
-        import: "servicebroker/scratchpad/import/data",
-        importSql: "servicebroker/scratchpad/import/sql",
-        importQsql: "servicebroker/scratchpad/import/qsql",
-        importUDA: "servicebroker/scratchpad/import/uda",
-        reset: "scratchpadmanager/reset",
-      },
-      serviceGateway: {
-        meta: "servicegateway/meta",
-        data: "servicegateway/data",
-        sql: "servicegateway/qe/sql",
-        qsql: "servicegateway/qe/qsql",
-        udaBase: "servicegateway/",
-      },
+    const scratchpadEndpoints = {
+      scratchpad: "scratchpadmanager/scratchpad/display",
+      import: "scratchpadmanager/scratchpad/import/data",
+      importSql: "scratchpadmanager/scratchpad/import/sql",
+      importQsql: "scratchpadmanager/scratchpad/import/qsql",
+      importUDA: "scratchpadmanager/scratchpad/import/uda",
+      reset: "scratchpadmanager/reset",
     };
 
-    const updatedEndpoints = {
-      scratchpad: {
-        scratchpad: "scratchpadmanager/scratchpad/display",
-        import: "scratchpadmanager/scratchpad/import/data",
-        importSql: "scratchpadmanager/scratchpad/import/sql",
-        importQsql: "scratchpadmanager/scratchpad/import/qsql",
-        importUDA: "scratchpadmanager/scratchpad/import/uda",
-        reset: "scratchpadmanager/reset",
-      },
-      serviceGateway: {
-        meta: "servicegateway/meta",
-        data: "servicegateway/data",
-        sql: "servicegateway/qe/sql",
-        qsql: "servicegateway/qe/qsql",
-        udaBase: "servicegateway/",
-      },
+    const getVersionGroup = (): string => {
+      if (
+        !this.insightsVersion ||
+        !isBaseVersionGreaterOrEqual(this.insightsVersion, 1.11)
+      ) {
+        return "pre-1.11";
+      }
+      if (!isBaseVersionGreaterOrEqual(this.insightsVersion, 1.14)) {
+        return "v1.11-1.13";
+      }
+      return "v1.14+";
     };
 
-    this.connEndpoints =
-      this.insightsVersion &&
-      isBaseVersionGreaterOrEqual(this.insightsVersion, 1.11)
-        ? updatedEndpoints
-        : baseEndpoints;
+    const versionGroup = getVersionGroup();
+    let serviceGatewayEndpoints;
+    const qePrefix = this.apiConfig?.queryEnvironmentsEnabled ? "qe/" : "";
+
+    switch (versionGroup) {
+      case "pre-1.11":
+        scratchpadEndpoints.scratchpad = "servicebroker/scratchpad/display";
+        scratchpadEndpoints.import = "servicebroker/scratchpad/import/data";
+        scratchpadEndpoints.importSql = "servicebroker/scratchpad/import/sql";
+        scratchpadEndpoints.importQsql = "servicebroker/scratchpad/import/qsql";
+        scratchpadEndpoints.importUDA = "servicebroker/scratchpad/import/uda";
+        scratchpadEndpoints.reset = "scratchpadmanager/reset";
+
+        serviceGatewayEndpoints = {
+          meta: "servicegateway/meta",
+          data: "servicegateway/data",
+          sql: "servicegateway/qe/sql",
+          qsql: "servicegateway/qe/qsql",
+          udaBase: "servicegateway/",
+        };
+        break;
+
+      case "v1.11-1.13":
+        serviceGatewayEndpoints = {
+          meta: `servicegateway/${qePrefix}api/v3/meta`,
+          data: "servicegateway/data",
+          sql: `servicegateway/${qePrefix}sql`,
+          qsql: `servicegateway/${qePrefix}qsql`,
+          udaBase: "servicegateway/",
+        };
+        break;
+
+      case "v1.14+":
+      default:
+        serviceGatewayEndpoints = {
+          meta: `servicegateway/${qePrefix}api/v3/meta`,
+          data: "servicegateway/data",
+          sql: `servicegateway/${qePrefix}kxi/sql`,
+          qsql: `servicegateway/${qePrefix}kxi/qsql`,
+          udaBase: "servicegateway/",
+        };
+        break;
+    }
+
+    this.connEndpoints = {
+      scratchpad: scratchpadEndpoints,
+      serviceGateway: serviceGatewayEndpoints,
+    };
   }
 
   public retrieveEndpoints(
@@ -351,6 +401,61 @@ export class InsightsConnection {
     return new url.URL(endpoint, this.node.details.server).toString();
   }
 
+  public generateQSqlBody(
+    query: string,
+    assemblyTarget: string,
+    version?: number,
+  ) {
+    const [plainAssembly, tier, plainDap] =
+      normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
+
+    const assembly = this.retrieveCorrectAssemblyName(plainAssembly);
+    const dap = this.retrieveCorrectDAPName(plainDap, tier);
+
+    if (version && isBaseVersionGreaterOrEqual(version, 1.13)) {
+      return {
+        query,
+        scope: {
+          affinity: "soft",
+          assembly,
+          tier: dap ? undefined : tier,
+          dap: dap,
+        },
+      };
+    }
+
+    return { query, assembly, tier, dap };
+  }
+
+  public retrieveCorrectAssemblyName(
+    plainAssembly: string,
+  ): string | undefined {
+    if (this.meta?.payload?.dap) {
+      const foundDap = this.meta.payload.dap.find((dap: any) =>
+        dap.assembly?.startsWith(plainAssembly),
+      );
+
+      return foundDap ? foundDap.assembly : undefined;
+    } else {
+      return;
+    }
+  }
+
+  public retrieveCorrectDAPName(
+    plainDAP: string | undefined,
+    tier: string | undefined,
+  ): string | undefined {
+    if (this.meta?.payload?.dap && plainDAP) {
+      const foundDap = this.meta.payload.dap.find(
+        (dap: any) => dap.dap?.startsWith(plainDAP) && dap.instance === tier,
+      );
+
+      return foundDap ? foundDap.dap : undefined;
+    } else {
+      return;
+    }
+  }
+
   public async getDatasourceQuery(
     type: DataSourceTypes,
     body: any,
@@ -380,54 +485,47 @@ export class InsightsConnection {
         return undefined;
       }
       options.responseType = "arraybuffer";
-      const results = await window.withProgress(
-        {
-          location: ProgressLocation.Notification,
-          cancellable: true,
-        },
-        async (progress, token) => {
-          token.onCancellationRequested(() => {
-            kdbOutputLog(`User cancelled the Datasource Run.`, "WARNING");
-          });
 
-          progress.report({ message: "Query executing..." });
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url },
+      });
 
-          return await axios(options)
-            .then((response: any) => {
-              kdbOutputLog(
-                `[Datasource RUN] Status: ${response.status}.`,
-                "INFO",
-              );
-              if (isCompressed(response.data)) {
-                response.data = uncompress(response.data);
-              }
-              return {
-                error: "",
-                arrayBuffer: response.data.buffer
-                  ? response.data.buffer
-                  : response.data,
-              };
-            })
-            .catch((error: any) => {
-              kdbOutputLog(
-                `[Datasource RUN] Status: ${error.response.status}.`,
-                "ERROR",
-              );
-              return {
-                error: { buffer: error.response.data },
-                arrayBuffer: undefined,
-              };
-            });
-        },
-      );
-      return results;
+      return await axios(options)
+        .then((response: any) => {
+          notify(
+            `Datasource execution status: ${response.status}.`,
+            MessageKind.DEBUG,
+            { logger },
+          );
+          if (isCompressed(response.data)) {
+            response.data = uncompress(response.data);
+          }
+          return {
+            error: "",
+            arrayBuffer: response.data.buffer
+              ? response.data.buffer
+              : response.data,
+          };
+        })
+        .catch((error: any) => {
+          notify(
+            `Datasource execution status: ${error.response.status}.`,
+            MessageKind.DEBUG,
+            { logger, params: error },
+          );
+          return {
+            error: { buffer: error.response.data },
+            arrayBuffer: undefined,
+          };
+        });
     }
   }
 
   public async importScratchpad(
     variableName: string,
     params: DataSourceFiles,
-    qeEnabled?: boolean,
+    silent?: boolean,
   ): Promise<void> {
     let dsTypeString = "";
     if (this.connected && this.connEndpoints) {
@@ -454,11 +552,10 @@ export class InsightsConnection {
           break;
         }
         case DataSourceTypes.QSQL: {
-          body.params = generateQSqlBody(
+          body.params = this.generateQSqlBody(
             params.dataSource.qsql.query,
             params.dataSource.qsql.selectedTarget,
             this.insightsVersion,
-            qeEnabled,
           );
 
           coreUrl = this.connEndpoints.scratchpad.importQsql;
@@ -470,10 +567,10 @@ export class InsightsConnection {
           const udaReqBody = await retrieveUDAtoCreateReqBody(uda, this);
 
           if (udaReqBody.error) {
-            kdbOutputLog(
-              `[SCRATCHPAD] Error occurred while creating UDA request body: ${udaReqBody.error}`,
-              "ERROR",
-            );
+            notify("Unable to create UDA request body.", MessageKind.ERROR, {
+              logger,
+              params: udaReqBody.error,
+            });
             return;
           }
           body.params = udaReqBody.params;
@@ -504,49 +601,35 @@ export class InsightsConnection {
         return;
       }
 
-      await window.withProgress(
-        {
-          location: ProgressLocation.Notification,
-          cancellable: false,
-        },
-        async (progress, token) => {
-          token.onCancellationRequested(() => {
-            kdbOutputLog(`User cancelled the scratchpad import.`, "WARNING");
-          });
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url },
+      });
 
-          progress.report({ message: "Populating scratchpad..." });
-
-          return await axios(options).then((response: any) => {
-            if (response.data.error) {
-              kdbOutputLog(
-                `[SCRATCHPAD] Error occured while populating scratchpad: ${response.data.errorMsg}`,
-                "ERROR",
-              );
-              Telemetry.sendEvent(
+      return await axios(options).then((response: any) => {
+        if (response.data.error) {
+          notify(
+            "Error occured while populating scratchpad.",
+            silent ? MessageKind.DEBUG : MessageKind.ERROR,
+            {
+              logger,
+              params: { status: response.status },
+              telemetry:
                 "Datasource." + dsTypeString + ".Scratchpad.Populated.Errored",
-              );
-            } else {
-              kdbOutputLog(
-                `Executed successfully, stored in ${variableName}.`,
-                "INFO",
-              );
-              kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
-              kdbOutputLog(
-                `[SCRATCHPAD] Populated scratchpad with the following params: ${JSON.stringify(
-                  body.params,
-                )}`,
-                "INFO",
-              );
-              window.showInformationMessage(
-                `Executed successfully, stored in ${variableName}.`,
-              );
-              Telemetry.sendEvent(
-                "Datasource." + dsTypeString + ".Scratchpad.Populated",
-              );
-            }
-          });
-        },
-      );
+            },
+          );
+        } else {
+          notify(
+            `Scratchpad variable (${variableName}) populated.`,
+            silent ? MessageKind.DEBUG : MessageKind.INFO,
+            {
+              logger,
+              params: { status: response.status },
+              telemetry: "Datasource." + dsTypeString + ".Scratchpad.Populated",
+            },
+          );
+        }
+      });
     } else {
       this.noConnectionOrEndpoints();
     }
@@ -576,8 +659,8 @@ export class InsightsConnection {
 
     if (this.meta.payload.api && Array.isArray(this.meta.payload.api)) {
       return this.meta.payload.api.some(
-        (apiItem: { api: string; custom: boolean }) =>
-          apiItem.api === udaName && apiItem.custom === true,
+        (apiItem: { api: string; uda: boolean }) =>
+          apiItem.api === udaName && apiItem.uda === true,
       );
     }
 
@@ -604,36 +687,29 @@ export class InsightsConnection {
         return;
       }
 
-      const udaResponse = await window.withProgress(
-        {
-          location: ProgressLocation.Notification,
-          cancellable: false,
-        },
-        async (_progress, token) => {
-          token.onCancellationRequested(() => {
-            kdbOutputLog(`User cancelled the UDA execution.`, "WARNING");
-          });
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url },
+      });
 
-          const udaRes = await axios(options).then((response: any) => {
-            if (response.data.error) {
-              return response.data;
-            } else {
-              kdbOutputLog(`[UDA] Status: ${response.status}`, "INFO");
-              if (!response.data.error) {
-                if (isTableView) {
-                  response.data = JSON.parse(
-                    response.data.data,
-                  ) as StructuredTextResults;
-                }
-                return response.data;
-              }
-              return response.data;
-            }
+      return await axios(options).then((response: any) => {
+        if (response.data.error) {
+          return response.data;
+        } else {
+          notify(`Status: ${response.status}`, MessageKind.DEBUG, {
+            logger,
           });
-          return udaRes;
-        },
-      );
-      return udaResponse;
+          if (!response.data.error) {
+            if (isTableView) {
+              response.data = JSON.parse(
+                response.data.data,
+              ) as StructuredTextResults;
+            }
+            return response.data;
+          }
+          return response.data;
+        }
+      });
     } else {
       this.noConnectionOrEndpoints();
     }
@@ -644,7 +720,6 @@ export class InsightsConnection {
     query: string,
     context?: string,
     isPython?: boolean,
-    isStarting?: boolean,
     isTableView?: boolean,
   ): Promise<any | undefined> {
     if (this.connected && this.connEndpoints) {
@@ -687,63 +762,51 @@ export class InsightsConnection {
         return;
       }
 
-      const spResponse = await window.withProgress(
-        {
-          location: ProgressLocation.Notification,
-          cancellable: false,
-        },
-        async (progress, token) => {
-          token.onCancellationRequested(() => {
-            kdbOutputLog(`User cancelled the scratchpad execution.`, "WARNING");
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url },
+      });
+
+      return await axios(options).then((response: any) => {
+        if (response.data.error) {
+          return response.data;
+        } else if (query === "") {
+          notify(
+            `Scratchpad created for connection: ${this.connLabel}.`,
+            MessageKind.DEBUG,
+            { logger },
+          );
+        } else {
+          notify(`Status: ${response.status}`, MessageKind.DEBUG, {
+            logger,
           });
+          if (!response.data.error) {
+            if (isTableView) {
+              if (
+                /* TODO: Workaround for Python structuredText bug */
+                !isPython &&
+                this.insightsVersion &&
+                isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
+              ) {
+                response.data = JSON.parse(
+                  response.data.data,
+                ) as StructuredTextResults;
+              } else {
+                const buffer = new Uint8Array(
+                  response.data.data.map((x: string) => parseInt(x, 16)),
+                ).buffer;
 
-          if (isStarting) {
-            progress.report({ message: "Starting scratchpad..." });
-          } else {
-            progress.report({ message: "Query is running..." });
-          }
-
-          const spRes = await axios(options).then((response: any) => {
-            if (response.data.error) {
-              return response.data;
-            } else if (query === "") {
-              kdbOutputLog(
-                `[SCRATCHPAD] scratchpad created for connection: ${this.connLabel}`,
-                "INFO",
-              );
-            } else {
-              kdbOutputLog(`[SCRATCHPAD] Status: ${response.status}`, "INFO");
-              if (!response.data.error) {
-                if (isTableView) {
-                  if (
-                    /* TODO: Workaround for Python structuredText bug */
-                    !isPython &&
-                    this.insightsVersion &&
-                    isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
-                  ) {
-                    response.data = JSON.parse(
-                      response.data.data,
-                    ) as StructuredTextResults;
-                  } else {
-                    const buffer = new Uint8Array(
-                      response.data.data.map((x: string) => parseInt(x, 16)),
-                    ).buffer;
-
-                    response.data.data = handleWSResults(buffer, isTableView);
-                    response.data.data = handleScratchpadTableRes(
-                      response.data.data,
-                    );
-                  }
-                }
-                return response.data;
+                response.data.data = handleWSResults(buffer, isTableView);
+                response.data.data = handleScratchpadTableRes(
+                  response.data.data,
+                );
               }
-              return response.data;
             }
-          });
-          return spRes;
-        },
-      );
-      return spResponse;
+            return response.data;
+          }
+          return response.data;
+        }
+      });
     } else {
       this.noConnectionOrEndpoints();
     }
@@ -768,43 +831,28 @@ export class InsightsConnection {
         return;
       }
 
-      return await window.withProgress(
-        {
-          location: ProgressLocation.Notification,
-          cancellable: false,
-        },
-        async (progress, token) => {
-          token.onCancellationRequested(() => {
-            kdbOutputLog(`User cancelled the scratchpad reset.`, "WARNING");
-            return false;
-          });
-          progress.report({ message: "Reseting scratchpad..." });
-          const res = await axios(options)
-            .then((_response: any) => {
-              kdbOutputLog(
-                `[SCRATCHPAD] Executed successfully, scratchpad reset at ${this.connLabel} connection.`,
-                "INFO",
-              );
-              window.showInformationMessage(
-                `Executed successfully, scratchpad reset at ${this.connLabel} connection.`,
-              );
-              Telemetry.sendEvent("Scratchpad.Reseted");
-              return true;
-            })
-            .catch((_error: any) => {
-              kdbOutputLog(
-                `[SCRATCHPAD] Error occurred while resetting scratchpad in connection ${this.connLabel}, try again.`,
-                "ERROR",
-              );
-              window.showErrorMessage(
-                "Error occurred while resetting scratchpad, try again.",
-              );
-              return false;
-            });
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url },
+      });
 
-          return res;
-        },
-      );
+      return await axios(options)
+        .then((_response: any) => {
+          notify(
+            `Scratchpad reset for ${this.connLabel} executed successfully.`,
+            MessageKind.INFO,
+            { logger, telemetry: "Scratchpad.Reseted" },
+          );
+          return true;
+        })
+        .catch((_error: any) => {
+          notify(
+            `Error occurred while resetting scratchpad for ${this.connLabel}, try again.`,
+            MessageKind.ERROR,
+            { logger },
+          );
+          return false;
+        });
     } else {
       this.noConnectionOrEndpoints();
       return false;
@@ -812,9 +860,10 @@ export class InsightsConnection {
   }
 
   public noConnectionOrEndpoints(): void {
-    kdbOutputLog(
+    notify(
       `No connection or endpoints defined for ${this.connLabel}`,
-      "ERROR",
+      MessageKind.ERROR,
+      { logger },
     );
   }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -111,6 +111,15 @@ describe("kdbValidator", () => {
     assert.strictEqual(
       result,
       "The server name “local” is reserved for connections to the Bundled q process",
+      "Input contained restricted keyword.",
+    );
+  });
+
+  it("Should return fail if using restricted keyword", () => {
+    const result = kdbValidators.validateServerAlias("REPL", false);
+    assert.strictEqual(
+      result,
+      "The server name 'REPL' is reserved for connections to the REPL",
       "Input contained restricted keyword.",
     );
   });

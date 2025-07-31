@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,6 +11,7 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { QList } from "./parse.qlist";
 import QBoolean from "./QBoolean";
 import QByte from "./QByte";
 import QChar from "./QChar";
@@ -29,7 +30,6 @@ import QSymbol from "./QSymbol";
 import QTime from "./QTime";
 import QTimespan from "./QTimespan";
 import QTimestamp from "./QTimestamp";
-import { QList } from "./parse.qlist";
 import { TypeBase } from "./typeBase";
 
 export class Util {
@@ -91,7 +91,7 @@ export class Util {
   static pack(bytes: Array<number>) {
     const chars = [];
     for (let i = 0, n = bytes.length; i < n; ) {
-      // eslint-disable-next-line no-bitwise
+       
       chars.push(((bytes[i++] & 0xff) << 8) | (bytes[i++] & 0xff));
     }
     return String.fromCharCode.apply(null, chars);

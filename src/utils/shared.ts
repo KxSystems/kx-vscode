@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,8 +11,25 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export function normalizeAssemblyTarget(assemblyTarget: string) {
-  const [dirtyAssembly, target] = assemblyTarget.split(/\s+/);
-  const assembly = dirtyAssembly.replace(/-qe$/gm, "");
-  return `${assembly} ${target}`;
+export function normalizeAssemblyTarget(assemblyTarget: string): string {
+  return assemblyTarget?.trim().replace(/\s+/g, " ") || "";
+}
+
+export function stripUnprintableChars(text: string): string {
+  return text
+    .replace(/\p{Cc}/gu, "")
+    .replace(/\p{Co}/gu, "")
+    .replace(/\p{Cn}/gu, "");
+}
+
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : `${error}`;
+}
+
+export function cleanDapName(dapName: string): string {
+  return dapName.replace(/:\d+$/, "");
+}
+
+export function cleanAssemblyName(assemblyName: string): string {
+  return assemblyName.replace(/-qe$/, "");
 }

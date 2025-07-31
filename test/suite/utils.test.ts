@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -13,6 +13,7 @@
 
 import * as assert from "assert";
 import mock from "mock-fs";
+import path from "node:path";
 import { env } from "node:process";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
@@ -55,10 +56,13 @@ import * as executionConsoleUtils from "../../src/utils/executionConsole";
 import { feedbackSurveyDialog } from "../../src/utils/feedbackSurveyUtils";
 import { getNonce } from "../../src/utils/getNonce";
 import { getUri } from "../../src/utils/getUri";
+import * as loggers from "../../src/utils/loggers";
+import * as notifications from "../../src/utils/notifications";
 import { openUrl } from "../../src/utils/openUrl";
 import * as queryUtils from "../../src/utils/queryUtils";
 import { showRegistrationNotification } from "../../src/utils/registration";
-import * as shared from "../../src/utils/shared";
+import * as sharedUtils from "../../src/utils/shared";
+import * as shell from "../../src/utils/shell";
 import { killPid } from "../../src/utils/shell";
 import * as UDAUtils from "../../src/utils/uda";
 import {
@@ -92,7 +96,7 @@ describe("Utils", () => {
       let kdbOutputLogStub: sinon.SinonStub;
       beforeEach(() => {
         tryExecuteCommandStub = sinon.stub(cpUtils, "tryExecuteCommand");
-        kdbOutputLogStub = sinon.stub(coreUtils, "kdbOutputLog");
+        kdbOutputLogStub = sinon.stub(loggers, "kdbOutputLog");
       });
 
       afterEach(() => {
@@ -117,6 +121,7 @@ describe("Utils", () => {
         assert.strictEqual(result, null);
       });
     });
+
     describe("setOutputWordWrapper", () => {
       let getConfigurationStub: sinon.SinonStub;
       beforeEach(() => {
@@ -139,46 +144,6 @@ describe("Utils", () => {
         getConfigurationStub.returns({ "editor.wordWrap": "on" });
         coreUtils.setOutputWordWrapper();
         sinon.assert.calledOnce(getConfigurationStub);
-      });
-    });
-
-    describe("getHideDetailedConsoleQueryOutput", () => {
-      let getConfigurationStub: sinon.SinonStub;
-
-      beforeEach(() => {
-        getConfigurationStub = sinon.stub(
-          vscode.workspace,
-          "getConfiguration",
-        ) as sinon.SinonStub;
-      });
-
-      afterEach(() => {
-        getConfigurationStub.restore();
-        sinon.restore();
-      });
-
-      it("should update configuration and set hideDetailedConsoleQueryOutput to true when setting is undefined", async () => {
-        getConfigurationStub.returns({
-          get: sinon.stub().returns(undefined),
-          update: sinon.stub(),
-        });
-
-        await coreUtils.getHideDetailedConsoleQueryOutput();
-
-        sinon.assert.calledTwice(getConfigurationStub);
-        assert.strictEqual(ext.hideDetailedConsoleQueryOutput, true);
-      });
-
-      it("should set hideDetailedConsoleQueryOutput to setting when setting is defined", async () => {
-        getConfigurationStub.returns({
-          get: sinon.stub().returns(false),
-          update: sinon.stub(),
-        });
-
-        await coreUtils.getHideDetailedConsoleQueryOutput();
-
-        sinon.assert.calledOnce(getConfigurationStub);
-        assert.strictEqual(ext.hideDetailedConsoleQueryOutput, false);
       });
     });
 
@@ -319,7 +284,7 @@ describe("Utils", () => {
         const message = "test message";
         const type = "INFO";
 
-        coreUtils.kdbOutputLog(message, type);
+        loggers.kdbOutputLog(message, type);
 
         appendLineSpy.calledOnce;
         appendLineSpy.calledWithMatch(message);
@@ -330,7 +295,7 @@ describe("Utils", () => {
         const message = "test message";
         const type = "ERROR";
 
-        coreUtils.kdbOutputLog(message, type);
+        loggers.kdbOutputLog(message, type);
 
         appendLineSpy.calledOnce;
         showErrorMessageSpy.calledOnce;
@@ -392,6 +357,660 @@ describe("Utils", () => {
           .resolves();
         coreUtils.noSelectedConnectionAction();
         assert.ok(stub.calledOnce);
+      });
+    });
+
+    describe("getServers", () => {
+      let workspaceStub: sinon.SinonStub;
+      let _getConfigurationStub: sinon.SinonStub;
+      let getStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        getStub = sinon.stub();
+        _getConfigurationStub = sinon.stub().returns({ get: getStub });
+        workspaceStub = sinon
+          .stub(vscode.workspace, "getConfiguration")
+          .returns({
+            get: getStub,
+            has: function (_section: string): boolean {
+              throw new Error("Function not implemented.");
+            },
+            inspect: function <T>(_section: string):
+              | {
+                  key: string;
+                  defaultValue?: T;
+                  globalValue?: T;
+                  workspaceValue?: T;
+                  workspaceFolderValue?: T;
+                  defaultLanguageValue?: T;
+                  globalLanguageValue?: T;
+                  workspaceLanguageValue?: T;
+                  workspaceFolderLanguageValue?: T;
+                  languageIds?: string[];
+                }
+              | undefined {
+              throw new Error("Function not implemented.");
+            },
+            update: function (
+              _section: string,
+              _value: any,
+              _configurationTarget?:
+                | vscode.ConfigurationTarget
+                | boolean
+                | null,
+              _overrideInLanguage?: boolean,
+            ): Thenable<void> {
+              throw new Error("Function not implemented.");
+            },
+          });
+      });
+
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("should return undefined when no servers are configured", () => {
+        getStub.returns(undefined);
+
+        const result = coreUtils.getServers();
+
+        assert.strictEqual(result, undefined);
+        assert.ok(getStub.calledWith("kdb.servers"));
+      });
+
+      it("should return servers sorted alphabetically by serverAlias", () => {
+        const mockServers = {
+          server3: {
+            serverName: "localhost",
+            serverPort: "5003",
+            serverAlias: "Charlie Server",
+            auth: false,
+            managed: false,
+            tls: false,
+          },
+          server1: {
+            serverName: "localhost",
+            serverPort: "5001",
+            serverAlias: "Alpha Server",
+            auth: false,
+            managed: false,
+            tls: false,
+          },
+          server2: {
+            serverName: "localhost",
+            serverPort: "5002",
+            serverAlias: "Beta Server",
+            auth: true,
+            managed: true,
+            tls: true,
+          },
+        };
+
+        getStub.returns(mockServers);
+
+        const result = coreUtils.getServers();
+
+        assert.ok(result);
+        const serverKeys = Object.keys(result);
+        const serverAliases = serverKeys.map((key) => result[key].serverAlias);
+
+        assert.deepStrictEqual(serverAliases, [
+          "Alpha Server",
+          "Beta Server",
+          "Charlie Server",
+        ]);
+
+        assert.strictEqual(result[serverKeys[0]].serverName, "localhost");
+        assert.strictEqual(result[serverKeys[0]].serverPort, "5001");
+        assert.strictEqual(result[serverKeys[0]].auth, false);
+        assert.strictEqual(result[serverKeys[1]].managed, true);
+        assert.strictEqual(result[serverKeys[2]].tls, false);
+      });
+
+      it("should handle single server correctly", () => {
+        const mockServers = {
+          onlyServer: {
+            serverName: "remote-host",
+            serverPort: "6000",
+            serverAlias: "Single Server",
+            auth: true,
+            managed: false,
+            tls: true,
+          },
+        };
+
+        getStub.returns(mockServers);
+
+        const result = coreUtils.getServers();
+
+        assert.ok(result);
+        const serverKeys = Object.keys(result);
+        assert.strictEqual(serverKeys.length, 1);
+        assert.strictEqual(result[serverKeys[0]].serverAlias, "Single Server");
+        assert.strictEqual(result[serverKeys[0]].serverName, "remote-host");
+      });
+
+      it("should handle servers with identical serverAlias", () => {
+        const mockServers = {
+          server1: {
+            serverName: "host1",
+            serverPort: "5001",
+            serverAlias: "Same Name",
+            auth: false,
+            managed: false,
+            tls: false,
+          },
+          server2: {
+            serverName: "host2",
+            serverPort: "5002",
+            serverAlias: "Same Name",
+            auth: false,
+            managed: false,
+            tls: false,
+          },
+        };
+
+        getStub.returns(mockServers);
+
+        const result = coreUtils.getServers();
+
+        assert.ok(result);
+        const serverKeys = Object.keys(result);
+        assert.strictEqual(serverKeys.length, 2);
+
+        serverKeys.forEach((key) => {
+          assert.strictEqual(result[key].serverAlias, "Same Name");
+        });
+      });
+
+      it("should handle empty servers object", () => {
+        const mockServers = {};
+
+        getStub.returns(mockServers);
+
+        const result = coreUtils.getServers();
+
+        assert.ok(result);
+        assert.strictEqual(Object.keys(result).length, 0);
+      });
+
+      it("should handle servers with special characters in serverAlias", () => {
+        const mockServers = {
+          server1: {
+            serverName: "localhost",
+            serverPort: "5001",
+            serverAlias: "!Special Server",
+            auth: false,
+            managed: false,
+            tls: false,
+          },
+          server2: {
+            serverName: "localhost",
+            serverPort: "5002",
+            serverAlias: "123 Numeric Server",
+            auth: false,
+            managed: false,
+            tls: false,
+          },
+          server3: {
+            serverName: "localhost",
+            serverPort: "5003",
+            serverAlias: "Åccented Server",
+            auth: false,
+            managed: false,
+            tls: false,
+          },
+        };
+
+        getStub.returns(mockServers);
+
+        const result = coreUtils.getServers();
+
+        assert.ok(result);
+        const serverKeys = Object.keys(result);
+        const serverAliases = serverKeys.map((key) => result[key].serverAlias);
+
+        assert.strictEqual(serverAliases[0], "!Special Server");
+        assert.strictEqual(serverAliases[1], "123 Numeric Server");
+        assert.strictEqual(serverAliases[2], "Åccented Server");
+      });
+
+      it("should call workspace.getConfiguration without parameters", () => {
+        getStub.returns(undefined);
+
+        coreUtils.getServers();
+
+        assert.ok(workspaceStub.calledOnce);
+        assert.ok(workspaceStub.calledWith());
+      });
+
+      it("should call get method with correct parameter", () => {
+        getStub.returns(undefined);
+
+        coreUtils.getServers();
+
+        assert.ok(getStub.calledOnce);
+        assert.ok(getStub.calledWith("kdb.servers"));
+      });
+    });
+
+    describe("getInsights", () => {
+      let workspaceStub: sinon.SinonStub;
+      let _getConfigurationStub: sinon.SinonStub;
+      let getStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        getStub = sinon.stub();
+        _getConfigurationStub = sinon.stub().returns({ get: getStub });
+        workspaceStub = sinon
+          .stub(vscode.workspace, "getConfiguration")
+          .returns({
+            get: getStub,
+            has: function (_section: string): boolean {
+              throw new Error("Function not implemented.");
+            },
+            inspect: function <T>(_section: string):
+              | {
+                  key: string;
+                  defaultValue?: T;
+                  globalValue?: T;
+                  workspaceValue?: T;
+                  workspaceFolderValue?: T;
+                  defaultLanguageValue?: T;
+                  globalLanguageValue?: T;
+                  workspaceLanguageValue?: T;
+                  workspaceFolderLanguageValue?: T;
+                  languageIds?: string[];
+                }
+              | undefined {
+              throw new Error("Function not implemented.");
+            },
+            update: function (
+              _section: string,
+              _value: any,
+              _configurationTarget?:
+                | vscode.ConfigurationTarget
+                | boolean
+                | null,
+              _overrideInLanguage?: boolean,
+            ): Thenable<void> {
+              throw new Error("Function not implemented.");
+            },
+          });
+      });
+
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("should return undefined when no insights are configured", () => {
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(undefined);
+        getStub.withArgs("kdb.insights").returns(undefined);
+
+        const result = coreUtils.getInsights();
+
+        assert.strictEqual(result, undefined);
+        assert.ok(getStub.calledWith("kdb.insightsEnterpriseConnections"));
+        assert.ok(getStub.calledWith("kdb.insights"));
+      });
+
+      it("should return insightsEnterpriseConnections when available and not empty", () => {
+        const mockInsights = {
+          insight3: {
+            alias: "Charlie Insight",
+            server: "https://charlie.insights.com",
+            auth: true,
+            realm: "charlie-realm",
+            insecure: false,
+          },
+          insight1: {
+            alias: "Alpha Insight",
+            server: "https://alpha.insights.com",
+            auth: false,
+            insecure: true,
+          },
+          insight2: {
+            alias: "Beta Insight",
+            server: "https://beta.insights.com",
+            auth: true,
+            realm: "beta-realm",
+            insecure: false,
+          },
+        };
+
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(mockInsights);
+        getStub.withArgs("kdb.insights").returns(undefined);
+
+        const result = coreUtils.getInsights();
+
+        assert.ok(result);
+        const insightKeys = Object.keys(result);
+        const insightAliases = insightKeys.map((key) => result[key].alias);
+
+        assert.deepStrictEqual(insightAliases, [
+          "Alpha Insight",
+          "Beta Insight",
+          "Charlie Insight",
+        ]);
+
+        assert.strictEqual(
+          result[insightKeys[0]].server,
+          "https://alpha.insights.com",
+        );
+        assert.strictEqual(result[insightKeys[0]].auth, false);
+        assert.strictEqual(result[insightKeys[1]].realm, "beta-realm");
+        assert.strictEqual(result[insightKeys[2]].insecure, false);
+
+        assert.ok(getStub.calledWith("kdb.insightsEnterpriseConnections"));
+        assert.ok(!getStub.calledWith("kdb.insights"));
+      });
+
+      it("should fallback to kdb.insights when insightsEnterpriseConnections is empty", () => {
+        const mockFallbackInsights = {
+          fallback2: {
+            alias: "Fallback Beta",
+            server: "https://fallback-beta.com",
+            auth: true,
+          },
+          fallback1: {
+            alias: "Fallback Alpha",
+            server: "https://fallback-alpha.com",
+            auth: false,
+          },
+        };
+
+        getStub.withArgs("kdb.insightsEnterpriseConnections").returns({});
+        getStub.withArgs("kdb.insights").returns(mockFallbackInsights);
+
+        const result = coreUtils.getInsights();
+
+        assert.ok(result);
+        const insightKeys = Object.keys(result);
+        const insightAliases = insightKeys.map((key) => result[key].alias);
+
+        assert.deepStrictEqual(insightAliases, [
+          "Fallback Alpha",
+          "Fallback Beta",
+        ]);
+
+        assert.ok(getStub.calledWith("kdb.insightsEnterpriseConnections"));
+        assert.ok(getStub.calledWith("kdb.insights"));
+      });
+
+      it("should fallback to kdb.insights when insightsEnterpriseConnections is undefined", () => {
+        const mockFallbackInsights = {
+          single: {
+            alias: "Single Fallback",
+            server: "https://single-fallback.com",
+            auth: true,
+            realm: "single-realm",
+          },
+        };
+
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(undefined);
+        getStub.withArgs("kdb.insights").returns(mockFallbackInsights);
+
+        const result = coreUtils.getInsights();
+
+        assert.ok(result);
+        const insightKeys = Object.keys(result);
+        assert.strictEqual(insightKeys.length, 1);
+        assert.strictEqual(result[insightKeys[0]].alias, "Single Fallback");
+
+        assert.ok(getStub.calledWith("kdb.insightsEnterpriseConnections"));
+        assert.ok(getStub.calledWith("kdb.insights"));
+      });
+
+      it("should return undefined when both sources are empty", () => {
+        getStub.withArgs("kdb.insightsEnterpriseConnections").returns({});
+        getStub.withArgs("kdb.insights").returns({});
+
+        const result = coreUtils.getInsights();
+
+        assert.strictEqual(result, undefined);
+        assert.ok(getStub.calledWith("kdb.insightsEnterpriseConnections"));
+        assert.ok(getStub.calledWith("kdb.insights"));
+      });
+
+      it("should handle single insight correctly", () => {
+        const mockInsights = {
+          onlyInsight: {
+            alias: "Only Insight",
+            server: "https://only.insights.com",
+            auth: true,
+            realm: "only-realm",
+            insecure: false,
+          },
+        };
+
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(mockInsights);
+
+        const result = coreUtils.getInsights();
+
+        assert.ok(result);
+        const insightKeys = Object.keys(result);
+        assert.strictEqual(insightKeys.length, 1);
+        assert.strictEqual(result[insightKeys[0]].alias, "Only Insight");
+        assert.strictEqual(
+          result[insightKeys[0]].server,
+          "https://only.insights.com",
+        );
+      });
+
+      it("should handle insights with identical aliases", () => {
+        const mockInsights = {
+          insight1: {
+            alias: "Same Name",
+            server: "https://server1.com",
+            auth: false,
+          },
+          insight2: {
+            alias: "Same Name",
+            server: "https://server2.com",
+            auth: true,
+          },
+        };
+
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(mockInsights);
+
+        const result = coreUtils.getInsights();
+
+        assert.ok(result);
+        const insightKeys = Object.keys(result);
+        assert.strictEqual(insightKeys.length, 2);
+
+        insightKeys.forEach((key) => {
+          assert.strictEqual(result[key].alias, "Same Name");
+        });
+      });
+
+      it("should handle insights with special characters in alias", () => {
+        const mockInsights = {
+          insight1: {
+            alias: "!Special Insight",
+            server: "https://special.com",
+            auth: false,
+          },
+          insight2: {
+            alias: "123 Numeric Insight",
+            server: "https://numeric.com",
+            auth: false,
+          },
+          insight3: {
+            alias: "Åccented Insight",
+            server: "https://accented.com",
+            auth: false,
+          },
+        };
+
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(mockInsights);
+
+        const result = coreUtils.getInsights();
+
+        assert.ok(result);
+        const insightKeys = Object.keys(result);
+        const insightAliases = insightKeys.map((key) => result[key].alias);
+
+        assert.strictEqual(insightAliases[0], "!Special Insight");
+        assert.strictEqual(insightAliases[1], "123 Numeric Insight");
+        assert.strictEqual(insightAliases[2], "Åccented Insight");
+      });
+
+      it("should prefer insightsEnterpriseConnections over fallback when both exist", () => {
+        const mockPrimaryInsights = {
+          primary: {
+            alias: "Primary Insight",
+            server: "https://primary.com",
+            auth: true,
+          },
+        };
+
+        const mockFallbackInsights = {
+          fallback: {
+            alias: "Fallback Insight",
+            server: "https://fallback.com",
+            auth: false,
+          },
+        };
+
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(mockPrimaryInsights);
+        getStub.withArgs("kdb.insights").returns(mockFallbackInsights);
+
+        const result = coreUtils.getInsights();
+
+        assert.ok(result);
+        const insightKeys = Object.keys(result);
+        assert.strictEqual(insightKeys.length, 1);
+        assert.strictEqual(result[insightKeys[0]].alias, "Primary Insight");
+        assert.strictEqual(
+          result[insightKeys[0]].server,
+          "https://primary.com",
+        );
+
+        assert.ok(getStub.calledWith("kdb.insightsEnterpriseConnections"));
+        assert.ok(!getStub.calledWith("kdb.insights"));
+      });
+
+      it("should call workspace.getConfiguration without parameters", () => {
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(undefined);
+        getStub.withArgs("kdb.insights").returns(undefined);
+
+        coreUtils.getInsights();
+
+        assert.ok(workspaceStub.calledOnce);
+        assert.ok(workspaceStub.calledWith());
+      });
+
+      it("should call get method with correct parameters", () => {
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(undefined);
+        getStub.withArgs("kdb.insights").returns(undefined);
+
+        coreUtils.getInsights();
+
+        assert.ok(getStub.calledWith("kdb.insightsEnterpriseConnections"));
+        assert.ok(getStub.calledWith("kdb.insights"));
+      });
+
+      it("should handle insights with optional properties", () => {
+        const mockInsights = {
+          insight1: {
+            alias: "Basic Insight",
+            server: "https://basic.com",
+            auth: false,
+          },
+          insight2: {
+            alias: "Full Insight",
+            server: "https://full.com",
+            auth: true,
+            realm: "full-realm",
+            insecure: true,
+          },
+        };
+
+        getStub
+          .withArgs("kdb.insightsEnterpriseConnections")
+          .returns(mockInsights);
+
+        const result = coreUtils.getInsights();
+
+        assert.ok(result);
+        const insightKeys = Object.keys(result);
+        assert.strictEqual(insightKeys.length, 2);
+
+        const basicInsight = Object.values(result).find(
+          (i) => i.alias === "Basic Insight",
+        );
+        const fullInsight = Object.values(result).find(
+          (i) => i.alias === "Full Insight",
+        );
+
+        assert.ok(basicInsight);
+        assert.strictEqual(basicInsight.realm, undefined);
+        assert.strictEqual(basicInsight.insecure, undefined);
+
+        assert.ok(fullInsight);
+        assert.strictEqual(fullInsight.realm, "full-realm");
+        assert.strictEqual(fullInsight.insecure, true);
+      });
+    });
+
+    describe("getQExecutablePath", () => {
+      afterEach(() => {
+        sinon.restore();
+      });
+      it("should return KDB+", () => {
+        ext.REAL_QHOME = "QHOME";
+        sinon.stub(shell, "stat").returns(false);
+        const res = coreUtils.getQExecutablePath();
+        assert.ok(res);
+      });
+      it("should return KDB-X", () => {
+        ext.REAL_QHOME = "QHOME";
+        sinon.stub(shell, "stat").returns(true);
+        const res = coreUtils.getQExecutablePath();
+        assert.strictEqual(res, path.join("QHOME", "bin", "q"));
+      });
+      it("should return KDB-X", () => {
+        ext.REAL_QHOME = "";
+        const target = path.join("QHOME", "bin", "q");
+        sinon.stub(shell, "which").returns([target]);
+        const res = coreUtils.getQExecutablePath();
+        assert.strictEqual(res, target);
+      });
+      it("should return qHomeDirectory", () => {
+        ext.REAL_QHOME = "";
+        sinon.stub(shell, "which").throws();
+        sinon.stub(vscode.workspace, "getConfiguration").value(() => {
+          return { get: () => "QHOME" };
+        });
+        const res = coreUtils.getQExecutablePath();
+        assert.ok(res);
+      });
+      it("should throw if q not found", () => {
+        ext.REAL_QHOME = "";
+        sinon.stub(shell, "which").throws();
+        sinon.stub(vscode.workspace, "getConfiguration").value(() => {
+          return { get: () => "" };
+        });
+        assert.throws(() => coreUtils.getQExecutablePath());
       });
     });
   });
@@ -903,81 +1522,6 @@ describe("Utils", () => {
         );
       });
     });
-
-    it("addQueryHistory", () => {
-      const query = "SELECT * FROM table";
-      const connectionName = "test";
-      const connectionType = ServerType.KDB;
-
-      ext.kdbQueryHistoryList.length = 0;
-
-      queryUtils.addQueryHistory(
-        query,
-        "fileName",
-        connectionName,
-        connectionType,
-        true,
-      );
-      assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
-    });
-
-    it("addQueryHistory in python", () => {
-      const query = "SELECT * FROM table";
-      const connectionName = "test";
-      const connectionType = ServerType.KDB;
-
-      ext.kdbQueryHistoryList.length = 0;
-
-      queryUtils.addQueryHistory(
-        query,
-        connectionName,
-        "fileName",
-        connectionType,
-        true,
-        true,
-      );
-      assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
-    });
-
-    it("should format a Scratchpad stacktrace correctly", () => {
-      const stacktrace = [
-        { name: "g", isNested: false, text: ["{a:x*2;a", "+y}"] },
-        { name: "f", isNested: false, text: ["{", "g[x;2#y]}"] },
-        { name: "", isNested: false, text: ["", 'f[3;"hello"]'] },
-      ];
-
-      const formatted = queryUtils.formatScratchpadStacktrace(stacktrace);
-      assert.strictEqual(
-        formatted,
-        '[2] g{a:x*2;a+y}\n             ^\n[1] f{g[x;2#y]}\n      ^\n[0] f[3;"hello"]\n    ^',
-      );
-    });
-
-    it("should format a Scratchpad stacktrace with nested function correctly", () => {
-      const stacktrace = [
-        { name: "f", isNested: true, text: ["{a:x*2;a", "+y}"] },
-        { name: "f", isNested: false, text: ["{", "{a:x*2;a+y}[x;2#y]}"] },
-        { name: "", isNested: false, text: ["", 'f[3;"hello"]'] },
-      ];
-
-      const formatted = queryUtils.formatScratchpadStacktrace(stacktrace);
-      assert.strictEqual(
-        formatted,
-        '[2] f @ {a:x*2;a+y}\n                ^\n[1] f{{a:x*2;a+y}[x;2#y]}\n      ^\n[0] f[3;"hello"]\n    ^',
-      );
-    });
-  });
-
-  describe("selectDSType", () => {
-    it("should return correct DataSourceTypes for given input", function () {
-      assert.equal(queryUtils.selectDSType("API"), DataSourceTypes.API);
-      assert.equal(queryUtils.selectDSType("QSQL"), DataSourceTypes.QSQL);
-      assert.equal(queryUtils.selectDSType("SQL"), DataSourceTypes.SQL);
-    });
-
-    it("should return undefined for unknown input", function () {
-      assert.equal(queryUtils.selectDSType("unknown"), undefined);
-    });
   });
 
   describe("getNonce", () => {
@@ -1080,28 +1624,6 @@ describe("Utils", () => {
         const expectedOutput: any[] = [];
         const actualOutput = queryUtils.getValueFromArray(inputSample);
         assert.deepStrictEqual(actualOutput.rows, expectedOutput);
-      });
-    });
-
-    describe("generateQSqlBody", () => {
-      it("should use scope for 1.13", () => {
-        const output = queryUtils.generateQSqlBody(
-          "a:1",
-          "assembly target",
-          1.13,
-        );
-        assert.equal(output.scope.assembly, "assembly");
-        assert.equal(output.scope.tier, "target");
-      });
-
-      it("should use legacy syntax for 1.12", () => {
-        const output = queryUtils.generateQSqlBody(
-          "a:1",
-          "assembly target",
-          1.12,
-        );
-        assert.equal(output.assembly, "assembly");
-        assert.equal(output.target, "target");
       });
     });
 
@@ -1386,6 +1908,248 @@ describe("Utils", () => {
           error:
             "\u00006\u0000\u0000\u0000Unexpected error (n10) encountered executing .kxi.qsql\u0000\u0000\u0000\u0000\u0000",
         });
+      });
+    });
+
+    describe("addQueryHistory", () => {
+      it("addQueryHistory", () => {
+        const query = "SELECT * FROM table";
+        const connectionName = "test";
+        const connectionType = ServerType.KDB;
+
+        ext.kdbQueryHistoryList.length = 0;
+
+        queryUtils.addQueryHistory(
+          query,
+          "fileName",
+          connectionName,
+          connectionType,
+          true,
+        );
+        assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+      });
+
+      it("addQueryHistory in python", () => {
+        const query = "SELECT * FROM table";
+        const connectionName = "test";
+        const connectionType = ServerType.KDB;
+
+        ext.kdbQueryHistoryList.length = 0;
+
+        queryUtils.addQueryHistory(
+          query,
+          connectionName,
+          "fileName",
+          connectionType,
+          true,
+          true,
+        );
+        assert.strictEqual(ext.kdbQueryHistoryList.length, 1);
+      });
+    });
+
+    describe("formatScratchpadStacktrace", () => {
+      it("should format a Scratchpad stacktrace correctly", () => {
+        const stacktrace = [
+          { name: "g", isNested: false, text: ["{a:x*2;a", "+y}"] },
+          { name: "f", isNested: false, text: ["{", "g[x;2#y]}"] },
+          { name: "", isNested: false, text: ["", 'f[3;"hello"]'] },
+        ];
+
+        const formatted = queryUtils.formatScratchpadStacktrace(stacktrace);
+        assert.strictEqual(
+          formatted,
+          '[2] g{a:x*2;a+y}\n             ^\n[1] f{g[x;2#y]}\n      ^\n[0] f[3;"hello"]\n    ^',
+        );
+      });
+
+      it("should format a Scratchpad stacktrace with nested function correctly", () => {
+        const stacktrace = [
+          { name: "f", isNested: true, text: ["{a:x*2;a", "+y}"] },
+          { name: "f", isNested: false, text: ["{", "{a:x*2;a+y}[x;2#y]}"] },
+          { name: "", isNested: false, text: ["", 'f[3;"hello"]'] },
+        ];
+
+        const formatted = queryUtils.formatScratchpadStacktrace(stacktrace);
+        assert.strictEqual(
+          formatted,
+          '[2] f @ {a:x*2;a+y}\n                ^\n[1] f{{a:x*2;a+y}[x;2#y]}\n      ^\n[0] f[3;"hello"]\n    ^',
+        );
+      });
+    });
+
+    describe("selectDSType", () => {
+      it("should return correct DataSourceTypes for given input", function () {
+        assert.equal(queryUtils.selectDSType("API"), DataSourceTypes.API);
+        assert.equal(queryUtils.selectDSType("QSQL"), DataSourceTypes.QSQL);
+        assert.equal(queryUtils.selectDSType("SQL"), DataSourceTypes.SQL);
+      });
+
+      it("should return undefined for unknown input", function () {
+        assert.equal(queryUtils.selectDSType("unknown"), undefined);
+      });
+    });
+
+    describe("normalizeQSQLQuery", () => {
+      it("should trim query", () => {
+        const res = queryUtils.normalizeQSQLQuery("  a:1  ");
+        assert.strictEqual(res, "a:1");
+      });
+      it("should remove block comment", () => {
+        let res = queryUtils.normalizeQSQLQuery("/\nBlock Comment\n\\\na:1");
+        assert.strictEqual(res, "a:1");
+        res = queryUtils.normalizeQSQLQuery("/\r\nBlock Comment\r\n\\\r\na:1");
+        assert.strictEqual(res, "a:1");
+      });
+      it("should remove single line comment", () => {
+        let res = queryUtils.normalizeQSQLQuery("/ single line comment\na:1");
+        assert.strictEqual(res, "a:1");
+        res = queryUtils.normalizeQSQLQuery("/ single line comment\r\na:1");
+        assert.strictEqual(res, "a:1");
+      });
+      it("should remove line comment", () => {
+        const res = queryUtils.normalizeQSQLQuery("a:1 / line comment");
+        assert.strictEqual(res, "a:1");
+      });
+      it("should ignore line comment in a string", () => {
+        const res = queryUtils.normalizeQSQLQuery('a:"1 / not line comment"');
+        assert.strictEqual(res, 'a:"1 / not line comment"');
+      });
+      it("should replace EOS with semicolon", () => {
+        let res = queryUtils.normalizeQSQLQuery("a:1\na");
+        assert.strictEqual(res, "a:1;a");
+        res = queryUtils.normalizeQSQLQuery("a:1\r\na");
+        assert.strictEqual(res, "a:1;a");
+      });
+      it("should escpae new lines in strings", () => {
+        let res = queryUtils.normalizeQSQLQuery('a:"a\n \nb"');
+        assert.strictEqual(res, 'a:"a\\n \\nb"');
+        res = queryUtils.normalizeQSQLQuery('a:"a\r\n \r\nb"');
+        assert.strictEqual(res, 'a:"a\\n \\nb"');
+      });
+    });
+
+    describe("resultToBase64", () => {
+      const png = [
+        "0x89",
+        "0x50",
+        "0x4e",
+        "0x47",
+        "0x0d",
+        "0x0a",
+        "0x1a",
+        "0x0a",
+      ];
+      const img = Array.from({ length: 59 }, () => "0x00");
+
+      it("should return undefined for undefined", () => {
+        const result = queryUtils.resultToBase64(undefined);
+        assert.strictEqual(result, undefined);
+      });
+      it("should return undefined for just signature", () => {
+        const result = queryUtils.resultToBase64(png);
+        assert.strictEqual(result, undefined);
+      });
+      it("should return undefined for bad signature", () => {
+        const result = queryUtils.resultToBase64([
+          ...png.map((v) => parseInt(v, 16) + 1),
+          ...img,
+        ]);
+        assert.strictEqual(result, undefined);
+      });
+      it("should return base64 for minimum img str", () => {
+        const result = queryUtils.resultToBase64([...png, ...img]);
+        assert.ok(result);
+      });
+      it("should return base64 for minimum img num", () => {
+        const result = queryUtils.resultToBase64([
+          ...png.map((v) => parseInt(v, 16)),
+          ...img.map((v) => parseInt(v, 16)),
+        ]);
+        assert.ok(result);
+      });
+      it("should return base64 for minimum img str for structuredText", () => {
+        const result = queryUtils.resultToBase64({
+          columns: { values: [...png, ...img] },
+        });
+        assert.ok(result);
+      });
+      it("should return base64 for minimum img str for structuredText v2", () => {
+        const result = queryUtils.resultToBase64({
+          columns: [{ values: [...png, ...img] }],
+        });
+        assert.ok(result);
+      });
+      it("should return undefined for bogus structuredText", () => {
+        const result = queryUtils.resultToBase64({
+          columns: {},
+        });
+        assert.strictEqual(result, undefined);
+      });
+      it("should return undefined for bogus structuredText v2", () => {
+        const result = queryUtils.resultToBase64({
+          columns: [],
+        });
+        assert.strictEqual(result, undefined);
+      });
+      it("should return base64 from windows q server", () => {
+        const result = queryUtils.resultToBase64([
+          ...png.map((v) => `${v}\r`),
+          ...img.map((v) => `${v}\r`),
+        ]);
+        assert.ok(result);
+      });
+    });
+
+    describe("normalizeQuery", () => {
+      it("should return normalized query under query limit", () => {
+        const query = "1234567890".repeat(25000);
+        const res = queryUtils.normalizeQuery(query);
+        assert.strictEqual(res, query);
+      });
+      it("should throw when limit reached", () => {
+        const query = "1234567890".repeat(25000) + "1";
+        assert.throws(() => queryUtils.normalizeQuery(query));
+      });
+    });
+
+    describe("normalizePyQuery", () => {
+      it("should escape double quotes", () => {
+        const res = queryUtils.normalizePyQuery('a="test"');
+        assert.strictEqual(res, 'a=\\"test\\"');
+      });
+    });
+    describe("getQSQLWrapper", () => {
+      let queryWrappeStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        //queryWrappeStub = sinon.stub(queryUtils, "queryWrapper");
+      });
+
+      it("should normalize q code", () => {
+        const res = queryUtils.getQSQLWrapper("a:1;\na");
+        assert.strictEqual(res, "a:1;;a");
+      });
+      it("should normalize python code using wrapper", () => {
+        assert.throws(() => {
+          queryUtils.getQSQLWrapper(``, true);
+          sinon.assert.calledOnce(queryWrappeStub);
+        });
+      });
+    });
+
+    describe("needsScratchpad", () => {
+      it("should return the promise", async () => {
+        const res = await queryUtils.needsScratchpad(
+          "test",
+          Promise.resolve("test"),
+        );
+        assert.strictEqual(res, "test");
+      });
+      it("should reset scratchpad started status", async () => {
+        ext.scratchpadStarted.add("test");
+        queryUtils.resetScratchpadStarted("test");
+        assert.strictEqual(ext.scratchpadStarted.has("test"), false);
       });
     });
   });
@@ -1758,11 +2522,35 @@ describe("Utils", () => {
         get: sinon.stub(),
         update: sinon.stub(),
       });
-      const logStub = sinon.stub(coreUtils, "kdbOutputLog");
+      const logStub = sinon.stub(loggers, "kdbOutputLog");
 
       LabelsUtils.createNewLabel("", "red");
 
-      sinon.assert.calledWith(logStub, "Label name can't be empty", "ERROR");
+      sinon.assert.calledWith(
+        logStub,
+        "[connLabel] Label name can't be empty.",
+        "ERROR",
+      );
+    });
+
+    it("should handle with same other label name", () => {
+      getConfigurationStub.returns({
+        get: sinon.stub().returns([
+          {
+            name: "testeLabel1",
+            color: { name: "red", colorHex: "#FF0000" },
+          },
+        ]),
+        update: sinon.stub(),
+      });
+      const logStub = sinon.stub(loggers, "kdbOutputLog");
+      LabelsUtils.createNewLabel("testeLabel1", "red");
+
+      sinon.assert.calledWith(
+        logStub,
+        "[connLabel] Label with this name already exists.",
+        "ERROR",
+      );
     });
 
     it("should handle no color selected", () => {
@@ -1770,13 +2558,13 @@ describe("Utils", () => {
         get: sinon.stub(),
         update: sinon.stub(),
       });
-      const logStub = sinon.stub(coreUtils, "kdbOutputLog");
+      const logStub = sinon.stub(loggers, "kdbOutputLog");
 
       LabelsUtils.createNewLabel("label1", "randomColorName");
 
       sinon.assert.calledWith(
         logStub,
-        "No Color selected for the label",
+        "[connLabel] No Color selected for the label.",
         "ERROR",
       );
     });
@@ -1870,13 +2658,53 @@ describe("Utils", () => {
       const labels: Labels[] = [
         { name: "label1", color: { name: "red", colorHex: "#FF0000" } },
       ];
+
+      const getStub = sinon.stub();
+      getStub.withArgs("kdb.connectionLabels").returns(labels);
+      getStub.withArgs("kdb.labelsConnectionMap").returns([]);
+
       getConfigurationStub.returns({
-        get: sinon.stub().returns(labels),
+        get: getStub,
         update: sinon.stub().returns(Promise.resolve()),
       });
+
       LabelsUtils.renameLabel("label1", "label2");
+
       assert.strictEqual(ext.connLabelList.length, 1);
-      assert.deepStrictEqual(ext.connLabelList[0].name, "label2");
+      assert.strictEqual(ext.connLabelList[0].name, "label2");
+    });
+
+    it("should not rename a label if the name is the same of other label", () => {
+      getConfigurationStub.returns({
+        get: sinon.stub().returns([
+          {
+            name: "label2",
+            color: { name: "red", colorHex: "#FF0000" },
+          },
+        ]),
+        update: sinon.stub().returns(Promise.resolve()),
+      });
+
+      const logStub = sinon.stub(loggers, "kdbOutputLog");
+      LabelsUtils.renameLabel("label1", "label2");
+      sinon.assert.calledWith(
+        logStub,
+        "[connLabel] Label with this name already exists.",
+        "ERROR",
+      );
+    });
+
+    it("should not rename a label if the name is empty or the same of original label name", () => {
+      getConfigurationStub.returns({
+        get: sinon.stub(),
+        update: sinon.stub().returns(Promise.resolve()),
+      });
+
+      LabelsUtils.renameLabel("label1", "");
+      sinon.assert.notCalled(getConfigurationStub);
+
+      LabelsUtils.renameLabel("label1", "label1");
+      sinon.assert.notCalled(getConfigurationStub);
     });
 
     it("should set label color", () => {
@@ -1967,6 +2795,247 @@ describe("Utils", () => {
       assert.strictEqual(stats.Magenta, 0);
       assert.strictEqual(stats.Cyan, 0);
     });
+
+    describe("clearWorkspaceLabels", () => {
+      let notifyStub: sinon.SinonStub;
+      let updateStub: sinon.SinonStub;
+
+      beforeEach(() => {
+        notifyStub = sinon.stub(notifications, "notify");
+        updateStub = sinon.stub();
+        ext.connLabelList.length = 0;
+        ext.labelConnMapList.length = 0;
+      });
+
+      afterEach(() => {
+        sinon.restore();
+      });
+
+      it("should clear all connection mappings when no labels exist", () => {
+        const getStub = sinon.stub();
+        getStub.withArgs("kdb.connectionLabels").returns([]);
+        getStub.withArgs("kdb.labelsConnectionMap").returns([
+          { labelName: "nonexistent1", connections: ["conn1"] },
+          { labelName: "nonexistent2", connections: ["conn2"] },
+        ]);
+
+        getConfigurationStub.returns({
+          get: getStub,
+          update: updateStub,
+        });
+
+        LabelsUtils.clearWorkspaceLabels();
+
+        sinon.assert.calledWith(
+          notifyStub,
+          "Cleaning connection mappings for nonexistent labels.",
+          notifications.MessageKind.DEBUG,
+          {
+            logger: "connLabel",
+            telemetry: "Label.Cleanup.NoLabels",
+          },
+        );
+
+        sinon.assert.calledWith(
+          updateStub,
+          "kdb.labelsConnectionMap",
+          [],
+          true,
+        );
+      });
+
+      it("should remove orphaned label connection mappings", () => {
+        const validLabels = [
+          { name: "label1", color: { name: "Red", colorHex: "#FF0000" } },
+          { name: "label2", color: { name: "Blue", colorHex: "#0000FF" } },
+        ];
+
+        const connectionMappings = [
+          { labelName: "label1", connections: ["conn1", "conn2"] },
+          { labelName: "orphaned1", connections: ["conn3"] },
+          { labelName: "label2", connections: ["conn4"] },
+          { labelName: "orphaned2", connections: ["conn5", "conn6"] },
+        ];
+
+        const getStub = sinon.stub();
+        getStub.withArgs("kdb.connectionLabels").returns(validLabels);
+        getStub.withArgs("kdb.labelsConnectionMap").returns(connectionMappings);
+
+        getConfigurationStub.returns({
+          get: getStub,
+          update: updateStub,
+        });
+
+        LabelsUtils.clearWorkspaceLabels();
+
+        assert.strictEqual(ext.labelConnMapList.length, 2);
+        assert.deepStrictEqual(ext.labelConnMapList, [
+          { labelName: "label1", connections: ["conn1", "conn2"] },
+          { labelName: "label2", connections: ["conn4"] },
+        ]);
+
+        sinon.assert.calledWith(
+          notifyStub,
+          "Removed 2 orphaned label connection mappings.",
+          notifications.MessageKind.DEBUG,
+          {
+            logger: "connLabel",
+            telemetry: "Label.Cleanup.OrphanedMappings",
+            measurements: { removedMappings: 2 },
+          },
+        );
+
+        sinon.assert.calledWith(
+          updateStub,
+          "kdb.labelsConnectionMap",
+          ext.labelConnMapList,
+          true,
+        );
+      });
+
+      it("should remove single orphaned label connection mapping", () => {
+        const validLabels = [
+          { name: "label1", color: { name: "Red", colorHex: "#FF0000" } },
+        ];
+
+        const connectionMappings = [
+          { labelName: "label1", connections: ["conn1"] },
+          { labelName: "orphaned1", connections: ["conn2"] },
+        ];
+
+        const getStub = sinon.stub();
+        getStub.withArgs("kdb.connectionLabels").returns(validLabels);
+        getStub.withArgs("kdb.labelsConnectionMap").returns(connectionMappings);
+
+        getConfigurationStub.returns({
+          get: getStub,
+          update: updateStub,
+        });
+
+        LabelsUtils.clearWorkspaceLabels();
+
+        assert.strictEqual(ext.labelConnMapList.length, 1);
+        assert.deepStrictEqual(ext.labelConnMapList, [
+          { labelName: "label1", connections: ["conn1"] },
+        ]);
+
+        sinon.assert.calledWith(
+          notifyStub,
+          "Removed 1 orphaned label connection mapping.",
+          notifications.MessageKind.DEBUG,
+          {
+            logger: "connLabel",
+            telemetry: "Label.Cleanup.OrphanedMappings",
+            measurements: { removedMappings: 1 },
+          },
+        );
+      });
+
+      it("should not remove anything when all mappings are valid", () => {
+        const validLabels = [
+          { name: "label1", color: { name: "Red", colorHex: "#FF0000" } },
+          { name: "label2", color: { name: "Blue", colorHex: "#0000FF" } },
+        ];
+
+        const connectionMappings = [
+          { labelName: "label1", connections: ["conn1"] },
+          { labelName: "label2", connections: ["conn2"] },
+        ];
+
+        const getStub = sinon.stub();
+        getStub.withArgs("kdb.connectionLabels").returns(validLabels);
+        getStub.withArgs("kdb.labelsConnectionMap").returns(connectionMappings);
+
+        getConfigurationStub.returns({
+          get: getStub,
+          update: updateStub,
+        });
+
+        LabelsUtils.clearWorkspaceLabels();
+
+        assert.strictEqual(ext.labelConnMapList.length, 2);
+        assert.deepStrictEqual(ext.labelConnMapList, connectionMappings);
+
+        sinon.assert.neverCalledWith(
+          notifyStub,
+          sinon.match.string,
+          notifications.MessageKind.DEBUG,
+          sinon.match.has("telemetry", "Label.Cleanup.OrphanedMappings"),
+        );
+
+        sinon.assert.neverCalledWith(
+          updateStub,
+          "kdb.labelsConnectionMap",
+          sinon.match.array,
+          true,
+        );
+      });
+
+      it("should handle empty connection mappings", () => {
+        const validLabels = [
+          { name: "label1", color: { name: "Red", colorHex: "#FF0000" } },
+        ];
+
+        const getStub = sinon.stub();
+        getStub.withArgs("kdb.connectionLabels").returns(validLabels);
+        getStub.withArgs("kdb.labelsConnectionMap").returns([]);
+
+        getConfigurationStub.returns({
+          get: getStub,
+          update: updateStub,
+        });
+
+        LabelsUtils.clearWorkspaceLabels();
+
+        assert.strictEqual(ext.labelConnMapList.length, 0);
+
+        sinon.assert.neverCalledWith(
+          notifyStub,
+          sinon.match.string,
+          notifications.MessageKind.DEBUG,
+        );
+
+        sinon.assert.notCalled(updateStub);
+      });
+
+      it("should handle case-sensitive label name matching", () => {
+        const validLabels = [
+          { name: "Label1", color: { name: "Red", colorHex: "#FF0000" } },
+        ];
+
+        const connectionMappings = [
+          { labelName: "Label1", connections: ["conn1"] },
+          { labelName: "label1", connections: ["conn2"] },
+          { labelName: "LABEL1", connections: ["conn3"] },
+        ];
+
+        const getStub = sinon.stub();
+        getStub.withArgs("kdb.connectionLabels").returns(validLabels);
+        getStub.withArgs("kdb.labelsConnectionMap").returns(connectionMappings);
+
+        getConfigurationStub.returns({
+          get: getStub,
+          update: updateStub,
+        });
+
+        LabelsUtils.clearWorkspaceLabels();
+
+        assert.strictEqual(ext.labelConnMapList.length, 1);
+        assert.strictEqual(ext.labelConnMapList[0].labelName, "Label1");
+
+        sinon.assert.calledWith(
+          notifyStub,
+          "Removed 2 orphaned label connection mappings.",
+          notifications.MessageKind.DEBUG,
+          {
+            logger: "connLabel",
+            telemetry: "Label.Cleanup.OrphanedMappings",
+            measurements: { removedMappings: 2 },
+          },
+        );
+      });
+    });
+
     describe("isLabelEmpty", () => {
       beforeEach(() => {
         ext.labelConnMapList.length = 0;
@@ -2092,77 +3161,6 @@ describe("Utils", () => {
     });
   });
 
-  describe("resultToBase64", () => {
-    const png = [
-      "0x89",
-      "0x50",
-      "0x4e",
-      "0x47",
-      "0x0d",
-      "0x0a",
-      "0x1a",
-      "0x0a",
-    ];
-    const img = Array.from({ length: 59 }, () => "0x00");
-
-    it("should return undefined for undefined", () => {
-      const result = queryUtils.resultToBase64(undefined);
-      assert.strictEqual(result, undefined);
-    });
-    it("should return undefined for just signature", () => {
-      const result = queryUtils.resultToBase64(png);
-      assert.strictEqual(result, undefined);
-    });
-    it("should return undefined for bad signature", () => {
-      const result = queryUtils.resultToBase64([
-        ...png.map((v) => parseInt(v, 16) + 1),
-        ...img,
-      ]);
-      assert.strictEqual(result, undefined);
-    });
-    it("should return base64 for minimum img str", () => {
-      const result = queryUtils.resultToBase64([...png, ...img]);
-      assert.ok(result);
-    });
-    it("should return base64 for minimum img num", () => {
-      const result = queryUtils.resultToBase64([
-        ...png.map((v) => parseInt(v, 16)),
-        ...img.map((v) => parseInt(v, 16)),
-      ]);
-      assert.ok(result);
-    });
-    it("should return base64 for minimum img str for structuredText", () => {
-      const result = queryUtils.resultToBase64({
-        columns: { values: [...png, ...img] },
-      });
-      assert.ok(result);
-    });
-    it("should return base64 for minimum img str for structuredText v2", () => {
-      const result = queryUtils.resultToBase64({
-        columns: [{ values: [...png, ...img] }],
-      });
-      assert.ok(result);
-    });
-    it("should return undefined for bogus structuredText", () => {
-      const result = queryUtils.resultToBase64({
-        columns: {},
-      });
-      assert.strictEqual(result, undefined);
-    });
-    it("should return undefined for bogus structuredText v2", () => {
-      const result = queryUtils.resultToBase64({
-        columns: [],
-      });
-      assert.strictEqual(result, undefined);
-    });
-    it("should return base64 from windows q server", () => {
-      const result = queryUtils.resultToBase64([
-        ...png.map((v) => `${v}\r`),
-        ...img.map((v) => `${v}\r`),
-      ]);
-      assert.ok(result);
-    });
-  });
   describe("UDAUtils", () => {
     describe("filterUDAParamsValidTypes", () => {
       it("should filter valid types", () => {
@@ -2466,26 +3464,14 @@ describe("Utils", () => {
     });
 
     describe("getIncompatibleError", () => {
-      it("should return no meta error message", () => {
-        const result = UDAUtils.getIncompatibleError(undefined, undefined);
-
-        assert.deepEqual(result, InvalidParamFieldErrors.NoMetadata);
-      });
-
       it("should return BadField error message", () => {
-        const result = UDAUtils.getIncompatibleError(
-          {},
-          ParamFieldType.Invalid,
-        );
+        const result = UDAUtils.getIncompatibleError(ParamFieldType.Invalid);
 
         assert.strictEqual(result, "badField");
       });
 
       it("should return undefined", () => {
-        const result = UDAUtils.getIncompatibleError(
-          {},
-          ParamFieldType.Boolean,
-        );
+        const result = UDAUtils.getIncompatibleError(ParamFieldType.Boolean);
         assert.strictEqual(result, undefined);
       });
     });
@@ -2581,28 +3567,27 @@ describe("Utils", () => {
           api: [
             {
               api: "testAPI",
-              custom: true,
-              metadata: {
-                params: [
-                  {
-                    name: "param1",
-                    type: 1,
-                    isReq: true,
-                    description: "",
-                  },
-                ],
-                return: { type: [1], description: "test" },
-                description: "",
-                aggReturn: {
-                  type: 0,
+              uda: true,
+              params: [
+                {
+                  name: "param1",
+                  type: 1,
+                  isReq: true,
                   description: "",
                 },
-                misc: {},
+              ],
+              return: { type: [1], description: "test" },
+              description: "",
+              aggReturn: {
+                type: 0,
+                description: "",
               },
+              misc: {},
               kxname: [],
               aggFn: "",
               full: false,
               procs: [],
+              custom: false,
             },
           ],
           rc: [],
@@ -2896,6 +3881,7 @@ describe("Utils", () => {
       });
     });
   });
+
   describe("FeedbackSurveyUtils", () => {
     describe("feedbackSurveyDialog", () => {
       let showSurveyDialogStub: sinon.SinonStub;
@@ -2949,55 +3935,214 @@ describe("Utils", () => {
     });
   });
 
-  describe("Shared with webview utils", () => {
+  describe("SharedUtils", () => {
     describe("normalizeAssemblyTarget", () => {
-      it("should return qe assembly without -qe", () => {
-        const res = shared.normalizeAssemblyTarget("test-assembly-qe target");
-        assert.strictEqual(res, "test-assembly target");
+      it("should return qe assembly -qe", () => {
+        const res = sharedUtils.normalizeAssemblyTarget(
+          "test-assembly-qe tier dapProcess",
+        );
+        assert.strictEqual(res, "test-assembly-qe tier dapProcess");
       });
-      it("should return normal assembly without -qe", () => {
-        const res = shared.normalizeAssemblyTarget("test-assembly target");
-        assert.strictEqual(res, "test-assembly target");
-      });
-    });
-  });
 
-  describe("sanitizeQsqlQuery", () => {
-    it("should trim query", () => {
-      const res = queryUtils.sanitizeQsqlQuery("  a:1  ");
-      assert.strictEqual(res, "a:1");
+      it("should return normal assembly without -qe", () => {
+        const res = sharedUtils.normalizeAssemblyTarget(
+          "test-assembly  tier dapProcess",
+        );
+        assert.strictEqual(res, "test-assembly tier dapProcess");
+      });
+
+      it("should return empty string for null input", () => {
+        const res = sharedUtils.normalizeAssemblyTarget(null as any);
+        assert.strictEqual(res, "");
+      });
+
+      it("should return empty string for undefined input", () => {
+        const res = sharedUtils.normalizeAssemblyTarget(undefined as any);
+        assert.strictEqual(res, "");
+      });
+
+      it("should return empty string for empty string", () => {
+        const res = sharedUtils.normalizeAssemblyTarget("");
+        assert.strictEqual(res, "");
+      });
+
+      it("should return empty string for whitespace-only string", () => {
+        const res = sharedUtils.normalizeAssemblyTarget("   ");
+        assert.strictEqual(res, "");
+      });
+
+      it("should handle single word input", () => {
+        const res = sharedUtils.normalizeAssemblyTarget("assembly");
+        assert.strictEqual(res, "assembly");
+      });
+
+      it("should handle single word with -qe suffix", () => {
+        const res = sharedUtils.normalizeAssemblyTarget("assembly-qe");
+        assert.strictEqual(res, "assembly-qe");
+      });
+
+      it("should normalize multiple consecutive spaces", () => {
+        const res = sharedUtils.normalizeAssemblyTarget(
+          "assembly    tier    dap",
+        );
+        assert.strictEqual(res, "assembly tier dap");
+      });
+
+      it("should normalize tabs and mixed whitespace", () => {
+        const res = sharedUtils.normalizeAssemblyTarget(
+          "assembly\t\ttier\n\ndap",
+        );
+        assert.strictEqual(res, "assembly tier dap");
+      });
+
+      it("should trim leading and trailing spaces", () => {
+        const res = sharedUtils.normalizeAssemblyTarget(
+          "  assembly tier dap  ",
+        );
+        assert.strictEqual(res, "assembly tier dap");
+      });
+
+      it("should handle complex whitespace normalization", () => {
+        const res = sharedUtils.normalizeAssemblyTarget(
+          "  \t assembly-qe   \n  tier   \t dap  \n  ",
+        );
+        assert.strictEqual(res, "assembly-qe tier dap");
+      });
+
+      it("should handle input with only spaces between words", () => {
+        const res = sharedUtils.normalizeAssemblyTarget("assembly tier");
+        assert.strictEqual(res, "assembly tier");
+      });
+
+      it("should preserve -qe in middle of assembly name", () => {
+        const res = sharedUtils.normalizeAssemblyTarget(
+          "test-qe-assembly  tier",
+        );
+        assert.strictEqual(res, "test-qe-assembly tier");
+      });
+
+      it("should handle special characters in assembly name", () => {
+        const res = sharedUtils.normalizeAssemblyTarget(
+          "test_assembly-qe:v1.0   tier   dap",
+        );
+        assert.strictEqual(res, "test_assembly-qe:v1.0 tier dap");
+      });
+
+      it("should normalize newlines and carriage returns", () => {
+        const res = sharedUtils.normalizeAssemblyTarget(
+          "assembly\r\ntier\rdap\n",
+        );
+        assert.strictEqual(res, "assembly tier dap");
+      });
     });
-    it("should remove block comment", () => {
-      let res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\n\\a:1");
-      assert.strictEqual(res, "a:1");
-      res = queryUtils.sanitizeQsqlQuery("/\nBlock Comment\r\n\\a:1");
-      assert.strictEqual(res, "a:1");
+
+    describe("stripUnprintableChars", () => {
+      it("should remove control characters", () => {
+        const input = "abc\u0000\u0001def";
+        const result = sharedUtils.stripUnprintableChars(input);
+        assert.strictEqual(result, "abcdef");
+      });
+
+      it("should remove private use characters", () => {
+        const input = "abc\udb80\udc00def";
+        const result = sharedUtils.stripUnprintableChars(input);
+        assert.strictEqual(result, "abcdef");
+      });
+
+      it("should remove unassigned characters", () => {
+        // U+0378 is unassigned
+        const input = "abc\u0378def";
+        const result = sharedUtils.stripUnprintableChars(input);
+        assert.strictEqual(result, "abcdef");
+      });
+
+      it("should return original string if no unprintable chars", () => {
+        const input = "normal string";
+        const result = sharedUtils.stripUnprintableChars(input);
+        assert.strictEqual(result, "normal string");
+      });
+
+      it("should handle empty string", () => {
+        const result = sharedUtils.stripUnprintableChars("");
+        assert.strictEqual(result, "");
+      });
     });
-    it("should remove single line comment", () => {
-      let res = queryUtils.sanitizeQsqlQuery("/ single line comment\na:1");
-      assert.strictEqual(res, "a:1");
-      res = queryUtils.sanitizeQsqlQuery("/ single line comment\r\na:1");
-      assert.strictEqual(res, "a:1");
+
+    describe("errorMessage", () => {
+      it("should return error message for Error instance", () => {
+        const error = new Error("Test error");
+        const result = sharedUtils.errorMessage(error);
+        assert.strictEqual(result, "Test error");
+      });
+
+      it("should return string for string input", () => {
+        const result = sharedUtils.errorMessage("Some error");
+        assert.strictEqual(result, "Some error");
+      });
+
+      it("should stringify number input", () => {
+        const result = sharedUtils.errorMessage(123);
+        assert.strictEqual(result, "123");
+      });
+
+      it("should stringify object input", () => {
+        const result = sharedUtils.errorMessage({ msg: "fail" });
+        assert.strictEqual(result, "[object Object]");
+      });
+
+      it("should handle null input", () => {
+        const result = sharedUtils.errorMessage(null);
+        assert.strictEqual(result, "null");
+      });
+
+      it("should handle undefined input", () => {
+        const result = sharedUtils.errorMessage(undefined);
+        assert.strictEqual(result, "undefined");
+      });
     });
-    it("should remove line comment", () => {
-      const res = queryUtils.sanitizeQsqlQuery("a:1 / line comment");
-      assert.strictEqual(res, "a:1");
+
+    describe("cleanDapName", () => {
+      it("should remove port suffix from dap name", () => {
+        const result = sharedUtils.cleanDapName("my-dap:1234");
+        assert.strictEqual(result, "my-dap");
+      });
+
+      it("should not change dap name without port", () => {
+        const result = sharedUtils.cleanDapName("my-dap");
+        assert.strictEqual(result, "my-dap");
+      });
+
+      it("should handle dap name with multiple colons", () => {
+        const result = sharedUtils.cleanDapName("my:dap:name:5678");
+        assert.strictEqual(result, "my:dap:name");
+      });
+
+      it("should handle empty string", () => {
+        const result = sharedUtils.cleanDapName("");
+        assert.strictEqual(result, "");
+      });
     });
-    it("should ignore line comment in a string", () => {
-      const res = queryUtils.sanitizeQsqlQuery('a:"1 / not line comment"');
-      assert.strictEqual(res, 'a:"1 / not line comment"');
-    });
-    it("should replace EOS with semicolon", () => {
-      let res = queryUtils.sanitizeQsqlQuery("a:1\na");
-      assert.strictEqual(res, "a:1;a");
-      res = queryUtils.sanitizeQsqlQuery("a:1\r\na");
-      assert.strictEqual(res, "a:1;a");
-    });
-    it("should not replace continuation with semicolon", () => {
-      let res = queryUtils.sanitizeQsqlQuery('a:"a\n \nb"');
-      assert.strictEqual(res, 'a:"a\n \nb"');
-      res = queryUtils.sanitizeQsqlQuery('a:"a\r\n \r\nb"');
-      assert.strictEqual(res, 'a:"a\r\n \r\nb"');
+
+    describe("cleanAssemblyName", () => {
+      it("should remove -qe suffix from assembly name", () => {
+        const result = sharedUtils.cleanAssemblyName("assembly-qe");
+        assert.strictEqual(result, "assembly");
+      });
+
+      it("should not change assembly name without -qe", () => {
+        const result = sharedUtils.cleanAssemblyName("assembly");
+        assert.strictEqual(result, "assembly");
+      });
+
+      it("should remove only trailing -qe", () => {
+        const result = sharedUtils.cleanAssemblyName("test-qe-assembly-qe");
+        assert.strictEqual(result, "test-qe-assembly");
+      });
+
+      it("should handle empty string", () => {
+        const result = sharedUtils.cleanAssemblyName("");
+        assert.strictEqual(result, "");
+      });
     });
   });
 });

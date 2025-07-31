@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -16,7 +16,10 @@ import * as os from "os";
 import { join } from "path";
 
 import { ext } from "../extensionVariables";
-import { kdbOutputLog } from "./core";
+import { getAutoFocusOutputOnEntrySetting } from "./core";
+import { MessageKind, notify } from "./notifications";
+
+const logger = "cpUtils";
 
 export async function executeCommand(
   workingDirectory: string | undefined,
@@ -30,15 +33,18 @@ export async function executeCommand(
     spawnCallback,
     ...args,
   );
-  ext.outputChannel.show();
+  if (getAutoFocusOutputOnEntrySetting()) {
+    ext.outputChannel.show(true);
+  }
   if (result.code !== 0) {
     throw new Error(
       `Failed to run ${command} command.  Check output window for more details.`,
     );
   } else {
-    kdbOutputLog(
+    notify(
       `Finished running command: ${command} ${result.formattedArgs}`,
-      "INFO",
+      MessageKind.DEBUG,
+      { logger },
     );
   }
   return result.cmdOutput;
@@ -89,17 +95,17 @@ export async function tryExecuteCommand(
         data = data.toString();
         cmdOutput = cmdOutput.concat(data);
         cmdOutputIncludingStderr = cmdOutputIncludingStderr.concat(data);
-        kdbOutputLog(data, "INFO");
+        notify(data, MessageKind.DEBUG, { logger });
       });
 
       childProc.stderr?.on("data", (data: string | Buffer) => {
         data = data.toString();
         cmdOutputIncludingStderr = cmdOutputIncludingStderr.concat(data);
-        kdbOutputLog(data, "INFO");
+        notify(data, MessageKind.DEBUG, { logger });
       });
 
       childProc.on("error", (error) => {
-        kdbOutputLog(error.message, "ERROR");
+        notify(error.message, MessageKind.ERROR, { logger });
         reject(error);
       });
 

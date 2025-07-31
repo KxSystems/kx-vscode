@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -16,8 +16,11 @@ import path from "path";
 import { Uri, window, workspace } from "vscode";
 
 import { ext } from "../extensionVariables";
-import { kdbOutputLog } from "./core";
+import { getAutoFocusOutputOnEntrySetting } from "./core";
+import { MessageKind, notify } from "./notifications";
 import { QueryResultType } from "../models/queryResult";
+
+const logger = "execution";
 
 interface tblHeader {
   label: string;
@@ -37,7 +40,9 @@ export function runQFileTerminal(filename?: string): void {
   });
   const terminal = window.createTerminal(terminalName);
   if (env.QHOME) {
-    terminal.show();
+    if (getAutoFocusOutputOnEntrySetting()) {
+      terminal.show(true);
+    }
     terminal.sendText(command);
   }
 }
@@ -130,12 +135,15 @@ export async function exportToCsv(workspaceUri: Uri): Promise<void> {
 
   try {
     await workspace.fs.writeFile(filePath, Buffer.from(ext.resultPanelCSV));
-    kdbOutputLog("file located at: " + filePath.fsPath, "INFO");
+    notify("file located at: " + filePath.fsPath, MessageKind.DEBUG, {
+      logger,
+    });
     window.showTextDocument(filePath, { preview: false });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    kdbOutputLog(`Error writing file: ${errorMessage}`, "ERROR");
-    window.showErrorMessage(`Failed to write file: ${errorMessage}`);
+    notify(`Failed to write file: ${errorMessage}`, MessageKind.ERROR, {
+      logger,
+    });
   }
 }
 

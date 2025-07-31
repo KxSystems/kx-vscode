@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -11,15 +11,20 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { ChildProcess } from "node:child_process";
+import { ChildProcess, execFileSync } from "node:child_process";
+import { existsSync } from "node:fs";
 
-import { kdbOutputLog } from "./core";
 import { ICommandResult, tryExecuteCommand } from "./cpUtils";
+import { MessageKind, notify } from "./notifications";
+
+const logger = "shell";
 
 const isWin = process.platform === "win32";
 
 export function log(childProcess: ChildProcess): void {
-  kdbOutputLog(`Process ${childProcess.pid} killed`, "INFO");
+  notify(`Process ${childProcess.pid} killed`, MessageKind.DEBUG, {
+    logger,
+  });
 }
 
 export async function killPid(pid = NaN): Promise<void> {
@@ -33,10 +38,24 @@ export async function killPid(pid = NaN): Promise<void> {
   } else if (process.platform === "darwin") {
     result = await tryExecuteCommand("/bin", killPidCommand(pid), log);
   }
-  kdbOutputLog(`Destroying q process result: ${result}`, "INFO");
+  notify(`Destroying q process result: ${result}`, MessageKind.DEBUG, {
+    logger,
+  });
 }
 
 function killPidCommand(pid: number): string {
   return `kill ${pid}`;
   // return process.platform === 'win32' ? `taskkill /PID ${pid} /T /F` : `kill -9 ${pid}`;
+}
+
+/* c8 ignore next */
+export function which(cmd: string): string[] {
+  // This works on WSL, MacOS, Linux
+  const res = execFileSync("/usr/bin/which", ["-a", cmd]);
+  return new TextDecoder().decode(res).split(/(?:\r\n|[\r\n])/gs);
+}
+
+/* c8 ignore next */
+export function stat(path: string): boolean {
+  return existsSync(path);
 }

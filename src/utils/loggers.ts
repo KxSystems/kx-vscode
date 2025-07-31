@@ -11,15 +11,21 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { validateUtils } from "../utils/validateUtils";
+import * as vscode from "vscode";
 
-export function validateScratchpadOutputVariableName(
-  input: string | undefined
-): string | undefined {
-  if (input !== undefined) {
-    if (!validateUtils.isValidLength(input, 1, 64)) {
-      return "Input value must be between 1 and 64 alphanumeric characters in length.";
-    }
+import { ext } from "../extensionVariables";
+
+export function kdbOutputLog(
+  message: string,
+  type: string,
+  supressDialog?: boolean,
+): void {
+  const dateNow = new Date().toLocaleDateString();
+  const timeNow = new Date().toLocaleTimeString();
+  ext.outputChannel.appendLine(`[${dateNow} ${timeNow}] [${type}] ${message}`);
+  if (type === "ERROR" && !supressDialog) {
+    vscode.window.showErrorMessage(
+      `Error occured, check kdb output channel for details.`,
+    );
   }
-  return undefined;
 }

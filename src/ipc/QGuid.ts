@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2023 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -44,10 +44,10 @@ export default class QGuid extends Vector {
       const d = i - start;
       s += d === 4 || d === 6 || d === 8 || d === 10 ? "-" : "";
 
-      // eslint-disable-next-line no-bitwise
+       
       s += x[c >> 4];
 
-      // eslint-disable-next-line no-bitwise
+       
       s += x[c & 15];
     }
     if (s === UUID_NULL) {

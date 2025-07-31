@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -13,29 +13,32 @@
 
 import * as fs from "fs";
 import path from "path";
-import { workspace, window, Uri } from "vscode";
+import { workspace, Uri } from "vscode";
 
 import { InsightsConnection } from "../classes/insightsConnection";
 import { ext } from "../extensionVariables";
-import { kdbOutputLog } from "./core";
-import { Telemetry } from "./telemetryClient";
+import { MessageKind, notify } from "./notifications";
 import { DataSourceFiles } from "../models/dataSource";
 import { DataSourcesPanel } from "../panels/datasource";
+
+const logger = "dataSource";
 
 export function createKdbDataSourcesFolder(): string {
   const rootPath = ext.context.globalStorageUri.fsPath;
   const kdbDataSourcesFolderPath = path.join(rootPath, ext.kdbDataSourceFolder);
   if (!fs.existsSync(rootPath)) {
-    kdbOutputLog(
-      `[DATSOURCE] Directory created to the extension folder: ${rootPath}`,
-      "INFO",
+    notify(
+      `Directory created to the extension folder: ${rootPath}`,
+      MessageKind.DEBUG,
+      { logger },
     );
     fs.mkdirSync(rootPath);
   }
   if (!fs.existsSync(kdbDataSourcesFolderPath)) {
-    kdbOutputLog(
-      `[DATSOURCE] Directory created to the extension folder: ${kdbDataSourcesFolderPath}`,
-      "INFO",
+    notify(
+      `Directory created to the extension folder: ${kdbDataSourcesFolderPath}`,
+      MessageKind.DEBUG,
+      { logger },
     );
     fs.mkdirSync(kdbDataSourcesFolderPath);
   }
@@ -51,13 +54,10 @@ export function convertTimeToTimestamp(time: string): string {
     const timePart = parts[1].replace("Z", "0").padEnd(9, "0");
     return `${datePart}.${timePart}`;
   } catch (error) {
-    kdbOutputLog(
-      `The string param is in an incorrect format. Param: ${time} Error: ${error}`,
-      "ERROR",
-    );
-    console.error(
-      `The string param is in an incorrect format. Param: ${time} Error: ${error}`,
-    );
+    notify("The string param is in an incorrect format.", MessageKind.ERROR, {
+      logger,
+      params: { time, error },
+    });
     return "";
   }
 }
@@ -116,7 +116,7 @@ export function oldFilesExists(): boolean {
   return files.length > 0;
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 export async function importOldDsFiles(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
   const files = fs.readdirSync(kdbDataSourcesFolderPath);
@@ -135,7 +135,7 @@ export async function importOldDsFiles(): Promise<void> {
   ext.oldDSformatExists = false;
 }
 
-/* istanbul ignore next */
+/* c8 ignore next */
 export async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
   const folders = workspace.workspaceFolders;
   if (folders) {
@@ -151,7 +151,9 @@ export async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
       filePath = path.join(importToUri.fsPath, fileName);
     }
     fs.writeFileSync(filePath, JSON.stringify(ds));
-    window.showInformationMessage(`Datasource created.`);
-    Telemetry.sendEvent("Datasource.Created");
+    notify(`Datasource created.`, MessageKind.INFO, {
+      logger,
+      telemetry: "Datasource.Created",
+    });
   }
 }

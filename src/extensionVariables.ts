@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -44,9 +44,11 @@ import AuthSettings from "./utils/secretStorage";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
+  export let REAL_QHOME: string | undefined;
   export const EXTENSION_VERSION =
     extensions.getExtension("KX.kdb")?.packageJSON.version || "unknown";
   export const isRCExtension = EXTENSION_VERSION.includes("rc");
+  export const REPL = "REPL";
   export let activeTextEditor: TextEditor | undefined;
   export let context: ExtensionContext;
   export let outputChannel: OutputChannel;
@@ -76,7 +78,6 @@ export namespace ext {
   export const connectedContextStrings: Array<string> = [];
   export const queryHistoryAvailableToCopy: Array<string> = [];
   export const connectionsList: Array<KdbNode | InsightsNode> = [];
-  export let hideDetailedConsoleQueryOutput: boolean;
   export let networkChangesWatcher: boolean;
   export let insightsHydrate: boolean;
   export let connectionNode: KdbNode | InsightsNode | undefined;
@@ -108,6 +109,7 @@ export namespace ext {
   export const jsonTypes = new Set([
     0, 1, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 19, 77, 98, 99,
   ]);
+  export const scratchpadStarted = new Set<string>();
 
   export let secretSettings: AuthSettings;
 
@@ -142,9 +144,7 @@ export namespace ext {
 
   const extensionId = "kx.kdb";
   const packageJSON = extensions.getExtension(extensionId)!.packageJSON;
-  export const extensionName = packageJSON.name;
-  export const extensionVersion = packageJSON.version;
-  export const extensionKey = packageJSON.aiKey;
+  export const extAIConnString = packageJSON.aiConnString;
 
   export const localhost = "127.0.0.1";
   export const networkProtocols = {

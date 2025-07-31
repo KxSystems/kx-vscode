@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -17,9 +17,15 @@ import { ext } from "../extensionVariables";
 import { ConnectionType } from "../models/connectionsModels";
 import { EditConnectionMessage } from "../models/messages";
 import { InsightsNode, KdbNode } from "../services/kdbTreeProvider";
-import { retrieveConnLabelsNames } from "../utils/connLabel";
+import {
+  clearWorkspaceLabels,
+  retrieveConnLabelsNames,
+} from "../utils/connLabel";
 import { getNonce } from "../utils/getNonce";
 import { getUri } from "../utils/getUri";
+import { MessageKind, notify } from "../utils/notifications";
+
+const logger = "newConnection";
 
 export class NewConnectionPannel {
   public static currentPanel: NewConnectionPannel | undefined;
@@ -32,6 +38,7 @@ export class NewConnectionPannel {
       NewConnectionPannel.currentPanel._panel.dispose();
       return;
     }
+    clearWorkspaceLabels();
 
     const panel = vscode.window.createWebviewPanel(
       "kdbNewConnection",
@@ -92,12 +99,14 @@ export class NewConnectionPannel {
       this._panel.webview,
       this._extensionUri,
     );
-    /* istanbul ignore next */
+    /* c8 ignore next */
     this._panel.webview.onDidReceiveMessage((message) => {
       if (message.command === "kdb.connections.add.bundleq") {
         if (ext.isBundleQCreated) {
-          vscode.window.showErrorMessage(
+          notify(
             "Bundled Q is already created, please remove it first",
+            MessageKind.ERROR,
+            { logger },
           );
         } else {
           vscode.commands.executeCommand(

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -44,9 +44,23 @@ export type MetaApi = {
   api: string;
   kxname: string[];
   aggFn: string;
-  custom: boolean;
+  custom?: boolean;
+  uda: boolean;
   full: boolean;
-  metadata?: MetaApiMetadata; // metadata pode ser undefined
+  metadata?: MetaApiMetadata; // can be undefined
+  params?: any[];
+  description?: string;
+  return?: {
+    type: number[];
+    description: string;
+  };
+  aggReturn?: {
+    type: number;
+    description: string;
+  };
+  misc?: {
+    [key: string]: any;
+  };
   procs: any[];
 };
 
@@ -98,11 +112,11 @@ export type MetaColumns = {
 };
 
 export type MetaDap = {
-  dap: string;
+  dap?: string;
   assembly: string;
   startTS: string;
   endTS: string;
-  labels: string[];
+  labels?: string[];
   instance: string;
 };
 

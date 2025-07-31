@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1998-2025 Kx Systems Inc.
+ * Copyright (c) 1998-2025 KX Systems Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
  * License. You may obtain a copy of the License at
@@ -16,12 +16,13 @@ import {
   CodeLens,
   CodeLensProvider,
   Command,
-  ProgressLocation,
+  NotebookCell,
+  QuickPickItem,
+  QuickPickItemKind,
   Range,
   StatusBarAlignment,
   TextDocument,
   TextEditor,
-  ThemeColor,
   Uri,
   window,
   workspace,
@@ -29,13 +30,25 @@ import {
 
 import { ext } from "../extensionVariables";
 import { resetScratchpad, runQuery } from "./serverCommand";
+import { InsightsConnection } from "../classes/insightsConnection";
+import { LocalConnection } from "../classes/localConnection";
+import { ReplConnection } from "../classes/replConnection";
 import { ExecutionTypes } from "../models/execution";
 import { MetaDap } from "../models/meta";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
-import { kdbOutputLog, offerConnectAction } from "../utils/core";
+import { updateCellMetadata } from "../services/notebookProviders";
+import { getBasename, offerConnectAction } from "../utils/core";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
-import { normalizeAssemblyTarget } from "../utils/shared";
+import { MessageKind, notify, Runner } from "../utils/notifications";
+import {
+  cleanAssemblyName,
+  cleanDapName,
+  errorMessage,
+  normalizeAssemblyTarget,
+} from "../utils/shared";
+
+const logger = "workspaceCommand";
 
 function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   if (editor) {
@@ -46,6 +59,30 @@ function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   } else {
     ext.activeTextEditor = undefined;
   }
+}
+
+/* c8 ignore next */
+function activeEditorChanged(editor?: TextEditor | undefined) {
+  setRealActiveTextEditor(editor);
+  const item = ext.runScratchpadItem;
+  if (ext.activeTextEditor) {
+    const uri = ext.activeTextEditor.document.uri;
+    const server = getServerForUri(uri);
+    if (server) {
+      setRunScratchpadItemText(uri, server);
+      item.show();
+    } else {
+      item.hide();
+    }
+  } else {
+    item.hide();
+  }
+}
+
+/* c8 ignore next */
+function setRunScratchpadItemText(uri: Uri, text: string) {
+  ext.runScratchpadItem.text = `$(cloud) ${text}`;
+  ext.runScratchpadItem.tooltip = `KX: Choose connection for '${getBasename(uri)}'`;
 }
 
 export function getInsightsServers() {
@@ -116,8 +153,15 @@ export async function setServerForUri(uri: Uri, server: string | undefined) {
     "connectionMap",
     {},
   );
-  map[relativePath(uri)] = server;
-  await conf.update("connectionMap", map);
+  const relative = relativePath(uri);
+  if (relative.startsWith("/")) {
+    notify(`Document (${uri.path}) is not in workspace.`, MessageKind.ERROR, {
+      logger,
+    });
+  } else {
+    map[relative] = server;
+    await conf.update("connectionMap", map);
+  }
 }
 
 export function getServerForUri(uri: Uri) {
@@ -130,7 +174,9 @@ export function getServerForUri(uri: Uri) {
   const server = map[relativePath(uri)];
   const servers = getServers();
 
-  return server && servers.includes(server) ? server : undefined;
+  return server && (server === ext.REPL || servers.includes(server))
+    ? server
+    : undefined;
 }
 
 export async function setTargetForUri(uri: Uri, target: string | undefined) {
@@ -165,8 +211,14 @@ export async function pickConnection(uri: Uri) {
   const server = getServerForUri(uri);
   const servers = getServers();
 
-  let picked = await window.showQuickPick(["(none)", ...servers], {
-    title: "Choose a connection",
+  const items = ["(none)"];
+  if (isQ(uri)) {
+    items.push(ext.REPL);
+  }
+  items.push(...servers);
+
+  let picked = await window.showQuickPick(items, {
+    title: `Choose Connection (${getBasename(uri)})`,
     placeHolder: server,
   });
 
@@ -175,66 +227,210 @@ export async function pickConnection(uri: Uri) {
       picked = undefined;
       await setTargetForUri(uri, undefined);
     }
+    if (picked) {
+      setRunScratchpadItemText(uri, picked);
+      ext.runScratchpadItem.show();
+    } else {
+      ext.runScratchpadItem.hide();
+    }
     await setServerForUri(uri, picked);
   }
-
   return picked;
 }
 
-export async function pickTarget(uri: Uri) {
-  const server = getServerForUri(uri);
-  if (!server) {
-    return;
-  }
-
-  const conn = await getConnectionForServer(server);
-  const isInsights = conn instanceof InsightsNode;
-  if (!isInsights) {
-    return;
-  }
+export async function pickTarget(uri: Uri, cell?: NotebookCell) {
+  const conn = await findConnection(uri);
+  const isInsights = conn instanceof InsightsConnection;
 
   let daps: MetaDap[] = [];
 
-  if (!isPython(uri)) {
+  if (isInsights) {
     const connMngService = new ConnectionManagementService();
-    const connected = connMngService.isConnected(conn.label);
-    if (connected) {
-      daps = JSON.parse(connMngService.retrieveMetaContent(conn.label, "DAP"));
-    } else {
-      offerConnectAction(server);
-    }
-  }
-
-  const target = getTargetForUri(uri);
-  if (target) {
-    const exists = daps.some(
-      (value) => `${value.assembly} ${value.instance}` === target,
+    daps = JSON.parse(
+      connMngService.retrieveMetaContent(conn.connLabel, "DAP"),
     );
-    if (!exists) {
-      const [assembly, instance] = target.split(/\s+/);
-      daps.push({ assembly, instance } as MetaDap);
+  }
+
+  const target = cell?.metadata.target || getTargetForUri(uri);
+
+  if (target && !targetExists(target, daps) && !conn) {
+    daps.unshift(createMetaDapFromTarget(target));
+  }
+
+  const tierItems = buildTierOptionsWithSeparators(daps);
+  const defaultOption = isInsights ? "scratchpad" : "default";
+
+  const items: QuickPickItem[] = [{ label: defaultOption }];
+
+  if (tierItems.length > 0) {
+    items.push(...tierItems);
+  }
+
+  const picked = await window.showQuickPick(items, {
+    title: `Choose Execution Target (${conn?.connLabel ?? "Not Connected"})`,
+    placeHolder: target || defaultOption,
+  });
+
+  let selectedValue = picked?.label;
+
+  if (selectedValue) {
+    if (selectedValue === "scratchpad" || selectedValue === "default") {
+      selectedValue = undefined;
+    }
+
+    if (cell) {
+      await updateCellMetadata(cell, {
+        target: selectedValue,
+        variable: selectedValue && cell.metadata.variable,
+      });
+    } else {
+      await setTargetForUri(uri, selectedValue);
     }
   }
 
-  let picked = await window.showQuickPick(
-    [
-      "scratchpad",
-      ...daps.map((value) => `${value.assembly} ${value.instance}`),
-    ],
-    {
-      title: `Choose a target on ${server}`,
-      placeHolder: target,
-    },
+  return selectedValue;
+}
+
+function createTierKey(dap: MetaDap): string {
+  const cleanedAssembly = cleanAssemblyName(dap.assembly);
+  return `${cleanedAssembly} ${dap.instance}`;
+}
+
+function targetExists(target: string, daps: MetaDap[]): boolean {
+  return daps.some((dap) => {
+    const tierKey = createTierKey(dap);
+    const processKey = createProcessKey(dap);
+    return tierKey === target || processKey === target;
+  });
+}
+
+function createMetaDapFromTarget(target: string): MetaDap {
+  const parts = target.split(/\s+/);
+  const [assembly, instance, ...dapParts] = parts;
+
+  return dapParts.length > 0
+    ? ({ assembly, instance, dap: dapParts.join(" ") } as MetaDap)
+    : ({ assembly, instance } as MetaDap);
+}
+
+// TODO: Remove it if this don't going to be used from 1.14
+// Options separated by ties and DAP processes
+// function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
+//   const items: QuickPickItem[] = [];
+
+//   const tierSet = new Set<string>();
+//   const processItems: QuickPickItem[] = [];
+
+//   daps.forEach((dap) => {
+//     const cleanedAssembly = cleanAssemblyName(dap.assembly);
+//     const tierKey = `${cleanedAssembly} ${dap.instance}`;
+//     tierSet.add(tierKey);
+
+//     if (dap.dap) {
+//       const cleanedDapName = cleanDapName(dap.dap);
+//       processItems.push({ label: `${tierKey} ${cleanedDapName}` });
+//     }
+//   });
+
+//   if (tierSet.size > 0) {
+//     items.push({
+//       kind: QuickPickItemKind.Separator,
+//       label: "Tiers",
+//     });
+
+//     const sortedTiers = Array.from(tierSet).sort((a, b) => a.localeCompare(b));
+//     sortedTiers.forEach((tier) => {
+//       items.push({ label: tier });
+//     });
+//   }
+
+//   if (processItems.length > 0) {
+//     items.push({
+//       kind: QuickPickItemKind.Separator,
+//       label: "DAP Processes",
+//     });
+
+//     const sortedProcessItems = processItems
+//       .slice()
+//       .sort((a, b) => a.label.localeCompare(b.label));
+//     sortedProcessItems.forEach((item) => {
+//       items.push(item);
+//     });
+//   }
+
+//   return items;
+// }
+
+// Options separated by Assembly
+function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
+  const assemblyMap = new Map<string, Map<string, MetaDap[]>>();
+
+  daps.forEach((dap) => {
+    if (!assemblyMap.has(dap.assembly)) {
+      assemblyMap.set(dap.assembly, new Map<string, MetaDap[]>());
+    }
+
+    const tierKey = `${cleanAssemblyName(dap.assembly)} ${dap.instance}`;
+    const tierMap = assemblyMap.get(dap.assembly)!;
+    const cleanedDap = { ...dap };
+
+    if (!tierMap.has(tierKey)) {
+      tierMap.set(tierKey, []);
+    }
+    if (cleanedDap.dap) {
+      cleanedDap.dap = cleanDapName(cleanedDap.dap);
+    }
+
+    tierMap.get(tierKey)!.push(cleanedDap);
+  });
+
+  const items: QuickPickItem[] = [];
+  const sortedAssemblies = Array.from(assemblyMap.keys()).sort((a, b) =>
+    a.localeCompare(b),
   );
 
-  if (picked) {
-    if (picked === "scratchpad") {
-      picked = undefined;
-    }
-    await setTargetForUri(uri, picked);
-  }
+  sortedAssemblies.forEach((assembly) => {
+    items.push({
+      kind: QuickPickItemKind.Separator,
+      label: `${assembly}`,
+    });
 
-  return picked;
+    const tierMap = assemblyMap.get(assembly)!;
+    const sortedTierKeys = Array.from(tierMap.keys()).sort((a, b) =>
+      a.localeCompare(b),
+    );
+
+    sortedTierKeys.forEach((tierKey) => {
+      const processes = tierMap.get(tierKey)!;
+
+      items.push({ label: tierKey });
+
+      const sortedProcesses = processes
+        .filter((process) => process.dap)
+        .sort((a, b) => a.dap!.localeCompare(b.dap!));
+
+      sortedProcesses.forEach((process) => {
+        items.push({ label: `${tierKey} ${process.dap}` });
+      });
+    });
+  });
+
+  return items;
+}
+
+function createProcessKey(dap: MetaDap): string | null {
+  if (!dap.dap) return null;
+
+  const cleanedDapName = cleanDapName(dap.dap);
+  return `${createTierKey(dap)} ${cleanedDapName}`;
+}
+
+function isSql(uri: Uri | undefined) {
+  return uri && uri.path.endsWith(".sql");
+}
+
+function isQ(uri: Uri | undefined) {
+  return uri && uri.path.endsWith(".q");
 }
 
 function isPython(uri: Uri | undefined) {
@@ -249,50 +445,116 @@ function isDataSource(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".kdb.json");
 }
 
-/* istanbul ignore next */
 function isKxFolder(uri: Uri | undefined) {
   return uri && Path.basename(uri.path) === ".kx";
 }
 
+export async function startRepl() {
+  try {
+    ReplConnection.getOrCreateInstance().start();
+  } catch (error) {
+    notify(errorMessage(error), MessageKind.ERROR, {
+      logger,
+      params: error,
+    });
+  }
+}
+
+export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
+  const basename = getBasename(editor.document.uri);
+
+  let text: string;
+
+  if (type === ExecutionTypes.QueryFile) {
+    text = editor.document.getText();
+  } else if (type === ExecutionTypes.QuerySelection) {
+    const selection = editor.selection;
+    text = selection.isEmpty
+      ? editor.document.lineAt(selection.active.line).text
+      : editor.document.getText(selection);
+  } else {
+    notify(
+      `Executing ${basename} on ${ext.REPL} is not supported.`,
+      MessageKind.ERROR,
+      { logger },
+    );
+    return;
+  }
+
+  try {
+    const runner = Runner.create(async () => {
+      ReplConnection.getOrCreateInstance().executeQuery(text);
+    });
+    runner.title = `Executing ${basename} on ${ext.REPL}.`;
+    await runner.execute();
+  } catch (error) {
+    notify(errorMessage(error), MessageKind.ERROR, {
+      logger,
+      params: error,
+    });
+  }
+}
+
 export async function runActiveEditor(type?: ExecutionTypes) {
   if (ext.activeTextEditor) {
-    const connMngService = new ConnectionManagementService();
     const uri = ext.activeTextEditor.document.uri;
-
-    let isInsights = false;
-    let server = getServerForUri(uri) || "";
-
-    if (server) {
-      const conn = await getConnectionForServer(server);
-      if (conn) {
-        isInsights = conn instanceof InsightsNode;
-        server = conn.label;
-        if (!connMngService.isConnected(server)) {
-          offerConnectAction(server);
-          return;
-        }
-      } else {
-        throw new Error("Connection for  not found");
-      }
+    if (getServerForUri(uri) === ext.REPL) {
+      runOnRepl(ext.activeTextEditor, type);
+      return;
+    }
+    const conn = await findConnection(uri);
+    if (!conn) {
+      return;
     }
 
-    const executorName =
-      ext.activeTextEditor.document.fileName.split("/").pop() || "";
-
+    const isInsights = conn instanceof InsightsConnection;
+    const executorName = getBasename(ext.activeTextEditor.document.uri);
     const target = isInsights ? getTargetForUri(uri) : undefined;
+    const isSql = executorName.endsWith(".sql");
 
-    runQuery(
-      type === undefined
-        ? isPython(uri)
-          ? ExecutionTypes.PythonQueryFile
-          : ExecutionTypes.QueryFile
-        : type,
-      server,
-      executorName,
-      !isPython(uri),
-      undefined,
-      target,
-    );
+    if (isSql && !isInsights) {
+      notify(
+        `SQL execution is not supported on ${conn.connLabel}.`,
+        MessageKind.ERROR,
+        { logger },
+      );
+      return;
+    }
+
+    if (type === ExecutionTypes.PopulateScratchpad && !isInsights) {
+      notify(
+        `Populating scratchpad is not supported on ${conn.connLabel}.`,
+        MessageKind.ERROR,
+        { logger },
+      );
+      return;
+    }
+
+    try {
+      await runQuery(
+        type === undefined
+          ? isPython(uri)
+            ? ExecutionTypes.PythonQueryFile
+            : ExecutionTypes.QueryFile
+          : type,
+        conn.connLabel,
+        executorName,
+        !isPython(uri),
+        undefined,
+        target,
+        isSql,
+        conn instanceof InsightsConnection,
+      );
+    } catch (error) {
+      notify(
+        `Executing ${executorName} on ${conn.connLabel} failed.`,
+        MessageKind.ERROR,
+        {
+          logger,
+          params: error,
+        },
+      );
+    }
   }
 }
 
@@ -335,7 +597,7 @@ export class ConnectionLensProvider implements CodeLensProvider {
 
     if (server) {
       const conn = await getConnectionForServer(server);
-      if (conn instanceof InsightsNode) {
+      if (!isSql(document.uri) && conn instanceof InsightsNode) {
         const pickTarget = new CodeLens(top, {
           command: "kdb.file.pickTarget",
           title: target || "scratchpad",
@@ -353,20 +615,17 @@ export function connectWorkspaceCommands() {
     StatusBarAlignment.Right,
     10000,
   );
-  ext.runScratchpadItem.backgroundColor = new ThemeColor(
-    "statusBarItem.warningBackground",
-  );
   ext.runScratchpadItem.command = <Command>{
-    title: "",
-    command: "kdb.scratchpad.run",
+    title: "Choose Connection",
+    command: "kdb.file.pickConnection",
     arguments: [],
   };
 
-  const watcher = workspace.createFileSystemWatcher("**/*.{kdb.json,q,py}");
+  const watcher = workspace.createFileSystemWatcher("**/*.{kdb.json,q,py,sql}");
   watcher.onDidCreate(update);
   watcher.onDidDelete(update);
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   workspace.onDidDeleteFiles((event) => {
     for (const uri of event.files) {
       if (isKxFolder(uri)) {
@@ -377,7 +636,7 @@ export function connectWorkspaceCommands() {
     }
   });
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   workspace.onDidRenameFiles(async (event) => {
     for (const { oldUri, newUri } of event.files) {
       await setServerForUri(newUri, getServerForUri(oldUri));
@@ -387,13 +646,13 @@ export function connectWorkspaceCommands() {
     }
   });
 
-  /* istanbul ignore next */
+  /* c8 ignore next */
   workspace.onDidChangeWorkspaceFolders(() => {
     ext.dataSourceTreeProvider.reload();
     ext.scratchpadTreeProvider.reload();
   });
-  window.onDidChangeActiveTextEditor(setRealActiveTextEditor);
-  setRealActiveTextEditor(window.activeTextEditor);
+  window.onDidChangeActiveTextEditor(activeEditorChanged);
+  activeEditorChanged(window.activeTextEditor);
 }
 
 export function checkOldDatasourceFiles() {
@@ -404,37 +663,54 @@ export async function importOldDSFiles() {
   if (ext.oldDSformatExists) {
     const folders = workspace.workspaceFolders;
     if (!folders) {
-      window.showErrorMessage(
-        "No workspace folder found. Please open a workspace folder.",
-      );
+      notify("No workspace folder found.", MessageKind.ERROR, { logger });
       return;
     }
-    return await window.withProgress(
-      {
-        location: ProgressLocation.Notification,
-        cancellable: false,
-      },
-      async (progress, token) => {
-        token.onCancellationRequested(() => {
-          kdbOutputLog(
-            "[DATASOURCE] User cancelled the old DS files import.",
-            "INFO",
-          );
-          return false;
+    const runner = Runner.create(async (_, token) => {
+      token.onCancellationRequested(() => {
+        notify("User cancelled the old DS files import.", MessageKind.DEBUG, {
+          logger,
         });
+        return false;
+      });
 
-        progress.report({ message: "Importing old DS files..." });
-        await importOldDsFiles();
-        return;
-      },
-    );
+      await importOldDsFiles();
+    });
+    runner.title = "Importing old DS files.";
+    return await runner.execute();
   } else {
-    window.showInformationMessage(
-      "No old Datasource files found on your VSCODE.",
-    );
-    kdbOutputLog(
-      "[DATASOURCE] No old Datasource files found on your VSCODE.",
-      "INFO",
-    );
+    notify("No old Datasource files found on your VSCODE.", MessageKind.INFO, {
+      logger,
+    });
   }
+}
+
+export async function findConnection(uri: Uri) {
+  const connMngService = new ConnectionManagementService();
+
+  let conn: InsightsConnection | LocalConnection | undefined;
+  let server = getServerForUri(uri) ?? "";
+
+  if (server) {
+    const node = await getConnectionForServer(server);
+    if (node) {
+      server = node.label;
+      conn = connMngService.retrieveConnectedConnection(server);
+      if (conn === undefined) {
+        offerConnectAction(server);
+        return;
+      }
+    } else {
+      notify(`Connection ${server} not found.`, MessageKind.ERROR, {
+        logger,
+      });
+      return;
+    }
+  } else if (ext.activeConnection) {
+    conn = ext.activeConnection;
+  } else {
+    offerConnectAction();
+    return;
+  }
+  return conn;
 }
