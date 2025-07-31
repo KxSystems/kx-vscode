@@ -3464,26 +3464,14 @@ describe("Utils", () => {
     });
 
     describe("getIncompatibleError", () => {
-      it("should return no meta error message", () => {
-        const result = UDAUtils.getIncompatibleError(undefined, undefined);
-
-        assert.deepEqual(result, InvalidParamFieldErrors.NoMetadata);
-      });
-
       it("should return BadField error message", () => {
-        const result = UDAUtils.getIncompatibleError(
-          {},
-          ParamFieldType.Invalid,
-        );
+        const result = UDAUtils.getIncompatibleError(ParamFieldType.Invalid);
 
         assert.strictEqual(result, "badField");
       });
 
       it("should return undefined", () => {
-        const result = UDAUtils.getIncompatibleError(
-          {},
-          ParamFieldType.Boolean,
-        );
+        const result = UDAUtils.getIncompatibleError(ParamFieldType.Boolean);
         assert.strictEqual(result, undefined);
       });
     });
@@ -3579,28 +3567,27 @@ describe("Utils", () => {
           api: [
             {
               api: "testAPI",
-              custom: true,
-              metadata: {
-                params: [
-                  {
-                    name: "param1",
-                    type: 1,
-                    isReq: true,
-                    description: "",
-                  },
-                ],
-                return: { type: [1], description: "test" },
-                description: "",
-                aggReturn: {
-                  type: 0,
+              uda: true,
+              params: [
+                {
+                  name: "param1",
+                  type: 1,
+                  isReq: true,
                   description: "",
                 },
-                misc: {},
+              ],
+              return: { type: [1], description: "test" },
+              description: "",
+              aggReturn: {
+                type: 0,
+                description: "",
               },
+              misc: {},
               kxname: [],
               aggFn: "",
               full: false,
               procs: [],
+              custom: false,
             },
           ],
           rc: [],

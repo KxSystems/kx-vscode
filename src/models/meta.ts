@@ -44,9 +44,23 @@ export type MetaApi = {
   api: string;
   kxname: string[];
   aggFn: string;
-  custom: boolean;
+  custom?: boolean;
+  uda: boolean;
   full: boolean;
-  metadata?: MetaApiMetadata; // metadata pode ser undefined
+  metadata?: MetaApiMetadata; // can be undefined
+  params?: any[];
+  description?: string;
+  return?: {
+    type: number[];
+    description: string;
+  };
+  aggReturn?: {
+    type: number;
+    description: string;
+  };
+  misc?: {
+    [key: string]: any;
+  };
   procs: any[];
 };
 
