@@ -40,7 +40,12 @@ import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { updateCellMetadata } from "../services/notebookProviders";
 import { getBasename, offerConnectAction } from "../utils/core";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
-import { MessageKind, notify, Runner } from "../utils/notifications";
+import {
+  Cancellable,
+  MessageKind,
+  notify,
+  Runner,
+} from "../utils/notifications";
 import {
   cleanAssemblyName,
   cleanDapName,
@@ -487,6 +492,7 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
       repl.show();
       return repl.executeQuery(text, token);
     });
+    runner.cancellable = Cancellable.EXECUTOR;
     runner.title = `Executing ${basename} on ${ext.REPL}.`;
     await runner.execute();
   } catch (error) {

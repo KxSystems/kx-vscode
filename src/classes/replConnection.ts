@@ -360,11 +360,19 @@ export class ReplConnection {
   }
 
   private done() {
-    const exec = this.executing;
+    let exec = this.executing;
     if (!exec) return;
-    exec.resolve(exec.buffer.join(ANSI.EMPTY));
-    this.showPrompt(true);
+    const output = exec.buffer.join(ANSI.EMPTY);
+    if (exec.cancelled) {
+      exec.reject(new Error(output));
+      while ((exec = this.executions.shift())) {
+        exec.reject("Execution removed from queue.");
+      }
+    } else {
+      exec.resolve(output);
+    }
     this.executing = undefined;
+    this.showPrompt(true);
     this.executeNext();
   }
 
@@ -406,10 +414,6 @@ export class ReplConnection {
   }
 
   private cancel() {
-    let exec: Execution | undefined;
-    while ((exec = this.executions.shift())) {
-      exec.reject(new Error("Execution cancelled."));
-    }
     if (this.executing) {
       this.executing.source.cancel();
     }

@@ -86,6 +86,7 @@ export class KxNotebookController {
         success = true;
       } catch (error) {
         this.replaceOutput(execution, { text: `${error}`, mime: "text/plain" });
+        break;
       } finally {
         execution.end(success, Date.now());
       }
