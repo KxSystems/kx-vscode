@@ -615,7 +615,7 @@
         "command": "kdb.file.pickTarget",
         "key": "ctrl+alt+t",
         "mac": "cmd+alt+t",
-        "when": "kdb.connected.active && resourceFilename =~ /\\.(?:q)$/i"
+        "when": "kdb.connected.active && resourceFilename =~ /\\.(?:q|py)$/i"
       }
     ],
     "snippets": [
