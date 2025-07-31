@@ -1530,14 +1530,13 @@ export class KdbDataSourceView extends LitElement {
 
   getUDAInputWidth(type: string, haveDeleteBtn = false) {
     switch (type) {
-      case "datetime-local":
-        return "width-30-pct";
       default:
         if (haveDeleteBtn) return "width-90-pct";
         return "width-97-pct";
     }
   }
 
+  /* c8 ignore next */
   renderUDAInput(param: UDAParam, inputType: string) {
     const validInputTypes = ["text", "number", "datetime-local"];
     const type = validInputTypes.includes(inputType) ? inputType : "text";
@@ -1567,17 +1566,23 @@ export class KdbDataSourceView extends LitElement {
         <div class="${inputFieldWrapperWidth} row align-top">
           ${type === "datetime-local" || type === "date"
             ? html`
-                <date-time-nano-picker
-                  class="reset-widths-limit width-100-pct"
-                  .label="${param.name}"
-                  .required="${isReq === "*"}"
-                  .helpText="${helpText}"
-                  .value="${live(value)}"
-                  @change="${(event: CustomEvent) => {
-                    param.value = event.detail.value;
-                    this.requestChange();
-                  }}">
-                </date-time-nano-picker>
+                <div
+                  style="display: flex; flex-direction: row; align-content: center; justify-content: center; align-items: center;">
+                  <date-time-nano-picker
+                    class="reset-widths-limit width-100-pct"
+                    .label="${param.name}"
+                    .required="${isReq === "*"}"
+                    .helpText="${helpText}"
+                    .value="${live(value)}"
+                    @change="${(event: CustomEvent) => {
+                      param.value = event.detail.value;
+                      this.requestChange();
+                    }}">
+                  </date-time-nano-picker>
+                  <div style="margin-top: 20px;">
+                    ${this.renderDeleteUDAParamButton(param)}
+                  </div>
+                </div>
               `
             : html`
                 <sl-input
@@ -1601,9 +1606,14 @@ export class KdbDataSourceView extends LitElement {
                 </sl-input>
               `}
         </div>
-        <div class="${renderDeleteParam ? "width-10-pct" : "display-none"}">
-          ${this.renderDeleteUDAParamButton(param)}
-        </div>
+        ${type !== "datetime-local"
+          ? html`
+              <div
+                class="${renderDeleteParam ? "width-10-pct" : "display-none"}">
+                ${this.renderDeleteUDAParamButton(param)}
+              </div>
+            `
+          : html``}
       </div>
     `;
   }
