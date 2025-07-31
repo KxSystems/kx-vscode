@@ -2533,6 +2533,26 @@ describe("Utils", () => {
       );
     });
 
+    it("should handle with same other label name", () => {
+      getConfigurationStub.returns({
+        get: sinon.stub().returns([
+          {
+            name: "testeLabel1",
+            color: { name: "red", colorHex: "#FF0000" },
+          },
+        ]),
+        update: sinon.stub(),
+      });
+      const logStub = sinon.stub(loggers, "kdbOutputLog");
+      LabelsUtils.createNewLabel("testeLabel1", "red");
+
+      sinon.assert.calledWith(
+        logStub,
+        "[connLabel] Label with this name already exists.",
+        "ERROR",
+      );
+    });
+
     it("should handle no color selected", () => {
       getConfigurationStub.returns({
         get: sinon.stub(),
@@ -2652,6 +2672,39 @@ describe("Utils", () => {
 
       assert.strictEqual(ext.connLabelList.length, 1);
       assert.strictEqual(ext.connLabelList[0].name, "label2");
+    });
+
+    it("should not rename a label if the name is the same of other label", () => {
+      getConfigurationStub.returns({
+        get: sinon.stub().returns([
+          {
+            name: "label2",
+            color: { name: "red", colorHex: "#FF0000" },
+          },
+        ]),
+        update: sinon.stub().returns(Promise.resolve()),
+      });
+
+      const logStub = sinon.stub(loggers, "kdbOutputLog");
+      LabelsUtils.renameLabel("label1", "label2");
+      sinon.assert.calledWith(
+        logStub,
+        "[connLabel] Label with this name already exists.",
+        "ERROR",
+      );
+    });
+
+    it("should not rename a label if the name is empty or the same of original label name", () => {
+      getConfigurationStub.returns({
+        get: sinon.stub(),
+        update: sinon.stub().returns(Promise.resolve()),
+      });
+
+      LabelsUtils.renameLabel("label1", "");
+      sinon.assert.notCalled(getConfigurationStub);
+
+      LabelsUtils.renameLabel("label1", "label1");
+      sinon.assert.notCalled(getConfigurationStub);
     });
 
     it("should set label color", () => {
@@ -3411,26 +3464,14 @@ describe("Utils", () => {
     });
 
     describe("getIncompatibleError", () => {
-      it("should return no meta error message", () => {
-        const result = UDAUtils.getIncompatibleError(undefined, undefined);
-
-        assert.deepEqual(result, InvalidParamFieldErrors.NoMetadata);
-      });
-
       it("should return BadField error message", () => {
-        const result = UDAUtils.getIncompatibleError(
-          {},
-          ParamFieldType.Invalid,
-        );
+        const result = UDAUtils.getIncompatibleError(ParamFieldType.Invalid);
 
         assert.strictEqual(result, "badField");
       });
 
       it("should return undefined", () => {
-        const result = UDAUtils.getIncompatibleError(
-          {},
-          ParamFieldType.Boolean,
-        );
+        const result = UDAUtils.getIncompatibleError(ParamFieldType.Boolean);
         assert.strictEqual(result, undefined);
       });
     });
@@ -3526,28 +3567,27 @@ describe("Utils", () => {
           api: [
             {
               api: "testAPI",
-              custom: true,
-              metadata: {
-                params: [
-                  {
-                    name: "param1",
-                    type: 1,
-                    isReq: true,
-                    description: "",
-                  },
-                ],
-                return: { type: [1], description: "test" },
-                description: "",
-                aggReturn: {
-                  type: 0,
+              uda: true,
+              params: [
+                {
+                  name: "param1",
+                  type: 1,
+                  isReq: true,
                   description: "",
                 },
-                misc: {},
+              ],
+              return: { type: [1], description: "test" },
+              description: "",
+              aggReturn: {
+                type: 0,
+                description: "",
               },
+              misc: {},
               kxname: [],
               aggFn: "",
               full: false,
               procs: [],
+              custom: false,
             },
           ],
           rc: [],
