@@ -1027,4 +1027,4 @@ If you choose to opt out permanently but wish to revert this, open VS Code setti
 
 ## Data and telemetry
 
-The KX kdb Extension for Visual Studio Code collects usage data and sends it to KX to help improve our products and services. Read our ![privacy statement](https://kx.com/privacy-policy/) to learn more. This extension respects the telemetry.enableTelemetry setting which you can learn more about at https://code.visualstudio.com/docs/supporting/faq#_how-to-disable-telemetry-reporting.
+The KX kdb Extension for Visual Studio Code collects usage data and sends it to KX to help improve our products and services. Read our [privacy statement](https://kx.com/privacy-policy/) to learn more. This extension respects the telemetry.enableTelemetry setting which you can learn more about at https://code.visualstudio.com/docs/supporting/faq#_how-to-disable-telemetry-reporting.
