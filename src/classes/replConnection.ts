@@ -76,6 +76,20 @@ const CONF = {
   MAX_INPUT: 80 * 40,
 };
 
+interface Execution {
+  token: vscode.CancellationToken;
+  source: vscode.CancellationTokenSource;
+  cancelled: boolean;
+  lines: string[];
+  line: string[];
+  buffer: string[];
+  doneOut: boolean;
+  doneErr: boolean;
+  index: number;
+  reject: (reason?: any) => void;
+  resolve: (value: string) => void;
+}
+
 export class ReplConnection {
   private readonly history = new History();
   private readonly identity = crypto.randomUUID();
@@ -93,7 +107,7 @@ export class ReplConnection {
   private readonly decoder: TextDecoder;
   private readonly terminal: vscode.Terminal;
   private readonly process: ChildProcessWithoutNullStreams;
-  private readonly tokens: vscode.CancellationTokenSource[] = [];
+  private readonly executions: Execution[] = [];
 
   private messages? = [
     `${CONF.TITLE} Copyright (C) 1993-2025 KX Systems` + ANSI.CRLF.repeat(2),
@@ -105,13 +119,10 @@ export class ReplConnection {
   private rows = 0;
   private maxInputIndex = 0;
   private inputIndex = 0;
-
-  private buffer: string[] = [];
   private input: string[] = [];
   private serial = 0;
-  private executing = 0;
-  private running = 0;
   private exited = false;
+  private executing?: Execution;
 
   private constructor() {
     this.onDidWrite = new vscode.EventEmitter<string>();
@@ -163,7 +174,7 @@ export class ReplConnection {
   }
 
   private createProcess() {
-    return spawn(getQExecutablePath(), {
+    return spawn(getQExecutablePath(), ["-q"], {
       env: { ...process.env, QHOME: ext.REAL_QHOME },
     });
   }
@@ -172,9 +183,9 @@ export class ReplConnection {
     this.process.on("error", this.handleError.bind(this));
     this.process.on("close", this.handleClose.bind(this));
     this.process.stdout.on("data", this.handleOutput.bind(this));
-    this.process.stdout.on("error", this.handleError.bind(this));
     this.process.stderr.on("data", this.handleErrorOutput.bind(this));
-    this.process.stderr.on("error", this.handleError.bind(this));
+    this.process.stdout.on("error", this.handlePipeError.bind(this));
+    this.process.stderr.on("error", this.handlePipeError.bind(this));
   }
 
   private executeCommand(data: string) {
@@ -221,7 +232,6 @@ export class ReplConnection {
   private sendToProcess(data: string) {
     this.process.stdin.write(
       this.stub(data) + ANSI.CRLF + this.createToken(1) + this.createToken(2),
-      () => this.executing++,
     );
   }
 
@@ -291,35 +301,6 @@ export class ReplConnection {
     );
   }
 
-  private showExecutionPrompt() {
-    this.showPrompt(
-      false,
-      this.executing > 1 ? `execution-${this.executing}` : "execution",
-    );
-    this.sendToTerminal(ANSI.CRLF);
-  }
-
-  private showOutput(decoded: string) {
-    if (this.exited) {
-      return;
-    }
-    const output = decoded.replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
-
-    if (this.messages) this.messages.push(output);
-    else this.buffer.push(output);
-  }
-
-  private decode(data: any, buffer = this.buffer) {
-    const decoded = this.decoder.decode(data);
-    this.token.lastIndex = 0;
-    buffer.push(
-      decoded
-        .replace(this.token, ANSI.EMPTY)
-        .replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF),
-    );
-    return decoded;
-  }
-
   private getToken(decoded: string) {
     this.token.lastIndex = 0;
     return this.token.exec(decoded);
@@ -343,59 +324,103 @@ export class ReplConnection {
     this.exited = true;
   }
 
-  private handleOutput(data: any) {
-    if (this.running) {
-      return;
+  private check(namespace: string) {
+    const exec = this.executing;
+    if (!exec) return;
+    if (exec.doneOut && exec.doneErr) {
+      this.namespace = namespace ? `.${namespace}` : ANSI.EMPTY;
+      const output = exec.line.join(ANSI.EMPTY);
+      if (output) {
+        exec.buffer.push(output);
+        this.sendToTerminal(output);
+      }
+      if (exec.cancelled) {
+        this.done();
+      } else if (exec.index < exec.lines.length - 1) {
+        exec.index++;
+        exec.line = [];
+        exec.doneOut = false;
+        exec.doneErr = false;
+        this.sendToProcess(exec.lines[exec.index]);
+      } else {
+        this.done();
+      }
     }
+  }
+
+  private decode(data: any, buffer: string[]) {
     const decoded = this.decoder.decode(data);
     this.token.lastIndex = 0;
-    const output = decoded.replace(this.token, ANSI.EMPTY);
-    this.showOutput(output);
+    buffer.push(
+      decoded
+        .replace(this.token, ANSI.EMPTY)
+        .replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF),
+    );
+    return decoded;
+  }
+
+  private done() {
+    const exec = this.executing;
+    if (!exec) return;
+    exec.resolve(exec.buffer.join(ANSI.EMPTY));
+    this.showPrompt(true);
+    this.executing = undefined;
+    this.executeNext();
+  }
+
+  private handlePipeError(error: Error) {
+    this.sendToTerminal(`${error.message}`);
+    this.done();
+  }
+
+  private handleOutput(data: any) {
+    const exec = this.executing;
+    if (!exec) return;
+    const decoded = this.decode(data, exec.line);
+    const match = this.getToken(decoded);
+    if (match) {
+      exec.doneOut = true;
+      this.check(match[2]);
+    }
   }
 
   private handleErrorOutput(data: any) {
-    if (this.running) {
-      return;
+    const exec = this.executing;
+    if (!exec) return;
+    const decoded = this.decode(data, exec.line);
+    const match = this.getToken(decoded);
+    if (match) {
+      exec.doneErr = true;
+      this.check(match[2]);
     }
-    const decoded = this.decoder.decode(data);
-    this.token.lastIndex = 0;
-    const output = decoded.replace(this.token, ANSI.EMPTY);
-    this.showOutput(output);
+  }
 
-    this.token.lastIndex = 0;
-    let match: RegExpMatchArray | null;
-
-    while ((match = this.token.exec(decoded))) {
-      if (match[0]) {
-        this.namespace = match[2] ? `.${match[2]}` : ANSI.EMPTY;
-
-        const serial = parseInt(match[1]);
-        if (serial + 1 === this.serial) {
-          const output = this.buffer.join(ANSI.EMPTY);
-          this.sendToTerminal(output);
-          this.buffer = [];
-        }
-
-        this.executing--;
-        if (this.executing === 0) {
-          this.input = [];
-          this.inputIndex = 0;
-          this.updateInputIndex();
-          this.showPrompt(true);
-        } else {
-          this.showExecutionPrompt();
-        }
+  private executeNext() {
+    if (!this.executing && !this.messages) {
+      this.executing = this.executions.shift();
+      if (this.executing) {
+        this.sendToTerminal(ANSI.CRLF);
+        this.sendToProcess(this.executing.lines[this.executing.index]);
       }
+    }
+  }
+
+  private cancel() {
+    let exec: Execution | undefined;
+    while ((exec = this.executions.shift())) {
+      exec.reject(new Error("Execution cancelled."));
+    }
+    if (this.executing) {
+      this.executing.source.cancel();
     }
   }
 
   private open(dimensions?: vscode.TerminalDimensions) {
     if (dimensions) this.setDimensions(dimensions);
-    if (this.messages) {
-      this.messages.forEach((message) => this.onDidWrite.fire(message));
-      this.messages = undefined;
-    }
+    this.messages?.forEach((message) => this.onDidWrite.fire(message));
+    this.messages = undefined;
     this.showPrompt(true);
+    this.executeNext();
   }
 
   private setDimensions(dimensions: vscode.TerminalDimensions) {
@@ -403,18 +428,16 @@ export class ReplConnection {
     this.columns = dimensions.columns;
     this.updateMaxInputIndex();
     this.sendDimensions();
-    if (!this.messages && !this.executing) this.showPrompt();
   }
 
   private sendSignalToProcess(signal: NodeJS.Signals = "SIGINT") {
     this.process.kill(signal);
   }
 
-  private cancel() {
-    let token: vscode.CancellationTokenSource | undefined;
-    while ((token = this.tokens.shift())) {
-      token.cancel();
-    }
+  private runQuery(data: string) {
+    const runner = Runner.create((_, token) => this.executeQuery(data, token));
+    runner.title = "Executing query on REPL.";
+    runner.execute();
   }
 
   private close() {
@@ -436,22 +459,22 @@ export class ReplConnection {
       return;
     }
 
+    let input: string | undefined;
+
     switch (data) {
       case KEY.CR:
-        if (this.input.length > 0) {
-          const input = this.inputText;
-          this.sendToProcess(input);
-          this.history.push(input);
-          this.inputIndex = this.visibleInputIndex;
-          this.showPrompt();
-          if (/^(?:\\[\t ]|\\$)/m.test(input)) {
-            this.context = this.context === CTX.K ? CTX.Q : CTX.K;
-          }
-        } else {
-          this.sendToProcess(ANSI.EMPTY);
-        }
+        input = this.inputText;
         this.history.rewind();
+        this.history.push(input);
+        this.runQuery(input);
+        this.inputIndex = this.visibleInputIndex;
+        this.showPrompt();
+        if (/^(?:\\[\t ]|\\$)/m.test(input)) {
+          this.context = this.context === CTX.K ? CTX.Q : CTX.K;
+        }
         this.sendToTerminal(ANSI.CRLF);
+        this.input = [];
+        this.inputIndex = 0;
         break;
       case KEY.CTRLC:
         this.cancel();
@@ -516,11 +539,7 @@ export class ReplConnection {
         break;
       default:
         if (/(?:\r\n|[\r\n])/s.test(data)) {
-          const runner = Runner.create((_, token) =>
-            this.executeQuery(data, token),
-          );
-          runner.title = "Executing clipboard on REPL.";
-          runner.execute();
+          this.runQuery(data);
           break;
         }
         if (data.length < CONF.MAX_INPUT) {
@@ -547,85 +566,32 @@ export class ReplConnection {
 
   executeQuery(text: string, token: vscode.CancellationToken) {
     return new Promise<string>((resolve, reject) => {
-      if (this.running || this.executing) {
-        reject(new Error("REPL is already executing code."));
-        return;
-      }
-      this.running++;
       const source = new vscode.CancellationTokenSource();
-      this.tokens.unshift(source);
 
-      const buff: string[] = [];
-      const lines = normalizeQuery(text).split(ANSI.CRLF);
-
-      let doneOut = false;
-      let doneErr = false;
-      let index = 0;
-      let line: string[] = [];
-
-      let cancelled =
-        token.isCancellationRequested || source.token.isCancellationRequested;
+      const execution = {
+        source,
+        token,
+        cancelled:
+          token.isCancellationRequested || source.token.isCancellationRequested,
+        lines: normalizeQuery(text).split(ANSI.CRLF),
+        line: [],
+        buffer: [],
+        doneOut: false,
+        doneErr: false,
+        index: 0,
+        reject,
+        resolve,
+      };
 
       [token, source.token].forEach((token) =>
         token.onCancellationRequested(() => {
-          cancelled = true;
+          execution.cancelled = true;
           this.sendSignalToProcess();
         }),
       );
 
-      const check = () => {
-        if (doneOut && doneErr) {
-          const output = line.join(ANSI.EMPTY);
-          if (output) {
-            buff.push(output);
-            this.sendToTerminal(output);
-          }
-          this.executing--;
-          if (cancelled) {
-            done();
-          } else if (index < lines.length - 1) {
-            index++;
-            line = [];
-            doneOut = false;
-            doneErr = false;
-            this.sendToProcess(lines[index]);
-          } else {
-            done();
-          }
-        }
-      };
-
-      const handleOutput = (data: any) => {
-        const decoded = this.decode(data, line);
-        const match = this.getToken(decoded);
-        if (match) {
-          doneOut = true;
-          check();
-        }
-      };
-
-      const handleErrorOutput = (data: any) => {
-        const decoded = this.decode(data, line);
-        const match = this.getToken(decoded);
-        if (match) {
-          doneErr = true;
-          check();
-        }
-      };
-
-      const done = () => {
-        this.process.stdout.off("data", handleOutput);
-        this.process.stderr.off("data", handleErrorOutput);
-        resolve(buff.join(ANSI.EMPTY));
-        this.running--;
-        this.tokens.shift()?.dispose();
-        this.showPrompt(true);
-      };
-
-      this.process.stdout.on("data", handleOutput);
-      this.process.stderr.on("data", handleErrorOutput);
-      this.sendToTerminal(ANSI.CRLF);
-      this.sendToProcess(lines[index]);
+      this.executions.push(execution);
+      this.executeNext();
     });
   }
 
