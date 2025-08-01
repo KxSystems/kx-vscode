@@ -40,7 +40,12 @@ import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { updateCellMetadata } from "../services/notebookProviders";
 import { getBasename, offerConnectAction } from "../utils/core";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
-import { MessageKind, notify, Runner } from "../utils/notifications";
+import {
+  Cancellable,
+  MessageKind,
+  notify,
+  Runner,
+} from "../utils/notifications";
 import {
   cleanAssemblyName,
   cleanDapName,
@@ -212,7 +217,7 @@ export async function pickConnection(uri: Uri) {
   const servers = getServers();
 
   const items = ["(none)"];
-  if (isQ(uri)) {
+  if (isQ(uri) || isNotebook(uri)) {
     items.push(ext.REPL);
   }
   items.push(...servers);
@@ -433,6 +438,10 @@ function isQ(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".q");
 }
 
+function isNotebook(uri: Uri | undefined) {
+  return uri && uri.path.endsWith(".kxnb");
+}
+
 function isPython(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".py");
 }
@@ -482,9 +491,12 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   }
 
   try {
-    const runner = Runner.create(async () => {
-      ReplConnection.getOrCreateInstance().executeQuery(text);
+    const runner = Runner.create((_, token) => {
+      const repl = ReplConnection.getOrCreateInstance();
+      repl.show();
+      return repl.executeQuery(text, token);
     });
+    runner.cancellable = Cancellable.EXECUTOR;
     runner.title = `Executing ${basename} on ${ext.REPL}.`;
     await runner.execute();
   } catch (error) {
