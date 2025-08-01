@@ -11,12 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { IRule } from "./rule";
-import { HasLowerCase } from "./validationFunctions/hasLowerCase";
-import { HasNoForbiddenChar } from "./validationFunctions/hasNoForbiddenChar";
-import { HasSpecialChar } from "./validationFunctions/hasSpecialChar";
-import { IsNotEmpty } from "./validationFunctions/isNotEmpty";
-import { LengthRange } from "./validationFunctions/lengthRange";
+import { ValidatorFunctions } from "./validatorFunctions";
+import { IRule } from "../models/rule";
 
 export class Validator {
   private errors: Set<string> = new Set();
@@ -27,31 +23,45 @@ export class Validator {
     return Array.from(this.errors).join("\r\n") || null;
   }
 
-  public isNotEmpty(): Validator {
-    this.validateSync(new IsNotEmpty());
+  public isNotEmpty(errorMessage?: string): this {
+    this.validateSync(ValidatorFunctions.createIsNotEmptyRule(errorMessage));
     return this;
   }
 
-  public hasSpecialChar(specialChars: RegExp): Validator {
-    this.validateSync(new HasSpecialChar(specialChars));
+  public hasSpecialChar(specialChars: RegExp, errorMessage?: string): this {
+    this.validateSync(
+      ValidatorFunctions.createHasSpecialCharRule(specialChars, errorMessage),
+    );
     return this;
   }
 
   public hasNoForbiddenChar(
     forbiddenChars: RegExp,
-    errorMessage: string
-  ): Validator {
-    this.validateSync(new HasNoForbiddenChar(forbiddenChars, errorMessage));
+    errorMessage?: string,
+  ): this {
+    this.validateSync(
+      ValidatorFunctions.createHasNoForbiddenCharRule(
+        forbiddenChars,
+        errorMessage ?? "Contains forbidden characters",
+      ),
+    );
     return this;
   }
 
-  public inLengthRange(min: number, max: number): Validator {
-    this.validateSync(new LengthRange(min, max));
+  public inLengthRange(min: number, max: number, errorMessage?: string): this {
+    this.validateSync(
+      ValidatorFunctions.createLengthRangeRule(min, max, errorMessage),
+    );
     return this;
   }
 
-  public hasLowerCase(): Validator {
-    this.validateSync(new HasLowerCase());
+  public hasLowerCase(errorMessage?: string): this {
+    this.validateSync(ValidatorFunctions.createHasLowerCaseRule(errorMessage));
+    return this;
+  }
+
+  public hasUpperCase(errorMessage?: string): this {
+    this.validateSync(ValidatorFunctions.createHasUpperCaseRule(errorMessage));
     return this;
   }
 

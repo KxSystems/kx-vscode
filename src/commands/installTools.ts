@@ -61,7 +61,7 @@ import {
 } from "../utils/core";
 import { executeCommand } from "../utils/cpUtils";
 import { MessageKind, Runner, notify } from "../utils/notifications";
-import { openUrl } from "../utils/openUrl";
+import { openUrl } from "../utils/uriUtils";
 import { validateServerPort } from "../validators/kdbValidator";
 
 const logger = "install";

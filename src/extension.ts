@@ -22,7 +22,7 @@ import {
 } from "vscode-languageclient/node";
 
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
-import { connectClientCommands } from "./commands/clientCommands";
+import { connectClientCommands } from "./commands/clientCommand";
 import {
   installTools,
   startLocalProcess,
@@ -707,9 +707,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
     {
       command: "kdb.connections.content.selectView",
       callback: async (viewItem) => {
-        const connLabel = viewItem.connLabel
-          ? viewItem.connLabel.split("[")[1].split("]")[0]
-          : undefined;
+        const connLabel = viewItem.connLabel;
         if (connLabel) {
           const executorName = viewItem.coreIcon.substring(2);
           executeQuery(

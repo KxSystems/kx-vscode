@@ -10,7 +10,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Introduced SQL code block support in notebooks
 - Enabled connection association and execution for plain SQL files
 - Notebooks now support DAP targets and automatically populate scratchpad
-- Workbook enhancements to allow Python files to target specific DAPs on kdb Insights connections
+- Starting from Insights Enterprise `version 1.14`, workbook enhancements enable you to target specific `tiers` and `DAP processes` within kdb Insights connections.
 - Improved the q REPL command functionality
 - Extended qsql API to allow targeting specific DAP processes, not just tiers
 - Refactorings are connection aware
@@ -40,6 +40,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Resolved Chevrotain (LS Server package) warnings related to test coverage
 - Migrated from deprecated telemetry to the current standard
 - Unified progress tracking, logging, telemetry, and notifications for consistency
+- The extension now automatically detects the appropriate endpoint for `Query Environment-enabled` IE connections.
 
 # v1.12.0
 

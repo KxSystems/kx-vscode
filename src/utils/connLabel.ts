@@ -87,6 +87,14 @@ export function createNewLabel(name: string, colorName: string) {
   );
   if (name === "") {
     notify("Label name can't be empty.", MessageKind.ERROR, { logger });
+    return;
+  }
+  if (checkIfLabelExists(name)) {
+    notify("Label with this name already exists.", MessageKind.ERROR, {
+      logger,
+      telemetry: "Label.Create.Exists",
+    });
+    return;
   }
   if (color && name !== "") {
     const newLbl: Labels = {
@@ -209,7 +217,17 @@ export function retrieveConnLabelsNames(
 }
 
 export function renameLabel(name: string, newName: string) {
+  if (name === newName || newName === "") {
+    return;
+  }
   getWorkspaceLabels();
+  if (checkIfLabelExists(newName)) {
+    notify("Label with this name already exists.", MessageKind.ERROR, {
+      logger,
+      telemetry: "Label.Rename.Exists",
+    });
+    return;
+  }
   const found = ext.connLabelList.find((item) => item.name === name);
   if (found) {
     found.name = newName;
@@ -321,4 +339,8 @@ export function getConnectionLabelStatistics(
   });
 
   return statistics;
+}
+
+export function checkIfLabelExists(name: string): boolean {
+  return ext.connLabelList.some((label) => label.name === name);
 }

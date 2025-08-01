@@ -16,13 +16,15 @@ import * as vscode from "vscode";
 import { getCellKind } from "./notebookProviders";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
+import { ReplConnection } from "../classes/replConnection";
 import {
   getPartialDatasourceFile,
   populateScratchpad,
   runDataSource,
 } from "../commands/dataSourceCommand";
 import { executeQuery } from "../commands/serverCommand";
-import { findConnection } from "../commands/workspaceCommand";
+import { findConnection, getServerForUri } from "../commands/workspaceCommand";
+import { ext } from "../extensionVariables";
 import { CellKind } from "../models/notebook";
 import { getBasename } from "../utils/core";
 import { MessageKind, notify } from "../utils/notifications";
@@ -55,11 +57,51 @@ export class KxNotebookController {
     this.controller.dispose();
   }
 
+  async executeRepl(
+    cells: vscode.NotebookCell[],
+    controller: vscode.NotebookController,
+  ) {
+    const repl = ReplConnection.getOrCreateInstance();
+
+    for (const cell of cells) {
+      const execution = controller.createNotebookCellExecution(cell);
+
+      execution.executionOrder = ++this.order;
+      execution.start(Date.now());
+
+      let success = false;
+      try {
+        const kind = getCellKind(cell);
+        if (kind === CellKind.SQL) {
+          throw new Error("SQL is not supported on REPL.");
+        }
+        if (kind === CellKind.PYTHON) {
+          throw new Error("Python is not supported on REPL.");
+        }
+        const text = await repl.executeQuery(
+          cell.document.getText(),
+          execution.token,
+        );
+        this.replaceOutput(execution, { text, mime: "text/plain" });
+        success = true;
+      } catch (error) {
+        this.replaceOutput(execution, { text: `${error}`, mime: "text/plain" });
+        break;
+      } finally {
+        execution.end(success, Date.now());
+      }
+    }
+  }
+
   async execute(
     cells: vscode.NotebookCell[],
     notebook: vscode.NotebookDocument,
     controller: vscode.NotebookController,
   ): Promise<void> {
+    if (getServerForUri(notebook.uri) === ext.REPL) {
+      return this.executeRepl(cells, controller);
+    }
+
     const conn = await findConnection(notebook.uri);
     if (!conn) {
       return;
