@@ -18,6 +18,7 @@ import * as vscode from "vscode";
 import * as notebookTestUtils from "./notebookTest.utils.test";
 import { InsightsConnection } from "../../../../src/classes/insightsConnection";
 import { LocalConnection } from "../../../../src/classes/localConnection";
+import { ReplConnection } from "../../../../src/classes/replConnection";
 import * as serverCommand from "../../../../src/commands/serverCommand";
 import * as workspaceCommand from "../../../../src/commands/workspaceCommand";
 import { ext } from "../../../../src/extensionVariables";
@@ -66,6 +67,62 @@ describe("Controller", () => {
       },
     };
   }
+
+  describe("REPL Connection", () => {
+    let replaceOutputStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      replaceOutputStub = sinon.stub(
+        controlller.KxNotebookController.prototype,
+        "replaceOutput",
+      );
+      sinon.stub(ReplConnection.prototype, "executeQuery").resolves("RESULT");
+      sinon.stub(workspaceCommand, "getServerForUri").returns(ext.REPL);
+      createInstance();
+    });
+
+    describe("q cell", () => {
+      it("should execute", async () => {
+        await instance.execute(
+          [notebookTestUtils.createCell("q")],
+          notebookTestUtils.createNotebook(),
+          createController(),
+        );
+        sinon.assert.calledOnceWithMatch(replaceOutputStub, sinon.match.any, {
+          text: "RESULT",
+          mime: "text/plain",
+        });
+      });
+    });
+
+    describe("python cell", () => {
+      it("should not execute", async () => {
+        await instance.execute(
+          [notebookTestUtils.createCell("python")],
+          notebookTestUtils.createNotebook(),
+          createController(),
+        );
+        sinon.assert.calledOnceWithMatch(replaceOutputStub, sinon.match.any, {
+          text: "Error: Python is not supported on REPL.",
+          mime: "text/plain",
+        });
+      });
+    });
+
+    describe("sql cell", () => {
+      it("should not execute", async () => {
+        await instance.execute(
+          [notebookTestUtils.createCell("sql")],
+          notebookTestUtils.createNotebook(),
+          createController(),
+        );
+        sinon.assert.calledOnceWithMatch(replaceOutputStub, sinon.match.any, {
+          text: "Error: SQL is not supported on REPL.",
+          mime: "text/plain",
+        });
+      });
+    });
+  });
 
   describe("Connection Picked", () => {
     beforeEach(() => {

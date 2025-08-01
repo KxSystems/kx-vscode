@@ -328,7 +328,7 @@ export class ReplConnection {
   }
 
   private cancel() {
-    let c: Execution | any;
+    let c: Execution | undefined;
     while ((c = this.executions.shift())) {
       c.resolve(ANSI.EMPTY);
     }
@@ -441,12 +441,14 @@ export class ReplConnection {
       return;
     }
 
+    const inputText = this.inputText;
+
     if (data === KEY.CR) {
       if (this.executing) {
         this.sendToTerminal(ANSI.CRLF);
         return;
       }
-      if (/^\\[\t ]*$/m.test(this.inputText)) {
+      if (/^\\[\t ]*$/m.test(inputText)) {
         this.context = this.context === CTX.K ? CTX.Q : CTX.K;
         this.sendCommand("\\");
         this.sendToTerminal(ANSI.CRLF);
@@ -458,8 +460,9 @@ export class ReplConnection {
 
     switch (data) {
       case KEY.CR:
+        this.history.push(inputText);
         this.history.rewind();
-        this.runQuery(this.history.push(this.inputText));
+        this.runQuery(inputText);
         this.inputIndex = this.visibleInputIndex;
         this.showPrompt();
         this.sendToTerminal(ANSI.CRLF);
@@ -609,7 +612,7 @@ class History {
 
   push(input: string) {
     if (input === this.head?.input) {
-      return input;
+      return;
     }
     const item = new HistoryItem(input);
     if (this.head) {
@@ -617,7 +620,6 @@ class History {
       this.head.prev = item;
     }
     this.head = item;
-    return input;
   }
 
   get next() {
