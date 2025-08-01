@@ -217,7 +217,7 @@ export async function pickConnection(uri: Uri) {
   const servers = getServers();
 
   const items = ["(none)"];
-  if (isQ(uri)) {
+  if (isQ(uri) || isNotebook(uri)) {
     items.push(ext.REPL);
   }
   items.push(...servers);
@@ -436,6 +436,10 @@ function isSql(uri: Uri | undefined) {
 
 function isQ(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".q");
+}
+
+function isNotebook(uri: Uri | undefined) {
+  return uri && uri.path.endsWith(".kxnb");
 }
 
 function isPython(uri: Uri | undefined) {
