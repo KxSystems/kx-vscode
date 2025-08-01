@@ -83,8 +83,7 @@ interface Execution {
   lines: string[];
   line: string[];
   buffer: string[];
-  doneOut: boolean;
-  doneErr: boolean;
+  done: RegExpExecArray[];
   index: number;
   reject: (reason?: any) => void;
   resolve: (value: string) => void;
@@ -185,20 +184,19 @@ export class ReplConnection {
   }
 
   private connect() {
-    const handler = this.handleError.bind(this);
+    let handler = this.handleError.bind(this);
     this.process.on("error", handler);
     this.process.stdin.on("error", handler);
     this.process.stdout.on("error", handler);
     this.process.stderr.on("error", handler);
-
     this.process.on("close", this.handleClose.bind(this));
-    this.process.stdout.on("data", this.handleStdOut.bind(this));
-    this.process.stderr.on("data", this.handleStdErr.bind(this));
+    handler = this.handleOutput.bind(this);
+    this.process.stdout.on("data", handler);
+    this.process.stderr.on("data", handler);
   }
 
   private stub(query: string) {
     return query.replace(
-      // Stub read0
       /(?<![A-Za-z0-9.])(?:read0(?![A-Za-z0-9.])|0::)/gs,
       '{$[x~0;"";0::[x]]}',
     );
@@ -210,7 +208,7 @@ export class ReplConnection {
       ANSI.QUOTE +
       this.identity +
       ANSI.AT +
-      this.serial++ +
+      this.serial +
       ANSI.AT +
       ANSI.QUOTE +
       (this.context === CTX.Q ? NS.Q : NS.K) +
@@ -245,6 +243,7 @@ export class ReplConnection {
     this.process.stdin.write(
       this.stub(data) + ANSI.CRLF + this.createToken(1) + this.createToken(2),
     );
+    this.serial++;
   }
 
   private runQuery(data: string) {
@@ -329,8 +328,14 @@ export class ReplConnection {
   }
 
   private cancel() {
-    if (this.executing) {
-      this.executing.source.cancel();
+    let c: Execution | any;
+    while ((c = this.executions.shift())) {
+      c.resolve(ANSI.EMPTY);
+    }
+    c = this.executing;
+    if (c) {
+      c.source.cancel();
+      c.resolve(ANSI.EMPTY);
     }
   }
 
@@ -356,11 +361,12 @@ export class ReplConnection {
     return this.token.exec(decoded);
   }
 
-  private nextLine(namespace: string) {
+  private nextToken(token: RegExpExecArray) {
     const c = this.executing;
     if (!c) return;
-    if (c.doneOut && c.doneErr) {
-      this.namespace = namespace ? `.${namespace}` : ANSI.EMPTY;
+    c.done.push(token);
+    if (c.done.length % 2 === 0) {
+      this.namespace = token[2] ? `.${token[2]}` : ANSI.EMPTY;
       const output = c.line.join(ANSI.EMPTY);
       if (output) {
         c.buffer.push(output);
@@ -371,8 +377,6 @@ export class ReplConnection {
       } else if (c.index < c.lines.length - 1) {
         c.index++;
         c.line = [];
-        c.doneOut = false;
-        c.doneErr = false;
         this.sendToProcess(c.lines[c.index]);
       } else {
         this.resolve();
@@ -381,40 +385,21 @@ export class ReplConnection {
   }
 
   private resolve() {
-    let c = this.executing;
+    const c = this.executing;
     if (!c) return;
-    const output = c.buffer.join(ANSI.EMPTY);
-    if (c.cancelled) {
-      c.reject(new Error(output));
-      while ((c = this.executions.shift())) {
-        c.reject("Execution removed from queue.");
-      }
-    } else {
-      c.resolve(output);
-    }
     this.executing = undefined;
+    const output = c.buffer.join(ANSI.EMPTY);
+    if (c.cancelled) c.reject(new Error(output));
+    else c.resolve(output);
     this.showPrompt(true);
     this.executeNext();
   }
 
-  private handleStdOut(data: any) {
+  private handleOutput(data: any) {
     const c = this.executing;
     if (!c) return;
     const token = this.push(data, c.line);
-    if (token) {
-      c.doneOut = true;
-      this.nextLine(token[2]);
-    }
-  }
-
-  private handleStdErr(data: any) {
-    const c = this.executing;
-    if (!c) return;
-    const token = this.push(data, c.line);
-    if (token) {
-      c.doneErr = true;
-      this.nextLine(token[2]);
-    }
+    if (token) this.nextToken(token);
   }
 
   private handleError(error: Error) {
@@ -425,6 +410,7 @@ export class ReplConnection {
   private handleClose(code?: number) {
     const msg = `${CONF.TITLE} exited with code (${code ?? 0}).${ANSI.CRLF}`;
     this.sendToTerminal(msg);
+    this.cancel();
     this.exited = true;
   }
 
@@ -438,7 +424,6 @@ export class ReplConnection {
 
   private close() {
     if (ReplConnection.instance === this) ReplConnection.instance = undefined;
-    this.cancel();
     this.sendSignalToProcess("SIGTERM");
     this.onDidWrite.dispose();
     this.exited = true;
@@ -456,18 +441,19 @@ export class ReplConnection {
       return;
     }
 
-    if (this.executing && data === KEY.CR) {
-      this.sendToTerminal(ANSI.CRLF);
-      return;
-    }
-
-    if (data === KEY.CR && /^\\[\t ]*$/m.test(this.inputText)) {
-      this.context = this.context === CTX.K ? CTX.Q : CTX.K;
-      this.sendCommand("\\");
-      this.sendToTerminal(ANSI.CRLF);
-      this.inputText = ANSI.EMPTY;
-      this.showPrompt(true);
-      return;
+    if (data === KEY.CR) {
+      if (this.executing) {
+        this.sendToTerminal(ANSI.CRLF);
+        return;
+      }
+      if (/^\\[\t ]*$/m.test(this.inputText)) {
+        this.context = this.context === CTX.K ? CTX.Q : CTX.K;
+        this.sendCommand("\\");
+        this.sendToTerminal(ANSI.CRLF);
+        this.inputText = ANSI.EMPTY;
+        this.showPrompt(true);
+        return;
+      }
     }
 
     switch (data) {
@@ -579,8 +565,7 @@ export class ReplConnection {
         lines: normalizeQuery(text).split(ANSI.CRLF),
         line: [],
         buffer: [],
-        doneOut: false,
-        doneErr: false,
+        done: [],
         index: 0,
         reject,
         resolve,
@@ -593,8 +578,12 @@ export class ReplConnection {
         }),
       );
 
-      this.executions.push(execution);
-      this.executeNext();
+      if (execution.cancelled) {
+        resolve(ANSI.EMPTY);
+      } else {
+        this.executions.push(execution);
+        this.executeNext();
+      }
     });
   }
 
