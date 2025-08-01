@@ -143,51 +143,51 @@
         "kdb.servers": {
           "type": "object",
           "description": "kdb servers for explorer",
-          "scope": "machine-overridable"
+          "scope": "machine"
         },
         "kdb.insights": {
           "deprecationMessage": "This setting is deprecated, use kdb.insightsEnterpriseConnections instead",
           "type": "object",
           "description": "kdb insights for explorer",
-          "scope": "machine-overridable"
+          "scope": "machine"
         },
         "kdb.insightsEnterpriseConnections": {
           "type": "object",
           "description": "kdb insights enterprise connections for explorer",
-          "scope": "machine-overridable"
+          "scope": "machine"
         },
         "kdb.hideInstallationNotification": {
           "type": "boolean",
           "description": "Hide notification for installation path, after first install",
-          "scope": "machine-overridable"
+          "scope": "machine"
         },
         "kdb.hideDetailedConsoleQueryOutput": {
           "type": "boolean",
           "description": "Hide detailed console query output",
           "default": true,
-          "scope": "machine-overridable"
+          "scope": "machine"
         },
         "kdb.autoFocusOutputOnEntry": {
           "type": "boolean",
           "description": "Automatically focus the output console when running a query without an active results tab or receive log entry",
           "default": true,
-          "scope": "machine-overridable"
+          "scope": "machine"
         },
         "kdb.qHomeDirectory": {
           "type": "string",
           "description": "QHOME directory for q runtime",
-          "scope": "machine-overridable"
+          "scope": "machine"
         },
         "kdb.neverShowQInstallAgain": {
           "type": "boolean",
           "description": "Never show q install walkthrough again",
-          "scope": "machine-overridable"
+          "scope": "machine"
         },
         "kdb.hideSubscribeRegistrationNotification": {
           "type": "boolean",
           "description": "Hide subscribe for registration notification",
           "default": false,
-          "scope": "machine-overridable"
+          "scope": "machine"
         },
         "kdb.linting": {
           "type": "boolean",
@@ -221,19 +221,19 @@
           "type": "array",
           "description": "List of label names and colorset",
           "default": [],
-          "scope": "machine-overridable"
+          "scope": "machine"
         },
         "kdb.labelsConnectionMap": {
           "type": "array",
           "description": "Labels connection map",
           "default": [],
-          "scope": "machine-overridable"
+          "scope": "machine"
         },
         "kdb.hideSurvey": {
           "type": "boolean",
           "default": false,
           "description": "Hide the extension survey dialog box",
-          "scope": "machine-overridable"
+          "scope": "machine"
         }
       }
     },
