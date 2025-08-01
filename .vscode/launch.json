@@ -67,8 +67,7 @@
       ],
       "runtimeExecutable": "npm",
       "skipFiles": ["<node_internals>/**"],
-      "type": "node",
-      "presentation": { "hidden": true }
+      "type": "node"
     }
   ],
   "compounds": [
