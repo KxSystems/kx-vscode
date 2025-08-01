@@ -19,7 +19,7 @@ import {
   getAutoFocusOutputOnEntrySetting,
   getQExecutablePath,
 } from "../utils/core";
-import { Runner } from "../utils/notifications";
+import { Cancellable, Runner } from "../utils/notifications";
 import { normalizeQuery } from "../utils/queryUtils";
 
 const ANSI = {
@@ -132,6 +132,21 @@ export class ReplConnection {
     this.connect();
   }
 
+  private get inputText() {
+    return this.input.join(ANSI.EMPTY);
+  }
+
+  private set inputText(text: string) {
+    this.input = [...text];
+    this.inputIndex = this.visibleInputIndex;
+  }
+
+  private get visibleInputIndex() {
+    return this.input.length > this.maxInputIndex
+      ? this.maxInputIndex
+      : this.input.length;
+  }
+
   private get context() {
     return this._context;
   }
@@ -148,16 +163,6 @@ export class ReplConnection {
   private set namespace(namespace: string) {
     this._namespace = namespace;
     this.updateMaxInputIndex();
-  }
-
-  private get visibleInputIndex() {
-    return this.input.length > this.maxInputIndex
-      ? this.maxInputIndex
-      : this.input.length;
-  }
-
-  private get inputText() {
-    return this.input.join(ANSI.EMPTY);
   }
 
   private createTerminal() {
@@ -180,30 +185,15 @@ export class ReplConnection {
   }
 
   private connect() {
-    this.process.on("error", this.handleError.bind(this));
+    const handler = this.handleError.bind(this);
+    this.process.on("error", handler);
+    this.process.stdin.on("error", handler);
+    this.process.stdout.on("error", handler);
+    this.process.stderr.on("error", handler);
+
     this.process.on("close", this.handleClose.bind(this));
-    this.process.stdout.on("data", this.handleOutput.bind(this));
-    this.process.stderr.on("data", this.handleErrorOutput.bind(this));
-    this.process.stdout.on("error", this.handlePipeError.bind(this));
-    this.process.stderr.on("error", this.handlePipeError.bind(this));
-  }
-
-  private executeCommand(data: string) {
-    this.process.stdin.write(data + ANSI.CRLF);
-  }
-
-  private sendDimensions() {
-    const LINES = process.env.LINES ?? this.rows.toString();
-    let rows = parseInt(LINES.replace(/\D+/gs, "0") || "0");
-    if (rows < 25) rows = 25;
-    if (rows > 500) rows = 500;
-
-    const COLUMNS = process.env.COLUMNS ?? this.columns.toString();
-    let columns = parseInt(COLUMNS.replace(/\D+/gs, "") || "0");
-    if (columns < 50) columns = 50;
-    if (columns > 320) columns = 320;
-
-    this.executeCommand(`\\c ${rows} ${columns}`);
+    this.process.stdout.on("data", this.handleStdOut.bind(this));
+    this.process.stderr.on("data", this.handleStdErr.bind(this));
   }
 
   private stub(query: string) {
@@ -229,10 +219,39 @@ export class ReplConnection {
     );
   }
 
+  private sendCommand(data: string) {
+    this.process.stdin.write(data + ANSI.CRLF);
+  }
+
+  private sendDimensions() {
+    const LINES = process.env.LINES ?? this.rows.toString();
+    let rows = parseInt(LINES.replace(/\D+/gs, "0") || "0");
+    if (rows < 25) rows = 25;
+    if (rows > 500) rows = 500;
+
+    const COLUMNS = process.env.COLUMNS ?? this.columns.toString();
+    let columns = parseInt(COLUMNS.replace(/\D+/gs, "") || "0");
+    if (columns < 50) columns = 50;
+    if (columns > 320) columns = 320;
+
+    this.sendCommand(`\\c ${rows} ${columns}`);
+  }
+
+  private sendSignalToProcess(signal: NodeJS.Signals = "SIGINT") {
+    this.process.kill(signal);
+  }
+
   private sendToProcess(data: string) {
     this.process.stdin.write(
       this.stub(data) + ANSI.CRLF + this.createToken(1) + this.createToken(2),
     );
+  }
+
+  private runQuery(data: string) {
+    const runner = Runner.create((_, token) => this.executeQuery(data, token));
+    runner.cancellable = Cancellable.EXECUTOR;
+    runner.title = "Executing query on REPL.";
+    runner.execute();
   }
 
   private sendToTerminal(data: string) {
@@ -301,11 +320,6 @@ export class ReplConnection {
     );
   }
 
-  private getToken(decoded: string) {
-    this.token.lastIndex = 0;
-    return this.token.exec(decoded);
-  }
-
   private recall(history?: HistoryItem) {
     const input = history?.input ?? ANSI.EMPTY;
     this.input = [...input];
@@ -314,92 +328,9 @@ export class ReplConnection {
     this.showPrompt();
   }
 
-  private handleError(error: Error) {
-    this.sendToTerminal(error.message + ANSI.CRLF);
-  }
-
-  private handleClose(code?: number) {
-    const message = `${CONF.TITLE} exited with code (${code ?? 0}).${ANSI.CRLF}`;
-    this.sendToTerminal(message);
-    this.exited = true;
-  }
-
-  private check(namespace: string) {
-    const exec = this.executing;
-    if (!exec) return;
-    if (exec.doneOut && exec.doneErr) {
-      this.namespace = namespace ? `.${namespace}` : ANSI.EMPTY;
-      const output = exec.line.join(ANSI.EMPTY);
-      if (output) {
-        exec.buffer.push(output);
-        this.sendToTerminal(output);
-      }
-      if (exec.cancelled) {
-        this.done();
-      } else if (exec.index < exec.lines.length - 1) {
-        exec.index++;
-        exec.line = [];
-        exec.doneOut = false;
-        exec.doneErr = false;
-        this.sendToProcess(exec.lines[exec.index]);
-      } else {
-        this.done();
-      }
-    }
-  }
-
-  private decode(data: any, buffer: string[]) {
-    const decoded = this.decoder.decode(data);
-    this.token.lastIndex = 0;
-    buffer.push(
-      decoded
-        .replace(this.token, ANSI.EMPTY)
-        .replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF),
-    );
-    return decoded;
-  }
-
-  private done() {
-    let exec = this.executing;
-    if (!exec) return;
-    const output = exec.buffer.join(ANSI.EMPTY);
-    if (exec.cancelled) {
-      exec.reject(new Error(output));
-      while ((exec = this.executions.shift())) {
-        exec.reject("Execution removed from queue.");
-      }
-    } else {
-      exec.resolve(output);
-    }
-    this.executing = undefined;
-    this.showPrompt(true);
-    this.executeNext();
-  }
-
-  private handlePipeError(error: Error) {
-    this.sendToTerminal(`${error.message}`);
-    this.done();
-  }
-
-  private handleOutput(data: any) {
-    const exec = this.executing;
-    if (!exec) return;
-    const decoded = this.decode(data, exec.line);
-    const match = this.getToken(decoded);
-    if (match) {
-      exec.doneOut = true;
-      this.check(match[2]);
-    }
-  }
-
-  private handleErrorOutput(data: any) {
-    const exec = this.executing;
-    if (!exec) return;
-    const decoded = this.decode(data, exec.line);
-    const match = this.getToken(decoded);
-    if (match) {
-      exec.doneErr = true;
-      this.check(match[2]);
+  private cancel() {
+    if (this.executing) {
+      this.executing.source.cancel();
     }
   }
 
@@ -413,10 +344,88 @@ export class ReplConnection {
     }
   }
 
-  private cancel() {
-    if (this.executing) {
-      this.executing.source.cancel();
+  private push(data: any, buffer: string[]) {
+    const decoded = this.decoder.decode(data);
+    this.token.lastIndex = 0;
+    buffer.push(
+      decoded
+        .replace(this.token, ANSI.EMPTY)
+        .replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF),
+    );
+    this.token.lastIndex = 0;
+    return this.token.exec(decoded);
+  }
+
+  private nextLine(namespace: string) {
+    const c = this.executing;
+    if (!c) return;
+    if (c.doneOut && c.doneErr) {
+      this.namespace = namespace ? `.${namespace}` : ANSI.EMPTY;
+      const output = c.line.join(ANSI.EMPTY);
+      if (output) {
+        c.buffer.push(output);
+        this.sendToTerminal(output);
+      }
+      if (c.cancelled) {
+        this.resolve();
+      } else if (c.index < c.lines.length - 1) {
+        c.index++;
+        c.line = [];
+        c.doneOut = false;
+        c.doneErr = false;
+        this.sendToProcess(c.lines[c.index]);
+      } else {
+        this.resolve();
+      }
     }
+  }
+
+  private resolve() {
+    let c = this.executing;
+    if (!c) return;
+    const output = c.buffer.join(ANSI.EMPTY);
+    if (c.cancelled) {
+      c.reject(new Error(output));
+      while ((c = this.executions.shift())) {
+        c.reject("Execution removed from queue.");
+      }
+    } else {
+      c.resolve(output);
+    }
+    this.executing = undefined;
+    this.showPrompt(true);
+    this.executeNext();
+  }
+
+  private handleStdOut(data: any) {
+    const c = this.executing;
+    if (!c) return;
+    const token = this.push(data, c.line);
+    if (token) {
+      c.doneOut = true;
+      this.nextLine(token[2]);
+    }
+  }
+
+  private handleStdErr(data: any) {
+    const c = this.executing;
+    if (!c) return;
+    const token = this.push(data, c.line);
+    if (token) {
+      c.doneErr = true;
+      this.nextLine(token[2]);
+    }
+  }
+
+  private handleError(error: Error) {
+    this.sendToTerminal(`${error.message}${ANSI.CRLF}`);
+    this.resolve();
+  }
+
+  private handleClose(code?: number) {
+    const msg = `${CONF.TITLE} exited with code (${code ?? 0}).${ANSI.CRLF}`;
+    this.sendToTerminal(msg);
+    this.exited = true;
   }
 
   private open(dimensions?: vscode.TerminalDimensions) {
@@ -427,30 +436,19 @@ export class ReplConnection {
     this.executeNext();
   }
 
+  private close() {
+    if (ReplConnection.instance === this) ReplConnection.instance = undefined;
+    this.cancel();
+    this.sendSignalToProcess("SIGTERM");
+    this.onDidWrite.dispose();
+    this.exited = true;
+  }
+
   private setDimensions(dimensions: vscode.TerminalDimensions) {
     this.rows = dimensions.rows;
     this.columns = dimensions.columns;
     this.updateMaxInputIndex();
     this.sendDimensions();
-  }
-
-  private sendSignalToProcess(signal: NodeJS.Signals = "SIGINT") {
-    this.process.kill(signal);
-  }
-
-  private runQuery(data: string) {
-    const runner = Runner.create((_, token) => this.executeQuery(data, token));
-    runner.title = "Executing query on REPL.";
-    runner.execute();
-  }
-
-  private close() {
-    if (ReplConnection.instance === this) {
-      ReplConnection.instance = undefined;
-    }
-    this.sendSignalToProcess("SIGTERM");
-    this.onDidWrite.dispose();
-    this.exited = true;
   }
 
   private handleInput(data: string) {
@@ -463,22 +461,23 @@ export class ReplConnection {
       return;
     }
 
-    let input: string | undefined;
+    if (data === KEY.CR && /^\\[\t ]*$/m.test(this.inputText)) {
+      this.context = this.context === CTX.K ? CTX.Q : CTX.K;
+      this.sendCommand("\\");
+      this.sendToTerminal(ANSI.CRLF);
+      this.inputText = ANSI.EMPTY;
+      this.showPrompt(true);
+      return;
+    }
 
     switch (data) {
       case KEY.CR:
-        input = this.inputText;
         this.history.rewind();
-        this.history.push(input);
-        this.runQuery(input);
+        this.runQuery(this.history.push(this.inputText));
         this.inputIndex = this.visibleInputIndex;
         this.showPrompt();
-        if (/^(?:\\[\t ]|\\$)/m.test(input)) {
-          this.context = this.context === CTX.K ? CTX.Q : CTX.K;
-        }
         this.sendToTerminal(ANSI.CRLF);
-        this.input = [];
-        this.inputIndex = 0;
+        this.inputText = ANSI.EMPTY;
         break;
       case KEY.CTRLC:
         this.cancel();
@@ -621,7 +620,7 @@ class History {
 
   push(input: string) {
     if (input === this.head?.input) {
-      return;
+      return input;
     }
     const item = new HistoryItem(input);
     if (this.head) {
@@ -629,6 +628,7 @@ class History {
       this.head.prev = item;
     }
     this.head = item;
+    return input;
   }
 
   get next() {
