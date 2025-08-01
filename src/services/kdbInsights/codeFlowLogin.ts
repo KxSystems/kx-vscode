@@ -174,7 +174,7 @@ export async function getCurrentToken(
 }
 
 /* c8 ignore next */
-async function getToken(
+export async function getToken(
   insightsUrl: string,
   realm: string,
   insecure: boolean,

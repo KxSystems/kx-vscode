@@ -75,7 +75,6 @@ import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { decodeQUTF } from "../utils/decode";
 import { ExecutionConsole } from "../utils/executionConsole";
 import { MessageKind, Runner, notify } from "../utils/notifications";
-import { openUrl } from "../utils/openUrl";
 import {
   checkIfIsDatasource,
   addQueryHistory,
@@ -83,6 +82,7 @@ import {
   resultToBase64,
   needsScratchpad,
 } from "../utils/queryUtils";
+import { openUrl } from "../utils/uriUtils";
 import {
   addWorkspaceFile,
   openWith,
