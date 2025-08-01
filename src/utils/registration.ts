@@ -15,7 +15,7 @@ import { ConfigurationTarget, workspace } from "vscode";
 
 import { ext } from "../extensionVariables";
 import { MessageKind, notify } from "./notifications";
-import { openUrl } from "./openUrl";
+import { openUrl } from "./uriUtils";
 
 export function showRegistrationNotification(): void {
   const setting = workspace

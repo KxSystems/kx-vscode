@@ -7,5 +7,6 @@
   },
   "[xml]": {
     "editor.defaultFormatter": "redhat.vscode-xml"
-  }
+  },
+  "terminal.integrated.scrollback": 4000
 }

@@ -178,22 +178,18 @@ export function fixTimeAtUDARequestBody(
 }
 
 export function getIncompatibleError(
-  metadata: any,
   parsedParams: any,
 ): InvalidParamFieldErrors | undefined {
-  if (!metadata) {
-    return InvalidParamFieldErrors.NoMetadata;
-  }
   if (parsedParams === ParamFieldType.Invalid) {
     return InvalidParamFieldErrors.BadField;
   }
   return undefined;
 }
 
-export function createUDAReturn(metadata: any): UDAReturn {
+export function createUDAReturn(uda: any): UDAReturn {
   return {
-    type: convertTypesToString(metadata?.return.type || []),
-    description: metadata?.return.description || "",
+    type: convertTypesToString(uda?.return.type || []),
+    description: uda?.return.description || "",
   };
 }
 
@@ -204,9 +200,9 @@ export function createUDAObject(
 ): UDA {
   return {
     name: uda.api,
-    description: uda.metadata?.description || "",
+    description: uda?.description || "",
     params: Array.isArray(parsedParams) ? parsedParams : [],
-    return: createUDAReturn(uda.metadata),
+    return: createUDAReturn(uda),
     incompatibleError,
   };
 }
@@ -214,14 +210,11 @@ export function createUDAObject(
 export function parseUDAList(getMeta: MetaObjectPayload): UDA[] {
   const UDAs: UDA[] = [];
   if (getMeta.api !== undefined) {
-    const getMetaUDAs = getMeta.api.filter((api) => api.custom === true);
+    const getMetaUDAs = getMeta.api.filter((api) => api.uda === true);
     if (getMetaUDAs.length !== 0) {
       for (const uda of getMetaUDAs) {
-        const parsedParams = parseUDAParams(uda.metadata?.params);
-        const incompatibleError = getIncompatibleError(
-          uda.metadata,
-          parsedParams,
-        );
+        const parsedParams = parseUDAParams(uda.params);
+        const incompatibleError = getIncompatibleError(parsedParams);
         UDAs.push(createUDAObject(uda, parsedParams, incompatibleError));
       }
     }
