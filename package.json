@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite including the q programming language",
   "publisher": "KX",
-  "version": "1.13.0-rc",
+  "version": "1.14.0-rc",
   "engines": {
     "vscode": "^1.96.0"
   },
@@ -213,7 +213,7 @@
         },
         "kdb.targetMap": {
           "type": "object",
-          "description": "Connection map for workspace files",
+          "description": "Target map for workspace files",
           "default": {},
           "scope": "resource"
         },
@@ -615,7 +615,7 @@
         "command": "kdb.file.pickTarget",
         "key": "ctrl+alt+t",
         "mac": "cmd+alt+t",
-        "when": "kdb.connected.active && resourceFilename =~ /\\.(?:q)$/i"
+        "when": "kdb.connected.active && resourceFilename =~ /\\.(?:q|py)$/i"
       }
     ],
     "snippets": [
@@ -1139,6 +1139,8 @@
     "publish": "npx vsce publish",
     "pretest": "rimraf out-test && tsc --outdir out-test -p ./test",
     "test": "node ./out-test/test/runTest.js",
+    "test:file": "cross-env TEST_FILE=$1 npm run test",
+    "test:folder": "cross-env TEST_FOLDER=$1 npm run test",
     "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js",
     "ui-test-cmd": "extest setup-and-run --code_version $npm_package_config_ui_test_vscode_version --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
     "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",

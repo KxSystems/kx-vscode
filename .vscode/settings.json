@@ -8,6 +8,5 @@
   "[xml]": {
     "editor.defaultFormatter": "redhat.vscode-xml"
   },
-  "kdb.connectionMap": {},
-  "kdb.targetMap": {}
+  "terminal.integrated.scrollback": 4000
 }

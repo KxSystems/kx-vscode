@@ -22,8 +22,8 @@ import {
   retrieveConnLabelsNames,
 } from "../utils/connLabel";
 import { getNonce } from "../utils/getNonce";
-import { getUri } from "../utils/getUri";
 import { MessageKind, notify } from "../utils/notifications";
+import { getUri } from "../utils/uriUtils";
 
 const logger = "newConnection";
 

@@ -659,8 +659,8 @@ export class InsightsConnection {
 
     if (this.meta.payload.api && Array.isArray(this.meta.payload.api)) {
       return this.meta.payload.api.some(
-        (apiItem: { api: string; custom: boolean }) =>
-          apiItem.api === udaName && apiItem.custom === true,
+        (apiItem: { api: string; uda: boolean }) =>
+          apiItem.api === udaName && apiItem.uda === true,
       );
     }
 
