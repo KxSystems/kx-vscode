@@ -37,6 +37,19 @@
       "preLaunchTask": "npm: pretest"
     },
     {
+      "name": "Test Selected File",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--profile=Extension Tests",
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--extensionTestsPath=${workspaceFolder}/out-test/test/suite/index"
+      ],
+      "env": { "TEST_FILE": "${fileBasenameNoExtension}" },
+      "outFiles": ["${workspaceFolder}/out/**/*.js"],
+      "preLaunchTask": "npm: pretest"
+    },
+    {
       "name": "Extension UI Tests",
       "request": "launch",
       "runtimeArgs": ["run", "ui-test"],

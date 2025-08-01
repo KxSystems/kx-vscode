@@ -1137,7 +1137,7 @@
     "preui-test": "rimraf out-test .test-extensions",
     "preui-test-cmd": "tsc --outdir out-test -p ./test",
     "publish": "npx vsce publish",
-    "pretest": "rimraf out-test && tsc --outdir out-test -p ./test",
+    "pretest": "rimraf out out-test && tsc --outdir out-test -p ./test",
     "test": "node ./out-test/test/runTest.js",
     "test:file": "cross-env TEST_FILE=$1 npm run test",
     "test:folder": "cross-env TEST_FOLDER=$1 npm run test",
