@@ -240,15 +240,19 @@ export class ReplConnection {
     this.sendCommand(`\\c ${rows} ${columns}`);
   }
 
-  private sendSignalToProcess(signal: NodeJS.Signals = "SIGINT") {
-    this.process.kill(signal);
-  }
-
   private sendToProcess(data: string) {
     this.process.stdin.write(
       this.stub(data) + ANSI.CRLF + this.createToken(1) + this.createToken(2),
     );
     this.serial++;
+  }
+
+  private stopExecution() {
+    this.process.kill("SIGINT");
+  }
+
+  private stopProcess() {
+    this.process.kill("SIGTERM");
   }
 
   private runQuery(data: string) {
@@ -426,7 +430,7 @@ export class ReplConnection {
   private close() {
     if (ReplConnection.instance === this) ReplConnection.instance = undefined;
     this.cancel();
-    this.sendSignalToProcess("SIGTERM");
+    this.stopProcess();
     this.onDidWrite.dispose();
     this.exited = true;
   }
@@ -581,12 +585,12 @@ export class ReplConnection {
       [token, source.token].forEach((token) =>
         token.onCancellationRequested(() => {
           execution.cancelled = true;
-          this.sendSignalToProcess();
+          this.stopExecution();
         }),
       );
 
       if (execution.cancelled) {
-        this.resolve();
+        resolve({ cancelled: true });
       } else {
         this.executions.push(execution);
         this.executeNext();
@@ -600,7 +604,6 @@ export class ReplConnection {
     if (!this.instance || this.instance.exited) {
       this.instance = new ReplConnection();
     }
-
     return this.instance;
   }
 }
