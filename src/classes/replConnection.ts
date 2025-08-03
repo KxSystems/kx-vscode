@@ -332,8 +332,11 @@ export class ReplConnection {
     this.showPrompt();
   }
 
-  private cancel() {
-    if (this.executing) this.executing.source.cancel();
+  private cancel(error?: Error) {
+    if (this.executing) {
+      if (error) this.executing.reject(error);
+      this.executing.source.cancel();
+    }
   }
 
   private executeNext() {
@@ -400,11 +403,8 @@ export class ReplConnection {
   }
 
   private handleError(error: Error) {
-    if (this.executing) {
-      this.executing.reject(error);
-      this.cancel();
-    }
     this.sendToTerminal(`${error.message}${ANSI.CRLF}`);
+    this.cancel(error);
   }
 
   private handleClose(code?: number) {
@@ -586,7 +586,7 @@ export class ReplConnection {
       );
 
       if (execution.cancelled) {
-        resolve({ cancelled: true });
+        this.resolve();
       } else {
         this.executions.push(execution);
         this.executeNext();
@@ -600,6 +600,7 @@ export class ReplConnection {
     if (!this.instance || this.instance.exited) {
       this.instance = new ReplConnection();
     }
+
     return this.instance;
   }
 }
