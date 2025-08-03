@@ -76,7 +76,9 @@ describe("Controller", () => {
         controlller.KxNotebookController.prototype,
         "replaceOutput",
       );
-      sinon.stub(ReplConnection.prototype, "executeQuery").resolves("RESULT");
+      sinon
+        .stub(ReplConnection.prototype, "executeQuery")
+        .resolves({ output: "RESULT" });
       sinon.stub(workspaceCommand, "getServerForUri").returns(ext.REPL);
       createInstance();
     });
