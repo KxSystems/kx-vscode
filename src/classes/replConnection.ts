@@ -110,8 +110,8 @@ export class ReplConnection {
   private readonly onDidWrite: vscode.EventEmitter<string>;
   private readonly decoder: TextDecoder;
   private readonly terminal: vscode.Terminal;
-  private readonly process: ChildProcessWithoutNullStreams;
   private readonly executions: Execution[] = [];
+  private process: ChildProcessWithoutNullStreams;
 
   private messages? = [
     `${CONF.TITLE} Copyright (C) 1993-2025 KX Systems` + ANSI.CRLF.repeat(2),
@@ -126,6 +126,7 @@ export class ReplConnection {
   private input: string[] = [];
   private serial = 0;
   private exited = false;
+  private stopped = false;
   private executing?: Execution;
 
   private constructor() {
@@ -226,20 +227,6 @@ export class ReplConnection {
     this.process.stdin.write(data + ANSI.CRLF);
   }
 
-  private sendDimensions() {
-    const LINES = process.env.LINES ?? this.rows.toString();
-    let rows = parseInt(LINES.replace(/\D+/gs, "0") || "0");
-    if (rows < 25) rows = 25;
-    if (rows > 500) rows = 500;
-
-    const COLUMNS = process.env.COLUMNS ?? this.columns.toString();
-    let columns = parseInt(COLUMNS.replace(/\D+/gs, "") || "0");
-    if (columns < 50) columns = 50;
-    if (columns > 320) columns = 320;
-
-    this.sendCommand(`\\c ${rows} ${columns}`);
-  }
-
   private sendToProcess(data: string) {
     this.process.stdin.write(
       this.stub(data) + ANSI.CRLF + this.createToken(1) + this.createToken(2),
@@ -248,6 +235,7 @@ export class ReplConnection {
   }
 
   private stopExecution() {
+    this.stopped = process.platform === "win32";
     this.process.kill("SIGINT");
   }
 
@@ -260,6 +248,22 @@ export class ReplConnection {
     runner.cancellable = Cancellable.EXECUTOR;
     runner.title = "Executing query on REPL.";
     runner.execute();
+  }
+
+  private getRows() {
+    const LINES = process.env.LINES ?? this.rows.toString();
+    let rows = parseInt(LINES.replace(/\D+/gs, "0") || "0");
+    if (rows < 25) rows = 25;
+    if (rows > 500) rows = 500;
+    return rows;
+  }
+
+  private getColumns() {
+    const COLUMNS = process.env.COLUMNS ?? this.columns.toString();
+    let columns = parseInt(COLUMNS.replace(/\D+/gs, "") || "0");
+    if (columns < 50) columns = 50;
+    if (columns > 320) columns = 320;
+    return columns;
   }
 
   private sendToTerminal(data: string) {
@@ -412,6 +416,15 @@ export class ReplConnection {
   }
 
   private handleClose(code?: number) {
+    if (this.stopped) {
+      this.stopped = false;
+      this._context = CTX.Q;
+      this._namespace = ANSI.EMPTY;
+      this.resolve();
+      this.process = this.createProcess();
+      this.connect();
+      return;
+    }
     this.sendToTerminal(
       `${CONF.TITLE} exited with code (${code ?? 0}).${ANSI.CRLF}`,
     );
@@ -439,7 +452,7 @@ export class ReplConnection {
     this.rows = dimensions.rows;
     this.columns = dimensions.columns;
     this.updateMaxInputIndex();
-    this.sendDimensions();
+    this.sendCommand(`\\c ${this.getRows()} ${this.getColumns()}`);
   }
 
   private handleInput(data: string) {
