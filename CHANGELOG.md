@@ -2,6 +2,13 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.13.1
+
+### Fixes
+
+- Fixed issue with corrupted settings for VSCode
+- Fixed OpenSSL message severity: debug messages were incorrectly logged as errors
+
 # v1.13.0
 
 ### Enhancements
