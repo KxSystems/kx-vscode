@@ -10,7 +10,7 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--disable-extensions",
+        "--profile-temp",
         "--extensionDevelopmentPath=${workspaceFolder}"
       ],
       "outFiles": ["${workspaceFolder}/out/extension.js*"],
@@ -29,11 +29,24 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--profile=Extension Tests",
+        "--profile-temp",
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--extensionTestsPath=${workspaceFolder}/out-test/test/suite/index"
       ],
-      "outFiles": ["${workspaceFolder}/out/**/*.js"],
+      "outFiles": ["${workspaceFolder}/out-test/**/*.js"],
+      "preLaunchTask": "npm: pretest"
+    },
+    {
+      "name": "Test Selected File",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--profile-temp",
+        "--extensionDevelopmentPath=${workspaceFolder}",
+        "--extensionTestsPath=${workspaceFolder}/out-test/test/suite/index"
+      ],
+      "env": { "TEST_FILE": "${fileBasenameNoExtension}" },
+      "outFiles": ["${workspaceFolder}/out-test/**/*.js"],
       "preLaunchTask": "npm: pretest"
     },
     {
@@ -54,8 +67,7 @@
       ],
       "runtimeExecutable": "npm",
       "skipFiles": ["<node_internals>/**"],
-      "type": "node",
-      "presentation": { "hidden": true }
+      "type": "node"
     }
   ],
   "compounds": [
