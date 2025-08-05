@@ -155,8 +155,26 @@ describe("Controller", () => {
               notebookTestUtils.createNotebook(),
               createController(),
             );
-
             assert.strictEqual(success, undefined);
+          });
+        });
+
+        describe("Connection Exists", () => {
+          beforeEach(() => {
+            sinon
+              .stub(workspaceCommand, "findConnection")
+              .resolves(sinon.createStubInstance(InsightsConnection));
+
+            createInstance();
+          });
+
+          it("should execute sql cell", async () => {
+            await instance.execute(
+              [notebookTestUtils.createCell("sql")],
+              notebookTestUtils.createNotebook(),
+              createController(),
+            );
+            assert.strictEqual(success, true);
           });
         });
       });

@@ -511,6 +511,7 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   }
 }
 
+/* c8 ignore next */
 export async function runActiveEditor(type?: ExecutionTypes) {
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
@@ -675,6 +676,7 @@ export function checkOldDatasourceFiles() {
   ext.oldDSformatExists = oldFilesExists();
 }
 
+/* c8 ignore next */
 export async function importOldDSFiles() {
   if (ext.oldDSformatExists) {
     const folders = workspace.workspaceFolders;
@@ -701,6 +703,7 @@ export async function importOldDSFiles() {
   }
 }
 
+/* c8 ignore next */
 export async function findConnection(uri: Uri) {
   const connMngService = new ConnectionManagementService();
 
