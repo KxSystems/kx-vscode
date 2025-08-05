@@ -365,8 +365,11 @@ export class ReplConnection {
     const output = decoded
       .replace(this.token, ANSI.EMPTY)
       .replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
-    buffer.push(output);
-    if (/^'\d{4}\.\d{2}\.\d{2}T/m.test(output)) c.cancelled = true;
+    if (output) {
+      buffer.push(output);
+      this.sendToTerminal(output);
+      if (/^'\d{4}\.\d{2}\.\d{2}T/m.test(output)) c.cancelled = true;
+    }
     this.token.lastIndex = 0;
     return this.token.exec(decoded);
   }
@@ -378,10 +381,7 @@ export class ReplConnection {
     if (c.done.length % 2 === 0) {
       this.namespace = token[2] ? `.${token[2]}` : ANSI.EMPTY;
       const output = c.line.join(ANSI.EMPTY);
-      if (output) {
-        c.buffer.push(output);
-        this.sendToTerminal(output);
-      }
+      c.buffer.push(output);
       if (c.cancelled || c.index >= c.lines.length - 1) {
         this.resolve();
       } else {
