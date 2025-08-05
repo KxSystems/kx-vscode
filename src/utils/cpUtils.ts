@@ -105,7 +105,7 @@ export async function tryExecuteCommand(
       });
 
       childProc.on("error", (error) => {
-        notify(error.message, MessageKind.ERROR, { logger });
+        notify(error.message, MessageKind.DEBUG, { logger });
         reject(error);
       });
 

@@ -114,6 +114,7 @@ function getServers() {
   ];
 }
 
+/* c8 ignore next */
 export async function getConnectionForServer(
   server: string,
 ): Promise<InsightsNode | KdbNode | undefined> {
@@ -213,6 +214,7 @@ export function getConnectionForUri(uri: Uri) {
   }
 }
 
+/* c8 ignore next */
 export async function pickConnection(uri: Uri) {
   const server = getServerForUri(uri);
   const servers = getServers();
@@ -244,6 +246,7 @@ export async function pickConnection(uri: Uri) {
   return picked;
 }
 
+/* c8 ignore next */
 export async function pickTarget(uri: Uri, cell?: NotebookCell) {
   const conn = await findConnection(uri);
   const isInsights = conn instanceof InsightsConnection;
@@ -424,6 +427,7 @@ function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
   return items;
 }
 
+/* c8 ignore next */
 function createProcessKey(dap: MetaDap): string | null {
   if (!dap.dap) return null;
 

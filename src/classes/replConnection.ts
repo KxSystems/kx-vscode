@@ -86,7 +86,12 @@ interface Execution {
   done: RegExpExecArray[];
   index: number;
   reject: (reason?: any) => void;
-  resolve: (value: string) => void;
+  resolve: (value: Result) => void;
+}
+
+export interface Result {
+  cancelled?: boolean;
+  output?: string;
 }
 
 export class ReplConnection {
@@ -105,8 +110,8 @@ export class ReplConnection {
   private readonly onDidWrite: vscode.EventEmitter<string>;
   private readonly decoder: TextDecoder;
   private readonly terminal: vscode.Terminal;
-  private readonly process: ChildProcessWithoutNullStreams;
   private readonly executions: Execution[] = [];
+  private process: ChildProcessWithoutNullStreams;
 
   private messages? = [
     `${CONF.TITLE} Copyright (C) 1993-2025 KX Systems` + ANSI.CRLF.repeat(2),
@@ -121,6 +126,7 @@ export class ReplConnection {
   private input: string[] = [];
   private serial = 0;
   private exited = false;
+  private stopped = false;
   private executing?: Execution;
 
   private constructor() {
@@ -221,24 +227,6 @@ export class ReplConnection {
     this.process.stdin.write(data + ANSI.CRLF);
   }
 
-  private sendDimensions() {
-    const LINES = process.env.LINES ?? this.rows.toString();
-    let rows = parseInt(LINES.replace(/\D+/gs, "0") || "0");
-    if (rows < 25) rows = 25;
-    if (rows > 500) rows = 500;
-
-    const COLUMNS = process.env.COLUMNS ?? this.columns.toString();
-    let columns = parseInt(COLUMNS.replace(/\D+/gs, "") || "0");
-    if (columns < 50) columns = 50;
-    if (columns > 320) columns = 320;
-
-    this.sendCommand(`\\c ${rows} ${columns}`);
-  }
-
-  private sendSignalToProcess(signal: NodeJS.Signals = "SIGINT") {
-    this.process.kill(signal);
-  }
-
   private sendToProcess(data: string) {
     this.process.stdin.write(
       this.stub(data) + ANSI.CRLF + this.createToken(1) + this.createToken(2),
@@ -246,11 +234,36 @@ export class ReplConnection {
     this.serial++;
   }
 
+  private stopExecution() {
+    this.stopped = process.platform === "win32";
+    this.process.kill("SIGINT");
+  }
+
+  private stopProcess() {
+    this.process.kill("SIGTERM");
+  }
+
   private runQuery(data: string) {
     const runner = Runner.create((_, token) => this.executeQuery(data, token));
     runner.cancellable = Cancellable.EXECUTOR;
     runner.title = "Executing query on REPL.";
     runner.execute();
+  }
+
+  private getRows() {
+    const LINES = process.env.LINES ?? this.rows.toString();
+    let rows = parseInt(LINES.replace(/\D+/gs, "0") || "0");
+    if (rows < 25) rows = 25;
+    if (rows > 500) rows = 500;
+    return rows;
+  }
+
+  private getColumns() {
+    const COLUMNS = process.env.COLUMNS ?? this.columns.toString();
+    let columns = parseInt(COLUMNS.replace(/\D+/gs, "") || "0");
+    if (columns < 50) columns = 50;
+    if (columns > 320) columns = 320;
+    return columns;
   }
 
   private sendToTerminal(data: string) {
@@ -327,15 +340,10 @@ export class ReplConnection {
     this.showPrompt();
   }
 
-  private cancel() {
-    let c: Execution | undefined;
-    while ((c = this.executions.shift())) {
-      c.resolve(ANSI.EMPTY);
-    }
-    c = this.executing;
-    if (c) {
-      c.source.cancel();
-      c.resolve(ANSI.EMPTY);
+  private cancel(error?: Error) {
+    if (this.executing) {
+      if (error) this.executing.reject(error);
+      this.executing.source.cancel();
     }
   }
 
@@ -350,13 +358,15 @@ export class ReplConnection {
   }
 
   private push(data: any, buffer: string[]) {
+    const c = this.executing;
+    if (!c) return;
     const decoded = this.decoder.decode(data);
     this.token.lastIndex = 0;
-    buffer.push(
-      decoded
-        .replace(this.token, ANSI.EMPTY)
-        .replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF),
-    );
+    const output = decoded
+      .replace(this.token, ANSI.EMPTY)
+      .replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
+    buffer.push(output);
+    if (/^'\d{4}\.\d{2}\.\d{2}T/m.test(output)) c.cancelled = true;
     this.token.lastIndex = 0;
     return this.token.exec(decoded);
   }
@@ -372,27 +382,25 @@ export class ReplConnection {
         c.buffer.push(output);
         this.sendToTerminal(output);
       }
-      if (c.cancelled) {
+      if (c.cancelled || c.index >= c.lines.length - 1) {
         this.resolve();
-      } else if (c.index < c.lines.length - 1) {
+      } else {
         c.index++;
         c.line = [];
         this.sendToProcess(c.lines[c.index]);
-      } else {
-        this.resolve();
       }
     }
   }
 
   private resolve() {
-    const c = this.executing;
+    let c = this.executing;
     if (!c) return;
     this.executing = undefined;
-    const output = c.buffer.join(ANSI.EMPTY);
-    if (c.cancelled) c.reject(new Error(output));
-    else c.resolve(output);
-    this.showPrompt(true);
-    this.executeNext();
+    c.resolve({ cancelled: c.cancelled, output: c.buffer.join(ANSI.EMPTY) });
+    if (!this.exited) this.showPrompt(true);
+    if (c.cancelled)
+      while ((c = this.executions.shift())) c.resolve({ cancelled: true });
+    else this.executeNext();
   }
 
   private handleOutput(data: any) {
@@ -404,14 +412,24 @@ export class ReplConnection {
 
   private handleError(error: Error) {
     this.sendToTerminal(`${error.message}${ANSI.CRLF}`);
-    this.resolve();
+    this.cancel(error);
   }
 
   private handleClose(code?: number) {
-    const msg = `${CONF.TITLE} exited with code (${code ?? 0}).${ANSI.CRLF}`;
-    this.sendToTerminal(msg);
-    this.cancel();
+    if (this.stopped) {
+      this.stopped = false;
+      this._context = CTX.Q;
+      this._namespace = ANSI.EMPTY;
+      this.resolve();
+      this.process = this.createProcess();
+      this.connect();
+      return;
+    }
+    this.sendToTerminal(
+      `${CONF.TITLE} exited with code (${code ?? 0}).${ANSI.CRLF}`,
+    );
     this.exited = true;
+    this.resolve();
   }
 
   private open(dimensions?: vscode.TerminalDimensions) {
@@ -424,7 +442,8 @@ export class ReplConnection {
 
   private close() {
     if (ReplConnection.instance === this) ReplConnection.instance = undefined;
-    this.sendSignalToProcess("SIGTERM");
+    this.cancel();
+    this.stopProcess();
     this.onDidWrite.dispose();
     this.exited = true;
   }
@@ -433,7 +452,7 @@ export class ReplConnection {
     this.rows = dimensions.rows;
     this.columns = dimensions.columns;
     this.updateMaxInputIndex();
-    this.sendDimensions();
+    this.sendCommand(`\\c ${this.getRows()} ${this.getColumns()}`);
   }
 
   private handleInput(data: string) {
@@ -531,7 +550,9 @@ export class ReplConnection {
         break;
       default:
         if (/(?:\r\n|[\r\n])/s.test(data)) {
-          this.runQuery(data);
+          if (!/\.venv[/\\]+bin[/\\]+activate/is.test(data)) {
+            this.runQuery(data);
+          }
           break;
         }
         if (data.length < CONF.MAX_INPUT) {
@@ -557,7 +578,7 @@ export class ReplConnection {
   }
 
   executeQuery(text: string, token: vscode.CancellationToken) {
-    return new Promise<string>((resolve, reject) => {
+    return new Promise<Result>((resolve, reject) => {
       const source = new vscode.CancellationTokenSource();
 
       const execution = {
@@ -577,12 +598,12 @@ export class ReplConnection {
       [token, source.token].forEach((token) =>
         token.onCancellationRequested(() => {
           execution.cancelled = true;
-          this.sendSignalToProcess();
+          this.stopExecution();
         }),
       );
 
       if (execution.cancelled) {
-        resolve(ANSI.EMPTY);
+        resolve({ cancelled: true });
       } else {
         this.executions.push(execution);
         this.executeNext();
