@@ -20,7 +20,7 @@ import { generateCoverageReport } from "../coverage";
 export async function run(): Promise<void> {
   const headless = !!process.env.CI;
   const testFolder = process.env.TEST_FOLDER;
-  const testFile = process.env.TEST_FILE;
+  let testFile = process.env.TEST_FILE;
 
   const options: Mocha.MochaOptions = {
     ui: "bdd",
@@ -42,6 +42,7 @@ export async function run(): Promise<void> {
     let pattern: string;
 
     if (testFile) {
+      testFile = testFile.replace(/\.test$/m, "");
       pattern = `**/suite/**/${testFile}.test.js`;
       console.log(`🧪 Running specific test file: ${testFile}.test.js`);
     } else if (testFolder) {

@@ -143,51 +143,51 @@
         "kdb.servers": {
           "type": "object",
           "description": "kdb servers for explorer",
-          "scope": "application"
+          "scope": "machine"
         },
         "kdb.insights": {
           "deprecationMessage": "This setting is deprecated, use kdb.insightsEnterpriseConnections instead",
           "type": "object",
           "description": "kdb insights for explorer",
-          "scope": "application"
+          "scope": "machine"
         },
         "kdb.insightsEnterpriseConnections": {
           "type": "object",
           "description": "kdb insights enterprise connections for explorer",
-          "scope": "application"
+          "scope": "machine"
         },
         "kdb.hideInstallationNotification": {
           "type": "boolean",
           "description": "Hide notification for installation path, after first install",
-          "scope": "application"
+          "scope": "machine"
         },
         "kdb.hideDetailedConsoleQueryOutput": {
           "type": "boolean",
           "description": "Hide detailed console query output",
           "default": true,
-          "scope": "application"
+          "scope": "machine"
         },
         "kdb.autoFocusOutputOnEntry": {
           "type": "boolean",
           "description": "Automatically focus the output console when running a query without an active results tab or receive log entry",
           "default": true,
-          "scope": "application"
+          "scope": "machine"
         },
         "kdb.qHomeDirectory": {
           "type": "string",
           "description": "QHOME directory for q runtime",
-          "scope": "application"
+          "scope": "machine"
         },
         "kdb.neverShowQInstallAgain": {
           "type": "boolean",
           "description": "Never show q install walkthrough again",
-          "scope": "application"
+          "scope": "machine"
         },
         "kdb.hideSubscribeRegistrationNotification": {
           "type": "boolean",
           "description": "Hide subscribe for registration notification",
           "default": false,
-          "scope": "application"
+          "scope": "machine"
         },
         "kdb.linting": {
           "type": "boolean",
@@ -221,19 +221,19 @@
           "type": "array",
           "description": "List of label names and colorset",
           "default": [],
-          "scope": "application"
+          "scope": "machine"
         },
         "kdb.labelsConnectionMap": {
           "type": "array",
           "description": "Labels connection map",
           "default": [],
-          "scope": "application"
+          "scope": "machine"
         },
         "kdb.hideSurvey": {
           "type": "boolean",
           "default": false,
           "description": "Hide the extension survey dialog box",
-          "scope": "application"
+          "scope": "machine"
         }
       }
     },
@@ -1137,7 +1137,7 @@
     "preui-test": "rimraf out-test .test-extensions",
     "preui-test-cmd": "tsc --outdir out-test -p ./test",
     "publish": "npx vsce publish",
-    "pretest": "rimraf out-test && tsc --outdir out-test -p ./test",
+    "pretest": "rimraf out out-test && tsc --outdir out-test -p ./test",
     "test": "node ./out-test/test/runTest.js",
     "test:file": "cross-env TEST_FILE=$1 npm run test",
     "test:folder": "cross-env TEST_FOLDER=$1 npm run test",
