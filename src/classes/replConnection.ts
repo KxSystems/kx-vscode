@@ -460,25 +460,23 @@ export class ReplConnection {
       return;
     }
 
-    const inputText = this.inputText;
-
-    if (data === KEY.CR) {
-      if (this.executing) {
-        this.sendToTerminal(ANSI.CRLF);
-        return;
-      }
-      if (/^\\[\t ]*$/m.test(inputText)) {
-        this.context = this.context === CTX.K ? CTX.Q : CTX.K;
-        this.sendCommand("\\");
-        this.sendToTerminal(ANSI.CRLF);
-        this.inputText = ANSI.EMPTY;
-        this.showPrompt(true);
-        return;
-      }
-    }
+    let inputText: string | undefined;
 
     switch (data) {
       case KEY.CR:
+        if (this.executing) {
+          this.sendToTerminal(ANSI.CRLF);
+          break;
+        }
+        inputText = this.inputText;
+        if (/^\\[\t ]*$/m.test(inputText)) {
+          this.context = this.context === CTX.K ? CTX.Q : CTX.K;
+          this.sendCommand("\\");
+          this.sendToTerminal(ANSI.CRLF);
+          this.inputText = ANSI.EMPTY;
+          this.showPrompt(true);
+          break;
+        }
         this.history.push(inputText);
         this.history.rewind();
         this.runQuery(inputText);

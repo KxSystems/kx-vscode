@@ -28,7 +28,11 @@ import { ext } from "../extensionVariables";
 import { CellKind } from "../models/notebook";
 import { getBasename } from "../utils/core";
 import { MessageKind, notify } from "../utils/notifications";
-import { resultToBase64, needsScratchpad } from "../utils/queryUtils";
+import {
+  resultToBase64,
+  needsScratchpad,
+  getPythonWrapper,
+} from "../utils/queryUtils";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
 
 const logger = "notebookController";
@@ -75,11 +79,9 @@ export class KxNotebookController {
         if (kind === CellKind.SQL) {
           throw new Error("SQL is not supported on REPL.");
         }
-        if (kind === CellKind.PYTHON) {
-          throw new Error("Python is not supported on REPL.");
-        }
+        const text = cell.document.getText();
         const result = await repl.executeQuery(
-          cell.document.getText(),
+          kind === CellKind.PYTHON ? getPythonWrapper(text) : text,
           execution.token,
         );
         this.replaceOutput(execution, {
