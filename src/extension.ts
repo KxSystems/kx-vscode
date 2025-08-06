@@ -707,9 +707,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
     {
       command: "kdb.connections.content.selectView",
       callback: async (viewItem) => {
-        const connLabel = viewItem.connLabel
-          ? viewItem.connLabel.split("[")[1].split("]")[0]
-          : undefined;
+        const connLabel = viewItem.connLabel;
         if (connLabel) {
           const executorName = viewItem.coreIcon.substring(2);
           executeQuery(

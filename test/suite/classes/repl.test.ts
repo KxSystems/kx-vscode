@@ -31,6 +31,7 @@ describe("REPL", () => {
         stdinChunk = chunk;
         stdinWriteCallback = callback;
       },
+      on(_: string) {},
     },
   };
   const terminal = <vscode.Terminal>{ show() {} };
@@ -86,24 +87,16 @@ describe("REPL", () => {
   describe("sendToProcess", () => {
     it("should write data to stdin with CRLF", () => {
       instance["sendToProcess"]("a:1");
-      assert.strictEqual(stdinChunk, "a:1\r\n");
+      assert.ok(stdinChunk.startsWith("a:1\r\n"));
     });
     it("should send token with data when no error on q", () => {
       instance["sendToProcess"]("a:1");
-      stdinWriteCallback(null);
       assert.ok(stdinChunk.endsWith(',string system"d";\r\n'));
     });
     it("should send token with data when no error on k", () => {
       instance["context"] = "k";
       instance["sendToProcess"]("a:1");
-      stdinWriteCallback(null);
       assert.ok(stdinChunk.endsWith(',$:."\\\\d";\r\n'));
-    });
-    it("should decrease execution count on error", () => {
-      instance["executing"] = 0;
-      instance["sendToProcess"]("a:1");
-      stdinWriteCallback(new Error());
-      assert.strictEqual(instance["executing"], 0);
     });
   });
 
@@ -123,6 +116,7 @@ describe("REPL", () => {
     });
 
     it("should fire onDidWrite", () => {
+      instance["messages"] = undefined;
       instance["sendToTerminal"]("test");
       assert.strictEqual(data, "test");
     });
@@ -146,15 +140,6 @@ describe("REPL", () => {
       it("should not output to terminal if exited", () => {
         sinon.stub(instance, <any>"exited").value(true);
         instance["showPrompt"]();
-        sinon.assert.notCalled(sendToTerminalSub);
-      });
-    });
-
-    describe("showOutput", () => {
-      it("should not output to terminal if exited", () => {
-        sinon.stub(instance, <any>"executions").value(undefined);
-        sinon.stub(instance, <any>"exited").value(true);
-        instance["showOutput"]("test");
         sinon.assert.notCalled(sendToTerminalSub);
       });
     });

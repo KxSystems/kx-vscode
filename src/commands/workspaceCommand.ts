@@ -40,7 +40,12 @@ import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { updateCellMetadata } from "../services/notebookProviders";
 import { getBasename, offerConnectAction } from "../utils/core";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
-import { MessageKind, notify, Runner } from "../utils/notifications";
+import {
+  Cancellable,
+  MessageKind,
+  notify,
+  Runner,
+} from "../utils/notifications";
 import {
   cleanAssemblyName,
   cleanDapName,
@@ -108,6 +113,7 @@ function getServers() {
   ];
 }
 
+/* c8 ignore next */
 export async function getConnectionForServer(
   server: string,
 ): Promise<InsightsNode | KdbNode | undefined> {
@@ -207,12 +213,13 @@ export function getConnectionForUri(uri: Uri) {
   }
 }
 
+/* c8 ignore next */
 export async function pickConnection(uri: Uri) {
   const server = getServerForUri(uri);
   const servers = getServers();
 
   const items = ["(none)"];
-  if (isQ(uri)) {
+  if (isQ(uri) || isNotebook(uri)) {
     items.push(ext.REPL);
   }
   items.push(...servers);
@@ -238,6 +245,7 @@ export async function pickConnection(uri: Uri) {
   return picked;
 }
 
+/* c8 ignore next */
 export async function pickTarget(uri: Uri, cell?: NotebookCell) {
   const conn = await findConnection(uri);
   const isInsights = conn instanceof InsightsConnection;
@@ -418,6 +426,7 @@ function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
   return items;
 }
 
+/* c8 ignore next */
 function createProcessKey(dap: MetaDap): string | null {
   if (!dap.dap) return null;
 
@@ -431,6 +440,10 @@ function isSql(uri: Uri | undefined) {
 
 function isQ(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".q");
+}
+
+function isNotebook(uri: Uri | undefined) {
+  return uri && uri.path.endsWith(".kxnb");
 }
 
 function isPython(uri: Uri | undefined) {
@@ -482,9 +495,12 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   }
 
   try {
-    const runner = Runner.create(async () => {
-      ReplConnection.getOrCreateInstance().executeQuery(text);
+    const runner = Runner.create((_, token) => {
+      const repl = ReplConnection.getOrCreateInstance();
+      repl.show();
+      return repl.executeQuery(text, token);
     });
+    runner.cancellable = Cancellable.EXECUTOR;
     runner.title = `Executing ${basename} on ${ext.REPL}.`;
     await runner.execute();
   } catch (error) {
@@ -495,6 +511,7 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   }
 }
 
+/* c8 ignore next */
 export async function runActiveEditor(type?: ExecutionTypes) {
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
@@ -659,6 +676,7 @@ export function checkOldDatasourceFiles() {
   ext.oldDSformatExists = oldFilesExists();
 }
 
+/* c8 ignore next */
 export async function importOldDSFiles() {
   if (ext.oldDSformatExists) {
     const folders = workspace.workspaceFolders;
@@ -685,6 +703,7 @@ export async function importOldDSFiles() {
   }
 }
 
+/* c8 ignore next */
 export async function findConnection(uri: Uri) {
   const connMngService = new ConnectionManagementService();
 

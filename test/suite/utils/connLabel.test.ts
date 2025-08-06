@@ -201,6 +201,39 @@ describe("connLabels", () => {
     assert.strictEqual(ext.connLabelList[0].name, "label2");
   });
 
+  it("should not rename a label if the name is the same of other label", () => {
+    getConfigurationStub.returns({
+      get: sinon.stub().returns([
+        {
+          name: "label2",
+          color: { name: "red", colorHex: "#FF0000" },
+        },
+      ]),
+      update: sinon.stub().returns(Promise.resolve()),
+    });
+
+    const logStub = sinon.stub(loggers, "kdbOutputLog");
+    LabelsUtils.renameLabel("label1", "label2");
+    sinon.assert.calledWith(
+      logStub,
+      "[connLabel] Label with this name already exists.",
+      "ERROR",
+    );
+  });
+
+  it("should not rename a label if the name is empty or the same of original label name", () => {
+    getConfigurationStub.returns({
+      get: sinon.stub(),
+      update: sinon.stub().returns(Promise.resolve()),
+    });
+
+    LabelsUtils.renameLabel("label1", "");
+    sinon.assert.notCalled(getConfigurationStub);
+
+    LabelsUtils.renameLabel("label1", "label1");
+    sinon.assert.notCalled(getConfigurationStub);
+  });
+
   it("should set label color", () => {
     const labels: Labels[] = [
       { name: "label1", color: { name: "red", colorHex: "#FF0000" } },
