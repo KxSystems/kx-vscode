@@ -189,14 +189,10 @@ export class ReplConnection {
   private createProcess() {
     const q = getQExecutablePath();
 
-    return spawn(
-      this.activate ? `${this.activate} && "${q}"` : `"${q}"`,
-      ["-q"],
-      {
-        env: { ...process.env, QHOME: ext.REAL_QHOME },
-        shell: !!this.activate,
-      },
-    );
+    return spawn(this.activate ? `${this.activate} && ${q}` : q, ["-q"], {
+      env: { ...process.env, QHOME: ext.REAL_QHOME },
+      shell: this.activate ? "zsh" : false,
+    });
   }
 
   private connect() {
