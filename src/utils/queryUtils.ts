@@ -280,7 +280,7 @@ export function getPythonWrapper(
     sample_fn: "first",
     sample_size: 10000,
   };
-  return `${wrapper}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]\`result`;
+  return `{[returnFormat;code;sample_fn;sample_size] res:${wrapper}[returnFormat;code;sample_fn;sample_size];$[res\`errored;res\`error;res\`result]}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]`;
 }
 
 export function getQSQLWrapper(query: string, isPython?: boolean): string {

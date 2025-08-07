@@ -1194,6 +1194,7 @@
     "prettier": "^3.6.0",
     "rimraf": "^6.0.1",
     "sinon": "^21.0.0",
+    "tree-kill": "^1.2.2",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.34.1",
     "vscode-extension-tester": "^8.16.2",

@@ -12,6 +12,7 @@
  */
 
 import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
+import kill from "tree-kill";
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
@@ -95,6 +96,7 @@ export interface Result {
 }
 
 export class ReplConnection {
+  private readonly posix = process.platform !== "win32";
   private readonly history = new History();
   private readonly identity = crypto.randomUUID();
   private readonly token = new RegExp(
@@ -128,6 +130,7 @@ export class ReplConnection {
   private exited = false;
   private stopped = false;
   private executing?: Execution;
+  private activate = "";
 
   private constructor() {
     this.onDidWrite = new vscode.EventEmitter<string>();
@@ -184,9 +187,16 @@ export class ReplConnection {
   }
 
   private createProcess() {
-    return spawn(getQExecutablePath(), ["-q"], {
-      env: { ...process.env, QHOME: ext.REAL_QHOME },
-    });
+    const q = getQExecutablePath();
+
+    return spawn(
+      this.activate ? `${this.activate} && "${q}"` : `"${q}"`,
+      ["-q"],
+      {
+        env: { ...process.env, QHOME: ext.REAL_QHOME },
+        shell: !!this.activate,
+      },
+    );
   }
 
   private connect() {
@@ -235,12 +245,19 @@ export class ReplConnection {
   }
 
   private stopExecution() {
-    this.stopped = process.platform === "win32";
-    this.process.kill("SIGINT");
+    this.stopped = !this.posix;
+    const signal = "SIGINT";
+    if (this.activate) {
+      if (this.process.pid) kill(this.process.pid, signal);
+    } else this.process.kill(signal);
   }
 
-  private stopProcess() {
-    this.process.kill("SIGTERM");
+  private stopProcess(restart = false) {
+    this.stopped = restart;
+    const signal = "SIGTERM";
+    if (this.activate) {
+      if (this.process.pid) kill(this.process.pid, signal);
+    } else this.process.kill(signal);
   }
 
   private runQuery(data: string) {
@@ -548,7 +565,12 @@ export class ReplConnection {
         break;
       default:
         if (/(?:\r\n|[\r\n])/s.test(data)) {
-          if (!/\.venv[/\\]+bin[/\\]+activate/is.test(data)) {
+          if (/\.venv[/\\]+(?:scripts|bin)[/\\]+/is.test(data)) {
+            if (this.posix) {
+              this.activate = data.replace(/(?:\r\n|[\r\n])/s, "");
+              this.stopProcess(true);
+            }
+          } else {
             this.runQuery(data);
           }
           break;
