@@ -191,7 +191,7 @@ export class ReplConnection {
 
     return spawn(this.activate ? `${this.activate};${q}` : q, ["-q"], {
       env: { ...process.env, QHOME: ext.REAL_QHOME },
-      shell: !!this.activate,
+      shell: this.activate ? "bash" : false,
     });
   }
 
@@ -504,7 +504,6 @@ export class ReplConnection {
         this.inputText = ANSI.EMPTY;
         break;
       case KEY.CTRLC:
-        if (this.posix) this.stopExecution();
         this.cancel();
         break;
       case KEY.BS:
@@ -571,6 +570,10 @@ export class ReplConnection {
             if (this.posix) {
               this.activate = data.replace(/(?:\r\n|[\r\n])/s, "");
               this.stopProcess(true);
+              this.sendToTerminal(
+                ANSI.CRLF + "Restarting REPL on " + data + ANSI.CRLF,
+              );
+              this.showPrompt(true);
             }
           } else {
             this.runQuery(data);
