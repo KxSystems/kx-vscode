@@ -26,6 +26,7 @@ import { ConnectionManagementService } from "../../../../src/services/connection
 import { KdbNode } from "../../../../src/services/kdbTreeProvider";
 import * as controlller from "../../../../src/services/notebookController";
 import * as notifications from "../../../../src/utils/notifications";
+import * as queryUtils from "../../../../src/utils/queryUtils";
 
 describe("Controller", () => {
   const result = notebookTestUtils.result;
@@ -80,6 +81,7 @@ describe("Controller", () => {
         .stub(ReplConnection.prototype, "executeQuery")
         .resolves({ output: "RESULT" });
       sinon.stub(workspaceCommand, "getServerForUri").returns(ext.REPL);
+      sinon.stub(queryUtils, "getPythonWrapper").returns("expression");
       createInstance();
     });
 
@@ -98,14 +100,14 @@ describe("Controller", () => {
     });
 
     describe("python cell", () => {
-      it("should not execute", async () => {
+      it("should execute", async () => {
         await instance.execute(
           [notebookTestUtils.createCell("python")],
           notebookTestUtils.createNotebook(),
           createController(),
         );
         sinon.assert.calledOnceWithMatch(replaceOutputStub, sinon.match.any, {
-          text: "Error: Python is not supported on REPL.",
+          text: "RESULT",
           mime: "text/plain",
         });
       });

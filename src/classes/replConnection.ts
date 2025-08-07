@@ -189,9 +189,9 @@ export class ReplConnection {
   private createProcess() {
     const q = getQExecutablePath();
 
-    return spawn(this.activate ? `${this.activate} && ${q}` : q, ["-q"], {
+    return spawn(this.activate ? `${this.activate};${q}` : q, ["-q"], {
       env: { ...process.env, QHOME: ext.REAL_QHOME },
-      shell: this.activate ? "zsh" : false,
+      shell: !!this.activate,
     });
   }
 
@@ -370,14 +370,16 @@ export class ReplConnection {
     }
   }
 
+  private normalize(decoded: string) {
+    return decoded.replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
+  }
+
   private push(data: any, buffer: string[]) {
     const c = this.executing;
     if (!c) return;
     const decoded = this.decoder.decode(data);
     this.token.lastIndex = 0;
-    const output = decoded
-      .replace(this.token, ANSI.EMPTY)
-      .replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
+    const output = this.normalize(decoded.replace(this.token, ANSI.EMPTY));
     if (output) {
       buffer.push(output);
       this.sendToTerminal(output);
@@ -418,9 +420,12 @@ export class ReplConnection {
 
   private handleOutput(data: any) {
     const c = this.executing;
-    if (!c) return;
-    const token = this.push(data, c.line);
-    if (token) this.nextToken(token);
+    if (c) {
+      const token = this.push(data, c.line);
+      if (token) this.nextToken(token);
+    } else {
+      this.sendToTerminal(this.normalize(this.decoder.decode(data)));
+    }
   }
 
   private handleError(error: Error) {
@@ -499,6 +504,7 @@ export class ReplConnection {
         this.inputText = ANSI.EMPTY;
         break;
       case KEY.CTRLC:
+        if (this.posix) this.stopExecution();
         this.cancel();
         break;
       case KEY.BS:
