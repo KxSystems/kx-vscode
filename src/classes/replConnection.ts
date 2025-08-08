@@ -12,6 +12,8 @@
  */
 
 import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
+import path from "node:path";
+import kill from "tree-kill";
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
@@ -41,6 +43,7 @@ const ANSI = {
 const KEY = {
   CR: "\r",
   CTRLC: "\x03",
+  CTRLD: "\x04",
   BS: "\b",
   BSMAC: "\x7f",
   DEL: "\x1b[3~",
@@ -95,6 +98,7 @@ export interface Result {
 }
 
 export class ReplConnection {
+  private readonly posix = process.platform !== "win32";
   private readonly history = new History();
   private readonly identity = crypto.randomUUID();
   private readonly token = new RegExp(
@@ -128,6 +132,8 @@ export class ReplConnection {
   private exited = false;
   private stopped = false;
   private executing?: Execution;
+  private activate = "";
+  private script = "";
 
   private constructor() {
     this.onDidWrite = new vscode.EventEmitter<string>();
@@ -184,8 +190,17 @@ export class ReplConnection {
   }
 
   private createProcess() {
-    return spawn(getQExecutablePath(), ["-q"], {
+    const params = ["-q"];
+
+    if (this.script) {
+      params.unshift(this.script);
+      this.script = "";
+    }
+    const q = getQExecutablePath();
+
+    return spawn(this.activate ? `${this.activate};${q}` : q, params, {
       env: { ...process.env, QHOME: ext.REAL_QHOME },
+      shell: this.activate ? "bash" : false,
     });
   }
 
@@ -235,12 +250,19 @@ export class ReplConnection {
   }
 
   private stopExecution() {
-    this.stopped = process.platform === "win32";
-    this.process.kill("SIGINT");
+    this.stopped = !this.posix;
+    const signal = "SIGINT";
+    if (this.activate) {
+      if (this.process.pid) kill(this.process.pid, signal);
+    } else this.process.kill(signal);
   }
 
-  private stopProcess() {
-    this.process.kill("SIGTERM");
+  private stopProcess(restart = false) {
+    this.stopped = restart;
+    const signal = restart ? "SIGKILL" : "SIGTERM";
+    if (this.activate) {
+      if (this.process.pid) kill(this.process.pid, signal);
+    } else this.process.kill(signal);
   }
 
   private runQuery(data: string) {
@@ -347,6 +369,11 @@ export class ReplConnection {
     }
   }
 
+  private restart() {
+    this.cancel();
+    this.stopProcess(true);
+  }
+
   private executeNext() {
     if (!this.executing && !this.messages) {
       this.executing = this.executions.shift();
@@ -357,14 +384,20 @@ export class ReplConnection {
     }
   }
 
+  private normalize(decoded: string) {
+    return decoded.replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
+  }
+
+  private clean(decoded: string) {
+    return decoded.replace(/(?:\r\n|[\r\n])+/gs, "");
+  }
+
   private push(data: any, buffer: string[]) {
     const c = this.executing;
     if (!c) return;
     const decoded = this.decoder.decode(data);
     this.token.lastIndex = 0;
-    const output = decoded
-      .replace(this.token, ANSI.EMPTY)
-      .replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
+    const output = this.normalize(decoded.replace(this.token, ANSI.EMPTY));
     if (output) {
       buffer.push(output);
       this.sendToTerminal(output);
@@ -405,9 +438,12 @@ export class ReplConnection {
 
   private handleOutput(data: any) {
     const c = this.executing;
-    if (!c) return;
-    const token = this.push(data, c.line);
-    if (token) this.nextToken(token);
+    if (c) {
+      const token = this.push(data, c.line);
+      if (token) this.nextToken(token);
+    } else {
+      this.sendToTerminal(this.normalize(this.decoder.decode(data)));
+    }
   }
 
   private handleError(error: Error) {
@@ -423,6 +459,8 @@ export class ReplConnection {
       this.resolve();
       this.process = this.createProcess();
       this.connect();
+      this.sendToTerminal(ANSI.CRLF);
+      this.showPrompt(true);
       return;
     }
     this.sendToTerminal(
@@ -441,7 +479,9 @@ export class ReplConnection {
   }
 
   private close() {
-    if (ReplConnection.instance === this) ReplConnection.instance = undefined;
+    if (ReplConnection.instance === this) {
+      ReplConnection.instance = undefined;
+    }
     this.cancel();
     this.stopProcess();
     this.onDidWrite.dispose();
@@ -460,25 +500,23 @@ export class ReplConnection {
       return;
     }
 
-    const inputText = this.inputText;
-
-    if (data === KEY.CR) {
-      if (this.executing) {
-        this.sendToTerminal(ANSI.CRLF);
-        return;
-      }
-      if (/^\\[\t ]*$/m.test(inputText)) {
-        this.context = this.context === CTX.K ? CTX.Q : CTX.K;
-        this.sendCommand("\\");
-        this.sendToTerminal(ANSI.CRLF);
-        this.inputText = ANSI.EMPTY;
-        this.showPrompt(true);
-        return;
-      }
-    }
+    let inputText: string | undefined;
 
     switch (data) {
       case KEY.CR:
+        if (this.executing) {
+          this.sendToTerminal(ANSI.CRLF);
+          break;
+        }
+        inputText = this.inputText;
+        if (/^\\[\t ]*$/m.test(inputText)) {
+          this.context = this.context === CTX.K ? CTX.Q : CTX.K;
+          this.sendCommand("\\");
+          this.sendToTerminal(ANSI.CRLF);
+          this.inputText = ANSI.EMPTY;
+          this.showPrompt(true);
+          break;
+        }
         this.history.push(inputText);
         this.history.rewind();
         this.runQuery(inputText);
@@ -489,6 +527,9 @@ export class ReplConnection {
         break;
       case KEY.CTRLC:
         this.cancel();
+        break;
+      case KEY.CTRLD:
+        this.restart();
         break;
       case KEY.BS:
       case KEY.BSMAC:
@@ -550,7 +591,17 @@ export class ReplConnection {
         break;
       default:
         if (/(?:\r\n|[\r\n])/s.test(data)) {
-          if (!/\.venv[/\\]+bin[/\\]+activate/is.test(data)) {
+          if (/\.venv[/\\]+(?:scripts|bin)[/\\]+/is.test(data)) {
+            if (this.posix) {
+              this.activate = this.clean(data);
+              this.stopProcess(true);
+              this.sendToTerminal(ANSI.CRLF + "Restarting REPL on " + data);
+            }
+          } else if (path.isAbsolute(data)) {
+            this.script = this.clean(data);
+            this.stopProcess(true);
+            this.sendToTerminal(ANSI.CRLF + "Running " + this.script);
+          } else {
             this.runQuery(data);
           }
           break;
@@ -612,6 +663,12 @@ export class ReplConnection {
   }
 
   private static instance?: ReplConnection;
+
+  static restart() {
+    if (this.instance && !this.instance.exited) {
+      this.instance.restart();
+    }
+  }
 
   static getOrCreateInstance() {
     if (!this.instance || this.instance.exited) {

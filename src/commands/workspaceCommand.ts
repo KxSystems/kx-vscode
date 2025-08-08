@@ -46,6 +46,7 @@ import {
   notify,
   Runner,
 } from "../utils/notifications";
+import { getPythonWrapper } from "../utils/queryUtils";
 import {
   cleanAssemblyName,
   cleanDapName,
@@ -219,7 +220,7 @@ export async function pickConnection(uri: Uri) {
   const servers = getServers();
 
   const items = ["(none)"];
-  if (isQ(uri) || isNotebook(uri)) {
+  if (isQ(uri) || isNotebook(uri) || isPython(uri)) {
     items.push(ext.REPL);
   }
   items.push(...servers);
@@ -462,9 +463,10 @@ function isKxFolder(uri: Uri | undefined) {
   return uri && Path.basename(uri.path) === ".kx";
 }
 
-export async function startRepl() {
+export async function startRepl(restart = false) {
   try {
-    ReplConnection.getOrCreateInstance().start();
+    if (restart) ReplConnection.restart();
+    else ReplConnection.getOrCreateInstance().start();
   } catch (error) {
     notify(errorMessage(error), MessageKind.ERROR, {
       logger,
@@ -474,31 +476,39 @@ export async function startRepl() {
 }
 
 export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
-  const basename = getBasename(editor.document.uri);
+  const uri = editor.document.uri;
+  const basename = getBasename(uri);
 
   let text: string;
 
-  if (type === ExecutionTypes.QueryFile) {
-    text = editor.document.getText();
-  } else if (type === ExecutionTypes.QuerySelection) {
-    const selection = editor.selection;
-    text = selection.isEmpty
-      ? editor.document.lineAt(selection.active.line).text
-      : editor.document.getText(selection);
-  } else {
-    notify(
-      `Executing ${basename} on ${ext.REPL} is not supported.`,
-      MessageKind.ERROR,
-      { logger },
-    );
-    return;
+  switch (type) {
+    case ExecutionTypes.QueryFile:
+    case ExecutionTypes.PythonQueryFile:
+      text = editor.document.getText();
+      break;
+    case ExecutionTypes.QuerySelection:
+    case ExecutionTypes.PythonQuerySelection:
+      text = editor.selection.isEmpty
+        ? editor.document.lineAt(editor.selection.active.line).text
+        : editor.document.getText(editor.selection);
+      break;
+    default:
+      notify(
+        `Executing ${basename} on ${ext.REPL} is not supported.`,
+        MessageKind.ERROR,
+        { logger },
+      );
+      return;
   }
 
   try {
     const runner = Runner.create((_, token) => {
       const repl = ReplConnection.getOrCreateInstance();
       repl.show();
-      return repl.executeQuery(text, token);
+      return repl.executeQuery(
+        isPython(uri) ? getPythonWrapper(text) : text,
+        token,
+      );
     });
     runner.cancellable = Cancellable.EXECUTOR;
     runner.title = `Executing ${basename} on ${ext.REPL}.`;

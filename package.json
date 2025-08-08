@@ -462,8 +462,13 @@
       },
       {
         "category": "KX",
-        "command": "kdb.start.repl",
+        "command": "kdb.repl.start",
         "title": "Start REPL"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.repl.restart",
+        "title": "Restart REPL"
       },
       {
         "category": "KX",
@@ -1081,6 +1086,12 @@
           "group": "q",
           "when": "resourceExtname == .py"
         }
+      ],
+      "terminal/context": [
+        {
+          "command": "kdb.repl.restart",
+          "group": "q"
+        }
       ]
     },
     "customEditors": [
@@ -1194,6 +1205,7 @@
     "prettier": "^3.6.0",
     "rimraf": "^6.0.1",
     "sinon": "^21.0.0",
+    "tree-kill": "^1.2.2",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.34.1",
     "vscode-extension-tester": "^8.16.2",
