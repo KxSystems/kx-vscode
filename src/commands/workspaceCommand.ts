@@ -463,9 +463,10 @@ function isKxFolder(uri: Uri | undefined) {
   return uri && Path.basename(uri.path) === ".kx";
 }
 
-export async function startRepl() {
+export async function startRepl(restart = false) {
   try {
-    ReplConnection.getOrCreateInstance().start();
+    if (restart) ReplConnection.restart();
+    else ReplConnection.getOrCreateInstance().start();
   } catch (error) {
     notify(errorMessage(error), MessageKind.ERROR, {
       logger,

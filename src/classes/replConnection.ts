@@ -12,6 +12,7 @@
  */
 
 import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
+import path from "node:path";
 import kill from "tree-kill";
 import * as vscode from "vscode";
 
@@ -42,6 +43,7 @@ const ANSI = {
 const KEY = {
   CR: "\r",
   CTRLC: "\x03",
+  CTRLD: "\x04",
   BS: "\b",
   BSMAC: "\x7f",
   DEL: "\x1b[3~",
@@ -131,6 +133,7 @@ export class ReplConnection {
   private stopped = false;
   private executing?: Execution;
   private activate = "";
+  private script = "";
 
   private constructor() {
     this.onDidWrite = new vscode.EventEmitter<string>();
@@ -187,9 +190,15 @@ export class ReplConnection {
   }
 
   private createProcess() {
+    const params = ["-q"];
+
+    if (this.script) {
+      params.unshift(this.script);
+      this.script = "";
+    }
     const q = getQExecutablePath();
 
-    return spawn(this.activate ? `${this.activate};${q}` : q, ["-q"], {
+    return spawn(this.activate ? `${this.activate};${q}` : q, params, {
       env: { ...process.env, QHOME: ext.REAL_QHOME },
       shell: this.activate ? "bash" : false,
     });
@@ -250,7 +259,7 @@ export class ReplConnection {
 
   private stopProcess(restart = false) {
     this.stopped = restart;
-    const signal = "SIGTERM";
+    const signal = restart ? "SIGKILL" : "SIGTERM";
     if (this.activate) {
       if (this.process.pid) kill(this.process.pid, signal);
     } else this.process.kill(signal);
@@ -360,6 +369,11 @@ export class ReplConnection {
     }
   }
 
+  private restart() {
+    this.cancel();
+    this.stopProcess(true);
+  }
+
   private executeNext() {
     if (!this.executing && !this.messages) {
       this.executing = this.executions.shift();
@@ -372,6 +386,10 @@ export class ReplConnection {
 
   private normalize(decoded: string) {
     return decoded.replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
+  }
+
+  private clean(decoded: string) {
+    return decoded.replace(/(?:\r\n|[\r\n])+/gs, "");
   }
 
   private push(data: any, buffer: string[]) {
@@ -441,6 +459,8 @@ export class ReplConnection {
       this.resolve();
       this.process = this.createProcess();
       this.connect();
+      this.sendToTerminal(ANSI.CRLF);
+      this.showPrompt(true);
       return;
     }
     this.sendToTerminal(
@@ -459,7 +479,9 @@ export class ReplConnection {
   }
 
   private close() {
-    if (ReplConnection.instance === this) ReplConnection.instance = undefined;
+    if (ReplConnection.instance === this) {
+      ReplConnection.instance = undefined;
+    }
     this.cancel();
     this.stopProcess();
     this.onDidWrite.dispose();
@@ -505,6 +527,9 @@ export class ReplConnection {
         break;
       case KEY.CTRLC:
         this.cancel();
+        break;
+      case KEY.CTRLD:
+        this.restart();
         break;
       case KEY.BS:
       case KEY.BSMAC:
@@ -568,13 +593,14 @@ export class ReplConnection {
         if (/(?:\r\n|[\r\n])/s.test(data)) {
           if (/\.venv[/\\]+(?:scripts|bin)[/\\]+/is.test(data)) {
             if (this.posix) {
-              this.activate = data.replace(/(?:\r\n|[\r\n])/s, "");
+              this.activate = this.clean(data);
               this.stopProcess(true);
-              this.sendToTerminal(
-                ANSI.CRLF + "Restarting REPL on " + data + ANSI.CRLF,
-              );
-              this.showPrompt(true);
+              this.sendToTerminal(ANSI.CRLF + "Restarting REPL on " + data);
             }
+          } else if (path.isAbsolute(data)) {
+            this.script = this.clean(data);
+            this.stopProcess(true);
+            this.sendToTerminal(ANSI.CRLF + "Running " + this.script);
           } else {
             this.runQuery(data);
           }
@@ -637,6 +663,12 @@ export class ReplConnection {
   }
 
   private static instance?: ReplConnection;
+
+  static restart() {
+    if (this.instance && !this.instance.exited) {
+      this.instance.restart();
+    }
+  }
 
   static getOrCreateInstance() {
     if (!this.instance || this.instance.exited) {
