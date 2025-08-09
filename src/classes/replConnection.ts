@@ -121,6 +121,9 @@ export class ReplConnection {
     `${CONF.TITLE} Copyright (C) 1993-2025 KX Systems` + ANSI.CRLF.repeat(2),
   ];
 
+  private home = "";
+  private activate = "";
+
   private _context = CTX.Q;
   private _namespace = ANSI.EMPTY;
   private columns = 0;
@@ -132,8 +135,6 @@ export class ReplConnection {
   private exited = false;
   private stopped = false;
   private executing?: Execution;
-  private activate = "";
-  private script = "";
 
   private constructor() {
     this.onDidWrite = new vscode.EventEmitter<string>();
@@ -190,15 +191,10 @@ export class ReplConnection {
   }
 
   private createProcess() {
-    const params = ["-q"];
-
-    if (this.script) {
-      params.unshift(this.script);
-      this.script = "";
-    }
     const q = getQExecutablePath();
+    this.home = path.resolve(path.dirname(q), "..");
 
-    return spawn(this.activate ? `${this.activate};${q}` : q, params, {
+    return spawn(this.activate ? `${this.activate};${q}` : q, ["-q"], {
       env: { ...process.env, QHOME: ext.REAL_QHOME },
       shell: this.activate ? "bash" : false,
     });
@@ -210,7 +206,7 @@ export class ReplConnection {
     this.process.stdin.on("error", handler);
     this.process.stdout.on("error", handler);
     this.process.stderr.on("error", handler);
-    this.process.on("close", this.handleClose.bind(this));
+    this.process.on("exit", this.handleExit.bind(this));
     handler = this.handleOutput.bind(this);
     this.process.stdout.on("data", handler);
     this.process.stderr.on("data", handler);
@@ -259,7 +255,7 @@ export class ReplConnection {
 
   private stopProcess(restart = false) {
     this.stopped = restart;
-    const signal = restart ? "SIGKILL" : "SIGTERM";
+    const signal = "SIGKILL";
     if (this.activate) {
       if (this.process.pid) kill(this.process.pid, signal);
     } else this.process.kill(signal);
@@ -430,7 +426,7 @@ export class ReplConnection {
     if (!c) return;
     this.executing = undefined;
     c.resolve({ cancelled: c.cancelled, output: c.buffer.join(ANSI.EMPTY) });
-    if (!this.exited) this.showPrompt(true);
+    if (!this.exited || !this.stopped) this.showPrompt(true);
     if (c.cancelled)
       while ((c = this.executions.shift())) c.resolve({ cancelled: true });
     else this.executeNext();
@@ -451,14 +447,16 @@ export class ReplConnection {
     this.cancel(error);
   }
 
-  private handleClose(code?: number) {
+  private handleExit(code?: number) {
     if (this.stopped) {
       this.stopped = false;
-      this._context = CTX.Q;
-      this._namespace = ANSI.EMPTY;
       this.resolve();
       this.process = this.createProcess();
       this.connect();
+      this._context = CTX.Q;
+      this._namespace = ANSI.EMPTY;
+      this.inputText = ANSI.EMPTY;
+      this.updateMaxInputIndex();
       this.sendToTerminal(ANSI.CRLF);
       this.showPrompt(true);
       return;
@@ -519,11 +517,10 @@ export class ReplConnection {
         }
         this.history.push(inputText);
         this.history.rewind();
-        this.runQuery(inputText);
         this.inputIndex = this.visibleInputIndex;
         this.showPrompt();
-        this.sendToTerminal(ANSI.CRLF);
         this.inputText = ANSI.EMPTY;
+        this.runQuery(inputText);
         break;
       case KEY.CTRLC:
         this.cancel();
@@ -598,9 +595,7 @@ export class ReplConnection {
               this.sendToTerminal(ANSI.CRLF + "Restarting REPL on " + data);
             }
           } else if (path.isAbsolute(data)) {
-            this.script = this.clean(data);
-            this.stopProcess(true);
-            this.sendToTerminal(ANSI.CRLF + "Running " + this.script);
+            this.runQuery(`\\l ${path.relative(this.home, this.clean(data))}`);
           } else {
             this.runQuery(data);
           }
