@@ -194,7 +194,7 @@ export class ReplConnection {
     const q = getQExecutablePath();
     this.home = path.resolve(path.dirname(q), "..");
 
-    return spawn(this.activate ? `${this.activate};${q}` : q, ["-q"], {
+    return spawn(this.activate ? `${this.activate};${q}` : q, {
       env: { ...process.env, QHOME: ext.REAL_QHOME },
       shell: this.activate ? "bash" : false,
     });
