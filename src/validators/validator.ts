@@ -19,8 +19,8 @@ export class Validator {
 
   constructor(private readonly value: string) {}
 
-  public getErrors(): string | null {
-    return Array.from(this.errors).join("\r\n") || null;
+  public getErrors(): string | undefined {
+    return Array.from(this.errors).join("\r\n") || undefined;
   }
 
   public isNotEmpty(errorMessage?: string): this {

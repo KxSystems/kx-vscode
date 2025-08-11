@@ -11,15 +11,23 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { validateUtils } from "../utils/validateUtils";
+import { Validator } from "./validator";
 
 export function validateScratchpadOutputVariableName(
-  input: string | undefined
+  input: string | undefined,
 ): string | undefined {
   if (input !== undefined) {
-    if (!validateUtils.isValidLength(input, 1, 64)) {
-      return "Input value must be between 1 and 64 alphanumeric characters in length.";
-    }
+    const validator = new Validator(input);
+
+    const errors = validator
+      .inLengthRange(
+        1,
+        64,
+        "Input value must be between 1 and 64 alphanumeric characters in length.",
+      )
+      .getErrors();
+
+    return errors;
   }
   return undefined;
 }
