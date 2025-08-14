@@ -467,11 +467,6 @@
       },
       {
         "category": "KX",
-        "command": "kdb.repl.restart",
-        "title": "Restart REPL"
-      },
-      {
-        "category": "KX",
         "command": "kdb.execute.selectedQuery",
         "title": "KX: Execute Current Selection",
         "icon": "$(run-above)"
@@ -1086,12 +1081,6 @@
           "group": "q",
           "when": "resourceExtname == .py"
         }
-      ],
-      "terminal/context": [
-        {
-          "command": "kdb.repl.restart",
-          "group": "q"
-        }
       ]
     },
     "customEditors": [
@@ -1182,6 +1171,7 @@
     "@types/vscode-webview": "^1.57.5",
     "@typescript-eslint/eslint-plugin": "^8.34.1",
     "@typescript-eslint/parser": "^8.34.1",
+    "@vscode/python-extension": "^1.0.5",
     "@vscode/test-electron": "^2.5.2",
     "c8": "^10.1.3",
     "esbuild": "^0.25.5",
@@ -1205,7 +1195,6 @@
     "prettier": "^3.6.0",
     "rimraf": "^6.0.1",
     "sinon": "^21.0.0",
-    "tree-kill": "^1.2.2",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.34.1",
     "vscode-extension-tester": "^8.16.2",

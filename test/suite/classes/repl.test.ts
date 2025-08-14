@@ -36,12 +36,12 @@ describe("REPL", () => {
   };
   const terminal = <vscode.Terminal>{ show() {} };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     sinon
       .stub(repl.ReplConnection.prototype, <any>"createProcess")
       .returns(target);
     sinon.stub(vscode.window, "createTerminal").returns(terminal);
-    instance = repl.ReplConnection.getOrCreateInstance();
+    instance = await repl.ReplConnection.getOrCreateInstance();
   });
 
   afterEach(() => {
@@ -57,10 +57,10 @@ describe("REPL", () => {
       instance["connect"]();
       sinon.assert.calledWithMatch(stub, "error");
     });
-    it("should listen close on target", () => {
+    it("should listen exit on target", () => {
       const stub = sinon.stub(target, "on");
       instance["connect"]();
-      sinon.assert.calledWithMatch(stub, "close");
+      sinon.assert.calledWithMatch(stub, "exit");
     });
     it("should listen data on target stdout", () => {
       const stub = sinon.stub(target.stdout, "on");

@@ -63,9 +63,10 @@ export class KxNotebookController {
 
   async executeRepl(
     cells: vscode.NotebookCell[],
+    notebook: vscode.NotebookDocument,
     controller: vscode.NotebookController,
   ) {
-    const repl = ReplConnection.getOrCreateInstance();
+    const repl = await ReplConnection.getOrCreateInstance(notebook.uri);
 
     for (const cell of cells) {
       const execution = controller.createNotebookCellExecution(cell);
@@ -105,7 +106,7 @@ export class KxNotebookController {
     controller: vscode.NotebookController,
   ): Promise<void> {
     if (getServerForUri(notebook.uri) === ext.REPL) {
-      return this.executeRepl(cells, controller);
+      return this.executeRepl(cells, notebook, controller);
     }
 
     const conn = await findConnection(notebook.uri);

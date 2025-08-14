@@ -463,10 +463,10 @@ function isKxFolder(uri: Uri | undefined) {
   return uri && Path.basename(uri.path) === ".kx";
 }
 
-export async function startRepl(restart = false) {
+export async function startRepl() {
   try {
-    if (restart) ReplConnection.restart();
-    else ReplConnection.getOrCreateInstance().start();
+    const instance = await ReplConnection.getOrCreateInstance();
+    instance.start();
   } catch (error) {
     notify(errorMessage(error), MessageKind.ERROR, {
       logger,
@@ -502,8 +502,8 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   }
 
   try {
-    const runner = Runner.create((_, token) => {
-      const repl = ReplConnection.getOrCreateInstance();
+    const runner = Runner.create(async (_, token) => {
+      const repl = await ReplConnection.getOrCreateInstance(uri);
       repl.show();
       return repl.executeQuery(
         isPython(uri) ? getPythonWrapper(text) : text,
