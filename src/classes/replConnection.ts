@@ -107,7 +107,7 @@ export interface Result {
 }
 
 function notEnvironment(target: string) {
-  return !/[/\\]+(?:scripts|bin)[/\\]+/is.test(target);
+  return !/[/\\](?:scripts|bin)[/\\]/is.test(target);
 }
 
 class HistoryItem {
@@ -728,8 +728,8 @@ export class ReplConnection {
     });
   }
 
-  private static history = new History();
-  private static repls = new Map<string, ReplConnection>();
+  private static readonly history = new History();
+  private static readonly repls = new Map<string, ReplConnection>();
 
   static async getOrCreateInstance(resource?: vscode.Uri) {
     const workspace =
@@ -737,7 +737,7 @@ export class ReplConnection {
       (vscode.workspace.workspaceFolders &&
         vscode.workspace.workspaceFolders[0]);
 
-    const key = workspace?.uri.toString() || CONF.DEFAULT;
+    const key = workspace?.uri.toString() ?? CONF.DEFAULT;
 
     let repl = this.repls.get(key);
     if (!repl || repl.exited) {
