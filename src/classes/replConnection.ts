@@ -11,9 +11,9 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { PythonExtension, ResolvedEnvironment } from "@vscode/python-extension";
 import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import path from "node:path";
-import kill from "tree-kill";
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
@@ -21,8 +21,16 @@ import {
   getAutoFocusOutputOnEntrySetting,
   getQExecutablePath,
 } from "../utils/core";
-import { Cancellable, Runner } from "../utils/notifications";
+import {
+  Cancellable,
+  MessageKind,
+  notify,
+  Runner,
+} from "../utils/notifications";
 import { normalizeQuery } from "../utils/queryUtils";
+import { errorMessage } from "../utils/shared";
+
+const logger = "replConnection";
 
 const ANSI = {
   EMPTY: "",
@@ -74,6 +82,7 @@ const NS = {
 };
 
 const CONF = {
+  DEFAULT: "default",
   TITLE: `KX ${ext.REPL}`,
   PROMPT: ")",
   MAX_INPUT: 80 * 40,
@@ -97,9 +106,54 @@ export interface Result {
   output?: string;
 }
 
+function notEnvironment(target: string) {
+  return !/[/\\]+(?:scripts|bin)[/\\]+/is.test(target);
+}
+
+class HistoryItem {
+  prev?: HistoryItem;
+  next?: HistoryItem;
+  constructor(readonly input: string) {}
+}
+
+class History {
+  private head?: HistoryItem;
+  private item?: HistoryItem;
+
+  push(input: string) {
+    if (input === this.head?.input) {
+      return;
+    }
+    const item = new HistoryItem(input);
+    if (this.head) {
+      item.next = this.head;
+      this.head.prev = item;
+    }
+    this.head = item;
+  }
+
+  get next() {
+    this.item = this.item === undefined ? this.head : this.item.next;
+    return this.item;
+  }
+
+  get prev() {
+    this.item = this.item?.prev;
+    return this.item;
+  }
+
+  rewind() {
+    this.item = undefined;
+  }
+
+  clear() {
+    this.head = undefined;
+    this.rewind();
+  }
+}
+
 export class ReplConnection {
-  private readonly posix = process.platform !== "win32";
-  private readonly history = new History();
+  private readonly win32 = process.platform === "win32";
   private readonly identity = crypto.randomUUID();
   private readonly token = new RegExp(
     this.identity +
@@ -121,9 +175,9 @@ export class ReplConnection {
     `${CONF.TITLE} Copyright (C) 1993-2025 KX Systems` + ANSI.CRLF.repeat(2),
   ];
 
-  private home = "";
+  private qhome = "";
   private activate = "";
-
+  private prefix = ANSI.EMPTY;
   private _context = CTX.Q;
   private _namespace = ANSI.EMPTY;
   private columns = 0;
@@ -136,10 +190,14 @@ export class ReplConnection {
   private stopped = false;
   private executing?: Execution;
 
-  private constructor() {
+  private constructor(
+    private readonly workspace?: vscode.WorkspaceFolder,
+    private readonly venv?: ResolvedEnvironment,
+  ) {
     this.onDidWrite = new vscode.EventEmitter<string>();
     this.decoder = new TextDecoder("utf8");
     this.terminal = this.createTerminal();
+    this.createEnvironment();
     this.process = this.createProcess();
     this.connect();
   }
@@ -180,23 +238,43 @@ export class ReplConnection {
   private createTerminal() {
     return vscode.window.createTerminal({
       pty: {
-        open: this.open.bind(this),
         close: this.close.bind(this),
+        open: this.open.bind(this),
         setDimensions: this.setDimensions.bind(this),
         handleInput: this.handleInput.bind(this),
         onDidWrite: this.onDidWrite.event,
       },
-      name: CONF.TITLE,
+      name: `${CONF.TITLE} (${this.workspace ? this.workspace.name : CONF.DEFAULT})`,
     });
+  }
+
+  private createEnvironment() {
+    if (!this.workspace || !this.venv) return;
+    const env = this.venv.environment;
+    if (!env || env.type !== "VirtualEnvironment") return;
+    const target = this.venv.path;
+    if (notEnvironment(target)) return;
+    const name = env.name;
+    if (!name) return;
+
+    const bin = path.dirname(target);
+    const dir = path.basename(path.dirname(bin));
+    if (name !== dir) return;
+
+    this.activate = this.win32
+      ? `"${path.join(bin, "activate.bat")}"`
+      : `source "${path.join(bin, "activate")}"`;
+    this.prefix = `(${name}) `;
   }
 
   private createProcess() {
     const q = getQExecutablePath();
-    this.home = path.resolve(path.dirname(q), "..");
+    this.qhome = path.resolve(path.dirname(q), "..");
 
-    return spawn(this.activate ? `${this.activate};${q}` : q, {
+    return spawn(`${this.activate ? this.activate + " && " : ""}"${q}"`, {
       env: { ...process.env, QHOME: ext.REAL_QHOME },
-      shell: this.activate ? "bash" : false,
+      shell: this.win32 ? "cmd.exe" : "bash",
+      windowsHide: true,
     });
   }
 
@@ -246,19 +324,13 @@ export class ReplConnection {
   }
 
   private stopExecution() {
-    this.stopped = !this.posix;
-    const signal = "SIGINT";
-    if (this.activate) {
-      if (this.process.pid) kill(this.process.pid, signal);
-    } else this.process.kill(signal);
+    this.stopped = this.win32;
+    this.process.kill("SIGINT");
   }
 
   private stopProcess(restart = false) {
     this.stopped = restart;
-    const signal = "SIGKILL";
-    if (this.activate) {
-      if (this.process.pid) kill(this.process.pid, signal);
-    } else this.process.kill(signal);
+    this.process.kill("SIGKILL");
   }
 
   private runQuery(data: string) {
@@ -294,6 +366,7 @@ export class ReplConnection {
       1 +
       (context ?? this.context).length +
       this.namespace.length +
+      this.prefix.length +
       CONF.PROMPT.length +
       (index ?? this.visibleInputIndex);
 
@@ -339,6 +412,7 @@ export class ReplConnection {
     this.sendToTerminal(
       (create ? ANSI.SAVE : ANSI.RESTORE) +
         ANSI.FAINTON +
+        this.prefix +
         (context ?? this.context) +
         this.namespace +
         CONF.PROMPT +
@@ -461,11 +535,22 @@ export class ReplConnection {
       this.showPrompt(true);
       return;
     }
+    this.exited = true;
     this.sendToTerminal(
       `${CONF.TITLE} exited with code (${code ?? 0}).${ANSI.CRLF}`,
     );
-    this.exited = true;
     this.resolve();
+  }
+
+  private close() {
+    const key = this.workspace?.uri.toString() ?? CONF.DEFAULT;
+    if (ReplConnection.repls.get(key) === this) {
+      ReplConnection.repls.delete(key);
+    }
+    this.exited = true;
+    this.cancel();
+    this.stopProcess();
+    this.onDidWrite.dispose();
   }
 
   private open(dimensions?: vscode.TerminalDimensions) {
@@ -474,16 +559,6 @@ export class ReplConnection {
     this.messages = undefined;
     this.showPrompt(true);
     this.executeNext();
-  }
-
-  private close() {
-    if (ReplConnection.instance === this) {
-      ReplConnection.instance = undefined;
-    }
-    this.cancel();
-    this.stopProcess();
-    this.onDidWrite.dispose();
-    this.exited = true;
   }
 
   private setDimensions(dimensions: vscode.TerminalDimensions) {
@@ -515,8 +590,8 @@ export class ReplConnection {
           this.showPrompt(true);
           break;
         }
-        this.history.push(inputText);
-        this.history.rewind();
+        ReplConnection.history.push(inputText);
+        ReplConnection.history.rewind();
         this.inputIndex = this.visibleInputIndex;
         this.showPrompt();
         this.inputText = ANSI.EMPTY;
@@ -581,23 +656,19 @@ export class ReplConnection {
         }
         break;
       case KEY.DOWN:
-        this.recall(this.history.prev);
+        this.recall(ReplConnection.history.prev);
         break;
       case KEY.UP:
-        this.recall(this.history.next);
+        this.recall(ReplConnection.history.next);
         break;
       default:
         if (/(?:\r\n|[\r\n])/s.test(data)) {
-          if (/\.venv[/\\]+(?:scripts|bin)[/\\]+/is.test(data)) {
-            if (this.posix) {
-              this.activate = this.clean(data);
-              this.stopProcess(true);
-              this.sendToTerminal(ANSI.CRLF + "Restarting REPL on " + data);
-            }
-          } else if (path.isAbsolute(data)) {
-            this.runQuery(`\\l ${path.relative(this.home, this.clean(data))}`);
-          } else {
-            this.runQuery(data);
+          if (notEnvironment(data)) {
+            if (path.isAbsolute(data))
+              this.runQuery(
+                `\\l ${path.relative(this.qhome, this.clean(data))}`,
+              );
+            else this.runQuery(data);
           }
           break;
         }
@@ -612,7 +683,7 @@ export class ReplConnection {
   }
 
   clearHistory() {
-    this.history.clear();
+    ReplConnection.history.clear();
   }
 
   start() {
@@ -657,60 +728,31 @@ export class ReplConnection {
     });
   }
 
-  private static instance?: ReplConnection;
+  private static history = new History();
+  private static repls = new Map<string, ReplConnection>();
 
-  static restart() {
-    if (this.instance && !this.instance.exited) {
-      this.instance.restart();
+  static async getOrCreateInstance(resource?: vscode.Uri) {
+    const workspace =
+      (resource && vscode.workspace.getWorkspaceFolder(resource)) ||
+      (vscode.workspace.workspaceFolders &&
+        vscode.workspace.workspaceFolders[0]);
+
+    const key = workspace?.uri.toString() || CONF.DEFAULT;
+
+    let repl = this.repls.get(key);
+    if (!repl || repl.exited) {
+      let venv: ResolvedEnvironment | undefined;
+      try {
+        const pythonApi = await PythonExtension.api();
+        const envPath = pythonApi.environments.getActiveEnvironmentPath();
+        venv = await pythonApi.environments.resolveEnvironment(envPath);
+      } catch (error) {
+        notify(errorMessage(error), MessageKind.DEBUG, { logger });
+      }
+      repl = new ReplConnection(workspace, venv);
+      this.repls.set(key, repl);
     }
-  }
 
-  static getOrCreateInstance() {
-    if (!this.instance || this.instance.exited) {
-      this.instance = new ReplConnection();
-    }
-    return this.instance;
-  }
-}
-
-class HistoryItem {
-  prev?: HistoryItem;
-  next?: HistoryItem;
-  constructor(readonly input: string) {}
-}
-
-class History {
-  private head?: HistoryItem;
-  private item?: HistoryItem;
-
-  push(input: string) {
-    if (input === this.head?.input) {
-      return;
-    }
-    const item = new HistoryItem(input);
-    if (this.head) {
-      item.next = this.head;
-      this.head.prev = item;
-    }
-    this.head = item;
-  }
-
-  get next() {
-    this.item = this.item === undefined ? this.head : this.item.next;
-    return this.item;
-  }
-
-  get prev() {
-    this.item = this.item?.prev;
-    return this.item;
-  }
-
-  rewind() {
-    this.item = undefined;
-  }
-
-  clear() {
-    this.head = undefined;
-    this.rewind();
+    return repl;
   }
 }

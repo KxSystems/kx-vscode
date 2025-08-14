@@ -17,6 +17,14 @@
       "preLaunchTask": "npm: watch"
     },
     {
+      "name": "Run Extension Inline",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+      "outFiles": ["${workspaceFolder}/out/extension.js*"],
+      "preLaunchTask": "npm: watch"
+    },
+    {
       "type": "node",
       "request": "attach",
       "name": "Attach to Server",

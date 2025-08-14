@@ -1073,12 +1073,6 @@ function registerReplCommands(): CommandRegistration[] {
         startRepl();
       },
     },
-    {
-      command: "kdb.repl.restart",
-      callback: () => {
-        startRepl(true);
-      },
-    },
   ];
 
   return replCommands;

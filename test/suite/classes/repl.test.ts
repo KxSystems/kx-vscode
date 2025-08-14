@@ -36,12 +36,12 @@ describe("REPL", () => {
   };
   const terminal = <vscode.Terminal>{ show() {} };
 
-  beforeEach(() => {
+  beforeEach(async () => {
     sinon
       .stub(repl.ReplConnection.prototype, <any>"createProcess")
       .returns(target);
     sinon.stub(vscode.window, "createTerminal").returns(terminal);
-    instance = repl.ReplConnection.getOrCreateInstance();
+    instance = await repl.ReplConnection.getOrCreateInstance();
   });
 
   afterEach(() => {
