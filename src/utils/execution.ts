@@ -13,11 +13,15 @@
 
 import { env } from "node:process";
 import path from "path";
+import * as vscode from "vscode";
 import { Uri, window, workspace } from "vscode";
 
 import { ext } from "../extensionVariables";
 import { getAutoFocusOutputOnEntrySetting } from "./core";
 import { MessageKind, notify } from "./notifications";
+import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
+import { ExecutionTypes } from "../models/execution";
+import { CellKind } from "../models/notebook";
 import { QueryResultType } from "../models/queryResult";
 
 const logger = "execution";
@@ -112,6 +116,36 @@ export function convertArrayInVector(resultRows: any[]): any[] {
     return row.split(",");
   });
   return resultVector;
+}
+
+export function selectNotebookExecutionType(
+  hasVariable: boolean,
+  hasTarget: boolean,
+  notebookType: CellKind,
+): ExecutionTypes {
+  const isPython = notebookType === CellKind.PYTHON;
+  const isSQL = notebookType === CellKind.SQL;
+  if (isSQL && hasVariable) {
+    return ExecutionTypes.PopulateScratchpad;
+  }
+  if (isSQL) {
+    return ExecutionTypes.NotebookDataQuerySQL;
+  }
+  if (hasVariable && hasTarget) {
+    return isPython
+      ? ExecutionTypes.PopulateScratchpadPython
+      : ExecutionTypes.PopulateScratchpad;
+  }
+  if (hasTarget && isPython) {
+    return ExecutionTypes.NotebookDataQueryPython;
+  }
+  if (hasTarget) {
+    return ExecutionTypes.NotebookDataQueryQSQL;
+  }
+  if (isPython) {
+    return ExecutionTypes.NotebookQueryPython;
+  }
+  return ExecutionTypes.NotebookQueryQSQL;
 }
 
 export function convertResultStringToVector(result: any): any[] {
@@ -244,4 +278,101 @@ export function convertStringToArray(str: string): any[] {
     .filter(
       (obj) => !("Value" in obj && (obj.Value as string).startsWith("-")),
     );
+}
+
+export function isExecutionPython(type: ExecutionTypes): boolean {
+  const name = ExecutionTypes[type];
+  return typeof name === "string" && name.includes("Python");
+}
+
+export function isExecutionNotebook(type: ExecutionTypes): boolean | undefined {
+  const name = ExecutionTypes[type];
+  return typeof name === "string" && name.includes("Notebook")
+    ? true
+    : undefined;
+}
+
+export function retrieveEditorSelectionToExecute(): string | undefined {
+  const editor = ext.activeTextEditor;
+  let query: string | undefined;
+  if (editor) {
+    const selection = editor.selection;
+    query = selection.isEmpty
+      ? editor.document.lineAt(selection.active.line).text
+      : editor.document.getText(selection);
+  }
+  return query;
+}
+
+export function retrieveEditorText(): string | undefined {
+  const editor = ext.activeTextEditor;
+  let query: string | undefined;
+  if (editor) {
+    query = editor.document.getText();
+  }
+  return query;
+}
+
+export function getQuery(
+  querySubject?: DataSourceFiles,
+): string | DataSourceFiles | undefined {
+  if (querySubject) {
+    if (querySubject.dataSource.selectedType === DataSourceTypes.QSQL) {
+      return querySubject.dataSource.qsql.query;
+    }
+    if (querySubject.dataSource.selectedType === DataSourceTypes.SQL) {
+      return querySubject.dataSource.sql.query;
+    }
+    return querySubject;
+  } else {
+    const editor = ext.activeTextEditor;
+    if (editor) {
+      return editor.document.getText();
+    }
+    return;
+  }
+}
+
+export function getDSExecutionType(
+  querySubject?: DataSourceFiles,
+): DataSourceTypes {
+  if (querySubject) {
+    return querySubject.dataSource.selectedType;
+  } else {
+    return DataSourceTypes.QSQL;
+  }
+}
+
+export function getExecutionQueryContext(): string {
+  let context = ".";
+  const editor = ext.activeTextEditor;
+
+  if (editor) {
+    const selection = editor.selection;
+    const lineNum = selection.end.line;
+    const fullText = typeof lineNum !== "number";
+    const document = editor.document;
+    let text;
+
+    if (fullText) {
+      text = editor.document.getText();
+    } else {
+      const line = document.lineAt(lineNum);
+      text = editor.document.getText(
+        new vscode.Range(
+          new vscode.Position(0, 0),
+          new vscode.Position(lineNum, line.range.end.character),
+        ),
+      );
+    }
+
+    const pattern = /^(system\s*"d|\\d)\s+([^\s"]+)/gm;
+
+    const matches = [...text.matchAll(pattern)];
+    if (matches.length) {
+      context = fullText ? matches[0][2] : matches[matches.length - 1][2];
+    }
+  }
+
+  return context;
 }

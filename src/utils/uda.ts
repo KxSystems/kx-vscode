@@ -22,6 +22,7 @@ import {
   UDARequestBody,
   UDAReturn,
 } from "../models/uda";
+import { ConnectionManagementService } from "../services/connectionManagerService";
 
 export function filterUDAParamsValidTypes(type: number | number[]): number[] {
   const validTypes = new Set([
@@ -359,12 +360,17 @@ export function createUDARequestBody(
 
 export async function retrieveUDAtoCreateReqBody(
   uda: UDA | undefined,
-  insightsConn: InsightsConnection,
+  connLabel: string,
 ): Promise<UDARequestBody | any> {
   if (!uda) {
     return { error: "UDA is undefined" };
   }
+  const connManager = new ConnectionManagementService();
 
+  const insightsConn = connManager.retrieveConnectedConnection(connLabel);
+  if (!insightsConn || !(insightsConn instanceof InsightsConnection)) {
+    return { error: `Connection ${connLabel} is not valid or not connected.` };
+  }
   const returnFormat = ext.isResultsTabVisible ? "structuredText" : "text";
 
   const validationError = await validateUDA(uda, insightsConn);
