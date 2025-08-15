@@ -37,7 +37,7 @@ import {
 } from "../utils/core";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
-import { resetScratchpadStarted, sanitizeQuery } from "../utils/queryUtils";
+import { resetScratchpadStarted } from "../utils/queryUtils";
 
 const logger = "connectionManagerService";
 
@@ -332,43 +332,6 @@ export class ConnectionManagementService {
       telemetry: "Connection.Disconnected." + connType,
     });
     ext.serverProvider.reload();
-  }
-
-  public async executeQuery(
-    command: string,
-    connLabel?: string,
-    context?: string,
-    stringify?: boolean,
-    isPython?: boolean,
-  ): Promise<any> {
-    let selectedConn;
-    if (connLabel) {
-      selectedConn = this.retrieveConnectedConnection(connLabel);
-    } else {
-      if (!ext.activeConnection) {
-        return;
-      }
-      selectedConn = ext.activeConnection;
-    }
-    if (!selectedConn) {
-      return;
-    }
-    command = sanitizeQuery(command);
-    if (selectedConn instanceof LocalConnection) {
-      return await selectedConn.executeQuery(
-        command,
-        context,
-        stringify,
-        isPython,
-      );
-    } else {
-      return await selectedConn.getScratchpadQuery(
-        command,
-        context,
-        isPython,
-        !stringify,
-      );
-    }
   }
 
   public async resetScratchpad(connLabel?: string): Promise<void> {

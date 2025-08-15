@@ -18,15 +18,20 @@ import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
 import { ReplConnection } from "../classes/replConnection";
 import {
+  convertDSDataResponse,
   getPartialDatasourceFile,
-  populateScratchpad,
-  runDataSource,
 } from "../commands/dataSourceCommand";
-import { executeQuery } from "../commands/serverCommand";
+import {
+  executeDataQuery,
+  executeQuery,
+  prepareToPopulateScratchpad,
+} from "../commands/executionCommands";
 import { findConnection, getServerForUri } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
+import { ExecutionTypes } from "../models/execution";
 import { CellKind } from "../models/notebook";
 import { getBasename } from "../utils/core";
+import { selectNotebookExecutionType } from "../utils/execution";
 import { MessageKind, notify } from "../utils/notifications";
 import { resultToBase64, needsScratchpad } from "../utils/queryUtils";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
@@ -229,7 +234,7 @@ export class KxNotebookController {
     return { target, variable };
   }
 
-  getQueryExecutor(
+  async getQueryExecutor(
     conn: LocalConnection | InsightsConnection,
     execution: vscode.NotebookCellExecution,
     cell: vscode.NotebookCell,
@@ -238,27 +243,55 @@ export class KxNotebookController {
     variable?: string,
   ): Promise<any> {
     const executorName = getBasename(cell.notebook.uri);
+    const executionType: ExecutionTypes = selectNotebookExecutionType(
+      variable ? true : false,
+      target ? true : false,
+      kind,
+    );
 
     if (target || kind === CellKind.SQL) {
-      const params = getPartialDatasourceFile(
+      const partialDS = getPartialDatasourceFile(
         cell.document.getText(),
         target,
         kind === CellKind.SQL,
         kind === CellKind.PYTHON,
       );
-      return variable
-        ? populateScratchpad(params, conn.connLabel, variable, true)
-        : runDataSource(params, conn.connLabel, executorName);
-    } else {
-      return executeQuery(
-        cell.document.getText(),
+
+      if (variable) {
+        return await prepareToPopulateScratchpad(
+          conn.connLabel,
+          executionType,
+          target,
+          variable,
+          partialDS,
+        );
+      }
+      const dataQueryRes = await executeDataQuery(
         conn.connLabel,
-        executorName,
-        ".",
-        kind === CellKind.PYTHON,
-        false,
-        false,
-        execution.token,
+        executionType,
+        target,
+        partialDS,
+      );
+      const res = convertDSDataResponse(dataQueryRes);
+
+      if (res) {
+        const success = !res.error;
+        if (!success) {
+          notify("Query execution failed.", MessageKind.DEBUG, {
+            logger,
+            params: res.error,
+            telemetry: "Notebook." + kind + ".Run.Error",
+          });
+          return;
+        } else {
+          return res;
+        }
+      }
+    } else {
+      return await executeQuery(
+        conn.connLabel,
+        executionType,
+        cell.document.getText(),
       );
     }
   }
