@@ -18,6 +18,7 @@ export enum DataSourceTypes {
   QSQL = "QSQL",
   SQL = "SQL",
   UDA = "UDA",
+  UNSUPPORTED = "UNSUPPORTED",
 }
 
 //TODO: make the optional params required in 1.10 or superior
