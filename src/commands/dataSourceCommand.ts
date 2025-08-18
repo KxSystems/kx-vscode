@@ -13,33 +13,28 @@
 
 import * as fs from "fs";
 import path from "path";
-import { InputBoxOptions, window } from "vscode";
 
 import { ext } from "../extensionVariables";
+import { executeDataQuery } from "./executionCommands";
 import {
   writeQueryResultsToConsole,
   writeQueryResultsToView,
 } from "./serverCommand";
-import { InsightsConnection } from "../classes/insightsConnection";
-import { LocalConnection } from "../classes/localConnection";
 import { ServerType } from "../models/connectionsModels";
-import { GetDataError, getDataBodyPayload } from "../models/data";
+import { GetDataError } from "../models/data";
 import {
   DataSourceFiles,
   DataSourceTypes,
   createDefaultDataSourceFile,
 } from "../models/dataSource";
-import { scratchpadVariableInput } from "../models/items/server";
-import { UDARequestBody } from "../models/uda";
+import { ExecutionTypes } from "../models/execution";
 import { DataSourcesPanel } from "../panels/datasource";
-import { ConnectionManagementService } from "../services/connectionManagerService";
 import { noSelectedConnectionAction } from "../utils/core";
 import {
-  checkIfTimeParamIsCorrect,
-  convertTimeToTimestamp,
   createKdbDataSourcesFolder,
   getConnectedInsightsNode,
 } from "../utils/dataSource";
+import { getDSExecutionType } from "../utils/execution";
 import { MessageKind, notify } from "../utils/notifications";
 import {
   addQueryHistory,
@@ -48,8 +43,6 @@ import {
   handleWSError,
   handleWSResults,
 } from "../utils/queryUtils";
-import { retrieveUDAtoCreateReqBody } from "../utils/uda";
-import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
 
 const logger = "dataSourceCommand";
 
@@ -79,44 +72,14 @@ export async function addDataSource(): Promise<void> {
   );
 }
 
-export async function populateScratchpad(
-  dataSourceForm: DataSourceFiles,
-  connLabel: string,
-  outputVariable?: string,
-  silent?: boolean,
-): Promise<void> {
-  const connMngService = new ConnectionManagementService();
-
-  if (!outputVariable) {
-    const scratchpadVariable: InputBoxOptions = {
-      prompt: scratchpadVariableInput.prompt,
-      placeHolder: scratchpadVariableInput.placeholder,
-      validateInput: (value: string | undefined) =>
-        validateScratchpadOutputVariableName(value),
-    };
-    outputVariable = await window.showInputBox(scratchpadVariable);
-  }
-
-  if (outputVariable !== undefined && outputVariable !== "") {
-    const selectedConnection =
-      connMngService.retrieveConnectedConnection(connLabel);
-
-    if (selectedConnection instanceof LocalConnection || !selectedConnection) {
-      DataSourcesPanel.running = false;
-      return;
-    }
-
-    await selectedConnection.importScratchpad(
-      outputVariable,
-      dataSourceForm,
-      silent,
-    );
+export function convertDSDataResponse(dataQueryCall: any) {
+  if (dataQueryCall?.error) {
+    return parseError(dataQueryCall.error);
+  } else if (dataQueryCall?.arrayBuffer) {
+    const results = handleWSResults(dataQueryCall.arrayBuffer);
+    return handleScratchpadTableRes(results);
   } else {
-    notify(
-      `Invalid scratchpad output variable name: ${outputVariable}`,
-      MessageKind.ERROR,
-      { logger },
-    );
+    return { error: "Datasource Data Query failed" };
   }
 }
 
@@ -135,23 +98,12 @@ export async function runDataSource(
   }
 
   DataSourcesPanel.running = true;
-  const connMngService = new ConnectionManagementService();
-  const selectedConnection =
-    connMngService.retrieveConnectedConnection(connLabel);
 
   try {
-    if (selectedConnection instanceof LocalConnection || !selectedConnection) {
-      return;
-    }
-    selectedConnection.getMeta();
-    if (!selectedConnection?.meta?.payload.assembly) {
-      throw new Error("No database running in the Insights connection");
-    }
-
     dataSourceForm.insightsNode = getConnectedInsightsNode();
+    let target;
     const fileContent = dataSourceForm;
 
-    let res: any;
     const selectedType = getSelectedType(fileContent);
     ext.isDatasourceExecution = true;
 
@@ -160,36 +112,25 @@ export async function runDataSource(
       telemetry: "Datasource." + selectedType + ".Run",
     });
 
-    const isNotebook = executorName.endsWith(".kxnb");
+    const selectedDSExecutionType = getDSExecutionType(fileContent);
 
-    switch (selectedType) {
-      case "API":
-        res = await runApiDataSource(fileContent, selectedConnection);
-        break;
-      case "QSQL":
-        res = await runQsqlDataSource(
-          fileContent,
-          selectedConnection,
-          isNotebook || undefined,
-        );
-        break;
-      case "UDA":
-        res = await runUDADataSource(fileContent, selectedConnection);
-        break;
-      case "SQL":
-      default:
-        res = await runSqlDataSource(
-          fileContent,
-          selectedConnection,
-          isNotebook || undefined,
-        );
-        break;
+    if (selectedDSExecutionType === DataSourceTypes.QSQL) {
+      target = fileContent.dataSource.qsql.selectedTarget;
     }
+
+    const dataQueryCall = await executeDataQuery(
+      connLabel,
+      ExecutionTypes.QueryDatasource,
+      target,
+      fileContent,
+    );
+
+    let res = convertDSDataResponse(dataQueryCall);
 
     ext.isDatasourceExecution = false;
     if (res) {
       const success = !res.error;
-      const query = getQuery(fileContent, selectedType);
+      const querySample = getQuerySample(fileContent, selectedType);
 
       if (!success) {
         notify("Query execution failed.", MessageKind.DEBUG, {
@@ -198,7 +139,7 @@ export async function runDataSource(
           telemetry: "Datasource." + selectedType + ".Run.Error",
         });
       }
-      if (isNotebook || ext.isResultsTabVisible) {
+      if (ext.isResultsTabVisible) {
         if (success) {
           const resultCount = typeof res === "string" ? "0" : res.rows.length;
           notify(`Results: ${resultCount} rows`, MessageKind.DEBUG, {
@@ -208,13 +149,9 @@ export async function runDataSource(
           res = res.errorMsg ? res.errorMsg : res.error;
         }
 
-        if (isNotebook) {
-          return res;
-        }
-
         await writeQueryResultsToView(
           res,
-          query,
+          querySample,
           connLabel,
           executorName,
           true,
@@ -233,7 +170,7 @@ export async function runDataSource(
 
         await writeQueryResultsToConsole(
           res,
-          query,
+          querySample,
           connLabel,
           executorName,
           true,
@@ -288,211 +225,7 @@ export function getSelectedType(fileContent: DataSourceFiles): string {
   }
 }
 
-export async function runApiDataSource(
-  fileContent: DataSourceFiles,
-  selectedConn: InsightsConnection,
-): Promise<any> {
-  const isTimeCorrect = checkIfTimeParamIsCorrect(
-    fileContent.dataSource.api.startTS,
-    fileContent.dataSource.api.endTS,
-  );
-  if (!isTimeCorrect) {
-    notify(
-      "The time parameters (startTS and endTS) are not correct, please check the format or if the startTS is before the endTS",
-      MessageKind.ERROR,
-      { logger },
-    );
-    return;
-  }
-  const apiBody = getApiBody(fileContent);
-  const apiCall = await selectedConn.getDatasourceQuery(
-    DataSourceTypes.API,
-    JSON.stringify(apiBody),
-  );
-
-  if (apiCall?.error) {
-    return parseError(apiCall.error);
-  } else if (apiCall?.arrayBuffer) {
-    const results = handleWSResults(apiCall.arrayBuffer);
-    return handleScratchpadTableRes(results);
-  } else {
-    return { error: "Datasource API call failed" };
-  }
-}
-
-export function getApiBody(
-  fileContent: DataSourceFiles,
-): Partial<getDataBodyPayload> {
-  const api = fileContent.dataSource.api;
-
-  const apiBody: getDataBodyPayload = {
-    table: fileContent.dataSource.api.table,
-    startTS: convertTimeToTimestamp(api.startTS),
-    endTS: convertTimeToTimestamp(api.endTS),
-  };
-
-  const optional = api.optional;
-
-  if (optional) {
-    if (optional.filled) {
-      apiBody.fill = api.fill;
-    }
-    if (optional.temporal) {
-      apiBody.temporality = api.temporality;
-    }
-    if (optional.rowLimit && api.rowCountLimit) {
-      if (api.isRowLimitLast) {
-        apiBody.limit = -parseInt(api.rowCountLimit);
-      } else {
-        apiBody.limit = parseInt(api.rowCountLimit);
-      }
-    }
-
-    const labels = optional.labels.filter((label) => label.active);
-
-    if (labels.length > 0) {
-      apiBody.labels = Object.assign(
-        {},
-        ...labels.map((label) => ({ [label.key]: label.value })),
-      );
-    } else {
-      apiBody.labels = {};
-    }
-
-    const filters = optional.filters
-      .filter((filter) => filter.active)
-      .map((filter) => [
-        filter.operator,
-        filter.column,
-        ((values: string) => {
-          const tokens = values.split(/[;\s]+/).map((token) => {
-            const number = parseFloat(token);
-            return isNaN(number) ? token : number;
-          });
-          return tokens.length === 1 ? tokens[0] : tokens;
-        })(filter.values),
-      ]);
-
-    if (filters.length > 0) {
-      apiBody.filter = filters;
-    }
-
-    const sorts = optional.sorts
-      .filter((sort) => sort.active)
-      .map((sort) => sort.column);
-
-    if (sorts.length > 0) {
-      apiBody.sortCols = sorts;
-    }
-
-    const aggs = optional.aggs
-      .filter((agg) => agg.active)
-      .map((agg) => [agg.key, agg.operator, agg.column]);
-
-    if (aggs.length > 0) {
-      apiBody.agg = aggs;
-    }
-
-    const groups = optional.groups
-      .filter((group) => group.active)
-      .map((group) => group.column);
-
-    if (groups.length > 0) {
-      apiBody.groupBy = groups;
-    }
-  }
-
-  return apiBody;
-}
-
-export async function runQsqlDataSource(
-  fileContent: DataSourceFiles,
-  selectedConn: InsightsConnection,
-  isTableView?: boolean,
-): Promise<any> {
-  const qsqlBody = selectedConn.generateQSqlBody(
-    fileContent.dataSource.qsql.query,
-    fileContent.dataSource.qsql.selectedTarget,
-    selectedConn.insightsVersion,
-  );
-
-  const qsqlCall = await selectedConn.getDatasourceQuery(
-    DataSourceTypes.QSQL,
-    JSON.stringify(qsqlBody),
-  );
-
-  if (qsqlCall?.error) {
-    return parseError(qsqlCall.error);
-  } else if (qsqlCall?.arrayBuffer) {
-    const results = handleWSResults(qsqlCall.arrayBuffer, isTableView);
-    return handleScratchpadTableRes(results);
-  } else {
-    return { error: "Datasource QSQL call failed" };
-  }
-}
-
-export async function runSqlDataSource(
-  fileContent: DataSourceFiles,
-  selectedConn: InsightsConnection,
-  isTableView?: boolean,
-): Promise<any> {
-  const sqlBody = {
-    query: fileContent.dataSource.sql.query,
-  };
-  const sqlCall = await selectedConn.getDatasourceQuery(
-    DataSourceTypes.SQL,
-    JSON.stringify(sqlBody),
-  );
-
-  if (sqlCall?.error) {
-    return parseError(sqlCall.error);
-  } else if (sqlCall?.arrayBuffer) {
-    const results = handleWSResults(sqlCall.arrayBuffer, isTableView);
-    return handleScratchpadTableRes(results);
-  } else {
-    return { error: "Datasource SQL call failed" };
-  }
-}
-
-export async function runUDADataSource(
-  fileContent: DataSourceFiles,
-  selectedConn: InsightsConnection,
-): Promise<any> {
-  const uda = fileContent.dataSource.uda;
-
-  const udaReqBody = await retrieveUDAtoCreateReqBody(uda, selectedConn);
-
-  if (udaReqBody.error) {
-    notify(`Datasource error.`, MessageKind.DEBUG, {
-      logger,
-      params: udaReqBody.error,
-    });
-    return udaReqBody;
-  }
-
-  return await executeUDARequest(selectedConn, udaReqBody);
-}
-
-export async function executeUDARequest(
-  selectedConn: InsightsConnection,
-  udaReqBody: UDARequestBody,
-): Promise<any> {
-  const udaCall = await selectedConn.getDatasourceQuery(
-    DataSourceTypes.UDA,
-    udaReqBody,
-  );
-
-  if (udaCall?.error) {
-    return parseError(udaCall.error);
-  } else if (udaCall?.arrayBuffer) {
-    const results = handleWSResults(udaCall.arrayBuffer);
-    return handleScratchpadTableRes(results);
-  } else {
-    return { error: "UDA call failed" };
-  }
-}
-
-export function getQuery(
+export function getQuerySample(
   fileContent: DataSourceFiles,
   selectedType: string,
 ): string {

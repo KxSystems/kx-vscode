@@ -23,11 +23,17 @@ import {
   InsightsEndpoints,
 } from "../models/config";
 import { GetDataObjectPayload } from "../models/data";
-import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
+import { DataSourceTypes } from "../models/dataSource";
 import { JwtUser } from "../models/jwt_user";
 import { MetaInfoType, MetaObject, MetaObjectPayload } from "../models/meta";
 import { StructuredTextResults } from "../models/queryResult";
-import { ScratchpadRequestBody } from "../models/scratchpad";
+import {
+  ScratchpadRequestBody,
+  ServicegatewayAPIReqBody,
+  ServicegatewayQSQLReqBody,
+  ServicegatewaySQLReqBody,
+  ServicegatewayUDAReqBody,
+} from "../models/requestBody";
 import { UDARequestBody } from "../models/uda";
 import {
   getCurrentToken,
@@ -40,11 +46,9 @@ import {
   invalidUsernameJWT,
   tokenUndefinedError,
 } from "../utils/core";
-import { convertTimeToTimestamp } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
 import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
 import { normalizeAssemblyTarget } from "../utils/shared";
-import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 
 const logger = "insightsConnection";
 
@@ -456,6 +460,65 @@ export class InsightsConnection {
     }
   }
 
+  public async getDataQuery(
+    type: DataSourceTypes,
+    body:
+      | ServicegatewayQSQLReqBody
+      | ServicegatewaySQLReqBody
+      | ServicegatewayAPIReqBody
+      | ServicegatewayUDAReqBody,
+    udaName: string,
+  ): Promise<GetDataObjectPayload | undefined> {
+    if (this.connected) {
+      const requestUrl = this.generateDatasourceEndpoints(type, udaName);
+      const options = await this.getOptions(
+        false,
+        customHeadersOctet,
+        "POST",
+        requestUrl,
+        body,
+      );
+
+      if (!options) {
+        return undefined;
+      }
+      options.responseType = "arraybuffer";
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url },
+      });
+
+      return await axios(options)
+        .then((response: any) => {
+          notify(
+            `Datasource execution status: ${response.status}.`,
+            MessageKind.DEBUG,
+            { logger },
+          );
+          if (isCompressed(response.data)) {
+            response.data = uncompress(response.data);
+          }
+          return {
+            error: "",
+            arrayBuffer: response.data.buffer
+              ? response.data.buffer
+              : response.data,
+          };
+        })
+        .catch((error: any) => {
+          notify(
+            `Datasource execution status: ${error.response.status}.`,
+            MessageKind.DEBUG,
+            { logger, params: error },
+          );
+          return {
+            error: { buffer: error.response.data },
+            arrayBuffer: undefined,
+          };
+        });
+    }
+  }
+
   public async getDatasourceQuery(
     type: DataSourceTypes,
     body: any,
@@ -524,67 +587,25 @@ export class InsightsConnection {
 
   public async importScratchpad(
     variableName: string,
-    params: DataSourceFiles,
+    body: any,
+    type: string,
     silent?: boolean,
   ): Promise<void> {
-    let dsTypeString = "";
     if (this.connected && this.connEndpoints) {
       let coreUrl: string;
-      const body: any = {
-        output: variableName,
-        isTableView: false,
-      };
-      switch (params.dataSource.selectedType) {
-        case DataSourceTypes.API: {
-          body.params = {
-            table: params.dataSource.api.table,
-            startTS: convertTimeToTimestamp(params.dataSource.api.startTS),
-            endTS: convertTimeToTimestamp(params.dataSource.api.endTS),
-          };
+      switch (type) {
+        case DataSourceTypes.API:
           coreUrl = this.connEndpoints.scratchpad.import;
-          dsTypeString = "API";
           break;
-        }
-        case DataSourceTypes.SQL: {
-          body.params = { query: params.dataSource.sql.query };
+        case DataSourceTypes.SQL:
           coreUrl = this.connEndpoints.scratchpad.importSql;
-          dsTypeString = "SQL";
           break;
-        }
-        case DataSourceTypes.QSQL: {
-          body.params = this.generateQSqlBody(
-            params.dataSource.qsql.query,
-            params.dataSource.qsql.selectedTarget,
-            this.insightsVersion,
-          );
-
-          coreUrl = this.connEndpoints.scratchpad.importQsql;
-          dsTypeString = "QSQL";
-          break;
-        }
-        case DataSourceTypes.UDA: {
-          const uda = params.dataSource.uda;
-          const udaReqBody = await retrieveUDAtoCreateReqBody(uda, this);
-
-          if (udaReqBody.error) {
-            notify("Unable to create UDA request body.", MessageKind.ERROR, {
-              logger,
-              params: udaReqBody.error,
-            });
-            return;
-          }
-          body.params = udaReqBody.params;
-          body.parameterTypes = udaReqBody.parameterTypes;
-          body.language = udaReqBody.language;
-          body.name = udaReqBody.name;
-          body.returnFormat = udaReqBody.returnFormat;
-          body.sampleFn = udaReqBody.sampleFn;
-          body.sampleSize = udaReqBody.sampleSize;
-
+        case DataSourceTypes.UDA:
           coreUrl = this.connEndpoints.scratchpad.importUDA;
           break;
-        }
+        case DataSourceTypes.QSQL:
         default:
+          coreUrl = this.connEndpoints.scratchpad.importQsql;
           break;
       }
 
@@ -614,8 +635,7 @@ export class InsightsConnection {
             {
               logger,
               params: { status: response.status },
-              telemetry:
-                "Datasource." + dsTypeString + ".Scratchpad.Populated.Errored",
+              telemetry: "Datasource." + type + ".Scratchpad.Populated.Errored",
             },
           );
         } else {
@@ -625,7 +645,7 @@ export class InsightsConnection {
             {
               logger,
               params: { status: response.status },
-              telemetry: "Datasource." + dsTypeString + ".Scratchpad.Populated",
+              telemetry: "Datasource." + type + ".Scratchpad.Populated",
             },
           );
         }
@@ -667,58 +687,8 @@ export class InsightsConnection {
     return false;
   }
 
-  public async getUDAScratchpadQuery(
-    udaReqBody: UDARequestBody,
-  ): Promise<any | undefined> {
-    if (this.connected && this.connEndpoints) {
-      const isTableView = udaReqBody.returnFormat === "structuredText";
-      const udaURL = new url.URL(
-        this.connEndpoints.scratchpad.importUDA,
-        this.node.details.server,
-      );
-      const options = await this.getOptions(
-        true,
-        customHeadersJson,
-        "POST",
-        udaURL.toString(),
-        udaReqBody,
-      );
-      if (!options) {
-        return;
-      }
-
-      notify("REST", MessageKind.DEBUG, {
-        logger,
-        params: { url: options.url },
-      });
-
-      return await axios(options).then((response: any) => {
-        if (response.data.error) {
-          return response.data;
-        } else {
-          notify(`Status: ${response.status}`, MessageKind.DEBUG, {
-            logger,
-          });
-          if (!response.data.error) {
-            if (isTableView) {
-              response.data = JSON.parse(
-                response.data.data,
-              ) as StructuredTextResults;
-            }
-            return response.data;
-          }
-          return response.data;
-        }
-      });
-    } else {
-      this.noConnectionOrEndpoints();
-    }
-    return undefined;
-  }
-
   public async getScratchpadQuery(
-    query: string,
-    context?: string,
+    body: ScratchpadRequestBody,
     isPython?: boolean,
     isTableView?: boolean,
   ): Promise<any | undefined> {
@@ -730,13 +700,6 @@ export class InsightsConnection {
         this.connEndpoints.scratchpad.scratchpad,
         this.node.details.server,
       );
-      const body: ScratchpadRequestBody = {
-        expression: query,
-        language: !isPython ? "q" : "python",
-        context: context || ".",
-        sampleFn: "first",
-        sampleSize: 10000,
-      };
 
       if (this.insightsVersion) {
         /* TODO: Workaround for Python structuredText bug */
@@ -770,7 +733,7 @@ export class InsightsConnection {
       return await axios(options).then((response: any) => {
         if (response.data.error) {
           return response.data;
-        } else if (query === "") {
+        } else if (body.expression === "") {
           notify(
             `Scratchpad created for connection: ${this.connLabel}.`,
             MessageKind.DEBUG,

@@ -30,10 +30,7 @@ import {
 
 import { ConnectionManagementService } from "./connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
-import {
-  populateScratchpad,
-  runDataSource,
-} from "../commands/dataSourceCommand";
+import { runDataSource } from "../commands/dataSourceCommand";
 import {
   getConnectionForServer,
   getInsightsServers,
@@ -48,6 +45,9 @@ import { getNonce } from "../utils/getNonce";
 import { MessageKind, Runner, notify } from "../utils/notifications";
 import { parseUDAList } from "../utils/uda";
 import { getUri } from "../utils/uriUtils";
+import { prepareToPopulateScratchpad } from "../commands/executionCommands";
+import { ExecutionTypes } from "../models/execution";
+import { DataSourceTypes } from "../models/dataSource";
 
 const logger = "dataSourceEditorProvider";
 
@@ -228,8 +228,21 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
         }
         case DataSourceCommand.Populate: {
           if (connected) {
+            const dsFile = msg.dataSourceFile;
+            const execType = ExecutionTypes.QueryDatasource;
+            const target =
+              dsFile.dataSource.selectedType === DataSourceTypes.QSQL
+                ? dsFile.dataSource.qsql.selectedTarget
+                : undefined;
+
             const runner = Runner.create(() =>
-              populateScratchpad(msg.dataSourceFile, msg.selectedServer),
+              prepareToPopulateScratchpad(
+                msg.selectedServer,
+                execType,
+                target,
+                undefined,
+                dsFile,
+              ),
             );
             runner.title = "Populating scratchpad.";
             await runner.execute();

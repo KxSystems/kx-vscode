@@ -42,7 +42,6 @@ import {
   editInsightsConnection,
   editKdbConnection,
   enableTLS,
-  executeQuery,
   exportConnections,
   importConnections,
   openMeta,
@@ -126,6 +125,7 @@ import { MessageKind, notify, Runner } from "./utils/notifications";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
 import { addWorkspaceFile, openWith, setUriContent } from "./utils/workspace";
+import { executeQuery } from "./commands/executionCommands";
 
 const logger = "extension";
 
@@ -709,15 +709,11 @@ function registerConnectionsCommands(): CommandRegistration[] {
       callback: async (viewItem) => {
         const connLabel = viewItem.connLabel;
         if (connLabel) {
-          const executorName = viewItem.coreIcon.substring(2);
           executeQuery(
+            connLabel,
+            ExecutionTypes.QuerySelection,
             viewItem.label,
             connLabel,
-            executorName,
-            "",
-            false,
-            false,
-            true,
           );
         } else {
           notify("Connection label not found", MessageKind.ERROR, {

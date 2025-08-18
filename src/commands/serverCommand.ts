@@ -23,15 +23,10 @@ import {
   window,
   workspace,
   env,
-  ProgressLocation,
 } from "vscode";
 
 import { ext } from "../extensionVariables";
-import {
-  getPartialDatasourceFile,
-  populateScratchpad,
-  runDataSource,
-} from "./dataSourceCommand";
+import { runDataSource } from "./dataSourceCommand";
 import { InsightsConnection } from "../classes/insightsConnection";
 import {
   ExportedConnections,
@@ -42,7 +37,6 @@ import {
   ServerType,
 } from "../models/connectionsModels";
 import { DataSourceFiles } from "../models/dataSource";
-import { ExecutionTypes } from "../models/execution";
 import { Plot } from "../models/plot";
 import { QueryHistory } from "../models/queryHistory";
 import { queryConstants } from "../models/queryResult";
@@ -58,7 +52,6 @@ import {
   MetaObjectPayloadNode,
 } from "../services/kdbTreeProvider";
 import { MetaContentProvider } from "../services/metaContentProvider";
-import { inputVariable } from "../services/notebookProviders";
 import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
 import {
   addLocalConnectionContexts,
@@ -74,13 +67,12 @@ import {
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { decodeQUTF } from "../utils/decode";
 import { ExecutionConsole } from "../utils/executionConsole";
-import { MessageKind, Runner, notify } from "../utils/notifications";
+import { MessageKind, notify } from "../utils/notifications";
 import {
   checkIfIsDatasource,
   addQueryHistory,
   formatScratchpadStacktrace,
   resultToBase64,
-  needsScratchpad,
 } from "../utils/queryUtils";
 import { openUrl } from "../utils/uriUtils";
 import {
@@ -840,155 +832,155 @@ export async function disconnect(connLabel: string): Promise<void> {
   }
 }
 
-export async function executeQuery(
-  query: string,
-  connLabel: string,
-  executorName: string,
-  context: string,
-  isPython: boolean,
-  isWorkbook: boolean,
-  isFromConnTree?: boolean,
-  token?: CancellationToken,
-): Promise<any> {
-  const connMngService = new ConnectionManagementService();
-  const queryConsole = ExecutionConsole.start();
-  if (connLabel === "") {
-    if (ext.activeConnection === undefined) {
-      return undefined;
-    } else {
-      connLabel = ext.activeConnection.connLabel;
-    }
-  }
-  const isConnected = connMngService.isConnected(connLabel);
-  if (!isConnected) {
-    notify(`Connection ${connLabel} is not connected.`, MessageKind.ERROR, {
-      logger,
-    });
-    return undefined;
-  }
+// export async function executeQuery(
+//   query: string,
+//   connLabel: string,
+//   executorName: string,
+//   context: string,
+//   isPython: boolean,
+//   isWorkbook: boolean,
+//   isFromConnTree?: boolean,
+//   token?: CancellationToken,
+// ): Promise<any> {
+//   const connMngService = new ConnectionManagementService();
+//   const queryConsole = ExecutionConsole.start();
+//   if (connLabel === "") {
+//     if (ext.activeConnection === undefined) {
+//       return undefined;
+//     } else {
+//       connLabel = ext.activeConnection.connLabel;
+//     }
+//   }
+//   const isConnected = connMngService.isConnected(connLabel);
+//   if (!isConnected) {
+//     notify(`Connection ${connLabel} is not connected.`, MessageKind.ERROR, {
+//       logger,
+//     });
+//     return undefined;
+//   }
 
-  const selectedConn = connMngService.retrieveConnectedConnection(connLabel);
-  const isInsights = selectedConn instanceof InsightsConnection;
-  const connVersion = isInsights ? (selectedConn.insightsVersion ?? 0) : 0;
-  const telemetryLangType = isPython ? ".Python" : ".q";
-  const telemetryBaseMsg = isWorkbook ? "Workbook" : "Scratchpad";
-  notify("Query execution.", MessageKind.DEBUG, {
-    logger,
-    telemetry: telemetryBaseMsg + ".Execute" + telemetryLangType,
-  });
-  if (query.length === 0) {
-    notify("Empty query.", MessageKind.DEBUG, {
-      logger,
-      telemetry: telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
-    });
-    queryConsole.appendQueryError(
-      query,
-      "Query is empty",
-      connLabel,
-      executorName,
-      isConnected,
-      isInsights,
-      isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
-      isPython,
-      false,
-      undefined,
-      isFromConnTree,
-    );
-    return undefined;
-  }
-  const isNotebook = executorName.endsWith(".kxnb");
-  const isStringfy = isNotebook ? false : !ext.isResultsTabVisible;
-  const startTime = Date.now();
-  const results = await connMngService.executeQuery(
-    query,
-    connLabel,
-    context,
-    isStringfy,
-    isPython,
-  );
-  const endTime = Date.now();
-  const duration = (endTime - startTime).toString();
+//   const selectedConn = connMngService.retrieveConnectedConnection(connLabel);
+//   const isInsights = selectedConn instanceof InsightsConnection;
+//   const connVersion = isInsights ? (selectedConn.insightsVersion ?? 0) : 0;
+//   const telemetryLangType = isPython ? ".Python" : ".q";
+//   const telemetryBaseMsg = isWorkbook ? "Workbook" : "Scratchpad";
+//   notify("Query execution.", MessageKind.DEBUG, {
+//     logger,
+//     telemetry: telemetryBaseMsg + ".Execute" + telemetryLangType,
+//   });
+//   if (query.length === 0) {
+//     notify("Empty query.", MessageKind.DEBUG, {
+//       logger,
+//       telemetry: telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
+//     });
+//     queryConsole.appendQueryError(
+//       query,
+//       "Query is empty",
+//       connLabel,
+//       executorName,
+//       isConnected,
+//       isInsights,
+//       isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+//       isPython,
+//       false,
+//       undefined,
+//       isFromConnTree,
+//     );
+//     return undefined;
+//   }
+//   const isNotebook = executorName.endsWith(".kxnb");
+//   const isStringfy = isNotebook ? false : !ext.isResultsTabVisible;
+//   const startTime = Date.now();
+//   const results = await connMngService.executeQuery(
+//     query,
+//     connLabel,
+//     context,
+//     isStringfy,
+//     isPython,
+//   );
+//   const endTime = Date.now();
+//   const duration = (endTime - startTime).toString();
 
-  /* c8 ignore next */
-  if (token?.isCancellationRequested) {
-    return undefined;
-  }
+//   /* c8 ignore next */
+//   if (token?.isCancellationRequested) {
+//     return undefined;
+//   }
 
-  // set context for root nodes
-  if (selectedConn instanceof InsightsConnection) {
-    const res = await writeScratchpadResult(
-      results,
-      query,
-      connLabel,
-      executorName,
-      isPython,
-      isWorkbook,
-      duration,
-      connVersion,
-    );
-    if (isNotebook) {
-      return res;
-    }
-  } else if (isNotebook) {
-    return results;
-  } else {
-    /* c8 ignore next */
-    if (ext.isResultsTabVisible) {
-      const data = resultToBase64(results);
-      if (data) {
-        notify("GG Plot displayed", MessageKind.DEBUG, {
-          logger,
-          telemetry: "GGPLOT.Display" + (isPython ? ".Python" : ".q"),
-        });
-        const active = ext.activeTextEditor;
-        if (active) {
-          const plot = <Plot>{
-            charts: [{ data }],
-          };
-          const uri = await addWorkspaceFile(
-            active.document.uri,
-            "plot",
-            ".plot",
-          );
-          if (!workspaceHas(uri)) {
-            await workspace.openTextDocument(uri);
-            await openWith(
-              uri,
-              ChartEditorProvider.viewType,
-              ViewColumn.Beside,
-            );
-          }
-          await setUriContent(uri, JSON.stringify(plot));
-        }
-      } else {
-        await writeQueryResultsToView(
-          results,
-          query,
-          connLabel,
-          executorName,
-          isInsights,
-          isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
-          isPython,
-          duration,
-          isFromConnTree,
-          connVersion,
-        );
-      }
-    } else {
-      await writeQueryResultsToConsole(
-        results,
-        query,
-        connLabel,
-        executorName,
-        isInsights,
-        isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
-        isPython,
-        duration,
-        isFromConnTree,
-      );
-    }
-  }
-}
+//   // set context for root nodes
+//   if (selectedConn instanceof InsightsConnection) {
+//     const res = await writeScratchpadResult(
+//       results,
+//       query,
+//       connLabel,
+//       executorName,
+//       isPython,
+//       isWorkbook,
+//       duration,
+//       connVersion,
+//     );
+//     if (isNotebook) {
+//       return res;
+//     }
+//   } else if (isNotebook) {
+//     return results;
+//   } else {
+//     /* c8 ignore next */
+//     if (ext.isResultsTabVisible) {
+//       const data = resultToBase64(results);
+//       if (data) {
+//         notify("GG Plot displayed", MessageKind.DEBUG, {
+//           logger,
+//           telemetry: "GGPLOT.Display" + (isPython ? ".Python" : ".q"),
+//         });
+//         const active = ext.activeTextEditor;
+//         if (active) {
+//           const plot = <Plot>{
+//             charts: [{ data }],
+//           };
+//           const uri = await addWorkspaceFile(
+//             active.document.uri,
+//             "plot",
+//             ".plot",
+//           );
+//           if (!workspaceHas(uri)) {
+//             await workspace.openTextDocument(uri);
+//             await openWith(
+//               uri,
+//               ChartEditorProvider.viewType,
+//               ViewColumn.Beside,
+//             );
+//           }
+//           await setUriContent(uri, JSON.stringify(plot));
+//         }
+//       } else {
+//         await writeQueryResultsToView(
+//           results,
+//           query,
+//           connLabel,
+//           executorName,
+//           isInsights,
+//           isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+//           isPython,
+//           duration,
+//           isFromConnTree,
+//           connVersion,
+//         );
+//       }
+//     } else {
+//       await writeQueryResultsToConsole(
+//         results,
+//         query,
+//         connLabel,
+//         executorName,
+//         isInsights,
+//         isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+//         isPython,
+//         duration,
+//         isFromConnTree,
+//       );
+//     }
+//   }
+// }
 
 export function getQueryContext(lineNum?: number): string {
   let context = ".";
@@ -1038,119 +1030,119 @@ export function getConextForRerunQuery(query: string): string {
   return context;
 }
 
-export async function runQuery(
-  type: ExecutionTypes,
-  connLabel: string,
-  executorName: string,
-  isWorkbook: boolean,
-  rerunQuery?: string,
-  target?: string,
-  isSql?: boolean,
-  isInsights?: boolean,
-) {
-  const editor = ext.activeTextEditor;
-  if (!editor) {
-    return false;
-  }
+// export async function runQuery(
+//   type: ExecutionTypes,
+//   connLabel: string,
+//   executorName: string,
+//   isWorkbook: boolean,
+//   rerunQuery?: string,
+//   target?: string,
+//   isSql?: boolean,
+//   isInsights?: boolean,
+// ) {
+//   const editor = ext.activeTextEditor;
+//   if (!editor) {
+//     return false;
+//   }
 
-  let context;
-  let query;
-  let isPython = false;
-  let variable: string | undefined;
+//   let context;
+//   let query;
+//   let isPython = false;
+//   let variable: string | undefined;
 
-  switch (type) {
-    case ExecutionTypes.QuerySelection:
-    case ExecutionTypes.PythonQuerySelection: {
-      const selection = editor.selection;
-      query = selection.isEmpty
-        ? editor.document.lineAt(selection.active.line).text
-        : editor.document.getText(selection);
-      context = getQueryContext(selection.end.line);
-      if (type === ExecutionTypes.PythonQuerySelection) {
-        isPython = true;
-      }
-      break;
-    }
+//   switch (type) {
+//     case ExecutionTypes.QuerySelection:
+//     case ExecutionTypes.PythonQuerySelection: {
+//       const selection = editor.selection;
+//       query = selection.isEmpty
+//         ? editor.document.lineAt(selection.active.line).text
+//         : editor.document.getText(selection);
+//       context = getQueryContext(selection.end.line);
+//       if (type === ExecutionTypes.PythonQuerySelection) {
+//         isPython = true;
+//       }
+//       break;
+//     }
 
-    case ExecutionTypes.QueryFile:
-    case ExecutionTypes.ReRunQuery:
-    case ExecutionTypes.PythonQueryFile:
-    default: {
-      query = rerunQuery || editor.document.getText();
-      context = getQueryContext();
+//     case ExecutionTypes.QueryFile:
+//     case ExecutionTypes.ReRunQuery:
+//     case ExecutionTypes.PythonQueryFile:
+//     default: {
+//       query = rerunQuery || editor.document.getText();
+//       context = getQueryContext();
 
-      if (type === ExecutionTypes.PythonQueryFile) {
-        isPython = true;
-      }
-      break;
-    }
-  }
+//       if (type === ExecutionTypes.PythonQueryFile) {
+//         isPython = true;
+//       }
+//       break;
+//     }
+//   }
 
-  if (type === ExecutionTypes.PopulateScratchpad) {
-    if (executorName.endsWith(".py")) {
-      isPython = true;
-    }
-    variable = await inputVariable();
-  }
+//   if (type === ExecutionTypes.PopulateScratchpad) {
+//     if (executorName.endsWith(".py")) {
+//       isPython = true;
+//     }
+//     variable = await inputVariable();
+//   }
 
-  const runner = Runner.create((_, token) => {
-    return target || isSql
-      ? variable
-        ? populateScratchpad(
-            getPartialDatasourceFile(query, target, isSql, isPython),
-            connLabel,
-            variable,
-          )
-        : runDataSource(
-            getPartialDatasourceFile(query, target, isSql, isPython),
-            connLabel,
-            executorName,
-          )
-      : executeQuery(
-          query,
-          connLabel,
-          executorName,
-          context,
-          isPython,
-          isWorkbook,
-          false,
-          token,
-        );
-  });
+//   const runner = Runner.create((_, token) => {
+//     return target || isSql
+//       ? variable
+//         ? populateScratchpad(
+//             getPartialDatasourceFile(query, target, isSql, isPython),
+//             connLabel,
+//             variable,
+//           )
+//         : runDataSource(
+//             getPartialDatasourceFile(query, target, isSql, isPython),
+//             connLabel,
+//             executorName,
+//           )
+//       : executeQuery(
+//           query,
+//           connLabel,
+//           executorName,
+//           context,
+//           isPython,
+//           isWorkbook,
+//           false,
+//           token,
+//         );
+//   });
 
-  if (isInsights) {
-    runner.location = ProgressLocation.Notification;
-  }
-  runner.title = `Executing ${executorName} on ${connLabel || "active connection"}.`;
+//   if (isInsights) {
+//     runner.location = ProgressLocation.Notification;
+//   }
+//   runner.title = `Executing ${executorName} on ${connLabel || "active connection"}.`;
 
-  return (target || isSql) && !variable
-    ? runner.execute()
-    : needsScratchpad(connLabel, runner.execute());
-}
+//   return (target || isSql) && !variable
+//     ? runner.execute()
+//     : needsScratchpad(connLabel, runner.execute());
+// }
 
 export function rerunQuery(rerunQueryElement: QueryHistory) {
-  if (
-    !rerunQueryElement.isDatasource &&
-    typeof rerunQueryElement.query === "string"
-  ) {
-    const context = getConextForRerunQuery(rerunQueryElement.query);
-    executeQuery(
-      rerunQueryElement.query,
-      rerunQueryElement.connectionName,
-      rerunQueryElement.executorName,
-      context,
-      rerunQueryElement.language !== "q",
-      !!rerunQueryElement.isWorkbook,
-      !!rerunQueryElement.isFromConnTree,
-    );
-  } else {
-    const dsFile = rerunQueryElement.query as DataSourceFiles;
-    runDataSource(
-      dsFile,
-      rerunQueryElement.connectionName,
-      rerunQueryElement.executorName,
-    );
-  }
+  // if (
+  //   !rerunQueryElement.isDatasource &&
+  //   typeof rerunQueryElement.query === "string"
+  // ) {
+  //   const context = getConextForRerunQuery(rerunQueryElement.query);
+  //   executeQuery(
+  //     rerunQueryElement.query,
+  //     rerunQueryElement.connectionName,
+  //     rerunQueryElement.executorName,
+  //     context,
+  //     rerunQueryElement.language !== "q",
+  //     !!rerunQueryElement.isWorkbook,
+  //     !!rerunQueryElement.isFromConnTree,
+  //   );
+  // } else {
+  //   const dsFile = rerunQueryElement.query as DataSourceFiles;
+  //   runDataSource(
+  //     dsFile,
+  //     rerunQueryElement.connectionName,
+  //     rerunQueryElement.executorName,
+  //   );
+  // }
 }
 
 export function copyQuery(queryHistoryElement: QueryHistory) {

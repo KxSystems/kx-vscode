@@ -29,7 +29,8 @@ import {
 } from "vscode";
 
 import { ext } from "../extensionVariables";
-import { resetScratchpad, runQuery } from "./serverCommand";
+import { selectFileExecutionMethod } from "./executionCommands";
+import { resetScratchpad } from "./serverCommand";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
 import { ReplConnection } from "../classes/replConnection";
@@ -321,54 +322,6 @@ function createMetaDapFromTarget(target: string): MetaDap {
     : ({ assembly, instance } as MetaDap);
 }
 
-// TODO: Remove it if this don't going to be used from 1.14
-// Options separated by ties and DAP processes
-// function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
-//   const items: QuickPickItem[] = [];
-
-//   const tierSet = new Set<string>();
-//   const processItems: QuickPickItem[] = [];
-
-//   daps.forEach((dap) => {
-//     const cleanedAssembly = cleanAssemblyName(dap.assembly);
-//     const tierKey = `${cleanedAssembly} ${dap.instance}`;
-//     tierSet.add(tierKey);
-
-//     if (dap.dap) {
-//       const cleanedDapName = cleanDapName(dap.dap);
-//       processItems.push({ label: `${tierKey} ${cleanedDapName}` });
-//     }
-//   });
-
-//   if (tierSet.size > 0) {
-//     items.push({
-//       kind: QuickPickItemKind.Separator,
-//       label: "Tiers",
-//     });
-
-//     const sortedTiers = Array.from(tierSet).sort((a, b) => a.localeCompare(b));
-//     sortedTiers.forEach((tier) => {
-//       items.push({ label: tier });
-//     });
-//   }
-
-//   if (processItems.length > 0) {
-//     items.push({
-//       kind: QuickPickItemKind.Separator,
-//       label: "DAP Processes",
-//     });
-
-//     const sortedProcessItems = processItems
-//       .slice()
-//       .sort((a, b) => a.label.localeCompare(b.label));
-//     sortedProcessItems.forEach((item) => {
-//       items.push(item);
-//     });
-//   }
-
-//   return items;
-// }
-
 // Options separated by Assembly
 function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
   const assemblyMap = new Map<string, Map<string, MetaDap[]>>();
@@ -524,6 +477,12 @@ export async function runActiveEditor(type?: ExecutionTypes) {
       return;
     }
 
+    if (type === undefined) {
+      type = isPython(uri)
+        ? ExecutionTypes.PythonQueryFile
+        : ExecutionTypes.QueryFile;
+    }
+
     const isInsights = conn instanceof InsightsConnection;
     const executorName = getBasename(ext.activeTextEditor.document.uri);
     const target = isInsights ? getTargetForUri(uri) : undefined;
@@ -548,19 +507,11 @@ export async function runActiveEditor(type?: ExecutionTypes) {
     }
 
     try {
-      await runQuery(
-        type === undefined
-          ? isPython(uri)
-            ? ExecutionTypes.PythonQueryFile
-            : ExecutionTypes.QueryFile
-          : type,
+      await selectFileExecutionMethod(
         conn.connLabel,
+        type,
         executorName,
-        !isPython(uri),
-        undefined,
         target,
-        isSql,
-        conn instanceof InsightsConnection,
       );
     } catch (error) {
       notify(
