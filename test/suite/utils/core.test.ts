@@ -209,7 +209,7 @@ describe("core", () => {
     beforeEach(() => {
       appendLineSpy = sinon.spy(
         vscode.window.createOutputChannel("testChannel"),
-        "appendLine",
+        "appendLine"
       );
       showErrorMessageSpy = sinon.spy(vscode.window, "showErrorMessage");
     });
@@ -299,11 +299,16 @@ describe("core", () => {
   });
 
   describe("getServers", () => {
-    let workspaceStub, _getConfigurationStub, getStub: sinon.SinonStub;
+    let workspaceStub,
+      _getConfigurationStub,
+      getStub,
+      updateServersStub: sinon.SinonStub;
 
     beforeEach(() => {
       getStub = sinon.stub();
-      _getConfigurationStub = sinon.stub().returns({ get: getStub });
+      _getConfigurationStub = sinon
+        .stub()
+        .returns({ get: getStub, update: sinon.stub() });
       workspaceStub = sinon.stub(vscode.workspace, "getConfiguration").returns({
         get: getStub,
         has: function (_section: string): boolean {
@@ -329,22 +334,24 @@ describe("core", () => {
           _section: string,
           _value: any,
           _configurationTarget?: vscode.ConfigurationTarget | boolean | null,
-          _overrideInLanguage?: boolean,
+          _overrideInLanguage?: boolean
         ): Thenable<void> {
           throw new Error("Function not implemented.");
         },
       });
+      updateServersStub = sinon.stub(coreUtils, "updateServers").resolves();
     });
 
     afterEach(() => {
       sinon.restore();
     });
 
-    it("should return undefined when no servers are configured", () => {
-      getStub.returns(undefined);
+    it("should return an empty object when no servers are configured", () => {
+      getStub.returns({});
       const result = coreUtils.getServers();
 
-      assert.strictEqual(result, undefined);
+      assert.ok(typeof result === "object");
+      assert.strictEqual(Object.keys(result).length, 0);
       assert.ok(getStub.calledWith("kdb.servers"));
     });
 
@@ -510,7 +517,7 @@ describe("core", () => {
 
       coreUtils.getServers();
 
-      assert.ok(workspaceStub.calledOnce);
+      assert.ok(workspaceStub.calledTwice);
       assert.ok(workspaceStub.calledWith());
     });
 
@@ -525,11 +532,16 @@ describe("core", () => {
   });
 
   describe("getInsights", () => {
-    let workspaceStub, _getConfigurationStub, getStub: sinon.SinonStub;
+    let workspaceStub,
+      _getConfigurationStub,
+      getStub,
+      updateInsightsStub: sinon.SinonStub;
 
     beforeEach(() => {
       getStub = sinon.stub();
-      _getConfigurationStub = sinon.stub().returns({ get: getStub });
+      _getConfigurationStub = sinon
+        .stub()
+        .returns({ get: getStub, update: sinon.stub() });
       workspaceStub = sinon.stub(vscode.workspace, "getConfiguration").returns({
         get: getStub,
         has: function (_section: string): boolean {
@@ -551,15 +563,9 @@ describe("core", () => {
           | undefined {
           throw new Error("Function not implemented.");
         },
-        update: function (
-          _section: string,
-          _value: any,
-          _configurationTarget?: vscode.ConfigurationTarget | boolean | null,
-          _overrideInLanguage?: boolean,
-        ): Thenable<void> {
-          throw new Error("Function not implemented.");
-        },
+        update: sinon.stub(),
       });
+      updateInsightsStub = sinon.stub(coreUtils, "updateInsights").resolves();
     });
 
     afterEach(() => {
@@ -572,7 +578,8 @@ describe("core", () => {
 
       const result = coreUtils.getInsights();
 
-      assert.strictEqual(result, undefined);
+      assert.ok(typeof result === "object");
+      assert.strictEqual(Object.keys(result).length, 0);
       assert.ok(getStub.calledWith("kdb.insightsEnterpriseConnections"));
       assert.ok(getStub.calledWith("kdb.insights"));
     });
@@ -620,7 +627,7 @@ describe("core", () => {
 
       assert.strictEqual(
         result[insightKeys[0]].server,
-        "https://alpha.insights.com",
+        "https://alpha.insights.com"
       );
       assert.strictEqual(result[insightKeys[0]].auth, false);
       assert.strictEqual(result[insightKeys[1]].realm, "beta-realm");
@@ -692,7 +699,8 @@ describe("core", () => {
 
       const result = coreUtils.getInsights();
 
-      assert.strictEqual(result, undefined);
+      assert.ok(typeof result === "object");
+      assert.strictEqual(Object.keys(result).length, 0);
       assert.ok(getStub.calledWith("kdb.insightsEnterpriseConnections"));
       assert.ok(getStub.calledWith("kdb.insights"));
     });
@@ -720,7 +728,7 @@ describe("core", () => {
       assert.strictEqual(result[insightKeys[0]].alias, "Only Insight");
       assert.strictEqual(
         result[insightKeys[0]].server,
-        "https://only.insights.com",
+        "https://only.insights.com"
       );
     });
 
@@ -827,7 +835,7 @@ describe("core", () => {
 
       coreUtils.getInsights();
 
-      assert.ok(workspaceStub.calledOnce);
+      assert.ok(workspaceStub.calledTwice);
       assert.ok(workspaceStub.calledWith());
     });
 
@@ -868,10 +876,10 @@ describe("core", () => {
       assert.strictEqual(insightKeys.length, 2);
 
       const basicInsight = Object.values(result).find(
-        (i) => i.alias === "Basic Insight",
+        (i) => i.alias === "Basic Insight"
       );
       const fullInsight = Object.values(result).find(
-        (i) => i.alias === "Full Insight",
+        (i) => i.alias === "Full Insight"
       );
 
       assert.ok(basicInsight);
@@ -993,9 +1001,9 @@ describe("core", () => {
         updateConfigurationStub.calledWith(
           "kdb.neverShowQInstallAgain",
           true,
-          vscode.ConfigurationTarget.Global,
+          vscode.ConfigurationTarget.Global
         ),
-        true,
+        true
       );
     });
   });

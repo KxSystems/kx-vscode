@@ -263,8 +263,12 @@ export async function getWorkspaceFolder(
   return undefined;
 }
 
-export function getServers(): Server | undefined {
+export function getServers(): Server {
   const servers = workspace.getConfiguration().get<Server>("kdb.servers");
+
+  if (!servers) {
+    updateServers({});
+  }
 
   return servers
     ? Object.fromEntries(
@@ -272,7 +276,7 @@ export function getServers(): Server | undefined {
           a.serverAlias.localeCompare(b.serverAlias),
         ),
       )
-    : servers;
+    : {};
 }
 
 // TODO: Remove this on 1.9.0 release
@@ -347,28 +351,36 @@ export function setOutputWordWrapper(): void {
   }
 }
 
-export function getInsights(): Insights | undefined {
+export function getInsights(): Insights {
   const configuration = workspace.getConfiguration();
   const insights = configuration.get<Insights>(
     "kdb.insightsEnterpriseConnections",
   );
 
-  const insightsList: Insights | undefined =
-    insights && Object.keys(insights).length > 0
-      ? insights
-      : configuration.get("kdb.insights");
-
-  if (!insightsList || Object.keys(insightsList).length === 0) {
-    return undefined;
-  }
-
-  return insightsList
-    ? Object.fromEntries(
+  if (insights && Object.keys(insights).length > 0) {
+    return Object.fromEntries(
+      Object.entries(insights).sort(([, a], [, b]) =>
+        a.alias.localeCompare(b.alias),
+      ),
+    );
+  } else {
+    const insightsList = configuration.get<Insights>("kdb.insights");
+    if (insightsList && Object.keys(insightsList).length > 0) {
+      updateInsights(insightsList);
+      configuration.update(
+        "kdb.insights",
+        undefined,
+        ConfigurationTarget.Global,
+      );
+      return Object.fromEntries(
         Object.entries(insightsList).sort(([, a], [, b]) =>
           a.alias.localeCompare(b.alias),
         ),
-      )
-    : insightsList;
+      );
+    }
+    updateInsights({});
+    return {};
+  }
 }
 
 export async function updateServers(servers: Server): Promise<void> {
