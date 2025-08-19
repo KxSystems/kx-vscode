@@ -14,10 +14,13 @@
       "preLaunchTask": "npm: watch"
     },
     {
-      "name": "Run Extension Inline",
+      "name": "Run Extension Plain",
       "type": "extensionHost",
       "request": "launch",
-      "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+      "args": [
+        "--profile-temp",
+        "--extensionDevelopmentPath=${workspaceFolder}"
+      ],
       "outFiles": ["${workspaceFolder}/out/extension.js*"],
       "preLaunchTask": "npm: watch"
     },
@@ -34,6 +37,7 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
+        "--profile-temp",
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--extensionTestsPath=${workspaceFolder}/out-test/test/suite/index"
       ],
@@ -45,6 +49,7 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
+        "--profile-temp",
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--extensionTestsPath=${workspaceFolder}/out-test/test/suite/index"
       ],
