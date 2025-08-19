@@ -9,10 +9,7 @@
       "name": "Run Extension",
       "type": "extensionHost",
       "request": "launch",
-      "args": [
-        "--profile-temp",
-        "--extensionDevelopmentPath=${workspaceFolder}"
-      ],
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
       "outFiles": ["${workspaceFolder}/out/extension.js*"],
       "preLaunchTask": "npm: watch"
     },
@@ -37,7 +34,6 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--profile-temp",
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--extensionTestsPath=${workspaceFolder}/out-test/test/suite/index"
       ],
@@ -49,7 +45,6 @@
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--profile-temp",
         "--extensionDevelopmentPath=${workspaceFolder}",
         "--extensionTestsPath=${workspaceFolder}/out-test/test/suite/index"
       ],
