@@ -209,7 +209,7 @@ describe("core", () => {
     beforeEach(() => {
       appendLineSpy = sinon.spy(
         vscode.window.createOutputChannel("testChannel"),
-        "appendLine"
+        "appendLine",
       );
       showErrorMessageSpy = sinon.spy(vscode.window, "showErrorMessage");
     });
@@ -334,7 +334,7 @@ describe("core", () => {
           _section: string,
           _value: any,
           _configurationTarget?: vscode.ConfigurationTarget | boolean | null,
-          _overrideInLanguage?: boolean
+          _overrideInLanguage?: boolean,
         ): Thenable<void> {
           throw new Error("Function not implemented.");
         },
@@ -627,7 +627,7 @@ describe("core", () => {
 
       assert.strictEqual(
         result[insightKeys[0]].server,
-        "https://alpha.insights.com"
+        "https://alpha.insights.com",
       );
       assert.strictEqual(result[insightKeys[0]].auth, false);
       assert.strictEqual(result[insightKeys[1]].realm, "beta-realm");
@@ -728,7 +728,7 @@ describe("core", () => {
       assert.strictEqual(result[insightKeys[0]].alias, "Only Insight");
       assert.strictEqual(
         result[insightKeys[0]].server,
-        "https://only.insights.com"
+        "https://only.insights.com",
       );
     });
 
@@ -876,10 +876,10 @@ describe("core", () => {
       assert.strictEqual(insightKeys.length, 2);
 
       const basicInsight = Object.values(result).find(
-        (i) => i.alias === "Basic Insight"
+        (i) => i.alias === "Basic Insight",
       );
       const fullInsight = Object.values(result).find(
-        (i) => i.alias === "Full Insight"
+        (i) => i.alias === "Full Insight",
       );
 
       assert.ok(basicInsight);
@@ -899,21 +899,21 @@ describe("core", () => {
     it("should return KDB+", () => {
       ext.REAL_QHOME = "QHOME";
       sinon.stub(shell, "stat").returns(false);
-      const res = coreUtils.getQExecutablePath();
+      const res = coreUtils.getEnvironment();
       assert.ok(res);
     });
     it("should return KDB-X", () => {
       ext.REAL_QHOME = "QHOME";
       sinon.stub(shell, "stat").returns(true);
-      const res = coreUtils.getQExecutablePath();
-      assert.strictEqual(res, path.join("QHOME", "bin", "q"));
+      const res = coreUtils.getEnvironment();
+      assert.strictEqual(res.QPATH, path.join("QHOME", "bin", "q"));
     });
     it("should return KDB-X", () => {
       ext.REAL_QHOME = "";
       const target = path.join("QHOME", "bin", "q");
       sinon.stub(shell, "which").returns([target]);
-      const res = coreUtils.getQExecutablePath();
-      assert.strictEqual(res, target);
+      const res = coreUtils.getEnvironment();
+      assert.strictEqual(res.QPATH, target);
     });
     it("should return qHomeDirectory", () => {
       ext.REAL_QHOME = "";
@@ -921,7 +921,7 @@ describe("core", () => {
       sinon.stub(vscode.workspace, "getConfiguration").value(() => {
         return { get: () => "QHOME" };
       });
-      const res = coreUtils.getQExecutablePath();
+      const res = coreUtils.getEnvironment();
       assert.ok(res);
     });
     it("should throw if q not found", () => {
@@ -930,7 +930,8 @@ describe("core", () => {
       sinon.stub(vscode.workspace, "getConfiguration").value(() => {
         return { get: () => "" };
       });
-      assert.throws(() => coreUtils.getQExecutablePath());
+      const res = coreUtils.getEnvironment();
+      assert.strictEqual(res.QPATH, undefined);
     });
   });
 
@@ -1001,9 +1002,9 @@ describe("core", () => {
         updateConfigurationStub.calledWith(
           "kdb.neverShowQInstallAgain",
           true,
-          vscode.ConfigurationTarget.Global
+          vscode.ConfigurationTarget.Global,
         ),
-        true
+        true,
       );
     });
   });
