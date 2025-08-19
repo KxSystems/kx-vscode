@@ -269,18 +269,22 @@ export function normalizePyQuery(query: string): string {
   );
 }
 
+export function getPythonWrapper(
+  query: string,
+  returnFormat: "serialized" | "text" | "structuredText" = "serialized",
+): string {
+  const wrapper = normalizeQSQLQuery(queryWrapper(true));
+  const args = {
+    returnFormat,
+    code: normalizePyQuery(query),
+    sample_fn: "first",
+    sample_size: 10000,
+  };
+  return `{[returnFormat;code;sample_fn;sample_size] res:${wrapper}[returnFormat;code;sample_fn;sample_size];$[res\`errored;res\`error;res\`result]}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]`;
+}
+
 export function getQSQLWrapper(query: string, isPython?: boolean): string {
-  if (isPython) {
-    const wrapper = normalizeQSQLQuery(queryWrapper(true));
-    const args = {
-      returnFormat: <"serialized" | "text" | "structuredText">"serialized",
-      code: normalizePyQuery(query),
-      sample_fn: "first",
-      sample_size: 10000,
-    };
-    return `${wrapper}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]\`result`;
-  }
-  return normalizeQSQLQuery(query);
+  return isPython ? getPythonWrapper(query) : normalizeQSQLQuery(query);
 }
 
 export function generateQTypes(meta: { [key: string]: number }): any {

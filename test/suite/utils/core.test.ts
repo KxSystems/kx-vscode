@@ -209,7 +209,7 @@ describe("core", () => {
     beforeEach(() => {
       appendLineSpy = sinon.spy(
         vscode.window.createOutputChannel("testChannel"),
-        "appendLine",
+        "appendLine"
       );
       showErrorMessageSpy = sinon.spy(vscode.window, "showErrorMessage");
     });
@@ -334,7 +334,7 @@ describe("core", () => {
           _section: string,
           _value: any,
           _configurationTarget?: vscode.ConfigurationTarget | boolean | null,
-          _overrideInLanguage?: boolean,
+          _overrideInLanguage?: boolean
         ): Thenable<void> {
           throw new Error("Function not implemented.");
         },
@@ -627,7 +627,7 @@ describe("core", () => {
 
       assert.strictEqual(
         result[insightKeys[0]].server,
-        "https://alpha.insights.com",
+        "https://alpha.insights.com"
       );
       assert.strictEqual(result[insightKeys[0]].auth, false);
       assert.strictEqual(result[insightKeys[1]].realm, "beta-realm");
@@ -728,7 +728,7 @@ describe("core", () => {
       assert.strictEqual(result[insightKeys[0]].alias, "Only Insight");
       assert.strictEqual(
         result[insightKeys[0]].server,
-        "https://only.insights.com",
+        "https://only.insights.com"
       );
     });
 
@@ -876,10 +876,10 @@ describe("core", () => {
       assert.strictEqual(insightKeys.length, 2);
 
       const basicInsight = Object.values(result).find(
-        (i) => i.alias === "Basic Insight",
+        (i) => i.alias === "Basic Insight"
       );
       const fullInsight = Object.values(result).find(
-        (i) => i.alias === "Full Insight",
+        (i) => i.alias === "Full Insight"
       );
 
       assert.ok(basicInsight);
@@ -1001,9 +1001,9 @@ describe("core", () => {
         updateConfigurationStub.calledWith(
           "kdb.neverShowQInstallAgain",
           true,
-          vscode.ConfigurationTarget.Global,
+          vscode.ConfigurationTarget.Global
         ),
-        true,
+        true
       );
     });
   });

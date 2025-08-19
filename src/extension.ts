@@ -902,12 +902,6 @@ function registerExecuteCommands(): CommandRegistration[] {
       },
     },
     {
-      command: "kdb.start.repl",
-      callback: () => {
-        startRepl();
-      },
-    },
-    {
       command: "kdb.execute.terminal.run",
       callback: async () => {
         if (ext.activeTextEditor) {
@@ -1067,6 +1061,19 @@ function registerNotebookCommands(): CommandRegistration[] {
   return notebookCommands;
 }
 
+function registerReplCommands(): CommandRegistration[] {
+  const replCommands: CommandRegistration[] = [
+    {
+      command: "kdb.repl.start",
+      callback: () => {
+        startRepl();
+      },
+    },
+  ];
+
+  return replCommands;
+}
+
 function registerAllExtensionCommands(): void {
   const allCommands: CommandRegistration[] = [
     ...registerHelpCommands(),
@@ -1080,6 +1087,7 @@ function registerAllExtensionCommands(): void {
     ...registerInstallCommands(),
     ...registerLSCommands(),
     ...registerNotebookCommands(),
+    ...registerReplCommands(),
   ];
 
   allCommands.forEach((command) => {

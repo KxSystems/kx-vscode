@@ -373,7 +373,7 @@ describe("workspaceCommand", () => {
         const conn = <ReplConnection>{ start() {} };
 
         beforeEach(() => {
-          sinon.stub(ReplConnection, "getOrCreateInstance").returns(conn);
+          sinon.stub(ReplConnection, "getOrCreateInstance").resolves(conn);
         });
 
         it("should notify error", async () => {

@@ -462,7 +462,7 @@
       },
       {
         "category": "KX",
-        "command": "kdb.start.repl",
+        "command": "kdb.repl.start",
         "title": "Start REPL"
       },
       {
@@ -1171,6 +1171,7 @@
     "@types/vscode-webview": "^1.57.5",
     "@typescript-eslint/eslint-plugin": "^8.34.1",
     "@typescript-eslint/parser": "^8.34.1",
+    "@vscode/python-extension": "^1.0.5",
     "@vscode/test-electron": "^2.5.2",
     "c8": "^10.1.3",
     "esbuild": "^0.25.5",
