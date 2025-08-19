@@ -12,6 +12,7 @@
  */
 
 import * as assert from "assert";
+import dotenv from "dotenv";
 import path from "node:path";
 import { env } from "node:process";
 import * as sinon from "sinon";
@@ -932,6 +933,15 @@ describe("core", () => {
       });
       const res = coreUtils.getEnvironment();
       assert.strictEqual(res.QPATH, undefined);
+    });
+    it("should return dotenv", () => {
+      const uri = vscode.Uri.file("test");
+      sinon
+        .stub(vscode.workspace, "getWorkspaceFolder")
+        .returns({ uri, name: "test", index: 0 });
+      const stub = sinon.stub(dotenv, "configDotenv");
+      coreUtils.getEnvironment(uri);
+      sinon.assert.calledOnce(stub);
     });
   });
 
