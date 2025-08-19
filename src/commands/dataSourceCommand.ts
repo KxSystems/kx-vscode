@@ -15,7 +15,10 @@ import * as fs from "fs";
 import path from "path";
 
 import { ext } from "../extensionVariables";
-import { executeDataQuery } from "./executionCommands";
+import {
+  executeDataQuery,
+  selectFileExecutionMethod,
+} from "./executionCommands";
 import {
   writeQueryResultsToConsole,
   writeQueryResultsToView,
@@ -72,17 +75,6 @@ export async function addDataSource(): Promise<void> {
   );
 }
 
-export function convertDSDataResponse(dataQueryCall: any) {
-  if (dataQueryCall?.error) {
-    return parseError(dataQueryCall.error);
-  } else if (dataQueryCall?.arrayBuffer) {
-    const results = handleWSResults(dataQueryCall.arrayBuffer);
-    return handleScratchpadTableRes(results);
-  } else {
-    return { error: "Datasource Data Query failed" };
-  }
-}
-
 export async function runDataSource(
   dataSourceForm: DataSourceFiles,
   connLabel: string,
@@ -118,14 +110,13 @@ export async function runDataSource(
       target = fileContent.dataSource.qsql.selectedTarget;
     }
 
-    const dataQueryCall = await executeDataQuery(
+    let res = await selectFileExecutionMethod(
       connLabel,
       ExecutionTypes.QueryDatasource,
+      executorName,
       target,
       fileContent,
     );
-
-    let res = convertDSDataResponse(dataQueryCall);
 
     ext.isDatasourceExecution = false;
     if (res) {
@@ -239,20 +230,6 @@ export function getQuerySample(
     case "SQL":
     default:
       return fileContent.dataSource.sql.query;
-  }
-}
-
-export function parseError(error: GetDataError) {
-  if (error instanceof Object && error.buffer) {
-    return handleWSError(error.buffer);
-  } else {
-    notify(`Datasource error.`, MessageKind.DEBUG, {
-      logger,
-      params: error,
-    });
-    return {
-      error,
-    };
   }
 }
 

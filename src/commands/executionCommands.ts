@@ -14,10 +14,17 @@
 import * as vscode from "vscode";
 
 import { LocalConnection } from "../classes/localConnection";
-import { GetDataObjectPayload } from "../models/data";
+import { ext } from "../extensionVariables";
+import {
+  writeQueryResultsToConsole,
+  writeQueryResultsToView,
+} from "./serverCommand";
+import { ServerType } from "../models/connectionsModels";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
 import { scratchpadVariableInput } from "../models/items/server";
+import { Plot } from "../models/plot";
+import { ChartEditorProvider } from "../services/chartEditorProvider";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { inputVariable } from "../services/notebookProviders";
 import {
@@ -28,14 +35,28 @@ import {
   getQuery,
   getDSExecutionType,
   isExecutionNotebook,
+  convertDSDataResponse,
+  isExecutionDS,
+  isExecutionWorkbook,
 } from "../utils/execution";
 import { MessageKind, notify, Runner } from "../utils/notifications";
-import { needsScratchpad, sanitizeQuery } from "../utils/queryUtils";
+import {
+  addQueryHistory,
+  needsScratchpad,
+  resultToBase64,
+  sanitizeQuery,
+} from "../utils/queryUtils";
 import {
   generateScratchpadQueryReqBody,
   selectAndGenerateScratchpadImportReqBody,
   selectAndGenerateServicegatewayReqBody,
 } from "../utils/requestBody";
+import {
+  addWorkspaceFile,
+  openWith,
+  setUriContent,
+  workspaceHas,
+} from "../utils/workspace";
 import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
 
 const logger = "executionCommands";
@@ -44,24 +65,63 @@ export async function selectFileExecutionMethod(
   connLabel: string,
   type: ExecutionTypes,
   executorName: string,
-  target: string | undefined,
+  target?: string,
+  datasourceFile?: DataSourceFiles,
   rerunQuery?: string,
 ) {
+  const isPython = isExecutionPython(type);
+  const isDS = isExecutionDS(datasourceFile);
+  const isWorkbook = isExecutionWorkbook(executorName);
+  const isNotebook = isExecutionNotebook(type) ? true : false;
   const hasTarget = target !== undefined && target !== "scratchpad";
-  const runner = Runner.create((_) => {
+  const runner = Runner.create(async (_) => {
     return hasTarget
-      ? executeDataQuery(connLabel, type, target)
-      : executeQuery(connLabel, type, rerunQuery);
+      ? await executeDataQuery(connLabel, type, target, datasourceFile)
+      : await executeQuery(connLabel, type, rerunQuery);
   });
 
   runner.title = `Executing ${executorName} on ${connLabel || "active connection"}.`;
 
-  let res;
+  let res, success;
 
   if (hasTarget) {
-    res = runner.execute();
+    const selectedType = datasourceFile?.dataSource?.selectedType
+      ? datasourceFile.dataSource.selectedType
+      : DataSourceTypes.QSQL;
+    const querySample = getDataQuerySample(datasourceFile, selectedType, type);
+    const startTime = Date.now();
+    res = await runner.execute();
+    const endTime = Date.now();
+    const duration = (endTime - startTime).toString();
+    success = await handleDataQueryResponse(
+      res,
+      querySample,
+      connLabel,
+      executorName,
+      selectedType,
+      isNotebook,
+      isPython,
+      isDS,
+      isWorkbook,
+      duration,
+    );
+
+    addQueryHistory(
+      datasourceFile ? datasourceFile : querySample,
+      executorName,
+      connLabel,
+      ServerType.INSIGHTS,
+      success,
+      isPython,
+      isDS,
+      isWorkbook,
+      selectedType,
+    );
   } else {
-    res = needsScratchpad(connLabel, runner.execute());
+    const startTime = Date.now();
+    res = await needsScratchpad(connLabel, runner.execute());
+    const endTime = Date.now();
+    const duration = (endTime - startTime).toString();
   }
 
   return hasTarget
@@ -147,9 +207,9 @@ export async function executeDataQuery(
   type: ExecutionTypes,
   target?: string,
   datasourceFile?: DataSourceFiles,
-): Promise<GetDataObjectPayload | undefined> {
+): Promise<any> {
   const isPython = isExecutionPython(type);
-  const query = getQuery(datasourceFile);
+  const query = getQuery(datasourceFile, type);
   const dsExecutionType = getDSExecutionType(datasourceFile);
   const udaName = datasourceFile?.dataSource?.uda?.name
     ? datasourceFile.dataSource.uda.name
@@ -193,7 +253,175 @@ export async function executeDataQuery(
     );
     return;
   }
-  return await selectedConnection.getDataQuery(dsExecutionType, body, udaName);
+  const res = await selectedConnection.getDataQuery(
+    dsExecutionType,
+    body,
+    udaName,
+  );
+
+  return convertDSDataResponse(res);
+}
+
+export async function handleDataQueryResponse(
+  res: any,
+  querySample: string,
+  connLabel: string,
+  executorName: string,
+  dataType: DataSourceTypes,
+  isNotebook: boolean,
+  isPython: boolean,
+  isDS: boolean,
+  isWorkbook: boolean,
+  duration: string,
+): Promise<boolean> {
+  const success = !res.error;
+  if (!success) {
+    notify("Query execution failed.", MessageKind.DEBUG, {
+      logger,
+      params: res.error,
+      telemetry: `Datasource.${dataType}.Run.Error`,
+    });
+  }
+  if (isNotebook) {
+    return success;
+  }
+  if (ext.isResultsTabVisible) {
+    if (success) {
+      const resultCount = typeof res === "string" ? "0" : res.rows.length;
+      notify(`Results: ${resultCount} rows`, MessageKind.DEBUG, {
+        logger,
+      });
+    } else if (!success) {
+      res = res.errorMsg ? res.errorMsg : res.error;
+    }
+
+    await writeQueryResultsToView(
+      res,
+      querySample,
+      connLabel,
+      executorName,
+      true,
+      isWorkbook ? "WORKBOOK" : dataType,
+      isPython,
+    );
+  } else {
+    if (success) {
+      notify(
+        `Results is a string with length: ${res.length}`,
+        MessageKind.DEBUG,
+        { logger },
+      );
+    } else if (res.error) {
+      res = res.errorMsg ? res.errorMsg : res.error;
+    }
+
+    await writeQueryResultsToConsole(
+      res,
+      querySample,
+      connLabel,
+      executorName,
+      true,
+      dataType,
+    );
+  }
+  return success;
+}
+
+export function getDataQuerySample(
+  dsFile?: DataSourceFiles,
+  selectedType?: DataSourceTypes,
+  type?: ExecutionTypes,
+): any {
+  if (dsFile) {
+    switch (selectedType) {
+      case DataSourceTypes.API:
+        return `GetData - table: ${dsFile.dataSource.api.table}`;
+      case DataSourceTypes.QSQL:
+        return dsFile.dataSource.qsql.query;
+      case DataSourceTypes.UDA:
+        return `Executed UDA: ${dsFile.dataSource.uda?.name}`;
+      case DataSourceTypes.SQL:
+      default:
+        return dsFile.dataSource.sql.query;
+    }
+  } else {
+    const query = getQuery(undefined, type);
+    return query ? query : "No query provided.";
+  }
+}
+
+export async function handleQueryResponse(
+  res: any,
+  connLabel: string,
+  isPython: boolean,
+  executorName: string,
+  isNotebook: boolean,
+  isInsights: boolean,
+): Promise<boolean> {
+  const success = !res.error;
+  if (!success) {
+    notify("Query execution failed.", MessageKind.DEBUG, {
+      logger,
+      params: res.error,
+      telemetry: "Query.Run.Error",
+    });
+  }
+  const data = resultToBase64(res);
+
+  if (ext.isResultsTabVisible) {
+    if (data) {
+      notify("GG Plot displayed", MessageKind.DEBUG, {
+        logger,
+        telemetry: "GGPLOT.Display" + (isPython ? ".Python" : ".q"),
+      });
+      const active = ext.activeTextEditor;
+      if (active) {
+        const plot = <Plot>{
+          charts: [{ data }],
+        };
+        const uri = await addWorkspaceFile(
+          active.document.uri,
+          "plot",
+          ".plot",
+        );
+        if (!workspaceHas(uri)) {
+          await vscode.workspace.openTextDocument(uri);
+          await openWith(
+            uri,
+            ChartEditorProvider.viewType,
+            vscode.ViewColumn.Beside,
+          );
+        }
+        await setUriContent(uri, JSON.stringify(plot));
+      }
+    } else {
+      if (isNotebook) {
+        return success;
+      }
+      await writeQueryResultsToView(
+        res,
+        "QUERY TEM QUE VIR AQUI",
+        connLabel,
+        executorName,
+        isInsights,
+      );
+    }
+    const resultCount =
+      typeof res.values === "string" ? "0" : res.values.length;
+  } else {
+    if (isNotebook) {
+      return success;
+    }
+    await writeQueryResultsToConsole(
+      res,
+      "QUERY TEM QUE VIR AQUI",
+      connLabel,
+      executorName,
+      isInsights,
+    );
+  }
+
+  return success;
 }
 
 export async function prepareToPopulateScratchpad(

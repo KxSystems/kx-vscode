@@ -17,14 +17,12 @@ import { getCellKind } from "./notebookProviders";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
 import { ReplConnection } from "../classes/replConnection";
-import {
-  convertDSDataResponse,
-  getPartialDatasourceFile,
-} from "../commands/dataSourceCommand";
+import { getPartialDatasourceFile } from "../commands/dataSourceCommand";
 import {
   executeDataQuery,
   executeQuery,
   prepareToPopulateScratchpad,
+  selectFileExecutionMethod,
 } from "../commands/executionCommands";
 import { findConnection, getServerForUri } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
@@ -266,13 +264,14 @@ export class KxNotebookController {
           partialDS,
         );
       }
-      const dataQueryRes = await executeDataQuery(
+      const res = await selectFileExecutionMethod(
         conn.connLabel,
         executionType,
+        executorName,
         target,
         partialDS,
       );
-      const res = convertDSDataResponse(dataQueryRes);
+      // const res = convertDSDataResponse(dataQueryRes);
 
       if (res) {
         const success = !res.error;

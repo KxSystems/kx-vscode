@@ -19,6 +19,12 @@ import { Uri, window, workspace } from "vscode";
 import { ext } from "../extensionVariables";
 import { getAutoFocusOutputOnEntrySetting } from "./core";
 import { MessageKind, notify } from "./notifications";
+import {
+  handleScratchpadTableRes,
+  handleWSError,
+  handleWSResults,
+} from "./queryUtils";
+import { GetDataError } from "../models/data";
 import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
 import { CellKind } from "../models/notebook";
@@ -29,6 +35,31 @@ const logger = "execution";
 interface tblHeader {
   label: string;
   count: number;
+}
+
+export function convertDSDataResponse(dataQueryCall: any) {
+  if (dataQueryCall?.error) {
+    return parseError(dataQueryCall.error);
+  } else if (dataQueryCall?.arrayBuffer) {
+    const results = handleWSResults(dataQueryCall.arrayBuffer);
+    return handleScratchpadTableRes(results);
+  } else {
+    return { error: "Datasource Data Query failed" };
+  }
+}
+
+export function parseError(error: GetDataError) {
+  if (error instanceof Object && error.buffer) {
+    return handleWSError(error.buffer);
+  } else {
+    notify(`Datasource error.`, MessageKind.DEBUG, {
+      logger,
+      params: error,
+    });
+    return {
+      error,
+    };
+  }
 }
 
 export function runQFileTerminal(filename?: string): void {
@@ -285,6 +316,14 @@ export function isExecutionPython(type: ExecutionTypes): boolean {
   return typeof name === "string" && name.includes("Python");
 }
 
+export function isExecutionDS(datasourceFile?: DataSourceFiles): boolean {
+  return datasourceFile ? true : false;
+}
+
+export function isExecutionWorkbook(executorName: string): boolean {
+  return executorName.includes(".kdb.q") || executorName.includes(".kdb.py");
+}
+
 export function isExecutionNotebook(type: ExecutionTypes): boolean | undefined {
   const name = ExecutionTypes[type];
   return typeof name === "string" && name.includes("Notebook")
@@ -315,6 +354,7 @@ export function retrieveEditorText(): string | undefined {
 
 export function getQuery(
   querySubject?: DataSourceFiles,
+  execType?: ExecutionTypes,
 ): string | DataSourceFiles | undefined {
   if (querySubject) {
     if (querySubject.dataSource.selectedType === DataSourceTypes.QSQL) {
@@ -325,9 +365,16 @@ export function getQuery(
     }
     return querySubject;
   } else {
-    const editor = ext.activeTextEditor;
-    if (editor) {
-      return editor.document.getText();
+    switch (execType) {
+      case ExecutionTypes.QuerySelection:
+      case ExecutionTypes.PythonQuerySelection:
+        return retrieveEditorSelectionToExecute();
+      case ExecutionTypes.NotebookDataQuerySQL:
+      case ExecutionTypes.NotebookDataQueryPython:
+      case ExecutionTypes.NotebookDataQueryQSQL:
+      case ExecutionTypes.PythonQueryFile:
+      case ExecutionTypes.QueryFile:
+        return retrieveEditorText();
     }
     return;
   }

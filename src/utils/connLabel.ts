@@ -40,7 +40,7 @@ export function clearWorkspaceLabels() {
   getWorkspaceLabels();
   getWorkspaceLabelsConnMap();
 
-  if (ext.connLabelList.length === 0) {
+  if (ext.connLabelList.length === 0 && ext.labelConnMapList.length > 0) {
     notify(
       "Cleaning connection mappings for nonexistent labels.",
       MessageKind.DEBUG,

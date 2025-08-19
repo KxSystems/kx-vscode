@@ -23,6 +23,7 @@ import {
 
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { connectClientCommands } from "./commands/clientCommand";
+import { executeQuery } from "./commands/executionCommands";
 import {
   installTools,
   startLocalProcess,
@@ -125,7 +126,6 @@ import { MessageKind, notify, Runner } from "./utils/notifications";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
 import { addWorkspaceFile, openWith, setUriContent } from "./utils/workspace";
-import { executeQuery } from "./commands/executionCommands";
 
 const logger = "extension";
 
