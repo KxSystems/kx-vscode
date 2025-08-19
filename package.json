@@ -176,7 +176,7 @@
         "kdb.qHomeDirectory": {
           "type": "string",
           "description": "QHOME directory for q runtime",
-          "scope": "machine"
+          "scope": "machine-overridable"
         },
         "kdb.neverShowQInstallAgain": {
           "type": "boolean",
@@ -1174,6 +1174,7 @@
     "@vscode/python-extension": "^1.0.5",
     "@vscode/test-electron": "^2.5.2",
     "c8": "^10.1.3",
+    "dotenv": "^17.2.1",
     "esbuild": "^0.25.5",
     "eslint": "^9.29.0",
     "eslint-plugin-header": "^3.1.1",
@@ -1195,6 +1196,7 @@
     "prettier": "^3.6.0",
     "rimraf": "^6.0.1",
     "sinon": "^21.0.0",
+    "tree-kill": "^1.2.2",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.34.1",
     "vscode-extension-tester": "^8.16.2",
