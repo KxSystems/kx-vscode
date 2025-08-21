@@ -119,4 +119,49 @@ describe("Workspace tests", () => {
       assert.strictEqual(executeCommand.calledOnce, true);
     });
   });
+
+  describe("pickWorkspace", () => {
+    let showQuickPickStub: sinon.SinonStub;
+
+    beforeEach(() => {
+      showQuickPickStub = sinon.stub(vscode.window, "showQuickPick");
+    });
+
+    afterEach(() => {
+      showQuickPickStub.restore();
+    });
+
+    it("should return undefined for no workspace folders", async () => {
+      workspaceMock.value(undefined);
+      const res = await workspaceHelper.pickWorkspace();
+      assert.strictEqual(res, undefined);
+    });
+
+    it("should return undefined for empty workspace folders", async () => {
+      workspaceMock.value([]);
+      const res = await workspaceHelper.pickWorkspace();
+      assert.strictEqual(res, undefined);
+    });
+
+    it("should return the picked folder", async () => {
+      const folder = {};
+      workspaceMock.value([folder]);
+      const res = await workspaceHelper.pickWorkspace();
+      assert.strictEqual(res, folder);
+    });
+
+    it("should return the picked folder", async () => {
+      workspaceMock.value(testWorkspaceFolder);
+      showQuickPickStub.resolves(<any>{ folder: testWorkspaceFolder[1] });
+      const res = await workspaceHelper.pickWorkspace();
+      assert.strictEqual(res, testWorkspaceFolder[1]);
+    });
+
+    it("should return first workspace when cancelled", async () => {
+      workspaceMock.value(testWorkspaceFolder);
+      showQuickPickStub.resolves(undefined);
+      const res = await workspaceHelper.pickWorkspace();
+      assert.strictEqual(res, testWorkspaceFolder[0]);
+    });
+  });
 });
