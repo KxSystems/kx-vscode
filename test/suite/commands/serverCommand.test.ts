@@ -41,6 +41,7 @@ import * as dataSourceUtils from "../../../src/utils/dataSource";
 import { ExecutionConsole } from "../../../src/utils/executionConsole";
 import * as loggers from "../../../src/utils/loggers";
 import * as notifications from "../../../src/utils/notifications";
+import * as queryUtils from "../../../src/utils/queryUtils";
 import * as kdbValidators from "../../../src/validators/kdbValidator";
 
 describe("serverCommand", () => {
@@ -675,7 +676,8 @@ describe("serverCommand", () => {
       queryConsoleErrorStub,
       writeQueryResultsToViewStub,
       writeQueryResultsToConsoleStub,
-      isVisibleStub: sinon.SinonStub;
+      isVisibleStub,
+      formatScratchpadStacktraceStub: sinon.SinonStub;
 
     beforeEach(() => {
       _executionConsoleStub = sinon
@@ -700,6 +702,10 @@ describe("serverCommand", () => {
         "writeQueryResultsToConsole",
       );
       isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
+      formatScratchpadStacktraceStub = sinon.stub(
+        queryUtils,
+        "formatScratchpadStacktrace",
+      );
     });
 
     afterEach(() => {
@@ -769,276 +775,6 @@ describe("serverCommand", () => {
     });
   });
 
-  // describe("runQuery", () => {
-  //   const editor = <vscode.TextEditor>(<unknown>{
-  //     selection: {
-  //       isEmpty: false,
-  //       active: { line: 5 },
-  //       end: sinon.stub().returns({ line: 10 }),
-  //     },
-  //     document: {
-  //       lineAt: sinon.stub().returns({ text: "SELECT * FROM table" }),
-  //       getText: sinon.stub().returns("SELECT * FROM table"),
-  //     },
-  //   });
-
-  //   let getQueryContextStub, executeQueryStub: sinon.SinonStub;
-
-  //   beforeEach(() => {
-  //     ext.activeTextEditor = editor;
-  //     getQueryContextStub = sinon
-  //       .stub(serverCommand, "getQueryContext")
-  //       .returns(".");
-  //     executeQueryStub = sinon
-  //       .stub(serverCommand, "executeQuery")
-  //       .resolves(undefined);
-  //     ext.kdbinsightsNodes.push("insightsserveralias (connected)");
-  //   });
-
-  //   afterEach(() => {
-  //     ext.activeTextEditor = undefined;
-  //     getQueryContextStub.restore();
-  //     executeQueryStub.restore();
-  //     ext.kdbinsightsNodes.pop();
-  //   });
-
-  //   it("runQuery with undefined editor ", async () => {
-  //     ext.activeTextEditor = undefined;
-  //     const result = await serverCommand.runQuery(
-  //       ExecutionTypes.PythonQueryFile,
-  //       "",
-  //       "",
-  //       false,
-  //     );
-  //     assert.equal(result, false);
-  //   });
-
-  //   it("runQuery with QuerySelection", async () => {
-  //     ext.connectionNode = undefined;
-  //     const result = await serverCommand.runQuery(
-  //       ExecutionTypes.QuerySelection,
-  //       "",
-  //       "",
-  //       false,
-  //     );
-  //     assert.equal(result, undefined);
-  //   });
-
-  //   it("runQuery with PythonQueryFile not connected to inisghts node", async () => {
-  //     ext.connectionNode = undefined;
-  //     const result = await serverCommand.runQuery(
-  //       ExecutionTypes.PythonQuerySelection,
-  //       "",
-  //       "",
-  //       false,
-  //     );
-  //     assert.equal(result, undefined);
-  //   });
-
-  //   it("runQuery with PythonQueryFile connected to inisghts node", async () => {
-  //     ext.connectionNode = insightsNode;
-  //     const result = await serverCommand.runQuery(
-  //       ExecutionTypes.PythonQuerySelection,
-  //       "",
-  //       "",
-  //       false,
-  //     );
-  //     assert.equal(result, undefined);
-  //   });
-
-  //   it("runQuery with QueryFile", async () => {
-  //     ext.connectionNode = undefined;
-  //     const result = await serverCommand.runQuery(
-  //       ExecutionTypes.QueryFile,
-  //       "",
-  //       "",
-  //       false,
-  //     );
-  //     assert.equal(result, undefined);
-  //   });
-
-  //   it("runQuery with ReRunQuery", async () => {
-  //     ext.connectionNode = undefined;
-  //     const result = await serverCommand.runQuery(
-  //       ExecutionTypes.ReRunQuery,
-  //       "",
-  //       "",
-  //       false,
-  //       "rerun query",
-  //     );
-  //     assert.equal(result, undefined);
-  //   });
-
-  //   it("runQuery with PythonQueryFile", async () => {
-  //     ext.connectionNode = undefined;
-  //     const result = await serverCommand.runQuery(
-  //       ExecutionTypes.PythonQueryFile,
-  //       "",
-  //       "",
-  //       false,
-  //     );
-  //     assert.equal(result, undefined);
-  //   });
-
-  //   it("runQuery with PythonQueryFile", async () => {
-  //     ext.connectionNode = insightsNode;
-  //     const result = await serverCommand.runQuery(
-  //       ExecutionTypes.PythonQueryFile,
-  //       "",
-  //       "",
-  //       false,
-  //     );
-  //     assert.equal(result, undefined);
-  //   });
-  // });
-
-  // describe("executeQuery", () => {
-  //   let isVisibleStub,
-  //     executeQueryStub,
-  //     writeResultsViewStub,
-  //     writeResultsConsoleStub,
-  //     writeScratchpadResultStub: sinon.SinonStub;
-  //   const connMangService = new ConnectionManagementService();
-  //   const insightsConn = new InsightsConnection(
-  //     insightsNode.label,
-  //     insightsNode,
-  //   );
-  //   const localConn = new LocalConnection("localhost:5001", "server1", []);
-
-  //   beforeEach(() => {
-  //     isVisibleStub = sinon.stub(ext.resultsViewProvider, "isVisible");
-  //     executeQueryStub = sinon.stub(connMangService, "executeQuery");
-  //     writeResultsViewStub = sinon.stub(
-  //       serverCommand,
-  //       "writeQueryResultsToView",
-  //     );
-  //     writeResultsConsoleStub = sinon.stub(
-  //       serverCommand,
-  //       "writeQueryResultsToConsole",
-  //     );
-  //     writeScratchpadResultStub = sinon.stub(
-  //       serverCommand,
-  //       "writeScratchpadResult",
-  //     );
-  //   });
-
-  //   afterEach(() => {
-  //     ext.activeConnection = undefined;
-  //     ext.connectedConnectionList.length = 0;
-  //     ext.connectedContextStrings.length = 0;
-  //     sinon.restore();
-  //   });
-
-  //   it("should fail if connLabel is empty and activeConnection is undefined", async () => {
-  //     serverCommand.executeQuery(
-  //       "SELECT * FROM table",
-  //       "",
-  //       "testFile.kdb.q",
-  //       ".",
-  //       true,
-  //       true,
-  //     );
-  //     sinon.assert.notCalled(writeResultsConsoleStub);
-  //     sinon.assert.notCalled(writeResultsViewStub);
-  //     sinon.assert.notCalled(writeScratchpadResultStub);
-  //   });
-
-  //   it("should proceed if connLabel is empty and activeConnection is not undefined", async () => {
-  //     ext.activeConnection = localConn;
-  //     ext.connectedConnectionList.push(localConn);
-  //     ext.connectedContextStrings.push(localConn.connLabel);
-  //     isVisibleStub.returns(true);
-  //     executeQueryStub.resolves({ data: "data" });
-  //     serverCommand.executeQuery(
-  //       "SELECT * FROM table",
-  //       "",
-  //       "testFile.kdb.q",
-  //       ".",
-  //       true,
-  //       true,
-  //     );
-  //     sinon.assert.notCalled(writeResultsConsoleStub);
-  //     sinon.assert.notCalled(writeScratchpadResultStub);
-  //   });
-  //   it("should fail if the connection selected is not connected", async () => {
-  //     ext.connectedConnectionList.push(localConn);
-  //     isVisibleStub.returns(true);
-  //     executeQueryStub.resolves({ data: "data" });
-  //     serverCommand.executeQuery(
-  //       "SELECT * FROM table",
-  //       localConn.connLabel,
-  //       "testFile.kdb.q",
-  //       ".",
-  //       true,
-  //       true,
-  //     );
-  //     sinon.assert.notCalled(writeResultsConsoleStub);
-  //     sinon.assert.notCalled(writeResultsViewStub);
-  //     sinon.assert.notCalled(writeScratchpadResultStub);
-  //   });
-  //   it("should execute query and write results to view", async () => {
-  //     ext.connectedConnectionList.push(localConn);
-  //     ext.connectedContextStrings.push(localConn.connLabel);
-  //     isVisibleStub.returns(true);
-  //     executeQueryStub.resolves({ data: "data" });
-  //     serverCommand.executeQuery(
-  //       "SELECT * FROM table",
-  //       localConn.connLabel,
-  //       "testFile.kdb.q",
-  //       ".",
-  //       true,
-  //       true,
-  //     );
-  //     sinon.assert.notCalled(writeResultsConsoleStub);
-  //     sinon.assert.notCalled(writeScratchpadResultStub);
-  //   });
-  //   it("should execute query and write results to console", async () => {
-  //     ext.connectedConnectionList.push(localConn);
-  //     ext.connectedContextStrings.push(localConn.connLabel);
-  //     isVisibleStub.returns(false);
-  //     executeQueryStub.resolves("dummy test");
-  //     serverCommand.executeQuery(
-  //       "SELECT * FROM table",
-  //       localConn.connLabel,
-  //       "testFile.kdb.q",
-  //       ".",
-  //       true,
-  //       true,
-  //     );
-  //     sinon.assert.notCalled(writeResultsViewStub);
-  //     sinon.assert.notCalled(writeScratchpadResultStub);
-  //   });
-  //   it("should execute query and write error to console", async () => {
-  //     ext.connectedConnectionList.push(insightsConn);
-  //     ext.connectedContextStrings.push(insightsConn.connLabel);
-  //     isVisibleStub.returns(true);
-  //     executeQueryStub.resolves("dummy test");
-  //     serverCommand.executeQuery(
-  //       "SELECT * FROM table",
-  //       insightsConn.connLabel,
-  //       "testFile.kdb.q",
-  //       ".",
-  //       true,
-  //       true,
-  //     );
-  //     sinon.assert.notCalled(writeResultsConsoleStub);
-  //   });
-
-  //   it("should get error", async () => {
-  //     ext.activeConnection = localConn;
-  //     ext.connectionNode = kdbNode;
-  //     const res = await serverCommand.executeQuery(
-  //       "",
-  //       "testeConn",
-  //       "testFile.kdb.q",
-  //       ".",
-  //       true,
-  //       true,
-  //     );
-  //     assert.equal(res, undefined);
-  //   });
-  // });
-
   describe("getConextForRerunQuery", function () {
     it("should return correct context for given input", function () {
       assert.equal(serverCommand.getConextForRerunQuery("\\d .foo"), ".foo");
@@ -1062,56 +798,6 @@ describe("serverCommand", () => {
       );
     });
   });
-
-  // describe("rerunQuery", function () {
-  //   let executeQueryStub, runDataSourceStub: sinon.SinonStub;
-
-  //   beforeEach(() => {
-  //     runDataSourceStub = sinon
-  //       .stub(dataSourceCommand, "runDataSource")
-  //       .resolves();
-
-  //     executeQueryStub = sinon.stub(serverCommand, "executeQuery").resolves();
-  //   });
-
-  //   this.afterEach(() => {
-  //     sinon.restore();
-  //   });
-
-  //   it("should execute query for non-datasource query", async function () {
-  //     const rerunQueryElement: QueryHistory = {
-  //       executorName: "test",
-  //       isDatasource: false,
-  //       query: "SELECT * FROM table",
-  //       language: "q",
-  //       time: "",
-  //       success: true,
-  //       connectionName: "",
-  //       connectionType: ServerType.KDB,
-  //     };
-
-  //     serverCommand.rerunQuery(rerunQueryElement);
-  //     sinon.assert.notCalled(runDataSourceStub);
-  //   });
-
-  //   it("should run datasource for datasource query", async function () {
-  //     const ds = createDefaultDataSourceFile();
-  //     const rerunQueryElement: QueryHistory = {
-  //       executorName: "test",
-  //       isDatasource: true,
-  //       datasourceType: DataSourceTypes.QSQL,
-  //       query: ds,
-  //       connectionName: "",
-  //       connectionType: ServerType.INSIGHTS,
-  //       time: "",
-  //       success: false,
-  //     };
-
-  //     await serverCommand.rerunQuery(rerunQueryElement);
-
-  //     sinon.assert.notCalled(executeQueryStub);
-  //   });
-  // });
 
   describe("activeConnection", () => {
     let setActiveConnectionStub,
