@@ -25,7 +25,6 @@ import {
 } from "vscode";
 
 import { ext } from "../extensionVariables";
-import { runDataSource } from "./dataSourceCommand";
 import {
   ExportedConnections,
   InsightDetails,
@@ -34,7 +33,6 @@ import {
   ServerDetails,
   ServerType,
 } from "../models/connectionsModels";
-import { DataSourceFiles } from "../models/dataSource";
 import { QueryHistory } from "../models/queryHistory";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
@@ -867,31 +865,6 @@ export function getConextForRerunQuery(query: string): string {
     context = query ? matches[0][2] : matches[matches.length - 1][2];
   }
   return context;
-}
-
-export function rerunQuery(rerunQueryElement: QueryHistory) {
-  if (
-    !rerunQueryElement.isDatasource &&
-    typeof rerunQueryElement.query === "string"
-  ) {
-    const context = getConextForRerunQuery(rerunQueryElement.query);
-    // executeQuery(
-    //   rerunQueryElement.query,
-    //   rerunQueryElement.connectionName,
-    //   rerunQueryElement.executorName,
-    //   context,
-    //   rerunQueryElement.language !== "q",
-    //   !!rerunQueryElement.isWorkbook,
-    //   !!rerunQueryElement.isFromConnTree,
-    // );
-  } else {
-    const dsFile = rerunQueryElement.query as DataSourceFiles;
-    runDataSource(
-      dsFile,
-      rerunQueryElement.connectionName,
-      rerunQueryElement.executorName,
-    );
-  }
 }
 
 export function copyQuery(queryHistoryElement: QueryHistory) {

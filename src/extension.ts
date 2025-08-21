@@ -25,6 +25,7 @@ import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { connectClientCommands } from "./commands/clientCommand";
 import {
   executeActiveEditorQuery,
+  executeReRunQuery,
   executeSelectViewQuery,
 } from "./commands/executionCommands";
 import {
@@ -51,7 +52,6 @@ import {
   openMeta,
   refreshGetMeta,
   removeConnection,
-  rerunQuery,
   resetScratchpad,
 } from "./commands/serverCommand";
 import { showInstallationDetails } from "./commands/walkthroughCommand";
@@ -597,7 +597,7 @@ function registerQueryHistoryCommands(): CommandRegistration[] {
     {
       command: "kdb.queryHistory.rerun",
       callback: async (viewItem: QueryHistoryTreeItem) => {
-        rerunQuery(viewItem.details);
+        executeReRunQuery(viewItem.details);
       },
     },
     {
