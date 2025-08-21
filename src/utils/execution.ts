@@ -13,11 +13,20 @@
 
 import { env } from "node:process";
 import path from "path";
-import { Uri, window, workspace } from "vscode";
+import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
 import { getAutoFocusOutputOnEntrySetting } from "./core";
 import { MessageKind, notify } from "./notifications";
+import {
+  handleScratchpadTableRes,
+  handleWSError,
+  handleWSResults,
+} from "./queryUtils";
+import { GetDataError } from "../models/data";
+import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
+import { ExecutionTypes } from "../models/execution";
+import { CellKind } from "../models/notebook";
 import { QueryResultType } from "../models/queryResult";
 
 const logger = "execution";
@@ -35,10 +44,10 @@ export function runQFileTerminal(filename?: string): void {
     terminalName = path.parse(filename).base;
     command = `q ${filename}`;
   }
-  window.terminals.forEach((terminal) => {
+  vscode.window.terminals.forEach((terminal) => {
     if (terminal.name === terminalName) terminal.dispose();
   });
-  const terminal = window.createTerminal(terminalName);
+  const terminal = vscode.window.createTerminal(terminalName);
   if (env.QHOME) {
     if (getAutoFocusOutputOnEntrySetting()) {
       terminal.show(true);
@@ -128,17 +137,20 @@ export function convertResultToVector(result: any): any[] {
   return convertArrayInVector(result);
 }
 
-export async function exportToCsv(workspaceUri: Uri): Promise<void> {
+export async function exportToCsv(workspaceUri: vscode.Uri): Promise<void> {
   const timestamp = Date.now();
   const fileName = `results-${timestamp}.csv`;
-  const filePath = Uri.file(path.join(workspaceUri.fsPath, fileName));
+  const filePath = vscode.Uri.file(path.join(workspaceUri.fsPath, fileName));
 
   try {
-    await workspace.fs.writeFile(filePath, Buffer.from(ext.resultPanelCSV));
+    await vscode.workspace.fs.writeFile(
+      filePath,
+      Buffer.from(ext.resultPanelCSV),
+    );
     notify("file located at: " + filePath.fsPath, MessageKind.DEBUG, {
       logger,
     });
-    window.showTextDocument(filePath, { preview: false });
+    vscode.window.showTextDocument(filePath, { preview: false });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     notify(`Failed to write file: ${errorMessage}`, MessageKind.ERROR, {
@@ -244,4 +256,204 @@ export function convertStringToArray(str: string): any[] {
     .filter(
       (obj) => !("Value" in obj && (obj.Value as string).startsWith("-")),
     );
+}
+
+export function isExecutionPython(type: ExecutionTypes): boolean {
+  const name = ExecutionTypes[type];
+  return typeof name === "string" && name.includes("Python");
+}
+
+export function isExecutionNotebook(type: ExecutionTypes): boolean | undefined {
+  const name = ExecutionTypes[type];
+  return typeof name === "string" && name.includes("Notebook")
+    ? true
+    : undefined;
+}
+
+export function getQuery(
+  querySubject?: DataSourceFiles,
+  execType?: ExecutionTypes,
+): string | DataSourceFiles | undefined {
+  if (querySubject) {
+    if (querySubject.dataSource.selectedType === DataSourceTypes.QSQL) {
+      return querySubject.dataSource.qsql.query;
+    }
+    if (querySubject.dataSource.selectedType === DataSourceTypes.SQL) {
+      return querySubject.dataSource.sql.query;
+    }
+    return querySubject;
+  } else {
+    switch (execType) {
+      case ExecutionTypes.QuerySelection:
+      case ExecutionTypes.PythonQuerySelection:
+        return retrieveEditorSelectionToExecute();
+      case ExecutionTypes.NotebookDataQuerySQL:
+      case ExecutionTypes.NotebookDataQueryPython:
+      case ExecutionTypes.NotebookDataQueryQSQL:
+      case ExecutionTypes.PythonQueryFile:
+      case ExecutionTypes.QueryFile:
+        return retrieveEditorText();
+    }
+    return;
+  }
+}
+
+export function retrieveEditorText(): string | undefined {
+  const editor = ext.activeTextEditor;
+  let query: string | undefined;
+  if (editor) {
+    query = editor.document.getText();
+  }
+  return query;
+}
+
+export function retrieveEditorSelectionToExecute(): string | undefined {
+  const editor = ext.activeTextEditor;
+  let query: string | undefined;
+  if (editor) {
+    const selection = editor.selection;
+    query = selection.isEmpty
+      ? editor.document.lineAt(selection.active.line).text
+      : editor.document.getText(selection);
+  }
+  return query;
+}
+
+export function retrieveQueryData(query?: string): string | undefined {
+  return query ? query : retrieveEditorSelectionToExecute();
+}
+
+export function getDSExecutionType(
+  querySubject?: DataSourceFiles,
+): DataSourceTypes {
+  if (querySubject) {
+    return querySubject.dataSource.selectedType;
+  } else {
+    return DataSourceTypes.QSQL;
+  }
+}
+
+export function defineNotepadExecutionType(
+  cell: CellKind,
+  target?: string,
+  variable?: string,
+): ExecutionTypes {
+  if (variable) {
+    return cell === CellKind.PYTHON
+      ? ExecutionTypes.PopulateScratchpadPython
+      : ExecutionTypes.PopulateScratchpad;
+  }
+
+  switch (cell) {
+    case CellKind.SQL:
+      return ExecutionTypes.NotebookDataQuerySQL;
+
+    case CellKind.PYTHON:
+      return target
+        ? ExecutionTypes.NotebookDataQueryPython
+        : ExecutionTypes.NotebookQueryPython;
+
+    default:
+      return target
+        ? ExecutionTypes.NotebookDataQueryQSQL
+        : ExecutionTypes.NotebookQueryQSQL;
+  }
+}
+
+export function convertDSDataResponse(dataQueryCall: any) {
+  if (dataQueryCall?.error) {
+    return parseError(dataQueryCall.error);
+  } else if (dataQueryCall?.arrayBuffer) {
+    const results = handleWSResults(dataQueryCall.arrayBuffer);
+    return handleScratchpadTableRes(results);
+  } else {
+    return { error: "Data Query failed" };
+  }
+}
+
+export function parseError(error: GetDataError) {
+  if (error instanceof Object && error.buffer) {
+    return handleWSError(error.buffer);
+  } else {
+    notify(`Datasource error.`, MessageKind.DEBUG, {
+      logger,
+      params: error,
+    });
+    return {
+      error,
+    };
+  }
+}
+
+export function getExecutionQueryContext(): string {
+  let context = ".";
+  const editor = ext.activeTextEditor;
+
+  if (editor) {
+    const selection = editor.selection;
+    const lineNum = selection.end.line;
+    const fullText = typeof lineNum !== "number";
+    const document = editor.document;
+    let text;
+
+    if (fullText) {
+      text = editor.document.getText();
+    } else {
+      const line = document.lineAt(lineNum);
+      text = editor.document.getText(
+        new vscode.Range(
+          new vscode.Position(0, 0),
+          new vscode.Position(lineNum, line.range.end.character),
+        ),
+      );
+    }
+
+    const pattern = /^(system\s*"d|\\d)\s+([^\s"]+)/gm;
+
+    const matches = [...text.matchAll(pattern)];
+    if (matches.length) {
+      context = fullText ? matches[0][2] : matches[matches.length - 1][2];
+    }
+  }
+
+  return context;
+}
+
+export function getEditorExecutionType(
+  isPython: boolean,
+  target?: string,
+): ExecutionTypes {
+  if (isPython) {
+    if (!target || target === "scratchpad") {
+      return ExecutionTypes.PythonQueryFile;
+    }
+    return ExecutionTypes.PythonDataQueryFile;
+  }
+  if (!target || target === "scratchpad") {
+    return ExecutionTypes.QueryFile;
+  }
+  return ExecutionTypes.DataQueryFile;
+}
+
+export function getDataTypeForEditor(executorName: string): DataSourceTypes {
+  if (executorName.endsWith(".q") || executorName.endsWith(".py")) {
+    return DataSourceTypes.QSQL;
+  }
+  return DataSourceTypes.SQL;
+}
+
+export function retrieveEditorFileType(executorName: string): string {
+  if (executorName.endsWith(".kxnb")) {
+    return "NOTEBOOK";
+  }
+  if (executorName.endsWith(".kdb.json")) {
+    return "DATASOURCE";
+  }
+  if (executorName.endsWith(".plot")) {
+    return "GGPLOT";
+  }
+  if (executorName.endsWith(".kdb.q") || executorName.endsWith(".kdb.py")) {
+    return "WORKBOOK";
+  }
+  return "SCRATCHPAD";
 }

@@ -38,6 +38,7 @@ import {
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
 import { resetScratchpadStarted, sanitizeQuery } from "../utils/queryUtils";
+import { generateScratchpadQueryReqBody } from "../utils/requestBody";
 
 const logger = "connectionManagerService";
 
@@ -98,6 +99,11 @@ export class ConnectionManagementService {
 
   public isKdbConnection(connection: KdbNode | InsightsNode): boolean {
     return connection instanceof KdbNode;
+  }
+
+  public isInsightsConnection(connLabel: string): boolean {
+    const connection = this.retrieveConnectedConnection(connLabel);
+    return connection instanceof InsightsConnection;
   }
 
   public isConnected(connLabel: string): boolean {
@@ -338,9 +344,10 @@ export class ConnectionManagementService {
     command: string,
     connLabel?: string,
     context?: string,
-    stringify?: boolean,
     isPython?: boolean,
+    isNotebook?: boolean,
   ): Promise<any> {
+    const isTableView = isNotebook ? true : ext.isResultsTabVisible;
     let selectedConn;
     if (connLabel) {
       selectedConn = this.retrieveConnectedConnection(connLabel);
@@ -358,16 +365,17 @@ export class ConnectionManagementService {
       return await selectedConn.executeQuery(
         command,
         context,
-        stringify,
+        !isTableView,
         isPython,
       );
     } else {
-      return await selectedConn.getScratchpadQuery(
+      const body = generateScratchpadQueryReqBody(
         command,
         context,
         isPython,
-        !stringify,
+        isNotebook,
       );
+      return await selectedConn.getScratchpadQuery(body, isPython, isTableView);
     }
   }
 

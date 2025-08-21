@@ -24,6 +24,10 @@ import {
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { connectClientCommands } from "./commands/clientCommand";
 import {
+  executeActiveEditorQuery,
+  executeSelectViewQuery,
+} from "./commands/executionCommands";
+import {
   installTools,
   startLocalProcess,
   stopLocalProcess,
@@ -42,7 +46,6 @@ import {
   editInsightsConnection,
   editKdbConnection,
   enableTLS,
-  executeQuery,
   exportConnections,
   importConnections,
   openMeta,
@@ -60,7 +63,6 @@ import {
   pickConnection,
   pickTarget,
   resetScratchpadFromEditor,
-  runActiveEditor,
   setServerForUri,
   startRepl,
 } from "./commands/workspaceCommand";
@@ -505,7 +507,7 @@ function registerScratchpadCommands(): CommandRegistration[] {
     {
       command: "kdb.scratchpad.run",
       callback: async () => {
-        await runActiveEditor();
+        await executeActiveEditorQuery();
       },
     },
     {
@@ -543,13 +545,13 @@ function registerScratchpadCommands(): CommandRegistration[] {
     {
       command: "kdb.scratchpad.python.run",
       callback: async () => {
-        await runActiveEditor(ExecutionTypes.PythonQuerySelection);
+        await executeActiveEditorQuery(ExecutionTypes.PythonQuerySelection);
       },
     },
     {
       command: "kdb.scratchpad.python.run.file",
       callback: async () => {
-        await runActiveEditor(ExecutionTypes.PythonQueryFile);
+        await executeActiveEditorQuery(ExecutionTypes.PythonQueryFile);
       },
     },
     {
@@ -707,23 +709,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
     {
       command: "kdb.connections.content.selectView",
       callback: async (viewItem) => {
-        const connLabel = viewItem.connLabel;
-        if (connLabel) {
-          const executorName = viewItem.coreIcon.substring(2);
-          executeQuery(
-            viewItem.label,
-            connLabel,
-            executorName,
-            "",
-            false,
-            false,
-            true,
-          );
-        } else {
-          notify("Connection label not found", MessageKind.ERROR, {
-            logger,
-          });
-        }
+        executeSelectViewQuery(viewItem);
       },
     },
     {
@@ -886,13 +872,13 @@ function registerExecuteCommands(): CommandRegistration[] {
     {
       command: "kdb.execute.selectedQuery",
       callback: async () => {
-        await runActiveEditor(ExecutionTypes.QuerySelection);
+        await executeActiveEditorQuery(ExecutionTypes.QuerySelection);
       },
     },
     {
       command: "kdb.execute.fileQuery",
       callback: async () => {
-        await runActiveEditor(ExecutionTypes.QueryFile);
+        await executeActiveEditorQuery(ExecutionTypes.QueryFile);
       },
     },
     {
@@ -997,7 +983,7 @@ function registerFileCommands(): CommandRegistration[] {
     {
       command: "kdb.file.populateScratchpad",
       callback: async () => {
-        await runActiveEditor(ExecutionTypes.PopulateScratchpad);
+        await executeActiveEditorQuery(ExecutionTypes.PopulateScratchpad);
       },
     },
   ];

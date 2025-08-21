@@ -25,11 +25,18 @@ import {
 import { LanguageClient } from "vscode-languageclient/node";
 
 import { ext } from "../extensionVariables";
-import { runActiveEditor } from "./workspaceCommand";
+import { executeActiveEditorQuery } from "./executionCommands";
+import { getTargetForUri } from "./workspaceCommand";
 import { ExecutionTypes } from "../models/execution";
+import { getBasename } from "../utils/core";
 
 async function executeBlock(client: LanguageClient) {
   if (ext.activeTextEditor) {
+    const isPython = getBasename(ext.activeTextEditor.document.uri).endsWith(
+      ".py",
+    );
+    const target = getTargetForUri(ext.activeTextEditor.document.uri);
+    const isDataQuery = target && target !== "scratchpad";
     const range = await client.sendRequest<Range>("kdb.qls.expressionRange", {
       textDocument: { uri: `${ext.activeTextEditor.document.uri}` },
       position: ext.activeTextEditor.selection.active,
@@ -41,7 +48,18 @@ async function executeBlock(client: LanguageClient) {
         range.end.line,
         range.end.character,
       );
-      await runActiveEditor(ExecutionTypes.QuerySelection);
+
+      const executionTypes = {
+        python_data: ExecutionTypes.PythonDataQuerySelection,
+        python_query: ExecutionTypes.PythonQuerySelection,
+        qsql_data: ExecutionTypes.DataQuerySelection,
+        qsql_query: ExecutionTypes.QuerySelection,
+      };
+
+      const key = `${isPython ? "python" : "qsql"}_${isDataQuery ? "data" : "query"}`;
+      const executionType = executionTypes[key as keyof typeof executionTypes];
+
+      await executeActiveEditorQuery(executionType);
     }
   }
 }

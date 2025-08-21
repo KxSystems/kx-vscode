@@ -23,10 +23,16 @@ import {
   InsightsEndpoints,
 } from "../models/config";
 import { GetDataObjectPayload } from "../models/data";
-import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
+import { DataSourceTypes } from "../models/dataSource";
 import { JwtUser } from "../models/jwt_user";
 import { MetaInfoType, MetaObject, MetaObjectPayload } from "../models/meta";
 import { StructuredTextResults } from "../models/queryResult";
+import {
+  ServicegatewayQSQLReqBody,
+  ServicegatewaySQLReqBody,
+  ServicegatewayAPIReqBody,
+  ServicegatewayUDAReqBody,
+} from "../models/requestBody";
 import { ScratchpadRequestBody } from "../models/scratchpad";
 import { UDARequestBody } from "../models/uda";
 import {
@@ -40,11 +46,9 @@ import {
   invalidUsernameJWT,
   tokenUndefinedError,
 } from "../utils/core";
-import { convertTimeToTimestamp } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
 import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
 import { normalizeAssemblyTarget } from "../utils/shared";
-import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 
 const logger = "insightsConnection";
 
@@ -524,68 +528,31 @@ export class InsightsConnection {
 
   public async importScratchpad(
     variableName: string,
-    params: DataSourceFiles,
+    body: any,
+    type: string,
     silent?: boolean,
   ): Promise<void> {
-    let dsTypeString = "";
     if (this.connected && this.connEndpoints) {
       let coreUrl: string;
-      const body: any = {
-        output: variableName,
-        isTableView: false,
-      };
-      switch (params.dataSource.selectedType) {
-        case DataSourceTypes.API: {
-          body.params = {
-            table: params.dataSource.api.table,
-            startTS: convertTimeToTimestamp(params.dataSource.api.startTS),
-            endTS: convertTimeToTimestamp(params.dataSource.api.endTS),
-          };
+      switch (type) {
+        case DataSourceTypes.API:
           coreUrl = this.connEndpoints.scratchpad.import;
-          dsTypeString = "API";
           break;
-        }
-        case DataSourceTypes.SQL: {
-          body.params = { query: params.dataSource.sql.query };
+        case DataSourceTypes.SQL:
           coreUrl = this.connEndpoints.scratchpad.importSql;
-          dsTypeString = "SQL";
           break;
-        }
-        case DataSourceTypes.QSQL: {
-          body.params = this.generateQSqlBody(
-            params.dataSource.qsql.query,
-            params.dataSource.qsql.selectedTarget,
-            this.insightsVersion,
-          );
-
-          coreUrl = this.connEndpoints.scratchpad.importQsql;
-          dsTypeString = "QSQL";
-          break;
-        }
-        case DataSourceTypes.UDA: {
-          const uda = params.dataSource.uda;
-          const udaReqBody = await retrieveUDAtoCreateReqBody(uda, this);
-
-          if (udaReqBody.error) {
-            notify("Unable to create UDA request body.", MessageKind.ERROR, {
-              logger,
-              params: udaReqBody.error,
-            });
-            return;
-          }
-          body.params = udaReqBody.params;
-          body.parameterTypes = udaReqBody.parameterTypes;
-          body.language = udaReqBody.language;
-          body.name = udaReqBody.name;
-          body.returnFormat = udaReqBody.returnFormat;
-          body.sampleFn = udaReqBody.sampleFn;
-          body.sampleSize = udaReqBody.sampleSize;
-
+        case DataSourceTypes.UDA:
           coreUrl = this.connEndpoints.scratchpad.importUDA;
           break;
-        }
+        case DataSourceTypes.QSQL:
         default:
+          coreUrl = this.connEndpoints.scratchpad.importQsql;
           break;
+      }
+
+      const qePrefix = this.apiConfig?.queryEnvironmentsEnabled ? "-qe" : "";
+      if ("scope" in body.params) {
+        body.params.scope.assembly = body.params.scope.assembly + qePrefix;
       }
 
       const scratchpadURL = new url.URL(coreUrl!, this.node.details.server);
@@ -614,8 +581,7 @@ export class InsightsConnection {
             {
               logger,
               params: { status: response.status },
-              telemetry:
-                "Datasource." + dsTypeString + ".Scratchpad.Populated.Errored",
+              telemetry: "Scratchpad." + type + ".Populated.Errored",
             },
           );
         } else {
@@ -625,7 +591,7 @@ export class InsightsConnection {
             {
               logger,
               params: { status: response.status },
-              telemetry: "Datasource." + dsTypeString + ".Scratchpad.Populated",
+              telemetry: "Scratchpad." + type + ".Populated",
             },
           );
         }
@@ -716,103 +682,6 @@ export class InsightsConnection {
     return undefined;
   }
 
-  public async getScratchpadQuery(
-    query: string,
-    context?: string,
-    isPython?: boolean,
-    isTableView?: boolean,
-  ): Promise<any | undefined> {
-    if (this.connected && this.connEndpoints) {
-      if (isTableView === undefined) {
-        isTableView = ext.isResultsTabVisible;
-      }
-      const scratchpadURL = new url.URL(
-        this.connEndpoints.scratchpad.scratchpad,
-        this.node.details.server,
-      );
-      const body: ScratchpadRequestBody = {
-        expression: query,
-        language: !isPython ? "q" : "python",
-        context: context || ".",
-        sampleFn: "first",
-        sampleSize: 10000,
-      };
-
-      if (this.insightsVersion) {
-        /* TODO: Workaround for Python structuredText bug */
-        if (
-          !isPython &&
-          isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
-        ) {
-          body.returnFormat = isTableView ? "structuredText" : "text";
-        } else {
-          body.isTableView = isTableView;
-        }
-      }
-
-      const options = await this.getOptions(
-        true,
-        customHeadersJson,
-        "POST",
-        scratchpadURL.toString(),
-        body,
-      );
-
-      if (options === undefined) {
-        return;
-      }
-
-      notify("REST", MessageKind.DEBUG, {
-        logger,
-        params: { url: options.url },
-      });
-
-      return await axios(options).then((response: any) => {
-        if (response.data.error) {
-          return response.data;
-        } else if (query === "") {
-          notify(
-            `Scratchpad created for connection: ${this.connLabel}.`,
-            MessageKind.DEBUG,
-            { logger },
-          );
-        } else {
-          notify(`Status: ${response.status}`, MessageKind.DEBUG, {
-            logger,
-          });
-          if (!response.data.error) {
-            if (isTableView) {
-              if (
-                /* TODO: Workaround for Python structuredText bug */
-                !isPython &&
-                this.insightsVersion &&
-                isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
-              ) {
-                response.data = JSON.parse(
-                  response.data.data,
-                ) as StructuredTextResults;
-              } else {
-                const buffer = new Uint8Array(
-                  response.data.data.map((x: string) => parseInt(x, 16)),
-                ).buffer;
-
-                response.data.data = handleWSResults(buffer, isTableView);
-                response.data.data = handleScratchpadTableRes(
-                  response.data.data,
-                );
-              }
-            }
-            return response.data;
-          }
-          return response.data;
-        }
-      });
-    } else {
-      this.noConnectionOrEndpoints();
-    }
-    return undefined;
-  }
-
   public async resetScratchpad(): Promise<boolean | undefined> {
     if (this.connected && this.connEndpoints) {
       const scratchpadURL = new url.URL(
@@ -857,6 +726,158 @@ export class InsightsConnection {
       this.noConnectionOrEndpoints();
       return false;
     }
+  }
+
+  public async getDataQuery(
+    type: DataSourceTypes,
+    body:
+      | ServicegatewayQSQLReqBody
+      | ServicegatewaySQLReqBody
+      | ServicegatewayAPIReqBody
+      | ServicegatewayUDAReqBody,
+    udaName: string,
+  ): Promise<GetDataObjectPayload | undefined> {
+    if (this.connected) {
+      const qePrefix = this.apiConfig?.queryEnvironmentsEnabled ? "-qe" : "";
+      if ("scope" in body) {
+        body.scope.assembly = body.scope.assembly + qePrefix;
+      }
+      const requestUrl = this.generateDatasourceEndpoints(type, udaName);
+      const options = await this.getOptions(
+        false,
+        customHeadersOctet,
+        "POST",
+        requestUrl,
+        body,
+      );
+
+      if (!options) {
+        return undefined;
+      }
+      options.responseType = "arraybuffer";
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url },
+      });
+
+      return await axios(options)
+        .then((response: any) => {
+          notify(
+            `Datasource execution status: ${response.status}.`,
+            MessageKind.DEBUG,
+            { logger },
+          );
+          if (isCompressed(response.data)) {
+            response.data = uncompress(response.data);
+          }
+          return {
+            error: "",
+            arrayBuffer: response.data.buffer
+              ? response.data.buffer
+              : response.data,
+          };
+        })
+        .catch((error: any) => {
+          notify(
+            `Datasource execution status: ${error.response.status}.`,
+            MessageKind.DEBUG,
+            { logger, params: error },
+          );
+          return {
+            error: { buffer: error.response.data },
+            arrayBuffer: undefined,
+          };
+        });
+    }
+  }
+
+  public async getScratchpadQuery(
+    body: ScratchpadRequestBody,
+    isPython?: boolean,
+    isTableView?: boolean,
+  ): Promise<any | undefined> {
+    if (this.connected && this.connEndpoints) {
+      if (isTableView === undefined) {
+        isTableView = ext.isResultsTabVisible;
+      }
+      const scratchpadURL = new url.URL(
+        this.connEndpoints.scratchpad.scratchpad,
+        this.node.details.server,
+      );
+
+      if (this.insightsVersion) {
+        /* TODO: Workaround for Python structuredText bug */
+        if (
+          !isPython &&
+          isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
+        ) {
+          body.returnFormat = isTableView ? "structuredText" : "text";
+        } else {
+          body.isTableView = isTableView;
+        }
+      }
+
+      const options = await this.getOptions(
+        true,
+        customHeadersJson,
+        "POST",
+        scratchpadURL.toString(),
+        body,
+      );
+
+      if (options === undefined) {
+        return;
+      }
+
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url },
+      });
+
+      return await axios(options).then((response: any) => {
+        if (response.data.error) {
+          return response.data;
+        } else if (body.expression === "") {
+          notify(
+            `Scratchpad created for connection: ${this.connLabel}.`,
+            MessageKind.DEBUG,
+            { logger },
+          );
+        } else {
+          notify(`Status: ${response.status}`, MessageKind.DEBUG, {
+            logger,
+          });
+          if (!response.data.error) {
+            if (isTableView) {
+              if (
+                /* TODO: Workaround for Python structuredText bug */
+                !isPython &&
+                this.insightsVersion &&
+                isBaseVersionGreaterOrEqual(this.insightsVersion, 1.12)
+              ) {
+                response.data = JSON.parse(
+                  response.data.data,
+                ) as StructuredTextResults;
+              } else {
+                const buffer = new Uint8Array(
+                  response.data.data.map((x: string) => parseInt(x, 16)),
+                ).buffer;
+
+                response.data.data = handleWSResults(buffer, isTableView);
+                response.data.data = handleScratchpadTableRes(
+                  response.data.data,
+                );
+              }
+            }
+            return response.data;
+          }
+          return response.data;
+        }
+      });
+    } else {
+      this.noConnectionOrEndpoints();
+    }
+    return undefined;
   }
 
   public noConnectionOrEndpoints(): void {

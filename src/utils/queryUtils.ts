@@ -398,11 +398,7 @@ export function getConnectionType(type: ServerType): string {
 export function checkIfIsDatasource(
   dataSourceType: string | undefined,
 ): boolean {
-  if (dataSourceType === undefined) {
-    return false;
-  }
-  const validTypes = ["API", "QSQL", "SQL", "UDA"];
-  return validTypes.includes(dataSourceType);
+  return dataSourceType === "DATASOURCE";
 }
 
 export function selectDSType(
@@ -513,4 +509,43 @@ export function needsScratchpad<T>(connLabel: string, target: Promise<T>) {
 
 export function resetScratchpadStarted(connLabel: string) {
   ext.scratchpadStarted.delete(connLabel);
+}
+
+export function getQuerySample(
+  fileContent: DataSourceFiles | string,
+  selectedType?: DataSourceTypes,
+): string {
+  if (typeof fileContent === "string") {
+    return fileContent;
+  }
+  switch (selectedType) {
+    case DataSourceTypes.API:
+      return `GetData - table: ${fileContent.dataSource.api.table}`;
+    case DataSourceTypes.QSQL:
+      return fileContent.dataSource.qsql.query;
+    case DataSourceTypes.UDA:
+      return `Executed UDA: ${fileContent.dataSource.uda?.name}`;
+    case DataSourceTypes.SQL:
+    default:
+      return fileContent.dataSource.sql.query;
+  }
+}
+
+export function addDStoQueryHistory(
+  dataSourceForm: DataSourceFiles,
+  success: boolean,
+  connLabel: string,
+  executrorName: string,
+) {
+  addQueryHistory(
+    dataSourceForm,
+    executrorName,
+    connLabel,
+    ServerType.INSIGHTS,
+    success,
+    false,
+    false,
+    true,
+    dataSourceForm.dataSource.selectedType,
+  );
 }

@@ -17,16 +17,10 @@ import { getCellKind } from "./notebookProviders";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
 import { ReplConnection } from "../classes/replConnection";
-import {
-  getPartialDatasourceFile,
-  populateScratchpad,
-  runDataSource,
-} from "../commands/dataSourceCommand";
-import { executeQuery } from "../commands/serverCommand";
+import { executeNotebookQuery } from "../commands/executionCommands";
 import { findConnection, getServerForUri } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
 import { CellKind } from "../models/notebook";
-import { getBasename } from "../utils/core";
 import { MessageKind, notify } from "../utils/notifications";
 import {
   resultToBase64,
@@ -134,9 +128,8 @@ export class KxNotebookController {
           conn,
         );
 
-        const executor = this.getQueryExecutor(
-          conn,
-          execution,
+        const executor = await executeNotebookQuery(
+          conn.connLabel,
           cell,
           kind,
           target,
@@ -230,40 +223,6 @@ export class KxNotebookController {
     }
 
     return { target, variable };
-  }
-
-  getQueryExecutor(
-    conn: LocalConnection | InsightsConnection,
-    execution: vscode.NotebookCellExecution,
-    cell: vscode.NotebookCell,
-    kind: CellKind,
-    target?: string,
-    variable?: string,
-  ): Promise<any> {
-    const executorName = getBasename(cell.notebook.uri);
-
-    if (target || kind === CellKind.SQL) {
-      const params = getPartialDatasourceFile(
-        cell.document.getText(),
-        target,
-        kind === CellKind.SQL,
-        kind === CellKind.PYTHON,
-      );
-      return variable
-        ? populateScratchpad(params, conn.connLabel, variable, true)
-        : runDataSource(params, conn.connLabel, executorName);
-    } else {
-      return executeQuery(
-        cell.document.getText(),
-        conn.connLabel,
-        executorName,
-        ".",
-        kind === CellKind.PYTHON,
-        false,
-        false,
-        execution.token,
-      );
-    }
   }
 
   replaceOutput(
