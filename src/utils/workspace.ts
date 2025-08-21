@@ -138,3 +138,19 @@ export async function getWorkbookStatistics(
   }
   throw new Error("No workspace has been opened");
 }
+
+export async function pickWorkspace() {
+  const folders = workspace.workspaceFolders;
+  if (!folders || folders.length === 0) return undefined;
+  if (folders.length === 1) return folders[0];
+  const picked = await window.showQuickPick(
+    folders.map((folder) => ({
+      folder,
+      label: folder.name,
+      description: folder.uri.path,
+    })),
+    { placeHolder: "Select workspace directory" },
+  );
+  if (!picked) return folders[0];
+  return picked.folder;
+}

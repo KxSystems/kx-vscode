@@ -31,6 +31,7 @@ import {
 } from "../utils/notifications";
 import { normalizeQuery } from "../utils/queryUtils";
 import { errorMessage } from "../utils/shared";
+import { pickWorkspace } from "../utils/workspace";
 
 const logger = "replConnection";
 
@@ -738,8 +739,7 @@ export class ReplConnection {
   static async getOrCreateInstance(resource?: vscode.Uri) {
     const workspace =
       (resource && vscode.workspace.getWorkspaceFolder(resource)) ||
-      (vscode.workspace.workspaceFolders &&
-        vscode.workspace.workspaceFolders[0]);
+      (await pickWorkspace());
 
     const key = workspace?.uri.toString() ?? CONF.DEFAULT;
 
