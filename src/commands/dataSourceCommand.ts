@@ -18,7 +18,7 @@ import { ext } from "../extensionVariables";
 import {
   executeDataSourceQuery,
   handleExecuteDataQueryResults,
-} from "./executionCommands";
+} from "./executionCommand";
 import { LocalConnection } from "../classes/localConnection";
 import { GetDataError } from "../models/data";
 import {

@@ -25,7 +25,7 @@ import {
 import { LanguageClient } from "vscode-languageclient/node";
 
 import { ext } from "../extensionVariables";
-import { executeActiveEditorQuery } from "./executionCommands";
+import { executeActiveEditorQuery } from "./executionCommand";
 import { getTargetForUri } from "./workspaceCommand";
 import { ExecutionTypes } from "../models/execution";
 import { getBasename } from "../utils/core";

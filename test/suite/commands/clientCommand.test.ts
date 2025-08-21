@@ -18,7 +18,7 @@ import { LanguageClient } from "vscode-languageclient/node";
 
 import * as clientCommand from "../../../src/commands/clientCommand";
 import * as dataSourceCommand from "../../../src/commands/dataSourceCommand";
-import * as workspaceCommand from "../../../src/commands/workspaceCommand";
+import * as executionCommand from "../../../src/commands/executionCommand";
 import { ext } from "../../../src/extensionVariables";
 
 describe("clientCommands", () => {
@@ -50,7 +50,7 @@ describe("clientCommands", () => {
       sinon
         .stub(client, "sendRequest")
         .value(async () => new vscode.Range(0, 0, 1, 1));
-      sinon.stub(workspaceCommand, "runActiveEditor").value(() => {});
+      sinon.stub(executionCommand, "executeActiveEditorQuery").value(() => {});
       await executeBlock(client);
       assert.deepEqual(
         ext.activeTextEditor.selection,

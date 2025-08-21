@@ -17,7 +17,7 @@ import { getCellKind } from "./notebookProviders";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
 import { ReplConnection } from "../classes/replConnection";
-import { executeNotebookQuery } from "../commands/executionCommands";
+import { executeNotebookQuery } from "../commands/executionCommand";
 import { findConnection, getServerForUri } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
 import { CellKind } from "../models/notebook";

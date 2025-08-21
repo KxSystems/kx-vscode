@@ -31,7 +31,7 @@ import {
 import { ConnectionManagementService } from "./connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { runDataSource } from "../commands/dataSourceCommand";
-import { prepareToPopulateScratchpad } from "../commands/executionCommands";
+import { prepareToPopulateScratchpad } from "../commands/executionCommand";
 import {
   getConnectionForServer,
   getInsightsServers,

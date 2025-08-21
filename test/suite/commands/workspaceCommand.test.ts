@@ -16,6 +16,7 @@ import * as sinon from "sinon";
 import * as vscode from "vscode";
 
 import { ReplConnection } from "../../../src/classes/replConnection";
+import * as executionCommand from "../../../src/commands/executionCommand";
 import * as serverCommand from "../../../src/commands/serverCommand";
 import * as workspaceCommand from "../../../src/commands/workspaceCommand";
 import { ext } from "../../../src/extensionVariables";
@@ -205,7 +206,7 @@ describe("workspaceCommand", () => {
 
   describe("runActiveEditor", () => {
     it("should run query", async () => {
-      await workspaceCommand.runActiveEditor();
+      await executionCommand.executeActiveEditorQuery();
     });
   });
 

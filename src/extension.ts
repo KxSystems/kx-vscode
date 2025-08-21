@@ -27,7 +27,7 @@ import {
   executeActiveEditorQuery,
   executeReRunQuery,
   executeSelectViewQuery,
-} from "./commands/executionCommands";
+} from "./commands/executionCommand";
 import {
   installTools,
   startLocalProcess,
