@@ -13,16 +13,21 @@
 
 import * as assert from "assert";
 import * as sinon from "sinon";
+import * as vscode from "vscode";
 
 import { ext } from "../../../src/extensionVariables";
 import { MetaObjectPayload } from "../../../src/models/meta";
 import {
-  InvalidParamFieldErrors,
   ParamFieldType,
+  UDA,
   UDAParam,
   UDARequestBody,
 } from "../../../src/models/uda";
+import { ConnectionManagementService } from "../../../src/services/connectionManagerService";
 import * as UDAUtils from "../../../src/utils/uda";
+import { InsightsConnection } from "../../../src/classes/insightsConnection";
+import { InsightsNode, KdbNode } from "../../../src/services/kdbTreeProvider";
+import { LocalConnection } from "../../../src/classes/localConnection";
 
 describe("UDA", () => {
   describe("filterUDAParamsValidTypes", () => {
@@ -737,6 +742,252 @@ describe("UDA", () => {
         new Error(
           "Invalid type for parameter: param6. Expected number or array of numbers.",
         ),
+      );
+    });
+  });
+
+  describe("createUDARequestBody", () => {
+    it("should create UDA request body with correct structure", () => {
+      const name = "testUDA";
+      const params = { param1: "value1", param2: 123 };
+      const parameterTypes = { param1: 10, param2: 1 };
+      const returnFormat = "text";
+
+      const result = UDAUtils.createUDARequestBody(
+        name,
+        params,
+        parameterTypes,
+        returnFormat,
+      );
+
+      const expected: UDARequestBody = {
+        language: "q",
+        name: "testUDA",
+        parameterTypes: { param1: 10, param2: 1 },
+        params: { param1: "value1", param2: 123 },
+        returnFormat: "text",
+        sampleFn: "first",
+        sampleSize: 10000,
+      };
+
+      assert.deepStrictEqual(result, expected);
+    });
+
+    it("should create UDA request body with empty params and parameterTypes", () => {
+      const name = "emptyUDA";
+      const params = {};
+      const parameterTypes = {};
+      const returnFormat = "structuredText";
+
+      const result = UDAUtils.createUDARequestBody(
+        name,
+        params,
+        parameterTypes,
+        returnFormat,
+      );
+
+      const expected: UDARequestBody = {
+        language: "q",
+        name: "emptyUDA",
+        parameterTypes: {},
+        params: {},
+        returnFormat: "structuredText",
+        sampleFn: "first",
+        sampleSize: 10000,
+      };
+
+      assert.deepStrictEqual(result, expected);
+    });
+
+    it("should always set language to 'q', sampleFn to 'first', and sampleSize to 10000", () => {
+      const result = UDAUtils.createUDARequestBody("test", {}, {}, "text");
+
+      assert.strictEqual(result.language, "q");
+      assert.strictEqual(result.sampleFn, "first");
+      assert.strictEqual(result.sampleSize, 10000);
+    });
+  });
+
+  describe("retrieveUDAtoCreateReqBody", () => {
+    let retrieveConnStub,
+      isResultsTabVisibleStub,
+      validateUDAStub,
+      isUDAAvailableStub,
+      processUDAParamsStub: sinon.SinonStub;
+    const connMngService = new ConnectionManagementService();
+    const insights = {
+      testInsight: {
+        alias: "testInsightsAlias",
+        server: "testInsightsName",
+        auth: false,
+      },
+    };
+    const insightNode = new InsightsNode(
+      ["child1"],
+      "testInsightsAlias",
+      insights["testInsight"],
+      vscode.TreeItemCollapsibleState.None,
+    );
+    const localConn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
+    const insightsConn = new InsightsConnection(insightNode.label, insightNode);
+
+    const mockUDA = {
+      name: "testUDA",
+      description: "Test UDA",
+      params: [
+        {
+          name: "param1",
+          type: 10,
+          isReq: true,
+          description: "Test param",
+          value: "test",
+          isVisible: true,
+        },
+      ],
+      return: { type: ["string"], description: "Test return" },
+    };
+
+    beforeEach(() => {
+      retrieveConnStub = sinon.stub(
+        connMngService,
+        "retrieveConnectedConnection",
+      );
+      isResultsTabVisibleStub = sinon.stub(ext, "isResultsTabVisible");
+      validateUDAStub = sinon.stub(UDAUtils, "validateUDA");
+      processUDAParamsStub = sinon.stub(UDAUtils, "processUDAParams");
+      isUDAAvailableStub = sinon.stub(insightsConn, "isUDAAvailable");
+    });
+
+    afterEach(() => {
+      sinon.restore();
+      ext.connectedConnectionList.length = 0;
+    });
+
+    it("should return error when UDA is undefined", async () => {
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        undefined,
+        "testConn",
+      );
+
+      assert.deepStrictEqual(result, { error: "UDA is undefined" });
+    });
+
+    it("should return error when connection is not found", async () => {
+      retrieveConnStub.returns(undefined);
+
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        mockUDA,
+        "testConn",
+      );
+
+      assert.deepStrictEqual(result, {
+        error: "Connection testConn is not valid or not connected.",
+      });
+    });
+
+    it("should return error when connection is not an InsightsConnection", async () => {
+      retrieveConnStub.resolves(localConn);
+
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        mockUDA,
+        localConn.connLabel,
+      );
+
+      assert.deepStrictEqual(result, {
+        error: `Connection ${localConn.connLabel} is not valid or not connected.`,
+      });
+    });
+
+    it("should set returnFormat to 'structuredText' when isResultsTabVisible is true", async () => {
+      isResultsTabVisibleStub.value(true);
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      isUDAAvailableStub.resolves(true);
+      validateUDAStub.resolves(null);
+      processUDAParamsStub.returns({
+        params: { param1: "test" },
+        parameterTypes: { param1: 10 },
+      });
+
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        mockUDA,
+        insightsConn.connLabel,
+      );
+
+      assert.equal(result.returnFormat, "structuredText");
+    });
+
+    it("should set returnFormat to 'text' when isResultsTabVisible is false", async () => {
+      isResultsTabVisibleStub.value(false);
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      isUDAAvailableStub.resolves(true);
+      validateUDAStub.resolves(null);
+      processUDAParamsStub.returns({
+        params: { param1: "test" },
+        parameterTypes: { param1: 10 },
+      });
+
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        mockUDA,
+        insightsConn.connLabel,
+      );
+
+      assert.equal(result.returnFormat, "text");
+    });
+
+    it("should return validation error when UDA validation fails", async () => {
+      isResultsTabVisibleStub.returns(false);
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      isUDAAvailableStub.resolves(false);
+      validateUDAStub.resolves({
+        error: "UDA testUDA is not available in this connection",
+      });
+      processUDAParamsStub.returns({
+        params: { param1: "test" },
+        parameterTypes: { param1: 10 },
+      });
+
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        mockUDA,
+        insightsConn.connLabel,
+      );
+
+      assert.equal(
+        JSON.stringify(result),
+        JSON.stringify({
+          error: "UDA testUDA is not available in this connection",
+        }),
+      );
+    });
+
+    it("should return processUDAParams error when parameter processing fails", async () => {
+      isResultsTabVisibleStub.returns(false);
+      ext.connectedConnectionList.push(insightsConn);
+      retrieveConnStub.resolves(insightsConn);
+      isUDAAvailableStub.resolves(true);
+      validateUDAStub.resolves(null);
+      processUDAParamsStub.returns({
+        params: {},
+        parameterTypes: {},
+        error: {
+          error: `The UDA you have selected cannot be queried because it has required fields with types that are not supported.`,
+        },
+      });
+      const mockUDA2 = mockUDA as UDA;
+      mockUDA2.incompatibleError = "error";
+
+      const result = await UDAUtils.retrieveUDAtoCreateReqBody(
+        mockUDA2,
+        insightsConn.connLabel,
+      );
+
+      assert.equal(
+        JSON.stringify(result),
+        JSON.stringify({
+          error: `The UDA you have selected cannot be queried because it has required fields with types that are not supported.`,
+        }),
       );
     });
   });
