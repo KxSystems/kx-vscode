@@ -87,4 +87,19 @@ describe("dataSource", () => {
       assert.equal(result, false);
     });
   });
+
+  describe("getPartialDatasourceFile", () => {
+    it("should return qsql datatsource", () => {
+      const res = dataSourceUtils.getPartialDatasourceFile("query");
+      assert.strictEqual(res.dataSource.selectedType, "QSQL");
+    });
+    it("should return sql datatsource", () => {
+      const res = dataSourceUtils.getPartialDatasourceFile(
+        "query",
+        "dap",
+        true,
+      );
+      assert.strictEqual(res.dataSource.selectedType, "SQL");
+    });
+  });
 });

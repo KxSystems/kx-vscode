@@ -35,7 +35,6 @@ import {
 import { MessageKind, notify } from "../utils/notifications";
 import {
   addDStoQueryHistory,
-  getQSQLWrapper,
   getQuerySample,
   handleWSError,
 } from "../utils/queryUtils";
@@ -148,25 +147,4 @@ export function parseError(error: GetDataError) {
       error,
     };
   }
-}
-
-export function getPartialDatasourceFile(
-  query: string,
-  selectedTarget?: string,
-  isSql?: boolean,
-  isPython?: boolean,
-) {
-  return isSql
-    ? <DataSourceFiles>{
-        dataSource: {
-          selectedType: "SQL",
-          sql: { query },
-        },
-      }
-    : <DataSourceFiles>{
-        dataSource: {
-          selectedType: "QSQL",
-          qsql: { query: getQSQLWrapper(query, isPython), selectedTarget },
-        },
-      };
 }

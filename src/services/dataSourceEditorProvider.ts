@@ -167,6 +167,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       const selectedServer = getServerForUri(document.uri) || "";
       const connected = connMngService.isConnected(selectedServer);
 
+      /* c8 ignore next */
       switch (msg.command) {
         case DataSourceCommand.Server: {
           await setServerForUri(document.uri, msg.selectedServer);

@@ -20,6 +20,7 @@ import { ext } from "../extensionVariables";
 import { MessageKind, notify } from "./notifications";
 import { DataSourceFiles } from "../models/dataSource";
 import { DataSourcesPanel } from "../panels/datasource";
+import { getQSQLWrapper } from "./queryUtils";
 
 const logger = "dataSource";
 
@@ -156,4 +157,25 @@ export async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
       telemetry: "Datasource.Created",
     });
   }
+}
+
+export function getPartialDatasourceFile(
+  query: string,
+  selectedTarget?: string,
+  isSql?: boolean,
+  isPython?: boolean,
+) {
+  return isSql
+    ? <DataSourceFiles>{
+        dataSource: {
+          selectedType: "SQL",
+          sql: { query },
+        },
+      }
+    : <DataSourceFiles>{
+        dataSource: {
+          selectedType: "QSQL",
+          qsql: { query: getQSQLWrapper(query, isPython), selectedTarget },
+        },
+      };
 }

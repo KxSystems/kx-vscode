@@ -14,7 +14,6 @@
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
-import { getPartialDatasourceFile } from "./dataSourceCommand";
 import {
   writeQueryResultsToConsole,
   writeQueryResultsToView,
@@ -38,6 +37,7 @@ import { ChartEditorProvider } from "../services/chartEditorProvider";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { inputVariable } from "../services/notebookProviders";
 import { getBasename } from "../utils/core";
+import { getPartialDatasourceFile } from "../utils/dataSource";
 import {
   convertDSDataResponse,
   defineNotepadExecutionType,
