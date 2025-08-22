@@ -15,6 +15,7 @@ import * as assert from "assert";
 
 import { QueryResultType } from "../../../src/models/queryResult";
 import * as executionUtils from "../../../src/utils/execution";
+import { ExecutionTypes } from "../../../src/models/execution";
 
 describe("execution", () => {
   it("runQFileTerminal", () => {
@@ -178,6 +179,186 @@ describe("execution", () => {
       ];
       const output = executionUtils.convertStringToArray(input);
       assert.deepStrictEqual(output, expectedOutput);
+    });
+  });
+
+  describe("isExecutionPython", () => {
+    it("should return true for Python execution types", () => {
+      assert.strictEqual(
+        executionUtils.isExecutionPython(
+          ExecutionTypes.NotebookDataQueryPython,
+        ),
+        true,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionPython(ExecutionTypes.NotebookQueryPython),
+        true,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionPython(
+          ExecutionTypes.PopulateScratchpadPython,
+        ),
+        true,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionPython(ExecutionTypes.PythonDataQueryFile),
+        true,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionPython(
+          ExecutionTypes.PythonDataQuerySelection,
+        ),
+        true,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionPython(ExecutionTypes.PythonQueryFile),
+        true,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionPython(ExecutionTypes.PythonQuerySelection),
+        true,
+      );
+    });
+
+    it("should return false for non-Python execution types", () => {
+      assert.strictEqual(
+        executionUtils.isExecutionPython(ExecutionTypes.DataQueryFile),
+        false,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionPython(ExecutionTypes.DataQuerySelection),
+        false,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionPython(ExecutionTypes.NotebookDataQueryQSQL),
+        false,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionPython(ExecutionTypes.NotebookDataQuerySQL),
+        false,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionPython(ExecutionTypes.NotebookQueryQSQL),
+        false,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionPython(ExecutionTypes.PopulateScratchpad),
+        false,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionPython(ExecutionTypes.QueryDatasource),
+        false,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionPython(ExecutionTypes.QueryFile),
+        false,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionPython(ExecutionTypes.QuerySelection),
+        false,
+      );
+    });
+
+    it("should handle invalid execution type gracefully", () => {
+      assert.strictEqual(
+        executionUtils.isExecutionPython(999 as ExecutionTypes),
+        false,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionPython(-1 as ExecutionTypes),
+        false,
+      );
+    });
+  });
+
+  describe("isExecutionNotebook", () => {
+    it("should return true for Notebook execution types", () => {
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(
+          ExecutionTypes.NotebookDataQueryPython,
+        ),
+        true,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(
+          ExecutionTypes.NotebookDataQueryQSQL,
+        ),
+        true,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(ExecutionTypes.NotebookDataQuerySQL),
+        true,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(ExecutionTypes.NotebookQueryPython),
+        true,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(ExecutionTypes.NotebookQueryQSQL),
+        true,
+      );
+    });
+
+    it("should return undefined for non-Notebook execution types", () => {
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(ExecutionTypes.DataQueryFile),
+        undefined,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(ExecutionTypes.DataQuerySelection),
+        undefined,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(ExecutionTypes.PopulateScratchpad),
+        undefined,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(
+          ExecutionTypes.PopulateScratchpadPython,
+        ),
+        undefined,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(ExecutionTypes.PythonDataQueryFile),
+        undefined,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(
+          ExecutionTypes.PythonDataQuerySelection,
+        ),
+        undefined,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(ExecutionTypes.PythonQueryFile),
+        undefined,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(ExecutionTypes.PythonQuerySelection),
+        undefined,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(ExecutionTypes.QueryDatasource),
+        undefined,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(ExecutionTypes.QueryFile),
+        undefined,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(ExecutionTypes.QuerySelection),
+        undefined,
+      );
+    });
+
+    it("should handle invalid execution type gracefully", () => {
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(999 as ExecutionTypes),
+        undefined,
+      );
+      assert.strictEqual(
+        executionUtils.isExecutionNotebook(-1 as ExecutionTypes),
+        undefined,
+      );
     });
   });
 });

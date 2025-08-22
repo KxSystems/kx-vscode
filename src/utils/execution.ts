@@ -294,7 +294,6 @@ export function getQuery(
       case ExecutionTypes.QueryFile:
         return retrieveEditorText();
     }
-    return;
   }
 }
 
