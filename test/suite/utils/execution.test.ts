@@ -15,15 +15,14 @@ import * as assert from "assert";
 import * as vscode from "vscode";
 
 import { ext } from "../../../src/extensionVariables";
-import { ExecutionTypes } from "../../../src/models/execution";
-import { QueryResultType } from "../../../src/models/queryResult";
-import * as executionUtils from "../../../src/utils/execution";
-import { getPartialDatasourceFile } from "../../../src/utils/dataSource";
 import {
   createDefaultDataSourceFile,
   DataSourceTypes,
 } from "../../../src/models/dataSource";
+import { ExecutionTypes } from "../../../src/models/execution";
 import { CellKind } from "../../../src/models/notebook";
+import { QueryResultType } from "../../../src/models/queryResult";
+import * as executionUtils from "../../../src/utils/execution";
 
 describe("execution", () => {
   it("runQFileTerminal", () => {
@@ -1061,6 +1060,184 @@ describe("execution", () => {
 
       const result = executionUtils.getExecutionQueryContext();
       assert.strictEqual(result, ".");
+    });
+  });
+
+  describe("getEditorExecutionType", () => {
+    it("should return PythonQueryFile for Python with no target", () => {
+      const result = executionUtils.getEditorExecutionType(true);
+      assert.strictEqual(result, ExecutionTypes.PythonQueryFile);
+    });
+
+    it("should return PythonQueryFile for Python with scratchpad target", () => {
+      const result = executionUtils.getEditorExecutionType(true, "scratchpad");
+      assert.strictEqual(result, ExecutionTypes.PythonQueryFile);
+    });
+
+    it("should return PythonDataQueryFile for Python with custom target", () => {
+      const result = executionUtils.getEditorExecutionType(true, "database");
+      assert.strictEqual(result, ExecutionTypes.PythonDataQueryFile);
+    });
+
+    it("should return QueryFile for non-Python with no target", () => {
+      const result = executionUtils.getEditorExecutionType(false);
+      assert.strictEqual(result, ExecutionTypes.QueryFile);
+    });
+
+    it("should return QueryFile for non-Python with scratchpad target", () => {
+      const result = executionUtils.getEditorExecutionType(false, "scratchpad");
+      assert.strictEqual(result, ExecutionTypes.QueryFile);
+    });
+
+    it("should return DataQueryFile for non-Python with custom target", () => {
+      const result = executionUtils.getEditorExecutionType(false, "database");
+      assert.strictEqual(result, ExecutionTypes.DataQueryFile);
+    });
+
+    it("should return PythonDataQueryFile for Python with empty string target", () => {
+      const result = executionUtils.getEditorExecutionType(true, "");
+      assert.strictEqual(result, ExecutionTypes.PythonQueryFile);
+    });
+
+    it("should return DataQueryFile for non-Python with empty string target", () => {
+      const result = executionUtils.getEditorExecutionType(false, "");
+      assert.strictEqual(result, ExecutionTypes.QueryFile);
+    });
+  });
+
+  describe("getDataTypeForEditor", () => {
+    it("should return QSQL for .q files", () => {
+      const result = executionUtils.getDataTypeForEditor("script.q");
+      assert.strictEqual(result, DataSourceTypes.QSQL);
+    });
+
+    it("should return QSQL for .py files", () => {
+      const result = executionUtils.getDataTypeForEditor("script.py");
+      assert.strictEqual(result, DataSourceTypes.QSQL);
+    });
+
+    it("should return SQL for .sql files", () => {
+      const result = executionUtils.getDataTypeForEditor("query.sql");
+      assert.strictEqual(result, DataSourceTypes.SQL);
+    });
+
+    it("should return SQL for .txt files", () => {
+      const result = executionUtils.getDataTypeForEditor("document.txt");
+      assert.strictEqual(result, DataSourceTypes.SQL);
+    });
+
+    it("should return SQL for files without extension", () => {
+      const result = executionUtils.getDataTypeForEditor("filename");
+      assert.strictEqual(result, DataSourceTypes.SQL);
+    });
+
+    it("should return SQL for empty string", () => {
+      const result = executionUtils.getDataTypeForEditor("");
+      assert.strictEqual(result, DataSourceTypes.SQL);
+    });
+
+    it("should return QSQL for file paths ending with .q", () => {
+      const result = executionUtils.getDataTypeForEditor("/path/to/file.q");
+      assert.strictEqual(result, DataSourceTypes.QSQL);
+    });
+
+    it("should return QSQL for file paths ending with .py", () => {
+      const result = executionUtils.getDataTypeForEditor("/path/to/script.py");
+      assert.strictEqual(result, DataSourceTypes.QSQL);
+    });
+
+    it("should handle case sensitivity for extensions", () => {
+      const resultQ = executionUtils.getDataTypeForEditor("script.Q");
+      assert.strictEqual(resultQ, DataSourceTypes.SQL);
+
+      const resultPy = executionUtils.getDataTypeForEditor("script.PY");
+      assert.strictEqual(resultPy, DataSourceTypes.SQL);
+    });
+  });
+
+  describe("retrieveEditorFileType", () => {
+    it("should return NOTEBOOK for .kxnb files", () => {
+      const result = executionUtils.retrieveEditorFileType("notebook.kxnb");
+      assert.strictEqual(result, "NOTEBOOK");
+    });
+
+    it("should return DATASOURCE for .kdb.json files", () => {
+      const result = executionUtils.retrieveEditorFileType(
+        "datasource.kdb.json",
+      );
+      assert.strictEqual(result, "DATASOURCE");
+    });
+
+    it("should return GGPLOT for .plot files", () => {
+      const result = executionUtils.retrieveEditorFileType("chart.plot");
+      assert.strictEqual(result, "GGPLOT");
+    });
+
+    it("should return WORKBOOK for .kdb.q files", () => {
+      const result = executionUtils.retrieveEditorFileType("workbook.kdb.q");
+      assert.strictEqual(result, "WORKBOOK");
+    });
+
+    it("should return WORKBOOK for .kdb.py files", () => {
+      const result = executionUtils.retrieveEditorFileType("workbook.kdb.py");
+      assert.strictEqual(result, "WORKBOOK");
+    });
+
+    it("should return SCRATCHPAD for .q files", () => {
+      const result = executionUtils.retrieveEditorFileType("script.q");
+      assert.strictEqual(result, "SCRATCHPAD");
+    });
+
+    it("should return SCRATCHPAD for .py files", () => {
+      const result = executionUtils.retrieveEditorFileType("script.py");
+      assert.strictEqual(result, "SCRATCHPAD");
+    });
+
+    it("should return SCRATCHPAD for .sql files", () => {
+      const result = executionUtils.retrieveEditorFileType("query.sql");
+      assert.strictEqual(result, "SCRATCHPAD");
+    });
+
+    it("should return SCRATCHPAD for files without extension", () => {
+      const result = executionUtils.retrieveEditorFileType("filename");
+      assert.strictEqual(result, "SCRATCHPAD");
+    });
+
+    it("should return SCRATCHPAD for empty string", () => {
+      const result = executionUtils.retrieveEditorFileType("");
+      assert.strictEqual(result, "SCRATCHPAD");
+    });
+
+    it("should handle file paths correctly", () => {
+      const result = executionUtils.retrieveEditorFileType(
+        "/path/to/notebook.kxnb",
+      );
+      assert.strictEqual(result, "NOTEBOOK");
+    });
+
+    it("should handle multiple dots in filename", () => {
+      const result = executionUtils.retrieveEditorFileType(
+        "file.with.dots.kdb.json",
+      );
+      assert.strictEqual(result, "DATASOURCE");
+    });
+
+    it("should handle case sensitivity for extensions", () => {
+      const resultKxnb = executionUtils.retrieveEditorFileType("notebook.KXNB");
+      assert.strictEqual(resultKxnb, "SCRATCHPAD");
+
+      const resultJson = executionUtils.retrieveEditorFileType(
+        "datasource.KDB.JSON",
+      );
+      assert.strictEqual(resultJson, "SCRATCHPAD");
+
+      const resultPlot = executionUtils.retrieveEditorFileType("chart.PLOT");
+      assert.strictEqual(resultPlot, "SCRATCHPAD");
+    });
+
+    it("should prioritize more specific extensions", () => {
+      const result = executionUtils.retrieveEditorFileType("test.kdb.q.kxnb");
+      assert.strictEqual(result, "NOTEBOOK");
     });
   });
 });

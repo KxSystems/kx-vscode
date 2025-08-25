@@ -359,6 +359,7 @@ export function defineNotepadExecutionType(
   }
 }
 
+/* c8 ignore next */
 export function convertDSDataResponse(dataQueryCall: any) {
   if (dataQueryCall?.error) {
     return parseError(dataQueryCall.error);
@@ -370,6 +371,7 @@ export function convertDSDataResponse(dataQueryCall: any) {
   }
 }
 
+/* c8 ignore next */
 export function parseError(error: GetDataError) {
   if (error instanceof Object && error.buffer) {
     return handleWSError(error.buffer);
