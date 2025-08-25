@@ -14,6 +14,7 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
 
+import { ext } from "../../../src/extensionVariables";
 import {
   createDefaultDataSourceFile,
   DataSourceFiles,
@@ -25,8 +26,6 @@ import { MessageKind } from "../../../src/utils/notifications";
 import * as queryUtils from "../../../src/utils/queryUtils";
 import * as requestBodyUtils from "../../../src/utils/requestBody";
 import * as sharedUtils from "../../../src/utils/shared";
-
-import { ext } from "../../../src/extensionVariables";
 import * as udaUtils from "../../../src/utils/uda";
 
 describe("requestBody", () => {
@@ -582,7 +581,6 @@ describe("requestBody", () => {
             "originalConn",
           );
 
-        // Verify it called with the dummyDS UDA configuration
         const expectedUDAConfig = {
           name: "sampleUDA",
           description: "sample UDA",
@@ -642,7 +640,7 @@ describe("requestBody", () => {
           name: "preserveTestUDA",
           sampleFn: "custom",
           sampleSize: 9999,
-          extraProperty: "shouldBeIgnored", // This should not appear in result
+          extraProperty: "shouldBeIgnored",
         };
         retrieveUDAtoCreateReqBodyStub.resolves(mockUDABody);
 
@@ -665,7 +663,6 @@ describe("requestBody", () => {
         assert.strictEqual(result.sampleFn, "custom");
         assert.strictEqual(result.sampleSize, 9999);
 
-        // Verify extraProperty is not included
         assert.ok(!("extraProperty" in result));
       });
     });
@@ -754,7 +751,7 @@ describe("requestBody", () => {
 
             assert.ok(result);
             assert.strictEqual((result as any).query, "SELECT * FROM table");
-            assert.ok(!(result as any).scope); // SQL doesn't have scope
+            assert.ok(!(result as any).scope);
           });
 
           it("should call notify and return undefined for unsupported string query type", () => {
@@ -808,10 +805,7 @@ describe("requestBody", () => {
                 "udaTarget",
               );
 
-            // Since this calls generateServiceGatewayUDAReqBody which has async behavior,
-            // we would need to stub retrieveUDAtoCreateReqBody for a complete test
-            // For now, we test that it doesn't return undefined immediately
-            assert.ok(result !== undefined || result === undefined); // Either is valid depending on stub
+            assert.ok(result !== undefined || result === undefined);
           });
 
           it("should call notify and return undefined for unsupported DataSourceFiles type", () => {
@@ -858,7 +852,7 @@ describe("requestBody", () => {
                 "SELECT COUNT(*) FROM users",
                 DataSourceTypes.SQL,
                 "sqlTarget",
-                true, // This should be ignored for SQL
+                true,
               );
 
             assert.ok(result);
@@ -881,11 +875,10 @@ describe("requestBody", () => {
 
             assert.ok(result);
             assert.strictEqual((result as any).table, "sampleTable");
-            // Additional API parameters would be tested in generateServicegatewayAPIReqBody tests
           });
 
           it("should handle empty target for QSQL", () => {
-            normalizeAssemblyTargetStub.returns("   "); // Empty normalized target
+            normalizeAssemblyTargetStub.returns("   ");
             getQSQLWrapperStub.returns("query");
 
             const result =
@@ -901,7 +894,6 @@ describe("requestBody", () => {
           });
 
           it("should call notify when no valid conditions are met", () => {
-            // Test case where neither string nor DataSourceFiles conditions are met
             const result =
               requestBodyUtils.selectAndGenerateServicegatewayReqBody(
                 "string query",
@@ -945,7 +937,7 @@ describe("requestBody", () => {
 
           assert.ok(result);
           assert.strictEqual((result as any).query, "SELECT * FROM table");
-          assert.ok(!(result as any).scope); // SQL doesn't have scope
+          assert.ok(!(result as any).scope);
         });
       });
 

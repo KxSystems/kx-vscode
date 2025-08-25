@@ -837,7 +837,7 @@ describe("queryUtils", () => {
           },
         },
       };
-      const result = queryUtils.getQuerySample(fileContent); // sem selectedType
+      const result = queryUtils.getQuerySample(fileContent);
 
       assert.strictEqual(result, sqlQuery);
     });
@@ -873,7 +873,6 @@ describe("queryUtils", () => {
           },
         },
       };
-      // Simular um tipo desconhecido forçando um cast
       const unknownType = "UNKNOWN_TYPE" as DataSourceTypes;
       const result = queryUtils.getQuerySample(fileContent, unknownType);
 
@@ -946,7 +945,7 @@ describe("queryUtils", () => {
             labels: [],
           },
           qsql: {
-            query: "", // empty query
+            query: "",
             selectedTarget: "",
           },
           sql: {
