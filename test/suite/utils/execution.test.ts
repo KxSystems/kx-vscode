@@ -12,10 +12,18 @@
  */
 
 import * as assert from "assert";
+import * as vscode from "vscode";
 
+import { ext } from "../../../src/extensionVariables";
 import { ExecutionTypes } from "../../../src/models/execution";
 import { QueryResultType } from "../../../src/models/queryResult";
 import * as executionUtils from "../../../src/utils/execution";
+import { getPartialDatasourceFile } from "../../../src/utils/dataSource";
+import {
+  createDefaultDataSourceFile,
+  DataSourceTypes,
+} from "../../../src/models/dataSource";
+import { CellKind } from "../../../src/models/notebook";
 
 describe("execution", () => {
   it("runQFileTerminal", () => {
@@ -359,6 +367,384 @@ describe("execution", () => {
         executionUtils.isExecutionNotebook(-1 as ExecutionTypes),
         undefined,
       );
+    });
+  });
+
+  describe("getQuery", () => {
+    let dummyDsFiles;
+    beforeEach(() => {
+      dummyDsFiles = createDefaultDataSourceFile();
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: { active: new vscode.Position(0, 0) },
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: () => "",
+        },
+      };
+    });
+
+    afterEach(() => {
+      ext.activeTextEditor = undefined;
+    });
+
+    it("should return QSQL string for QSQL datasource", () => {
+      dummyDsFiles.dataSource.selectedType = DataSourceTypes.QSQL;
+      dummyDsFiles.dataSource.qsql = { query: "select from t" };
+      const result = executionUtils.getQuery(dummyDsFiles);
+      assert.strictEqual(result, "select from t");
+    });
+
+    it("should return SQL string for SQL datasource", () => {
+      dummyDsFiles.dataSource.selectedType = DataSourceTypes.SQL;
+      dummyDsFiles.dataSource.sql = { query: "SELECT * FROM table" };
+      const result = executionUtils.getQuery(dummyDsFiles);
+      assert.strictEqual(result, "SELECT * FROM table");
+    });
+
+    it("should return entire DSFILE if DSFILE is not QSQL or SQL", () => {
+      dummyDsFiles.dataSource.selectedType = DataSourceTypes.API;
+      const result = executionUtils.getQuery(dummyDsFiles);
+      assert.deepStrictEqual(result, dummyDsFiles);
+    });
+
+    it("should return querySelection if execution type is querySelection or PythonQuerySelection", () => {
+      const selectedText = "This is the selected text.";
+      const fullDocument =
+        "This is the selected text. This is the rest of the document.";
+
+      const mockSelection = {
+        active: new vscode.Position(0, 0),
+        start: new vscode.Position(0, 0),
+        end: new vscode.Position(0, 27),
+        isEmpty: false,
+      };
+
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: mockSelection,
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: (range?: vscode.Range | vscode.Selection) => {
+            if (range) {
+              return selectedText;
+            }
+            return fullDocument;
+          },
+        },
+      };
+
+      const result = executionUtils.getQuery(
+        undefined,
+        ExecutionTypes.QuerySelection,
+      );
+      assert.strictEqual(result, selectedText);
+      const resultPython = executionUtils.getQuery(
+        undefined,
+        ExecutionTypes.PythonQuerySelection,
+      );
+      assert.strictEqual(resultPython, selectedText);
+    });
+
+    it("should return the entire document text if there is no selection execution type and no DSFile", () => {
+      const sampleText = "This is a sample document text.";
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: { active: new vscode.Position(0, 0) },
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: () => sampleText,
+        },
+      };
+      let result = executionUtils.getQuery(undefined, ExecutionTypes.QueryFile);
+      assert.strictEqual(result, sampleText);
+
+      result = executionUtils.getQuery(
+        undefined,
+        ExecutionTypes.PythonQueryFile,
+      );
+      assert.strictEqual(result, sampleText);
+
+      result = executionUtils.getQuery(
+        undefined,
+        ExecutionTypes.NotebookDataQuerySQL,
+      );
+      assert.strictEqual(result, sampleText);
+
+      result = executionUtils.getQuery(
+        undefined,
+        ExecutionTypes.NotebookDataQueryQSQL,
+      );
+      assert.strictEqual(result, sampleText);
+
+      result = executionUtils.getQuery(
+        undefined,
+        ExecutionTypes.NotebookDataQueryPython,
+      );
+      assert.strictEqual(result, sampleText);
+    });
+  });
+
+  describe("retrieveEditorText", () => {
+    beforeEach(() => {
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: { active: new vscode.Position(0, 0) },
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: () => "",
+        },
+      };
+    });
+
+    afterEach(() => {
+      ext.activeTextEditor = undefined;
+    });
+
+    it("should return undefined if no active editor", () => {
+      ext.activeTextEditor = undefined;
+      const result = executionUtils.retrieveEditorText();
+      assert.strictEqual(result, undefined);
+    });
+
+    it("should return entire document text if execution type is QueryFile", () => {
+      const sampleText = "This is a sample document text.";
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: { active: new vscode.Position(0, 0) },
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: () => sampleText,
+        },
+      };
+      const result = executionUtils.retrieveEditorText();
+      assert.strictEqual(result, sampleText);
+    });
+  });
+
+  describe("retrieveEditorSelectionToExecute", () => {
+    beforeEach(() => {
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: { active: new vscode.Position(0, 0) },
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: () => "",
+        },
+      };
+    });
+
+    afterEach(() => {
+      ext.activeTextEditor = undefined;
+    });
+
+    it("should return undefined if no active editor", () => {
+      ext.activeTextEditor = undefined;
+      const result = executionUtils.retrieveEditorSelectionToExecute();
+      assert.strictEqual(result, undefined);
+    });
+
+    it("should return selected text if there is a selection", () => {
+      const selectedText = "This is the selected text.";
+      const fullDocument =
+        "This is the selected text. This is the rest of the document.";
+
+      const mockSelection = {
+        active: new vscode.Position(0, 0),
+        start: new vscode.Position(0, 0),
+        end: new vscode.Position(0, 27),
+        isEmpty: false,
+      };
+
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: mockSelection,
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: (range?: vscode.Range | vscode.Selection) => {
+            if (range) {
+              return selectedText;
+            }
+            return fullDocument;
+          },
+        },
+      };
+
+      const result = executionUtils.retrieveEditorSelectionToExecute();
+      assert.strictEqual(result, selectedText);
+    });
+
+    it("should return entire document text if there is no selection", () => {
+      const sampleText = "This is a sample document text.";
+      const lineText = "This is a sample document text.";
+
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: new vscode.Selection(
+          new vscode.Position(0, 0),
+          new vscode.Position(0, 0),
+        ),
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: () => sampleText,
+          lineAt: (line: number) => ({
+            text: lineText,
+            lineNumber: line,
+            range: new vscode.Range(
+              new vscode.Position(line, 0),
+              new vscode.Position(line, lineText.length),
+            ),
+            rangeIncludingLineBreak: new vscode.Range(
+              new vscode.Position(line, 0),
+              new vscode.Position(line + 1, 0),
+            ),
+            firstNonWhitespaceCharacterIndex: 0,
+            isEmptyOrWhitespace: false,
+          }),
+        },
+      };
+
+      const result = executionUtils.retrieveEditorSelectionToExecute();
+      assert.strictEqual(result, lineText);
+    });
+  });
+
+  describe("retrieveQueryData", () => {
+    afterEach(() => {
+      ext.activeTextEditor = undefined;
+    });
+
+    it("should return undefined if no active editor and no query string", () => {
+      ext.activeTextEditor = undefined;
+      const result = executionUtils.retrieveQueryData();
+      assert.strictEqual(result, undefined);
+    });
+
+    it("should return the query string if provided", () => {
+      const queryString = "This is a query string.";
+      const result = executionUtils.retrieveQueryData(queryString);
+      assert.strictEqual(result, queryString);
+    });
+
+    it("should return selection of document if no query string provided", () => {
+      const selectedText = "This is the selected text.";
+      const fullDocument =
+        "This is the selected text. This is the rest of the document.";
+
+      const mockSelection = {
+        active: new vscode.Position(0, 0),
+        start: new vscode.Position(0, 0),
+        end: new vscode.Position(0, 27),
+        isEmpty: false,
+      };
+
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: mockSelection,
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: (range?: vscode.Range | vscode.Selection) => {
+            if (range) {
+              return selectedText;
+            }
+            return fullDocument;
+          },
+        },
+      };
+
+      const result = executionUtils.retrieveQueryData();
+      assert.strictEqual(result, selectedText);
+    });
+  });
+
+  describe("getDSExecutionType", () => {
+    it("should return the selected type from DS file", () => {
+      const dummyDsFiles = createDefaultDataSourceFile();
+      dummyDsFiles.dataSource.selectedType = DataSourceTypes.QSQL;
+      const result = executionUtils.getDSExecutionType(dummyDsFiles);
+      assert.strictEqual(result, DataSourceTypes.QSQL);
+
+      dummyDsFiles.dataSource.selectedType = DataSourceTypes.SQL;
+      const result2 = executionUtils.getDSExecutionType(dummyDsFiles);
+      assert.strictEqual(result2, DataSourceTypes.SQL);
+
+      dummyDsFiles.dataSource.selectedType = DataSourceTypes.API;
+      const result3 = executionUtils.getDSExecutionType(dummyDsFiles);
+      assert.strictEqual(result3, DataSourceTypes.API);
+
+      dummyDsFiles.dataSource.selectedType = DataSourceTypes.UDA;
+      const result4 = executionUtils.getDSExecutionType(dummyDsFiles);
+      assert.strictEqual(result4, DataSourceTypes.UDA);
+    });
+
+    it("should return DataSourceTypes.QSQL if no DS file provided", () => {
+      const result = executionUtils.getDSExecutionType();
+      assert.strictEqual(result, DataSourceTypes.QSQL);
+    });
+  });
+
+  describe("defineNotepadExecutionType", () => {
+    it("should return PopulateScratchpadPython for python cell type with variable", () => {
+      const result = executionUtils.defineNotepadExecutionType(
+        CellKind.PYTHON,
+        undefined,
+        "var",
+      );
+      assert.strictEqual(result, ExecutionTypes.PopulateScratchpadPython);
+    });
+
+    it("should return PopulateScratchpad for q cell type with variable", () => {
+      const result = executionUtils.defineNotepadExecutionType(
+        CellKind.Q,
+        undefined,
+        "var",
+      );
+      assert.strictEqual(result, ExecutionTypes.PopulateScratchpad);
+    });
+
+    it("should return NotebookDataQueryPython for python cell type with no variable and with target", () => {
+      const result = executionUtils.defineNotepadExecutionType(
+        CellKind.PYTHON,
+        "target",
+        undefined,
+      );
+      assert.strictEqual(result, ExecutionTypes.NotebookDataQueryPython);
+    });
+
+    it("should return NotebookQueryPython for python cell type with no variable and no target", () => {
+      const result = executionUtils.defineNotepadExecutionType(
+        CellKind.PYTHON,
+        undefined,
+        undefined,
+      );
+      assert.strictEqual(result, ExecutionTypes.NotebookQueryPython);
+    });
+
+    it("should return NotebookQueryQSQL for q cell type with no variable and no target", () => {
+      const result = executionUtils.defineNotepadExecutionType(
+        CellKind.Q,
+        undefined,
+        undefined,
+      );
+      assert.strictEqual(result, ExecutionTypes.NotebookQueryQSQL);
+    });
+
+    it("should return NotebookDataQueryQSQL for q cell type with no variable and with target", () => {
+      const result = executionUtils.defineNotepadExecutionType(
+        CellKind.Q,
+        "target",
+        undefined,
+      );
+      assert.strictEqual(result, ExecutionTypes.NotebookDataQueryQSQL);
+    });
+
+    it("should return NotebookDataQuerySQL for sql cell type with no variable", () => {
+      const result = executionUtils.defineNotepadExecutionType(
+        CellKind.SQL,
+        undefined,
+        undefined,
+      );
+      assert.strictEqual(result, ExecutionTypes.NotebookDataQuerySQL);
     });
   });
 });
