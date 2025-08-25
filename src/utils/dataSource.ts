@@ -18,9 +18,9 @@ import { workspace, Uri } from "vscode";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { ext } from "../extensionVariables";
 import { MessageKind, notify } from "./notifications";
+import { getQSQLWrapper } from "./queryUtils";
 import { DataSourceFiles } from "../models/dataSource";
 import { DataSourcesPanel } from "../panels/datasource";
-import { getQSQLWrapper } from "./queryUtils";
 
 const logger = "dataSource";
 

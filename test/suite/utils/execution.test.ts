@@ -13,9 +13,9 @@
 
 import * as assert from "assert";
 
+import { ExecutionTypes } from "../../../src/models/execution";
 import { QueryResultType } from "../../../src/models/queryResult";
 import * as executionUtils from "../../../src/utils/execution";
-import { ExecutionTypes } from "../../../src/models/execution";
 
 describe("execution", () => {
   it("runQFileTerminal", () => {

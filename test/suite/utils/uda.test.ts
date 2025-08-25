@@ -15,6 +15,8 @@ import * as assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
+import { InsightsConnection } from "../../../src/classes/insightsConnection";
+import { LocalConnection } from "../../../src/classes/localConnection";
 import { ext } from "../../../src/extensionVariables";
 import { MetaObjectPayload } from "../../../src/models/meta";
 import {
@@ -24,10 +26,8 @@ import {
   UDARequestBody,
 } from "../../../src/models/uda";
 import { ConnectionManagementService } from "../../../src/services/connectionManagerService";
+import { InsightsNode } from "../../../src/services/kdbTreeProvider";
 import * as UDAUtils from "../../../src/utils/uda";
-import { InsightsConnection } from "../../../src/classes/insightsConnection";
-import { InsightsNode, KdbNode } from "../../../src/services/kdbTreeProvider";
-import { LocalConnection } from "../../../src/classes/localConnection";
 
 describe("UDA", () => {
   describe("filterUDAParamsValidTypes", () => {

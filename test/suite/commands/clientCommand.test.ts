@@ -17,7 +17,6 @@ import * as vscode from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 
 import * as clientCommand from "../../../src/commands/clientCommand";
-import * as dataSourceCommand from "../../../src/commands/dataSourceCommand";
 import * as executionCommand from "../../../src/commands/executionCommand";
 import { ext } from "../../../src/extensionVariables";
 
