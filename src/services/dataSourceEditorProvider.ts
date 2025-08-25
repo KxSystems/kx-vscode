@@ -30,16 +30,15 @@ import {
 
 import { ConnectionManagementService } from "./connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
-import {
-  populateScratchpad,
-  runDataSource,
-} from "../commands/dataSourceCommand";
+import { runDataSource } from "../commands/dataSourceCommand";
+import { prepareToPopulateScratchpad } from "../commands/executionCommand";
 import {
   getConnectionForServer,
   getInsightsServers,
   getServerForUri,
   setServerForUri,
 } from "../commands/workspaceCommand";
+import { ExecutionTypes } from "../models/execution";
 import { DataSourceCommand, DataSourceMessage2 } from "../models/messages";
 import { MetaObjectPayload } from "../models/meta";
 import { UDA } from "../models/uda";
@@ -168,6 +167,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       const selectedServer = getServerForUri(document.uri) || "";
       const connected = connMngService.isConnected(selectedServer);
 
+      /* c8 ignore next */
       switch (msg.command) {
         case DataSourceCommand.Server: {
           await setServerForUri(document.uri, msg.selectedServer);
@@ -229,7 +229,13 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
         case DataSourceCommand.Populate: {
           if (connected) {
             const runner = Runner.create(() =>
-              populateScratchpad(msg.dataSourceFile, msg.selectedServer),
+              prepareToPopulateScratchpad(
+                msg.selectedServer,
+                ExecutionTypes.PopulateScratchpad,
+                undefined,
+                undefined,
+                msg.dataSourceFile,
+              ),
             );
             runner.title = "Populating scratchpad.";
             await runner.execute();

@@ -11,11 +11,25 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export const enum ExecutionTypes {
-  QuerySelection,
-  QueryFile,
-  ReRunQuery,
-  PythonQuerySelection,
-  PythonQueryFile,
+export enum ExecutionTypes {
+  DataQueryFile,
+  DataQuerySelection,
+  NotebookDataQueryPython,
+  NotebookDataQueryQSQL,
+  NotebookDataQuerySQL,
+  NotebookQueryPython,
+  NotebookQueryQSQL,
   PopulateScratchpad,
+  PopulateScratchpadPython,
+  PythonDataQueryFile,
+  PythonDataQuerySelection,
+  PythonQueryFile,
+  PythonQuerySelection,
+  QueryDatasource,
+  QueryFile,
+  QuerySelection,
+  ReRunDataQuery,
+  ReRunPythonDataQuery,
+  ReRunPythonQuery,
+  ReRunQuery,
 }

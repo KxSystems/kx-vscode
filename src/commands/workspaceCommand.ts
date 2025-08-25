@@ -29,7 +29,7 @@ import {
 } from "vscode";
 
 import { ext } from "../extensionVariables";
-import { resetScratchpad, runQuery } from "./serverCommand";
+import { resetScratchpad } from "./serverCommand";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
 import { ReplConnection } from "../classes/replConnection";
@@ -518,70 +518,6 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
       logger,
       params: error,
     });
-  }
-}
-
-/* c8 ignore next */
-export async function runActiveEditor(type?: ExecutionTypes) {
-  if (ext.activeTextEditor) {
-    const uri = ext.activeTextEditor.document.uri;
-    if (getServerForUri(uri) === ext.REPL) {
-      runOnRepl(ext.activeTextEditor, type);
-      return;
-    }
-    const conn = await findConnection(uri);
-    if (!conn) {
-      return;
-    }
-
-    const isInsights = conn instanceof InsightsConnection;
-    const executorName = getBasename(ext.activeTextEditor.document.uri);
-    const target = isInsights ? getTargetForUri(uri) : undefined;
-    const isSql = executorName.endsWith(".sql");
-
-    if (isSql && !isInsights) {
-      notify(
-        `SQL execution is not supported on ${conn.connLabel}.`,
-        MessageKind.ERROR,
-        { logger },
-      );
-      return;
-    }
-
-    if (type === ExecutionTypes.PopulateScratchpad && !isInsights) {
-      notify(
-        `Populating scratchpad is not supported on ${conn.connLabel}.`,
-        MessageKind.ERROR,
-        { logger },
-      );
-      return;
-    }
-
-    try {
-      await runQuery(
-        type === undefined
-          ? isPython(uri)
-            ? ExecutionTypes.PythonQueryFile
-            : ExecutionTypes.QueryFile
-          : type,
-        conn.connLabel,
-        executorName,
-        !isPython(uri),
-        undefined,
-        target,
-        isSql,
-        conn instanceof InsightsConnection,
-      );
-    } catch (error) {
-      notify(
-        `Executing ${executorName} on ${conn.connLabel} failed.`,
-        MessageKind.ERROR,
-        {
-          logger,
-          params: error,
-        },
-      );
-    }
   }
 }
 
