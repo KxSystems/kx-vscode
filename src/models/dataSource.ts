@@ -92,6 +92,12 @@ export function createDefaultDataSourceFile(): DataSourceFiles {
       sql: {
         query: "",
       },
+      uda: {
+        name: "",
+        description: "",
+        params: [],
+        return: { type: [], description: "" },
+      },
     },
   };
 }
