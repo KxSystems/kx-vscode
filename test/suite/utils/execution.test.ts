@@ -747,4 +747,320 @@ describe("execution", () => {
       assert.strictEqual(result, ExecutionTypes.NotebookDataQuerySQL);
     });
   });
+
+  describe("getExecutionQueryContext", () => {
+    beforeEach(() => {
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: { active: new vscode.Position(0, 0) },
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: () => "",
+        },
+      };
+    });
+
+    afterEach(() => {
+      ext.activeTextEditor = undefined;
+    });
+
+    it("should return default context '.' when no active editor", () => {
+      ext.activeTextEditor = undefined;
+      const result = executionUtils.getExecutionQueryContext();
+      assert.strictEqual(result, ".");
+    });
+
+    it("should return default context '.' when no system command is found", () => {
+      const sampleText = "select from table\ncount from trades";
+      const lineText = "count from trades";
+
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: new vscode.Selection(
+          new vscode.Position(1, 0),
+          new vscode.Position(1, 17),
+        ),
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: (range?: vscode.Range) => {
+            if (range) {
+              return "select from table\ncount from trades";
+            }
+            return sampleText;
+          },
+          lineAt: (line: number) => ({
+            text: lineText,
+            lineNumber: line,
+            range: new vscode.Range(
+              new vscode.Position(line, 0),
+              new vscode.Position(line, lineText.length),
+            ),
+            rangeIncludingLineBreak: new vscode.Range(
+              new vscode.Position(line, 0),
+              new vscode.Position(line + 1, 0),
+            ),
+            firstNonWhitespaceCharacterIndex: 0,
+            isEmptyOrWhitespace: false,
+          }),
+        },
+      };
+
+      const result = executionUtils.getExecutionQueryContext();
+      assert.strictEqual(result, ".");
+    });
+
+    it("should return context from system command with 'system \"d'", () => {
+      const sampleText = 'system "d /home/data"\nselect from table';
+      const lineText = "select from table";
+
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: new vscode.Selection(
+          new vscode.Position(1, 0),
+          new vscode.Position(1, 17),
+        ),
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: (range?: vscode.Range) => {
+            if (range) {
+              return 'system "d /home/data"\nselect from table';
+            }
+            return sampleText;
+          },
+          lineAt: (line: number) => ({
+            text: lineText,
+            lineNumber: line,
+            range: new vscode.Range(
+              new vscode.Position(line, 0),
+              new vscode.Position(line, lineText.length),
+            ),
+            rangeIncludingLineBreak: new vscode.Range(
+              new vscode.Position(line, 0),
+              new vscode.Position(line + 1, 0),
+            ),
+            firstNonWhitespaceCharacterIndex: 0,
+            isEmptyOrWhitespace: false,
+          }),
+        },
+      };
+
+      const result = executionUtils.getExecutionQueryContext();
+      assert.strictEqual(result, "/home/data");
+    });
+
+    it("should return context from \\d command", () => {
+      const sampleText = "\\d /var/logs\ncount from table";
+      const lineText = "count from table";
+
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: new vscode.Selection(
+          new vscode.Position(1, 0),
+          new vscode.Position(1, 16),
+        ),
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: (range?: vscode.Range) => {
+            if (range) {
+              return "\\d /var/logs\ncount from table";
+            }
+            return sampleText;
+          },
+          lineAt: (line: number) => ({
+            text: lineText,
+            lineNumber: line,
+            range: new vscode.Range(
+              new vscode.Position(line, 0),
+              new vscode.Position(line, lineText.length),
+            ),
+            rangeIncludingLineBreak: new vscode.Range(
+              new vscode.Position(line, 0),
+              new vscode.Position(line + 1, 0),
+            ),
+            firstNonWhitespaceCharacterIndex: 0,
+            isEmptyOrWhitespace: false,
+          }),
+        },
+      };
+
+      const result = executionUtils.getExecutionQueryContext();
+      assert.strictEqual(result, "/var/logs");
+    });
+
+    it("should return last matching context when multiple system commands exist", () => {
+      const sampleText =
+        'system "d /first/path"\n\\d /second/path\nselect from table';
+      const lineText = "select from table";
+
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: new vscode.Selection(
+          new vscode.Position(2, 0),
+          new vscode.Position(2, 17),
+        ),
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: (range?: vscode.Range) => {
+            if (range) {
+              return 'system "d /first/path"\n\\d /second/path\nselect from table';
+            }
+            return sampleText;
+          },
+          lineAt: (line: number) => ({
+            text: lineText,
+            lineNumber: line,
+            range: new vscode.Range(
+              new vscode.Position(line, 0),
+              new vscode.Position(line, lineText.length),
+            ),
+            rangeIncludingLineBreak: new vscode.Range(
+              new vscode.Position(line, 0),
+              new vscode.Position(line + 1, 0),
+            ),
+            firstNonWhitespaceCharacterIndex: 0,
+            isEmptyOrWhitespace: false,
+          }),
+        },
+      };
+
+      const result = executionUtils.getExecutionQueryContext();
+      assert.strictEqual(result, "/second/path");
+    });
+
+    it("should handle fullText scenario when lineNum is not a number", () => {
+      const sampleText = 'system "d /workspace"\nselect from trades';
+
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: {
+          end: { line: "notANumber" as any },
+          active: new vscode.Position(0, 0),
+        },
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: () => sampleText,
+        },
+      };
+
+      const result = executionUtils.getExecutionQueryContext();
+      assert.strictEqual(result, "/workspace");
+    });
+
+    it("should handle system command with extra spaces", () => {
+      const sampleText = 'system  "d    /path/with/spaces"\nquery here';
+      const lineText = "query here";
+
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: new vscode.Selection(
+          new vscode.Position(1, 0),
+          new vscode.Position(1, 10),
+        ),
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: (range?: vscode.Range) => {
+            if (range) {
+              return 'system  "d    /path/with/spaces"\nquery here';
+            }
+            return sampleText;
+          },
+          lineAt: (line: number) => ({
+            text: lineText,
+            lineNumber: line,
+            range: new vscode.Range(
+              new vscode.Position(line, 0),
+              new vscode.Position(line, lineText.length),
+            ),
+            rangeIncludingLineBreak: new vscode.Range(
+              new vscode.Position(line, 0),
+              new vscode.Position(line + 1, 0),
+            ),
+            firstNonWhitespaceCharacterIndex: 0,
+            isEmptyOrWhitespace: false,
+          }),
+        },
+      };
+
+      const result = executionUtils.getExecutionQueryContext();
+      assert.strictEqual(result, "/path/with/spaces");
+    });
+
+    it("should handle \\d command with extra spaces", () => {
+      const sampleText = "\\d   /another/path\nsome query";
+      const lineText = "some query";
+
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: new vscode.Selection(
+          new vscode.Position(1, 0),
+          new vscode.Position(1, 10),
+        ),
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: (range?: vscode.Range) => {
+            if (range) {
+              return "\\d   /another/path\nsome query";
+            }
+            return sampleText;
+          },
+          lineAt: (line: number) => ({
+            text: lineText,
+            lineNumber: line,
+            range: new vscode.Range(
+              new vscode.Position(line, 0),
+              new vscode.Position(line, lineText.length),
+            ),
+            rangeIncludingLineBreak: new vscode.Range(
+              new vscode.Position(line, 0),
+              new vscode.Position(line + 1, 0),
+            ),
+            firstNonWhitespaceCharacterIndex: 0,
+            isEmptyOrWhitespace: false,
+          }),
+        },
+      };
+
+      const result = executionUtils.getExecutionQueryContext();
+      assert.strictEqual(result, "/another/path");
+    });
+
+    it("should return default context when pattern matches but no capture group", () => {
+      const sampleText = "system d\nselect from table";
+      const lineText = "select from table";
+
+      ext.activeTextEditor = <vscode.TextEditor>{
+        options: { insertSpaces: true, indentSize: 4 },
+        selection: new vscode.Selection(
+          new vscode.Position(1, 0),
+          new vscode.Position(1, 17),
+        ),
+        document: {
+          uri: vscode.Uri.file("/tmp/some.q"),
+          getText: (range?: vscode.Range) => {
+            if (range) {
+              return "system d\nselect from table";
+            }
+            return sampleText;
+          },
+          lineAt: (line: number) => ({
+            text: lineText,
+            lineNumber: line,
+            range: new vscode.Range(
+              new vscode.Position(line, 0),
+              new vscode.Position(line, lineText.length),
+            ),
+            rangeIncludingLineBreak: new vscode.Range(
+              new vscode.Position(line, 0),
+              new vscode.Position(line + 1, 0),
+            ),
+            firstNonWhitespaceCharacterIndex: 0,
+            isEmptyOrWhitespace: false,
+          }),
+        },
+      };
+
+      const result = executionUtils.getExecutionQueryContext();
+      assert.strictEqual(result, ".");
+    });
+  });
 });
