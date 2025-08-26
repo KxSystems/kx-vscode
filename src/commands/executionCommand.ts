@@ -91,7 +91,7 @@ export async function executeNotebookQuery(
       kind === CellKind.SQL,
       kind === CellKind.PYTHON,
     );
-    return variable
+    return variable && variable.trim() !== ""
       ? await prepareToPopulateScratchpad(
           connLabel,
           executionType,
@@ -112,7 +112,7 @@ export async function executeActiveEditorQuery(type?: ExecutionTypes) {
     const selectedServer = getServerForUri(uri);
 
     if (selectedServer === ext.REPL) {
-      runOnRepl(ext.activeTextEditor, type);
+      return runOnRepl(ext.activeTextEditor, type);
     }
 
     const conn = await findConnection(uri);
@@ -206,6 +206,7 @@ export async function executeDataSourceQuery(
   return executeDataQuery(connLabel, executionType, target, datasourceFile);
 }
 
+// Execute ReRun Query
 export async function executeReRunQuery(queryHistoryItem: QueryHistory) {
   const isPython = queryHistoryItem.language === "python";
   const startTime = Date.now();
