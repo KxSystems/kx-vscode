@@ -368,7 +368,7 @@ async function executeServiceGateway(
 async function resolveVariable(
   outputVariable?: string,
 ): Promise<string | undefined> {
-  return outputVariable || (await inputVariable());
+  return outputVariable ?? (await inputVariable());
 }
 
 function validateScratchpadInputs(
@@ -570,7 +570,7 @@ export async function executeActiveEditorQuery(type?: ExecutionTypes) {
   }
 
   const executionType =
-    type || getEditorExecutionType(context.isPython, context.target);
+    type ?? getEditorExecutionType(context.isPython, context.target);
   const isDataQuery = context.target && context.target !== "scratchpad";
   const query = retrieveQueryData();
 
@@ -582,7 +582,7 @@ export async function executeActiveEditorQuery(type?: ExecutionTypes) {
     );
 
     const dataType = getDataTypeForEditor(context.executorName);
-    const querySample = getQuerySample(query || "", dataType);
+    const querySample = getQuerySample(query ?? "", dataType);
 
     handleExecuteDataQueryResults(
       context.conn.connLabel,
@@ -611,7 +611,7 @@ export async function executeActiveEditorQuery(type?: ExecutionTypes) {
     context.conn.connLabel,
     res,
     context.executorName,
-    query || "",
+    query ?? "",
     context.isInsights,
     context.documentType,
     context.isPython,
@@ -718,7 +718,7 @@ export async function executeDataQuery(
   const isPython = isExecutionPython(type);
   const query = getQuery(datasourceFile, type);
   const dsExecutionType = getDSExecutionType(datasourceFile);
-  const udaName = datasourceFile?.dataSource?.uda?.name || "";
+  const udaName = datasourceFile?.dataSource?.uda?.name ?? "";
 
   if (!validateDataQueryInputs(query)) {
     return;
@@ -768,11 +768,10 @@ export async function prepareToPopulateScratchpad(
   const variable = await resolveVariable(outputVariable);
   const query = getQuery(datasourceFile);
   const dsExecutionType = getDSExecutionType(datasourceFile);
-  const selectedTarget = target
-    ? target
-    : dsExecutionType === DataSourceTypes.QSQL
-      ? datasourceFile?.dataSource?.qsql.selectedTarget
-      : "";
+  let selectedTarget = target ?? "";
+  if (!target && dsExecutionType === DataSourceTypes.QSQL) {
+    selectedTarget = datasourceFile?.dataSource?.qsql.selectedTarget ?? "";
+  }
 
   if (!validateScratchpadInputs(query, variable)) {
     return;
@@ -783,7 +782,7 @@ export async function prepareToPopulateScratchpad(
     dsExecutionType,
     variable!,
     connLabel,
-    selectedTarget || "",
+    selectedTarget,
     isPython,
   );
 

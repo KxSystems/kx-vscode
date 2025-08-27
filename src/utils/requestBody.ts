@@ -50,16 +50,17 @@ export function generateScratchpadQueryReqBody(
   isPython?: boolean,
   isNotebook?: boolean,
 ): ScratchpadRequestBody {
-  const returnFormat = isNotebook
-    ? "structuredText"
-    : ext.isResultsTabVisible
-      ? "structuredText"
-      : "text";
+  let returnFormat = "text";
+  if (isNotebook || ext.isResultsTabVisible) {
+    returnFormat = "structuredText";
+  }
+
   const language = isPython ? "python" : "q";
+
   return {
     expression,
     language,
-    context: context || ".",
+    context: context ?? ".",
     sampleFn: "first",
     sampleSize: 10000,
     returnFormat,
@@ -115,7 +116,6 @@ export async function selectAndGenerateScratchpadImportReqBody(
   notify("No data provided to populate scratchpad.", MessageKind.ERROR, {
     logger,
   });
-  return;
 }
 
 export function generateScratchpadQSQLImportReqBody(
@@ -250,7 +250,6 @@ export function selectAndGenerateServicegatewayReqBody(
   notify("No data provided to execute the query.", MessageKind.ERROR, {
     logger,
   });
-  return;
 }
 
 export function generateServicegatewayQSQLReqBody(

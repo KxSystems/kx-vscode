@@ -300,27 +300,27 @@ export function getQuery(
 
 export function retrieveEditorText(): string {
   const editor = ext.activeTextEditor;
-  let query: string | undefined;
+  let query = "";
   if (editor) {
     query = editor.document.getText();
   }
-  return query ? query : "";
+  return query;
 }
 
 export function retrieveEditorSelectionToExecute(): string {
   const editor = ext.activeTextEditor;
-  let query: string | undefined;
+  let query = "";
   if (editor) {
     const selection = editor.selection;
     query = selection.isEmpty
       ? editor.document.lineAt(selection.active.line).text
       : editor.document.getText(selection);
   }
-  return query ? query : "";
+  return query;
 }
 
 export function retrieveQueryData(query?: string): string | undefined {
-  return query ? query : retrieveEditorSelectionToExecute();
+  return query ?? retrieveEditorSelectionToExecute();
 }
 
 export function getDSExecutionType(
