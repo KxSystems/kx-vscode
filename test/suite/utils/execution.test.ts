@@ -503,7 +503,7 @@ describe("execution", () => {
     it("should return undefined if no active editor", () => {
       ext.activeTextEditor = undefined;
       const result = executionUtils.retrieveEditorText();
-      assert.strictEqual(result, undefined);
+      assert.strictEqual(result, "");
     });
 
     it("should return entire document text if execution type is QueryFile", () => {
@@ -540,7 +540,7 @@ describe("execution", () => {
     it("should return undefined if no active editor", () => {
       ext.activeTextEditor = undefined;
       const result = executionUtils.retrieveEditorSelectionToExecute();
-      assert.strictEqual(result, undefined);
+      assert.strictEqual(result, "");
     });
 
     it("should return selected text if there is a selection", () => {
@@ -616,7 +616,7 @@ describe("execution", () => {
     it("should return undefined if no active editor and no query string", () => {
       ext.activeTextEditor = undefined;
       const result = executionUtils.retrieveQueryData();
-      assert.strictEqual(result, undefined);
+      assert.strictEqual(result, "");
     });
 
     it("should return the query string if provided", () => {

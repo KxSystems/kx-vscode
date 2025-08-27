@@ -273,7 +273,7 @@ export function isExecutionNotebook(type: ExecutionTypes): boolean | undefined {
 export function getQuery(
   querySubject?: DataSourceFiles,
   execType?: ExecutionTypes,
-): string | DataSourceFiles | undefined {
+): string | DataSourceFiles {
   if (querySubject) {
     if (querySubject.dataSource.selectedType === DataSourceTypes.QSQL) {
       return querySubject.dataSource.qsql.query;
@@ -295,18 +295,19 @@ export function getQuery(
         return retrieveEditorText();
     }
   }
+  return "";
 }
 
-export function retrieveEditorText(): string | undefined {
+export function retrieveEditorText(): string {
   const editor = ext.activeTextEditor;
   let query: string | undefined;
   if (editor) {
     query = editor.document.getText();
   }
-  return query;
+  return query ? query : "";
 }
 
-export function retrieveEditorSelectionToExecute(): string | undefined {
+export function retrieveEditorSelectionToExecute(): string {
   const editor = ext.activeTextEditor;
   let query: string | undefined;
   if (editor) {
@@ -315,7 +316,7 @@ export function retrieveEditorSelectionToExecute(): string | undefined {
       ? editor.document.lineAt(selection.active.line).text
       : editor.document.getText(selection);
   }
-  return query;
+  return query ? query : "";
 }
 
 export function retrieveQueryData(query?: string): string | undefined {

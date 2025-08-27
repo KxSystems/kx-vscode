@@ -73,7 +73,440 @@ import { validateScratchpadOutputVariableName } from "../validators/interfaceVal
 
 const logger = "executionCommands";
 
-// Execute Notebook Query
+interface EditorContext {
+  conn: InsightsConnection | LocalConnection;
+  isInsights: boolean;
+  executorName: string;
+  target?: string;
+  isSql: boolean;
+  isPython: boolean;
+  documentType: string;
+}
+
+interface ExecutionResult {
+  result: any;
+  duration: string;
+}
+
+interface InsightsVersionContext {
+  isInsights: boolean;
+  version?: number;
+}
+
+const QUERY_RETRIEVAL_STRATEGIES = {
+  [ExecutionTypes.QuerySelection]: retrieveQueryData,
+  [ExecutionTypes.PythonQuerySelection]: retrieveQueryData,
+  [ExecutionTypes.DataQuerySelection]: retrieveQueryData,
+  [ExecutionTypes.PythonDataQueryFile]: retrieveQueryData,
+  [ExecutionTypes.NotebookDataQueryPython]: retrieveQueryData,
+  [ExecutionTypes.NotebookDataQueryQSQL]: retrieveQueryData,
+  [ExecutionTypes.NotebookDataQuerySQL]: retrieveQueryData,
+  [ExecutionTypes.NotebookQueryPython]: retrieveQueryData,
+  [ExecutionTypes.NotebookQueryQSQL]: retrieveQueryData,
+  [ExecutionTypes.QueryFile]: retrieveEditorText,
+  [ExecutionTypes.PythonQueryFile]: retrieveEditorText,
+  [ExecutionTypes.DataQueryFile]: retrieveEditorText,
+} as const;
+
+// Helper functions for complexity reduction
+
+async function withExecutionTiming<T>(
+  fn: () => Promise<T>,
+): Promise<ExecutionResult> {
+  const startTime = Date.now();
+  const result = await fn();
+  const endTime = Date.now();
+  const duration = (endTime - startTime).toString();
+  return { result, duration };
+}
+
+async function getEditorContext(
+  uri: vscode.Uri,
+): Promise<EditorContext | null> {
+  const conn = await findConnection(uri);
+  if (!conn) {
+    return null;
+  }
+
+  const isInsights = conn instanceof InsightsConnection;
+  const executorName = getBasename(ext.activeTextEditor!.document.uri);
+  const target = isInsights ? getTargetForUri(uri) : undefined;
+  const isSql = executorName.endsWith(".sql");
+  const isPython = executorName.endsWith(".py");
+  const documentType = retrieveEditorFileType(executorName);
+
+  return {
+    conn,
+    isInsights,
+    executorName,
+    target,
+    isSql,
+    isPython,
+    documentType,
+  };
+}
+
+function validateSqlOnInsights(
+  isSql: boolean,
+  isInsights: boolean,
+  connLabel: string,
+): boolean {
+  if (isSql && !isInsights) {
+    notify(
+      `SQL execution is not supported on ${connLabel}.`,
+      MessageKind.ERROR,
+      { logger },
+    );
+    return false;
+  }
+  return true;
+}
+
+async function executeDataQueryWithTiming(
+  connLabel: string,
+  type: ExecutionTypes,
+  target?: string,
+): Promise<ExecutionResult> {
+  return withExecutionTiming(() => executeDataQuery(connLabel, type, target));
+}
+
+async function executeQueryWithTiming(
+  connLabel: string,
+  type: ExecutionTypes,
+): Promise<ExecutionResult> {
+  return withExecutionTiming(() => executeQuery(connLabel, type));
+}
+
+async function getInsightsVersionContext(
+  connMngService: ConnectionManagementService,
+  connectionName: string,
+): Promise<InsightsVersionContext> {
+  const isInsights = connMngService.isInsightsConnection(connectionName);
+
+  if (!isInsights) {
+    return { isInsights: false };
+  }
+
+  const versionExist =
+    await connMngService.retrieveInsightsConnVersion(connectionName);
+  const version = versionExist && versionExist !== 0 ? versionExist : undefined;
+
+  return { isInsights: true, version };
+}
+
+async function executeStringQuery(
+  queryHistoryItem: QueryHistory,
+  isPython: boolean,
+  versionContext: InsightsVersionContext,
+): Promise<void> {
+  const type = isPython
+    ? ExecutionTypes.ReRunPythonQuery
+    : ExecutionTypes.ReRunQuery;
+
+  const { result: res, duration } = await withExecutionTiming(() =>
+    executeQuery(
+      queryHistoryItem.connectionName,
+      type,
+      undefined,
+      queryHistoryItem.query as string,
+    ),
+  );
+
+  await handleExecuteQueryResults(
+    queryHistoryItem.connectionName,
+    res,
+    queryHistoryItem.executorName,
+    queryHistoryItem.query as string,
+    versionContext.isInsights,
+    "RERUN-QUERY",
+    isPython,
+    duration,
+    false,
+    versionContext.version,
+  );
+}
+
+async function executeDataSourceRerun(
+  queryHistoryItem: QueryHistory,
+  isPython: boolean,
+): Promise<void> {
+  const query = queryHistoryItem.query as DataSourceFiles;
+  const querySample = getQuerySample(query, query.dataSource.selectedType);
+  const target =
+    query.dataSource.selectedType === DataSourceTypes.QSQL
+      ? query.dataSource.qsql.selectedTarget
+      : undefined;
+  const type = isPython
+    ? ExecutionTypes.ReRunPythonDataQuery
+    : ExecutionTypes.ReRunDataQuery;
+
+  const { result: res, duration } = await withExecutionTiming(() =>
+    executeDataQuery(queryHistoryItem.connectionName, type, target, query),
+  );
+
+  const success = !res.error;
+  await handleExecuteDataQueryResults(
+    queryHistoryItem.connectionName,
+    res,
+    queryHistoryItem.executorName,
+    query.dataSource.selectedType,
+    querySample,
+    queryHistoryItem.isDatasource ? "DATASOURCE" : "RERUN-DATAQUERY",
+    isPython,
+    duration,
+  );
+
+  if (queryHistoryItem.isDatasource) {
+    addDStoQueryHistory(
+      query,
+      success,
+      queryHistoryItem.connectionName,
+      queryHistoryItem.executorName,
+    );
+  }
+}
+
+function getQueryFromExecutionType(
+  type: ExecutionTypes,
+  queryData?: string,
+  rerunQuery?: string,
+): string | undefined {
+  if (rerunQuery) {
+    return rerunQuery;
+  }
+
+  const strategy =
+    QUERY_RETRIEVAL_STRATEGIES[type as keyof typeof QUERY_RETRIEVAL_STRATEGIES];
+  if (strategy) {
+    return strategy(queryData);
+  }
+
+  notify("No query provided for scratchpad execution.", MessageKind.ERROR, {
+    logger,
+  });
+  return undefined;
+}
+
+function validateQuery(query: string | undefined): string | null {
+  if (!query || query.trim() === "") {
+    notify("No query provided for execution.", MessageKind.ERROR, { logger });
+    return null;
+  }
+  return sanitizeQuery(query);
+}
+
+async function executeWithConnection(
+  query: string,
+  connLabel: string,
+  context: string,
+  isPython: boolean,
+  isNotebook: boolean | undefined,
+): Promise<any> {
+  const connMngService = new ConnectionManagementService();
+  const res = await connMngService.executeQuery(
+    query,
+    connLabel,
+    context,
+    isPython,
+    isNotebook,
+  );
+
+  if (!res) {
+    notify("Failed to execute query. No connection found.", MessageKind.ERROR, {
+      logger,
+    });
+    return null;
+  }
+
+  return res;
+}
+
+function validateDataQueryInputs(
+  query: string | DataSourceFiles | undefined,
+): boolean {
+  if (!query || (query instanceof String && query.trim() === "")) {
+    notify("No data provided for execution.", MessageKind.ERROR, { logger });
+    return false;
+  }
+  return true;
+}
+
+function validateConnection(
+  selectedConnection: any,
+): selectedConnection is InsightsConnection {
+  if (selectedConnection instanceof LocalConnection || !selectedConnection) {
+    return false;
+  }
+
+  selectedConnection.getMeta();
+  if (!selectedConnection?.meta?.payload.assembly) {
+    notify(
+      "No database running in the Insights connection.",
+      MessageKind.ERROR,
+      { logger },
+    );
+    return false;
+  }
+
+  return true;
+}
+
+async function executeServiceGateway(
+  selectedConnection: InsightsConnection,
+  dsExecutionType: DataSourceTypes,
+  body: any,
+  udaName: string,
+): Promise<any> {
+  const res = await selectedConnection.getDataQuery(
+    dsExecutionType,
+    body,
+    udaName,
+  );
+  return convertDSDataResponse(res);
+}
+
+async function resolveVariable(
+  outputVariable?: string,
+): Promise<string | undefined> {
+  return outputVariable || (await inputVariable());
+}
+
+function validateScratchpadInputs(
+  query: string | DataSourceFiles | undefined,
+  variable: string | undefined,
+): boolean {
+  if (!query || (typeof query === "string" && query.trim() === "")) {
+    notify("No data provided to populate scratchpad.", MessageKind.ERROR, {
+      logger,
+    });
+    return false;
+  }
+
+  if (!variable || variable.trim() === "") {
+    notify(
+      "No variable name provided to populate scratchpad.",
+      MessageKind.INFO,
+      { logger },
+    );
+    return false;
+  }
+
+  return true;
+}
+
+async function buildScratchpadBody(
+  query: string | DataSourceFiles,
+  dsExecutionType: DataSourceTypes,
+  variable: string,
+  connLabel: string,
+  selectedTarget: string,
+  isPython: boolean,
+): Promise<any> {
+  const body = await selectAndGenerateScratchpadImportReqBody(
+    query ?? "",
+    dsExecutionType,
+    variable ?? "",
+    connLabel,
+    selectedTarget ?? "",
+    isPython,
+  );
+
+  if (!body) {
+    notify("No data available to populate scratchpad.", MessageKind.ERROR, {
+      logger,
+    });
+    return null;
+  }
+
+  return body;
+}
+
+function formatDataQueryResult(res: any): {
+  success: boolean;
+  formattedRes: any;
+} {
+  const success = !res.error;
+
+  if (!success) {
+    notify("Query execution failed.", MessageKind.DEBUG, {
+      logger,
+      params: res.error,
+      telemetry: "documentType.dataQueryType.Run.Error",
+    });
+  }
+
+  return {
+    success,
+    formattedRes: success ? res : res.errorMsg || res.error,
+  };
+}
+
+async function dispatchToResultsTab(
+  res: any,
+  success: boolean,
+  querySample: string,
+  connLabel: string,
+  executorName: string,
+  isInsights: boolean,
+  documentType: string,
+  isPython?: boolean,
+  duration?: string,
+  isFromConnTree?: boolean,
+  connVersion?: number,
+): Promise<void> {
+  if (success && !isInsights) {
+    const resultCount = typeof res === "string" ? "0" : res.rows.length;
+    notify(`Results: ${resultCount} rows`, MessageKind.DEBUG, { logger });
+  }
+
+  await writeQueryResultsToView(
+    res,
+    querySample,
+    connLabel,
+    executorName,
+    isInsights,
+    documentType,
+    isPython,
+    duration,
+    isFromConnTree,
+    connVersion,
+  );
+}
+
+async function dispatchToConsole(
+  res: any,
+  success: boolean,
+  querySample: string,
+  connLabel: string,
+  executorName: string,
+  isInsights: boolean,
+  documentType: string,
+  isPython?: boolean,
+  duration?: string,
+  isFromConnTree?: boolean,
+): Promise<void> {
+  if (success && !isInsights) {
+    notify(
+      `Results is a string with length: ${res.length}`,
+      MessageKind.DEBUG,
+      { logger },
+    );
+  }
+
+  await writeQueryResultsToConsole(
+    res,
+    querySample,
+    connLabel,
+    executorName,
+    isInsights,
+    documentType,
+    isPython,
+    duration,
+    isFromConnTree,
+  );
+}
+
+// Execute Notebook Queries
 export async function executeNotebookQuery(
   connLabel: string,
   cell: vscode.NotebookCell,
@@ -100,99 +533,95 @@ export async function executeNotebookQuery(
           partialDS,
         )
       : await executeDataQuery(connLabel, executionType, target, partialDS);
-  } else {
-    return await executeQuery(connLabel, executionType, query);
   }
+
+  return await executeQuery(connLabel, executionType, query);
 }
 
-// Execute Active Editor Query
+// Execute Active Editor Queries
 export async function executeActiveEditorQuery(type?: ExecutionTypes) {
-  if (ext.activeTextEditor) {
-    const uri = ext.activeTextEditor.document.uri;
-    const selectedServer = getServerForUri(uri);
+  if (!ext.activeTextEditor) {
+    notify("No active editor found to execute query.", MessageKind.ERROR, {
+      logger,
+    });
+    return;
+  }
 
-    if (selectedServer === ext.REPL) {
-      return runOnRepl(ext.activeTextEditor, type);
-    }
+  const uri = ext.activeTextEditor.document.uri;
+  const selectedServer = getServerForUri(uri);
 
-    const conn = await findConnection(uri);
-    if (!conn) {
-      return;
-    }
+  if (selectedServer === ext.REPL) {
+    return runOnRepl(ext.activeTextEditor, type);
+  }
 
-    const isInsights = conn instanceof InsightsConnection;
-    const executorName = getBasename(ext.activeTextEditor.document.uri);
-    const target = isInsights ? getTargetForUri(uri) : undefined;
-    const isSql = executorName.endsWith(".sql");
-    const isPython = executorName.endsWith(".py");
-    const documentType = retrieveEditorFileType(executorName);
+  const context = await getEditorContext(uri);
+  if (!context) {
+    return;
+  }
 
-    if (isSql && !isInsights) {
-      notify(
-        `SQL execution is not supported on ${conn.connLabel}.`,
-        MessageKind.ERROR,
-        { logger },
-      );
-      return;
-    }
+  if (
+    !validateSqlOnInsights(
+      context.isSql,
+      context.isInsights,
+      context.conn.connLabel,
+    )
+  ) {
+    return;
+  }
 
-    if (!type) {
-      type = getEditorExecutionType(isPython, target);
-    }
-    const isDataQuery = target && target !== "scratchpad";
-    const query = retrieveQueryData();
-    if (isDataQuery && isInsights) {
-      const startTime = Date.now();
-      const res = await executeDataQuery(conn.connLabel, type, target);
-      const endTime = Date.now();
-      const duration = (endTime - startTime).toString();
-      const dataType = getDataTypeForEditor(executorName);
+  const executionType =
+    type || getEditorExecutionType(context.isPython, context.target);
+  const isDataQuery = context.target && context.target !== "scratchpad";
+  const query = retrieveQueryData();
 
-      const querySample = getQuerySample(query ? query : "", dataType);
+  if (isDataQuery && context.isInsights) {
+    const { result: res, duration } = await executeDataQueryWithTiming(
+      context.conn.connLabel,
+      executionType,
+      context.target,
+    );
 
-      handleExecuteDataQueryResults(
-        conn.connLabel,
-        res,
-        executorName,
-        dataType,
-        querySample,
-        documentType,
-        isPython,
-        duration,
-      );
-      return;
-    }
-    const startTime = Date.now();
-    const res = await executeQuery(conn.connLabel, type);
-    const endTime = Date.now();
-    const duration = (endTime - startTime).toString();
-    let insightsConnVersion: number | undefined;
+    const dataType = getDataTypeForEditor(context.executorName);
+    const querySample = getQuerySample(query || "", dataType);
 
-    if (conn instanceof InsightsConnection) {
-      insightsConnVersion = conn.insightsVersion;
-    }
-
-    await handleExecuteQueryResults(
-      conn.connLabel,
+    handleExecuteDataQueryResults(
+      context.conn.connLabel,
       res,
-      executorName,
-      query ? query : "",
-      isInsights,
-      documentType,
-      isPython,
+      context.executorName,
+      dataType,
+      querySample,
+      context.documentType,
+      context.isPython,
       duration,
-      false,
-      insightsConnVersion,
     );
     return;
   }
-  notify("No active editor found to execute query.", MessageKind.ERROR, {
-    logger,
-  });
-  return;
+
+  const { result: res, duration } = await executeQueryWithTiming(
+    context.conn.connLabel,
+    executionType,
+  );
+
+  const insightsConnVersion =
+    context.conn instanceof InsightsConnection
+      ? context.conn.insightsVersion
+      : undefined;
+
+  await handleExecuteQueryResults(
+    context.conn.connLabel,
+    res,
+    context.executorName,
+    query || "",
+    context.isInsights,
+    context.documentType,
+    context.isPython,
+    duration,
+    false,
+    insightsConnVersion,
+  );
 }
 
-// Execute DataSources
+// Execute Datasource Queries
 export async function executeDataSourceQuery(
   connLabel: string,
   datasourceFile: DataSourceFiles,
@@ -206,123 +635,50 @@ export async function executeDataSourceQuery(
   return executeDataQuery(connLabel, executionType, target, datasourceFile);
 }
 
-// Execute ReRun Query
 export async function executeReRunQuery(queryHistoryItem: QueryHistory) {
   const isPython = queryHistoryItem.language === "python";
-  const startTime = Date.now();
   const connMngService = new ConnectionManagementService();
-  const isInsights = connMngService.isInsightsConnection(
+  const versionContext = await getInsightsVersionContext(
+    connMngService,
     queryHistoryItem.connectionName,
   );
-  let insightsConnVersion;
-  if (isInsights) {
-    const versionExist = await connMngService.retrieveInsightsConnVersion(
-      queryHistoryItem.connectionName,
-    );
-    insightsConnVersion =
-      versionExist && versionExist !== 0 ? versionExist : undefined;
-  }
+
   if (typeof queryHistoryItem.query === "string") {
-    const type = isPython
-      ? ExecutionTypes.ReRunPythonQuery
-      : ExecutionTypes.ReRunQuery;
-    const res = await executeQuery(
-      queryHistoryItem.connectionName,
-      type,
-      undefined,
-      queryHistoryItem.query,
-    );
-    const endTime = Date.now();
-    const duration = (endTime - startTime).toString();
-
-    await handleExecuteQueryResults(
-      queryHistoryItem.connectionName,
-      res,
-      queryHistoryItem.executorName,
-      queryHistoryItem.query,
-      isInsights,
-      "RERUN-QUERY",
-      isPython,
-      duration,
-      false,
-      insightsConnVersion,
-    );
+    await executeStringQuery(queryHistoryItem, isPython, versionContext);
   } else {
-    const querySample = getQuerySample(
-      queryHistoryItem.query,
-      queryHistoryItem.query.dataSource.selectedType,
-    );
-    const target =
-      queryHistoryItem.query.dataSource.selectedType === DataSourceTypes.QSQL
-        ? queryHistoryItem.query.dataSource.qsql.selectedTarget
-        : undefined;
-    const type = isPython
-      ? ExecutionTypes.ReRunPythonDataQuery
-      : ExecutionTypes.ReRunDataQuery;
-    const res = await executeDataQuery(
-      queryHistoryItem.connectionName,
-      type,
-      target,
-      queryHistoryItem.query,
-    );
-    const endTime = Date.now();
-    const duration = (endTime - startTime).toString();
-    const success = !res.error;
-    await handleExecuteDataQueryResults(
-      queryHistoryItem.connectionName,
-      res,
-      queryHistoryItem.executorName,
-      queryHistoryItem.query.dataSource.selectedType,
-      querySample,
-      queryHistoryItem.isDatasource ? "DATASOURCE" : "RERUN-DATAQUERY",
-      isPython,
-      duration,
-    );
-
-    if (queryHistoryItem.isDatasource) {
-      addDStoQueryHistory(
-        queryHistoryItem.query,
-        success,
-        queryHistoryItem.connectionName,
-        queryHistoryItem.executorName,
-      );
-    }
+    await executeDataSourceRerun(queryHistoryItem, isPython);
   }
 }
 
-// Execute Select View Query (for the future this will also handle variables from connected servers)
+// Execute Select View(for local conn atm) Queries
 export async function executeSelectViewQuery(viewItem: any) {
   const connLabel = viewItem.connLabel;
-  if (connLabel) {
-    const executorName = connLabel + " - " + viewItem.coreIcon;
-    const query = viewItem.label;
-    const startTime = Date.now();
-    const res = await executeQuery(
-      connLabel,
-      ExecutionTypes.QuerySelection,
-      query,
-    );
-    const endTime = Date.now();
-    const duration = (endTime - startTime).toString();
-    await handleExecuteQueryResults(
-      connLabel,
-      res,
-      executorName,
-      query,
-      false,
-      "VIEW",
-      false,
-      duration,
-      true,
-    );
-  } else {
-    notify("Connection label not found", MessageKind.ERROR, {
-      logger,
-    });
+  if (!connLabel) {
+    notify("Connection label not found", MessageKind.ERROR, { logger });
+    return;
   }
+
+  const executorName = connLabel + " - " + viewItem.coreIcon;
+  const query = viewItem.label;
+
+  const { result: res, duration } = await withExecutionTiming(() =>
+    executeQuery(connLabel, ExecutionTypes.QuerySelection, query),
+  );
+
+  await handleExecuteQueryResults(
+    connLabel,
+    res,
+    executorName,
+    query,
+    false,
+    "VIEW",
+    false,
+    duration,
+    true,
+  );
 }
 
-// Execute query or scratchpad
+// Execute Queries
 export async function executeQuery(
   connLabel: string,
   type: ExecutionTypes,
@@ -333,66 +689,26 @@ export async function executeQuery(
   const isPython = isExecutionPython(type);
   const isNotebook = isExecutionNotebook(type);
 
-  let query: any;
-  if (!rerunQuery) {
-    switch (type) {
-      case ExecutionTypes.QuerySelection:
-      case ExecutionTypes.PythonQuerySelection:
-      case ExecutionTypes.DataQuerySelection:
-      case ExecutionTypes.PythonDataQueryFile:
-      case ExecutionTypes.NotebookDataQueryPython:
-      case ExecutionTypes.NotebookDataQueryQSQL:
-      case ExecutionTypes.NotebookDataQuerySQL:
-      case ExecutionTypes.NotebookQueryPython:
-      case ExecutionTypes.NotebookQueryQSQL:
-        query = retrieveQueryData(queryData);
-        break;
-      case ExecutionTypes.QueryFile:
-      case ExecutionTypes.PythonQueryFile:
-      case ExecutionTypes.DataQueryFile:
-        query = retrieveEditorText();
-        break;
-      default:
-        notify(
-          "No query provided for scratchpad execution.",
-          MessageKind.ERROR,
-          {
-            logger,
-          },
-        );
-        return;
-    }
-  } else {
-    query = rerunQuery;
-  }
-
-  if (!query || query.trim() === "") {
-    notify("No query provided for execution.", MessageKind.ERROR, {
-      logger,
-    });
+  const query = getQueryFromExecutionType(type, queryData, rerunQuery);
+  if (!query) {
     return;
   }
 
-  query = sanitizeQuery(query);
+  const sanitizedQuery = validateQuery(query);
+  if (!sanitizedQuery) {
+    return;
+  }
 
-  const connMngService = new ConnectionManagementService();
-  const res = await connMngService.executeQuery(
-    query,
+  return executeWithConnection(
+    sanitizedQuery,
     connLabel,
     context,
     isPython,
     isNotebook,
   );
-  if (!res) {
-    notify("Failed to execute query. No connection found.", MessageKind.ERROR, {
-      logger,
-    });
-    return;
-  }
-  return res;
 }
 
-// Execute via SERVICE GATEWAY
+// Execute Data Queries
 export async function executeDataQuery(
   connLabel: string,
   type: ExecutionTypes,
@@ -402,12 +718,9 @@ export async function executeDataQuery(
   const isPython = isExecutionPython(type);
   const query = getQuery(datasourceFile, type);
   const dsExecutionType = getDSExecutionType(datasourceFile);
-  const udaName = datasourceFile?.dataSource?.uda?.name
-    ? datasourceFile.dataSource.uda.name
-    : "";
+  const udaName = datasourceFile?.dataSource?.uda?.name || "";
 
-  if (!query || (query instanceof String && query.trim() === "")) {
-    notify("No data provided for execution.", MessageKind.ERROR, { logger });
+  if (!validateDataQueryInputs(query)) {
     return;
   }
 
@@ -431,29 +744,19 @@ export async function executeDataQuery(
   const selectedConnection =
     connMngService.retrieveConnectedConnection(connLabel);
 
-  if (selectedConnection instanceof LocalConnection || !selectedConnection) {
+  if (!validateConnection(selectedConnection)) {
     return;
   }
 
-  selectedConnection.getMeta();
-  if (!selectedConnection?.meta?.payload.assembly) {
-    notify(
-      "No database running in the Insights connection.",
-      MessageKind.ERROR,
-      { logger },
-    );
-    return;
-  }
-  const res = await selectedConnection.getDataQuery(
+  return executeServiceGateway(
+    selectedConnection,
     dsExecutionType,
     body,
     udaName,
   );
-
-  return convertDSDataResponse(res);
 }
 
-// Populate scratchpad methods
+// Populate Scratchpad
 export async function prepareToPopulateScratchpad(
   connLabel: string,
   type: ExecutionTypes,
@@ -462,7 +765,7 @@ export async function prepareToPopulateScratchpad(
   datasourceFile?: DataSourceFiles,
 ): Promise<void> {
   const isPython = isExecutionPython(type);
-  const variable = outputVariable ? outputVariable : await inputVariable();
+  const variable = await resolveVariable(outputVariable);
   const query = getQuery(datasourceFile);
   const dsExecutionType = getDSExecutionType(datasourceFile);
   const selectedTarget = target
@@ -471,36 +774,23 @@ export async function prepareToPopulateScratchpad(
       ? datasourceFile?.dataSource?.qsql.selectedTarget
       : "";
 
-  if (!query || (typeof query === "string" && query.trim() === "")) {
-    notify("No data provided to populate scratchpad.", MessageKind.ERROR, {
-      logger,
-    });
+  if (!validateScratchpadInputs(query, variable)) {
     return;
   }
 
-  if (!variable || variable.trim() === "") {
-    notify(
-      "No variable name provided to populate scratchpad.",
-      MessageKind.INFO,
-      { logger },
-    );
-    return;
-  }
-  const body = await selectAndGenerateScratchpadImportReqBody(
-    query ?? "",
+  const body = await buildScratchpadBody(
+    query!,
     dsExecutionType,
-    variable ?? "",
+    variable!,
     connLabel,
-    selectedTarget ?? "",
+    selectedTarget || "",
     isPython,
   );
 
   if (!body) {
-    notify("No data available to populate scratchpad.", MessageKind.ERROR, {
-      logger,
-    });
     return;
   }
+
   return populateScratchpad(connLabel, dsExecutionType, body, variable);
 }
 
@@ -523,62 +813,57 @@ export async function populateScratchpad(
     outputVariable = await vscode.window.showInputBox(scratchpadVariable);
   }
 
-  if (outputVariable !== undefined && outputVariable !== "") {
-    const selectedConnection =
-      connMngService.retrieveConnectedConnection(connLabel);
-
-    if (selectedConnection instanceof LocalConnection || !selectedConnection) {
-      return;
-    }
-
-    await selectedConnection.importScratchpad(
-      outputVariable,
-      body,
-      type,
-      silent,
-    );
-  } else {
+  if (!outputVariable || outputVariable === "") {
     notify(
       `Invalid scratchpad output variable name: ${outputVariable}`,
       MessageKind.ERROR,
       { logger },
     );
+    return;
   }
+
+  const selectedConnection =
+    connMngService.retrieveConnectedConnection(connLabel);
+
+  if (selectedConnection instanceof LocalConnection || !selectedConnection) {
+    return;
+  }
+
+  await selectedConnection.importScratchpad(outputVariable, body, type, silent);
 }
 
-// Handle GG Plots
+// Handlers
 export async function handleGGPlotExecution(
   results: any,
   isPython: boolean,
 ): Promise<any> {
   const data = resultToBase64(results);
-  if (data) {
-    notify("GG Plot displayed", MessageKind.DEBUG, {
-      logger,
-      telemetry: "GGPLOT.Display" + (isPython ? ".Python" : ".q"),
-    });
-    const active = ext.activeTextEditor;
-    if (active) {
-      const plot = <Plot>{
-        charts: [{ data }],
-      };
-      const uri = await addWorkspaceFile(active.document.uri, "plot", ".plot");
-      if (!workspaceHas(uri)) {
-        await vscode.workspace.openTextDocument(uri);
-        await openWith(
-          uri,
-          ChartEditorProvider.viewType,
-          vscode.ViewColumn.Beside,
-        );
-      }
-      await setUriContent(uri, JSON.stringify(plot));
-      return true;
-    }
+  if (!data) {
+    return false;
   }
-  return false;
+
+  notify("GG Plot displayed", MessageKind.DEBUG, {
+    logger,
+    telemetry: "GGPLOT.Display" + (isPython ? ".Python" : ".q"),
+  });
+
+  const active = ext.activeTextEditor;
+  if (!active) {
+    return false;
+  }
+
+  const plot = <Plot>{ charts: [{ data }] };
+  const uri = await addWorkspaceFile(active.document.uri, "plot", ".plot");
+
+  if (!workspaceHas(uri)) {
+    await vscode.workspace.openTextDocument(uri);
+    await openWith(uri, ChartEditorProvider.viewType, vscode.ViewColumn.Beside);
+  }
+
+  await setUriContent(uri, JSON.stringify(plot));
+  return true;
 }
 
-// Handle Execution process for results to be displayed
 export async function handleExecuteQueryResults(
   connLabel: string,
   res: any,
@@ -602,25 +887,13 @@ export async function handleExecuteQueryResults(
       duration,
       connVersion,
     );
-  } else {
-    if (ext.isResultsTabVisible) {
-      const ggplot = await handleGGPlotExecution(res, isPython);
-      if (!ggplot) {
-        await writeQueryResultsToView(
-          res,
-          querySample,
-          connLabel,
-          executorName,
-          isInsights,
-          fileType,
-          isPython,
-          duration,
-          isFromConnTree,
-          connVersion,
-        );
-      }
-    } else {
-      await writeQueryResultsToConsole(
+    return;
+  }
+
+  if (ext.isResultsTabVisible) {
+    const ggplot = await handleGGPlotExecution(res, isPython);
+    if (!ggplot) {
+      await writeQueryResultsToView(
         res,
         querySample,
         connLabel,
@@ -630,8 +903,21 @@ export async function handleExecuteQueryResults(
         isPython,
         duration,
         isFromConnTree,
+        connVersion,
       );
     }
+  } else {
+    await writeQueryResultsToConsole(
+      res,
+      querySample,
+      connLabel,
+      executorName,
+      isInsights,
+      fileType,
+      isPython,
+      duration,
+      isFromConnTree,
+    );
   }
 }
 
@@ -645,7 +931,7 @@ export async function handleExecuteDataQueryResults(
   isPython?: boolean,
   duration?: string,
 ) {
-  const success = !res.error;
+  const { success, formattedRes } = formatDataQueryResult(res);
 
   if (!success) {
     notify("Query execution failed.", MessageKind.DEBUG, {
@@ -654,17 +940,11 @@ export async function handleExecuteDataQueryResults(
       telemetry: documentType + "." + dataQueryType + ".Run.Error",
     });
   }
+
   if (ext.isResultsTabVisible) {
-    if (success) {
-      const resultCount = typeof res === "string" ? "0" : res.rows.length;
-      notify(`Results: ${resultCount} rows`, MessageKind.DEBUG, {
-        logger,
-      });
-    } else if (!success) {
-      res = res.errorMsg ? res.errorMsg : res.error;
-    }
-    await writeQueryResultsToView(
-      res,
+    await dispatchToResultsTab(
+      formattedRes,
+      success,
       querySample,
       connLabel,
       executorName,
@@ -674,17 +954,9 @@ export async function handleExecuteDataQueryResults(
       duration,
     );
   } else {
-    if (success) {
-      notify(
-        `Results is a string with length: ${res.length}`,
-        MessageKind.DEBUG,
-        { logger },
-      );
-    } else if (res.error) {
-      res = res.errorMsg ? res.errorMsg : res.error;
-    }
-    await writeQueryResultsToConsole(
-      res,
+    await dispatchToConsole(
+      formattedRes,
+      success,
       querySample,
       connLabel,
       executorName,
