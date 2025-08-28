@@ -205,12 +205,18 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
             runner.title = `Refreshing meta data for ${selectedServer}.`;
             await runner.execute();
           } else {
-            offerConnectAction(selectedServer);
+            await offerConnectAction(selectedServer);
           }
           break;
         }
         case DataSourceCommand.Run: {
-          if (connected) {
+          if (!connected) {
+            const connectedAfterOffering =
+              await offerConnectAction(selectedServer);
+            if (!connectedAfterOffering) {
+              break;
+            }
+
             const runner = Runner.create(() =>
               runDataSource(
                 msg.dataSourceFile,
@@ -221,13 +227,17 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
             runner.location = ProgressLocation.Notification;
             runner.title = `Running ${getBasename(document.uri)} on ${msg.selectedServer}.`;
             await runner.execute();
-          } else {
-            offerConnectAction(selectedServer);
           }
           break;
         }
         case DataSourceCommand.Populate: {
-          if (connected) {
+          if (!connected) {
+            const connectedAfterOffering =
+              await offerConnectAction(selectedServer);
+            if (!connectedAfterOffering) {
+              break;
+            }
+
             const runner = Runner.create(() =>
               prepareToPopulateScratchpad(
                 msg.selectedServer,
@@ -239,8 +249,6 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
             );
             runner.title = "Populating scratchpad.";
             await runner.execute();
-          } else {
-            offerConnectAction(selectedServer);
           }
           break;
         }

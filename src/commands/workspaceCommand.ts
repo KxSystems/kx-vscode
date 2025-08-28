@@ -662,8 +662,12 @@ export async function findConnection(uri: Uri) {
       server = node.label;
       conn = connMngService.retrieveConnectedConnection(server);
       if (conn === undefined) {
-        offerConnectAction(server);
-        return;
+        const connectedAfterOffering = await offerConnectAction(server);
+        if (connectedAfterOffering) {
+          conn = connMngService.retrieveConnectedConnection(server);
+        } else {
+          return;
+        }
       }
     } else {
       notify(`Connection ${server} not found.`, MessageKind.ERROR, {
@@ -674,7 +678,7 @@ export async function findConnection(uri: Uri) {
   } else if (ext.activeConnection) {
     conn = ext.activeConnection;
   } else {
-    offerConnectAction();
+    await offerConnectAction();
     return;
   }
   return conn;

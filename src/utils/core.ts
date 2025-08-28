@@ -411,9 +411,9 @@ export function invalidUsernameJWT(connLabel: string): void {
 }
 
 /* c8 ignore next */
-export function offerConnectAction(connLabel?: string): void {
+export async function offerConnectAction(connLabel?: string): Promise<boolean> {
   if (connLabel) {
-    notify(
+    return notify(
       `You aren't connected to ${connLabel}, would you like to connect? Once connected please try again.`,
       MessageKind.WARNING,
       {},
@@ -425,7 +425,9 @@ export function offerConnectAction(connLabel?: string): void {
           "kdb.connections.connect.via.dialog",
           connLabel,
         );
+        return true;
       }
+      return false;
     });
   } else {
     notify(
@@ -433,6 +435,7 @@ export function offerConnectAction(connLabel?: string): void {
       MessageKind.WARNING,
       { logger },
     );
+    return false;
   }
 }
 

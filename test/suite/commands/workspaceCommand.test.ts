@@ -24,6 +24,7 @@ import { ExecutionTypes } from "../../../src/models/execution";
 import { ConnectionManagementService } from "../../../src/services/connectionManagerService";
 import { InsightsNode, KdbNode } from "../../../src/services/kdbTreeProvider";
 import { WorkspaceTreeProvider } from "../../../src/services/workspaceTreeProvider";
+import * as coreUtils from "../../../src/utils/core";
 import * as dataSourceUtils from "../../../src/utils/dataSource";
 import * as loggers from "../../../src/utils/loggers";
 import * as notifications from "../../../src/utils/notifications";
@@ -173,6 +174,7 @@ describe("workspaceCommand", () => {
 
   describe("pickTarget", () => {
     it("should pick from available targets", async () => {
+      sinon.stub(coreUtils, "offerConnectAction").resolves(true);
       sinon
         .stub(vscode.window, "showQuickPick")
         .value(async () => "scratchpad");
@@ -183,6 +185,7 @@ describe("workspaceCommand", () => {
     });
 
     it("should only show scratchpad for .py files", async () => {
+      sinon.stub(coreUtils, "offerConnectAction").resolves(true);
       sinon
         .stub(vscode.window, "showQuickPick")
         .value(async () => "scratchpad");
@@ -206,6 +209,7 @@ describe("workspaceCommand", () => {
 
   describe("runActiveEditor", () => {
     it("should run query", async () => {
+      sinon.stub(coreUtils, "offerConnectAction").resolves(true);
       await executionCommand.executeActiveEditorQuery();
     });
   });
