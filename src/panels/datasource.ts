@@ -103,6 +103,7 @@ export class DataSourcesPanel {
   public static set running(flag: boolean) {
     running = flag;
     const panel = DataSourcesPanel.currentPanel;
+
     if (panel) {
       panel.status();
     }
@@ -127,6 +128,7 @@ export class DataSourcesPanel {
 
     while (this._disposables.length) {
       const disposable = this._disposables.pop();
+
       if (disposable) {
         disposable.dispose();
       }
@@ -139,7 +141,6 @@ export class DataSourcesPanel {
     const insightsMeta = ext.insightsMeta;
     const isInsights = ext.connectionNode instanceof InsightsNode;
     const insightsUDAs: UDA[] = [];
-
     const message: DataSourceMessage = {
       isInsights,
       insightsMeta,

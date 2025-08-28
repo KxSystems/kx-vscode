@@ -32,7 +32,6 @@ export function filterUDAParamsValidTypes(type: number | number[]): number[] {
     ...ext.timestampTypes,
     ...ext.jsonTypes,
   ]);
-
   const typesArray = Array.isArray(type) ? type : [type];
 
   return typesArray.filter(validTypes.has, validTypes);
@@ -69,6 +68,7 @@ export function getUDAFieldType(type: number | number[]): ParamFieldType {
   ];
 
   let foundType: ParamFieldType | undefined;
+
   for (const fieldType of typePriority) {
     if (typeSet.has(fieldType)) {
       if (foundType) {
@@ -111,6 +111,7 @@ export function parseUDAParams(
   }
 
   const parsedParams: UDAParam[] = [];
+
   let hasInvalidRequiredParam = false;
 
   params.forEach((param) => {
@@ -121,6 +122,7 @@ export function parseUDAParams(
     const typeStrings = convertTypesToString(validTypes);
 
     let multiFieldTypes: { [key: string]: ParamFieldType }[] | undefined;
+
     if (fieldType === ParamFieldType.MultiType) {
       multiFieldTypes = validTypes.map((type, index) => ({
         [typeStrings[index]]: getUDAFieldType(type),
@@ -214,12 +216,15 @@ export function createUDAObject(
 
 export function parseUDAList(getMeta: MetaObjectPayload): UDA[] {
   const UDAs: UDA[] = [];
+
   if (getMeta.api !== undefined) {
     const getMetaUDAs = getMeta.api.filter((api) => api.uda === true);
+
     if (getMetaUDAs.length !== 0) {
       for (const uda of getMetaUDAs) {
         const parsedParams = parseUDAParams(uda.params);
         const incompatibleError = getIncompatibleError(parsedParams);
+
         UDAs.push(createUDAObject(uda, parsedParams, incompatibleError));
       }
     }
@@ -244,6 +249,7 @@ export async function validateUDA(
   }
 
   const isAvailable = await selectedConn.isUDAAvailable(uda.name);
+
   if (!isAvailable) {
     return { error: `UDA ${uda.name} is not available in this connection` };
   }
@@ -272,6 +278,7 @@ export function processUDAParams(uda: UDA): {
   if (uda.params && uda.params.length > 0) {
     for (const param of uda.params) {
       const validationError = validateParam(param, uda.name);
+
       if (validationError) {
         return validationError;
       }
@@ -330,6 +337,7 @@ export function isInvalidRequiredParam(param: UDAParam): boolean {
       typeToValidate = param.type[0];
     } else if (param.type.length > 1 && param.selectedMultiTypeString) {
       const selectedTypeFixed = param.selectedMultiTypeString.replace("_", " ");
+
       typeToValidate = ext.constants.reverseDataTypes.get(selectedTypeFixed);
     }
   } else if (typeof param.type === "number") {
@@ -370,19 +378,20 @@ export async function retrieveUDAtoCreateReqBody(
     return { error: "UDA is undefined" };
   }
   const connManager = new ConnectionManagementService();
-
   const insightsConn = connManager.retrieveConnectedConnection(connLabel);
+
   if (!insightsConn || !(insightsConn instanceof InsightsConnection)) {
     return { error: `Connection ${connLabel} is not valid or not connected.` };
   }
   const returnFormat = ext.isResultsTabVisible ? "structuredText" : "text";
-
   const validationError = await validateUDA(uda, insightsConn);
+
   if (validationError) {
     return validationError;
   }
 
   const { params, parameterTypes, error } = processUDAParams(uda);
+
   if (error) {
     return error;
   }

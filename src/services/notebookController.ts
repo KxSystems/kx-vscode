@@ -69,8 +69,10 @@ export class KxNotebookController {
       execution.start(Date.now());
 
       let success = false;
+
       try {
         const kind = getCellKind(cell);
+
         if (kind === CellKind.SQL) {
           throw new Error("SQL is not supported on REPL.");
         }
@@ -79,6 +81,7 @@ export class KxNotebookController {
           kind === CellKind.PYTHON ? getPythonWrapper(text) : text,
           execution.token,
         );
+
         this.replaceOutput(execution, {
           text: result.output || "",
           mime: "text/plain",
@@ -104,6 +107,7 @@ export class KxNotebookController {
     }
 
     const conn = await findConnection(notebook.uri);
+
     if (!conn) {
       return;
     }
@@ -120,14 +124,12 @@ export class KxNotebookController {
 
       try {
         const kind = getCellKind(cell);
-
         const { target, variable } = this.getCellMetadata(
           cell,
           kind,
           isInsights,
           conn,
         );
-
         const executor = await executeNotebookQuery(
           conn.connLabel,
           cell,
@@ -146,6 +148,7 @@ export class KxNotebookController {
                 reject(new vscode.CancellationError());
               }
             };
+
             updateCancelled();
             cancellationDisposable =
               execution.token.onCancellationRequested(updateCancelled);
@@ -263,12 +266,14 @@ function render(
     } else if (results) {
       const rows: string[] = [];
       const table = convertToGrid(results, isInsights, connVersion, isPython);
+
       if (table.columnDefs) {
         rows.push("<table>");
 
         rows.push("<thead>");
         rows.push("<tr>");
         const fields: string[] = [];
+
         for (const def of table.columnDefs) {
           rows.push(`<th>${def.headerName}</th>`);
           if ("field" in def) {

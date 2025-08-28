@@ -35,6 +35,7 @@ describe("Serializer", () => {
       encoder.encode(""),
       <vscode.CancellationToken>{},
     );
+
     assert.strictEqual(deserialized.cells.length, 0);
   });
 

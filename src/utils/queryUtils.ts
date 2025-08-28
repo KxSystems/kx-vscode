@@ -26,7 +26,6 @@ import { QueryHistory } from "../models/queryHistory";
 import { ScratchpadStacktrace } from "../models/scratchpadResult";
 
 const logger = "queryUtils";
-
 const QUERY_LIMIT = 250_000;
 
 export function sanitizeQuery(query: string): string {
@@ -63,6 +62,7 @@ export function handleWSError(ab: ArrayBuffer): any {
     // error for: qe/qsql
     // deserializer didn't recognize the format
     const raw = new Uint8Array(ab);
+
     if (
       raw.byteLength >= 10 &&
       // header?
@@ -84,6 +84,7 @@ export function handleWSError(ab: ArrayBuffer): any {
         )
         .split("\n")
         .slice(-1);
+
       errorString = translated.join("").trim();
 
       // TODO: need to check if this is needed
@@ -109,11 +110,13 @@ export function handleWSResults(ab: ArrayBuffer, isTableView?: boolean): any {
     isTableView = ext.isResultsTabVisible;
   }
   let res: any;
+
   try {
     if (isCompressed(ab)) {
       ab = uncompress(ab);
     }
     let des = deserialize(ab);
+
     if (des.qtype === 0 && des.values.length === 2) {
       des = des.values[1];
     }
@@ -137,6 +140,7 @@ export function handleScratchpadTableRes(results: DCDS | string): any {
     return results;
   }
   let scratchpadResponse = results.rows;
+
   if (!Array.isArray(scratchpadResponse)) {
     return results;
   }
@@ -144,8 +148,10 @@ export function handleScratchpadTableRes(results: DCDS | string): any {
     scratchpadResponse = addIndexKey(scratchpadResponse);
   }
   const result = [];
+
   for (const row of scratchpadResponse) {
     const newObj = {};
+
     for (const key in row) {
       row[key] = checkIfIsQDateTypes(row[key]);
       if (typeof row[key] === "bigint") {
@@ -202,6 +208,7 @@ export function addIndexKey(input: any) {
 
 export function getValueFromArray(results: DCDS): any {
   const arr = results.rows;
+
   if (arr !== undefined) {
     if (arr.length === 1 && typeof arr[0] === "object" && arr[0] !== null) {
       results.rows = [checkIfIsQDateTypes(arr[0])];
@@ -280,6 +287,7 @@ export function getPythonWrapper(
     sample_fn: "first",
     sample_size: 10000,
   };
+
   return `{[returnFormat;code;sample_fn;sample_size] res:${wrapper}[returnFormat;code;sample_fn;sample_size];$[res\`errored;res\`error;res\`result]}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]`;
 }
 
@@ -289,8 +297,10 @@ export function getQSQLWrapper(query: string, isPython?: boolean): string {
 
 export function generateQTypes(meta: { [key: string]: number }): any {
   const newMeta: { [key: string]: string } = {};
+
   for (const key in meta) {
     const value = meta[key];
+
     newMeta[key] = TypeBase.typeNames[value] ?? `Unknown type: ${value}`;
   }
   return newMeta;
@@ -315,6 +325,7 @@ export function convertRows(rows: any[]): any {
   const isObj = typeof rows[0] === "object";
   const isPropVal = isObj ? checkIfIsPropVal(keys) : false;
   const result = isPropVal ? [] : [keys.join("#$#;header;#$#")];
+
   for (const row of rows) {
     const values = keys.map((key) => {
       if (Array.isArray(row[key])) {
@@ -322,6 +333,7 @@ export function convertRows(rows: any[]): any {
       }
       return row[key];
     });
+
     result.push(values.join("#$#;#$#"));
   }
   return convertRowsToConsole(result).join("\n") + "\n\n";
@@ -332,12 +344,15 @@ export function convertRowsToConsole(rows: string[]): string[] {
     return [];
   }
   const haveHeader = rows[0].includes("#$#;header;#$#");
+
   let header;
+
   if (haveHeader) {
     header = rows[0].split("#$#;header;#$#");
     rows.shift();
   }
   const vector = rows.map((row) => row.split("#$#;#$#"));
+
   if (header) {
     vector.unshift(header);
   }
@@ -347,6 +362,7 @@ export function convertRowsToConsole(rows: string[]): string[] {
       (max, row) => Math.max(max, row[j].length),
       0,
     );
+
     counters.push(maxLength + 2);
     return counters;
   }, []);
@@ -355,6 +371,7 @@ export function convertRowsToConsole(rows: string[]): string[] {
     row.forEach((value, j) => {
       const counter = columnCounters[j];
       const diff = counter - value.length;
+
       if (diff > 0) {
         if (!haveHeader && j !== columnCounters.length - 1) {
           row[j] = value + "|" + " ".repeat(diff > 1 ? diff - 1 : diff);
@@ -366,9 +383,9 @@ export function convertRowsToConsole(rows: string[]): string[] {
   });
 
   const result = vector.map((row) => row.join(""));
-
   const totalCount = columnCounters.reduce((sum, count) => sum + count, 0);
   const totalCounter = "-".repeat(totalCount);
+
   if (haveHeader) {
     result.splice(1, 0, totalCounter);
   }
@@ -409,6 +426,7 @@ export function selectDSType(
     QSQL: DataSourceTypes.QSQL,
     SQL: DataSourceTypes.SQL,
   };
+
   return typeMapping[dataSourceType] || undefined;
 }
 
@@ -450,6 +468,7 @@ export function formatScratchpadStacktrace(stacktrace: ScratchpadStacktrace) {
     .map((frame, i) => {
       let lines = frame.text[0].split("\n");
       let preline = "";
+
       // We need to account for the possibility that the error
       // occurs in a piece of code containing newlines, so we split
       // up the text into lines and inject the caret into the correct
@@ -457,6 +476,7 @@ export function formatScratchpadStacktrace(stacktrace: ScratchpadStacktrace) {
       preline = lines.pop() as string;
       const caretline = Array(preline.length).fill(" ").join("") + "^";
       const postlines = (preline + frame.text[1]).split("\n");
+
       postlines.splice(1, 0, caretline);
       lines = lines.concat(postlines);
 
@@ -470,6 +490,7 @@ export function formatScratchpadStacktrace(stacktrace: ScratchpadStacktrace) {
 
       // add gutter to align other lines with the first one
       const gutter = " ".repeat(str.length);
+
       str += lines.map((l, i) => (i > 0 ? gutter + l : l)).join("\n");
 
       return str;
@@ -485,6 +506,7 @@ export function resultToBase64(result: any): string | undefined {
     (Array.isArray(result?.columns) && result.columns[0]?.values) ||
     result?.columns?.values ||
     result;
+
   if (Array.isArray(bytes) && bytes.length > 66) {
     for (let i = 0; i < PNG.length; i++) {
       if (parseInt(`${bytes[i]}`) !== PNG[i]) {
@@ -501,6 +523,7 @@ export function needsScratchpad<T>(connLabel: string, target: Promise<T>) {
     const runner = Runner.create(() =>
       target.then(() => ext.scratchpadStarted.add(connLabel)),
     );
+
     runner.title = `Starting scratchpad on ${connLabel}.`;
     runner.execute();
   }

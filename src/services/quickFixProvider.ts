@@ -34,8 +34,10 @@ export class QuickFixProvider implements CodeActionProvider {
     const diagnostic = diagnostics.find(
       (item) => item.source === "qlint" && item.range.isEqual(range),
     );
+
     if (diagnostic) {
       const once = new CodeAction("Suppress warning", CodeActionKind.QuickFix);
+
       once.diagnostics = [diagnostic];
       once.edit = new WorkspaceEdit();
       once.edit.insert(
@@ -47,6 +49,7 @@ export class QuickFixProvider implements CodeActionProvider {
         `Suppress all warnings (${diagnostic.code})`,
         CodeActionKind.QuickFix,
       );
+
       always.diagnostics = [diagnostic];
       always.edit = new WorkspaceEdit();
       always.edit.insert(

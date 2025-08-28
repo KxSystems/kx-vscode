@@ -30,6 +30,7 @@ describe("kdbTreeService", () => {
     it("Should return empty ServerObjects array when none are loaded", async () => {
       sinon.stub(localConn, "loadServerObjects").resolves(undefined);
       const result = await KdbTreeService.loadNamespaces(localConn, "");
+
       assert.strictEqual(
         result.length,
         0,
@@ -60,8 +61,10 @@ describe("kdbTreeService", () => {
           isNs: true,
         },
       ];
+
       sinon.stub(localConn, "loadServerObjects").resolves(testObject);
       const result = await KdbTreeService.loadNamespaces(localConn);
+
       assert.strictEqual(
         result[0],
         testObject[0],
@@ -92,8 +95,10 @@ describe("kdbTreeService", () => {
           isNs: true,
         },
       ];
+
       sinon.stub(localConn, "loadServerObjects").resolves(testObject0);
       const result = await KdbTreeService.loadNamespaces(localConn);
+
       assert.strictEqual(
         result[0],
         testObject0[0],
@@ -115,8 +120,10 @@ describe("kdbTreeService", () => {
           isNs: true,
         },
       ];
+
       sinon.stub(localConn, "loadServerObjects").resolves(testObject2);
       const result = await KdbTreeService.loadNamespaces(localConn, ".");
+
       assert.strictEqual(
         result[0],
         testObject2[0],
@@ -136,6 +143,7 @@ describe("kdbTreeService", () => {
     it("Should return empty ServerObjects array when none are loaded", async () => {
       sinon.stub(localConn, "loadServerObjects").resolves(undefined);
       const result = await KdbTreeService.loadDictionaries(localConn, "");
+
       assert.strictEqual(
         result.length,
         0,
@@ -156,8 +164,10 @@ describe("kdbTreeService", () => {
           isNs: false,
         },
       ];
+
       sinon.stub(localConn, "loadServerObjects").resolves(testObject);
       const result = await KdbTreeService.loadDictionaries(localConn, ".");
+
       assert.strictEqual(
         result[0],
         testObject[0],
@@ -174,6 +184,7 @@ describe("kdbTreeService", () => {
     it("Should return empty ServerObjects array when none are loaded", async () => {
       sinon.stub(localConn, "loadServerObjects").resolves(undefined);
       const result = await KdbTreeService.loadFunctions(localConn, ".");
+
       assert.strictEqual(
         result.length,
         0,
@@ -194,8 +205,10 @@ describe("kdbTreeService", () => {
           isNs: false,
         },
       ];
+
       sinon.stub(localConn, "loadServerObjects").resolves(testObject);
       const result = await KdbTreeService.loadFunctions(localConn, ".");
+
       assert.strictEqual(
         result[0],
         testObject[0],
@@ -212,6 +225,7 @@ describe("kdbTreeService", () => {
     it("Should return empty ServerObjects array when none are loaded", async () => {
       sinon.stub(localConn, "loadServerObjects").resolves(undefined);
       const result = await KdbTreeService.loadTables(localConn, ".");
+
       assert.strictEqual(
         result.length,
         0,
@@ -232,8 +246,10 @@ describe("kdbTreeService", () => {
           isNs: false,
         },
       ];
+
       sinon.stub(localConn, "loadServerObjects").resolves(testObject);
       const result = await KdbTreeService.loadTables(localConn, ".");
+
       assert.strictEqual(
         result[0],
         testObject[0],
@@ -251,6 +267,7 @@ describe("kdbTreeService", () => {
       sinon.stub(localConn, "loadServerObjects").resolves(undefined);
       sinon.stub(KdbTreeService, "loadViews").resolves([]);
       const result = await KdbTreeService.loadVariables(localConn, ".");
+
       assert.strictEqual(
         result.length,
         0,
@@ -271,9 +288,11 @@ describe("kdbTreeService", () => {
           isNs: false,
         },
       ];
+
       sinon.stub(localConn, "loadServerObjects").resolves(testObject);
       sinon.stub(KdbTreeService, "loadViews").resolves([]);
       const result = await KdbTreeService.loadVariables(localConn, ".");
+
       assert.strictEqual(
         result[0],
         testObject[0],
@@ -295,6 +314,7 @@ describe("kdbTreeService", () => {
       );
       sinon.stub(localConn, "executeQueryRaw").resolves(["vw1", "vw2"]);
       const result = await KdbTreeService.loadViews(localConn);
+
       assert.strictEqual(result[0], "vw1", "Should return the first view");
     });
 
@@ -306,6 +326,7 @@ describe("kdbTreeService", () => {
       );
       sinon.stub(localConn, "executeQueryRaw").resolves(["vw1", "vw2"]);
       const result = await KdbTreeService.loadViews(localConn);
+
       assert.strictEqual(result[0], "vw1", "Should return the first view");
     });
   });

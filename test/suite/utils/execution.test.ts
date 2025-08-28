@@ -28,6 +28,7 @@ describe("execution", () => {
   it("runQFileTerminal", () => {
     const filename = "test";
     const result = executionUtils.runQFileTerminal(filename);
+
     assert.strictEqual(result, undefined);
   });
 
@@ -35,6 +36,7 @@ describe("execution", () => {
     const results = "test";
     const type = QueryResultType.Error;
     const result = executionUtils.handleQueryResults(results, type);
+
     assert.strictEqual(result, "test");
   });
 
@@ -44,6 +46,7 @@ describe("execution", () => {
     const result = executionUtils
       .convertArrayStringInVector(resultRows)
       .toString();
+
     assert.equal(result, expectedRes);
   });
 
@@ -55,6 +58,7 @@ describe("execution", () => {
       ["3", "4"],
     ].toString();
     const result = executionUtils.convertArrayInVector(resultRows).toString();
+
     assert.equal(result, expectedRes);
   });
 
@@ -68,6 +72,7 @@ describe("execution", () => {
     const result = executionUtils
       .convertResultStringToVector(resultRows)
       .toString();
+
     assert.equal(result, expectedRes);
   });
 
@@ -79,27 +84,32 @@ describe("execution", () => {
       ["3", "4"],
     ].toString();
     const result = executionUtils.convertResultToVector(resultRows).toString();
+
     assert.equal(result, expectedRes);
   });
 
   describe("convertArrayOfArraysToObjects", () => {
     it("should return an empty array if the input is not an array", () => {
       const result = executionUtils.convertArrayOfArraysToObjects(null);
+
       assert.deepStrictEqual(result, null);
     });
 
     it("should return the input array if it is empty", () => {
       const result = executionUtils.convertArrayOfArraysToObjects([]);
+
       assert.deepStrictEqual(result, []);
     });
 
     it("should return the input array if the first row is not an array", () => {
       const result = executionUtils.convertArrayOfArraysToObjects([1, 2, 3]);
+
       assert.deepStrictEqual(result, [1, 2, 3]);
     });
 
     it("should return the input array if the first row is empty", () => {
       const result = executionUtils.convertArrayOfArraysToObjects([[]]);
+
       assert.deepStrictEqual(result, [[]]);
     });
 
@@ -108,6 +118,7 @@ describe("execution", () => {
         [1, 2],
         [3],
       ]);
+
       assert.deepStrictEqual(result, []);
     });
 
@@ -122,6 +133,7 @@ describe("execution", () => {
         { b: 2, a: 2 },
       ];
       const result = executionUtils.convertArrayOfArraysToObjects(input);
+
       assert.deepStrictEqual(result, expectedOutput);
     });
   });
@@ -134,6 +146,7 @@ describe("execution", () => {
         { Index: 2, Key: "key2", Value: "value2" },
       ];
       const output = executionUtils.convertStringToArray(input);
+
       assert.deepStrictEqual(output, expectedOutput);
     });
 
@@ -144,6 +157,7 @@ describe("execution", () => {
         { Index: 2, Value: "value2" },
       ];
       const output = executionUtils.convertStringToArray(input);
+
       assert.deepStrictEqual(output, expectedOutput);
     });
 
@@ -154,6 +168,7 @@ describe("execution", () => {
         { Index: 2, name: "Doe", age: "30" },
       ];
       const output = executionUtils.convertStringToArray(input);
+
       assert.deepStrictEqual(output, expectedOutput);
     });
 
@@ -165,6 +180,7 @@ describe("execution", () => {
         { Index: 3, Key: "key3", Value: "value3" },
       ];
       const output = executionUtils.convertStringToArray(input);
+
       assert.deepStrictEqual(output, expectedOutput);
     });
 
@@ -174,6 +190,7 @@ describe("execution", () => {
         { Index: 1, Value: "2001.01.01D12:00:00.000000000" },
       ];
       const output = executionUtils.convertStringToArray(input);
+
       assert.deepStrictEqual(output, expectedOutput);
     });
 
@@ -185,6 +202,7 @@ describe("execution", () => {
         { Index: 2, Value: "2001.01.01D12:00:00.000000001" },
       ];
       const output = executionUtils.convertStringToArray(input);
+
       assert.deepStrictEqual(output, expectedOutput);
     });
   });
@@ -371,6 +389,7 @@ describe("execution", () => {
 
   describe("getQuery", () => {
     let dummyDsFiles;
+
     beforeEach(() => {
       dummyDsFiles = createDefaultDataSourceFile();
       ext.activeTextEditor = <vscode.TextEditor>{
@@ -391,6 +410,7 @@ describe("execution", () => {
       dummyDsFiles.dataSource.selectedType = DataSourceTypes.QSQL;
       dummyDsFiles.dataSource.qsql = { query: "select from t" };
       const result = executionUtils.getQuery(dummyDsFiles);
+
       assert.strictEqual(result, "select from t");
     });
 
@@ -398,12 +418,14 @@ describe("execution", () => {
       dummyDsFiles.dataSource.selectedType = DataSourceTypes.SQL;
       dummyDsFiles.dataSource.sql = { query: "SELECT * FROM table" };
       const result = executionUtils.getQuery(dummyDsFiles);
+
       assert.strictEqual(result, "SELECT * FROM table");
     });
 
     it("should return entire DSFILE if DSFILE is not QSQL or SQL", () => {
       dummyDsFiles.dataSource.selectedType = DataSourceTypes.API;
       const result = executionUtils.getQuery(dummyDsFiles);
+
       assert.deepStrictEqual(result, dummyDsFiles);
     });
 
@@ -411,7 +433,6 @@ describe("execution", () => {
       const selectedText = "This is the selected text.";
       const fullDocument =
         "This is the selected text. This is the rest of the document.";
-
       const mockSelection = {
         active: new vscode.Position(0, 0),
         start: new vscode.Position(0, 0),
@@ -437,16 +458,19 @@ describe("execution", () => {
         undefined,
         ExecutionTypes.QuerySelection,
       );
+
       assert.strictEqual(result, selectedText);
       const resultPython = executionUtils.getQuery(
         undefined,
         ExecutionTypes.PythonQuerySelection,
       );
+
       assert.strictEqual(resultPython, selectedText);
     });
 
     it("should return the entire document text if there is no selection execution type and no DSFile", () => {
       const sampleText = "This is a sample document text.";
+
       ext.activeTextEditor = <vscode.TextEditor>{
         options: { insertSpaces: true, indentSize: 4 },
         selection: { active: new vscode.Position(0, 0) },
@@ -456,6 +480,7 @@ describe("execution", () => {
         },
       };
       let result = executionUtils.getQuery(undefined, ExecutionTypes.QueryFile);
+
       assert.strictEqual(result, sampleText);
 
       result = executionUtils.getQuery(
@@ -503,11 +528,13 @@ describe("execution", () => {
     it("should return undefined if no active editor", () => {
       ext.activeTextEditor = undefined;
       const result = executionUtils.retrieveEditorText();
+
       assert.strictEqual(result, "");
     });
 
     it("should return entire document text if execution type is QueryFile", () => {
       const sampleText = "This is a sample document text.";
+
       ext.activeTextEditor = <vscode.TextEditor>{
         options: { insertSpaces: true, indentSize: 4 },
         selection: { active: new vscode.Position(0, 0) },
@@ -517,6 +544,7 @@ describe("execution", () => {
         },
       };
       const result = executionUtils.retrieveEditorText();
+
       assert.strictEqual(result, sampleText);
     });
   });
@@ -540,6 +568,7 @@ describe("execution", () => {
     it("should return undefined if no active editor", () => {
       ext.activeTextEditor = undefined;
       const result = executionUtils.retrieveEditorSelectionToExecute();
+
       assert.strictEqual(result, "");
     });
 
@@ -547,7 +576,6 @@ describe("execution", () => {
       const selectedText = "This is the selected text.";
       const fullDocument =
         "This is the selected text. This is the rest of the document.";
-
       const mockSelection = {
         active: new vscode.Position(0, 0),
         start: new vscode.Position(0, 0),
@@ -570,6 +598,7 @@ describe("execution", () => {
       };
 
       const result = executionUtils.retrieveEditorSelectionToExecute();
+
       assert.strictEqual(result, selectedText);
     });
 
@@ -604,6 +633,7 @@ describe("execution", () => {
       };
 
       const result = executionUtils.retrieveEditorSelectionToExecute();
+
       assert.strictEqual(result, lineText);
     });
   });
@@ -616,12 +646,14 @@ describe("execution", () => {
     it("should return undefined if no active editor and no query string", () => {
       ext.activeTextEditor = undefined;
       const result = executionUtils.retrieveQueryData();
+
       assert.strictEqual(result, "");
     });
 
     it("should return the query string if provided", () => {
       const queryString = "This is a query string.";
       const result = executionUtils.retrieveQueryData(queryString);
+
       assert.strictEqual(result, queryString);
     });
 
@@ -629,7 +661,6 @@ describe("execution", () => {
       const selectedText = "This is the selected text.";
       const fullDocument =
         "This is the selected text. This is the rest of the document.";
-
       const mockSelection = {
         active: new vscode.Position(0, 0),
         start: new vscode.Position(0, 0),
@@ -652,6 +683,7 @@ describe("execution", () => {
       };
 
       const result = executionUtils.retrieveQueryData();
+
       assert.strictEqual(result, selectedText);
     });
   });
@@ -659,25 +691,31 @@ describe("execution", () => {
   describe("getDSExecutionType", () => {
     it("should return the selected type from DS file", () => {
       const dummyDsFiles = createDefaultDataSourceFile();
+
       dummyDsFiles.dataSource.selectedType = DataSourceTypes.QSQL;
       const result = executionUtils.getDSExecutionType(dummyDsFiles);
+
       assert.strictEqual(result, DataSourceTypes.QSQL);
 
       dummyDsFiles.dataSource.selectedType = DataSourceTypes.SQL;
       const result2 = executionUtils.getDSExecutionType(dummyDsFiles);
+
       assert.strictEqual(result2, DataSourceTypes.SQL);
 
       dummyDsFiles.dataSource.selectedType = DataSourceTypes.API;
       const result3 = executionUtils.getDSExecutionType(dummyDsFiles);
+
       assert.strictEqual(result3, DataSourceTypes.API);
 
       dummyDsFiles.dataSource.selectedType = DataSourceTypes.UDA;
       const result4 = executionUtils.getDSExecutionType(dummyDsFiles);
+
       assert.strictEqual(result4, DataSourceTypes.UDA);
     });
 
     it("should return DataSourceTypes.QSQL if no DS file provided", () => {
       const result = executionUtils.getDSExecutionType();
+
       assert.strictEqual(result, DataSourceTypes.QSQL);
     });
   });
@@ -689,6 +727,7 @@ describe("execution", () => {
         undefined,
         "var",
       );
+
       assert.strictEqual(result, ExecutionTypes.PopulateScratchpadPython);
     });
 
@@ -698,6 +737,7 @@ describe("execution", () => {
         undefined,
         "var",
       );
+
       assert.strictEqual(result, ExecutionTypes.PopulateScratchpad);
     });
 
@@ -707,6 +747,7 @@ describe("execution", () => {
         "target",
         undefined,
       );
+
       assert.strictEqual(result, ExecutionTypes.NotebookDataQueryPython);
     });
 
@@ -716,6 +757,7 @@ describe("execution", () => {
         undefined,
         undefined,
       );
+
       assert.strictEqual(result, ExecutionTypes.NotebookQueryPython);
     });
 
@@ -725,6 +767,7 @@ describe("execution", () => {
         undefined,
         undefined,
       );
+
       assert.strictEqual(result, ExecutionTypes.NotebookQueryQSQL);
     });
 
@@ -734,6 +777,7 @@ describe("execution", () => {
         "target",
         undefined,
       );
+
       assert.strictEqual(result, ExecutionTypes.NotebookDataQueryQSQL);
     });
 
@@ -743,6 +787,7 @@ describe("execution", () => {
         undefined,
         undefined,
       );
+
       assert.strictEqual(result, ExecutionTypes.NotebookDataQuerySQL);
     });
   });
@@ -766,6 +811,7 @@ describe("execution", () => {
     it("should return default context '.' when no active editor", () => {
       ext.activeTextEditor = undefined;
       const result = executionUtils.getExecutionQueryContext();
+
       assert.strictEqual(result, ".");
     });
 
@@ -805,6 +851,7 @@ describe("execution", () => {
       };
 
       const result = executionUtils.getExecutionQueryContext();
+
       assert.strictEqual(result, ".");
     });
 
@@ -844,6 +891,7 @@ describe("execution", () => {
       };
 
       const result = executionUtils.getExecutionQueryContext();
+
       assert.strictEqual(result, "/home/data");
     });
 
@@ -883,6 +931,7 @@ describe("execution", () => {
       };
 
       const result = executionUtils.getExecutionQueryContext();
+
       assert.strictEqual(result, "/var/logs");
     });
 
@@ -923,6 +972,7 @@ describe("execution", () => {
       };
 
       const result = executionUtils.getExecutionQueryContext();
+
       assert.strictEqual(result, "/second/path");
     });
 
@@ -942,6 +992,7 @@ describe("execution", () => {
       };
 
       const result = executionUtils.getExecutionQueryContext();
+
       assert.strictEqual(result, "/workspace");
     });
 
@@ -981,6 +1032,7 @@ describe("execution", () => {
       };
 
       const result = executionUtils.getExecutionQueryContext();
+
       assert.strictEqual(result, "/path/with/spaces");
     });
 
@@ -1020,6 +1072,7 @@ describe("execution", () => {
       };
 
       const result = executionUtils.getExecutionQueryContext();
+
       assert.strictEqual(result, "/another/path");
     });
 
@@ -1059,6 +1112,7 @@ describe("execution", () => {
       };
 
       const result = executionUtils.getExecutionQueryContext();
+
       assert.strictEqual(result, ".");
     });
   });
@@ -1066,41 +1120,49 @@ describe("execution", () => {
   describe("getEditorExecutionType", () => {
     it("should return PythonQueryFile for Python with no target", () => {
       const result = executionUtils.getEditorExecutionType(true);
+
       assert.strictEqual(result, ExecutionTypes.PythonQueryFile);
     });
 
     it("should return PythonQueryFile for Python with scratchpad target", () => {
       const result = executionUtils.getEditorExecutionType(true, "scratchpad");
+
       assert.strictEqual(result, ExecutionTypes.PythonQueryFile);
     });
 
     it("should return PythonDataQueryFile for Python with custom target", () => {
       const result = executionUtils.getEditorExecutionType(true, "database");
+
       assert.strictEqual(result, ExecutionTypes.PythonDataQueryFile);
     });
 
     it("should return QueryFile for non-Python with no target", () => {
       const result = executionUtils.getEditorExecutionType(false);
+
       assert.strictEqual(result, ExecutionTypes.QueryFile);
     });
 
     it("should return QueryFile for non-Python with scratchpad target", () => {
       const result = executionUtils.getEditorExecutionType(false, "scratchpad");
+
       assert.strictEqual(result, ExecutionTypes.QueryFile);
     });
 
     it("should return DataQueryFile for non-Python with custom target", () => {
       const result = executionUtils.getEditorExecutionType(false, "database");
+
       assert.strictEqual(result, ExecutionTypes.DataQueryFile);
     });
 
     it("should return PythonDataQueryFile for Python with empty string target", () => {
       const result = executionUtils.getEditorExecutionType(true, "");
+
       assert.strictEqual(result, ExecutionTypes.PythonQueryFile);
     });
 
     it("should return DataQueryFile for non-Python with empty string target", () => {
       const result = executionUtils.getEditorExecutionType(false, "");
+
       assert.strictEqual(result, ExecutionTypes.QueryFile);
     });
   });
@@ -1108,49 +1170,59 @@ describe("execution", () => {
   describe("getDataTypeForEditor", () => {
     it("should return QSQL for .q files", () => {
       const result = executionUtils.getDataTypeForEditor("script.q");
+
       assert.strictEqual(result, DataSourceTypes.QSQL);
     });
 
     it("should return QSQL for .py files", () => {
       const result = executionUtils.getDataTypeForEditor("script.py");
+
       assert.strictEqual(result, DataSourceTypes.QSQL);
     });
 
     it("should return SQL for .sql files", () => {
       const result = executionUtils.getDataTypeForEditor("query.sql");
+
       assert.strictEqual(result, DataSourceTypes.SQL);
     });
 
     it("should return SQL for .txt files", () => {
       const result = executionUtils.getDataTypeForEditor("document.txt");
+
       assert.strictEqual(result, DataSourceTypes.SQL);
     });
 
     it("should return SQL for files without extension", () => {
       const result = executionUtils.getDataTypeForEditor("filename");
+
       assert.strictEqual(result, DataSourceTypes.SQL);
     });
 
     it("should return SQL for empty string", () => {
       const result = executionUtils.getDataTypeForEditor("");
+
       assert.strictEqual(result, DataSourceTypes.SQL);
     });
 
     it("should return QSQL for file paths ending with .q", () => {
       const result = executionUtils.getDataTypeForEditor("/path/to/file.q");
+
       assert.strictEqual(result, DataSourceTypes.QSQL);
     });
 
     it("should return QSQL for file paths ending with .py", () => {
       const result = executionUtils.getDataTypeForEditor("/path/to/script.py");
+
       assert.strictEqual(result, DataSourceTypes.QSQL);
     });
 
     it("should handle case sensitivity for extensions", () => {
       const resultQ = executionUtils.getDataTypeForEditor("script.Q");
+
       assert.strictEqual(resultQ, DataSourceTypes.SQL);
 
       const resultPy = executionUtils.getDataTypeForEditor("script.PY");
+
       assert.strictEqual(resultPy, DataSourceTypes.SQL);
     });
   });
@@ -1158,6 +1230,7 @@ describe("execution", () => {
   describe("retrieveEditorFileType", () => {
     it("should return NOTEBOOK for .kxnb files", () => {
       const result = executionUtils.retrieveEditorFileType("notebook.kxnb");
+
       assert.strictEqual(result, "NOTEBOOK");
     });
 
@@ -1165,46 +1238,55 @@ describe("execution", () => {
       const result = executionUtils.retrieveEditorFileType(
         "datasource.kdb.json",
       );
+
       assert.strictEqual(result, "DATASOURCE");
     });
 
     it("should return GGPLOT for .plot files", () => {
       const result = executionUtils.retrieveEditorFileType("chart.plot");
+
       assert.strictEqual(result, "GGPLOT");
     });
 
     it("should return WORKBOOK for .kdb.q files", () => {
       const result = executionUtils.retrieveEditorFileType("workbook.kdb.q");
+
       assert.strictEqual(result, "WORKBOOK");
     });
 
     it("should return WORKBOOK for .kdb.py files", () => {
       const result = executionUtils.retrieveEditorFileType("workbook.kdb.py");
+
       assert.strictEqual(result, "WORKBOOK");
     });
 
     it("should return SCRATCHPAD for .q files", () => {
       const result = executionUtils.retrieveEditorFileType("script.q");
+
       assert.strictEqual(result, "SCRATCHPAD");
     });
 
     it("should return SCRATCHPAD for .py files", () => {
       const result = executionUtils.retrieveEditorFileType("script.py");
+
       assert.strictEqual(result, "SCRATCHPAD");
     });
 
     it("should return SCRATCHPAD for .sql files", () => {
       const result = executionUtils.retrieveEditorFileType("query.sql");
+
       assert.strictEqual(result, "SCRATCHPAD");
     });
 
     it("should return SCRATCHPAD for files without extension", () => {
       const result = executionUtils.retrieveEditorFileType("filename");
+
       assert.strictEqual(result, "SCRATCHPAD");
     });
 
     it("should return SCRATCHPAD for empty string", () => {
       const result = executionUtils.retrieveEditorFileType("");
+
       assert.strictEqual(result, "SCRATCHPAD");
     });
 
@@ -1212,6 +1294,7 @@ describe("execution", () => {
       const result = executionUtils.retrieveEditorFileType(
         "/path/to/notebook.kxnb",
       );
+
       assert.strictEqual(result, "NOTEBOOK");
     });
 
@@ -1219,24 +1302,29 @@ describe("execution", () => {
       const result = executionUtils.retrieveEditorFileType(
         "file.with.dots.kdb.json",
       );
+
       assert.strictEqual(result, "DATASOURCE");
     });
 
     it("should handle case sensitivity for extensions", () => {
       const resultKxnb = executionUtils.retrieveEditorFileType("notebook.KXNB");
+
       assert.strictEqual(resultKxnb, "SCRATCHPAD");
 
       const resultJson = executionUtils.retrieveEditorFileType(
         "datasource.KDB.JSON",
       );
+
       assert.strictEqual(resultJson, "SCRATCHPAD");
 
       const resultPlot = executionUtils.retrieveEditorFileType("chart.PLOT");
+
       assert.strictEqual(resultPlot, "SCRATCHPAD");
     });
 
     it("should prioritize more specific extensions", () => {
       const result = executionUtils.retrieveEditorFileType("test.kdb.q.kxnb");
+
       assert.strictEqual(result, "NOTEBOOK");
     });
   });

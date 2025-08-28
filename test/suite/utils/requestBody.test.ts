@@ -30,6 +30,7 @@ import * as udaUtils from "../../../src/utils/uda";
 
 describe("requestBody", () => {
   const dummyDS = createDefaultDataSourceFile();
+
   dummyDS.dataSource.api.selectedApi = "sampleApi";
   dummyDS.dataSource.api.table = "sampleTable";
   dummyDS.dataSource.api.startTS = "2023.01.01D00:00:00.000000000";
@@ -65,6 +66,7 @@ describe("requestBody", () => {
           undefined,
           true,
         );
+
         assert.strictEqual(result.returnFormat, "structuredText");
       });
 
@@ -76,6 +78,7 @@ describe("requestBody", () => {
           undefined,
           false,
         );
+
         assert.strictEqual(result.returnFormat, "structuredText");
       });
 
@@ -86,6 +89,7 @@ describe("requestBody", () => {
           undefined,
           undefined,
         );
+
         assert.strictEqual(result.returnFormat, "text");
       });
 
@@ -96,12 +100,14 @@ describe("requestBody", () => {
           true,
           undefined,
         );
+
         assert.strictEqual(result.language, "python");
       });
     });
 
     describe("selectAndGenerateScratchpadImportReqBody", () => {
       let sampleDS = dummyDS;
+
       beforeEach(() => {
         sampleDS = dummyDS;
       });
@@ -151,6 +157,7 @@ describe("requestBody", () => {
             "connSample",
             "targetSample",
           );
+
         assert.strictEqual(result, undefined);
       });
 
@@ -439,6 +446,7 @@ describe("requestBody", () => {
           sampleFn: "first",
           sampleSize: 5000,
         };
+
         retrieveUDAtoCreateReqBodyStub.resolves(mockUDABody);
 
         const result =
@@ -474,6 +482,7 @@ describe("requestBody", () => {
           sampleFn: "first",
           sampleSize: 1000,
         };
+
         retrieveUDAtoCreateReqBodyStub.resolves(mockUDABody);
 
         await requestBodyUtils.generateScratchpadUDAImportReqBody(
@@ -510,6 +519,7 @@ describe("requestBody", () => {
           sampleFn: "last",
           sampleSize: 2500,
         };
+
         retrieveUDAtoCreateReqBodyStub.resolves(mockUDABody);
 
         const result =
@@ -543,6 +553,7 @@ describe("requestBody", () => {
           sampleFn: "first",
           sampleSize: 10000,
         };
+
         retrieveUDAtoCreateReqBodyStub.resolves(mockUDABody);
 
         const result =
@@ -572,6 +583,7 @@ describe("requestBody", () => {
           sampleFn: "first",
           sampleSize: 10000,
         };
+
         retrieveUDAtoCreateReqBodyStub.resolves(mockUDABody);
 
         const result =
@@ -580,7 +592,6 @@ describe("requestBody", () => {
             "originalVar",
             "originalConn",
           );
-
         const expectedUDAConfig = {
           name: "sampleUDA",
           description: "sample UDA",
@@ -615,6 +626,7 @@ describe("requestBody", () => {
           sampleFn: "first",
           sampleSize: 1000,
         };
+
         retrieveUDAtoCreateReqBodyStub.resolves(mockUDABody);
 
         const variableNames = ["var1", "myVariable", "test_var", "Variable123"];
@@ -642,6 +654,7 @@ describe("requestBody", () => {
           sampleSize: 9999,
           extraProperty: "shouldBeIgnored",
         };
+
         retrieveUDAtoCreateReqBodyStub.resolves(mockUDABody);
 
         const result =
@@ -1382,6 +1395,7 @@ describe("requestBody", () => {
             sampleFn: "first",
             sampleSize: 5000,
           };
+
           retrieveUDAtoCreateReqBodyStub.resolves(mockUDABody);
 
           const result =
@@ -1404,6 +1418,7 @@ describe("requestBody", () => {
             sampleFn: "first",
             sampleSize: 1000,
           };
+
           retrieveUDAtoCreateReqBodyStub.resolves(mockUDABody);
 
           await requestBodyUtils.generateServiceGatewayUDAReqBody(sampleDS);
@@ -1497,6 +1512,7 @@ describe("requestBody", () => {
             sampleFn: "last",
             sampleSize: 2500,
           };
+
           retrieveUDAtoCreateReqBodyStub.resolves(mockUDABody);
 
           const result =
@@ -1528,6 +1544,7 @@ describe("requestBody", () => {
             sampleFn: "first",
             sampleSize: 10000,
           };
+
           retrieveUDAtoCreateReqBodyStub.resolves(mockUDABody);
 
           const result =
@@ -1555,6 +1572,7 @@ describe("requestBody", () => {
             sampleFn: "first",
             sampleSize: 1000,
           };
+
           retrieveUDAtoCreateReqBodyStub.resolves(mockUDABody);
 
           const result =
@@ -1586,6 +1604,7 @@ describe("requestBody", () => {
             sampleFn: "first",
             sampleSize: 10000,
           };
+
           retrieveUDAtoCreateReqBodyStub.resolves(mockUDABody);
 
           const result =
@@ -1616,6 +1635,7 @@ describe("requestBody", () => {
             sampleFn: "first",
             sampleSize: 10000,
           };
+
           retrieveUDAtoCreateReqBodyStub.resolves(mockUDABody);
 
           const result =
@@ -1656,6 +1676,7 @@ describe("requestBody", () => {
             sampleFn: "first",
             sampleSize: 10000,
           };
+
           retrieveUDAtoCreateReqBodyStub.resolves(mockUDABody);
 
           const result =
@@ -1682,6 +1703,7 @@ describe("requestBody", () => {
             sampleFn: "first",
             sampleSize: 10000,
           };
+
           retrieveUDAtoCreateReqBodyStub.resolves(mockUDABody);
 
           await requestBodyUtils.generateServiceGatewayUDAReqBody(sampleDS);
@@ -1689,6 +1711,7 @@ describe("requestBody", () => {
           assert.ok(retrieveUDAtoCreateReqBodyStub.calledOnce);
           const [udaParam, connParam] =
             retrieveUDAtoCreateReqBodyStub.getCall(0).args;
+
           assert.strictEqual(udaParam.name, "customUDA");
           assert.strictEqual(udaParam.description, "custom description");
           assert.strictEqual(connParam, "udaTestConnection");

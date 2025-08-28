@@ -39,6 +39,7 @@ export class ValidatorFunctions {
     errorMessage: string = "Password should have at least one lowercase letter from a to z.",
   ): string | null {
     const hasLowerCase = value.search("[a-z]+") !== -1;
+
     return hasLowerCase ? null : errorMessage;
   }
 
@@ -48,6 +49,7 @@ export class ValidatorFunctions {
     errorMessage: string = "Contains forbidden characters",
   ): string | null {
     const hasForbiddenChars = value.search(forbiddenChars) !== -1;
+
     return hasForbiddenChars ? errorMessage : null;
   }
 
@@ -57,6 +59,7 @@ export class ValidatorFunctions {
     errorMessage: string = "Password must have 1 special character.",
   ): string | null {
     const hasSpecialChars = value.search(specialChars) !== -1;
+
     return hasSpecialChars ? null : errorMessage;
   }
 
@@ -65,6 +68,7 @@ export class ValidatorFunctions {
     errorMessage: string = "Password should have at least one uppercase letter from A to Z.",
   ): string | null {
     const hasUpperCase = value.search("[A-Z]+") !== -1;
+
     return hasUpperCase ? null : errorMessage;
   }
 
@@ -83,6 +87,7 @@ export class ValidatorFunctions {
   ): string | null {
     const inRange = value.length >= min && value.length <= max;
     const defaultMessage = `Length must be between ${min} and ${max} characters`;
+
     return inRange ? null : (errorMessage ?? defaultMessage);
   }
 
@@ -102,6 +107,7 @@ export class ValidatorFunctions {
     }
     const defaultMessage =
       this.forbiddenCharsErrorMessage ?? "Contains forbidden characters";
+
     return ValidatorFunctions.hasNoForbiddenChar(
       value,
       this.forbiddenChars,

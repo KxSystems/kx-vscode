@@ -37,10 +37,12 @@ export function convertToGrid(
   } else {
     results = isInsights ? (results.data ?? results) : results;
     const queryResult = isInsights ? results.rows : results;
+
     if (Array.isArray(queryResult[0])) {
       if (typeof queryResult[0][0] === "object") {
         rowData = queryResult[0].map((_, index) => {
           const row: any = {};
+
           queryResult.forEach((subArray: any[]) => {
             Object.assign(row, subArray[index]);
           });
@@ -55,6 +57,7 @@ export function convertToGrid(
 
     rowData = rowData.map((row: any) => {
       const newRow = { ...row };
+
       Object.keys(newRow).forEach((key) => {
         if (typeof newRow[key] === "object" && newRow[key] !== null) {
           newRow[key] = newRow[key].toString();
@@ -103,8 +106,10 @@ export function updatedExtractRowData(results: StructuredTextResults) {
   const columnsArray = Array.isArray(columns) ? columns : [columns];
 
   let dataLength = 0;
+
   if (columnsArray.length > 0) {
     const firstColumnValues = columnsArray[0].values;
+
     if (Array.isArray(firstColumnValues)) {
       dataLength = firstColumnValues.length;
     } else {
@@ -120,6 +125,7 @@ export function updatedExtractRowData(results: StructuredTextResults) {
   columnsArray.forEach((column) => {
     const { name, values } = column;
     const valuesArray = Array.isArray(values) ? values.flat() : [values];
+
     valuesArray.forEach((value, index) => {
       rowData[index][name] = decodeQUTF(value);
     });
@@ -130,9 +136,7 @@ export function updatedExtractRowData(results: StructuredTextResults) {
 
 export function updatedExtractColumnDefs(results: StructuredTextResults) {
   const { columns } = results;
-
   const columnsArray = Array.isArray(columns) ? columns : [columns];
-
   const columnDefs = columnsArray.map((column) => {
     const sanitizedKey = sanitizeString(column.name);
     const cellDataType = kdbToAgGridCellType(column.type);
@@ -197,6 +201,7 @@ export function generateCoumnDefs(results: any, isInsights: boolean): any {
         const type = results.meta[key];
         const headerName = type ? `${sanitizedKey} [${type}]` : sanitizedKey;
         const cellDataType = kdbToAgGridCellType(type);
+
         return {
           field: sanitizedKey,
           headerName,
@@ -210,6 +215,7 @@ export function generateCoumnDefs(results: any, isInsights: boolean): any {
         const headerName = type ? `${sanitizedKey} [${type}]` : sanitizedKey;
         const cellDataType =
           type != undefined ? kdbToAgGridCellType(type) : undefined;
+
         return {
           field: sanitizedKey,
           headerName,
@@ -222,6 +228,7 @@ export function generateCoumnDefs(results: any, isInsights: boolean): any {
       return results.map((key: string) => {
         const sanitizedKey = sanitizeString(key);
         const cellDataType = "text";
+
         return {
           field: sanitizedKey,
           headerName: sanitizedKey,
@@ -232,6 +239,7 @@ export function generateCoumnDefs(results: any, isInsights: boolean): any {
     return Object.keys(results[0]).map((key: string) => {
       const sanitizedKey = sanitizeString(key);
       const cellDataType = "text";
+
       return { field: sanitizedKey, headerName: sanitizedKey, cellDataType };
     });
   }
@@ -253,5 +261,6 @@ export function convertToCsv(data: any[]): string[] {
       })
       .join(",");
   });
+
   return [header, ...rows];
 }

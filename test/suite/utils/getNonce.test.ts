@@ -18,12 +18,14 @@ import { getNonce } from "../../../src/utils/getNonce";
 describe("getNonce", () => {
   it("should return a string with length 32", () => {
     const nonce = getNonce();
+
     assert.strictEqual(nonce.length, 32);
   });
 
   it("should return a string containing only alphanumeric characters", () => {
     const nonce = getNonce();
     const alphanumericRegex = /^[a-zA-Z0-9]+$/;
+
     assert.match(nonce, alphanumericRegex);
   });
 });

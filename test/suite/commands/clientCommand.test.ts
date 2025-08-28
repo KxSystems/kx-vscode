@@ -22,11 +22,13 @@ import { ext } from "../../../src/extensionVariables";
 
 describe("clientCommands", () => {
   const client = sinon.createStubInstance(LanguageClient);
+
   let executeBlock;
   let toggleParameterCache;
 
   beforeEach(() => {
     const context = <vscode.ExtensionContext>{ subscriptions: [] };
+
     sinon.stub(vscode.commands, "registerCommand").value((a, b) => b);
     clientCommand.connectClientCommands(context, client);
     executeBlock = context.subscriptions[0];
@@ -60,6 +62,7 @@ describe("clientCommands", () => {
   describe("kdb.toggleParameterCache", () => {
     it("should add parameter cache for single line functions", async () => {
       let edit: vscode.WorkspaceEdit;
+
       sinon.stub(client, "sendRequest").value(async () => ({
         params: ["a"],
         start: new vscode.Position(0, 0),
@@ -71,6 +74,7 @@ describe("clientCommands", () => {
     });
     it("should add parameter cache for multi line functions", async () => {
       let edit: vscode.WorkspaceEdit;
+
       sinon.stub(client, "sendRequest").value(async () => ({
         params: ["a"],
         start: new vscode.Position(0, 0),

@@ -31,6 +31,7 @@ export class ChartEditorProvider implements CustomTextEditorProvider {
 
   public static register(context: ExtensionContext): Disposable {
     const provider = new ChartEditorProvider(context);
+
     return window.registerCustomEditorProvider(
       ChartEditorProvider.viewType,
       provider,
@@ -44,13 +45,13 @@ export class ChartEditorProvider implements CustomTextEditorProvider {
     webviewPanel: WebviewPanel,
   ): Promise<void> {
     const webview = webviewPanel.webview;
+
     webview.options = { enableScripts: true };
     webview.html = this.getWebviewContent(webview);
 
     const updateWebview = () => {
       webview.postMessage(document.getText());
     };
-
     const changeDocumentSubscription = workspace.onDidChangeTextDocument(
       (event) => {
         if (event.document.uri.toString() === document.uri.toString()) {

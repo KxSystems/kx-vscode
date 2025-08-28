@@ -47,6 +47,7 @@ export class WorkspaceTreeProvider implements TreeDataProvider<FileTreeItem> {
       return element.getChildren();
     }
     const folders = workspace.workspaceFolders;
+
     if (folders) {
       return Promise.resolve(
         folders.map(
@@ -74,6 +75,7 @@ export class FileTreeItem extends TreeItem {
     this.id = resourceUri.toString();
     if (glob) {
       const folder = workspace.getWorkspaceFolder(resourceUri);
+
       if (folder) {
         this.pattern = new RelativePattern(folder, glob);
         this.collapsibleState = TreeItemCollapsibleState.Expanded;
@@ -90,8 +92,10 @@ export class FileTreeItem extends TreeItem {
 
   private updateIconPath() {
     let state = "";
+
     if (this.resourceUri) {
       const connection = getConnectionForUri(this.resourceUri);
+
       if (connection) {
         state = getWorkspaceIconsState(connection.label);
       }
@@ -113,11 +117,13 @@ export class FileTreeItem extends TreeItem {
   async getChildren(): Promise<FileTreeItem[]> {
     if (this.pattern) {
       const files = await workspace.findFiles(this.pattern);
+
       return files
         .sort((a, b) => a.path.localeCompare(b.path))
         .map((file) => {
           this.getFileIconType(file.toString());
           const item = new FileTreeItem(file, this.baseIcon);
+
           item.updateIconPath();
           return item;
         });

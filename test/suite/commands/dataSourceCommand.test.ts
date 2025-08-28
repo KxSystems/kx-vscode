@@ -35,6 +35,7 @@ import * as queryUtils from "../../../src/utils/queryUtils";
 describe("dataSourceCommand", () => {
   let dummyDataSourceFiles: DataSourceFiles;
   let _resultsPanel: KdbResultsViewProvider;
+
   ext.outputChannel = vscode.window.createOutputChannel("kdb");
   const localConn = new LocalConnection("localhost:5001", "test", []);
   const insightsNode = new InsightsNode(

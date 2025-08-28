@@ -39,6 +39,7 @@ describe("connLabels", () => {
     const labels: Labels[] = [
       { name: "label1", color: { name: "red", colorHex: "#FF0000" } },
     ];
+
     getConfigurationStub.returns({
       get: sinon.stub().returns(labels),
       update: sinon.stub(),
@@ -98,6 +99,7 @@ describe("connLabels", () => {
 
   it("should get workspace labels connection map", () => {
     const connMap = [{ labelName: "label1", connections: ["conn1"] }];
+
     getConfigurationStub.returns({
       get: sinon.stub().returns(connMap),
       update: sinon.stub(),
@@ -175,7 +177,6 @@ describe("connLabels", () => {
       },
       vscode.TreeItemCollapsibleState.None,
     );
-
     const labels = LabelsUtils.retrieveConnLabelsNames(conn);
 
     assert.deepStrictEqual(labels, ["label1"]);
@@ -185,8 +186,8 @@ describe("connLabels", () => {
     const labels: Labels[] = [
       { name: "label1", color: { name: "red", colorHex: "#FF0000" } },
     ];
-
     const getStub = sinon.stub();
+
     getStub.withArgs("kdb.connectionLabels").returns(labels);
     getStub.withArgs("kdb.labelsConnectionMap").returns([]);
 
@@ -213,6 +214,7 @@ describe("connLabels", () => {
     });
 
     const logStub = sinon.stub(loggers, "kdbOutputLog");
+
     LabelsUtils.renameLabel("label1", "label2");
     sinon.assert.calledWith(
       logStub,
@@ -238,6 +240,7 @@ describe("connLabels", () => {
     const labels: Labels[] = [
       { name: "label1", color: { name: "red", colorHex: "#FF0000" } },
     ];
+
     getConfigurationStub.returns({
       get: sinon.stub().returns(labels),
       update: sinon.stub().returns(Promise.resolve()),
@@ -251,6 +254,7 @@ describe("connLabels", () => {
     const labels: Labels[] = [
       { name: "label1", color: { name: "red", colorHex: "#FF0000" } },
     ];
+
     getConfigurationStub.returns({
       get: sinon.stub().returns(labels),
       update: sinon.stub().returns(Promise.resolve()),
@@ -339,6 +343,7 @@ describe("connLabels", () => {
 
     it("should clear all connection mappings when no labels exist", () => {
       const getStub = sinon.stub();
+
       getStub.withArgs("kdb.connectionLabels").returns([]);
       getStub.withArgs("kdb.labelsConnectionMap").returns([
         { labelName: "nonexistent1", connections: ["conn1"] },
@@ -370,15 +375,14 @@ describe("connLabels", () => {
         { name: "label1", color: { name: "Red", colorHex: "#FF0000" } },
         { name: "label2", color: { name: "Blue", colorHex: "#0000FF" } },
       ];
-
       const connectionMappings = [
         { labelName: "label1", connections: ["conn1", "conn2"] },
         { labelName: "orphaned1", connections: ["conn3"] },
         { labelName: "label2", connections: ["conn4"] },
         { labelName: "orphaned2", connections: ["conn5", "conn6"] },
       ];
-
       const getStub = sinon.stub();
+
       getStub.withArgs("kdb.connectionLabels").returns(validLabels);
       getStub.withArgs("kdb.labelsConnectionMap").returns(connectionMappings);
 
@@ -418,13 +422,12 @@ describe("connLabels", () => {
       const validLabels = [
         { name: "label1", color: { name: "Red", colorHex: "#FF0000" } },
       ];
-
       const connectionMappings = [
         { labelName: "label1", connections: ["conn1"] },
         { labelName: "orphaned1", connections: ["conn2"] },
       ];
-
       const getStub = sinon.stub();
+
       getStub.withArgs("kdb.connectionLabels").returns(validLabels);
       getStub.withArgs("kdb.labelsConnectionMap").returns(connectionMappings);
 
@@ -457,13 +460,12 @@ describe("connLabels", () => {
         { name: "label1", color: { name: "Red", colorHex: "#FF0000" } },
         { name: "label2", color: { name: "Blue", colorHex: "#0000FF" } },
       ];
-
       const connectionMappings = [
         { labelName: "label1", connections: ["conn1"] },
         { labelName: "label2", connections: ["conn2"] },
       ];
-
       const getStub = sinon.stub();
+
       getStub.withArgs("kdb.connectionLabels").returns(validLabels);
       getStub.withArgs("kdb.labelsConnectionMap").returns(connectionMappings);
 
@@ -496,8 +498,8 @@ describe("connLabels", () => {
       const validLabels = [
         { name: "label1", color: { name: "Red", colorHex: "#FF0000" } },
       ];
-
       const getStub = sinon.stub();
+
       getStub.withArgs("kdb.connectionLabels").returns(validLabels);
       getStub.withArgs("kdb.labelsConnectionMap").returns([]);
 
@@ -523,14 +525,13 @@ describe("connLabels", () => {
       const validLabels = [
         { name: "Label1", color: { name: "Red", colorHex: "#FF0000" } },
       ];
-
       const connectionMappings = [
         { labelName: "Label1", connections: ["conn1"] },
         { labelName: "label1", connections: ["conn2"] },
         { labelName: "LABEL1", connections: ["conn3"] },
       ];
-
       const getStub = sinon.stub();
+
       getStub.withArgs("kdb.connectionLabels").returns(validLabels);
       getStub.withArgs("kdb.labelsConnectionMap").returns(connectionMappings);
 
@@ -568,6 +569,7 @@ describe("connLabels", () => {
     it("should return true if label is empty", () => {
       ext.labelConnMapList.push({ labelName: "label1", connections: [] });
       const result = LabelsUtils.isLabelEmpty("label1");
+
       assert.strictEqual(result, true);
     });
 
@@ -577,11 +579,13 @@ describe("connLabels", () => {
         connections: ["conn1"],
       });
       const result = LabelsUtils.isLabelEmpty("label1");
+
       assert.strictEqual(result, false);
     });
 
     it("should return false if label is empty if label not on map list", () => {
       const result = LabelsUtils.isLabelEmpty("label1");
+
       assert.strictEqual(result, true);
     });
   });
@@ -598,11 +602,13 @@ describe("connLabels", () => {
     it("should return true if label content is changed", () => {
       ext.latestLblsChanged.push("label1");
       const result = LabelsUtils.isLabelContentChanged("label1");
+
       assert.strictEqual(result, true);
     });
 
     it("should return false if label content is not changed", () => {
       const result = LabelsUtils.isLabelContentChanged("label1");
+
       assert.strictEqual(result, false);
     });
   });

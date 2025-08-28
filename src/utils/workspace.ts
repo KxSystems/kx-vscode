@@ -34,6 +34,7 @@ export function getWorkspaceRoot(
 
   if (workspaceRoot === undefined && !ignoreException) {
     const error = new Error("Workspace root should be defined");
+
     throw error;
   }
 
@@ -51,6 +52,7 @@ export async function activateTextDocument(item: Uri) {
     let document = workspace.textDocuments.find(
       (doc) => doc.uri.fsPath === item.fsPath,
     );
+
     if (!document) {
       document = await workspace.openTextDocument(item);
     }
@@ -67,14 +69,18 @@ export async function addWorkspaceFile(
   directory = ".kx",
 ) {
   const folders = workspace.workspaceFolders;
+
   if (folders) {
     const folder = uri ? workspace.getWorkspaceFolder(uri) : folders[0];
+
     if (folder) {
       let i = 1;
+
       while (true) {
         const files = await workspace.findFiles(
           `${directory}/${name}-${i}${ext}`,
         );
+
         if (files.length === 0) {
           break;
         }
@@ -91,7 +97,6 @@ export async function addWorkspaceFile(
       ).with({
         scheme: "untitled",
       });
-
       const telemetryStats = await getWorkbookStatistics(ext, directory);
       const isPython = ext === ".kdb.py" ? ".Python" : ".q";
 
@@ -109,6 +114,7 @@ export async function addWorkspaceFile(
 
 export async function setUriContent(uri: Uri, content: string) {
   const edit = new WorkspaceEdit();
+
   edit.replace(uri, new Range(0, 0, 1, 0), content);
   await workspace.applyEdit(edit);
 }
@@ -132,8 +138,10 @@ export async function getWorkbookStatistics(
   directory = ".kx",
 ): Promise<{ count: number }> {
   const folders = workspace.workspaceFolders;
+
   if (folders) {
     const files = await workspace.findFiles(`${directory}/*${ext}`);
+
     return { count: files.length };
   }
   throw new Error("No workspace has been opened");

@@ -41,6 +41,7 @@ async function executeBlock(client: LanguageClient) {
       textDocument: { uri: `${ext.activeTextEditor.document.uri}` },
       position: ext.activeTextEditor.selection.active,
     });
+
     if (range) {
       ext.activeTextEditor.selection = new Selection(
         range.start.line,
@@ -55,7 +56,6 @@ async function executeBlock(client: LanguageClient) {
         qsql_data: ExecutionTypes.DataQuerySelection,
         qsql_query: ExecutionTypes.QuerySelection,
       };
-
       const key = `${isPython ? "python" : "qsql"}_${isDataQuery ? "data" : "query"}`;
       const executionType = executionTypes[key as keyof typeof executionTypes];
 
@@ -75,6 +75,7 @@ async function toggleParameterCache(client: LanguageClient) {
       textDocument: { uri: `${doc.uri}` },
       position: ext.activeTextEditor.selection.active,
     });
+
     if (res) {
       const edit = new WorkspaceEdit();
       const start = new Position(res.start.line, res.start.character);
@@ -82,8 +83,10 @@ async function toggleParameterCache(client: LanguageClient) {
       const text = doc.getText(new Range(start, end));
       const match =
         /\s*\.axdebug\.temp([A-F0-9]{6}).*?\.axdebug\.temp\1\s*;/s.exec(text);
+
       if (match) {
         const offset = doc.offsetAt(start);
+
         edit.delete(
           doc.uri,
           new Range(
@@ -105,8 +108,10 @@ async function toggleParameterCache(client: LanguageClient) {
             new Range(end.line, 0, end.line, end.character),
           );
           const match = /^[ \t]*/.exec(line);
+
           if (match) {
             const eol = doc.eol === EndOfLine.CRLF ? "\r\n" : "\n";
+
             edit.insert(doc.uri, start, eol);
             edit.insert(doc.uri, start, match[0]);
             edit.insert(doc.uri, start, expr1);

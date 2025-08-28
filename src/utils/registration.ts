@@ -21,6 +21,7 @@ export function showRegistrationNotification(): void {
   const setting = workspace
     .getConfiguration()
     .get<boolean | undefined>("kdb.hideSubscribeRegistrationNotification");
+
   if (setting !== undefined && setting === false) {
     notify(
       "Subscribe to updates",

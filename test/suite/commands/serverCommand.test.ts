@@ -65,7 +65,6 @@ describe("serverCommand", () => {
     },
     vscode.TreeItemCollapsibleState.None,
   );
-
   const kdbNode = new KdbNode(
     ["child1"],
     "testElement",
@@ -79,6 +78,7 @@ describe("serverCommand", () => {
       auth: false,
     },
   };
+
   ext.serverProvider = new KdbTreeProvider(servers, insights);
 
   after(() => {
@@ -87,6 +87,7 @@ describe("serverCommand", () => {
 
   it("should call the New Connection Panel Renderer", async () => {
     const newConnectionPanelStub = sinon.stub(NewConnectionPannel, "render");
+
     ext.context = <vscode.ExtensionContext>{};
     await serverCommand.addNewConnection();
     sinon.assert.calledOnce(newConnectionPanelStub);
@@ -95,6 +96,7 @@ describe("serverCommand", () => {
 
   it("should call the Edit Connection Panel Renderer", async () => {
     const newConnectionPanelStub = sinon.stub(NewConnectionPannel, "render");
+
     ext.context = <vscode.ExtensionContext>{};
     await serverCommand.editConnection(kdbNode);
     sinon.assert.calledOnce(newConnectionPanelStub);
@@ -113,6 +115,7 @@ describe("serverCommand", () => {
     it("deve retornar false quando isConnected do ConnectionManagementService retornar false", () => {
       connMngServiceMock.isConnected.returns(false);
       const result = serverCommand.isConnected("127.0.0.1:6812 [CONNLABEL]");
+
       assert.deepStrictEqual(result, false);
     });
   });
@@ -154,6 +157,7 @@ describe("serverCommand", () => {
         coreUtils,
         "getKeyForServerName",
       );
+
       getKeyForServerNameStub.returns("insightsserveralias");
 
       const existingInsights = {
@@ -163,6 +167,7 @@ describe("serverCommand", () => {
           auth: false,
         },
       };
+
       getInsightsStub.returns(existingInsights);
 
       await serverCommand.addInsightsConnection(insightsData);
@@ -181,6 +186,7 @@ describe("serverCommand", () => {
         kdbValidators,
         "validateServerAlias",
       );
+
       validateServerAliasStub.returns("Invalid alias");
 
       await serverCommand.addInsightsConnection(insightsData);
@@ -201,6 +207,7 @@ describe("serverCommand", () => {
       validationServerAliasStub,
       validationHostnameStub,
       validationPortStub: sinon.SinonStub;
+
     beforeEach(() => {
       kdbData = {
         serverName: "testServer",
@@ -648,6 +655,7 @@ describe("serverCommand", () => {
           auth: false,
         },
       };
+
       ext.serverProvider = new KdbTreeProvider(servers, insights);
       ext.openSslVersion = "1.0.2";
       getServersStub.returns({
@@ -769,6 +777,7 @@ describe("serverCommand", () => {
         ConnectionManagementService.prototype,
         "resetScratchpad",
       );
+
       await serverCommand.resetScratchpad();
       sinon.assert.calledOnce(resetScratchpadStub);
       sinon.restore();
@@ -974,6 +983,7 @@ describe("serverCommand", () => {
     const connService = new ConnectionManagementService();
     const _console = vscode.window.createOutputChannel("q Console Output");
     const _executionConsole = new ExecutionConsole(_console);
+
     let windowErrorStub, retrieveConnectionStub: sinon.SinonStub;
 
     beforeEach(() => {
@@ -1227,6 +1237,7 @@ describe("serverCommand", () => {
         time: "now",
         success: true,
       };
+
       await serverCommand.copyQuery(queryHistory);
       sinon.assert.notCalled(showInfoStub);
     });
@@ -1241,6 +1252,7 @@ describe("serverCommand", () => {
         success: true,
         isDatasource: true,
       };
+
       await serverCommand.copyQuery(queryHistory);
       sinon.assert.notCalled(showInfoStub);
     });

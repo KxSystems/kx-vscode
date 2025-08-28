@@ -117,6 +117,7 @@ async function withExecutionTiming<T>(
   const result = await fn();
   const endTime = Date.now();
   const duration = (endTime - startTime).toString();
+
   return { result, duration };
 }
 
@@ -124,6 +125,7 @@ async function getEditorContext(
   uri: vscode.Uri,
 ): Promise<EditorContext | null> {
   const conn = await findConnection(uri);
+
   if (!conn) {
     return null;
   }
@@ -202,7 +204,6 @@ async function executeStringQuery(
   const type = isPython
     ? ExecutionTypes.ReRunPythonQuery
     : ExecutionTypes.ReRunQuery;
-
   const { result: res, duration } = await withExecutionTiming(() =>
     executeQuery(
       queryHistoryItem.connectionName,
@@ -239,12 +240,11 @@ async function executeDataSourceRerun(
   const type = isPython
     ? ExecutionTypes.ReRunPythonDataQuery
     : ExecutionTypes.ReRunDataQuery;
-
   const { result: res, duration } = await withExecutionTiming(() =>
     executeDataQuery(queryHistoryItem.connectionName, type, target, query),
   );
-
   const success = !res.error;
+
   await handleExecuteDataQueryResults(
     queryHistoryItem.connectionName,
     res,
@@ -277,6 +277,7 @@ function getQueryFromExecutionType(
 
   const strategy =
     QUERY_RETRIEVAL_STRATEGIES[type as keyof typeof QUERY_RETRIEVAL_STRATEGIES];
+
   if (strategy) {
     return strategy(queryData);
   }
@@ -362,6 +363,7 @@ async function executeServiceGateway(
     body,
     udaName,
   );
+
   return convertDSDataResponse(res);
 }
 
@@ -456,6 +458,7 @@ async function dispatchToResultsTab(
 ): Promise<void> {
   if (success && !isInsights) {
     const resultCount = typeof res === "string" ? "0" : res.rows.length;
+
     notify(`Results: ${resultCount} rows`, MessageKind.DEBUG, { logger });
   }
 
@@ -524,6 +527,7 @@ export async function executeNotebookQuery(
       kind === CellKind.SQL,
       kind === CellKind.PYTHON,
     );
+
     return variable && variable.trim() !== ""
       ? await prepareToPopulateScratchpad(
           connLabel,
@@ -555,6 +559,7 @@ export async function executeActiveEditorQuery(type?: ExecutionTypes) {
   }
 
   const context = await getEditorContext(uri);
+
   if (!context) {
     return;
   }
@@ -580,7 +585,6 @@ export async function executeActiveEditorQuery(type?: ExecutionTypes) {
       executionType,
       context.target,
     );
-
     const dataType = getDataTypeForEditor(context.executorName);
     const querySample = getQuerySample(query ?? "", dataType);
 
@@ -601,7 +605,6 @@ export async function executeActiveEditorQuery(type?: ExecutionTypes) {
     context.conn.connLabel,
     executionType,
   );
-
   const insightsConnVersion =
     context.conn instanceof InsightsConnection
       ? context.conn.insightsVersion
@@ -653,6 +656,7 @@ export async function executeReRunQuery(queryHistoryItem: QueryHistory) {
 // Execute Select View(for local conn atm) Queries
 export async function executeSelectViewQuery(viewItem: any) {
   const connLabel = viewItem.connLabel;
+
   if (!connLabel) {
     notify("Connection label not found", MessageKind.ERROR, { logger });
     return;
@@ -660,7 +664,6 @@ export async function executeSelectViewQuery(viewItem: any) {
 
   const executorName = connLabel + " - " + viewItem.coreIcon;
   const query = viewItem.label;
-
   const { result: res, duration } = await withExecutionTiming(() =>
     executeQuery(connLabel, ExecutionTypes.QuerySelection, query),
   );
@@ -688,13 +691,14 @@ export async function executeQuery(
   const context = getExecutionQueryContext();
   const isPython = isExecutionPython(type);
   const isNotebook = isExecutionNotebook(type);
-
   const query = getQueryFromExecutionType(type, queryData, rerunQuery);
+
   if (!query) {
     return;
   }
 
   const sanitizedQuery = validateQuery(query);
+
   if (!sanitizedQuery) {
     return;
   }
@@ -768,7 +772,9 @@ export async function prepareToPopulateScratchpad(
   const variable = await resolveVariable(outputVariable);
   const query = getQuery(datasourceFile);
   const dsExecutionType = getDSExecutionType(datasourceFile);
+
   let selectedTarget = target ?? "";
+
   if (!target && dsExecutionType === DataSourceTypes.QSQL) {
     selectedTarget = datasourceFile?.dataSource?.qsql.selectedTarget ?? "";
   }
@@ -809,6 +815,7 @@ export async function populateScratchpad(
       validateInput: (value: string | undefined) =>
         validateScratchpadOutputVariableName(value),
     };
+
     outputVariable = await vscode.window.showInputBox(scratchpadVariable);
   }
 
@@ -837,6 +844,7 @@ export async function handleGGPlotExecution(
   isPython: boolean,
 ): Promise<any> {
   const data = resultToBase64(results);
+
   if (!data) {
     return false;
   }
@@ -847,6 +855,7 @@ export async function handleGGPlotExecution(
   });
 
   const active = ext.activeTextEditor;
+
   if (!active) {
     return false;
   }
@@ -891,6 +900,7 @@ export async function handleExecuteQueryResults(
 
   if (ext.isResultsTabVisible) {
     const ggplot = await handleGGPlotExecution(res, isPython);
+
     if (!ggplot) {
       await writeQueryResultsToView(
         res,

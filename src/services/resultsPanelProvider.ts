@@ -109,6 +109,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       return;
     }
     const workspaceFolders = workspace.workspaceFolders;
+
     if (!workspaceFolders) {
       notify("Open a folder to export results", MessageKind.ERROR, {
         logger,
@@ -116,6 +117,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       return;
     }
     const workspaceUri = workspaceFolders[0].uri;
+
     utils.exportToCsv(workspaceUri);
   }
 
@@ -189,12 +191,14 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
 
   private _getWebviewContent() {
     const agGridTheme = this.defineAgGridTheme();
+
     if (this._view) {
       const webviewUri = getUri(this._view.webview, this._extensionUri, [
         "out",
         "webview.js",
       ]);
       const nonce = getNonce();
+
       return /*html*/ `
         <!DOCTYPE html>
         <html lang="en">

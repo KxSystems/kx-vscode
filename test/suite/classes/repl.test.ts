@@ -54,31 +54,37 @@ describe("REPL", () => {
   describe("connect", () => {
     it("should listen error on target", () => {
       const stub = sinon.stub(target, "on");
+
       instance["connect"]();
       sinon.assert.calledWithMatch(stub, "error");
     });
     it("should listen exit on target", () => {
       const stub = sinon.stub(target, "on");
+
       instance["connect"]();
       sinon.assert.calledWithMatch(stub, "exit");
     });
     it("should listen data on target stdout", () => {
       const stub = sinon.stub(target.stdout, "on");
+
       instance["connect"]();
       sinon.assert.calledWithMatch(stub, "data");
     });
     it("should listen error on target stdout", () => {
       const stub = sinon.stub(target.stdout, "on");
+
       instance["connect"]();
       sinon.assert.calledWithMatch(stub, "error");
     });
     it("should listen data on target stderr", () => {
       const stub = sinon.stub(target.stderr, "on");
+
       instance["connect"]();
       sinon.assert.calledWithMatch(stub, "data");
     });
     it("should listen error on target stderr", () => {
       const stub = sinon.stub(target.stderr, "on");
+
       instance["connect"]();
       sinon.assert.calledWithMatch(stub, "error");
     });
@@ -125,6 +131,7 @@ describe("REPL", () => {
   describe("moveCursorToColumn", () => {
     it("should return ANSİ code for moving cursor", () => {
       const res = instance["moveCursorToColumn"](1);
+
       assert.strictEqual(res, "\x1B[1G");
     });
   });

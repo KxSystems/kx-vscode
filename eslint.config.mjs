@@ -46,6 +46,39 @@ export default [
       "@typescript-eslint/no-non-null-assertion": "off",
       "@typescript-eslint/explicit-module-boundary-types": "off",
       "@typescript-eslint/no-explicit-any": "off",
+      "padding-line-between-statements": [
+        "error",
+        {
+          blankLine: "always",
+          prev: "const",
+          next: "*",
+        },
+        {
+          blankLine: "never",
+          prev: "const",
+          next: "const",
+        },
+        {
+          blankLine: "always",
+          prev: "let",
+          next: "*",
+        },
+        {
+          blankLine: "never",
+          prev: "let",
+          next: "let",
+        },
+        {
+          blankLine: "always",
+          prev: "var",
+          next: "*",
+        },
+        {
+          blankLine: "never",
+          prev: "var",
+          next: "var",
+        },
+      ],
       "license-header/header": [
         "error",
         [

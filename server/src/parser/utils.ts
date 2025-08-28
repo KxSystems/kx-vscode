@@ -42,6 +42,7 @@ export interface Token extends IToken {
 
 function inScope(token: Token, ...scopeType: TokenType[]): Token | undefined {
   let scope;
+
   while ((scope = token.scope)) {
     for (const type of scopeType) {
       if (scope.tokenType === type) {
@@ -71,12 +72,14 @@ export function inSql(token: Token) {
 
 export function inTable(token: Token) {
   const list = inList(token);
+
   return list && list.tangled?.tokenType === LBracket;
 }
 
 export function inParam(token: Token) {
   const lambda = inLambda(token);
   const bracket = inBracket(token);
+
   return lambda && bracket && lambda.tangled === bracket;
 }
 
@@ -90,6 +93,7 @@ export function identifier(token: Token) {
 
 export function namespace(token: Token) {
   const id = identifier(token);
+
   return (id.startsWith(".") && id.split(".", 3)[1]) || "";
 }
 
@@ -127,6 +131,7 @@ export function local(token: Token, tokens: Token[]) {
     return false;
   }
   const scope = inLambda(token);
+
   if (scope && !scope.tangled) {
     if (token.image === "x" || token.image === "y" || token.image === "z") {
       return true;
@@ -233,6 +238,7 @@ export function findIdentifiers(
               assigned(token) &&
               (amended(token) || !inLambda(token)),
           );
+
       result.forEach((token) => {
         if (
           !completions.find(

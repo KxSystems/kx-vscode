@@ -18,6 +18,7 @@ import { validateScratchpadOutputVariableName } from "../../../src/validators/in
 describe("Interface validation tests", () => {
   it("Should return successful scratchpad variable output name", () => {
     const result = validateScratchpadOutputVariableName("test");
+
     assert.strictEqual(
       result,
       undefined,
@@ -29,6 +30,7 @@ describe("Interface validation tests", () => {
     const result = validateScratchpadOutputVariableName(
       "ttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttttt",
     );
+
     assert.strictEqual(
       result,
       "Input value must be between 1 and 64 alphanumeric characters in length.",

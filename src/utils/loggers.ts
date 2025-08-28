@@ -22,6 +22,7 @@ export function kdbOutputLog(
 ): void {
   const dateNow = new Date().toLocaleDateString();
   const timeNow = new Date().toLocaleTimeString();
+
   ext.outputChannel.appendLine(`[${dateNow} ${timeNow}] [${type}] ${message}`);
   if (type === "ERROR" && !supressDialog) {
     vscode.window.showErrorMessage(

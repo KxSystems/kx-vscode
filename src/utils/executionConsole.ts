@@ -40,6 +40,7 @@ export class ExecutionConsole {
     setOutputWordWrapper();
     if (!ExecutionConsole.current) {
       const _console = window.createOutputChannel("q Console Output");
+
       ExecutionConsole.current = new ExecutionConsole(_console);
     }
     return ExecutionConsole.current;
@@ -90,8 +91,10 @@ export class ExecutionConsole {
     isFromConnTree?: boolean,
   ): void {
     const hideDetails = getHideDetailedConsoleQueryOutputSetting();
+
     output = this.checkOutput(output, query);
     let dataSourceRes: string[] = [];
+
     if (getAutoFocusOutputOnEntrySetting()) {
       this._console.show(true);
     }
@@ -118,6 +121,7 @@ export class ExecutionConsole {
 
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
+
     if (!hideDetails) {
       this._console.appendLine(
         `>>> ${connLabel}  @ ${date.toLocaleTimeString()} <<<`,
@@ -152,11 +156,13 @@ export class ExecutionConsole {
     isFromConnTree?: boolean,
   ): void {
     const hideDetails = getHideDetailedConsoleQueryOutputSetting();
+
     if (getAutoFocusOutputOnEntrySetting()) {
       this._console.show(true);
     }
     //TODO: this._console.clear(); Add an option in the future to clear or not the console
     const date = new Date();
+
     if (!hideDetails) {
       this._console.appendLine(
         `<<< ERROR -  ${connLabel}  @ ${date.toLocaleTimeString()} >>>`,

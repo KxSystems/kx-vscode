@@ -54,6 +54,7 @@ describe("workspaceCommand", () => {
       },
       vscode.TreeItemCollapsibleState.None,
     );
+
     ext.serverProvider = <any>{
       async getChildren() {
         return [kdbNode, insightNode];
@@ -114,6 +115,7 @@ describe("workspaceCommand", () => {
   describe("connectWorkspaceCommands", () => {
     it("should update views on delete and create", () => {
       let cb1, cb2, dsTree, wbTree;
+
       sinon.stub(vscode.workspace, "createFileSystemWatcher").value(() => ({
         onDidCreate: (cb) => (cb1 = cb),
         onDidDelete: (cb) => (cb2 = cb),
@@ -139,6 +141,7 @@ describe("workspaceCommand", () => {
   describe("getInsightsServers", () => {
     it("should return insights server aliases as array", () => {
       const result = workspaceCommand.getInsightsServers();
+
       assert.strictEqual(result[0], "connection1");
     });
   });
@@ -160,6 +163,7 @@ describe("workspaceCommand", () => {
       const result = await workspaceCommand.pickConnection(
         vscode.Uri.file("test.kdb.q"),
       );
+
       assert.strictEqual(result, "test");
     });
 
@@ -168,6 +172,7 @@ describe("workspaceCommand", () => {
       const result = await workspaceCommand.pickConnection(
         vscode.Uri.file("test.kdb.q"),
       );
+
       assert.strictEqual(result, undefined);
     });
   });
@@ -179,6 +184,7 @@ describe("workspaceCommand", () => {
         .stub(vscode.window, "showQuickPick")
         .value(async () => "scratchpad");
       let res = await workspaceCommand.pickTarget(insightsUri);
+
       assert.strictEqual(res, undefined);
       res = await workspaceCommand.pickTarget(kdbUri);
       assert.strictEqual(res, undefined);
@@ -190,6 +196,7 @@ describe("workspaceCommand", () => {
         .stub(vscode.window, "showQuickPick")
         .value(async () => "scratchpad");
       const res = await workspaceCommand.pickTarget(pythonUri);
+
       assert.strictEqual(res, undefined);
     });
   });
@@ -203,6 +210,7 @@ describe("workspaceCommand", () => {
     it("should return undefined", async () => {
       ext.connectionsList.length = 0;
       const node = workspaceCommand.getConnectionForUri(insightsUri);
+
       assert.strictEqual(node, undefined);
     });
   });
@@ -222,6 +230,7 @@ describe("workspaceCommand", () => {
         };
         const provider = new workspaceCommand.ConnectionLensProvider();
         const result = await provider.provideCodeLenses(document);
+
         assert.ok(result.length >= 1);
       });
 
@@ -231,6 +240,7 @@ describe("workspaceCommand", () => {
         };
         const provider = new workspaceCommand.ConnectionLensProvider();
         const result = await provider.provideCodeLenses(document);
+
         assert.ok(result.length >= 1);
       });
     });
@@ -272,6 +282,7 @@ describe("workspaceCommand", () => {
         const token = {
           onCancellationRequested: tokenOnCancellationRequestedStub,
         };
+
         task({}, token);
       });
 
@@ -332,6 +343,7 @@ describe("workspaceCommand", () => {
 
     describe("runOnRepl", () => {
       let notifyStub, executeStub: sinon.SinonStub;
+
       const editor = <vscode.TextEditor>{
         document: <any>{
           uri: kdbUri,

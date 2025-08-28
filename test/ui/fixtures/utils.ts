@@ -15,6 +15,7 @@ import { Editor, EditorView, VSBrowser } from "vscode-extension-tester";
 
 export function waitForEditor(title: string): Promise<Editor> {
   const editors = new EditorView();
+
   return VSBrowser.instance.driver.wait(
     () =>
       new Promise<Editor>((resolve) => {

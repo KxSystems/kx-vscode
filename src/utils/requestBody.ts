@@ -51,6 +51,7 @@ export function generateScratchpadQueryReqBody(
   isNotebook?: boolean,
 ): ScratchpadRequestBody {
   let returnFormat = "text";
+
   if (isNotebook || ext.isResultsTabVisible) {
     returnFormat = "structuredText";
   }
@@ -160,6 +161,7 @@ export function generateScratchpadSQLImportReqBody(
     sampleFn: "first",
     sampleSize: 10000,
   };
+
   return body;
 }
 
@@ -184,8 +186,8 @@ export function generateScratchpadAPIImportReqBody(
     sampleFn: "first",
     sampleSize: 10000,
   };
-
   const api = datasourceParams.dataSource.api;
+
   addIfDefined(body.params, "fill", api.fill);
   addIfDefined(body.params, "temporality", api.temporality);
   addIfDefined(body.params, "filter", api.filter);
@@ -258,6 +260,7 @@ export function generateServicegatewayQSQLReqBody(
   isPython?: boolean,
 ): ServicegatewayQSQLReqBody {
   const [assembly, tier, dap] = normalizeAssemblyTarget(target).split(/\s+/);
+
   return {
     query: getQSQLWrapper(query, isPython),
     scope: {
@@ -294,6 +297,7 @@ function processOptionalParameters(
   }
 
   const activeLabels = optional.labels.filter((label: any) => label.active);
+
   if (activeLabels.length > 0) {
     body.labels = Object.assign(
       {},
@@ -304,6 +308,7 @@ function processOptionalParameters(
   const activeFilters = optional.filters
     .filter((filter: any) => filter.active)
     .map((filter: any) => [filter.operator, filter.column, filter.values]);
+
   if (activeFilters.length > 0) {
     body.filter = activeFilters;
   }
@@ -311,6 +316,7 @@ function processOptionalParameters(
   const activeSorts = optional.sorts
     .filter((sort: any) => sort.active)
     .map((sort: any) => sort.column);
+
   if (activeSorts.length > 0) {
     body.sortCols = activeSorts;
   }
@@ -318,6 +324,7 @@ function processOptionalParameters(
   const activeAggs = optional.aggs
     .filter((agg: any) => agg.active)
     .map((agg: any) => [agg.key, agg.operator, agg.column]);
+
   if (activeAggs.length > 0) {
     body.agg = activeAggs;
   }
@@ -325,6 +332,7 @@ function processOptionalParameters(
   const activeGroups = optional.groups
     .filter((group: any) => group.active)
     .map((group: any) => group.column);
+
   if (activeGroups.length > 0) {
     body.groupBy = activeGroups;
   }
@@ -363,7 +371,6 @@ export function generateServicegatewayAPIReqBody(
     startTS,
     endTS,
   };
-
   const api = datasourceParams.dataSource.api;
   const optional = api.optional;
 
@@ -381,6 +388,7 @@ export async function generateServiceGatewayUDAReqBody(
 ): Promise<ServicegatewayUDAReqBody | undefined> {
   const uda = datasourceParams.dataSource.uda;
   const selectedConn = datasourceParams.insightsNode;
+
   if (!selectedConn) {
     notify("No connection selected for UDA import.", MessageKind.INFO, {
       logger,

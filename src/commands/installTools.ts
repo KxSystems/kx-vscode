@@ -80,6 +80,7 @@ export async function installTools(): Promise<void> {
 
   if (licenseTypeResult?.label === licenseAquire) {
     let licenseCancel;
+
     await openUrl(ext.kdbInstallUrl);
     await notify(
       licenseWorkflow.prompt,
@@ -142,6 +143,7 @@ export async function installTools(): Promise<void> {
     // download the binaries
     progress.report({ increment: 20, message: "Getting the binaries..." });
     const osFile = getOsFile();
+
     if (osFile === undefined) {
       notify(
         "Unsupported operating system, unable to download binaries.",
@@ -150,9 +152,11 @@ export async function installTools(): Promise<void> {
       );
     } else {
       const gpath = join(ext.context.globalStorageUri.fsPath, osFile);
+
       if (!existsSync(gpath)) {
         const runtimeUrl = `${ext.kdbDownloadPrefixUrl}${osFile}`;
         const response = await fetch(runtimeUrl);
+
         if (response.status > 200) {
           notify("Invalid or unavailable download url.", MessageKind.ERROR, {
             logger,
@@ -194,6 +198,7 @@ export async function installTools(): Promise<void> {
     const QHOME = workspace
       .getConfiguration()
       .get<string>("kdb.qHomeDirectory");
+
     if (QHOME) {
       // TODO 1: This is wrong, env vars should be read only.
       env.QHOME = QHOME;
@@ -211,6 +216,7 @@ export async function installTools(): Promise<void> {
       });
     }
   });
+
   runner.title = "Installing q.";
   runner.execute().then(async () => {
     notify(
@@ -228,9 +234,11 @@ export async function installTools(): Promise<void> {
           validateInput: (value: string | undefined) =>
             validateServerPort(value),
         };
+
         window.showInputBox(portInput).then(async (port) => {
           if (port) {
             let servers: Server | undefined = getServers();
+
             if (servers != undefined && servers[getKeyForServerName("local")]) {
               notify(
                 `Server localhost:${port} already exists in configuration store`,
@@ -239,6 +247,7 @@ export async function installTools(): Promise<void> {
               );
             } else {
               const key = "local";
+
               if (servers === undefined) {
                 servers = {
                   key: {
@@ -264,6 +273,7 @@ export async function installTools(): Promise<void> {
               }
               await updateServers(servers);
               const newServers = getServers();
+
               if (newServers != undefined) {
                 ext.serverProvider.refresh(newServers);
               }

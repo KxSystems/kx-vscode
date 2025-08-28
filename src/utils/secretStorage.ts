@@ -32,6 +32,7 @@ export default class AuthSettings {
 
   async getAuthData(tokenKey: string): Promise<string | undefined> {
     const result = await this.secretStorage.get(tokenKey);
+
     return result;
   }
 }

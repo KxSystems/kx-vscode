@@ -59,6 +59,7 @@ const logger = "workspaceCommand";
 function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   if (editor) {
     const scheme = editor.document.uri.scheme;
+
     if (scheme !== "output") {
       ext.activeTextEditor = editor;
     }
@@ -71,9 +72,11 @@ function setRealActiveTextEditor(editor?: TextEditor | undefined) {
 function activeEditorChanged(editor?: TextEditor | undefined) {
   setRealActiveTextEditor(editor);
   const item = ext.runScratchpadItem;
+
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
     const server = getServerForUri(uri);
+
     if (server) {
       setRunScratchpadItemText(uri, server);
       item.show();
@@ -128,10 +131,12 @@ export async function getConnectionForServer(
       }
       return false;
     }) as InsightsNode | KdbNode;
+
     if (orphan) {
       return orphan;
     }
     const labels = nodes.filter((server) => server instanceof LabelNode);
+
     for (const label of labels) {
       const item = (label as LabelNode).children.find((node) => {
         const name =
@@ -140,8 +145,10 @@ export async function getConnectionForServer(
             : node instanceof KdbNode
               ? node.details.serverAlias
               : "";
+
         return name === server;
       }) as InsightsNode | KdbNode;
+
       if (item) {
         return item;
       }
@@ -161,6 +168,7 @@ export async function setServerForUri(uri: Uri, server: string | undefined) {
     {},
   );
   const relative = relativePath(uri);
+
   if (relative.startsWith("/")) {
     notify(`Document (${uri.path}) is not in workspace.`, MessageKind.ERROR, {
       logger,
@@ -190,6 +198,7 @@ export async function setTargetForUri(uri: Uri, target: string | undefined) {
   uri = Uri.file(uri.path);
   const conf = workspace.getConfiguration("kdb", uri);
   const map = conf.get<{ [key: string]: string | undefined }>("targetMap", {});
+
   map[relativePath(uri)] = target;
   await conf.update("targetMap", map);
 }
@@ -199,11 +208,13 @@ export function getTargetForUri(uri: Uri) {
   const conf = workspace.getConfiguration("kdb", uri);
   const map = conf.get<{ [key: string]: string | undefined }>("targetMap", {});
   const target = map[relativePath(uri)];
+
   return target ? normalizeAssemblyTarget(target) : undefined;
 }
 
 export function getConnectionForUri(uri: Uri) {
   const server = getServerForUri(uri);
+
   if (server) {
     return ext.connectionsList.find((item) => {
       if (item instanceof InsightsNode) {
@@ -218,8 +229,8 @@ export function getConnectionForUri(uri: Uri) {
 export async function pickConnection(uri: Uri) {
   const server = getServerForUri(uri);
   const servers = getServers();
-
   const items = ["(none)"];
+
   if (isQ(uri) || isNotebook(uri) || isPython(uri)) {
     items.push(ext.REPL);
   }
@@ -255,6 +266,7 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
 
   if (isInsights) {
     const connMngService = new ConnectionManagementService();
+
     daps = JSON.parse(
       connMngService.retrieveMetaContent(conn.connLabel, "DAP"),
     );
@@ -268,7 +280,6 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
 
   const tierItems = buildTierOptionsWithSeparators(daps);
   const defaultOption = isInsights ? "scratchpad" : "default";
-
   const items: QuickPickItem[] = [{ label: defaultOption }];
 
   if (tierItems.length > 0) {
@@ -302,6 +313,7 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
 
 function createTierKey(dap: MetaDap): string {
   const cleanedAssembly = cleanAssemblyName(dap.assembly);
+
   return `${cleanedAssembly} ${dap.instance}`;
 }
 
@@ -309,6 +321,7 @@ function targetExists(target: string, daps: MetaDap[]): boolean {
   return daps.some((dap) => {
     const tierKey = createTierKey(dap);
     const processKey = createProcessKey(dap);
+
     return tierKey === target || processKey === target;
   });
 }
@@ -432,6 +445,7 @@ function createProcessKey(dap: MetaDap): string | null {
   if (!dap.dap) return null;
 
   const cleanedDapName = cleanDapName(dap.dap);
+
   return `${createTierKey(dap)} ${cleanedDapName}`;
 }
 
@@ -466,6 +480,7 @@ function isKxFolder(uri: Uri | undefined) {
 export async function startRepl() {
   try {
     const instance = await ReplConnection.getOrCreateInstance();
+
     instance.start();
   } catch (error) {
     notify(errorMessage(error), MessageKind.ERROR, {
@@ -504,12 +519,14 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   try {
     const runner = Runner.create(async (_, token) => {
       const repl = await ReplConnection.getOrCreateInstance(uri);
+
       repl.show();
       return repl.executeQuery(
         isPython(uri) ? getPythonWrapper(text) : text,
         token,
       );
     });
+
     runner.cancellable = Cancellable.EXECUTOR;
     runner.title = `Executing ${basename} on ${ext.REPL}.`;
     await runner.execute();
@@ -525,7 +542,9 @@ export async function resetScratchpadFromEditor(): Promise<void> {
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
     const isWorkbook = uri.path.endsWith(".kdb.q");
+
     let server = getServerForUri(uri);
+
     if (!server && isWorkbook) {
       server = await pickConnection(uri);
     }
@@ -533,6 +552,7 @@ export async function resetScratchpadFromEditor(): Promise<void> {
       server = "";
     }
     const connection = await getConnectionForServer(server);
+
     server = connection?.label || "";
     resetScratchpad(server);
   }
@@ -550,21 +570,21 @@ export class ConnectionLensProvider implements CodeLensProvider {
   async provideCodeLenses(document: TextDocument) {
     const server = getServerForUri(document.uri);
     const top = new Range(0, 0, 0, 0);
-
     const pickConnection = new CodeLens(top, {
       command: "kdb.file.pickConnection",
       title: server ? `Run on ${server}` : "Choose Connection",
     });
-
     const target = getTargetForUri(document.uri);
 
     if (server) {
       const conn = await getConnectionForServer(server);
+
       if (!isSql(document.uri) && conn instanceof InsightsNode) {
         const pickTarget = new CodeLens(top, {
           command: "kdb.file.pickTarget",
           title: target || "scratchpad",
         });
+
         return [pickConnection, pickTarget];
       }
     }
@@ -585,6 +605,7 @@ export function connectWorkspaceCommands() {
   };
 
   const watcher = workspace.createFileSystemWatcher("**/*.{kdb.json,q,py,sql}");
+
   watcher.onDidCreate(update);
   watcher.onDidDelete(update);
 
@@ -626,6 +647,7 @@ export function checkOldDatasourceFiles() {
 export async function importOldDSFiles() {
   if (ext.oldDSformatExists) {
     const folders = workspace.workspaceFolders;
+
     if (!folders) {
       notify("No workspace folder found.", MessageKind.ERROR, { logger });
       return;
@@ -640,6 +662,7 @@ export async function importOldDSFiles() {
 
       await importOldDsFiles();
     });
+
     runner.title = "Importing old DS files.";
     return await runner.execute();
   } else {
@@ -658,11 +681,13 @@ export async function findConnection(uri: Uri) {
 
   if (server) {
     const node = await getConnectionForServer(server);
+
     if (node) {
       server = node.label;
       conn = connMngService.retrieveConnectedConnection(server);
       if (conn === undefined) {
         const connectedAfterOffering = await offerConnectAction(server);
+
         if (connectedAfterOffering) {
           conn = connMngService.retrieveConnectedConnection(server);
         } else {

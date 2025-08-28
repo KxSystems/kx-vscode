@@ -29,11 +29,11 @@ export function instrument() {
     autoWrap: true,
     produceSourceMap: true,
   });
-
   const files = rreaddir(path.resolve(REPO_ROOT, "out"));
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
+
     if (/\.js\.map$/.test(file)) {
       continue;
     }
@@ -47,8 +47,10 @@ export function instrument() {
     }
 
     let map = undefined;
+
     try {
       const mapContent = fs.readFileSync(`${inputPath}.map`).toString();
+
       map = JSON.parse(mapContent);
     } catch {
       // missing source map - map remains undefined
@@ -79,12 +81,10 @@ export function createReport(): void {
   }
 
   const coverageMap = createCoverageMap(global.__coverage__);
-
   const context = createContext({
     dir: path.join(REPO_ROOT, `coverage-reports`),
     coverageMap: coverageMap,
   });
-
   const reports = [
     create("json"),
     create("lcov"),
@@ -108,6 +108,7 @@ export function createReport(): void {
   });
 
   const summary = coverageMap.getCoverageSummary();
+
   console.log("\n=== COVERAGE SUMMARY ===");
   console.log(
     `Lines: ${summary.lines.pct}% (${summary.lines.covered}/${summary.lines.total})`,
@@ -138,6 +139,7 @@ export function fixLcovPaths(): void {
   content = content.replace(/\\/g, "/");
 
   const repoRootEscaped = REPO_ROOT.replace(/[/\\]/g, "[/\\\\]");
+
   content = content.replace(
     new RegExp(`^SF:.*${repoRootEscaped}[/\\\\](.*)$`, "gm"),
     "SF:$1",
@@ -176,6 +178,7 @@ export function debugLcov(): void {
   console.log("\n=== LCOV DEBUG ===");
 
   const sfLines = content.match(/^SF:.*$/gm);
+
   if (sfLines) {
     console.log(`Found ${sfLines.length} source files:`);
     sfLines.forEach((line) => console.log(`  ${line}`));
@@ -186,8 +189,8 @@ export function debugLcov(): void {
 
 export function generateCoverageReport(): void {
   const coverageReportsDir = path.join(REPO_ROOT, "coverage-reports");
-
   const global = new Function("return this")();
+
   if (!global.__coverage__ || Object.keys(global.__coverage__).length === 0) {
     console.warn("❌ No coverage data available to generate report");
     console.warn("This might be because:");
@@ -205,6 +208,7 @@ export function generateCoverageReport(): void {
   createReport();
 
   const lcovPath = path.join(coverageReportsDir, "lcov.info");
+
   if (!fs.existsSync(lcovPath)) {
     console.error(`❌ lcov.info was not created at ${lcovPath}`);
     return;
@@ -212,12 +216,14 @@ export function generateCoverageReport(): void {
 
   console.log(`✅ lcov.info created at ${lcovPath}`);
   const stats = fs.statSync(lcovPath);
+
   console.log(`File size: ${stats.size} bytes`);
 
   fixLcovPaths();
 
   if (fs.existsSync(lcovPath)) {
     const finalStats = fs.statSync(lcovPath);
+
     console.log(`✅ Final lcov.info size: ${finalStats.size} bytes`);
   } else {
     console.error(`❌ lcov.info missing after processing!`);
@@ -245,6 +251,7 @@ function ensureDir(dirname: string): void {
 
 function rreaddir(dirname: string): string[] {
   const result: string[] = [];
+
   _rreaddir(dirname, dirname, result);
   return result;
 }
@@ -255,9 +262,11 @@ function _rreaddir(
   result: string[],
 ): void {
   const entries = fs.readdirSync(dirname);
+
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
     const entryPath = path.join(dirname, entry);
+
     if (fs.statSync(entryPath).isDirectory()) {
       _rreaddir(entryPath, relativeTo, result);
     } else {

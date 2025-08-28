@@ -81,6 +81,7 @@ export class KdbNewConnectionView extends LitElement {
 
   set connectionData(value: EditConnectionMessage | undefined) {
     const oldValue = this._connectionData;
+
     this._connectionData = value;
     this.requestUpdate("connectionData", oldValue);
   }
@@ -127,6 +128,7 @@ export class KdbNewConnectionView extends LitElement {
 
   updateLabelValue(pos: number, event: Event) {
     const value = (event.target as HTMLSelectElement).value;
+
     this.labels[pos] = decodeURIComponent(value);
     this.requestUpdate();
   }
@@ -146,6 +148,7 @@ export class KdbNewConnectionView extends LitElement {
 
   handleMessage(event: { data: any }) {
     const message = event.data;
+
     if (message.command === "editConnection") {
       this.connectionData = message.data;
       this.labels = message.labels;
@@ -246,6 +249,7 @@ export class KdbNewConnectionView extends LitElement {
           @input="${(event: Event) => {
             /* c8 ignore next */
             const value = (event.target as HTMLInputElement).value;
+
             /* c8 ignore next */
             if (isBundleQ) {
               this.bundledServer.serverPort = value;
@@ -299,6 +303,7 @@ export class KdbNewConnectionView extends LitElement {
               @input="${(event: Event) => {
                 /* c8 ignore next */
                 const value = (event.target as HTMLInputElement).value;
+
                 /* c8 ignore next */
                 if (serverType === ServerType.KDB) {
                   this.kdbServer.serverName = value;
@@ -324,6 +329,7 @@ export class KdbNewConnectionView extends LitElement {
           @input="${(event: Event) => {
             /* c8 ignore next */
             const value = (event.target as HTMLInputElement).value;
+
             /* c8 ignore next */
             this.insightsServer.realm = value;
           }}"
@@ -357,6 +363,7 @@ export class KdbNewConnectionView extends LitElement {
     const config =
       this.tabConfig[tabNumber as keyof typeof this.tabConfig] ??
       this.tabConfig.default;
+
     this.isBundledQ = config.isBundledQ;
     this.serverType = config.serverType;
   }
@@ -758,6 +765,7 @@ export class KdbNewConnectionView extends LitElement {
       this.renderId = "";
     }
     const connTypeName = this.defineConnTypeName(this.connectionData.connType);
+
     this.serverType =
       this.connectionData.connType === ConnectionType.Insights
         ? ServerType.INSIGHTS
@@ -1061,8 +1069,10 @@ export class KdbNewConnectionView extends LitElement {
 
   private generateRenderId(): string {
     let counter = 0;
+
     const timestamp = Date.now().toString(36);
     const uniqueCounter = (counter++).toString(36);
+
     return `render-${timestamp}-${uniqueCounter}`;
   }
 }

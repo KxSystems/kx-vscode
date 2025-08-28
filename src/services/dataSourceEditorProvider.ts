@@ -56,6 +56,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
 
   public static register(context: ExtensionContext): Disposable {
     const provider = new DataSourceEditorProvider(context);
+
     return window.registerCustomEditorProvider(
       DataSourceEditorProvider.viewType,
       provider,
@@ -68,8 +69,10 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
 
   async getMeta(connLabel: string) {
     let meta = this.cache.get(connLabel);
+
     const connMngService = new ConnectionManagementService();
     const isConnected = connMngService.isConnected(connLabel);
+
     if (!isConnected) {
       this.cache.set(connLabel, Promise.resolve(<MetaObjectPayload>{}));
       return Promise.resolve(<MetaObjectPayload>{});
@@ -111,19 +114,22 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
   ): Promise<void> {
     this.filenname = document.fileName.split("/").pop() || "";
     const webview = webviewPanel.webview;
+
     webview.options = { enableScripts: true };
     webview.html = this.getWebviewContent(webview);
     let changing = 0;
-    const connMngService = new ConnectionManagementService();
 
+    const connMngService = new ConnectionManagementService();
     const updateWebview = async () => {
       if (changing === 0) {
         const selectedServer = getServerForUri(document.uri) || "";
         const selectedServerVersion =
           await connMngService.retrieveInsightsConnVersion(selectedServer);
+
         await getConnectionForServer(selectedServer);
         const insightsMeta = await this.getMeta(selectedServer);
         const UDAs: UDA[] = parseUDAList(insightsMeta);
+
         webview.postMessage(<DataSourceMessage2>{
           command: DataSourceCommand.Update,
           selectedServer,
@@ -177,6 +183,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
         case DataSourceCommand.Change: {
           const changed = msg.dataSourceFile;
           const current = this.getDocumentAsJson(document);
+
           if (!isDeepStrictEqual(current, changed)) {
             changing++;
             try {
@@ -201,6 +208,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
               this.cache.delete(selectedServer);
               updateWebview();
             });
+
             runner.location = ProgressLocation.Notification;
             runner.title = `Refreshing meta data for ${selectedServer}.`;
             await runner.execute();
@@ -213,6 +221,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           if (!connected) {
             const connectedAfterOffering =
               await offerConnectAction(selectedServer);
+
             if (!connectedAfterOffering) {
               break;
             }
@@ -224,6 +233,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
                 this.filenname,
               ),
             );
+
             runner.location = ProgressLocation.Notification;
             runner.title = `Running ${getBasename(document.uri)} on ${msg.selectedServer}.`;
             await runner.execute();
@@ -234,6 +244,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           if (!connected) {
             const connectedAfterOffering =
               await offerConnectAction(selectedServer);
+
             if (!connectedAfterOffering) {
               break;
             }
@@ -247,6 +258,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
                 msg.dataSourceFile,
               ),
             );
+
             runner.title = "Populating scratchpad.";
             await runner.execute();
           }
@@ -260,6 +272,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
 
   private getDocumentAsJson(document: TextDocument) {
     const text = document.getText();
+
     if (text.trim().length === 0) {
       return {};
     }

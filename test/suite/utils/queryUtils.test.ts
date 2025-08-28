@@ -42,6 +42,7 @@ describe("queryUtils", () => {
 
   describe("getValueFromArray", () => {
     let inputSample: DCDS = undefined;
+
     beforeEach(() => {
       inputSample = {
         class: "203",
@@ -109,6 +110,7 @@ describe("queryUtils", () => {
 
   describe("handleScratchpadTableRes", () => {
     let inputSample: DCDS = undefined;
+
     beforeEach(() => {
       inputSample = {
         class: "203",
@@ -306,6 +308,7 @@ describe("queryUtils", () => {
 
   describe("handleWSError", () => {
     let sandbox: sinon.SinonSandbox;
+
     const abTest = new Uint8Array([
       1, 2, 0, 0, 114, 1, 0, 0, 0, 0, 2, 0, 0, 0, 99, 11, 0, 17, 0, 0, 0, 0,
       114, 99, 118, 84, 83, 0, 99, 111, 114, 114, 0, 112, 114, 111, 116, 111,
@@ -449,6 +452,7 @@ describe("queryUtils", () => {
 
     it("should remove block comment", () => {
       let res = queryUtils.normalizeQSQLQuery("/\nBlock Comment\n\\\na:1");
+
       assert.strictEqual(res, "a:1");
       res = queryUtils.normalizeQSQLQuery("/\r\nBlock Comment\r\n\\\r\na:1");
       assert.strictEqual(res, "a:1");
@@ -456,6 +460,7 @@ describe("queryUtils", () => {
 
     it("should remove single line comment", () => {
       let res = queryUtils.normalizeQSQLQuery("/ single line comment\na:1");
+
       assert.strictEqual(res, "a:1");
       res = queryUtils.normalizeQSQLQuery("/ single line comment\r\na:1");
       assert.strictEqual(res, "a:1");
@@ -475,6 +480,7 @@ describe("queryUtils", () => {
 
     it("should replace EOS with semicolon", () => {
       let res = queryUtils.normalizeQSQLQuery("a:1\na");
+
       assert.strictEqual(res, "a:1;a");
       res = queryUtils.normalizeQSQLQuery("a:1\r\na");
       assert.strictEqual(res, "a:1;a");
@@ -482,6 +488,7 @@ describe("queryUtils", () => {
 
     it("should escpae new lines in strings", () => {
       let res = queryUtils.normalizeQSQLQuery('a:"a\n \nb"');
+
       assert.strictEqual(res, 'a:"a\\n \\nb"');
       res = queryUtils.normalizeQSQLQuery('a:"a\r\n \r\nb"');
       assert.strictEqual(res, 'a:"a\\n \\nb"');

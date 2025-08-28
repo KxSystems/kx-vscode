@@ -196,6 +196,7 @@ export class KdbDataSourceView extends LitElement {
 
   message = (event: MessageEvent<DataSourceMessage2>) => {
     const msg = event.data;
+
     if (msg.command === DataSourceCommand.Update) {
       this.servers = msg.servers;
       this.selectedServer = msg.selectedServer;
@@ -207,6 +208,7 @@ export class KdbDataSourceView extends LitElement {
       this.insightsMeta = msg.insightsMeta;
       this.UDAs = msg.UDAs;
       const ds = msg.dataSourceFile;
+
       this.selectedType = ds.dataSource.selectedType;
       this.selectedApi = ds.dataSource.api.selectedApi;
       this.selectedTable = ds.dataSource.api.table;
@@ -219,6 +221,7 @@ export class KdbDataSourceView extends LitElement {
       this.isRowLimitLast = ds.dataSource.api.isRowLimitLast !== false;
       this.temporality = ds.dataSource.api.temporality;
       const optional = ds.dataSource.api.optional;
+
       if (optional) {
         this.filled = optional.filled;
         this.temporal = optional.temporal;
@@ -422,6 +425,7 @@ export class KdbDataSourceView extends LitElement {
             .value="${live(this.isRowLimitLast ? "last" : "first")}"
             @sl-change="${(event: Event) => {
               const value = (event.target as HTMLInputElement).value;
+
               this.isRowLimitLast = value === "last";
               this.requestChange();
             }}">
@@ -448,6 +452,7 @@ export class KdbDataSourceView extends LitElement {
         .map((api) => {
           const value =
             api.api === ".kxi.getData" ? api.api.replace(".kxi.", "") : api.api;
+
           return html`
             <sl-option value="${value}" ?disabled="${value !== "getData"}"
               >${value}</sl-option
@@ -472,8 +477,10 @@ export class KdbDataSourceView extends LitElement {
   renderColumnOptions() {
     if (this.isInsights && this.isMetaLoaded) {
       const schema = this.insightsMeta.schema;
+
       if (schema) {
         const found = schema.find((item) => item.table === this.selectedTable);
+
         if (found) {
           return found.columns.map(
             ({ column }) => html`
@@ -561,6 +568,7 @@ export class KdbDataSourceView extends LitElement {
         }
 
         const tierMap = assemblyMap.get(assemblyName)!;
+
         if (!tierMap.has(tierKey)) {
           tierMap.set(tierKey, []);
         }
@@ -568,6 +576,7 @@ export class KdbDataSourceView extends LitElement {
       });
 
       const resOptions: any[] = [];
+
       let firstTierOption: any = null;
 
       assemblyMap.forEach((tierMap, assemblyName) => {
@@ -578,6 +587,7 @@ export class KdbDataSourceView extends LitElement {
             value="${encodeURIComponent(tierKey)}"
             >${tierKey}</sl-option
           >`;
+
           resOptions.push(tierOption);
 
           if (!firstTierOption) {
@@ -587,6 +597,7 @@ export class KdbDataSourceView extends LitElement {
           processes.forEach((process) => {
             if (process.dap) {
               const processValue = `${tierKey} ${cleanDapName(process.dap)}`;
+
               resOptions.push(
                 html`<sl-option value="${encodeURIComponent(processValue)}"
                   >${processValue}</sl-option
@@ -665,6 +676,7 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.filters.length < MAX_RULES) {
                 const index = this.filters.indexOf(filter);
+
                 this.filters.splice(index + 1, 0, createFilter());
                 this.requestChange();
               }
@@ -677,6 +689,7 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.filters.length > 0) {
                 const index = this.filters.indexOf(filter);
+
                 this.filters.splice(index, 1);
                 if (this.filters.length === 0) {
                   this.filters.push(createFilter());
@@ -721,6 +734,7 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.labels.length < MAX_RULES) {
                 const index = this.labels.indexOf(label);
+
                 this.labels.splice(index + 1, 0, createLabel());
                 this.requestChange();
               }
@@ -733,6 +747,7 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.labels.length > 0) {
                 const index = this.labels.indexOf(label);
+
                 this.labels.splice(index, 1);
                 if (this.labels.length === 0) {
                   this.labels.push(createLabel());
@@ -778,6 +793,7 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.sorts.length < MAX_RULES) {
                 const index = this.sorts.indexOf(sort);
+
                 this.sorts.splice(index + 1, 0, createSort());
                 this.requestChange();
               }
@@ -790,6 +806,7 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.sorts.length > 0) {
                 const index = this.sorts.indexOf(sort);
+
                 this.sorts.splice(index, 1);
                 if (this.sorts.length === 0) {
                   this.sorts.push(createSort());
@@ -860,6 +877,7 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.aggs.length < MAX_RULES) {
                 const index = this.aggs.indexOf(agg);
+
                 this.aggs.splice(index + 1, 0, createAgg());
                 this.requestChange();
               }
@@ -872,6 +890,7 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.aggs.length > 0) {
                 const index = this.aggs.indexOf(agg);
+
                 this.aggs.splice(index, 1);
                 if (this.aggs.length === 0) {
                   this.aggs.push(createAgg());
@@ -919,6 +938,7 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.groups.length < MAX_RULES) {
                 const index = this.groups.indexOf(group);
+
                 this.groups.splice(index + 1, 0, createGroup());
                 this.requestChange();
               }
@@ -931,6 +951,7 @@ export class KdbDataSourceView extends LitElement {
             @click="${() => {
               if (this.groups.length > 0) {
                 const index = this.groups.indexOf(group);
+
                 this.groups.splice(index, 1);
                 if (this.groups.length === 0) {
                   this.groups.push(createGroup());
@@ -1189,6 +1210,7 @@ export class KdbDataSourceView extends LitElement {
         const exists = this.userSelectedUDA?.params.some(
           (param) => param.name === distinguishedParam.name,
         );
+
         if (!exists) {
           if (this.userSelectedUDA?.params) {
             this.userSelectedUDA.params.push({ ...distinguishedParam });
@@ -1222,6 +1244,7 @@ export class KdbDataSourceView extends LitElement {
     if (!this.userSelectedUDA) return [];
 
     const details = [];
+
     if (this.userSelectedUDA.description) {
       details.push(html`${this.userSelectedUDA.description}<br />`);
     }
@@ -1229,6 +1252,7 @@ export class KdbDataSourceView extends LitElement {
       const returnType = Array.isArray(this.userSelectedUDA.return.type)
         ? this.userSelectedUDA.return.type.join(", ")
         : this.userSelectedUDA.return.type;
+
       details.push(html`
         Return Description: ${this.userSelectedUDA.return.description}<br />
         Return Type: ${returnType}<br />
@@ -1279,6 +1303,7 @@ export class KdbDataSourceView extends LitElement {
     const param = this.userSelectedUDA?.params.find(
       (param) => param.name === paramSelected,
     );
+
     if (param) {
       param.isVisible = true;
     }
@@ -1308,15 +1333,12 @@ export class KdbDataSourceView extends LitElement {
         ><strong>DISTINGUISHED PARAMETERS:</strong></small
       >
     `;
-
     const optionalParams = this.userSelectedUDA.params.filter(
       (param) => !param.isReq && !param.isDistinguised,
     );
-
     const filteredDistinguisedParam = this.userSelectedUDA.params.filter(
       (param) => !param.isReq && param.isDistinguised,
     );
-
     const renderParams = (params: any[]) =>
       params.map(
         (param: {
@@ -1332,7 +1354,6 @@ export class KdbDataSourceView extends LitElement {
           </sl-menu-item>
         `,
       );
-
     const optionalParamsHtml = [
       optParamTxtHtml,
       ...(optionalParams.length
@@ -1384,6 +1405,7 @@ export class KdbDataSourceView extends LitElement {
       multitype: "multitype",
       text: "text",
     };
+
     return inputTypes[type ?? "text"] || "text";
   }
 
@@ -1423,6 +1445,7 @@ export class KdbDataSourceView extends LitElement {
     const description =
       param.description !== "" ? "Description: " + param.description : "";
     const helpText = isDistinguised + typeString + description;
+
     return html`
       <div class="opt-param-field">
         <sl-checkbox
@@ -1449,6 +1472,7 @@ export class KdbDataSourceView extends LitElement {
     const description =
       param.description !== "" ? "Description: " + param.description : "";
     const helpText = isDistinguised + typeString + description;
+
     return html`
       <div class="opt-param-field">
         <sl-textarea
@@ -1471,6 +1495,7 @@ export class KdbDataSourceView extends LitElement {
   renderUDAMultitype(param: UDAParam) {
     const selectedMultiTypeString =
       param.selectedMultiTypeString || param.typeStrings?.[0] || "";
+
     param.selectedMultiTypeString = selectedMultiTypeString;
     const _value =
       param.selectedMultiTypeString || param.typeStrings?.[0] || "";
@@ -1780,6 +1805,7 @@ export class KdbDataSourceView extends LitElement {
 
   renderActions() {
     const selectedServerExists = this.servers.includes(this.selectedServer);
+
     if (!selectedServerExists) {
       this.selectedServer = "";
     }

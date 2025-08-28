@@ -25,11 +25,13 @@ export function getWorkspaceLabels() {
   const existingConnLbls = workspace
     .getConfiguration()
     .get<Labels[]>("kdb.connectionLabels");
+
   ext.connLabelList.length = 0;
   if (existingConnLbls && existingConnLbls.length > 0) {
     const sortedLabels = existingConnLbls.sort((a, b) =>
       a.name.localeCompare(b.name),
     );
+
     sortedLabels.forEach((label: Labels) => {
       ext.connLabelList.push(label);
     });
@@ -63,6 +65,7 @@ export function clearWorkspaceLabels() {
   }
 
   const removedCount = initialLength - ext.labelConnMapList.length;
+
   if (removedCount > 0) {
     workspace
       .getConfiguration()
@@ -85,6 +88,7 @@ export function createNewLabel(name: string, colorName: string) {
   const color = ext.labelColors.find(
     (color) => color.name.toLowerCase() === colorName.toLowerCase(),
   );
+
   if (name === "") {
     notify("Label name can't be empty.", MessageKind.ERROR, { logger });
     return;
@@ -125,6 +129,7 @@ export function getWorkspaceLabelsConnMap() {
   const existingLabelConnMaps = workspace
     .getConfiguration()
     .get<ConnectionLabel[]>("kdb.labelsConnectionMap");
+
   ext.labelConnMapList.length = 0;
   if (existingLabelConnMaps && existingLabelConnMaps.length > 0) {
     existingLabelConnMaps.forEach((labelConnMap: ConnectionLabel) => {
@@ -144,11 +149,13 @@ export function addConnToLabel(labelName: string, connName: string) {
   const label = ext.connLabelList.find(
     (lbl) => lbl.name.toLowerCase() === labelName.toLowerCase(),
   );
+
   if (label) {
     if (ext.labelConnMapList.length > 0) {
       const labelConnMap = ext.labelConnMapList.find(
         (lbl) => lbl.labelName === labelName,
       );
+
       if (labelConnMap) {
         if (!labelConnMap.connections.includes(connName)) {
           labelConnMap.connections.push(connName);
@@ -208,6 +215,7 @@ export function retrieveConnLabelsNames(
   const connName =
     conn instanceof KdbNode ? conn.details.serverAlias : conn.details.alias;
   const labels: string[] = [];
+
   ext.labelConnMapList.forEach((labelConnMap) => {
     if (labelConnMap.connections.includes(connName)) {
       labels.push(labelConnMap.labelName);
@@ -229,11 +237,13 @@ export function renameLabel(name: string, newName: string) {
     return;
   }
   const found = ext.connLabelList.find((item) => item.name === name);
+
   if (found) {
     found.name = newName;
   }
   getWorkspaceLabelsConnMap();
   const target = ext.labelConnMapList.find((item) => item.labelName === name);
+
   if (target) {
     target.labelName = newName;
   }
@@ -251,8 +261,10 @@ export function renameLabel(name: string, newName: string) {
 export function setLabelColor(name: string, color: string) {
   getWorkspaceLabels();
   const found = ext.connLabelList.find((item) => item.name === name);
+
   if (found) {
     const target = ext.labelColors.find((value) => value.name === color);
+
     if (target) {
       found.color = target;
     }
@@ -266,6 +278,7 @@ export function setLabelColor(name: string, color: string) {
 export function deleteLabel(name: string) {
   getWorkspaceLabels();
   const found = ext.connLabelList.find((item) => item.name === name);
+
   if (found) {
     ext.connLabelList.splice(ext.connLabelList.indexOf(found), 1);
   }
@@ -284,6 +297,7 @@ export function deleteLabel(name: string) {
 
 export function isLabelEmpty(name: string) {
   const found = ext.labelConnMapList.find((item) => item.labelName === name);
+
   if (found) {
     return found.connections.length === 0;
   }
@@ -292,6 +306,7 @@ export function isLabelEmpty(name: string) {
 
 export function isLabelContentChanged(name: string) {
   const found = ext.latestLblsChanged.find((item) => item === name);
+
   if (found) {
     return true;
   }

@@ -23,5 +23,6 @@ export function getIconPath(iconFileName: string): vscode.IconPath {
       path.join(__dirname, "..", "resources", "dark", iconFileName),
     ),
   };
+
   return iconPath;
 }

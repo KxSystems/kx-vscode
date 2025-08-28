@@ -33,6 +33,7 @@ export async function executeCommand(
     spawnCallback,
     ...args,
   );
+
   if (getAutoFocusOutputOnEntrySetting()) {
     ext.outputChannel.show(true);
   }
@@ -63,6 +64,7 @@ export async function tryExecuteCommand(
     ): void => {
       let cmdOutput = "";
       let cmdOutputIncludingStderr = "";
+
       const formattedArgs: string = args.join(" ");
 
       workingDirectory = workingDirectory || os.tmpdir();
@@ -70,7 +72,9 @@ export async function tryExecuteCommand(
         cwd: workingDirectory,
         shell: process.platform === "darwin" ? true : false,
       };
+
       let childProc: cp.ChildProcess;
+
       if (process.platform === "darwin") {
         // need to send the escaped working directory and command together for MacOS
         workingDirectory = workingDirectory.replace(/\s/g, "\\ ");

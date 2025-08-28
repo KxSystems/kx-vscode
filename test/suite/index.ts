@@ -20,6 +20,7 @@ import { generateCoverageReport } from "../coverage";
 export async function run(): Promise<void> {
   const headless = !!process.env.CI;
   const testFolder = process.env.TEST_FOLDER;
+
   let testFile = process.env.TEST_FILE;
 
   const options: Mocha.MochaOptions = {
@@ -34,7 +35,6 @@ export async function run(): Promise<void> {
       },
     },
   };
-
   const mocha = new Mocha(options);
   const testsRoot = path.join(__dirname, "..");
 
@@ -54,13 +54,13 @@ export async function run(): Promise<void> {
     }
 
     const allFiles = await glob(pattern, { cwd: testsRoot });
-
     const testFiles = allFiles.filter(
       (file) => !file.endsWith(".util.test.js"),
     );
 
     if (testFiles.length === 0) {
       const target = testFile || testFolder || "any tests";
+
       throw new Error(`❌ No test files found for: ${target}`);
     }
 

@@ -68,12 +68,14 @@ describe("buildToolsCommand", () => {
       setQHome("");
       setAxHome("/ax");
       const document = await openTextDocument("lint.q");
+
       await assert.rejects(() => tools.lintCommand(document));
     });
     it("should reject if ax home directory is not set", async () => {
       setQHome("/q");
       setAxHome("");
       const document = await openTextDocument("lint.q");
+
       await assert.rejects(() => tools.lintCommand(document));
     });
     it("should provide no QuickFix for empty diagnostics", async () => {
@@ -83,6 +85,7 @@ describe("buildToolsCommand", () => {
         document,
         new Range(0, 0, 0, 0),
       );
+
       assert.ok(!result);
     });
   });
@@ -91,6 +94,7 @@ describe("buildToolsCommand", () => {
     it("should provide global completions", async () => {
       const comletion = new CompletionProvider();
       const result = await comletion.provideCompletionItems();
+
       assert.ok(Array.isArray(result));
     });
   });

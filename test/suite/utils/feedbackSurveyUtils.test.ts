@@ -33,6 +33,7 @@ describe("FeedbackSurveyUtils", () => {
 
     it("should increment extSurveyTriggerCount and return immediately if hideSurvey is true", async () => {
       const result = await feedbackSurveyDialog(false, 0, true);
+
       assert.deepStrictEqual(result, {
         sawSurveyAlready: false,
         extSurveyTriggerCount: 1,
@@ -42,6 +43,7 @@ describe("FeedbackSurveyUtils", () => {
 
     it("should set sawSurveyAlready to true and reset extSurveyTriggerCount when extSurveyTriggerCount >= 3 and sawSurveyAlready is false", async () => {
       const result = await feedbackSurveyDialog(false, 3, false);
+
       assert.deepStrictEqual(result, {
         sawSurveyAlready: true,
         extSurveyTriggerCount: 0,
@@ -51,6 +53,7 @@ describe("FeedbackSurveyUtils", () => {
 
     it("should reset extSurveyTriggerCount when extSurveyTriggerCount >= 5 and sawSurveyAlready is true", async () => {
       const result = await feedbackSurveyDialog(true, 5, false);
+
       assert.deepStrictEqual(result, {
         sawSurveyAlready: true,
         extSurveyTriggerCount: 0,
@@ -60,6 +63,7 @@ describe("FeedbackSurveyUtils", () => {
 
     it("should increment extSurveyTriggerCount and not show survey dialog for other cases", async () => {
       const result = await feedbackSurveyDialog(false, 1, false);
+
       assert.deepStrictEqual(result, {
         sawSurveyAlready: false,
         extSurveyTriggerCount: 2,

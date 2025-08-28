@@ -37,6 +37,7 @@ describe("LocalConnection", () => {
 
   it("Should create a new connection object", () => {
     const conn = new LocalConnection("server:5001", "server1", []);
+
     assert.strictEqual(
       conn.connected,
       false,
@@ -52,6 +53,7 @@ describe("LocalConnection", () => {
       ["username", "password"],
       true,
     );
+
     assert.strictEqual(
       conn.connected,
       false,
@@ -61,6 +63,7 @@ describe("LocalConnection", () => {
 
   it("Should create a new connection object", () => {
     const conn = new LocalConnection("server:5001", "server1", []);
+
     conn.disconnect();
     assert.strictEqual(
       conn.connected,
@@ -79,6 +82,7 @@ describe("LocalConnection", () => {
     });
 
     const conn = localConn.getConnection();
+
     assert.strictEqual(conn, "fakeConnection");
   });
 

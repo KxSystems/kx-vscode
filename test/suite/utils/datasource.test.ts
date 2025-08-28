@@ -22,22 +22,26 @@ import * as dataSourceUtils from "../../../src/utils/dataSource";
 describe("dataSource", () => {
   it("convertTimeToTimestamp", () => {
     const result = dataSourceUtils.convertTimeToTimestamp("2021-01-01");
+
     assert.strictEqual(result, "2021-01-01T00:00:00.000000000");
   });
 
   it("convertTimeToTimestamp", () => {
     const result = dataSourceUtils.convertTimeToTimestamp("testTime");
+
     assert.strictEqual(result, "");
   });
 
   it("getConnectedInsightsNode", () => {
     const result = dataSourceUtils.getConnectedInsightsNode();
+
     assert.strictEqual(result, "");
   });
 
   it("checkFileFromInsightsNode", () => {
     const file = "test";
     const result = dataSourceUtils.checkFileFromInsightsNode(file);
+
     assert.strictEqual(result, false);
   });
 
@@ -46,11 +50,13 @@ describe("dataSource", () => {
       "2021-01-01",
       "2021-01-02",
     );
+
     assert.strictEqual(result, true);
     const result2 = dataSourceUtils.checkIfTimeParamIsCorrect(
       "2021-01-02",
       "2021-01-01",
     );
+
     assert.strictEqual(result2, false);
   });
 
@@ -91,6 +97,7 @@ describe("dataSource", () => {
   describe("getPartialDatasourceFile", () => {
     it("should return qsql datatsource", () => {
       const res = dataSourceUtils.getPartialDatasourceFile("query");
+
       assert.strictEqual(res.dataSource.selectedType, "QSQL");
     });
     it("should return sql datatsource", () => {
@@ -99,6 +106,7 @@ describe("dataSource", () => {
         "dap",
         true,
       );
+
       assert.strictEqual(res.dataSource.selectedType, "SQL");
     });
   });

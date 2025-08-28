@@ -15,6 +15,7 @@ import { SyntaxError, Token } from "./utils";
 
 export function checkEscape(token: Token) {
   let value;
+
   switch (token.image.slice(1)) {
     case "n":
     case "r":

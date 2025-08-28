@@ -34,7 +34,9 @@ import * as notebookTestUtils from "../services/notebook/notebookTest.utils.test
 
 describe("executionCommand", () => {
   let executionCommand: any;
+
   const dummyDS = createDefaultDataSourceFile();
+
   dummyDS.dataSource.api.selectedApi = "sampleApi";
   dummyDS.dataSource.api.table = "sampleTable";
   dummyDS.dataSource.api.startTS = "2023.01.01D00:00:00.000000000";
@@ -68,6 +70,7 @@ describe("executionCommand", () => {
     vscode.TreeItemCollapsibleState.None,
   );
   const insightsConn = new InsightsConnection(insightsNode.label, insightsNode);
+
   beforeEach(() => {
     executionCommand = rewire("../../../src/commands/executionCommand");
   });
@@ -108,7 +111,6 @@ describe("executionCommand", () => {
         target: "target",
         variable: "variable",
       });
-
       const result = await executionCommand.executeNotebookQuery(
         "connSample",
         mockCell,
@@ -137,7 +139,6 @@ describe("executionCommand", () => {
       const mockCell = notebookTestUtils.createCell("sql", {
         target: "target",
       });
-
       const result = await executionCommand.executeNotebookQuery(
         "connSample",
         mockCell,
@@ -157,7 +158,6 @@ describe("executionCommand", () => {
         target: "target",
         variable: "variable",
       });
-
       const result = await executionCommand.executeNotebookQuery(
         "connSample",
         mockCell,
@@ -184,7 +184,6 @@ describe("executionCommand", () => {
 
     it("should execute query when no target is provided and kind is not SQL", async () => {
       const mockCell = notebookTestUtils.createCell("q", {});
-
       const result = await executionCommand.executeNotebookQuery(
         "connSample",
         mockCell,
@@ -288,6 +287,7 @@ describe("executionCommand", () => {
       const res = await executionCommand.executeActiveEditorQuery(
         ExecutionTypes.DataQuerySelection,
       );
+
       assert.strictEqual(res, undefined);
       sinon.assert.calledOnce(findConnectionStub);
     });
@@ -362,6 +362,7 @@ describe("executionCommand", () => {
 
     it("should execute data query with target", async () => {
       const sampleDS = JSON.parse(JSON.stringify(dummyDS));
+
       sampleDS.dataSource.selectedType = DataSourceTypes.QSQL;
       sampleDS.dataSource.qsql.selectedTarget = "ams tier dap";
       await executionCommand.executeDataSourceQuery("connSample", sampleDS);

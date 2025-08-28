@@ -32,6 +32,7 @@ export interface LinterDiagnostic {
 
 export function lint(tokens: Token[]): LinterDiagnostic[] {
   const diagnostics: LinterDiagnostic[] = [];
+
   Rules.filter(
     (rule) => rule.check && enabled.indexOf(rule.code) !== -1,
   ).forEach((rule) =>

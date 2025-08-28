@@ -165,6 +165,7 @@ describe("ConnectionManagementService", () => {
         regexConnLabel,
         insightNode,
       );
+
       ext.connectedConnectionList.push(insightsConnWithRegexLabel);
 
       const result =
@@ -180,6 +181,7 @@ describe("ConnectionManagementService", () => {
         "testLabel",
         [],
       );
+
       ext.connectedConnectionList.push(localConnWithRegexLabel);
 
       const result = connectionManagerService.isInsightsConnection("testLabel");
@@ -704,6 +706,7 @@ describe("ConnectionManagementService", () => {
     let getAuthDataStub: sinon.SinonStub;
     let _kdbAuthMapStub: sinon.SinonStub;
     let _contextStub: sinon.SinonStub;
+
     ext.context = {} as vscode.ExtensionContext;
 
     beforeEach(() => {
@@ -819,6 +822,7 @@ describe("ConnectionManagementService", () => {
 
   describe("retrieveInsightsConnQEEnabled", () => {
     let retrieveConnectedConnectionStub: sinon.SinonStub;
+
     const apiConfig: InsightsApiConfig = {
       version: "1.11",
       encryptionDatabase: false,

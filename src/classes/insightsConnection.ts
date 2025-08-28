@@ -51,7 +51,6 @@ import { handleScratchpadTableRes, handleWSResults } from "../utils/queryUtils";
 import { normalizeAssemblyTarget } from "../utils/shared";
 
 const logger = "insightsConnection";
-
 const customHeadersOctet = {
   Accept: "application/octet-stream",
   "Content-Type": "application/json",
@@ -141,6 +140,7 @@ export class InsightsConnection {
 
     if (needUsername && options.headers) {
       const username = jwtDecode<JwtUser>(token.accessToken);
+
       if (!username || !username.preferred_username) {
         invalidUsernameJWT(this.connLabel);
         return undefined;
@@ -217,6 +217,7 @@ export class InsightsConnection {
 
       const metaResponse = await axios(options);
       const meta: MetaObject = metaResponse.data;
+
       this.meta = meta;
       return meta.payload;
     }
@@ -288,8 +289,10 @@ export class InsightsConnection {
   public getInsightsVersion() {
     const match = this.config?.version.match(/-\d+(\.\d+){2}(-|$)/);
     const version = match ? match[0].replace(/-/g, "") : null;
+
     if (version) {
       const [major, minor, _path] = version.split(".");
+
       this.insightsVersion = parseFloat(`${major}.${minor}`);
     }
   }
@@ -303,7 +306,6 @@ export class InsightsConnection {
       importUDA: "scratchpadmanager/scratchpad/import/uda",
       reset: "scratchpadmanager/reset",
     };
-
     const getVersionGroup = (): string => {
       if (
         !this.insightsVersion ||
@@ -316,9 +318,10 @@ export class InsightsConnection {
       }
       return "v1.14+";
     };
-
     const versionGroup = getVersionGroup();
+
     let serviceGatewayEndpoints;
+
     const qePrefix = this.apiConfig?.queryEnvironmentsEnabled ? "qe/" : "";
 
     switch (versionGroup) {
@@ -373,6 +376,7 @@ export class InsightsConnection {
   ): string | undefined {
     if (this.connEndpoints) {
       const parent = this.connEndpoints[parentKey];
+
       if (parent) {
         return parent[childKey as keyof typeof parent];
       }
@@ -385,6 +389,7 @@ export class InsightsConnection {
     udaName: string,
   ): string {
     let endpoint: string = "";
+
     switch (type) {
       case DataSourceTypes.UDA:
         endpoint =
@@ -412,7 +417,6 @@ export class InsightsConnection {
   ) {
     const [plainAssembly, tier, plainDap] =
       normalizeAssemblyTarget(assemblyTarget).split(/\s+/);
-
     const assembly = this.retrieveCorrectAssemblyName(plainAssembly);
     const dap = this.retrieveCorrectDAPName(plainDap, tier);
 
@@ -468,6 +472,7 @@ export class InsightsConnection {
       const udaName = (body as UDARequestBody).name
         ? (body as UDARequestBody).name
         : "";
+
       if (udaName !== "") {
         body = body.params;
         // TODO: This will be necessary when the parametertypes issue is fixed just remove the line above
@@ -534,6 +539,7 @@ export class InsightsConnection {
   ): Promise<void> {
     if (this.connected && this.connEndpoints) {
       let coreUrl: string;
+
       switch (type) {
         case DataSourceTypes.API:
           coreUrl = this.connEndpoints.scratchpad.import;
@@ -551,6 +557,7 @@ export class InsightsConnection {
       }
 
       const qePrefix = this.apiConfig?.queryEnvironmentsEnabled ? "-qe" : "";
+
       if ("scope" in body.params) {
         body.params.scope.assembly = body.params.scope.assembly + qePrefix;
       }
@@ -608,6 +615,7 @@ export class InsightsConnection {
       this.node.details.realm || "insights",
       !!this.node.details.insecure,
     );
+
     if (token === undefined) {
       tokenUndefinedError(this.connLabel);
     }
@@ -649,6 +657,7 @@ export class InsightsConnection {
         udaURL.toString(),
         udaReqBody,
       );
+
       if (!options) {
         return;
       }
@@ -739,6 +748,7 @@ export class InsightsConnection {
   ): Promise<GetDataObjectPayload | undefined> {
     if (this.connected) {
       const qePrefix = this.apiConfig?.queryEnvironmentsEnabled ? "-qe" : "";
+
       if ("scope" in body) {
         body.scope.assembly = body.scope.assembly + qePrefix;
       }

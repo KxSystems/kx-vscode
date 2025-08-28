@@ -53,8 +53,10 @@ export class DateTimeNanoPicker extends LitElement {
     const match = qdt.match(
       /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?$/,
     );
+
     if (match) {
       const [, yyyy, mm, dd, h, m, s, n = ""] = match;
+
       this.date = `${yyyy}-${mm}-${dd}`;
       this.time = `${h.padStart(2, "0")}:${m.padStart(2, "0")}:${s.padStart(2, "0")}`;
       this.nanos = n.padEnd(9, "0");
@@ -65,6 +67,7 @@ export class DateTimeNanoPicker extends LitElement {
     const [yyyy, mm, dd] = this.date.split("-");
     const [h, m, s] = this.time.split(":");
     const n = this.nanos.padEnd(9, "0").slice(0, 9);
+
     this.value = `${yyyy}-${mm}-${dd}T${h}:${m}:${s}.${n}`;
     this.requestUpdate();
     this.dispatchValueChanged();
@@ -104,6 +107,7 @@ export class DateTimeNanoPicker extends LitElement {
           pattern="^([01]\\d|2[0-3]):([0-5]\\d):([0-5]\\d)$"
           @input=${(e: { target: { value: string } }) => {
             let val = e.target.value.replace(/[^0-9:]/g, "");
+
             if (/^\d{2}$/.test(val)) val = val + ":";
             if (/^\d{2}:\d{2}$/.test(val)) val = val + ":";
             if (val.length > 8) val = val.slice(0, 8);
@@ -113,11 +117,13 @@ export class DateTimeNanoPicker extends LitElement {
           }}
           @blur=${(e: { target: { value: string } }) => {
             let val = e.target.value.replace(/[^0-9]/g, "");
+
             val = val.padEnd(6, "0").slice(0, 6);
             const hh = val.slice(0, 2);
             const mm = val.slice(2, 4);
             const ss = val.slice(4, 6);
             const formatted = `${hh}:${mm}:${ss}`;
+
             this.time = formatted;
             e.target.value = formatted;
           }}>
@@ -133,6 +139,7 @@ export class DateTimeNanoPicker extends LitElement {
           }}
           @blur=${(e: { target: { value: string } }) => {
             let val = e.target.value.replace(/\D/g, "");
+
             if (val.length < 9) val = val.padEnd(9, "0");
             if (val.length > 9) val = val.slice(0, 9);
             this.nanos = val;

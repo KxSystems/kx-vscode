@@ -63,7 +63,6 @@ export function getHttpsAgent(insecure: boolean | undefined) {
 
 const defaultTimeout = 3 * 60 * 1000; // 3 min
 const closeTimeout = 10 * 1000; // 10 sec
-
 const commonRequestParams = {
   client_id: "insights-app",
 };
@@ -77,14 +76,12 @@ export async function signIn(
 
   try {
     const port = await startServer(server);
-
     const authParams = {
       response_type: "code",
       scope: "profile",
       redirect_uri: `http://localhost:${port}/redirect`,
       state: crypto.randomBytes(20).toString("hex"),
     };
-
     const authorizationUrl = getAuthUrl(insightsUrl, realm);
 
     authorizationUrl.search = queryString(authParams);
@@ -92,6 +89,7 @@ export async function signIn(
     await env.openExternal(Uri.parse(authorizationUrl.toString()));
 
     const code = await codePromise;
+
     return await getToken(insightsUrl, realm, insecure, code);
   } finally {
     setImmediate(() => server.close());
@@ -146,10 +144,12 @@ export async function getCurrentToken(
   }
 
   let token: IToken | undefined;
+
   const existingToken = await ext.context.secrets.get(serverAlias);
 
   if (existingToken !== undefined) {
     const storedToken: IToken = JSON.parse(existingToken);
+
     if (new Date(storedToken.accessTokenExpirationDate) < new Date()) {
       token = await refreshToken(
         serverName,
@@ -201,10 +201,10 @@ async function tokenRequest(
     signal: AbortSignal.timeout(closeTimeout),
     httpsAgent: getHttpsAgent(insecure),
   };
-
   const requestUrl = getTokenUrl(insightsUrl, realm);
 
   let response;
+
   if (params.grant_type === "refresh_token") {
     try {
       response = await axios.post(requestUrl.toString(), queryParams, headers);
@@ -238,6 +238,7 @@ function queryString(options: any): string {
 /* c8 ignore next */
 function createServer() {
   let deferredCode: IDeferred<string>;
+
   const codePromise = new Promise<string>(
     (resolve, reject) => (deferredCode = { resolve, reject }),
   );
@@ -246,12 +247,12 @@ function createServer() {
     defaultTimeout,
   );
   const cancelCodeTimer = () => clearTimeout(codeTimer);
-
   const server = http.createServer((req, res) => {
     const reqUrl = new url.URL(
       req.url!,
       `${ext.networkProtocols.http}${ext.localhost}`,
     );
+
     switch (reqUrl.pathname) {
       case "/": {
         sendFile(
@@ -276,6 +277,7 @@ function createServer() {
           res.writeHead(302, { Location: "/" });
         } else {
           const err = new Error(error || "No code received.");
+
           deferredCode.reject(err);
           res.writeHead(302, {
             Location: `/?error=${querystring.escape(err.message)}`,
@@ -316,6 +318,7 @@ function createServer() {
 function startServer(server: http.Server): Promise<number> {
   return new Promise((resolve, reject) => {
     let deferredCode: IDeferred<number>;
+
     const portPromise = new Promise<number>(
       (resolve, reject) => (deferredCode = { resolve, reject }),
     );

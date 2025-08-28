@@ -50,18 +50,21 @@ describe("Workspace tests", () => {
   it("getWorkspaceRoot should return workspace root path", async () => {
     workspaceMock.value(testWorkspaceFolder);
     const result = workspaceHelper.getWorkspaceRoot();
+
     assert.strictEqual(result, testWorkspaceFolder[0].uri.fsPath);
   });
 
   it("isWorkspaceOpen should return false when no workspace is opened", () => {
     workspaceMock.value(undefined);
     const result = workspaceHelper.isWorkspaceOpen();
+
     assert.strictEqual(result, false);
   });
 
   it("isWorkspaceOpen should return true when workspace is opened", () => {
     workspaceMock.value(testWorkspaceFolder);
     const result = workspaceHelper.isWorkspaceOpen();
+
     assert.strictEqual(result, true);
   });
 
@@ -70,6 +73,7 @@ describe("Workspace tests", () => {
       sinon.stub(vscode.workspace, "openTextDocument").value(() => ({}));
       const stub = sinon.stub(vscode.window, "showTextDocument");
       const uri = vscode.Uri.file("/test/test.q");
+
       await workspaceHelper.activateTextDocument(uri);
       assert.strictEqual(stub.calledOnce, true);
     });
@@ -89,6 +93,7 @@ describe("Workspace tests", () => {
         .returns(testWorkspaceFolder[0]);
       const uri = vscode.Uri.file("test.q");
       const result = await workspaceHelper.addWorkspaceFile(uri, "test", ".q");
+
       assert.ok(result.fsPath.endsWith("test-1.q"));
       sinon.restore();
     });
@@ -98,6 +103,7 @@ describe("Workspace tests", () => {
     it("should reject when no workspace", async () => {
       const applyEdit = sinon.stub(vscode.workspace, "applyEdit");
       const uri = vscode.Uri.file("test.q");
+
       await workspaceHelper.setUriContent(uri, "test");
       assert.ok(applyEdit.calledOnce);
     });
@@ -107,6 +113,7 @@ describe("Workspace tests", () => {
     it("should return false", async () => {
       const uri = vscode.Uri.file("test.q");
       const result = workspaceHelper.workspaceHas(uri);
+
       assert.strictEqual(result, false);
     });
   });
@@ -115,6 +122,7 @@ describe("Workspace tests", () => {
     it("should call command", async () => {
       const executeCommand = sinon.stub(vscode.commands, "executeCommand");
       const uri = vscode.Uri.file("test.q");
+
       await workspaceHelper.openWith(uri, "test");
       assert.strictEqual(executeCommand.calledOnce, true);
     });

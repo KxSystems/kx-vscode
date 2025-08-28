@@ -33,6 +33,7 @@ describe("ChartEditorProvider", () => {
   describe("register", () => {
     it("should register the provider", () => {
       let result = undefined;
+
       sinon
         .stub(vscode.window, "registerCustomEditorProvider")
         .value(() => (result = true));
@@ -48,8 +49,10 @@ describe("ChartEditorProvider", () => {
         language: "kdbplot",
         content: "{}",
       });
+
       sinon.stub(utils, "getUri").value(() => "");
       const panel = createPanel();
+
       await assert.doesNotReject(
         provider.resolveCustomTextEditor(document, panel.panel),
       );

@@ -51,6 +51,7 @@ describe("core", () => {
 
     it("should handle errors correctly", async () => {
       const error = new Error("Test error");
+
       tryExecuteCommandStub.rejects(error);
 
       const result = await coreUtils.checkOpenSslInstalled();
@@ -100,6 +101,7 @@ describe("core", () => {
         server: "test",
         auth: true,
       };
+
       coreUtils.getInsightsAlias([insightsDetail]);
       assert.strictEqual(ext.kdbConnectionAliasList.length, 1);
     });
@@ -123,6 +125,7 @@ describe("core", () => {
           tls: false,
         },
       ];
+
       coreUtils.getServerAlias(serverList);
       assert.strictEqual(ext.kdbConnectionAliasList.length, 1);
     });
@@ -130,6 +133,7 @@ describe("core", () => {
 
   describe("getServerIconState", () => {
     const localConn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
+
     afterEach(() => {
       ext.activeConnection = undefined;
       ext.connectedConnectionList.length = 0;
@@ -139,18 +143,21 @@ describe("core", () => {
       ext.activeConnection = undefined;
       ext.connectedConnectionList.push(localConn);
       const result = coreUtils.getServerIconState(localConn.connLabel);
+
       assert.strictEqual(result, "-connected");
     });
 
     it("should return active state", () => {
       ext.activeConnection = localConn;
       const result = coreUtils.getServerIconState(localConn.connLabel);
+
       assert.strictEqual(result, "-active");
     });
 
     it("should return disconnected state", () => {
       ext.activeConnection = undefined;
       const result = coreUtils.getServerIconState(localConn.connLabel);
+
       assert.strictEqual(result, "");
     });
   });
@@ -167,24 +174,28 @@ describe("core", () => {
       ext.activeConnection = undefined;
       ext.connectedConnectionList.push(localConn);
       const result = coreUtils.getStatus(localConn.connLabel);
+
       assert.strictEqual(result, "- connected");
     });
 
     it("should return active state", () => {
       ext.activeConnection = localConn;
       const result = coreUtils.getStatus(localConn.connLabel);
+
       assert.strictEqual(result, "- active");
     });
 
     it("should return disconnected state", () => {
       ext.activeConnection = undefined;
       const result = coreUtils.getStatus(localConn.connLabel);
+
       assert.strictEqual(result, "- disconnected");
     });
   });
 
   describe("getWorkspaceIconsState", () => {
     const localConn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
+
     afterEach(() => {
       ext.connectedConnectionList.length = 0;
     });
@@ -192,12 +203,14 @@ describe("core", () => {
     it("should return active state", () => {
       ext.connectedConnectionList.push(localConn);
       const result = coreUtils.getWorkspaceIconsState(localConn.connLabel);
+
       assert.strictEqual(result, "-active");
     });
 
     it("should return disconnected state", () => {
       ext.activeConnection = undefined;
       const result = coreUtils.getWorkspaceIconsState(localConn.connLabel);
+
       assert.strictEqual(result, "");
     });
   });
@@ -206,6 +219,7 @@ describe("core", () => {
   describe("coreLogs", () => {
     ext.outputChannel = vscode.window.createOutputChannel("kdb");
     let appendLineSpy, showErrorMessageSpy: sinon.SinonSpy;
+
     beforeEach(() => {
       appendLineSpy = sinon.spy(
         vscode.window.createOutputChannel("testChannel"),
@@ -273,12 +287,14 @@ describe("core", () => {
     it("should return true if a workspace folder is opened", () => {
       sinon.stub(vscode.workspace, "workspaceFolders").get(() => [{}]);
       const result = coreUtils.hasWorkspaceOrShowOption("Test");
+
       assert.strictEqual(result, true);
     });
 
     it("should return false and display message if no workspace", () => {
       const stub = sinon.stub(vscode.window, "showWarningMessage").resolves();
       const result = coreUtils.hasWorkspaceOrShowOption("Test");
+
       assert.strictEqual(result, false);
       assert.ok(stub.calledOnce);
     });
@@ -293,6 +309,7 @@ describe("core", () => {
       const stub = sinon
         .stub(vscode.window, "showInformationMessage")
         .resolves();
+
       coreUtils.noSelectedConnectionAction();
       assert.ok(stub.calledOnce);
     });
@@ -422,6 +439,7 @@ describe("core", () => {
 
       assert.ok(result);
       const serverKeys = Object.keys(result);
+
       assert.strictEqual(serverKeys.length, 1);
       assert.strictEqual(result[serverKeys[0]].serverAlias, "Single Server");
       assert.strictEqual(result[serverKeys[0]].serverName, "remote-host");
@@ -453,6 +471,7 @@ describe("core", () => {
 
       assert.ok(result);
       const serverKeys = Object.keys(result);
+
       assert.strictEqual(serverKeys.length, 2);
 
       serverKeys.forEach((key) => {
@@ -686,6 +705,7 @@ describe("core", () => {
 
       assert.ok(result);
       const insightKeys = Object.keys(result);
+
       assert.strictEqual(insightKeys.length, 1);
       assert.strictEqual(result[insightKeys[0]].alias, "Single Fallback");
 
@@ -724,6 +744,7 @@ describe("core", () => {
 
       assert.ok(result);
       const insightKeys = Object.keys(result);
+
       assert.strictEqual(insightKeys.length, 1);
       assert.strictEqual(result[insightKeys[0]].alias, "Only Insight");
       assert.strictEqual(
@@ -754,6 +775,7 @@ describe("core", () => {
 
       assert.ok(result);
       const insightKeys = Object.keys(result);
+
       assert.strictEqual(insightKeys.length, 2);
 
       insightKeys.forEach((key) => {
@@ -803,7 +825,6 @@ describe("core", () => {
           auth: true,
         },
       };
-
       const mockFallbackInsights = {
         fallback: {
           alias: "Fallback Insight",
@@ -821,6 +842,7 @@ describe("core", () => {
 
       assert.ok(result);
       const insightKeys = Object.keys(result);
+
       assert.strictEqual(insightKeys.length, 1);
       assert.strictEqual(result[insightKeys[0]].alias, "Primary Insight");
       assert.strictEqual(result[insightKeys[0]].server, "https://primary.com");
@@ -873,6 +895,7 @@ describe("core", () => {
 
       assert.ok(result);
       const insightKeys = Object.keys(result);
+
       assert.strictEqual(insightKeys.length, 2);
 
       const basicInsight = Object.values(result).find(
@@ -900,19 +923,23 @@ describe("core", () => {
       ext.REAL_QHOME = "QHOME";
       sinon.stub(shell, "stat").returns(false);
       const res = coreUtils.getQExecutablePath();
+
       assert.ok(res);
     });
     it("should return KDB-X", () => {
       ext.REAL_QHOME = "QHOME";
       sinon.stub(shell, "stat").returns(true);
       const res = coreUtils.getQExecutablePath();
+
       assert.strictEqual(res, path.join("QHOME", "bin", "q"));
     });
     it("should return KDB-X", () => {
       ext.REAL_QHOME = "";
       const target = path.join("QHOME", "bin", "q");
+
       sinon.stub(shell, "which").returns([target]);
       const res = coreUtils.getQExecutablePath();
+
       assert.strictEqual(res, target);
     });
     it("should return qHomeDirectory", () => {
@@ -922,6 +949,7 @@ describe("core", () => {
         return { get: () => "QHOME" };
       });
       const res = coreUtils.getQExecutablePath();
+
       assert.ok(res);
     });
     it("should throw if q not found", () => {

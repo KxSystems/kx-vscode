@@ -52,8 +52,10 @@ export function decodeUnicode(str: string, i: number): string {
   if (i % 2 === ODD_INDEX) {
     return str.replace(/[\x80-\xff]+/g, (encodedString) => {
       let acc = "";
+
       for (let j = 0; j < encodedString.length; j++) {
         const num = encodedString.charCodeAt(j).toString(16);
+
         acc += `%${num.length === 1 ? "0" : ""}${num}`;
       }
       try {
@@ -74,8 +76,10 @@ export function decodeUnicode(str: string, i: number): string {
  */
 export function toOctalEscapes(str: string): string {
   let acc = "";
+
   for (let i = 0; i < str.length; i++) {
     const code = str.charCodeAt(i);
+
     acc += code < 128 ? str[i] : `\\${str.charCodeAt(i).toString(8)}`;
   }
   return acc;

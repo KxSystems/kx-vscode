@@ -27,6 +27,7 @@ import * as renderer from "../../../src/utils/resultsRenderer";
 
 describe("ResultsPanelProvider", () => {
   const uriTest: vscode.Uri = vscode.Uri.parse("test");
+
   let resultsPanel: KdbResultsViewProvider;
   let viewStub: any;
 
@@ -40,11 +41,11 @@ describe("ResultsPanelProvider", () => {
     },
     TreeItemCollapsibleState.None,
   );
-
   const insightsConn = new InsightsConnection(
     "insightsservername",
     insightsNode,
   );
+
   beforeEach(() => {
     resultsPanel = new KdbResultsViewProvider(uriTest);
     viewStub = {
@@ -58,6 +59,7 @@ describe("ResultsPanelProvider", () => {
       resultsPanel._colorTheme = { kind: vscode.ColorThemeKind.Light };
       const expectedTheme = "ag-theme-alpine";
       const actualTheme = resultsPanel.defineAgGridTheme();
+
       assert.strictEqual(actualTheme, expectedTheme);
     });
 
@@ -65,6 +67,7 @@ describe("ResultsPanelProvider", () => {
       resultsPanel._colorTheme = { kind: vscode.ColorThemeKind.Dark };
       const expectedTheme = "ag-theme-alpine-dark";
       const actualTheme = resultsPanel.defineAgGridTheme();
+
       assert.strictEqual(actualTheme, expectedTheme);
     });
   });
@@ -74,6 +77,7 @@ describe("ResultsPanelProvider", () => {
       const inputString = "  test string  ";
       const expectedString = "test string";
       const actualString = renderer.sanitizeString(inputString);
+
       assert.strictEqual(actualString, expectedString);
     });
 
@@ -81,6 +85,7 @@ describe("ResultsPanelProvider", () => {
       const inputString = `'test' "string" \`with\` quotes`;
       const expectedString = "test string with quotes";
       const actualString = renderer.sanitizeString(inputString);
+
       assert.strictEqual(actualString, expectedString);
     });
 
@@ -88,6 +93,7 @@ describe("ResultsPanelProvider", () => {
       const inputString = "test ${string} with ${variables}";
       const expectedString = "test string} with variables}";
       const actualString = renderer.sanitizeString(inputString);
+
       assert.strictEqual(actualString, expectedString);
     });
 
@@ -95,6 +101,7 @@ describe("ResultsPanelProvider", () => {
       const inputString = ["test", "string", "with", "array"];
       const expectedString = "test string with array";
       const actualString = renderer.sanitizeString(inputString);
+
       assert.strictEqual(actualString, expectedString);
     });
 
@@ -102,6 +109,7 @@ describe("ResultsPanelProvider", () => {
       const inputString = 123;
       const expectedString = 123;
       const actualString = renderer.sanitizeString(inputString);
+
       assert.strictEqual(actualString, expectedString);
       assert.ok(typeof actualString === "number");
     });
@@ -109,7 +117,9 @@ describe("ResultsPanelProvider", () => {
 
   describe("isVisible()", () => {
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
+
     let resultsPanel: KdbResultsViewProvider;
+
     const view: vscode.WebviewView = {
       visible: true,
 
@@ -134,12 +144,14 @@ describe("ResultsPanelProvider", () => {
     });
     it("should return false if the panel is not visible", () => {
       const actualVisibility = resultsPanel.isVisible();
+
       assert.strictEqual(actualVisibility, false);
     });
 
     it("should return false if the panel visible", () => {
       resultsPanel["_view"] = view;
       const actualVisibility = resultsPanel.isVisible();
+
       assert.strictEqual(actualVisibility, true);
     });
   });
@@ -155,7 +167,6 @@ describe("ResultsPanelProvider", () => {
           meta: { prop1: "type1", prop2: "type2" },
         },
       };
-
       const expectedOutput = JSON.stringify({
         rowData: [
           { index: 1, prop1: "value1", prop2: "value2" },
@@ -175,8 +186,8 @@ describe("ResultsPanelProvider", () => {
           },
         ],
       });
-
       const output = renderer.convertToGrid(results, true);
+
       assert.equal(JSON.stringify(output), expectedOutput);
     });
 
@@ -198,7 +209,6 @@ describe("ResultsPanelProvider", () => {
         ],
         count: 2,
       };
-
       const expectedOutput = JSON.stringify({
         rowData: [
           { index: 1, prop1: "value1", prop2: "value3" },
@@ -220,8 +230,8 @@ describe("ResultsPanelProvider", () => {
           },
         ],
       });
-
       const output = renderer.convertToGrid(results, true, 1.12);
+
       assert.equal(JSON.stringify(output), expectedOutput);
     });
 
@@ -232,7 +242,6 @@ describe("ResultsPanelProvider", () => {
           meta: { prop1: "type1", prop2: "type2" },
         },
       };
-
       const expectedOutput = JSON.stringify({
         rowData: [],
         columnDefs: [
@@ -249,8 +258,8 @@ describe("ResultsPanelProvider", () => {
           },
         ],
       });
-
       const output = renderer.convertToGrid(results, true);
+
       assert.equal(JSON.stringify(output), expectedOutput);
     });
 
@@ -264,7 +273,6 @@ describe("ResultsPanelProvider", () => {
           meta: { sym: "type1", val: "type2" },
         },
       };
-
       const expectedOutput = JSON.stringify({
         rowData: [
           { index: 1, sym: "a", val: 1 },
@@ -277,8 +285,8 @@ describe("ResultsPanelProvider", () => {
           { field: "val", headerName: "val [type2]", cellDataType: "text" },
         ],
       });
-
       const output = renderer.convertToGrid(results, true);
+
       assert.equal(JSON.stringify(output), expectedOutput);
     });
 
@@ -286,7 +294,6 @@ describe("ResultsPanelProvider", () => {
       const results = {
         data: { rows: [[1, 2, 3]], meta: { value: "type1" } },
       };
-
       const expectedOutput = JSON.stringify({
         rowData: [{ index: 1, value: "1,2,3" }],
         columnDefs: [
@@ -298,8 +305,8 @@ describe("ResultsPanelProvider", () => {
           },
         ],
       });
-
       const output = renderer.convertToGrid(results, true);
+
       assert.equal(JSON.stringify(output), expectedOutput);
     });
   });
@@ -323,6 +330,7 @@ describe("ResultsPanelProvider", () => {
         },
       ];
       const actualOutput = renderer.generateCoumnDefs(input, false);
+
       assert.deepStrictEqual(actualOutput, expectedOutput);
     });
 
@@ -341,6 +349,7 @@ describe("ResultsPanelProvider", () => {
         },
       ];
       const actualOutput = renderer.generateCoumnDefs(input, false);
+
       assert.deepStrictEqual(actualOutput, expectedOutput);
     });
   });
@@ -350,6 +359,7 @@ describe("ResultsPanelProvider", () => {
       const input = ["hello,", "world,"];
       const expectedOutput = ["hello", "world"];
       const actualOutput = resultsPanel.removeEndCommaFromStrings(input);
+
       assert.deepStrictEqual(actualOutput, expectedOutput);
     });
 
@@ -357,6 +367,7 @@ describe("ResultsPanelProvider", () => {
       const input = ["hello", "world"];
       const expectedOutput = ["hello", "world"];
       const actualOutput = resultsPanel.removeEndCommaFromStrings(input);
+
       assert.deepStrictEqual(actualOutput, expectedOutput);
     });
 
@@ -364,6 +375,7 @@ describe("ResultsPanelProvider", () => {
       const input: string[] = [];
       const expectedOutput: string[] = [];
       const actualOutput = resultsPanel.removeEndCommaFromStrings(input);
+
       assert.deepStrictEqual(actualOutput, expectedOutput);
     });
   });
@@ -377,6 +389,7 @@ describe("ResultsPanelProvider", () => {
       ];
       const expectedOutput = ["a,b", "1,1", "2,2", "3,3"];
       const actualOutput = renderer.convertToCsv(inputQueryResult);
+
       assert.deepStrictEqual(actualOutput, expectedOutput);
     });
   });
@@ -418,6 +431,7 @@ describe("ResultsPanelProvider", () => {
 
     it("should handle string queryResult", () => {
       const queryResult = "test string";
+
       resultsPanel.updateWebView(queryResult);
       sinon.assert.calledWith(postMessageStub, {
         command: "setResultsContent",
@@ -427,6 +441,7 @@ describe("ResultsPanelProvider", () => {
 
     it("should handle number queryResult", () => {
       const queryResult = 123;
+
       resultsPanel.updateWebView(queryResult);
       sinon.assert.calledWith(postMessageStub, {
         command: "setResultsContent",
@@ -436,6 +451,7 @@ describe("ResultsPanelProvider", () => {
 
     it("should handle empty string queryResult", () => {
       const queryResult = "";
+
       resultsPanel.updateWebView(queryResult);
       sinon.assert.calledWith(postMessageStub, {
         command: "setResultsContent",
@@ -446,6 +462,7 @@ describe("ResultsPanelProvider", () => {
     it("should handle object queryResult and call convertToGrid", () => {
       const queryResult = { data: "test" };
       const gridOptions = { columnDefs: [], rowData: [] };
+
       convertToGridStub.returns(gridOptions);
       resultsPanel.updateWebView(queryResult);
       sinon.assert.calledWith(
@@ -471,6 +488,7 @@ describe("ResultsPanelProvider", () => {
 
     it("should handle null queryResult", () => {
       const queryResult = null;
+
       resultsPanel.updateWebView(queryResult);
       sinon.assert.calledWith(postMessageStub, {
         command: "setResultsContent",
@@ -483,6 +501,7 @@ describe("ResultsPanelProvider", () => {
     const uriTest: vscode.Uri = vscode.Uri.parse("test");
 
     let resultsPanel: KdbResultsViewProvider;
+
     const view: vscode.WebviewView = {
       visible: true,
 
@@ -510,6 +529,7 @@ describe("ResultsPanelProvider", () => {
     it("should render the results tab", () => {
       const expectedOutput = ` id="results" class="results-view-container"`;
       const actualOutput = resultsPanel["_getWebviewContent"]();
+
       assert.ok(actualOutput.includes(expectedOutput));
     });
   });
@@ -519,7 +539,6 @@ describe("ResultsPanelProvider", () => {
       const queryResults = { data: "test" };
       const isInsights = true;
       const connVersion = 1.11;
-
       const updateWebViewStub = sinon.stub(resultsPanel, "updateWebView");
 
       resultsPanel.updateResults(queryResults, isInsights, connVersion);
@@ -536,7 +555,6 @@ describe("ResultsPanelProvider", () => {
       const queryResults = { data: "test" };
       const isInsights = false;
       const connVersion = 1.11;
-
       const updateWebViewStub = sinon.stub(resultsPanel, "updateWebView");
 
       resultsPanel.updateResults(queryResults, isInsights, connVersion);
@@ -554,7 +572,6 @@ describe("ResultsPanelProvider", () => {
       const queryResults = { data: "test" };
       const isInsights = true;
       const connVersion = 1.11;
-
       const updateWebViewStub = sinon.stub(resultsPanel, "updateWebView");
 
       resultsPanel.updateResults(queryResults, isInsights, connVersion);
@@ -591,6 +608,7 @@ describe("ResultsPanelProvider", () => {
     it("should export to CSV if there are results and a folder is open", () => {
       sinon.stub(ext, "resultPanelCSV").value("some,csv,data");
       const workspaceUri = vscode.Uri.parse("file:///path/to/workspace");
+
       sinon
         .stub(vscode.workspace, "workspaceFolders")
         .value([{ uri: workspaceUri }]);
@@ -605,6 +623,7 @@ describe("ResultsPanelProvider", () => {
       const windowMock = sinon.mock(vscode.window);
       const workspaceMock = sinon.mock(vscode.workspace);
       const exportToCsvStub = sinon.stub(utils, "exportToCsv");
+
       windowMock
         .expects("showErrorMessage")
         .once()
@@ -641,13 +660,11 @@ describe("ResultsPanelProvider", () => {
         ],
         count: 3,
       };
-
       const expectedRowData = [
         { date: "2024.10.21", instance: "`inst1" },
         { date: "2024.10.22", instance: "`inst2" },
         { date: "2024.10.23", instance: "`inst3" },
       ];
-
       const rowData = renderer.updatedExtractRowData(results);
 
       assert.deepEqual(rowData, expectedRowData);
@@ -658,9 +675,7 @@ describe("ResultsPanelProvider", () => {
         columns: [],
         count: 0,
       };
-
       const expectedRowData: any[] = [];
-
       const rowData = renderer.updatedExtractRowData(results);
 
       assert.deepEqual(rowData, expectedRowData);
@@ -686,7 +701,6 @@ describe("ResultsPanelProvider", () => {
         ],
         count: 3,
       };
-
       const expectedColumnDefs = [
         {
           field: "date",
@@ -701,7 +715,6 @@ describe("ResultsPanelProvider", () => {
           cellRendererParams: { disabled: false },
         },
       ];
-
       const columnDefs = renderer.updatedExtractColumnDefs(results);
 
       assert.deepEqual(columnDefs, expectedColumnDefs);
@@ -712,9 +725,7 @@ describe("ResultsPanelProvider", () => {
         columns: [],
         count: 0,
       };
-
       const expectedColumnDefs: any[] = [];
-
       const columnDefs = renderer.updatedExtractColumnDefs(results);
 
       assert.deepEqual(columnDefs, expectedColumnDefs);

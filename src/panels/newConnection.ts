@@ -66,6 +66,7 @@ export class NewConnectionPannel {
       const labels = retrieveConnLabelsNames(conn);
       const connType = this.getConnectionType(conn);
       const editConnData = this.createEditConnectionMessage(conn, connType);
+
       panel.webview.postMessage({
         command: "editConnection",
         data: editConnData,
@@ -177,6 +178,7 @@ export class NewConnectionPannel {
     this._panel.dispose();
     while (this._disposables.length) {
       const x = this._disposables.pop();
+
       if (x) {
         x.dispose();
       }

@@ -56,6 +56,7 @@ export async function addDataSource(): Promise<void> {
   const dataSourceName = fileName.replace(ext.kdbDataSourceFileExtension, "");
   const defaultDataSourceContent = createDefaultDataSourceFile();
   const insightsNode = getConnectedInsightsNode();
+
   defaultDataSourceContent.name = dataSourceName;
   defaultDataSourceContent.insightsNode = insightsNode;
 
@@ -97,8 +98,8 @@ export async function runDataSource(
 
     dataSourceForm.insightsNode = getConnectedInsightsNode();
     const fileContent = dataSourceForm;
-
     const selectedType = fileContent.dataSource.selectedType;
+
     ext.isDatasourceExecution = true;
 
     notify(`Running ${fileContent.name} datasource...`, MessageKind.DEBUG, {

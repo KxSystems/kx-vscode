@@ -57,6 +57,7 @@ async function showSurveyDialog() {
     "Take Survey",
     "Don't show me this message next time",
   );
+
   if (result === "Take Survey") {
     vscode.env.openExternal(vscode.Uri.parse(SURVEY_URL));
   } else if (result === "Don't show me this message next time") {
@@ -74,7 +75,6 @@ async function showSurveyDialog() {
 /* c8 ignore next */
 export async function handleFeedbackSurvey() {
   const context = ext.context;
-
   const hideSurvey = vscode.workspace
     .getConfiguration("kdb")
     .get<boolean>("hideSurvey", false);
@@ -84,7 +84,6 @@ export async function handleFeedbackSurvey() {
   );
   const extSurveyTriggerCount =
     context.globalState.get<number>("extSurveyTriggerCount", 0) || 0;
-
   const updatedValues = await feedbackSurveyDialog(
     sawSurveyAlready,
     extSurveyTriggerCount,
