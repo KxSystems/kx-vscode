@@ -36,6 +36,7 @@ import {
   ServerDetails,
 } from "../models/connectionsModels";
 import { QueryResult } from "../models/queryResult";
+import { ConnectionManagementService } from "../services/connectionManagerService";
 
 const logger = "core";
 
@@ -421,11 +422,43 @@ export async function offerConnectAction(connLabel?: string): Promise<boolean> {
       "Cancel",
     ).then(async (result) => {
       if (result === "Connect") {
-        await commands.executeCommand(
-          "kdb.connections.connect.via.dialog",
-          connLabel,
-        );
-        return true;
+        try {
+          commands.executeCommand(
+            "kdb.connections.connect.via.dialog",
+            connLabel,
+          );
+
+          const maxRetries = 20;
+          const retryDelay = 500;
+
+          for (let i = 0; i < maxRetries; i++) {
+            const connMngService = new ConnectionManagementService();
+            const connection =
+              connMngService.retrieveConnectedConnection(connLabel);
+
+            if (connection) {
+              return true;
+            }
+
+            if (i < maxRetries - 1) {
+              await delay(retryDelay);
+            }
+          }
+
+          notify(
+            `Connection to ${connLabel} was not established within expected time.`,
+            MessageKind.WARNING,
+            { logger },
+          );
+          return false;
+        } catch (error) {
+          notify(
+            `Failed to connect to ${connLabel}: ${error}`,
+            MessageKind.ERROR,
+            { logger },
+          );
+          return false;
+        }
       }
       return false;
     });
