@@ -19,7 +19,7 @@ import * as notebookTestUtils from "./notebookTest.utils.test";
 import { InsightsConnection } from "../../../../src/classes/insightsConnection";
 import { LocalConnection } from "../../../../src/classes/localConnection";
 import { ReplConnection } from "../../../../src/classes/replConnection";
-import * as serverCommand from "../../../../src/commands/serverCommand";
+import * as executionCommand from "../../../../src/commands/executionCommand";
 import * as workspaceCommand from "../../../../src/commands/workspaceCommand";
 import { ext } from "../../../../src/extensionVariables";
 import { ConnectionManagementService } from "../../../../src/services/connectionManagerService";
@@ -37,7 +37,7 @@ describe("Controller", () => {
   let success: boolean;
 
   beforeEach(() => {
-    executeQueryStub = sinon.stub(serverCommand, "executeQuery");
+    executeQueryStub = sinon.stub(executionCommand, "executeNotebookQuery");
     notifyStub = sinon.stub(notifications, "notify");
     sinon
       .stub(vscode.notebooks, "createNotebookController")

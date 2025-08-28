@@ -38,6 +38,7 @@ import {
   ServerDetails,
 } from "../models/connectionsModels";
 import { QueryResult } from "../models/queryResult";
+import { ConnectionManagementService } from "../services/connectionManagerService";
 
 const logger = "core";
 
@@ -430,9 +431,9 @@ export function invalidUsernameJWT(connLabel: string): void {
 }
 
 /* c8 ignore next */
-export function offerConnectAction(connLabel?: string): void {
+export async function offerConnectAction(connLabel?: string): Promise<boolean> {
   if (connLabel) {
-    notify(
+    return notify(
       `You aren't connected to ${connLabel}, would you like to connect? Once connected please try again.`,
       MessageKind.WARNING,
       {},
@@ -440,11 +441,45 @@ export function offerConnectAction(connLabel?: string): void {
       "Cancel",
     ).then(async (result) => {
       if (result === "Connect") {
-        await commands.executeCommand(
-          "kdb.connections.connect.via.dialog",
-          connLabel,
-        );
+        try {
+          commands.executeCommand(
+            "kdb.connections.connect.via.dialog",
+            connLabel,
+          );
+
+          const maxRetries = 20;
+          const retryDelay = 500;
+
+          for (let i = 0; i < maxRetries; i++) {
+            const connMngService = new ConnectionManagementService();
+            const connection =
+              connMngService.retrieveConnectedConnection(connLabel);
+
+            if (connection) {
+              return true;
+            }
+
+            if (i < maxRetries - 1) {
+              await delay(retryDelay);
+            }
+          }
+
+          notify(
+            `Connection to ${connLabel} was not established within expected time.`,
+            MessageKind.WARNING,
+            { logger },
+          );
+          return false;
+        } catch (error) {
+          notify(
+            `Failed to connect to ${connLabel}: ${error}`,
+            MessageKind.ERROR,
+            { logger },
+          );
+          return false;
+        }
       }
+      return false;
     });
   } else {
     notify(
@@ -452,6 +487,7 @@ export function offerConnectAction(connLabel?: string): void {
       MessageKind.WARNING,
       { logger },
     );
+    return false;
   }
 }
 

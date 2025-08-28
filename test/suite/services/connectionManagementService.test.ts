@@ -121,6 +121,85 @@ describe("ConnectionManagementService", () => {
     });
   });
 
+  describe("isInsightsConnection", () => {
+    afterEach(() => {
+      ext.connectedConnectionList.length = 0;
+      sinon.restore();
+    });
+
+    it("Should return true when connection is an InsightsConnection", () => {
+      ext.connectedConnectionList.push(insightsConn);
+      const result = connectionManagerService.isInsightsConnection(
+        insightsConn.connLabel,
+      );
+
+      assert.strictEqual(result, true);
+    });
+
+    it("Should return false when connection is a LocalConnection", () => {
+      ext.connectedConnectionList.push(localConn);
+      const result = connectionManagerService.isInsightsConnection(
+        localConn.connLabel,
+      );
+
+      assert.strictEqual(result, false);
+    });
+
+    it("Should return false when connection is not found", () => {
+      const result =
+        connectionManagerService.isInsightsConnection("nonExistentLabel");
+
+      assert.strictEqual(result, false);
+    });
+
+    it("Should return false when connLabel is empty", () => {
+      ext.connectedConnectionList.push(insightsConn);
+      const result = connectionManagerService.isInsightsConnection("");
+
+      assert.strictEqual(result, false);
+    });
+
+    it("Should return true when connection label matches regex pattern for InsightsConnection", () => {
+      const regexConnLabel = "192.168.1.1:5001 [testInsightsAlias]";
+      const insightsConnWithRegexLabel = new InsightsConnection(
+        regexConnLabel,
+        insightNode,
+      );
+      ext.connectedConnectionList.push(insightsConnWithRegexLabel);
+
+      const result =
+        connectionManagerService.isInsightsConnection("testInsightsAlias");
+
+      assert.strictEqual(result, true);
+    });
+
+    it("Should return false when connection label matches regex pattern for LocalConnection", () => {
+      const regexConnLabel = "192.168.1.1:5001 [testLabel]";
+      const localConnWithRegexLabel = new LocalConnection(
+        regexConnLabel,
+        "testLabel",
+        [],
+      );
+      ext.connectedConnectionList.push(localConnWithRegexLabel);
+
+      const result = connectionManagerService.isInsightsConnection("testLabel");
+
+      assert.strictEqual(result, false);
+    });
+
+    it("Should use retrieveConnectedConnection method internally", () => {
+      const retrieveConnectedConnectionSpy = sinon.spy(
+        connectionManagerService,
+        "retrieveConnectedConnection",
+      );
+
+      connectionManagerService.isInsightsConnection("testLabel");
+
+      sinon.assert.calledOnce(retrieveConnectedConnectionSpy);
+      sinon.assert.calledWith(retrieveConnectedConnectionSpy, "testLabel");
+    });
+  });
+
   describe("retrieveLocalConnectionString", () => {
     it("Should return the connection string", () => {
       const result =
