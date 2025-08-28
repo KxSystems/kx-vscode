@@ -43,6 +43,7 @@ describe("MetaContentProvider", () => {
 
   it("should provide text document content", () => {
     const content = "content";
+
     metaContentProvider.update(uri, content);
     assert.strictEqual(
       metaContentProvider.provideTextDocumentContent(uri),

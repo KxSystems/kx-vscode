@@ -14,7 +14,6 @@
 import * as fs from "fs";
 import * as url from "url";
 import {
-  CancellationToken,
   Position,
   Range,
   Uri,
@@ -23,16 +22,9 @@ import {
   window,
   workspace,
   env,
-  ProgressLocation,
 } from "vscode";
 
 import { ext } from "../extensionVariables";
-import {
-  getPartialDatasourceFile,
-  populateScratchpad,
-  runDataSource,
-} from "./dataSourceCommand";
-import { InsightsConnection } from "../classes/insightsConnection";
 import {
   ExportedConnections,
   InsightDetails,
@@ -41,15 +33,11 @@ import {
   ServerDetails,
   ServerType,
 } from "../models/connectionsModels";
-import { DataSourceFiles } from "../models/dataSource";
-import { ExecutionTypes } from "../models/execution";
-import { Plot } from "../models/plot";
 import { QueryHistory } from "../models/queryHistory";
 import { queryConstants } from "../models/queryResult";
 import { ScratchpadResult } from "../models/scratchpadResult";
 import { DataSourcesPanel } from "../panels/datasource";
 import { NewConnectionPannel } from "../panels/newConnection";
-import { ChartEditorProvider } from "../services/chartEditorProvider";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import {
   InsightsMetaNode,
@@ -58,7 +46,6 @@ import {
   MetaObjectPayloadNode,
 } from "../services/kdbTreeProvider";
 import { MetaContentProvider } from "../services/metaContentProvider";
-import { inputVariable } from "../services/notebookProviders";
 import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
 import {
   addLocalConnectionContexts,
@@ -74,21 +61,13 @@ import {
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { decodeQUTF } from "../utils/decode";
 import { ExecutionConsole } from "../utils/executionConsole";
-import { MessageKind, Runner, notify } from "../utils/notifications";
+import { MessageKind, notify } from "../utils/notifications";
 import {
   checkIfIsDatasource,
   addQueryHistory,
   formatScratchpadStacktrace,
-  resultToBase64,
-  needsScratchpad,
 } from "../utils/queryUtils";
 import { openUrl } from "../utils/uriUtils";
-import {
-  addWorkspaceFile,
-  openWith,
-  setUriContent,
-  workspaceHas,
-} from "../utils/workspace";
 import {
   validateServerAlias,
   validateServerName,
@@ -110,6 +89,7 @@ export async function editConnection(viewItem: KdbNode | InsightsNode) {
 
 export function isConnected(connLabel: string): boolean {
   const connMngService = new ConnectionManagementService();
+
   return connMngService.isConnected(connLabel);
 }
 
@@ -118,16 +98,19 @@ export async function addInsightsConnection(
   labels?: string[],
 ) {
   const aliasValidation = validateServerAlias(insightsData.alias, false);
+
   if (aliasValidation) {
     notify(aliasValidation, MessageKind.ERROR, { logger });
     return;
   }
   if (insightsData.alias === undefined || insightsData.alias === "") {
     const host = new url.URL(insightsData.server!);
+
     insightsData.alias = host.host;
   }
 
   let insights: Insights | undefined = getInsights();
+
   if (
     insights != undefined &&
     insights[getKeyForServerName(insightsData.alias)]
@@ -140,7 +123,9 @@ export async function addInsightsConnection(
     return;
   } else {
     const key = insightsData.alias;
+
     let server = insightsData.server || "";
+
     if (!/^https?:\/\//i.exec(server)) {
       server = "https://" + server;
     }
@@ -166,6 +151,7 @@ export async function addInsightsConnection(
 
     await updateInsights(insights);
     const newInsights = getInsights();
+
     if (newInsights != undefined) {
       ext.latestLblsChanged.length = 0;
       if (labels && labels.length > 0) {
@@ -199,23 +185,28 @@ export async function editInsightsConnection(
     oldAlias === insightsData.alias
       ? undefined
       : validateServerAlias(insightsData.alias, false);
+
   if (aliasValidation) {
     notify(aliasValidation, MessageKind.ERROR, { logger });
     return;
   }
   const isConnectedConn = isConnected(oldAlias);
+
   await disconnect(oldAlias);
   if (insightsData.alias === undefined || insightsData.alias === "") {
     const host = new url.URL(insightsData.server);
+
     insightsData.alias = host.host;
   }
   const insights: Insights | undefined = getInsights();
+
   if (insights) {
     const oldInsights = insights[getKeyForServerName(oldAlias)];
     const newAliasExists =
       oldAlias !== insightsData.alias
         ? insights[getKeyForServerName(insightsData.alias)]
         : undefined;
+
     if (newAliasExists) {
       notify(
         `Insights instance named ${insightsData.alias} already exists.`,
@@ -234,12 +225,14 @@ export async function editInsightsConnection(
       } else {
         const oldKey = getKeyForServerName(oldAlias);
         const newKey = insightsData.alias;
+
         removeConnFromLabels(oldAlias);
         if (insights[oldKey] && oldAlias !== insightsData.alias) {
           const uInsights = Object.keys(insights).filter((insight) => {
             return insight !== oldKey;
           });
           const updatedInsights: Insights = {};
+
           uInsights.forEach((insight) => {
             updatedInsights[insight] = insights[insight];
           });
@@ -265,6 +258,7 @@ export async function editInsightsConnection(
         }
 
         const newInsights = getInsights();
+
         if (newInsights != undefined) {
           ext.latestLblsChanged.length = 0;
           if (labels && labels.length > 0) {
@@ -303,12 +297,14 @@ export async function addAuthConnection(
   password: string,
 ): Promise<void> {
   const validUsername = validateServerUsername(username);
+
   if (validUsername) {
     notify(validUsername, MessageKind.ERROR, { logger });
     return;
   }
   if (password?.trim()?.length) {
     const servers: Server | undefined = getServers();
+
     // store secrets
     if (
       (username != undefined || username != "") &&
@@ -319,6 +315,7 @@ export async function addAuthConnection(
       ext.secretSettings.storeAuthData(serverKey, `${username}:${password}`);
       await updateServers(servers);
       const newServers = getServers();
+
       if (newServers != undefined) {
         ext.serverProvider.refresh(newServers);
       }
@@ -363,6 +360,7 @@ export async function enableTLS(serverKey: string): Promise<void> {
     servers[serverKey].tls = true;
     await updateServers(servers);
     const newServers = getServers();
+
     if (newServers != undefined) {
       ext.serverProvider.refresh(newServers);
     }
@@ -384,6 +382,7 @@ export async function addKdbConnection(
   const aliasValidation = validateServerAlias(kdbData.serverAlias, isLocal!);
   const hostnameValidation = validateServerName(kdbData.serverName);
   const portValidation = validateServerPort(kdbData.serverPort);
+
   if (aliasValidation) {
     notify(aliasValidation, MessageKind.ERROR, { logger });
     return;
@@ -409,6 +408,7 @@ export async function addKdbConnection(
     );
   } else {
     const key = kdbData.serverAlias || "";
+
     if (servers === undefined) {
       servers = {
         key: {
@@ -439,6 +439,7 @@ export async function addKdbConnection(
 
     await updateServers(servers);
     const newServers = getServers();
+
     if (newServers != undefined) {
       ext.latestLblsChanged.length = 0;
       if (labels && labels.length > 0) {
@@ -477,6 +478,7 @@ export async function editKdbConnection(
       : validateServerAlias(kdbData.serverAlias, isLocal!);
   const hostnameValidation = validateServerName(kdbData.serverName);
   const portValidation = validateServerPort(kdbData.serverPort);
+
   if (aliasValidation) {
     notify(aliasValidation, MessageKind.ERROR, { logger });
     return;
@@ -490,6 +492,7 @@ export async function editKdbConnection(
     return;
   }
   const isConnectedConn = isConnected(oldAlias);
+
   await disconnect(oldAlias);
   const servers: Server | undefined = getServers();
 
@@ -499,6 +502,7 @@ export async function editKdbConnection(
       oldAlias !== kdbData.serverAlias
         ? servers[getKeyForServerName(kdbData.serverAlias)]
         : undefined;
+
     if (newAliasExists) {
       notify(
         `KDB instance named ${kdbData.serverAlias} already exists.`,
@@ -516,15 +520,18 @@ export async function editKdbConnection(
         return;
       } else {
         const oldKey = getKeyForServerName(oldAlias);
+
         removeConnFromLabels(oldKey);
         const newKey = kdbData.serverAlias;
         const removedAuth =
           editAuth && (kdbData.username === "" || kdbData.password === "");
+
         if (servers[oldKey] && oldAlias !== kdbData.serverAlias) {
           const uServers = Object.keys(servers).filter((server) => {
             return server !== oldKey;
           });
           const updatedServers: Server = {};
+
           uServers.forEach((server) => {
             updatedServers[server] = servers[server];
           });
@@ -552,6 +559,7 @@ export async function editKdbConnection(
           await updateServers(servers);
         }
         const newServers = getServers();
+
         if (newServers != undefined) {
           ext.latestLblsChanged.length = 0;
           if (labels && labels.length > 0) {
@@ -566,6 +574,7 @@ export async function editKdbConnection(
             telemetry: "Connection.Edited.KDB",
           });
           const connLabelToReconn = `${kdbData.serverName}:${kdbData.serverPort} [${kdbData.serverAlias}]`;
+
           if (isConnectedConn) {
             offerReconnectionAfterEdit(connLabelToReconn);
           }
@@ -608,8 +617,8 @@ export async function importConnections() {
       "All Files": ["*"],
     },
   };
-
   const fileUri = await window.showOpenDialog(options);
+
   if (!fileUri || fileUri.length === 0) {
     notify("No file selected.", MessageKind.ERROR, { logger });
     return;
@@ -618,6 +627,7 @@ export async function importConnections() {
   const fileContent = fs.readFileSync(filePath, "utf8");
 
   let importedConnections: ExportedConnections;
+
   try {
     importedConnections = JSON.parse(fileContent);
   } catch {
@@ -651,7 +661,6 @@ export async function addImportedConnections(
   const connMangService = new ConnectionManagementService();
   const existingAliases = connMangService.retrieveListOfConnectionsNames();
   const localAlreadyExists = existingAliases.has("local");
-
   const hasDuplicates =
     importedConnections.connections.Insights.some((connection) =>
       existingAliases.has(
@@ -669,6 +678,7 @@ export async function addImportedConnections(
     );
 
   let res: "Duplicate" | "Overwrite" | "Cancel" | undefined = "Duplicate";
+
   if (hasDuplicates) {
     res = await notify(
       "You are importing connections with the same name. Would you like to duplicate, overwrite or cancel the import?",
@@ -684,7 +694,9 @@ export async function addImportedConnections(
   }
 
   let counter = 1;
+
   const insights: InsightDetails[] = [];
+
   for (const connection of importedConnections.connections.Insights) {
     let alias = connMangService.checkConnAlias(connection.alias, true);
 
@@ -703,6 +715,7 @@ export async function addImportedConnections(
   }
 
   const servers: ServerDetails[] = [];
+
   for (const connection of importedConnections.connections.KDB) {
     let alias = connMangService.checkConnAlias(
       connection.serverAlias,
@@ -719,6 +732,7 @@ export async function addImportedConnections(
       }
       connection.serverAlias = alias;
       const isManaged = alias === "local";
+
       await addKdbConnection(connection, isManaged);
     }
     existingAliases.add(alias);
@@ -730,6 +744,7 @@ export async function addImportedConnections(
       config[connection.alias] = connection;
       return config;
     }, getInsights() || {});
+
     await updateInsights(config);
     ext.serverProvider.refreshInsights(config);
   }
@@ -739,6 +754,7 @@ export async function addImportedConnections(
       config[connection.serverAlias] = connection;
       return config;
     }, getServers() || {});
+
     await updateServers(config);
     ext.serverProvider.refresh(config);
   }
@@ -758,6 +774,7 @@ export async function removeConnection(viewItem: KdbNode | InsightsNode) {
   ).then(async (result) => {
     if (result === "Proceed") {
       const connMngService = new ConnectionManagementService();
+
       removeConnFromLabels(
         viewItem instanceof KdbNode
           ? viewItem.details.serverAlias
@@ -770,14 +787,17 @@ export async function removeConnection(viewItem: KdbNode | InsightsNode) {
 
 export async function connect(connLabel: string): Promise<void> {
   const connMngService = new ConnectionManagementService();
+
   ExecutionConsole.start();
   const viewItem = connMngService.retrieveConnection(connLabel);
+
   if (viewItem === undefined) {
     notify("Connection not found.", MessageKind.ERROR, { logger });
     return;
   }
 
   const isKdbNode = viewItem instanceof KdbNode;
+
   if (isKdbNode) {
     // check for TLS support
     if (viewItem.details.tls) {
@@ -809,6 +829,7 @@ export async function connect(connLabel: string): Promise<void> {
 
 export function activeConnection(viewItem: KdbNode | InsightsNode): void {
   const connMngService = new ConnectionManagementService();
+
   connMngService.setActiveConnection(viewItem);
   refreshDataSourcesPanel();
   ext.serverProvider.reload();
@@ -816,11 +837,13 @@ export function activeConnection(viewItem: KdbNode | InsightsNode): void {
 
 export async function resetScratchpad(connName?: string): Promise<void> {
   const connMngService = new ConnectionManagementService();
+
   await connMngService.resetScratchpad(connName);
 }
 
 export async function refreshGetMeta(connLabel?: string): Promise<void> {
   const connMngService = new ConnectionManagementService();
+
   if (connLabel) {
     await connMngService.refreshGetMeta(connLabel);
   } else {
@@ -830,179 +853,34 @@ export async function refreshGetMeta(connLabel?: string): Promise<void> {
 
 export async function disconnect(connLabel: string): Promise<void> {
   const connMngService = new ConnectionManagementService();
+
   connMngService.disconnect(connLabel);
 
   if (ext.connectedConnectionList.length === 0) {
     const queryConsole = ExecutionConsole.start();
+
     queryConsole.dispose();
     DataSourcesPanel.close();
     ext.serverProvider.reload();
   }
 }
 
-export async function executeQuery(
-  query: string,
-  connLabel: string,
-  executorName: string,
-  context: string,
-  isPython: boolean,
-  isWorkbook: boolean,
-  isFromConnTree?: boolean,
-  token?: CancellationToken,
-): Promise<any> {
-  const connMngService = new ConnectionManagementService();
-  const queryConsole = ExecutionConsole.start();
-  if (connLabel === "") {
-    if (ext.activeConnection === undefined) {
-      return undefined;
-    } else {
-      connLabel = ext.activeConnection.connLabel;
-    }
-  }
-  const isConnected = connMngService.isConnected(connLabel);
-  if (!isConnected) {
-    notify(`Connection ${connLabel} is not connected.`, MessageKind.ERROR, {
-      logger,
-    });
-    return undefined;
-  }
-
-  const selectedConn = connMngService.retrieveConnectedConnection(connLabel);
-  const isInsights = selectedConn instanceof InsightsConnection;
-  const connVersion = isInsights ? (selectedConn.insightsVersion ?? 0) : 0;
-  const telemetryLangType = isPython ? ".Python" : ".q";
-  const telemetryBaseMsg = isWorkbook ? "Workbook" : "Scratchpad";
-  notify("Query execution.", MessageKind.DEBUG, {
-    logger,
-    telemetry: telemetryBaseMsg + ".Execute" + telemetryLangType,
-  });
-  if (query.length === 0) {
-    notify("Empty query.", MessageKind.DEBUG, {
-      logger,
-      telemetry: telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
-    });
-    queryConsole.appendQueryError(
-      query,
-      "Query is empty",
-      connLabel,
-      executorName,
-      isConnected,
-      isInsights,
-      isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
-      isPython,
-      false,
-      undefined,
-      isFromConnTree,
-    );
-    return undefined;
-  }
-  const isNotebook = executorName.endsWith(".kxnb");
-  const isStringfy = isNotebook ? false : !ext.isResultsTabVisible;
-  const startTime = Date.now();
-  const results = await connMngService.executeQuery(
-    query,
-    connLabel,
-    context,
-    isStringfy,
-    isPython,
-  );
-  const endTime = Date.now();
-  const duration = (endTime - startTime).toString();
-
-  /* c8 ignore next */
-  if (token?.isCancellationRequested) {
-    return undefined;
-  }
-
-  // set context for root nodes
-  if (selectedConn instanceof InsightsConnection) {
-    const res = await writeScratchpadResult(
-      results,
-      query,
-      connLabel,
-      executorName,
-      isPython,
-      isWorkbook,
-      duration,
-      connVersion,
-    );
-    if (isNotebook) {
-      return res;
-    }
-  } else if (isNotebook) {
-    return results;
-  } else {
-    /* c8 ignore next */
-    if (ext.isResultsTabVisible) {
-      const data = resultToBase64(results);
-      if (data) {
-        notify("GG Plot displayed", MessageKind.DEBUG, {
-          logger,
-          telemetry: "GGPLOT.Display" + (isPython ? ".Python" : ".q"),
-        });
-        const active = ext.activeTextEditor;
-        if (active) {
-          const plot = <Plot>{
-            charts: [{ data }],
-          };
-          const uri = await addWorkspaceFile(
-            active.document.uri,
-            "plot",
-            ".plot",
-          );
-          if (!workspaceHas(uri)) {
-            await workspace.openTextDocument(uri);
-            await openWith(
-              uri,
-              ChartEditorProvider.viewType,
-              ViewColumn.Beside,
-            );
-          }
-          await setUriContent(uri, JSON.stringify(plot));
-        }
-      } else {
-        await writeQueryResultsToView(
-          results,
-          query,
-          connLabel,
-          executorName,
-          isInsights,
-          isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
-          isPython,
-          duration,
-          isFromConnTree,
-          connVersion,
-        );
-      }
-    } else {
-      await writeQueryResultsToConsole(
-        results,
-        query,
-        connLabel,
-        executorName,
-        isInsights,
-        isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
-        isPython,
-        duration,
-        isFromConnTree,
-      );
-    }
-  }
-}
-
 export function getQueryContext(lineNum?: number): string {
   let context = ".";
+
   const editor = ext.activeTextEditor;
   const fullText = typeof lineNum !== "number";
 
   if (editor) {
     const document = editor.document;
+
     let text;
 
     if (fullText) {
       text = editor.document.getText();
     } else {
       const line = document.lineAt(lineNum);
+
       text = editor.document.getText(
         new Range(
           new Position(0, 0),
@@ -1013,8 +891,8 @@ export function getQueryContext(lineNum?: number): string {
 
     // matches '\d .foo' or 'system "d .foo"'
     const pattern = /^(system\s*"d|\\d)\s+([^\s"]+)/gm;
-
     const matches = [...text.matchAll(pattern)];
+
     if (matches.length) {
       // fullText should use first defined context
       // a selection should use the last defined context
@@ -1027,130 +905,17 @@ export function getQueryContext(lineNum?: number): string {
 
 export function getConextForRerunQuery(query: string): string {
   let context = ".";
+
   // matches '\d .foo' or 'system "d .foo"'
   const pattern = /^(system\s*"d|\\d)\s+([^\s"]+)/gm;
   const matches = [...query.matchAll(pattern)];
+
   if (matches.length) {
     // fullText should use first defined context
     // a selection should use the last defined context
     context = query ? matches[0][2] : matches[matches.length - 1][2];
   }
   return context;
-}
-
-export async function runQuery(
-  type: ExecutionTypes,
-  connLabel: string,
-  executorName: string,
-  isWorkbook: boolean,
-  rerunQuery?: string,
-  target?: string,
-  isSql?: boolean,
-  isInsights?: boolean,
-) {
-  const editor = ext.activeTextEditor;
-  if (!editor) {
-    return false;
-  }
-
-  let context;
-  let query;
-  let isPython = false;
-  let variable: string | undefined;
-
-  switch (type) {
-    case ExecutionTypes.QuerySelection:
-    case ExecutionTypes.PythonQuerySelection: {
-      const selection = editor.selection;
-      query = selection.isEmpty
-        ? editor.document.lineAt(selection.active.line).text
-        : editor.document.getText(selection);
-      context = getQueryContext(selection.end.line);
-      if (type === ExecutionTypes.PythonQuerySelection) {
-        isPython = true;
-      }
-      break;
-    }
-
-    case ExecutionTypes.QueryFile:
-    case ExecutionTypes.ReRunQuery:
-    case ExecutionTypes.PythonQueryFile:
-    default: {
-      query = rerunQuery || editor.document.getText();
-      context = getQueryContext();
-
-      if (type === ExecutionTypes.PythonQueryFile) {
-        isPython = true;
-      }
-      break;
-    }
-  }
-
-  if (type === ExecutionTypes.PopulateScratchpad) {
-    if (executorName.endsWith(".py")) {
-      isPython = true;
-    }
-    variable = await inputVariable();
-  }
-
-  const runner = Runner.create((_, token) => {
-    return target || isSql
-      ? variable
-        ? populateScratchpad(
-            getPartialDatasourceFile(query, target, isSql, isPython),
-            connLabel,
-            variable,
-          )
-        : runDataSource(
-            getPartialDatasourceFile(query, target, isSql, isPython),
-            connLabel,
-            executorName,
-          )
-      : executeQuery(
-          query,
-          connLabel,
-          executorName,
-          context,
-          isPython,
-          isWorkbook,
-          false,
-          token,
-        );
-  });
-
-  if (isInsights) {
-    runner.location = ProgressLocation.Notification;
-  }
-  runner.title = `Executing ${executorName} on ${connLabel || "active connection"}.`;
-
-  return (target || isSql) && !variable
-    ? runner.execute()
-    : needsScratchpad(connLabel, runner.execute());
-}
-
-export function rerunQuery(rerunQueryElement: QueryHistory) {
-  if (
-    !rerunQueryElement.isDatasource &&
-    typeof rerunQueryElement.query === "string"
-  ) {
-    const context = getConextForRerunQuery(rerunQueryElement.query);
-    executeQuery(
-      rerunQueryElement.query,
-      rerunQueryElement.connectionName,
-      rerunQueryElement.executorName,
-      context,
-      rerunQueryElement.language !== "q",
-      !!rerunQueryElement.isWorkbook,
-      !!rerunQueryElement.isFromConnTree,
-    );
-  } else {
-    const dsFile = rerunQueryElement.query as DataSourceFiles;
-    runDataSource(
-      dsFile,
-      rerunQueryElement.connectionName,
-      rerunQueryElement.executorName,
-    );
-  }
 }
 
 export function copyQuery(queryHistoryElement: QueryHistory) {
@@ -1165,14 +930,18 @@ export function copyQuery(queryHistoryElement: QueryHistory) {
 
 export async function openMeta(node: MetaObjectPayloadNode | InsightsMetaNode) {
   const metaContentProvider = new MetaContentProvider();
+
   workspace.registerTextDocumentContentProvider("meta", metaContentProvider);
   const connMngService = new ConnectionManagementService();
   const doc = connMngService.retrieveMetaContent(node.connLabel, node.label);
+
   if (doc && doc !== "") {
     const formattedDoc = JSON.stringify(JSON.parse(doc), null, 2);
     const uri = Uri.parse(`meta:${node.connLabel} - ${node.label}.json`);
+
     metaContentProvider.update(uri, formattedDoc);
     const document = await workspace.openTextDocument(uri);
+
     await window.showTextDocument(document, {
       preview: false,
       viewColumn: ViewColumn.One,
@@ -1186,7 +955,6 @@ export async function openMeta(node: MetaObjectPayloadNode | InsightsMetaNode) {
 
 export async function exportConnections(connLabel?: string) {
   const connMngService = new ConnectionManagementService();
-
   const exportAuth = await window.showQuickPick(["Yes", "No"], {
     placeHolder: "Do you want to export username and password?",
   });
@@ -1199,10 +967,12 @@ export async function exportConnections(connLabel?: string) {
   }
 
   const includeAuth = exportAuth === "Yes";
+
   if (includeAuth) {
     await connMngService.retrieveUserPass();
   }
   const doc = await connMngService.exportConnection(connLabel, includeAuth);
+
   if (doc && doc !== "") {
     const formattedDoc = JSON.stringify(JSON.parse(doc), null, 2);
     const uri = await window.showSaveDialog({
@@ -1212,6 +982,7 @@ export async function exportConnections(connLabel?: string) {
         "All Files": ["*"],
       },
     });
+
     if (uri) {
       fs.writeFile(uri.fsPath, formattedDoc, (err) => {
         if (err) {
@@ -1251,6 +1022,7 @@ export async function writeQueryResultsToConsole(
   const isNonEmptyArray = Array.isArray(result) && result.length > 0;
   const valueToDecode = isNonEmptyArray ? result[0] : result.toString();
   const res = decodeQUTF(valueToDecode);
+
   if (!res.startsWith(queryConstants.error)) {
     queryConsole.append(
       res,
@@ -1302,12 +1074,14 @@ export async function writeQueryResultsToView(
     isPython,
   );
   let isSuccess = true;
+
   const telemetryLangType = isPython ? ".Python" : ".q";
   const telemetryBaseMsg = type === "WORKBOOK" ? "Workbook" : "Scratchpad";
 
   if (!checkIfIsDatasource(type)) {
     if (typeof result === "string") {
       const res = decodeQUTF(result);
+
       if (res.startsWith(queryConstants.error)) {
         notify("Telemetry", MessageKind.DEBUG, {
           logger,
@@ -1339,12 +1113,14 @@ export async function writeScratchpadResult(
   connLabel: string,
   executorName: string,
   isPython: boolean,
-  isWorkbook: boolean,
-  duration: string,
-  connVersion: number,
+  documentType: string,
+  duration?: string,
+  connVersion?: number,
 ): Promise<any> {
   const telemetryLangType = isPython ? ".Python" : ".q";
-  const telemetryBaseMsg = isWorkbook ? "Workbook" : "Scratchpad";
+  const telemetryBaseMsg =
+    documentType.charAt(0).toUpperCase() + documentType.slice(1).toLowerCase();
+
   let errorMsg;
 
   if (result.error) {
@@ -1376,7 +1152,7 @@ export async function writeScratchpadResult(
       connLabel,
       executorName,
       true,
-      isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+      documentType,
       isPython,
       duration,
       false,
@@ -1389,7 +1165,7 @@ export async function writeScratchpadResult(
       connLabel,
       executorName,
       true,
-      isWorkbook ? "WORKBOOK" : "SCRATCHPAD",
+      documentType,
       isPython,
       duration,
     );

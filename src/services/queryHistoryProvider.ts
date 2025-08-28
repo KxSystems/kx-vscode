@@ -64,6 +64,7 @@ export class QueryHistoryProvider implements TreeDataProvider<TreeItem> {
     return Promise.resolve(
       this.queryList.map((query) => {
         const label = query.connectionName + " - " + query.time;
+
         if (!query.isDatasource && typeof query.query === "string") {
           ext.queryHistoryAvailableToCopy.push(label);
         }
@@ -113,6 +114,7 @@ export class QueryHistoryTreeItem extends TreeItem {
     const connType = getConnectionType(this.details.connectionType);
     const tooltipMd = new MarkdownString();
     const codeType = this.details.language === "python" ? "python" : "q";
+
     tooltipMd.appendMarkdown("### Query History Details\n");
     tooltipMd.appendMarkdown(
       "- Connection Name: **" + this.details.connectionName + "** \n",
@@ -139,6 +141,7 @@ export class QueryHistoryTreeItem extends TreeItem {
 
       if (typeof queryText === "string") {
         const lines = queryText.split("\n");
+
         if (lines.length > 1) {
           queryText =
             lines[0].slice(0, 77) +

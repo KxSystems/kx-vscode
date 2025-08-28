@@ -33,6 +33,7 @@ describe("kdbChartView.ts", () => {
   describe("connectedCallback", () => {
     it("should add an event listener", () => {
       let result = undefined;
+
       sinon.stub(window, "addEventListener").value(() => (result = true));
       view.connectedCallback();
       assert.ok(result);
@@ -42,6 +43,7 @@ describe("kdbChartView.ts", () => {
   describe("disconnectedCallback", () => {
     it("should remove an event listener", () => {
       let result = undefined;
+
       sinon.stub(window, "removeEventListener").value(() => (result = true));
       view.disconnectedCallback();
       assert.ok(result);
@@ -50,11 +52,13 @@ describe("kdbChartView.ts", () => {
 
   it("should update from message", () => {
     const data = { charts: [{ data: "test" }] };
+
     view.message(<MessageEvent>{
       data: JSON.stringify(data),
     });
     assert.deepStrictEqual(view.plot, data);
     const result = view.render();
+
     assert.ok(result);
   });
 });

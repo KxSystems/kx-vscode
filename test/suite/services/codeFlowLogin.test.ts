@@ -45,16 +45,19 @@ describe("CodeFlowLogin", () => {
   describe("getHttpsAgent", () => {
     it("should return agent with rejectUnauthorized false when insecure is true", () => {
       const agent = codeFlow.getHttpsAgent(true);
+
       assert.strictEqual(agent.options.rejectUnauthorized, false);
     });
 
     it("should return agent with rejectUnauthorized true when insecure is false", () => {
       const agent = codeFlow.getHttpsAgent(false);
+
       assert.strictEqual(agent.options.rejectUnauthorized, true);
     });
 
     it("should return agent with rejectUnauthorized true when insecure is undefined", () => {
       const agent = codeFlow.getHttpsAgent(undefined);
+
       assert.strictEqual(agent.options.rejectUnauthorized, true);
     });
   });
@@ -62,6 +65,7 @@ describe("CodeFlowLogin", () => {
   describe("signOut", () => {
     it("should make POST request to revoke endpoint", async () => {
       const mockResponse = { data: { success: true } };
+
       axiosStub.resolves(mockResponse);
 
       await codeFlow.signOut(
@@ -86,6 +90,7 @@ describe("CodeFlowLogin", () => {
 
     it("should handle insecure connections", async () => {
       const mockResponse = { data: { success: true } };
+
       axiosStub.resolves(mockResponse);
 
       await codeFlow.signOut(
@@ -96,6 +101,7 @@ describe("CodeFlowLogin", () => {
       );
 
       const [, , config] = axiosStub.getCall(0).args;
+
       assert.strictEqual(config.httpsAgent.options.rejectUnauthorized, false);
     });
   });
@@ -109,6 +115,7 @@ describe("CodeFlowLogin", () => {
           expires_in: 3600,
         },
       };
+
       axiosStub.resolves(mockResponse);
 
       const result = await codeFlow.refreshToken(
@@ -144,6 +151,7 @@ describe("CodeFlowLogin", () => {
           expires_in: 3600,
         },
       };
+
       axiosStub.resolves(mockResponse);
 
       await codeFlow.refreshToken(
@@ -154,6 +162,7 @@ describe("CodeFlowLogin", () => {
       );
 
       const [, body] = axiosStub.getCall(0).args;
+
       assert.ok(body.includes("grant_type=refresh_token"));
       assert.ok(body.includes("refresh_token=refresh_token_123"));
     });
@@ -167,6 +176,7 @@ describe("CodeFlowLogin", () => {
         "realm",
         false,
       );
+
       assert.strictEqual(result, undefined);
     });
 
@@ -177,11 +187,13 @@ describe("CodeFlowLogin", () => {
         "realm",
         false,
       );
+
       assert.strictEqual(result, undefined);
     });
 
     it("should return stored token if not expired", async () => {
       const futureDate = new Date();
+
       futureDate.setHours(futureDate.getHours() + 1);
 
       const storedToken = {
@@ -205,6 +217,7 @@ describe("CodeFlowLogin", () => {
 
     it("should refresh token if expired", async () => {
       const pastDate = new Date();
+
       pastDate.setHours(pastDate.getHours() - 1);
 
       const storedToken = {
@@ -212,7 +225,6 @@ describe("CodeFlowLogin", () => {
         refreshToken: "refresh_token",
         accessTokenExpirationDate: pastDate,
       };
-
       const newTokenResponse = {
         data: {
           access_token: "new_access_token",
@@ -245,6 +257,7 @@ describe("CodeFlowLogin", () => {
           expires_in: 3600,
         },
       };
+
       axiosStub.resolves(mockResponse);
 
       const result = await codeFlow.getToken(
@@ -267,6 +280,7 @@ describe("CodeFlowLogin", () => {
           expires_in: 3600,
         },
       };
+
       axiosStub.resolves(mockResponse);
 
       await codeFlow.getToken(
@@ -277,6 +291,7 @@ describe("CodeFlowLogin", () => {
       );
 
       const [, body] = axiosStub.getCall(0).args;
+
       assert.ok(body.includes("grant_type=authorization_code"));
       assert.ok(body.includes("code=auth_code_123"));
     });
@@ -308,6 +323,7 @@ describe("CodeFlowLogin", () => {
           expires_in: 3600,
         },
       };
+
       axiosStub.resolves(mockResponse);
       envStub.resolves();
 
@@ -324,6 +340,7 @@ describe("CodeFlowLogin", () => {
           expires_in: 3600,
         },
       };
+
       axiosStub.resolves(mockResponse);
 
       const beforeTime = new Date();
@@ -334,7 +351,6 @@ describe("CodeFlowLogin", () => {
         "code",
       );
       const afterTime = new Date();
-
       const expectedMin = new Date(beforeTime.getTime() + 3600 * 1000);
       const expectedMax = new Date(afterTime.getTime() + 3600 * 1000);
 
@@ -350,6 +366,7 @@ describe("CodeFlowLogin", () => {
           refresh_token: "refresh",
         },
       };
+
       axiosStub.resolves(mockResponse);
 
       const result = await codeFlow.getToken(
@@ -377,11 +394,13 @@ describe("CodeFlowLogin", () => {
           refresh_token: "refresh",
         },
       };
+
       axiosStub.resolves(mockResponse);
 
       await codeFlow.getToken("https://insights.com", "realm1", false, "code");
 
       const [, body] = axiosStub.getCall(0).args;
+
       assert.ok(body.includes("client_id=insights-app"));
     });
   });

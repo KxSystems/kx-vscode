@@ -32,6 +32,7 @@ describe("Start Up", () => {
     activityBar = new ActivityBar();
     sideBar = new SideBarView();
     const control = await activityBar.getViewControl("KX");
+
     assert.ok(control);
     await control.click();
   });
@@ -46,11 +47,14 @@ describe("Start Up", () => {
 
     it("should open new connection view", async () => {
       const welcome = await section.findWelcomeContent();
+
       assert.ok(welcome);
       const button = await welcome.getButton("Add Connection");
+
       assert.ok(button);
       await button.click();
       const editor = await waitForEditor("New Connection");
+
       assert.ok(editor);
     });
   });

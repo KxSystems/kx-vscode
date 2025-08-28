@@ -29,7 +29,6 @@ import { getBasename } from "../utils/core";
 import { Runner } from "../utils/notifications";
 
 const cache = new Map<string, Thenable<Diagnostic[]>>();
-
 const enum LinterErrorClass {
   ERROR = "error",
   WARNING = "warning",
@@ -75,7 +74,6 @@ function getRuntime() {
     process.platform === "linux" && process.arch === "arm64"
       ? "l64arm"
       : process.platform;
-
   const target = prefix[platform];
 
   if (!target) {
@@ -94,6 +92,7 @@ function getTool(args: string[]) {
 
 function getLinter() {
   const home = getBuidToolsHome();
+
   if (home) {
     return Path.join(home, "ws", "qlint.q_");
   }
@@ -103,6 +102,7 @@ function getLinter() {
 function initBuildTools() {
   return new Promise<void>((resolve, reject) => {
     const home = getBuidToolsHome();
+
     if (home) {
       // if (process.platform === "darwin") {
       //   const xattr = spawn(
@@ -127,6 +127,7 @@ function initBuildTools() {
 
 function isLintingSupported(document: TextDocument) {
   const path = document.uri.path;
+
   return path.endsWith(".q") || path.endsWith(".quke");
 }
 
@@ -156,6 +157,7 @@ function getLinterResults(uri: Uri) {
           results,
           "-quiet",
         ]);
+
         linter.on("exit", () => {
           fs.readFile(results, "utf8", (error, data) => {
             if (error) {
@@ -185,6 +187,7 @@ function lint(document: TextDocument) {
   const runner = Runner.create(async (_, token) => {
     try {
       const results = await getLinterResults(document.uri);
+
       if (token.isCancellationRequested) {
         cache.delete(document.uri.path);
         return [];
@@ -200,6 +203,7 @@ function lint(document: TextDocument) {
           result.description,
           severity[result.errorClass],
         );
+
         diagnostic.source = "qlint";
         diagnostic.code = result.label;
         return diagnostic;
@@ -208,12 +212,14 @@ function lint(document: TextDocument) {
       throw new Error(`Linting Failed ${error}`);
     }
   });
+
   runner.title = `Linting ${getBasename(document.uri)}.`;
   return runner.execute();
 }
 
 async function setDiagnostics(document: TextDocument) {
   let diagnostics = cache.get(document.uri.path);
+
   if (!diagnostics) {
     diagnostics = lint(document);
     cache.set(document.uri.path, diagnostics);
@@ -229,6 +235,7 @@ export async function lintCommand(document: TextDocument) {
 
 export async function connectBuildTools() {
   const home = getBuidToolsHome();
+
   if (home) {
     workspace.onDidSaveTextDocument(async (document) => {
       if (isAutoLintingSupported(document)) {
@@ -259,6 +266,7 @@ export async function connectBuildTools() {
 
     if (ext.activeTextEditor) {
       const document = ext.activeTextEditor.document;
+
       if (isAutoLintingSupported(document)) {
         await setDiagnostics(document);
       }

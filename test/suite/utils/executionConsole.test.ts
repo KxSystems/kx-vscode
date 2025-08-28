@@ -27,6 +27,7 @@ describe("executionConsole", () => {
   describe("ExecutionConsole", () => {
     let queryConsole: executionConsoleUtils.ExecutionConsole;
     let getConfigurationStub: sinon.SinonStub;
+
     const kdbNode = new KdbNode(
       [],
       "kdbnode1",
@@ -40,7 +41,6 @@ describe("executionConsole", () => {
       },
       vscode.TreeItemCollapsibleState.None,
     );
-
     const insightsNode = new InsightsNode(
       [],
       "insightsnode1",
@@ -61,21 +61,25 @@ describe("executionConsole", () => {
     describe("checkOutput", () => {
       it("should return the input string if the input is not an array", () => {
         const result = queryConsole.checkOutput("test", "test");
+
         assert.strictEqual(result, "test");
       });
 
       it("should return No results found if the input is an empty array", () => {
         const result = queryConsole.checkOutput([], "test");
+
         assert.strictEqual(result, "No results found.");
       });
 
       it("should return No results found if the input is an empty string", () => {
         const result = queryConsole.checkOutput("", "test");
+
         assert.strictEqual(result, "No results found.");
       });
 
       it("should return the input array if the input is an array with multiple strings", () => {
         const result = queryConsole.checkOutput(["test", "test"], "test");
+
         assert.deepStrictEqual(result, ["test", "test"]);
       });
     });

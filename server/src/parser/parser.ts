@@ -87,6 +87,7 @@ function assignment(state: State, token: Token) {
     token.order = 1;
   } else {
     let top = peek(stack);
+
     if (top?.tokenType === Colon || top?.tokenType === DoubleColon) {
       token.assignment = [];
       while ((top = stack.pop())) {
@@ -101,6 +102,7 @@ function assignment(state: State, token: Token) {
 function block(state: State, tokens: Token[], scopped = true) {
   if (scopped) {
     const anchor = peek(tokens);
+
     if (anchor && anchor.scope) {
       tokens.pop();
       tokens = tokens.splice(tokens.indexOf(anchor.scope) + 1);
@@ -194,7 +196,6 @@ export function parse(text: string): Token[] {
   const tokens = result.tokens as Token[];
   const cache: Token[] = [];
   const scope: Token[] = [];
-
   const state: State = {
     order: 1,
     exprs: 1,
@@ -307,6 +308,7 @@ export function parse(text: string): Token[] {
         break;
       case Command: {
         const [cmd, arg] = token.image.split(/[ \t]+/, 2);
+
         switch (cmd) {
           case "\\d":
             if (arg) {

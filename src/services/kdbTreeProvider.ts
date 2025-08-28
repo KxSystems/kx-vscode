@@ -112,10 +112,12 @@ export class KdbTreeProvider
       const items = this.getMergedElements(element);
 
       let orphan, found;
+
       for (const item of items) {
         orphan = true;
         if (item instanceof KdbNode || item instanceof InsightsNode) {
           const labels = retrieveConnLabelsNames(item);
+
           for (const label of labels) {
             found = nodes.find((node) => label === node.source.name);
             if (found) {
@@ -163,6 +165,7 @@ export class KdbTreeProvider
     ext.connectionsList.length = 0;
     const servers = this.getChildElements(_element);
     const insights = this.getInsightsChildElements();
+
     ext.connectionsList.push(...servers, ...insights);
     ext.kdbConnectionAliasList.length = 0;
     getServerAlias(servers.map((x) => x.details));
@@ -182,6 +185,7 @@ export class KdbTreeProvider
   private async getMetas(connLabel: string): Promise<InsightsMetaNode[]> {
     const connMng = new ConnectionManagementService();
     const conn = connMng.retrieveConnectedConnection(connLabel);
+
     if (conn) {
       return [
         new InsightsMetaNode(
@@ -201,6 +205,7 @@ export class KdbTreeProvider
   private async getNamespaces(connLabel: string): Promise<QNamespaceNode[]> {
     const connMng = new ConnectionManagementService();
     const conn = connMng.retrieveConnectedConnection(connLabel);
+
     if (!conn) {
       return new Array<QNamespaceNode>();
     }
@@ -224,6 +229,7 @@ export class KdbTreeProvider
           connLabel ?? "",
         ),
     );
+
     if (result !== undefined) {
       return result;
     } else {
@@ -239,6 +245,7 @@ export class KdbTreeProvider
   ): Promise<QCategoryNode[]> {
     // filter out views for non-default namespaces
     let filteredCategories;
+
     if (ns !== ".") {
       filteredCategories = objectCategories.filter((item) => {
         return item !== "Views";
@@ -257,6 +264,7 @@ export class KdbTreeProvider
           connLabel ?? "",
         ),
     );
+
     return result;
   }
 
@@ -266,6 +274,7 @@ export class KdbTreeProvider
     if (serverType === undefined) return new Array<QServerNode>();
 
     const conn = this.validateAndGetConnection(serverType);
+
     if (!conn) {
       return new Array<QServerNode>();
     }
@@ -354,6 +363,7 @@ export class KdbTreeProvider
     connLabel: string,
   ): Promise<QServerNode[]> {
     const dicts = await KdbTreeService.loadDictionaries(conn, namespace);
+
     return this.createQServerNodes(dicts, ns, connLabel, "dictionaries");
   }
 
@@ -364,6 +374,7 @@ export class KdbTreeProvider
     connLabel: string,
   ): Promise<QServerNode[]> {
     const funcs = await KdbTreeService.loadFunctions(conn, namespace);
+
     return this.createQServerNodes(funcs, ns, connLabel, "functions");
   }
 
@@ -374,6 +385,7 @@ export class KdbTreeProvider
     connLabel: string,
   ): Promise<QServerNode[]> {
     const tables = await KdbTreeService.loadTables(conn, namespace);
+
     return this.createQServerNodes(tables, ns, connLabel, "tables");
   }
 
@@ -384,6 +396,7 @@ export class KdbTreeProvider
     connLabel: string,
   ): Promise<QServerNode[]> {
     const vars = await KdbTreeService.loadVariables(conn, namespace);
+
     return this.createQServerNodes(vars, ns, connLabel, "variables");
   }
 
@@ -393,6 +406,7 @@ export class KdbTreeProvider
     connLabel: string,
   ): Promise<QServerNode[]> {
     const views = await KdbTreeService.loadViews(conn);
+
     return views.map(
       (x) =>
         new QServerNode(
@@ -443,12 +457,15 @@ export class KdbTreeProvider
     const connMng = new ConnectionManagementService();
     const conn = connMng.retrieveConnectedConnection(connLabel);
     const isInsights = conn instanceof InsightsConnection;
+
     if (conn && isInsights) {
       const meta = conn.meta;
+
       if (!meta) {
         return new Array<MetaObjectPayloadNode>();
       }
       const objects: MetaObjectPayloadNode[] = [];
+
       if (meta.payload.schema) {
         objects.push(
           new MetaObjectPayloadNode(
@@ -518,6 +535,7 @@ export class KdbTreeProvider
 
   private createLeafItems(servers: Server): KdbNode[] {
     const keys: string[] = Object.keys(servers);
+
     return keys.map(
       (x) =>
         new KdbNode(
@@ -534,10 +552,12 @@ export class KdbTreeProvider
   private createInsightLeafItems(insights: Insights): InsightsNode[] {
     const connMng = new ConnectionManagementService();
     const keys: string[] = Object.keys(insights);
+
     return keys.map((x) => {
       const isConnected = connMng.retrieveConnectedConnection(
         insights[x].alias,
       );
+
       return new InsightsNode(
         [],
         insights[x].alias,
@@ -584,6 +604,7 @@ export class KdbNode extends vscode.TreeItem {
       }
     } else {
       const index = ext.kdbNodesWithoutAuth.indexOf(label);
+
       if (index !== -1) {
         ext.kdbNodesWithoutAuth.splice(index, 1);
         vscode.commands.executeCommand(
@@ -606,6 +627,7 @@ export class KdbNode extends vscode.TreeItem {
       }
     } else {
       const index = ext.kdbNodesWithoutTls.indexOf(label);
+
       if (index !== -1) {
         ext.kdbNodesWithoutTls.splice(index, 1);
         vscode.commands.executeCommand(
@@ -624,6 +646,7 @@ export class KdbNode extends vscode.TreeItem {
   getTooltip(): vscode.MarkdownString {
     const tooltipMd = new vscode.MarkdownString();
     const title = `${this.details.serverAlias} ${getStatus(this.label)}`;
+
     tooltipMd.appendMarkdown(`### ${title}\n`);
     tooltipMd.appendMarkdown(
       `${this.details.serverName}:${this.details.serverPort}`,
@@ -658,6 +681,7 @@ export class InsightsNode extends vscode.TreeItem {
     // set context for root nodes
     if (ext.kdbinsightsNodes.indexOf(this.label) === -1) {
       const indexOriginalLabel = ext.kdbinsightsNodes.indexOf(this.label);
+
       if (indexOriginalLabel !== -1) {
         ext.kdbinsightsNodes.splice(indexOriginalLabel, 1);
       }
@@ -677,6 +701,7 @@ export class InsightsNode extends vscode.TreeItem {
     const connService = new ConnectionManagementService();
     const tooltipMd = new vscode.MarkdownString();
     const title = `${this.label} ${getStatus(this.label)}`;
+
     tooltipMd.appendMarkdown(`### ${title} \n`);
     tooltipMd.appendMarkdown(
       `${this.details.server.replace(/:\/\//g, "&#65279;://")}`,
@@ -686,6 +711,7 @@ export class InsightsNode extends vscode.TreeItem {
     const qeEnabled = await connService.retrieveInsightsConnQEEnabled(
       this.label,
     );
+
     if (version !== 0) {
       tooltipMd.appendMarkdown(`\nVersion: ${version}\n`);
     }

@@ -40,6 +40,7 @@ describe("ValidatorFunctions", () => {
       it("should return default error message for strings without lowercase letters", () => {
         const expected =
           "Password should have at least one lowercase letter from a to z.";
+
         assert.strictEqual(
           validatorFuncs.ValidatorFunctions.hasLowerCase("PASSWORD"),
           expected,
@@ -60,6 +61,7 @@ describe("ValidatorFunctions", () => {
 
       it("should return custom error message when provided", () => {
         const customMessage = "Custom lowercase error";
+
         assert.strictEqual(
           validatorFuncs.ValidatorFunctions.hasLowerCase(
             "PASSWORD",
@@ -93,6 +95,7 @@ describe("ValidatorFunctions", () => {
       it("should return default error message for strings without uppercase letters", () => {
         const expected =
           "Password should have at least one uppercase letter from A to Z.";
+
         assert.strictEqual(
           validatorFuncs.ValidatorFunctions.hasUpperCase("password"),
           expected,
@@ -113,6 +116,7 @@ describe("ValidatorFunctions", () => {
 
       it("should return custom error message when provided", () => {
         const customMessage = "Custom uppercase error";
+
         assert.strictEqual(
           validatorFuncs.ValidatorFunctions.hasUpperCase(
             "password",
@@ -152,6 +156,7 @@ describe("ValidatorFunctions", () => {
 
       it("should return default error message for strings without special characters", () => {
         const expected = "Password must have 1 special character.";
+
         assert.strictEqual(
           validatorFuncs.ValidatorFunctions.hasSpecialChar(
             "password",
@@ -174,6 +179,7 @@ describe("ValidatorFunctions", () => {
 
       it("should return custom error message when provided", () => {
         const customMessage = "Custom special char error";
+
         assert.strictEqual(
           validatorFuncs.ValidatorFunctions.hasSpecialChar(
             "password",
@@ -214,6 +220,7 @@ describe("ValidatorFunctions", () => {
 
       it("should return default error message for strings with forbidden characters", () => {
         const expected = "Contains forbidden characters";
+
         assert.strictEqual(
           validatorFuncs.ValidatorFunctions.hasNoForbiddenChar(
             "pass<word",
@@ -239,6 +246,7 @@ describe("ValidatorFunctions", () => {
 
       it("should return custom error message when provided", () => {
         const customMessage = "Custom forbidden char error";
+
         assert.strictEqual(
           validatorFuncs.ValidatorFunctions.hasNoForbiddenChar(
             "pass<word",
@@ -268,6 +276,7 @@ describe("ValidatorFunctions", () => {
 
       it("should return default error message for empty or whitespace-only strings", () => {
         const expected = "Value cannot be empty.";
+
         assert.strictEqual(
           validatorFuncs.ValidatorFunctions.isNotEmpty(""),
           expected,
@@ -288,6 +297,7 @@ describe("ValidatorFunctions", () => {
 
       it("should return custom error message when provided", () => {
         const customMessage = "Custom empty error";
+
         assert.strictEqual(
           validatorFuncs.ValidatorFunctions.isNotEmpty("", customMessage),
           customMessage,
@@ -328,6 +338,7 @@ describe("ValidatorFunctions", () => {
 
       it("should return custom error message when provided", () => {
         const customMessage = "Custom length error";
+
         assert.strictEqual(
           validatorFuncs.ValidatorFunctions.lengthRange(
             "1234",
@@ -345,6 +356,7 @@ describe("ValidatorFunctions", () => {
     describe("constructor", () => {
       it("should create instance with default options", () => {
         const validator = new validatorFuncs.ValidatorFunctions();
+
         assert.ok(validator instanceof validatorFuncs.ValidatorFunctions);
       });
 
@@ -357,6 +369,7 @@ describe("ValidatorFunctions", () => {
           maxLength: 10,
         };
         const validator = new validatorFuncs.ValidatorFunctions(options);
+
         assert.ok(validator instanceof validatorFuncs.ValidatorFunctions);
       });
     });
@@ -364,6 +377,7 @@ describe("ValidatorFunctions", () => {
     describe("validateHasLowerCase", () => {
       it("should work same as static method", () => {
         const validator = new validatorFuncs.ValidatorFunctions();
+
         assert.strictEqual(validator.validateHasLowerCase("password"), null);
         assert.strictEqual(
           validator.validateHasLowerCase("PASSWORD"),
@@ -374,6 +388,7 @@ describe("ValidatorFunctions", () => {
       it("should accept custom error message", () => {
         const validator = new validatorFuncs.ValidatorFunctions();
         const customMessage = "Custom lowercase error";
+
         assert.strictEqual(
           validator.validateHasLowerCase("PASSWORD", customMessage),
           customMessage,
@@ -384,6 +399,7 @@ describe("ValidatorFunctions", () => {
     describe("validateHasUpperCase", () => {
       it("should work same as static method", () => {
         const validator = new validatorFuncs.ValidatorFunctions();
+
         assert.strictEqual(validator.validateHasUpperCase("Password"), null);
         assert.strictEqual(
           validator.validateHasUpperCase("password"),
@@ -394,6 +410,7 @@ describe("ValidatorFunctions", () => {
       it("should accept custom error message", () => {
         const validator = new validatorFuncs.ValidatorFunctions();
         const customMessage = "Custom uppercase error";
+
         assert.strictEqual(
           validator.validateHasUpperCase("password", customMessage),
           customMessage,
@@ -404,6 +421,7 @@ describe("ValidatorFunctions", () => {
     describe("validateIsNotEmpty", () => {
       it("should work same as static method", () => {
         const validator = new validatorFuncs.ValidatorFunctions();
+
         assert.strictEqual(validator.validateIsNotEmpty("value"), null);
         assert.strictEqual(
           validator.validateIsNotEmpty(""),
@@ -414,6 +432,7 @@ describe("ValidatorFunctions", () => {
       it("should accept custom error message", () => {
         const validator = new validatorFuncs.ValidatorFunctions();
         const customMessage = "Custom empty error";
+
         assert.strictEqual(
           validator.validateIsNotEmpty("", customMessage),
           customMessage,
@@ -427,6 +446,7 @@ describe("ValidatorFunctions", () => {
           forbiddenChars: /[<>]/,
           forbiddenCharsErrorMessage: "Contains forbidden characters",
         });
+
         assert.strictEqual(
           validator.validateHasNoForbiddenChar("password"),
           null,
@@ -439,6 +459,7 @@ describe("ValidatorFunctions", () => {
 
       it("should return error message when forbidden chars not configured", () => {
         const validator = new validatorFuncs.ValidatorFunctions();
+
         assert.strictEqual(
           validator.validateHasNoForbiddenChar("password"),
           "forbiddenChars must be configured",
@@ -451,6 +472,7 @@ describe("ValidatorFunctions", () => {
           forbiddenCharsErrorMessage: "Default error",
         });
         const customMessage = "Custom forbidden char error";
+
         assert.strictEqual(
           validator.validateHasNoForbiddenChar("pass<word", customMessage),
           customMessage,
@@ -463,6 +485,7 @@ describe("ValidatorFunctions", () => {
         const validator = new validatorFuncs.ValidatorFunctions({
           specialChars: /[!@#$%^&*(),.?":{}|<>]/,
         });
+
         assert.strictEqual(validator.validateHasSpecialChar("password!"), null);
         assert.strictEqual(
           validator.validateHasSpecialChar("password"),
@@ -472,6 +495,7 @@ describe("ValidatorFunctions", () => {
 
       it("should return error message when special chars not configured", () => {
         const validator = new validatorFuncs.ValidatorFunctions();
+
         assert.strictEqual(
           validator.validateHasSpecialChar("password"),
           "specialChars must be configured",
@@ -483,6 +507,7 @@ describe("ValidatorFunctions", () => {
           specialChars: /[!@#]/,
         });
         const customMessage = "Custom special char error";
+
         assert.strictEqual(
           validator.validateHasSpecialChar("password", customMessage),
           customMessage,
@@ -496,6 +521,7 @@ describe("ValidatorFunctions", () => {
           minLength: 5,
           maxLength: 10,
         });
+
         assert.strictEqual(validator.validateLengthRange("password"), null);
         assert.strictEqual(
           validator.validateLengthRange("1234"),
@@ -505,6 +531,7 @@ describe("ValidatorFunctions", () => {
 
       it("should return error message when length range not configured", () => {
         const validator = new validatorFuncs.ValidatorFunctions();
+
         assert.strictEqual(
           validator.validateLengthRange("password"),
           "minLength and maxLength must be configured",
@@ -517,6 +544,7 @@ describe("ValidatorFunctions", () => {
           maxLength: 10,
         });
         const customMessage = "Custom length error";
+
         assert.strictEqual(
           validator.validateLengthRange("1234", customMessage),
           customMessage,
@@ -529,6 +557,7 @@ describe("ValidatorFunctions", () => {
     describe("createHasLowerCaseRule", () => {
       it("should create rule with default error message", () => {
         const rule = validatorFuncs.ValidatorFunctions.createHasLowerCaseRule();
+
         assert.strictEqual(rule.validate("password"), null);
         assert.strictEqual(
           rule.validate("PASSWORD"),
@@ -542,6 +571,7 @@ describe("ValidatorFunctions", () => {
           validatorFuncs.ValidatorFunctions.createHasLowerCaseRule(
             customMessage,
           );
+
         assert.strictEqual(rule.validate("PASSWORD"), customMessage);
       });
     });
@@ -549,6 +579,7 @@ describe("ValidatorFunctions", () => {
     describe("createHasUpperCaseRule", () => {
       it("should create rule with default error message", () => {
         const rule = validatorFuncs.ValidatorFunctions.createHasUpperCaseRule();
+
         assert.strictEqual(rule.validate("Password"), null);
         assert.strictEqual(
           rule.validate("password"),
@@ -562,6 +593,7 @@ describe("ValidatorFunctions", () => {
           validatorFuncs.ValidatorFunctions.createHasUpperCaseRule(
             customMessage,
           );
+
         assert.strictEqual(rule.validate("password"), customMessage);
       });
     });
@@ -570,6 +602,7 @@ describe("ValidatorFunctions", () => {
       it("should create rule with default error message", () => {
         const rule =
           validatorFuncs.ValidatorFunctions.createHasSpecialCharRule(/[!@#]/);
+
         assert.strictEqual(rule.validate("password!"), null);
         assert.strictEqual(
           rule.validate("password"),
@@ -583,6 +616,7 @@ describe("ValidatorFunctions", () => {
           /[!@#]/,
           customMessage,
         );
+
         assert.strictEqual(rule.validate("password"), customMessage);
       });
     });
@@ -593,6 +627,7 @@ describe("ValidatorFunctions", () => {
           validatorFuncs.ValidatorFunctions.createHasNoForbiddenCharRule(
             /[<>]/,
           );
+
         assert.strictEqual(rule.validate("password"), null);
         assert.strictEqual(
           rule.validate("pass<word"),
@@ -607,6 +642,7 @@ describe("ValidatorFunctions", () => {
             /[<>]/,
             customMessage,
           );
+
         assert.strictEqual(rule.validate("pass<word"), customMessage);
       });
     });
@@ -614,6 +650,7 @@ describe("ValidatorFunctions", () => {
     describe("createIsNotEmptyRule", () => {
       it("should create rule with default error message", () => {
         const rule = validatorFuncs.ValidatorFunctions.createIsNotEmptyRule();
+
         assert.strictEqual(rule.validate("value"), null);
         assert.strictEqual(rule.validate(""), "Value cannot be empty.");
       });
@@ -622,6 +659,7 @@ describe("ValidatorFunctions", () => {
         const customMessage = "Custom rule error";
         const rule =
           validatorFuncs.ValidatorFunctions.createIsNotEmptyRule(customMessage);
+
         assert.strictEqual(rule.validate(""), customMessage);
       });
     });
@@ -632,6 +670,7 @@ describe("ValidatorFunctions", () => {
           5,
           10,
         );
+
         assert.strictEqual(rule.validate("password"), null);
         assert.strictEqual(
           rule.validate("1234"),
@@ -646,6 +685,7 @@ describe("ValidatorFunctions", () => {
           10,
           customMessage,
         );
+
         assert.strictEqual(rule.validate("1234"), customMessage);
       });
     });
@@ -681,6 +721,7 @@ describe("ValidatorFunctions", () => {
     describe("HasSpecialChar", () => {
       it("should work as exported function with default error message", () => {
         const rule = validatorFuncs.HasSpecialChar(/[!@#]/);
+
         assert.strictEqual(rule.validate("password!"), null);
         assert.strictEqual(
           rule.validate("password"),
@@ -691,6 +732,7 @@ describe("ValidatorFunctions", () => {
       it("should work as exported function with custom error message", () => {
         const customMessage = "Custom special char error";
         const rule = validatorFuncs.HasSpecialChar(/[!@#]/, customMessage);
+
         assert.strictEqual(rule.validate("password"), customMessage);
       });
     });
@@ -698,6 +740,7 @@ describe("ValidatorFunctions", () => {
     describe("HasNoForbiddenChar", () => {
       it("should work as exported function with default error message", () => {
         const rule = validatorFuncs.HasNoForbiddenChar(/[<>]/);
+
         assert.strictEqual(rule.validate("password"), null);
         assert.strictEqual(
           rule.validate("pass<word"),
@@ -708,6 +751,7 @@ describe("ValidatorFunctions", () => {
       it("should work as exported function with custom error message", () => {
         const customMessage = "Custom forbidden char error";
         const rule = validatorFuncs.HasNoForbiddenChar(/[<>]/, customMessage);
+
         assert.strictEqual(rule.validate("pass<word"), customMessage);
       });
     });
@@ -725,6 +769,7 @@ describe("ValidatorFunctions", () => {
     describe("LengthRange", () => {
       it("should work as exported function with default error message", () => {
         const rule = validatorFuncs.LengthRange(5, 10);
+
         assert.strictEqual(rule.validate("password"), null);
         assert.strictEqual(
           rule.validate("1234"),
@@ -735,6 +780,7 @@ describe("ValidatorFunctions", () => {
       it("should work as exported function with custom error message", () => {
         const customMessage = "Custom length error";
         const rule = validatorFuncs.LengthRange(5, 10, customMessage);
+
         assert.strictEqual(rule.validate("1234"), customMessage);
       });
     });
@@ -746,6 +792,7 @@ describe("ValidatorFunctions", () => {
         forbiddenChars: /[[\]]/,
         forbiddenCharsErrorMessage: "Square brackets not allowed",
       });
+
       assert.strictEqual(
         validator.validateHasNoForbiddenChar("password"),
         null,
@@ -773,6 +820,7 @@ describe("ValidatorFunctions", () => {
 
     it("should handle very long strings", () => {
       const longString = "a".repeat(1000);
+
       assert.strictEqual(
         validatorFuncs.ValidatorFunctions.hasLowerCase(longString),
         null,
@@ -785,6 +833,7 @@ describe("ValidatorFunctions", () => {
 
     it("should handle empty regex patterns correctly", () => {
       const emptyRegex = /(?:)/;
+
       assert.strictEqual(
         validatorFuncs.ValidatorFunctions.hasSpecialChar(
           "password",

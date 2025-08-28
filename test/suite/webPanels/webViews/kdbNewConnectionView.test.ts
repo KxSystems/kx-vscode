@@ -122,12 +122,14 @@ describe("KdbNewConnectionView", () => {
   describe("renderServerNameDesc", () => {
     it("should render bundled server name desc", () => {
       const result = view.renderServerNameDesc(true);
+
       assert.strictEqual(result.strings[0].includes("<b>Bundled q.</b>"), true);
     });
 
     it("should render normal server name desc", () => {
       view.isBundledQ = false;
       const result = view.renderServerNameDesc(false);
+
       assert.strictEqual(
         result.strings[0].includes("<b>Bundled q.</b>"),
         false,
@@ -138,18 +140,21 @@ describe("KdbNewConnectionView", () => {
   describe("renderServerNameField", () => {
     it("should render server name field for bundled q", () => {
       const result = view.renderServerNameField(ServerType.KDB, true);
+
       assert.strictEqual(result.strings[0].includes("Server-1"), false);
     });
 
     it("should render server name field for KDB", () => {
       view.isBundledQ = false;
       const result = view.renderServerNameField(ServerType.KDB);
+
       assert.strictEqual(result.strings[0].includes("Server-1"), true);
     });
 
     it("should render server name field for Insights", () => {
       view.isBundledQ = false;
       const result = view.renderServerNameField(ServerType.INSIGHTS, false);
+
       assert.strictEqual(result.strings[0].includes("Insights-1"), true);
     });
   });
@@ -157,6 +162,7 @@ describe("KdbNewConnectionView", () => {
   describe("renderServerName", () => {
     it("should render server name", () => {
       const result = view.renderServerName(ServerType.INSIGHTS, false);
+
       assert.strictEqual(
         result.strings[1].includes("row option-description  option-help"),
         true,
@@ -168,6 +174,7 @@ describe("KdbNewConnectionView", () => {
     it("should render port number desc for bundled q", () => {
       view.isBundledQ = true;
       const result = view.renderPortNumberDesc(ServerType.KDB);
+
       assert.strictEqual(
         JSON.stringify(result).includes(
           "Ensure the port number you use does not conflict with another",
@@ -178,6 +185,7 @@ describe("KdbNewConnectionView", () => {
 
     it("should render port number desc for KDB server", () => {
       const result = view.renderPortNumberDesc();
+
       assert.strictEqual(
         JSON.stringify(result).includes("<b>Set port number</b>"),
         true,
@@ -187,6 +195,7 @@ describe("KdbNewConnectionView", () => {
   describe("renderPortNumber", () => {
     it("should render port number for bundled q", () => {
       const result = view.renderPortNumber(ServerType.KDB);
+
       assert.strictEqual(
         JSON.stringify(result).includes(
           "Ensure the port number you use does not conflict with another",
@@ -197,6 +206,7 @@ describe("KdbNewConnectionView", () => {
 
     it("should render port number for KDB server", () => {
       const result = view.renderPortNumber();
+
       assert.strictEqual(
         JSON.stringify(result).includes("<b>Set port number</b>"),
         true,
@@ -208,6 +218,7 @@ describe("KdbNewConnectionView", () => {
     it("should render connection address for KDB", () => {
       view.isBundledQ = false;
       const result = view.renderConnAddDesc(ServerType.KDB);
+
       assert.strictEqual(
         result.strings[0].includes(
           "Set the IP of your kdb+ database connection.",
@@ -219,11 +230,13 @@ describe("KdbNewConnectionView", () => {
     it("should render connection address for Insights", () => {
       view.isBundledQ = false;
       const result = view.renderConnAddDesc(ServerType.INSIGHTS);
+
       assert.strictEqual(result.strings[0].includes("your Insights"), true);
     });
 
     it("should render connection address for Bundled q", () => {
       const result = view.renderConnAddDesc(ServerType.KDB, true);
+
       assert.strictEqual(
         result.strings[0].includes("already set up for you"),
         true,
@@ -235,6 +248,7 @@ describe("KdbNewConnectionView", () => {
     it("should render connection address", () => {
       view.isBundledQ = false;
       const result = view.renderConnAddress(ServerType.KDB);
+
       assert.strictEqual(
         JSON.stringify(result).includes("127.0.0.1 or localhost"),
         true,
@@ -243,6 +257,7 @@ describe("KdbNewConnectionView", () => {
 
     it("should render connection address for Bundled q", () => {
       const result = view.renderConnAddress(ServerType.KDB, true);
+
       assert.strictEqual(
         JSON.stringify(result).includes("127.0.0.1 or localhost"),
         false,
@@ -252,6 +267,7 @@ describe("KdbNewConnectionView", () => {
     it("should render connection address for Insights", () => {
       view.isBundledQ = false;
       const result = view.renderConnAddress(ServerType.INSIGHTS);
+
       assert.strictEqual(
         JSON.stringify(result).includes("myinsights.clouddeploy.com"),
         true,
@@ -391,6 +407,7 @@ describe("KdbNewConnectionView", () => {
   it("should update label", () => {
     view.labels = ["label1"];
     const event: Event = new Event("label2");
+
     Object.defineProperty(event, "target", {
       value: { value: "label2" },
       writable: false,
@@ -473,6 +490,7 @@ describe("KdbNewConnectionView", () => {
       view.connectionData = { connType: 0, serverName: "local" };
 
       const result = view.renderEditConnectionForm();
+
       assert.strictEqual(view.isBundledQ, true);
       assert.strictEqual(view.oldAlias, "local");
       assert.strictEqual(view.serverType, ServerType.KDB);
@@ -548,6 +566,7 @@ describe("KdbNewConnectionView", () => {
     it('should return "No connection found to be edited" when connectionData is null', () => {
       view.connectionData = null;
       const result = view.renderEditConnFields();
+
       assert.equal(
         result.strings[0],
         "<div>No connection found to be edited</div>",
@@ -559,6 +578,7 @@ describe("KdbNewConnectionView", () => {
       const renderBundleQEditFormStub = sinon
         .stub(view, "renderBundleQEditForm")
         .returns(html``);
+
       view.renderEditConnFields();
       assert.ok(renderBundleQEditFormStub.calledOnce);
       renderBundleQEditFormStub.restore();
@@ -569,6 +589,7 @@ describe("KdbNewConnectionView", () => {
       const renderMyQEditFormStub = sinon
         .stub(view, "renderMyQEditForm")
         .returns(html``);
+
       view.renderEditConnFields();
       assert.ok(renderMyQEditFormStub.calledOnce);
       renderMyQEditFormStub.restore();
@@ -579,6 +600,7 @@ describe("KdbNewConnectionView", () => {
       const renderInsightsEditFormStub = sinon
         .stub(view, "renderInsightsEditForm")
         .returns(html``);
+
       view.renderEditConnFields();
       assert.ok(renderInsightsEditFormStub.calledOnce);
       renderInsightsEditFormStub.restore();
@@ -589,6 +611,7 @@ describe("KdbNewConnectionView", () => {
     it('should return "No connection found to be edited" when connectionData is null', () => {
       view.connectionData = null;
       const result = view.renderBundleQEditForm();
+
       assert.strictEqual(
         result.strings[0],
         "<div>No connection found to be edited</div>",
@@ -602,6 +625,7 @@ describe("KdbNewConnectionView", () => {
         serverName: "local",
       };
       const result = view.renderBundleQEditForm();
+
       assert.ok(result.strings[0].includes('<div class="col gap-0">'));
       assert.ok(result.strings[1].includes('<div class="col gap-0">'));
       assert.ok(result.strings[2].includes('<div class="col gap-0">'));
@@ -613,6 +637,7 @@ describe("KdbNewConnectionView", () => {
     it('should return "No connection found to be edited" when connectionData is null', () => {
       view.connectionData = null;
       const result = view.renderMyQEditForm();
+
       assert.strictEqual(
         result.strings[0],
         "<div>No connection found to be edited</div>",
@@ -626,6 +651,7 @@ describe("KdbNewConnectionView", () => {
         serverName: "local",
       };
       const result = view.renderMyQEditForm();
+
       assert.ok(result.strings[0].includes('<div class="col gap-0">'));
       assert.ok(result.strings[1].includes('<div class="col gap-0">'));
       assert.ok(result.strings[2].includes('<div class="col gap-0">'));
@@ -637,6 +663,7 @@ describe("KdbNewConnectionView", () => {
     it('should return "No connection found to be edited" when connectionData is null', () => {
       view.connectionData = null;
       const result = view.renderInsightsEditForm();
+
       assert.strictEqual(
         result.strings[0],
         "<div>No connection found to be edited</div>",
@@ -650,6 +677,7 @@ describe("KdbNewConnectionView", () => {
         serverName: "local",
       };
       const result = view.renderInsightsEditForm();
+
       assert.ok(result.strings[0].includes('<div class="col gap-0">'));
       assert.ok(result.strings[1].includes('<div class="col gap-0">'));
       assert.ok(result.strings[2].includes('<div class="col gap-0">'));
@@ -668,6 +696,7 @@ describe("KdbNewConnectionView", () => {
         insecure: false,
       };
       const data = view["data"];
+
       assert.deepEqual(data, expectedData);
     });
 
@@ -684,6 +713,7 @@ describe("KdbNewConnectionView", () => {
         password: "",
       };
       const data = view["data"];
+
       assert.deepEqual(data, expectedData);
     });
   });
@@ -691,7 +721,9 @@ describe("KdbNewConnectionView", () => {
   describe("save", () => {
     it("should post a message", () => {
       let result: any;
+
       const api = acquireVsCodeApi();
+
       sinon.stub(api, "postMessage").value(({ command, data }) => {
         if (
           command === "kdb.connections.add.kdb" ||
@@ -755,7 +787,9 @@ describe("KdbNewConnectionView", () => {
 
     it("should post a message", () => {
       const api = acquireVsCodeApi();
+
       let result: any;
+
       sinon.stub(api, "postMessage").value(({ command, data }) => {
         if (
           command === "kdb.connections.edit.kdb" ||

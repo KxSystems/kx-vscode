@@ -83,12 +83,14 @@ describe("queryHistoryProvider", () => {
       duration: "500",
     },
   ];
+
   beforeEach(() => {
     ext.kdbQueryHistoryList.length = 0;
     ext.kdbQueryHistoryList.push(...dummyQueryHistory);
   });
   it("Should reload the provider", () => {
     const queryHistoryProvider = new QueryHistoryProvider();
+
     queryHistoryProvider.reload();
     assert.notStrictEqual(
       queryHistoryProvider,
@@ -98,6 +100,7 @@ describe("queryHistoryProvider", () => {
   });
   it("Should refresh the provider", () => {
     const queryHistoryProvider = new QueryHistoryProvider();
+
     queryHistoryProvider.refresh();
     assert.notStrictEqual(
       queryHistoryProvider,
@@ -114,6 +117,7 @@ describe("queryHistoryProvider", () => {
     );
     const queryHistoryProvider = new QueryHistoryProvider();
     const element = queryHistoryProvider.getTreeItem(queryHistoryTreeItem);
+
     assert.strictEqual(
       element.label,
       queryHistoryTreeItem.label,
@@ -129,6 +133,7 @@ describe("queryHistoryProvider", () => {
     );
     const queryHistoryProvider = new QueryHistoryProvider();
     const element = queryHistoryProvider.getTreeItem(queryHistoryTreeItem);
+
     assert.strictEqual(
       element.label,
       queryHistoryTreeItem.label,
@@ -139,6 +144,7 @@ describe("queryHistoryProvider", () => {
   it("Should return children for the tree when queryHistory has entries", async () => {
     const queryHistoryProvider = new QueryHistoryProvider();
     const result = await queryHistoryProvider.getChildren();
+
     assert.strictEqual(result.length, 6, "Children count should be 6");
   });
 
@@ -146,18 +152,21 @@ describe("queryHistoryProvider", () => {
     ext.kdbQueryHistoryList.length = 0;
     const queryHistoryProvider = new QueryHistoryProvider();
     const result = await queryHistoryProvider.getChildren();
+
     assert.strictEqual(result.length, 0, "Children count should be 0");
   });
 
   describe("QueryHistoryTreeItem", () => {
     const sucessIcon = "testing-passed-icon";
     const failIcon = "testing-error-icon";
+
     it("Should return a new QueryHistoryTreeItem", () => {
       const queryHistoryTreeItem = new QueryHistoryTreeItem(
         "testLabel",
         dummyQueryHistory[0],
         vscode.TreeItemCollapsibleState.None,
       );
+
       assert.strictEqual(
         queryHistoryTreeItem.label,
         "testLabel",
@@ -171,6 +180,7 @@ describe("queryHistoryProvider", () => {
         vscode.TreeItemCollapsibleState.None,
       );
       const result = queryHistoryTreeItem.defineQueryIcon(true);
+
       assert.strictEqual(
         result,
         sucessIcon,
@@ -185,6 +195,7 @@ describe("queryHistoryProvider", () => {
         vscode.TreeItemCollapsibleState.None,
       );
       const result = queryHistoryTreeItem.defineQueryIcon(false);
+
       assert.strictEqual(
         result,
         failIcon,
@@ -199,6 +210,7 @@ describe("queryHistoryProvider", () => {
         vscode.TreeItemCollapsibleState.None,
       );
       const result = queryHistoryTreeItem.defineQueryIcon(true);
+
       assert.strictEqual(
         result,
         sucessIcon,

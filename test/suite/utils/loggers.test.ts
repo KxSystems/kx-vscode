@@ -44,6 +44,7 @@ describe("loggers", () => {
       assert.ok(appendLineStub.calledOnce, "appendLine should be called once");
 
       const loggedMessage = appendLineStub.getCall(0).args[0];
+
       assert.ok(
         loggedMessage.includes("[INFO] Test info message"),
         "appendLine should include type and message",
@@ -64,6 +65,7 @@ describe("loggers", () => {
       assert.ok(appendLineStub.calledOnce, "appendLine should be called once");
 
       const loggedMessage = appendLineStub.getCall(0).args[0];
+
       assert.ok(
         loggedMessage.includes("[WARNING] Test warning message"),
         "appendLine should include type and message",
@@ -84,6 +86,7 @@ describe("loggers", () => {
       assert.ok(appendLineStub.calledOnce, "appendLine should be called once");
 
       const loggedMessage = appendLineStub.getCall(0).args[0];
+
       assert.ok(
         loggedMessage.includes("[ERROR] Test error message"),
         "appendLine should include type and message",
@@ -111,6 +114,7 @@ describe("loggers", () => {
       assert.ok(appendLineStub.calledOnce, "appendLine should be called once");
 
       const loggedMessage = appendLineStub.getCall(0).args[0];
+
       assert.ok(
         loggedMessage.includes("[ERROR] Test error message"),
         "appendLine should include type and message",
@@ -132,6 +136,7 @@ describe("loggers", () => {
       assert.ok(appendLineStub.calledOnce, "appendLine should be called once");
 
       const loggedMessage = appendLineStub.getCall(0).args[0];
+
       assert.ok(
         loggedMessage.includes("[ERROR] Test error message"),
         "appendLine should include type and message",
@@ -152,6 +157,7 @@ describe("loggers", () => {
       assert.ok(appendLineStub.calledOnce, "appendLine should be called once");
 
       const loggedMessage = appendLineStub.getCall(0).args[0];
+
       assert.ok(
         loggedMessage.includes("[INFO] "),
         "appendLine should include type even with empty message",
@@ -172,6 +178,7 @@ describe("loggers", () => {
       assert.ok(appendLineStub.calledOnce, "appendLine should be called once");
 
       const loggedMessage = appendLineStub.getCall(0).args[0];
+
       assert.ok(
         loggedMessage.includes("[CUSTOM] Test custom message"),
         "appendLine should include custom type and message",
@@ -192,6 +199,7 @@ describe("loggers", () => {
       assert.ok(appendLineStub.calledOnce, "appendLine should be called once");
 
       const loggedMessage = appendLineStub.getCall(0).args[0];
+
       assert.ok(
         loggedMessage.includes("[INFO] Line 1\nLine 2\nLine 3"),
         "appendLine should include multiline message",
@@ -207,6 +215,7 @@ describe("loggers", () => {
       assert.ok(appendLineStub.calledOnce, "appendLine should be called once");
 
       const loggedMessage = appendLineStub.getCall(0).args[0];
+
       assert.ok(
         loggedMessage.includes(
           "[INFO] Message with special chars: !@#$%^&*()[]{}",
@@ -224,6 +233,7 @@ describe("loggers", () => {
       assert.ok(appendLineStub.calledOnce, "appendLine should be called once");
 
       const loggedMessage = appendLineStub.getCall(0).args[0];
+
       assert.ok(
         loggedMessage.includes("[error] Test error message"),
         "appendLine should include lowercase error type",

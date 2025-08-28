@@ -27,6 +27,7 @@ describe("HelpFeedbackProvider", () => {
 
   it("should return all help items in getChildren", () => {
     const children = provider.getChildren();
+
     assert.strictEqual(children.length, 4);
     assert.ok(children[0] instanceof vscode.TreeItem);
     assert.strictEqual(children[0].label, "Extension Documentation");
@@ -37,8 +38,10 @@ describe("HelpFeedbackProvider", () => {
 
   it("should return the same item in getTreeItem", () => {
     const children = provider.getChildren();
+
     for (const item of children) {
       const treeItem = provider.getTreeItem(item);
+
       assert.strictEqual(treeItem, item);
     }
   });
@@ -92,6 +95,7 @@ describe("HelpFeedbackProvider", () => {
         const expectedDark = normalizePath(
           Path.join("resources", "dark", expected[idx].icon),
         );
+
         assert.ok(actualLight.endsWith(expectedLight));
         assert.ok(actualDark.endsWith(expectedDark));
       }
@@ -100,6 +104,7 @@ describe("HelpFeedbackProvider", () => {
 
   it("should emit onDidChangeTreeData event", (done) => {
     const spy = sinon.spy();
+
     provider.onDidChangeTreeData(spy);
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore: Accessing private member for test

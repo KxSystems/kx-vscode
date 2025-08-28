@@ -17,17 +17,18 @@ import * as vscode from "vscode";
 import { LanguageClient } from "vscode-languageclient/node";
 
 import * as clientCommand from "../../../src/commands/clientCommand";
-import * as dataSourceCommand from "../../../src/commands/dataSourceCommand";
-import * as workspaceCommand from "../../../src/commands/workspaceCommand";
+import * as executionCommand from "../../../src/commands/executionCommand";
 import { ext } from "../../../src/extensionVariables";
 
 describe("clientCommands", () => {
   const client = sinon.createStubInstance(LanguageClient);
+
   let executeBlock;
   let toggleParameterCache;
 
   beforeEach(() => {
     const context = <vscode.ExtensionContext>{ subscriptions: [] };
+
     sinon.stub(vscode.commands, "registerCommand").value((a, b) => b);
     clientCommand.connectClientCommands(context, client);
     executeBlock = context.subscriptions[0];
@@ -50,7 +51,7 @@ describe("clientCommands", () => {
       sinon
         .stub(client, "sendRequest")
         .value(async () => new vscode.Range(0, 0, 1, 1));
-      sinon.stub(workspaceCommand, "runActiveEditor").value(() => {});
+      sinon.stub(executionCommand, "executeActiveEditorQuery").value(() => {});
       await executeBlock(client);
       assert.deepEqual(
         ext.activeTextEditor.selection,
@@ -61,6 +62,7 @@ describe("clientCommands", () => {
   describe("kdb.toggleParameterCache", () => {
     it("should add parameter cache for single line functions", async () => {
       let edit: vscode.WorkspaceEdit;
+
       sinon.stub(client, "sendRequest").value(async () => ({
         params: ["a"],
         start: new vscode.Position(0, 0),
@@ -72,6 +74,7 @@ describe("clientCommands", () => {
     });
     it("should add parameter cache for multi line functions", async () => {
       let edit: vscode.WorkspaceEdit;
+
       sinon.stub(client, "sendRequest").value(async () => ({
         params: ["a"],
         start: new vscode.Position(0, 0),
@@ -80,21 +83,6 @@ describe("clientCommands", () => {
       sinon.stub(vscode.workspace, "applyEdit").value(async (a) => (edit = a));
       await toggleParameterCache(client);
       assert.strictEqual(edit.size, 1);
-    });
-  });
-
-  describe("getPartialDatasourceFile", () => {
-    it("should return qsql datatsource", () => {
-      const res = dataSourceCommand.getPartialDatasourceFile("query");
-      assert.strictEqual(res.dataSource.selectedType, "QSQL");
-    });
-    it("should return sql datatsource", () => {
-      const res = dataSourceCommand.getPartialDatasourceFile(
-        "query",
-        "dap",
-        true,
-      );
-      assert.strictEqual(res.dataSource.selectedType, "SQL");
     });
   });
 });

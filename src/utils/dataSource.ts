@@ -18,6 +18,7 @@ import { workspace, Uri } from "vscode";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { ext } from "../extensionVariables";
 import { MessageKind, notify } from "./notifications";
+import { getQSQLWrapper } from "./queryUtils";
 import { DataSourceFiles } from "../models/dataSource";
 import { DataSourcesPanel } from "../panels/datasource";
 
@@ -26,6 +27,7 @@ const logger = "dataSource";
 export function createKdbDataSourcesFolder(): string {
   const rootPath = ext.context.globalStorageUri.fsPath;
   const kdbDataSourcesFolderPath = path.join(rootPath, ext.kdbDataSourceFolder);
+
   if (!fs.existsSync(rootPath)) {
     notify(
       `Directory created to the extension folder: ${rootPath}`,
@@ -52,6 +54,7 @@ export function convertTimeToTimestamp(time: string): string {
     const parts = isoString.split(".");
     const datePart = parts[0];
     const timePart = parts[1].replace("Z", "0").padEnd(9, "0");
+
     return `${datePart}.${timePart}`;
   } catch (error) {
     notify("The string param is in an incorrect format.", MessageKind.ERROR, {
@@ -70,12 +73,14 @@ export function getConnectedInsightsNode(): string {
 
 export function checkFileFromInsightsNode(filePath: string): boolean {
   const insightsNode = getConnectedInsightsNode();
+
   if (!insightsNode || insightsNode === "") {
     return false;
   }
   try {
     const fileData = fs.readFileSync(filePath);
     const fileContent: DataSourceFiles = JSON.parse(fileData.toString());
+
     return fileContent.insightsNode === insightsNode;
   } catch {
     return false;
@@ -89,6 +94,7 @@ export function checkIfTimeParamIsCorrect(
   try {
     const startDate = new Date(startTS);
     const endDate = new Date(endTS);
+
     return startDate < endDate;
   } catch (error) {
     console.error(
@@ -113,6 +119,7 @@ export function convertDataSourceFormToDataSourceFile(
 export function oldFilesExists(): boolean {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
   const files = fs.readdirSync(kdbDataSourcesFolderPath);
+
   return files.length > 0;
 }
 
@@ -120,9 +127,11 @@ export function oldFilesExists(): boolean {
 export async function importOldDsFiles(): Promise<void> {
   const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
   const files = fs.readdirSync(kdbDataSourcesFolderPath);
+
   for (const file of files) {
     const fileData = fs.readFileSync(path.join(kdbDataSourcesFolderPath, file));
     const fileContent: DataSourceFiles = JSON.parse(fileData.toString());
+
     //remove fields that will became deprecated in the future
     fileContent.name = undefined;
     fileContent.originalName = undefined;
@@ -138,13 +147,16 @@ export async function importOldDsFiles(): Promise<void> {
 /* c8 ignore next */
 export async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
   const folders = workspace.workspaceFolders;
+
   if (folders) {
     const folder = folders[0];
     const importToUri = Uri.joinPath(folder.uri, ".kx");
+
     await workspace.fs.createDirectory(importToUri);
     let i = 1;
     let fileName = `datasource-${i}.kdb.json`;
     let filePath = path.join(importToUri.fsPath, fileName);
+
     while (fs.existsSync(filePath)) {
       i++;
       fileName = `datasource-${i}.kdb.json`;
@@ -156,4 +168,25 @@ export async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
       telemetry: "Datasource.Created",
     });
   }
+}
+
+export function getPartialDatasourceFile(
+  query: string,
+  selectedTarget?: string,
+  isSql?: boolean,
+  isPython?: boolean,
+) {
+  return isSql
+    ? <DataSourceFiles>{
+        dataSource: {
+          selectedType: "SQL",
+          sql: { query },
+        },
+      }
+    : <DataSourceFiles>{
+        dataSource: {
+          selectedType: "QSQL",
+          qsql: { query: getQSQLWrapper(query, isPython), selectedTarget },
+        },
+      };
 }

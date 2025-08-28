@@ -35,19 +35,21 @@ function isTestFile(fileName: string): boolean {
 
 function loadTestsFromDirectory(dirPath: string): void {
   const items = readdirSync(dirPath).sort((a, b) => a.localeCompare(b));
-
   const testFiles = items.filter((item) => {
     const itemPath = join(dirPath, item);
+
     return statSync(itemPath).isFile() && isTestFile(item);
   });
 
   testFiles.forEach((file) => {
     const filePath = join(dirPath, file);
+
     eval("require")(filePath);
   });
 
   const directories = items.filter((item) => {
     const itemPath = join(dirPath, item);
+
     return statSync(itemPath).isDirectory();
   });
 

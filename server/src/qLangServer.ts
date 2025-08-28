@@ -76,7 +76,6 @@ import {
 } from "./parser";
 
 const logger = "qLangServer";
-
 const enum MessageKind {
   DEBUG = "DEBUG",
   INFO = "INFO",
@@ -162,6 +161,7 @@ export default class QLangServer {
       scopeUri: uri,
       section: "kdb.debug",
     });
+
     return res ?? false;
   }
 
@@ -170,6 +170,7 @@ export default class QLangServer {
       scopeUri: uri,
       section: "kdb.linting",
     });
+
     return res ?? false;
   }
 
@@ -178,6 +179,7 @@ export default class QLangServer {
       scopeUri: uri,
       section: "kdb.refactoring",
     });
+
     return res ?? "Workspace";
   }
 
@@ -188,6 +190,7 @@ export default class QLangServer {
       scopeUri: uri,
       section: "kdb.connectionMap",
     });
+
     return res ?? {};
   }
 
@@ -236,6 +239,7 @@ export default class QLangServer {
           item.source,
         ),
       );
+
       this.connection.sendDiagnostics({ uri, diagnostics });
     }
   }
@@ -248,6 +252,7 @@ export default class QLangServer {
     textDocument,
   }: DocumentSymbolParams): Promise<DocumentSymbol[]> {
     const tokens = await this.parse(textDocument.uri);
+
     if (await this.getDebug(textDocument.uri)) {
       return tokens.map((token) => createDebugSymbol(token));
     }
@@ -266,6 +271,7 @@ export default class QLangServer {
   }: ReferenceParams): Promise<Location[]> {
     const tokens = await this.parse(textDocument.uri);
     const source = positionToToken(tokens, position);
+
     return (await this.context(textDocument.uri))
       .map((document) =>
         findIdentifiers(FindKind.Reference, document.tokens, source).map(
@@ -281,6 +287,7 @@ export default class QLangServer {
   }: DefinitionParams): Promise<Location[]> {
     const tokens = await this.parse(textDocument.uri);
     const source = positionToToken(tokens, position);
+
     return (await this.context(textDocument.uri))
       .map((document) =>
         findIdentifiers(FindKind.Definition, document.tokens, source).map(
@@ -297,14 +304,17 @@ export default class QLangServer {
   }: RenameParams): Promise<WorkspaceEdit> {
     const tokens = await this.parse(textDocument.uri);
     const source = positionToToken(tokens, position);
+
     return (await this.context(textDocument.uri)).reduce(
       (edit, document) => {
         const refs = findIdentifiers(FindKind.Rename, document.tokens, source);
+
         if (refs.length > 0) {
           const name = <Token>{
             image: newName,
             namespace: source?.namespace,
           };
+
           edit.changes![document.uri] = refs.map((token) =>
             TextEdit.replace(rangeFromToken(token), relative(name, token)),
           );
@@ -321,6 +331,7 @@ export default class QLangServer {
   }: CompletionParams): Promise<CompletionItem[]> {
     const tokens = await this.parse(textDocument.uri);
     const source = positionToToken(tokens, position);
+
     return (await this.context(textDocument.uri))
       .map((document) =>
         findIdentifiers(FindKind.Completion, document.tokens, source).map(
@@ -345,6 +356,7 @@ export default class QLangServer {
   }: TextDocumentPositionParams) {
     const tokens = await this.parse(textDocument.uri);
     const source = positionToToken(tokens, position);
+
     if (!source || !source.exprs) {
       return null;
     }
@@ -357,32 +369,39 @@ export default class QLangServer {
   }: TextDocumentPositionParams) {
     const tokens = await this.parse(textDocument.uri);
     const source = positionToToken(tokens, position);
+
     if (!source) {
       return null;
     }
     const lambda = inLambda(source);
+
     if (!lambda) {
       return null;
     }
     const scoped = tokens.filter((token) => inLambda(token) === lambda);
+
     if (scoped.length === 0) {
       return null;
     }
     const curly = scoped[scoped.length - 1];
+
     if (!curly || curly.tokenType !== RCurly) {
       return null;
     }
     const params = scoped.filter((token) => inParam(token));
+
     if (params.length === 0) {
       return null;
     }
     const bracket = params[params.length - 1];
+
     if (!bracket) {
       return null;
     }
     const args = params
       .filter((token) => assigned(token))
       .map((token) => token.image);
+
     if (args.length === 0) {
       return null;
     }
@@ -402,6 +421,7 @@ export default class QLangServer {
 
     for (const position of positions) {
       const source = positionToToken(tokens, position);
+
       if (source) {
         ranges.push(SelectionRange.create(rangeFromToken(source)));
       }
@@ -415,6 +435,7 @@ export default class QLangServer {
   }: CallHierarchyPrepareParams): Promise<CallHierarchyItem[]> {
     const tokens = await this.parse(textDocument.uri);
     const source = positionToToken(tokens, position);
+
     if (source && assignable(source)) {
       return [
         {
@@ -435,6 +456,7 @@ export default class QLangServer {
   }: CallHierarchyIncomingCallsParams): Promise<CallHierarchyIncomingCall[]> {
     const tokens = await this.parse(item.uri);
     const source = positionToToken(tokens, item.range.end);
+
     return item.data
       ? (await this.context(item.uri))
           .map((document) =>
@@ -442,6 +464,7 @@ export default class QLangServer {
               .filter((token) => !assigned(token))
               .map((token) => {
                 const lambda = inLambda(token);
+
                 return {
                   from: {
                     kind: lambda ? SymbolKind.Object : SymbolKind.Function,
@@ -463,6 +486,7 @@ export default class QLangServer {
   }: CallHierarchyOutgoingCallsParams): Promise<CallHierarchyOutgoingCall[]> {
     const tokens = await this.parse(item.uri);
     const source = positionToToken(tokens, item.range.end);
+
     return item.data
       ? (await this.context(item.uri))
           .map((document) =>
@@ -490,13 +514,16 @@ export default class QLangServer {
   }: SemanticTokensParams): Promise<SemanticTokens> {
     const tokens = await this.parse(textDocument.uri);
     const result = { data: [] } as SemanticTokens;
+
     let range: Range = Range.create(0, 0, 0, 0);
     let line = 0;
     let character = 0;
     let delta = 0;
+
     for (const token of tokens) {
       if (assignable(token)) {
         const kind = lamdaDefinition(token) ? 1 : local(token, tokens) ? 0 : -1;
+
         if (kind >= 0) {
           line = range.start.line;
           character = range.start.character;
@@ -517,13 +544,17 @@ export default class QLangServer {
 
   private async parse(uri: string): Promise<Token[]> {
     let tokens = this.cached.get(uri);
+
     if (!tokens) {
       const document = this.documents.get(uri);
+
       let text: string;
+
       if (document) {
         text = document.getText();
       } else {
         const path = fileURLToPath(uri);
+
         try {
           text = await readFile(path, { encoding: "utf8" });
         } catch (error) {
@@ -542,6 +573,7 @@ export default class QLangServer {
 
   private async related(uri: string): Promise<string[]> {
     let res = [uri];
+
     const folders = await this.connection.workspace.getWorkspaceFolders();
 
     if (!folders) {
@@ -563,10 +595,12 @@ export default class QLangServer {
 
     const map = await this.getConnectionMap(uri);
     const connections = new Map<string, string[]>();
+
     let current: string | undefined;
 
     for (const key of Object.keys(map)) {
       const target = map[key];
+
       let uris = connections.get(target);
 
       if (!uris) {
@@ -588,6 +622,7 @@ export default class QLangServer {
   private async context(uri: string): Promise<Tokenized[]> {
     const res: Tokenized[] = [];
     const refactoring = await this.getRefactoring(uri);
+
     if (refactoring === "Workspace") {
       for (const item of await this.related(uri)) {
         res.push({ uri: item, tokens: await this.parse(item) });
@@ -613,6 +648,7 @@ function rangeFromToken(token: Token): Range {
 function positionToToken(tokens: Token[], position: Position) {
   return tokens.find((token) => {
     const { start, end } = rangeFromToken(token);
+
     return (
       start.line <= position.line &&
       end.line >= position.line &&
@@ -631,6 +667,7 @@ function expressionToRange(tokens: Token[], expression: number) {
       token.tokenType !== WhiteSpace,
   );
   const first = exprs[0];
+
   if (!first) {
     return null;
   }
@@ -643,6 +680,7 @@ function expressionToRange(tokens: Token[], expression: number) {
 
 function createSymbol(token: Token, tokens: Token[]): DocumentSymbol {
   const range = rangeFromToken(token);
+
   return DocumentSymbol.create(
     lambda(token)
       ? testblock(token)
@@ -671,6 +709,7 @@ function createSymbol(token: Token, tokens: Token[]): DocumentSymbol {
 
 function createDebugSymbol(token: Token): DocumentSymbol {
   const range = rangeFromToken(token);
+
   return DocumentSymbol.create(
     tokenId(token),
     `${token.tokenType.name} ${token.namespace ? `(${token.namespace})` : ""} ${

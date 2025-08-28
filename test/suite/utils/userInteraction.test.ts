@@ -38,13 +38,16 @@ describe("userInteraction", () => {
 
   it("showInputBox should return a value", async () => {
     const option: vscode.InputBoxOptions = {};
+
     windowMock.expects("showInputBox").withArgs(option).returns("test");
     const result = await userInteraction.showInputBox(option);
+
     assert.strictEqual(result, "test");
   });
 
   it("showInputBox should throw cancellation event", async () => {
     const option: vscode.InputBoxOptions = {};
+
     windowMock.expects("showInputBox").withArgs(option).returns(undefined);
     await assert.rejects(
       userInteraction.showInputBox(option),
@@ -70,6 +73,7 @@ describe("userInteraction", () => {
       .withArgs(items, option)
       .returns(items[1]);
     const result = await userInteraction.showQuickPick(items, option);
+
     assert.deepStrictEqual(result, items[1]);
   });
 
@@ -95,6 +99,7 @@ describe("userInteraction", () => {
       .withArgs(items, option)
       .returns(items[1]);
     const result = await userInteraction.showQuickPick(items, option);
+
     assert.deepStrictEqual(result, items[1]);
   });
 
@@ -127,6 +132,7 @@ describe("userInteraction", () => {
 
     windowMock.expects("showOpenDialog").returns(uris);
     const result = await userInteraction.showOpenFolderDialog();
+
     assert.deepStrictEqual(result, folderPath);
   });
 
@@ -140,6 +146,7 @@ describe("userInteraction", () => {
 
     windowMock.expects("showOpenDialog").returns(uris);
     const result = await userInteraction.showOpenFolderDialog();
+
     assert.strictEqual(result, folderPath1);
   });
 

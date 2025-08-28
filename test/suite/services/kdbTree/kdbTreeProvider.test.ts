@@ -41,7 +41,9 @@ describe("kdbTreeProvider", () => {
   let insights: Insights;
   let kdbNode: KdbNode;
   let insightNode: InsightsNode;
+
   const connMng = new ConnectionManagementService();
+
   let retrieveInsightsConnVersionStub,
     retrieveInsightsConnQEEnabledStub: sinon.SinonStub;
 
@@ -91,6 +93,7 @@ describe("kdbTreeProvider", () => {
 
   it("Validate creation of KDB provider", () => {
     const kdbProvider = new KdbTreeProvider(servers, insights);
+
     assert.notStrictEqual(
       kdbProvider,
       undefined,
@@ -100,6 +103,7 @@ describe("kdbTreeProvider", () => {
 
   it("Validate reload of KDB provider", () => {
     const kdbProvider = new KdbTreeProvider(servers, insights);
+
     kdbProvider.reload();
     assert.notStrictEqual(
       kdbProvider,
@@ -110,6 +114,7 @@ describe("kdbTreeProvider", () => {
 
   it("Validate refreshing KDB provider with KDB instance", () => {
     const kdbProvider = new KdbTreeProvider(servers, insights);
+
     servers["testServer"] = {
       serverAlias: "testServer2Alias",
       serverName: "testServer2Name",
@@ -128,6 +133,7 @@ describe("kdbTreeProvider", () => {
 
   it("Validate refreshing KDB provide with Insights instancer", () => {
     const kdbProvider = new KdbTreeProvider(servers, insights);
+
     insights["testInsight2"] = {
       alias: "testInsights2Alias",
       server: "testInsights2Name",
@@ -144,6 +150,7 @@ describe("kdbTreeProvider", () => {
   it("Should return the KdbNode tree item element", () => {
     const kdbProvider = new KdbTreeProvider(servers, insights);
     const element = kdbProvider.getTreeItem(kdbNode);
+
     assert.strictEqual(
       element.label,
       kdbNode.label,
@@ -154,6 +161,7 @@ describe("kdbTreeProvider", () => {
   it("Should return the Insights tree item element", () => {
     const kdbProvider = new KdbTreeProvider(servers, insights);
     const element = kdbProvider.getTreeItem(insightNode);
+
     assert.strictEqual(
       element.label,
       insightNode.label,
@@ -164,6 +172,7 @@ describe("kdbTreeProvider", () => {
   it("Should return no children for the tree when serverList is empty", async () => {
     const kdbProvider = new KdbTreeProvider({}, {});
     const result = await kdbProvider.getChildren();
+
     assert.strictEqual(result.length, 0, "Children should be empty");
   });
 
@@ -172,6 +181,7 @@ describe("kdbTreeProvider", () => {
     retrieveInsightsConnQEEnabledStub.returned("Enabled");
     const kdbProvider = new KdbTreeProvider(servers, insights);
     const result = await kdbProvider.getChildren();
+
     assert.strictEqual(result.length, 2, "Children count should be 2");
   });
 
@@ -190,9 +200,11 @@ describe("kdbTreeProvider", () => {
       },
       vscode.TreeItemCollapsibleState.None,
     );
+
     kdbNode.contextValue = "testServerAlias";
     kdbProvider.getChildren(kdbNode);
     const result = await kdbProvider.getChildren(kdbNode);
+
     assert.notStrictEqual(result, undefined);
   });
 
@@ -211,8 +223,10 @@ describe("kdbTreeProvider", () => {
       },
       vscode.TreeItemCollapsibleState.None,
     );
+
     kdbProvider.getChildren(kdbNode);
     const result = await kdbProvider.getChildren(kdbNode);
+
     assert.notStrictEqual(result, undefined);
   });
 
@@ -231,9 +245,11 @@ describe("kdbTreeProvider", () => {
       },
       vscode.TreeItemCollapsibleState.None,
     );
+
     kdbNode.contextValue = "ns";
     kdbProvider.getChildren(kdbNode);
     const result = await kdbProvider.getChildren(kdbNode);
+
     assert.notStrictEqual(result, undefined);
   });
 
@@ -251,6 +267,7 @@ describe("kdbTreeProvider", () => {
       },
       vscode.TreeItemCollapsibleState.None,
     );
+
     assert.strictEqual(
       kdbNode.label,
       "[kdbservername:5001]",
@@ -272,6 +289,7 @@ describe("kdbTreeProvider", () => {
       },
       vscode.TreeItemCollapsibleState.None,
     );
+
     assert.strictEqual(
       kdbNode.label,
       "[kdbservername:5001]",
@@ -293,6 +311,7 @@ describe("kdbTreeProvider", () => {
       },
       vscode.TreeItemCollapsibleState.None,
     );
+
     assert.strictEqual(
       kdbNode.label,
       "kdbserveralias [kdbservername:5001]",
@@ -483,6 +502,7 @@ describe("kdbTreeProvider", () => {
       "nsfullname",
       "connLabel",
     );
+
     assert.strictEqual(
       qNsNode.label,
       "nsnode1",
@@ -499,6 +519,7 @@ describe("kdbTreeProvider", () => {
       vscode.TreeItemCollapsibleState.None,
       "connLabel",
     );
+
     assert.strictEqual(
       qCategoryNode.label,
       "categorynode1",
@@ -515,6 +536,7 @@ describe("kdbTreeProvider", () => {
       "",
       "connLabel",
     );
+
     assert.strictEqual(
       qServerNode.label,
       "servernode1",
@@ -527,6 +549,7 @@ describe("kdbTreeProvider", () => {
       name: "White",
       color: { name: "White", colorHex: "#CCCCCC" },
     });
+
     assert.strictEqual(
       labelNode.label,
       "White",
@@ -593,6 +616,7 @@ describe("kdbTreeProvider", () => {
 
   describe("getChildren", () => {
     const kdbProvider = new KdbTreeProvider(servers, insights);
+
     insights = {
       testInsight: {
         alias: "testInsightsAlias",
@@ -617,6 +641,7 @@ describe("kdbTreeProvider", () => {
       ext.kdbinsightsNodes.push("testInsight");
       kdbProvider.getChildren(insightNode);
       const result = await kdbProvider.getChildren(insightNode);
+
       assert.notStrictEqual(result, undefined);
     });
 
@@ -633,9 +658,11 @@ describe("kdbTreeProvider", () => {
         insightNode.label,
         insightNode,
       );
+
       sinon.stub(connMng, "retrieveConnectedConnection").returns(insightsConn);
       insightsConn.meta = dummyMeta;
       const result = await kdbProvider.getChildren(metaNode);
+
       assert.notStrictEqual(result, undefined);
     });
 
@@ -649,11 +676,13 @@ describe("kdbTreeProvider", () => {
           connections: ["testServerAlias", "testInsightsAlias"],
         },
       ];
+
       sinon.stub(vscode.workspace, "getConfiguration").value(() => ({
         get: (v: string) => (v === "kdb.connectionLabels" ? labels : conns),
       }));
       const provider = new KdbTreeProvider(servers, insights);
       const result = await provider.getChildren();
+
       assert.strictEqual(result.length, 1);
     });
   });
@@ -726,6 +755,7 @@ describe("kdbTreeProvider", () => {
           vscode.TreeItemCollapsibleState.None,
           "testLabel",
         );
+
         connMngStub.returns(undefined);
 
         const result = (provider as any).validateAndGetConnection(serverType);
@@ -742,6 +772,7 @@ describe("kdbTreeProvider", () => {
           vscode.TreeItemCollapsibleState.None,
           "testLabel",
         );
+
         connMngStub.returns(mockInsightsConn);
 
         const result = (provider as any).validateAndGetConnection(serverType);
@@ -758,6 +789,7 @@ describe("kdbTreeProvider", () => {
           vscode.TreeItemCollapsibleState.None,
           "testLabel",
         );
+
         connMngStub.returns(mockLocalConn);
 
         const result = (provider as any).validateAndGetConnection(serverType);
@@ -774,6 +806,7 @@ describe("kdbTreeProvider", () => {
           vscode.TreeItemCollapsibleState.None,
           "testConnLabel",
         );
+
         connMngStub.returns(mockLocalConn);
 
         (provider as any).validateAndGetConnection(serverType);
@@ -783,6 +816,7 @@ describe("kdbTreeProvider", () => {
 
       it("should handle non-QCategoryNode TreeItem", () => {
         const serverType = { contextValue: "test" } as any;
+
         connMngStub.returns(mockLocalConn);
 
         (provider as any).validateAndGetConnection(serverType);
@@ -807,6 +841,7 @@ describe("kdbTreeProvider", () => {
           vscode.TreeItemCollapsibleState.None,
           "",
         );
+
         connMngStub.returns(undefined);
 
         const result = await (provider as any).getServerObjects(serverType);
@@ -823,6 +858,7 @@ describe("kdbTreeProvider", () => {
           vscode.TreeItemCollapsibleState.None,
           "testLabel",
         );
+
         connMngStub.returns(mockLocalConn);
 
         const loadObjectsByCategoryStub = sinon
@@ -974,7 +1010,6 @@ describe("kdbTreeProvider", () => {
           vscode.TreeItemCollapsibleState.None,
           "testLabel",
         );
-
         const result = await (provider as any).loadObjectsByCategory(
           serverType,
           mockLocalConn,
@@ -992,7 +1027,6 @@ describe("kdbTreeProvider", () => {
           createMockServerObject(1, "dict1", 99),
           createMockServerObject(2, "dict2", 99),
         ];
-
         const kdbTreeServiceStub = sinon
           .stub(KdbTreeService, "loadDictionaries")
           .resolves(mockDicts);
@@ -1024,7 +1058,6 @@ describe("kdbTreeProvider", () => {
           createMockServerObject(1, "func1", 100),
           createMockServerObject(2, "func2", 100),
         ];
-
         const kdbTreeServiceStub = sinon
           .stub(KdbTreeService, "loadFunctions")
           .resolves(mockFuncs);
@@ -1118,7 +1151,6 @@ describe("kdbTreeProvider", () => {
         const kdbTreeServiceStub = sinon
           .stub(KdbTreeService, "loadViews")
           .resolves(mockViews);
-
         const result = await (provider as any).loadViews(
           mockLocalConn,
           ".",
@@ -1134,6 +1166,7 @@ describe("kdbTreeProvider", () => {
 
       it("should load views and create QServerNodes with dot prefix for non-root namespace", async () => {
         const mockViews = ["view1"];
+
         sinon.stub(KdbTreeService, "loadViews").resolves(mockViews);
 
         const result = await (provider as any).loadViews(
@@ -1149,7 +1182,6 @@ describe("kdbTreeProvider", () => {
     describe("createQServerNodes", () => {
       it("should create QServerNodes correctly for root namespace", () => {
         const objects = [{ name: "test1" }, { name: "test2" }];
-
         const result = (provider as any).createQServerNodes(
           objects,
           ".",
@@ -1166,7 +1198,6 @@ describe("kdbTreeProvider", () => {
 
       it("should create QServerNodes with namespace prefix for non-root namespace", () => {
         const objects = [{ name: "test1" }];
-
         const result = (provider as any).createQServerNodes(
           objects,
           "myns",
@@ -1190,7 +1221,6 @@ describe("kdbTreeProvider", () => {
 
       it("should set correct TreeItemCollapsibleState", () => {
         const objects = [{ name: "test1" }];
-
         const result = (provider as any).createQServerNodes(
           objects,
           ".",

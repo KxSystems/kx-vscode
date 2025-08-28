@@ -67,7 +67,6 @@ const includes = [
     include: "#tokens",
   },
 ];
-
 const quke = {
   patterns: [
     {
@@ -97,7 +96,6 @@ const quke = {
     },
   ],
 };
-
 const repository = {
   quke,
   ranges: {
@@ -242,7 +240,6 @@ const repository = {
     ],
   },
 };
-
 const language = {
   description:
     "TextMate grammar for q, quke and qdoc. This file is auto generated DO NOT EDIT",
@@ -262,6 +259,7 @@ function _(token: TokenType | RegExp) {
   const index = pattern.lastIndexOf("/");
   const options = pattern.slice(index + 1);
   const result = pattern.slice(1, index);
+
   return options ? `(?${options})${result}` : result;
 }
 
@@ -271,6 +269,7 @@ function __(token: TokenType | RegExp) {
 
 export function generateTextMateGrammar() {
   const grammar = JSON.stringify(language, null, 2);
+
   writeFileSync(
     resolve(__dirname, "..", "..", "..", "..", "syntaxes", "q.tmLanguage.json"),
     grammar,

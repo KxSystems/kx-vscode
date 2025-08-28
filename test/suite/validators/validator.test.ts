@@ -19,6 +19,7 @@ describe("Validation functions", () => {
   it("Should return validated empty object", () => {
     const vTest = new Validator("");
     const result = vTest.isNotEmpty();
+
     assert.strictEqual(
       result.getErrors(),
       "Value cannot be empty.",
@@ -29,6 +30,7 @@ describe("Validation functions", () => {
   it("Should return validated success for special char", () => {
     const vTest = new Validator("t*st");
     const result = vTest.hasSpecialChar(new RegExp("\\*"));
+
     assert.strictEqual(
       result.getErrors(),
       null,
@@ -39,6 +41,7 @@ describe("Validation functions", () => {
   it("Should return validated fail for special char", () => {
     const vTest = new Validator("t*st");
     const result = vTest.hasSpecialChar(new RegExp("\\!"));
+
     assert.strictEqual(
       result.getErrors(),
       "Password must have 1 special character.",
@@ -52,6 +55,7 @@ describe("Validation functions", () => {
       new RegExp("\\!"),
       "Forbidden char found",
     );
+
     assert.strictEqual(
       result.getErrors(),
       null,
@@ -65,6 +69,7 @@ describe("Validation functions", () => {
       new RegExp("\\*"),
       "Forbidden char found",
     );
+
     assert.strictEqual(
       result.getErrors(),
       "Forbidden char found",
@@ -75,6 +80,7 @@ describe("Validation functions", () => {
   it("Should return validated success for length", () => {
     const vTest = new Validator("test");
     const result = vTest.inLengthRange(1, 4);
+
     assert.strictEqual(
       result.getErrors(),
       null,
@@ -85,6 +91,7 @@ describe("Validation functions", () => {
   it("Should return validated failed for length", () => {
     const vTest = new Validator("test");
     const result = vTest.inLengthRange(1, 3);
+
     assert.strictEqual(
       result.getErrors(),
       "Length must be between 1 and 3 characters",
@@ -95,6 +102,7 @@ describe("Validation functions", () => {
   it("Should return validated success for lower case", () => {
     const vTest = new Validator("test");
     const result = vTest.hasLowerCase();
+
     assert.strictEqual(
       result.getErrors(),
       null,
@@ -105,6 +113,7 @@ describe("Validation functions", () => {
   it("Should return validated fail for lower case", () => {
     const vTest = new Validator("TEST");
     const result = vTest.hasLowerCase();
+
     assert.strictEqual(
       result.getErrors(),
       "Password should have at least one lowercase letter from a to z.",
@@ -115,6 +124,7 @@ describe("Validation functions", () => {
   it("Should return validated success for upper case", () => {
     const vTest = new Validator("Test");
     const result = vTest.hasUpperCase();
+
     assert.strictEqual(
       result.getErrors(),
       null,
@@ -125,6 +135,7 @@ describe("Validation functions", () => {
   it("Should return validated fail for upper case", () => {
     const vTest = new Validator("test");
     const result = vTest.hasUpperCase();
+
     assert.strictEqual(
       result.getErrors(),
       "Password should have at least one uppercase letter from A to Z.",
@@ -135,6 +146,7 @@ describe("Validation functions", () => {
   it("Should return null for valid non-empty string", () => {
     const vTest = new Validator("validString");
     const result = vTest.isNotEmpty();
+
     assert.strictEqual(
       result.getErrors(),
       null,
@@ -145,6 +157,7 @@ describe("Validation functions", () => {
   it("Should return error for whitespace only string", () => {
     const vTest = new Validator("   ");
     const result = vTest.isNotEmpty();
+
     assert.strictEqual(
       result.getErrors(),
       "Value cannot be empty.",
@@ -155,6 +168,7 @@ describe("Validation functions", () => {
   it("Should return null for minimum length boundary", () => {
     const vTest = new Validator("a");
     const result = vTest.inLengthRange(1, 5);
+
     assert.strictEqual(
       result.getErrors(),
       null,
@@ -165,6 +179,7 @@ describe("Validation functions", () => {
   it("Should return null for maximum length boundary", () => {
     const vTest = new Validator("abcde");
     const result = vTest.inLengthRange(1, 5);
+
     assert.strictEqual(
       result.getErrors(),
       null,
@@ -175,6 +190,7 @@ describe("Validation functions", () => {
   it("Should return error for string below minimum length", () => {
     const vTest = new Validator("");
     const result = vTest.inLengthRange(1, 5);
+
     assert.strictEqual(
       result.getErrors(),
       "Length must be between 1 and 5 characters",
@@ -185,6 +201,7 @@ describe("Validation functions", () => {
   it("Should return error for string above maximum length", () => {
     const vTest = new Validator("abcdef");
     const result = vTest.inLengthRange(1, 5);
+
     assert.strictEqual(
       result.getErrors(),
       "Length must be between 1 and 5 characters",
@@ -200,6 +217,7 @@ describe("Validation functions", () => {
       .hasUpperCase()
       .hasSpecialChar(/[!@#$%^&*]/)
       .inLengthRange(8, 20);
+
     assert.strictEqual(
       result.getErrors(),
       null,
@@ -214,6 +232,7 @@ describe("Validation functions", () => {
       .hasSpecialChar(/[!@#$%^&*]/)
       .inLengthRange(8, 20);
     const errors = result.getErrors();
+
     assert.ok(
       errors?.includes(
         "Password should have at least one lowercase letter from a to z.",
@@ -227,6 +246,7 @@ describe("Validation functions", () => {
     const vTest = new Validator("");
     const result = vTest.isNotEmpty().hasLowerCase();
     const errors = result.getErrors();
+
     assert.ok(errors?.includes("\r\n"));
     assert.ok(errors?.includes("Value cannot be empty."));
     assert.ok(
@@ -239,6 +259,7 @@ describe("Validation functions", () => {
   it("Should handle special characters in regex patterns", () => {
     const vTest = new Validator("test@domain.com");
     const result = vTest.hasSpecialChar(/[@.]/);
+
     assert.strictEqual(
       result.getErrors(),
       null,
@@ -250,6 +271,7 @@ describe("Validation functions", () => {
     const customMessage = "Custom forbidden character error";
     const vTest = new Validator("test<script>");
     const result = vTest.hasNoForbiddenChar(/<|>/, customMessage);
+
     assert.strictEqual(
       result.getErrors(),
       customMessage,
@@ -260,6 +282,7 @@ describe("Validation functions", () => {
   it("Should validate with zero minimum length", () => {
     const vTest = new Validator("");
     const result = vTest.inLengthRange(0, 5);
+
     assert.strictEqual(
       result.getErrors(),
       null,
@@ -270,6 +293,7 @@ describe("Validation functions", () => {
   it("Should handle edge case with equal min and max length", () => {
     const vTest = new Validator("test");
     const result = vTest.inLengthRange(4, 4);
+
     assert.strictEqual(
       result.getErrors(),
       null,
@@ -280,6 +304,7 @@ describe("Validation functions", () => {
   it("Should fail when length does not match exact requirement", () => {
     const vTest = new Validator("test");
     const result = vTest.inLengthRange(5, 5);
+
     assert.strictEqual(
       result.getErrors(),
       "Length must be between 5 and 5 characters",

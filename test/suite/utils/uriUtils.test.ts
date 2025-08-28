@@ -30,6 +30,7 @@ describe("uriUtils", () => {
       const extensionUri = vscode.Uri.parse("file:///path/to/extension");
       const pathList = ["path", "to", "file.txt"];
       const uri = uriUtils.getUri(webview, extensionUri, pathList);
+
       assert.ok(uri instanceof vscode.Uri);
     });
 
@@ -44,6 +45,7 @@ describe("uriUtils", () => {
       const extensionUri = vscode.Uri.parse("file:///path/to/extension");
       const pathList = ["path", "to", "file.txt"];
       const uri = uriUtils.getUri(webview, extensionUri, pathList);
+
       assert.strictEqual(uri.path, "/path/to/extension/path/to/file.txt");
     });
   });
@@ -61,6 +63,7 @@ describe("uriUtils", () => {
 
     it("should call env.openExternal for a valid url", async () => {
       const validUrl = "https://example.com";
+
       await uriUtils.openUrl(validUrl);
       assert.ok(envOpenExternalStub.calledOnceWith(vscode.Uri.parse(validUrl)));
     });

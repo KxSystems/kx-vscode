@@ -34,7 +34,6 @@ import { errorMessage } from "../utils/shared";
 import { pickWorkspace } from "../utils/workspace";
 
 const logger = "replConnection";
-
 const ANSI = {
   EMPTY: "",
   SPACE: " ",
@@ -50,7 +49,6 @@ const ANSI = {
   FAINTON: "\x1b[2m",
   FAINTOFF: "\x1b[22m",
 };
-
 const KEY = {
   CR: "\r",
   CTRLC: "\x03",
@@ -73,17 +71,14 @@ const KEY = {
   SHIFTLEFT: "\x1b[1;2D",
   SHIFTRIGHT: "\x1b[1;2C",
 };
-
 const CTX = {
   Q: "q",
   K: "k",
 };
-
 const NS = {
   Q: ',string system"d"',
   K: ',$:."\\\\d"',
 };
-
 const CONF = {
   DEFAULT: "default",
   TITLE: `KX ${ext.REPL}`,
@@ -128,6 +123,7 @@ class History {
       return;
     }
     const item = new HistoryItem(input);
+
     if (this.head) {
       item.next = this.head;
       this.head.prev = item;
@@ -254,14 +250,18 @@ export class ReplConnection {
   private createEnvironment() {
     if (!this.workspace || !this.venv) return;
     const env = this.venv.environment;
+
     if (!env || env.type !== "VirtualEnvironment") return;
     const target = this.venv.path;
+
     if (notEnvironment(target)) return;
     const name = env.name;
+
     if (!name) return;
 
     const bin = path.dirname(target);
     const dir = path.basename(path.dirname(bin));
+
     if (name !== dir) return;
 
     this.activate = this.win32
@@ -285,6 +285,7 @@ export class ReplConnection {
 
   private connect() {
     let handler = this.handleError.bind(this);
+
     this.process.on("error", handler);
     this.process.stdin.on("error", handler);
     this.process.stdout.on("error", handler);
@@ -340,6 +341,7 @@ export class ReplConnection {
 
   private runQuery(data: string) {
     const runner = Runner.create((_, token) => this.executeQuery(data, token));
+
     runner.cancellable = Cancellable.EXECUTOR;
     runner.title = "Executing query on REPL.";
     runner.execute();
@@ -347,7 +349,9 @@ export class ReplConnection {
 
   private getRows() {
     const LINES = process.env.LINES ?? this.rows.toString();
+
     let rows = parseInt(LINES.replace(/\D+/gs, "0") || "0");
+
     if (rows < 25) rows = 25;
     if (rows > 500) rows = 500;
     return rows;
@@ -355,7 +359,9 @@ export class ReplConnection {
 
   private getColumns() {
     const COLUMNS = process.env.COLUMNS ?? this.columns.toString();
+
     let columns = parseInt(COLUMNS.replace(/\D+/gs, "") || "0");
+
     if (columns < 50) columns = 50;
     if (columns > 320) columns = 320;
     return columns;
@@ -374,7 +380,6 @@ export class ReplConnection {
       this.prefix.length +
       CONF.PROMPT.length +
       (index ?? this.visibleInputIndex);
-
     const lines = Math.ceil(length / this.columns);
     const column = length % this.columns;
 
@@ -392,6 +397,7 @@ export class ReplConnection {
   private updateMaxInputIndex() {
     const { length } = this.promptProperties(this.context, 0);
     const max = this.columns * this.rows;
+
     this.maxInputIndex = (max > CONF.MAX_INPUT ? CONF.MAX_INPUT : max) - length;
     this.updateInputIndex();
   }
@@ -431,6 +437,7 @@ export class ReplConnection {
 
   private recall(history?: HistoryItem) {
     const input = history?.input ?? ANSI.EMPTY;
+
     this.input = [...input];
     this.inputIndex = 0;
     this.updateInputIndex(input);
@@ -469,10 +476,13 @@ export class ReplConnection {
 
   private push(data: any, buffer: string[]) {
     const c = this.executing;
+
     if (!c) return;
     const decoded = this.decoder.decode(data);
+
     this.token.lastIndex = 0;
     const output = this.normalize(decoded.replace(this.token, ANSI.EMPTY));
+
     if (output) {
       buffer.push(output);
       this.sendToTerminal(output);
@@ -484,11 +494,13 @@ export class ReplConnection {
 
   private nextToken(token: RegExpExecArray) {
     const c = this.executing;
+
     if (!c) return;
     c.done.push(token);
     if (c.done.length % 2 === 0) {
       this.namespace = token[2] ? `.${token[2]}` : ANSI.EMPTY;
       const output = c.line.join(ANSI.EMPTY);
+
       c.buffer.push(output);
       if (c.cancelled || c.index >= c.lines.length - 1) {
         this.resolve();
@@ -502,6 +514,7 @@ export class ReplConnection {
 
   private resolve() {
     let c = this.executing;
+
     if (!c) return;
     this.executing = undefined;
     c.resolve({ cancelled: c.cancelled, output: c.buffer.join(ANSI.EMPTY) });
@@ -513,8 +526,10 @@ export class ReplConnection {
 
   private handleOutput(data: any) {
     const c = this.executing;
+
     if (c) {
       const token = this.push(data, c.line);
+
       if (token) this.nextToken(token);
     } else {
       this.sendToTerminal(this.normalize(this.decoder.decode(data)));
@@ -549,6 +564,7 @@ export class ReplConnection {
 
   private close() {
     const key = this.workspace?.uri.toString() ?? CONF.DEFAULT;
+
     if (ReplConnection.repls.get(key) === this) {
       ReplConnection.repls.delete(key);
     }
@@ -679,6 +695,7 @@ export class ReplConnection {
         }
         if (data.length < CONF.MAX_INPUT) {
           const target = data.replace(/[^\P{Cc}]/gsu, ANSI.EMPTY);
+
           this.input.splice(this.inputIndex, 0, ...target);
           this.updateInputIndex(target);
           this.showPrompt();
@@ -702,7 +719,6 @@ export class ReplConnection {
   executeQuery(text: string, token: vscode.CancellationToken) {
     return new Promise<Result>((resolve, reject) => {
       const source = new vscode.CancellationTokenSource();
-
       const execution = {
         source,
         token,
@@ -740,15 +756,17 @@ export class ReplConnection {
     const workspace =
       (resource && vscode.workspace.getWorkspaceFolder(resource)) ||
       (await pickWorkspace());
-
     const key = workspace?.uri.toString() ?? CONF.DEFAULT;
 
     let repl = this.repls.get(key);
+
     if (!repl || repl.exited) {
       let venv: ResolvedEnvironment | undefined;
+
       try {
         const pythonApi = await PythonExtension.api();
         const envp = pythonApi.environments.getActiveEnvironmentPath(workspace);
+
         venv = await pythonApi.environments.resolveEnvironment(envp);
       } catch (error) {
         notify(errorMessage(error), MessageKind.DEBUG, { logger });

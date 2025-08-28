@@ -47,6 +47,7 @@ export class KdbDataSourceProvider implements TreeDataProvider<TreeItem> {
   constructor() {
     this.refresh();
     const datasourceFolder = createKdbDataSourcesFolder();
+
     this.watcher = workspace.createFileSystemWatcher(
       new RelativePattern(datasourceFolder, ext.kdbDataSourceFileGlob),
     );
@@ -82,20 +83,24 @@ export class KdbDataSourceProvider implements TreeDataProvider<TreeItem> {
 
   private getDsFiles(): Promise<KdbDataSourceTreeItem[]> {
     const kdbDataSourcesFolderPath = createKdbDataSourcesFolder();
+
     if (kdbDataSourcesFolderPath) {
       const files = fs.readdirSync(kdbDataSourcesFolderPath);
       const dsFiles = files.filter((file) => {
         const isFromInsightsNode = checkFileFromInsightsNode(
           path.join(kdbDataSourcesFolderPath, file),
         );
+
         return (
           path.extname(file) === ext.kdbDataSourceFileExtension &&
           isFromInsightsNode
         );
       });
+
       return Promise.resolve(
         dsFiles.map((file) => {
           const newLabel = file.replace(ext.kdbDataSourceFileExtension, "");
+
           return new KdbDataSourceTreeItem(
             newLabel,
             TreeItemCollapsibleState.None,

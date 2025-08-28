@@ -23,7 +23,10 @@ import {
 } from "../../../src/ipc/cClasses";
 import * as QTable from "../../../src/ipc/QTable";
 import { ServerType } from "../../../src/models/connectionsModels";
-import { DataSourceTypes } from "../../../src/models/dataSource";
+import {
+  DataSourceFiles,
+  DataSourceTypes,
+} from "../../../src/models/dataSource";
 import * as queryUtils from "../../../src/utils/queryUtils";
 
 describe("queryUtils", () => {
@@ -39,6 +42,7 @@ describe("queryUtils", () => {
 
   describe("getValueFromArray", () => {
     let inputSample: DCDS = undefined;
+
     beforeEach(() => {
       inputSample = {
         class: "203",
@@ -106,6 +110,7 @@ describe("queryUtils", () => {
 
   describe("handleScratchpadTableRes", () => {
     let inputSample: DCDS = undefined;
+
     beforeEach(() => {
       inputSample = {
         class: "203",
@@ -303,6 +308,7 @@ describe("queryUtils", () => {
 
   describe("handleWSError", () => {
     let sandbox: sinon.SinonSandbox;
+
     const abTest = new Uint8Array([
       1, 2, 0, 0, 114, 1, 0, 0, 0, 0, 2, 0, 0, 0, 99, 11, 0, 17, 0, 0, 0, 0,
       114, 99, 118, 84, 83, 0, 99, 111, 114, 114, 0, 112, 114, 111, 116, 111,
@@ -446,6 +452,7 @@ describe("queryUtils", () => {
 
     it("should remove block comment", () => {
       let res = queryUtils.normalizeQSQLQuery("/\nBlock Comment\n\\\na:1");
+
       assert.strictEqual(res, "a:1");
       res = queryUtils.normalizeQSQLQuery("/\r\nBlock Comment\r\n\\\r\na:1");
       assert.strictEqual(res, "a:1");
@@ -453,6 +460,7 @@ describe("queryUtils", () => {
 
     it("should remove single line comment", () => {
       let res = queryUtils.normalizeQSQLQuery("/ single line comment\na:1");
+
       assert.strictEqual(res, "a:1");
       res = queryUtils.normalizeQSQLQuery("/ single line comment\r\na:1");
       assert.strictEqual(res, "a:1");
@@ -472,6 +480,7 @@ describe("queryUtils", () => {
 
     it("should replace EOS with semicolon", () => {
       let res = queryUtils.normalizeQSQLQuery("a:1\na");
+
       assert.strictEqual(res, "a:1;a");
       res = queryUtils.normalizeQSQLQuery("a:1\r\na");
       assert.strictEqual(res, "a:1;a");
@@ -479,6 +488,7 @@ describe("queryUtils", () => {
 
     it("should escpae new lines in strings", () => {
       let res = queryUtils.normalizeQSQLQuery('a:"a\n \nb"');
+
       assert.strictEqual(res, 'a:"a\\n \\nb"');
       res = queryUtils.normalizeQSQLQuery('a:"a\r\n \r\nb"');
       assert.strictEqual(res, 'a:"a\\n \\nb"');
@@ -630,6 +640,332 @@ describe("queryUtils", () => {
       ext.scratchpadStarted.add("test");
       queryUtils.resetScratchpadStarted("test");
       assert.strictEqual(ext.scratchpadStarted.has("test"), false);
+    });
+  });
+
+  describe("getQuerySample", () => {
+    it("should return the string directly when fileContent is a string", () => {
+      const query = "SELECT * FROM table";
+      const result = queryUtils.getQuerySample(query);
+
+      assert.strictEqual(result, query);
+    });
+
+    it("should return API description for DataSourceTypes.API", () => {
+      const fileContent: DataSourceFiles = {
+        name: "test-datasource",
+        dataSource: {
+          selectedType: DataSourceTypes.API,
+          api: {
+            selectedApi: "getData",
+            table: "trades",
+            startTS: "2023-01-01",
+            endTS: "2023-01-02",
+            fill: "zero",
+            temporality: "snapshot",
+            rowCountLimit: "100000",
+            isRowLimitLast: true,
+            filter: [],
+            groupBy: [],
+            agg: [],
+            sortCols: [],
+            slice: [],
+            labels: [],
+          },
+          qsql: {
+            query: "",
+            selectedTarget: "",
+          },
+          sql: {
+            query: "",
+          },
+        },
+      };
+      const expectedResult = "GetData - table: trades";
+      const result = queryUtils.getQuerySample(
+        fileContent,
+        DataSourceTypes.API,
+      );
+
+      assert.strictEqual(result, expectedResult);
+    });
+
+    it("should return QSQL query for DataSourceTypes.QSQL", () => {
+      const qsqlQuery = "select from trades where date=2023.01.01";
+      const fileContent: DataSourceFiles = {
+        name: "test-datasource",
+        dataSource: {
+          selectedType: DataSourceTypes.QSQL,
+          api: {
+            selectedApi: "",
+            table: "",
+            startTS: "",
+            endTS: "",
+            fill: "zero",
+            temporality: "snapshot",
+            rowCountLimit: "100000",
+            isRowLimitLast: true,
+            filter: [],
+            groupBy: [],
+            agg: [],
+            sortCols: [],
+            slice: [],
+            labels: [],
+          },
+          qsql: {
+            query: qsqlQuery,
+            selectedTarget: "assembly1",
+          },
+          sql: {
+            query: "",
+          },
+        },
+      };
+      const result = queryUtils.getQuerySample(
+        fileContent,
+        DataSourceTypes.QSQL,
+      );
+
+      assert.strictEqual(result, qsqlQuery);
+    });
+
+    it("should return UDA description for DataSourceTypes.UDA", () => {
+      const udaName = "myCustomFunction";
+      const fileContent: DataSourceFiles = {
+        name: "test-datasource",
+        dataSource: {
+          selectedType: DataSourceTypes.UDA,
+          api: {
+            selectedApi: "",
+            table: "",
+            startTS: "",
+            endTS: "",
+            fill: "zero",
+            temporality: "snapshot",
+            rowCountLimit: "100000",
+            isRowLimitLast: true,
+            filter: [],
+            groupBy: [],
+            agg: [],
+            sortCols: [],
+            slice: [],
+            labels: [],
+          },
+          qsql: {
+            query: "",
+            selectedTarget: "",
+          },
+          sql: {
+            query: "",
+          },
+          uda: {
+            name: udaName,
+            description: "",
+            params: [],
+          },
+        },
+      };
+      const expectedResult = `Executed UDA: ${udaName}`;
+      const result = queryUtils.getQuerySample(
+        fileContent,
+        DataSourceTypes.UDA,
+      );
+
+      assert.strictEqual(result, expectedResult);
+    });
+
+    it("should return SQL query for DataSourceTypes.SQL", () => {
+      const sqlQuery = "SELECT * FROM trades WHERE date = '2023-01-01'";
+      const fileContent: DataSourceFiles = {
+        name: "test-datasource",
+        dataSource: {
+          selectedType: DataSourceTypes.SQL,
+          api: {
+            selectedApi: "",
+            table: "",
+            startTS: "",
+            endTS: "",
+            fill: "zero",
+            temporality: "snapshot",
+            rowCountLimit: "100000",
+            isRowLimitLast: true,
+            filter: [],
+            groupBy: [],
+            agg: [],
+            sortCols: [],
+            slice: [],
+            labels: [],
+          },
+          qsql: {
+            query: "",
+            selectedTarget: "",
+          },
+          sql: {
+            query: sqlQuery,
+          },
+        },
+      };
+      const result = queryUtils.getQuerySample(
+        fileContent,
+        DataSourceTypes.SQL,
+      );
+
+      assert.strictEqual(result, sqlQuery);
+    });
+
+    it("should return SQL query as default when selectedType is not provided", () => {
+      const sqlQuery = "SELECT COUNT(*) FROM users";
+      const fileContent: DataSourceFiles = {
+        name: "test-datasource",
+        dataSource: {
+          selectedType: DataSourceTypes.SQL,
+          api: {
+            selectedApi: "",
+            table: "",
+            startTS: "",
+            endTS: "",
+            fill: "zero",
+            temporality: "snapshot",
+            rowCountLimit: "100000",
+            isRowLimitLast: true,
+            filter: [],
+            groupBy: [],
+            agg: [],
+            sortCols: [],
+            slice: [],
+            labels: [],
+          },
+          qsql: {
+            query: "",
+            selectedTarget: "",
+          },
+          sql: {
+            query: sqlQuery,
+          },
+        },
+      };
+      const result = queryUtils.getQuerySample(fileContent);
+
+      assert.strictEqual(result, sqlQuery);
+    });
+
+    it("should return SQL query as default for unknown selectedType", () => {
+      const sqlQuery = "SELECT * FROM orders";
+      const fileContent: DataSourceFiles = {
+        name: "test-datasource",
+        dataSource: {
+          selectedType: DataSourceTypes.SQL,
+          api: {
+            selectedApi: "",
+            table: "",
+            startTS: "",
+            endTS: "",
+            fill: "zero",
+            temporality: "snapshot",
+            rowCountLimit: "100000",
+            isRowLimitLast: true,
+            filter: [],
+            groupBy: [],
+            agg: [],
+            sortCols: [],
+            slice: [],
+            labels: [],
+          },
+          qsql: {
+            query: "",
+            selectedTarget: "",
+          },
+          sql: {
+            query: sqlQuery,
+          },
+        },
+      };
+      const unknownType = "UNKNOWN_TYPE" as DataSourceTypes;
+      const result = queryUtils.getQuerySample(fileContent, unknownType);
+
+      assert.strictEqual(result, sqlQuery);
+    });
+
+    it("should handle undefined UDA name gracefully", () => {
+      const fileContent: DataSourceFiles = {
+        name: "test-datasource",
+        dataSource: {
+          selectedType: DataSourceTypes.UDA,
+          api: {
+            selectedApi: "",
+            table: "",
+            startTS: "",
+            endTS: "",
+            fill: "zero",
+            temporality: "snapshot",
+            rowCountLimit: "100000",
+            isRowLimitLast: true,
+            filter: [],
+            groupBy: [],
+            agg: [],
+            sortCols: [],
+            slice: [],
+            labels: [],
+          },
+          qsql: {
+            query: "",
+            selectedTarget: "",
+          },
+          sql: {
+            query: "",
+          },
+          uda: {
+            name: undefined,
+            description: "",
+            params: [],
+          },
+        },
+      };
+      const expectedResult = "Executed UDA: undefined";
+      const result = queryUtils.getQuerySample(
+        fileContent,
+        DataSourceTypes.UDA,
+      );
+
+      assert.strictEqual(result, expectedResult);
+    });
+
+    it("should handle empty strings correctly", () => {
+      const fileContent: DataSourceFiles = {
+        name: "test-datasource",
+        dataSource: {
+          selectedType: DataSourceTypes.QSQL,
+          api: {
+            selectedApi: "",
+            table: "",
+            startTS: "",
+            endTS: "",
+            fill: "zero",
+            temporality: "snapshot",
+            rowCountLimit: "100000",
+            isRowLimitLast: true,
+            filter: [],
+            groupBy: [],
+            agg: [],
+            sortCols: [],
+            slice: [],
+            labels: [],
+          },
+          qsql: {
+            query: "",
+            selectedTarget: "",
+          },
+          sql: {
+            query: "",
+          },
+        },
+      };
+      const result = queryUtils.getQuerySample(
+        fileContent,
+        DataSourceTypes.QSQL,
+      );
+
+      assert.strictEqual(result, "");
     });
   });
 });

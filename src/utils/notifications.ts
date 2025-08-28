@@ -68,6 +68,7 @@ export class Runner<T> {
                         reject(new vscode.CancellationError());
                       }
                     };
+
                     token.onCancellationRequested(updateCancelled);
                     updateCancelled();
                   }),
@@ -127,6 +128,7 @@ export function notify<T extends string>(
   if (options.logger) {
     const params = getParams(options.params);
     const log = `[${options.logger}] ${message} ${params}`.trim();
+
     kdbOutputLog(log, kind, true);
   }
 

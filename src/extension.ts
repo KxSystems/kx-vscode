@@ -24,6 +24,11 @@ import {
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { connectClientCommands } from "./commands/clientCommand";
 import {
+  executeActiveEditorQuery,
+  executeReRunQuery,
+  executeSelectViewQuery,
+} from "./commands/executionCommand";
+import {
   installTools,
   startLocalProcess,
   stopLocalProcess,
@@ -42,13 +47,11 @@ import {
   editInsightsConnection,
   editKdbConnection,
   enableTLS,
-  executeQuery,
   exportConnections,
   importConnections,
   openMeta,
   refreshGetMeta,
   removeConnection,
-  rerunQuery,
   resetScratchpad,
 } from "./commands/serverCommand";
 import { showInstallationDetails } from "./commands/walkthroughCommand";
@@ -60,7 +63,6 @@ import {
   pickConnection,
   pickTarget,
   resetScratchpadFromEditor,
-  runActiveEditor,
   setServerForUri,
   startRepl,
 } from "./commands/workspaceCommand";
@@ -331,6 +333,7 @@ export async function activate(context: vscode.ExtensionContext) {
   connectClientCommands(context, client);
 
   const yamlExtension = vscode.extensions.getExtension("redhat.vscode-yaml");
+
   if (yamlExtension) {
     const actualSchema = await vscode.workspace
       .getConfiguration()
@@ -347,6 +350,7 @@ export async function activate(context: vscode.ExtensionContext) {
       "https://code.kx.com/insights/enterprise/packaging/schemas/shard.json":
         "*shard.yaml",
     };
+
     Object.assign(actualSchema ? actualSchema : {}, schemaJSON);
     await yamlExtension.activate().then(() => {
       vscode.workspace
@@ -359,8 +363,10 @@ export async function activate(context: vscode.ExtensionContext) {
     });
   }
   const authExtension = vscode.extensions.getExtension("KX.kdb-auth");
+
   if (authExtension) {
     const api = await authExtension.activate();
+
     if ("auth" in api) {
       notify("Custom authentication activated.", MessageKind.DEBUG, {
         logger,
@@ -477,6 +483,7 @@ function registerDatasourceCommands(): CommandRegistration[] {
             "datasource",
             ".kdb.json",
           );
+
           await vscode.workspace.openTextDocument(uri);
           await setUriContent(
             uri,
@@ -505,13 +512,14 @@ function registerScratchpadCommands(): CommandRegistration[] {
     {
       command: "kdb.scratchpad.run",
       callback: async () => {
-        await runActiveEditor();
+        await executeActiveEditorQuery();
       },
     },
     {
       command: "kdb.scratchpad.reset",
       callback: async (viewItem?: InsightsNode) => {
         const connLabel = viewItem ? viewItem.label : undefined;
+
         await resetScratchpad(connLabel);
       },
     },
@@ -530,6 +538,7 @@ function registerScratchpadCommands(): CommandRegistration[] {
             "workbook",
             ".kdb.q",
           );
+
           await vscode.workspace.openTextDocument(uri);
           await vscode.window.showTextDocument(uri);
           await vscode.commands.executeCommand(
@@ -543,13 +552,13 @@ function registerScratchpadCommands(): CommandRegistration[] {
     {
       command: "kdb.scratchpad.python.run",
       callback: async () => {
-        await runActiveEditor(ExecutionTypes.PythonQuerySelection);
+        await executeActiveEditorQuery(ExecutionTypes.PythonQuerySelection);
       },
     },
     {
       command: "kdb.scratchpad.python.run.file",
       callback: async () => {
-        await runActiveEditor(ExecutionTypes.PythonQueryFile);
+        await executeActiveEditorQuery(ExecutionTypes.PythonQueryFile);
       },
     },
     {
@@ -561,6 +570,7 @@ function registerScratchpadCommands(): CommandRegistration[] {
             "workbook",
             ".kdb.py",
           );
+
           await vscode.workspace.openTextDocument(uri);
           await vscode.window.showTextDocument(uri);
           await vscode.commands.executeCommand(
@@ -595,7 +605,7 @@ function registerQueryHistoryCommands(): CommandRegistration[] {
     {
       command: "kdb.queryHistory.rerun",
       callback: async (viewItem: QueryHistoryTreeItem) => {
-        rerunQuery(viewItem.details);
+        executeReRunQuery(viewItem.details);
       },
     },
     {
@@ -636,12 +646,14 @@ function registerConnectionsCommands(): CommandRegistration[] {
           prompt: "Username",
           title: "Add Authentication",
         });
+
         if (username) {
           const password = await vscode.window.showInputBox({
             prompt: "Password",
             title: "Add Authentication",
             password: true,
           });
+
           if (password) {
             await addAuthConnection(viewItem.children[0], username, password);
           }
@@ -671,6 +683,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
       callback: async (viewItem: InsightsNode | KdbNode | string) => {
         const connLabel =
           typeof viewItem === "string" ? viewItem : viewItem.label;
+
         await disconnect(connLabel);
       },
     },
@@ -707,23 +720,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
     {
       command: "kdb.connections.content.selectView",
       callback: async (viewItem) => {
-        const connLabel = viewItem.connLabel;
-        if (connLabel) {
-          const executorName = viewItem.coreIcon.substring(2);
-          executeQuery(
-            viewItem.label,
-            connLabel,
-            executorName,
-            "",
-            false,
-            false,
-            true,
-          );
-        } else {
-          notify("Connection label not found", MessageKind.ERROR, {
-            logger,
-          });
-        }
+        executeSelectViewQuery(viewItem);
       },
     },
     {
@@ -800,6 +797,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
           ext.serverProvider.reload();
           return refreshGetMeta();
         });
+
         runner.location = vscode.ProgressLocation.Notification;
         runner.title = "Refreshing server objects for all connections.";
         await runner.execute();
@@ -809,6 +807,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
       command: "kdb.connections.refresh.meta",
       callback: async (viewItem: InsightsNode) => {
         const runner = Runner.create(() => refreshGetMeta(viewItem.label));
+
         runner.location = vscode.ProgressLocation.Notification;
         runner.title = `Refreshing meta data for ${viewItem.label || "all connections"}.`;
         await runner.execute();
@@ -828,6 +827,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
             prompt: "Enter label name",
             value: item.label,
           });
+
           if (name) {
             renameLabel(item.label, name);
           }
@@ -846,6 +846,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
             title: "Select label color",
             placeHolder: item.source.color.name,
           });
+
           if (picked) {
             setLabelColor(item.label, picked.label);
           }
@@ -886,13 +887,13 @@ function registerExecuteCommands(): CommandRegistration[] {
     {
       command: "kdb.execute.selectedQuery",
       callback: async () => {
-        await runActiveEditor(ExecutionTypes.QuerySelection);
+        await executeActiveEditorQuery(ExecutionTypes.QuerySelection);
       },
     },
     {
       command: "kdb.execute.fileQuery",
       callback: async () => {
-        await runActiveEditor(ExecutionTypes.QueryFile);
+        await executeActiveEditorQuery(ExecutionTypes.QueryFile);
       },
     },
     {
@@ -914,6 +915,7 @@ function registerExecuteCommands(): CommandRegistration[] {
             "kdb-vscode-repl.q",
           );
           const text = ext.activeTextEditor.document.getText();
+
           try {
             await vscode.workspace.fs.writeFile(
               uri,
@@ -946,6 +948,7 @@ function registerFileCommands(): CommandRegistration[] {
             const document = await vscode.workspace.openTextDocument(
               item.resourceUri,
             );
+
             await vscode.window.showTextDocument(document);
           }
           await vscode.commands.executeCommand("revealInExplorer");
@@ -963,6 +966,7 @@ function registerFileCommands(): CommandRegistration[] {
             const document = await vscode.workspace.openTextDocument(
               item.resourceUri,
             );
+
             await vscode.window.showTextDocument(document);
           }
           await vscode.commands.executeCommand("revealInExplorer");
@@ -974,6 +978,7 @@ function registerFileCommands(): CommandRegistration[] {
       command: "kdb.file.pickConnection",
       callback: async () => {
         const editor = ext.activeTextEditor;
+
         if (editor) {
           await pickConnection(editor.document.uri);
         }
@@ -983,6 +988,7 @@ function registerFileCommands(): CommandRegistration[] {
       command: "kdb.file.pickTarget",
       callback: async (cell?: vscode.NotebookCell) => {
         const editor = ext.activeTextEditor;
+
         if (editor) {
           await pickTarget(editor.document.uri, cell);
         }
@@ -997,7 +1003,7 @@ function registerFileCommands(): CommandRegistration[] {
     {
       command: "kdb.file.populateScratchpad",
       callback: async () => {
-        await runActiveEditor(ExecutionTypes.PopulateScratchpad);
+        await executeActiveEditorQuery(ExecutionTypes.PopulateScratchpad);
       },
     },
   ];
@@ -1030,6 +1036,7 @@ function registerLSCommands(): CommandRegistration[] {
       command: "kdb.ls.q.lint",
       callback: async () => {
         const editor = ext.activeTextEditor;
+
         if (editor) {
           await lintCommand(editor.document);
         }
@@ -1057,6 +1064,7 @@ function registerNotebookCommands(): CommandRegistration[] {
             ],
           },
         );
+
         await vscode.window.showNotebookDocument(notebook);
       },
     },

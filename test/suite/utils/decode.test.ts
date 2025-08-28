@@ -19,6 +19,7 @@ describe("decode", () => {
   describe("decodeQUTF", () => {
     it("should return undefined if the input is undefined", () => {
       const result = decodeUtils.decodeQUTF(undefined);
+
       assert.strictEqual(result, undefined);
     });
 
@@ -26,6 +27,7 @@ describe("decode", () => {
       const input = "\\344\\275\\240\\345\\245\\275";
       const expectedOutput = "你好";
       const result = decodeUtils.decodeQUTF(input);
+
       assert.strictEqual(result, expectedOutput);
     });
 
@@ -34,6 +36,7 @@ describe("decode", () => {
       const input2 = "0b";
       const result1 = decodeUtils.decodeQUTF(input1);
       const result2 = decodeUtils.decodeQUTF(input2);
+
       assert.strictEqual(result1, true);
       assert.strictEqual(result2, false);
     });
@@ -43,6 +46,7 @@ describe("decode", () => {
     it("should return the input string if the index is even", () => {
       const input = "hello";
       const result = decodeUtils.decodeUnicode(input, 0);
+
       assert.strictEqual(result, input);
     });
 
@@ -50,6 +54,7 @@ describe("decode", () => {
       const input = "ããç ãã¯ãªããªãªããªãªããª";
       const expectedOutput = "もう眠くはないなないなないな";
       const result = decodeUtils.decodeUnicode(input, 1);
+
       assert.strictEqual(result, expectedOutput);
     });
   });
@@ -58,6 +63,7 @@ describe("decode", () => {
     it("should return the input string if all characters have code points less than 128", () => {
       const input = "hello";
       const result = decodeUtils.toOctalEscapes(input);
+
       assert.strictEqual(result, input);
     });
   });
@@ -67,6 +73,7 @@ describe("decode", () => {
       const input = "\\344";
       const expectedOutput = "ä";
       const result = decodeUtils.decodeOctal(input);
+
       assert.strictEqual(result, expectedOutput);
     });
   });

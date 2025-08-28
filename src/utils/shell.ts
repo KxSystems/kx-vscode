@@ -18,7 +18,6 @@ import { ICommandResult, tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
 
 const logger = "shell";
-
 const isWin = process.platform === "win32";
 
 export function log(childProcess: ChildProcess): void {
@@ -33,6 +32,7 @@ export async function killPid(pid = NaN): Promise<void> {
   }
 
   let result: ICommandResult | undefined;
+
   if (isWin) {
     result = await tryExecuteCommand(undefined, killPidCommand(pid), log);
   } else if (process.platform === "darwin") {
@@ -52,6 +52,7 @@ function killPidCommand(pid: number): string {
 export function which(cmd: string): string[] {
   // This works on WSL, MacOS, Linux
   const res = execFileSync("/usr/bin/which", ["-a", cmd]);
+
   return new TextDecoder().decode(res).split(/(?:\r\n|[\r\n])/gs);
 }
 

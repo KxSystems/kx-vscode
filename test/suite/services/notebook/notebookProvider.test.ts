@@ -33,12 +33,14 @@ describe("Providers", () => {
       const res = providers.getCellKind(<vscode.NotebookCell>{
         document: { languageId },
       });
+
       assert.strictEqual(res, index);
     });
   });
 
   it("updateCellMetadata should apply workspace edit", () => {
     const stub = sinon.stub(vscode.workspace, "applyEdit");
+
     providers.updateCellMetadata(
       <vscode.NotebookCell>{
         index: 0,
@@ -55,6 +57,7 @@ describe("Providers", () => {
   it("inputVariable should return input variable", async () => {
     sinon.stub(vscode.window, "showInputBox").resolves("variable");
     const res = await providers.inputVariable();
+
     assert.strictEqual(res, "variable");
   });
 
@@ -84,6 +87,7 @@ describe("Providers", () => {
 
   describe("KxNotebookTargetActionProvider", () => {
     const token = <vscode.CancellationToken>{};
+
     let instance: providers.KxNotebookTargetActionProvider;
     let changeConfigCallback: any;
 
@@ -103,6 +107,7 @@ describe("Providers", () => {
 
       it("should update on config change", () => {
         let fired = false;
+
         instance.onDidChangeCellStatusBarItems(() => (fired = true));
         assert.ok(changeConfigCallback);
         changeConfigCallback({ affectsConfiguration: () => true });
@@ -122,6 +127,7 @@ describe("Providers", () => {
             variable: "variable",
           });
           const res = await instance.provideCellStatusBarItems(cell, token);
+
           assert.strictEqual(res.length, 2);
         });
 
@@ -131,6 +137,7 @@ describe("Providers", () => {
             variable: "variable",
           });
           const res = await instance.provideCellStatusBarItems(cell, token);
+
           assert.strictEqual(res.length, 2);
         });
 
@@ -140,6 +147,7 @@ describe("Providers", () => {
             variable: "variable",
           });
           const res = await instance.provideCellStatusBarItems(cell, token);
+
           assert.strictEqual(res.length, 1);
         });
       });
@@ -154,6 +162,7 @@ describe("Providers", () => {
         it("should return only scratchpad", async () => {
           const cell = notebookTestUtils.createCell("q");
           const res = await instance.provideCellStatusBarItems(cell, token);
+
           assert.strictEqual(res.length, 1);
           assert.strictEqual(res[0].text, "scratchpad");
         });
@@ -164,6 +173,7 @@ describe("Providers", () => {
             variable: "variable",
           });
           const res = await instance.provideCellStatusBarItems(cell, token);
+
           assert.strictEqual(res.length, 2);
           assert.strictEqual(res[0].text, "target");
           assert.strictEqual(res[1].text, "(variable)");
@@ -174,6 +184,7 @@ describe("Providers", () => {
             variable: "variable",
           });
           const res = await instance.provideCellStatusBarItems(cell, token);
+
           assert.strictEqual(res.length, 1);
           assert.strictEqual(res[0].text, "(variable)");
         });
@@ -181,12 +192,14 @@ describe("Providers", () => {
         it("should return none for markdown", async () => {
           const cell = notebookTestUtils.createCell("markdown");
           const res = await instance.provideCellStatusBarItems(cell, token);
+
           assert.strictEqual(res.length, 0);
         });
 
         it("should return target for python", async () => {
           const cell = notebookTestUtils.createCell("python");
           const res = await instance.provideCellStatusBarItems(cell, token);
+
           assert.strictEqual(res.length, 1);
         });
       });
@@ -201,6 +214,7 @@ describe("Providers", () => {
       it("should return 1", async () => {
         const cell = notebookTestUtils.createCell("q");
         const res = await instance.provideCellStatusBarItems(cell, token);
+
         assert.strictEqual(res.length, 1);
       });
     });

@@ -54,6 +54,7 @@ class ExtensionTelemetry {
     measurements?: { [key: string]: number },
   ): void {
     const props = Object.assign({}, this.defaultProperties, properties);
+
     if (this.reporter) {
       this.reporter.sendTelemetryEvent(eventName, props, measurements);
     }

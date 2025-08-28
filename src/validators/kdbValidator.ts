@@ -72,6 +72,7 @@ export function validateServerPort(
       return "Input value must be a number.";
     }
     const parsedNumber = Number(input);
+
     return parsedNumber > 0 && parsedNumber < 65537
       ? undefined
       : "Invalid port number, valid range is 1-65536";

@@ -24,6 +24,7 @@ describe("workspaceTreeProvider", () => {
 
   function stubWorkspaceFile(path: string) {
     const parsed = Path.parse(path);
+
     sinon
       .stub(vscode.workspace, "workspaceFolders")
       .value([{ uri: vscode.Uri.file(parsed.dir) }]);
@@ -51,6 +52,7 @@ describe("workspaceTreeProvider", () => {
     it("should return workspace scratchpad items", async () => {
       stubWorkspaceFile("/workspace/test.kdb.q");
       let result = await provider.getChildren();
+
       assert.strictEqual(result.length, 1);
       result = await provider.getChildren(provider.getTreeItem(result[0]));
       assert.strictEqual(result.length, 1);
@@ -59,6 +61,7 @@ describe("workspaceTreeProvider", () => {
     it("should return workspace python items", async () => {
       stubWorkspaceFile("/workspace/test.kdb.py");
       let result = await provider.getChildren();
+
       assert.strictEqual(result.length, 1);
       result = await provider.getChildren(provider.getTreeItem(result[0]));
       assert.strictEqual(result.length, 1);
@@ -67,6 +70,7 @@ describe("workspaceTreeProvider", () => {
     it("should return workspace datasource items", async () => {
       stubWorkspaceFile("/workspace/test.kdb.json");
       let result = await provider.getChildren();
+
       assert.strictEqual(result.length, 1);
       result = await provider.getChildren(provider.getTreeItem(result[0]));
       assert.strictEqual(result.length, 1);

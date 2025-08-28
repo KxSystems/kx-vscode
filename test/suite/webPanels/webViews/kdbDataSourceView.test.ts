@@ -140,6 +140,7 @@ describe("KdbDataSourceView", () => {
   describe("connectedCallback", () => {
     it("should add an event listener", () => {
       let result = undefined;
+
       sinon.stub(window, "addEventListener").value(() => (result = true));
       view.connectedCallback();
       assert.ok(result);
@@ -149,6 +150,7 @@ describe("KdbDataSourceView", () => {
   describe("disconnectedCallback", () => {
     it("should remove an event listener", () => {
       let result = undefined;
+
       sinon.stub(window, "removeEventListener").value(() => (result = true));
       view.disconnectedCallback();
       assert.ok(result);
@@ -158,11 +160,13 @@ describe("KdbDataSourceView", () => {
   describe("renderIcons", () => {
     it("renderExclamationTriangleIcon", () => {
       const result = view.renderExclamationTriangleIcon();
+
       assert.ok(result);
     });
 
     it("renderInfoCircleIcon", () => {
       const result = view.renderInfoCircleIcon();
+
       assert.ok(result);
     });
   });
@@ -174,6 +178,7 @@ describe("KdbDataSourceView", () => {
       }
 
       let result = "";
+
       const strings = templateResult.strings;
       const values = templateResult.values || [];
 
@@ -261,6 +266,7 @@ describe("KdbDataSourceView", () => {
 
     it("should not set qsqlTarget when already set", () => {
       const originalTarget = "existing-target";
+
       view.qsqlTarget = originalTarget;
       view.renderTargetOptions();
       assert.strictEqual(view.qsqlTarget, originalTarget);
@@ -281,12 +287,14 @@ describe("KdbDataSourceView", () => {
     it("should return empty array when not insights", () => {
       view.isInsights = false;
       const result = view.renderTargetOptions();
+
       assert.deepStrictEqual(result, []);
     });
 
     it("should return empty array when meta not loaded", () => {
       view.isMetaLoaded = false;
       const result = view.renderTargetOptions();
+
       assert.deepStrictEqual(result, []);
     });
 
@@ -294,6 +302,7 @@ describe("KdbDataSourceView", () => {
       view.isInsights = false;
       view.isMetaLoaded = false;
       const result = view.renderTargetOptions();
+
       assert.deepStrictEqual(result, []);
     });
   });
@@ -304,6 +313,7 @@ describe("KdbDataSourceView", () => {
       view.message(createMessageEvent(true));
       assert.ok(view.data);
       const result = view.render();
+
       assert.ok(result);
       sinon.restore();
     });
@@ -311,6 +321,7 @@ describe("KdbDataSourceView", () => {
       view.message(createMessageEvent(false));
       assert.ok(view.data);
       const result = view.render();
+
       assert.ok(result);
     });
     it("should call event handlers", () => {
@@ -368,8 +379,10 @@ describe("KdbDataSourceView", () => {
           "text",
           "text",
         ];
+
         for (let i = 0; i < inputList.length; i++) {
           const result = view.retrieveUDAParamInputType(inputList[i]);
+
           assert.strictEqual(result, resultList[i]);
         }
       });
@@ -379,24 +392,28 @@ describe("KdbDataSourceView", () => {
       it("should render UDA checkbox field", () => {
         sinon.stub(view, "renderUDACheckbox").returns(html`checkbox`);
         const result = view.renderUDAParam(dummyUDAs[0].params[0], "checkbox");
+
         assert.deepStrictEqual(result, html`checkbox`);
       });
 
       it("should render UDA textarea field", () => {
         sinon.stub(view, "renderUDATextarea").returns(html`textarea`);
         const result = view.renderUDAParam(dummyUDAs[0].params[0], "textarea");
+
         assert.deepStrictEqual(result, html`textarea`);
       });
 
       it("should render UDA multitype field", () => {
         sinon.stub(view, "renderUDAMultitype").returns(html`multitype`);
         const result = view.renderUDAParam(dummyUDAs[0].params[0], "multitype");
+
         assert.deepStrictEqual(result, html`multitype`);
       });
 
       it("should render UDA input field", () => {
         sinon.stub(view, "renderUDAInput").returns(html`input`);
         const result = view.renderUDAParam(dummyUDAs[0].params[0], "input");
+
         assert.deepStrictEqual(result, html`input`);
       });
     });
@@ -412,6 +429,7 @@ describe("KdbDataSourceView", () => {
           type: 0,
         };
         const result = view.renderUDACheckbox(param);
+
         assert.ok(result);
       });
 
@@ -426,6 +444,7 @@ describe("KdbDataSourceView", () => {
           type: 0,
         };
         const result = view.renderUDACheckbox(param);
+
         assert.ok(result);
       });
 
@@ -440,6 +459,7 @@ describe("KdbDataSourceView", () => {
           typeStrings: ["boolean"],
         };
         const result = view.renderUDACheckbox(param);
+
         assert.ok(result);
       });
 
@@ -453,6 +473,7 @@ describe("KdbDataSourceView", () => {
           type: 0,
         };
         const result = view.renderUDACheckbox(param);
+
         assert.ok(result);
         assert.ok(!result.strings[0].includes("Description:"));
       });
@@ -467,6 +488,7 @@ describe("KdbDataSourceView", () => {
           type: 0,
         };
         const result = view.renderUDACheckbox(param);
+
         assert.ok(result);
       });
 
@@ -479,17 +501,17 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-
         const requestChangeSpy = sinon.spy(view, "requestChange");
         const result = view.renderUDACheckbox(param);
-
         const event = new Event("sl-change");
+
         Object.defineProperty(event, "target", {
           value: { checked: true },
           writable: false,
         });
 
         const checkbox = result.values.find((v) => typeof v === "function");
+
         if (checkbox) {
           checkbox(event);
         }
@@ -508,7 +530,6 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           type: 0,
         };
-
         const renderDeleteSpy = sinon.spy(view, "renderDeleteUDAParamButton");
         const result = view.renderUDACheckbox(param);
 
@@ -529,6 +550,7 @@ describe("KdbDataSourceView", () => {
           type: 0,
         };
         const result = view.renderUDATextarea(param);
+
         assert.ok(result);
       });
 
@@ -542,6 +564,7 @@ describe("KdbDataSourceView", () => {
           type: 0,
         };
         const result = view.renderUDATextarea(param);
+
         assert.ok(result);
       });
 
@@ -555,6 +578,7 @@ describe("KdbDataSourceView", () => {
           type: 0,
         };
         const result = view.renderUDATextarea(param);
+
         assert.ok(result);
       });
     });
@@ -570,6 +594,7 @@ describe("KdbDataSourceView", () => {
           type: 1,
         };
         const result = view.renderUDAInput(param, "number");
+
         assert.ok(result);
       });
 
@@ -583,6 +608,7 @@ describe("KdbDataSourceView", () => {
           type: 1,
         };
         const result = view.renderUDAInput(param, "invalid-type");
+
         assert.ok(result);
       });
 
@@ -596,6 +622,7 @@ describe("KdbDataSourceView", () => {
           type: 1,
         };
         const result = view.renderUDAInput(param, "text");
+
         assert.ok(result);
       });
 
@@ -609,6 +636,7 @@ describe("KdbDataSourceView", () => {
           type: 1,
         };
         const result = view.renderUDAInput(param, "text");
+
         assert.ok(result);
       });
 
@@ -622,6 +650,7 @@ describe("KdbDataSourceView", () => {
           type: 1,
         };
         const result = view.renderUDAInput(param, "text");
+
         assert.ok(result);
       });
     });
@@ -640,6 +669,7 @@ describe("KdbDataSourceView", () => {
           multiFieldTypes: [{ type1: ParamFieldType.Text }],
         };
         const result = view.renderUDAMultitype(param);
+
         assert.ok(result);
       });
 
@@ -656,6 +686,7 @@ describe("KdbDataSourceView", () => {
           multiFieldTypes: [{ type1: ParamFieldType.Text }],
         };
         const result = view.renderUDAMultitype(param);
+
         assert.ok(result);
         assert.strictEqual(param.selectedMultiTypeString, "type1");
       });
@@ -673,6 +704,7 @@ describe("KdbDataSourceView", () => {
           multiFieldTypes: undefined,
         };
         const result = view.renderUDAMultitype(param);
+
         assert.ok(result);
         assert.strictEqual(param.selectedMultiTypeString, "");
       });
@@ -690,6 +722,7 @@ describe("KdbDataSourceView", () => {
           multiFieldTypes: [{ type1: ParamFieldType.Boolean }],
         };
         const result = view.renderUDAMultitype(param);
+
         assert.ok(result);
       });
 
@@ -706,6 +739,7 @@ describe("KdbDataSourceView", () => {
           multiFieldTypes: [{ type1: ParamFieldType.JSON }],
         };
         const result = view.renderUDAMultitype(param);
+
         assert.ok(result);
       });
     });
@@ -717,6 +751,7 @@ describe("KdbDataSourceView", () => {
       it("should return empty string if user doesnt have userSelectedUDA", () => {
         view.userSelectedUDA = null;
         const result = view.renderUDAInvalidParams();
+
         assert.strictEqual(result, "");
       });
 
@@ -724,6 +759,7 @@ describe("KdbDataSourceView", () => {
         view.userSelectedUDA = dummyUDAs[0];
         view.userSelectedUDA.incompatibleError = "error";
         const result = view.renderUDAInvalidParams();
+
         assert.ok(result);
       });
 
@@ -731,6 +767,7 @@ describe("KdbDataSourceView", () => {
         view.userSelectedUDA = dummyUDAs[0];
         view.userSelectedUDA.incompatibleError = undefined;
         const result = view.renderUDAInvalidParams();
+
         assert.strictEqual(result, "");
       });
     });
@@ -744,6 +781,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           isVisible: true,
         };
+
         view.handleUDADeleteParam(param);
         assert.strictEqual(param.isVisible, false);
       });
@@ -756,6 +794,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           value: "some value",
         };
+
         view.handleUDADeleteParam(param);
         assert.strictEqual(param.value, undefined);
       });
@@ -768,6 +807,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           selectedMultiTypeString: "some string",
         };
+
         view.handleUDADeleteParam(param);
         assert.strictEqual(param.selectedMultiTypeString, undefined);
       });
@@ -780,6 +820,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
         };
         const requestChangeSpy = sinon.spy(view, "requestChange");
+
         view.handleUDADeleteParam(param);
         assert.strictEqual(requestChangeSpy.calledOnce, true);
       });
@@ -794,6 +835,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           isVisible: false,
         };
+
         view.userSelectedUDA = {
           name: "test",
           description: "test description",
@@ -824,6 +866,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           isVisible: false,
         };
+
         view.userSelectedUDA = {
           name: "test",
           description: "test description",
@@ -854,6 +897,7 @@ describe("KdbDataSourceView", () => {
           isReq: false,
           isVisible: false,
         };
+
         view.userSelectedUDA = {
           name: "test",
           description: "test description",
@@ -871,8 +915,8 @@ describe("KdbDataSourceView", () => {
             },
           },
         };
-
         const requestChangeSpy = sinon.spy(view, "requestChange");
+
         view.handleUDAAddParamSelect(event);
         assert.strictEqual(requestChangeSpy.calledOnce, true);
       });
@@ -900,6 +944,7 @@ describe("KdbDataSourceView", () => {
             description: "test return description",
           },
         };
+
         view.UDAs = [dummyUDA];
 
         const event = {
@@ -931,8 +976,8 @@ describe("KdbDataSourceView", () => {
             value: encodeURIComponent("testUDA"),
           },
         } as unknown as Event;
-
         const requestChangeSpy = sinon.spy(view, "requestChange");
+
         view.handleUDAChange(event);
         assert.strictEqual(requestChangeSpy.calledOnce, true);
       });
@@ -942,6 +987,7 @@ describe("KdbDataSourceView", () => {
   describe("save", () => {
     it("should send a message", () => {
       let result = undefined;
+
       sinon.stub(view, "postMessage").value(() => (result = true));
       view.save();
       assert.ok(result);
@@ -951,6 +997,7 @@ describe("KdbDataSourceView", () => {
   describe("refresh", () => {
     it("should send a message", () => {
       let result = undefined;
+
       sinon.stub(view, "postMessage").value(() => (result = true));
       view.refresh();
       assert.ok(result);
@@ -960,6 +1007,7 @@ describe("KdbDataSourceView", () => {
   describe("run", () => {
     it("should send a message", () => {
       let result = undefined;
+
       sinon.stub(view, "postMessage").value(() => (result = true));
       view.run();
       assert.ok(result);
@@ -969,6 +1017,7 @@ describe("KdbDataSourceView", () => {
   describe("populateScratchpad", () => {
     it("should send a message", () => {
       let result = undefined;
+
       sinon.stub(view, "postMessage").value(() => (result = true));
       view.populateScratchpad();
       assert.ok(result);
@@ -978,6 +1027,7 @@ describe("KdbDataSourceView", () => {
   describe("requestChange", () => {
     it("should send a message after 200 ms", (done) => {
       let result = undefined;
+
       sinon.stub(view, "postMessage").value(() => (result = true));
       view.requestChange();
       setTimeout(() => {
@@ -990,6 +1040,7 @@ describe("KdbDataSourceView", () => {
   describe("requestServerChange", () => {
     it("should send a message", () => {
       let result = undefined;
+
       sinon.stub(view, "postMessage").value(() => (result = true));
       view.requestServerChange(createValueEvent("server"));
       assert.ok(result);
@@ -1000,12 +1051,14 @@ describe("KdbDataSourceView", () => {
     it("should render row count options", () => {
       view.selectedServerVersion = 1.11;
       const result = view.renderRowCountOptions();
+
       assert.ok(result);
     });
 
     it("should not render row count options for older server version", () => {
       view.selectedServerVersion = 1.1;
       const result = view.renderRowCountOptions();
+
       assert.ok(!result);
     });
   });
@@ -1080,10 +1133,12 @@ describe("KdbDataSourceView", () => {
     it("should return 'No optional parameters available' if userSelectedUDA is not set", () => {
       view.userSelectedUDA = undefined;
       const result = view.renderUDAOptionalParamsOpts();
+
       assert.strictEqual(Array.isArray(result) ? result.length : 0, 0);
       const resultString = Array.isArray(result)
         ? result.map((item) => item.strings.join("")).join("")
         : result.strings.join("");
+
       assert.ok(resultString.includes("No optional parameters available"));
     });
 
@@ -1108,6 +1163,7 @@ describe("KdbDataSourceView", () => {
       const resultString = Array.isArray(result)
         ? result.map((item) => item.strings.join("")).join("")
         : result.strings.join("");
+
       assert.ok(resultString.includes("No optional parameters available"));
     });
 
@@ -1131,10 +1187,12 @@ describe("KdbDataSourceView", () => {
 
       view.userSelectedUDA.params.push(...distinguishedParams);
       const result = view.renderUDAOptionalParamsOpts();
+
       assert.strictEqual(Array.isArray(result) ? result.length : 0, 11);
       const resultString = Array.isArray(result)
         ? result.map((item) => item.strings.join("")).join("")
         : result.strings.join("");
+
       assert.ok(resultString.includes("OPTIONAL PARAMETERS"));
     });
 
@@ -1158,6 +1216,7 @@ describe("KdbDataSourceView", () => {
 
       view.userSelectedUDA.params.push(...distinguishedParams);
       const result = view.renderUDAOptionalParamsOpts();
+
       assert.strictEqual(Array.isArray(result) ? result.length : 0, 11);
       const resultString = Array.isArray(result)
         ? result.map((item) => item.strings.join("")).join("")

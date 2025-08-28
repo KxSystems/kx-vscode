@@ -187,6 +187,7 @@ describe("kdbNewConnectionPanel", () => {
     NewConnectionPannel.render(uriTest);
     const expectedHtml = `<kdb-new-connection-view/>`;
     const actualHtml = mockWebview.html;
+
     assert.ok(
       actualHtml.indexOf(expectedHtml) !== -1,
       "Panel HTML should include expected web component",
@@ -313,6 +314,7 @@ describe("kdbNewConnectionPanel", () => {
     );
 
     const messageHandler = onDidReceiveMessageStub.getCall(0).args[0];
+
     assert.ok(
       typeof messageHandler === "function",
       "Message handler should be a function",
@@ -337,6 +339,7 @@ describe("kdbNewConnectionPanel", () => {
     );
 
     const disposeHandler = onDidDisposeStub.getCall(0).args[0];
+
     assert.ok(
       typeof disposeHandler === "function",
       "Dispose handler should be a function",

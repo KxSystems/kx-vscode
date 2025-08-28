@@ -36,6 +36,7 @@ export function createPanel() {
       listeners.onDidDispose = e;
     },
   };
+
   return {
     panel,
     listeners,

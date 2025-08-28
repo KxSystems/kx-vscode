@@ -30,16 +30,15 @@ import {
 
 import { ConnectionManagementService } from "./connectionManagerService";
 import { InsightsConnection } from "../classes/insightsConnection";
-import {
-  populateScratchpad,
-  runDataSource,
-} from "../commands/dataSourceCommand";
+import { runDataSource } from "../commands/dataSourceCommand";
+import { prepareToPopulateScratchpad } from "../commands/executionCommand";
 import {
   getConnectionForServer,
   getInsightsServers,
   getServerForUri,
   setServerForUri,
 } from "../commands/workspaceCommand";
+import { ExecutionTypes } from "../models/execution";
 import { DataSourceCommand, DataSourceMessage2 } from "../models/messages";
 import { MetaObjectPayload } from "../models/meta";
 import { UDA } from "../models/uda";
@@ -57,6 +56,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
 
   public static register(context: ExtensionContext): Disposable {
     const provider = new DataSourceEditorProvider(context);
+
     return window.registerCustomEditorProvider(
       DataSourceEditorProvider.viewType,
       provider,
@@ -69,8 +69,10 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
 
   async getMeta(connLabel: string) {
     let meta = this.cache.get(connLabel);
+
     const connMngService = new ConnectionManagementService();
     const isConnected = connMngService.isConnected(connLabel);
+
     if (!isConnected) {
       this.cache.set(connLabel, Promise.resolve(<MetaObjectPayload>{}));
       return Promise.resolve(<MetaObjectPayload>{});
@@ -112,19 +114,22 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
   ): Promise<void> {
     this.filenname = document.fileName.split("/").pop() || "";
     const webview = webviewPanel.webview;
+
     webview.options = { enableScripts: true };
     webview.html = this.getWebviewContent(webview);
     let changing = 0;
-    const connMngService = new ConnectionManagementService();
 
+    const connMngService = new ConnectionManagementService();
     const updateWebview = async () => {
       if (changing === 0) {
         const selectedServer = getServerForUri(document.uri) || "";
         const selectedServerVersion =
           await connMngService.retrieveInsightsConnVersion(selectedServer);
+
         await getConnectionForServer(selectedServer);
         const insightsMeta = await this.getMeta(selectedServer);
         const UDAs: UDA[] = parseUDAList(insightsMeta);
+
         webview.postMessage(<DataSourceMessage2>{
           command: DataSourceCommand.Update,
           selectedServer,
@@ -168,6 +173,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       const selectedServer = getServerForUri(document.uri) || "";
       const connected = connMngService.isConnected(selectedServer);
 
+      /* c8 ignore next */
       switch (msg.command) {
         case DataSourceCommand.Server: {
           await setServerForUri(document.uri, msg.selectedServer);
@@ -177,6 +183,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
         case DataSourceCommand.Change: {
           const changed = msg.dataSourceFile;
           const current = this.getDocumentAsJson(document);
+
           if (!isDeepStrictEqual(current, changed)) {
             changing++;
             try {
@@ -201,16 +208,24 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
               this.cache.delete(selectedServer);
               updateWebview();
             });
+
             runner.location = ProgressLocation.Notification;
             runner.title = `Refreshing meta data for ${selectedServer}.`;
             await runner.execute();
           } else {
-            offerConnectAction(selectedServer);
+            await offerConnectAction(selectedServer);
           }
           break;
         }
         case DataSourceCommand.Run: {
-          if (connected) {
+          if (!connected) {
+            const connectedAfterOffering =
+              await offerConnectAction(selectedServer);
+
+            if (!connectedAfterOffering) {
+              break;
+            }
+
             const runner = Runner.create(() =>
               runDataSource(
                 msg.dataSourceFile,
@@ -218,23 +233,34 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
                 this.filenname,
               ),
             );
+
             runner.location = ProgressLocation.Notification;
             runner.title = `Running ${getBasename(document.uri)} on ${msg.selectedServer}.`;
             await runner.execute();
-          } else {
-            offerConnectAction(selectedServer);
           }
           break;
         }
         case DataSourceCommand.Populate: {
-          if (connected) {
+          if (!connected) {
+            const connectedAfterOffering =
+              await offerConnectAction(selectedServer);
+
+            if (!connectedAfterOffering) {
+              break;
+            }
+
             const runner = Runner.create(() =>
-              populateScratchpad(msg.dataSourceFile, msg.selectedServer),
+              prepareToPopulateScratchpad(
+                msg.selectedServer,
+                ExecutionTypes.PopulateScratchpad,
+                undefined,
+                undefined,
+                msg.dataSourceFile,
+              ),
             );
+
             runner.title = "Populating scratchpad.";
             await runner.execute();
-          } else {
-            offerConnectAction(selectedServer);
           }
           break;
         }
@@ -246,6 +272,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
 
   private getDocumentAsJson(document: TextDocument) {
     const text = document.getText();
+
     if (text.trim().length === 0) {
       return {};
     }

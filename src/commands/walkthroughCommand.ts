@@ -19,5 +19,6 @@ export async function showInstallationDetails(): Promise<void> {
   const QHOME = await workspace
     .getConfiguration()
     .get<string>("kdb.qHomeDirectory");
+
   notify(`q runtime installed path: ${QHOME}`, MessageKind.INFO);
 }

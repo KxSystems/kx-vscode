@@ -28,6 +28,7 @@ export class CompletionProvider implements CompletionItemProvider {
   > {
     if (ext.connectionNode instanceof KdbNode) {
       const items: CompletionItem[] = [];
+
       [ext.functions, ext.tables, ext.variables].forEach((group) =>
         group.forEach((item) =>
           items.push({

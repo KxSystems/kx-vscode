@@ -17,16 +17,10 @@ import { getCellKind } from "./notebookProviders";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
 import { ReplConnection } from "../classes/replConnection";
-import {
-  getPartialDatasourceFile,
-  populateScratchpad,
-  runDataSource,
-} from "../commands/dataSourceCommand";
-import { executeQuery } from "../commands/serverCommand";
+import { executeNotebookQuery } from "../commands/executionCommand";
 import { findConnection, getServerForUri } from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
 import { CellKind } from "../models/notebook";
-import { getBasename } from "../utils/core";
 import { MessageKind, notify } from "../utils/notifications";
 import {
   resultToBase64,
@@ -75,8 +69,10 @@ export class KxNotebookController {
       execution.start(Date.now());
 
       let success = false;
+
       try {
         const kind = getCellKind(cell);
+
         if (kind === CellKind.SQL) {
           throw new Error("SQL is not supported on REPL.");
         }
@@ -85,6 +81,7 @@ export class KxNotebookController {
           kind === CellKind.PYTHON ? getPythonWrapper(text) : text,
           execution.token,
         );
+
         this.replaceOutput(execution, {
           text: result.output || "",
           mime: "text/plain",
@@ -110,6 +107,7 @@ export class KxNotebookController {
     }
 
     const conn = await findConnection(notebook.uri);
+
     if (!conn) {
       return;
     }
@@ -126,17 +124,14 @@ export class KxNotebookController {
 
       try {
         const kind = getCellKind(cell);
-
         const { target, variable } = this.getCellMetadata(
           cell,
           kind,
           isInsights,
           conn,
         );
-
-        const executor = this.getQueryExecutor(
-          conn,
-          execution,
+        const executor = await executeNotebookQuery(
+          conn.connLabel,
           cell,
           kind,
           target,
@@ -153,6 +148,7 @@ export class KxNotebookController {
                 reject(new vscode.CancellationError());
               }
             };
+
             updateCancelled();
             cancellationDisposable =
               execution.token.onCancellationRequested(updateCancelled);
@@ -232,40 +228,6 @@ export class KxNotebookController {
     return { target, variable };
   }
 
-  getQueryExecutor(
-    conn: LocalConnection | InsightsConnection,
-    execution: vscode.NotebookCellExecution,
-    cell: vscode.NotebookCell,
-    kind: CellKind,
-    target?: string,
-    variable?: string,
-  ): Promise<any> {
-    const executorName = getBasename(cell.notebook.uri);
-
-    if (target || kind === CellKind.SQL) {
-      const params = getPartialDatasourceFile(
-        cell.document.getText(),
-        target,
-        kind === CellKind.SQL,
-        kind === CellKind.PYTHON,
-      );
-      return variable
-        ? populateScratchpad(params, conn.connLabel, variable, true)
-        : runDataSource(params, conn.connLabel, executorName);
-    } else {
-      return executeQuery(
-        cell.document.getText(),
-        conn.connLabel,
-        executorName,
-        ".",
-        kind === CellKind.PYTHON,
-        false,
-        false,
-        execution.token,
-      );
-    }
-  }
-
   replaceOutput(
     execution: vscode.NotebookCellExecution,
     rendered: Rendered,
@@ -304,12 +266,14 @@ function render(
     } else if (results) {
       const rows: string[] = [];
       const table = convertToGrid(results, isInsights, connVersion, isPython);
+
       if (table.columnDefs) {
         rows.push("<table>");
 
         rows.push("<thead>");
         rows.push("<tr>");
         const fields: string[] = [];
+
         for (const def of table.columnDefs) {
           rows.push(`<th>${def.headerName}</th>`);
           if ("field" in def) {

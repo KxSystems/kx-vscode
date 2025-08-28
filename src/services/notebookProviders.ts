@@ -43,7 +43,6 @@ export class KxNotebookTargetActionProvider
     const server = getServerForUri(cell.notebook.uri);
     const conn = server ? await getConnectionForServer(server) : undefined;
     const isInsights = conn instanceof InsightsNode;
-
     const actions: vscode.NotebookCellStatusBarItem[] = [];
     const kind = getCellKind(cell);
     const target = cell.metadata?.target;
@@ -92,6 +91,7 @@ export async function inputVariable(cell?: vscode.NotebookCell) {
     value: cell?.metadata?.variable,
     validateInput,
   });
+
   if (variable !== undefined) {
     if (cell) {
       await updateCellMetadata(cell, {
@@ -124,6 +124,7 @@ export async function updateCellMetadata(
   metadata: { target?: string; variable?: string },
 ) {
   const edit = new vscode.WorkspaceEdit();
+
   edit.set(cell.notebook.uri, [
     vscode.NotebookEdit.updateCellMetadata(cell.index, {
       target: metadata.target || undefined,

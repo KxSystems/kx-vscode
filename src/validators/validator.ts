@@ -67,6 +67,7 @@ export class Validator {
 
   private validateSync(fn: IRule): void {
     const error = fn.validate(this.value) as string | null;
+
     if (error) {
       this.errors.add(error);
     }

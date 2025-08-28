@@ -20,11 +20,11 @@ export class KdbTreeService {
     root?: string,
   ): Promise<ServerObject[]> {
     const serverObjects = await conn.loadServerObjects();
+
     if (serverObjects !== undefined) {
       const ns = serverObjects.filter((value) => {
         return value.isNs ? value : undefined;
       });
-
       const sorted = KdbTreeService.sortObjects(ns);
 
       return KdbTreeService.getNamespaces(sorted, root);
@@ -37,12 +37,14 @@ export class KdbTreeService {
     ns: string,
   ): Promise<ServerObject[]> {
     const serverObjects = await conn.loadServerObjects();
+
     if (serverObjects !== undefined) {
       const dicts = serverObjects.filter((value) => {
         return value.typeNum === 99 && !value.isNs && value.namespace === ns
           ? value
           : undefined;
       });
+
       return KdbTreeService.sortObjects(dicts);
     }
     return new Array<ServerObject>();
@@ -53,12 +55,14 @@ export class KdbTreeService {
     ns: string,
   ): Promise<ServerObject[]> {
     const serverObjects = await conn.loadServerObjects();
+
     if (serverObjects !== undefined) {
       const funcs = serverObjects.filter((value) => {
         return value.typeNum === 100 && !value.isNs && value.namespace === ns
           ? value
           : undefined;
       });
+
       return KdbTreeService.sortObjects(funcs);
     }
     return new Array<ServerObject>();
@@ -69,6 +73,7 @@ export class KdbTreeService {
     ns: string,
   ): Promise<ServerObject[]> {
     const serverObjects = await conn.loadServerObjects();
+
     if (!serverObjects) return [];
 
     const tables = serverObjects.filter(
@@ -97,6 +102,7 @@ export class KdbTreeService {
           ? value
           : undefined;
       });
+
       return KdbTreeService.sortObjects(vars);
     }
     return new Array<ServerObject>();
@@ -115,6 +121,7 @@ export class KdbTreeService {
       }
       return 0;
     });
+
     return sorted ?? new Array<string>();
   }
 
@@ -126,6 +133,7 @@ export class KdbTreeService {
 
     input.forEach((v, i) => {
       let index = -1;
+
       if (root === v.namespace) {
         index = i;
       }
@@ -147,6 +155,7 @@ export class KdbTreeService {
       }
       return 0;
     });
+
     return sorted;
   }
 }

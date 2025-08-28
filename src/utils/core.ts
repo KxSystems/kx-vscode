@@ -38,6 +38,7 @@ import {
   ServerDetails,
 } from "../models/connectionsModels";
 import { QueryResult } from "../models/queryResult";
+import { ConnectionManagementService } from "../services/connectionManagerService";
 
 const logger = "core";
 
@@ -55,6 +56,7 @@ export async function checkOpenSslInstalled(): Promise<string | null> {
       log,
       "version",
     );
+
     if (result.code === 0) {
       const matcher = /(\d+.\d+.\d+)/;
       const installedVersion = result.cmdOutput.match(matcher);
@@ -88,9 +90,11 @@ export function getKeyForServerName(name: string) {
     "servers",
     {},
   );
+
   let result = Object.keys(servers).find(
     (key) => servers[key].serverAlias === name,
   );
+
   if (result) {
     return result;
   }
@@ -98,6 +102,7 @@ export function getKeyForServerName(name: string) {
     "insightsEnterpriseConnections",
     {},
   );
+
   result = Object.keys(insgihts).find((key) => insgihts[key].alias === name);
   return result || "";
 }
@@ -127,6 +132,7 @@ export async function removeLocalConnectionStatus(
   const result = ext.localConnectionStatus.filter(
     (connection) => connection !== serverName,
   );
+
   ext.localConnectionStatus = result;
   await commands.executeCommand(
     "setContext",
@@ -152,6 +158,7 @@ export async function removeLocalConnectionContext(
   const result = ext.localConnectionContexts.filter(
     (connection) => connection !== serverName,
   );
+
   ext.localConnectionContexts = result;
   await commands.executeCommand(
     "setContext",
@@ -207,6 +214,7 @@ export function getEnvironment(resource?: Uri): DotenvPopulateInput {
 
   if (resource) {
     const target = workspace.getWorkspaceFolder(resource);
+
     if (target) {
       dotenv.configDotenv({
         quiet: true,
@@ -226,11 +234,11 @@ export function getEnvironment(resource?: Uri): DotenvPopulateInput {
     const qHomeDirectory = workspace
       .getConfiguration("kdb", resource)
       .get<string>("qHomeDirectory", "");
-
     const home = env.QHOME || expandPath(qHomeDirectory) || "";
 
     if (home) {
       const q = path.join(home, "bin", "q");
+
       env.QHOME = home;
       env.QPATH = stat(q) ? q : path.join(home, folder, "q");
     } else {
@@ -284,13 +292,16 @@ export function getServers(): Server {
 export function fixUnnamedAlias(): void {
   const servers = getServers();
   const insights = getInsights();
+
   let counter = 1;
 
   if (servers) {
     const updatedServers: Server = {};
+
     for (const key in servers) {
       if (Object.prototype.hasOwnProperty.call(servers, key)) {
         const server = servers[key];
+
         if (server.serverAlias === "") {
           server.serverAlias = `unnamedServer-${counter}`;
           counter++;
@@ -304,9 +315,11 @@ export function fixUnnamedAlias(): void {
 
   if (insights) {
     const updatedInsights: Insights = {};
+
     for (const key in insights) {
       if (Object.prototype.hasOwnProperty.call(insights, key)) {
         const insight = insights[key];
+
         if (insight.alias === "") {
           insight.alias = `unnamedServer-${counter}`;
           counter++;
@@ -333,9 +346,12 @@ export function getHideDetailedConsoleQueryOutputSetting(): boolean {
 
 export function setOutputWordWrapper(): void {
   let existWrap = false;
+
   const logConfig = workspace.getConfiguration("[Log]");
+
   if (logConfig) {
     const wordWrap = logConfig["editor.wordWrap"];
+
     if (wordWrap) {
       existWrap = true;
     }
@@ -365,6 +381,7 @@ export function getInsights(): Insights {
     );
   } else {
     const insightsList = configuration.get<Insights>("kdb.insights");
+
     if (insightsList && Object.keys(insightsList).length > 0) {
       updateInsights(insightsList);
       configuration.update(
@@ -430,9 +447,9 @@ export function invalidUsernameJWT(connLabel: string): void {
 }
 
 /* c8 ignore next */
-export function offerConnectAction(connLabel?: string): void {
+export async function offerConnectAction(connLabel?: string): Promise<boolean> {
   if (connLabel) {
-    notify(
+    return notify(
       `You aren't connected to ${connLabel}, would you like to connect? Once connected please try again.`,
       MessageKind.WARNING,
       {},
@@ -440,11 +457,45 @@ export function offerConnectAction(connLabel?: string): void {
       "Cancel",
     ).then(async (result) => {
       if (result === "Connect") {
-        await commands.executeCommand(
-          "kdb.connections.connect.via.dialog",
-          connLabel,
-        );
+        try {
+          commands.executeCommand(
+            "kdb.connections.connect.via.dialog",
+            connLabel,
+          );
+
+          const maxRetries = 20;
+          const retryDelay = 500;
+
+          for (let i = 0; i < maxRetries; i++) {
+            const connMngService = new ConnectionManagementService();
+            const connection =
+              connMngService.retrieveConnectedConnection(connLabel);
+
+            if (connection) {
+              return true;
+            }
+
+            if (i < maxRetries - 1) {
+              await delay(retryDelay);
+            }
+          }
+
+          notify(
+            `Connection to ${connLabel} was not established within expected time.`,
+            MessageKind.WARNING,
+            { logger },
+          );
+          return false;
+        } catch (error) {
+          notify(
+            `Failed to connect to ${connLabel}: ${error}`,
+            MessageKind.ERROR,
+            { logger },
+          );
+          return false;
+        }
       }
+      return false;
     });
   } else {
     notify(
@@ -452,6 +503,7 @@ export function offerConnectAction(connLabel?: string): void {
       MessageKind.WARNING,
       { logger },
     );
+    return false;
   }
 }
 
@@ -525,10 +577,12 @@ export async function checkLocalInstall(
   isExtensionStartCheck?: boolean,
 ): Promise<void> {
   const QHOME = workspace.getConfiguration().get<string>("kdb.qHomeDirectory");
+
   if (isExtensionStartCheck) {
     const notShow = workspace
       .getConfiguration()
       .get<boolean>("kdb.neverShowQInstallAgain");
+
     if (notShow) {
       return;
     }
@@ -558,6 +612,7 @@ export async function checkLocalInstall(
     const hideNotification = await workspace
       .getConfiguration()
       .get<boolean>("kdb.hideInstallationNotification");
+
     if (!hideNotification) {
       notify(`Installation of q found here: ${env.QHOME}`, MessageKind.INFO, {
         logger,
@@ -604,6 +659,7 @@ export async function convertBase64License(
   tempDir: string = tmpdir(),
 ): Promise<Uri> {
   const decodedLicense = Buffer.from(encodedLicense, "base64");
+
   await writeFile(join(tempDir, "kc.lic"), decodedLicense);
   return Uri.parse(join(tmpdir(), "kc.lic"));
 }
@@ -621,6 +677,7 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
   }
 
   const data = new Array(rows_.length);
+
   for (let i = 0; i < rows_.lenth; ++i) {
     data[i] = typeof rows_[i] === "object" ? Object.values(rows_[i]) : rows_[i];
   }
@@ -633,7 +690,6 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
     function (s: any) {
       return String(s).length;
     };
-
   const dotsizes = reduce(
     data,
 
@@ -656,29 +712,30 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
     },
     [],
   );
-
   const rows = map(data, function (row: any) {
     return map(row, function (c_: any, ix: any) {
       const c = String(c_);
+
       if (align[ix] === ".") {
         const [left, right] = dotoffsets(c);
         const test = /\./.test(c);
         const [maxLeft, maxRight] = dotsizes[ix];
         const leftSize = maxLeft - left;
         const rightSize = (maxRight === 0 || test ? 0 : 1) + maxRight - right;
+
         return " ".repeat(leftSize) + c + " ".repeat(rightSize);
       } else {
         return c;
       }
     });
   });
-
   const sizes = reduce(
     rows,
 
     function (acc: any, row: any) {
       forEach(row, function (c: any, ix: any) {
         const n = stringLength(c);
+
         if (!acc[ix] || n > acc[ix]) {
           acc[ix] = n;
         }
@@ -693,6 +750,7 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
     return map(row, function (c: any, ix: any) {
       const n = sizes[ix] - stringLength(c) || 0;
       const s = Array(Math.max(n + 1, 1)).join(" ");
+
       if (align[ix] === "r" /* || align[ix] === '.'*/) {
         return s + c;
       }
@@ -714,6 +772,7 @@ export function formatTable(headers_: any, rows_: any, opts: any) {
   });
 
   let columnSeparatorIndex = 0;
+
   for (let i = 0; i < keys.length; ++i) {
     columnSeparatorIndex += headers[i].length;
   }
@@ -757,7 +816,9 @@ function reduce(xs: any, f: any, init: any) {
   }
 
   let i = 0;
+
   const acc = arguments.length >= 3 ? init : xs[i++];
+
   for (; i < xs.length; i++) {
     f(acc, xs[i], i);
   }
@@ -777,6 +838,7 @@ function forEach(xs: any, f: any) {
 
 function dotoffsets(c: string) {
   const m = /\.[^.]*$/.exec(c);
+
   return m ? [m.index, c.length - m.length - 1] : [c.length, 0];
 }
 
@@ -786,6 +848,7 @@ function map(xs: any, f: any) {
   }
 
   const res = [];
+
   for (let i = 0; i < xs.length; i++) {
     res.push(f.call(xs, xs[i], i));
   }

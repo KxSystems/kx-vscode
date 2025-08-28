@@ -22,6 +22,7 @@ describe("validateUtils", () => {
       const lower = 1;
       const upper = 20;
       const result = validateUtils.isValidLength(value, lower, upper);
+
       assert.strictEqual(result, true);
     });
 
@@ -30,6 +31,7 @@ describe("validateUtils", () => {
       const lower = 20;
       const upper = 30;
       const result = validateUtils.isValidLength(value, lower, upper);
+
       assert.strictEqual(result, false);
     });
 
@@ -38,6 +40,7 @@ describe("validateUtils", () => {
       const lower = 1;
       const upper = 5;
       const result = validateUtils.isValidLength(value, lower, upper);
+
       assert.strictEqual(result, false);
     });
 
@@ -46,6 +49,7 @@ describe("validateUtils", () => {
       const lower = 30;
       const upper = 20;
       const result = validateUtils.isValidLength(value, lower, upper);
+
       assert.strictEqual(result, false);
     });
 
@@ -54,6 +58,7 @@ describe("validateUtils", () => {
       const lower = 1;
       const upper = 2147483648;
       const result = validateUtils.isValidLength(value, lower, upper);
+
       assert.strictEqual(result, true);
     });
   });
@@ -62,6 +67,7 @@ describe("validateUtils", () => {
     it("should return true if value is alphanumeric with hyphens", () => {
       const value = "test-value-123";
       const result = validateUtils.isAlphanumericWithHypens(value);
+
       assert.strictEqual(result, true);
     });
   });
@@ -70,12 +76,14 @@ describe("validateUtils", () => {
     it("should return true if value is lowercase alphanumeric with hyphens", () => {
       const value = "test-value-123";
       const result = validateUtils.isLowerCaseAlphanumericWithHypens(value);
+
       assert.strictEqual(result, true);
     });
 
     it("should return false if value contains uppercase characters", () => {
       const value = "Test-Value-123";
       const result = validateUtils.isLowerCaseAlphanumericWithHypens(value);
+
       assert.strictEqual(result, false);
     });
   });
@@ -84,12 +92,14 @@ describe("validateUtils", () => {
     it("should return true if value is a number", () => {
       const value = "123";
       const result = validateUtils.isNumber(value);
+
       assert.strictEqual(result, true);
     });
 
     it("should return false if value is not a number", () => {
       const value = "test";
       const result = validateUtils.isNumber(value);
+
       assert.strictEqual(result, false);
     });
   });
@@ -98,18 +108,21 @@ describe("validateUtils", () => {
     it("should return true if value is 'true'", () => {
       const value = "true";
       const result = validateUtils.isBoolean(value);
+
       assert.strictEqual(result, true);
     });
 
     it("should return true if value is 'false'", () => {
       const value = "false";
       const result = validateUtils.isBoolean(value);
+
       assert.strictEqual(result, true);
     });
 
     it("should return false if value is not 'true' or 'false'", () => {
       const value = "test";
       const result = validateUtils.isBoolean(value);
+
       assert.strictEqual(result, false);
     });
   });

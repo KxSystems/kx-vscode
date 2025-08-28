@@ -24,6 +24,7 @@ describe("CompletionProvider", () => {
     sinon.stub(ext, "functions").value(["test"]);
     const provider = new CompletionProvider();
     const items = provider.provideCompletionItems();
+
     assert.ok(items);
   });
 });

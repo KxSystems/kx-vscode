@@ -22,6 +22,7 @@ import * as loggers from "../../../src/utils/loggers";
 describe("DataSourcesPanel", () => {
   const dsTest = createDefaultDataSourceFile();
   const uriTest: vscode.Uri = vscode.Uri.parse("test");
+
   let kdbOutputLogStub: sinon.SinonStub;
 
   beforeEach(() => {
@@ -53,6 +54,7 @@ describe("DataSourcesPanel", () => {
   it("should make sure the datasource is rendered, check if the web component exists", () => {
     const expectedHtml = `<kdb-data-source-view></kdb-data-source-view>`;
     const actualHtml = DataSourcesPanel.currentPanel._panel.webview.html;
+
     assert.ok(
       actualHtml.indexOf(expectedHtml) !== -1,
       "Panel HTML should include expected web component",

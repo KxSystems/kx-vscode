@@ -43,6 +43,7 @@ export class LocalConnection {
     tls?: boolean,
   ) {
     const params = connectionString.split(":");
+
     if (!params) {
       throw new Error("Missing or invalid connection string");
     }
@@ -155,6 +156,7 @@ export class LocalConnection {
     let result;
     let error;
     let retryCount = 0;
+
     while (this.connection === undefined) {
       if (retryCount > ext.maxRetryCount) {
         return "timeout";
@@ -191,6 +193,7 @@ export class LocalConnection {
     isPython?: boolean,
   ): Promise<any> {
     let result;
+
     await this.waitForConnection();
 
     if (!this.connection) {
@@ -251,6 +254,7 @@ export class LocalConnection {
     let result;
     let retryCount = 0;
     let error;
+
     while (this.connection === undefined) {
       if (retryCount > ext.maxRetryCount) {
         return "timeout";
@@ -291,11 +295,13 @@ export class LocalConnection {
     ).toString();
     const cc = "\n" + script + "(::)";
     const result = await this.executeQueryRaw(cc);
+
     if (result !== undefined) {
       const result2: ServerObject[] = (0, eval)(result);
       const result3: ServerObject[] = result2.filter((item) => {
         return ext.qNamespaceFilters.indexOf(item.name) === -1;
       });
+
       return result3;
     } else {
       return new Array<ServerObject>();
@@ -304,6 +310,7 @@ export class LocalConnection {
 
   private async waitForConnection(): Promise<void> {
     let retryCount = 0;
+
     while (this.connection === undefined) {
       if (retryCount > ext.maxRetryCount) {
         throw new Error("timeout");
@@ -330,6 +337,7 @@ export class LocalConnection {
       await delay(500);
     }
     const result = this.result;
+
     this.result = undefined;
     return result;
   }
@@ -337,6 +345,7 @@ export class LocalConnection {
   private updateGlobal() {
     const globalQuery =
       '{[q] t:system"T";tm:@[{$[x>0;[system"T ",string x;1b];0b]};0;{0b}];r:$[tm;@[0;(q;::);{[tm; t; msgs] if[tm;system"T ",string t];\'msgs}[tm;t]];@[q;::;{\'x}]];if[tm;system"T ",string t];r}{do[1000;2+2];{@[{.z.ide.ns.r1:x;:.z.ide.ns.r1};x;{r:y;:r}[;x]]}({:x!{![sv[`;] each x cross `Tables`Functions`Variables; system each "afv" cross enlist[" "] cross enlist string x]} each x} [{raze x,.z.s\'[{x where{@[{1#get x};x;`]~1#.q}\'[x]}` sv\'x,\'key x]}`]),(enlist `.z)!flip (`.z.Tables`.z.Functions`.z.Variables)!(enlist 0#`;enlist `ac`bm`exit`pc`pd`pg`ph`pi`pm`po`pp`ps`pw`vs`ts`s`wc`wo`ws;enlist `a`b`e`f`h`i`k`K`l`o`q`u`w`W`x`X`n`N`p`P`z`Z`t`T`d`D`c`zd)}';
+
     this.connection?.k(globalQuery, (err, result) => {
       if (err) {
         notify("Failed to retrieve kdb+ global variables.", MessageKind.ERROR, {
@@ -362,7 +371,9 @@ export class LocalConnection {
       key = key === "null" ? "." : key + ".";
       const f = value[key + "Functions"];
       const t = value[key + "Tables"];
+
       let v = value[key + "Variables"];
+
       key = key === "." || key === ".q." ? "" : key;
 
       if (f instanceof Array) {
@@ -382,6 +393,7 @@ export class LocalConnection {
 
   private updateReservedKeywords() {
     const reservedQuery = ".Q.res";
+
     this.connection?.k(reservedQuery, (err, result) => {
       if (err) {
         notify(
@@ -423,6 +435,7 @@ export class LocalConnection {
           socketNoDelay: this.options.socketNoDelay,
         },
       });
+
       if (kdb) {
         return { ...this.options, ...kdb };
       }

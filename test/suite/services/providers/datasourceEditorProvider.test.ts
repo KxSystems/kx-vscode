@@ -39,6 +39,7 @@ describe("dataSourceEditorProvider", () => {
   describe("register", () => {
     it("should register the provider", () => {
       let result = undefined;
+
       sinon
         .stub(vscode.window, "registerCustomEditorProvider")
         .value(() => (result = true));
@@ -54,8 +55,10 @@ describe("dataSourceEditorProvider", () => {
         language: "q",
         content: "{}",
       });
+
       sinon.stub(utils, "getUri").value(() => "");
       const panel = createPanel();
+
       await assert.doesNotReject(() =>
         provider.resolveCustomTextEditor(document, panel.panel),
       );
@@ -121,7 +124,6 @@ describe("dataSourceEditorProvider", () => {
           schema: [],
         },
       };
-
       const dummyMetaNoAssembly: MetaObject = {
         header: {
           ac: "0",
@@ -188,7 +190,9 @@ describe("dataSourceEditorProvider", () => {
       );
       const localConn = new LocalConnection("127.0.0.1:5001", "testLabel", []);
       const connMngService = new ConnectionManagementService();
+
       let isConnetedStub, _retrieveConnectedConnectionStub: sinon.SinonStub;
+
       beforeEach(() => {
         isConnetedStub = sinon.stub(connMngService, "isConnected");
         _retrieveConnectedConnectionStub = sinon.stub(
@@ -205,6 +209,7 @@ describe("dataSourceEditorProvider", () => {
         isConnetedStub.returns(false);
         const provider = new DataSourceEditorProvider(context);
         const result = await provider.getMeta(insightsConn.connLabel);
+
         assert.deepStrictEqual(result, {});
       });
 
@@ -213,6 +218,7 @@ describe("dataSourceEditorProvider", () => {
         isConnetedStub.resolves(true);
         const provider = new DataSourceEditorProvider(context);
         const result = await provider.getMeta(insightsConn.connLabel);
+
         assert.deepStrictEqual(result, {});
       });
 
@@ -222,6 +228,7 @@ describe("dataSourceEditorProvider", () => {
         isConnetedStub.resolves(true);
         const provider = new DataSourceEditorProvider(context);
         const result = await provider.getMeta(localConn.connLabel);
+
         assert.deepStrictEqual(result, {});
       });
       it("Should return empty object if the meta is undefined", async () => {
@@ -230,6 +237,7 @@ describe("dataSourceEditorProvider", () => {
         isConnetedStub.resolves(true);
         const provider = new DataSourceEditorProvider(context);
         const result = await provider.getMeta(insightsConn.connLabel);
+
         assert.deepStrictEqual(result, {});
       });
       it("Should return empty object if the meta has no assembly", async () => {
@@ -239,6 +247,7 @@ describe("dataSourceEditorProvider", () => {
         insightsConn.meta = dummyMetaNoAssembly;
         const provider = new DataSourceEditorProvider(context);
         const result = await provider.getMeta(insightsConn.connLabel);
+
         assert.deepStrictEqual(result, {});
       });
       it("Should return empty object if the meta has no assembly", async () => {
@@ -248,6 +257,7 @@ describe("dataSourceEditorProvider", () => {
         insightsConn.meta = dummyMeta;
         const provider = new DataSourceEditorProvider(context);
         const result = await provider.getMeta(insightsConn.connLabel);
+
         assert.deepStrictEqual(result, dummyMeta.payload);
       });
     });

@@ -38,6 +38,7 @@ import {
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
 import { resetScratchpadStarted, sanitizeQuery } from "../utils/queryUtils";
+import { generateScratchpadQueryReqBody } from "../utils/requestBody";
 
 const logger = "connectionManagerService";
 
@@ -65,6 +66,7 @@ export class ConnectionManagementService {
         const regex = new RegExp(
           `\\d+\\.\\d+\\.\\d+\\.\\d+:\\d+ \\[${escapedConnLabel}\\]`,
         );
+
         return (
           connLabel === connection.connLabel || regex.test(connection.connLabel)
         );
@@ -100,6 +102,12 @@ export class ConnectionManagementService {
     return connection instanceof KdbNode;
   }
 
+  public isInsightsConnection(connLabel: string): boolean {
+    const connection = this.retrieveConnectedConnection(connLabel);
+
+    return connection instanceof InsightsConnection;
+  }
+
   public isConnected(connLabel: string): boolean {
     const escapedConnLabel = connLabel.replace(
       /[-[\]{}()*+?.,\\^$|#\s]/g,
@@ -108,6 +116,7 @@ export class ConnectionManagementService {
     const regex = new RegExp(
       `\\d+\\.\\d+\\.\\d+\\.\\d+:\\d+ \\[${escapedConnLabel}\\]`,
     );
+
     return (
       ext.connectedContextStrings.includes(connLabel) ||
       ext.connectedContextStrings.some((context) => regex.test(context))
@@ -120,6 +129,7 @@ export class ConnectionManagementService {
 
   public removeConnectionFromContextString(connLabel: string): void {
     const index = ext.connectedContextStrings.indexOf(connLabel);
+
     if (index > -1) {
       ext.connectedContextStrings.splice(index, 1);
     }
@@ -128,6 +138,7 @@ export class ConnectionManagementService {
   /* c8 ignore next */
   public async connect(connLabel: string): Promise<void> {
     const connection = this.retrieveConnection(connLabel);
+
     if (!connection) {
       return;
     }
@@ -143,6 +154,7 @@ export class ConnectionManagementService {
         authCredentials ? authCredentials.split(":") : undefined,
         connection.details.tls,
       );
+
       await localConnection.connect((err, conn) => {
         if (err) {
           this.connectFailBehaviour(connLabel);
@@ -171,6 +183,7 @@ export class ConnectionManagementService {
         connLabel,
         connection,
       );
+
       await insightsConn.connect();
       if (insightsConn.connected) {
         notify(
@@ -195,6 +208,7 @@ export class ConnectionManagementService {
 
   public setActiveConnection(node: KdbNode | InsightsNode): void {
     const connection = this.retrieveConnectedConnection(node.label);
+
     if (!connection) {
       return;
     }
@@ -228,6 +242,7 @@ export class ConnectionManagementService {
   public disconnect(connLabel: string): void {
     const connection = this.retrieveConnectedConnection(connLabel);
     const connectionNode = this.retrieveConnection(connection?.connLabel ?? "");
+
     if (!connection || !connectionNode) {
       return;
     }
@@ -240,6 +255,7 @@ export class ConnectionManagementService {
     connNode: KdbNode | InsightsNode,
   ): Promise<void> {
     const isConnected = this.isConnected(connNode.label);
+
     if (isConnected) {
       this.removeConnectionFromContextString(connNode.label);
       this.disconnect(connNode.label);
@@ -247,12 +263,13 @@ export class ConnectionManagementService {
     if (connNode instanceof InsightsNode) {
       const insights = getInsights();
       const key = getKeyForServerName(connNode.details.alias);
+
       if (insights && insights[key]) {
         const uInsights = Object.keys(insights).filter((insight) => {
           return insight !== key;
         });
-
         const updatedInsights: Insights = {};
+
         uInsights.forEach((insight) => {
           updatedInsights[insight] = insights[insight];
         });
@@ -262,14 +279,14 @@ export class ConnectionManagementService {
       }
     } else {
       const servers: Server | undefined = getServers();
-
       const key = getKeyForServerName(connNode.details.serverAlias || "");
+
       if (servers != undefined && servers[key]) {
         const uServers = Object.keys(servers).filter((server) => {
           return server !== key;
         });
-
         const updatedServers: Server = {};
+
         uServers.forEach((server) => {
           updatedServers[server] = servers[server];
         });
@@ -308,6 +325,7 @@ export class ConnectionManagementService {
     connection: LocalConnection | InsightsConnection,
   ): void {
     const connType = connection instanceof LocalConnection ? "KDB" : "Insights";
+
     ext.connectedConnectionList.splice(
       ext.connectedConnectionList.indexOf(connection),
       1,
@@ -338,10 +356,13 @@ export class ConnectionManagementService {
     command: string,
     connLabel?: string,
     context?: string,
-    stringify?: boolean,
     isPython?: boolean,
+    isNotebook?: boolean,
   ): Promise<any> {
+    const isTableView = isNotebook ? true : ext.isResultsTabVisible;
+
     let selectedConn;
+
     if (connLabel) {
       selectedConn = this.retrieveConnectedConnection(connLabel);
     } else {
@@ -358,23 +379,27 @@ export class ConnectionManagementService {
       return await selectedConn.executeQuery(
         command,
         context,
-        stringify,
+        !isTableView,
         isPython,
       );
     } else {
-      return await selectedConn.getScratchpadQuery(
+      const body = generateScratchpadQueryReqBody(
         command,
         context,
         isPython,
-        !stringify,
+        isNotebook,
       );
+
+      return await selectedConn.getScratchpadQuery(body, isPython, isTableView);
     }
   }
 
   public async resetScratchpad(connLabel?: string): Promise<void> {
     let conn: InsightsConnection | undefined;
+
     if (connLabel) {
       const retrievedConn = this.retrieveConnectedConnection(connLabel);
+
       if (retrievedConn instanceof InsightsConnection) {
         conn = retrievedConn;
       } else {
@@ -439,12 +464,14 @@ export class ConnectionManagementService {
           await connection.getMeta();
         }
       });
+
       await Promise.all(promises);
     }
   }
 
   public async refreshGetMeta(connLabel: string): Promise<void> {
     const connection = this.retrieveConnectedConnection(connLabel);
+
     if (connection instanceof InsightsConnection) {
       await connection.getMeta();
     }
@@ -459,6 +486,7 @@ export class ConnectionManagementService {
     metaTypeString: string,
   ): string {
     const metaType = this.getMetaInfoType(metaTypeString.toUpperCase());
+
     if (!metaType) {
       notify(
         "The meta info type that you try to open is not valid",
@@ -468,6 +496,7 @@ export class ConnectionManagementService {
       return "";
     }
     const connection = this.retrieveConnectedConnection(connLabel);
+
     if (!connection) {
       notify(
         "The connection that you try to open meta info is not connected",
@@ -494,6 +523,7 @@ export class ConnectionManagementService {
         const authCredentials = await ext.secretSettings.getAuthData(
           connection.children[0],
         );
+
         if (authCredentials) {
           const [username, password] = authCredentials.split(":");
           const authMap: kdbAuthMap = {
@@ -502,6 +532,7 @@ export class ConnectionManagementService {
               password,
             },
           };
+
           ext.kdbAuthMap.push(authMap);
         }
       }
@@ -510,6 +541,7 @@ export class ConnectionManagementService {
 
   public async retrieveInsightsConnVersion(connLabel: string): Promise<number> {
     const connection = this.retrieveConnectedConnection(connLabel);
+
     if (!connection || !(connection instanceof InsightsConnection)) {
       return 0;
     }
@@ -540,8 +572,10 @@ export class ConnectionManagementService {
         KDB: [],
       },
     };
+
     if (connLabel) {
       const connection = this.retrieveConnection(connLabel);
+
       if (!connection) {
         return "";
       }
@@ -570,6 +604,7 @@ export class ConnectionManagementService {
           const auth = ext.kdbAuthMap.find((auth) => {
             return Object.keys(auth)[0] === kdbConn.serverAlias;
           });
+
           if (auth) {
             kdbConn.auth = true;
             kdbConn.username = auth[kdbConn.serverAlias].username;
@@ -592,6 +627,7 @@ export class ConnectionManagementService {
       return ".Insights";
     }
     const isCustom = ext.customAuth ? ".CustomAuth" : "";
+
     if (connLabel === "local") {
       return isCustom + ".KDB+.Local";
     }
