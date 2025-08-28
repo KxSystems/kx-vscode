@@ -756,7 +756,6 @@ export class ReplConnection {
     const workspace =
       (resource && vscode.workspace.getWorkspaceFolder(resource)) ||
       (await pickWorkspace());
-
     const key = workspace?.uri.toString() ?? CONF.DEFAULT;
 
     let repl = this.repls.get(key);
@@ -767,6 +766,7 @@ export class ReplConnection {
       try {
         const pythonApi = await PythonExtension.api();
         const envp = pythonApi.environments.getActiveEnvironmentPath(workspace);
+
         venv = await pythonApi.environments.resolveEnvironment(envp);
       } catch (error) {
         notify(errorMessage(error), MessageKind.DEBUG, { logger });

@@ -214,6 +214,7 @@ export function getEnvironment(resource?: Uri): DotenvPopulateInput {
 
   if (resource) {
     const target = workspace.getWorkspaceFolder(resource);
+
     if (target) {
       dotenv.configDotenv({
         quiet: true,
@@ -233,11 +234,11 @@ export function getEnvironment(resource?: Uri): DotenvPopulateInput {
     const qHomeDirectory = workspace
       .getConfiguration("kdb", resource)
       .get<string>("qHomeDirectory", "");
-
     const home = env.QHOME || expandPath(qHomeDirectory) || "";
 
     if (home) {
       const q = path.join(home, "bin", "q");
+
       env.QHOME = home;
       env.QPATH = stat(q) ? q : path.join(home, folder, "q");
     } else {

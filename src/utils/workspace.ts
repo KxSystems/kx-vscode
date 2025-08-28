@@ -149,6 +149,7 @@ export async function getWorkbookStatistics(
 
 export async function pickWorkspace() {
   const folders = workspace.workspaceFolders;
+
   if (!folders || folders.length === 0) return undefined;
   if (folders.length === 1) return folders[0];
   const picked = await window.showQuickPick(
@@ -159,6 +160,7 @@ export async function pickWorkspace() {
     })),
     { placeHolder: "Select workspace directory" },
   );
+
   if (!picked) return folders[0];
   return picked.folder;
 }

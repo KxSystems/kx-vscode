@@ -924,12 +924,14 @@ describe("core", () => {
       ext.REAL_QHOME = "QHOME";
       sinon.stub(shell, "stat").returns(false);
       const res = coreUtils.getEnvironment();
+
       assert.ok(res);
     });
     it("should return KDB-X", () => {
       ext.REAL_QHOME = "QHOME";
       sinon.stub(shell, "stat").returns(true);
       const res = coreUtils.getEnvironment();
+
       assert.strictEqual(res.QPATH, path.join("QHOME", "bin", "q"));
     });
     it("should return KDB-X", () => {
@@ -938,6 +940,7 @@ describe("core", () => {
 
       sinon.stub(shell, "which").returns([target]);
       const res = coreUtils.getEnvironment();
+
       assert.strictEqual(res.QPATH, target);
     });
     it("should return qHomeDirectory", () => {
@@ -947,6 +950,7 @@ describe("core", () => {
         return { get: () => "QHOME" };
       });
       const res = coreUtils.getEnvironment();
+
       assert.ok(res);
     });
     it("should throw if q not found", () => {
@@ -956,14 +960,17 @@ describe("core", () => {
         return { get: () => "" };
       });
       const res = coreUtils.getEnvironment();
+
       assert.strictEqual(res.QPATH, undefined);
     });
     it("should return dotenv", () => {
       const uri = vscode.Uri.file("test");
+
       sinon
         .stub(vscode.workspace, "getWorkspaceFolder")
         .returns({ uri, name: "test", index: 0 });
       const stub = sinon.stub(dotenv, "configDotenv");
+
       coreUtils.getEnvironment(uri);
       sinon.assert.calledOnce(stub);
     });

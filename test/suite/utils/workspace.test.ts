@@ -142,19 +142,23 @@ describe("Workspace tests", () => {
     it("should return undefined for no workspace folders", async () => {
       workspaceMock.value(undefined);
       const res = await workspaceHelper.pickWorkspace();
+
       assert.strictEqual(res, undefined);
     });
 
     it("should return undefined for empty workspace folders", async () => {
       workspaceMock.value([]);
       const res = await workspaceHelper.pickWorkspace();
+
       assert.strictEqual(res, undefined);
     });
 
     it("should return the picked folder", async () => {
       const folder = {};
+
       workspaceMock.value([folder]);
       const res = await workspaceHelper.pickWorkspace();
+
       assert.strictEqual(res, folder);
     });
 
@@ -162,6 +166,7 @@ describe("Workspace tests", () => {
       workspaceMock.value(testWorkspaceFolder);
       showQuickPickStub.resolves(<any>{ folder: testWorkspaceFolder[1] });
       const res = await workspaceHelper.pickWorkspace();
+
       assert.strictEqual(res, testWorkspaceFolder[1]);
     });
 
@@ -169,6 +174,7 @@ describe("Workspace tests", () => {
       workspaceMock.value(testWorkspaceFolder);
       showQuickPickStub.resolves(undefined);
       const res = await workspaceHelper.pickWorkspace();
+
       assert.strictEqual(res, testWorkspaceFolder[0]);
     });
   });
