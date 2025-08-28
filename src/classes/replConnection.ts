@@ -12,14 +12,16 @@
  */
 
 import { PythonExtension, ResolvedEnvironment } from "@vscode/python-extension";
+import { DotenvPopulateInput } from "dotenv";
 import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import path from "node:path";
+import kill from "tree-kill";
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
 import {
   getAutoFocusOutputOnEntrySetting,
-  getQExecutablePath,
+  getEnvironment,
 } from "../utils/core";
 import {
   Cancellable,
@@ -29,6 +31,7 @@ import {
 } from "../utils/notifications";
 import { normalizeQuery } from "../utils/queryUtils";
 import { errorMessage } from "../utils/shared";
+import { pickWorkspace } from "../utils/workspace";
 
 const logger = "replConnection";
 const ANSI = {
@@ -171,7 +174,7 @@ export class ReplConnection {
     `${CONF.TITLE} Copyright (C) 1993-2025 KX Systems` + ANSI.CRLF.repeat(2),
   ];
 
-  private qhome = "";
+  private env: DotenvPopulateInput = {};
   private activate = "";
   private prefix = ANSI.EMPTY;
   private _context = CTX.Q;
@@ -268,15 +271,16 @@ export class ReplConnection {
   }
 
   private createProcess() {
-    const q = getQExecutablePath();
+    this.env = getEnvironment(this.workspace?.uri);
 
-    this.qhome = path.resolve(path.dirname(q), "..");
-
-    return spawn(`${this.activate ? this.activate + " && " : ""}"${q}"`, {
-      env: { ...process.env, QHOME: ext.REAL_QHOME },
-      shell: this.win32 ? "cmd.exe" : "bash",
-      windowsHide: true,
-    });
+    return spawn(
+      `${this.activate ? this.activate + " && " : ""}"${this.env.QPATH}"`,
+      {
+        env: { ...process.env, ...this.env },
+        shell: this.win32 ? "cmd.exe" : "bash",
+        windowsHide: true,
+      },
+    );
   }
 
   private connect() {
@@ -327,12 +331,12 @@ export class ReplConnection {
 
   private stopExecution() {
     this.stopped = this.win32;
-    this.process.kill("SIGINT");
+    if (this.process.pid) kill(this.process.pid, "SIGINT");
   }
 
   private stopProcess(restart = false) {
     this.stopped = restart;
-    this.process.kill("SIGKILL");
+    if (this.process.pid) kill(this.process.pid, "SIGKILL");
   }
 
   private runQuery(data: string) {
@@ -683,7 +687,7 @@ export class ReplConnection {
           if (notEnvironment(data)) {
             if (path.isAbsolute(data))
               this.runQuery(
-                `\\l ${path.relative(this.qhome, this.clean(data))}`,
+                `\\l ${path.relative(path.resolve(this.env.QPATH, ".."), this.clean(data))}`,
               );
             else this.runQuery(data);
           }
@@ -751,8 +755,8 @@ export class ReplConnection {
   static async getOrCreateInstance(resource?: vscode.Uri) {
     const workspace =
       (resource && vscode.workspace.getWorkspaceFolder(resource)) ||
-      (vscode.workspace.workspaceFolders &&
-        vscode.workspace.workspaceFolders[0]);
+      (await pickWorkspace());
+
     const key = workspace?.uri.toString() ?? CONF.DEFAULT;
 
     let repl = this.repls.get(key);
@@ -762,9 +766,8 @@ export class ReplConnection {
 
       try {
         const pythonApi = await PythonExtension.api();
-        const envPath = pythonApi.environments.getActiveEnvironmentPath();
-
-        venv = await pythonApi.environments.resolveEnvironment(envPath);
+        const envp = pythonApi.environments.getActiveEnvironmentPath(workspace);
+        venv = await pythonApi.environments.resolveEnvironment(envp);
       } catch (error) {
         notify(errorMessage(error), MessageKind.DEBUG, { logger });
       }

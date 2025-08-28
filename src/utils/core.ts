@@ -13,8 +13,10 @@
 
 import { ChildProcess } from "child_process";
 import { createHash } from "crypto";
+import dotenv, { DotenvPopulateInput } from "dotenv";
 import { writeFile } from "fs/promises";
 import { pathExists } from "fs-extra";
+import { homedir } from "node:os";
 import path from "node:path";
 import { env } from "node:process";
 import { tmpdir } from "os";
@@ -203,40 +205,56 @@ export function getPlatformFolder(
   return undefined;
 }
 
-export function getQExecutablePath() {
-  const folder = getPlatformFolder(process.platform, process.arch);
+export function expandPath(target: string) {
+  return target.replace(/(?:\$HOME|~)/gs, homedir());
+}
 
-  if (!folder) {
-    throw new Error(
-      `Unsupported platform (${process.platform}) or architecture (${process.arch}).`,
-    );
-  }
+export function getEnvironment(resource?: Uri): DotenvPopulateInput {
+  const env: DotenvPopulateInput = { QHOME: ext.REAL_QHOME ?? "" };
 
-  if (ext.REAL_QHOME) {
-    const q = path.join(ext.REAL_QHOME, "bin", "q");
-
-    return stat(q) ? q : path.join(ext.REAL_QHOME, folder, "q");
-  } else {
-    try {
-      for (const target of which("q")) {
-        if (target.endsWith(path.join("bin", "q"))) return target;
-      }
-    } catch (error) {
-      notify(errorMessage(error), MessageKind.DEBUG, { logger });
+  if (resource) {
+    const target = workspace.getWorkspaceFolder(resource);
+    if (target) {
+      dotenv.configDotenv({
+        quiet: true,
+        override: true,
+        processEnv: env,
+        path: Uri.joinPath(target.uri, ".env").path,
+      });
+    }
+    for (const name in env) {
+      env[name] = expandPath(env[name]);
     }
   }
 
-  const qHomeDirectory = workspace
-    .getConfiguration("kdb")
-    .get<string>("qHomeDirectory", "");
+  const folder = getPlatformFolder(process.platform, process.arch);
 
-  if (qHomeDirectory) {
-    return path.join(qHomeDirectory, folder, "q");
+  if (folder) {
+    const qHomeDirectory = workspace
+      .getConfiguration("kdb", resource)
+      .get<string>("qHomeDirectory", "");
+
+    const home = env.QHOME || expandPath(qHomeDirectory) || "";
+
+    if (home) {
+      const q = path.join(home, "bin", "q");
+      env.QHOME = home;
+      env.QPATH = stat(q) ? q : path.join(home, folder, "q");
+    } else {
+      try {
+        for (const target of which("q")) {
+          if (target.endsWith(path.join("bin", "q"))) {
+            env.QPATH = target;
+            break;
+          }
+        }
+      } catch (error) {
+        notify(errorMessage(error), MessageKind.DEBUG, { logger });
+      }
+    }
   }
 
-  throw new Error(
-    `Neither QHOME environment variable nor qHomeDirectory is set.`,
-  );
+  return env;
 }
 
 export async function getWorkspaceFolder(
