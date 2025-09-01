@@ -837,7 +837,7 @@ export class InsightsConnection {
 
       return await axios(options).then((response: any) => {
         if (response.data.error) {
-          return response.data;
+          return response.data.errorMsg ?? response.data;
         } else if (body.expression === "") {
           notify(
             `Scratchpad created for connection: ${this.connLabel}.`,
