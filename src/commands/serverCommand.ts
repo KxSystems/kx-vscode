@@ -338,6 +338,49 @@ function removeAuthConnection(serverKey: string) {
   }
 }
 
+// Not possible to test secrets
+/* c8 ignore next */
+export function updateAuthDataKey(oldServerKey: string, newServerKey: string) {
+  const storeAuthData = ext.secretSettings.storeAuthData as {
+    [key: string]: any;
+  };
+
+  if (Object.prototype.hasOwnProperty.call(storeAuthData, newServerKey)) {
+    notify(
+      `Auth data already exists for key: ${newServerKey}`,
+      MessageKind.ERROR,
+      { logger },
+    );
+    return;
+  }
+
+  storeAuthData[newServerKey] = storeAuthData[oldServerKey];
+  delete storeAuthData[oldServerKey];
+
+  return;
+}
+
+// Not possible to test secrets
+/* c8 ignore next */
+export function handleEditAuthData(
+  oldServerKey: string,
+  newServerKey: string,
+  editAuth: boolean,
+  isAuth?: boolean,
+  username?: string,
+  password?: string,
+) {
+  if (editAuth) {
+    removeAuthConnection(oldServerKey);
+    if (isAuth && username !== "" && password !== "") {
+      addAuthConnection(newServerKey, username!, password!);
+      return;
+    }
+  } else if (oldServerKey !== newServerKey) {
+    updateAuthDataKey(oldServerKey, newServerKey);
+  }
+}
+
 export async function enableTLS(serverKey: string): Promise<void> {
   const servers: Server | undefined = getServers();
 
@@ -494,7 +537,7 @@ export async function editKdbConnection(
   const isConnectedConn = isConnected(oldAlias);
 
   await disconnect(oldAlias);
-  const servers: Server | undefined = getServers();
+  const servers: Server = getServers();
 
   if (servers) {
     const oldServer = servers[getKeyForServerName(oldAlias)];
@@ -585,20 +628,14 @@ export async function editKdbConnection(
           MessageKind.INFO,
           { logger },
         );
-        if (oldKey !== newKey) {
-          removeConnFromLabels(oldKey);
-          removeAuthConnection(oldKey);
-          if (kdbData.auth) {
-            addAuthConnection(newKey, kdbData.username!, kdbData.password!);
-          }
-        } else {
-          if (editAuth && !removedAuth) {
-            addAuthConnection(newKey, kdbData.username!, kdbData.password!);
-          }
-          if (editAuth && removedAuth) {
-            removeAuthConnection(newKey);
-          }
-        }
+        handleEditAuthData(
+          oldKey,
+          newKey,
+          editAuth ?? false,
+          kdbData.auth,
+          kdbData.username,
+          kdbData.password,
+        );
 
         NewConnectionPannel.close();
       }
