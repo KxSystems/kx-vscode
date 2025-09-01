@@ -28,7 +28,6 @@ import { installTools } from "../commands/installTools";
 import { ext } from "../extensionVariables";
 import { tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
-import { showRegistrationNotification } from "./registration";
 import { errorMessage } from "./shared";
 import { stat, which } from "./shell";
 import {
@@ -548,81 +547,33 @@ export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function checkLocalInstall(
-  isExtensionStartCheck?: boolean,
-): Promise<void> {
-  const QHOME = workspace.getConfiguration().get<string>("kdb.qHomeDirectory");
-  if (isExtensionStartCheck) {
-    const notShow = workspace
-      .getConfiguration()
-      .get<boolean>("kdb.neverShowQInstallAgain");
-    if (notShow) {
-      return;
-    }
-  }
-  if (QHOME || env.QHOME) {
-    // TODO 1: This is wrong, env vars should be read only.
-    // Aligned this with REPL behavior
-    env.QHOME = env.QHOME || QHOME;
-    if (!pathExists(env.QHOME!)) {
-      notify("QHOME path stored is empty.", MessageKind.ERROR, { logger });
-    }
-    await writeFile(
-      join(__dirname, "qinstall.md"),
-      `# q runtime installed location: \n### ${env.QHOME}`,
-    );
+export function checkLocalInstall() {
+  env.QHOME =
+    ext.REAL_QHOME ||
+    workspace.getConfiguration().get<string>("kdb.qHomeDirectory", "");
 
-    // persist the QHOME to global settings
-    //await workspace
-    //  .getConfiguration()
-    //  .update("kdb.qHomeDirectory", env.QHOME, ConfigurationTarget.Global);
+  const notShow = workspace
+    .getConfiguration()
+    .get<boolean>("kdb.neverShowQInstallAgain", false);
 
-    notify(`Installation of q found here: ${env.QHOME}`, MessageKind.DEBUG, {
-      logger,
-    });
+  if (notShow || env.QHOME) return;
 
-    showRegistrationNotification();
-
-    const hideNotification = await workspace
-      .getConfiguration()
-      .get<boolean>("kdb.hideInstallationNotification");
-    if (!hideNotification) {
-      notify(`Installation of q found here: ${env.QHOME}`, MessageKind.INFO, {
-        logger,
-      });
-    }
-
-    // persist the notification seen option
-    await workspace
-      .getConfiguration()
-      .update(
-        "kdb.hideInstallationNotification",
-        true,
-        ConfigurationTarget.Global,
-      );
-
-    return;
-  }
-
-  // set custom context that QHOME is not setup to control walkthrough visibility
   commands.executeCommand("setContext", "kdb.showInstallWalkthrough", true);
 
   notify(
-    "Local q installation not found!",
+    "Local q installation not found.",
     MessageKind.INFO,
     { logger },
     "Install new instance",
     "No",
     "Never show again",
-  ).then(async (installResult) => {
+  ).then((installResult) => {
     if (installResult === "Install new instance") {
-      await installTools();
+      installTools();
     } else if (installResult === "Never show again") {
-      await workspace
+      workspace
         .getConfiguration()
         .update("kdb.neverShowQInstallAgain", true, ConfigurationTarget.Global);
-    } else {
-      showRegistrationNotification();
     }
   });
 }
