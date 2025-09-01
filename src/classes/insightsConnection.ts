@@ -813,7 +813,7 @@ export class InsightsConnection {
         ) {
           body.returnFormat = isTableView ? "structuredText" : "text";
         } else {
-          body.returnFormat = undefined;
+          delete body.returnFormat;
           body.isTableView = isTableView;
         }
       }
