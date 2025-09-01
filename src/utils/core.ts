@@ -13,9 +13,9 @@
 
 import { ChildProcess } from "child_process";
 import { createHash } from "crypto";
-import dotenv, { DotenvPopulateInput } from "dotenv";
 import { writeFile } from "fs/promises";
 import { pathExists } from "fs-extra";
+import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { env } from "node:process";
@@ -198,52 +198,79 @@ export function getPlatformFolder(
   return undefined;
 }
 
-export function expandPath(target: string) {
-  return target.replace(/(?:\$HOME|~)/gs, homedir());
+function loadEnvironment(folder: string, env: { [key: string]: string }) {
+  const data = readFileSync(path.resolve(folder, ".env"), "utf-8");
+  for (const line of data.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith("#")) {
+      const [key, value] = trimmed.split("=");
+      if (key && value !== undefined) {
+        env[key.trim()] = value
+          .replace(/["']/gs, "")
+          .replace(/(?:\$HOME|~)/gs, homedir())
+          .trim();
+      }
+    }
+  }
 }
 
-export function getEnvironment(resource?: Uri): DotenvPopulateInput {
-  const env: DotenvPopulateInput = { QHOME: ext.REAL_QHOME ?? "" };
+export function getEnvironment(resource?: Uri): { [key: string]: string } {
+  const folder = getPlatformFolder(process.platform, process.arch);
+  const qHomeDirectory = folder
+    ? workspace
+        .getConfiguration("kdb", resource)
+        .get<string>("qHomeDirectory", "")
+    : "";
+
+  const env: { [key: string]: string } = {
+    ...process.env,
+    qHomeDirectory,
+    QPATH: "",
+    QHOME: ext.REAL_QHOME ?? "",
+  };
 
   if (resource) {
     const target = workspace.getWorkspaceFolder(resource);
     if (target) {
-      dotenv.configDotenv({
-        quiet: true,
-        override: true,
-        processEnv: env,
-        path: Uri.joinPath(target.uri, ".env").path,
-      });
-    }
-    for (const name in env) {
-      env[name] = expandPath(env[name]);
-    }
-  }
-
-  const folder = getPlatformFolder(process.platform, process.arch);
-
-  if (folder) {
-    const qHomeDirectory = workspace
-      .getConfiguration("kdb", resource)
-      .get<string>("qHomeDirectory", "");
-
-    const home = env.QHOME || expandPath(qHomeDirectory) || "";
-
-    if (home) {
-      const q = path.join(home, "bin", "q");
-      env.QHOME = home;
-      env.QPATH = stat(q) ? q : path.join(home, folder, "q");
-    } else {
       try {
-        for (const target of which("q")) {
-          if (target.endsWith(path.join("bin", "q"))) {
-            env.QPATH = target;
-            break;
-          }
-        }
+        loadEnvironment(target.uri.fsPath, env);
       } catch (error) {
         notify(errorMessage(error), MessageKind.DEBUG, { logger });
       }
+    }
+  }
+
+  const home = env.QHOME || env.qHomeDirectory || "";
+
+  if (env.QHOME) {
+    env.QHOME = home;
+    env.qHomeDirectory = home;
+
+    let q = path.resolve(home, "bin", "q");
+    let exists = stat(q);
+
+    if (folder) {
+      if (!exists) {
+        q = path.resolve(home, folder, "q");
+        exists = stat(q);
+      }
+      if (!exists) {
+        q = path.resolve(home, folder, "q.exe");
+        exists = stat(q);
+      }
+    }
+
+    if (exists) env.QPATH = q;
+  } else {
+    try {
+      for (const target of which("q")) {
+        if (target.endsWith(path.join("bin", "q"))) {
+          env.QPATH = target;
+          break;
+        }
+      }
+    } catch (error) {
+      notify(errorMessage(error), MessageKind.DEBUG, { logger });
     }
   }
 
@@ -535,7 +562,8 @@ export async function checkLocalInstall(
   }
   if (QHOME || env.QHOME) {
     // TODO 1: This is wrong, env vars should be read only.
-    env.QHOME = QHOME || env.QHOME;
+    // Aligned this with REPL behavior
+    env.QHOME = env.QHOME || QHOME;
     if (!pathExists(env.QHOME!)) {
       notify("QHOME path stored is empty.", MessageKind.ERROR, { logger });
     }
@@ -545,9 +573,9 @@ export async function checkLocalInstall(
     );
 
     // persist the QHOME to global settings
-    await workspace
-      .getConfiguration()
-      .update("kdb.qHomeDirectory", env.QHOME, ConfigurationTarget.Global);
+    //await workspace
+    //  .getConfiguration()
+    //  .update("kdb.qHomeDirectory", env.QHOME, ConfigurationTarget.Global);
 
     notify(`Installation of q found here: ${env.QHOME}`, MessageKind.DEBUG, {
       logger,

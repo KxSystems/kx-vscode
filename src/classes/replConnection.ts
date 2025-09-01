@@ -12,7 +12,6 @@
  */
 
 import { PythonExtension, ResolvedEnvironment } from "@vscode/python-extension";
-import { DotenvPopulateInput } from "dotenv";
 import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import path from "node:path";
 import kill from "tree-kill";
@@ -171,7 +170,7 @@ export class ReplConnection {
     `${CONF.TITLE} Copyright (C) 1993-2025 KX Systems` + ANSI.CRLF.repeat(2),
   ];
 
-  private env: DotenvPopulateInput = {};
+  private env: { [key: string]: string } = {};
   private process: ChildProcessWithoutNullStreams;
   private activate = "";
   private prefix = ANSI.EMPTY;
@@ -274,9 +273,9 @@ export class ReplConnection {
     return spawn(
       `${this.activate ? this.activate + " && " : ""}"${this.env.QPATH}"`,
       {
-        env: { ...process.env, ...this.env },
-        shell: this.win32 ? "cmd.exe" : "bash",
+        env: this.env,
         windowsHide: true,
+        shell: this.win32 ? "cmd.exe" : "bash",
       },
     );
   }
