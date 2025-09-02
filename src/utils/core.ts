@@ -15,7 +15,6 @@ import { ChildProcess } from "child_process";
 import { createHash } from "crypto";
 import { writeFile } from "fs/promises";
 import { pathExists } from "fs-extra";
-import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { env } from "node:process";
@@ -29,7 +28,7 @@ import { ext } from "../extensionVariables";
 import { tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
 import { errorMessage } from "./shared";
-import { stat, which } from "./shell";
+import { readTextFile, stat, which } from "./shell";
 import {
   InsightDetails,
   Insights,
@@ -198,7 +197,7 @@ export function getPlatformFolder(
 }
 
 function loadEnvironment(folder: string, env: { [key: string]: string }) {
-  const data = readFileSync(path.resolve(folder, ".env"), "utf-8");
+  const data = readTextFile(path.resolve(folder, ".env"));
   for (const line of data.split(/\r?\n/)) {
     const trimmed = line.trim();
     if (trimmed && !trimmed.startsWith("#")) {
@@ -241,7 +240,7 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
 
   const home = env.QHOME || env.qHomeDirectory || "";
 
-  if (env.QHOME) {
+  if (home) {
     env.QHOME = home;
     env.qHomeDirectory = home;
 
