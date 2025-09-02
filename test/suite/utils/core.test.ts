@@ -971,26 +971,25 @@ describe("core", () => {
         .get.withArgs("kdb.neverShowQInstallAgain")
         .returns(true);
 
-      await coreUtils.checkLocalInstall(true);
+      await coreUtils.checkLocalInstall();
 
       assert.strictEqual(showInformationMessageStub.called, false);
       assert.strictEqual(executeCommandStub.called, false);
     });
     it("should continue if 'neverShowQInstallAgain' is false", async () => {
+      getConfigurationStub().get.withArgs("kdb.qHomeDirectory").returns("");
       getConfigurationStub()
         .get.withArgs("kdb.neverShowQInstallAgain")
         .returns(false);
 
-      await coreUtils.checkLocalInstall(true);
+      await coreUtils.checkLocalInstall();
 
       assert.strictEqual(showInformationMessageStub.called, true);
       assert.strictEqual(executeCommandStub.called, true);
     });
 
     it("should handle 'Never show again' response", async () => {
-      getConfigurationStub()
-        .get.withArgs("kdb.qHomeDirectory")
-        .returns(undefined);
+      getConfigurationStub().get.withArgs("kdb.qHomeDirectory").returns("");
       getConfigurationStub()
         .get.withArgs("kdb.neverShowQInstallAgain")
         .returns(false);

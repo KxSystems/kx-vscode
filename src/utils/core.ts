@@ -547,7 +547,7 @@ export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function checkLocalInstall() {
+export async function checkLocalInstall() {
   env.QHOME =
     ext.REAL_QHOME ||
     workspace.getConfiguration().get<string>("kdb.qHomeDirectory", "");
@@ -560,7 +560,7 @@ export function checkLocalInstall() {
 
   commands.executeCommand("setContext", "kdb.showInstallWalkthrough", true);
 
-  notify(
+  return notify(
     "Local q installation not found.",
     MessageKind.INFO,
     { logger },
@@ -569,9 +569,9 @@ export function checkLocalInstall() {
     "Never show again",
   ).then((installResult) => {
     if (installResult === "Install new instance") {
-      installTools();
+      return installTools();
     } else if (installResult === "Never show again") {
-      workspace
+      return workspace
         .getConfiguration()
         .update("kdb.neverShowQInstallAgain", true, ConfigurationTarget.Global);
     }
