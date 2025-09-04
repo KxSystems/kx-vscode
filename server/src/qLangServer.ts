@@ -28,6 +28,9 @@ import {
   DidChangeWatchedFilesParams,
   DocumentSymbol,
   DocumentSymbolParams,
+  FoldingRange,
+  FoldingRangeKind,
+  FoldingRangeParams,
   InitializeParams,
   Location,
   NotebookDocuments,
@@ -62,6 +65,7 @@ import {
   Token,
   Type,
 } from "./parser";
+import { CommentBegin, CommentEnd } from "./parser/ranges";
 
 const logger = "qLangServer";
 
@@ -121,6 +125,7 @@ export default class QLangServer {
       this.onParameterCache.bind(this),
     );
     this.connection.onSelectionRanges(this.onSelectionRanges.bind(this));
+    this.connection.onFoldingRanges(this.onFoldingRanges.bind(this));
   }
 
   public capabilities(): ServerCapabilities {
@@ -148,6 +153,7 @@ export default class QLangServer {
           },
         ],
       },
+      foldingRangeProvider: true,
     };
   }
 
@@ -386,6 +392,28 @@ export default class QLangServer {
       const target = source.tokenAt(position);
       if (target) {
         ranges.push(SelectionRange.create(RangeFrom(target)));
+      }
+    }
+    return ranges;
+  }
+
+  public async onFoldingRanges({
+    textDocument: { uri },
+  }: FoldingRangeParams): Promise<FoldingRange[]> {
+    const source = await this.getSource(uri);
+    const ranges: FoldingRange[] = [];
+    for (const token of source.tokens) {
+      if (token.tokenType === CommentBegin) {
+        ranges.push({
+          startLine: (token.startLine || 0) - 1,
+          endLine: -1,
+          kind: FoldingRangeKind.Comment,
+        });
+      } else if (token.tokenType === CommentEnd) {
+        const top = ranges[ranges.length - 1];
+        if (top) {
+          top.endLine = (token.endLine || 0) - 1;
+        }
       }
     }
     return ranges;
