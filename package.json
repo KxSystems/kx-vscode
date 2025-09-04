@@ -69,9 +69,6 @@
             "id": "view",
             "title": "q runtime installed",
             "description": " \n",
-            "media": {
-              "markdown": "out/qinstall.md"
-            },
             "completionEvents": [
               "onLink:https://code.kx.com/q/learn/install/"
             ],
