@@ -2,6 +2,12 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.14.0
+
+### Enhancements
+
+- Added a new setting to hide detailed console query output that, when disabled, shows the query that generated the output, the connection the query was run on, and the time when it was run
+
 # v1.13.1
 
 ### Fixes
