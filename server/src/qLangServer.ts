@@ -52,7 +52,17 @@ import {
 } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { RCurly, LCurly, RBracket, Callable } from "./parser";
+import {
+  RCurly,
+  LCurly,
+  RBracket,
+  Callable,
+  LineComment,
+  EndOfLine,
+  WhiteSpace,
+  CommentEndOfLine,
+  CommentLiteral,
+} from "./parser";
 import {
   Name,
   Namespace,
@@ -65,7 +75,7 @@ import {
   Token,
   Type,
 } from "./parser";
-import { CommentBegin, CommentEnd } from "./parser/ranges";
+import { CommentBegin, CommentEnd, ExitCommentBegin } from "./parser/ranges";
 
 const logger = "qLangServer";
 
@@ -402,20 +412,55 @@ export default class QLangServer {
   }: FoldingRangeParams): Promise<FoldingRange[]> {
     const source = await this.getSource(uri);
     const ranges: FoldingRange[] = [];
+
+    let range: FoldingRange | undefined;
+    let startLine: number;
+    let endLine: number;
+
+    const start = () => {
+      range = {
+        startLine,
+        endLine: -1,
+        kind: FoldingRangeKind.Comment,
+      };
+    };
+
+    const end = () => {
+      if (range) {
+        range.endLine = endLine;
+        ranges.push(range);
+        range = undefined;
+      }
+    };
+
     for (const token of source.tokens) {
-      if (token.tokenType === CommentBegin) {
-        ranges.push({
-          startLine: (token.startLine || 0) - 1,
-          endLine: -1,
-          kind: FoldingRangeKind.Comment,
-        });
-      } else if (token.tokenType === CommentEnd) {
-        const top = ranges[ranges.length - 1];
-        if (top) {
-          top.endLine = (token.endLine || 0) - 1;
-        }
+      startLine = (token.startLine || 0) - 1;
+      endLine = (token.endLine || 0) - 1;
+      switch (token.tokenType) {
+        case EndOfLine:
+        case WhiteSpace:
+        case CommentEndOfLine:
+        case CommentLiteral:
+          break;
+        case ExitCommentBegin:
+        case LineComment:
+          if (!range) start();
+          break;
+        case CommentBegin:
+          endLine--;
+          end();
+          start();
+          break;
+        case CommentEnd:
+          end();
+          break;
+        default:
+          endLine--;
+          end();
+          break;
       }
     }
+    end();
     return ranges;
   }
 
