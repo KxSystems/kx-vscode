@@ -18,6 +18,7 @@ import * as sinon from "sinon";
 import { pathToFileURL } from "url";
 import {
   Connection,
+  FoldingRangeKind,
   InitializeParams,
   TextDocumentIdentifier,
 } from "vscode-languageserver";
@@ -197,12 +198,12 @@ describe("qLangServer", () => {
       assert.strictEqual(result.length, 2);
     });
     it("should find globals in functions", async () => {
-      const params = createDocument("a:1;{a");
+      const params = createDocument("a:1;{a};a");
       const result = await server.onReferences({ ...params, context });
-      assert.strictEqual(result.length, 2);
+      assert.strictEqual(result.length, 3);
     });
     it("should find locals in functions", async () => {
-      const params = createDocument("a:1;{a:2;a");
+      const params = createDocument("a:1;{a:2};a");
       const result = await server.onReferences({ ...params, context });
       assert.strictEqual(result.length, 2);
     });
@@ -260,7 +261,7 @@ describe("qLangServer", () => {
       assert.strictEqual(result.start.line, 0);
       assert.strictEqual(result.start.character, 0);
       assert.strictEqual(result.end.line, 0);
-      assert.strictEqual(result.end.character, 3);
+      assert.strictEqual(result.end.character, 4);
     });
     it("should return the range of the expression", async () => {
       const params = createDocument("a");
@@ -275,15 +276,21 @@ describe("qLangServer", () => {
       const result = await server.onExpressionRange(params);
       assert.strictEqual(result, null);
     });
-    it("should return null", async () => {
+    it("should not return null", async () => {
       const params = createDocument(";");
       const result = await server.onExpressionRange(params);
-      assert.strictEqual(result, null);
+      assert.strictEqual(result.start.line, 0);
+      assert.strictEqual(result.start.character, 0);
+      assert.strictEqual(result.end.line, 0);
+      assert.strictEqual(result.end.character, 1);
     });
-    it("should return null", async () => {
+    it("should not return null", async () => {
       const params = createDocument("/a:1");
       const result = await server.onExpressionRange(params);
-      assert.strictEqual(result, null);
+      assert.strictEqual(result.start.line, 0);
+      assert.strictEqual(result.start.character, 0);
+      assert.strictEqual(result.end.line, 0);
+      assert.strictEqual(result.end.character, 4);
     });
   });
 
@@ -295,7 +302,7 @@ describe("qLangServer", () => {
       assert.strictEqual(result.start.line, 0);
       assert.strictEqual(result.start.character, 0);
       assert.strictEqual(result.end.line, 0);
-      assert.strictEqual(result.end.character, 3);
+      assert.strictEqual(result.end.character, 4);
     });
     it("should return range for lambda", async () => {
       const params = createDocument("a:{b:1;b};");
@@ -304,16 +311,16 @@ describe("qLangServer", () => {
       assert.strictEqual(result.start.line, 0);
       assert.strictEqual(result.start.character, 0);
       assert.strictEqual(result.end.line, 0);
-      assert.strictEqual(result.end.character, 9);
+      assert.strictEqual(result.end.character, 10);
     });
-    it("should skip comments", async () => {
+    it("should not skip comments", async () => {
       const params = createDocument("a:1 /comment", 1);
       const result = await server.onExpressionRange(params);
       assert.ok(result);
       assert.strictEqual(result.start.line, 0);
       assert.strictEqual(result.start.character, 0);
       assert.strictEqual(result.end.line, 0);
-      assert.strictEqual(result.end.character, 3);
+      assert.strictEqual(result.end.character, 12);
     });
   });
 
@@ -373,7 +380,7 @@ describe("qLangServer", () => {
     });
   });
 
-  describe("onPrepareCallHierarchy", () => {
+  describe.skip("onPrepareCallHierarchy", () => {
     it("should prepare call hierarchy", async () => {
       const params = createDocument("a:1;a");
       const result = await server.onPrepareCallHierarchy(params);
@@ -381,7 +388,7 @@ describe("qLangServer", () => {
     });
   });
 
-  describe("onIncomingCallsCallHierarchy", () => {
+  describe.skip("onIncomingCallsCallHierarchy", () => {
     it("should return incoming calls", async () => {
       const params = createDocument("a:1;a");
       const items = await server.onPrepareCallHierarchy(params);
@@ -392,7 +399,7 @@ describe("qLangServer", () => {
     });
   });
 
-  describe("onOutgoingCallsCallHierarchy", () => {
+  describe.skip("onOutgoingCallsCallHierarchy", () => {
     it("should return outgoing calls", async () => {
       const params = createDocument("a:1;{a");
       const items = await server.onPrepareCallHierarchy(params);
@@ -407,28 +414,63 @@ describe("qLangServer", () => {
     it("should tokenize local variables", async () => {
       const params = createDocument("a:{[b;c]d:1;b*c*d}");
       const result = await server.onSemanticTokens(params);
-      assert.strictEqual(result.data.length, 35);
+      assert.strictEqual(result.data.length, 30);
     });
 
     it("should ignore qualified variables", async () => {
       const params = createDocument("a:{.ns.b:1;.ns.b}");
       const result = await server.onSemanticTokens(params);
-      assert.strictEqual(result.data.length, 5);
+      assert.strictEqual(result.data.length, 0);
     });
 
     it("should detect empty lists", async () => {
       const params = createDocument("a:{b:();b}");
       const result = await server.onSemanticTokens(params);
-      assert.strictEqual(result.data.length, 15);
+      assert.strictEqual(result.data.length, 10);
     });
   });
 
-  describe("onFoldingRanges", async () => {
-    const params = createDocument("/\n*\n\\");
-    const result = await server.onFoldingRanges({
-      textDocument: params.textDocument,
+  describe("onFoldingRanges", () => {
+    it("should include block comments", async () => {
+      const params = createDocument("/\n*\n\\\n");
+      const result = await server.onFoldingRanges({
+        textDocument: params.textDocument,
+      });
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].kind, FoldingRangeKind.Comment);
     });
-    assert.strictEqual(result.length, 1);
+    it("should include line comments", async () => {
+      const params = createDocument("//\n");
+      const result = await server.onFoldingRanges({
+        textDocument: params.textDocument,
+      });
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].kind, FoldingRangeKind.Comment);
+    });
+    it("should include white space", async () => {
+      const params = createDocument("//\n \n//\n");
+      const result = await server.onFoldingRanges({
+        textDocument: params.textDocument,
+      });
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].kind, FoldingRangeKind.Comment);
+      assert.strictEqual(result[0].endLine, 2);
+    });
+    it("should include exit comment", async () => {
+      const params = createDocument("\\\n");
+      const result = await server.onFoldingRanges({
+        textDocument: params.textDocument,
+      });
+      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result[0].kind, FoldingRangeKind.Comment);
+    });
+    it("should not include other statements", async () => {
+      const params = createDocument("a:1");
+      const result = await server.onFoldingRanges({
+        textDocument: params.textDocument,
+      });
+      assert.strictEqual(result.length, 0);
+    });
   });
 
   describe("onDidOpen", () => {

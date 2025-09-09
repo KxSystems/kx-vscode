@@ -15,7 +15,7 @@ import * as assert from "assert";
 
 import * as lang from "../../../server/src/parser";
 
-describe("Language", () => {
+describe("q Language", () => {
   describe("CutDrop", () => {
     it("should be part of Identifier", () => {
       const source = lang.Source.create("uri", "a_b");

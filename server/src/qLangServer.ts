@@ -341,6 +341,9 @@ export default class QLangServer {
   }: TextDocumentPositionParams) {
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
+    if (!target) {
+      return null;
+    }
 
     const tokens = source.tokens.filter(
       (token) => token.index === target?.index,
@@ -369,14 +372,14 @@ export default class QLangServer {
       (token) => Type(token) === RCurly && Scope(token) === scope,
     );
     if (!curly) {
-      return;
+      return null;
     }
     const bracket = source.tokens.find(
       (token) =>
         Scope(token) === scope && Param(token) && Type(token) === RBracket,
     );
     if (!bracket) {
-      return;
+      return null;
     }
     const args = source.definitions.filter(
       (token) => Scope(token) === scope && Param(token),
@@ -385,7 +388,7 @@ export default class QLangServer {
       return null;
     }
     return {
-      params: args,
+      params: args.reverse().map((value) => value.image),
       start: RangeFrom(bracket).end,
       end: RangeFrom(curly).start,
     };
