@@ -271,7 +271,7 @@ function _(token: TokenType | RegExp) {
 }
 
 function __(token: TokenType | RegExp) {
-  return `(?<![A-Za-z0-9.])${_(token)}(?![A-Za-z0-9.])`;
+  return `(?<![A-Za-z0-9.])${_(token)}(?![A-Za-z0-9._])`;
 }
 
 export function generateTextMateGrammar() {

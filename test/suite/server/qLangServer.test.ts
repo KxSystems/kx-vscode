@@ -63,6 +63,7 @@ describe("qLangServer", () => {
       onRequest() {},
       onSelectionRanges() {},
       onDidChangeWatchedFiles() {},
+      onFoldingRanges() {},
       workspace: {
         async getWorkspaceFolders() {
           return [];
@@ -117,6 +118,7 @@ describe("qLangServer", () => {
       assert.ok(capabilities.selectionRangeProvider);
       assert.ok(capabilities.callHierarchyProvider);
       assert.ok(capabilities.semanticTokensProvider);
+      assert.ok(capabilities.foldingRangeProvider);
     });
   });
 
@@ -131,11 +133,11 @@ describe("qLangServer", () => {
       const result = await server.onDocumentSymbol(params);
       assert.strictEqual(result.length, 0);
     });
-    it("should account for \\d can be only one level deep", async () => {
+    it("should be relax for \\d can be only one level deep", async () => {
       const params = createDocument("\\d .foo.bar\na:1");
       const result = await server.onDocumentSymbol(params);
       assert.strictEqual(result.length, 1);
-      assert.strictEqual(result[0].name, ".foo.a");
+      assert.strictEqual(result[0].name, ".foo.bar.a");
     });
     it("should account for bogus \\d", async () => {
       const params = createDocument("\\d\na:1");
@@ -143,11 +145,11 @@ describe("qLangServer", () => {
       assert.strictEqual(result.length, 1);
       assert.strictEqual(result[0].name, "a");
     });
-    it("should account for bogus \\d foo", async () => {
+    it("should allow bogus \\d foo", async () => {
       const params = createDocument("\\d foo\na:1");
       const result = await server.onDocumentSymbol(params);
       assert.strictEqual(result.length, 1);
-      assert.strictEqual(result[0].name, "a");
+      assert.strictEqual(result[0].name, "foo.a");
     });
     it('should account for bogus system"d', async () => {
       const params = createDocument('system"d";a:1');
@@ -421,6 +423,14 @@ describe("qLangServer", () => {
     });
   });
 
+  describe("onFoldingRanges", async () => {
+    const params = createDocument("/\n*\n\\");
+    const result = await server.onFoldingRanges({
+      textDocument: params.textDocument,
+    });
+    assert.strictEqual(result.length, 1);
+  });
+
   describe("onDidOpen", () => {
     it("should add to opened", () => {
       server.onDidOpen({ document: <TextDocument>{ uri: "test" } });
@@ -499,10 +509,6 @@ describe("qLangServer", () => {
       server["onDidChangeWatchedFiles"](<any>{ changes: [{ uri: "test" }] });
       assert.strictEqual(stub.get("test"), undefined);
     });
-  });
-
-  describe("onDidChangeContent", () => {
-    it("should ...", async () => {});
   });
 
   describe("related", () => {
