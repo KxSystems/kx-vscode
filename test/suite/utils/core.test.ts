@@ -12,7 +12,6 @@
  */
 
 import * as assert from "assert";
-import dotenv from "dotenv";
 import path from "node:path";
 import { env } from "node:process";
 import * as sinon from "sinon";
@@ -893,28 +892,28 @@ describe("core", () => {
     });
   });
 
-  describe("getQExecutablePath", () => {
+  describe("getEnvironment", () => {
     afterEach(() => {
       sinon.restore();
     });
     it("should return KDB+", () => {
       ext.REAL_QHOME = "QHOME";
       sinon.stub(shell, "stat").returns(false);
-      const res = coreUtils.getEnvironment();
-      assert.ok(res);
+      const env = coreUtils.getEnvironment();
+      assert.strictEqual(env.QHOME, "QHOME");
     });
     it("should return KDB-X", () => {
       ext.REAL_QHOME = "QHOME";
       sinon.stub(shell, "stat").returns(true);
-      const res = coreUtils.getEnvironment();
-      assert.strictEqual(res.QPATH, path.join("QHOME", "bin", "q"));
+      const env = coreUtils.getEnvironment();
+      assert.strictEqual(env.QPATH, path.resolve("QHOME", "bin", "q"));
     });
     it("should return KDB-X", () => {
       ext.REAL_QHOME = "";
       const target = path.join("QHOME", "bin", "q");
       sinon.stub(shell, "which").returns([target]);
-      const res = coreUtils.getEnvironment();
-      assert.strictEqual(res.QPATH, target);
+      const env = coreUtils.getEnvironment();
+      assert.strictEqual(env.QPATH, target);
     });
     it("should return qHomeDirectory", () => {
       ext.REAL_QHOME = "";
@@ -922,26 +921,25 @@ describe("core", () => {
       sinon.stub(vscode.workspace, "getConfiguration").value(() => {
         return { get: () => "QHOME" };
       });
-      const res = coreUtils.getEnvironment();
-      assert.ok(res);
+      const env = coreUtils.getEnvironment();
+      assert.strictEqual(env.QHOME, "QHOME");
     });
-    it("should throw if q not found", () => {
+    it("should return empty", () => {
       ext.REAL_QHOME = "";
       sinon.stub(shell, "which").throws();
       sinon.stub(vscode.workspace, "getConfiguration").value(() => {
         return { get: () => "" };
       });
-      const res = coreUtils.getEnvironment();
-      assert.strictEqual(res.QPATH, undefined);
+      const env = coreUtils.getEnvironment();
+      assert.strictEqual(env.QPATH, "");
     });
-    it("should return dotenv", () => {
-      const uri = vscode.Uri.file("test");
+    it("should return QHOME", () => {
       sinon
         .stub(vscode.workspace, "getWorkspaceFolder")
-        .returns({ uri, name: "test", index: 0 });
-      const stub = sinon.stub(dotenv, "configDotenv");
-      coreUtils.getEnvironment(uri);
-      sinon.assert.calledOnce(stub);
+        .returns(<vscode.WorkspaceFolder>{ uri: vscode.Uri.file("TEST") });
+      sinon.stub(shell, "readTextFile").returns('QHOME="QHOME"');
+      const env = coreUtils.getEnvironment(vscode.Uri.file("TEST"));
+      assert.strictEqual(env.QHOME, "QHOME");
     });
   });
 
@@ -981,26 +979,25 @@ describe("core", () => {
         .get.withArgs("kdb.neverShowQInstallAgain")
         .returns(true);
 
-      await coreUtils.checkLocalInstall(true);
+      await coreUtils.checkLocalInstall();
 
       assert.strictEqual(showInformationMessageStub.called, false);
       assert.strictEqual(executeCommandStub.called, false);
     });
     it("should continue if 'neverShowQInstallAgain' is false", async () => {
+      getConfigurationStub().get.withArgs("kdb.qHomeDirectory").returns("");
       getConfigurationStub()
         .get.withArgs("kdb.neverShowQInstallAgain")
         .returns(false);
 
-      await coreUtils.checkLocalInstall(true);
+      await coreUtils.checkLocalInstall();
 
       assert.strictEqual(showInformationMessageStub.called, true);
       assert.strictEqual(executeCommandStub.called, true);
     });
 
     it("should handle 'Never show again' response", async () => {
-      getConfigurationStub()
-        .get.withArgs("kdb.qHomeDirectory")
-        .returns(undefined);
+      getConfigurationStub().get.withArgs("kdb.qHomeDirectory").returns("");
       getConfigurationStub()
         .get.withArgs("kdb.neverShowQInstallAgain")
         .returns(false);

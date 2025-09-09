@@ -89,15 +89,6 @@ describe("REPL", () => {
       instance["sendToProcess"]("a:1");
       assert.ok(stdinChunk.startsWith("a:1\r\n"));
     });
-    it("should send token with data when no error on q", () => {
-      instance["sendToProcess"]("a:1");
-      assert.ok(stdinChunk.endsWith(',string system"d";\r\n'));
-    });
-    it("should send token with data when no error on k", () => {
-      instance["context"] = "k";
-      instance["sendToProcess"]("a:1");
-      assert.ok(stdinChunk.endsWith(',$:."\\\\d";\r\n'));
-    });
   });
 
   describe("sendToTerminal", () => {

@@ -159,7 +159,8 @@
         "kdb.hideInstallationNotification": {
           "type": "boolean",
           "description": "Hide notification for installation path, after first install",
-          "scope": "machine"
+          "scope": "machine",
+          "deprecationMessage": "This setting is deprecated, use kdb.neverShowQInstallAgain instead"
         },
         "kdb.hideDetailedConsoleQueryOutput": {
           "type": "boolean",
@@ -176,11 +177,13 @@
         "kdb.qHomeDirectory": {
           "type": "string",
           "description": "QHOME directory for q runtime",
+          "default": "",
           "scope": "machine-overridable"
         },
         "kdb.neverShowQInstallAgain": {
           "type": "boolean",
           "description": "Never show q install walkthrough again",
+          "default": false,
           "scope": "machine"
         },
         "kdb.hideSubscribeRegistrationNotification": {
@@ -1174,7 +1177,6 @@
     "@vscode/python-extension": "^1.0.5",
     "@vscode/test-electron": "^2.5.2",
     "c8": "^10.1.3",
-    "dotenv": "^17.2.1",
     "esbuild": "^0.25.5",
     "eslint": "^9.29.0",
     "eslint-plugin-header": "^3.1.1",
