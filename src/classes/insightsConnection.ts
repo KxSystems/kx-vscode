@@ -741,6 +741,13 @@ export class InsightsConnection {
       const qePrefix = this.apiConfig?.queryEnvironmentsEnabled ? "-qe" : "";
       if ("scope" in body) {
         body.scope.assembly = body.scope.assembly + qePrefix;
+        if (body.scope.dap) {
+          body.scope.dap = this.retrieveCorrectDAPName(
+            body.scope.dap,
+            body.scope.tier,
+          );
+          body.scope.tier = undefined;
+        }
       }
       const requestUrl = this.generateDatasourceEndpoints(type, udaName);
       const options = await this.getOptions(
