@@ -56,7 +56,6 @@ import {
   RCurly,
   LCurly,
   RBracket,
-  Callable,
   LineComment,
   EndOfLine,
   WhiteSpace,
@@ -488,19 +487,16 @@ export default class QLangServer {
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
 
-    if (Callable(target)) {
-      return [
-        {
-          data: target,
-          kind: SymbolKind.Variable,
-          name: Name(target),
-          uri: uri,
-          range: RangeFrom(target!),
-          selectionRange: RangeFrom(target!),
-        },
-      ];
-    }
-    return [];
+    return [
+      {
+        data: target,
+        kind: SymbolKind.Variable,
+        name: Name(target),
+        uri: uri,
+        range: RangeFrom(target!),
+        selectionRange: RangeFrom(target!),
+      },
+    ];
   }
 
   public async onIncomingCallsCallHierarchy({

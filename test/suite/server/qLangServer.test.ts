@@ -380,7 +380,7 @@ describe("qLangServer", () => {
     });
   });
 
-  describe.skip("onPrepareCallHierarchy", () => {
+  describe("onPrepareCallHierarchy", () => {
     it("should prepare call hierarchy", async () => {
       const params = createDocument("a:1;a");
       const result = await server.onPrepareCallHierarchy(params);
@@ -388,25 +388,25 @@ describe("qLangServer", () => {
     });
   });
 
-  describe.skip("onIncomingCallsCallHierarchy", () => {
+  describe("onIncomingCallsCallHierarchy", () => {
     it("should return incoming calls", async () => {
       const params = createDocument("a:1;a");
       const items = await server.onPrepareCallHierarchy(params);
       const result = await server.onIncomingCallsCallHierarchy({
         item: items[0],
       });
-      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result.length, 2);
     });
   });
 
-  describe.skip("onOutgoingCallsCallHierarchy", () => {
+  describe("onOutgoingCallsCallHierarchy", () => {
     it("should return outgoing calls", async () => {
       const params = createDocument("a:1;{a");
       const items = await server.onPrepareCallHierarchy(params);
       const result = await server.onOutgoingCallsCallHierarchy({
         item: items[0],
       });
-      assert.strictEqual(result.length, 1);
+      assert.strictEqual(result.length, 2);
     });
   });
 
