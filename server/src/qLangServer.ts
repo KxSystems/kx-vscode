@@ -290,9 +290,13 @@ export default class QLangServer {
     textDocument: { uri },
     position,
     newName,
-  }: RenameParams): Promise<WorkspaceEdit> {
+  }: RenameParams): Promise<WorkspaceEdit | null> {
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
+
+    if (!target) {
+      return null;
+    }
 
     return (await this.getSources(uri)).reduce(
       (edit, source) => {
@@ -302,9 +306,14 @@ export default class QLangServer {
             image: newName,
             namespace: target?.namespace,
           });
-          edit.changes![source.uri] = references.map((token) =>
-            TextEdit.replace(RangeFrom(token), Relative(token, name)),
-          );
+          edit.changes![source.uri] = references
+            .filter(
+              (token) =>
+                token.scope === Scope(target) && Name(token) === Name(target),
+            )
+            .map((token) =>
+              TextEdit.replace(RangeFrom(token), Relative(name, token)),
+            );
         }
         return edit;
       },
@@ -321,16 +330,21 @@ export default class QLangServer {
 
     return (await this.getSources(uri))
       .map((source) =>
-        source.references.map((token) => {
-          return {
-            label: token.image,
-            labelDetails: {
-              detail: ` .${Namespace(token)}`,
-            },
-            kind: CompletionItemKind.Variable,
-            insertText: Relative(token, target),
-          };
-        }),
+        source.references
+          .filter(
+            (token) =>
+              token.scope === Scope(target) && Name(token) === Name(target),
+          )
+          .map((token) => {
+            return {
+              label: token.image,
+              labelDetails: {
+                detail: ` .${Namespace(token)}`,
+              },
+              kind: CompletionItemKind.Variable,
+              insertText: Relative(token, target),
+            };
+          }),
       )
       .flat();
   }
