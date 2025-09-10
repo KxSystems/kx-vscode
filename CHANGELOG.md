@@ -7,6 +7,30 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 ### Enhancements
 
 - Added a new setting to hide detailed console query output that, when disabled, shows the query that generated the output, the connection the query was run on, and the time when it was run
+- Added REPL execution support for Python files
+- Added REPL execution support in KX Notebooks
+- Added .venv support to REPL
+- Added .env support to REPL
+- Added workspace picker for REPL for multi root workspaces
+- Added support for pattern matching syntax in language server
+- Added support for filter functions in language server
+- Added folding comments in language server
+- Support language server features on notebook q code cells
+
+### Fixes
+
+- Fixed bundled q connections not working on remote
+- Added ability to debug single test file from UI
+- Stop execution support on Windows
+- Fixed clean install error messages
+- Support editing connections without the need to re-enter authentication details when just changing port and host
+- Made QSQL endpoint queries preserve new lines
+- Fixed adding BundledQ or MyQ connections does not update connection list
+
+### Internal Improvements
+
+- Breakdown test files
+- Added ability to debug single test file from UI
 
 # v1.13.1
 
