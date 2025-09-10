@@ -96,7 +96,7 @@ If you want to use q outside of VS Code, set a [`QHOME` environment variable](ht
 
 If q is installed at `C:\q`, then `QHOME` is `C:\q`.
 
-**Note!** The kdb VS Code Extension now treats the `QHOME` environment variable and the `kdb.qHomeDirectory` setting as identical when locating the q executable for REPL and bundled q connections. For more details, refer to the [QHomeDirectory](https://github.com/KxSystems/kx-vscode/wiki/qHomeDirectory) wiki page. 
+**Note!** The kdb VS Code Extension treats the `QHOME` environment variable and the `kdb.qHomeDirectory` setting as identical when locating the q executable for REPL and bundled q connections. For more details, refer to the [QHomeDirectory](https://github.com/KxSystems/kx-vscode/wiki/qHomeDirectory) wiki page. 
 
 ### Versions available
 
