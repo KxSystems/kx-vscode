@@ -1130,8 +1130,8 @@
   },
   "scripts": {
     "build": "npm run -S esbuild-base -- --sourcemap",
-    "coverage_old": "npm run test -- --coverage",
-    "coverage": "c8 -o coverage-reports -r lcov -r cobertura -r html npm run test",
+    "coverage_old": "npm run test -- --coverage; rm -rf .vscode-test",
+    "coverage": "c8 -o coverage-reports -r lcov -r cobertura -r html npm run test; rm -rf .vscode-test",
     "esbuild-base": "rimraf out && node ./esbuild.js",
     "fmt": "prettier --write \"src/**/*.ts\"&& npm run test -- --fix",
     "format": "prettier --ignore-path .gitignore --write \"**/*.+(js|ts|json)\"",
