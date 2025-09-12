@@ -15,6 +15,7 @@ import { ChildProcess } from "child_process";
 import { createHash } from "crypto";
 import { writeFile } from "fs/promises";
 import { pathExists } from "fs-extra";
+import { homedir } from "node:os";
 import path from "node:path";
 import { env } from "node:process";
 import { tmpdir } from "os";
@@ -26,9 +27,8 @@ import { installTools } from "../commands/installTools";
 import { ext } from "../extensionVariables";
 import { tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
-import { showRegistrationNotification } from "./registration";
 import { errorMessage } from "./shared";
-import { stat, which } from "./shell";
+import { readTextFile, stat, which } from "./shell";
 import {
   InsightDetails,
   Insights,
@@ -197,39 +197,83 @@ export function getPlatformFolder(
   return undefined;
 }
 
-export function getQExecutablePath() {
-  const folder = getPlatformFolder(process.platform, process.arch);
+function loadEnvironment(folder: string, env: { [key: string]: string }) {
+  const data = readTextFile(path.resolve(folder, ".env"));
+  for (const line of data.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith("#")) {
+      const [key, value] = trimmed.split("=");
+      if (key && value !== undefined) {
+        env[key.trim()] = value
+          .replace(/["']/gs, "")
+          .replace(/(?:\$HOME|~)/gs, homedir())
+          .trim();
+      }
+    }
+  }
+}
 
-  if (!folder) {
-    throw new Error(
-      `Unsupported platform (${process.platform}) or architecture (${process.arch}).`,
-    );
+export function getEnvironment(resource?: Uri): { [key: string]: string } {
+  const folder = getPlatformFolder(process.platform, process.arch);
+  const qHomeDirectory = folder
+    ? workspace
+        .getConfiguration("kdb", resource)
+        .get<string>("qHomeDirectory", "")
+    : "";
+
+  const env: { [key: string]: string } = {
+    ...process.env,
+    qHomeDirectory,
+    QPATH: "",
+    QHOME: ext.REAL_QHOME ?? "",
+  };
+
+  if (resource) {
+    const target = workspace.getWorkspaceFolder(resource);
+    if (target) {
+      try {
+        loadEnvironment(target.uri.fsPath, env);
+      } catch (error) {
+        notify(errorMessage(error), MessageKind.DEBUG, { logger });
+      }
+    }
   }
 
-  if (ext.REAL_QHOME) {
-    const q = path.join(ext.REAL_QHOME, "bin", "q");
-    return stat(q) ? q : path.join(ext.REAL_QHOME, folder, "q");
+  const home = env.QHOME || env.qHomeDirectory || "";
+
+  if (home) {
+    env.QHOME = home;
+    env.qHomeDirectory = home;
+
+    let q = path.resolve(home, "bin", "q");
+    let exists = stat(q);
+
+    if (folder) {
+      if (!exists) {
+        q = path.resolve(home, folder, "q");
+        exists = stat(q);
+      }
+      if (!exists) {
+        q = path.resolve(home, folder, "q.exe");
+        exists = stat(q);
+      }
+    }
+
+    if (exists) env.QPATH = q;
   } else {
     try {
       for (const target of which("q")) {
-        if (target.endsWith(path.join("bin", "q"))) return target;
+        if (target.endsWith(path.join("bin", "q"))) {
+          env.QPATH = target;
+          break;
+        }
       }
     } catch (error) {
       notify(errorMessage(error), MessageKind.DEBUG, { logger });
     }
   }
 
-  const qHomeDirectory = workspace
-    .getConfiguration("kdb")
-    .get<string>("qHomeDirectory", "");
-
-  if (qHomeDirectory) {
-    return path.join(qHomeDirectory, folder, "q");
-  }
-
-  throw new Error(
-    `Neither QHOME environment variable nor qHomeDirectory is set.`,
-  );
+  return env;
 }
 
 export async function getWorkspaceFolder(
@@ -538,80 +582,33 @@ export function delay(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function checkLocalInstall(
-  isExtensionStartCheck?: boolean,
-): Promise<void> {
-  const QHOME = workspace.getConfiguration().get<string>("kdb.qHomeDirectory");
-  if (isExtensionStartCheck) {
-    const notShow = workspace
-      .getConfiguration()
-      .get<boolean>("kdb.neverShowQInstallAgain");
-    if (notShow) {
-      return;
-    }
-  }
-  if (QHOME || env.QHOME) {
-    // TODO 1: This is wrong, env vars should be read only.
-    env.QHOME = QHOME || env.QHOME;
-    if (!pathExists(env.QHOME!)) {
-      notify("QHOME path stored is empty.", MessageKind.ERROR, { logger });
-    }
-    await writeFile(
-      join(__dirname, "qinstall.md"),
-      `# q runtime installed location: \n### ${env.QHOME}`,
-    );
+export async function checkLocalInstall() {
+  env.QHOME =
+    ext.REAL_QHOME ||
+    workspace.getConfiguration().get<string>("kdb.qHomeDirectory", "");
 
-    // persist the QHOME to global settings
-    await workspace
-      .getConfiguration()
-      .update("kdb.qHomeDirectory", env.QHOME, ConfigurationTarget.Global);
+  const notShow = workspace
+    .getConfiguration()
+    .get<boolean>("kdb.neverShowQInstallAgain", false);
 
-    notify(`Installation of q found here: ${env.QHOME}`, MessageKind.DEBUG, {
-      logger,
-    });
+  if (notShow || env.QHOME) return;
 
-    showRegistrationNotification();
-
-    const hideNotification = await workspace
-      .getConfiguration()
-      .get<boolean>("kdb.hideInstallationNotification");
-    if (!hideNotification) {
-      notify(`Installation of q found here: ${env.QHOME}`, MessageKind.INFO, {
-        logger,
-      });
-    }
-
-    // persist the notification seen option
-    await workspace
-      .getConfiguration()
-      .update(
-        "kdb.hideInstallationNotification",
-        true,
-        ConfigurationTarget.Global,
-      );
-
-    return;
-  }
-
-  // set custom context that QHOME is not setup to control walkthrough visibility
   commands.executeCommand("setContext", "kdb.showInstallWalkthrough", true);
 
-  notify(
-    "Local q installation not found!",
+  return notify(
+    "Local q installation not found.",
     MessageKind.INFO,
     { logger },
     "Install new instance",
     "No",
     "Never show again",
-  ).then(async (installResult) => {
+  ).then((installResult) => {
     if (installResult === "Install new instance") {
-      await installTools();
+      return installTools();
     } else if (installResult === "Never show again") {
-      await workspace
+      return workspace
         .getConfiguration()
         .update("kdb.neverShowQInstallAgain", true, ConfigurationTarget.Global);
-    } else {
-      showRegistrationNotification();
     }
   });
 }

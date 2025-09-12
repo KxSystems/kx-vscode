@@ -11,8 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Token } from "../parser";
 import { Rules } from "./rules";
+import { Token } from "../parser/utils";
 
 const enabled = [
   "DEPRECATED_DATETIME",

@@ -96,6 +96,8 @@ If you want to use q outside of VS Code, set a [`QHOME` environment variable](ht
 
 If q is installed at `C:\q`, then `QHOME` is `C:\q`.
 
+**Note!** The kdb VS Code Extension treats the `QHOME` environment variable and the `kdb.qHomeDirectory` setting as identical when locating the q executable for REPL and bundled q connections. For more details, refer to the [QHomeDirectory](https://github.com/KxSystems/kx-vscode/wiki/qHomeDirectory) wiki page. 
+
 ### Versions available
 
 There are commercial and non-commercial editions available. We recommend you start with the kdb+ Personal Edition or kdb Insights Personal Edition. The following table lists the editions with links to downloads and the functionality they support.
@@ -862,6 +864,26 @@ To execute a q file in REPL:
 The results are shown in the terminal and you can continue to work either in your q file or directly in the terminal.
 
 Refer to the [REPL shortcuts table](https://github.com/KxSystems/kx-vscode/wiki/REPL) for information on the keyboard shortcuts you can use.
+
+### Benefits of using REPL
+
+A REPL gives you a tight feedback loop, stateful context, and guardrails. You learn faster, debug quicker, and ship with fewer mistakes.
+
+Key benefits include:
+
+- **Rapid iteration with stateful sessions**. Execute commands and receive immediate feedback while maintaining session state across operations. This enables faster development cycles with reduced boilerplate.
+
+- **Safe and efficient troubleshooting**. Experiment within transactions and roll back changes as needed. Quickly isolate and resolve issues by modifying and re-running queries in real time.
+
+- **In-context exploration and optimization**. Access schema details, autocomplete, and performance insights directly within the REPL, supporting informed tuning and discovery.
+
+- **Streamlined workflow and reusability**. Minimize context switching by staying within a single interface. Use command history as a living notebook to document, replay, or convert workflows into scripts.
+
+- **Smooth transition to production and built-in safeguards**. Validate logic in the REPL before promoting queries to production. Features like autocommit off, role switching, and environment prompts help prevent unintended changes.
+
+### Use PyKX within REPL
+
+Refer to the [PyKX within REPL](https://github.com/KxSystems/kx-vscode/wiki/Use-PyKX-Within-REPL) instructions for details on how to get started and use PyKX within REPL.
 
 ## Logs
 

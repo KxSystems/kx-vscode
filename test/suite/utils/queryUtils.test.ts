@@ -461,10 +461,9 @@ describe("queryUtils", () => {
       assert.strictEqual(res, "a:1");
     });
 
-    it("should remove line comment", () => {
+    it("should preserve line comment", () => {
       const res = queryUtils.normalizeQSQLQuery("a:1 / line comment");
-
-      assert.strictEqual(res, "a:1");
+      assert.strictEqual(res, "a:1 / line comment");
     });
 
     it("should ignore line comment in a string", () => {
@@ -473,18 +472,18 @@ describe("queryUtils", () => {
       assert.strictEqual(res, 'a:"1 / not line comment"');
     });
 
-    it("should replace EOS with semicolon", () => {
+    it("should replace EOS with semicolon preserve new lines", () => {
       let res = queryUtils.normalizeQSQLQuery("a:1\na");
-      assert.strictEqual(res, "a:1;a");
+      assert.strictEqual(res, "a:1;\na");
       res = queryUtils.normalizeQSQLQuery("a:1\r\na");
-      assert.strictEqual(res, "a:1;a");
+      assert.strictEqual(res, "a:1;\r\na");
     });
 
-    it("should escpae new lines in strings", () => {
-      let res = queryUtils.normalizeQSQLQuery('a:"a\n \nb"');
-      assert.strictEqual(res, 'a:"a\\n \\nb"');
-      res = queryUtils.normalizeQSQLQuery('a:"a\r\n \r\nb"');
-      assert.strictEqual(res, 'a:"a\\n \\nb"');
+    it("should preserve new lines in strings", () => {
+      let res = queryUtils.normalizeQSQLQuery('a:"a\n\n b"');
+      assert.strictEqual(res, 'a:"a\n\n b"');
+      res = queryUtils.normalizeQSQLQuery('a:"a\r\n\r\n b"');
+      assert.strictEqual(res, 'a:"a\r\n\r\n b"');
     });
   });
 
@@ -605,10 +604,9 @@ describe("queryUtils", () => {
   describe("getQSQLWrapper", () => {
     let queryWrappeStub: sinon.SinonStub;
 
-    it("should normalize q code", () => {
+    it("should not add extra semicolon", () => {
       const res = queryUtils.getQSQLWrapper("a:1;\na");
-
-      assert.strictEqual(res, "a:1;;a");
+      assert.strictEqual(res, "a:1;\na");
     });
 
     it("should normalize python code using wrapper", () => {

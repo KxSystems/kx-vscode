@@ -125,6 +125,7 @@ import { runQFileTerminal } from "./utils/execution";
 import { handleFeedbackSurvey } from "./utils/feedbackSurveyUtils";
 import { getIconPath } from "./utils/iconsUtils";
 import { MessageKind, notify, Runner } from "./utils/notifications";
+import { showRegistrationNotification } from "./utils/registration";
 import AuthSettings from "./utils/secretStorage";
 import { Telemetry } from "./utils/telemetryClient";
 import { addWorkspaceFile, openWith, setUriContent } from "./utils/workspace";
@@ -200,13 +201,6 @@ export async function activate(context: vscode.ExtensionContext) {
   // initialize the secret store
   AuthSettings.init(context);
   ext.secretSettings = AuthSettings.instance;
-
-  try {
-    // check for installed q runtime
-    await checkLocalInstall(true);
-  } catch (err) {
-    notify(`${err}`, MessageKind.DEBUG, { logger });
-  }
 
   registerAllExtensionCommands();
 
@@ -305,7 +299,15 @@ export async function activate(context: vscode.ExtensionContext) {
     },
   };
   const clientOptions: LanguageClientOptions = {
-    documentSelector: [{ language: "q" }],
+    documentSelector: [
+      {
+        language: "q",
+      },
+      {
+        language: "q",
+        notebook: { notebookType: "kx-notebook" },
+      },
+    ],
     synchronize: {
       fileEvents: vscode.workspace.createFileSystemWatcher(
         "**/*.{q,quke,k}",
@@ -371,7 +373,12 @@ export async function activate(context: vscode.ExtensionContext) {
       ext.customAuth = api;
     }
   }
-  handleFeedbackSurvey();
+
+  setTimeout(() => {
+    checkLocalInstall();
+    showRegistrationNotification();
+    handleFeedbackSurvey();
+  }, 500);
 
   notify("kdb extension is now active.", MessageKind.DEBUG, {
     logger,
@@ -879,16 +886,6 @@ function registerExecuteCommands(): CommandRegistration[] {
       command: "kdb.execute.fileQuery",
       callback: async () => {
         await executeActiveEditorQuery(ExecutionTypes.QueryFile);
-      },
-    },
-    {
-      command: "kdb.execute.terminal.run.file",
-      callback: () => {
-        if (env.QHOME) {
-          runQFileTerminal();
-        } else {
-          checkLocalInstall();
-        }
       },
     },
     {

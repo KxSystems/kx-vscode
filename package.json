@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite including the q programming language",
   "publisher": "KX",
-  "version": "1.14.0-rc",
+  "version": "1.14.0",
   "engines": {
     "vscode": "^1.96.0"
   },
@@ -159,7 +159,8 @@
         "kdb.hideInstallationNotification": {
           "type": "boolean",
           "description": "Hide notification for installation path, after first install",
-          "scope": "machine"
+          "scope": "machine",
+          "deprecationMessage": "This setting is deprecated, use kdb.neverShowQInstallAgain instead"
         },
         "kdb.hideDetailedConsoleQueryOutput": {
           "type": "boolean",
@@ -176,11 +177,13 @@
         "kdb.qHomeDirectory": {
           "type": "string",
           "description": "QHOME directory for q runtime",
-          "scope": "machine"
+          "default": "",
+          "scope": "machine-overridable"
         },
         "kdb.neverShowQInstallAgain": {
           "type": "boolean",
           "description": "Never show q install walkthrough again",
+          "default": false,
           "scope": "machine"
         },
         "kdb.hideSubscribeRegistrationNotification": {
@@ -513,7 +516,7 @@
       {
         "category": "KX",
         "command": "kdb.toggleParameterCache",
-        "title": "KX: Toggle parameter cache"
+        "title": "Toggle Parameter Cache"
       },
       {
         "category": "KX",
@@ -1196,6 +1199,7 @@
     "rewire": "^9.0.1",
     "rimraf": "^6.0.1",
     "sinon": "^21.0.0",
+    "tree-kill": "^1.2.2",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.34.1",
     "vscode-extension-tester": "^8.16.2",
