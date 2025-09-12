@@ -460,6 +460,7 @@ export class ReplConnection {
     if (!c) return;
     this.executing = undefined;
     const output = c.output.join(ANSI.EMPTY);
+
     if (output && !output.endsWith(ANSI.CRLF)) this.sendToTerminal(ANSI.CRLF);
     c.resolve({ cancelled: c.cancelled, output });
     if (!this.exited || !this.stopped) this.showPrompt(true);
@@ -470,11 +471,14 @@ export class ReplConnection {
 
   private handleOutput(data: any) {
     const chunk = this.decoder.decode(data);
+
     this.token.lastIndex = 0;
     const output = this.normalize(chunk.replace(this.token, ANSI.EMPTY));
+
     if (output) this.sendToTerminal(output);
 
     const c = this.executing;
+
     if (!c) return;
     if (output) c.output.push(output);
 
@@ -486,6 +490,7 @@ export class ReplConnection {
 
     this.token.lastIndex = 0;
     let match: RegExpExecArray | null;
+
     while ((match = this.token.exec(chunk))) c.done.push(match);
 
     if (c.done.length === (c.index + 1) * 2) {

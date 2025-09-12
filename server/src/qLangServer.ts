@@ -234,6 +234,7 @@ export default class QLangServer {
       const diagnostics = source.errors
         .filter((token) => token.error)
         .map((token) => token.error!);
+
       this.connection.sendDiagnostics({ uri, diagnostics });
     }
   }
@@ -246,6 +247,7 @@ export default class QLangServer {
     textDocument: { uri },
   }: DocumentSymbolParams): Promise<DocumentSymbol[]> {
     const source = await this.getSource(uri);
+
     return source.symbols.map((token) => createSymbol(token, source));
   }
 
@@ -302,11 +304,13 @@ export default class QLangServer {
     return (await this.getSources(uri)).reduce(
       (edit, source) => {
         const references = source.references;
+
         if (references.length > 0) {
           const name = Token({
             image: newName,
             namespace: target?.namespace,
           });
+
           edit.changes![source.uri] = references
             .filter(
               (token) =>
@@ -356,6 +360,7 @@ export default class QLangServer {
   }: TextDocumentPositionParams) {
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
+
     if (!target) {
       return null;
     }
@@ -363,7 +368,6 @@ export default class QLangServer {
     const tokens = source.tokens.filter(
       (token) => token.index === target?.index,
     );
-
     const start = RangeFrom(tokens[0]);
     const end = RangeFrom(Peek(tokens)!);
 
@@ -376,16 +380,19 @@ export default class QLangServer {
   }: TextDocumentPositionParams) {
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
+
     if (!target) {
       return null;
     }
     const scope = Scope(target);
+
     if (!scope) {
       return null;
     }
     const curly = source.tokens.find(
       (token) => Type(token) === RCurly && Scope(token) === scope,
     );
+
     if (!curly) {
       return null;
     }
@@ -393,12 +400,14 @@ export default class QLangServer {
       (token) =>
         Scope(token) === scope && Param(token) && Type(token) === RBracket,
     );
+
     if (!bracket) {
       return null;
     }
     const args = source.definitions.filter(
       (token) => Scope(token) === scope && Param(token),
     );
+
     if (args.length === 0) {
       return null;
     }
@@ -418,6 +427,7 @@ export default class QLangServer {
 
     for (const position of positions) {
       const target = source.tokenAt(position);
+
       if (target) {
         ranges.push(SelectionRange.create(RangeFrom(target)));
       }
@@ -442,7 +452,6 @@ export default class QLangServer {
         kind: FoldingRangeKind.Comment,
       };
     };
-
     const end = () => {
       if (range) {
         range.endLine = endLine;
@@ -522,6 +531,7 @@ export default class QLangServer {
             },
             fromRanges: [],
           };
+
           incoming.push(call);
         }
       });
@@ -551,6 +561,7 @@ export default class QLangServer {
             },
             fromRanges: [],
           };
+
           outgoing.push(call);
         }
       });
@@ -595,6 +606,7 @@ export default class QLangServer {
       const notebook = this.notebooks.getNotebookDocument(
         uri.replace(/^vscode-notebook-cell:([^#]*).*$/, "file://$1"),
       );
+
       if (notebook) {
         for (const cell of notebook.cells) {
           res.push(cell.document);
@@ -645,6 +657,7 @@ export default class QLangServer {
 
     if (current) {
       const related = connections.get(current);
+
       if (related) {
         for (const target of related) {
           if (target !== uri) res.push(target);
@@ -657,13 +670,17 @@ export default class QLangServer {
 
   private async getSource(uri: string): Promise<Source> {
     let source = this.cached.get(uri);
+
     if (!source) {
       const document = this.documents.get(uri);
+
       let text = "";
+
       if (document) {
         text = document.getText();
       } else if (uri.startsWith("file:")) {
         const file = fileURLToPath(uri);
+
         try {
           text = await readFile(file, { encoding: "utf8" });
         } catch (error) {

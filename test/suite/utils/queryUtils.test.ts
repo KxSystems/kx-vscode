@@ -468,6 +468,7 @@ describe("queryUtils", () => {
 
     it("should preserve line comment", () => {
       const res = queryUtils.normalizeQSQLQuery("a:1 / line comment");
+
       assert.strictEqual(res, "a:1 / line comment");
     });
 
@@ -479,6 +480,7 @@ describe("queryUtils", () => {
 
     it("should replace EOS with semicolon preserve new lines", () => {
       let res = queryUtils.normalizeQSQLQuery("a:1\na");
+
       assert.strictEqual(res, "a:1;\na");
       res = queryUtils.normalizeQSQLQuery("a:1\r\na");
       assert.strictEqual(res, "a:1;\r\na");
@@ -486,6 +488,7 @@ describe("queryUtils", () => {
 
     it("should preserve new lines in strings", () => {
       let res = queryUtils.normalizeQSQLQuery('a:"a\n\n b"');
+
       assert.strictEqual(res, 'a:"a\n\n b"');
       res = queryUtils.normalizeQSQLQuery('a:"a\r\n\r\n b"');
       assert.strictEqual(res, 'a:"a\r\n\r\n b"');
@@ -611,6 +614,7 @@ describe("queryUtils", () => {
 
     it("should not add extra semicolon", () => {
       const res = queryUtils.getQSQLWrapper("a:1;\na");
+
       assert.strictEqual(res, "a:1;\na");
     });
 

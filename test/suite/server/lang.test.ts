@@ -19,26 +19,31 @@ describe("q Language", () => {
   describe("CutDrop", () => {
     it("should be part of Identifier", () => {
       const source = lang.Source.create("uri", "a_b");
+
       assert.strictEqual(source.tokens.length, 1);
       assert.strictEqual(source.tokens[0].tokenType, lang.Identifier);
     });
     it("should be part of Identifier", () => {
       const source = lang.Source.create("uri", "a_ b");
+
       assert.strictEqual(source.tokens.length, 3);
       assert.strictEqual(source.tokens[0].tokenType, lang.Identifier);
     });
     it("should be CutDrop", () => {
       const source = lang.Source.create("uri", "a _b");
+
       assert.strictEqual(source.tokens.length, 4);
       assert.strictEqual(source.tokens[2].tokenType, lang.CutDrop);
     });
     it("should be CutDrop", () => {
       const source = lang.Source.create("uri", "a _ b");
+
       assert.strictEqual(source.tokens.length, 5);
       assert.strictEqual(source.tokens[2].tokenType, lang.CutDrop);
     });
     it("should be CutDrop", () => {
       const source = lang.Source.create("uri", "a _2");
+
       assert.strictEqual(source.tokens.length, 4);
       assert.strictEqual(source.tokens[2].tokenType, lang.CutDrop);
     });

@@ -74,6 +74,7 @@ export class Source {
       } else {
         const name = Name(reference);
         const found = tokens.find((token) => name === Name(token));
+
         if (!found) {
           if (rank === 0 && (name === "x" || name === "y" || name === "z")) {
             return;
@@ -98,6 +99,7 @@ export class Source {
 
     const Assign = (pattern = true) => {
       let count = 0;
+
       while ((token = stack.pop())) {
         if (Type(token) === Identifier) {
           this.definitions.push(token);
@@ -229,6 +231,7 @@ export class Source {
       const definition = this.definitions.find(
         (token) => Name(token) === Name(reference),
       );
+
       if (definition?.call) reference.call = definition.call;
     }
   }
@@ -240,6 +243,7 @@ export class Source {
   tokenAt(position: Position) {
     return this.tokens.find((token) => {
       const { start, end } = RangeFrom(token);
+
       return (
         start.line <= position.line &&
         end.line >= position.line &&
@@ -251,6 +255,7 @@ export class Source {
 
   static create(uri: string, text: string) {
     const source = new Source(uri, text);
+
     source.parse();
     source.process();
     return source;
@@ -312,6 +317,7 @@ export function RangeFrom(token: Token): Range {
 // TODO
 export function Namespace(token: Token) {
   const name = Name(token);
+
   return (name.startsWith(".") && name.split(".", 3)[1]) || "";
 }
 

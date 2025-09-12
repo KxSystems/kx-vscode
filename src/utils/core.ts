@@ -205,10 +205,13 @@ export function getPlatformFolder(
 
 function loadEnvironment(folder: string, env: { [key: string]: string }) {
   const data = readTextFile(path.resolve(folder, ".env"));
+
   for (const line of data.split(/\r?\n/)) {
     const trimmed = line.trim();
+
     if (trimmed && !trimmed.startsWith("#")) {
       const [key, value] = trimmed.split("=");
+
       if (key && value !== undefined) {
         env[key.trim()] = value
           .replace(/["']/gs, "")
@@ -226,7 +229,6 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
         .getConfiguration("kdb", resource)
         .get<string>("qHomeDirectory", "")
     : "";
-
   const env: { [key: string]: string } = {
     ...process.env,
     qHomeDirectory,

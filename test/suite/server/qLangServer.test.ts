@@ -215,6 +215,7 @@ describe("qLangServer", () => {
     it("should find globals in functions", async () => {
       const params = createDocument("a:1;{a};a");
       const result = await server.onReferences({ ...params, context });
+
       assert.strictEqual(result.length, 3);
     });
     it("should find locals in functions", async () => {
@@ -304,6 +305,7 @@ describe("qLangServer", () => {
     it("should not return null", async () => {
       const params = createDocument(";");
       const result = await server.onExpressionRange(params);
+
       assert.strictEqual(result.start.line, 0);
       assert.strictEqual(result.start.character, 0);
       assert.strictEqual(result.end.line, 0);
@@ -312,6 +314,7 @@ describe("qLangServer", () => {
     it("should not return null", async () => {
       const params = createDocument("/a:1");
       const result = await server.onExpressionRange(params);
+
       assert.strictEqual(result.start.line, 0);
       assert.strictEqual(result.start.character, 0);
       assert.strictEqual(result.end.line, 0);
@@ -431,6 +434,7 @@ describe("qLangServer", () => {
       const result = await server.onIncomingCallsCallHierarchy({
         item: items[0],
       });
+
       assert.strictEqual(result.length, 2);
     });
   });
@@ -442,6 +446,7 @@ describe("qLangServer", () => {
       const result = await server.onOutgoingCallsCallHierarchy({
         item: items[0],
       });
+
       assert.strictEqual(result.length, 2);
     });
   });
@@ -450,18 +455,21 @@ describe("qLangServer", () => {
     it("should tokenize local variables", async () => {
       const params = createDocument("a:{[b;c]d:1;b*c*d}");
       const result = await server.onSemanticTokens(params);
+
       assert.strictEqual(result.data.length, 30);
     });
 
     it("should ignore qualified variables", async () => {
       const params = createDocument("a:{.ns.b:1;.ns.b}");
       const result = await server.onSemanticTokens(params);
+
       assert.strictEqual(result.data.length, 0);
     });
 
     it("should detect empty lists", async () => {
       const params = createDocument("a:{b:();b}");
       const result = await server.onSemanticTokens(params);
+
       assert.strictEqual(result.data.length, 10);
     });
   });
@@ -472,6 +480,7 @@ describe("qLangServer", () => {
       const result = await server.onFoldingRanges({
         textDocument: params.textDocument,
       });
+
       assert.strictEqual(result.length, 1);
       assert.strictEqual(result[0].kind, FoldingRangeKind.Comment);
     });
@@ -480,6 +489,7 @@ describe("qLangServer", () => {
       const result = await server.onFoldingRanges({
         textDocument: params.textDocument,
       });
+
       assert.strictEqual(result.length, 1);
       assert.strictEqual(result[0].kind, FoldingRangeKind.Comment);
     });
@@ -488,6 +498,7 @@ describe("qLangServer", () => {
       const result = await server.onFoldingRanges({
         textDocument: params.textDocument,
       });
+
       assert.strictEqual(result.length, 1);
       assert.strictEqual(result[0].kind, FoldingRangeKind.Comment);
       assert.strictEqual(result[0].endLine, 2);
@@ -497,6 +508,7 @@ describe("qLangServer", () => {
       const result = await server.onFoldingRanges({
         textDocument: params.textDocument,
       });
+
       assert.strictEqual(result.length, 1);
       assert.strictEqual(result[0].kind, FoldingRangeKind.Comment);
     });
@@ -505,6 +517,7 @@ describe("qLangServer", () => {
       const result = await server.onFoldingRanges({
         textDocument: params.textDocument,
       });
+
       assert.strictEqual(result.length, 0);
     });
   });
