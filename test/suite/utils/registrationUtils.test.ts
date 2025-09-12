@@ -1,0 +1,61 @@
+/*
+ * Copyright (c) 1998-2025 KX Systems Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the
+ * License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ */
+
+import * as sinon from "sinon";
+import * as vscode from "vscode";
+
+import { showRegistrationNotification } from "../../../src/utils/registration";
+
+describe("Registration", () => {
+  let getConfigurationStub: sinon.SinonStub;
+  let showInformationMessageStub: sinon.SinonStub;
+
+  beforeEach(() => {
+    getConfigurationStub = sinon.stub(vscode.workspace, "getConfiguration");
+    showInformationMessageStub = sinon.stub(
+      vscode.window,
+      "showInformationMessage",
+    ) as sinon.SinonStub<
+      [
+        message: string,
+        options: vscode.MessageOptions,
+        ...items: vscode.MessageItem[],
+      ],
+      Thenable<vscode.MessageItem>
+    >;
+  });
+
+  afterEach(() => {
+    getConfigurationStub.restore();
+    showInformationMessageStub.restore();
+  });
+
+  it("should show registration notification if setting is false", async () => {
+    getConfigurationStub.returns({
+      get: sinon.stub().returns(false),
+      update: sinon.stub(),
+    });
+    showInformationMessageStub.resolves("Opt-In");
+    await showRegistrationNotification();
+    sinon.assert.calledOnce(showInformationMessageStub);
+  });
+
+  it("should not show registration notification if setting is true", async () => {
+    getConfigurationStub.returns({
+      get: sinon.stub().returns(true),
+      update: sinon.stub(),
+    });
+    await showRegistrationNotification();
+    sinon.assert.notCalled(showInformationMessageStub);
+  });
+});

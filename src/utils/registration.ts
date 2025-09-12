@@ -15,13 +15,13 @@ import { ConfigurationTarget, workspace } from "vscode";
 
 import { ext } from "../extensionVariables";
 import { MessageKind, notify } from "./notifications";
-import { openUrl } from "./openUrl";
+import { openUrl } from "./uriUtils";
 
 export function showRegistrationNotification(): void {
   const setting = workspace
     .getConfiguration()
-    .get<boolean | undefined>("kdb.hideSubscribeRegistrationNotification");
-  if (setting !== undefined && setting === false) {
+    .get<boolean>("kdb.hideSubscribeRegistrationNotification", false);
+  if (setting === false) {
     notify(
       "Subscribe to updates",
       MessageKind.INFO,
@@ -31,16 +31,15 @@ export function showRegistrationNotification(): void {
     ).then((result) => {
       if (result === "Opt-In") {
         openUrl(ext.kdbNewsletterUrl);
+      } else if (result) {
+        workspace
+          .getConfiguration()
+          .update(
+            "kdb.hideSubscribeRegistrationNotification",
+            true,
+            ConfigurationTarget.Global,
+          );
       }
     });
   }
-
-  // hide notification for future extension use
-  workspace
-    .getConfiguration()
-    .update(
-      "kdb.hideSubscribeRegistrationNotification",
-      true,
-      ConfigurationTarget.Global,
-    );
 }

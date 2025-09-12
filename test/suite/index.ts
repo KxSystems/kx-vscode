@@ -19,6 +19,8 @@ import { generateCoverageReport } from "../coverage";
 
 export async function run(): Promise<void> {
   const headless = !!process.env.CI;
+  const testFolder = process.env.TEST_FOLDER;
+  let testFile = process.env.TEST_FILE;
 
   const options: Mocha.MochaOptions = {
     ui: "bdd",
@@ -37,9 +39,32 @@ export async function run(): Promise<void> {
   const testsRoot = path.join(__dirname, "..");
 
   try {
-    const files = await glob("**/suite/**.test.js", { cwd: testsRoot });
+    let pattern: string;
 
-    files.forEach((f) => mocha.addFile(path.join(testsRoot, f)));
+    if (testFile) {
+      testFile = testFile.replace(/\.test$/m, "");
+      pattern = `**/suite/**/${testFile}.test.js`;
+      console.log(`🧪 Running specific test file: ${testFile}.test.js`);
+    } else if (testFolder) {
+      pattern = `**/suite/${testFolder}/**/*.test.js`;
+      console.log(`🧪 Running tests in folder: ${testFolder}`);
+    } else {
+      pattern = "**/suite/**/**.test.js";
+      console.log("🧪 Running all tests");
+    }
+
+    const allFiles = await glob(pattern, { cwd: testsRoot });
+
+    const testFiles = allFiles.filter(
+      (file) => !file.endsWith(".util.test.js"),
+    );
+
+    if (testFiles.length === 0) {
+      const target = testFile || testFolder || "any tests";
+      throw new Error(`❌ No test files found for: ${target}`);
+    }
+
+    testFiles.forEach((f) => mocha.addFile(path.join(testsRoot, f)));
 
     return new Promise<void>((resolve, reject) => {
       mocha.run((failures) => {
@@ -58,10 +83,6 @@ export async function run(): Promise<void> {
           console.error("❌ Coverage generation failed:", error);
           throw error;
         }
-      } else {
-        // console.log(
-        //   "❌ GENERATE_COVERAGE not set, skipping coverage generation",
-        // );
       }
     });
   } catch (err) {

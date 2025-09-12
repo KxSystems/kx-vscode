@@ -24,9 +24,9 @@ import {
 import { ext } from "../extensionVariables";
 import * as utils from "../utils/execution";
 import { getNonce } from "../utils/getNonce";
-import { getUri } from "../utils/getUri";
 import { MessageKind, notify } from "../utils/notifications";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
+import { getUri } from "../utils/uriUtils";
 
 const logger = "resultsPanelProvider";
 

@@ -12,7 +12,7 @@
  */
 
 import { ChildProcess, execFileSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 import { ICommandResult, tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
@@ -58,4 +58,9 @@ export function which(cmd: string): string[] {
 /* c8 ignore next */
 export function stat(path: string): boolean {
   return existsSync(path);
+}
+
+/* c8 ignore next */
+export function readTextFile(path: string): string {
+  return readFileSync(path, "utf-8");
 }

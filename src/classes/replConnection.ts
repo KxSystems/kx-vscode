@@ -11,20 +11,34 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { PythonExtension, ResolvedEnvironment } from "@vscode/python-extension";
 import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
+import path from "node:path";
+import kill from "tree-kill";
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
 import {
   getAutoFocusOutputOnEntrySetting,
-  getQExecutablePath,
+  getEnvironment,
 } from "../utils/core";
+import {
+  Cancellable,
+  MessageKind,
+  notify,
+  Runner,
+} from "../utils/notifications";
 import { normalizeQuery } from "../utils/queryUtils";
+import { errorMessage } from "../utils/shared";
+import { pickWorkspace } from "../utils/workspace";
+
+const logger = "replConnection";
 
 const ANSI = {
   EMPTY: "",
   SPACE: " ",
   QUOTE: '"',
+  SEMI: ";",
   AT: "@",
   CR: "\r",
   CRLF: "\r\n",
@@ -40,6 +54,7 @@ const ANSI = {
 const KEY = {
   CR: "\r",
   CTRLC: "\x03",
+  CTRLD: "\x04",
   BS: "\b",
   BSMAC: "\x7f",
   DEL: "\x1b[3~",
@@ -65,58 +80,136 @@ const CTX = {
 };
 
 const NS = {
-  Q: ',string system"d"',
-  K: ',$:."\\\\d"',
+  Q: ',string[system"d"],',
+  K: ',$:[."\\\\d"],',
 };
 
 const CONF = {
+  DEFAULT: "default",
   TITLE: `KX ${ext.REPL}`,
   PROMPT: ")",
   MAX_INPUT: 80 * 40,
 };
 
-type Callable = () => void;
+interface Execution {
+  token: vscode.CancellationToken;
+  source: vscode.CancellationTokenSource;
+  cancelled: boolean;
+  lines: string[];
+  output: string[];
+  done: RegExpExecArray[];
+  index: number;
+  reject: (reason?: any) => void;
+  resolve: (value: Result) => void;
+}
+
+export interface Result {
+  cancelled?: boolean;
+  output?: string;
+}
+
+function notEnvironment(target: string) {
+  return !/[/\\](?:scripts|bin)[/\\]/is.test(target);
+}
+
+class HistoryItem {
+  prev?: HistoryItem;
+  next?: HistoryItem;
+  constructor(readonly input: string) {}
+}
+
+class History {
+  private head?: HistoryItem;
+  private item?: HistoryItem;
+
+  push(input: string) {
+    if (input === this.head?.input) {
+      return;
+    }
+    const item = new HistoryItem(input);
+    if (this.head) {
+      item.next = this.head;
+      this.head.prev = item;
+    }
+    this.head = item;
+  }
+
+  get next() {
+    this.item = this.item === undefined ? this.head : this.item.next;
+    return this.item;
+  }
+
+  get prev() {
+    this.item = this.item?.prev;
+    return this.item;
+  }
+
+  rewind() {
+    this.item = undefined;
+  }
+
+  clear() {
+    this.head = undefined;
+    this.rewind();
+  }
+}
 
 export class ReplConnection {
-  private readonly history = new History();
+  private readonly win32 = process.platform === "win32";
   private readonly identity = crypto.randomUUID();
   private readonly token = new RegExp(
-    this.identity +
-      ANSI.AT +
-      "(\\d+)" +
-      ANSI.AT +
-      ".([0-9a-zA-Z_`]*)" +
-      `[${ANSI.CRLF}]*`,
+    this.identity + ANSI.AT + ".([0-9a-zA-Z_]*)" + ANSI.AT,
     "gs",
   );
-
   private readonly onDidWrite: vscode.EventEmitter<string>;
   private readonly decoder: TextDecoder;
   private readonly terminal: vscode.Terminal;
-  private readonly process: ChildProcessWithoutNullStreams;
+  private readonly executions: Execution[] = [];
 
-  private messages: string[] = [];
-  private buffer: string[] = [];
-  private input: string[] = [];
-  private executions?: Callable[] = [];
+  private messages? = [
+    `${CONF.TITLE} Copyright (C) 1993-2025 KX Systems` + ANSI.CRLF.repeat(2),
+  ];
 
+  private env: { [key: string]: string } = {};
+  private process: ChildProcessWithoutNullStreams;
+  private activate = "";
+  private prefix = ANSI.EMPTY;
   private _context = CTX.Q;
   private _namespace = ANSI.EMPTY;
   private columns = 0;
   private rows = 0;
   private maxInputIndex = 0;
   private inputIndex = 0;
-
-  private serial = 0;
-  private executing = 0;
+  private input: string[] = [];
   private exited = false;
+  private stopped = false;
+  private executing?: Execution;
 
-  private constructor() {
+  private constructor(
+    private readonly workspace?: vscode.WorkspaceFolder,
+    private readonly venv?: ResolvedEnvironment,
+  ) {
     this.onDidWrite = new vscode.EventEmitter<string>();
     this.decoder = new TextDecoder("utf8");
-    this.terminal = this.createTerminal();
+    this.createEnvironment();
     this.process = this.createProcess();
     this.connect();
+    this.terminal = this.createTerminal();
+  }
+
+  private get inputText() {
+    return this.input.join(ANSI.EMPTY);
+  }
+
+  private set inputText(text: string) {
+    this.input = [...text];
+    this.inputIndex = this.visibleInputIndex;
+  }
+
+  private get visibleInputIndex() {
+    return this.input.length > this.maxInputIndex
+      ? this.maxInputIndex
+      : this.input.length;
   }
 
   private get context() {
@@ -125,7 +218,12 @@ export class ReplConnection {
 
   private set context(context: string) {
     this._context = context;
+    if (context === CTX.K) this.sendToProcess("\\x .z.pi" + ANSI.CRLF + "\\");
+    else this.sendToProcess("\\" + ANSI.CRLF + this.createHandler());
+    this.inputText = ANSI.EMPTY;
     this.updateMaxInputIndex();
+    this.sendToTerminal(ANSI.CRLF);
+    this.showPrompt(true);
   }
 
   private get namespace() {
@@ -137,94 +235,124 @@ export class ReplConnection {
     this.updateMaxInputIndex();
   }
 
-  private get visibleInputIndex() {
-    return this.input.length > this.maxInputIndex
-      ? this.maxInputIndex
-      : this.input.length;
-  }
-
-  private get inputText() {
-    return this.input.join(ANSI.EMPTY);
-  }
-
   private createTerminal() {
     return vscode.window.createTerminal({
       pty: {
-        open: this.open.bind(this),
         close: this.close.bind(this),
+        open: this.open.bind(this),
         setDimensions: this.setDimensions.bind(this),
         handleInput: this.handleInput.bind(this),
         onDidWrite: this.onDidWrite.event,
       },
-      name: CONF.TITLE,
+      name: `${CONF.TITLE} (${this.workspace ? this.workspace.name : CONF.DEFAULT})`,
     });
+  }
+
+  private createEnvironment() {
+    if (!this.workspace || !this.venv) return;
+    const env = this.venv.environment;
+    if (!env || env.type !== "VirtualEnvironment") return;
+    const target = this.venv.path;
+    if (notEnvironment(target)) return;
+    const name = env.name;
+    if (!name) return;
+
+    const bin = path.dirname(target);
+    const dir = path.basename(path.dirname(bin));
+    if (name !== dir) return;
+
+    this.activate = this.win32
+      ? `"${path.join(bin, "activate.bat")}"`
+      : `source "${path.join(bin, "activate")}"`;
+    this.prefix = `(${name}) `;
   }
 
   private createProcess() {
-    return spawn(getQExecutablePath(), {
-      env: { ...process.env, QHOME: ext.REAL_QHOME },
-    });
+    this.env = getEnvironment(this.workspace?.uri);
+
+    return spawn(
+      `${this.activate ? this.activate + " && " : ""}"${this.env.QPATH}"`,
+      {
+        env: this.env,
+        windowsHide: true,
+        shell: this.win32 ? "cmd.exe" : "bash",
+      },
+    );
   }
 
   private connect() {
-    this.process.on("error", this.handleError.bind(this));
-    this.process.on("close", this.handleClose.bind(this));
-    this.process.stdout.on("data", this.handleOutput.bind(this));
-    this.process.stdout.on("error", this.handleError.bind(this));
-    this.process.stderr.on("data", this.handleErrorOutput.bind(this));
-    this.process.stderr.on("error", this.handleError.bind(this));
+    let handler = this.handleError.bind(this);
+    this.process.on("error", handler);
+    this.process.stdin.on("error", handler);
+    this.process.stdout.on("error", handler);
+    this.process.stderr.on("error", handler);
+    this.process.on("exit", this.handleExit.bind(this));
+    handler = this.handleOutput.bind(this);
+    this.process.stdout.on("data", handler);
+    this.process.stderr.on("data", handler);
+    this.process.on("spawn", () => this.sendToProcess(this.createHandler()));
   }
 
-  private executeCommand(data: string) {
-    this.process.stdin.write(data + ANSI.CRLF);
+  private createToken(pipe: 1 | 2) {
+    return (
+      `${pipe} {x}` +
+      ANSI.QUOTE +
+      this.identity +
+      ANSI.AT +
+      ANSI.QUOTE +
+      (this.context === CTX.Q ? NS.Q : NS.K) +
+      ANSI.QUOTE +
+      ANSI.AT +
+      ANSI.QUOTE +
+      ANSI.SEMI
+    );
   }
 
-  private sendDimensions() {
-    const LINES = process.env.LINES ?? this.rows.toString();
-    let rows = parseInt(LINES.replace(/\D+/gs, "0") || "0");
-    if (rows < 25) rows = 25;
-    if (rows > 500) rows = 500;
-
-    const COLUMNS = process.env.COLUMNS ?? this.columns.toString();
-    let columns = parseInt(COLUMNS.replace(/\D+/gs, "") || "0");
-    if (columns < 50) columns = 50;
-    if (columns > 320) columns = 320;
-
-    this.executeCommand(`\\c ${rows} ${columns}`);
+  private createHandler() {
+    return normalizeQuery(
+      `.z.pi:{show value x;${this.createToken(1)}${this.createToken(2)}};`,
+    );
   }
 
   private stub(query: string) {
     return query.replace(
-      // Stub read0
       /(?<![A-Za-z0-9.])(?:read0(?![A-Za-z0-9.])|0::)/gs,
       '{$[x~0;"";0::[x]]}',
     );
   }
 
   private sendToProcess(data: string) {
-    this.process.stdin.write(this.stub(data + ANSI.CRLF), (error) => {
-      if (error) {
-        this.executing--;
-      } else {
-        this.process.stdin.write(
-          "2 {x}" +
-            ANSI.QUOTE +
-            this.identity +
-            ANSI.AT +
-            this.serial++ +
-            ANSI.AT +
-            ANSI.QUOTE +
-            (this.context === CTX.Q ? NS.Q : NS.K) +
-            ";" +
+    this.process.stdin.write(
+      this.context === CTX.Q
+        ? data + ANSI.CRLF
+        : this.stub(data) +
+            ANSI.CRLF +
+            this.createToken(1) +
+            this.createToken(2) +
             ANSI.CRLF,
-        );
-      }
-    });
-    this.executing++;
+    );
+  }
+
+  private stopExecution() {
+    this.stopped = this.win32;
+    if (this.process.pid) kill(this.process.pid, "SIGINT");
+  }
+
+  private stopProcess(restart = false) {
+    this.stopped = restart;
+    if (this.process.pid) kill(this.process.pid, "SIGKILL");
+  }
+
+  private runQuery(data: string) {
+    const runner = Runner.create((_, token) => this.executeQuery(data, token));
+    runner.cancellable = Cancellable.EXECUTOR;
+    runner.title = "Executing query on REPL.";
+    runner.execute();
   }
 
   private sendToTerminal(data: string) {
-    this.onDidWrite.fire(data);
+    if (this.messages) this.messages.push(data);
+    else this.onDidWrite.fire(data);
   }
 
   private promptProperties(context?: string, index?: number) {
@@ -232,6 +360,7 @@ export class ReplConnection {
       1 +
       (context ?? this.context).length +
       this.namespace.length +
+      this.prefix.length +
       CONF.PROMPT.length +
       (index ?? this.visibleInputIndex);
 
@@ -277,6 +406,7 @@ export class ReplConnection {
     this.sendToTerminal(
       (create ? ANSI.SAVE : ANSI.RESTORE) +
         ANSI.FAINTON +
+        this.prefix +
         (context ?? this.context) +
         this.namespace +
         CONF.PROMPT +
@@ -288,36 +418,6 @@ export class ReplConnection {
     );
   }
 
-  private showExecutionPrompt() {
-    this.showPrompt(
-      false,
-      this.executing > 1 ? `execution-${this.executing}` : "execution",
-    );
-    this.sendToTerminal(ANSI.CRLF);
-  }
-
-  private showMessage(message: string) {
-    if (this.executions) {
-      this.messages.push(message);
-    } else {
-      this.sendToTerminal(message);
-    }
-  }
-
-  private showOutput(decoded: string) {
-    if (this.exited) {
-      return;
-    }
-    const output = decoded.replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
-
-    if (this.executions) this.messages.push(output);
-    else this.buffer.push(output);
-  }
-
-  private show() {
-    if (getAutoFocusOutputOnEntrySetting()) this.terminal.show(true);
-  }
-
   private recall(history?: HistoryItem) {
     const input = history?.input ?? ANSI.EMPTY;
     this.input = [...input];
@@ -326,88 +426,123 @@ export class ReplConnection {
     this.showPrompt();
   }
 
-  private handleError(error: Error) {
-    this.showMessage(error.message + ANSI.CRLF);
+  private cancel(error?: Error) {
+    if (this.executing) {
+      if (error) this.executing.reject(error);
+      this.executing.source.cancel();
+    }
   }
 
-  private handleClose(code?: number) {
-    const message = `${CONF.TITLE} exited with code (${code ?? 0}).${ANSI.CRLF}`;
-    this.showMessage(message);
-    this.exited = true;
+  private normalize(decoded: string) {
+    return decoded.replace(/(?:\r\n|[\r\n])+/gs, ANSI.CRLF);
   }
 
-  private handleOutput(data: any) {
-    const decoded = this.decoder.decode(data);
-    this.showOutput(decoded);
+  private clean(decoded: string) {
+    return decoded.replace(/(?:\r\n|[\r\n])+/gs, "");
   }
 
-  private handleErrorOutput(data: any) {
-    const decoded = this.decoder.decode(data);
-    this.token.lastIndex = 0;
-    const output = decoded.replace(this.token, ANSI.EMPTY);
-    this.showOutput(output);
-
-    this.token.lastIndex = 0;
-    let match: RegExpMatchArray | null;
-
-    while ((match = this.token.exec(decoded))) {
-      if (match[0]) {
-        this.namespace = match[2] ? `.${match[2]}` : ANSI.EMPTY;
-
-        const serial = parseInt(match[1]);
-        if (serial + 1 === this.serial) {
-          const output = this.buffer.join(ANSI.EMPTY);
-          this.sendToTerminal(output);
-          this.buffer = [];
-        }
-
-        this.executing--;
-        if (this.executing === 0) {
-          this.input = [];
-          this.inputIndex = 0;
-          this.updateInputIndex();
-          this.showPrompt(true);
-        } else {
-          this.showExecutionPrompt();
-        }
+  private executeNext() {
+    if (!this.executing && !this.messages) {
+      this.executing = this.executions.shift();
+      if (this.executing) {
+        this.sendToTerminal(ANSI.CRLF);
+        this.sendToProcess(this.executing.lines[this.executing.index]);
       }
     }
   }
 
-  private open(dimensions?: vscode.TerminalDimensions) {
-    if (dimensions) {
-      this.setDimensions(dimensions);
+  private resolve() {
+    let c = this.executing;
+    if (!c) return;
+    this.executing = undefined;
+    const output = c.output.join(ANSI.EMPTY);
+    if (output && !output.endsWith(ANSI.CRLF)) this.sendToTerminal(ANSI.CRLF);
+    c.resolve({ cancelled: c.cancelled, output });
+    if (!this.exited || !this.stopped) this.showPrompt(true);
+    if (c.cancelled)
+      while ((c = this.executions.shift())) c.resolve({ cancelled: true });
+    else this.executeNext();
+  }
+
+  private handleOutput(data: any) {
+    const chunk = this.decoder.decode(data);
+    this.token.lastIndex = 0;
+    const output = this.normalize(chunk.replace(this.token, ANSI.EMPTY));
+    if (output) this.sendToTerminal(output);
+
+    const c = this.executing;
+    if (!c) return;
+    if (output) c.output.push(output);
+
+    if (/'\d{4}\.\d{2}\.\d{2}T/m.test(c.output.join(ANSI.EMPTY))) {
+      c.cancelled = true;
+      this.resolve();
+      return;
     }
 
+    this.token.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = this.token.exec(chunk))) c.done.push(match);
+
+    if (c.done.length === (c.index + 1) * 2) {
+      match = c.done[c.done.length - 1];
+      this.namespace = match[1] ? `.${match[1]}` : ANSI.EMPTY;
+      if (c.index < c.lines.length - 1) {
+        c.index++;
+        this.sendToProcess(c.lines[c.index]);
+      } else this.resolve();
+    }
+  }
+
+  private handleError(error: Error) {
+    this.sendToTerminal(`${error.message}${ANSI.CRLF}`);
+    this.cancel(error);
+  }
+
+  private handleExit(code?: number) {
+    if (this.stopped) {
+      this.stopped = false;
+      this.resolve();
+      this.process = this.createProcess();
+      this.connect();
+      this._context = CTX.Q;
+      this._namespace = ANSI.EMPTY;
+      this.inputText = ANSI.EMPTY;
+      this.updateMaxInputIndex();
+      this.sendToTerminal(ANSI.CRLF);
+      this.showPrompt(true);
+      return;
+    }
+    this.exited = true;
     this.sendToTerminal(
-      `${CONF.TITLE} Copyright (C) 1993-2025 KX Systems` + ANSI.CRLF.repeat(2),
+      `${CONF.TITLE} exited with code (${code ?? 0}).${ANSI.CRLF}`,
     );
+    this.resolve();
+  }
 
-    this.messages.forEach((message) => this.sendToTerminal(message));
-    this.messages = [];
+  private close() {
+    const key = this.workspace?.uri.toString() ?? CONF.DEFAULT;
+    if (ReplConnection.repls.get(key) === this) {
+      ReplConnection.repls.delete(key);
+    }
+    this.exited = true;
+    this.cancel();
+    this.stopProcess();
+    this.onDidWrite.dispose();
+  }
 
+  private open(dimensions?: vscode.TerminalDimensions) {
+    if (dimensions) this.setDimensions(dimensions);
+    this.messages?.forEach((message) => this.onDidWrite.fire(message));
+    this.messages = undefined;
     this.showPrompt(true);
-
-    (this.executions || []).forEach((execution) => execution());
-    this.executions = undefined;
+    this.executeNext();
   }
 
   private setDimensions(dimensions: vscode.TerminalDimensions) {
     this.rows = dimensions.rows;
     this.columns = dimensions.columns;
     this.updateMaxInputIndex();
-    this.sendDimensions();
-    if (!this.executions && !this.executing) this.showPrompt();
-  }
-
-  private close() {
-    if (ReplConnection.instance === this) {
-      ReplConnection.instance = undefined;
-    }
-    this.process.kill("SIGINT");
-    this.process.kill("SIGTERM");
-    this.onDidWrite.dispose();
-    this.exited = true;
   }
 
   private handleInput(data: string) {
@@ -415,32 +550,39 @@ export class ReplConnection {
       return;
     }
 
-    if (this.executing && data === KEY.CR) {
-      this.sendToTerminal(ANSI.CRLF);
-      return;
-    }
+    let inputText: string | undefined;
 
     switch (data) {
       case KEY.CR:
-        if (this.input.length > 0) {
-          const input = this.inputText;
-          this.sendToProcess(input);
-          this.history.push(input);
-          this.inputIndex = this.visibleInputIndex;
-          this.showPrompt();
-          if (/^(?:\\[\t ]|\\$)/m.test(input)) {
-            this.context = this.context === CTX.K ? CTX.Q : CTX.K;
-          }
-        } else {
-          this.sendToProcess(ANSI.EMPTY);
+        inputText = this.inputText;
+        if (this.executing) {
+          this.sendToTerminal(ANSI.CRLF);
+          this.sendToProcess(inputText);
+          this.executing.output.push(inputText + ANSI.CRLF);
+          this.inputText = ANSI.EMPTY;
+          break;
         }
-        this.history.rewind();
-        this.sendToTerminal(ANSI.CRLF);
+        if (!inputText) {
+          this.sendToTerminal(ANSI.CRLF);
+          this.showPrompt(true);
+          break;
+        }
+        if (/^\\[\t ]*$/m.test(inputText)) {
+          this.context = this.context === CTX.K ? CTX.Q : CTX.K;
+          break;
+        }
+        ReplConnection.history.push(inputText);
+        ReplConnection.history.rewind();
+        this.inputIndex = this.visibleInputIndex;
+        this.showPrompt();
+        this.inputText = ANSI.EMPTY;
+        this.runQuery(inputText);
         break;
       case KEY.CTRLC:
-        if (this.executing) {
-          this.process.kill("SIGINT");
-        }
+        this.cancel();
+        break;
+      case KEY.CTRLD:
+        this.stopProcess(true);
         break;
       case KEY.BS:
       case KEY.BSMAC:
@@ -495,95 +637,115 @@ export class ReplConnection {
         }
         break;
       case KEY.DOWN:
-        this.recall(this.history.prev);
+        this.recall(ReplConnection.history.prev);
         break;
       case KEY.UP:
-        this.recall(this.history.next);
+        this.recall(ReplConnection.history.next);
         break;
       default:
         if (/(?:\r\n|[\r\n])/s.test(data)) {
-          this.executeQuery(data);
+          if (notEnvironment(data)) {
+            if (path.isAbsolute(data))
+              this.runQuery(
+                `\\l ${path.relative(path.resolve(this.env.QPATH, ".."), this.clean(data))}`,
+              );
+            else this.runQuery(data);
+          }
           break;
         }
         if (data.length < CONF.MAX_INPUT) {
           const target = data.replace(/[^\P{Cc}]/gsu, ANSI.EMPTY);
           this.input.splice(this.inputIndex, 0, ...target);
           this.updateInputIndex(target);
-          this.showPrompt();
+          if (this.executing) this.sendToTerminal(target);
+          else this.showPrompt();
         }
         break;
     }
   }
 
   clearHistory() {
-    this.history.clear();
+    ReplConnection.history.clear();
   }
 
   start() {
     this.terminal.show();
   }
 
-  executeQuery(text: string) {
-    const execution = () => {
-      this.sendToProcess(normalizeQuery(text));
-      this.showExecutionPrompt();
-      this.show();
-    };
-    if (this.executions) {
-      this.executions.push(execution);
-    } else {
-      execution();
+  show() {
+    if (getAutoFocusOutputOnEntrySetting()) this.terminal.show(true);
+  }
+
+  executeQuery(text: string, token: vscode.CancellationToken) {
+    return new Promise<Result>((resolve, reject) => {
+      const source = new vscode.CancellationTokenSource();
+
+      const execution = {
+        source,
+        token,
+        cancelled:
+          token.isCancellationRequested || source.token.isCancellationRequested,
+        lines: normalizeQuery(text)
+          .split(ANSI.CRLF)
+          .filter((line) => line),
+        output: [],
+        done: [],
+        index: 0,
+        reject,
+        resolve,
+      };
+
+      let retry = 0;
+
+      const requestCancellation = () => {
+        if (this.executing) {
+          if (retry < 50) {
+            retry++;
+            this.stopExecution();
+            setTimeout(requestCancellation, 50);
+          } else {
+            this.stopProcess(true);
+          }
+        }
+      };
+
+      [token, source.token].forEach((token) =>
+        token.onCancellationRequested(requestCancellation),
+      );
+
+      if (execution.cancelled) {
+        resolve({ cancelled: true });
+      } else {
+        this.executions.push(execution);
+        this.executeNext();
+      }
+    });
+  }
+
+  private static readonly history = new History();
+  private static readonly repls = new Map<string, ReplConnection>();
+
+  static async getOrCreateInstance(resource?: vscode.Uri) {
+    const workspace =
+      (resource && vscode.workspace.getWorkspaceFolder(resource)) ||
+      (await pickWorkspace());
+
+    const key = workspace?.uri.toString() ?? CONF.DEFAULT;
+
+    let repl = this.repls.get(key);
+    if (!repl || repl.exited) {
+      let venv: ResolvedEnvironment | undefined;
+      try {
+        const pythonApi = await PythonExtension.api();
+        const envp = pythonApi.environments.getActiveEnvironmentPath(workspace);
+        venv = await pythonApi.environments.resolveEnvironment(envp);
+      } catch (error) {
+        notify(errorMessage(error), MessageKind.DEBUG, { logger });
+      }
+      repl = new ReplConnection(workspace, venv);
+      this.repls.set(key, repl);
     }
-  }
 
-  private static instance?: ReplConnection;
-
-  static getOrCreateInstance() {
-    if (!this.instance || this.instance.exited) {
-      this.instance = new ReplConnection();
-    }
-    return this.instance;
-  }
-}
-
-class HistoryItem {
-  prev?: HistoryItem;
-  next?: HistoryItem;
-  constructor(readonly input: string) {}
-}
-
-class History {
-  private head?: HistoryItem;
-  private item?: HistoryItem;
-
-  push(input: string) {
-    if (input === this.head?.input) {
-      return;
-    }
-    const item = new HistoryItem(input);
-    if (this.head) {
-      item.next = this.head;
-      this.head.prev = item;
-    }
-    this.head = item;
-  }
-
-  get next() {
-    this.item = this.item === undefined ? this.head : this.item.next;
-    return this.item;
-  }
-
-  get prev() {
-    this.item = this.item?.prev;
-    return this.item;
-  }
-
-  rewind() {
-    this.item = undefined;
-  }
-
-  clear() {
-    this.head = undefined;
-    this.rewind();
+    return repl;
   }
 }

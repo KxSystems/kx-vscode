@@ -40,7 +40,13 @@ import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { updateCellMetadata } from "../services/notebookProviders";
 import { getBasename, offerConnectAction } from "../utils/core";
 import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
-import { MessageKind, notify, Runner } from "../utils/notifications";
+import {
+  Cancellable,
+  MessageKind,
+  notify,
+  Runner,
+} from "../utils/notifications";
+import { getPythonWrapper } from "../utils/queryUtils";
 import {
   cleanAssemblyName,
   cleanDapName,
@@ -108,6 +114,7 @@ function getServers() {
   ];
 }
 
+/* c8 ignore next */
 export async function getConnectionForServer(
   server: string,
 ): Promise<InsightsNode | KdbNode | undefined> {
@@ -207,12 +214,13 @@ export function getConnectionForUri(uri: Uri) {
   }
 }
 
+/* c8 ignore next */
 export async function pickConnection(uri: Uri) {
   const server = getServerForUri(uri);
   const servers = getServers();
 
   const items = ["(none)"];
-  if (isQ(uri)) {
+  if (isQ(uri) || isNotebook(uri) || isPython(uri)) {
     items.push(ext.REPL);
   }
   items.push(...servers);
@@ -238,6 +246,7 @@ export async function pickConnection(uri: Uri) {
   return picked;
 }
 
+/* c8 ignore next */
 export async function pickTarget(uri: Uri, cell?: NotebookCell) {
   const conn = await findConnection(uri);
   const isInsights = conn instanceof InsightsConnection;
@@ -418,6 +427,7 @@ function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
   return items;
 }
 
+/* c8 ignore next */
 function createProcessKey(dap: MetaDap): string | null {
   if (!dap.dap) return null;
 
@@ -431,6 +441,10 @@ function isSql(uri: Uri | undefined) {
 
 function isQ(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".q");
+}
+
+function isNotebook(uri: Uri | undefined) {
+  return uri && uri.path.endsWith(".kxnb");
 }
 
 function isPython(uri: Uri | undefined) {
@@ -451,7 +465,8 @@ function isKxFolder(uri: Uri | undefined) {
 
 export async function startRepl() {
   try {
-    ReplConnection.getOrCreateInstance().start();
+    const instance = await ReplConnection.getOrCreateInstance();
+    instance.start();
   } catch (error) {
     notify(errorMessage(error), MessageKind.ERROR, {
       logger,
@@ -461,30 +476,41 @@ export async function startRepl() {
 }
 
 export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
-  const basename = getBasename(editor.document.uri);
+  const uri = editor.document.uri;
+  const basename = getBasename(uri);
 
   let text: string;
 
-  if (type === ExecutionTypes.QueryFile) {
-    text = editor.document.getText();
-  } else if (type === ExecutionTypes.QuerySelection) {
-    const selection = editor.selection;
-    text = selection.isEmpty
-      ? editor.document.lineAt(selection.active.line).text
-      : editor.document.getText(selection);
-  } else {
-    notify(
-      `Executing ${basename} on ${ext.REPL} is not supported.`,
-      MessageKind.ERROR,
-      { logger },
-    );
-    return;
+  switch (type) {
+    case ExecutionTypes.QueryFile:
+    case ExecutionTypes.PythonQueryFile:
+      text = editor.document.getText();
+      break;
+    case ExecutionTypes.QuerySelection:
+    case ExecutionTypes.PythonQuerySelection:
+      text = editor.selection.isEmpty
+        ? editor.document.lineAt(editor.selection.active.line).text
+        : editor.document.getText(editor.selection);
+      break;
+    default:
+      notify(
+        `Executing ${basename} on ${ext.REPL} is not supported.`,
+        MessageKind.ERROR,
+        { logger },
+      );
+      return;
   }
 
   try {
-    const runner = Runner.create(async () => {
-      ReplConnection.getOrCreateInstance().executeQuery(text);
+    const runner = Runner.create(async (_, token) => {
+      const repl = await ReplConnection.getOrCreateInstance(uri);
+      repl.show();
+      return repl.executeQuery(
+        isPython(uri) ? getPythonWrapper(text) : text,
+        token,
+      );
     });
+    runner.cancellable = Cancellable.EXECUTOR;
     runner.title = `Executing ${basename} on ${ext.REPL}.`;
     await runner.execute();
   } catch (error) {
@@ -495,6 +521,7 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   }
 }
 
+/* c8 ignore next */
 export async function runActiveEditor(type?: ExecutionTypes) {
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
@@ -659,6 +686,7 @@ export function checkOldDatasourceFiles() {
   ext.oldDSformatExists = oldFilesExists();
 }
 
+/* c8 ignore next */
 export async function importOldDSFiles() {
   if (ext.oldDSformatExists) {
     const folders = workspace.workspaceFolders;
@@ -685,6 +713,7 @@ export async function importOldDSFiles() {
   }
 }
 
+/* c8 ignore next */
 export async function findConnection(uri: Uri) {
   const connMngService = new ConnectionManagementService();
 

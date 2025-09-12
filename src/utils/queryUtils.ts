@@ -245,19 +245,23 @@ export function normalizeQuery(query: string): string {
 
 export function normalizeQSQLQuery(query: string): string {
   return (
-    normalizeQuery(query)
+    queryLimitCheck(query)
+      // Remove block comments
+      .replace(/^\/[\t ]*$[^]*?^\\[\t ]*$/gm, "")
+      // Remove terminate comments
+      .replace(/^\\[\t ]*(?:\r\n|[\r\n])[^]*/gm, "")
+      // Remove single line comments
+      .replace(/^\/.+/gm, "")
       // Replace system commands
       .replace(/^\\([a-zA-Z_1-2\\]+)[\t ]*(.*)/gm, (matched, command, args) =>
         matched === "\\\\"
           ? 'system"\\\\"'
           : `system"${command} ${args.trim()}"`,
       )
+      // Trim white space
+      .trim()
       // Replace end of statements
-      .replace(/\r\n/gs, ";")
-      // Remove start of file
-      .replace(/^[;\s]+/gs, "")
-      // Remove end of file
-      .replace(/[;\s]+$/gs, "")
+      .replace(/(?<!;[\t ]*)(\r\n|[\r\n])+(?![\t\r\n ])/gs, ";$1")
   );
 }
 
@@ -269,18 +273,22 @@ export function normalizePyQuery(query: string): string {
   );
 }
 
+export function getPythonWrapper(
+  query: string,
+  returnFormat: "serialized" | "text" | "structuredText" = "serialized",
+): string {
+  const wrapper = normalizeQSQLQuery(queryWrapper(true));
+  const args = {
+    returnFormat,
+    code: normalizePyQuery(query),
+    sample_fn: "first",
+    sample_size: 10000,
+  };
+  return `{[returnFormat;code;sample_fn;sample_size] res:${wrapper}[returnFormat;code;sample_fn;sample_size];$[res\`errored;res\`error;res\`result]}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]`;
+}
+
 export function getQSQLWrapper(query: string, isPython?: boolean): string {
-  if (isPython) {
-    const wrapper = normalizeQSQLQuery(queryWrapper(true));
-    const args = {
-      returnFormat: <"serialized" | "text" | "structuredText">"serialized",
-      code: normalizePyQuery(query),
-      sample_fn: "first",
-      sample_size: 10000,
-    };
-    return `${wrapper}["${args.returnFormat}";"${args.code}";"${args.sample_fn}";${args.sample_size}]\`result`;
-  }
-  return normalizeQSQLQuery(query);
+  return isPython ? getPythonWrapper(query) : normalizeQSQLQuery(query);
 }
 
 export function generateQTypes(meta: { [key: string]: number }): any {

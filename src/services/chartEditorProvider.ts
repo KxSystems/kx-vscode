@@ -24,7 +24,7 @@ import {
 } from "vscode";
 
 import { getNonce } from "../utils/getNonce";
-import { getUri } from "../utils/getUri";
+import { getUri } from "../utils/uriUtils";
 
 export class ChartEditorProvider implements CustomTextEditorProvider {
   static readonly viewType = "kdb.chartEditor";
