@@ -311,7 +311,7 @@ async function executeWithConnection(
     isNotebook,
   );
 
-  if (!res) {
+  if (res === null || res === undefined) {
     notify("Failed to execute query. No connection found.", MessageKind.ERROR, {
       logger,
     });
