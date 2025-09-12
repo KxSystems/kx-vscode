@@ -751,6 +751,13 @@ export class InsightsConnection {
 
       if ("scope" in body) {
         body.scope.assembly = body.scope.assembly + qePrefix;
+        if (body.scope.dap) {
+          body.scope.dap = this.retrieveCorrectDAPName(
+            body.scope.dap,
+            body.scope.tier,
+          );
+          body.scope.tier = undefined;
+        }
       }
       const requestUrl = this.generateDatasourceEndpoints(type, udaName);
       const options = await this.getOptions(
@@ -823,6 +830,7 @@ export class InsightsConnection {
         ) {
           body.returnFormat = isTableView ? "structuredText" : "text";
         } else {
+          delete body.returnFormat;
           body.isTableView = isTableView;
         }
       }
@@ -846,7 +854,7 @@ export class InsightsConnection {
 
       return await axios(options).then((response: any) => {
         if (response.data.error) {
-          return response.data;
+          return response.data.errorMsg ?? response.data;
         } else if (body.expression === "") {
           notify(
             `Scratchpad created for connection: ${this.connLabel}.`,

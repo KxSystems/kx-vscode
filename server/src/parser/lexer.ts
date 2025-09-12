@@ -68,6 +68,7 @@ import {
   TestLambdaBlock,
   Cond,
   CutDrop,
+  Dict,
 } from "./tokens";
 
 const Language = [
@@ -95,6 +96,7 @@ const Language = [
   Iterator,
   Comparator,
   DoubleColon,
+  Dict,
   Operator,
   Cond,
   Colon,

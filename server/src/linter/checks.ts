@@ -11,8 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { DateTimeLiteral } from "../parser";
 import {
-  DateTimeLiteral,
   SyntaxError,
   Token,
   amended,
@@ -23,7 +23,7 @@ import {
   inParam,
   ordered,
   qualified,
-} from "../parser";
+} from "../parser/utils";
 
 export function deprecatedDatetime(tokens: Token[]): Token[] {
   return tokens.filter((token) => token.tokenType === DateTimeLiteral);
