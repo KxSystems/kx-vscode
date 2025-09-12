@@ -11,10 +11,9 @@
  * specific language governing permissions and limitations under the License.
  */
 
-export * from "./utils";
 export * from "./keywords";
 export * from "./language";
 export * from "./lexer";
 export * from "./literals";
-export * from "./parser";
 export * from "./tokens";
+export * from "./source";

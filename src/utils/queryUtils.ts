@@ -252,19 +252,23 @@ export function normalizeQuery(query: string): string {
 
 export function normalizeQSQLQuery(query: string): string {
   return (
-    normalizeQuery(query)
+    queryLimitCheck(query)
+      // Remove block comments
+      .replace(/^\/[\t ]*$[^]*?^\\[\t ]*$/gm, "")
+      // Remove terminate comments
+      .replace(/^\\[\t ]*(?:\r\n|[\r\n])[^]*/gm, "")
+      // Remove single line comments
+      .replace(/^\/.+/gm, "")
       // Replace system commands
       .replace(/^\\([a-zA-Z_1-2\\]+)[\t ]*(.*)/gm, (matched, command, args) =>
         matched === "\\\\"
           ? 'system"\\\\"'
           : `system"${command} ${args.trim()}"`,
       )
+      // Trim white space
+      .trim()
       // Replace end of statements
-      .replace(/\r\n/gs, ";")
-      // Remove start of file
-      .replace(/^[;\s]+/gs, "")
-      // Remove end of file
-      .replace(/[;\s]+$/gs, "")
+      .replace(/(?<!;[\t ]*)(\r\n|[\r\n])+(?![\t\r\n ])/gs, ";$1")
   );
 }
 

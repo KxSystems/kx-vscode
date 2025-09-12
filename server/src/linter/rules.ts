@@ -11,8 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { Token } from "../parser";
 import * as checks from "./checks";
+import { Token } from "../parser/utils";
 
 const enum DiagnosticSeverity {
   Error = 1,
