@@ -553,6 +553,13 @@ export class InsightsConnection {
       const qePrefix = this.apiConfig?.queryEnvironmentsEnabled ? "-qe" : "";
       if ("scope" in body.params) {
         body.params.scope.assembly = body.params.scope.assembly + qePrefix;
+        if (body.params.scope.dap) {
+          body.params.scope.dap = this.retrieveCorrectDAPName(
+            body.params.scope.dap,
+            body.params.scope.tier,
+          );
+          body.params.scope.tier = undefined;
+        }
       }
 
       const scratchpadURL = new url.URL(coreUrl!, this.node.details.server);
