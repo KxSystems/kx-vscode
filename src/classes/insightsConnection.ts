@@ -86,6 +86,7 @@ export class InsightsConnection {
         await this.getConfig();
         await this.getApiConfig();
         await this.getMeta();
+        await this.startScratchpadSession();
       }
     });
     return this.connected;
@@ -802,6 +803,46 @@ export class InsightsConnection {
             arrayBuffer: undefined,
           };
         });
+    }
+  }
+
+  public async startScratchpadSession(): Promise<void> {
+    if (this.connected && this.connEndpoints) {
+      const body: ScratchpadRequestBody = {
+        expression: "",
+        language: "q",
+        context: ".",
+        sampleFn: "first",
+        sampleSize: 1,
+      };
+      const scratchpadURL = new url.URL(
+        this.connEndpoints.scratchpad.scratchpad,
+        this.node.details.server,
+      );
+      const options = await this.getOptions(
+        true,
+        customHeadersJson,
+        "POST",
+        scratchpadURL.toString(),
+        body,
+      );
+
+      if (options === undefined) {
+        return;
+      }
+
+      notify("REST", MessageKind.DEBUG, {
+        logger,
+        params: { url: options.url },
+      });
+
+      return await axios(options).then((_res: any) => {
+        notify(
+          `Scratchpad created for connection: ${this.connLabel}.`,
+          MessageKind.DEBUG,
+          { logger },
+        );
+      });
     }
   }
 

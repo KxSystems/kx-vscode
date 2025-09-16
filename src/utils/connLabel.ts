@@ -41,14 +41,6 @@ export function clearWorkspaceLabels() {
   getWorkspaceLabelsConnMap();
 
   if (ext.connLabelList.length === 0) {
-    notify(
-      "Cleaning connection mappings for nonexistent labels.",
-      MessageKind.DEBUG,
-      {
-        logger,
-        telemetry: "Label.Cleanup.NoLabels",
-      },
-    );
     workspace.getConfiguration().update("kdb.labelsConnectionMap", [], true);
     return;
   }
