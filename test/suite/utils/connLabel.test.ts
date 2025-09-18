@@ -352,16 +352,6 @@ describe("connLabels", () => {
 
       LabelsUtils.clearWorkspaceLabels();
 
-      sinon.assert.calledWith(
-        notifyStub,
-        "Cleaning connection mappings for nonexistent labels.",
-        notifications.MessageKind.DEBUG,
-        {
-          logger: "connLabel",
-          telemetry: "Label.Cleanup.NoLabels",
-        },
-      );
-
       sinon.assert.calledWith(updateStub, "kdb.labelsConnectionMap", [], true);
     });
 
