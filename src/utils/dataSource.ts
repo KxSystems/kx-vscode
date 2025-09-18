@@ -179,3 +179,23 @@ export function getPartialDatasourceFile(
         },
       };
 }
+
+export function getPartialDatasourceFileForNotebooks(
+  query: string,
+  selectedTarget?: string,
+  isSql?: boolean,
+) {
+  return isSql
+    ? <DataSourceFiles>{
+        dataSource: {
+          selectedType: "SQL",
+          sql: { query },
+        },
+      }
+    : <DataSourceFiles>{
+        dataSource: {
+          selectedType: "QSQL",
+          qsql: { query: query, selectedTarget },
+        },
+      };
+}

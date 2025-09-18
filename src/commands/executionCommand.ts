@@ -37,7 +37,7 @@ import { ChartEditorProvider } from "../services/chartEditorProvider";
 import { ConnectionManagementService } from "../services/connectionManagerService";
 import { inputVariable } from "../services/notebookProviders";
 import { getBasename } from "../utils/core";
-import { getPartialDatasourceFile } from "../utils/dataSource";
+import { getPartialDatasourceFileForNotebooks } from "../utils/dataSource";
 import {
   convertDSDataResponse,
   defineNotepadExecutionType,
@@ -518,11 +518,10 @@ export async function executeNotebookQuery(
   const executionType = defineNotepadExecutionType(kind, target, variable);
 
   if (target || kind === CellKind.SQL) {
-    const partialDS = getPartialDatasourceFile(
+    const partialDS = getPartialDatasourceFileForNotebooks(
       query,
       target,
       kind === CellKind.SQL,
-      kind === CellKind.PYTHON,
     );
     return variable && variable.trim() !== ""
       ? await prepareToPopulateScratchpad(
