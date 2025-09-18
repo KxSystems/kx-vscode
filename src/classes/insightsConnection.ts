@@ -592,6 +592,11 @@ export class InsightsConnection {
               telemetry: "Scratchpad." + type + ".Populated.Errored",
             },
           );
+          notify(response.data.errorMsg, MessageKind.DEBUG, {
+            logger,
+            params: { status: response.status },
+            telemetry: "Scratchpad." + type + ".Populated.Errored",
+          });
         } else {
           notify(
             `Scratchpad variable (${variableName}) populated.`,
