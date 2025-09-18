@@ -356,13 +356,15 @@ async function executeServiceGateway(
   dsExecutionType: DataSourceTypes,
   body: any,
   udaName: string,
+  isNotebook?: boolean,
 ): Promise<any> {
+  const isTableView = isNotebook ? true : ext.isResultsTabVisible;
   const res = await selectedConnection.getDataQuery(
     dsExecutionType,
     body,
     udaName,
   );
-  return convertDSDataResponse(res);
+  return convertDSDataResponse(res, isTableView);
 }
 
 async function resolveVariable(
@@ -718,6 +720,7 @@ export async function executeDataQuery(
   const query = getQuery(datasourceFile, type);
   const dsExecutionType = getDSExecutionType(datasourceFile);
   const udaName = datasourceFile?.dataSource?.uda?.name ?? "";
+  const isNotebook = isExecutionNotebook(type);
 
   if (!validateDataQueryInputs(query)) {
     return;
@@ -752,6 +755,7 @@ export async function executeDataQuery(
     dsExecutionType,
     body,
     udaName,
+    isNotebook,
   );
 }
 

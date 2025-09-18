@@ -361,11 +361,14 @@ export function defineNotepadExecutionType(
 }
 
 /* c8 ignore next */
-export function convertDSDataResponse(dataQueryCall: any) {
+export function convertDSDataResponse(
+  dataQueryCall: any,
+  isTableView?: boolean,
+): any {
   if (dataQueryCall?.error) {
     return parseError(dataQueryCall.error);
   } else if (dataQueryCall?.arrayBuffer) {
-    const results = handleWSResults(dataQueryCall.arrayBuffer);
+    const results = handleWSResults(dataQueryCall.arrayBuffer, isTableView);
     return handleScratchpadTableRes(results);
   } else {
     return { error: "Data Query failed" };
