@@ -2,6 +2,13 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.14.1
+
+### Fixes
+
+- Updated dependencies to address security vulnerabilities
+- Resolved an issue where QDoc comments were not collapsing as expected
+
 # v1.14.0
 
 ### Enhancements
