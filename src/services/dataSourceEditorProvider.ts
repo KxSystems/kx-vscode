@@ -209,12 +209,14 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           }
           break;
         }
-        case DataSourceCommand.Run: {
-          if (!connected) {
-            const connectedAfterOffering =
-              await offerConnectAction(selectedServer);
-            if (!connectedAfterOffering) {
-              break;
+        case DataSourceCommand.Run:
+          {
+            if (!connected) {
+              const connectedAfterOffering =
+                await offerConnectAction(selectedServer);
+              if (!connectedAfterOffering) {
+                break;
+              }
             }
 
             const runner = Runner.create(() =>
@@ -229,7 +231,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
             await runner.execute();
           }
           break;
-        }
+
         case DataSourceCommand.Populate: {
           if (!connected) {
             const connectedAfterOffering =
