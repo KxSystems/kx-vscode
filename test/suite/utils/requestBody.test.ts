@@ -184,7 +184,7 @@ describe("requestBody", () => {
           );
 
         assert.ok(result);
-        assert.strictEqual(result.language, "sql");
+        assert.strictEqual(result.language, "q");
         assert.strictEqual(result.output, "varSample");
         assert.strictEqual(result.returnFormat, "text");
         assert.strictEqual(result.sampleFn, "first");
@@ -201,7 +201,7 @@ describe("requestBody", () => {
         );
 
         assert.ok(result);
-        assert.strictEqual(result.language, "sql");
+        assert.strictEqual(result.language, "q");
         assert.strictEqual(result.output, "varSample");
         assert.strictEqual(result.returnFormat, "text");
         assert.strictEqual(result.sampleFn, "first");
