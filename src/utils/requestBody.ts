@@ -154,7 +154,7 @@ export function generateScratchpadSQLImportReqBody(
     params: {
       query,
     },
-    language: "sql",
+    language: "q",
     output: variableName,
     returnFormat: "text",
     sampleFn: "first",
