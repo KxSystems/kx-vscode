@@ -166,8 +166,11 @@ async function executeDataQueryWithTiming(
   connLabel: string,
   type: ExecutionTypes,
   target?: string,
+  query?: string,
 ): Promise<ExecutionResult> {
-  return withExecutionTiming(() => executeDataQuery(connLabel, type, target));
+  return withExecutionTiming(() =>
+    executeDataQuery(connLabel, type, target, undefined, query),
+  );
 }
 
 async function executeQueryWithTiming(
@@ -575,27 +578,48 @@ export async function executeActiveEditorQuery(type?: ExecutionTypes) {
   const isDataQuery = context.target && context.target !== "scratchpad";
   const query = retrieveQueryData();
 
-  if (isDataQuery && context.isInsights) {
-    const { result: res, duration } = await executeDataQueryWithTiming(
-      context.conn.connLabel,
-      executionType,
+  if (type === ExecutionTypes.PopulateScratchpad) {
+    type = context.isPython
+      ? ExecutionTypes.PopulateScratchpadPython
+      : ExecutionTypes.PopulateScratchpad;
+
+    const dsFile = getPartialDatasourceFileForNotebooks(
+      query ?? "",
       context.target,
+      context.isSql,
     );
-
-    const dataType = getDataTypeForEditor(context.executorName);
-    const querySample = getQuerySample(query ?? "", dataType);
-
-    handleExecuteDataQueryResults(
+    prepareToPopulateScratchpad(
       context.conn.connLabel,
-      res,
-      context.executorName,
-      dataType,
-      querySample,
-      context.documentType,
-      context.isPython,
-      duration,
+      type,
+      context.target,
+      undefined,
+      dsFile,
     );
     return;
+  } else {
+    if (isDataQuery && context.isInsights) {
+      const { result: res, duration } = await executeDataQueryWithTiming(
+        context.conn.connLabel,
+        executionType,
+        context.target,
+        query,
+      );
+
+      const dataType = getDataTypeForEditor(context.executorName);
+      const querySample = getQuerySample(query ?? "", dataType);
+
+      handleExecuteDataQueryResults(
+        context.conn.connLabel,
+        res,
+        context.executorName,
+        dataType,
+        querySample,
+        context.documentType,
+        context.isPython,
+        duration,
+      );
+      return;
+    }
   }
 
   const { result: res, duration } = await executeQueryWithTiming(
@@ -715,9 +739,10 @@ export async function executeDataQuery(
   type: ExecutionTypes,
   target?: string,
   datasourceFile?: DataSourceFiles,
+  queryParsed?: string,
 ): Promise<any> {
   const isPython = isExecutionPython(type);
-  const query = getQuery(datasourceFile, type);
+  const query = queryParsed ? queryParsed : getQuery(datasourceFile, type);
   const dsExecutionType = getDSExecutionType(datasourceFile);
   const udaName = datasourceFile?.dataSource?.uda?.name ?? "";
   const isNotebook = isExecutionNotebook(type);
