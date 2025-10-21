@@ -870,10 +870,6 @@ function registerConnectionsCommands(): CommandRegistration[] {
     {
       command: "kdb.connections.localProcess.stop",
       callback: async (viewItem: KdbNode) => {
-        await vscode.commands.executeCommand(
-          "kdb.connections.disconnect",
-          viewItem,
-        );
         await stopLocalProcess(viewItem);
       },
     },

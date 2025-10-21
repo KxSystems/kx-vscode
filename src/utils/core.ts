@@ -353,7 +353,7 @@ export function getAutoFocusOutputOnEntrySetting(): boolean {
 export function getHideDetailedConsoleQueryOutputSetting(): boolean {
   return workspace
     .getConfiguration("kdb")
-    .get<boolean>("hideDetailedConsoleQueryOutput", true);
+    .get<boolean>("hideSourceExpressions", true);
 }
 
 export function setOutputWordWrapper(): void {

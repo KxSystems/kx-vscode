@@ -70,7 +70,7 @@
             "title": "q runtime installed",
             "description": " \n",
             "media": {
-              "markdown": "out/qinstall.md"
+              "markdown": "resources/walkthrough/qinstall.md"
             },
             "completionEvents": [
               "onLink:https://code.kx.com/q/learn/install/"
@@ -165,6 +165,13 @@
         "kdb.hideDetailedConsoleQueryOutput": {
           "type": "boolean",
           "description": "Hide detailed console query output",
+          "default": true,
+          "scope": "machine",
+          "deprecationMessage": "This setting is deprecated, use kdb.hideSourceExpressions instead"
+        },
+        "kdb.hideSourceExpressions": {
+          "type": "boolean",
+          "description": "When disabled, the console shows all evaluated expressions, intermediate steps, and results from your query. Enable this to streamline logs and reduce visual clutter when running simple or production-ready queries.",
           "default": true,
           "scope": "machine"
         },

@@ -202,10 +202,6 @@ export async function installTools(): Promise<void> {
           logger,
         });
       }
-      await writeFile(
-        join(__dirname, "qinstall.md"),
-        `# q runtime installed location: \n### ${QHOME}`,
-      );
       notify(`Installation of q found here: ${QHOME}`, MessageKind.DEBUG, {
         logger,
       });
@@ -314,14 +310,16 @@ export async function startLocalProcess(viewItem: KdbNode): Promise<void> {
 }
 
 export async function stopLocalProcess(viewItem: KdbNode): Promise<void> {
-  ext.localProcessObjects[viewItem.children[0]].kill();
-  notify(
-    `Child process id ${ext.localProcessObjects[viewItem.children[0]]
-      .pid!} removed in cache.`,
-    MessageKind.DEBUG,
-    { logger },
-  );
-  await removeLocalConnectionStatus(`${getServerName(viewItem.details)}`);
+  const proc = ext.localProcessObjects[viewItem.children[0]];
+  proc.once("exit", () => {
+    notify(
+      `Child process id ${proc.pid!} removed in cache.`,
+      MessageKind.DEBUG,
+      { logger },
+    );
+    removeLocalConnectionStatus(`${getServerName(viewItem.details)}`);
+  });
+  proc.kill();
 }
 
 export async function stopLocalProcessByServerName(
