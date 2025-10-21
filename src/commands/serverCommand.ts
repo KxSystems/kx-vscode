@@ -190,6 +190,7 @@ export async function addInsightsConnection(
 }
 
 /* c8 ignore next */
+/* istanbul ignore next */
 export async function editInsightsConnection(
   insightsData: InsightDetails,
   oldAlias: string,
@@ -297,6 +298,7 @@ export async function editInsightsConnection(
 
 // Not possible to test secrets
 /* c8 ignore next */
+/* istanbul ignore next */
 export async function addAuthConnection(
   serverKey: string,
   username: string,
@@ -328,6 +330,7 @@ export async function addAuthConnection(
 
 // Not possible to test secrets
 /* c8 ignore next */
+/* istanbul ignore next */
 function removeAuthConnection(serverKey: string) {
   if (
     Object.prototype.hasOwnProperty.call(
@@ -343,6 +346,7 @@ function removeAuthConnection(serverKey: string) {
 
 // Not possible to test secrets
 /* c8 ignore next */
+/* istanbul ignore next */
 export function updateAuthDataKey(oldServerKey: string, newServerKey: string) {
   const storeAuthData = ext.secretSettings.storeAuthData as {
     [key: string]: any;
@@ -365,6 +369,7 @@ export function updateAuthDataKey(oldServerKey: string, newServerKey: string) {
 
 // Not possible to test secrets
 /* c8 ignore next */
+/* istanbul ignore next */
 export function handleEditAuthData(
   oldServerKey: string,
   newServerKey: string,
@@ -507,6 +512,7 @@ export async function addKdbConnection(
 }
 
 /* c8 ignore next */
+/* istanbul ignore next */
 export async function editKdbConnection(
   kdbData: ServerDetails,
   oldAlias: string,
@@ -646,6 +652,7 @@ export async function editKdbConnection(
 
 // test fs readFileSync unit tests are flaky, no correct way to test them
 /* c8 ignore next */
+/* istanbul ignore next */
 export async function importConnections() {
   const options = {
     canSelectMany: false,
@@ -957,6 +964,7 @@ export async function executeQuery(
   const duration = (endTime - startTime).toString();
 
   /* c8 ignore next */
+  /* istanbul ignore next */
   if (token?.isCancellationRequested) {
     return undefined;
   }
@@ -980,6 +988,7 @@ export async function executeQuery(
     return results;
   } else {
     /* c8 ignore next */
+    /* istanbul ignore next */
     if (ext.isResultsTabVisible) {
       const data = resultToBase64(results);
       if (data) {
