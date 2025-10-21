@@ -2,6 +2,26 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.15.0
+
+### Enhancments
+
+- Deprecated `Hide Detailed Console Query Output` setting and added a new `Hide Source Expressions` setting.
+
+### Fixes
+
+- Resolved an issue where QDoc comments were not collapsing as expected
+- Resolved an issue where query history was not showing for some files
+- Resolved an issue where stopping the bundled q showed multiple errors
+- Resolved a walkthrough error message issue
+- Resolved an issue where recently added connections were not showing
+- Resolved an issue where authentication details were missing for modified connections
+- Changed the subscribe notification text
+
+### Internal Improvements
+
+- Updated dependencies to address security vulnerabilities
+
 # v1.14.0
 
 ### Enhancements
