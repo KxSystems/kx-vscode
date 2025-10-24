@@ -4,7 +4,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 # v1.15.0
 
-### Enhancments
+### Enhancements
 
 - Deprecated the `Hide Detailed Console Query Output` setting and added a new `Hide Source Expressions` setting.
 
