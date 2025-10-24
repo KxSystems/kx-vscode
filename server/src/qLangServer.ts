@@ -61,6 +61,7 @@ import {
   WhiteSpace,
   CommentEndOfLine,
   CommentLiteral,
+  Documentation,
 } from "./parser";
 import {
   Name,
@@ -460,6 +461,7 @@ export default class QLangServer {
           break;
         case ExitCommentBegin:
         case LineComment:
+        case Documentation:
           if (!range) start();
           break;
         case CommentBegin:

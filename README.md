@@ -96,7 +96,7 @@ If you want to use q outside of VS Code, set a [`QHOME` environment variable](ht
 
 If q is installed at `C:\q`, then `QHOME` is `C:\q`.
 
-**Note!** The kdb VS Code Extension treats the `QHOME` environment variable and the `kdb.qHomeDirectory` setting as identical when locating the q executable for REPL and bundled q connections. For more details, refer to the [QHomeDirectory](https://github.com/KxSystems/kx-vscode/wiki/qHomeDirectory) wiki page. 
+**Note!** The kdb VS Code Extension treats the `QHOME` environment variable and the `kdb.qHomeDirectory` setting as identical when locating the q executable for REPL and bundled q connections. For more details, refer to the [QHomeDirectory](https://github.com/KxSystems/kx-vscode/wiki/qHomeDirectory) wiki page.
 
 ### Versions available
 
@@ -805,9 +805,9 @@ All query executions happen remotely from the **kdb VS Code extension** either a
 
   ![Output autoscrolling](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/auto-scrolling.png)
 
-  **Note** You can hide or show the full details in the console output. Go to settings of the VS Code, search for kdb, check the option **Hide Detailed Console Query Output** (this option is checked by default)
+  **Note** You can hide or show the full details in the console output. Go to settings of the VS Code, search for kdb, check the option **Hide Source Expressions** (this option is checked by default)
 
-  ![Hide Detailed Console Query Output](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/hide-detailed-console-query.png)
+  ![Hide Source Expressions](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/hide-source-expressions.png)
 
 - **KDB Results** - This window displays the kdb returned data in a table.
 
@@ -904,7 +904,7 @@ To update kdb VS Code settings, search for **kdb** from _Preferences_ > _Setting
 | **Hide notification for installation path, after first install**                                                   | yes/no; default no                                                      |
 | **Hide subscribe for registration notification**                                                                   | yes/no; default no                                                      |
 | **Hide the extension survey dialog box**                                                                           | yes/no; default no                                                      |
-| **Hide detailed console query output**                                                                             | yes/no; default yes                                                     |
+| **Hide source expressions**                                                                                        | yes/no; default yes                                                     |
 | **kdb Insights Enterprise connections for explorer**                                                               | [edit JSON settings](#kdb-insights-enterprise-connections-for-explorer) |
 | **Linting**                                                                                                        | Enable linting for q and quke files                                     |
 | **Refactoring**                                                                                                    | Choose refactoring scope                                                |

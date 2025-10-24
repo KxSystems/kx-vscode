@@ -23,7 +23,7 @@ export function showRegistrationNotification(): void {
     .get<boolean>("kdb.hideSubscribeRegistrationNotification", false);
   if (setting === false) {
     notify(
-      "Subscribe to updates",
+      "Subscribe to the kdb VS Code extension newsletter?",
       MessageKind.INFO,
       {},
       "Opt-In",
