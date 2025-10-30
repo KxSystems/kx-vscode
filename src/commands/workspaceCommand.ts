@@ -46,7 +46,7 @@ import {
   notify,
   Runner,
 } from "../utils/notifications";
-import { getPythonWrapper } from "../utils/queryUtils";
+import { getPythonWrapper, getSQLWrapper } from "../utils/queryUtils";
 import {
   cleanAssemblyName,
   cleanDapName,
@@ -214,13 +214,13 @@ export function getConnectionForUri(uri: Uri) {
   }
 }
 
-/* c8 ignore next */
 export async function pickConnection(uri: Uri) {
+  /* c8 ignore start */
   const server = getServerForUri(uri);
   const servers = getServers();
 
   const items = ["(none)"];
-  if (isQ(uri) || isNotebook(uri) || isPython(uri)) {
+  if (isQ(uri) || isNotebook(uri) || isPython(uri) || isSql(uri)) {
     items.push(ext.REPL);
   }
   items.push(...servers);
@@ -244,6 +244,7 @@ export async function pickConnection(uri: Uri) {
     await setServerForUri(uri, picked);
   }
   return picked;
+  /* c8 ignore stop */
 }
 
 /* c8 ignore next */
@@ -506,7 +507,11 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
       const repl = await ReplConnection.getOrCreateInstance(uri);
       repl.show();
       return repl.executeQuery(
-        isPython(uri) ? getPythonWrapper(text) : text,
+        isPython(uri)
+          ? getPythonWrapper(text)
+          : isSql(uri)
+            ? getSQLWrapper(text)
+            : text,
         token,
       );
     });

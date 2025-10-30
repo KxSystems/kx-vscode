@@ -291,6 +291,10 @@ export function getQSQLWrapper(query: string, isPython?: boolean): string {
   return isPython ? getPythonWrapper(query) : normalizeQSQLQuery(query);
 }
 
+export function getSQLWrapper(query: string): string {
+  return `s)${query.replace(/(?:\r\n|\n)/g, " ")}`;
+}
+
 export function generateQTypes(meta: { [key: string]: number }): any {
   const newMeta: { [key: string]: string } = {};
   for (const key in meta) {
