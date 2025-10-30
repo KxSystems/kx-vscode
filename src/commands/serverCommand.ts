@@ -1212,8 +1212,8 @@ export function copyQuery(queryHistoryElement: QueryHistory) {
     query = queryHistoryElement.query;
   }
   if (query) {
-    env.clipboard.writeText(query);
     notify("Query copied to clipboard.", MessageKind.INFO, { logger });
+    return env.clipboard.writeText(query);
   }
 }
 
