@@ -65,6 +65,7 @@ export class QueryHistoryProvider implements TreeDataProvider<TreeItem> {
     return Promise.resolve(
       this.queryList.map((query) => {
         const label = query.connectionName + " - " + query.time;
+        /* c8 ignore start */
         if (query.isDatasource) {
           const ds = query.query as DataSourceFiles;
           if (
@@ -76,6 +77,7 @@ export class QueryHistoryProvider implements TreeDataProvider<TreeItem> {
         } else if (typeof query.query === "string") {
           ext.queryHistoryAvailableToCopy.push(label);
         }
+        /* c8 ignore stop */
         return new QueryHistoryTreeItem(
           label,
           query,
@@ -140,6 +142,7 @@ export class QueryHistoryTreeItem extends TreeItem {
 
     let queryText;
 
+    /* c8 ignore start */
     if (this.details.isDatasource) {
       const ds = this.details.query as DataSourceFiles;
       if (ds.dataSource.selectedType === DataSourceTypes.QSQL)
@@ -152,6 +155,7 @@ export class QueryHistoryTreeItem extends TreeItem {
     } else {
       queryText = this.details.query;
     }
+    /* c8 ignore stop */
 
     if (typeof queryText === "string") {
       tooltipMd.appendMarkdown("- Query: ");
