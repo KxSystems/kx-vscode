@@ -1552,18 +1552,42 @@ describe("serverCommand", () => {
       sinon.assert.notCalled(showInfoStub);
     });
 
-    it("should not copy query to clipboard if is DS", async () => {
+    it("should copy query to clipboard if is DS QSQL", async () => {
       const queryHistory: QueryHistory = {
         executorName: "test",
         connectionName: "conn",
         connectionType: ServerType.KDB,
-        query: "select from table",
+        query: <any>{
+          dataSource: <any>{
+            selectedType: DataSourceTypes.QSQL,
+            qsql: { query: "select", selectedTarget: "" },
+          },
+        },
         time: "now",
         success: true,
         isDatasource: true,
       };
       await serverCommand.copyQuery(queryHistory);
-      sinon.assert.notCalled(showInfoStub);
+      sinon.assert.called(showInfoStub);
+    });
+
+    it("should copy query to clipboard if is DS SQL", async () => {
+      const queryHistory: QueryHistory = {
+        executorName: "test",
+        connectionName: "conn",
+        connectionType: ServerType.KDB,
+        query: <any>{
+          dataSource: <any>{
+            selectedType: DataSourceTypes.SQL,
+            sql: { query: "select" },
+          },
+        },
+        time: "now",
+        success: true,
+        isDatasource: true,
+      };
+      await serverCommand.copyQuery(queryHistory);
+      sinon.assert.called(showInfoStub);
     });
   });
 });
