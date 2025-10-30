@@ -41,7 +41,7 @@ import {
   ServerDetails,
   ServerType,
 } from "../models/connectionsModels";
-import { DataSourceFiles } from "../models/dataSource";
+import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
 import { Plot } from "../models/plot";
 import { QueryHistory } from "../models/queryHistory";
@@ -1201,11 +1201,18 @@ export function rerunQuery(rerunQueryElement: QueryHistory) {
 }
 
 export function copyQuery(queryHistoryElement: QueryHistory) {
-  if (
-    !queryHistoryElement.isDatasource &&
-    typeof queryHistoryElement.query === "string"
-  ) {
-    env.clipboard.writeText(queryHistoryElement.query);
+  let query;
+  if (queryHistoryElement.isDatasource) {
+    const ds = queryHistoryElement.query as DataSourceFiles;
+    if (ds.dataSource.selectedType === DataSourceTypes.QSQL)
+      query = ds.dataSource.qsql.query;
+    if (ds.dataSource.selectedType === DataSourceTypes.SQL)
+      query = ds.dataSource.sql.query;
+  } else if (typeof queryHistoryElement.query === "string") {
+    query = queryHistoryElement.query;
+  }
+  if (query) {
+    env.clipboard.writeText(query);
     notify("Query copied to clipboard.", MessageKind.INFO, { logger });
   }
 }

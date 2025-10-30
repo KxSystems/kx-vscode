@@ -24,6 +24,7 @@ import {
 } from "vscode";
 
 import { ext } from "../extensionVariables";
+import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { QueryHistory } from "../models/queryHistory";
 import { getConnectionType } from "../utils/queryUtils";
 
@@ -64,7 +65,15 @@ export class QueryHistoryProvider implements TreeDataProvider<TreeItem> {
     return Promise.resolve(
       this.queryList.map((query) => {
         const label = query.connectionName + " - " + query.time;
-        if (!query.isDatasource && typeof query.query === "string") {
+        if (query.isDatasource) {
+          const ds = query.query as DataSourceFiles;
+          if (
+            ds.dataSource.selectedType === DataSourceTypes.QSQL ||
+            ds.dataSource.selectedType === DataSourceTypes.SQL
+          ) {
+            ext.queryHistoryAvailableToCopy.push(label);
+          }
+        } else if (typeof query.query === "string") {
           ext.queryHistoryAvailableToCopy.push(label);
         }
         return new QueryHistoryTreeItem(
@@ -119,48 +128,48 @@ export class QueryHistoryTreeItem extends TreeItem {
     );
     tooltipMd.appendMarkdown("- Connection Type: **" + connType + "** \n");
     tooltipMd.appendMarkdown("- Time: **" + this.details.time + "** \n");
-    if (!this.details.isDatasource && typeof this.details.query === "string") {
-      if (this.details.isWorkbook) {
-        tooltipMd.appendMarkdown(
-          "- Workbook: " + this.details.executorName + " \n",
-        );
-      } else if (this.details.isFromConnTree) {
-        tooltipMd.appendMarkdown("- Executiom from: Connection Tree \n");
-        tooltipMd.appendMarkdown(
-          "- Category: " + this.details.executorName + " \n",
-        );
-      } else {
-        tooltipMd.appendMarkdown(
-          "- File: " + this.details.executorName + " \n",
-        );
-      }
-      tooltipMd.appendMarkdown("- Query: ");
-      let queryText = this.details.query;
 
-      if (typeof queryText === "string") {
-        const lines = queryText.split("\n");
-        if (lines.length > 1) {
-          queryText =
-            lines[0].slice(0, 77) +
-            (lines[0].length > 77 ? "... " : "") +
-            "\n" +
-            lines[1].slice(0, 77) +
-            (lines[1].length > 77 ? "... " : "");
-        } else {
-          queryText =
-            lines[0].slice(0, 77) + (lines[0].length > 77 ? "... " : "");
-        }
-      }
-
-      tooltipMd.appendCodeblock(queryText, codeType);
+    if (this.details.isFromConnTree) {
+      tooltipMd.appendMarkdown("- Executiom from: Connection Tree \n");
+      tooltipMd.appendMarkdown(
+        "- Category: " + this.details.executorName + " \n",
+      );
     } else {
-      tooltipMd.appendMarkdown(
-        "- Data Source: **" + this.details.executorName + "**  \n",
-      );
-      tooltipMd.appendMarkdown(
-        "- Data Source Type: **" + this.details.datasourceType + "** \n",
-      );
+      tooltipMd.appendMarkdown("- File: " + this.details.executorName + " \n");
     }
+
+    let queryText;
+
+    if (this.details.isDatasource) {
+      const ds = this.details.query as DataSourceFiles;
+      if (ds.dataSource.selectedType === DataSourceTypes.QSQL)
+        queryText = ds.dataSource.qsql.query;
+      if (ds.dataSource.selectedType === DataSourceTypes.SQL)
+        queryText = ds.dataSource.sql.query;
+      tooltipMd.appendMarkdown(
+        "- Type: **" + this.details.datasourceType + "** \n",
+      );
+    } else {
+      queryText = this.details.query;
+    }
+
+    if (typeof queryText === "string") {
+      tooltipMd.appendMarkdown("- Query: ");
+      const lines = queryText.split("\n");
+      if (lines.length > 1) {
+        queryText =
+          lines[0].slice(0, 77) +
+          (lines[0].length > 77 ? "... " : "") +
+          "\n" +
+          lines[1].slice(0, 77) +
+          (lines[1].length > 77 ? "... " : "");
+      } else {
+        queryText =
+          lines[0].slice(0, 77) + (lines[0].length > 77 ? "... " : "");
+      }
+      tooltipMd.appendCodeblock(queryText, codeType);
+    }
+
     if (this.details.duration) {
       tooltipMd.appendMarkdown(
         "- Duration: **" + this.details.duration + "ms** \n",
