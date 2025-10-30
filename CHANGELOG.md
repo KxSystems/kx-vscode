@@ -2,6 +2,18 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.16.0
+
+### Enhancements
+
+- Refactored extension walkthrough for KDB-X GA
+- Ability to execute SQL files on REPL
+- Removed `local` connection
+
+### Fixes
+
+- Resolved an issue where query history was not showing copy action for some files
+
 # v1.15.0
 
 ### Enhancements
