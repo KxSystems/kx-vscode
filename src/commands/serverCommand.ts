@@ -1205,9 +1205,9 @@ export function copyQuery(queryHistoryElement: QueryHistory) {
   if (queryHistoryElement.isDatasource) {
     const ds = queryHistoryElement.query as DataSourceFiles;
     if (ds.dataSource.selectedType === DataSourceTypes.QSQL)
-      query = ds.dataSource.qsql.query;
+      query = ds.dataSource.source ?? ds.dataSource.qsql.query;
     if (ds.dataSource.selectedType === DataSourceTypes.SQL)
-      query = ds.dataSource.sql.query;
+      query = ds.dataSource.source ?? ds.dataSource.sql.query;
   } else if (typeof queryHistoryElement.query === "string") {
     query = queryHistoryElement.query;
   }
