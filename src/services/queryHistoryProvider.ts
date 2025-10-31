@@ -146,9 +146,9 @@ export class QueryHistoryTreeItem extends TreeItem {
     if (this.details.isDatasource) {
       const ds = this.details.query as DataSourceFiles;
       if (ds.dataSource.selectedType === DataSourceTypes.QSQL)
-        queryText = ds.dataSource.qsql.query;
+        queryText = ds.dataSource.source ?? ds.dataSource.qsql.query;
       if (ds.dataSource.selectedType === DataSourceTypes.SQL)
-        queryText = ds.dataSource.sql.query;
+        queryText = ds.dataSource.source ?? ds.dataSource.sql.query;
       tooltipMd.appendMarkdown(
         "- Type: **" + this.details.datasourceType + "** \n",
       );

@@ -534,12 +534,14 @@ export function getPartialDatasourceFile(
         dataSource: {
           selectedType: "SQL",
           sql: { query },
+          source: query,
         },
       }
     : <DataSourceFiles>{
         dataSource: {
           selectedType: "QSQL",
           qsql: { query: getQSQLWrapper(query, isPython), selectedTarget },
+          source: query,
         },
       };
 }
