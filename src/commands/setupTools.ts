@@ -38,7 +38,7 @@ export function showWelcome() {
   } else {
     panel = vscode.window.createWebviewPanel(
       "kdbWelcomeView",
-      "Welcome to KX Extension for KDB-X",
+      "Welcome to KDB-X",
       vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -59,27 +59,28 @@ export function showWelcome() {
 
 function getWebviewContent(webview: vscode.Webview) {
   const getResource = (resource: string) =>
-    getUri(webview, ext.context.extensionUri, ["out", resource]);
+    getUri(webview, ext.context.extensionUri, ["out", ...resource.split("/")]);
+
+  const getTheme = () =>
+    vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Light ||
+    vscode.window.activeColorTheme.kind ===
+      vscode.ColorThemeKind.HighContrastLight
+      ? "sl-theme-light"
+      : "sl-theme-dark";
 
   return /* html */ `
         <!DOCTYPE html>
-        <html lang="en" class="${
-          vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Light ||
-          vscode.window.activeColorTheme.kind ===
-            vscode.ColorThemeKind.HighContrastLight
-            ? "sl-theme-light"
-            : "sl-theme-dark"
-        }">
+        <html lang="en" class="${getTheme()}">
         <head>
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <link rel="stylesheet" href="${getResource("light.css")}" />
           <link rel="stylesheet" href="${getResource("style.css")}" />
           <script type="module" nonce="${getNonce()}" src="${getResource("webview.js")}"></script>
-          <title>GG PLOT</title>
+          <title>Welcome to KDB-X</title>
         </head>
         <body>
-          <kdb-welcome-view></kdb-welcome-view>
+          <kdb-welcome-view dark="${getTheme() === "sl-theme-dark" ? "dark" : ""}"></kdb-welcome-view>
         </body>
         </html>
       `;
