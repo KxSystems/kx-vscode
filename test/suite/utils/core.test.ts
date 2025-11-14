@@ -906,14 +906,14 @@ describe("core", () => {
       ext.REAL_QHOME = "QHOME";
       sinon.stub(shell, "stat").returns(true);
       const env = coreUtils.getEnvironment();
-      assert.strictEqual(env.QPATH, path.resolve("QHOME", "bin", "q"));
+      assert.strictEqual(env.qBinPath, path.resolve("QHOME", "bin", "q"));
     });
     it("should return KDB-X", () => {
       ext.REAL_QHOME = "";
       const target = path.join("QHOME", "bin", "q");
       sinon.stub(shell, "which").returns([target]);
       const env = coreUtils.getEnvironment();
-      assert.strictEqual(env.QPATH, target);
+      assert.strictEqual(env.qBinPath, target);
     });
     it("should return qHomeDirectory", () => {
       ext.REAL_QHOME = "";
@@ -931,7 +931,7 @@ describe("core", () => {
         return { get: () => "" };
       });
       const env = coreUtils.getEnvironment();
-      assert.strictEqual(env.QPATH, "");
+      assert.strictEqual(env.qBinPath, "");
     });
     it("should return QHOME", () => {
       sinon

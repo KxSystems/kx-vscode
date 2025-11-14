@@ -51,6 +51,7 @@ import {
   rerunQuery,
   resetScratchpad,
 } from "./commands/serverCommand";
+import { installKdbX, showWelcome } from "./commands/setupTools";
 import { showInstallationDetails } from "./commands/walkthroughCommand";
 import {
   ConnectionLensProvider,
@@ -382,6 +383,15 @@ export async function activate(context: vscode.ExtensionContext) {
     logger,
     telemetry: "Extension.Activated",
   });
+}
+
+function registerSetupCommands(): CommandRegistration[] {
+  const setupCommands: CommandRegistration[] = [
+    { command: "kdb.show.welcome", callback: () => showWelcome() },
+    { command: "kdb.install.kdbx", callback: () => installKdbX() },
+  ];
+
+  return setupCommands;
 }
 
 function registerHelpCommands(): CommandRegistration[] {
@@ -1073,6 +1083,7 @@ function registerReplCommands(): CommandRegistration[] {
 
 function registerAllExtensionCommands(): void {
   const allCommands: CommandRegistration[] = [
+    ...registerSetupCommands(),
     ...registerHelpCommands(),
     ...registerResultsPanelCommands(),
     ...registerDatasourceCommands(),

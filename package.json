@@ -250,6 +250,16 @@
     "commands": [
       {
         "category": "KX",
+        "command": "kdb.show.welcome",
+        "title": "Welcome to KDB-X"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.install.kdbx",
+        "title": "Install KDB-X"
+      },
+      {
+        "category": "KX",
         "command": "kdb.connections.export.all",
         "title": "Export connections"
       },

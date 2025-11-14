@@ -32,6 +32,7 @@ import "@shoelace-style/shoelace/dist/components/menu/menu.js";
 import "@shoelace-style/shoelace/dist/components/menu-item/menu-item.js";
 import "@shoelace-style/shoelace/dist/components/tooltip/tooltip.js";
 
+import "./components/kdbWelcomeView";
 import "./components/kdbDataSourceView";
 import "./components/kdbNewConnectionView";
 import "./components/kdbChartView";

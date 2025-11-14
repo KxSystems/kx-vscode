@@ -23,12 +23,12 @@ import { join } from "path";
 import * as semver from "semver";
 import { commands, ConfigurationTarget, Uri, workspace } from "vscode";
 
-import { installTools } from "../commands/installTools";
 import { ext } from "../extensionVariables";
 import { tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
 import { errorMessage } from "./shared";
 import { readTextFile, stat, which } from "./shell";
+import { showWelcome } from "../commands/setupTools";
 import {
   InsightDetails,
   Insights,
@@ -223,7 +223,7 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
   const env: { [key: string]: string } = {
     ...process.env,
     qHomeDirectory,
-    QPATH: "",
+    qBinPath: "",
     QHOME: ext.REAL_QHOME ?? "",
   };
 
@@ -258,12 +258,12 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
       }
     }
 
-    if (exists) env.QPATH = q;
+    if (exists) env.qBinPath = q;
   } else {
     try {
       for (const target of which("q")) {
         if (target.endsWith(path.join("bin", "q"))) {
-          env.QPATH = target;
+          env.qBinPath = target;
           break;
         }
       }
@@ -547,34 +547,41 @@ export function delay(ms: number) {
 }
 
 export async function checkLocalInstall() {
-  env.QHOME =
-    ext.REAL_QHOME ||
-    workspace.getConfiguration().get<string>("kdb.qHomeDirectory", "");
-
   const notShow = workspace
     .getConfiguration()
     .get<boolean>("kdb.neverShowQInstallAgain", false);
 
-  if (notShow || env.QHOME) return;
+  if (notShow) return;
 
-  commands.executeCommand("setContext", "kdb.showInstallWalkthrough", true);
+  env.QHOME =
+    ext.REAL_QHOME ||
+    workspace.getConfiguration().get<string>("kdb.qHomeDirectory", "");
 
-  return notify(
-    "Local q installation not found.",
-    MessageKind.INFO,
-    { logger },
-    "Install new instance",
-    "No",
-    "Never show again",
-  ).then((installResult) => {
-    if (installResult === "Install new instance") {
-      return installTools();
-    } else if (installResult === "Never show again") {
-      return workspace
-        .getConfiguration()
-        .update("kdb.neverShowQInstallAgain", true, ConfigurationTarget.Global);
-    }
-  });
+  const folders = workspace.workspaceFolders ?? [];
+  const qenv = getEnvironment(folders[0]?.uri);
+
+  if (qenv.QHOME || qenv.qBinPath) return;
+
+  showWelcome();
+
+  // commands.executeCommand("setContext", "kdb.showInstallWalkthrough", true);
+
+  // return notify(
+  //   "Local q installation not found.",
+  //   MessageKind.INFO,
+  //   { logger },
+  //   "Install new instance",
+  //   "No",
+  //   "Never show again",
+  // ).then((installResult) => {
+  //   if (installResult === "Install new instance") {
+  //     return installTools();
+  //   } else if (installResult === "Never show again") {
+  //     return workspace
+  //       .getConfiguration()
+  //       .update("kdb.neverShowQInstallAgain", true, ConfigurationTarget.Global);
+  //   }
+  // });
 }
 
 export async function convertBase64License(

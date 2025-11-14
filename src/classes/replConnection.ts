@@ -271,9 +271,10 @@ export class ReplConnection {
     this.env = getEnvironment(this.workspace?.uri);
 
     return spawn(
-      `${this.activate ? this.activate + " && " : ""}"${this.env.QPATH}"`,
+      `${this.activate ? this.activate + " && " : ""}"${this.env.qBinPath}"`,
       {
         env: this.env,
+        cwd: this.workspace?.uri.fsPath,
         windowsHide: true,
         shell: this.win32 ? "cmd.exe" : "bash",
       },
@@ -647,7 +648,7 @@ export class ReplConnection {
           if (notEnvironment(data)) {
             if (path.isAbsolute(data))
               this.runQuery(
-                `\\l ${path.relative(path.resolve(this.env.QPATH, ".."), this.clean(data))}`,
+                `\\l ${path.relative(path.resolve(this.env.qBinPath, ".."), this.clean(data))}`,
               );
             else this.runQuery(data);
           }
