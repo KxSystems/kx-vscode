@@ -238,7 +238,7 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
     }
   }
 
-  const home = env.QHOME || env.qHomeDirectory || "";
+  const home = env.QHOME || env.qHomeDirectory || env.qHomeDirTemp || "";
 
   if (home) {
     env.QHOME = home;

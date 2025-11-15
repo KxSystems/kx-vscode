@@ -103,6 +103,14 @@ function getWebviewContent(webview: vscode.Webview) {
 }
 
 export async function installKdbX() {
+  if (process.platform === "win32") {
+    notify(
+      "KDB-X on Windows requires Windows Subsystem for Linux (WSL).",
+      MessageKind.WARNING,
+      { logger },
+    );
+    return;
+  }
   const license = await vscode.window.showInputBox({
     prompt: "Paste the base64 encoded license string",
     placeHolder: "encoded license",
@@ -112,7 +120,7 @@ export async function installKdbX() {
   if (!license) return;
 
   const runner = Runner.create(async (progress, token) => {
-    progress.report({ message: "Downloading KDB-X installation script" });
+    progress.report({ message: "Downloading KDB-X installation script." });
 
     const controller = new AbortController();
     token.onCancellationRequested(() => controller.abort());
@@ -133,7 +141,15 @@ export async function installKdbX() {
         "install_kdb.sh",
       );
       await writeFile(path, res.data);
-      executeInTerminal("Install KDB-X", `bash "${path}" --b64lic ${license}`);
+      progress.report({ message: "Preparing to run KDB-X script." });
+      await executeInTerminal(
+        "Install KDB-X",
+        controller.signal,
+        "source",
+        path,
+        "--b64lic",
+        license,
+      );
     } catch (error) {
       notify("Failed to instal KDB-X.", MessageKind.ERROR, {
         logger,
@@ -143,18 +159,91 @@ export async function installKdbX() {
   });
 
   runner.cancellable = Cancellable.EXECUTOR;
+  runner.location = vscode.ProgressLocation.Notification;
   await runner.execute();
 }
 
-function executeInTerminal(name: string, cmd: string) {
-  const term = vscode.window.createTerminal(name);
-  const opened = vscode.window.onDidOpenTerminal((terminal) => {
-    if (term === terminal) {
-      opened.dispose();
-      term.sendText(cmd);
-    }
+function executeInTerminal(
+  name: string,
+  signal: AbortSignal,
+  cmd: string,
+  ...params: string[]
+) {
+  return new Promise<void>((resolve, reject) => {
+    let pending = true;
+
+    const term = vscode.window.createTerminal({
+      name,
+      hideFromUser: true,
+      shellPath: "bash",
+      env: { ...process.env },
+      strictEnv: true,
+      isTransient: true,
+    });
+
+    const changed = vscode.window.onDidChangeTerminalShellIntegration(
+      ({ terminal, shellIntegration }) => {
+        if (terminal === term && pending) {
+          pending = false;
+          changed.dispose();
+          if (shellIntegration) {
+            const init = vscode.window.onDidStartTerminalShellExecution(
+              (event) => {
+                if (event.execution === execution) {
+                  init.dispose();
+                  if (signal.aborted) {
+                    done.dispose();
+                    event.terminal.dispose();
+                  } else term.show();
+                  resolve();
+                }
+              },
+            );
+            const done = vscode.window.onDidEndTerminalShellExecution(
+              (event) => {
+                if (event.execution === execution) {
+                  done.dispose();
+                  event.terminal.dispose();
+                }
+              },
+            );
+            const execution = shellIntegration.executeCommand(cmd, params);
+            parseOutput(execution);
+          } else reject(new Error("Shell integration failed."));
+        }
+      },
+    );
   });
-  term.show();
+}
+
+async function parseOutput(execution: vscode.TerminalShellExecution) {
+  let home;
+  const stream = execution.read();
+  for await (const data of stream) {
+    const matches =
+      /KDB-X has been installed to ([\P{Cc}]+?) with the following structure:/gsu.exec(
+        data,
+      );
+    if (matches) {
+      home = matches[1];
+      break;
+    }
+  }
+  if (home) {
+    for (const folder of vscode.workspace.workspaceFolders || []) {
+      if (home.startsWith(folder.uri.fsPath)) {
+        await setHome(folder, home);
+        return;
+      }
+    }
+    process.env.qHomeDirTemp = home;
+  }
+}
+
+async function setHome(folder: vscode.ConfigurationScope, home: string) {
+  await vscode.workspace
+    .getConfiguration("kdb", folder)
+    .update("qHomeDirectory", home);
 }
 
 function getHide() {

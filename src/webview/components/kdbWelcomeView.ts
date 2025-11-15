@@ -50,9 +50,11 @@ export class KdbWelcomeView extends LitElement {
       }
       .footer {
         position: fixed;
-        bottom: 1em;
+        bottom: 0;
+        padding: 1em;
         width: 100%;
         text-align: center;
+        background-color: var(--vscode-editor-background);
       }
       a {
         color: var(--vscode-textLink-foreground);
