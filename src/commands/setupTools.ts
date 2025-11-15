@@ -141,7 +141,9 @@ export async function installKdbX() {
         "install_kdb.sh",
       );
       await writeFile(path, res.data);
-      progress.report({ message: "Preparing to run KDB-X script." });
+      progress.report({
+        message: "Preparing to run KDB-X installation script.",
+      });
       await executeInTerminal(
         "Install KDB-X",
         controller.signal,
