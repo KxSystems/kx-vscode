@@ -32,6 +32,13 @@ const logger = "setupTools";
 
 let panel: vscode.WebviewPanel | undefined;
 
+export function hideWelcome() {
+  if (panel) {
+    panel.dispose();
+    panel = undefined;
+  }
+}
+
 export function showWelcome() {
   if (panel) {
     panel.reveal();
@@ -52,6 +59,15 @@ export function showWelcome() {
     panel.webview.html = getWebviewContent(panel.webview);
     panel.webview.onDidReceiveMessage((msg) => {
       if (msg === "install") installKdbX();
+      if (msg === true || msg === false) {
+        vscode.workspace
+          .getConfiguration()
+          .update(
+            "kdb.neverShowQInstallAgain",
+            msg,
+            vscode.ConfigurationTarget.Global,
+          );
+      }
     });
     panel.onDidDispose(() => (panel = undefined));
   }
@@ -80,7 +96,7 @@ function getWebviewContent(webview: vscode.Webview) {
           <title>Welcome to KDB-X</title>
         </head>
         <body>
-          <kdb-welcome-view dark="${getTheme() === "sl-theme-dark" ? "dark" : ""}"></kdb-welcome-view>
+          <kdb-welcome-view checked="${getHide()}" dark="${getTheme() === "sl-theme-dark" ? "dark" : ""}"></kdb-welcome-view>
         </body>
         </html>
       `;
@@ -117,13 +133,7 @@ export async function installKdbX() {
         "install_kdb.sh",
       );
       await writeFile(path, res.data);
-
-      const term = vscode.window.createTerminal({
-        name: "Install KDB-X",
-        shellPath: "bash",
-        shellArgs: [path, "--b64lic", license],
-      });
-      term.show();
+      executeInTerminal("Install KDB-X", `bash "${path}" --b64lic ${license}`);
     } catch (error) {
       notify("Failed to instal KDB-X.", MessageKind.ERROR, {
         logger,
@@ -134,4 +144,21 @@ export async function installKdbX() {
 
   runner.cancellable = Cancellable.EXECUTOR;
   await runner.execute();
+}
+
+function executeInTerminal(name: string, cmd: string) {
+  const term = vscode.window.createTerminal(name);
+  const opened = vscode.window.onDidOpenTerminal((terminal) => {
+    if (term === terminal) {
+      opened.dispose();
+      term.sendText(cmd);
+    }
+  });
+  term.show();
+}
+
+function getHide() {
+  return vscode.workspace
+    .getConfiguration()
+    .get<boolean>("kdb.neverShowQInstallAgain", false);
 }

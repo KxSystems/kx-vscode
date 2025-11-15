@@ -264,12 +264,14 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
       for (const target of which("q")) {
         if (target.endsWith(path.join("bin", "q"))) {
           env.qBinPath = target;
-          break;
+          return env;
         }
       }
     } catch (error) {
       notify(errorMessage(error), MessageKind.DEBUG, { logger });
     }
+    const target = join(homedir(), ".kx", "bin", "q");
+    if (stat(target)) env.qBinPath = target;
   }
 
   return env;
@@ -563,25 +565,6 @@ export async function checkLocalInstall() {
   if (qenv.QHOME || qenv.qBinPath) return;
 
   showWelcome();
-
-  // commands.executeCommand("setContext", "kdb.showInstallWalkthrough", true);
-
-  // return notify(
-  //   "Local q installation not found.",
-  //   MessageKind.INFO,
-  //   { logger },
-  //   "Install new instance",
-  //   "No",
-  //   "Never show again",
-  // ).then((installResult) => {
-  //   if (installResult === "Install new instance") {
-  //     return installTools();
-  //   } else if (installResult === "Never show again") {
-  //     return workspace
-  //       .getConfiguration()
-  //       .update("kdb.neverShowQInstallAgain", true, ConfigurationTarget.Global);
-  //   }
-  // });
 }
 
 export async function convertBase64License(
