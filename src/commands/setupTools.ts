@@ -64,7 +64,7 @@ export function showWelcome() {
           .getConfiguration()
           .update(
             "kdb.neverShowQInstallAgain",
-            msg,
+            !msg,
             vscode.ConfigurationTarget.Global,
           );
       }
@@ -96,7 +96,7 @@ function getWebviewContent(webview: vscode.Webview) {
           <title>Welcome to KDB-X</title>
         </head>
         <body>
-          <kdb-welcome-view checked="${getHide()}" dark="${getTheme() === "sl-theme-dark" ? "dark" : ""}"></kdb-welcome-view>
+          <kdb-welcome-view checked="${getShowWelcome()}" dark="${getTheme() === "sl-theme-dark" ? "dark" : ""}"></kdb-welcome-view>
         </body>
         </html>
       `;
@@ -238,7 +238,7 @@ async function parseOutput(execution: vscode.TerminalShellExecution) {
         return;
       }
     }
-    process.env.qHomeDirTemp = home;
+    process.env.qHomeTempDir = home;
   }
 }
 
@@ -248,8 +248,8 @@ async function setHome(home: string, folder: vscode.ConfigurationScope) {
     .update("qHomeDirectory", home);
 }
 
-function getHide() {
-  return vscode.workspace
+function getShowWelcome() {
+  return !vscode.workspace
     .getConfiguration()
     .get<boolean>("kdb.neverShowQInstallAgain", false);
 }

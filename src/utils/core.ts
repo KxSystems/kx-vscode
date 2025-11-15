@@ -17,7 +17,6 @@ import { writeFile } from "fs/promises";
 import { pathExists } from "fs-extra";
 import { homedir } from "node:os";
 import path from "node:path";
-import { env } from "node:process";
 import { tmpdir } from "os";
 import { join } from "path";
 import * as semver from "semver";
@@ -213,8 +212,7 @@ function loadEnvironment(folder: string, env: { [key: string]: string }) {
 }
 
 export function getEnvironment(resource?: Uri): { [key: string]: string } {
-  const folder = getPlatformFolder(process.platform, process.arch);
-  const qHomeDirectory = folder
+  const qHomeDirectory = resource
     ? workspace
         .getConfiguration("kdb", resource)
         .get<string>("qHomeDirectory", "")
@@ -224,7 +222,6 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
     ...process.env,
     qHomeDirectory,
     qBinPath: "",
-    QHOME: ext.REAL_QHOME ?? "",
   };
 
   if (resource) {
@@ -238,41 +235,50 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
     }
   }
 
-  const home = env.QHOME || env.qHomeDirectory || env.qHomeDirTemp || "";
+  const home = env.QHOME || env.qHomeDirectory || env.qHomeTempDir || "";
 
   if (home) {
-    env.QHOME = home;
-    env.qHomeDirectory = home;
-
     let q = path.resolve(home, "bin", "q");
     let exists = stat(q);
 
-    if (folder) {
-      if (!exists) {
-        q = path.resolve(home, folder, "q");
-        exists = stat(q);
-      }
-      if (!exists) {
-        q = path.resolve(home, folder, "q.exe");
-        exists = stat(q);
+    if (!exists) {
+      const folder = getPlatformFolder(process.platform, process.arch);
+      if (folder) {
+        if (!exists) {
+          q = path.resolve(home, folder, "q");
+          exists = stat(q);
+        }
+        if (!exists) {
+          q = path.resolve(home, folder, "q.exe");
+          exists = stat(q);
+        }
       }
     }
 
-    if (exists) env.qBinPath = q;
-  } else {
+    if (exists) {
+      env.QHOME = home;
+      env.qHomeDirectory = home;
+      env.qBinPath = q;
+      return env;
+    }
+  }
+
+  const target = join(homedir(), ".kx", "bin", "q");
+
+  if (stat(target)) env.qBinPath = target;
+  else
     try {
       for (const target of which("q")) {
         if (target.endsWith(path.join("bin", "q"))) {
-          env.qBinPath = target;
-          return env;
+          if (stat(target)) {
+            env.qBinPath = target;
+            break;
+          }
         }
       }
     } catch (error) {
       notify(errorMessage(error), MessageKind.DEBUG, { logger });
     }
-    const target = join(homedir(), ".kx", "bin", "q");
-    if (stat(target)) env.qBinPath = target;
-  }
 
   return env;
 }
@@ -549,20 +555,16 @@ export function delay(ms: number) {
 }
 
 export async function checkLocalInstall() {
-  const notShow = workspace
+  const hide = workspace
     .getConfiguration()
     .get<boolean>("kdb.neverShowQInstallAgain", false);
 
-  if (notShow) return;
+  if (hide) return;
 
-  env.QHOME =
-    ext.REAL_QHOME ||
-    workspace.getConfiguration().get<string>("kdb.qHomeDirectory", "");
-
-  const folders = workspace.workspaceFolders ?? [];
-  const qenv = getEnvironment(folders[0]?.uri);
-
-  if (qenv.QHOME || qenv.qBinPath) return;
+  for (const folder of workspace.workspaceFolders || []) {
+    const env = getEnvironment(folder.uri);
+    if (env.qBinPath) return;
+  }
 
   showWelcome();
 }

@@ -23,7 +23,8 @@ export class KdbWelcomeView extends LitElement {
     kdbStyles,
     css`
       .container {
-        padding: 2.5em;
+        padding: 1em 0 0 4em;
+        margin-bottom: 4em;
       }
       .row {
         display: flex;
@@ -35,6 +36,9 @@ export class KdbWelcomeView extends LitElement {
         display: flex;
         flex-wrap: nowrap;
         flex-direction: row;
+      }
+      .gap-0 {
+        gap: 0;
       }
       .mt-1 {
         margin-top: 1em;
@@ -73,7 +77,7 @@ export class KdbWelcomeView extends LitElement {
   dark = "";
 
   @property()
-  checked = "false";
+  checked = "true";
 
   readonly vscode = acquireVsCodeApi();
 
@@ -81,8 +85,8 @@ export class KdbWelcomeView extends LitElement {
     return html`
       <div class="container">
         <div class="row">
-          <h1>Welcome to KX Extension for KDB-X</h1>
-          <div class="col">
+          <h1>Welcome to KDB-X</h1>
+          <div class="col gap-0">
             <div>
               <p>
                 KDB-X is the next generation of kdb+, optimized for modern
@@ -135,7 +139,8 @@ export class KdbWelcomeView extends LitElement {
                   >Install & Continue</sl-button
                 >
                 <a href="https://developer.kx.com/products/kdb-x" class="nowrap"
-                  >Developer Center & Documentation ${renderIcon5()}</a
+                  >Developer Center & Documentation
+                  <span class="icon">${renderIcon5()}</span></a
                 >
               </div>
             </div>
@@ -149,7 +154,7 @@ export class KdbWelcomeView extends LitElement {
           @sl-change="${(event: Event) => {
             this.vscode.postMessage((event.target as any).checked);
           }}"
-          >Hide welcome page on startup</sl-checkbox
+          >Show welcome page on startup</sl-checkbox
         >
       </div>
     `;

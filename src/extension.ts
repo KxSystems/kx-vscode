@@ -134,8 +134,6 @@ const logger = "extension";
 let client: LanguageClient;
 
 export async function activate(context: vscode.ExtensionContext) {
-  // TODO 2: Workaround, remove when TODO 1 is complete
-  ext.REAL_QHOME = process.env.QHOME;
   ext.context = context;
   ext.outputChannel = vscode.window.createOutputChannel("kdb");
   ext.openSslVersion = await checkOpenSslInstalled();
