@@ -15,6 +15,7 @@ import { ChildProcess } from "child_process";
 import { createHash } from "crypto";
 import { writeFile } from "fs/promises";
 import { pathExists } from "fs-extra";
+import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { tmpdir } from "os";
@@ -211,16 +212,37 @@ function loadEnvironment(folder: string, env: { [key: string]: string }) {
   }
 }
 
+export async function writeLocalFile(name: string, content: string) {
+  try {
+    const target = path.resolve(ext.context.globalStorageUri.fsPath, name);
+    await writeFile(target, content);
+    return target;
+  } catch (error) {
+    notify(errorMessage(error), MessageKind.DEBUG, { logger });
+  }
+  return "";
+}
+
+export function readLocalFile(name: string) {
+  try {
+    const target = path.resolve(ext.context.globalStorageUri.fsPath, name);
+    return readFileSync(target, { encoding: "utf8" });
+  } catch (error) {
+    notify(errorMessage(error), MessageKind.DEBUG, { logger });
+  }
+  return "";
+}
+
 export function getEnvironment(resource?: Uri): { [key: string]: string } {
-  const qHomeDirectory = resource
-    ? workspace
-        .getConfiguration("kdb", resource)
-        .get<string>("qHomeDirectory", "")
-    : "";
+  const setting = workspace
+    .getConfiguration("kdb", resource)
+    .inspect<string>("qHomeDirectory");
+
+  let qHomeDirectory = setting?.workspaceFolderValue;
+  if (!qHomeDirectory) qHomeDirectory = readLocalFile("qHomeDirectory");
 
   const env: { [key: string]: string } = {
     ...process.env,
-    qHomeDirectory,
     qBinPath: "",
   };
 
@@ -235,7 +257,7 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
     }
   }
 
-  const home = env.QHOME || env.qHomeDirectory || env.qHomeTempDir || "";
+  const home = env.QHOME || qHomeDirectory || "";
 
   if (home) {
     let q = path.resolve(home, "bin", "q");
@@ -257,11 +279,12 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
 
     if (exists) {
       env.QHOME = home;
-      env.qHomeDirectory = home;
       env.qBinPath = q;
       return env;
     }
   }
+
+  env.QHOME = "";
 
   const target = join(homedir(), ".kx", "bin", "q");
 

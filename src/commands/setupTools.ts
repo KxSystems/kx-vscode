@@ -12,11 +12,12 @@
  */
 
 import axios from "axios";
-import { writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
+import { writeLocalFile } from "../utils/core";
 import { getNonce } from "../utils/getNonce";
 import { getIconPath } from "../utils/iconsUtils";
 import {
@@ -132,18 +133,14 @@ export async function installKdbX() {
         { signal: controller.signal },
       );
 
-      if (res.status !== 200) {
-        throw new Error(res.statusText);
-      }
+      if (res.status !== 200) throw new Error(res.statusText);
 
-      const path = resolve(
-        ext.context.globalStorageUri.fsPath,
-        "install_kdb.sh",
-      );
-      await writeFile(path, res.data);
+      const path = await writeLocalFile("install_kdb.sh", res.data);
+
       progress.report({
         message: "Preparing to run KDB-X installation script.",
       });
+
       await executeInTerminal(
         "Install KDB-X",
         controller.signal,
@@ -192,11 +189,10 @@ function executeInTerminal(
             const init = vscode.window.onDidStartTerminalShellExecution(
               (event) => {
                 if (event.execution === execution) {
-                  init.dispose();
                   if (signal.aborted) {
-                    done.dispose();
                     event.terminal.dispose();
                   } else term.show();
+                  init.dispose();
                   resolve();
                 }
               },
@@ -204,8 +200,8 @@ function executeInTerminal(
             const done = vscode.window.onDidEndTerminalShellExecution(
               (event) => {
                 if (event.execution === execution) {
-                  done.dispose();
                   event.terminal.dispose();
+                  done.dispose();
                 }
               },
             );
@@ -238,14 +234,20 @@ async function parseOutput(execution: vscode.TerminalShellExecution) {
         return;
       }
     }
-    process.env.qHomeTempDir = home;
+    await setHome(home);
   }
 }
 
-async function setHome(home: string, folder: vscode.ConfigurationScope) {
-  await vscode.workspace
-    .getConfiguration("kdb", folder)
-    .update("qHomeDirectory", home);
+async function setHome(home: string, folder?: vscode.ConfigurationScope) {
+  if (home === join(homedir(), ".kx")) return;
+  if (folder) {
+    const config = vscode.workspace.getConfiguration("kdb", folder);
+    await config.update(
+      "qHomeDirectory",
+      home,
+      vscode.ConfigurationTarget.WorkspaceFolder,
+    );
+  } else await writeLocalFile("qHomeDirectory", home);
 }
 
 function getShowWelcome() {
