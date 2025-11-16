@@ -113,7 +113,6 @@ import {
   hasWorkspaceOrShowOption,
   initializeLocalServers,
 } from "./utils/core";
-import { runQFileTerminal } from "./utils/execution";
 import { handleFeedbackSurvey } from "./utils/feedbackSurveyUtils";
 import { getIconPath } from "./utils/iconsUtils";
 import { MessageKind, notify, Runner } from "./utils/notifications";
@@ -885,30 +884,6 @@ function registerExecuteCommands(): CommandRegistration[] {
       command: "kdb.execute.fileQuery",
       callback: async () => {
         await runActiveEditor(ExecutionTypes.QueryFile);
-      },
-    },
-    {
-      command: "kdb.execute.terminal.run",
-      callback: async () => {
-        if (ext.activeTextEditor) {
-          const uri = vscode.Uri.joinPath(
-            ext.context.globalStorageUri,
-            "kdb-vscode-repl.q",
-          );
-          const text = ext.activeTextEditor.document.getText();
-          try {
-            await vscode.workspace.fs.writeFile(
-              uri,
-              Buffer.from(text, "utf-8"),
-            );
-            runQFileTerminal(`"${uri.fsPath}"`);
-          } catch (error) {
-            notify(`Unable to write temp file.`, MessageKind.ERROR, {
-              logger,
-              params: error,
-            });
-          }
-        }
       },
     },
   ];
