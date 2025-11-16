@@ -50,33 +50,39 @@ export function readLocalFile(name: string) {
 
 export function getLocalSetting(key: string, value?: any) {
   /* c8 ignore start */
-  const settings = readSettigs();
+  const settings = readSettings();
   return settings[key] ?? value;
   /* c8 ignore stop */
 }
 
 export async function setLocalSetting(key: string, value: any) {
   /* c8 ignore start */
-  const settings = readSettigs();
+  const settings = readSettings();
   settings[key] = value;
-  await writeSettigs(settings);
+  await writeSettings(settings);
   /* c8 ignore stop */
 }
 
-function readSettigs() {
+let cachedSettings: any;
+
+function readSettings() {
   /* c8 ignore start */
+  if (cachedSettings) return cachedSettings;
   try {
     const settings = readLocalFile("settings.json");
-    if (settings) return JSON.parse(settings);
+    if (settings) cachedSettings = JSON.parse(settings);
+    else cachedSettings = {};
   } catch (error) {
+    cachedSettings = {};
     notify(errorMessage(error), MessageKind.DEBUG, { logger });
   }
-  return {};
+  return cachedSettings;
   /* c8 ignore stop */
 }
 
-function writeSettigs(settings: any) {
+function writeSettings(settings: any) {
   /* c8 ignore start */
+  cachedSettings = settings;
   return writeLocalFile("settings.json", JSON.stringify(settings));
   /* c8 ignore stop */
 }
