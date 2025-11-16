@@ -234,13 +234,6 @@ export function readLocalFile(name: string) {
 }
 
 export function getEnvironment(resource?: Uri): { [key: string]: string } {
-  const setting = workspace
-    .getConfiguration("kdb", resource)
-    .inspect<string>("qHomeDirectory");
-
-  let qHomeDirectory = setting?.workspaceFolderValue;
-  if (!qHomeDirectory) qHomeDirectory = readLocalFile("qHomeDirectory");
-
   const env: { [key: string]: string } = {
     ...process.env,
     qBinPath: "",
@@ -257,7 +250,15 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
     }
   }
 
-  const home = env.QHOME || qHomeDirectory || "";
+  const setting = workspace
+    .getConfiguration("kdb", resource)
+    .inspect<string>("qHomeDirectory");
+
+  const home =
+    env.QHOME ||
+    setting?.workspaceFolderValue ||
+    readLocalFile("qHomeDirectory") ||
+    "";
 
   if (home) {
     let q = path.resolve(home, "bin", "q");
@@ -583,6 +584,9 @@ export async function checkLocalInstall() {
     .get<boolean>("kdb.neverShowQInstallAgain", false);
 
   if (hide) return;
+
+  const env = getEnvironment();
+  if (env.qBinPath) return;
 
   for (const folder of workspace.workspaceFolders || []) {
     const env = getEnvironment(folder.uri);
