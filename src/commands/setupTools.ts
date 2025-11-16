@@ -33,11 +33,15 @@ const logger = "setupTools";
 
 let panel: vscode.WebviewPanel | undefined;
 
-export function hideWelcome() {
-  if (panel) {
-    panel.dispose();
-    panel = undefined;
-  }
+export async function showSetupError(logger?: string) {
+  const res = await notify(
+    "KDB intallation not found in scope.",
+    MessageKind.WARNING,
+    { logger },
+    "Install KDB-X",
+    "Dismiss",
+  );
+  if (res === "Install KDB-X") showWelcome();
 }
 
 export function showWelcome() {
@@ -218,10 +222,9 @@ async function parseOutput(execution: vscode.TerminalShellExecution) {
   let home;
   const stream = execution.read();
   for await (const data of stream) {
-    const matches =
-      /KDB-X has been installed to ([\P{Cc}]+?) with the following structure:/gsu.exec(
-        data,
-      );
+    const matches = /KDB-X has been installed to ([\P{Cc}]+?) with/gsu.exec(
+      data,
+    );
     if (matches) {
       home = matches[1];
       break;

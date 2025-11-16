@@ -17,6 +17,7 @@ import path from "node:path";
 import kill from "tree-kill";
 import * as vscode from "vscode";
 
+import { showSetupError } from "../commands/setupTools";
 import { ext } from "../extensionVariables";
 import {
   getAutoFocusOutputOnEntrySetting,
@@ -269,6 +270,7 @@ export class ReplConnection {
 
   private createProcess() {
     this.env = getEnvironment(this.workspace?.uri);
+    if (!this.env.qBinPath) showSetupError(logger);
 
     return spawn(
       `${this.activate ? this.activate + " && " : ""}"${this.env.qBinPath}"`,

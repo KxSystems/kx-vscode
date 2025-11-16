@@ -465,15 +465,8 @@ function isKxFolder(uri: Uri | undefined) {
 }
 
 export async function startRepl() {
-  try {
-    const instance = await ReplConnection.getOrCreateInstance();
-    instance.start();
-  } catch (error) {
-    notify(errorMessage(error), MessageKind.ERROR, {
-      logger,
-      params: error,
-    });
-  }
+  const instance = await ReplConnection.getOrCreateInstance();
+  instance.start();
 }
 
 export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {

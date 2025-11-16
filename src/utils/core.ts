@@ -257,6 +257,7 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
   const home =
     env.QHOME ||
     setting?.workspaceFolderValue ||
+    setting?.workspaceValue ||
     readLocalFile("qHomeDirectory") ||
     "";
 
@@ -584,15 +585,6 @@ export async function checkLocalInstall() {
     .get<boolean>("kdb.neverShowQInstallAgain", false);
 
   if (hide) return;
-
-  const env = getEnvironment();
-  if (env.qBinPath) return;
-
-  for (const folder of workspace.workspaceFolders || []) {
-    const env = getEnvironment(folder.uri);
-    if (env.qBinPath) return;
-  }
-
   showWelcome();
 }
 
