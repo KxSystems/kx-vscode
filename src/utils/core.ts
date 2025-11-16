@@ -15,7 +15,6 @@ import { ChildProcess } from "child_process";
 import { createHash } from "crypto";
 import { writeFile } from "fs/promises";
 import { pathExists } from "fs-extra";
-import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import { tmpdir } from "os";
@@ -28,6 +27,7 @@ import { tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
 import { errorMessage } from "./shared";
 import { readTextFile, stat, which } from "./shell";
+import { getLocalSetting } from "./storage";
 import { showWelcome } from "../commands/setupTools";
 import {
   InsightDetails,
@@ -212,27 +212,6 @@ function loadEnvironment(folder: string, env: { [key: string]: string }) {
   }
 }
 
-export async function writeLocalFile(name: string, content: string) {
-  try {
-    const target = path.resolve(ext.context.globalStorageUri.fsPath, name);
-    await writeFile(target, content);
-    return target;
-  } catch (error) {
-    notify(errorMessage(error), MessageKind.DEBUG, { logger });
-  }
-  return "";
-}
-
-export function readLocalFile(name: string) {
-  try {
-    const target = path.resolve(ext.context.globalStorageUri.fsPath, name);
-    return readFileSync(target, { encoding: "utf8" });
-  } catch (error) {
-    notify(errorMessage(error), MessageKind.DEBUG, { logger });
-  }
-  return "";
-}
-
 export function getEnvironment(resource?: Uri): { [key: string]: string } {
   const env: { [key: string]: string } = {
     ...process.env,
@@ -258,7 +237,7 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
     env.QHOME ||
     setting?.workspaceFolderValue ||
     setting?.workspaceValue ||
-    readLocalFile("qHomeDirectory") ||
+    getLocalSetting("qHomeDirectory") ||
     "";
 
   if (home) {

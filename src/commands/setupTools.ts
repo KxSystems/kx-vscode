@@ -12,12 +12,9 @@
  */
 
 import axios from "axios";
-import { homedir } from "node:os";
-import { join } from "node:path";
 import * as vscode from "vscode";
 
 import { ext } from "../extensionVariables";
-import { writeLocalFile } from "../utils/core";
 import { getNonce } from "../utils/getNonce";
 import { getIconPath } from "../utils/iconsUtils";
 import {
@@ -27,6 +24,7 @@ import {
   Runner,
 } from "../utils/notifications";
 import { errorMessage } from "../utils/shared";
+import { setLocalSetting, writeLocalFile } from "../utils/storage";
 import { getUri } from "../utils/uriUtils";
 
 const logger = "setupTools";
@@ -253,7 +251,6 @@ async function parseOutput(execution: vscode.TerminalShellExecution) {
 
 async function setHome(home: string, folder?: vscode.ConfigurationScope) {
   /* c8 ignore start */
-  if (home === join(homedir(), ".kx")) return;
   if (folder) {
     const config = vscode.workspace.getConfiguration("kdb", folder);
     await config.update(
@@ -261,7 +258,7 @@ async function setHome(home: string, folder?: vscode.ConfigurationScope) {
       home,
       vscode.ConfigurationTarget.WorkspaceFolder,
     );
-  } else await writeLocalFile("qHomeDirectory", home);
+  } else await setLocalSetting("qHomeDirectory", home);
   /* c8 ignore stop */
 }
 
