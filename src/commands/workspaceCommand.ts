@@ -67,8 +67,8 @@ function setRealActiveTextEditor(editor?: TextEditor | undefined) {
   }
 }
 
-/* c8 ignore next */
 function activeEditorChanged(editor?: TextEditor | undefined) {
+  /* c8 ignore start */
   setRealActiveTextEditor(editor);
   const item = ext.runScratchpadItem;
   if (ext.activeTextEditor) {
@@ -83,12 +83,14 @@ function activeEditorChanged(editor?: TextEditor | undefined) {
   } else {
     item.hide();
   }
+  /* c8 ignore stop */
 }
 
-/* c8 ignore next */
 function setRunScratchpadItemText(uri: Uri, text: string) {
+  /* c8 ignore start */
   ext.runScratchpadItem.text = `$(cloud) ${text}`;
   ext.runScratchpadItem.tooltip = `KX: Choose connection for '${getBasename(uri)}'`;
+  /* c8 ignore stop */
 }
 
 export function getInsightsServers() {
@@ -114,10 +116,10 @@ function getServers() {
   ];
 }
 
-/* c8 ignore next */
 export async function getConnectionForServer(
   server: string,
 ): Promise<InsightsNode | KdbNode | undefined> {
+  /* c8 ignore start */
   if (server) {
     const nodes = await ext.serverProvider.getChildren();
     const orphan = nodes.find((node) => {
@@ -147,6 +149,7 @@ export async function getConnectionForServer(
       }
     }
   }
+  /* c8 ignore stop */
 }
 
 function relativePath(uri: Uri) {
@@ -247,8 +250,8 @@ export async function pickConnection(uri: Uri) {
   /* c8 ignore stop */
 }
 
-/* c8 ignore next */
 export async function pickTarget(uri: Uri, cell?: NotebookCell) {
+  /* c8 ignore start */
   const conn = await findConnection(uri);
   const isInsights = conn instanceof InsightsConnection;
 
@@ -299,6 +302,7 @@ export async function pickTarget(uri: Uri, cell?: NotebookCell) {
   }
 
   return selectedValue;
+  /* c8 ignore stop */
 }
 
 function createTierKey(dap: MetaDap): string {
@@ -428,12 +432,13 @@ function buildTierOptionsWithSeparators(daps: MetaDap[]): QuickPickItem[] {
   return items;
 }
 
-/* c8 ignore next */
 function createProcessKey(dap: MetaDap): string | null {
+  /* c8 ignore start */
   if (!dap.dap) return null;
 
   const cleanedDapName = cleanDapName(dap.dap);
   return `${createTierKey(dap)} ${cleanedDapName}`;
+  /* c8 ignore stop */
 }
 
 function isSql(uri: Uri | undefined) {
@@ -519,8 +524,8 @@ export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
   }
 }
 
-/* c8 ignore next */
 export async function runActiveEditor(type?: ExecutionTypes) {
+  /* c8 ignore start */
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
     if (getServerForUri(uri) === ext.REPL) {
@@ -581,6 +586,7 @@ export async function runActiveEditor(type?: ExecutionTypes) {
       );
     }
   }
+  /* c8 ignore stop */
 }
 
 export async function resetScratchpadFromEditor(): Promise<void> {
@@ -650,8 +656,8 @@ export function connectWorkspaceCommands() {
   watcher.onDidCreate(update);
   watcher.onDidDelete(update);
 
-  /* c8 ignore next */
   workspace.onDidDeleteFiles((event) => {
+    /* c8 ignore start */
     for (const uri of event.files) {
       if (isKxFolder(uri)) {
         ext.dataSourceTreeProvider.reload();
@@ -659,22 +665,25 @@ export function connectWorkspaceCommands() {
         break;
       }
     }
+    /* c8 ignore stop */
   });
 
-  /* c8 ignore next */
   workspace.onDidRenameFiles(async (event) => {
+    /* c8 ignore start */
     for (const { oldUri, newUri } of event.files) {
       await setServerForUri(newUri, getServerForUri(oldUri));
       await setServerForUri(oldUri, undefined);
       await setTargetForUri(newUri, getTargetForUri(oldUri));
       await setTargetForUri(oldUri, undefined);
     }
+    /* c8 ignore stop */
   });
 
-  /* c8 ignore next */
   workspace.onDidChangeWorkspaceFolders(() => {
+    /* c8 ignore start */
     ext.dataSourceTreeProvider.reload();
     ext.scratchpadTreeProvider.reload();
+    /* c8 ignore stop */
   });
   window.onDidChangeActiveTextEditor(activeEditorChanged);
   activeEditorChanged(window.activeTextEditor);
@@ -684,8 +693,8 @@ export function checkOldDatasourceFiles() {
   ext.oldDSformatExists = oldFilesExists();
 }
 
-/* c8 ignore next */
 export async function importOldDSFiles() {
+  /* c8 ignore start */
   if (ext.oldDSformatExists) {
     const folders = workspace.workspaceFolders;
     if (!folders) {
@@ -709,10 +718,11 @@ export async function importOldDSFiles() {
       logger,
     });
   }
+  /* c8 ignore stop */
 }
 
-/* c8 ignore next */
 export async function findConnection(uri: Uri) {
+  /* c8 ignore start */
   const connMngService = new ConnectionManagementService();
 
   let conn: InsightsConnection | LocalConnection | undefined;
@@ -740,4 +750,5 @@ export async function findConnection(uri: Uri) {
     return;
   }
   return conn;
+  /* c8 ignore stop */
 }

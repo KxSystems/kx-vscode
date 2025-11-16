@@ -24,12 +24,6 @@ import {
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { connectClientCommands } from "./commands/clientCommand";
 import {
-  installTools,
-  startLocalProcess,
-  stopLocalProcess,
-  stopLocalProcessByServerName,
-} from "./commands/installTools";
-import {
   activeConnection,
   addAuthConnection,
   addInsightsConnection,
@@ -52,7 +46,6 @@ import {
   resetScratchpad,
 } from "./commands/serverCommand";
 import { installKdbX, showWelcome } from "./commands/setupTools";
-import { showInstallationDetails } from "./commands/walkthroughCommand";
 import {
   ConnectionLensProvider,
   checkOldDatasourceFiles,
@@ -875,18 +868,6 @@ function registerConnectionsCommands(): CommandRegistration[] {
         }
       },
     },
-    {
-      command: "kdb.connections.localProcess.stop",
-      callback: async (viewItem: KdbNode) => {
-        await stopLocalProcess(viewItem);
-      },
-    },
-    {
-      command: "kdb.connections.localProcess.start",
-      callback: async (viewItem: KdbNode) => {
-        await startLocalProcess(viewItem);
-      },
-    },
   ];
 
   return connectionCommands;
@@ -1006,25 +987,6 @@ function registerFileCommands(): CommandRegistration[] {
   return fileCommands;
 }
 
-function registerInstallCommands(): CommandRegistration[] {
-  const installCommands: CommandRegistration[] = [
-    {
-      command: "kdb.install.showDetails",
-      callback: async () => {
-        await showInstallationDetails();
-      },
-    },
-    {
-      command: "kdb.install.tools",
-      callback: async () => {
-        await installTools();
-      },
-    },
-  ];
-
-  return installCommands;
-}
-
 function registerLSCommands(): CommandRegistration[] {
   const lsCommands: CommandRegistration[] = [
     {
@@ -1090,7 +1052,6 @@ function registerAllExtensionCommands(): void {
     ...registerConnectionsCommands(),
     ...registerExecuteCommands(),
     ...registerFileCommands(),
-    ...registerInstallCommands(),
     ...registerLSCommands(),
     ...registerNotebookCommands(),
     ...registerReplCommands(),
@@ -1105,11 +1066,6 @@ function registerAllExtensionCommands(): void {
 
 export async function deactivate(): Promise<void> {
   await Telemetry.dispose();
-
-  // cleanup of local q instance processes
-  Object.keys(ext.localProcessObjects).forEach((index) => {
-    stopLocalProcessByServerName(index);
-  });
 
   if (!ext.client) {
     return undefined;

@@ -33,18 +33,21 @@ const logger = "setupTools";
 
 let panel: vscode.WebviewPanel | undefined;
 
-export async function showSetupError(logger?: string) {
+export async function showSetupError(workspace?: vscode.WorkspaceFolder) {
+  /* c8 ignore start */
   const res = await notify(
-    "KDB intallation not found in scope.",
+    `KDB intallation not found${workspace ? " for workspace " + workspace.name : ""}.`,
     MessageKind.WARNING,
-    { logger },
+    { logger, params: workspace?.name },
     "Install KDB-X",
     "Dismiss",
   );
   if (res === "Install KDB-X") showWelcome();
+  /* c8 ignore stop */
 }
 
 export function showWelcome() {
+  /* c8 ignore start */
   if (panel) {
     panel.reveal();
   } else {
@@ -55,9 +58,7 @@ export function showWelcome() {
       {
         enableScripts: true,
         retainContextWhenHidden: true,
-        localResourceRoots: [
-          vscode.Uri.joinPath(ext.context.extensionUri, "out"),
-        ],
+        localResourceRoots: [vscode.Uri.joinPath(ext.context.extensionUri)],
       },
     );
     panel.iconPath = <any>getIconPath("kx_logo.png");
@@ -76,11 +77,13 @@ export function showWelcome() {
     });
     panel.onDidDispose(() => (panel = undefined));
   }
+  /* c8 ignore stop */
 }
 
 function getWebviewContent(webview: vscode.Webview) {
+  /* c8 ignore start */
   const getResource = (resource: string) =>
-    getUri(webview, ext.context.extensionUri, ["out", ...resource.split("/")]);
+    getUri(webview, ext.context.extensionUri, resource.split("/"));
 
   const getTheme = () =>
     vscode.window.activeColorTheme.kind === vscode.ColorThemeKind.Light ||
@@ -95,19 +98,21 @@ function getWebviewContent(webview: vscode.Webview) {
         <head>
           <meta charset="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <link rel="stylesheet" href="${getResource("light.css")}" />
-          <link rel="stylesheet" href="${getResource("style.css")}" />
-          <script type="module" nonce="${getNonce()}" src="${getResource("webview.js")}"></script>
+          <link rel="stylesheet" href="${getResource("out/light.css")}" />
+          <link rel="stylesheet" href="${getResource("out/style.css")}" />
+          <script type="module" nonce="${getNonce()}" src="${getResource("out/webview.js")}"></script>
           <title>Welcome to KDB-X</title>
         </head>
         <body>
-          <kdb-welcome-view checked="${getShowWelcome()}" dark="${getTheme() === "sl-theme-dark" ? "dark" : ""}"></kdb-welcome-view>
+          <kdb-welcome-view image="${getResource("resources/kx_welcome.png")}" checked="${getShowWelcome()}" dark="${getTheme() === "sl-theme-dark" ? "dark" : ""}"></kdb-welcome-view>
         </body>
         </html>
       `;
+  /* c8 ignore stop */
 }
 
 export async function installKdbX() {
+  /* c8 ignore start */
   if (process.platform === "win32") {
     notify(
       "KDB-X on Windows requires Windows Subsystem for Linux (WSL).",
@@ -164,6 +169,7 @@ export async function installKdbX() {
   runner.cancellable = Cancellable.EXECUTOR;
   runner.location = vscode.ProgressLocation.Notification;
   await runner.execute();
+  /* c8 ignore stop */
 }
 
 function executeInTerminal(
@@ -172,6 +178,7 @@ function executeInTerminal(
   cmd: string,
   ...params: string[]
 ) {
+  /* c8 ignore start */
   return new Promise<void>((resolve, reject) => {
     let pending = true;
 
@@ -216,9 +223,11 @@ function executeInTerminal(
       },
     );
   });
+  /* c8 ignore stop */
 }
 
 async function parseOutput(execution: vscode.TerminalShellExecution) {
+  /* c8 ignore start */
   let home;
   const stream = execution.read();
   for await (const data of stream) {
@@ -239,9 +248,11 @@ async function parseOutput(execution: vscode.TerminalShellExecution) {
     }
     await setHome(home);
   }
+  /* c8 ignore stop */
 }
 
 async function setHome(home: string, folder?: vscode.ConfigurationScope) {
+  /* c8 ignore start */
   if (home === join(homedir(), ".kx")) return;
   if (folder) {
     const config = vscode.workspace.getConfiguration("kdb", folder);
@@ -251,10 +262,13 @@ async function setHome(home: string, folder?: vscode.ConfigurationScope) {
       vscode.ConfigurationTarget.WorkspaceFolder,
     );
   } else await writeLocalFile("qHomeDirectory", home);
+  /* c8 ignore stop */
 }
 
 function getShowWelcome() {
+  /* c8 ignore start */
   return !vscode.workspace
     .getConfiguration()
     .get<boolean>("kdb.neverShowQInstallAgain", false);
+  /* c8 ignore stop */
 }

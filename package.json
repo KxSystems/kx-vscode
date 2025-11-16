@@ -31,7 +31,6 @@
     "kdb Insights"
   ],
   "activationEvents": [
-    "onCommand:kdb.installTools",
     "onCommand:kdb.connections.add.insights",
     "onCommand:kdb.connections.add.kdb",
     "onCommand:kdb.connections.add.bundleq",
@@ -46,97 +45,6 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "walkthroughs": [
-      {
-        "id": "qinstallation",
-        "title": "Get Started with kdb",
-        "description": "Get started by installing q to work with local kdb processes - q will need to be installed either locally or via this extension.",
-        "steps": [
-          {
-            "id": "install",
-            "title": "Register, acquire license and download the q runtime",
-            "description": " \n[Install runtime](command:kdb.installTools)",
-            "media": {
-              "image": "resources/kx_install.png",
-              "altText": "register"
-            },
-            "completionEvents": [
-              "onCommand:kdb.installTools"
-            ],
-            "when": "kdb.showInstallWalkthrough"
-          },
-          {
-            "id": "view",
-            "title": "q runtime installed",
-            "description": " \n",
-            "media": {
-              "markdown": "resources/walkthrough/qinstall.md"
-            },
-            "completionEvents": [
-              "onLink:https://code.kx.com/q/learn/install/"
-            ],
-            "when": "!kdb.showInstallWalkthrough"
-          },
-          {
-            "id": "addConnection",
-            "title": "Add a connection",
-            "description": "You can configure connections for multiple kdb servers \n[Add connection](command:kdb.connections.add)",
-            "media": {
-              "markdown": "resources/walkthrough/add_connection.md"
-            },
-            "completionEvents": [
-              "command:kdb.connections.add"
-            ],
-            "when": "!kdb.showInstallWalkthrough"
-          },
-          {
-            "id": "startProcess",
-            "title": "Start a q process",
-            "description": "If q is not already running on your chosen server, right-click and choose 'Start q process' \n[Start Local Process](command:kdb.startLocalProcess)",
-            "media": {
-              "markdown": "resources/walkthrough/startProcess.md"
-            },
-            "completionEvents": [
-              "command:kdb.startLocalProcess"
-            ],
-            "when": "!kdb.showInstallWalkthrough"
-          },
-          {
-            "id": "connect",
-            "title": "Connect to a server",
-            "description": "Connect to one of your defined servers \n[Connect to server](command:kdb.connect)",
-            "media": {
-              "markdown": "resources/walkthrough/connect.md"
-            },
-            "completionEvents": [
-              "command:kdb.connect"
-            ],
-            "when": "!kdb.showInstallWalkthrough"
-          },
-          {
-            "id": "execute",
-            "title": "Execute code",
-            "description": "Execute a q file on your connected server \n[Connect to server](command:kdb.connect)",
-            "media": {
-              "markdown": "resources/walkthrough/execute.md"
-            },
-            "completionEvents": [
-              "command:kdb.execute.fileQuery"
-            ],
-            "when": "!kdb.showInstallWalkthrough"
-          },
-          {
-            "id": "more",
-            "title": "More",
-            "description": "This extension also adds syntax highlighting, code completion and code navigation for q files",
-            "media": {
-              "markdown": "resources/walkthrough/more.md"
-            },
-            "when": "!kdb.showInstallWalkthrough"
-          }
-        ]
-      }
-    ],
     "configuration": {
       "title": "kdb",
       "properties": {
@@ -365,16 +273,6 @@
         "category": "KX",
         "command": "kdb.scratchpad.editor.reset",
         "title": "Reset editor connection"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.connections.localProcess.start",
-        "title": "Start q process"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.connections.localProcess.stop",
-        "title": "Stop q process"
       },
       {
         "category": "KX",
@@ -778,14 +676,6 @@
           "when": "false"
         },
         {
-          "command": "kdb.connections.localProcess.start",
-          "when": "false"
-        },
-        {
-          "command": "kdb.connections.localProcess.stop",
-          "when": "false"
-        },
-        {
           "command": "kdb.connections.add",
           "when": "false"
         },
@@ -969,16 +859,6 @@
           "group": "connection@7"
         },
         {
-          "command": "kdb.connections.localProcess.start",
-          "when": "view == kdb-servers && viewItem in kdb.local && viewItem not in kdb.running && viewItem in kdb.rootNodes",
-          "group": "connection"
-        },
-        {
-          "command": "kdb.connections.localProcess.stop",
-          "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running && viewItem in kdb.rootNodes",
-          "group": "connection"
-        },
-        {
           "command": "kdb.queryHistory.rerun",
           "when": "view == kdb-query-history",
           "group": "queryHistory@1"
@@ -1144,6 +1024,15 @@
   "homepage": "https://kx.com",
   "config": {
     "ui_test_vscode_version": "1.102.0"
+  },
+  "c8": {
+    "exclude": [
+      "**/test/**/*.*",
+      "**/src/ipc/**/*.*",
+      "**/src/models/**/*.*",
+      "**/src/classes/**/*.*",
+      "**/src/extension.ts"
+    ]
   },
   "scripts": {
     "build": "npm run -S esbuild-base -- --sourcemap",

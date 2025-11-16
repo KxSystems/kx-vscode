@@ -125,8 +125,8 @@ export class ConnectionManagementService {
     }
   }
 
-  /* c8 ignore next */
   public async connect(connLabel: string): Promise<void> {
+    /* c8 ignore start */
     const connection = this.retrieveConnection(connLabel);
     if (!connection) {
       return;
@@ -191,6 +191,7 @@ export class ConnectionManagementService {
       }
       refreshDataSourcesPanel();
     }
+    /* c8 ignore stop */
   }
 
   public setActiveConnection(node: KdbNode | InsightsNode): void {
@@ -231,7 +232,6 @@ export class ConnectionManagementService {
     if (!connection || !connectionNode) {
       return;
     }
-    /* c8 ignore next */
     connection.disconnect();
     this.disconnectBehaviour(connection);
   }

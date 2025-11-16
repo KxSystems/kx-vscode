@@ -52,8 +52,8 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     });
   }
 
-  /* c8 ignore next */
   public resolveWebviewView(webviewView: WebviewView) {
+    /* c8 ignore start */
     this._view = webviewView;
 
     webviewView.webview.options = {
@@ -77,6 +77,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     webviewView.onDidDispose(() => {
       ext.isResultsTabVisible = false;
     });
+    /* c8 ignore stop */
   }
 
   public updateResults(

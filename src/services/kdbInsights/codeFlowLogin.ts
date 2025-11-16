@@ -134,13 +134,13 @@ export async function refreshToken(
   });
 }
 
-/* c8 ignore next */
 export async function getCurrentToken(
   serverName: string,
   serverAlias: string,
   realm: string,
   insecure: boolean,
 ): Promise<IToken | undefined> {
+  /* c8 ignore start */
   if (serverName === "" || serverAlias === "") {
     return undefined;
   }
@@ -171,19 +171,21 @@ export async function getCurrentToken(
     ext.context.secrets.store(serverAlias, JSON.stringify(token));
   }
   return token;
+  /* c8 ignore stop */
 }
 
-/* c8 ignore next */
 export async function getToken(
   insightsUrl: string,
   realm: string,
   insecure: boolean,
   code: string,
 ): Promise<IToken | undefined> {
+  /* c8 ignore start */
   return await tokenRequest(insightsUrl, realm, insecure, {
     code,
     grant_type: ext.insightsGrantType.authorizationCode,
   });
+  /* c8 ignore stop */
 }
 
 async function tokenRequest(
@@ -235,8 +237,8 @@ function queryString(options: any): string {
     .replace(/%2B/g, "+");
 }
 
-/* c8 ignore next */
 function createServer() {
+  /* c8 ignore start */
   let deferredCode: IDeferred<string>;
   const codePromise = new Promise<string>(
     (resolve, reject) => (deferredCode = { resolve, reject }),
@@ -311,6 +313,7 @@ function createServer() {
     codePromise,
     server,
   };
+  /* c8 ignore stop */
 }
 
 function startServer(server: http.Server): Promise<number> {

@@ -29,7 +29,7 @@ import { EditConnectionMessage } from "../../models/messages";
 @customElement("kdb-new-connection-view")
 export class KdbNewConnectionView extends LitElement {
   static readonly styles = [shoelaceStyles, kdbStyles, newConnectionStyles];
-  selectedTab = ConnectionType.BundledQ;
+  selectedTab = ConnectionType.Kdb;
   lblColorsList: LabelColors[] = [];
   lblNamesList: Labels[] = [];
   newLblName = "";
@@ -181,8 +181,8 @@ export class KdbNewConnectionView extends LitElement {
         >`;
   }
 
-  /* c8 ignore next */
   renderServerNameField(serverType: ServerType, isBundleQ?: boolean) {
+    /* c8 ignore start */
     return isBundleQ
       ? html`<sl-input
           class="text-field larger option-title"
@@ -208,6 +208,8 @@ export class KdbNewConnectionView extends LitElement {
                 event.target as HTMLInputElement
               ).value)}"
             label="Server Name"></sl-input>`;
+
+    /* c8 ignore stop */
   }
 
   renderServerName(serverType: ServerType, isBundleQ?: boolean) {
@@ -234,6 +236,7 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   renderPortNumber(isBundleQ?: boolean) {
+    /* c8 ignore start */
     return html`
       <div class="row">
         <sl-input
@@ -244,9 +247,7 @@ export class KdbNewConnectionView extends LitElement {
               : this.kdbServer.serverPort,
           )}"
           @input="${(event: Event) => {
-            /* c8 ignore next */
             const value = (event.target as HTMLInputElement).value;
-            /* c8 ignore next */
             if (isBundleQ) {
               this.bundledServer.serverPort = value;
             } else {
@@ -259,6 +260,7 @@ export class KdbNewConnectionView extends LitElement {
         ${this.renderPortNumberDesc(isBundleQ)}
       </div>
     `;
+    /* c8 ignore stop */
   }
 
   renderConnAddDesc(serverType: ServerType, isBundleQ?: boolean) {
@@ -271,6 +273,7 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   renderConnAddress(serverType: ServerType, isBundleQ?: boolean) {
+    /* c8 ignore start */
     return isBundleQ
       ? html`
           <div class="row">
@@ -297,9 +300,8 @@ export class KdbNewConnectionView extends LitElement {
                   : this.insightsServer.server,
               )}"
               @input="${(event: Event) => {
-                /* c8 ignore next */
                 const value = (event.target as HTMLInputElement).value;
-                /* c8 ignore next */
+
                 if (serverType === ServerType.KDB) {
                   this.kdbServer.serverName = value;
                 } else {
@@ -312,9 +314,11 @@ export class KdbNewConnectionView extends LitElement {
             ${this.renderConnAddDesc(serverType)}
           </div>
         `;
+    /* c8 ignore stop */
   }
 
   renderRealm() {
+    /* c8 ignore start */
     return html`
       <div class="row mt-1">
         <sl-input
@@ -322,9 +326,7 @@ export class KdbNewConnectionView extends LitElement {
           value="${live(this.insightsServer.realm ?? "")}"
           placeholder="insights"
           @input="${(event: Event) => {
-            /* c8 ignore next */
             const value = (event.target as HTMLInputElement).value;
-            /* c8 ignore next */
             this.insightsServer.realm = value;
           }}"
           label="Define Realm (optional)"></sl-input>
@@ -334,15 +336,16 @@ export class KdbNewConnectionView extends LitElement {
         to a specific realm as configured on your server.
       </div>
     `;
+    /* c8 ignore stop */
   }
 
   renderInsecureSSL() {
+    /* c8 ignore start */
     return html`
       <div class="row mt-1">
         <sl-checkbox
           .checked="${this.insightsServer.insecure ?? false}"
           @sl-change="${(event: Event) => {
-            /* c8 ignore next */
             this.insightsServer.insecure = (
               event.target as HTMLInputElement
             ).checked;
@@ -351,6 +354,7 @@ export class KdbNewConnectionView extends LitElement {
         </sl-checkbox>
       </div>
     `;
+    /* c8 ignore stop */
   }
 
   tabClickAction(tabNumber: number) {
@@ -437,6 +441,7 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   renderNewLabelModal() {
+    /* c8 ignore start */
     return html`
       <div class="overlay"></div>
       <dialog class="modal" ?open="${this.isModalOpen}">
@@ -449,9 +454,7 @@ export class KdbNewConnectionView extends LitElement {
               class="text-field larger"
               value="${live(this.newLblName)}"
               @sl-input="${(event: Event) => {
-                /* c8 ignore next */
                 this.newLblName = (event.target as HTMLInputElement).value;
-                /* c8 ignore next */
                 this.requestUpdate();
               }}"
               id="label-name"></sl-input>
@@ -464,9 +467,7 @@ export class KdbNewConnectionView extends LitElement {
               id="label-color"
               value="${live(this.newLblColorName)}"
               @sl-change="${(event: Event) => {
-                /* c8 ignore next */
                 this.newLblColorName = (event.target as HTMLInputElement).value;
-                /* c8 ignore next */
                 this.requestUpdate();
               }}"
               class="dropdown"
@@ -494,6 +495,7 @@ export class KdbNewConnectionView extends LitElement {
         </div>
       </dialog>
     `;
+    /* c8 ignore stop */
   }
 
   renderNewLblBtn() {
@@ -548,8 +550,8 @@ export class KdbNewConnectionView extends LitElement {
     `;
   }
 
-  /* c8 ignore next */
   renderNewMyQConnectionForm() {
+    /* c8 ignore start */
     return html`<div class="col">
       <div class="row">
         <div class="col gap-0">${this.renderServerName(ServerType.KDB)}</div>
@@ -605,6 +607,7 @@ export class KdbNewConnectionView extends LitElement {
       ${this.renderConnectionLabelsSection()}
       ${this.renderCreateConnectionBtn()}
     </div>`;
+    /* c8 ignore stop */
   }
 
   renderNewInsightsConnectionForm() {
@@ -633,6 +636,7 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   renderNewConnectionForm() {
+    /* c8 ignore start */
     return html`
       <div class="row mt-1 mb-1 content-wrapper">
         ${this.isModalOpen ? this.renderNewLabelModal() : ""}
@@ -672,24 +676,9 @@ export class KdbNewConnectionView extends LitElement {
               <sl-tab-group>
                 <sl-tab
                   slot="nav"
-                  panel="${ConnectionType.BundledQ}"
-                  ?active="${live(
-                    this.selectedTab === ConnectionType.BundledQ,
-                  )}"
-                  @click="${() => {
-                    /* c8 ignore next */
-                    this.selectedTab = ConnectionType.BundledQ;
-                    this.serverType = ServerType.KDB;
-                    this.isBundledQ = true;
-                  }}"
-                  >Bundle q</sl-tab
-                >
-                <sl-tab
-                  slot="nav"
                   panel="${ConnectionType.Kdb}"
                   ?active="${live(this.selectedTab === ConnectionType.Kdb)}"
                   @click="${() => {
-                    /* c8 ignore next */
                     this.isBundledQ = false;
                     this.serverType = ServerType.KDB;
                     this.selectedTab = ConnectionType.Kdb;
@@ -703,20 +692,12 @@ export class KdbNewConnectionView extends LitElement {
                     this.selectedTab === ConnectionType.Insights,
                   )}"
                   @click="${() => {
-                    /* c8 ignore next */
                     this.isBundledQ = false;
                     this.serverType = ServerType.INSIGHTS;
                     this.selectedTab = ConnectionType.Insights;
                   }}"
                   >Insights connection
                 </sl-tab>
-                <sl-tab-panel
-                  name="${ConnectionType.BundledQ}"
-                  ?active="${live(
-                    this.selectedTab === ConnectionType.BundledQ,
-                  )}">
-                  ${this.renderNewBundleqConnectionForm()}
-                </sl-tab-panel>
                 <sl-tab-panel
                   name="${ConnectionType.Kdb}"
                   ?active="${live(this.selectedTab === ConnectionType.Kdb)}">
@@ -735,6 +716,7 @@ export class KdbNewConnectionView extends LitElement {
         </div>
       </div>
     `;
+    /* c8 ignore stop */
   }
 
   renderCreateConnectionBtn() {

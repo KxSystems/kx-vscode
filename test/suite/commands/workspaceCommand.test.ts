@@ -289,42 +289,6 @@ describe("workspaceCommand", () => {
       sinon.assert.calledOnce(windowErrorStub);
     });
 
-    it.skip("should show not show error or info message if workspace do exist", async () => {
-      ext.oldDSformatExists = true;
-      workspaceFolderStub.get(() => [
-        {
-          uri: { fsPath: "path/to/workspace" },
-          name: "workspace",
-          index: 0,
-        },
-      ]);
-      await workspaceCommand.importOldDSFiles();
-      sinon.assert.notCalled(windowErrorStub);
-      sinon.assert.notCalled(windowShowInfo);
-    });
-
-    it.skip("should log cancellation if user cancels the request", async () => {
-      ext.oldDSformatExists = true;
-      workspaceFolderStub.get(() => [
-        {
-          uri: { fsPath: "path/to/workspace" },
-          name: "workspace",
-          index: 0,
-        },
-      ]);
-
-      tokenOnCancellationRequestedStub.callsFake((callback) => callback());
-
-      await workspaceCommand.importOldDSFiles();
-
-      sinon.assert.calledOnce(kdbOutputLogStub);
-      sinon.assert.calledWith(
-        kdbOutputLogStub,
-        "[workspaceCommand] User cancelled the old DS files import.",
-        "DEBUG",
-      );
-    });
-
     describe("runOnRepl", () => {
       let notifyStub, executeStub: sinon.SinonStub;
       const editor = <vscode.TextEditor>{
@@ -374,12 +338,6 @@ describe("workspaceCommand", () => {
 
         beforeEach(() => {
           sinon.stub(ReplConnection, "getOrCreateInstance").resolves(conn);
-        });
-
-        it("should notify error", async () => {
-          sinon.stub(conn, "start").throws(new Error("Test"));
-          await workspaceCommand.startRepl();
-          sinon.assert.calledOnce(notifyStub);
         });
       });
     });

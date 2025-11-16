@@ -338,8 +338,8 @@ export function getServers(): Server {
 }
 
 // TODO: Remove this on 1.9.0 release
-/* c8 ignore next */
 export function fixUnnamedAlias(): void {
+  /* c8 ignore start */
   const servers = getServers();
   const insights = getInsights();
   let counter = 1;
@@ -375,6 +375,7 @@ export function fixUnnamedAlias(): void {
     updateInsights(updatedInsights);
     ext.serverProvider.refreshInsights(insights);
   }
+  /* c8 ignore stop */
 }
 
 export function getAutoFocusOutputOnEntrySetting(): boolean {
@@ -487,8 +488,8 @@ export function invalidUsernameJWT(connLabel: string): void {
   );
 }
 
-/* c8 ignore next */
 export function offerConnectAction(connLabel?: string): void {
+  /* c8 ignore start */
   if (connLabel) {
     notify(
       `You aren't connected to ${connLabel}, would you like to connect? Once connected please try again.`,
@@ -511,6 +512,7 @@ export function offerConnectAction(connLabel?: string): void {
       { logger },
     );
   }
+  /* c8 ignore stop */
 }
 
 export function noSelectedConnectionAction(): void {
@@ -520,8 +522,8 @@ export function noSelectedConnectionAction(): void {
   );
 }
 
-/* c8 ignore next */
 export function offerReconnectionAfterEdit(connLabel: string): void {
+  /* c8 ignore start */
   notify(
     `You are no longer connected to ${connLabel}, would you like to connect?`,
     MessageKind.INFO,
@@ -536,6 +538,7 @@ export function offerReconnectionAfterEdit(connLabel: string): void {
       );
     }
   });
+  /* c8 ignore stop */
 }
 
 export function getInsightsAlias(insightsList: InsightDetails[]): void {

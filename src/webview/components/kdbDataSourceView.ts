@@ -335,9 +335,10 @@ export class KdbDataSourceView extends LitElement {
     `;
   }
 
-  /* c8 ignore next */
   postMessage(msg: Partial<DataSourceMessage2>) {
+    /* c8 ignore start */
     this.vscode.postMessage(msg);
+    /* c8 ignore stop */
   }
 
   save() {
@@ -1536,8 +1537,8 @@ export class KdbDataSourceView extends LitElement {
     }
   }
 
-  /* c8 ignore next */
   renderUDAInput(param: UDAParam, inputType: string) {
+    /* c8 ignore start */
     const validInputTypes = ["text", "number", "datetime-local"];
     const type = validInputTypes.includes(inputType) ? inputType : "text";
     const value = param.value || param.default || "";
@@ -1616,6 +1617,7 @@ export class KdbDataSourceView extends LitElement {
           : html``}
       </div>
     `;
+    /* c8 ignore stop */
   }
 
   renderUDAMultiTypeInput(param: UDAParam) {

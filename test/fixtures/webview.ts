@@ -42,6 +42,7 @@ export function css(strings: any, ...values: unknown[]) {
 }
 export function customElement() {}
 export function state() {}
+export function property() {}
 export function repeat(items: Iterable<any>, keyFn: any, template: any) {
   for (const item of items) {
     keyFn(item);

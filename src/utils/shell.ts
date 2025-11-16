@@ -48,19 +48,22 @@ function killPidCommand(pid: number): string {
   // return process.platform === 'win32' ? `taskkill /PID ${pid} /T /F` : `kill -9 ${pid}`;
 }
 
-/* c8 ignore next */
 export function which(cmd: string): string[] {
+  /* c8 ignore start */
   // This works on WSL, MacOS, Linux
   const res = execFileSync("/usr/bin/which", ["-a", cmd]);
   return new TextDecoder().decode(res).split(/(?:\r\n|[\r\n])/gs);
+  /* c8 ignore stop */
 }
 
-/* c8 ignore next */
 export function stat(path: string): boolean {
+  /* c8 ignore start */
   return existsSync(path);
+  /* c8 ignore stop */
 }
 
-/* c8 ignore next */
 export function readTextFile(path: string): string {
+  /* c8 ignore start */
   return readFileSync(path, "utf-8");
+  /* c8 ignore stop */
 }

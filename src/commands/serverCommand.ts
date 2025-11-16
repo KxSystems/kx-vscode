@@ -189,12 +189,12 @@ export async function addInsightsConnection(
   }
 }
 
-/* c8 ignore next */
 export async function editInsightsConnection(
   insightsData: InsightDetails,
   oldAlias: string,
   labels?: string[],
 ) {
+  /* c8 ignore start */
   const aliasValidation =
     oldAlias === insightsData.alias
       ? undefined
@@ -293,15 +293,15 @@ export async function editInsightsConnection(
       }
     }
   }
+  /* c8 ignore stop */
 }
 
-// Not possible to test secrets
-/* c8 ignore next */
 export async function addAuthConnection(
   serverKey: string,
   username: string,
   password: string,
 ): Promise<void> {
+  /* c8 ignore start */
   const validUsername = validateServerUsername(username);
   if (validUsername) {
     notify(validUsername, MessageKind.ERROR, { logger });
@@ -324,11 +324,11 @@ export async function addAuthConnection(
       }
     }
   }
+  /* c8 ignore stop */
 }
 
-// Not possible to test secrets
-/* c8 ignore next */
 function removeAuthConnection(serverKey: string) {
+  /* c8 ignore start */
   if (
     Object.prototype.hasOwnProperty.call(
       ext.secretSettings.storeAuthData,
@@ -339,11 +339,11 @@ function removeAuthConnection(serverKey: string) {
       serverKey
     ];
   }
+  /* c8 ignore stop */
 }
 
-// Not possible to test secrets
-/* c8 ignore next */
 export function updateAuthDataKey(oldServerKey: string, newServerKey: string) {
+  /* c8 ignore start */
   const storeAuthData = ext.secretSettings.storeAuthData as {
     [key: string]: any;
   };
@@ -361,10 +361,9 @@ export function updateAuthDataKey(oldServerKey: string, newServerKey: string) {
   delete storeAuthData[oldServerKey];
 
   return;
+  /* c8 ignore stop */
 }
 
-// Not possible to test secrets
-/* c8 ignore next */
 export function handleEditAuthData(
   oldServerKey: string,
   newServerKey: string,
@@ -373,6 +372,7 @@ export function handleEditAuthData(
   username?: string,
   password?: string,
 ) {
+  /* c8 ignore start */
   if (editAuth) {
     removeAuthConnection(oldServerKey);
     if (isAuth && username !== "" && password !== "") {
@@ -382,6 +382,7 @@ export function handleEditAuthData(
   } else if (oldServerKey !== newServerKey) {
     updateAuthDataKey(oldServerKey, newServerKey);
   }
+  /* c8 ignore stop */
 }
 
 export async function enableTLS(serverKey: string): Promise<void> {
@@ -506,7 +507,6 @@ export async function addKdbConnection(
   }
 }
 
-/* c8 ignore next */
 export async function editKdbConnection(
   kdbData: ServerDetails,
   oldAlias: string,
@@ -514,6 +514,7 @@ export async function editKdbConnection(
   editAuth?: boolean,
   labels?: string[],
 ) {
+  /* c8 ignore start */
   const aliasValidation =
     oldAlias === kdbData.serverAlias
       ? undefined
@@ -642,11 +643,11 @@ export async function editKdbConnection(
       }
     }
   }
+  /* c8 ignore stop */
 }
 
-// test fs readFileSync unit tests are flaky, no correct way to test them
-/* c8 ignore next */
 export async function importConnections() {
+  /* c8 ignore start */
   const options = {
     canSelectMany: false,
     openLabel: "Select JSON File",
@@ -690,6 +691,7 @@ export async function importConnections() {
     return;
   }
   await addImportedConnections(importedConnections);
+  /* c8 ignore stop */
 }
 
 export async function addImportedConnections(
@@ -956,7 +958,6 @@ export async function executeQuery(
   const endTime = Date.now();
   const duration = (endTime - startTime).toString();
 
-  /* c8 ignore next */
   if (token?.isCancellationRequested) {
     return undefined;
   }
@@ -979,7 +980,7 @@ export async function executeQuery(
   } else if (isNotebook) {
     return results;
   } else {
-    /* c8 ignore next */
+    /* c8 ignore start */
     if (ext.isResultsTabVisible) {
       const data = resultToBase64(results);
       if (data) {
@@ -1034,6 +1035,7 @@ export async function executeQuery(
         isFromConnTree,
       );
     }
+    /* c8 ignore stop */
   }
 }
 

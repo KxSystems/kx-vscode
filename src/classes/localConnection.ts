@@ -89,29 +89,11 @@ export class LocalConnection {
       if (err || !conn) {
         ext.serverProvider.reload();
 
-        if (this.connLabel.endsWith("[local]")) {
-          notify(
-            `Connection to server ${this.options.host}:${this.options.port} failed.`,
-            MessageKind.ERROR,
-            { logger, params: err },
-            "Start q process",
-          ).then((res) => {
-            if (res) {
-              commands.executeCommand(
-                "kdb.connections.localProcess.start",
-                ext.connectionsList.find(
-                  (conn) => conn.label === this.connLabel,
-                ),
-              );
-            }
-          });
-        } else {
-          notify(
-            `Connection to server ${this.options.host}:${this.options.port} failed.`,
-            MessageKind.ERROR,
-            { logger, params: err },
-          );
-        }
+        notify(
+          `Connection to server ${this.options.host}:${this.options.port} failed.`,
+          MessageKind.ERROR,
+          { logger, params: err },
+        );
 
         return;
       }
