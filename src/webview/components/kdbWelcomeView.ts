@@ -54,6 +54,10 @@ export class KdbWelcomeView extends LitElement {
       .icon {
         margin-top: 0.15em;
       }
+      .icon-inline {
+        margin-left: 0.25em;
+        margin-right: 0.25em;
+      }
       .footer {
         position: fixed;
         bottom: 0;
@@ -145,7 +149,7 @@ export class KdbWelcomeView extends LitElement {
                 >
                 <a href="https://developer.kx.com/products/kdb-x" class="nowrap"
                   >Developer Center & Documentation
-                  <span class="icon">${renderIcon5()}</span></a
+                  <span class="icon-inline">${renderIcon5()}</span></a
                 >
               </div>
             </div>

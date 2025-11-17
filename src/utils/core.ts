@@ -27,7 +27,6 @@ import { tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
 import { errorMessage } from "./shared";
 import { readTextFile, stat, which } from "./shell";
-import { getLocalSetting } from "./storage";
 import { showWelcome } from "../commands/setupTools";
 import {
   InsightDetails,
@@ -234,11 +233,7 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
     .inspect<string>("qHomeDirectory");
 
   const home =
-    env.QHOME ||
-    setting?.workspaceFolderValue ||
-    setting?.workspaceValue ||
-    getLocalSetting("qHomeDirectory") ||
-    "";
+    setting?.workspaceFolderValue || env.QHOME || setting?.globalValue || "";
 
   if (home) {
     let q = path.resolve(home, "bin", "q");

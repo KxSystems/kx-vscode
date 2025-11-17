@@ -85,7 +85,7 @@
           "type": "string",
           "description": "QHOME directory for q runtime",
           "default": "",
-          "scope": "resource"
+          "scope": "machine-overridable"
         },
         "kdb.neverShowQInstallAgain": {
           "type": "boolean",
