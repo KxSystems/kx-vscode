@@ -201,7 +201,6 @@ describe("Controller", () => {
                 serverPort: "kdbserverport",
                 auth: true,
                 serverAlias: "kdbserveralias",
-                managed: false,
                 tls: true,
               },
               vscode.TreeItemCollapsibleState.None,

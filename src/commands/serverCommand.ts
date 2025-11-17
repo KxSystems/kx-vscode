@@ -61,11 +61,9 @@ import { MetaContentProvider } from "../services/metaContentProvider";
 import { inputVariable } from "../services/notebookProviders";
 import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
 import {
-  addLocalConnectionContexts,
   checkOpenSslInstalled,
   getInsights,
   getKeyForServerName,
-  getServerName,
   getServers,
   offerReconnectionAfterEdit,
   updateInsights,
@@ -117,7 +115,7 @@ export async function addInsightsConnection(
   insightsData: InsightDetails,
   labels?: string[],
 ) {
-  const aliasValidation = validateServerAlias(insightsData.alias, false);
+  const aliasValidation = validateServerAlias(insightsData.alias);
   if (aliasValidation) {
     notify(aliasValidation, MessageKind.ERROR, { logger });
     return;
@@ -198,7 +196,7 @@ export async function editInsightsConnection(
   const aliasValidation =
     oldAlias === insightsData.alias
       ? undefined
-      : validateServerAlias(insightsData.alias, false);
+      : validateServerAlias(insightsData.alias);
   if (aliasValidation) {
     notify(aliasValidation, MessageKind.ERROR, { logger });
     return;
@@ -422,10 +420,9 @@ export async function enableTLS(serverKey: string): Promise<void> {
 
 export async function addKdbConnection(
   kdbData: ServerDetails,
-  isLocal?: boolean,
   labels?: string[],
 ): Promise<void> {
-  const aliasValidation = validateServerAlias(kdbData.serverAlias, isLocal!);
+  const aliasValidation = validateServerAlias(kdbData.serverAlias);
   const hostnameValidation = validateServerName(kdbData.serverName);
   const portValidation = validateServerPort(kdbData.serverPort);
   if (aliasValidation) {
@@ -460,25 +457,17 @@ export async function addKdbConnection(
           serverName: kdbData.serverName,
           serverPort: kdbData.serverPort,
           serverAlias: kdbData.serverAlias,
-          managed: kdbData.serverAlias === "local",
           tls: kdbData.tls,
         },
       };
-      if (servers.key.managed) {
-        await addLocalConnectionContexts(getServerName(servers[0]));
-      }
     } else {
       servers[key] = {
         auth: kdbData.auth,
         serverName: kdbData.serverName,
         serverPort: kdbData.serverPort,
         serverAlias: kdbData.serverAlias,
-        managed: kdbData.serverAlias === "local",
         tls: kdbData.tls,
       };
-      if (servers[key].managed) {
-        await addLocalConnectionContexts(getServerName(servers[key]));
-      }
     }
 
     await updateServers(servers);
@@ -510,7 +499,6 @@ export async function addKdbConnection(
 export async function editKdbConnection(
   kdbData: ServerDetails,
   oldAlias: string,
-  isLocal?: boolean,
   editAuth?: boolean,
   labels?: string[],
 ) {
@@ -518,7 +506,7 @@ export async function editKdbConnection(
   const aliasValidation =
     oldAlias === kdbData.serverAlias
       ? undefined
-      : validateServerAlias(kdbData.serverAlias, isLocal!);
+      : validateServerAlias(kdbData.serverAlias);
   const hostnameValidation = validateServerName(kdbData.serverName);
   const portValidation = validateServerPort(kdbData.serverPort);
   if (aliasValidation) {
@@ -583,7 +571,6 @@ export async function editKdbConnection(
             serverName: kdbData.serverName,
             serverPort: kdbData.serverPort,
             serverAlias: kdbData.serverAlias,
-            managed: kdbData.serverAlias === "local",
             tls: kdbData.tls,
           };
 
@@ -599,7 +586,6 @@ export async function editKdbConnection(
             serverName: kdbData.serverName,
             serverPort: kdbData.serverPort,
             serverAlias: kdbData.serverAlias,
-            managed: kdbData.serverAlias === "local",
             tls: kdbData.tls,
           };
 
@@ -767,8 +753,7 @@ export async function addImportedConnections(
         counter++;
       }
       connection.serverAlias = alias;
-      const isManaged = alias === "local";
-      await addKdbConnection(connection, isManaged);
+      await addKdbConnection(connection);
     }
     existingAliases.add(alias);
     counter = 1;

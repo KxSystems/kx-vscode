@@ -39,7 +39,6 @@ export class KdbNewConnectionView extends LitElement {
     serverPort: "",
     auth: false,
     serverAlias: "",
-    managed: false,
     tls: false,
     username: "",
     password: "",
@@ -49,7 +48,6 @@ export class KdbNewConnectionView extends LitElement {
     serverPort: "",
     auth: false,
     serverAlias: "local",
-    managed: false,
     tls: false,
   };
   insightsServer: InsightDetails = {
@@ -167,153 +165,110 @@ export class KdbNewConnectionView extends LitElement {
     this.requestUpdate();
   }
 
-  renderServerNameDesc(isBundleQ?: boolean) {
-    return isBundleQ
-      ? html`<span
-          >Name your server "local"; this name has been reserved for use by the
-          packaged q in the kdb VS Code extension and must be used to access
-          <b>Bundled q.</b></span
-        >`
-      : html`<span
-          >Name the server, <u>but do not use "local";</u> "local" has been
-          reserved for use by the pre-packaged q in the kdb VS Code
-          extension.</span
-        >`;
+  renderServerNameDesc() {
+    return html`<span
+      >Name the server, <u>but do not use "REPL";</u> "REPL" has been
+      reserved.</span
+    >`;
   }
 
-  renderServerNameField(serverType: ServerType, isBundleQ?: boolean) {
+  renderServerNameField(serverType: ServerType) {
     /* c8 ignore start */
-    return isBundleQ
+    return serverType === ServerType.KDB
       ? html`<sl-input
           class="text-field larger option-title"
-          value="${live(this.bundledServer.serverAlias)}"
-          readonly
+          placeholder="Server-1"
+          value="${live(this.kdbServer.serverAlias)}"
+          @input="${(event: Event) =>
+            (this.kdbServer.serverAlias = (
+              event.target as HTMLInputElement
+            ).value)}"
           label="Server Name"></sl-input>`
-      : serverType === ServerType.KDB
-        ? html`<sl-input
-            class="text-field larger option-title"
-            placeholder="Server-1"
-            value="${live(this.kdbServer.serverAlias)}"
-            @input="${(event: Event) =>
-              (this.kdbServer.serverAlias = (
-                event.target as HTMLInputElement
-              ).value)}"
-            label="Server Name"></sl-input>`
-        : html`<sl-input
-            class="text-field larger option-title"
-            placeholder="Insights-1"
-            value="${live(this.insightsServer.alias)}"
-            @input="${(event: Event) =>
-              (this.insightsServer.alias = (
-                event.target as HTMLInputElement
-              ).value)}"
-            label="Server Name"></sl-input>`;
+      : html`<sl-input
+          class="text-field larger option-title"
+          placeholder="Insights-1"
+          value="${live(this.insightsServer.alias)}"
+          @input="${(event: Event) =>
+            (this.insightsServer.alias = (
+              event.target as HTMLInputElement
+            ).value)}"
+          label="Server Name"></sl-input>`;
 
     /* c8 ignore stop */
   }
 
-  renderServerName(serverType: ServerType, isBundleQ?: boolean) {
+  renderServerName(serverType: ServerType) {
     return html`
-      <div class="row">
-        ${this.renderServerNameField(serverType, isBundleQ)}
-      </div>
+      <div class="row">${this.renderServerNameField(serverType)}</div>
       <div class="row option-description  option-help">
-        ${this.renderServerNameDesc(isBundleQ)}
+        ${this.renderServerNameDesc()}
       </div>
     `;
   }
 
-  renderPortNumberDesc(isBundleQ?: boolean) {
-    return isBundleQ
-      ? html`<span
-          >Ensure the port number you use does not conflict with another
-          port.</span
-        >`
-      : html`<span
-          >Ensure <b>Set port number</b> matches the assigned port of your q
-          process, and doesn’t conflict with another port.</span
-        >`;
+  renderPortNumberDesc() {
+    return html`<span
+      >Ensure <b>Set port number</b> matches the assigned port of your q
+      process, and doesn’t conflict with another port.</span
+    >`;
   }
 
-  renderPortNumber(isBundleQ?: boolean) {
+  renderPortNumber() {
     /* c8 ignore start */
     return html`
       <div class="row">
         <sl-input
           class="text-field larger option-title"
-          value="${live(
-            isBundleQ
-              ? this.bundledServer.serverPort
-              : this.kdbServer.serverPort,
-          )}"
+          value="${live(this.kdbServer.serverPort)}"
           @input="${(event: Event) => {
             const value = (event.target as HTMLInputElement).value;
-            if (isBundleQ) {
-              this.bundledServer.serverPort = value;
-            } else {
-              this.kdbServer.serverPort = value;
-            }
+            this.kdbServer.serverPort = value;
           }}"
           label="Set port number"></sl-input>
       </div>
       <div class="row option-description option-help">
-        ${this.renderPortNumberDesc(isBundleQ)}
+        ${this.renderPortNumberDesc()}
       </div>
     `;
     /* c8 ignore stop */
   }
 
-  renderConnAddDesc(serverType: ServerType, isBundleQ?: boolean) {
-    return isBundleQ
-      ? html`The localhost connection is already set up for you.`
-      : serverType === ServerType.KDB
-        ? html`Set the IP of your kdb+ database connection.`
-        : html`Set the IP of your kdb+ database connection, your Insights
-          connection must be deployed for kdb VS Code to access.`;
+  renderConnAddDesc(serverType: ServerType) {
+    return serverType === ServerType.KDB
+      ? html`Set the IP of your kdb+ database connection.`
+      : html`Set the IP of your kdb+ database connection, your Insights
+        connection must be deployed for kdb VS Code to access.`;
   }
 
-  renderConnAddress(serverType: ServerType, isBundleQ?: boolean) {
+  renderConnAddress(serverType: ServerType) {
     /* c8 ignore start */
-    return isBundleQ
-      ? html`
-          <div class="row">
-            <sl-input
-              class="text-field larger option-title"
-              value="${live(this.bundledServer.serverName)}"
-              readonly
-              label="Define connection address"></sl-input>
-          </div>
-          <div class="row option-description option-help">
-            ${this.renderConnAddDesc(serverType)}
-          </div>
-        `
-      : html`
-          <div class="row">
-            <sl-input
-              class="text-field larger option-title"
-              placeholder="${serverType === ServerType.KDB
-                ? "127.0.0.1 or localhost"
-                : `myinsights.clouddeploy.com`}"
-              value="${live(
-                serverType === ServerType.KDB
-                  ? this.kdbServer.serverName
-                  : this.insightsServer.server,
-              )}"
-              @input="${(event: Event) => {
-                const value = (event.target as HTMLInputElement).value;
+    return html`
+      <div class="row">
+        <sl-input
+          class="text-field larger option-title"
+          placeholder="${serverType === ServerType.KDB
+            ? "127.0.0.1 or localhost"
+            : `myinsights.clouddeploy.com`}"
+          value="${live(
+            serverType === ServerType.KDB
+              ? this.kdbServer.serverName
+              : this.insightsServer.server,
+          )}"
+          @input="${(event: Event) => {
+            const value = (event.target as HTMLInputElement).value;
 
-                if (serverType === ServerType.KDB) {
-                  this.kdbServer.serverName = value;
-                } else {
-                  this.insightsServer.server = value;
-                }
-              }}"
-              label="Define connection address"></sl-input>
-          </div>
-          <div class="row option-description option-help">
-            ${this.renderConnAddDesc(serverType)}
-          </div>
-        `;
+            if (serverType === ServerType.KDB) {
+              this.kdbServer.serverName = value;
+            } else {
+              this.insightsServer.server = value;
+            }
+          }}"
+          label="Define connection address"></sl-input>
+      </div>
+      <div class="row option-description option-help">
+        ${this.renderConnAddDesc(serverType)}
+      </div>
+    `;
     /* c8 ignore stop */
   }
 
@@ -528,28 +483,6 @@ export class KdbNewConnectionView extends LitElement {
     </div>`;
   }
 
-  renderNewBundleqConnectionForm() {
-    return html`
-      <div class="col">
-        <div class="row">
-          <div class="col gap-0">
-            ${this.renderServerName(ServerType.KDB, true)}
-          </div>
-        </div>
-        <div class="row">
-          <div class="col gap-0">
-            ${this.renderConnAddress(ServerType.KDB, true)}
-          </div>
-        </div>
-        <div class="row">
-          <div class="col gap-0">${this.renderPortNumber(true)}</div>
-        </div>
-        ${this.renderConnectionLabelsSection()}
-        ${this.renderCreateConnectionBtn()}
-      </div>
-    `;
-  }
-
   renderNewMyQConnectionForm() {
     /* c8 ignore start */
     return html`<div class="col">
@@ -646,19 +579,11 @@ export class KdbNewConnectionView extends LitElement {
               <h2>Add a New Connection</h2>
             </div>
             <div class="row option-description">
-              <span
-                >If you are new to kdb and q, start with the
-                <b>“Bundled q”</b> that comes packaged with the kdb VS Code
-                extension.</span
-              >
-            </div>
-            <br />
-            <div class="row option-description">
               <span>
-                If you are familiar with q and are running a remote q process,
-                then use <b>“My q”</b>. Please ensure your remote q process is
-                running before connecting it to the kdb VS Code extension
-                otherwise you will get a connection error.</span
+                If you are running a q process then use <b>“My q”</b>. Please
+                ensure your q process is running before connecting it to the kdb
+                VS Code extension otherwise you will get a connection
+                error.</span
               >
             </div>
             <br />
@@ -776,9 +701,7 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   defineConnTypeName(connType: number) {
-    if (connType === ConnectionType.BundledQ) {
-      return "Bundled q";
-    } else if (connType === ConnectionType.Kdb) {
+    if (connType === ConnectionType.Kdb) {
       return "My q";
     } else {
       return "Insights";
@@ -789,44 +712,11 @@ export class KdbNewConnectionView extends LitElement {
     if (!this.connectionData) {
       return html`<div>No connection found to be edited</div>`;
     }
-    if (this.connectionData.connType === 0) {
-      return this.renderBundleQEditForm();
-    } else if (this.connectionData.connType === 1) {
+    if (this.connectionData.connType === 1) {
       return this.renderMyQEditForm();
     } else {
       return this.renderInsightsEditForm();
     }
-  }
-
-  renderBundleQEditForm() {
-    if (!this.connectionData) {
-      return html`<div>No connection found to be edited</div>`;
-    }
-
-    if (this.renderId === "") {
-      this.renderId = this.generateRenderId();
-      this.bundledServer.serverAlias = "local";
-      this.bundledServer.serverPort = this.connectionData.port ?? "";
-      this.bundledServer.serverName = this.connectionData.serverAddress;
-    }
-
-    return html`
-      <div class="col">
-        <div class="row">
-          <div class="col gap-0">
-            ${this.renderServerName(ServerType.KDB, true)}
-          </div>
-        </div>
-        <div class="row">
-          <div class="col gap-0">
-            ${this.renderConnAddress(ServerType.KDB, true)}
-          </div>
-        </div>
-        <div class="row">
-          <div class="col gap-0">${this.renderPortNumber(true)}</div>
-        </div>
-      </div>
-    `;
   }
 
   renderMyQEditForm() {
@@ -975,13 +865,7 @@ export class KdbNewConnectionView extends LitElement {
 
   private save() {
     this.removeBlankLabels();
-    if (this.isBundledQ) {
-      this.vscode.postMessage({
-        command: "kdb.connections.add.bundleq",
-        data: this.bundledServer,
-        labels: this.labels,
-      });
-    } else if (this.serverType === ServerType.INSIGHTS) {
+    if (this.serverType === ServerType.INSIGHTS) {
       this.vscode.postMessage({
         command: "kdb.connections.add.insights",
         data: this.data,
@@ -1016,14 +900,7 @@ export class KdbNewConnectionView extends LitElement {
       return;
     }
     this.removeBlankLabels();
-    if (this.connectionData.connType === 0) {
-      this.vscode.postMessage({
-        command: "kdb.connections.edit.bundleq",
-        data: this.bundledServer,
-        oldAlias: "local",
-        labels: this.labels,
-      });
-    } else if (this.connectionData.connType === 1) {
+    if (this.connectionData.connType === 1) {
       this.vscode.postMessage({
         command: "kdb.connections.edit.kdb",
         data: this.data,

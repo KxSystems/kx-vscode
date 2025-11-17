@@ -19,7 +19,7 @@ import * as kdbValidators from "../../../src/validators/kdbValidator";
 
 describe("kdbValidator", () => {
   it("Should return fail for server alias that is blank or undefined", () => {
-    const result = kdbValidators.validateServerAlias(undefined, false);
+    const result = kdbValidators.validateServerAlias(undefined);
     assert.strictEqual(
       result,
       undefined,
@@ -30,7 +30,7 @@ describe("kdbValidator", () => {
   it("Should fail if the Alias already exist", () => {
     sinon.stub(kdbValidators, "isAliasInUse").returns(true);
     ext.kdbConnectionAliasList.push("teste");
-    const result = kdbValidators.validateServerAlias("teste", false);
+    const result = kdbValidators.validateServerAlias("teste");
     assert.strictEqual(
       result,
       "Server Name is already in use. Please use a different name.",
@@ -40,7 +40,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail for server alias that starts with a space", () => {
-    const result = kdbValidators.validateServerAlias(" test", false);
+    const result = kdbValidators.validateServerAlias(" test");
     assert.strictEqual(
       result,
       "Input value cannot start with a space.",
@@ -51,7 +51,6 @@ describe("kdbValidator", () => {
   it("Should return fail for server alias that is outside the size limits", () => {
     const result = kdbValidators.validateServerAlias(
       "t".repeat(kdbValidators.MAX_STR_LEN + 1),
-      false,
     );
     assert.strictEqual(
       result,
@@ -61,7 +60,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail for server alias should not contain special chars", () => {
-    const result = kdbValidators.validateServerAlias("test!", false);
+    const result = kdbValidators.validateServerAlias("test!");
     assert.strictEqual(
       result,
       "Input value must contain only alphanumeric characters and hypens",
@@ -70,10 +69,7 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail if using restricted keyword", () => {
-    const result = kdbValidators.validateServerAlias(
-      "InsightsEnterprise",
-      false,
-    );
+    const result = kdbValidators.validateServerAlias("InsightsEnterprise");
     assert.strictEqual(
       result,
       "Input value using restricted keywords of Insights Enterprise",
@@ -82,28 +78,10 @@ describe("kdbValidator", () => {
   });
 
   it("Should return fail if using restricted keyword", () => {
-    const result = kdbValidators.validateServerAlias("local", false);
-    assert.strictEqual(
-      result,
-      "The server name “local” is reserved for connections to the Bundled q process",
-      "Input contained restricted keyword.",
-    );
-  });
-
-  it("Should return fail if using restricted keyword", () => {
-    const result = kdbValidators.validateServerAlias("REPL", false);
+    const result = kdbValidators.validateServerAlias("REPL");
     assert.strictEqual(
       result,
       "The server name 'REPL' is reserved for connections to the REPL",
-      "Input contained restricted keyword.",
-    );
-  });
-
-  it("Should return fail if using restricted keyword", () => {
-    const result = kdbValidators.validateServerAlias("local", false);
-    assert.strictEqual(
-      result,
-      "The server name “local” is reserved for connections to the Bundled q process",
       "Input contained restricted keyword.",
     );
   });

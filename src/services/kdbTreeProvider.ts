@@ -61,7 +61,6 @@ export class KdbTreeProvider
   }
 
   refresh(serverList: Server): void {
-    ext.isBundleQCreated = false;
     this.serverList = serverList;
     vscode.commands.executeCommand(
       "setContext",
@@ -77,13 +76,6 @@ export class KdbTreeProvider
   }
 
   getTreeItem(element: KdbNode | InsightsNode): vscode.TreeItem {
-    if (
-      element instanceof KdbNode &&
-      element.details.managed &&
-      element.details.serverAlias === "local"
-    ) {
-      ext.isBundleQCreated = true;
-    }
     if (
       element instanceof InsightsMetaNode ||
       element instanceof MetaObjectPayloadNode
