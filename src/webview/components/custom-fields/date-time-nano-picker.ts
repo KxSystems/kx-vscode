@@ -40,13 +40,14 @@ export class DateTimeNanoPicker extends LitElement {
     };
   }
 
-  /* c8 ignore next */
   connectedCallback() {
+    /* c8 ignore start */
     super.connectedCallback();
     if (this.value) {
       this.parseQDateTime(this.value);
     }
     this.parseValuesToQDateTime();
+    /* c8 ignore stop */
   }
 
   parseQDateTime(qdt: string) {
@@ -80,8 +81,8 @@ export class DateTimeNanoPicker extends LitElement {
     );
   }
 
-  /* c8 ignore next */
   render() {
+    /* c8 ignore start */
     return html`
       <div class="nanoseconds-row">
         <label>${this.label + (this.required ? " *" : "")}</label>
@@ -149,6 +150,7 @@ export class DateTimeNanoPicker extends LitElement {
         <p>${this.helpText}</p>
       </div>
     `;
+    /* c8 ignore stop */
   }
 }
 

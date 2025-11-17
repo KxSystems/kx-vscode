@@ -12,7 +12,6 @@
  */
 
 import * as assert from "assert";
-import path from "node:path";
 import { env } from "node:process";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
@@ -26,7 +25,6 @@ import {
 import * as coreUtils from "../../../src/utils/core";
 import * as cpUtils from "../../../src/utils/cpUtils";
 import * as loggers from "../../../src/utils/loggers";
-import * as shell from "../../../src/utils/shell";
 
 describe("core", () => {
   describe("checkOpenSslInstalled", () => {
@@ -896,51 +894,6 @@ describe("core", () => {
     afterEach(() => {
       sinon.restore();
     });
-    it("should return KDB+", () => {
-      ext.REAL_QHOME = "QHOME";
-      sinon.stub(shell, "stat").returns(false);
-      const env = coreUtils.getEnvironment();
-      assert.strictEqual(env.QHOME, "QHOME");
-    });
-    it("should return KDB-X", () => {
-      ext.REAL_QHOME = "QHOME";
-      sinon.stub(shell, "stat").returns(true);
-      const env = coreUtils.getEnvironment();
-      assert.strictEqual(env.QPATH, path.resolve("QHOME", "bin", "q"));
-    });
-    it("should return KDB-X", () => {
-      ext.REAL_QHOME = "";
-      const target = path.join("QHOME", "bin", "q");
-      sinon.stub(shell, "which").returns([target]);
-      const env = coreUtils.getEnvironment();
-      assert.strictEqual(env.QPATH, target);
-    });
-    it("should return qHomeDirectory", () => {
-      ext.REAL_QHOME = "";
-      sinon.stub(shell, "which").throws();
-      sinon.stub(vscode.workspace, "getConfiguration").value(() => {
-        return { get: () => "QHOME" };
-      });
-      const env = coreUtils.getEnvironment();
-      assert.strictEqual(env.QHOME, "QHOME");
-    });
-    it("should return empty", () => {
-      ext.REAL_QHOME = "";
-      sinon.stub(shell, "which").throws();
-      sinon.stub(vscode.workspace, "getConfiguration").value(() => {
-        return { get: () => "" };
-      });
-      const env = coreUtils.getEnvironment();
-      assert.strictEqual(env.QPATH, "");
-    });
-    it("should return QHOME", () => {
-      sinon
-        .stub(vscode.workspace, "getWorkspaceFolder")
-        .returns(<vscode.WorkspaceFolder>{ uri: vscode.Uri.file("TEST") });
-      sinon.stub(shell, "readTextFile").returns('QHOME="QHOME"');
-      const env = coreUtils.getEnvironment(vscode.Uri.file("TEST"));
-      assert.strictEqual(env.QHOME, "QHOME");
-    });
   });
 
   describe("checkLocalInstall", () => {
@@ -983,36 +936,6 @@ describe("core", () => {
 
       assert.strictEqual(showInformationMessageStub.called, false);
       assert.strictEqual(executeCommandStub.called, false);
-    });
-    it("should continue if 'neverShowQInstallAgain' is false", async () => {
-      getConfigurationStub().get.withArgs("kdb.qHomeDirectory").returns("");
-      getConfigurationStub()
-        .get.withArgs("kdb.neverShowQInstallAgain")
-        .returns(false);
-
-      await coreUtils.checkLocalInstall();
-
-      assert.strictEqual(showInformationMessageStub.called, true);
-      assert.strictEqual(executeCommandStub.called, true);
-    });
-
-    it("should handle 'Never show again' response", async () => {
-      getConfigurationStub().get.withArgs("kdb.qHomeDirectory").returns("");
-      getConfigurationStub()
-        .get.withArgs("kdb.neverShowQInstallAgain")
-        .returns(false);
-      showInformationMessageStub.resolves("Never show again");
-
-      await coreUtils.checkLocalInstall();
-
-      assert.strictEqual(
-        updateConfigurationStub.calledWith(
-          "kdb.neverShowQInstallAgain",
-          true,
-          vscode.ConfigurationTarget.Global,
-        ),
-        true,
-      );
     });
   });
 });

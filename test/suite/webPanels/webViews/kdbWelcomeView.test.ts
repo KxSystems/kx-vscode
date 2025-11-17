@@ -11,13 +11,23 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { workspace } from "vscode";
+/* eslint @typescript-eslint/no-explicit-any: 0 */
 
-import { MessageKind, notify } from "../utils/notifications";
+import "../../../fixtures";
+import * as assert from "assert";
+import * as sinon from "sinon";
 
-export async function showInstallationDetails(): Promise<void> {
-  const QHOME = await workspace
-    .getConfiguration()
-    .get<string>("kdb.qHomeDirectory");
-  notify(`q runtime installed path: ${QHOME}`, MessageKind.INFO);
-}
+import { KdbWelcomeView } from "../../../../src/webview/components/kdbWelcomeView";
+
+describe("kdbWelcomeView", () => {
+  let view: KdbWelcomeView;
+  beforeEach(() => {
+    view = new KdbWelcomeView();
+  });
+  afterEach(() => {
+    sinon.restore();
+  });
+  it("should exists", () => {
+    assert.ok(view);
+  });
+});

@@ -24,12 +24,6 @@ import {
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { connectClientCommands } from "./commands/clientCommand";
 import {
-  installTools,
-  startLocalProcess,
-  stopLocalProcess,
-  stopLocalProcessByServerName,
-} from "./commands/installTools";
-import {
   activeConnection,
   addAuthConnection,
   addInsightsConnection,
@@ -51,7 +45,7 @@ import {
   rerunQuery,
   resetScratchpad,
 } from "./commands/serverCommand";
-import { showInstallationDetails } from "./commands/walkthroughCommand";
+import { installKdbX, showWelcome } from "./commands/setupTools";
 import {
   ConnectionLensProvider,
   checkOldDatasourceFiles,
@@ -119,7 +113,6 @@ import {
   hasWorkspaceOrShowOption,
   initializeLocalServers,
 } from "./utils/core";
-import { runQFileTerminal } from "./utils/execution";
 import { handleFeedbackSurvey } from "./utils/feedbackSurveyUtils";
 import { getIconPath } from "./utils/iconsUtils";
 import { MessageKind, notify, Runner } from "./utils/notifications";
@@ -133,8 +126,6 @@ const logger = "extension";
 let client: LanguageClient;
 
 export async function activate(context: vscode.ExtensionContext) {
-  // TODO 2: Workaround, remove when TODO 1 is complete
-  ext.REAL_QHOME = process.env.QHOME;
   ext.context = context;
   ext.outputChannel = vscode.window.createOutputChannel("kdb");
   ext.openSslVersion = await checkOpenSslInstalled();
@@ -382,6 +373,15 @@ export async function activate(context: vscode.ExtensionContext) {
     logger,
     telemetry: "Extension.Activated",
   });
+}
+
+function registerSetupCommands(): CommandRegistration[] {
+  const setupCommands: CommandRegistration[] = [
+    { command: "kdb.show.welcome", callback: () => showWelcome() },
+    { command: "kdb.install.kdbx", callback: () => installKdbX() },
+  ];
+
+  return setupCommands;
 }
 
 function registerHelpCommands(): CommandRegistration[] {
@@ -867,18 +867,6 @@ function registerConnectionsCommands(): CommandRegistration[] {
         }
       },
     },
-    {
-      command: "kdb.connections.localProcess.stop",
-      callback: async (viewItem: KdbNode) => {
-        await stopLocalProcess(viewItem);
-      },
-    },
-    {
-      command: "kdb.connections.localProcess.start",
-      callback: async (viewItem: KdbNode) => {
-        await startLocalProcess(viewItem);
-      },
-    },
   ];
 
   return connectionCommands;
@@ -896,30 +884,6 @@ function registerExecuteCommands(): CommandRegistration[] {
       command: "kdb.execute.fileQuery",
       callback: async () => {
         await runActiveEditor(ExecutionTypes.QueryFile);
-      },
-    },
-    {
-      command: "kdb.execute.terminal.run",
-      callback: async () => {
-        if (ext.activeTextEditor) {
-          const uri = vscode.Uri.joinPath(
-            ext.context.globalStorageUri,
-            "kdb-vscode-repl.q",
-          );
-          const text = ext.activeTextEditor.document.getText();
-          try {
-            await vscode.workspace.fs.writeFile(
-              uri,
-              Buffer.from(text, "utf-8"),
-            );
-            runQFileTerminal(`"${uri.fsPath}"`);
-          } catch (error) {
-            notify(`Unable to write temp file.`, MessageKind.ERROR, {
-              logger,
-              params: error,
-            });
-          }
-        }
       },
     },
   ];
@@ -998,25 +962,6 @@ function registerFileCommands(): CommandRegistration[] {
   return fileCommands;
 }
 
-function registerInstallCommands(): CommandRegistration[] {
-  const installCommands: CommandRegistration[] = [
-    {
-      command: "kdb.install.showDetails",
-      callback: async () => {
-        await showInstallationDetails();
-      },
-    },
-    {
-      command: "kdb.install.tools",
-      callback: async () => {
-        await installTools();
-      },
-    },
-  ];
-
-  return installCommands;
-}
-
 function registerLSCommands(): CommandRegistration[] {
   const lsCommands: CommandRegistration[] = [
     {
@@ -1073,6 +1018,7 @@ function registerReplCommands(): CommandRegistration[] {
 
 function registerAllExtensionCommands(): void {
   const allCommands: CommandRegistration[] = [
+    ...registerSetupCommands(),
     ...registerHelpCommands(),
     ...registerResultsPanelCommands(),
     ...registerDatasourceCommands(),
@@ -1081,7 +1027,6 @@ function registerAllExtensionCommands(): void {
     ...registerConnectionsCommands(),
     ...registerExecuteCommands(),
     ...registerFileCommands(),
-    ...registerInstallCommands(),
     ...registerLSCommands(),
     ...registerNotebookCommands(),
     ...registerReplCommands(),
@@ -1096,11 +1041,6 @@ function registerAllExtensionCommands(): void {
 
 export async function deactivate(): Promise<void> {
   await Telemetry.dispose();
-
-  // cleanup of local q instance processes
-  Object.keys(ext.localProcessObjects).forEach((index) => {
-    stopLocalProcessByServerName(index);
-  });
 
   if (!ext.client) {
     return undefined;

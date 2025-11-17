@@ -99,8 +99,9 @@ export class NewConnectionPannel {
       this._panel.webview,
       this._extensionUri,
     );
-    /* c8 ignore next */
+
     this._panel.webview.onDidReceiveMessage((message) => {
+      /* c8 ignore start */
       if (message.command === "kdb.connections.add.bundleq") {
         if (ext.isBundleQCreated) {
           notify(
@@ -169,6 +170,7 @@ export class NewConnectionPannel {
           });
         }, 500);
       }
+      /* c8 ignore stop */
     });
   }
 
