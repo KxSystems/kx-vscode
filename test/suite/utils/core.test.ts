@@ -108,7 +108,6 @@ describe("core", () => {
           serverName: "test",
           serverAlias: "test",
           serverPort: "5001",
-          managed: false,
           auth: false,
           tls: false,
         },
@@ -116,7 +115,6 @@ describe("core", () => {
           serverName: "test2",
           serverAlias: undefined,
           serverPort: "5001",
-          managed: false,
           auth: false,
           tls: false,
         },
@@ -398,7 +396,6 @@ describe("core", () => {
       assert.strictEqual(result[serverKeys[0]].serverName, "localhost");
       assert.strictEqual(result[serverKeys[0]].serverPort, "5001");
       assert.strictEqual(result[serverKeys[0]].auth, false);
-      assert.strictEqual(result[serverKeys[1]].managed, true);
       assert.strictEqual(result[serverKeys[2]].tls, false);
     });
 

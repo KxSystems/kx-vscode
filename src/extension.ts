@@ -111,7 +111,6 @@ import {
   getInsights,
   getServers,
   hasWorkspaceOrShowOption,
-  initializeLocalServers,
 } from "./utils/core";
 import { handleFeedbackSurvey } from "./utils/feedbackSurveyUtils";
 import { getIconPath } from "./utils/iconsUtils";
@@ -129,7 +128,6 @@ export async function activate(context: vscode.ExtensionContext) {
   ext.context = context;
   ext.outputChannel = vscode.window.createOutputChannel("kdb");
   ext.openSslVersion = await checkOpenSslInstalled();
-  ext.isBundleQCreated = false;
 
   getWorkspaceLabelsConnMap();
   getWorkspaceLabels();
@@ -180,12 +178,6 @@ export async function activate(context: vscode.ExtensionContext) {
     "kdb-help-feedback-view",
     new HelpFeedbackProvider(),
   );
-
-  // initialize local servers
-  if (servers !== undefined) {
-    initializeLocalServers(servers);
-    ext.serverProvider.refresh(servers);
-  }
 
   // initialize the secret store
   AuthSettings.init(context);
@@ -760,13 +752,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
     {
       command: "kdb.connections.add.kdb",
       callback: async (kdbData: ServerDetails, labels: string[]) => {
-        await addKdbConnection(kdbData, false, labels);
-      },
-    },
-    {
-      command: "kdb.connections.add.bundleq",
-      callback: async (kdbData: ServerDetails, labels: string[]) => {
-        await addKdbConnection(kdbData, true, labels);
+        await addKdbConnection(kdbData, labels);
       },
     },
     {
@@ -787,17 +773,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
         editAuth: boolean,
         labels: string[],
       ) => {
-        await editKdbConnection(kdbData, oldAlias, false, editAuth, labels);
-      },
-    },
-    {
-      command: "kdb.connections.edit.bundleq",
-      callback: async (
-        kdbData: ServerDetails,
-        oldAlias: string,
-        labels: string[],
-      ) => {
-        await editKdbConnection(kdbData, oldAlias, true, false, labels);
+        await editKdbConnection(kdbData, oldAlias, editAuth, labels);
       },
     },
     {

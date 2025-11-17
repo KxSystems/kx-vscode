@@ -44,7 +44,6 @@ describe("workspaceCommand", () => {
       "local",
       {
         auth: false,
-        managed: false,
         serverAlias: "connection2",
         serverName: "",
         serverPort: "1",

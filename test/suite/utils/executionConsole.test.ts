@@ -34,7 +34,6 @@ describe("executionConsole", () => {
         serverName: "kdbservername",
         serverAlias: "kdbserveralias",
         serverPort: "5001",
-        managed: false,
         auth: false,
         tls: false,
       },

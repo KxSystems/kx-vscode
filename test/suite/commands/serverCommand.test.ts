@@ -212,7 +212,6 @@ describe("serverCommand", () => {
         serverName: "testServer",
         serverAlias: "testServerAlias",
         auth: false,
-        managed: false,
         serverPort: "5001",
         tls: false,
       };
@@ -237,7 +236,7 @@ describe("serverCommand", () => {
       validationServerAliasStub.returns(false);
       validationHostnameStub.returns(false);
       validationPortStub.returns(false);
-      await serverCommand.addKdbConnection(kdbData, false, ["lblTest"]);
+      await serverCommand.addKdbConnection(kdbData, ["lblTest"]);
       sinon.assert.calledOnce(updateServersStub);
       windowMock
         .expects("showInformationMessage")
@@ -270,19 +269,6 @@ describe("serverCommand", () => {
         .expects("showErrorMessage")
         .once()
         .withArgs("Server Name is required");
-    });
-
-    it("should give error if alias is local and isLocal is false", async () => {
-      validationServerAliasStub.returns(
-        "The server name “local” is reserved for connections to the Bundled q process",
-      );
-      kdbData.serverAlias = "local";
-      kdbData.managed = true;
-      await serverCommand.addKdbConnection(kdbData);
-      windowMock
-        .expects("showErrorMessage")
-        .once()
-        .withArgs("Invalid Kdb connection");
     });
 
     it("should add authentication to the connection", async () => {
@@ -367,7 +353,6 @@ describe("serverCommand", () => {
         serverAlias: "local",
         serverPort: "1818",
         auth: false,
-        managed: false,
         tls: false,
       },
       collapsibleState: vscode.TreeItemCollapsibleState.None,
@@ -491,7 +476,6 @@ describe("serverCommand", () => {
               serverAlias: "testKdb",
               serverPort: "1818",
               auth: false,
-              managed: false,
               tls: false,
             },
           ],
@@ -520,7 +504,6 @@ describe("serverCommand", () => {
               serverAlias: "testKdb",
               serverPort: "1818",
               auth: false,
-              managed: false,
               tls: false,
             },
           ],
@@ -1181,7 +1164,6 @@ describe("serverCommand", () => {
       getHashStub,
       getKeyStub,
       getInsightsStub,
-      removeLocalConnectionContextStub,
       updateServersStub,
       refreshStub,
       notifyStub: sinon.SinonStub;
@@ -1193,10 +1175,6 @@ describe("serverCommand", () => {
       getInsightsStub = sinon.stub(coreUtils, "getInsights");
       getHashStub = sinon.stub(coreUtils, "getHash");
       getKeyStub = sinon.stub(coreUtils, "getKeyForServerName");
-      removeLocalConnectionContextStub = sinon.stub(
-        coreUtils,
-        "removeLocalConnectionContext",
-      );
       updateServersStub = sinon.stub(coreUtils, "updateServers");
       refreshStub = sinon.stub(ext.serverProvider, "refresh");
 
@@ -1221,11 +1199,6 @@ describe("serverCommand", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      assert.ok(
-        removeLocalConnectionContextStub.calledWith(
-          coreUtils.getServerName(kdbNode.details),
-        ),
-      );
       assert.ok(updateServersStub.calledOnce);
       assert.ok(refreshStub.calledOnce);
     });
@@ -1270,7 +1243,6 @@ describe("serverCommand", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      assert.ok(removeLocalConnectionContextStub.notCalled);
       assert.ok(updateServersStub.notCalled);
       assert.ok(refreshStub.notCalled);
     });
@@ -1285,7 +1257,6 @@ describe("serverCommand", () => {
 
       await new Promise((resolve) => setTimeout(resolve, 0));
 
-      assert.ok(removeLocalConnectionContextStub.notCalled);
       assert.ok(updateServersStub.notCalled);
       assert.ok(refreshStub.notCalled);
     });

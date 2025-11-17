@@ -29,9 +29,7 @@ import {
   isBaseVersionGreaterOrEqual,
   getInsights,
   getKeyForServerName,
-  getServerName,
   getServers,
-  removeLocalConnectionContext,
   updateInsights,
   updateServers,
 } from "../utils/core";
@@ -273,8 +271,6 @@ export class ConnectionManagementService {
         uServers.forEach((server) => {
           updatedServers[server] = servers[server];
         });
-
-        removeLocalConnectionContext(getServerName(connNode.details));
 
         await updateServers(updatedServers);
         ext.serverProvider.refresh(updatedServers);

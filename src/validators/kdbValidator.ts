@@ -18,7 +18,6 @@ export const MAX_STR_LEN = 2048;
 
 export function validateServerAlias(
   input: string | undefined,
-  isLocal: boolean,
 ): string | undefined {
   // server alias is not required, but should be validated if entered
   if (input !== undefined) {
@@ -40,10 +39,6 @@ export function validateServerAlias(
 
     if (input === "InsightsEnterprise") {
       return "Input value using restricted keywords of Insights Enterprise";
-    }
-
-    if (!isLocal && input.toLowerCase() === "local") {
-      return "The server name “local” is reserved for connections to the Bundled q process";
     }
 
     if (input.toUpperCase() === ext.REPL) {

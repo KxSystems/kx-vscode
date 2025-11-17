@@ -22,10 +22,7 @@ import {
   retrieveConnLabelsNames,
 } from "../utils/connLabel";
 import { getNonce } from "../utils/getNonce";
-import { MessageKind, notify } from "../utils/notifications";
 import { getUri } from "../utils/uriUtils";
-
-const logger = "newConnection";
 
 export class NewConnectionPannel {
   public static currentPanel: NewConnectionPannel | undefined;
@@ -102,21 +99,6 @@ export class NewConnectionPannel {
 
     this._panel.webview.onDidReceiveMessage((message) => {
       /* c8 ignore start */
-      if (message.command === "kdb.connections.add.bundleq") {
-        if (ext.isBundleQCreated) {
-          notify(
-            "Bundled Q is already created, please remove it first",
-            MessageKind.ERROR,
-            { logger },
-          );
-        } else {
-          vscode.commands.executeCommand(
-            "kdb.connections.add.bundleq",
-            message.data,
-            message.labels,
-          );
-        }
-      }
       if (message.command === "kdb.connections.add.insights") {
         vscode.commands.executeCommand(
           "kdb.connections.add.insights",
@@ -145,14 +127,6 @@ export class NewConnectionPannel {
           message.data,
           message.oldAlias,
           message.editAuth,
-          message.labels,
-        );
-      }
-      if (message.command === "kdb.connections.edit.bundleq") {
-        vscode.commands.executeCommand(
-          "kdb.connections.edit.bundleq",
-          message.data,
-          message.oldAlias,
           message.labels,
         );
       }
@@ -222,9 +196,7 @@ export class NewConnectionPannel {
     if (conn instanceof InsightsNode) {
       return ConnectionType.Insights;
     } else {
-      return conn.details.managed
-        ? ConnectionType.BundledQ
-        : ConnectionType.Kdb;
+      return ConnectionType.Kdb;
     }
   }
 

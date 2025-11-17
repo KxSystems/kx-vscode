@@ -53,7 +53,6 @@ describe("kdbNewConnectionPanel", () => {
       serverPort: "kdbserverport",
       auth: true,
       serverAlias: "kdbserveralias",
-      managed: false,
       tls: true,
     },
     TreeItemCollapsibleState.None,
@@ -66,7 +65,6 @@ describe("kdbNewConnectionPanel", () => {
       serverPort: "kdbserverport",
       auth: false,
       serverAlias: "local",
-      managed: true,
       tls: false,
     },
     TreeItemCollapsibleState.None,
@@ -107,7 +105,6 @@ describe("kdbNewConnectionPanel", () => {
     Object.assign(ext, {
       connLabelList: [],
       labelColors: [],
-      isBundleQCreated: false,
     });
 
     clearWorkspaceLabelsStub = sinon.stub(connLabel, "clearWorkspaceLabels");
