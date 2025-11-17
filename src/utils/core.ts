@@ -228,12 +228,15 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
     }
   }
 
-  const setting = workspace
+  const qHomeDirectory = workspace
     .getConfiguration("kdb", resource)
-    .inspect<string>("qHomeDirectory");
+    .get<string>("qHomeDirectory", "");
 
-  const home =
-    setting?.workspaceFolderValue || env.QHOME || setting?.globalValue || "";
+  const qHomeDirectoryWorkspace = workspace
+    .getConfiguration("kdb", resource)
+    .get<string>("qHomeDirectoryWorkspace", "");
+
+  const home = qHomeDirectoryWorkspace || env.QHOME || qHomeDirectory || "";
 
   if (home) {
     let q = path.resolve(home, "bin", "q");

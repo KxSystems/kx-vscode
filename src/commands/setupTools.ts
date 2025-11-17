@@ -254,7 +254,7 @@ async function setHome(home: string, folder?: vscode.ConfigurationScope) {
   /* c8 ignore start */
   const config = vscode.workspace.getConfiguration("kdb", folder);
   await config.update(
-    "qHomeDirectory",
+    folder ? "qHomeDirectoryWorkspace" : "qHomeDirectory",
     home,
     folder
       ? vscode.ConfigurationTarget.WorkspaceFolder

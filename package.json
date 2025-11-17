@@ -87,6 +87,12 @@
           "default": "",
           "scope": "machine"
         },
+        "kdb.qHomeDirectoryWorkspace": {
+          "type": "string",
+          "description": "QHOME directory for q runtime for the workspace",
+          "default": "",
+          "scope": "resource"
+        },
         "kdb.neverShowQInstallAgain": {
           "type": "boolean",
           "description": "Never show q install walkthrough again",
