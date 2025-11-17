@@ -229,9 +229,7 @@ async function parseOutput(execution: vscode.TerminalShellExecution) {
   let home;
   const stream = execution.read();
   for await (const data of stream) {
-    const matches = /KDB-X has been installed to ([\P{Cc}]+?) with/gsu.exec(
-      data,
-    );
+    const matches = /KDB-X has been installed to (.+?) with/gs.exec(data);
     if (matches) {
       home = matches[1];
       break;
