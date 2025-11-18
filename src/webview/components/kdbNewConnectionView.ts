@@ -43,13 +43,6 @@ export class KdbNewConnectionView extends LitElement {
     username: "",
     password: "",
   };
-  bundledServer: ServerDetails = {
-    serverName: "127.0.0.1",
-    serverPort: "",
-    auth: false,
-    serverAlias: "local",
-    tls: false,
-  };
   insightsServer: InsightDetails = {
     alias: "",
     server: "",
@@ -59,7 +52,6 @@ export class KdbNewConnectionView extends LitElement {
   };
   labels: string[] = [""];
   serverType: ServerType = ServerType.KDB;
-  isBundledQ: boolean = true;
   oldAlias: string = "";
   editAuth: boolean = false;
   renderId: string = "";
@@ -67,10 +59,8 @@ export class KdbNewConnectionView extends LitElement {
   private _connectionData: EditConnectionMessage | undefined = undefined;
   private readonly vscode = acquireVsCodeApi();
   private tabConfig = {
-    1: { isBundledQ: true, serverType: ServerType.KDB },
-    2: { isBundledQ: false, serverType: ServerType.KDB },
-    3: { isBundledQ: false, serverType: ServerType.INSIGHTS },
-    default: { isBundledQ: true, serverType: ServerType.KDB },
+    2: { serverType: ServerType.INSIGHTS },
+    default: { serverType: ServerType.KDB },
   };
 
   get connectionData(): EditConnectionMessage | undefined {
@@ -130,15 +120,11 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   get selectConnection(): string {
-    if (this.isBundledQ) {
-      return "tab-1";
-    }
     switch (this.serverType) {
       case ServerType.INSIGHTS:
-        return "tab-3";
-      case ServerType.KDB:
-      default:
         return "tab-2";
+      default:
+        return "tab-1";
     }
   }
 
@@ -166,10 +152,7 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   renderServerNameDesc() {
-    return html`<span
-      >Name the server, <u>but do not use "REPL";</u> "REPL" has been
-      reserved.</span
-    >`;
+    return html`<span>Name the server.</span>`;
   }
 
   renderServerNameField(serverType: ServerType) {
@@ -316,7 +299,6 @@ export class KdbNewConnectionView extends LitElement {
     const config =
       this.tabConfig[tabNumber as keyof typeof this.tabConfig] ??
       this.tabConfig.default;
-    this.isBundledQ = config.isBundledQ;
     this.serverType = config.serverType;
   }
 
@@ -604,7 +586,6 @@ export class KdbNewConnectionView extends LitElement {
                   panel="${ConnectionType.Kdb}"
                   ?active="${live(this.selectedTab === ConnectionType.Kdb)}"
                   @click="${() => {
-                    this.isBundledQ = false;
                     this.serverType = ServerType.KDB;
                     this.selectedTab = ConnectionType.Kdb;
                   }}"
@@ -617,7 +598,6 @@ export class KdbNewConnectionView extends LitElement {
                     this.selectedTab === ConnectionType.Insights,
                   )}"
                   @click="${() => {
-                    this.isBundledQ = false;
                     this.serverType = ServerType.INSIGHTS;
                     this.selectedTab = ConnectionType.Insights;
                   }}"
@@ -656,7 +636,6 @@ export class KdbNewConnectionView extends LitElement {
     if (!this.connectionData) {
       return html`<div>No connection found to be edited</div>`;
     }
-    this.isBundledQ = this.connectionData.connType === ConnectionType.BundledQ;
     if (
       this.renderId === "" ||
       this.oldAlias !== this.connectionData.serverName
@@ -701,10 +680,10 @@ export class KdbNewConnectionView extends LitElement {
   }
 
   defineConnTypeName(connType: number) {
-    if (connType === ConnectionType.Kdb) {
-      return "My q";
-    } else {
+    if (connType === ConnectionType.Insights) {
       return "Insights";
+    } else {
+      return "My q";
     }
   }
 

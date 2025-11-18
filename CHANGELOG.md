@@ -6,9 +6,9 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 ### Enhancements
 
-- Refactored extension welcome page for KDB-X GA
+- Refactored extension welcome page for KDB-X
 - Ability to execute SQL files on REPL
-- Removed `local` connection
+- Removed `Bundled q` connection feature
 
 ### Fixes
 
