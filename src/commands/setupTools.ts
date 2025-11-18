@@ -113,7 +113,7 @@ export async function installKdbX() {
   /* c8 ignore start */
   if (process.platform === "win32") {
     notify(
-      "KDB-X on Windows requires Windows Subsystem for Linux (WSL).",
+      "KDB-X on Windows requires Windows Subsystem for Linux (WSL). Connect to a WSL instance and try again.",
       MessageKind.WARNING,
       { logger },
     );
