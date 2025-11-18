@@ -4,7 +4,7 @@
 
 The **kdb Visual Studio Code extension** provides developers with an extensive set of features that enables them to create and edit q files, connect to multiple kdb processes, and execute queries.
 
-This extension serves as an IDE for [KDB-X](https://code.kx.com/kdb-x/) and can also be used with [kdb Insights Enterprise](https://code.kx.com/insights/enterprise/index.html) when using a shared kdb process.
+This extension serves as an IDE for [KDB-X](https://code.kx.com/kdb-x/) and can also be used with [kdb Insights Enterprise](https://code.kx.com/insights/enterprise/index.html) when using a shared kdb process. In addition, it supports the older kdb+ Personal Edition and kdb+ SDK, working with any q executable.
 
 ## Contents
 
@@ -30,7 +30,7 @@ This guide provides information on the following:
 
 With the **kdb VS Code extension** you can:
 
-- Install q.
+- Install KDB-X.
 - Write q syntax with support for syntax highlighting, predict and autocomplete.
 - Write and execute q from a single line of code, code block or q file.
 - Write and execute q and Python code against kdb Insights Enterprise.
@@ -181,7 +181,7 @@ To add connections:
 
    ![connecttoakdbserver](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/connecttoakdbserver.png)
 
-   This opens the **Add a new connection** screen which has three tabs; one for each of the three connection types.
+   This opens the **Add a new connection** screen which has a tab for each of the connection types.
    - [My q](#my-q): This is an unmanaged q session and is a connection to a remote q process.
    - [Insights](#insights-connection): This accesses **kdb Insights Enterprise** API endpoints and a user-specific scratchpad process within a **kdb Insights Enterprise** deployment.
 
@@ -195,7 +195,7 @@ Set the following properties:
 
 | Property               | Description                                                                                                                                                                                                                          |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Server Name            | The server name / alias. The server name selected cannot be **insights**, as this is reserved for use by [Insights connections](#insights-connection); e.g. dev |
+| Server Name            | The server name / alias. The server name selected cannot be **insights**, as this is reserved for use by [Insights connections](#insights-connection); e.g. dev. |
 | The connection address | Set to the IP address of the kdb server; e.g. **localhost**.                                                                                                                                                                         |
 | Port                   | Enter the port used by the kdb server; e.g. 5001. Learn more about [setting a q port](https://code.kx.com/q/basics/ipc/) .                                                                                                           |
 | Username               | If authentication is needed, fill in the username otherwise, leave **blank**                                                                                                                                                         |
