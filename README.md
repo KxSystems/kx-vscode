@@ -72,7 +72,11 @@ The kdb VSCode extension supports KDB-X, the next generation of kdb+ designed fo
 
 When first opening the KX extension, you are greeted by a **Welcome to KDB-X** message and instructions on how to install KDB-X.
 
-![Welcome to KDB-X](.README/welcome-to-kdbx.png)
+![Welcome to KDB-X](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/welcome-to-kdbx.png)
+
+**Note!** If you are an existing user who has previously disabled the welcome screen, use the `Welcome to KDB-X` command in the Command Palette to re-enable it. Furthermore, if you already have the KDB-X license key and you want to install it for example on a remote machine, run the `Install KDB-X` command.
+
+![Install and welcome commands](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/install-kdbx-command.png)
 
 **Setup instructions:**
 
@@ -167,7 +171,11 @@ Key benefits include:
 
 ### Use PyKX within REPL
 
+The kdb VSCode extension allows you to integrate PyKX directly within the REPL environment. When KDB-X is installed through VS Code, PyKX support is automatically available within the REPL environment, enabling you to switch between q and Python contexts for data analysis, visualization, or model development.
+
 Refer to the [PyKX within REPL](https://github.com/KxSystems/kx-vscode/wiki/Use-PyKX-Within-REPL) instructions for details on how to get started and use PyKX within REPL.
+
+**Note!** The REPL automatically inherits the active Python virtual environment (`venv`) from the Python extension in VS Code. If you switch Python interpreters and restart the REPL, it will use the latest interpreter selected in VS Code.
 
 ## Connections
 
