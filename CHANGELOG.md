@@ -6,7 +6,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 ### Enhancements
 
-- Refactored the extension welcome page to introduce KDB-X and streamline the setup and activation process
+- Introduce KDB-X to the welcome page and streamline the setup and activation process
 - Added the ability to execute SQL files directly within the REPL environment
 - Removed the deprecated `Bundled q` connection feature
 
