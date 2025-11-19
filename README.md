@@ -80,7 +80,7 @@ When first opening the KX extension, you are greeted by a **Welcome to KDB-X** m
 
 **Setup instructions:**
 
-1. Sign in or create an account
+1. Log in or create an account
 
    - When prompted, a browser window opens automatically.
    - Enter your email address, verify using the code sent to you, and accept the KDB-X EULA.
