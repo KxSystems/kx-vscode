@@ -13,6 +13,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 ### Fixes
 
 - Resolved an issue where the copy action was not appearing for certain files in the query history
+- Fixed an issue where My q connections would attempt to reconnect after a q process had terminated
 
 # v1.15.0
 

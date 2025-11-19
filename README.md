@@ -177,6 +177,10 @@ Refer to the [PyKX within REPL](https://github.com/KxSystems/kx-vscode/wiki/Use-
 
 **Note!** The REPL automatically inherits the active Python virtual environment (`venv`) from the Python extension in VS Code. If you switch Python interpreters and restart the REPL, it will use the latest interpreter selected in VS Code.
 
+### Supported file types
+
+In addition to q and Python files, SQL files are also supported for execution within REPL. Refer to the [supported execution types](https://github.com/KxSystems/kx-vscode/wiki/Supported-Execution-Types) table for more details.
+
 ## Connections
 
 The **kdb VS Code extension** allows you to have multiple connections open at once, enabling development and testing across different q and kdb Insights Enterprise connections using both q and Python.
