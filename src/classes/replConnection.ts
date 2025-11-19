@@ -751,4 +751,8 @@ export class ReplConnection {
 
     return repl;
   }
+
+  static dispose() {
+    Array.from(this.repls.values()).forEach((repl) => repl.close());
+  }
 }

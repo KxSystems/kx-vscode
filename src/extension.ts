@@ -21,6 +21,7 @@ import {
   TransportKind,
 } from "vscode-languageclient/node";
 
+import { ReplConnection } from "./classes/replConnection";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { connectClientCommands } from "./commands/clientCommand";
 import {
@@ -1016,6 +1017,8 @@ function registerAllExtensionCommands(): void {
 }
 
 export async function deactivate(): Promise<void> {
+  ReplConnection.dispose();
+
   await Telemetry.dispose();
 
   if (!ext.client) {
