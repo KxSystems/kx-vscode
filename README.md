@@ -4,7 +4,7 @@
 
 The **kdb Visual Studio Code extension** provides developers with an extensive set of features that enables them to create and edit q files, connect to multiple kdb processes, and execute queries.
 
-This extension serves as an IDE for [KDB-X](https://code.kx.com/kdb-x/) and can also be used with [kdb Insights Enterprise](https://code.kx.com/insights/enterprise/index.html) when using a shared kdb process. In addition, it supports the older kdb+ Personal Edition and kdb+ SDK, working with any q executable.
+This extension serves as an IDE for [KDB-X](https://code.kx.com/kdb-x/) and can also be used with [kdb Insights Enterprise](https://code.kx.com/insights/enterprise/index.html). In addition, it supports the kdb+ Personal Edition and kdb Insights SDK, working with any q executable.
 
 ## Contents
 
@@ -74,7 +74,7 @@ When first opening the KX extension, you are greeted by a **Welcome to KDB-X** m
 
 ![Welcome to KDB-X](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/welcome-to-kdbx.png)
 
-**Note!** If you are an existing user who has previously disabled the welcome screen, use the `Welcome to KDB-X` command in the Command Palette to re-enable it. Furthermore, if you already have the KDB-X license key and you want to install it for example on a remote machine, run the `Install KDB-X` command.
+**Note!** If you are an existing user who has previously disabled the welcome screen, use the `Welcome to KDB-X` command in the Command Palette to re-enable it. Furthermore, if you already have the KDB-X license key and you want to use it, for example on a remote machine, run the `Install KDB-X` command.
 
 ![Install and welcome commands](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/install-kdbx-command.png)
 
@@ -83,11 +83,11 @@ When first opening the KX extension, you are greeted by a **Welcome to KDB-X** m
 1. Log in or create an account
 
    - When prompted, a browser window opens automatically.
-   - Enter your email address, verify using the code sent to you, and accept the KDB-X EULA.
+   - Log in using your email address (verify using the code sent to you) or sign in with Google, then accept the KDB-X EULA.
 
 2. Retrieve your KDB-X license key
 
-   - After log in, navigate to the [KDB-X Welcome Page](https://developer.kx.com/products/kdb-x/install) or check your welcome email to copy your unique license key.
+   - After login, navigate to the [KDB-X Welcome Page](https://developer.kx.com/products/kdb-x/install) or check your welcome email to copy your unique license key.
 
 3. Activate KDB-X in VS Code
 
@@ -141,8 +141,6 @@ REPL can be started from the command prompt by searching **>repl**.
 
 ![REPL](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/repl.png)
 
-**Important!** Before running code in the REPL interactive terminal, ensure that your [Q Home Directory](#using-q-outside-of-vs-code) is correctly configured in VSCode. This setting is required to set up the q runtime environment for the interactive terminal. To configure the Q Home Directory, go to **VSCode Settings > Extension > kdb** and enter the path for the `q` runtime.
-
 To execute a q file in REPL:
 
 1. Click **Choose Connection**
@@ -183,7 +181,7 @@ In addition to q and Python files, SQL files are also supported for execution wi
 
 ## Connections
 
-The **kdb VS Code extension** allows you to have multiple connections open at once, enabling development and testing across different q and kdb Insights Enterprise connections using both q and Python.
+The **kdb VS Code extension** allows you to have multiple connections open at once, enabling development and testing across different KDB-X and kdb Insights Enterprise connections using both q and Python.
 
 To add connections:
 
