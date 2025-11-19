@@ -6,13 +6,14 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 ### Enhancements
 
-- Refactored extension welcome page for KDB-X
-- Ability to execute SQL files on REPL
-- Removed `Bundled q` connection feature
+- Introduce KDB-X to the welcome page and streamline the setup and activation process
+- Added the ability to execute SQL files directly within the REPL environment
+- Removed the deprecated `Bundled q` connection feature
 
 ### Fixes
 
-- Resolved an issue where query history was not showing copy action for some files
+- Resolved an issue where the copy action was not appearing for certain files in the query history
+- Fixed an issue where My q connections would attempt to reconnect after a q process had terminated
 
 # v1.15.0
 
