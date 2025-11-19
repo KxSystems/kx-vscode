@@ -87,7 +87,7 @@ When first opening the KX extension, you are greeted by a **Welcome to KDB-X** m
 
 2. Retrieve your KDB-X license key
 
-   - After sign-in, navigate to the [KDB-X Welcome Page](https://developer.kx.com/products/kdb-x/install) or check your welcome email to copy your unique license key.
+   - After log in, navigate to the [KDB-X Welcome Page](https://developer.kx.com/products/kdb-x/install) or check your welcome email to copy your unique license key.
 
 3. Activate KDB-X in VS Code
 
