@@ -60,6 +60,7 @@ export interface DataSourceFiles {
     sql: {
       query: string;
     };
+    source?: string;
     uda?: UDA;
   };
 }

@@ -41,7 +41,7 @@ import {
   ServerDetails,
   ServerType,
 } from "../models/connectionsModels";
-import { DataSourceFiles } from "../models/dataSource";
+import { DataSourceFiles, DataSourceTypes } from "../models/dataSource";
 import { ExecutionTypes } from "../models/execution";
 import { Plot } from "../models/plot";
 import { QueryHistory } from "../models/queryHistory";
@@ -61,11 +61,9 @@ import { MetaContentProvider } from "../services/metaContentProvider";
 import { inputVariable } from "../services/notebookProviders";
 import { handleLabelsConnMap, removeConnFromLabels } from "../utils/connLabel";
 import {
-  addLocalConnectionContexts,
   checkOpenSslInstalled,
   getInsights,
   getKeyForServerName,
-  getServerName,
   getServers,
   offerReconnectionAfterEdit,
   updateInsights,
@@ -117,7 +115,7 @@ export async function addInsightsConnection(
   insightsData: InsightDetails,
   labels?: string[],
 ) {
-  const aliasValidation = validateServerAlias(insightsData.alias, false);
+  const aliasValidation = validateServerAlias(insightsData.alias);
   if (aliasValidation) {
     notify(aliasValidation, MessageKind.ERROR, { logger });
     return;
@@ -189,16 +187,16 @@ export async function addInsightsConnection(
   }
 }
 
-/* c8 ignore next */
 export async function editInsightsConnection(
   insightsData: InsightDetails,
   oldAlias: string,
   labels?: string[],
 ) {
+  /* c8 ignore start */
   const aliasValidation =
     oldAlias === insightsData.alias
       ? undefined
-      : validateServerAlias(insightsData.alias, false);
+      : validateServerAlias(insightsData.alias);
   if (aliasValidation) {
     notify(aliasValidation, MessageKind.ERROR, { logger });
     return;
@@ -293,15 +291,15 @@ export async function editInsightsConnection(
       }
     }
   }
+  /* c8 ignore stop */
 }
 
-// Not possible to test secrets
-/* c8 ignore next */
 export async function addAuthConnection(
   serverKey: string,
   username: string,
   password: string,
 ): Promise<void> {
+  /* c8 ignore start */
   const validUsername = validateServerUsername(username);
   if (validUsername) {
     notify(validUsername, MessageKind.ERROR, { logger });
@@ -324,11 +322,11 @@ export async function addAuthConnection(
       }
     }
   }
+  /* c8 ignore stop */
 }
 
-// Not possible to test secrets
-/* c8 ignore next */
 function removeAuthConnection(serverKey: string) {
+  /* c8 ignore start */
   if (
     Object.prototype.hasOwnProperty.call(
       ext.secretSettings.storeAuthData,
@@ -339,11 +337,11 @@ function removeAuthConnection(serverKey: string) {
       serverKey
     ];
   }
+  /* c8 ignore stop */
 }
 
-// Not possible to test secrets
-/* c8 ignore next */
 export function updateAuthDataKey(oldServerKey: string, newServerKey: string) {
+  /* c8 ignore start */
   const storeAuthData = ext.secretSettings.storeAuthData as {
     [key: string]: any;
   };
@@ -361,10 +359,9 @@ export function updateAuthDataKey(oldServerKey: string, newServerKey: string) {
   delete storeAuthData[oldServerKey];
 
   return;
+  /* c8 ignore stop */
 }
 
-// Not possible to test secrets
-/* c8 ignore next */
 export function handleEditAuthData(
   oldServerKey: string,
   newServerKey: string,
@@ -373,6 +370,7 @@ export function handleEditAuthData(
   username?: string,
   password?: string,
 ) {
+  /* c8 ignore start */
   if (editAuth) {
     removeAuthConnection(oldServerKey);
     if (isAuth && username !== "" && password !== "") {
@@ -382,6 +380,7 @@ export function handleEditAuthData(
   } else if (oldServerKey !== newServerKey) {
     updateAuthDataKey(oldServerKey, newServerKey);
   }
+  /* c8 ignore stop */
 }
 
 export async function enableTLS(serverKey: string): Promise<void> {
@@ -421,10 +420,9 @@ export async function enableTLS(serverKey: string): Promise<void> {
 
 export async function addKdbConnection(
   kdbData: ServerDetails,
-  isLocal?: boolean,
   labels?: string[],
 ): Promise<void> {
-  const aliasValidation = validateServerAlias(kdbData.serverAlias, isLocal!);
+  const aliasValidation = validateServerAlias(kdbData.serverAlias);
   const hostnameValidation = validateServerName(kdbData.serverName);
   const portValidation = validateServerPort(kdbData.serverPort);
   if (aliasValidation) {
@@ -459,25 +457,17 @@ export async function addKdbConnection(
           serverName: kdbData.serverName,
           serverPort: kdbData.serverPort,
           serverAlias: kdbData.serverAlias,
-          managed: kdbData.serverAlias === "local",
           tls: kdbData.tls,
         },
       };
-      if (servers.key.managed) {
-        await addLocalConnectionContexts(getServerName(servers[0]));
-      }
     } else {
       servers[key] = {
         auth: kdbData.auth,
         serverName: kdbData.serverName,
         serverPort: kdbData.serverPort,
         serverAlias: kdbData.serverAlias,
-        managed: kdbData.serverAlias === "local",
         tls: kdbData.tls,
       };
-      if (servers[key].managed) {
-        await addLocalConnectionContexts(getServerName(servers[key]));
-      }
     }
 
     await updateServers(servers);
@@ -506,18 +496,17 @@ export async function addKdbConnection(
   }
 }
 
-/* c8 ignore next */
 export async function editKdbConnection(
   kdbData: ServerDetails,
   oldAlias: string,
-  isLocal?: boolean,
   editAuth?: boolean,
   labels?: string[],
 ) {
+  /* c8 ignore start */
   const aliasValidation =
     oldAlias === kdbData.serverAlias
       ? undefined
-      : validateServerAlias(kdbData.serverAlias, isLocal!);
+      : validateServerAlias(kdbData.serverAlias);
   const hostnameValidation = validateServerName(kdbData.serverName);
   const portValidation = validateServerPort(kdbData.serverPort);
   if (aliasValidation) {
@@ -582,7 +571,6 @@ export async function editKdbConnection(
             serverName: kdbData.serverName,
             serverPort: kdbData.serverPort,
             serverAlias: kdbData.serverAlias,
-            managed: kdbData.serverAlias === "local",
             tls: kdbData.tls,
           };
 
@@ -598,7 +586,6 @@ export async function editKdbConnection(
             serverName: kdbData.serverName,
             serverPort: kdbData.serverPort,
             serverAlias: kdbData.serverAlias,
-            managed: kdbData.serverAlias === "local",
             tls: kdbData.tls,
           };
 
@@ -642,11 +629,11 @@ export async function editKdbConnection(
       }
     }
   }
+  /* c8 ignore stop */
 }
 
-// test fs readFileSync unit tests are flaky, no correct way to test them
-/* c8 ignore next */
 export async function importConnections() {
+  /* c8 ignore start */
   const options = {
     canSelectMany: false,
     openLabel: "Select JSON File",
@@ -690,6 +677,7 @@ export async function importConnections() {
     return;
   }
   await addImportedConnections(importedConnections);
+  /* c8 ignore stop */
 }
 
 export async function addImportedConnections(
@@ -765,8 +753,7 @@ export async function addImportedConnections(
         counter++;
       }
       connection.serverAlias = alias;
-      const isManaged = alias === "local";
-      await addKdbConnection(connection, isManaged);
+      await addKdbConnection(connection);
     }
     existingAliases.add(alias);
     counter = 1;
@@ -956,7 +943,6 @@ export async function executeQuery(
   const endTime = Date.now();
   const duration = (endTime - startTime).toString();
 
-  /* c8 ignore next */
   if (token?.isCancellationRequested) {
     return undefined;
   }
@@ -979,7 +965,7 @@ export async function executeQuery(
   } else if (isNotebook) {
     return results;
   } else {
-    /* c8 ignore next */
+    /* c8 ignore start */
     if (ext.isResultsTabVisible) {
       const data = resultToBase64(results);
       if (data) {
@@ -1034,6 +1020,7 @@ export async function executeQuery(
         isFromConnTree,
       );
     }
+    /* c8 ignore stop */
   }
 }
 
@@ -1201,12 +1188,19 @@ export function rerunQuery(rerunQueryElement: QueryHistory) {
 }
 
 export function copyQuery(queryHistoryElement: QueryHistory) {
-  if (
-    !queryHistoryElement.isDatasource &&
-    typeof queryHistoryElement.query === "string"
-  ) {
-    env.clipboard.writeText(queryHistoryElement.query);
+  let query;
+  if (queryHistoryElement.isDatasource) {
+    const ds = queryHistoryElement.query as DataSourceFiles;
+    if (ds.dataSource.selectedType === DataSourceTypes.QSQL)
+      query = ds.dataSource.source ?? ds.dataSource.qsql.query;
+    if (ds.dataSource.selectedType === DataSourceTypes.SQL)
+      query = ds.dataSource.source ?? ds.dataSource.sql.query;
+  } else if (typeof queryHistoryElement.query === "string") {
+    query = queryHistoryElement.query;
+  }
+  if (query) {
     notify("Query copied to clipboard.", MessageKind.INFO, { logger });
+    return env.clipboard.writeText(query);
   }
 }
 

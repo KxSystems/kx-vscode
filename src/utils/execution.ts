@@ -11,12 +11,10 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { env } from "node:process";
 import path from "path";
 import { Uri, window, workspace } from "vscode";
 
 import { ext } from "../extensionVariables";
-import { getAutoFocusOutputOnEntrySetting } from "./core";
 import { MessageKind, notify } from "./notifications";
 import { QueryResultType } from "../models/queryResult";
 
@@ -25,26 +23,6 @@ const logger = "execution";
 interface tblHeader {
   label: string;
   count: number;
-}
-
-export function runQFileTerminal(filename?: string): void {
-  let terminalName = "REPL: kdb q";
-  let command = "q";
-  if (filename) {
-    filename = filename.replace(/\\/g, "/");
-    terminalName = path.parse(filename).base;
-    command = `q ${filename}`;
-  }
-  window.terminals.forEach((terminal) => {
-    if (terminal.name === terminalName) terminal.dispose();
-  });
-  const terminal = window.createTerminal(terminalName);
-  if (env.QHOME) {
-    if (getAutoFocusOutputOnEntrySetting()) {
-      terminal.show(true);
-    }
-    terminal.sendText(command);
-  }
 }
 
 export function handleQueryResults(

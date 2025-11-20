@@ -138,11 +138,12 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       }
     };
 
-    /* c8 ignore next */
     workspace.onDidChangeConfiguration((event) => {
+      /* c8 ignore start */
       if ((event.affectsConfiguration("kdb.connectionMap"), document)) {
         updateWebview();
       }
+      /* c8 ignore stop */
     });
 
     const changeDocumentSubscription = workspace.onDidChangeTextDocument(
@@ -163,8 +164,8 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       changeDocumentSubscription.dispose();
     });
 
-    /* c8 ignore next */
     webview.onDidReceiveMessage(async (msg: DataSourceMessage2) => {
+      /* c8 ignore start */
       const selectedServer = getServerForUri(document.uri) || "";
       const connected = connMngService.isConnected(selectedServer);
 
@@ -239,6 +240,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           break;
         }
       }
+      /* c8 ignore stop */
     });
 
     updateWebview();

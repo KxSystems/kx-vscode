@@ -17,12 +17,6 @@ import { QueryResultType } from "../../../src/models/queryResult";
 import * as executionUtils from "../../../src/utils/execution";
 
 describe("execution", () => {
-  it("runQFileTerminal", () => {
-    const filename = "test";
-    const result = executionUtils.runQFileTerminal(filename);
-    assert.strictEqual(result, undefined);
-  });
-
   it("handleQueryResults", () => {
     const results = "test";
     const type = QueryResultType.Error;

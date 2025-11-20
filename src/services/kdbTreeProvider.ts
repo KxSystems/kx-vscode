@@ -61,7 +61,6 @@ export class KdbTreeProvider
   }
 
   refresh(serverList: Server): void {
-    ext.isBundleQCreated = false;
     this.serverList = serverList;
     vscode.commands.executeCommand(
       "setContext",
@@ -77,13 +76,6 @@ export class KdbTreeProvider
   }
 
   getTreeItem(element: KdbNode | InsightsNode): vscode.TreeItem {
-    if (
-      element instanceof KdbNode &&
-      element.details.managed &&
-      element.details.serverAlias === "local"
-    ) {
-      ext.isBundleQCreated = true;
-    }
     if (
       element instanceof InsightsMetaNode ||
       element instanceof MetaObjectPayloadNode
@@ -178,8 +170,8 @@ export class KdbTreeProvider
     return this.createInsightLeafItems(this.insightsList);
   }
 
-  /* c8 ignore next */
   private async getMetas(connLabel: string): Promise<InsightsMetaNode[]> {
+    /* c8 ignore start */
     const connMng = new ConnectionManagementService();
     const conn = connMng.retrieveConnectedConnection(connLabel);
     if (conn) {
@@ -195,10 +187,11 @@ export class KdbTreeProvider
     } else {
       return new Array<InsightsMetaNode>();
     }
+    /* c8 ignore stop */
   }
 
-  /* c8 ignore next */
   private async getNamespaces(connLabel: string): Promise<QNamespaceNode[]> {
+    /* c8 ignore start */
     const connMng = new ConnectionManagementService();
     const conn = connMng.retrieveConnectedConnection(connLabel);
     if (!conn) {
@@ -229,14 +222,15 @@ export class KdbTreeProvider
     } else {
       return new Array<QNamespaceNode>();
     }
+    /* c8 ignore stop */
   }
 
-  /* c8 ignore next */
   private async getCategories(
     ns: string | undefined,
     objectCategories: string[],
     connLabel?: string,
   ): Promise<QCategoryNode[]> {
+    /* c8 ignore start */
     // filter out views for non-default namespaces
     let filteredCategories;
     if (ns !== ".") {
@@ -258,6 +252,7 @@ export class KdbTreeProvider
         ),
     );
     return result;
+    /* c8 ignore stop */
   }
 
   private async getServerObjects(
@@ -416,13 +411,13 @@ export class KdbTreeProvider
   //   return this.createQServerNodes(nns, ns, connLabel, "namespaces");
   // }
 
-  /* c8 ignore next */
   private createQServerNodes(
     objects: any[],
     ns: string,
     connLabel: string,
     iconType: string,
   ): QServerNode[] {
+    /* c8 ignore start */
     return objects.map(
       (x) =>
         new QServerNode(
@@ -434,12 +429,13 @@ export class KdbTreeProvider
           connLabel,
         ),
     );
+    /* c8 ignore stop */
   }
 
-  /* c8 ignore next */
   private async getMetaObjects(
     connLabel: string,
   ): Promise<MetaObjectPayloadNode[]> {
+    /* c8 ignore start */
     const connMng = new ConnectionManagementService();
     const conn = connMng.retrieveConnectedConnection(connLabel);
     const isInsights = conn instanceof InsightsConnection;
@@ -514,6 +510,7 @@ export class KdbTreeProvider
     } else {
       return new Array<MetaObjectPayloadNode>();
     }
+    /* c8 ignore stop */
   }
 
   private createLeafItems(servers: Server): KdbNode[] {

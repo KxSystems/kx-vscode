@@ -17,6 +17,7 @@ import path from "node:path";
 import kill from "tree-kill";
 import * as vscode from "vscode";
 
+import { showSetupError } from "../commands/setupTools";
 import { ext } from "../extensionVariables";
 import {
   getAutoFocusOutputOnEntrySetting,
@@ -269,11 +270,13 @@ export class ReplConnection {
 
   private createProcess() {
     this.env = getEnvironment(this.workspace?.uri);
+    if (!this.env.qBinPath) showSetupError(this.workspace);
 
     return spawn(
-      `${this.activate ? this.activate + " && " : ""}"${this.env.QPATH}"`,
+      `${this.activate ? this.activate + " && " : ""}"${this.env.qBinPath}"`,
       {
         env: this.env,
+        cwd: this.workspace?.uri.fsPath,
         windowsHide: true,
         shell: this.win32 ? "cmd.exe" : "bash",
       },
@@ -647,7 +650,7 @@ export class ReplConnection {
           if (notEnvironment(data)) {
             if (path.isAbsolute(data))
               this.runQuery(
-                `\\l ${path.relative(path.resolve(this.env.QPATH, ".."), this.clean(data))}`,
+                `\\l ${path.relative(path.resolve(this.env.qBinPath, ".."), this.clean(data))}`,
               );
             else this.runQuery(data);
           }
@@ -747,5 +750,9 @@ export class ReplConnection {
     }
 
     return repl;
+  }
+
+  static dispose() {
+    Array.from(this.repls.values()).forEach((repl) => repl.close());
   }
 }

@@ -169,7 +169,6 @@ describe("connLabels", () => {
         serverName: "kdbservername",
         serverAlias: "conn1",
         serverPort: "5001",
-        managed: false,
         auth: false,
         tls: false,
       },

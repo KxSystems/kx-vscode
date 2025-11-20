@@ -27,7 +27,6 @@ import { kdbAuthMap } from "./models/connectionsModels";
 import { CustomAuth } from "./models/customAuth";
 import { DataSourceFiles } from "./models/dataSource";
 import { ConnectionLabel, LabelColors, Labels } from "./models/labels";
-import { LocalProcess } from "./models/localProcess";
 import { MetaObjectPayload } from "./models/meta";
 import { QueryHistory } from "./models/queryHistory";
 import { ScratchpadFile } from "./models/scratchpad";
@@ -44,7 +43,6 @@ import AuthSettings from "./utils/secretStorage";
 
 // eslint-disable-next-line @typescript-eslint/no-namespace
 export namespace ext {
-  export let REAL_QHOME: string | undefined;
   export const EXTENSION_VERSION =
     extensions.getExtension("KX.kdb")?.packageJSON.version || "unknown";
   export const isRCExtension = EXTENSION_VERSION.includes("rc");
@@ -68,7 +66,6 @@ export namespace ext {
   export let openSslVersion: string | null;
   export let resultPanelCSV: string;
   export let isDatasourceExecution: boolean;
-  export let isBundleQCreated: boolean;
   export const rowLimit = 150000000;
 
   export let activeConnection: LocalConnection | InsightsConnection | undefined;
@@ -122,11 +119,6 @@ export namespace ext {
     suggestFeature: "https://kx-features.ideas.aha.io/ideas/new",
     reportBug: "https://github.com/KxSystems/kx-vscode/issues/new?labels=bug",
   };
-  export const localProcessObjects: LocalProcess = {};
-  // eslint-disable-next-line prefer-const
-  export let localConnectionContexts: Array<string> = [];
-  // eslint-disable-next-line prefer-const
-  export let localConnectionStatus: Array<string> = [];
 
   export const kdbLicName = "kc.lic";
   export const kdbInstallUrl =

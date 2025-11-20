@@ -114,14 +114,14 @@ describe("Controller", () => {
     });
 
     describe("sql cell", () => {
-      it("should not execute", async () => {
+      it("should execute", async () => {
         await instance.execute(
           [notebookTestUtils.createCell("sql")],
           notebookTestUtils.createNotebook(),
           createController(),
         );
         sinon.assert.calledOnceWithMatch(replaceOutputStub, sinon.match.any, {
-          text: "Error: SQL is not supported on REPL.",
+          text: "RESULT",
           mime: "text/plain",
         });
       });
@@ -201,7 +201,6 @@ describe("Controller", () => {
                 serverPort: "kdbserverport",
                 auth: true,
                 serverAlias: "kdbserveralias",
-                managed: false,
                 tls: true,
               },
               vscode.TreeItemCollapsibleState.None,

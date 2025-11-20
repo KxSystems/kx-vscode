@@ -32,6 +32,7 @@ import {
   resultToBase64,
   needsScratchpad,
   getPythonWrapper,
+  getSQLWrapper,
 } from "../utils/queryUtils";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
 
@@ -77,12 +78,13 @@ export class KxNotebookController {
       let success = false;
       try {
         const kind = getCellKind(cell);
-        if (kind === CellKind.SQL) {
-          throw new Error("SQL is not supported on REPL.");
-        }
         const text = cell.document.getText();
         const result = await repl.executeQuery(
-          kind === CellKind.PYTHON ? getPythonWrapper(text) : text,
+          kind === CellKind.PYTHON
+            ? getPythonWrapper(text)
+            : kind === CellKind.SQL
+              ? getSQLWrapper(text)
+              : text,
           execution.token,
         );
         this.replaceOutput(execution, {

@@ -3,7 +3,7 @@
   "displayName": "kdb",
   "description": "IDE support for kdb product suite including the q programming language",
   "publisher": "KX",
-  "version": "1.15.0",
+  "version": "1.16.0",
   "engines": {
     "vscode": "^1.96.0"
   },
@@ -27,116 +27,16 @@
   "keywords": [
     "kdb",
     "kdb+",
+    "kdb-x",
     "q",
     "kdb Insights"
   ],
   "activationEvents": [
-    "onCommand:kdb.installTools",
-    "onCommand:kdb.connections.add.insights",
-    "onCommand:kdb.connections.add.kdb",
-    "onCommand:kdb.connections.add.bundleq",
-    "onCommand:kdb.connections.edit.insights",
-    "onCommand:kdb.connections.edit.kdb",
-    "onCommand:kdb.connections.edit.bundleq",
-    "onCommand:kdb.connections.labels.create",
-    "onView:kdb-datasources-explorer",
-    "onTerminalProfile:kdb.q-terminal",
     "onLanguage:python",
     "onLanguage:sql"
   ],
   "main": "./out/extension.js",
   "contributes": {
-    "walkthroughs": [
-      {
-        "id": "qinstallation",
-        "title": "Get Started with kdb",
-        "description": "Get started by installing q to work with local kdb processes - q will need to be installed either locally or via this extension.",
-        "steps": [
-          {
-            "id": "install",
-            "title": "Register, acquire license and download the q runtime",
-            "description": " \n[Install runtime](command:kdb.installTools)",
-            "media": {
-              "image": "resources/kx_install.png",
-              "altText": "register"
-            },
-            "completionEvents": [
-              "onCommand:kdb.installTools"
-            ],
-            "when": "kdb.showInstallWalkthrough"
-          },
-          {
-            "id": "view",
-            "title": "q runtime installed",
-            "description": " \n",
-            "media": {
-              "markdown": "resources/walkthrough/qinstall.md"
-            },
-            "completionEvents": [
-              "onLink:https://code.kx.com/q/learn/install/"
-            ],
-            "when": "!kdb.showInstallWalkthrough"
-          },
-          {
-            "id": "addConnection",
-            "title": "Add a connection",
-            "description": "You can configure connections for multiple kdb servers \n[Add connection](command:kdb.connections.add)",
-            "media": {
-              "markdown": "resources/walkthrough/add_connection.md"
-            },
-            "completionEvents": [
-              "command:kdb.connections.add"
-            ],
-            "when": "!kdb.showInstallWalkthrough"
-          },
-          {
-            "id": "startProcess",
-            "title": "Start a q process",
-            "description": "If q is not already running on your chosen server, right-click and choose 'Start q process' \n[Start Local Process](command:kdb.startLocalProcess)",
-            "media": {
-              "markdown": "resources/walkthrough/startProcess.md"
-            },
-            "completionEvents": [
-              "command:kdb.startLocalProcess"
-            ],
-            "when": "!kdb.showInstallWalkthrough"
-          },
-          {
-            "id": "connect",
-            "title": "Connect to a server",
-            "description": "Connect to one of your defined servers \n[Connect to server](command:kdb.connect)",
-            "media": {
-              "markdown": "resources/walkthrough/connect.md"
-            },
-            "completionEvents": [
-              "command:kdb.connect"
-            ],
-            "when": "!kdb.showInstallWalkthrough"
-          },
-          {
-            "id": "execute",
-            "title": "Execute code",
-            "description": "Execute a q file on your connected server \n[Connect to server](command:kdb.connect)",
-            "media": {
-              "markdown": "resources/walkthrough/execute.md"
-            },
-            "completionEvents": [
-              "command:kdb.execute.fileQuery"
-            ],
-            "when": "!kdb.showInstallWalkthrough"
-          },
-          {
-            "id": "more",
-            "title": "More",
-            "description": "This extension also adds syntax highlighting, code completion and code navigation for q files",
-            "media": {
-              "markdown": "resources/walkthrough/more.md"
-            },
-            "when": "!kdb.showInstallWalkthrough"
-          }
-        ]
-      }
-    ],
     "configuration": {
       "title": "kdb",
       "properties": {
@@ -185,7 +85,13 @@
           "type": "string",
           "description": "QHOME directory for q runtime",
           "default": "",
-          "scope": "machine-overridable"
+          "scope": "machine"
+        },
+        "kdb.qHomeDirectoryWorkspace": {
+          "type": "string",
+          "description": "QHOME directory for q runtime for the workspace",
+          "default": "",
+          "scope": "resource"
         },
         "kdb.neverShowQInstallAgain": {
           "type": "boolean",
@@ -250,6 +156,16 @@
     "commands": [
       {
         "category": "KX",
+        "command": "kdb.show.welcome",
+        "title": "Welcome to KDB-X"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.install.kdbx",
+        "title": "Install KDB-X"
+      },
+      {
+        "category": "KX",
         "command": "kdb.connections.export.all",
         "title": "Export connections"
       },
@@ -272,7 +188,7 @@
       {
         "category": "KX",
         "command": "kdb.datasource.create",
-        "title": "New Datasource...",
+        "title": "New KX Datasource",
         "icon": "$(add)"
       },
       {
@@ -285,7 +201,7 @@
       {
         "category": "KX",
         "command": "kdb.scratchpad.create",
-        "title": "New q workbook...",
+        "title": "New KX Workbook (q)",
         "icon": {
           "dark": "./resources/dark/add-scratchpad.svg",
           "light": "./resources/light/add-scratchpad.svg"
@@ -294,7 +210,7 @@
       {
         "category": "KX",
         "command": "kdb.scratchpad.python.create",
-        "title": "New Python workbook...",
+        "title": "New KX Workbook (Python)",
         "icon": {
           "dark": "./resources/dark/add-scratchpad-python.svg",
           "light": "./resources/light/add-scratchpad-python.svg"
@@ -358,18 +274,8 @@
       },
       {
         "category": "KX",
-        "command": "kdb.connections.localProcess.start",
-        "title": "Start q process"
-      },
-      {
-        "category": "KX",
-        "command": "kdb.connections.localProcess.stop",
-        "title": "Stop q process"
-      },
-      {
-        "category": "KX",
         "command": "kdb.connections.add",
-        "title": "New connection...",
+        "title": "New KX Connection",
         "icon": "$(add)"
       },
       {
@@ -466,12 +372,6 @@
       },
       {
         "category": "KX",
-        "command": "kdb.execute.terminal.run",
-        "title": "KX: Run File in New q Instance",
-        "icon": "$(debug-alt)"
-      },
-      {
-        "category": "KX",
         "command": "kdb.repl.start",
         "title": "Start REPL"
       },
@@ -563,7 +463,7 @@
       {
         "category": "KX",
         "command": "kdb.createNotebook",
-        "title": "Create New KX Notebook"
+        "title": "New KX Notebook"
       }
     ],
     "keybindings": [
@@ -602,12 +502,6 @@
         "key": "alt+ctrl+shift+p",
         "mac": "alt+cmd+shift+p",
         "when": "resourceFilename =~ /\\.(?:q|py|sql)$/i"
-      },
-      {
-        "command": "kdb.execute.terminal.run",
-        "key": "ctrl+shift+r",
-        "mac": "cmd+shift+r",
-        "when": "resourceFilename =~ /\\.(?:q)$/i"
       },
       {
         "command": "kdb.execute.block",
@@ -760,24 +654,84 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "kdb.connections.remove.insights",
+          "command": "kdb.show.welcome",
+          "when": "true"
+        },
+        {
+          "command": "kdb.install.kdbx",
+          "when": "true"
+        },
+        {
+          "command": "kdb.connections.export.all",
+          "when": "true"
+        },
+        {
+          "command": "kdb.connections.export.single",
           "when": "false"
         },
         {
-          "command": "kdb.connections.refresh.meta",
+          "command": "kdb.connections.import",
+          "when": "true"
+        },
+        {
+          "command": "kdb.connections.refresh.serverObjects",
           "when": "false"
         },
         {
-          "command": "kdb.connections.localProcess.start",
+          "command": "kdb.datasource.create",
+          "when": "true"
+        },
+        {
+          "command": "kdb.datasource.refreshDataSourceExplorer",
           "when": "false"
         },
         {
-          "command": "kdb.connections.localProcess.stop",
+          "command": "kdb.scratchpad.create",
+          "when": "true"
+        },
+        {
+          "command": "kdb.scratchpad.python.create",
+          "when": "true"
+        },
+        {
+          "command": "kdb.connections.content.selectView",
+          "when": "false"
+        },
+        {
+          "command": "kdb.scratchpad.explorer.refresh",
+          "when": "false"
+        },
+        {
+          "command": "kdb.file.pickConnection",
+          "when": "false"
+        },
+        {
+          "command": "kdb.file.pickTarget",
+          "when": "false"
+        },
+        {
+          "command": "kdb.file.inputVariable",
+          "when": "false"
+        },
+        {
+          "command": "kdb.file.populateScratchpad",
+          "when": "false"
+        },
+        {
+          "command": "kdb.scratchpad.run",
+          "when": "false"
+        },
+        {
+          "command": "kdb.scratchpad.reset",
+          "when": "false"
+        },
+        {
+          "command": "kdb.scratchpad.editor.reset",
           "when": "false"
         },
         {
           "command": "kdb.connections.add",
-          "when": "false"
+          "when": "true"
         },
         {
           "command": "kdb.connections.edit",
@@ -792,11 +746,7 @@
           "when": "false"
         },
         {
-          "command": "kdb.connections.open.meta",
-          "when": "false"
-        },
-        {
-          "command": "kdb.scratchpad.editor.reset",
+          "command": "kdb.connections.refresh.meta",
           "when": "false"
         },
         {
@@ -808,7 +758,7 @@
           "when": "false"
         },
         {
-          "command": "kdb.connections.disconnect",
+          "command": "kdb.connections.open.meta",
           "when": "false"
         },
         {
@@ -820,12 +770,112 @@
           "when": "false"
         },
         {
-          "command": "kdb.connections.export.single",
+          "command": "kdb.connections.remove.insights",
           "when": "false"
         },
         {
-          "command": "kdb.connections.content.selectView",
+          "command": "kdb.connections.disconnect",
           "when": "false"
+        },
+        {
+          "command": "kdb.queryHistory.rerun",
+          "when": "false"
+        },
+        {
+          "command": "kdb.queryHistory.copyQuery",
+          "when": "false"
+        },
+        {
+          "command": "kdb.queryHistory.clear",
+          "when": "false"
+        },
+        {
+          "command": "kdb.resultsPanel.update",
+          "when": "false"
+        },
+        {
+          "command": "kdb.resultsPanel.clear",
+          "when": "false"
+        },
+        {
+          "command": "kdb.resultsPanel.export.csv",
+          "when": "false"
+        },
+        {
+          "command": "kdb.datasource.import",
+          "when": "false"
+        },
+        {
+          "command": "kdb.repl.start",
+          "when": "true"
+        },
+        {
+          "command": "kdb.execute.selectedQuery",
+          "when": "false"
+        },
+        {
+          "command": "kdb.execute.fileQuery",
+          "when": "false"
+        },
+        {
+          "command": "kdb.scratchpad.python.run",
+          "when": "false"
+        },
+        {
+          "command": "kdb.scratchpad.python.run.file",
+          "when": "false"
+        },
+        {
+          "command": "kdb.ls.q.lint",
+          "when": "false"
+        },
+        {
+          "command": "kdb.file.rename",
+          "when": "false"
+        },
+        {
+          "command": "kdb.file.delete",
+          "when": "false"
+        },
+        {
+          "command": "kdb.execute.block",
+          "when": "false"
+        },
+        {
+          "command": "kdb.toggleParameterCache",
+          "when": "true"
+        },
+        {
+          "command": "kdb.connections.labels.rename",
+          "when": "false"
+        },
+        {
+          "command": "kdb.connections.labels.edit",
+          "when": "false"
+        },
+        {
+          "command": "kdb.connections.labels.delete",
+          "when": "false"
+        },
+        {
+          "command": "kdb.help.openDocumentation",
+          "when": "false"
+        },
+        {
+          "command": "kdb.help.suggestFeature",
+          "when": "false"
+        },
+        {
+          "command": "kdb.help.provideFeedback",
+          "when": "false"
+        },
+        {
+          "command": "kdb.help.reportBug",
+          "when": "false"
+        },
+        {
+          "command": "kdb.createNotebook",
+          "when": "true"
         }
       ],
       "webview/context": [
@@ -957,16 +1007,6 @@
           "command": "kdb.scratchpad.reset",
           "when": "view == kdb-servers && viewItem in kdb.connected && viewItem in kdb.insightsNodes",
           "group": "connection@7"
-        },
-        {
-          "command": "kdb.connections.localProcess.start",
-          "when": "view == kdb-servers && viewItem in kdb.local && viewItem not in kdb.running && viewItem in kdb.rootNodes",
-          "group": "connection"
-        },
-        {
-          "command": "kdb.connections.localProcess.stop",
-          "when": "view == kdb-servers && viewItem in kdb.local && viewItem in kdb.running && viewItem in kdb.rootNodes",
-          "group": "connection"
         },
         {
           "command": "kdb.queryHistory.rerun",
@@ -1134,6 +1174,15 @@
   "homepage": "https://kx.com",
   "config": {
     "ui_test_vscode_version": "1.102.0"
+  },
+  "c8": {
+    "exclude": [
+      "**/test/**/*.*",
+      "**/src/ipc/**/*.*",
+      "**/src/models/**/*.*",
+      "**/src/classes/**/*.*",
+      "**/src/extension.ts"
+    ]
   },
   "scripts": {
     "build": "npm run -S esbuild-base -- --sourcemap",

@@ -19,7 +19,7 @@ import { commands } from "vscode";
 import { ext } from "../extensionVariables";
 import { QueryResult, QueryResultType } from "../models/queryResult";
 import { ServerObject } from "../models/serverObject";
-import { delay, getAutoFocusOutputOnEntrySetting } from "../utils/core";
+import { delay } from "../utils/core";
 import { convertStringToArray, handleQueryResults } from "../utils/execution";
 import { MessageKind, notify } from "../utils/notifications";
 import { queryWrapper } from "../utils/queryUtils";
@@ -83,38 +83,21 @@ export class LocalConnection {
   public async connect(
     callback: nodeq.AsyncValueCallback<LocalConnection>,
   ): Promise<void> {
+    if (this.connection && this.connected) return;
+
     const options = await this.getCustomAuthOptions();
 
     nodeq.connect(options, (err, conn) => {
       if (err || !conn) {
         ext.serverProvider.reload();
-
-        if (this.connLabel.endsWith("[local]")) {
-          notify(
-            `Connection to server ${this.options.host}:${this.options.port} failed.`,
-            MessageKind.ERROR,
-            { logger, params: err },
-            "Start q process",
-          ).then((res) => {
-            if (res) {
-              commands.executeCommand(
-                "kdb.connections.localProcess.start",
-                ext.connectionsList.find(
-                  (conn) => conn.label === this.connLabel,
-                ),
-              );
-            }
-          });
-        } else {
-          notify(
-            `Connection to server ${this.options.host}:${this.options.port} failed.`,
-            MessageKind.ERROR,
-            { logger, params: err },
-          );
-        }
-
+        notify(
+          `Connection to server ${this.options.host}:${this.options.port} failed.`,
+          MessageKind.ERROR,
+          { logger, params: err },
+        );
         return;
       }
+
       conn.addListener("close", () => {
         commands.executeCommand("kdb.connections.disconnect", this.connLabel);
         notify(
@@ -122,26 +105,19 @@ export class LocalConnection {
           MessageKind.DEBUG,
           { logger },
         );
-        if (getAutoFocusOutputOnEntrySetting()) {
-          ext.outputChannel.show(true);
-        }
       });
 
-      if (this.connection && this.connected) {
-        this.connection.close(() => {
-          this.onConnect(err, conn, callback);
-        });
-      } else {
-        this.onConnect(err, conn, callback);
-      }
-
-      this.connected = false;
+      this.connection = conn;
+      this.connected = true;
+      this.update();
+      callback(err, this);
     });
   }
 
   public disconnect(): void {
     if (this.connected) {
       this.connection?.close();
+      this.connection = undefined;
       this.connected = false;
     }
   }
@@ -394,18 +370,6 @@ export class LocalConnection {
 
       ext.keywords = result;
     });
-  }
-
-  private onConnect(
-    err: Error | undefined,
-    conn: nodeq.Connection,
-    callback: nodeq.AsyncValueCallback<LocalConnection>,
-  ): void {
-    this.connected = true;
-    this.connection = conn;
-
-    this.update();
-    callback(err, this);
   }
 
   async getCustomAuthOptions(): Promise<nodeq.ConnectionParameters> {

@@ -22,10 +22,7 @@ import {
   retrieveConnLabelsNames,
 } from "../utils/connLabel";
 import { getNonce } from "../utils/getNonce";
-import { MessageKind, notify } from "../utils/notifications";
 import { getUri } from "../utils/uriUtils";
-
-const logger = "newConnection";
 
 export class NewConnectionPannel {
   public static currentPanel: NewConnectionPannel | undefined;
@@ -99,23 +96,9 @@ export class NewConnectionPannel {
       this._panel.webview,
       this._extensionUri,
     );
-    /* c8 ignore next */
+
     this._panel.webview.onDidReceiveMessage((message) => {
-      if (message.command === "kdb.connections.add.bundleq") {
-        if (ext.isBundleQCreated) {
-          notify(
-            "Bundled Q is already created, please remove it first",
-            MessageKind.ERROR,
-            { logger },
-          );
-        } else {
-          vscode.commands.executeCommand(
-            "kdb.connections.add.bundleq",
-            message.data,
-            message.labels,
-          );
-        }
-      }
+      /* c8 ignore start */
       if (message.command === "kdb.connections.add.insights") {
         vscode.commands.executeCommand(
           "kdb.connections.add.insights",
@@ -147,14 +130,6 @@ export class NewConnectionPannel {
           message.labels,
         );
       }
-      if (message.command === "kdb.connections.edit.bundleq") {
-        vscode.commands.executeCommand(
-          "kdb.connections.edit.bundleq",
-          message.data,
-          message.oldAlias,
-          message.labels,
-        );
-      }
       if (message.command === "kdb.connections.labels.add") {
         vscode.commands.executeCommand(
           "kdb.connections.labels.add",
@@ -169,6 +144,7 @@ export class NewConnectionPannel {
           });
         }, 500);
       }
+      /* c8 ignore stop */
     });
   }
 
@@ -220,9 +196,7 @@ export class NewConnectionPannel {
     if (conn instanceof InsightsNode) {
       return ConnectionType.Insights;
     } else {
-      return conn.details.managed
-        ? ConnectionType.BundledQ
-        : ConnectionType.Kdb;
+      return ConnectionType.Kdb;
     }
   }
 

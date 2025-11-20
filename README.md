@@ -4,7 +4,7 @@
 
 The **kdb Visual Studio Code extension** provides developers with an extensive set of features that enables them to create and edit q files, connect to multiple kdb processes, and execute queries.
 
-This extension can be used with [kdb Insights Enterprise](https://code.kx.com/insights/enterprise/index.html) when using a shared kdb process.
+This extension serves as an IDE for [KDB-X](https://code.kx.com/kdb-x/) and can also be used with [kdb Insights Enterprise](https://code.kx.com/insights/enterprise/index.html). In addition, it supports the kdb+ Personal Edition and kdb Insights SDK, working with any q executable.
 
 ## Contents
 
@@ -12,6 +12,7 @@ This guide provides information on the following:
 
 - [Benefits of using kdb VS Code Extension](#benefits-of-kdb-vs-code-extension)
 - [Getting Started](#getting-started)
+- [REPL](#repl)
 - [Creating and managing connections](#connections)
 - [kdb language server](#kdb-language-server)
 - [Executing code](#execute-code)
@@ -21,7 +22,6 @@ This guide provides information on the following:
 - [Query History](#query-history)
 - [Viewing results](#view-results)
 - [AxLibraries](#axlibraries)
-- [REPL](#repl)
 - [Settings](#settings)
 - [Help and feedback](#help-and-feedback)
 - [Shortcuts](#shortcuts)
@@ -30,7 +30,7 @@ This guide provides information on the following:
 
 With the **kdb VS Code extension** you can:
 
-- Install q.
+- Install KDB-X.
 - Write q syntax with support for syntax highlighting, predict and autocomplete.
 - Write and execute q from a single line of code, code block or q file.
 - Write and execute q and Python code against kdb Insights Enterprise.
@@ -44,7 +44,7 @@ With the **kdb VS Code extension** you can:
 To get started you must do the following:
 
 1. [Install kdb VS Code Extension](#installing-kdb-vs-code-extension)
-2. [Install q and integrate with VS Code extension](#installing-q)
+2. [Install KDB-X and integrate with VS Code extension](#installing-kdb-x)
 
 ### Installing kdb VS Code Extension
 
@@ -52,58 +52,77 @@ This section assumes you have already installed [VS Code](https://code.visualstu
 
 Install the kdb VS Code extension by clicking **Install** [on this page.](https://marketplace.visualstudio.com/items?itemName=KX.kdb)
 
-- If q is already installed the message **q runtime installed** is displayed and you can go directly to adding [connections](#connections).
-- If q is not installed the message **Local q installation not found** is displayed. If this is the case go to the [instructions for installing q.](#installing-q)
-
 Once the **kdb VS Code extension** is installed **KX** appears in the Activity Bar on the left-hand side and when it is selected the following views are displayed in the primary sidebar:
 
 - [Connections](#connections)
 - [Datasources](#data-sources)
 - [Workbooks](#workbooks)
 - [Query History](#query-history)
+- [Help and Feedback](#help-and-feedback)
 
-**Note** Customized authentication has been implemented for the kdb VS Code extension, allowing you to add custom logic when authenticating with kdb. Refer to [customized authentication](https://github.com/KxSystems/kx-vscode-auth) for details on how to set this up.
+### Customized Authentication
 
-### Installing q
+Customized authentication has been implemented for the kdb VS Code extension, allowing you to add custom logic when authenticating with kdb. 
 
-After you install **kdb VS Code extension**, if q is not already installed the extension provides a seamless integration with q, by displaying a notification with an option to download, register and install [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/). For details on the other versions available see [here](#versions-available).
+Refer to [customized authentication](https://github.com/KxSystems/kx-vscode-auth) for details on how to set this up.
 
-1. Click **Install new instance**. If the prompt is not visible ensure the kdb extension is selected in the Activity bar on the left, if that does not display the prompt, close and re-open VS Code.
+### Installing KDB-X
 
-   ![installnewinstance](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/installnewinstance.jpg)
+The kdb VSCode extension supports KDB-X, the next generation of kdb+ designed for scalable analytics, real-time data processing, and AI workflows. With this integration, you can install, configure, and run KDB-X environments directly within Visual Studio Code.
 
-1. A dropdown is displayed with the two options:
-   - **Select/Enter a license** - If you have already registered for any of the [versions of q available](#versions-available) choose this to enter the license details.
-   - **Acquire license** - If you haven't yet registered for q, click this to open a dialog with a redirect link to register for [kdb Insights Personal Edition](https://kx.com/kdb-insights-personal-edition-license-download/).
+When first opening the KX extension, you are greeted by a **Welcome to KDB-X** message and instructions on how to install KDB-X.
 
-   ![findlicense](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/findlicense.jpg)
+![Welcome to KDB-X](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/welcome-to-kdbx.png)
 
-Once registered you will receive an email with you license details. The base64 encoded license string can be found in the welcome email received after registration, under the download link for the license file.
+**Note!** If you are an existing user who has previously disabled the welcome screen, use the `Welcome to KDB-X` command in the Command Palette to re-enable it. Furthermore, if you already have the KDB-X license key and you want to use it, for example on a remote machine, run the `Install KDB-X` command.
 
-With your license details to hand, you can link this to VS Code by either choosing **Paste license string** or **Select license file** from your PC. The latter method is recommended for new users.
+![Install and welcome commands](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/install-kdbx-command.png)
 
-![findlicense](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/pastelicense.jpg)
+**Setup instructions:**
 
-The `k4.lic` or `kc.lic` license file can be downloaded to your PC using the link also found in the welcome email.
+1. Log in or create an account
 
-To finish, a prompt is offered with an opt-in to receive a newsletter.
+   - When prompted, a browser window opens automatically.
+   - Log in using your email address (verify using the code sent to you) or sign in with Google, then accept the KDB-X EULA.
+
+2. Retrieve your KDB-X license key
+
+   - After login, navigate to the [KDB-X Welcome Page](https://developer.kx.com/products/kdb-x/install) or check your welcome email to copy your unique license key.
+
+3. Activate KDB-X in VS Code
+
+   - Paste your license key when prompted.
+   - The KDB-X runtime will install automatically via the terminal.
+
+4. Start coding
+
+   - Once the installation completes, the runtime path and environment should appear in the KX Extension panel.
+   - You can start coding immediately using KDB-X scripts and sessions.
+
+**Note!** New users must install KDB-X before starting a REPL session in VS Code. The REPL environment requires the KDB-X runtime, which is installed during license activation. 
+
+As a side note, if KDB-X is installed from within VS Code, you do not need to modify your system `PATH`. The REPL automatically remembers the installed runtime location and will use it for subsequent sessions.
+
+**Additional resources:**
+
+- [KDB-X Developer Center](https://developer.kx.com/)
+- [KDB-X Documentation](https://code.kx.com/kdb-x/)
 
 ### Using q outside of VS Code
 
-If you want to use q outside of VS Code, set a [`QHOME` environment variable](https://code.kx.com/q/learn/install/#step-5-edit-your-profile) to the location used by the kdb VS Code install. A notification dialog displays the location of q, as do the extension [settings](#settings).
-
-![qfound](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/installationofqfound.jpg)
+If you want to use q outside of VS Code, set a [`QHOME` environment variable](https://code.kx.com/q/learn/install/#step-5-edit-your-profile) to the location used by the kdb VS Code install.
 
 If q is installed at `C:\q`, then `QHOME` is `C:\q`.
 
-**Note!** The kdb VS Code Extension treats the `QHOME` environment variable and the `kdb.qHomeDirectory` setting as identical when locating the q executable for REPL and bundled q connections. For more details, refer to the [QHomeDirectory](https://github.com/KxSystems/kx-vscode/wiki/qHomeDirectory) wiki page.
+**Note!** The kdb VS Code Extension treats the `QHOME` environment variable and the `kdb.qHomeDirectory` setting as identical when locating the q executable for REPL. For more details, refer to the [QHomeDirectory](https://github.com/KxSystems/kx-vscode/wiki/qHomeDirectory) wiki page.
 
 ### Versions available
 
-There are commercial and non-commercial editions available. We recommend you start with the kdb+ Personal Edition or kdb Insights Personal Edition. The following table lists the editions with links to downloads and the functionality they support.
+There are commercial and non-commercial editions available. We recommend you start with the KDB-X Community Edition or kdb Insights Personal Edition. The following table lists the editions with links to downloads and the functionality they support.
 
 | Edition                                                                                         | write q | run q queries | explore results | shared kdb process with kdb Insights |
 | ----------------------------------------------------------------------------------------------- | ------- | ------------- | --------------- | ------------------------------------ |
+| [KDB-X Community Edition](https://developer.kx.com/products/kdb-x/install)                          | yes     | yes           | yes             | no                                   |
 | [kdb+ Personal Edition](https://kx.com/kdb-personal-edition-download/)                          | yes     | yes           | yes             | no                                   |
 | [kdb Insights SDK Personal Edition](https://kx.com/kdb-insights-sdk-personal-edition-download/) | yes     | yes           | yes             | no                                   |
 | **kdb Insights Enterprise**                                                                     | yes     | yes           | yes             | yes                                  |
@@ -112,9 +131,57 @@ There are commercial and non-commercial editions available. We recommend you sta
 
 After registering for your chosen version, you will receive an email with a link to download an installation file and a `k4.lic` or `kc.lic` license file. Follow the instructions [here](https://code.kx.com/q/learn/install) for Linux, macOS and Windows to install q and a license file before proceeding.
 
+## REPL
+
+REPL stands for **Read-Eval-Print Loop**, which is an interactive programming environment used in many languages. REPLs are particularly useful for interactive development, debugging, and testing because users can write and run code snippets in real-time, seeing immediate feedback.
+
+In KX VSCode, the REPL is the primary mechanism for running and testing q code. It provides an interactive interface to execute commands directly against the KDB-X runtime.
+
+REPL can be started from the command prompt by searching **>repl**.
+
+![REPL](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/repl.png)
+
+To execute a q file in REPL:
+
+1. Click **Choose Connection**
+1. Select **REPL** from the list
+1. Execute your q file
+
+The results are shown in the terminal and you can continue to work either in your q file or directly in the terminal.
+
+Refer to the [REPL shortcuts table](https://github.com/KxSystems/kx-vscode/wiki/REPL) for information on the keyboard shortcuts you can use.
+
+### Benefits of using REPL
+
+A REPL gives you a tight feedback loop, stateful context, and guardrails. You learn faster, debug quicker, and ship with fewer mistakes.
+
+Key benefits include:
+
+- **Rapid iteration with stateful sessions**. Execute commands and receive immediate feedback while maintaining session state across operations. This enables faster development cycles with reduced boilerplate.
+
+- **Safe and efficient troubleshooting**. Experiment within transactions and roll back changes as needed. Quickly isolate and resolve issues by modifying and re-running queries in real time.
+
+- **In-context exploration and optimization**. Access schema details, autocomplete, and performance insights directly within the REPL, supporting informed tuning and discovery.
+
+- **Streamlined workflow and reusability**. Minimize context switching by staying within a single interface. Use command history as a living notebook to document, replay, or convert workflows into scripts.
+
+- **Smooth transition to production and built-in safeguards**. Validate logic in the REPL before promoting queries to production. Features like autocommit off, role switching, and environment prompts help prevent unintended changes.
+
+### Use PyKX within REPL
+
+The kdb VSCode extension allows you to integrate PyKX directly within the REPL environment. When KDB-X is installed through VS Code, PyKX support is automatically available within the REPL environment, enabling you to switch between q and Python contexts for data analysis, visualization, or model development.
+
+Refer to the [PyKX within REPL](https://github.com/KxSystems/kx-vscode/wiki/Use-PyKX-Within-REPL) instructions for details on how to get started and use PyKX within REPL.
+
+**Note!** The REPL automatically inherits the active Python virtual environment (`venv`) from the Python extension in VS Code. If you switch Python interpreters and restart the REPL, it will use the latest interpreter selected in VS Code.
+
+### Supported file types
+
+In addition to q and Python files, SQL files are also supported for execution within REPL. Refer to the [supported execution types](https://github.com/KxSystems/kx-vscode/wiki/Supported-Execution-Types) table for more details.
+
 ## Connections
 
-The **kdb VS Code extension** allows you to have multiple connections open at once, enabling development and testing across different q and kdb Insights Enterprise connections using both q and Python.
+The **kdb VS Code extension** allows you to have multiple connections open at once, enabling development and testing across different KDB-X and kdb Insights Enterprise connections using both q and Python.
 
 To add connections:
 
@@ -124,35 +191,11 @@ To add connections:
 
    ![connecttoakdbserver](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/connecttoakdbserver.png)
 
-   This opens the **Add a new connection** screen which has three tabs; one for each of the three connection types.
-   - [Bundled q](#bundled-q): This is a managed q session, which uses the q installed as part of the **kdb VS Code extension** installation. It runs a child q process from within the extension and is fully managed by the extension.
+   This opens the **Add a new connection** screen which has a tab for each of the connection types.
    - [My q](#my-q): This is an unmanaged q session and is a connection to a remote q process.
    - [Insights](#insights-connection): This accesses **kdb Insights Enterprise** API endpoints and a user-specific scratchpad process within a **kdb Insights Enterprise** deployment.
 
 1. Set the properties appropriate to the connection type as described in the following sections.
-
-### Bundled q
-
-When you select **Bundled q** as the connection type and set the following properties:
-
-| Property               | Description                                                                                                                                                                                        |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Server Name            | The name is already set as **local**.                                                                                                                                                              |
-| The connection address | This is already be set as `127.0.0.1` which corresponds to your **localhost**.                                                                                                                     |
-| Port                   | Set the port for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. 5002. [Read here for more about setting a q port](https://code.kx.com/q/basics/ipc/) |
-| Label Name             | Select the label you want to assign the connection to                                                                                                                                              |
-
-![setendpoint](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/bundleq.png)
-
-1. Click **Create Connection** and the connection appears under **CONNECTIONS** in the primary sidebar..
-
-1. Right-click the q bundled process listed under **CONNECTIONS**, and click **Start q process**.
-
-   ![setendpoint](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/managedqprocess.jpg)
-
-1. From the same right-click menu, click **Connect server**. This connects to the child q process running inside the kdb VS Code extension.
-
-If you close the extension, the connection to the child q process also closes.
 
 ### My q
 
@@ -162,7 +205,7 @@ Set the following properties:
 
 | Property               | Description                                                                                                                                                                                                                          |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Server Name            | The server name / alias. The server name selected cannot be **local** or **insights**, as these are reserved for use by [Bundled q connections](#bundled-q) and [Insights connections](#insights-connection), respectively; e.g. dev |
+| Server Name            | The server name / alias. The server name selected cannot be **insights**, as this is reserved for use by [Insights connections](#insights-connection); e.g. dev. |
 | The connection address | Set to the IP address of the kdb server; e.g. **localhost**.                                                                                                                                                                         |
 | Port                   | Enter the port used by the kdb server; e.g. 5001. Learn more about [setting a q port](https://code.kx.com/q/basics/ipc/) .                                                                                                           |
 | Username               | If authentication is needed, fill in the username otherwise, leave **blank**                                                                                                                                                         |
@@ -186,7 +229,7 @@ Set the following properties:
 
 | Property               | Description                                                                                                                |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Server Name            | The server name / alias. This can be any name, aside from `local`, which is used by [Bundled q connection](#bundled-q)     |
+| Server Name            | The server name / alias.     |
 | The connection address | This is the remote address of your **kdb Insights Enterprise** deployment: e.g. `https://mykdbinsights.cloudapp.azure.com` |
 | Label Name             | Select the label you want to assign the connection to                                                                      |
 
@@ -240,26 +283,13 @@ To edit an existing connection, right-click the connection you wish to edit and 
 
 ![Edit connected connection dialog](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/edit-connected-connection-dialog.png)
 
-### Edit Bundle q connection
-
-When editing a **Bundled q** connection, you can edit the following properties:
-
-| Property               | Description                                                                                                                                                                                         |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Server Name            | The name is already set as **local** and **cannot be edited**.                                                                                                                                      |
-| The connection address | This is already be set as `127.0.0.1` which corresponds to your **localhost** and **cannot be edited**.                                                                                             |
-| Port                   | Set the port for the kdb server. Ensure the port used doesn't conflict with any other running q process; e.g. 5002. [Read here for more about setting a q port](https://code.kx.com/q/basics/ipc/). |
-| Label Name             | Select the label you want to assign the connection to.                                                                                                                                              |
-
-![Edit Bundle q connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/edit-bundle-q-conn-form.png)
-
 ### Edit My q connection
 
 When editing a **My q** connection, you can edit the following properties:
 
 | Property               | Description                                                                                                                                                                                                                          |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Server Name            | The server name / alias. The server name selected cannot be **local** or **insights**, as these are reserved for use by [Bundled q connections](#bundled-q) and [Insights connections](#insights-connection), respectively; e.g. dev |
+| Server Name            | The server name / alias. The server name selected cannot be **insights**, as this is reserved for use by [Insights connections](#insights-connection); e.g. dev |
 | The connection address | Set to the IP address of the kdb server; e.g. **localhost**.                                                                                                                                                                         |
 | Port                   | Enter the port used by the kdb server; e.g. 5001. Learn more about [setting a q port](https://code.kx.com/q/basics/ipc/) .                                                                                                           |
 | Edit Auth options      | Check the box if you wish to change **Auth options**. If you want to **remove the Auth** for this connection, select this checkbox and leave the **Username** and **Password** fields in **blank**.                                  |
@@ -276,7 +306,7 @@ When editing a **Insights** connection, you can edit the following properties:
 
 | Property               | Description                                                                                                                                                                                                                          |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Server Name            | The server name / alias. This can be any name, aside from `local`, which is used by [Bundled q connection](#bundled-q)                                                                                                               |
+| Server Name            | The server name / alias.                                                                                                               |
 | The connection address | This is the remote address of your **kdb Insights Enterprise** deployment: e.g. `https://mykdbinsights.cloudapp.azure.com`                                                                                                           |
 | Define Realm           | Specify the Keycloak realm for authentication. Usually the realm is set to `insights`, which is the default value used by the extension. You only need to change this field if a different realm has been configured on your server. |
 | Label Name             | Select the label you want to assign the connection to                                                                                                                                                                                |
@@ -844,46 +874,6 @@ To use GGPlot2 in VSCode:
 You can make changes to the script before exporting the plot. Re-running the script updates to reflect the changes.
 
 **Note**: When executing GG script commands, select the `KDB RESULTS` tab to display the plot.
-
-## REPL
-
-REPL stands for **Read-Eval-Print Loop**, which is an interactive programming environment used in many languages. REPLs are particularly useful for interactive development, debugging, and testing because users can write and run code snippets in real-time, seeing immediate feedback.
-
-REPL can be started from the command prompt by searching **>repl**.
-
-![REPL](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/repl.png)
-
-**Important!** Before running code in the REPL interactive terminal, ensure that your [Q Home Directory](#using-q-outside-of-vs-code) is correctly configured in VSCode. This setting is required to set up the q runtime environment for the interactive terminal. To configure the Q Home Directory, go to **VSCode Settings > Extension > kdb** and enter the path for the `q` runtime.
-
-To execute a q file in REPL:
-
-1. Click **Choose Connection**
-1. Select **REPL** from the list
-1. Execute your q file
-
-The results are shown in the terminal and you can continue to work either in your q file or directly in the terminal.
-
-Refer to the [REPL shortcuts table](https://github.com/KxSystems/kx-vscode/wiki/REPL) for information on the keyboard shortcuts you can use.
-
-### Benefits of using REPL
-
-A REPL gives you a tight feedback loop, stateful context, and guardrails. You learn faster, debug quicker, and ship with fewer mistakes.
-
-Key benefits include:
-
-- **Rapid iteration with stateful sessions**. Execute commands and receive immediate feedback while maintaining session state across operations. This enables faster development cycles with reduced boilerplate.
-
-- **Safe and efficient troubleshooting**. Experiment within transactions and roll back changes as needed. Quickly isolate and resolve issues by modifying and re-running queries in real time.
-
-- **In-context exploration and optimization**. Access schema details, autocomplete, and performance insights directly within the REPL, supporting informed tuning and discovery.
-
-- **Streamlined workflow and reusability**. Minimize context switching by staying within a single interface. Use command history as a living notebook to document, replay, or convert workflows into scripts.
-
-- **Smooth transition to production and built-in safeguards**. Validate logic in the REPL before promoting queries to production. Features like autocommit off, role switching, and environment prompts help prevent unintended changes.
-
-### Use PyKX within REPL
-
-Refer to the [PyKX within REPL](https://github.com/KxSystems/kx-vscode/wiki/Use-PyKX-Within-REPL) instructions for details on how to get started and use PyKX within REPL.
 
 ## Logs
 

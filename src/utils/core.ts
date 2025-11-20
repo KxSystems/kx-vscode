@@ -17,18 +17,17 @@ import { writeFile } from "fs/promises";
 import { pathExists } from "fs-extra";
 import { homedir } from "node:os";
 import path from "node:path";
-import { env } from "node:process";
 import { tmpdir } from "os";
 import { join } from "path";
 import * as semver from "semver";
 import { commands, ConfigurationTarget, Uri, workspace } from "vscode";
 
-import { installTools } from "../commands/installTools";
 import { ext } from "../extensionVariables";
 import { tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
 import { errorMessage } from "./shared";
 import { readTextFile, stat, which } from "./shell";
+import { showWelcome } from "../commands/setupTools";
 import {
   InsightDetails,
   Insights,
@@ -100,76 +99,6 @@ export function getKeyForServerName(name: string) {
   return result || "";
 }
 
-export function initializeLocalServers(servers: Server): void {
-  Object.keys(servers!).forEach((server) => {
-    if (servers![server].managed === true) {
-      addLocalConnectionContexts(getServerName(servers![server]));
-    }
-  });
-}
-
-export async function addLocalConnectionStatus(
-  serverName: string,
-): Promise<void> {
-  ext.localConnectionStatus.push(serverName);
-  await commands.executeCommand(
-    "setContext",
-    "kdb.running",
-    ext.localConnectionStatus,
-  );
-}
-
-export async function removeLocalConnectionStatus(
-  serverName: string,
-): Promise<void> {
-  const result = ext.localConnectionStatus.filter(
-    (connection) => connection !== serverName,
-  );
-  ext.localConnectionStatus = result;
-  await commands.executeCommand(
-    "setContext",
-    "kdb.running",
-    ext.localConnectionStatus,
-  );
-}
-
-export async function addLocalConnectionContexts(
-  serverName: string,
-): Promise<void> {
-  ext.localConnectionContexts.push(serverName);
-  await commands.executeCommand(
-    "setContext",
-    "kdb.local",
-    ext.localConnectionContexts,
-  );
-}
-
-export async function removeLocalConnectionContext(
-  serverName: string,
-): Promise<void> {
-  const result = ext.localConnectionContexts.filter(
-    (connection) => connection !== serverName,
-  );
-  ext.localConnectionContexts = result;
-  await commands.executeCommand(
-    "setContext",
-    "kdb.local",
-    ext.localConnectionContexts,
-  );
-}
-
-export function saveLocalProcessObj(
-  childProcess: ChildProcess,
-  args: string[],
-): void {
-  notify(
-    `Child process id ${childProcess.pid} saved in cache.`,
-    MessageKind.DEBUG,
-    { logger },
-  );
-  ext.localProcessObjects[args[2]] = childProcess;
-}
-
 export function getOsFile(): string | undefined {
   if (process.platform === "win32") {
     return "w64.zip";
@@ -213,18 +142,9 @@ function loadEnvironment(folder: string, env: { [key: string]: string }) {
 }
 
 export function getEnvironment(resource?: Uri): { [key: string]: string } {
-  const folder = getPlatformFolder(process.platform, process.arch);
-  const qHomeDirectory = folder
-    ? workspace
-        .getConfiguration("kdb", resource)
-        .get<string>("qHomeDirectory", "")
-    : "";
-
   const env: { [key: string]: string } = {
     ...process.env,
-    qHomeDirectory,
-    QPATH: "",
-    QHOME: ext.REAL_QHOME ?? "",
+    qBinPath: "",
   };
 
   if (resource) {
@@ -238,39 +158,59 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
     }
   }
 
-  const home = env.QHOME || env.qHomeDirectory || "";
+  const qHomeDirectory = workspace
+    .getConfiguration("kdb", resource)
+    .get<string>("qHomeDirectory", "");
+
+  const qHomeDirectoryWorkspace = workspace
+    .getConfiguration("kdb", resource)
+    .get<string>("qHomeDirectoryWorkspace", "");
+
+  const home = qHomeDirectoryWorkspace || env.QHOME || qHomeDirectory || "";
 
   if (home) {
-    env.QHOME = home;
-    env.qHomeDirectory = home;
-
     let q = path.resolve(home, "bin", "q");
     let exists = stat(q);
 
-    if (folder) {
-      if (!exists) {
-        q = path.resolve(home, folder, "q");
-        exists = stat(q);
-      }
-      if (!exists) {
-        q = path.resolve(home, folder, "q.exe");
-        exists = stat(q);
+    if (!exists) {
+      const folder = getPlatformFolder(process.platform, process.arch);
+      if (folder) {
+        if (!exists) {
+          q = path.resolve(home, folder, "q");
+          exists = stat(q);
+        }
+        if (!exists) {
+          q = path.resolve(home, folder, "q.exe");
+          exists = stat(q);
+        }
       }
     }
 
-    if (exists) env.QPATH = q;
-  } else {
+    if (exists) {
+      env.QHOME = home;
+      env.qBinPath = q;
+      return env;
+    }
+  }
+
+  env.QHOME = "";
+
+  const target = join(homedir(), ".kx", "bin", "q");
+
+  if (stat(target)) env.qBinPath = target;
+  else
     try {
       for (const target of which("q")) {
         if (target.endsWith(path.join("bin", "q"))) {
-          env.QPATH = target;
-          break;
+          if (stat(target)) {
+            env.qBinPath = target;
+            break;
+          }
         }
       }
     } catch (error) {
       notify(errorMessage(error), MessageKind.DEBUG, { logger });
     }
-  }
 
   return env;
 }
@@ -305,8 +245,8 @@ export function getServers(): Server {
 }
 
 // TODO: Remove this on 1.9.0 release
-/* c8 ignore next */
 export function fixUnnamedAlias(): void {
+  /* c8 ignore start */
   const servers = getServers();
   const insights = getInsights();
   let counter = 1;
@@ -342,6 +282,7 @@ export function fixUnnamedAlias(): void {
     updateInsights(updatedInsights);
     ext.serverProvider.refreshInsights(insights);
   }
+  /* c8 ignore stop */
 }
 
 export function getAutoFocusOutputOnEntrySetting(): boolean {
@@ -454,8 +395,8 @@ export function invalidUsernameJWT(connLabel: string): void {
   );
 }
 
-/* c8 ignore next */
 export function offerConnectAction(connLabel?: string): void {
+  /* c8 ignore start */
   if (connLabel) {
     notify(
       `You aren't connected to ${connLabel}, would you like to connect? Once connected please try again.`,
@@ -478,6 +419,7 @@ export function offerConnectAction(connLabel?: string): void {
       { logger },
     );
   }
+  /* c8 ignore stop */
 }
 
 export function noSelectedConnectionAction(): void {
@@ -487,8 +429,8 @@ export function noSelectedConnectionAction(): void {
   );
 }
 
-/* c8 ignore next */
 export function offerReconnectionAfterEdit(connLabel: string): void {
+  /* c8 ignore start */
   notify(
     `You are no longer connected to ${connLabel}, would you like to connect?`,
     MessageKind.INFO,
@@ -503,6 +445,7 @@ export function offerReconnectionAfterEdit(connLabel: string): void {
       );
     }
   });
+  /* c8 ignore stop */
 }
 
 export function getInsightsAlias(insightsList: InsightDetails[]): void {
@@ -547,34 +490,12 @@ export function delay(ms: number) {
 }
 
 export async function checkLocalInstall() {
-  env.QHOME =
-    ext.REAL_QHOME ||
-    workspace.getConfiguration().get<string>("kdb.qHomeDirectory", "");
-
-  const notShow = workspace
+  const hide = workspace
     .getConfiguration()
     .get<boolean>("kdb.neverShowQInstallAgain", false);
 
-  if (notShow || env.QHOME) return;
-
-  commands.executeCommand("setContext", "kdb.showInstallWalkthrough", true);
-
-  return notify(
-    "Local q installation not found.",
-    MessageKind.INFO,
-    { logger },
-    "Install new instance",
-    "No",
-    "Never show again",
-  ).then((installResult) => {
-    if (installResult === "Install new instance") {
-      return installTools();
-    } else if (installResult === "Never show again") {
-      return workspace
-        .getConfiguration()
-        .update("kdb.neverShowQInstallAgain", true, ConfigurationTarget.Global);
-    }
-  });
+  if (hide) return;
+  showWelcome();
 }
 
 export async function convertBase64License(
