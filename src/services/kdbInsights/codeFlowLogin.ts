@@ -30,38 +30,52 @@ interface IDeferred<T> {
   reject: (reason: any) => void;
 }
 
-interface OpenIdConfig {
-  authorization_endpoint: url.URL;
-  token_endpoint: url.URL;
-  revocation_endpoint: url.URL;
-}
+const prefixMap = new Map<string, string>([
+  ["https://insights.com", "auth/"],
+  ["https://insights.example.com", "auth/"],
+]);
 
-const openIdConfigs = new Map<string, OpenIdConfig>();
-
-async function getOpenIdConfig(
+async function getAuthPrefix(
   insightsUrl: string,
   realm: string,
-): Promise<OpenIdConfig> {
-  let config = openIdConfigs.get(insightsUrl);
-  if (config) return config;
-  const base = `realms/${realm}/.well-known/openid-configuration`;
-  const opts = { maxRedirects: 0, validateStatus: () => true };
-  let res = await axios.get(
-    new url.URL(`auth/${base}`, insightsUrl).toString(),
-    opts,
-  );
-  if (res.status !== 200 || typeof res.data !== "object")
-    res = await axios.get(new url.URL(base, insightsUrl).toString(), opts);
-  if (res.status === 200 || typeof res.data === "object") {
-    config = {
-      authorization_endpoint: new url.URL(res.data["authorization_endpoint"]),
-      token_endpoint: new url.URL(res.data["token_endpoint"]),
-      revocation_endpoint: new url.URL(res.data["revocation_endpoint"]),
-    };
-    openIdConfigs.set(insightsUrl, config);
-    return config;
+): Promise<string> {
+  let prefix = prefixMap.get(insightsUrl);
+  if (prefix === undefined) {
+    const res = await axios.get(
+      new url.URL(
+        `${`realms/${realm}/.well-known/openid-configuration`}`,
+        insightsUrl,
+      ).toString(),
+      { maxRedirects: 0, validateStatus: () => true },
+    );
+    prefix = res.status === 200 ? "" : "auth/";
+    prefixMap.set(insightsUrl, prefix);
   }
-  throw new Error("Unnable to fetch OpenID configuration.");
+  return prefix;
+}
+
+async function getAuthUrl(insightsUrl: string, realm: string) {
+  const auth = await getAuthPrefix(insightsUrl, realm);
+  return new url.URL(
+    `${auth}realms/${realm}/protocol/openid-connect/auth`,
+    insightsUrl,
+  );
+}
+
+async function getTokenUrl(insightsUrl: string, realm: string) {
+  const auth = await getAuthPrefix(insightsUrl, realm);
+  return new url.URL(
+    `${auth}realms/${realm}/protocol/openid-connect/token`,
+    insightsUrl,
+  );
+}
+
+async function getRevokeUrl(insightsUrl: string, realm: string) {
+  const auth = await getAuthPrefix(insightsUrl, realm);
+  return new url.URL(
+    `${auth}realms/${realm}/protocol/openid-connect/revoke`,
+    insightsUrl,
+  );
 }
 
 export interface IToken {
@@ -98,8 +112,7 @@ export async function signIn(
       state: crypto.randomBytes(20).toString("hex"),
     };
 
-    const config = await getOpenIdConfig(insightsUrl, realm);
-    const authorizationUrl = config.authorization_endpoint;
+    const authorizationUrl = await getAuthUrl(insightsUrl, realm);
 
     authorizationUrl.search = queryString(authParams);
 
@@ -129,8 +142,8 @@ export async function signOut(
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     httpsAgent: getHttpsAgent(insecure),
   };
-  const config = await getOpenIdConfig(insightsUrl, realm);
-  const requestUrl = config.revocation_endpoint;
+
+  const requestUrl = await getRevokeUrl(insightsUrl, realm);
 
   await axios.post(requestUrl.toString(), body, headers).then((res) => {
     return res.data;
@@ -219,8 +232,7 @@ async function tokenRequest(
     httpsAgent: getHttpsAgent(insecure),
   };
 
-  const config = await getOpenIdConfig(insightsUrl, realm);
-  const requestUrl = config.token_endpoint;
+  const requestUrl = await getTokenUrl(insightsUrl, realm);
 
   let response;
   if (params.grant_type === "refresh_token") {
