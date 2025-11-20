@@ -76,14 +76,13 @@ export class InsightsConnection {
 
   public async connect(): Promise<boolean> {
     ext.context.secrets.delete(this.node.details.alias);
-    await this.getTokens().then(async (token) => {
-      this.connected = token ? true : false;
-      if (token) {
-        await this.getConfig();
-        await this.getApiConfig();
-        await this.getMeta();
-      }
-    });
+    const token = await this.getTokens();
+    if (token) {
+      this.connected = true;
+      await this.getConfig();
+      await this.getApiConfig();
+      await this.getMeta();
+    } else this.connected = false;
     return this.connected;
   }
 

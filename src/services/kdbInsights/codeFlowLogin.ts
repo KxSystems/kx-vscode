@@ -30,25 +30,38 @@ interface IDeferred<T> {
   reject: (reason: any) => void;
 }
 
-function getAuthUrl(insightsUrl: string, realm: string) {
-  return new url.URL(
-    `auth/realms/${realm}/protocol/openid-connect/auth`,
-    insightsUrl,
-  );
+interface OpenIdConfig {
+  authorization_endpoint: url.URL;
+  token_endpoint: url.URL;
+  revocation_endpoint: url.URL;
 }
 
-function getTokenUrl(insightsUrl: string, realm: string) {
-  return new url.URL(
-    `auth/realms/${realm}/protocol/openid-connect/token`,
-    insightsUrl,
-  );
-}
+const openIdConfigs = new Map<string, OpenIdConfig>();
 
-function getRevokeUrl(insightsUrl: string, realm: string) {
-  return new url.URL(
-    `auth/realms/${realm}/protocol/openid-connect/revoke`,
-    insightsUrl,
+async function getOpenIdConfig(
+  insightsUrl: string,
+  realm: string,
+): Promise<OpenIdConfig> {
+  let config = openIdConfigs.get(insightsUrl);
+  if (config) return config;
+  const base = `realms/${realm}/.well-known/openid-configuration`;
+  const opts = { maxRedirects: 0, validateStatus: () => true };
+  let res = await axios.get(
+    new url.URL(`auth/${base}`, insightsUrl).toString(),
+    opts,
   );
+  if (res.status !== 200 || typeof res.data !== "object")
+    res = await axios.get(new url.URL(base, insightsUrl).toString(), opts);
+  if (res.status === 200 || typeof res.data === "object") {
+    config = {
+      authorization_endpoint: new url.URL(res.data["authorization_endpoint"]),
+      token_endpoint: new url.URL(res.data["token_endpoint"]),
+      revocation_endpoint: new url.URL(res.data["revocation_endpoint"]),
+    };
+    openIdConfigs.set(insightsUrl, config);
+    return config;
+  }
+  throw new Error("Unnable to fetch OpenID configuration.");
 }
 
 export interface IToken {
@@ -85,7 +98,8 @@ export async function signIn(
       state: crypto.randomBytes(20).toString("hex"),
     };
 
-    const authorizationUrl = getAuthUrl(insightsUrl, realm);
+    const config = await getOpenIdConfig(insightsUrl, realm);
+    const authorizationUrl = config.authorization_endpoint;
 
     authorizationUrl.search = queryString(authParams);
 
@@ -115,7 +129,8 @@ export async function signOut(
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     httpsAgent: getHttpsAgent(insecure),
   };
-  const requestUrl = getRevokeUrl(insightsUrl, realm);
+  const config = await getOpenIdConfig(insightsUrl, realm);
+  const requestUrl = config.revocation_endpoint;
 
   await axios.post(requestUrl.toString(), body, headers).then((res) => {
     return res.data;
@@ -204,7 +219,8 @@ async function tokenRequest(
     httpsAgent: getHttpsAgent(insecure),
   };
 
-  const requestUrl = getTokenUrl(insightsUrl, realm);
+  const config = await getOpenIdConfig(insightsUrl, realm);
+  const requestUrl = config.token_endpoint;
 
   let response;
   if (params.grant_type === "refresh_token") {
