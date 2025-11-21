@@ -107,7 +107,7 @@
         },
         "kdb.linting": {
           "type": "boolean",
-          "description": "Enable linting for q and quke files",
+          "description": "Enable linting",
           "default": false,
           "scope": "resource"
         },
@@ -188,7 +188,7 @@
       {
         "category": "KX",
         "command": "kdb.datasource.create",
-        "title": "New KX Datasource",
+        "title": "New Datasource",
         "icon": "$(add)"
       },
       {
@@ -201,7 +201,7 @@
       {
         "category": "KX",
         "command": "kdb.scratchpad.create",
-        "title": "New KX Workbook (q)",
+        "title": "New Workbook (q)",
         "icon": {
           "dark": "./resources/dark/add-scratchpad.svg",
           "light": "./resources/light/add-scratchpad.svg"
@@ -210,7 +210,7 @@
       {
         "category": "KX",
         "command": "kdb.scratchpad.python.create",
-        "title": "New KX Workbook (Python)",
+        "title": "New Workbook (Python)",
         "icon": {
           "dark": "./resources/dark/add-scratchpad-python.svg",
           "light": "./resources/light/add-scratchpad-python.svg"
@@ -242,7 +242,7 @@
       {
         "category": "KX",
         "command": "kdb.file.pickTarget",
-        "title": "Choose Target",
+        "title": "Choose Execution Target",
         "shortTitle": "Target",
         "icon": "$(target)"
       },
@@ -265,17 +265,17 @@
       {
         "category": "KX",
         "command": "kdb.scratchpad.reset",
-        "title": "Reset scratchpad"
+        "title": "Reset Scratchpad"
       },
       {
         "category": "KX",
         "command": "kdb.scratchpad.editor.reset",
-        "title": "Reset editor connection"
+        "title": "Reset Scratchpad"
       },
       {
         "category": "KX",
         "command": "kdb.connections.add",
-        "title": "New KX Connection",
+        "title": "New Connection",
         "icon": "$(add)"
       },
       {
@@ -423,7 +423,7 @@
       {
         "category": "KX",
         "command": "kdb.toggleParameterCache",
-        "title": "Toggle Parameter Cache"
+        "title": "KX: Toggle Parameter Cache"
       },
       {
         "category": "KX",
@@ -463,7 +463,7 @@
       {
         "category": "KX",
         "command": "kdb.createNotebook",
-        "title": "New KX Notebook"
+        "title": "New Notebook"
       }
     ],
     "keybindings": [
@@ -513,13 +513,13 @@
         "command": "kdb.toggleParameterCache",
         "key": "ctrl+shift+y",
         "mac": "cmd+shift+y",
-        "when": "resourceFilename =~ /\\.(?:q|quke)$/i"
+        "when": "resourceFilename =~ /\\.(?:q)$/i"
       },
       {
         "command": "kdb.file.pickTarget",
         "key": "ctrl+alt+t",
         "mac": "cmd+alt+t",
-        "when": "kdb.connected.active && resourceFilename =~ /\\.(?:q|py)$/i"
+        "when": "kdb.connected.active && resourceFilename =~ /\\.(?:q|py|sql)$/i"
       }
     ],
     "snippets": [
@@ -843,7 +843,7 @@
         },
         {
           "command": "kdb.toggleParameterCache",
-          "when": "true"
+          "when": "false"
         },
         {
           "command": "kdb.connections.labels.rename",
@@ -1101,6 +1101,11 @@
           "command": "kdb.file.populateScratchpad",
           "group": "q2@0",
           "when": "resourceFilename =~ /\\.(?:q|py|sql)$/i"
+        },
+        {
+          "command": "kdb.toggleParameterCache",
+          "group": "q2@1",
+          "when": "resourceFilename =~ /\\.(?:q)$/i"
         },
         {
           "command": "kdb.scratchpad.python.run.file",
