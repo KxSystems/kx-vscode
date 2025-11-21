@@ -31,7 +31,6 @@ interface IDeferred<T> {
 }
 
 const prefixMap = new Map<string, string>([
-  ["https://insights.com", "auth/"],
   ["https://insights.example.com", "auth/"],
 ]);
 
@@ -41,15 +40,22 @@ async function getAuthPrefix(
 ): Promise<string> {
   let prefix = prefixMap.get(insightsUrl);
   if (prefix === undefined) {
+    /* c8 ignore start */
     const res = await axios.get(
       new url.URL(
         `${`realms/${realm}/.well-known/openid-configuration`}`,
         insightsUrl,
       ).toString(),
-      { maxRedirects: 0, validateStatus: () => true },
+      {
+        maxRedirects: 0,
+        validateStatus: () => true,
+        transformResponse: (res) => res,
+        responseType: "json",
+      },
     );
     prefix = res.status === 200 ? "" : "auth/";
     prefixMap.set(insightsUrl, prefix);
+    /* c8 ignore stop */
   }
   return prefix;
 }

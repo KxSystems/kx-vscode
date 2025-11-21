@@ -134,7 +134,8 @@ export class KdbWelcomeView extends LitElement {
                 <div class="row">
                   <strong>Start coding</strong>
                   <div>
-                    Installation completes → switch to KX Extension tab.
+                    Installation completes → run command
+                    <strong>KX: Start REPL</strong> from the command palette.
                   </div>
                 </div>
               </div>
