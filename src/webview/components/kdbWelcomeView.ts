@@ -105,11 +105,8 @@ export class KdbWelcomeView extends LitElement {
               <div class="col">
                 <div class="icon">${renderIcon1(this.dark)}</div>
                 <div class="row">
-                  <strong>Sign in or create an account</strong>
-                  <div>
-                    A browser opens → enter email → verify with code → accept
-                    EULA.
-                  </div>
+                  <strong>Log in or create an account</strong>
+                  <div>A browser opens → authenticate → accept EULA.</div>
                 </div>
               </div>
               <div class="col">
@@ -124,8 +121,7 @@ export class KdbWelcomeView extends LitElement {
                 <div class="row">
                   <strong>Activate in VS Code</strong>
                   <div>
-                    Paste the key in the extension → terminal installs KDB-X
-                    runtime.
+                    Paste the key in VS Code → terminal installs KDB-X runtime.
                   </div>
                 </div>
               </div>
