@@ -352,7 +352,7 @@ describe("ConnectionManagementService", () => {
       connectionManagerService.connectFailBehaviour(testLabel);
       sinon.assert.calledWith(
         showErrorMessageStub,
-        `Connection failed to: ${testLabel}`,
+        `Connection to ${testLabel} failed.`,
       );
       sinon.assert.calledWith(sendEventStub, "Connection.Failed.KDB+");
     });

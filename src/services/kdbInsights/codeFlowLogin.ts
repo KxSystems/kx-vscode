@@ -30,23 +30,56 @@ interface IDeferred<T> {
   reject: (reason: any) => void;
 }
 
-function getAuthUrl(insightsUrl: string, realm: string) {
+const prefixMap = new Map<string, string>([
+  ["https://insights.example.com", "auth/"],
+]);
+
+async function getAuthPrefix(
+  insightsUrl: string,
+  realm: string,
+): Promise<string> {
+  let prefix = prefixMap.get(insightsUrl);
+  if (prefix === undefined) {
+    /* c8 ignore start */
+    const res = await axios.get(
+      new url.URL(
+        `${`realms/${realm}/.well-known/openid-configuration`}`,
+        insightsUrl,
+      ).toString(),
+      {
+        maxRedirects: 0,
+        validateStatus: () => true,
+        transformResponse: (res) => res,
+        responseType: "json",
+      },
+    );
+    prefix = res.status === 200 ? "" : "auth/";
+    prefixMap.set(insightsUrl, prefix);
+    /* c8 ignore stop */
+  }
+  return prefix;
+}
+
+async function getAuthUrl(insightsUrl: string, realm: string) {
+  const auth = await getAuthPrefix(insightsUrl, realm);
   return new url.URL(
-    `auth/realms/${realm}/protocol/openid-connect/auth`,
+    `${auth}realms/${realm}/protocol/openid-connect/auth`,
     insightsUrl,
   );
 }
 
-function getTokenUrl(insightsUrl: string, realm: string) {
+async function getTokenUrl(insightsUrl: string, realm: string) {
+  const auth = await getAuthPrefix(insightsUrl, realm);
   return new url.URL(
-    `auth/realms/${realm}/protocol/openid-connect/token`,
+    `${auth}realms/${realm}/protocol/openid-connect/token`,
     insightsUrl,
   );
 }
 
-function getRevokeUrl(insightsUrl: string, realm: string) {
+async function getRevokeUrl(insightsUrl: string, realm: string) {
+  const auth = await getAuthPrefix(insightsUrl, realm);
   return new url.URL(
-    `auth/realms/${realm}/protocol/openid-connect/revoke`,
+    `${auth}realms/${realm}/protocol/openid-connect/revoke`,
     insightsUrl,
   );
 }
@@ -85,7 +118,7 @@ export async function signIn(
       state: crypto.randomBytes(20).toString("hex"),
     };
 
-    const authorizationUrl = getAuthUrl(insightsUrl, realm);
+    const authorizationUrl = await getAuthUrl(insightsUrl, realm);
 
     authorizationUrl.search = queryString(authParams);
 
@@ -115,7 +148,8 @@ export async function signOut(
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     httpsAgent: getHttpsAgent(insecure),
   };
-  const requestUrl = getRevokeUrl(insightsUrl, realm);
+
+  const requestUrl = await getRevokeUrl(insightsUrl, realm);
 
   await axios.post(requestUrl.toString(), body, headers).then((res) => {
     return res.data;
@@ -204,7 +238,7 @@ async function tokenRequest(
     httpsAgent: getHttpsAgent(insecure),
   };
 
-  const requestUrl = getTokenUrl(insightsUrl, realm);
+  const requestUrl = await getTokenUrl(insightsUrl, realm);
 
   let response;
   if (params.grant_type === "refresh_token") {
