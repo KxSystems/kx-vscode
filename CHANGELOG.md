@@ -2,6 +2,14 @@
 
 All notable changes to the **kdb VS Code extension** are documented in this file.
 
+# v1.16.1
+
+### Fixes
+
+- Fix for Keycloak url change in IE 1.17
+- Updated welcome page to be more clear
+- Updated documentation
+
 # v1.16.0
 
 ### Enhancements

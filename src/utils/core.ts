@@ -166,7 +166,7 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
     .getConfiguration("kdb", resource)
     .get<string>("qHomeDirectoryWorkspace", "");
 
-  const home = qHomeDirectoryWorkspace || env.QHOME || qHomeDirectory || "";
+  let home = qHomeDirectoryWorkspace || env.QHOME || qHomeDirectory || "";
 
   if (home) {
     let q = path.resolve(home, "bin", "q");
@@ -193,24 +193,28 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
     }
   }
 
-  env.QHOME = "";
+  home = join(homedir(), ".kx");
+  const target = join(home, "bin", "q");
 
-  const target = join(homedir(), ".kx", "bin", "q");
+  if (stat(target)) {
+    env.QHOME = home;
+    env.qBinPath = target;
+    return env;
+  }
 
-  if (stat(target)) env.qBinPath = target;
-  else
-    try {
-      for (const target of which("q")) {
-        if (target.endsWith(path.join("bin", "q"))) {
-          if (stat(target)) {
-            env.qBinPath = target;
-            break;
-          }
+  try {
+    for (const target of which("q")) {
+      if (target.endsWith(path.join("bin", "q"))) {
+        if (stat(target)) {
+          env.QHOME = path.resolve(path.parse(target).dir, "..");
+          env.qBinPath = target;
+          break;
         }
       }
-    } catch (error) {
-      notify(errorMessage(error), MessageKind.DEBUG, { logger });
     }
+  } catch (error) {
+    notify(errorMessage(error), MessageKind.DEBUG, { logger });
+  }
 
   return env;
 }

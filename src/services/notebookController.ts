@@ -146,7 +146,7 @@ export class KxNotebookController {
         );
 
         let results = await Promise.race([
-          (target || kind === CellKind.SQL) && !variable
+          !isInsights || ((target || kind === CellKind.SQL) && !variable)
             ? executor
             : needsScratchpad(conn.connLabel, executor),
           new Promise((_, reject) => {
