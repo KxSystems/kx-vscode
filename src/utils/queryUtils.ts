@@ -227,6 +227,12 @@ export function normalizeQuery(query: string): string {
       .replace(/^\\[\t ]*(?:\r\n|[\r\n])[^]*/gm, "")
       // Remove single line comments
       .replace(/^\/.+/gm, "")
+      // Replace system commands
+      .replace(/^\\([a-zA-Z_1-2\\]+)[\t ]*(.*)/gm, (matched, command, args) =>
+        matched === "\\\\"
+          ? 'system"\\\\"'
+          : `system"${command} ${args.trim()}"`,
+      )
       // Remove line comments
       .replace(
         /(?:("([^"\\]*(?:\\.[^"\\]*)*)")|([ \t]+\/.*))/gm,
