@@ -24,6 +24,7 @@ import {
 import { ReplConnection } from "./classes/replConnection";
 import { connectBuildTools, lintCommand } from "./commands/buildToolsCommand";
 import { connectClientCommands } from "./commands/clientCommand";
+import { startDashboards, stopDashboards } from "./commands/dashboardsCommand";
 import {
   activeConnection,
   addAuthConnection,
@@ -993,6 +994,21 @@ function registerReplCommands(): CommandRegistration[] {
   return replCommands;
 }
 
+function registerDashboardsCommands(): CommandRegistration[] {
+  const dashboardsCommands: CommandRegistration[] = [
+    {
+      command: "kdb.dashboards.start",
+      callback: () => startDashboards(),
+    },
+    {
+      command: "kdb.dashboards.stop",
+      callback: () => stopDashboards(),
+    },
+  ];
+
+  return dashboardsCommands;
+}
+
 function registerAllExtensionCommands(): void {
   const allCommands: CommandRegistration[] = [
     ...registerSetupCommands(),
@@ -1007,6 +1023,7 @@ function registerAllExtensionCommands(): void {
     ...registerLSCommands(),
     ...registerNotebookCommands(),
     ...registerReplCommands(),
+    ...registerDashboardsCommands(),
   ];
 
   allCommands.forEach((command) => {
@@ -1018,6 +1035,7 @@ function registerAllExtensionCommands(): void {
 
 export async function deactivate(): Promise<void> {
   ReplConnection.dispose();
+  stopDashboards();
 
   await Telemetry.dispose();
 

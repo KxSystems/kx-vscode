@@ -464,6 +464,16 @@
         "category": "KX",
         "command": "kdb.createNotebook",
         "title": "New Notebook"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.dashboards.start",
+        "title": "Start Dashboards"
+      },
+      {
+        "category": "KX",
+        "command": "kdb.dashboards.stop",
+        "title": "Stop Dashboards"
       }
     ],
     "keybindings": [
@@ -875,6 +885,14 @@
         },
         {
           "command": "kdb.createNotebook",
+          "when": "true"
+        },
+        {
+          "command": "kdb.dashboards.start",
+          "when": "true"
+        },
+        {
+          "command": "kdb.dashboards.stop",
           "when": "true"
         }
       ],
