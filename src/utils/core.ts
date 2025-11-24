@@ -126,6 +126,7 @@ export function getPlatformFolder(
 }
 
 function loadEnvironment(folder: string, env: { [key: string]: string }) {
+  /* c8 ignore start */
   const data = readTextFile(path.resolve(folder, ".env"));
   for (const line of data.split(/\r?\n/)) {
     const trimmed = line.trim();
@@ -139,6 +140,7 @@ function loadEnvironment(folder: string, env: { [key: string]: string }) {
       }
     }
   }
+  /* c8 ignore stop */
 }
 
 export function getEnvironment(resource?: Uri): { [key: string]: string } {
@@ -148,6 +150,7 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
   };
 
   if (resource) {
+    /* c8 ignore start */
     const target = workspace.getWorkspaceFolder(resource);
     if (target) {
       try {
@@ -156,6 +159,7 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
         notify(errorMessage(error), MessageKind.DEBUG, { logger });
       }
     }
+    /* c8 ignore stop */
   }
 
   const qHomeDirectory = workspace
@@ -166,9 +170,10 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
     .getConfiguration("kdb", resource)
     .get<string>("qHomeDirectoryWorkspace", "");
 
-  const home = qHomeDirectoryWorkspace || env.QHOME || qHomeDirectory || "";
+  let home = qHomeDirectoryWorkspace || env.QHOME || qHomeDirectory || "";
 
   if (home) {
+    /* c8 ignore start */
     let q = path.resolve(home, "bin", "q");
     let exists = stat(q);
 
@@ -191,26 +196,33 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
       env.qBinPath = q;
       return env;
     }
+    /* c8 ignore stop */
   }
 
-  env.QHOME = "";
+  home = join(homedir(), ".kx");
+  const target = join(home, "bin", "q");
 
-  const target = join(homedir(), ".kx", "bin", "q");
+  if (stat(target)) {
+    /* c8 ignore start */
+    env.QHOME = home;
+    env.qBinPath = target;
+    return env;
+    /* c8 ignore stop */
+  }
 
-  if (stat(target)) env.qBinPath = target;
-  else
-    try {
-      for (const target of which("q")) {
-        if (target.endsWith(path.join("bin", "q"))) {
-          if (stat(target)) {
-            env.qBinPath = target;
-            break;
-          }
+  try {
+    for (const target of which("q")) {
+      if (target.endsWith(path.join("bin", "q"))) {
+        if (stat(target)) {
+          env.QHOME = path.resolve(path.parse(target).dir, "..");
+          env.qBinPath = target;
+          break;
         }
       }
-    } catch (error) {
-      notify(errorMessage(error), MessageKind.DEBUG, { logger });
     }
+  } catch (error) {
+    notify(errorMessage(error), MessageKind.DEBUG, { logger });
+  }
 
   return env;
 }

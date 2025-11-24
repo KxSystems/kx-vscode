@@ -16,13 +16,12 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
-import { kdbStyles, shoelaceStyles } from "./styles";
+import { shoelaceStyles } from "./styles";
 
 @customElement("kdb-welcome-view")
 export class KdbWelcomeView extends LitElement {
   static readonly styles = [
     shoelaceStyles,
-    kdbStyles,
     css`
       .container {
         padding: 1em 4em 0 4em;
@@ -38,8 +37,6 @@ export class KdbWelcomeView extends LitElement {
         display: flex;
         flex-wrap: nowrap;
         flex-direction: row;
-      }
-      .gap-1 {
         gap: 1em;
       }
       .mt-1 {
@@ -65,6 +62,10 @@ export class KdbWelcomeView extends LitElement {
         width: 100%;
         text-align: center;
         background-color: var(--vscode-editor-background);
+      }
+      body {
+        margin: 0;
+        padding: 0;
       }
       a {
         color: var(--vscode-textLink-foreground);
@@ -95,7 +96,7 @@ export class KdbWelcomeView extends LitElement {
       <div class="container">
         <div class="row">
           <h1>Welcome to KDB-X</h1>
-          <div class="col gap-1">
+          <div class="col">
             <div>
               <p>
                 KDB-X is the next generation of kdb+, optimized for modern
@@ -389,4 +390,4 @@ function renderIcon5() {
   `;
 }
 
-/* c8 ignore end */
+/* c8 ignore stop */

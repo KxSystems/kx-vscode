@@ -1157,7 +1157,7 @@ export async function runQuery(
   }
   runner.title = `Executing ${executorName} on ${connLabel || "active connection"}.`;
 
-  return (target || isSql) && !variable
+  return !isInsights || ((target || isSql) && !variable)
     ? runner.execute()
     : needsScratchpad(connLabel, runner.execute());
 }
