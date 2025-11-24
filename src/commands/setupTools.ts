@@ -73,6 +73,7 @@ export function showWelcome() {
           );
       }
     });
+    ext.context.subscriptions.push(panel);
     panel.onDidDispose(() => (panel = undefined));
   }
   /* c8 ignore stop */
