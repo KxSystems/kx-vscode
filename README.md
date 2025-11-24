@@ -793,7 +793,7 @@ KX Notebooks detect [GGPlot2](#grammar-of-graphics) outputs. If the execution ge
 
 ![See notebook plot](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/notebook-plot.png)
 
-Sample notebooks are available on [Developer Wiki](https://github.com/KxSystems/kx-vscode/wiki/Sample-KX-Notebooks).
+See the [Sample KX Notebooks](hhttps://github.com/KxSystems/kx-vscode/wiki/Sample-KX-Notebooks) for more detailed examples.
 
 ## Query History
 
@@ -1039,6 +1039,10 @@ If you choose to opt out permanently but wish to revert this, open VS Code setti
 | ⌘ + Shift + Y      | Toggle parameter cache for lambda |
 | ⌘ + Shift + Delete | Reset scratchpad                  |
 | ⌘ + Alt + T        | Choose the execution target       |
+
+## Reference card
+
+See the [Reference Card](https://github.com/KxSystems/kx-vscode/wiki/Reference-Card) for a list of all commands, shortcuts, and settings.
 
 ## Data and telemetry
 
