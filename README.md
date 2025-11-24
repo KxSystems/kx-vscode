@@ -213,8 +213,6 @@ Set the following properties:
 | Enable TLS Encryption  | Check the box is TLS is enabled. Learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).                                                                                                                                   |
 | Label Name             | Select the label you want to assign the connection to                                                                                                                                                                                |
 
-![setendpoint](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/myq.png)
-
 1. Click **Create Connection** and the connection appears under **CONNECTIONS** in the primary sidebar.
 
 1. Right-click the my q process listed under **CONNECTIONS**, and click **Connect server**. This connects to the child q process running inside the kdb VS Code extension.
@@ -232,8 +230,6 @@ Set the following properties:
 | Server Name            | The server name / alias.     |
 | The connection address | This is the remote address of your **kdb Insights Enterprise** deployment: e.g. `https://mykdbinsights.cloudapp.azure.com` |
 | Label Name             | Select the label you want to assign the connection to                                                                      |
-
-![connecttoinsights](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/insightsconnection.png)
 
 Set the following from the Advanced properties if necessary:
 
