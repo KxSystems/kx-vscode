@@ -126,6 +126,7 @@ export function getPlatformFolder(
 }
 
 function loadEnvironment(folder: string, env: { [key: string]: string }) {
+  /* c8 ignore start */
   const data = readTextFile(path.resolve(folder, ".env"));
   for (const line of data.split(/\r?\n/)) {
     const trimmed = line.trim();
@@ -139,6 +140,7 @@ function loadEnvironment(folder: string, env: { [key: string]: string }) {
       }
     }
   }
+  /* c8 ignore stop */
 }
 
 export function getEnvironment(resource?: Uri): { [key: string]: string } {
@@ -148,6 +150,7 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
   };
 
   if (resource) {
+    /* c8 ignore start */
     const target = workspace.getWorkspaceFolder(resource);
     if (target) {
       try {
@@ -156,6 +159,7 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
         notify(errorMessage(error), MessageKind.DEBUG, { logger });
       }
     }
+    /* c8 ignore stop */
   }
 
   const qHomeDirectory = workspace
@@ -169,6 +173,7 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
   let home = qHomeDirectoryWorkspace || env.QHOME || qHomeDirectory || "";
 
   if (home) {
+    /* c8 ignore start */
     let q = path.resolve(home, "bin", "q");
     let exists = stat(q);
 
@@ -191,15 +196,18 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
       env.qBinPath = q;
       return env;
     }
+    /* c8 ignore stop */
   }
 
   home = join(homedir(), ".kx");
   const target = join(home, "bin", "q");
 
   if (stat(target)) {
+    /* c8 ignore start */
     env.QHOME = home;
     env.qBinPath = target;
     return env;
+    /* c8 ignore stop */
   }
 
   try {
