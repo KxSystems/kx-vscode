@@ -1016,7 +1016,6 @@ If you choose to opt out permanently but wish to revert this, open VS Code setti
 | Ctrl + D               | Execute current selection         |
 | Ctrl + Shift + E       | Execute current block             |
 | Ctrl + Shift + D       | Execute entire file               |
-| Ctrl + Shift + R       | Run q file in new q instance      |
 | Ctrl + Shift + Y       | Toggle parameter cache for lambda |
 | Ctrl + Shift + Alt + P | Populate Scratchpad               |
 | Ctrl + Shift + Delete  | Reset Scratchpad                  |
@@ -1032,11 +1031,10 @@ If you choose to opt out permanently but wish to revert this, open VS Code setti
 | ⌘ + D               | Execute current selection         |
 | ⌘ + Shift + E       | Execute current block             |
 | ⌘ + Shift + D       | Execute entire file               |
-| ⌘ + Shift + R       | Run q file in new q instance      |
 | ⌘ + Shift + Y       | Toggle parameter cache for lambda |
 | ⌘ + Shift + Alt + P | Populate Scratchpad               |
 | ⌘ + Shift + Delete  | Reset Scratchpad                  |
-| ⌘ + Alt + T        |  Choose the execution target       |
+| ⌘ + Alt + T         | Choose the execution target       |
 
 ## Reference card
 
