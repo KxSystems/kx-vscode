@@ -149,7 +149,7 @@ To execute a q file in REPL:
 
 The results are shown in the terminal and you can continue to work either in your q file or directly in the terminal.
 
-Refer to the [REPL shortcuts table](https://github.com/KxSystems/kx-vscode/wiki/REPL) for information on the keyboard shortcuts you can use.
+Refer to the [REPL shortcuts table](https://github.com/KxSystems/kx-vscode/wiki/Reference-Card#repl) for information on the keyboard shortcuts you can use.
 
 ### Benefits of using REPL
 
@@ -882,7 +882,7 @@ To update kdb VS Code settings, search for **kdb** from _Preferences_ > _Setting
 | Setting                                                                                                            | Action                                                                  |
 | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
 | **Automatically [focus the output](#auto-focus-output-on-entry) console when running a query without an active results tab or receive log entry** | yes/no; default yes                                                     |
-| **List of label names and colorset**                                                                               | edit JSON settings                                                      |
+| **List of label names and color set**                                                                               | edit JSON settings                                                      |
 | **Connection map for workspace files**                                                                             | edit JSON settings                                                      |
 | **Hide source expressions**                                                                                        | yes/no; default yes                                                     |
 | **Hide subscribe for registration notification**                                                                   | yes/no; default yes                                                     |
