@@ -177,7 +177,7 @@ Refer to the [PyKX within REPL](https://github.com/KxSystems/kx-vscode/wiki/Use-
 
 ### Supported file types
 
-In addition to q and Python files, SQL files are also supported for execution within REPL. Refer to the [supported execution types](https://github.com/KxSystems/kx-vscode/wiki/Supported-Execution-Types) table for more details.
+In addition to q and Python files, SQL files are also supported for execution within REPL. Refer to the [supported execution types](https://github.com/KxSystems/kx-vscode/wiki/Reference-Card#execution) table for more details.
 
 ## Connections
 
@@ -463,8 +463,6 @@ For any file with a **.q** or **.py** extension there are additional options ava
 - **Execute current selection** - Takes the current selection (or current line if nothing is selected) and executes it against the active connection. Results are displayed in the [Output window and/or the KDB Results window](#view-results).
 
 - **Execute current block** - Selects the q expression under the cursor and executes it against the active connection. Results are displayed in the [Output window and/or the KDB Results window](#view-results).
-
-- **Run q file in new q instance** - If q is installed and executable from the terminal you can execute an entire q script on a newly launched q instance. Executing a file on a new instance is done in the terminal, and allows interrogation of the active q process from the terminal window.
 
 When executing Python code against kdb+ connections, **note** the following:
 
