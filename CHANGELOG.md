@@ -6,10 +6,10 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 
 ### Fixes
 
-- Fixed Keycloak url change in IE 1.17
-- Fixed REPL system commands path issue
-- Updated welcome page to be more clear
-- Updated documentation
+- Updated Keycloak URL configuration to support Insights Enterprise 1.17
+- Resolved an issue with REPL system command path
+- Improved clarity and layout of the welcome page
+- Updated and refined documentation
 
 # v1.16.0
 

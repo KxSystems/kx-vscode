@@ -149,7 +149,7 @@ To execute a q file in REPL:
 
 The results are shown in the terminal and you can continue to work either in your q file or directly in the terminal.
 
-Refer to the [REPL shortcuts table](https://github.com/KxSystems/kx-vscode/wiki/REPL) for information on the keyboard shortcuts you can use.
+Refer to the [REPL shortcuts table](https://github.com/KxSystems/kx-vscode/wiki/Reference-Card#repl) for information on the keyboard shortcuts you can use.
 
 ### Benefits of using REPL
 
@@ -177,11 +177,11 @@ Refer to the [PyKX within REPL](https://github.com/KxSystems/kx-vscode/wiki/Use-
 
 ### Supported file types
 
-In addition to q and Python files, SQL files are also supported for execution within REPL. Refer to the [supported execution types](https://github.com/KxSystems/kx-vscode/wiki/Supported-Execution-Types) table for more details.
+In addition to q and Python files, SQL files are also supported for execution within REPL. Refer to the [supported execution types](https://github.com/KxSystems/kx-vscode/wiki/Reference-Card#execution) table for more details.
 
 ## Connections
 
-The **kdb VS Code extension** allows you to have multiple connections open at once, enabling development and testing across different KDB-X and kdb Insights Enterprise connections using both q and Python.
+The **kdb VS Code extension** allows you to have multiple connections open at once, enabling development and testing across different KDB-X and kdb Insights Enterprise connections using q, Python, and SQL.
 
 To add connections:
 
@@ -213,8 +213,6 @@ Set the following properties:
 | Enable TLS Encryption  | Check the box is TLS is enabled. Learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).                                                                                                                                   |
 | Label Name             | Select the label you want to assign the connection to                                                                                                                                                                                |
 
-![setendpoint](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/myq.png)
-
 1. Click **Create Connection** and the connection appears under **CONNECTIONS** in the primary sidebar.
 
 1. Right-click the my q process listed under **CONNECTIONS**, and click **Connect server**. This connects to the child q process running inside the kdb VS Code extension.
@@ -233,8 +231,6 @@ Set the following properties:
 | The connection address | This is the remote address of your **kdb Insights Enterprise** deployment: e.g. `https://mykdbinsights.cloudapp.azure.com` |
 | Label Name             | Select the label you want to assign the connection to                                                                      |
 
-![connecttoinsights](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/insightsconnection.png)
-
 Set the following from the Advanced properties if necessary:
 
 | Property     | Description                                                                                                                                                                                                                          |
@@ -249,7 +245,7 @@ Set the following from the Advanced properties if necessary:
 
 1. Right-click the connection, and click **Connect server**.
 
-   ![connecttoinsights](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/kdbinsightsconnection.jpg)
+   ![connecttoinsights](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/kdbinsightsconnection.png)
 
 1. The kdb VS Code extension runs an authentication step with the remote **kdb Insights Enterprise** process to sign-in.
 
@@ -280,8 +276,6 @@ To edit an existing connection, right-click the connection you wish to edit and 
 ![Edit connection option](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/select-edit-connection.png)
 
 > NOTE: Editing an **active connection** may require you to **restart** the connection. If so, you are prompted to reconnect after saving your changes.
-
-![Edit connected connection dialog](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/edit-connected-connection-dialog.png)
 
 ### Edit My q connection
 
@@ -469,8 +463,6 @@ For any file with a **.q** or **.py** extension there are additional options ava
 - **Execute current selection** - Takes the current selection (or current line if nothing is selected) and executes it against the active connection. Results are displayed in the [Output window and/or the KDB Results window](#view-results).
 
 - **Execute current block** - Selects the q expression under the cursor and executes it against the active connection. Results are displayed in the [Output window and/or the KDB Results window](#view-results).
-
-- **Run q file in new q instance** - If q is installed and executable from the terminal you can execute an entire q script on a newly launched q instance. Executing a file on a new instance is done in the terminal, and allows interrogation of the active q process from the terminal window.
 
 When executing Python code against kdb+ connections, **note** the following:
 
@@ -797,7 +789,7 @@ KX Notebooks detect [GGPlot2](#grammar-of-graphics) outputs. If the execution ge
 
 ![See notebook plot](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/notebook-plot.png)
 
-Sample notebooks are available on [Developer Wiki](https://github.com/KxSystems/kx-vscode/wiki/Sample-KX-Notebooks).
+See the [Sample KX Notebooks](hhttps://github.com/KxSystems/kx-vscode/wiki/Sample-KX-Notebooks) for more detailed examples.
 
 ## Query History
 
@@ -828,8 +820,6 @@ Right-clicking on a history row brings up a menu with the option to **Rerun quer
 All query executions happen remotely from the **kdb VS Code extension** either against a running q process or against your user-specific scratchpad process in **kdb Insights Enterprise**. The results, successful or otherwise, are returned to VS Code in one of the following windows:
 
 - **Output** - The **Output** window displays results as they are received by the **kdb VS Code extension**. It includes the query executed, a timestamp and the results.
-
-  ![Output view](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/output-results.png)
 
   **Note:** You can enable/disable auto-scrolling in the VS Code settings. This setting determines whether the output view scrolls to the latest results.
 
@@ -891,21 +881,21 @@ To update kdb VS Code settings, search for **kdb** from _Preferences_ > _Setting
 
 | Setting                                                                                                            | Action                                                                  |
 | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| **Hide notification for installation path, after first install**                                                   | yes/no; default no                                                      |
-| **Hide subscribe for registration notification**                                                                   | yes/no; default no                                                      |
-| **Hide the extension survey dialog box**                                                                           | yes/no; default no                                                      |
-| **Hide source expressions**                                                                                        | yes/no; default yes                                                     |
-| **kdb Insights Enterprise connections for explorer**                                                               | [edit JSON settings](#kdb-insights-enterprise-connections-for-explorer) |
-| **Linting**                                                                                                        | Enable linting for q and quke files                                     |
-| **Refactoring**                                                                                                    | Choose refactoring scope                                                |
-| **QHOME directory for q runtime**                                                                                  | Display location path of q installation                                 |
-| **Never show q install walkthrough again**                                                                         | yes/no; default no                                                      |
-| **kdb servers for explorer**                                                                                       | [edit JSON settings](#servers)                                          |
-| **Automatically focus the output console when running a query without an active results tab or receive log entry** | yes/no; default yes                                                     |
+| **Automatically [focus the output](#auto-focus-output-on-entry) console when running a query without an active results tab or receive log entry** | yes/no; default yes                                                     |
+| **List of label names and color set**                                                                               | edit JSON settings                                                      |
 | **Connection map for workspace files**                                                                             | edit JSON settings                                                      |
-| **Target map for workspace files**                                                                                 | edit JSON settings                                                      |
-| **List of label names and colorset**                                                                               | edit JSON settings                                                      |
+| **Hide source expressions**                                                                                        | yes/no; default yes                                                     |
+| **Hide subscribe for registration notification**                                                                   | yes/no; default yes                                                     |
+| **Hide survey**                                                                                                    | yes/no; default no                                                     |
+| **kdb Insights Enterprise connections for explorer**                                                               | [edit JSON settings](#kdb-insights-enterprise-connections-for-explorer) |
 | **Labels connection map**                                                                                          | edit JSON settings                                                      |
+| **Linting**                                                                                                        | Enable linting for q and quke files                                     |
+| **Never show q install walkthrough again**                                                                         | yes/no; default no                                                      |
+| **QHOME directory for q runtime**                                                                                  | Display location path of q installation                                 |
+| **QHOME directory for q runtime for the workspace**                                                                | Display location path of the q installation used to launch the REPL for the current workspace                                 |
+| **Refactoring**                                                                                                    | Choose [refactoring](#refactoring) scope                                                |
+| **kdb servers for explorer**                                                                                       | [edit JSON settings](#servers)                                          |
+| **Target map for workspace files**                                                                                 | edit JSON settings                                                      |
 
 ### Refactoring
 
@@ -1016,33 +1006,37 @@ If you choose to opt out permanently but wish to revert this, open VS Code setti
 
 ### For Windows
 
-| Key                   | Action                            |
-| --------------------- | --------------------------------- |
-| F12                   | Go to definition                  |
-| Shift + F12           | Go to references                  |
-| Ctrl + Shift + F12    | Find all references               |
-| Ctrl + D              | Execute current selection         |
-| Ctrl + Shift + E      | Execute current block             |
-| Ctrl + Shift + D      | Execute entire file               |
-| Ctrl + Shift + R      | Run q file in new q instance      |
-| Ctrl + Shift + Y      | Toggle parameter cache for lambda |
-| Ctrl + Shift + Delete | Reset scratchpad                  |
-| Ctrl + Alt + T        | Choose the execution target       |
+| Key                    | Action                            |
+| ---------------------- | --------------------------------- |
+| F12                    | Go to definition                  |
+| Shift + F12            | Go to references                  |
+| Ctrl + Shift + F12     | Find all references               |
+| Ctrl + D               | Execute current selection         |
+| Ctrl + Shift + E       | Execute current block             |
+| Ctrl + Shift + D       | Execute entire file               |
+| Ctrl + Shift + Y       | Toggle parameter cache for lambda |
+| Ctrl + Shift + Alt + P | Populate Scratchpad               |
+| Ctrl + Shift + Delete  | Reset Scratchpad                  |
+| Ctrl + Alt + T         | Choose the execution target       |
 
 ### For MacOS
 
-| Key                | Action                            |
-| ------------------ | --------------------------------- |
-| F12                | Go to definition                  |
-| Shift + F12        | Go to references                  |
-| ⌘ + Shift + F12    | Find all references               |
-| ⌘ + D              | Execute current selection         |
-| ⌘ + Shift + E      | Execute current block             |
-| ⌘ + Shift + D      | Execute entire file               |
-| ⌘ + Shift + R      | Run q file in new q instance      |
-| ⌘ + Shift + Y      | Toggle parameter cache for lambda |
-| ⌘ + Shift + Delete | Reset scratchpad                  |
-| ⌘ + Alt + T        | Choose the execution target       |
+| Key                  | Action                            |
+| -------------------- | --------------------------------- |
+| F12                  | Go to definition                  |
+| Shift + F12          | Go to references                  |
+| ⌘ + Shift + F12     | Find all references               |
+| ⌘ + D               | Execute current selection         |
+| ⌘ + Shift + E       | Execute current block             |
+| ⌘ + Shift + D       | Execute entire file               |
+| ⌘ + Shift + Y       | Toggle parameter cache for lambda |
+| ⌘ + Shift + Alt + P | Populate Scratchpad               |
+| ⌘ + Shift + Delete  | Reset Scratchpad                  |
+| ⌘ + Alt + T         | Choose the execution target       |
+
+## Reference card
+
+See the [Reference Card](https://github.com/KxSystems/kx-vscode/wiki/Reference-Card) for a list of all commands, shortcuts, and settings.
 
 ## Data and telemetry
 
