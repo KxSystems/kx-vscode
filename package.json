@@ -639,6 +639,12 @@
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "kdb-servers",
+        "contents": "No connections registered.\n[Add Connection](command:kdb.connections.add)"
+      }
+    ],
     "menus": {
       "commandPalette": [
         {

@@ -62,7 +62,7 @@ Once the **kdb VS Code extension** is installed **KX** appears in the Activity B
 
 ### Customized Authentication
 
-Customized authentication has been implemented for the kdb VS Code extension, allowing you to add custom logic when authenticating with kdb. 
+Customized authentication has been implemented for the kdb VS Code extension, allowing you to add custom logic when authenticating with kdb.
 
 Refer to [customized authentication](https://github.com/KxSystems/kx-vscode-auth) for details on how to set this up.
 
@@ -81,25 +81,21 @@ When first opening the KX extension, you are greeted by a **Welcome to KDB-X** m
 **Setup instructions:**
 
 1. Log in or create an account
-
    - When prompted, a browser window opens automatically.
    - Log in using your email address (verify using the code sent to you) or sign in with Google, then accept the KDB-X EULA.
 
 2. Retrieve your KDB-X license key
-
    - After login, navigate to the [KDB-X Welcome Page](https://developer.kx.com/products/kdb-x/install) or check your welcome email to copy your unique license key.
 
 3. Activate KDB-X in VS Code
-
    - Paste your license key when prompted.
    - The KDB-X runtime will install automatically via the terminal.
 
 4. Start coding
-
    - Once the installation completes, the runtime path and environment should appear in the KX Extension panel.
    - You can start coding immediately using KDB-X scripts and sessions.
 
-**Note!** New users must install KDB-X before starting a REPL session in VS Code. The REPL environment requires the KDB-X runtime, which is installed during license activation. 
+**Note!** New users must install KDB-X before starting a REPL session in VS Code. The REPL environment requires the KDB-X runtime, which is installed during license activation.
 
 As a side note, if KDB-X is installed from within VS Code, you do not need to modify your system `PATH`. The REPL automatically remembers the installed runtime location and will use it for subsequent sessions.
 
@@ -122,7 +118,7 @@ There are commercial and non-commercial editions available. We recommend you sta
 
 | Edition                                                                                         | write q | run q queries | explore results | shared kdb process with kdb Insights |
 | ----------------------------------------------------------------------------------------------- | ------- | ------------- | --------------- | ------------------------------------ |
-| [KDB-X Community Edition](https://developer.kx.com/products/kdb-x/install)                          | yes     | yes           | yes             | no                                   |
+| [KDB-X Community Edition](https://developer.kx.com/products/kdb-x/install)                      | yes     | yes           | yes             | no                                   |
 | [kdb+ Personal Edition](https://kx.com/kdb-personal-edition-download/)                          | yes     | yes           | yes             | no                                   |
 | [kdb Insights SDK Personal Edition](https://kx.com/kdb-insights-sdk-personal-edition-download/) | yes     | yes           | yes             | no                                   |
 | **kdb Insights Enterprise**                                                                     | yes     | yes           | yes             | yes                                  |
@@ -203,15 +199,15 @@ When you select **My q** as the connection type, identify the remote location of
 
 Set the following properties:
 
-| Property               | Description                                                                                                                                                                                                                          |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Property               | Description                                                                                                                                                      |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Server Name            | The server name / alias. The server name selected cannot be **insights**, as this is reserved for use by [Insights connections](#insights-connection); e.g. dev. |
-| The connection address | Set to the IP address of the kdb server; e.g. **localhost**.                                                                                                                                                                         |
-| Port                   | Enter the port used by the kdb server; e.g. 5001. Learn more about [setting a q port](https://code.kx.com/q/basics/ipc/) .                                                                                                           |
-| Username               | If authentication is needed, fill in the username otherwise, leave **blank**                                                                                                                                                         |
-| Password               | If authentication is needed, fill in the password otherwise, leave **blank**                                                                                                                                                         |
-| Enable TLS Encryption  | Check the box is TLS is enabled. Learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).                                                                                                                                   |
-| Label Name             | Select the label you want to assign the connection to                                                                                                                                                                                |
+| The connection address | Set to the IP address of the kdb server; e.g. **localhost**.                                                                                                     |
+| Port                   | Enter the port used by the kdb server; e.g. 5001. Learn more about [setting a q port](https://code.kx.com/q/basics/ipc/) .                                       |
+| Username               | If authentication is needed, fill in the username otherwise, leave **blank**                                                                                     |
+| Password               | If authentication is needed, fill in the password otherwise, leave **blank**                                                                                     |
+| Enable TLS Encryption  | Check the box is TLS is enabled. Learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).                                                               |
+| Label Name             | Select the label you want to assign the connection to                                                                                                            |
 
 1. Click **Create Connection** and the connection appears under **CONNECTIONS** in the primary sidebar.
 
@@ -227,7 +223,7 @@ Set the following properties:
 
 | Property               | Description                                                                                                                |
 | ---------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Server Name            | The server name / alias.     |
+| Server Name            | The server name / alias.                                                                                                   |
 | The connection address | This is the remote address of your **kdb Insights Enterprise** deployment: e.g. `https://mykdbinsights.cloudapp.azure.com` |
 | Label Name             | Select the label you want to assign the connection to                                                                      |
 
@@ -281,16 +277,16 @@ To edit an existing connection, right-click the connection you wish to edit and 
 
 When editing a **My q** connection, you can edit the following properties:
 
-| Property               | Description                                                                                                                                                                                                                          |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Server Name            | The server name / alias. The server name selected cannot be **insights**, as this is reserved for use by [Insights connections](#insights-connection); e.g. dev |
-| The connection address | Set to the IP address of the kdb server; e.g. **localhost**.                                                                                                                                                                         |
-| Port                   | Enter the port used by the kdb server; e.g. 5001. Learn more about [setting a q port](https://code.kx.com/q/basics/ipc/) .                                                                                                           |
-| Edit Auth options      | Check the box if you wish to change **Auth options**. If you want to **remove the Auth** for this connection, select this checkbox and leave the **Username** and **Password** fields in **blank**.                                  |
-| Username               | If authentication is needed, fill in the username otherwise, leave **blank**.                                                                                                                                                        |
-| Password               | If authentication is needed, fill in the password otherwise, leave **blank**.                                                                                                                                                        |
-| Enable TLS Encryption  | Check the box is TLS is enabled. Learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).                                                                                                                                   |
-| Label Name             | Select the label to assign the connection to.                                                                                                                                                                                        |
+| Property               | Description                                                                                                                                                                                         |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Server Name            | The server name / alias. The server name selected cannot be **insights**, as this is reserved for use by [Insights connections](#insights-connection); e.g. dev                                     |
+| The connection address | Set to the IP address of the kdb server; e.g. **localhost**.                                                                                                                                        |
+| Port                   | Enter the port used by the kdb server; e.g. 5001. Learn more about [setting a q port](https://code.kx.com/q/basics/ipc/) .                                                                          |
+| Edit Auth options      | Check the box if you wish to change **Auth options**. If you want to **remove the Auth** for this connection, select this checkbox and leave the **Username** and **Password** fields in **blank**. |
+| Username               | If authentication is needed, fill in the username otherwise, leave **blank**.                                                                                                                       |
+| Password               | If authentication is needed, fill in the password otherwise, leave **blank**.                                                                                                                       |
+| Enable TLS Encryption  | Check the box is TLS is enabled. Learn more [about TLS encryption](https://code.kx.com/q/kb/ssl/).                                                                                                  |
+| Label Name             | Select the label to assign the connection to.                                                                                                                                                       |
 
 ![Edit My q connection](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/edit-my-q-conn-form.png)
 
@@ -300,7 +296,7 @@ When editing a **Insights** connection, you can edit the following properties:
 
 | Property               | Description                                                                                                                                                                                                                          |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Server Name            | The server name / alias.                                                                                                               |
+| Server Name            | The server name / alias.                                                                                                                                                                                                             |
 | The connection address | This is the remote address of your **kdb Insights Enterprise** deployment: e.g. `https://mykdbinsights.cloudapp.azure.com`                                                                                                           |
 | Define Realm           | Specify the Keycloak realm for authentication. Usually the realm is set to `insights`, which is the default value used by the extension. You only need to change this field if a different realm has been configured on your server. |
 | Label Name             | Select the label you want to assign the connection to                                                                                                                                                                                |
@@ -701,7 +697,7 @@ Create a Workbook using the WORKBOOKS panel and run code against a specific conn
 1. Run the code:
    1. To run all the code in the file you can use one of the following methods:
       1. Select **Run** from the upper right of the editor. Using the dropdown next to the button you can choose any of the [**KX:** menu items](#kdb-process-executing-q-and-python-code) to run some, or all of the code in the workbook.
-         ![play dropdown](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/workbookplaydropdown.png)
+         ![play dropdown](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/unassociated-file-workbook.png)
 
       1. Right-click and choose **KX: Execute Entire File** from the menu.
 
@@ -879,23 +875,23 @@ The format is:
 
 To update kdb VS Code settings, search for **kdb** from _Preferences_ > _Settings_, or right-click the settings icon in kdb VS Code marketplace panel and choose **Extension Settings**.
 
-| Setting                                                                                                            | Action                                                                  |
-| ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
-| **Automatically [focus the output](#auto-focus-output-on-entry) console when running a query without an active results tab or receive log entry** | yes/no; default yes                                                     |
-| **List of label names and color set**                                                                               | edit JSON settings                                                      |
-| **Connection map for workspace files**                                                                             | edit JSON settings                                                      |
-| **Hide source expressions**                                                                                        | yes/no; default yes                                                     |
-| **Hide subscribe for registration notification**                                                                   | yes/no; default yes                                                     |
-| **Hide survey**                                                                                                    | yes/no; default no                                                     |
-| **kdb Insights Enterprise connections for explorer**                                                               | [edit JSON settings](#kdb-insights-enterprise-connections-for-explorer) |
-| **Labels connection map**                                                                                          | edit JSON settings                                                      |
-| **Linting**                                                                                                        | Enable linting for q and quke files                                     |
-| **Never show q install walkthrough again**                                                                         | yes/no; default no                                                      |
-| **QHOME directory for q runtime**                                                                                  | Display location path of q installation                                 |
-| **QHOME directory for q runtime for the workspace**                                                                | Display location path of the q installation used to launch the REPL for the current workspace                                 |
-| **Refactoring**                                                                                                    | Choose [refactoring](#refactoring) scope                                                |
-| **kdb servers for explorer**                                                                                       | [edit JSON settings](#servers)                                          |
-| **Target map for workspace files**                                                                                 | edit JSON settings                                                      |
+| Setting                                                                                                                                           | Action                                                                                        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **Automatically [focus the output](#auto-focus-output-on-entry) console when running a query without an active results tab or receive log entry** | yes/no; default yes                                                                           |
+| **List of label names and color set**                                                                                                             | edit JSON settings                                                                            |
+| **Connection map for workspace files**                                                                                                            | edit JSON settings                                                                            |
+| **Hide source expressions**                                                                                                                       | yes/no; default yes                                                                           |
+| **Hide subscribe for registration notification**                                                                                                  | yes/no; default yes                                                                           |
+| **Hide survey**                                                                                                                                   | yes/no; default no                                                                            |
+| **kdb Insights Enterprise connections for explorer**                                                                                              | [edit JSON settings](#kdb-insights-enterprise-connections-for-explorer)                       |
+| **Labels connection map**                                                                                                                         | edit JSON settings                                                                            |
+| **Linting**                                                                                                                                       | Enable linting for q and quke files                                                           |
+| **Never show q install walkthrough again**                                                                                                        | yes/no; default no                                                                            |
+| **QHOME directory for q runtime**                                                                                                                 | Display location path of q installation                                                       |
+| **QHOME directory for q runtime for the workspace**                                                                                               | Display location path of the q installation used to launch the REPL for the current workspace |
+| **Refactoring**                                                                                                                                   | Choose [refactoring](#refactoring) scope                                                      |
+| **kdb servers for explorer**                                                                                                                      | [edit JSON settings](#servers)                                                                |
+| **Target map for workspace files**                                                                                                                | edit JSON settings                                                                            |
 
 ### Refactoring
 
@@ -1021,10 +1017,10 @@ If you choose to opt out permanently but wish to revert this, open VS Code setti
 
 ### For MacOS
 
-| Key                  | Action                            |
-| -------------------- | --------------------------------- |
-| F12                  | Go to definition                  |
-| Shift + F12          | Go to references                  |
+| Key                 | Action                            |
+| ------------------- | --------------------------------- |
+| F12                 | Go to definition                  |
+| Shift + F12         | Go to references                  |
 | ⌘ + Shift + F12     | Find all references               |
 | ⌘ + D               | Execute current selection         |
 | ⌘ + Shift + E       | Execute current block             |
