@@ -235,7 +235,7 @@
       {
         "category": "KX",
         "command": "kdb.file.pickConnection",
-        "title": "Chooses Connection",
+        "title": "Choose Connection",
         "shortTitle": "Connection",
         "icon": "$(cloud)"
       },
@@ -252,7 +252,6 @@
         "title": "Input Variable Name"
       },
       {
-        "category": "KX",
         "command": "kdb.file.populateScratchpad",
         "title": "KX: Populate Scratchpad",
         "icon": "$(debug-rerun)"
@@ -376,25 +375,21 @@
         "title": "Start REPL"
       },
       {
-        "category": "KX",
         "command": "kdb.execute.selectedQuery",
         "title": "KX: Execute Current Selection",
         "icon": "$(run-above)"
       },
       {
-        "category": "KX",
         "command": "kdb.execute.fileQuery",
         "title": "KX: Execute Entire File",
         "icon": "$(run)"
       },
       {
-        "category": "KX",
         "command": "kdb.scratchpad.python.run",
         "title": "KX: Execute Current Selection",
         "icon": "$(run-above)"
       },
       {
-        "category": "KX",
         "command": "kdb.scratchpad.python.run.file",
         "title": "KX: Execute Entire File",
         "icon": "$(run)"
@@ -415,7 +410,6 @@
         "title": "Delete"
       },
       {
-        "category": "KX",
         "command": "kdb.execute.block",
         "title": "KX: Execute Current Block",
         "icon": "$(run-below)"
@@ -423,7 +417,7 @@
       {
         "category": "KX",
         "command": "kdb.toggleParameterCache",
-        "title": "KX: Toggle Parameter Cache"
+        "title": "Toggle Parameter Cache"
       },
       {
         "category": "KX",
@@ -495,7 +489,7 @@
         "command": "kdb.scratchpad.editor.reset",
         "key": "ctrl+shift+delete",
         "mac": "cmd+shift+delete",
-        "when": "resourceFilename =~ /\\.(?:q|py|sql)$/i"
+        "when": "resourceFilename =~ /\\.(?:q|py|sql|kxnb)$/i"
       },
       {
         "command": "kdb.file.populateScratchpad",
@@ -645,12 +639,6 @@
         }
       ]
     },
-    "viewsWelcome": [
-      {
-        "view": "kdb-servers",
-        "contents": "No connections registered.\n[Add Connection](command:kdb.connections.add)"
-      }
-    ],
     "menus": {
       "commandPalette": [
         {
@@ -703,11 +691,11 @@
         },
         {
           "command": "kdb.file.pickConnection",
-          "when": "false"
+          "when": "resourceFilename =~ /\\.(?:q|py|sql|kxnb)$/i"
         },
         {
           "command": "kdb.file.pickTarget",
-          "when": "false"
+          "when": "resourceFilename =~ /\\.(?:q|py|sql)$/i"
         },
         {
           "command": "kdb.file.inputVariable",
@@ -715,7 +703,7 @@
         },
         {
           "command": "kdb.file.populateScratchpad",
-          "when": "false"
+          "when": "resourceFilename =~ /\\.(?:q|py|sql)$/i"
         },
         {
           "command": "kdb.scratchpad.run",
@@ -727,7 +715,7 @@
         },
         {
           "command": "kdb.scratchpad.editor.reset",
-          "when": "false"
+          "when": "resourceFilename =~ /\\.(?:q|py|sql|kxnb)$/i"
         },
         {
           "command": "kdb.connections.add",
@@ -811,19 +799,19 @@
         },
         {
           "command": "kdb.execute.selectedQuery",
-          "when": "false"
+          "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
         },
         {
           "command": "kdb.execute.fileQuery",
-          "when": "false"
+          "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
         },
         {
           "command": "kdb.scratchpad.python.run",
-          "when": "false"
+          "when": "resourceFilename =~ /\\.(?:py)$/i"
         },
         {
           "command": "kdb.scratchpad.python.run.file",
-          "when": "false"
+          "when": "resourceFilename =~ /\\.(?:py)$/i"
         },
         {
           "command": "kdb.ls.q.lint",
@@ -839,11 +827,11 @@
         },
         {
           "command": "kdb.execute.block",
-          "when": "false"
+          "when": "resourceFilename =~ /\\.(?:q)$/i"
         },
         {
           "command": "kdb.toggleParameterCache",
-          "when": "false"
+          "when": "resourceFilename =~ /\\.(?:q)$/i"
         },
         {
           "command": "kdb.connections.labels.rename",
@@ -1073,7 +1061,7 @@
         {
           "command": "kdb.execute.block",
           "group": "q1@2",
-          "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
+          "when": "resourceFilename =~ /\\.(?:q)$/i"
         },
         {
           "command": "kdb.file.populateScratchpad",
@@ -1095,17 +1083,12 @@
         {
           "command": "kdb.execute.block",
           "group": "q@2",
-          "when": "resourceFilename =~ /\\.(?:q|sql)$/i"
+          "when": "resourceFilename =~ /\\.(?:q)$/i"
         },
         {
           "command": "kdb.file.populateScratchpad",
           "group": "q2@0",
           "when": "resourceFilename =~ /\\.(?:q|py|sql)$/i"
-        },
-        {
-          "command": "kdb.toggleParameterCache",
-          "group": "q2@1",
-          "when": "resourceFilename =~ /\\.(?:q)$/i"
         },
         {
           "command": "kdb.scratchpad.python.run.file",
