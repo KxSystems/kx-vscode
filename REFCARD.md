@@ -5,20 +5,21 @@
 | KX: Welcome to KDB-X   | KX: New Connection        | KX: Focus on Connections view       |
 | KX: Install KDB-X      | KX: New Notebook          | KX: Focus on Datasources view       |
 | KX: Start REPL         | KX: New Workbook (q)      | KX: Focus on Workbooks view         |
-| KX: Import connections | KX: New Workbook (Python) | KX: Focus on Query History view     |
-| KX: Export connections | KX: New Datasource        | KX: Focus on Help and Feedback view |
+| KX: Import Connections | KX: New Workbook (Python) | KX: Focus on Query History view     |
+| KX: Export Connections | KX: New Datasource        | KX: Focus on Help and Feedback view |
 
 ## Keybindings
 
-| Command                       | When           | Shortcut                 | MacOS                 |
-| :---------------------------- | :------------- | :----------------------- | :-------------------- |
-| KX: Execute Current Selection | `q` `py` `sql` | `ctrl`+`d`               | `⌘`+`d`               |
-| KX: Execute Current Block     | `q`            | `ctrl`+`shift`+`e`       | `⌘`+`shift`+`e`       |
-| KX: Execute Entire File       | `q` `py` `sql` | `ctrl`+`shift`+`d`       | `⌘`+`shift`+`d`       |
-| KX: Populate Scratchpad       | `q` `py` `sql` | `ctrl`+`shift`+`alt`+`p` | `⌘`+`shift`+`alt`+`p` |
-| KX: Reset Scratchpad          | `q` `py` `sql` | `ctrl`+`shift`+`delete`  | `⌘`+`shift`+`delete`  |
-| KX: Choose Execution Target   | `q` `py` `sql` | `ctrl`+`alt`+`t`         | `⌘`+`alt`+`t`         |
-| KX: Toggle Parameter Cache    | `q`            | `ctrl`+`shift`+`y`       | `⌘`+`shift`+`y`       |
+| Command                       | When                  | Shortcut                     |
+| :---------------------------- | :-------------------- | :--------------------------- |
+| KX: Execute Entire File       | `q` `py` `sql`        | `ctrl`/`⌘` +`shift`+`d`      |
+| KX: Execute Current Selection | `q` `py` `sql`        | `ctrl`/`⌘`+`d`               |
+| KX: Execute Current Block     | `q`                   | `ctrl`/`⌘`+`shift`+`e`       |
+| KX: Populate Scratchpad       | `q` `py` `sql`        | `ctrl`/`⌘`+`shift`+`alt`+`p` |
+| KX: Reset Scratchpad          | `q` `py` `sql` `kxnb` | `ctrl`/`⌘`+`shift`+`delete`  |
+| KX: Choose Connection         | `q` `py` `sql` `kxnb` |                              |
+| KX: Choose Execution Target   | `q` `py` `sql`        | `ctrl`/`⌘`+`alt`+`t`         |
+| KX: Toggle Parameter Cache    | `q`                   | `ctrl`/`⌘`+`shift`+`y`       |
 
 ### REPL
 

@@ -15,8 +15,11 @@ esbuild.js
 sonar-project.properties
 .snyk 
 eslint.config.cjs
+eslint.config.mjs
 release_process.md
 .github/
 out-test/
 .test-extensions/
 .test-folder/
+.README
+REFCARD.md 

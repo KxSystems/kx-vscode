@@ -28,11 +28,34 @@ describe("Docs", () => {
   });
 
   describe("README", () => {
+    it("should contain secure external links", () => {
+      const regex = /\[.*?\]\((.*?)\)/gs;
+      let match: RegExpExecArray;
+      while ((match = regex.exec(readme))) {
+        if (!match[1].startsWith("#")) {
+          assert.ok(match[1].startsWith("https://"));
+        }
+      }
+    });
     it("should contain all images", () => {
       for (const img of images) {
         const index = readme.indexOf(`/${img}`);
-        assert.ok(index >= 0);
+        assert.ok(index !== -1);
       }
+    });
+    it("should have valid links to images", () => {
+      const regex = /\(https:\/\/([^)]*)\/.README\/([^)]*)\)/gs;
+      const linked = new Set();
+      let match: RegExpExecArray;
+      while ((match = regex.exec(readme))) {
+        assert.strictEqual(
+          match[1],
+          "raw.githubusercontent.com/KxSystems/kx-vscode/main",
+        );
+        assert.ok(images.includes(match[2]));
+        linked.add(match[2]);
+      }
+      assert.strictEqual(linked.size, images.length);
     });
   });
 });

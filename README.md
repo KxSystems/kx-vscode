@@ -785,7 +785,7 @@ KX Notebooks detect [GGPlot2](#grammar-of-graphics) outputs. If the execution ge
 
 ![See notebook plot](https://raw.githubusercontent.com/KxSystems/kx-vscode/main/.README/notebook-plot.png)
 
-See the [Sample KX Notebooks](hhttps://github.com/KxSystems/kx-vscode/wiki/Sample-KX-Notebooks) for more detailed examples.
+See the [Sample KX Notebooks](https://github.com/KxSystems/kx-vscode/wiki/Sample-KX-Notebooks) for more detailed examples.
 
 ## Query History
 
