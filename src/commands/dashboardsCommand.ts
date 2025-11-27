@@ -16,6 +16,7 @@ import { join, resolve } from "node:path";
 import { pickPort } from "pick-port";
 import * as vscode from "vscode";
 
+import { showSetupError } from "./setupTools";
 import { getEnvironment } from "../utils/core";
 import { MessageKind, notify } from "../utils/notifications";
 import { pickWorkspace } from "../utils/workspace";
@@ -33,6 +34,13 @@ export async function startDashboards() {
     openDashboards();
     return;
   }
+  const workspace = await pickWorkspace();
+  const env = getEnvironment(workspace?.uri);
+  if (!env.qBinKdbX) {
+    showSetupError(workspace);
+    return;
+  }
+  const cwd = resolve(env.QHOME, "dashboards");
 
   port = await pickPort({
     ip: "127.0.0.1",
@@ -40,10 +48,6 @@ export async function startDashboards() {
     minPort: 10000,
     maxPort: 11000,
   });
-
-  const workspace = await pickWorkspace();
-  const env = getEnvironment(workspace?.uri);
-  const cwd = resolve(env.QHOME, "dashboards");
 
   demo = createDemo(env, cwd);
   demo.on("spawn", () => {
