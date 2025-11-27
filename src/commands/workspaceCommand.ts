@@ -252,6 +252,10 @@ export async function pickConnection(uri: Uri) {
 
 export async function pickTarget(uri: Uri, cell?: NotebookCell) {
   /* c8 ignore start */
+  let server = getServerForUri(uri);
+  if (!server) server = await pickConnection(uri);
+  if (!server || server === ext.REPL) return;
+
   const conn = await findConnection(uri);
   const isInsights = conn instanceof InsightsConnection;
 
