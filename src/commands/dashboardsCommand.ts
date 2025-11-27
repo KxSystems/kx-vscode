@@ -35,8 +35,8 @@ export async function startDashboards() {
     return;
   }
   const workspace = await pickWorkspace();
-  const env = getEnvironment(workspace?.uri);
-  if (!env.qBinKdbX) {
+  const env = getEnvironment(workspace);
+  if (!env.QHOME || !env.qBinKdbX) {
     showSetupError(workspace);
     return;
   }
