@@ -167,7 +167,7 @@
       {
         "category": "KX",
         "command": "kdb.connections.export.all",
-        "title": "Export connections"
+        "title": "Export Connections"
       },
       {
         "category": "KX",
@@ -177,7 +177,7 @@
       {
         "category": "KX",
         "command": "kdb.connections.import",
-        "title": "Import connections"
+        "title": "Import Connections"
       },
       {
         "category": "KX",
@@ -315,7 +315,7 @@
       {
         "category": "KX",
         "command": "kdb.connections.addAuthentication",
-        "title": "Add Authentication",
+        "title": "Add authentication",
         "position": "end"
       },
       {
@@ -639,6 +639,12 @@
         }
       ]
     },
+    "viewsWelcome": [
+      {
+        "view": "kdb-servers",
+        "contents": "No connections registered.\n[Add Connection](command:kdb.connections.add)"
+      }
+    ],
     "menus": {
       "commandPalette": [
         {

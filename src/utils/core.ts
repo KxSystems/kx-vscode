@@ -16,11 +16,17 @@ import { createHash } from "crypto";
 import { writeFile } from "fs/promises";
 import { pathExists } from "fs-extra";
 import { homedir } from "node:os";
-import path from "node:path";
+import path, { isAbsolute } from "node:path";
 import { tmpdir } from "os";
 import { join } from "path";
 import * as semver from "semver";
-import { commands, ConfigurationTarget, Uri, workspace } from "vscode";
+import {
+  commands,
+  ConfigurationTarget,
+  Uri,
+  workspace,
+  WorkspaceFolder,
+} from "vscode";
 
 import { ext } from "../extensionVariables";
 import { tryExecuteCommand } from "./cpUtils";
@@ -143,41 +149,51 @@ function loadEnvironment(folder: string, env: { [key: string]: string }) {
   /* c8 ignore stop */
 }
 
-export function getEnvironment(resource?: Uri): { [key: string]: string } {
+export function getEnvironment(resource?: WorkspaceFolder): {
+  [key: string]: string;
+} {
+  /* c8 ignore start */
   const env: { [key: string]: string } = {
     ...process.env,
     qBinPath: "",
+    qBinKdbX: "true",
   };
 
   if (resource) {
-    /* c8 ignore start */
-    const target = workspace.getWorkspaceFolder(resource);
-    if (target) {
-      try {
-        loadEnvironment(target.uri.fsPath, env);
-      } catch (error) {
-        notify(errorMessage(error), MessageKind.DEBUG, { logger });
-      }
+    try {
+      loadEnvironment(resource.uri.fsPath, env);
+    } catch (error) {
+      notify(errorMessage(error), MessageKind.DEBUG, { logger });
     }
-    /* c8 ignore stop */
   }
 
   const qHomeDirectory = workspace
     .getConfiguration("kdb", resource)
     .get<string>("qHomeDirectory", "");
 
-  const qHomeDirectoryWorkspace = workspace
+  let qHomeDirectoryWorkspace = workspace
     .getConfiguration("kdb", resource)
     .get<string>("qHomeDirectoryWorkspace", "");
+
+  if (
+    resource &&
+    qHomeDirectoryWorkspace &&
+    !isAbsolute(qHomeDirectoryWorkspace)
+  ) {
+    qHomeDirectoryWorkspace = join(
+      resource.uri.fsPath,
+      qHomeDirectoryWorkspace,
+    );
+  }
 
   let home = qHomeDirectoryWorkspace || env.QHOME || qHomeDirectory || "";
 
   if (home) {
-    /* c8 ignore start */
     let q = path.resolve(home, "bin", "q");
     let exists = stat(q);
 
     if (!exists) {
+      env.qBinKdbX = "";
       const folder = getPlatformFolder(process.platform, process.arch);
       if (folder) {
         if (!exists) {
@@ -196,18 +212,17 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
       env.qBinPath = q;
       return env;
     }
-    /* c8 ignore stop */
   }
+
+  env.qBinKdbX = "true";
 
   home = join(homedir(), ".kx");
   const target = join(home, "bin", "q");
 
   if (stat(target)) {
-    /* c8 ignore start */
     env.QHOME = home;
     env.qBinPath = target;
     return env;
-    /* c8 ignore stop */
   }
 
   try {
@@ -225,6 +240,7 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
   }
 
   return env;
+  /* c8 ignore stop */
 }
 
 export async function getWorkspaceFolder(

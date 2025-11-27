@@ -269,7 +269,7 @@ export class ReplConnection {
   }
 
   private createProcess() {
-    this.env = getEnvironment(this.workspace?.uri);
+    this.env = getEnvironment(this.workspace);
     if (!this.env.qBinPath) showSetupError(this.workspace);
 
     return spawn(

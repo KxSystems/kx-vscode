@@ -242,7 +242,7 @@ async function parseOutput(execution: vscode.TerminalShellExecution) {
   if (home) {
     for (const folder of vscode.workspace.workspaceFolders || []) {
       if (home.startsWith(folder.uri.fsPath)) {
-        await setHome(home, folder);
+        await setHome(vscode.workspace.asRelativePath(home), folder);
         return;
       }
     }
@@ -251,7 +251,7 @@ async function parseOutput(execution: vscode.TerminalShellExecution) {
   /* c8 ignore stop */
 }
 
-async function setHome(home: string, folder?: vscode.ConfigurationScope) {
+async function setHome(home: string, folder?: vscode.WorkspaceFolder) {
   /* c8 ignore start */
   const config = vscode.workspace.getConfiguration("kdb", folder);
   await config.update(
