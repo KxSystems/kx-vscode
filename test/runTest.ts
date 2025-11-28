@@ -14,42 +14,13 @@
 import { runTests } from "@vscode/test-electron";
 import * as path from "path";
 
-import { instrument } from "./coverage";
-
 async function main() {
   try {
     const extensionDevelopmentPath = path.join(__dirname, "../../");
-
-    let extensionTestsPath = path.join(__dirname, "./suite/index");
-
-    const hasCoverageFlag = process.argv.indexOf("--coverage") >= 0;
-
-    if (hasCoverageFlag) {
-      try {
-        instrument();
-        console.log("✅ Code instrumentation completed");
-      } catch (error) {
-        console.error("❌ Code instrumentation failed:", error);
-        throw error;
-      }
-
-      extensionTestsPath = path.join(
-        __dirname,
-        "../../out-cov/test/suite/index",
-      );
-
-      process.env["GENERATE_COVERAGE"] = "1";
-    } else {
-      //console.log("⚠️ Coverage mode disabled, running normal tests");
-    }
-
-    await runTests({
-      extensionDevelopmentPath,
-      extensionTestsPath,
-    });
+    const extensionTestsPath = path.join(__dirname, "./suite/index");
+    await runTests({ extensionDevelopmentPath, extensionTestsPath });
   } catch (err) {
-    console.log(err);
-    console.error("Failed to run tests.");
+    console.error(err);
     process.exit(1);
   }
 }
