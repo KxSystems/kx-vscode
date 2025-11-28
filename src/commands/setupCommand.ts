@@ -103,7 +103,7 @@ function getWebviewContent(webview: vscode.Webview) {
           <title>Welcome to KDB-X</title>
         </head>
         <body>
-          <kdb-welcome-view image="${getResource("resources/kx_welcome.png")}" checked="${getShowWelcome()}" dark="${getTheme() === "sl-theme-dark" ? "dark" : ""}"></kdb-welcome-view>
+          <kdb-welcome-view image="${getResource("resources/images/kx_welcome.png")}" checked="${getShowWelcome()}" dark="${getTheme() === "sl-theme-dark" ? "dark" : ""}"></kdb-welcome-view>
         </body>
         </html>
       `;

@@ -32,7 +32,7 @@ export async function showInputBox(options: InputBoxOptions): Promise<string> {
 
 export async function showQuickPick<T extends QuickPickItem>(
   items: T[] | Promise<T[]>,
-  options: QuickPickOptions
+  options: QuickPickOptions,
 ): Promise<T> {
   const result = await window.showQuickPick(items, options);
 

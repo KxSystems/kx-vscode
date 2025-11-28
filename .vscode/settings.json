@@ -4,5 +4,16 @@
   "editor.codeActionsOnSave": {
     "source.organizeImports": "never"
   },
-  "terminal.integrated.scrollback": 4000
+  "launcher.mappings": [
+    {
+      "name": "Test Selected File",
+      "pattern": "kx-vscode.*/test/suite/.+\\.test\\.ts$"
+    },
+    {
+      "name": "UI Test Selected File",
+      "pattern": "kx-vscode.*/test/ui/.+\\.test\\.ts$"
+    }
+  ],
+  "kdb.connectionMap": {},
+  "kdb.targetMap": {}
 }

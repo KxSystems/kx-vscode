@@ -14,7 +14,7 @@
 import { validateUtils } from "../utils/validateUtils";
 
 export function validateScratchpadOutputVariableName(
-  input: string | undefined
+  input: string | undefined,
 ): string | undefined {
   if (input !== undefined) {
     if (!validateUtils.isValidLength(input, 1, 64)) {
