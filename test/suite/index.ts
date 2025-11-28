@@ -15,8 +15,6 @@ import { glob } from "glob";
 import Mocha from "mocha";
 import * as path from "path";
 
-import { generateCoverageReport } from "../coverage";
-
 export async function run(): Promise<void> {
   const headless = !!process.env.CI;
   const testFolder = process.env.TEST_FOLDER;
@@ -77,7 +75,6 @@ export async function run(): Promise<void> {
     }).then(() => {
       if (process.env["GENERATE_COVERAGE"]) {
         try {
-          generateCoverageReport();
           console.log("✅ Coverage generation completed successfully");
         } catch (error) {
           console.error("❌ Coverage generation failed:", error);
