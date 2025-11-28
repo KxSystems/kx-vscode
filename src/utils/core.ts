@@ -16,11 +16,17 @@ import { createHash } from "crypto";
 import { writeFile } from "fs/promises";
 import { pathExists } from "fs-extra";
 import { homedir } from "node:os";
-import path from "node:path";
+import path, { isAbsolute } from "node:path";
 import { tmpdir } from "os";
 import { join } from "path";
 import * as semver from "semver";
-import { commands, ConfigurationTarget, Uri, workspace } from "vscode";
+import {
+  commands,
+  ConfigurationTarget,
+  Uri,
+  workspace,
+  WorkspaceFolder,
+} from "vscode";
 
 import { ext } from "../extensionVariables";
 import { tryExecuteCommand } from "./cpUtils";
@@ -126,6 +132,7 @@ export function getPlatformFolder(
 }
 
 function loadEnvironment(folder: string, env: { [key: string]: string }) {
+  /* c8 ignore start */
   const data = readTextFile(path.resolve(folder, ".env"));
   for (const line of data.split(/\r?\n/)) {
     const trimmed = line.trim();
@@ -139,22 +146,24 @@ function loadEnvironment(folder: string, env: { [key: string]: string }) {
       }
     }
   }
+  /* c8 ignore stop */
 }
 
-export function getEnvironment(resource?: Uri): { [key: string]: string } {
+export function getEnvironment(resource?: WorkspaceFolder): {
+  [key: string]: string;
+} {
+  /* c8 ignore start */
   const env: { [key: string]: string } = {
     ...process.env,
     qBinPath: "",
+    qBinKdbX: "true",
   };
 
   if (resource) {
-    const target = workspace.getWorkspaceFolder(resource);
-    if (target) {
-      try {
-        loadEnvironment(target.uri.fsPath, env);
-      } catch (error) {
-        notify(errorMessage(error), MessageKind.DEBUG, { logger });
-      }
+    try {
+      loadEnvironment(resource.uri.fsPath, env);
+    } catch (error) {
+      notify(errorMessage(error), MessageKind.DEBUG, { logger });
     }
   }
 
@@ -162,17 +171,29 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
     .getConfiguration("kdb", resource)
     .get<string>("qHomeDirectory", "");
 
-  const qHomeDirectoryWorkspace = workspace
+  let qHomeDirectoryWorkspace = workspace
     .getConfiguration("kdb", resource)
     .get<string>("qHomeDirectoryWorkspace", "");
 
-  const home = qHomeDirectoryWorkspace || env.QHOME || qHomeDirectory || "";
+  if (
+    resource &&
+    qHomeDirectoryWorkspace &&
+    !isAbsolute(qHomeDirectoryWorkspace)
+  ) {
+    qHomeDirectoryWorkspace = join(
+      resource.uri.fsPath,
+      qHomeDirectoryWorkspace,
+    );
+  }
+
+  let home = qHomeDirectoryWorkspace || env.QHOME || qHomeDirectory || "";
 
   if (home) {
     let q = path.resolve(home, "bin", "q");
     let exists = stat(q);
 
     if (!exists) {
+      env.qBinKdbX = "";
       const folder = getPlatformFolder(process.platform, process.arch);
       if (folder) {
         if (!exists) {
@@ -193,26 +214,33 @@ export function getEnvironment(resource?: Uri): { [key: string]: string } {
     }
   }
 
-  env.QHOME = "";
+  env.qBinKdbX = "true";
 
-  const target = join(homedir(), ".kx", "bin", "q");
+  home = join(homedir(), ".kx");
+  const target = join(home, "bin", "q");
 
-  if (stat(target)) env.qBinPath = target;
-  else
-    try {
-      for (const target of which("q")) {
-        if (target.endsWith(path.join("bin", "q"))) {
-          if (stat(target)) {
-            env.qBinPath = target;
-            break;
-          }
+  if (stat(target)) {
+    env.QHOME = home;
+    env.qBinPath = target;
+    return env;
+  }
+
+  try {
+    for (const target of which("q")) {
+      if (target.endsWith(path.join("bin", "q"))) {
+        if (stat(target)) {
+          env.QHOME = path.resolve(path.parse(target).dir, "..");
+          env.qBinPath = target;
+          break;
         }
       }
-    } catch (error) {
-      notify(errorMessage(error), MessageKind.DEBUG, { logger });
     }
+  } catch (error) {
+    notify(errorMessage(error), MessageKind.DEBUG, { logger });
+  }
 
   return env;
+  /* c8 ignore stop */
 }
 
 export async function getWorkspaceFolder(

@@ -891,6 +891,14 @@ describe("core", () => {
     afterEach(() => {
       sinon.restore();
     });
+    it("should have qBinPath variable", () => {
+      const env = coreUtils.getEnvironment();
+      assert.notStrictEqual(env.qBinPath, undefined);
+    });
+    it("should have qBinKdbX variable", () => {
+      const env = coreUtils.getEnvironment();
+      assert.notStrictEqual(env.qBinKdbX, undefined);
+    });
   });
 
   describe("checkLocalInstall", () => {

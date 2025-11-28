@@ -16,13 +16,12 @@
 import { LitElement, css, html } from "lit";
 import { customElement, property } from "lit/decorators.js";
 
-import { kdbStyles, shoelaceStyles } from "./styles";
+import { shoelaceStyles } from "./styles";
 
 @customElement("kdb-welcome-view")
 export class KdbWelcomeView extends LitElement {
   static readonly styles = [
     shoelaceStyles,
-    kdbStyles,
     css`
       .container {
         padding: 1em 4em 0 4em;
@@ -38,8 +37,6 @@ export class KdbWelcomeView extends LitElement {
         display: flex;
         flex-wrap: nowrap;
         flex-direction: row;
-      }
-      .gap-1 {
         gap: 1em;
       }
       .mt-1 {
@@ -65,6 +62,10 @@ export class KdbWelcomeView extends LitElement {
         width: 100%;
         text-align: center;
         background-color: var(--vscode-editor-background);
+      }
+      body {
+        margin: 0;
+        padding: 0;
       }
       a {
         color: var(--vscode-textLink-foreground);
@@ -95,7 +96,7 @@ export class KdbWelcomeView extends LitElement {
       <div class="container">
         <div class="row">
           <h1>Welcome to KDB-X</h1>
-          <div class="col gap-1">
+          <div class="col">
             <div>
               <p>
                 KDB-X is the next generation of kdb+, optimized for modern
@@ -105,11 +106,8 @@ export class KdbWelcomeView extends LitElement {
               <div class="col">
                 <div class="icon">${renderIcon1(this.dark)}</div>
                 <div class="row">
-                  <strong>Sign in or create an account</strong>
-                  <div>
-                    A browser opens → enter email → verify with code → accept
-                    EULA.
-                  </div>
+                  <strong>Log in or create an account</strong>
+                  <div>A browser opens → authenticate → accept EULA.</div>
                 </div>
               </div>
               <div class="col">
@@ -124,8 +122,7 @@ export class KdbWelcomeView extends LitElement {
                 <div class="row">
                   <strong>Activate in VS Code</strong>
                   <div>
-                    Paste the key in the extension → terminal installs KDB-X
-                    runtime.
+                    Paste the key in VS Code → terminal installs KDB-X runtime.
                   </div>
                 </div>
               </div>
@@ -134,7 +131,8 @@ export class KdbWelcomeView extends LitElement {
                 <div class="row">
                   <strong>Start coding</strong>
                   <div>
-                    Installation completes → switch to KX Extension tab.
+                    Installation completes → run command
+                    <strong>KX: Start REPL</strong> from the command palette.
                   </div>
                 </div>
               </div>
@@ -392,4 +390,4 @@ function renderIcon5() {
   `;
 }
 
-/* c8 ignore end */
+/* c8 ignore stop */

@@ -125,69 +125,77 @@ export class ConnectionManagementService {
 
   public async connect(connLabel: string): Promise<void> {
     /* c8 ignore start */
-    const connection = this.retrieveConnection(connLabel);
-    if (!connection) {
-      return;
-    }
-    if (connection instanceof KdbNode) {
-      const connectionString = this.retrieveLocalConnectionString(connection);
-      const authCredentials = connection.details.auth
-        ? await ext.secretSettings.getAuthData(connection.children[0])
-        : undefined;
-      const localConnection = new LocalConnection(
-        connectionString,
-        connLabel,
-        retrieveConnLabelsNames(connection),
-        authCredentials ? authCredentials.split(":") : undefined,
-        connection.details.tls,
-      );
-      await localConnection.connect((err, conn) => {
-        if (err) {
-          this.connectFailBehaviour(connLabel);
-          return;
-        }
-        if (conn) {
+    try {
+      const connection = this.retrieveConnection(connLabel);
+      if (!connection) {
+        this.connectFailBehaviour(
+          connLabel,
+          new Error(`Connection ${connLabel} not found.`),
+        );
+        return;
+      }
+      if (connection instanceof KdbNode) {
+        const connectionString = this.retrieveLocalConnectionString(connection);
+        const authCredentials = connection.details.auth
+          ? await ext.secretSettings.getAuthData(connection.children[0])
+          : undefined;
+        const localConnection = new LocalConnection(
+          connectionString,
+          connLabel,
+          retrieveConnLabelsNames(connection),
+          authCredentials ? authCredentials.split(":") : undefined,
+          connection.details.tls,
+        );
+        await localConnection.connect((err, conn) => {
+          if (err) {
+            this.connectFailBehaviour(connLabel, err);
+            return;
+          }
+          if (conn) {
+            notify(
+              `Connection established successfully to: ${connLabel}`,
+              MessageKind.DEBUG,
+              {
+                logger,
+                telemetry:
+                  "Connection.Connected" +
+                  this.getTelemetryConnectionType(connLabel),
+              },
+            );
+
+            ext.connectedConnectionList.push(localConnection);
+
+            this.connectSuccessBehaviour(connection);
+          }
+        });
+      } else {
+        ext.context.secrets.delete(connection.details.alias);
+        const insightsConn: InsightsConnection = new InsightsConnection(
+          connLabel,
+          connection,
+        );
+        await insightsConn.connect();
+        if (insightsConn.connected) {
           notify(
             `Connection established successfully to: ${connLabel}`,
             MessageKind.DEBUG,
             {
               logger,
+              params: { insightsVersion: insightsConn.insightsVersion },
               telemetry:
                 "Connection.Connected" +
                 this.getTelemetryConnectionType(connLabel),
             },
           );
-
-          ext.connectedConnectionList.push(localConnection);
-
+          ext.connectedConnectionList.push(insightsConn);
           this.connectSuccessBehaviour(connection);
+        } else {
+          this.connectFailBehaviour(connLabel);
         }
-      });
-    } else {
-      ext.context.secrets.delete(connection.details.alias);
-      const insightsConn: InsightsConnection = new InsightsConnection(
-        connLabel,
-        connection,
-      );
-      await insightsConn.connect();
-      if (insightsConn.connected) {
-        notify(
-          `Connection established successfully to: ${connLabel}`,
-          MessageKind.DEBUG,
-          {
-            logger,
-            params: { insightsVersion: insightsConn.insightsVersion },
-            telemetry:
-              "Connection.Connected" +
-              this.getTelemetryConnectionType(connLabel),
-          },
-        );
-        ext.connectedConnectionList.push(insightsConn);
-        this.connectSuccessBehaviour(connection);
-      } else {
-        this.connectFailBehaviour(connLabel);
+        refreshDataSourcesPanel();
       }
-      refreshDataSourcesPanel();
+    } catch (error) {
+      this.connectFailBehaviour(connLabel, error);
     }
     /* c8 ignore stop */
   }
@@ -292,9 +300,10 @@ export class ConnectionManagementService {
     ext.serverProvider.reload();
   }
 
-  public connectFailBehaviour(connLabel: string): void {
-    notify(`Connection failed to: ${connLabel}`, MessageKind.ERROR, {
+  public connectFailBehaviour(connLabel: string, error?: unknown): void {
+    notify(`Connection to ${connLabel} failed.`, MessageKind.ERROR, {
       logger,
+      params: error,
       telemetry:
         "Connection.Failed" + this.getTelemetryConnectionType(connLabel),
     });

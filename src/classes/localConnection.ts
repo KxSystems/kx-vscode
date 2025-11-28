@@ -90,11 +90,9 @@ export class LocalConnection {
     nodeq.connect(options, (err, conn) => {
       if (err || !conn) {
         ext.serverProvider.reload();
-        notify(
-          `Connection to server ${this.options.host}:${this.options.port} failed.`,
-          MessageKind.ERROR,
-          { logger, params: err },
-        );
+        this.connection = undefined;
+        this.connected = false;
+        callback(err, this);
         return;
       }
 

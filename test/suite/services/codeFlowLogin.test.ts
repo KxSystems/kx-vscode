@@ -65,7 +65,7 @@ describe("CodeFlowLogin", () => {
       axiosStub.resolves(mockResponse);
 
       await codeFlow.signOut(
-        "https://insights.com",
+        "https://insights.example.com",
         "realm1",
         false,
         "token123",
@@ -76,7 +76,7 @@ describe("CodeFlowLogin", () => {
 
       assert.strictEqual(
         url,
-        "https://insights.com/auth/realms/realm1/protocol/openid-connect/revoke",
+        "https://insights.example.com/auth/realms/realm1/protocol/openid-connect/revoke",
       );
       assert.strictEqual(
         config.headers["Content-Type"],
@@ -89,7 +89,7 @@ describe("CodeFlowLogin", () => {
       axiosStub.resolves(mockResponse);
 
       await codeFlow.signOut(
-        "https://insights.com",
+        "https://insights.example.com",
         "realm1",
         true,
         "token123",
@@ -112,7 +112,7 @@ describe("CodeFlowLogin", () => {
       axiosStub.resolves(mockResponse);
 
       const result = await codeFlow.refreshToken(
-        "https://insights.com",
+        "https://insights.example.com",
         "realm1",
         false,
         "refresh_token_123",
@@ -127,7 +127,7 @@ describe("CodeFlowLogin", () => {
       axiosStub.rejects(new Error("Token expired"));
 
       const result = await codeFlow.refreshToken(
-        "https://insights.com",
+        "https://insights.example.com",
         "realm1",
         false,
         "invalid_refresh_token",
@@ -147,7 +147,7 @@ describe("CodeFlowLogin", () => {
       axiosStub.resolves(mockResponse);
 
       await codeFlow.refreshToken(
-        "https://insights.com",
+        "https://insights.example.com",
         "realm1",
         false,
         "refresh_token_123",
@@ -248,7 +248,7 @@ describe("CodeFlowLogin", () => {
       axiosStub.resolves(mockResponse);
 
       const result = await codeFlow.getToken(
-        "https://insights.com",
+        "https://insights.example.com",
         "realm1",
         false,
         "auth_code_123",
@@ -270,7 +270,7 @@ describe("CodeFlowLogin", () => {
       axiosStub.resolves(mockResponse);
 
       await codeFlow.getToken(
-        "https://insights.com",
+        "https://insights.example.com",
         "realm1",
         false,
         "auth_code_123",
@@ -286,7 +286,7 @@ describe("CodeFlowLogin", () => {
 
       try {
         await codeFlow.getToken(
-          "https://insights.com",
+          "https://insights.example.com",
           "realm1",
           false,
           "auth_code_123",
@@ -328,7 +328,7 @@ describe("CodeFlowLogin", () => {
 
       const beforeTime = new Date();
       const result = await codeFlow.getToken(
-        "https://insights.com",
+        "https://insights.example.com",
         "realm1",
         false,
         "code",
@@ -353,7 +353,7 @@ describe("CodeFlowLogin", () => {
       axiosStub.resolves(mockResponse);
 
       const result = await codeFlow.getToken(
-        "https://insights.com",
+        "https://insights.example.com",
         "realm1",
         false,
         "code",
@@ -379,7 +379,12 @@ describe("CodeFlowLogin", () => {
       };
       axiosStub.resolves(mockResponse);
 
-      await codeFlow.getToken("https://insights.com", "realm1", false, "code");
+      await codeFlow.getToken(
+        "https://insights.example.com",
+        "realm1",
+        false,
+        "code",
+      );
 
       const [, body] = axiosStub.getCall(0).args;
       assert.ok(body.includes("client_id=insights-app"));
