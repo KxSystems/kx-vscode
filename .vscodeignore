@@ -13,7 +13,6 @@ test/
 img/
 esbuild.js
 sonar-project.properties
-.snyk 
 eslint.config.cjs
 eslint.config.mjs
 release_process.md
@@ -23,5 +22,4 @@ out-test/
 .test-folder/
 .prettierignore
 .README
-license-header.js
 REFCARD.md 

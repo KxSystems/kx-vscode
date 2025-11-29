@@ -1,8 +1,10 @@
 {
-  "editor.formatOnSave": true,
-  "editor.defaultFormatter": "esbenp.prettier-vscode",
-  "editor.codeActionsOnSave": {
-    "source.organizeImports": "never"
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": "never"
+    },
+    "editor.formatOnSave": true
   },
   "launcher.mappings": [
     {
@@ -13,7 +15,5 @@
       "name": "UI Test Selected File",
       "pattern": "kx-vscode.*/test/ui/.+\\.test\\.ts$"
     }
-  ],
-  "kdb.connectionMap": {},
-  "kdb.targetMap": {}
+  ]
 }
