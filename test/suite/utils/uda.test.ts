@@ -17,7 +17,6 @@ import * as sinon from "sinon";
 import { ext } from "../../../src/extensionVariables";
 import { MetaObjectPayload } from "../../../src/models/meta";
 import {
-  InvalidParamFieldErrors,
   ParamFieldType,
   UDAParam,
   UDARequestBody,

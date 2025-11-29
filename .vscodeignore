@@ -15,6 +15,7 @@ esbuild.js
 sonar-project.properties
 eslint.config.cjs
 eslint.config.mjs
+ref_card.md
 release_process.md
 .github/
 out-test/
@@ -22,4 +23,3 @@ out-test/
 .test-folder/
 .prettierignore
 .README
-REFCARD.md 
