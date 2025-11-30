@@ -3,7 +3,6 @@
     "dbaeumer.vscode-eslint",
     "esbenp.prettier-vscode",
     "runem.lit-plugin",
-    "pushqrdx.inline-html",
     "connor4312.esbuild-problem-matchers",
     "ecmel.vscode-launcher"
   ]
