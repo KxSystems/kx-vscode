@@ -16,7 +16,7 @@ import { join, resolve } from "node:path";
 import { pickPort } from "pick-port";
 import * as vscode from "vscode";
 
-import { showSetupError } from "./setupTools";
+import { showSetupError } from "./setupCommand";
 import { getEnvironment } from "../utils/core";
 import { MessageKind, notify } from "../utils/notifications";
 import { pickWorkspace } from "../utils/workspace";
