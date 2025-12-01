@@ -5,15 +5,13 @@
     "outDir": "out",
     "lib": ["ES2019", "WebWorker", "DOM", "DOM.Iterable"],
     "sourceMap": true,
-    "rootDir": "src",
     "strict": true,
     "noFallthroughCasesInSwitch": true,
-    "noUnusedParameters": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "experimentalDecorators": true,
     "useDefineForClassFields": false
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", ".vscode-test"]
+  "include": ["src/**/*", "server/**/*", "test/**/*"],
+  "exclude": ["node_modules"]
 }

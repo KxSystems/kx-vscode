@@ -33,7 +33,7 @@ import { tryExecuteCommand } from "./cpUtils";
 import { MessageKind, notify } from "./notifications";
 import { errorMessage } from "./shared";
 import { readTextFile, stat, which } from "./shell";
-import { showWelcome } from "../commands/setupTools";
+import { showWelcome } from "../commands/setupCommand";
 import {
   InsightDetails,
   Insights,

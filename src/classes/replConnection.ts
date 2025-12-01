@@ -17,7 +17,7 @@ import path from "node:path";
 import kill from "tree-kill";
 import * as vscode from "vscode";
 
-import { showSetupError } from "../commands/setupTools";
+import { showSetupError } from "../commands/setupCommand";
 import { ext } from "../extensionVariables";
 import {
   getAutoFocusOutputOnEntrySetting,

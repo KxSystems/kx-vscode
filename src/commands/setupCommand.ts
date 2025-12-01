@@ -60,10 +60,9 @@ export function showWelcome() {
       },
     );
     panel.iconPath = <any>getIconPath("kx_logo.png");
-    panel.webview.html = getWebviewContent(panel.webview);
     panel.webview.onDidReceiveMessage((msg) => {
       if (msg === "install") installKdbX();
-      if (msg === true || msg === false) {
+      else if (msg === true || msg === false) {
         vscode.workspace
           .getConfiguration()
           .update(
@@ -73,8 +72,15 @@ export function showWelcome() {
           );
       }
     });
+    updateView();
+    const listener = vscode.window.onDidChangeActiveColorTheme(() =>
+      updateView(),
+    );
+    panel.onDidDispose(() => {
+      listener.dispose();
+      panel = undefined;
+    });
     ext.context.subscriptions.push(panel);
-    panel.onDidDispose(() => (panel = undefined));
   }
   /* c8 ignore stop */
 }
@@ -92,21 +98,21 @@ function getWebviewContent(webview: vscode.Webview) {
       : "sl-theme-dark";
 
   return /* html */ `
-        <!DOCTYPE html>
-        <html lang="en" class="${getTheme()}">
-        <head>
-          <meta charset="UTF-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-          <link rel="stylesheet" href="${getResource("out/light.css")}" />
-          <link rel="stylesheet" href="${getResource("out/style.css")}" />
-          <script type="module" nonce="${getNonce()}" src="${getResource("out/webview.js")}"></script>
-          <title>Welcome to KDB-X</title>
-        </head>
-        <body>
-          <kdb-welcome-view image="${getResource("resources/kx_welcome.png")}" checked="${getShowWelcome()}" dark="${getTheme() === "sl-theme-dark" ? "dark" : ""}"></kdb-welcome-view>
-        </body>
-        </html>
-      `;
+    <!DOCTYPE html>
+    <html lang="en" class="${getTheme()}">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="stylesheet" href="${getResource("out/light.css")}" />
+      <link rel="stylesheet" href="${getResource("out/style.css")}" />
+      <script type="module" nonce="${getNonce()}" src="${getResource("out/webview.js")}"></script>
+      <title>Welcome to KDB-X</title>
+    </head>
+    <body>
+      <kdb-welcome-view image="${getResource("resources/images/kx_welcome.png")}" checked="${getShowWelcome()}" dark="${getTheme() === "sl-theme-dark" ? "dark" : ""}"></kdb-welcome-view>
+    </body>
+    </html>
+  `;
   /* c8 ignore stop */
 }
 
@@ -269,5 +275,11 @@ function getShowWelcome() {
   return !vscode.workspace
     .getConfiguration()
     .get<boolean>("kdb.neverShowQInstallAgain", false);
+  /* c8 ignore stop */
+}
+
+function updateView() {
+  /* c8 ignore start */
+  if (panel) panel.webview.html = getWebviewContent(panel.webview);
   /* c8 ignore stop */
 }

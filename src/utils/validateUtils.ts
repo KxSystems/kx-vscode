@@ -16,7 +16,7 @@ export namespace validateUtils {
   export function isValidLength(
     value: string,
     lower?: number,
-    upper?: number
+    upper?: number,
   ): boolean {
     const maxInteger = 2147483647;
 

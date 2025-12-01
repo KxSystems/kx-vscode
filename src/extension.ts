@@ -47,7 +47,7 @@ import {
   rerunQuery,
   resetScratchpad,
 } from "./commands/serverCommand";
-import { installKdbX, showWelcome } from "./commands/setupTools";
+import { installKdbX, showWelcome } from "./commands/setupCommand";
 import {
   ConnectionLensProvider,
   checkOldDatasourceFiles,
