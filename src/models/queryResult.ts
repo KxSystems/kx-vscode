@@ -19,7 +19,7 @@ export type QueryResult = {
   error: string;
   keys: string[];
   meta: MetaResult[];
-   
+
   data: any;
   backtrace: {
     name: string;

@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "runem.lit-plugin",
+    "connor4312.esbuild-problem-matchers",
+    "ecmel.vscode-launcher"
+  ]
+}

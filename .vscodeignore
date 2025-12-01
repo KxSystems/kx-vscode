@@ -13,13 +13,13 @@ test/
 img/
 esbuild.js
 sonar-project.properties
-.snyk 
 eslint.config.cjs
 eslint.config.mjs
+ref_card.md
 release_process.md
 .github/
 out-test/
 .test-extensions/
 .test-folder/
+.prettierignore
 .README
-REFCARD.md 
