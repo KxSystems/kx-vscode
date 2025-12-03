@@ -261,14 +261,19 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
                   const columnWidths = saveColumnWidths();
                   const gridOptions = {
                     defaultColDef: {
-                      sortable: true,
                       resizable: true,
-                      filter: true,
-                      flex: 1,
-                      minWidth: 100,
+                      sortable: false,
+                      filter: false,
                       editable: false,
+                      flex: 1,
                     },
                     theme: message.theme,
+                    autoSizeStrategy: {
+                      type: 'fitCellContents',
+                      defaultMinWidth: 100,
+                      defaultMaxWidth: 1000,
+                      scaleUpToFitGridWidth: true,
+                    },
                     columnDefs: message.columnDefs,
                     domLayout: "autoHeight",
                     pagination: true,
