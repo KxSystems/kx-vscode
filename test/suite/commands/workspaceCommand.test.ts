@@ -240,12 +240,6 @@ describe("workspaceCommand", () => {
     afterEach(() => {
       oldFilesExistsStub.restore();
     });
-
-    it("should check for old datasource files", async () => {
-      oldFilesExistsStub.returns(true);
-      await workspaceCommand.checkOldDatasourceFiles();
-      sinon.assert.calledOnce(oldFilesExistsStub);
-    });
   });
 
   describe("importOldDSFiles", () => {

@@ -102,4 +102,11 @@ describe("Start Up", () => {
       assert.ok(section);
     });
   });
+
+  describe("Welcome View", () => {
+    it("should exist", async () => {
+      const view = await waitForEditor("Welcome to KDB-X");
+      assert.ok(view);
+    });
+  });
 });

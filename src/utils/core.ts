@@ -272,47 +272,6 @@ export function getServers(): Server {
     : {};
 }
 
-// TODO: Remove this on 1.9.0 release
-export function fixUnnamedAlias(): void {
-  /* c8 ignore start */
-  const servers = getServers();
-  const insights = getInsights();
-  let counter = 1;
-
-  if (servers) {
-    const updatedServers: Server = {};
-    for (const key in servers) {
-      if (Object.prototype.hasOwnProperty.call(servers, key)) {
-        const server = servers[key];
-        if (server.serverAlias === "") {
-          server.serverAlias = `unnamedServer-${counter}`;
-          counter++;
-        }
-        updatedServers[server.serverAlias] = server;
-      }
-    }
-    updateServers(updatedServers);
-    ext.serverProvider.refresh(servers);
-  }
-
-  if (insights) {
-    const updatedInsights: Insights = {};
-    for (const key in insights) {
-      if (Object.prototype.hasOwnProperty.call(insights, key)) {
-        const insight = insights[key];
-        if (insight.alias === "") {
-          insight.alias = `unnamedServer-${counter}`;
-          counter++;
-        }
-        updatedInsights[insight.alias] = insight;
-      }
-    }
-    updateInsights(updatedInsights);
-    ext.serverProvider.refreshInsights(insights);
-  }
-  /* c8 ignore stop */
-}
-
 export function getAutoFocusOutputOnEntrySetting(): boolean {
   return workspace
     .getConfiguration("kdb")
