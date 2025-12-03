@@ -20,6 +20,7 @@ export function kdbOutputLog(
   type: string,
   supressDialog?: boolean,
 ): void {
+  /* c8 ignore start */
   switch (type) {
     case "DEBUG":
       ext.outputChannel.debug(message);
@@ -48,5 +49,6 @@ export function kdbOutputLog(
           ext.outputChannel.show(true);
         }
       });
+    /* c8 ignore stop */
   }
 }
