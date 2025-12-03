@@ -23,7 +23,11 @@ import {
   runDataSource,
 } from "../commands/dataSourceCommand";
 import { executeQuery } from "../commands/serverCommand";
-import { findConnection, getServerForUri } from "../commands/workspaceCommand";
+import {
+  findConnection,
+  getServerForUri,
+  setServerForUri,
+} from "../commands/workspaceCommand";
 import { ext } from "../extensionVariables";
 import { CellKind } from "../models/notebook";
 import { getBasename } from "../utils/core";
@@ -107,7 +111,12 @@ export class KxNotebookController {
     notebook: vscode.NotebookDocument,
     controller: vscode.NotebookController,
   ): Promise<void> {
-    if (getServerForUri(notebook.uri) === ext.REPL) {
+    let server = getServerForUri(notebook.uri);
+    if (server === ext.REPL) {
+      server = undefined;
+      await setServerForUri(notebook.uri, undefined);
+    }
+    if (server === undefined) {
       return this.executeRepl(cells, notebook, controller);
     }
 

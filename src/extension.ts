@@ -49,7 +49,6 @@ import {
 import { installKdbX, showWelcome } from "./commands/setupCommand";
 import {
   ConnectionLensProvider,
-  checkOldDatasourceFiles,
   connectWorkspaceCommands,
   importOldDSFiles,
   pickConnection,
@@ -108,7 +107,6 @@ import {
 import {
   checkLocalInstall,
   checkOpenSslInstalled,
-  fixUnnamedAlias,
   getInsights,
   getServers,
   hasWorkspaceOrShowOption,
@@ -155,8 +153,6 @@ export async function activate(context: vscode.ExtensionContext) {
     "**/*.kdb.json",
     "datasource",
   );
-
-  fixUnnamedAlias();
 
   vscode.commands.executeCommand("setContext", "kdb.QHOME", env.QHOME);
 
@@ -220,8 +216,6 @@ export async function activate(context: vscode.ExtensionContext) {
     }),
   );
 
-  checkOldDatasourceFiles();
-
   const lastResult: QueryResult | undefined = undefined;
   const resultSchema = "vscode-kdb-q";
   const resultProvider = new (class
@@ -265,9 +259,6 @@ export async function activate(context: vscode.ExtensionContext) {
       new KxNotebookTargetActionProvider(),
     ),
   );
-
-  connectWorkspaceCommands();
-  await connectBuildTools();
 
   //q language server
   const serverModule = path.join(context.extensionPath, "out", "server.js");
@@ -313,8 +304,8 @@ export async function activate(context: vscode.ExtensionContext) {
   );
 
   await client.start();
-
   connectClientCommands(context, client);
+  await connectBuildTools();
 
   const yamlExtension = vscode.extensions.getExtension("redhat.vscode-yaml");
   if (yamlExtension) {
@@ -1014,6 +1005,7 @@ function registerAllExtensionCommands(): void {
       vscode.commands.registerCommand(command.command, command.callback),
     );
   });
+  connectWorkspaceCommands();
 }
 
 export async function deactivate(): Promise<void> {

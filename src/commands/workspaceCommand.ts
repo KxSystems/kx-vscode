@@ -39,7 +39,7 @@ import { ConnectionManagementService } from "../services/connectionManagerServic
 import { InsightsNode, KdbNode, LabelNode } from "../services/kdbTreeProvider";
 import { updateCellMetadata } from "../services/notebookProviders";
 import { getBasename, offerConnectAction } from "../utils/core";
-import { importOldDsFiles, oldFilesExists } from "../utils/dataSource";
+import { importOldDsFiles } from "../utils/dataSource";
 import {
   Cancellable,
   MessageKind,
@@ -221,12 +221,7 @@ export async function pickConnection(uri: Uri) {
   /* c8 ignore start */
   const server = getServerForUri(uri);
   const servers = getServers();
-
-  const items = ["(none)"];
-  if (isQ(uri) || isNotebook(uri) || isPython(uri) || isSql(uri)) {
-    items.push(ext.REPL);
-  }
-  items.push(...servers);
+  const items = ["(none)", ...servers];
 
   let picked = await window.showQuickPick(items, {
     title: `Choose Connection (${getBasename(uri)})`,
@@ -449,14 +444,6 @@ function isSql(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".sql");
 }
 
-function isQ(uri: Uri | undefined) {
-  return uri && uri.path.endsWith(".q");
-}
-
-function isNotebook(uri: Uri | undefined) {
-  return uri && uri.path.endsWith(".kxnb");
-}
-
 function isPython(uri: Uri | undefined) {
   return uri && uri.path.endsWith(".py");
 }
@@ -532,7 +519,12 @@ export async function runActiveEditor(type?: ExecutionTypes) {
   /* c8 ignore start */
   if (ext.activeTextEditor) {
     const uri = ext.activeTextEditor.document.uri;
-    if (getServerForUri(uri) === ext.REPL) {
+    let server = getServerForUri(uri);
+    if (server === ext.REPL) {
+      server = undefined;
+      await setServerForUri(uri, undefined);
+    }
+    if (server === undefined) {
       runOnRepl(ext.activeTextEditor, type);
       return;
     }
@@ -691,10 +683,6 @@ export function connectWorkspaceCommands() {
   });
   window.onDidChangeActiveTextEditor(activeEditorChanged);
   activeEditorChanged(window.activeTextEditor);
-}
-
-export function checkOldDatasourceFiles() {
-  ext.oldDSformatExists = oldFilesExists();
 }
 
 export async function importOldDSFiles() {
