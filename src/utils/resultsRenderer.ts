@@ -83,6 +83,7 @@ export function convertToGrid(
       field: "index",
       headerName: "Index",
       cellDataType: "number",
+      pinned: "left",
     });
   }
 
