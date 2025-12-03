@@ -375,7 +375,7 @@ describe("ResultsPanelProvider", () => {
         { a: "2", b: "2" },
         { a: "3", b: "3" },
       ];
-      const expectedOutput = ["a,b", "1,1", "2,2", "3,3"];
+      const expectedOutput = ['"a","b"', '"1","1"', '"2","2"', '"3","3"'];
       const actualOutput = renderer.convertToCsv(inputQueryResult);
       assert.deepStrictEqual(actualOutput, expectedOutput);
     });
