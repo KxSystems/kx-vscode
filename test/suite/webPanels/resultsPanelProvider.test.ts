@@ -162,7 +162,12 @@ describe("ResultsPanelProvider", () => {
           { index: 2, prop1: "value3", prop2: "value4" },
         ],
         columnDefs: [
-          { field: "index", headerName: "Index", cellDataType: "number" },
+          {
+            field: "index",
+            headerName: "Index",
+            cellDataType: "number",
+            pinned: "left",
+          },
           {
             field: "prop1",
             headerName: "prop1 [type1]",
@@ -205,7 +210,12 @@ describe("ResultsPanelProvider", () => {
           { index: 2, prop1: "value2", prop2: "value4" },
         ],
         columnDefs: [
-          { field: "index", headerName: "Index", cellDataType: "number" },
+          {
+            field: "index",
+            headerName: "Index",
+            cellDataType: "number",
+            pinned: "left",
+          },
           {
             field: "prop1",
             headerName: "prop1 [type1]",
@@ -236,7 +246,12 @@ describe("ResultsPanelProvider", () => {
       const expectedOutput = JSON.stringify({
         rowData: [],
         columnDefs: [
-          { field: "index", headerName: "Index", cellDataType: "number" },
+          {
+            field: "index",
+            headerName: "Index",
+            cellDataType: "number",
+            pinned: "left",
+          },
           {
             field: "prop1",
             headerName: "prop1 [type1]",
@@ -272,7 +287,12 @@ describe("ResultsPanelProvider", () => {
           { index: 3, sym: "c", val: 3 },
         ],
         columnDefs: [
-          { field: "index", headerName: "Index", cellDataType: "number" },
+          {
+            field: "index",
+            headerName: "Index",
+            cellDataType: "number",
+            pinned: "left",
+          },
           { field: "sym", headerName: "sym [type1]", cellDataType: "text" },
           { field: "val", headerName: "val [type2]", cellDataType: "text" },
         ],
@@ -290,7 +310,12 @@ describe("ResultsPanelProvider", () => {
       const expectedOutput = JSON.stringify({
         rowData: [{ index: 1, value: "1,2,3" }],
         columnDefs: [
-          { field: "index", headerName: "Index", cellDataType: "number" },
+          {
+            field: "index",
+            headerName: "Index",
+            cellDataType: "number",
+            pinned: "left",
+          },
           {
             field: "value",
             headerName: "value [type1]",
