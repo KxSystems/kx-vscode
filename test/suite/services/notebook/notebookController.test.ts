@@ -21,7 +21,6 @@ import { LocalConnection } from "../../../../src/classes/localConnection";
 import { ReplConnection } from "../../../../src/classes/replConnection";
 import * as serverCommand from "../../../../src/commands/serverCommand";
 import * as workspaceCommand from "../../../../src/commands/workspaceCommand";
-import { ext } from "../../../../src/extensionVariables";
 import { ConnectionManagementService } from "../../../../src/services/connectionManagerService";
 import { KdbNode } from "../../../../src/services/kdbTreeProvider";
 import * as controlller from "../../../../src/services/notebookController";
@@ -80,7 +79,7 @@ describe("Controller", () => {
       sinon
         .stub(ReplConnection.prototype, "executeQuery")
         .resolves({ output: "RESULT" });
-      sinon.stub(workspaceCommand, "getServerForUri").returns(ext.REPL);
+      sinon.stub(workspaceCommand, "getServerForUri").returns(undefined);
       sinon.stub(queryUtils, "getPythonWrapper").returns("expression");
       createInstance();
     });
