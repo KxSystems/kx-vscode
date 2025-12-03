@@ -200,7 +200,7 @@ describe("core", () => {
 
   /* eslint-disable @typescript-eslint/no-unused-expressions */
   describe("coreLogs", () => {
-    ext.outputChannel = vscode.window.createOutputChannel("kdb");
+    ext.outputChannel = vscode.window.createOutputChannel("kdb", { log: true });
     let appendLineSpy, showErrorMessageSpy: sinon.SinonSpy;
     beforeEach(() => {
       appendLineSpy = sinon.spy(

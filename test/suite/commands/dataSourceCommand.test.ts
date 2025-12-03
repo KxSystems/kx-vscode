@@ -36,7 +36,7 @@ import * as queryUtils from "../../../src/utils/queryUtils";
 describe("dataSourceCommand", () => {
   let dummyDataSourceFiles: DataSourceFiles;
   let _resultsPanel: KdbResultsViewProvider;
-  ext.outputChannel = vscode.window.createOutputChannel("kdb");
+  ext.outputChannel = vscode.window.createOutputChannel("kdb", { log: true });
   const localConn = new LocalConnection("localhost:5001", "test", []);
   const insightsNode = new InsightsNode(
     [],
@@ -731,7 +731,7 @@ describe("dataSourceCommand", () => {
       writeQueryResultsToConsoleStub: sinon.SinonStub;
     let windowMock: sinon.SinonMock;
 
-    ext.outputChannel = vscode.window.createOutputChannel("kdb");
+    ext.outputChannel = vscode.window.createOutputChannel("kdb", { log: true });
 
     beforeEach(() => {
       retrieveConnStub = sinon.stub(
