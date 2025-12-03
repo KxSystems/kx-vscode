@@ -127,7 +127,7 @@ let client: LanguageClient;
 
 export async function activate(context: vscode.ExtensionContext) {
   ext.context = context;
-  ext.outputChannel = vscode.window.createOutputChannel("kdb");
+  ext.outputChannel = vscode.window.createOutputChannel("kdb", { log: true });
   ext.openSslVersion = await checkOpenSslInstalled();
 
   getWorkspaceLabelsConnMap();

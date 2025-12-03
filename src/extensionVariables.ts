@@ -15,6 +15,7 @@ import {
   ExtensionContext,
   extensions,
   languages,
+  LogOutputChannel,
   OutputChannel,
   StatusBarItem,
   TextEditor,
@@ -49,7 +50,7 @@ export namespace ext {
   export const REPL = "REPL";
   export let activeTextEditor: TextEditor | undefined;
   export let context: ExtensionContext;
-  export let outputChannel: OutputChannel;
+  export let outputChannel: LogOutputChannel;
   export let consolePanel: OutputChannel;
   export let serverProvider: KdbTreeProvider;
   export let queryHistoryProvider: QueryHistoryProvider;

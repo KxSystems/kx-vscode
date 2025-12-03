@@ -20,12 +20,33 @@ export function kdbOutputLog(
   type: string,
   supressDialog?: boolean,
 ): void {
-  const dateNow = new Date().toLocaleDateString();
-  const timeNow = new Date().toLocaleTimeString();
-  ext.outputChannel.appendLine(`[${dateNow} ${timeNow}] [${type}] ${message}`);
+  switch (type) {
+    case "DEBUG":
+      ext.outputChannel.debug(message);
+      break;
+    case "INFO":
+      ext.outputChannel.info(message);
+      break;
+    case "WARNING":
+      ext.outputChannel.warn(message);
+      break;
+    case "ERROR":
+      ext.outputChannel.error(message);
+      break;
+    default:
+      ext.outputChannel.trace(message);
+      break;
+  }
   if (type === "ERROR" && !supressDialog) {
-    vscode.window.showErrorMessage(
-      `Error occured, check kdb output channel for details.`,
-    );
+    vscode.window
+      .showErrorMessage(
+        `Error occured, check kdb output log for details.`,
+        "Check",
+      )
+      .then((res) => {
+        if (res === "Check") {
+          ext.outputChannel.show(true);
+        }
+      });
   }
 }
