@@ -245,13 +245,14 @@ export function formatResult(queryResult: string | number): string {
 
 export function convertToCsv(data: any[]): string[] {
   const keys = Object.keys(data[0]);
-  const header = keys.join(",");
-  const rows = data.map((obj) => {
-    return keys
-      .map((key) => {
-        return obj[key];
-      })
-      .join(",");
-  });
+  const header = keys.map((k) => normalize(k)).join(",");
+  const rows = data.map((obj) =>
+    keys.map((key) => normalize(obj[key])).join(","),
+  );
   return [header, ...rows];
+}
+
+function normalize(obj: any) {
+  const o = `${obj}`;
+  return `"${o.replace(/"/gs, '""')}"`;
 }
