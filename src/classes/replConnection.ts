@@ -12,9 +12,9 @@
  */
 
 import { PythonExtension, ResolvedEnvironment } from "@vscode/python-extension";
+import kill from "kill-sync";
 import { ChildProcessWithoutNullStreams, spawn } from "node:child_process";
 import path from "node:path";
-import kill from "tree-kill";
 import * as vscode from "vscode";
 
 import { showSetupError } from "../commands/setupCommand";
@@ -246,6 +246,7 @@ export class ReplConnection {
         onDidWrite: this.onDidWrite.event,
       },
       name: `${CONF.TITLE} (${this.workspace ? this.workspace.name : CONF.DEFAULT})`,
+      isTransient: true,
     });
   }
 
@@ -338,12 +339,12 @@ export class ReplConnection {
 
   private stopExecution() {
     this.stopped = this.win32;
-    if (this.process.pid) kill(this.process.pid, "SIGINT");
+    if (this.process.pid) kill(this.process.pid, "SIGINT", true);
   }
 
   private stopProcess(restart = false) {
     this.stopped = restart;
-    if (this.process.pid) kill(this.process.pid, "SIGKILL");
+    if (this.process.pid) kill(this.process.pid, "SIGKILL", true);
   }
 
   private runQuery(data: string) {
@@ -750,9 +751,5 @@ export class ReplConnection {
     }
 
     return repl;
-  }
-
-  static dispose() {
-    Array.from(this.repls.values()).forEach((repl) => repl.close());
   }
 }
