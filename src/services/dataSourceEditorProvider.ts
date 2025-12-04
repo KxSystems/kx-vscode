@@ -168,7 +168,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
       /* c8 ignore start */
       const selectedServer = getServerForUri(document.uri) || "";
       const connected = connMngService.isConnected(selectedServer);
-
+      let runner: any;
       switch (msg.command) {
         case DataSourceCommand.Server: {
           await setServerForUri(document.uri, msg.selectedServer);
@@ -196,47 +196,41 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           break;
         }
         case DataSourceCommand.Refresh: {
-          if (connected) {
-            const runner = Runner.create(async () => {
-              await connMngService.refreshGetMeta(selectedServer);
-              this.cache.delete(selectedServer);
-              updateWebview();
-            });
-            runner.location = ProgressLocation.Notification;
-            runner.title = `Refreshing meta data for ${selectedServer}.`;
+          runner = Runner.create(async () => {
+            await connMngService.refreshGetMeta(selectedServer);
+            this.cache.delete(selectedServer);
+            updateWebview();
+          });
+          runner.location = ProgressLocation.Notification;
+          runner.title = `Refreshing meta data for ${selectedServer}.`;
+          if (connected) await runner.execute();
+          else if (await offerConnectAction(selectedServer))
             await runner.execute();
-          } else {
-            offerConnectAction(selectedServer);
-          }
           break;
         }
         case DataSourceCommand.Run: {
-          if (connected) {
-            const runner = Runner.create(() =>
-              runDataSource(
-                msg.dataSourceFile,
-                msg.selectedServer,
-                this.filenname,
-              ),
-            );
-            runner.location = ProgressLocation.Notification;
-            runner.title = `Running ${getBasename(document.uri)} on ${msg.selectedServer}.`;
+          runner = Runner.create(() =>
+            runDataSource(
+              msg.dataSourceFile,
+              msg.selectedServer,
+              this.filenname,
+            ),
+          );
+          runner.location = ProgressLocation.Notification;
+          runner.title = `Running ${getBasename(document.uri)} on ${msg.selectedServer}.`;
+          if (connected) await runner.execute();
+          else if (await offerConnectAction(selectedServer))
             await runner.execute();
-          } else {
-            offerConnectAction(selectedServer);
-          }
           break;
         }
         case DataSourceCommand.Populate: {
-          if (connected) {
-            const runner = Runner.create(() =>
-              populateScratchpad(msg.dataSourceFile, msg.selectedServer),
-            );
-            runner.title = "Populating scratchpad.";
+          runner = Runner.create(() =>
+            populateScratchpad(msg.dataSourceFile, msg.selectedServer),
+          );
+          runner.title = "Populating scratchpad.";
+          if (connected) await runner.execute();
+          else if (await offerConnectAction(selectedServer))
             await runner.execute();
-          } else {
-            offerConnectAction(selectedServer);
-          }
           break;
         }
       }
