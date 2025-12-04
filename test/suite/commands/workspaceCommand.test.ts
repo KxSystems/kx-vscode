@@ -182,12 +182,6 @@ describe("workspaceCommand", () => {
     });
   });
 
-  describe.skip("runActiveEditor", () => {
-    it("should run query", async () => {
-      await workspaceCommand.runActiveEditor();
-    });
-  });
-
   describe("ConnectionLensProvider", () => {
     describe("provideCodeLenses", () => {
       it("should return lenses", async () => {
