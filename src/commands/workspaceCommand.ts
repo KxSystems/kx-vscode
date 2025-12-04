@@ -726,20 +726,18 @@ export async function findConnection(uri: Uri) {
       server = node.label;
       conn = connMngService.retrieveConnectedConnection(server);
       if (conn === undefined) {
-        offerConnectAction(server);
-        return;
+        const res = await offerConnectAction(server);
+        if (res) {
+          conn = connMngService.retrieveConnectedConnection(server);
+        }
       }
     } else {
       notify(`Connection ${server} not found.`, MessageKind.ERROR, {
         logger,
       });
-      return;
     }
-  } else if (ext.activeConnection) {
-    conn = ext.activeConnection;
   } else {
-    offerConnectAction();
-    return;
+    await offerConnectAction();
   }
   return conn;
   /* c8 ignore stop */

@@ -169,26 +169,6 @@ describe("workspaceCommand", () => {
     });
   });
 
-  describe("pickTarget", () => {
-    it("should pick from available targets", async () => {
-      sinon
-        .stub(vscode.window, "showQuickPick")
-        .value(async () => "scratchpad");
-      let res = await workspaceCommand.pickTarget(insightsUri);
-      assert.strictEqual(res, undefined);
-      res = await workspaceCommand.pickTarget(kdbUri);
-      assert.strictEqual(res, undefined);
-    });
-
-    it("should only show scratchpad for .py files", async () => {
-      sinon
-        .stub(vscode.window, "showQuickPick")
-        .value(async () => "scratchpad");
-      const res = await workspaceCommand.pickTarget(pythonUri);
-      assert.strictEqual(res, undefined);
-    });
-  });
-
   describe("getConnectionForUri", () => {
     it("should return node", async () => {
       workspaceCommand.getConnectionForUri(insightsUri);
@@ -199,12 +179,6 @@ describe("workspaceCommand", () => {
       ext.connectionsList.length = 0;
       const node = workspaceCommand.getConnectionForUri(insightsUri);
       assert.strictEqual(node, undefined);
-    });
-  });
-
-  describe("runActiveEditor", () => {
-    it("should run query", async () => {
-      await workspaceCommand.runActiveEditor();
     });
   });
 

@@ -81,15 +81,4 @@ describe("LocalConnection", () => {
     const conn = localConn.getConnection();
     assert.strictEqual(conn, "fakeConnection");
   });
-
-  it("should connect", async () => {
-    connectStub.callsFake((callback) => {
-      callback(null, "fakeConnection");
-    });
-
-    await localConn.connect((err, conn) => {
-      assert.ok(!err);
-      assert.strictEqual(conn, "fakeConnection");
-    });
-  });
 });

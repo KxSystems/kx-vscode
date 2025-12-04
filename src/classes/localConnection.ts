@@ -19,7 +19,6 @@ import { commands } from "vscode";
 import { ext } from "../extensionVariables";
 import { QueryResult, QueryResultType } from "../models/queryResult";
 import { ServerObject } from "../models/serverObject";
-import { delay } from "../utils/core";
 import { convertStringToArray, handleQueryResults } from "../utils/execution";
 import { MessageKind, notify } from "../utils/notifications";
 import { queryWrapper } from "../utils/queryUtils";
@@ -32,8 +31,6 @@ export class LocalConnection {
   public labels: string[];
   private options: nodeq.ConnectionParameters;
   private connection?: nodeq.Connection;
-  private isError: boolean = false;
-  private result?: string;
 
   constructor(
     connectionString: string,
@@ -80,35 +77,30 @@ export class LocalConnection {
     return this.connection;
   }
 
-  public async connect(
-    callback: nodeq.AsyncValueCallback<LocalConnection>,
-  ): Promise<void> {
-    if (this.connection && this.connected) return;
-
+  public async connect() {
     const options = await this.getCustomAuthOptions();
-
-    nodeq.connect(options, (err, conn) => {
-      if (err || !conn) {
-        ext.serverProvider.reload();
-        this.connection = undefined;
-        this.connected = false;
-        callback(err, this);
-        return;
-      }
-
-      conn.addListener("close", () => {
-        commands.executeCommand("kdb.connections.disconnect", this.connLabel);
-        notify(
-          `Connection closed: ${this.options.host}:${this.options.port}`,
-          MessageKind.DEBUG,
-          { logger },
-        );
+    return new Promise<nodeq.Connection>((resolve, reject) => {
+      nodeq.connect(options, (err, conn) => {
+        if (err || !conn) {
+          ext.serverProvider.reload();
+          this.connection = undefined;
+          this.connected = false;
+          reject(err);
+          return;
+        }
+        conn.addListener("close", () => {
+          commands.executeCommand("kdb.connections.disconnect", this.connLabel);
+          notify(
+            `Connection closed: ${this.options.host}:${this.options.port}`,
+            MessageKind.DEBUG,
+            { logger },
+          );
+        });
+        this.connection = conn;
+        this.connected = true;
+        this.update();
+        resolve(conn);
       });
-
-      this.connection = conn;
-      this.connected = true;
-      this.update();
-      callback(err, this);
     });
   }
 
@@ -125,131 +117,60 @@ export class LocalConnection {
     this.updateReservedKeywords();
   }
 
-  public async execute(query: string): Promise<string | Error> {
-    let result;
-    let error;
-    let retryCount = 0;
-    while (this.connection === undefined) {
-      if (retryCount > ext.maxRetryCount) {
-        return "timeout";
-      }
-      await delay(500);
-      retryCount++;
-    }
-
-    this.connection.k(query, function (err: Error, res: string) {
-      if (err) {
-        error = err;
-        result = "";
-        return;
-      }
-      result = res;
-    });
-
-    // wait for result (lack of await using callbacks)
-    while (result === undefined || result === null) {
-      await delay(500);
-    }
-
-    if (error) {
-      throw error;
-    }
-
-    return result;
-  }
-
   public async executeQuery(
     command: string,
     context?: string,
     stringify?: boolean,
     isPython?: boolean,
   ): Promise<any> {
-    let result;
-    await this.waitForConnection();
-
-    if (!this.connection) {
-      return "timeout";
-    }
-    const args: any[] = [];
-    const wrapper = queryWrapper(!!isPython);
-
-    if (isPython) {
-      args.push(stringify ? "text" : "serialized", command, "first", 10000);
-    } else {
-      args.push(context ?? ".", command, stringify ? "text" : "structuredText");
-    }
-
-    args.push((err: Error, res: QueryResult) => {
-      if (err) {
-        this.isError = true;
-        result = handleQueryResults(err.toString(), QueryResultType.Error);
-      }
-      if (res) {
-        if (res.errored) {
-          this.isError = true;
-          result = handleQueryResults(
-            res.error + (res.backtrace ? "\n" + res.backtrace : ""),
-            QueryResultType.Error,
-          );
+    return new Promise((resolve, reject) => {
+      if (this.connection) {
+        const args: any[] = [];
+        const wrapper = queryWrapper(!!isPython);
+        if (isPython) {
+          args.push(stringify ? "text" : "serialized", command, "first", 10000);
         } else {
-          result = res.result === null ? "" : res.result;
+          args.push(
+            context ?? ".",
+            command,
+            stringify ? "text" : "structuredText",
+          );
         }
-      }
+        this.connection.k(wrapper, ...args, (err: Error, res: QueryResult) => {
+          if (err) {
+            reject(handleQueryResults(err.toString(), QueryResultType.Error));
+          } else if (res.errored) {
+            resolve(
+              handleQueryResults(
+                res.error + (res.backtrace ? "\n" + res.backtrace : ""),
+                QueryResultType.Error,
+              ),
+            );
+          } else {
+            const result = res.result === null ? "" : res.result;
+            if (!stringify && !isPython) {
+              resolve(JSON.parse(result));
+            } else if (ext.isResultsTabVisible && stringify) {
+              resolve(convertStringToArray(result ? result : ""));
+            } else {
+              resolve(result);
+            }
+          }
+          this.updateGlobal();
+        });
+      } else reject(new Error("Not connected."));
     });
-
-    this.connection.k(wrapper, ...args);
-
-    while (result === undefined || result === null) {
-      await delay(50);
-    }
-
-    this.updateGlobal();
-
-    if (this.isError) {
-      this.isError = false;
-      return result;
-    }
-
-    if (!stringify && !isPython) {
-      return JSON.parse(result);
-    }
-
-    if (ext.isResultsTabVisible && stringify) {
-      return convertStringToArray(result ? result : "");
-    }
-
-    return result;
   }
 
   public async executeQueryRaw(command: string): Promise<any> {
-    let result;
-    let retryCount = 0;
-    let error;
-    while (this.connection === undefined) {
-      if (retryCount > ext.maxRetryCount) {
-        return "timeout";
-      }
-      await delay(500);
-      retryCount++;
-    }
-    this.connection.k(command, (err: Error, res: any) => {
-      if (err) {
-        error = err;
-        result = "";
-        return;
-      }
-      result = res;
+    return new Promise((resolve, reject) => {
+      if (this.connection) {
+        this.connection.k(command, (err: Error, res: any) => {
+          if (err) reject(err);
+          else resolve(res || "");
+        });
+      } else reject(new Error("Not connected."));
     });
-
-    while (result === undefined || result === null) {
-      await delay(500);
-    }
-
-    if (error) {
-      throw error;
-    }
-
-    return result;
   }
 
   public async loadServerObjects(): Promise<ServerObject[]> {
@@ -274,38 +195,6 @@ export class LocalConnection {
     } else {
       return new Array<ServerObject>();
     }
-  }
-
-  private async waitForConnection(): Promise<void> {
-    let retryCount = 0;
-    while (this.connection === undefined) {
-      if (retryCount > ext.maxRetryCount) {
-        throw new Error("timeout");
-      }
-      await delay(500);
-      retryCount++;
-    }
-  }
-
-  private handleQueryResult(res: QueryResult): void {
-    if (res.errored) {
-      this.isError = true;
-      this.result = handleQueryResults(
-        res.error + (res.backtrace ? "\n" + res.backtrace : ""),
-        QueryResultType.Error,
-      );
-    } else {
-      this.result = res.result;
-    }
-  }
-
-  private async waitForResult(): Promise<any> {
-    while (this.result === undefined || this.result === null) {
-      await delay(500);
-    }
-    const result = this.result;
-    this.result = undefined;
-    return result;
   }
 
   private updateGlobal() {
