@@ -146,28 +146,23 @@ export class ConnectionManagementService {
           authCredentials ? authCredentials.split(":") : undefined,
           connection.details.tls,
         );
-        await localConnection.connect((err, conn) => {
-          if (err) {
-            this.connectFailBehaviour(connLabel, err);
-            return;
-          }
-          if (conn) {
-            notify(
-              `Connection established successfully to: ${connLabel}`,
-              MessageKind.DEBUG,
-              {
-                logger,
-                telemetry:
-                  "Connection.Connected" +
-                  this.getTelemetryConnectionType(connLabel),
-              },
-            );
+        const conn = await localConnection.connect();
+        if (conn) {
+          notify(
+            `Connection established successfully to: ${connLabel}`,
+            MessageKind.DEBUG,
+            {
+              logger,
+              telemetry:
+                "Connection.Connected" +
+                this.getTelemetryConnectionType(connLabel),
+            },
+          );
 
-            ext.connectedConnectionList.push(localConnection);
+          ext.connectedConnectionList.push(localConnection);
 
-            this.connectSuccessBehaviour(connection);
-          }
-        });
+          this.connectSuccessBehaviour(connection);
+        }
       } else {
         ext.context.secrets.delete(connection.details.alias);
         const insightsConn: InsightsConnection = new InsightsConnection(
@@ -212,22 +207,8 @@ export class ConnectionManagementService {
       logger,
       telemetry: "Connection.Connected.Active",
     });
+    commands.executeCommand("setContext", "kdb.pythonEnabled", true);
     ext.activeConnection = connection;
-
-    if (node instanceof InsightsNode) {
-      commands.executeCommand("setContext", "kdb.pythonEnabled", true);
-    } else if (connection instanceof LocalConnection) {
-      // check if pykx namespace is defined
-      connection
-        .execute("`pykx in key`")
-        .then((res) => {
-          commands.executeCommand("setContext", "kdb.pythonEnabled", !!res);
-        })
-        .catch(() => {
-          commands.executeCommand("setContext", "kdb.pythonEnabled", false);
-        });
-    }
-
     ext.connectionNode = node;
     ext.serverProvider.reload();
   }

@@ -382,30 +382,31 @@ export function invalidUsernameJWT(connLabel: string): void {
   );
 }
 
-export function offerConnectAction(connLabel?: string): void {
+export async function offerConnectAction(connLabel?: string) {
   /* c8 ignore start */
   if (connLabel) {
-    notify(
-      `You aren't connected to ${connLabel}, would you like to connect? Once connected please try again.`,
+    const result = await notify(
+      `You aren't connected to ${connLabel}, would you like to connect?`,
       MessageKind.WARNING,
       {},
       "Connect",
       "Cancel",
-    ).then(async (result) => {
-      if (result === "Connect") {
-        await commands.executeCommand(
-          "kdb.connections.connect.via.dialog",
-          connLabel,
-        );
-      }
-    });
+    );
+    if (result === "Connect") {
+      await commands.executeCommand(
+        "kdb.connections.connect.via.dialog",
+        connLabel,
+      );
+      return true;
+    }
   } else {
     notify(
-      "You aren't connected to any connection. Once connected please try again.",
+      "No connection choosen. Once choosen please try again.",
       MessageKind.WARNING,
       { logger },
     );
   }
+  return false;
   /* c8 ignore stop */
 }
 
@@ -470,10 +471,6 @@ export function getStatus(label: string): string {
     return "- connected";
   }
   return "- disconnected";
-}
-
-export function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export async function checkLocalInstall() {
