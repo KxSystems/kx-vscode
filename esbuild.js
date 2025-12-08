@@ -10,10 +10,15 @@ function copyFiles(srcPattern, destDir) {
   });
 }
 
+const minify = process.argv.includes("--minify");
+const sourcemap = process.argv.includes("--sourcemap");
+const keepNames = process.argv.includes("--keep-names");
+
 const baseConfig = {
+  minify,
+  sourcemap,
+  keepNames,
   bundle: true,
-  minify: process.env.NODE_ENV === "production",
-  sourcemap: process.env.NODE_ENV !== "production",
 };
 
 const extensionConfig = {
