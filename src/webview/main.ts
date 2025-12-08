@@ -36,3 +36,4 @@ import "./components/kdbWelcomeView";
 import "./components/kdbDataSourceView";
 import "./components/kdbNewConnectionView";
 import "./components/kdbChartView";
+import "./components/kdbResultsView";

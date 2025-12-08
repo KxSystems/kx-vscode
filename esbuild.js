@@ -10,10 +10,15 @@ function copyFiles(srcPattern, destDir) {
   });
 }
 
+const minify = process.argv.includes("--minify");
+const sourcemap = process.argv.includes("--sourcemap");
+const keepNames = process.argv.includes("--keep-names");
+
 const baseConfig = {
+  minify,
+  sourcemap,
+  keepNames,
   bundle: true,
-  minify: process.env.NODE_ENV === "production",
-  sourcemap: process.env.NODE_ENV !== "production",
 };
 
 const extensionConfig = {
@@ -51,15 +56,6 @@ const webviewConfig = {
     console.log("server build complete");
     await build(webviewConfig);
     copyFiles("src/webview/styles/*.css", "./out");
-    copyFiles("node_modules/ag-grid-community/styles/ag-grid.min.css", "./out");
-    copyFiles(
-      "node_modules/ag-grid-community/styles/ag-theme-alpine.min.css",
-      "./out",
-    );
-    copyFiles(
-      "node_modules/ag-grid-community/dist/ag-grid-community.min.js",
-      "./out",
-    );
     console.log("build complete");
   } catch (err) {
     process.stderr.write(err.stderr);

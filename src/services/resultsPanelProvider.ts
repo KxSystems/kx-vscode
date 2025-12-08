@@ -11,10 +11,10 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { GridOptions } from "ag-grid-community";
 import {
   ColorThemeKind,
   Uri,
+  Webview,
   WebviewView,
   WebviewViewProvider,
   window,
@@ -61,7 +61,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
       localResourceRoots: [Uri.joinPath(this._extensionUri, "out")],
     };
 
-    webviewView.webview.html = this._getWebviewContent();
+    webviewView.webview.html = this.getWebviewContent(webviewView.webview);
 
     ext.isResultsTabVisible = this._view?.visible || false;
 
@@ -166,10 +166,7 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     this.postMessageToWebview(gridOptions, result);
   }
 
-  private postMessageToWebview(
-    gridOptions: GridOptions | undefined,
-    result: string,
-  ) {
+  private postMessageToWebview(gridOptions: any | undefined, result: string) {
     if (this._view) {
       if (gridOptions) {
         this._view.webview.postMessage({
@@ -186,6 +183,36 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
         });
       }
     }
+  }
+
+  private getWebviewContent(webview: Webview) {
+    /* c8 ignore start */
+    const getResource = (resource: string) =>
+      getUri(webview, ext.context.extensionUri, resource.split("/"));
+
+    const getTheme = () =>
+      window.activeColorTheme.kind === ColorThemeKind.Light ||
+      window.activeColorTheme.kind === ColorThemeKind.HighContrastLight
+        ? "sl-theme-light"
+        : "sl-theme-dark";
+
+    return /* html */ `
+    <!DOCTYPE html>
+    <html lang="en" class="${getTheme()}">
+    <head>
+      <meta charset="UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <link rel="stylesheet" href="${getResource("out/light.css")}" />
+      <link rel="stylesheet" href="${getResource("out/style.css")}" />
+      <script type="module" nonce="${getNonce()}" src="${getResource("out/webview.js")}"></script>
+      <title>Welcome to KDB-X</title>
+    </head>
+    <body>
+      <kdb-results-view dark="${getTheme() === "sl-theme-dark" ? "dark" : ""}"></kdb-results-view>
+    </body>
+    </html>
+  `;
+    /* c8 ignore stop */
   }
 
   private _getWebviewContent() {
