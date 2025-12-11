@@ -165,10 +165,10 @@ fn: {[returnFormat;code;sample_fn;sample_size]
         columns = []
 
         for element in kx.q.key(data).columns:
-            columns.append(pystruct_generate_columns(True, data.get([element]).values(), str(element)))
+            columns.append(pystruct_generate_columns(True, data.get([element]).values()[0], str(element)))
 
         for element in data.values():
-            columns.append(pystruct_generate_columns(False, data.get([element]).values(), str(element)))
+            columns.append(pystruct_generate_columns(False, data.get([element]).values()[0], str(element)))
             
     elif isinstance(data, dict) or isinstance(data, pykx.Dictionary):
         columns = [pystruct_generate_columns(True,list(data.keys()), 'keys'),pystruct_generate_columns(False, list(data.values()), 'values')]
@@ -191,7 +191,7 @@ fn: {[returnFormat;code;sample_fn;sample_size]
     elif isinstance(data, pykx.Table):
         columns = []
         for element in data:
-            columns.append(pystruct_generate_columns(False, data.get([element]).values(), str(element)))
+            columns.append(pystruct_generate_columns(False, data.get([element]).values()[0], str(element)))
 
     else:
         columns = [pystruct_generate_columns(False, data, 'value' if length == 1 else 'values')]
