@@ -1,4 +1,4 @@
-{[ctx; code; returnFormat]
+{[ctx; code; sampleFn; returnFormat]
   if [`histogram in key `.qp;
   if [not `display2 in key `.qp; 
   .qp.display2: (')[{x[`output][`bytes]}; .qp.display]
@@ -108,7 +108,7 @@
   prefix: ";[::;";
   suffix: $[(not isLastLine) and not ";" ~ last expr; ";]"; "]"];
   expr: prefix , expr , suffix;
-  result: .Q.trp[{[expr] `result`errored`error`backtrace!({$[x ~ (::); (::); x]} value expr; 0b; ""; ())};
+  result: .Q.trp[{[expr] `data`error`errorMsg`backtrace!({$[x ~ (::); (::); x]} value expr; 0b; ""; ())};
   expr;
   {[suffix; prefix; err; backtrace]
   if [err ~ enlist " ";
@@ -118,16 +118,18 @@
   userCode[-1 + count userCode; 1; 3]: (neg count suffix) _ (count prefix) _ userCode[-1 + count userCode; 1; 3];
   userCode[-1 + count userCode; 2]-: count prefix;
   (!) . flip (
-  (`result;    ::);
-  (`errored;   1b);
-  (`error;     err);
+  (`data;    ::);
+  (`error;   1b);
+  (`errorMsg;     err);
   (`backtrace; .Q.sbt userCode))
   }[suffix; prefix]];
-  if [isLastLine or result`errored;
+  if [isLastLine or result`error;
   system "d ", cachedCtx;
   : result];
   index +: 1];
   };
+  DEFAULT_TABULAR_LIMIT: 600000;
+  TABULAR_LIMIT: DEFAULT_TABULAR_LIMIT^"J"$getenv `TABULAR_LIMIT;
   .axq.i_PRIMCODE: `undefined`boolean`guid`undefined`byte`short`int`long`real`float`char`symbol`timestamp`month`date`datetime`timespan`minute`second`time`enum;
   .axq.i_NONPRIMCODE:
   `general`booleans`guids`undefined`bytes`shorts`ints`longs`reals`floats`chars`symbols`timestamps`months`dates`datetimes`timespans`minutes`seconds`times,
@@ -138,10 +140,27 @@
   `compoundChar`compoundSymbol`compoundTimestamp`compoundMonth`compoundDate`compoundDatetime`compoundTimespan`compoundMinute`compoundSecond,
   `compoundTime`compoundEnum`table`dictionary`lambda`unary`binary`ternary`projection`composition,
   `$("f'";"f/";"f\\";"f':";"f/:";"f\\:";"dynamicload");
-    removeTrailingNewline: {[text]
+  removeTrailingNewline: {[text]
   if ["\n" = last text;
   text: -1 _ text];
   text
+  };
+  typeOf: {$[0>type x; .axq.i_PRIMCODE neg type x; .axq.i_NONPRIMCODE type x]};
+  isAtom: {not type[x] within 0 99h};
+  isNumber: {abs[type[x]] within abs[5 9h]};
+  sample: {[sampleFn; sampleSize; data]
+  sampleSize: min (sampleSize; count data);
+  fn: $[  sampleFn ~ "random";
+  {[sampleSize; data]
+  $[  type[data] ~ 99h;
+  [   ii: neg[sampleSize]?count data;
+  (key[data] ii)!value[data]ii];
+  neg[sampleSize]?data]
+  };
+  sampleFn ~ "first"; #;
+  sampleFn ~ "last";  {neg[x]#y};
+  ' "Unrecognized sample function"];
+  fn[sampleSize; data]
   };
   generateColumns:{[removeTrailingNewline; toString; originalType; isAtomic; isKey; data; name]
   attributes: attr data;
@@ -167,10 +186,22 @@
   ' "This view is not supported for splayed tables"];
   generateColumns[originalType; isAtom; isKey] ./: flip (value; key) @\: flip data
   }[generateColumns];
-  toStructuredText:{[generateTableColumns; generateColumns; data; quantity; isAtom; originalType]
-  if[(type data) ~ 10h; data: enlist data];
+  toStructuredText:{[generateTableColumns; generateColumns; sample; data; sampleFn]
+  itemLimit: TABULAR_LIMIT;
+  if[not isNumber itemLimit; itemLimit: DEFAULT_TABULAR_LIMIT];
+  isEmpty: {0 ~ count x};
+  warnings: ();
   isTable: .Q.qt data;
   isDict: 99h ~ type data;
+  truncateSize: $[isTable;ceiling itemLimit%count cols data;isDict;ceiling itemLimit%2;itemLimit];
+  if[not isEmpty data;if[(sum count each data) > truncateSize;data: sample["first";truncateSize;data];warnings,: enlist "Results truncated to TABULAR_LIMIT. Console view is faster for large data."];];
+  typeOf: {$[0>type x; .axq.i_PRIMCODE neg type x; .axq.i_NONPRIMCODE type x]};
+  isAtom: {not type[x] within 0 99h};
+  isAtom: isAtom data;
+  originalType: typeOf data;
+  quantity: count data;
+  data: sampleFn data;
+  if[(type data) ~ 10h; data: enlist data];
   columns: $[
   isTable and isDict;
   raze (generateTableColumns[::;0b;1b;key data]; generateTableColumns[::;0b;0b;value data]);
@@ -180,29 +211,13 @@
   generateTableColumns[originalType;isAtom;0b;data];
   enlist generateColumns[originalType;isAtom;0b;data;"values"]
   ];
-  : .j.j `count`columns!(quantity; columns)
-  }[generateTableColumns; generateColumns];
-  typeOf: {$[0>type x; .axq.i_PRIMCODE neg type x; .axq.i_NONPRIMCODE type x]};
-  isAtom: {not type[x] within 0 99h};
-  sample: {[sampleFn; sampleSize; data]
-  sampleSize: min (sampleSize; count data);
-  fn: $[  sampleFn ~ "random";
-  {[sampleSize; data]
-  $[  type[data] ~ 99h;
-  [   ii: neg[sampleSize]?count data;
-  (key[data] ii)!value[data]ii];
-  neg[sampleSize]?data]
-  };
-  sampleFn ~ "first"; #;
-  sampleFn ~ "last";  {neg[x]#y};
-  ' "Unrecognized sample function"];
-  fn[sampleSize; data]
-  }
+  : .j.j `count`columns`warnings!(quantity; columns;warnings)
+  }[generateTableColumns; generateColumns; sample];
   result: evalInContext[ctx; splitExpression stripTrailingSemi wrapLines removeMultilineComments code];
-  if [result `errored; :result];
+  if [result`error; :result];
   if [returnFormat ~ "text";
-  result[`result]: toString result `result];
+  result[`data]: toString result `data];
   if [returnFormat ~ "structuredText";
-  result[`result]: toStructuredText[result `result;count result`result; isAtom result`result; typeOf result`result]];
+  result[`data]: toStructuredText[result`data; sampleFn]];
   result
   }
