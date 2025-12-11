@@ -128,8 +128,6 @@
   : result];
   index +: 1];
   };
-  DEFAULT_TABULAR_LIMIT: 600000;
-  TABULAR_LIMIT: DEFAULT_TABULAR_LIMIT^"J"$getenv `TABULAR_LIMIT;
   .axq.i_PRIMCODE: `undefined`boolean`guid`undefined`byte`short`int`long`real`float`char`symbol`timestamp`month`date`datetime`timespan`minute`second`time`enum;
   .axq.i_NONPRIMCODE:
   `general`booleans`guids`undefined`bytes`shorts`ints`longs`reals`floats`chars`symbols`timestamps`months`dates`datetimes`timespans`minutes`seconds`times,
@@ -147,7 +145,6 @@
   };
   typeOf: {$[0>type x; .axq.i_PRIMCODE neg type x; .axq.i_NONPRIMCODE type x]};
   isAtom: {not type[x] within 0 99h};
-  isNumber: {abs[type[x]] within abs[5 9h]};
   sample: {[sampleFn; sampleSize; data]
   sampleSize: min (sampleSize; count data);
   fn: $[  sampleFn ~ "random";
@@ -187,6 +184,9 @@
   generateColumns[originalType; isAtom; isKey] ./: flip (value; key) @\: flip data
   }[generateColumns];
   toStructuredText:{[generateTableColumns; generateColumns; sample; data; sampleFn]
+  DEFAULT_TABULAR_LIMIT: 600000;
+  TABULAR_LIMIT: DEFAULT_TABULAR_LIMIT^"J"$getenv `TABULAR_LIMIT;
+  isNumber: {abs[type[x]] within abs[5 9h]};
   itemLimit: TABULAR_LIMIT;
   if[not isNumber itemLimit; itemLimit: DEFAULT_TABULAR_LIMIT];
   isEmpty: {0 ~ count x};
