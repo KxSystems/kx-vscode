@@ -1,7 +1,7 @@
 import { context, build } from "esbuild";
 import { copyFileSync, mkdirSync } from "fs";
-import { join, basename } from "path";
 import { sync } from "glob";
+import { join, basename } from "path";
 
 function copyFiles(srcPattern, destDir) {
   sync(srcPattern).forEach((file) => {
@@ -55,47 +55,22 @@ const webviewConfig = {
     copyFiles("src/webview/styles/*.css", "./out");
 
     if (watch) {
-      const ctxs = await Promise.all([
-        context({
-          ...serverConfig,
-          plugins: [getProblemMatcherPlugin()],
-        }),
-        context({
-          ...webviewConfig,
-          plugins: [getProblemMatcherPlugin()],
-        }),
-        context({
-          ...extensionConfig,
-          plugins: [getProblemMatcherPlugin()],
-        }),
+      console.log("esbuild:started");
+      const contexts = await Promise.all([
+        context(serverConfig),
+        context(webviewConfig),
+        context(extensionConfig),
       ]);
-      ctxs.forEach((ctx) => ctx.watch({ delay: 500 }));
+      await Promise.all(contexts.map((ctx) => ctx.rebuild()));
+      contexts.forEach((ctx) => ctx.watch({ delay: 500 }));
+      console.log("esbuild:watching");
     } else {
       await build(serverConfig);
       await build(webviewConfig);
       await build(extensionConfig);
     }
   } catch (err) {
-    console.log(err);
+    console.error(err);
     process.exit(1);
   }
 })();
-
-function getProblemMatcherPlugin() {
-  return {
-    name: "custom-problem-matcher",
-    setup(build) {
-      build.onStart(() => {
-        console.log("esbuild:started");
-      });
-      build.onEnd((result) => {
-        result.errors.forEach(({ text, location }) => {
-          console.error(
-            `esbuild:${text}:${location.file}:${location.line}:${location.column}:`,
-          );
-        });
-        console.log("esbuild:watching");
-      });
-    },
-  };
-}

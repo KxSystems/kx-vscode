@@ -13,11 +13,11 @@
         "applyTo": "closedDocuments",
         "fileLocation": ["relative", "${cwd}"],
         "pattern": {
-          "regexp": "^esbuild:([^:]+):([^:]+):([^:]+):([^:]+):$",
-          "message": 1,
-          "file": 2,
-          "line": 3,
-          "column": 4
+          "regexp": "^Error: Build failed[^:]*:([^:]*):([^:]*):([^:]*): (ERROR:.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "message": 4
         },
         "background": {
           "activeOnStart": true,
