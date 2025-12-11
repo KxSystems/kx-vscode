@@ -23,7 +23,6 @@ import {
   window,
   workspace,
   env,
-  ProgressLocation,
 } from "vscode";
 
 import { ext } from "../extensionVariables";
@@ -1152,9 +1151,6 @@ export async function runQuery(
         );
   });
 
-  if (isInsights) {
-    runner.location = ProgressLocation.Notification;
-  }
   runner.title = `Executing ${executorName} on ${connLabel || "active connection"}.`;
 
   return !isInsights || ((target || isSql) && !variable)

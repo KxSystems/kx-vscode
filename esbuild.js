@@ -1,18 +1,19 @@
-const { build } = require("esbuild");
-const fs = require("fs");
-const path = require("path");
-const glob = require("glob");
+import { context, build } from "esbuild";
+import { copyFileSync, mkdirSync } from "fs";
+import { join, basename } from "path";
+import { sync } from "glob";
 
 function copyFiles(srcPattern, destDir) {
-  glob.sync(srcPattern).forEach((file) => {
-    const destFile = path.join(destDir, path.basename(file));
-    fs.copyFileSync(file, destFile);
+  sync(srcPattern).forEach((file) => {
+    const destFile = join(destDir, basename(file));
+    copyFileSync(file, destFile);
   });
 }
 
 const minify = process.argv.includes("--minify");
 const sourcemap = process.argv.includes("--sourcemap");
 const keepNames = process.argv.includes("--keep-names");
+const watch = process.argv.includes("--watch");
 
 const baseConfig = {
   minify,
@@ -50,15 +51,51 @@ const webviewConfig = {
 
 (async () => {
   try {
-    await build(extensionConfig);
-    console.log("extension build complete");
-    await build(serverConfig);
-    console.log("server build complete");
-    await build(webviewConfig);
+    mkdirSync("./out", { recursive: true });
     copyFiles("src/webview/styles/*.css", "./out");
-    console.log("build complete");
+
+    if (watch) {
+      const ctxs = await Promise.all([
+        context({
+          ...serverConfig,
+          plugins: [getProblemMatcherPlugin()],
+        }),
+        context({
+          ...webviewConfig,
+          plugins: [getProblemMatcherPlugin()],
+        }),
+        context({
+          ...extensionConfig,
+          plugins: [getProblemMatcherPlugin()],
+        }),
+      ]);
+      ctxs.forEach((ctx) => ctx.watch({ delay: 500 }));
+    } else {
+      await build(serverConfig);
+      await build(webviewConfig);
+      await build(extensionConfig);
+    }
   } catch (err) {
-    process.stderr.write(err.stderr);
+    console.log(err);
     process.exit(1);
   }
 })();
+
+function getProblemMatcherPlugin() {
+  return {
+    name: "custom-problem-matcher",
+    setup(build) {
+      build.onStart(() => {
+        console.log("esbuild:started");
+      });
+      build.onEnd((result) => {
+        result.errors.forEach(({ text, location }) => {
+          console.error(
+            `esbuild:${text}:${location.file}:${location.line}:${location.column}:`,
+          );
+        });
+        console.log("esbuild:watching");
+      });
+    },
+  };
+}
