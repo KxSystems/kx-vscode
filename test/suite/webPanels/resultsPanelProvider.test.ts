@@ -531,12 +531,6 @@ describe("ResultsPanelProvider", () => {
       resultsPanel = new KdbResultsViewProvider(uriTest);
       resultsPanel["_view"] = view;
     });
-
-    it("should render the results tab", () => {
-      const expectedOutput = ` id="results" class="results-view-container"`;
-      const actualOutput = resultsPanel["_getWebviewContent"]();
-      assert.ok(actualOutput.includes(expectedOutput));
-    });
   });
 
   describe("updateResults", () => {

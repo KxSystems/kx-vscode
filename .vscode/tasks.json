@@ -5,15 +5,35 @@
       "type": "npm",
       "script": "watch",
       "group": "build",
-      "problemMatcher": "$esbuild-watch",
       "isBackground": true,
-      "label": "npm: watch"
+      "label": "npm: watch",
+      "problemMatcher": {
+        "owner": "typescript",
+        "source": "ts",
+        "applyTo": "closedDocuments",
+        "fileLocation": ["relative", "${cwd}"],
+        "pattern": {
+          "regexp": "^Error: Build failed[^:]*:([^:]*):([^:]*):([^:]*): (ERROR:.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "message": 4
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": {
+            "regexp": "^esbuild:started$"
+          },
+          "endsPattern": {
+            "regexp": "^esbuild:watching$"
+          }
+        }
+      }
     },
     {
       "type": "npm",
       "script": "build",
       "group": "build",
-      "problemMatcher": "$esbuild",
       "label": "npm: build"
     }
   ]

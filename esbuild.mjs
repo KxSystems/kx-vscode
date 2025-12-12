@@ -1,18 +1,19 @@
-const { build } = require("esbuild");
-const fs = require("fs");
-const path = require("path");
-const glob = require("glob");
+import { context, build } from "esbuild";
+import { copyFileSync, mkdirSync } from "fs";
+import { sync } from "glob";
+import { join, basename } from "path";
 
 function copyFiles(srcPattern, destDir) {
-  glob.sync(srcPattern).forEach((file) => {
-    const destFile = path.join(destDir, path.basename(file));
-    fs.copyFileSync(file, destFile);
+  sync(srcPattern).forEach((file) => {
+    const destFile = join(destDir, basename(file));
+    copyFileSync(file, destFile);
   });
 }
 
 const minify = process.argv.includes("--minify");
 const sourcemap = process.argv.includes("--sourcemap");
 const keepNames = process.argv.includes("--keep-names");
+const watch = process.argv.includes("--watch");
 
 const baseConfig = {
   minify,
@@ -50,24 +51,26 @@ const webviewConfig = {
 
 (async () => {
   try {
-    await build(extensionConfig);
-    console.log("extension build complete");
-    await build(serverConfig);
-    console.log("server build complete");
-    await build(webviewConfig);
+    mkdirSync("./out", { recursive: true });
     copyFiles("src/webview/styles/*.css", "./out");
-    copyFiles("node_modules/ag-grid-community/styles/ag-grid.min.css", "./out");
-    copyFiles(
-      "node_modules/ag-grid-community/styles/ag-theme-alpine.min.css",
-      "./out",
-    );
-    copyFiles(
-      "node_modules/ag-grid-community/dist/ag-grid-community.min.js",
-      "./out",
-    );
-    console.log("build complete");
+
+    if (watch) {
+      console.log("esbuild:started");
+      const contexts = await Promise.all([
+        context(serverConfig),
+        context(webviewConfig),
+        context(extensionConfig),
+      ]);
+      await Promise.all(contexts.map((ctx) => ctx.rebuild()));
+      contexts.forEach((ctx) => ctx.watch({ delay: 500 }));
+      console.log("esbuild:watching");
+    } else {
+      await build(serverConfig);
+      await build(webviewConfig);
+      await build(extensionConfig);
+    }
   } catch (err) {
-    process.stderr.write(err.stderr);
+    console.error(err);
     process.exit(1);
   }
 })();
