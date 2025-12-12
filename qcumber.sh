@@ -8,7 +8,7 @@ QBUILD_IMAGE="registry.gitlab.com/kxdev/cloud/packaging/qpacker/qpbuild:2.1.41"
 CMD="/app/qbuild/scripts/qcumber -color -q $*"
 SETUP="if [ -f /app/project/build/preTest.sh ]; then source /app/project/build/preTest.sh; fi"
 
-docker run --rm -it \
+docker run --rm \
     -e KDB_K4LICENSE_B64 \
     -v $(pwd):/app/project \
     -w /app/project \
