@@ -1,6 +1,6 @@
 feature list_mem
     before
-        .ignore.fnStr: "\n" sv read0 `:src/q/list_mem.q;
+        .ignore.fnStr: "\n" sv read0 `:resources/list_mem.q;
         // Ignore q namespaces and our temporary setup namespace
         .ignore.blacklist: " `.q`.Q`.h`.z`.o`.j`.m`.ignore";
         // Also ignore all of the ax-libraries namespaces

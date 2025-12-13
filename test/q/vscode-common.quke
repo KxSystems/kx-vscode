@@ -1,4 +1,4 @@
-feature EDI
+xfeature EDI
     
     before
         .test.dims : system "c";
@@ -196,7 +196,7 @@ feature EDI
             .qu.compare[rows; ([] a: 8 9)]
 
 
-feature .com_kx_edi.toStructuredText
+xfeature .com_kx_edi.toStructuredText
     before
         .test.toStructuredText: {
             .com_kx_edi.toStructuredText[x; count x; .axq.isAtom x; .axq.typeOf x]
@@ -301,7 +301,7 @@ feature .com_kx_edi.toStructuredText
 
                 )
 
-feature .com_kx_ediNoCoverage.evaluate
+xfeature .com_kx_ediNoCoverage.evaluate
 
     before
         .test.ctx: string system "d";
@@ -345,7 +345,7 @@ feature .com_kx_ediNoCoverage.evaluate
                 `error`errorMsg`data!(0b; ""; 14)]
 
 // @TICKET KXI-9607
-feature .com_kx_edi.toString
+xfeature .com_kx_edi.toString
     
     before
         // @qlintsuppress OVERWRITE_ARTIFACT(1)
@@ -379,7 +379,7 @@ feature .com_kx_edi.toString
                 ",(();();())\n"
 
 // @TICKET KXI-12077
-feature sampling
+xfeature sampling
     before
         .test.args: (!) . flip (
             (`isTableView; 1b);
