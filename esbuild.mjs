@@ -61,9 +61,14 @@ const webviewConfig = {
         context(webviewConfig),
         context(extensionConfig),
       ]);
-      await Promise.all(contexts.map((ctx) => ctx.rebuild()));
-      contexts.forEach((ctx) => ctx.watch({ delay: 500 }));
-      console.log("esbuild:watching");
+      await Promise.all(contexts.map((ctx) => ctx.rebuild())).finally(() =>
+        Promise.all(contexts.map((ctx) => ctx.watch({ delay: 500 })))
+          .then(() => console.log("esbuild:watching"))
+          .catch((err) => {
+            console.error(err);
+            process.exit(1);
+          }),
+      );
     } else {
       await build(serverConfig);
       await build(webviewConfig);
@@ -71,6 +76,5 @@ const webviewConfig = {
     }
   } catch (err) {
     console.error(err);
-    process.exit(1);
   }
 })();
