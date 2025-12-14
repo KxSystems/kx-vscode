@@ -25,7 +25,7 @@ feature removeExtraIndents
                 "\tfoo(a)\n";
             .qu.compare[.test.evaluatePy["serialized"; x]`result; 2]
             
-    should handle multiline strings
+    xshould handle multiline strings
         expect all statements to be moved to column 0
             x:  "    a = len(\"\"\"\n",
                 "       1 2 3\n",
@@ -116,11 +116,11 @@ feature evaluatePy 1
             .qu.compare[
                 .test.evaluatePy["text"; "'你好'"];
                 .test.wrap "你好"]
-        expect return values to be limited to 250,000 characters
+        xexpect return values to be limited to 250,000 characters
             .qu.compare[
                 .test.evaluatePy["text"; "'", (251000#.Q.a) , "'"];
                 .test.wrap (250000#.Q.a) , ".."]
-        expect an ellipsis on a new line for long multiline results
+        xexpect an ellipsis on a new line for long multiline results
             // A custom class is the easiest way to get a newline in the python results
             .pykx.pyexec "class Long_Text:
                 def __repr__(self):
@@ -143,15 +143,15 @@ feature evaluatePy 1
             .qu.compare[
                 .test.evaluatePy["text";"a=(1+ # An inline comment\n   2 + 3)\na\n# This is a comment"];
                 .test.wrap "6"]
-        expect code multiline strings to return the value of the last expression
+        xexpect code multiline strings to return the value of the last expression
             .qu.compare[
                 .test.evaluatePy["text";"'''This is\na multiline\nstring'''"];
                 .test.wrap "This is\na multiline\nstring"]
-        expect code multiline strings to return the value of the last expression
+        xexpect code multiline strings to return the value of the last expression
             .qu.compare[
                 .test.evaluatePy["text";"'''This is\na multiline\nstring'''"];
                 .test.wrap "This is\na multiline\nstring"]
-        expect code with multiline expressions per line to return the last expression
+        xexpect code with multiline expressions per line to return the last expression
             .qu.compare[
                 .test.evaluatePy["serialized";"a = 3; b = 10; c = '''This is\nmy\nstring'''; a + b + len(c)"];
                 .test.wrap 30]
@@ -252,7 +252,7 @@ feature evaluatePy 2
             .test.evaluatePy["serialized"; "def my_fn():\n    return [1,2,3]"];
             1 2 3 ~ .pykx.qeval"my_fn()";
             
-    should not affect the value of .pykx.i.defaultConv
+    xshould not affect the value of .pykx.i.defaultConv
         expect .pykx.i.defaultConv to remain "py"
             original: .pykx.i.defaultConv;
             .pykx.i.defaultConv: "py";

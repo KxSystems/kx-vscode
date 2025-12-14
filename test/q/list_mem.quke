@@ -2,7 +2,7 @@ feature list_mem
     before
         .ignore.fnStr: "\n" sv read0 `:resources/list_mem.q;
         // Ignore q namespaces and our temporary setup namespace
-        .ignore.blacklist: " `.q`.Q`.h`.z`.o`.j`.m`.ignore`.comkxic`.pykx`.p`.foo";
+        .ignore.blacklist: " `.q`.Q`.h`.z`.o`.j`.m`.ignore`.comkxic`.pykx`.p`.s`.foo";
         // Also ignore all of the ax-libraries namespaces
         .ignore.blacklist,: "`", "`" sv string distinct ` sv/: 2#/: ` vs/: .axenv.modules[];
 
