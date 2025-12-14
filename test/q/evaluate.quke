@@ -1,0 +1,167 @@
+feature EDI
+    before
+        .test.src: "\n" sv read0 `:resources/evaluate.q;
+        .test.evaluate: {[ctx; code; returnFormat]
+            0i (.test.src; ctx; code; returnFormat)
+            };
+        .test.dims : system "c";
+        .test.precision: system "P";
+        .test.attrLines: ("dict: `s#`a`b`c`d`e`f`g!enlist each 7?0";
+                              "dict[`e] : dict[`e] , 1";
+                              "attr dict");         
+    after
+      delete dict from `.;  
+
+    after each
+        system "c ", " " sv string .test.dims;
+        system "P ", string .test.precision;
+
+    // @TICKET KXI-9607
+    should ensure EDI performs display correctly for standard expressions
+        // @TICKET KXI-12260
+        expect simple expression of 3+3 to return 6:
+            .qu.compare[.test.evaluate["."; "3+3"; "serialized"]`result; 6]
+
+        // This test is skipped because coverage is not handling generic null correctly in QBUILD 1.0.17 and greater
+        // @TICKET KXI-12260
+        xexpect projection null to return as generic null
+            .qu.compare[.test.evaluate["."; "last value (;;)"; "serialized"]`result; (::)]
+
+        expect function definition to work:
+             .qu.compare[.test.evaluate["."; ".test.fn333: {: 333}"; "serialized"]`result; {: 333}]
+
+        expect function call to work and return 333:
+             .qu.compare[.test.evaluate["."; ".test.fn333 []"; "serialized"]`result; 333]
+
+        xexpect each right and each left of similar expressions to be equal:
+            .com_kx_edi.dropIrrelevantRecords[.com_kx_ediNoCoverage.evaluate["1 2 3 +\\: 10"; "."]] ~ .com_kx_edi.dropIrrelevantRecords  .com_kx_ediNoCoverage.evaluate["10 +/: 1 2 3"; "."]
+
+        expect scan to work and return 11 13 16:
+            .qu.compare[.test.evaluate["."; "10 +\\ 1 2 3"; "serialized"]`result; 11 13 16]
+
+        expect over to work and return 16:
+            .qu.compare[.test.evaluate["."; "10 +/ 1 2 3"; "serialized"]`result; 16]
+
+        expect a list created by EDI to be equal to the list:
+             .qu.compare[.test.evaluate["."; "1 2 3 4 5 6 7 8"; "serialized"]`result; 1 2 3 4 5 6 7 8]
+
+        expect an expression that creates a list to return the correct list:
+             .qu.compare[.test.evaluate["."; "`char$97+til 26"; "serialized"]`result; "abcdefghijklmnopqrstuvwxyz"]
+
+        expect the concat of two lists to be the same:
+             .qu.compare[.test.evaluate["."; "(til 100),(til 100)"; "serialized"]`result; (til[100], til 100)]
+  
+      // @TICKET KXI-9607
+    should ensure EDI performs display correctly for k expressions
+        expect simple k expressions to work, 3+3=6:
+            .qu.compare[.test.evaluate["."; "k) 3 + 3"; "serialized"]`result; 6]
+
+        expect more complicated k expressions to work such as over:
+            .qu.compare[.test.evaluate["."; "k) +/1 2 3 4"; "serialized"]`result; 10]
+
+        expect more complicated k expressions to work such as dyadic function over:
+            .qu.compare[.test.evaluate["."; "k) {x+2*y}/1 2 3 4"; "serialized"]`result; 19]
+
+        expect more complicated k expressions to work such as monadic each both:
+             .qu.compare[.test.evaluate["."; "k) (-':)1 2 3 4"; "serialized"]`result; 1 1 1 1]
+
+        expect more complicated k expressions to work such as monadic each both:
+             .qu.compare[.test.evaluate["."; "k) +\\1 2 3 4"; "serialized"]`result; 1 3 6 10]
+
+        expect a string to be a string in k:
+            .qu.compare[.test.evaluate["."; "k) \"hello\\\\there\""; "serialized"]`result; "hello\\there"]
+
+    // @TICKET KXI-9607
+    should ensure EDI performs display correctly for system expressions
+        expect it to return timing information:
+            // this fails intermittently on windows for some reason ...
+            10 > .test.evaluate["."; "\\t count \"doug\""; "serialized"]`result
+
+        expect expression in t to set zz correctly:
+            (.test.zz ~ 4) and (10 > .test.evaluate["."; "\\t .test.zz: count \"doug\""; "serialized"]`result)
+
+        expect simple expression in t to work correctly:
+            (.test.zz ~ 4) and (10 > .test.evaluate["."; "\\t .test.zz: 1 + 1 + 1 + 1"; "serialized"]`result)
+
+        expect ts to return time and space:
+            .qu.compare[count .test.evaluate["."; "\\ts til 10000"; "serialized"]`result; 2]
+
+        expect workspace information to return correctly (should usually work but may fail):
+            (last system "w") ~ last .test.evaluate["."; "\\w"; "serialized"]`result
+
+        expect ls os command to return data back as a general list equivalent to system call:
+            $["w" ~ first string .z.o;
+                // The /b is needed to show the simple results,
+                // as if just "dir" is used, the results can change between the two calls
+                (system "dir /b") ~ .test.evaluate["."; "\\dir /b"; "serialized"]`result;
+                (system "ls") ~ .test.evaluate["."; "\\ls"; "serialized"]`result];
+
+        expect pwd os command to return the current directory equivalent to system call:
+            (system "cd") ~ .test.evaluate["."; "\\cd"; "serialized"]`result
+
+        expect a to return a list of tables:
+            11h ~ type .test.evaluate["."; "\\a"; "serialized"]`result
+
+        expect c to return the console size:
+            6h ~ type .test.evaluate["."; "\\c"; "serialized"]`result
+
+        expect c 100 100 to set the console to 100 100:
+            .test.evaluate["."; "\\c 100 100"; "serialized"]`result;
+            100 100i ~ system "c"
+
+        expect p to provide the port:
+            system["p"] ~ .test.evaluate["."; "\\p"; "serialized"]`result
+
+        expect P to provide the precision:
+            system["P"] ~ .test.evaluate["."; "\\P"; "serialized"]`result
+
+        expect setting precision to 4 for it to be set to 4:
+            (system ["P"] ~ 4i) and (::) ~ .test.evaluate["."; "\\P 4"; "serialized"]`result
+
+        expect setting the precision to 0 sets it to max (same as 16):
+            (system ["P"] ~ 0i) and (::) ~ .test.evaluate["."; "\\P 0"; "serialized"]`result
+
+    // @TICKET KXI-9607
+    should work for non-default contexts
+        expect correct expression result
+            6 ~ .test.evaluate[".test"; "3+3"; "serialized"]`result
+
+        expect function to be compiled in the correct context
+            `foo ~ first @[;3] value .test.evaluate[".foo"; "fn:{3+3}"; "serialized"]`result
+
+    // @TICKET KXI-9607
+    should accept alternate values to indicate "."
+        expect correct expression result
+            .test.ctx: system "d";
+            system "d .ignore";
+            .test.evaluate["."; "myVal1: `first"; "serialized"]`result;
+            .test.evaluate["."; "myVal2: `second"; "serialized"]`result;
+            system "d " , string .test.ctx;
+            `first`second ~ get each `..myVal1`..myVal2;
+        after 
+          delete myVal1 from `.;
+          delete myVal2 from `.;
+
+    // @TICKET KXI-9607
+    // @TICKET KXI-16397
+    should not remove things that look like comments
+        expect the /test to not be removed
+            // This needs the trim, because it returns "/test " on windows
+            trim[.test.evaluate["."; "\\echo /test"; "serialized"]`result] ~ enlist "/test"
+
+    // @TICKET KXI-9607
+    // @TICKET KXI-16397
+    should handle windows line endings
+        expect this to be treated as a single expression
+            .qu.compare[.test.evaluate["."; "(1\r\n\r\n    2 3)"; "serialized"]`result; 1 2 3]
+
+    // @TICKET KXI-9607
+    should maintain attributes regardless of semi-colon (KXAX-16342)
+        expect an attribute with no semi colons
+            `s ~ .test.evaluate["."; "\n" sv .test.attrLines; "serialized"]`result
+        expect an attribute with semi colons
+            `s ~ .test.evaluate["."; "\n" sv .test.attrLines ,\: ";"; "serialized"]`result
+        expect an attribute with no semi colons with two newlines
+            `s ~ .test.evaluate["."; "\n\n" sv .test.attrLines; "serialized"]`result
+        expect an attribute with semi colons with two newlines
+            `s ~ .test.evaluate["."; "\n\n" sv .test.attrLines ,\: ";"; "serialized"]`result
