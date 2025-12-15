@@ -105,8 +105,10 @@ export class FileTreeItem extends TreeItem {
       this.baseIcon = "datasource";
     } else if (fileName.endsWith(".kdb.q")) {
       this.baseIcon = "scratchpad";
-    } else {
+    } else if (fileName.endsWith(".kdb.py")) {
       this.baseIcon = "python";
+    } else {
+      this.baseIcon = "sql";
     }
   }
 

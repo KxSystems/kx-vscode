@@ -6,7 +6,8 @@
 | KX: Install KDB-X      | KX: New Notebook          | KX: Focus on Datasources view       |
 | KX: Start REPL         | KX: New Workbook (q)      | KX: Focus on Workbooks view         |
 | KX: Import Connections | KX: New Workbook (Python) | KX: Focus on Query History view     |
-| KX: Export Connections | KX: New Datasource        | KX: Focus on Help and Feedback view |
+| KX: Export Connections | KX: New Workbook (SQL)    | KX: Focus on Help and Feedback view |
+|                        | KX: New Datasource        |                                     |
 
 ## Keybindings
 
@@ -60,10 +61,10 @@
 | :--------- | :--: | :--: | :---: | :------: | :----: | :----: | :------------: |
 | File `q`   |  ✓   |  ✓   |   ✓   |    ✓     |        |        |       ✓        |
 | File `py`  |  ✓   |  ✓   |   ✓   |    ✓     |        |        |       ✓        |
-| File `sql` |  ✓   |      |       |    ✓     |        |        |       ✓        |
+| File `sql` |  ✓   |  ✓   |       |    ✓     |        |        |       ✓        |
 | Cell `q`   |  ✓   |  ✓   |   ✓   |    ✓     |        |        |       ✓        |
 | Cell `py`  |  ✓   |  ✓   |   ✓   |    ✓     |        |        |       ✓        |
-| Cell `sql` |  ✓   |      |       |    ✓     |        |        |       ✓        |
+| Cell `sql` |  ✓   |  ✓   |       |    ✓     |        |        |       ✓        |
 | Datasource |      |      |       |    ✓     |   ✓    |   ✓    |       ✓        |
 
 `REPL` and `My q` requires [PyKX](https://github.com/KxSystems/kx-vscode/wiki/Use-PyKX-Within-REPL) for Python support.

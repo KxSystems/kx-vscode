@@ -215,6 +215,15 @@
       },
       {
         "category": "KX",
+        "command": "kdb.scratchpad.sql.create",
+        "title": "New Workbook (SQL)",
+        "icon": {
+          "dark": "./resources/dark/sql.svg",
+          "light": "./resources/light/sql.svg"
+        }
+      },
+      {
+        "category": "KX",
         "command": "kdb.connections.content.selectView",
         "title": "View contents",
         "icon": {
@@ -687,6 +696,10 @@
           "when": "true"
         },
         {
+          "command": "kdb.scratchpad.sql.create",
+          "when": "true"
+        },
+        {
           "command": "kdb.connections.content.selectView",
           "when": "false"
         },
@@ -915,9 +928,14 @@
           "group": "navigation@2"
         },
         {
-          "command": "kdb.scratchpad.explorer.refresh",
+          "command": "kdb.scratchpad.sql.create",
           "when": "view == kdb-scratchpad-explorer",
           "group": "navigation@3"
+        },
+        {
+          "command": "kdb.scratchpad.explorer.refresh",
+          "when": "view == kdb-scratchpad-explorer",
+          "group": "navigation@4"
         },
         {
           "command": "kdb.queryHistory.clear",

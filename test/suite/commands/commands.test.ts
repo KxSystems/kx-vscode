@@ -49,6 +49,7 @@ describe("Commands", () => {
         "kdb.datasource.create",
         "kdb.scratchpad.create",
         "kdb.scratchpad.python.create",
+        "kdb.scratchpad.sql.create",
         "kdb.connections.add",
         "kdb.repl.start",
         "kdb.createNotebook",

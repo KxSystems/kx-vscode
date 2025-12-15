@@ -145,7 +145,7 @@ export async function activate(context: vscode.ExtensionContext) {
     ext.context.extensionUri,
   );
   ext.scratchpadTreeProvider = new WorkspaceTreeProvider(
-    "**/*.kdb.{q,py}",
+    "**/*.kdb.{q,py,sql}",
     "scratchpad",
   );
   ext.dataSourceTreeProvider = new WorkspaceTreeProvider(
@@ -550,6 +550,25 @@ function registerScratchpadCommands(): CommandRegistration[] {
             item ? item.resourceUri : undefined,
             "workbook",
             ".kdb.py",
+          );
+          await vscode.workspace.openTextDocument(uri);
+          await vscode.window.showTextDocument(uri);
+          await vscode.commands.executeCommand(
+            "workbench.action.files.save",
+            uri,
+          );
+          await setServerForUri(uri, undefined);
+        }
+      },
+    },
+    {
+      command: "kdb.scratchpad.sql.create",
+      callback: async (item: FileTreeItem) => {
+        if (hasWorkspaceOrShowOption("adding workbooks")) {
+          const uri = await addWorkspaceFile(
+            item ? item.resourceUri : undefined,
+            "workbook",
+            ".kdb.sql",
           );
           await vscode.workspace.openTextDocument(uri);
           await vscode.window.showTextDocument(uri);
