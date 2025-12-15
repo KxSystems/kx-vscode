@@ -78,6 +78,7 @@ import {
   formatScratchpadStacktrace,
   resultToBase64,
   needsScratchpad,
+  getSQLWrapper,
 } from "../utils/queryUtils";
 import { openUrl } from "../utils/uriUtils";
 import {
@@ -1126,8 +1127,12 @@ export async function runQuery(
     variable = await inputVariable();
   }
 
+  if (isSql && !isInsights) {
+    query = getSQLWrapper(query);
+  }
+
   const runner = Runner.create((_, token) => {
-    return target || isSql
+    return target || (isSql && isInsights)
       ? variable
         ? populateScratchpad(
             getPartialDatasourceFile(query, target, isSql, isPython),

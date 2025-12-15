@@ -225,9 +225,6 @@ export class KxNotebookController {
     const variable = cell.metadata?.variable;
 
     if (!isInsights) {
-      if (kind === CellKind.SQL) {
-        throw new Error(`SQL is not supported on ${conn.connLabel}`);
-      }
       if (target) {
         throw new Error(
           `Setting execution target (${target}) is not supported on ${conn.connLabel}.`,
@@ -253,7 +250,10 @@ export class KxNotebookController {
   ): Promise<any> {
     const executorName = getBasename(cell.notebook.uri);
 
-    if (target || kind === CellKind.SQL) {
+    if (
+      target ||
+      (kind === CellKind.SQL && conn instanceof InsightsConnection)
+    ) {
       const params = getPartialDatasourceFile(
         cell.document.getText(),
         target,
@@ -265,7 +265,9 @@ export class KxNotebookController {
         : runDataSource(params, conn.connLabel, executorName);
     } else {
       return executeQuery(
-        cell.document.getText(),
+        kind === CellKind.SQL
+          ? getSQLWrapper(cell.document.getText())
+          : cell.document.getText(),
         conn.connLabel,
         executorName,
         ".",

@@ -449,7 +449,14 @@ function isPython(uri: Uri | undefined) {
 }
 
 function isWorkbook(uri: Uri | undefined) {
-  return uri && (uri.path.endsWith(".kdb.q") || uri.path.endsWith(".kdb.py"));
+  /* c8 ignore start */
+  return (
+    uri &&
+    (uri.path.endsWith(".kdb.q") ||
+      uri.path.endsWith(".kdb.py") ||
+      uri.path.endsWith(".kdb.sql"))
+  );
+  /* c8 ignore stop */
 }
 
 function isDataSource(uri: Uri | undefined) {
@@ -537,15 +544,6 @@ export async function runActiveEditor(type?: ExecutionTypes) {
     const executorName = getBasename(ext.activeTextEditor.document.uri);
     const target = isInsights ? getTargetForUri(uri) : undefined;
     const isSql = executorName.endsWith(".sql");
-
-    if (isSql && !isInsights) {
-      notify(
-        `SQL execution is not supported on ${conn.connLabel}.`,
-        MessageKind.ERROR,
-        { logger },
-      );
-      return;
-    }
 
     if (type === ExecutionTypes.PopulateScratchpad && !isInsights) {
       notify(
