@@ -8,19 +8,8 @@
       "isBackground": true,
       "label": "npm: watch",
       "problemMatcher": {
-        "owner": "typescript",
-        "source": "ts",
-        "applyTo": "closedDocuments",
-        "fileLocation": ["relative", "${cwd}"],
-        "pattern": {
-          "regexp": "^Error: Build failed[^:]*:([^:]*):([^:]*):([^:]*): (ERROR:.*)$",
-          "file": 1,
-          "line": 2,
-          "column": 3,
-          "message": 4
-        },
+        "base": "$eslint-stylish",
         "background": {
-          "activeOnStart": true,
           "beginsPattern": {
             "regexp": "^esbuild:started$"
           },

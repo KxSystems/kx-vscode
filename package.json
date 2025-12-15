@@ -1202,12 +1202,12 @@
     "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js"
   },
   "devDependencies": {
-    "@eslint/js": "9.39.1",
+    "@eslint/js": "9.39.2",
     "@shoelace-style/shoelace": "2.20.1",
     "@types/fs-extra": "11.0.4",
     "@types/jsdom": "27.0.0",
     "@types/mocha": "10.0.10",
-    "@types/node": "24.10.1",
+    "@types/node": "22.19.2",
     "@types/semver": "7.7.1",
     "@types/sinon": "21.0.0",
     "@types/vscode": "1.101.0",
@@ -1221,7 +1221,7 @@
     "chevrotain": "10.5.0",
     "cross-env": "10.1.0",
     "esbuild": "0.27.1",
-    "eslint": "9.39.1",
+    "eslint": "9.39.2",
     "eslint-plugin-header": "3.1.1",
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-license-header": "0.8.0",
