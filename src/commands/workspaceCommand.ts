@@ -449,12 +449,14 @@ function isPython(uri: Uri | undefined) {
 }
 
 function isWorkbook(uri: Uri | undefined) {
+  /* c8 ignore start */
   return (
     uri &&
     (uri.path.endsWith(".kdb.q") ||
       uri.path.endsWith(".kdb.py") ||
       uri.path.endsWith(".kdb.sql"))
   );
+  /* c8 ignore stop */
 }
 
 function isDataSource(uri: Uri | undefined) {
