@@ -51,6 +51,21 @@ jobs:
           name: lcov
           path: coverage-reports/lcov.info
           retention-days: 1
+  test-q:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Login to GitLab
+        uses: docker/login-action@v3
+        with:
+          registry: registry.gitlab.com
+          username: ${{ secrets.GL_REG_USERNAME }}
+          password: ${{ secrets.GL_REG_TOKEN }}
+      - name: Run qCumber
+        run: ./qcumber.sh -src test/q/main.q -test test/q/tests
+        env:
+          KDB_K4LICENSE_B64: ${{ secrets.KDB_K4LICENSE_B64 }}
 
   app-sec:
     needs: [test, test-q]
