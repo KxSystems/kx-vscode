@@ -63,13 +63,13 @@ jobs:
           username: ${{ secrets.GL_REG_USERNAME }}
           password: ${{ secrets.GL_REG_TOKEN }}
       - name: Run qCumber
-        run: ./qcumber.sh -src test/q/main.q -test test/q
+        run: ./qcumber.sh -src test/q/main.q -test test/q/tests
         env:
           KDB_K4LICENSE_B64: ${{ secrets.KDB_K4LICENSE_B64 }}
       
 
   app-sec:
-    needs: test
+    needs: [test, test-q]
     if: "! github.event.pull_request.head.repo.fork "
     uses: ./.github/workflows/app-sec-template.yml
     with:

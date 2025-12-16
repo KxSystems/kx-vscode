@@ -4,7 +4,7 @@ feature removeExtraIndents
         .test.evaluatePy: {[isString; code]
             0i (.test.src; isString; code; "first"; 10000)
             };
-
+            
     should handle unmatched dedents
         expect both expressions to be moved to column 0
             x:  "  a = 1 + 2\n",

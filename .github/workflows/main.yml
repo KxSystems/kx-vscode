@@ -53,7 +53,7 @@ jobs:
           retention-days: 1
 
   app-sec:
-    needs: test
+    needs: [test, test-q]
     if: "! github.event.pull_request.head.repo.fork "
     uses: ./.github/workflows/app-sec-template.yml
     with:
