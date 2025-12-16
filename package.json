@@ -1217,7 +1217,8 @@
     "preui-test-cmd": "tsc --outdir out-test --strict false",
     "ui-test-cmd": "extest setup-and-run --code_version 1.101.0 --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
     "preui-test": "rimraf out-test .test-extensions",
-    "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js"
+    "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js",
+    "q-test": "arch -x86_64 q $AXLIBRARIES_HOME/ws/qcumber.q_ -color -src ./test/q/main.q -test ./test/q/tests"
   },
   "devDependencies": {
     "@eslint/js": "9.39.2",
