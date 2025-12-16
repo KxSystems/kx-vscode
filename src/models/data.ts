@@ -11,6 +11,8 @@
  * specific language governing permissions and limitations under the License.
  */
 
+import { StructuredTextResults } from "./queryResult";
+
 export type GetDataError = string | { buffer: ArrayBuffer };
 
 export type GetDataObjectPayload = {
@@ -22,6 +24,7 @@ export type GetDataObjectPayload = {
     columns: string[];
     rows: any;
   };
+  results?: StructuredTextResults;
   arrayBuffer?: ArrayBuffer;
 };
 

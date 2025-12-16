@@ -43,11 +43,13 @@ import {
 import { MessageKind, notify } from "../utils/notifications";
 import {
   addQueryHistory,
+  convertRows,
   getQSQLWrapper,
   handleScratchpadTableRes,
   handleWSError,
   handleWSResults,
 } from "../utils/queryUtils";
+import { updatedExtractRowData } from "../utils/resultsRenderer";
 import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 import { validateScratchpadOutputVariableName } from "../validators/interfaceValidator";
 
@@ -200,7 +202,12 @@ export async function runDataSource(
       }
       if (isNotebook || ext.isResultsTabVisible) {
         if (success) {
-          const resultCount = typeof res === "string" ? "0" : res.rows.length;
+          const resultCount =
+            typeof res === "string"
+              ? "0"
+              : res.rows
+                ? res.rows.length
+                : res.columns?.[0]?.values?.length || 0;
           notify(`Results: ${resultCount} rows`, MessageKind.DEBUG, {
             logger,
           });
@@ -231,8 +238,12 @@ export async function runDataSource(
           res = res.errorMsg ? res.errorMsg : res.error;
         }
 
+        const rowData = res.columns
+          ? convertRows(updatedExtractRowData(res))
+          : res;
+
         await writeQueryResultsToConsole(
-          res,
+          rowData,
           query,
           connLabel,
           executorName,
@@ -312,6 +323,8 @@ export async function runApiDataSource(
 
   if (apiCall?.error) {
     return parseError(apiCall.error);
+  } else if (apiCall?.results) {
+    return apiCall.results;
   } else if (apiCall?.arrayBuffer) {
     const results = handleWSResults(apiCall.arrayBuffer);
     return handleScratchpadTableRes(results);
@@ -423,6 +436,8 @@ export async function runQsqlDataSource(
 
   if (qsqlCall?.error) {
     return parseError(qsqlCall.error);
+  } else if (qsqlCall?.results) {
+    return qsqlCall.results;
   } else if (qsqlCall?.arrayBuffer) {
     const results = handleWSResults(qsqlCall.arrayBuffer, isTableView);
     return handleScratchpadTableRes(results);
@@ -446,6 +461,8 @@ export async function runSqlDataSource(
 
   if (sqlCall?.error) {
     return parseError(sqlCall.error);
+  } else if (sqlCall?.results) {
+    return sqlCall.results;
   } else if (sqlCall?.arrayBuffer) {
     const results = handleWSResults(sqlCall.arrayBuffer, isTableView);
     return handleScratchpadTableRes(results);
@@ -484,6 +501,8 @@ export async function executeUDARequest(
 
   if (udaCall?.error) {
     return parseError(udaCall.error);
+  } else if (udaCall?.results) {
+    return udaCall.results;
   } else if (udaCall?.arrayBuffer) {
     const results = handleWSResults(udaCall.arrayBuffer);
     return handleScratchpadTableRes(results);

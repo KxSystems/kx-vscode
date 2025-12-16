@@ -28,7 +28,10 @@ export function convertToGrid(
   if (
     (!isInsights && !isPython) ||
     /* TODO: Workaround for Python structuredText bug */
-    (!isPython && connVersion && isBaseVersionGreaterOrEqual(connVersion, 1.12))
+    (!isPython &&
+      connVersion &&
+      isBaseVersionGreaterOrEqual(connVersion, 1.12)) ||
+    results.columns
   ) {
     rowData = updatedExtractRowData(results);
     columnDefs = updatedExtractColumnDefs(results);
