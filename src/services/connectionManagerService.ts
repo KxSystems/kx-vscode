@@ -151,12 +151,7 @@ export class ConnectionManagementService {
           notify(
             `Connection established successfully to: ${connLabel}`,
             MessageKind.DEBUG,
-            {
-              logger,
-              telemetry:
-                "Connection.Connected" +
-                this.getTelemetryConnectionType(connLabel),
-            },
+            { logger },
           );
 
           ext.connectedConnectionList.push(localConnection);
@@ -177,9 +172,6 @@ export class ConnectionManagementService {
             {
               logger,
               params: { insightsVersion: insightsConn.insightsVersion },
-              telemetry:
-                "Connection.Connected" +
-                this.getTelemetryConnectionType(connLabel),
             },
           );
           ext.connectedConnectionList.push(insightsConn);
@@ -203,10 +195,7 @@ export class ConnectionManagementService {
     commands.executeCommand("setContext", "kdb.connected.active", [
       `${node.label}`,
     ]);
-    notify("Connection activated.", MessageKind.DEBUG, {
-      logger,
-      telemetry: "Connection.Connected.Active",
-    });
+    notify("Connection activated.", MessageKind.DEBUG, { logger });
     commands.executeCommand("setContext", "kdb.pythonEnabled", true);
     ext.activeConnection = connection;
     ext.connectionNode = node;
@@ -231,6 +220,7 @@ export class ConnectionManagementService {
       this.removeConnectionFromContextString(connNode.label);
       this.disconnect(connNode.label);
     }
+    let kind = ".kdb";
     if (connNode instanceof InsightsNode) {
       const insights = getInsights();
       const key = getKeyForServerName(connNode.details.alias);
@@ -246,6 +236,8 @@ export class ConnectionManagementService {
 
         await updateInsights(updatedInsights);
         ext.serverProvider.refreshInsights(updatedInsights);
+
+        kind = ".ie";
       }
     } else {
       const servers: Server | undefined = getServers();
@@ -265,6 +257,10 @@ export class ConnectionManagementService {
         ext.serverProvider.refresh(updatedServers);
       }
     }
+    notify(`Connection ${connNode.label} removed`, MessageKind.DEBUG, {
+      logger,
+      telemetry: "Connection.Delete" + kind,
+    });
   }
 
   public connectSuccessBehaviour(connNode: KdbNode | InsightsNode): void {
@@ -285,8 +281,6 @@ export class ConnectionManagementService {
     notify(`Connection to ${connLabel} failed.`, MessageKind.ERROR, {
       logger,
       params: error,
-      telemetry:
-        "Connection.Failed" + this.getTelemetryConnectionType(connLabel),
     });
   }
 
@@ -315,7 +309,6 @@ export class ConnectionManagementService {
     }
     notify(`Connection closed: ${connection.connLabel}`, MessageKind.DEBUG, {
       logger,
-      telemetry: "Connection.Disconnected." + connType,
     });
     ext.serverProvider.reload();
   }
@@ -569,18 +562,5 @@ export class ConnectionManagementService {
       exportedContent.connections.KDB.length === 0
       ? ""
       : JSON.stringify(exportedContent, null, 2);
-  }
-
-  public getTelemetryConnectionType(connLabel: string): string {
-    const connection = this.retrieveConnection(connLabel);
-
-    if (connection instanceof InsightsNode) {
-      return ".Insights";
-    }
-    const isCustom = ext.customAuth ? ".CustomAuth" : "";
-    if (connLabel === "local") {
-      return isCustom + ".KDB+.Local";
-    }
-    return isCustom + ".KDB+";
   }
 }

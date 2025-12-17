@@ -75,7 +75,7 @@ export async function addDataSource(): Promise<void> {
   notify(
     `Created ${fileName} in ${kdbDataSourcesFolderPath}.`,
     MessageKind.INFO,
-    { logger, telemetry: "Datasource.Created" },
+    { logger },
   );
 }
 
@@ -157,7 +157,6 @@ export async function runDataSource(
 
     notify(`Running ${fileContent.name} datasource...`, MessageKind.DEBUG, {
       logger,
-      telemetry: "Datasource." + selectedType + ".Run",
     });
 
     const isNotebook = executorName.endsWith(".kxnb");
@@ -195,7 +194,6 @@ export async function runDataSource(
         notify("Query execution failed.", MessageKind.DEBUG, {
           logger,
           params: res.error,
-          telemetry: "Datasource." + selectedType + ".Run.Error",
         });
       }
       if (isNotebook || ext.isResultsTabVisible) {

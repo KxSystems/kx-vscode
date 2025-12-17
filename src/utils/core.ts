@@ -75,7 +75,7 @@ export async function checkOpenSslInstalled(): Promise<string | null> {
     // kdbOutputLog(`Error in checking OpenSSL version: ${err}`, "ERROR");
     notify("OpenSSL not found.", MessageKind.DEBUG, {
       logger,
-      telemetry: err as Error,
+      params: err,
     });
   }
   return null;

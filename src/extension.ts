@@ -298,7 +298,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     client.onNotification("notify", (params) =>
-      notify(params.message, params.kind, params.options, params.telemetry),
+      notify(params.message, params.kind, params.options),
     ),
   );
 
@@ -340,7 +340,7 @@ export async function activate(context: vscode.ExtensionContext) {
     if ("auth" in api) {
       notify("Custom authentication activated.", MessageKind.DEBUG, {
         logger,
-        telemetry: "CustomAuth.Extension.Actived",
+        telemetry: "Extension.CustomAuth.Activated",
       });
       ext.customAuth = api;
     }
@@ -380,7 +380,7 @@ function registerHelpCommands(): CommandRegistration[] {
           .then(undefined, () => {
             notify("Help&Feedback documentation selected.", MessageKind.DEBUG, {
               logger,
-              telemetry: "Help&Feedback.Open.ExtensionDocumentation",
+              telemetry: "Help.Open.Documentation",
             });
             vscode.commands.executeCommand("extension.open", "KX.kdb");
           });
@@ -391,7 +391,7 @@ function registerHelpCommands(): CommandRegistration[] {
       callback: () => {
         notify("Help&Feedback suggest a feature selected.", MessageKind.DEBUG, {
           logger,
-          telemetry: "Help&Feedback.Open.SuggestFeature",
+          telemetry: "Help.Open.SuggestFeature",
         });
         vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.suggestFeature));
       },
@@ -401,7 +401,7 @@ function registerHelpCommands(): CommandRegistration[] {
       callback: () => {
         notify("Help&Feedback survey selected.", MessageKind.DEBUG, {
           logger,
-          telemetry: "Help&Feedback.Open.Survey",
+          telemetry: "Help.Open.Survey",
         });
         vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.survey));
       },
@@ -411,7 +411,7 @@ function registerHelpCommands(): CommandRegistration[] {
       callback: () => {
         notify("Help&Feedback report a bug selected.", MessageKind.DEBUG, {
           logger,
-          telemetry: "Help&Feedback.Open.ReportBug",
+          telemetry: "Help.Open.ReportBug",
         });
         vscode.env.openExternal(vscode.Uri.parse(ext.urlLinks.reportBug));
       },
@@ -688,7 +688,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
       callback: () => {
         notify("Export all conections.", MessageKind.DEBUG, {
           logger,
-          telemetry: "Connections.Export.All",
+          telemetry: "Connection.Export.All",
         });
         exportConnections();
       },
@@ -698,7 +698,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
       callback: async (viewItem: KdbNode | InsightsNode) => {
         notify("Export single conection.", MessageKind.DEBUG, {
           logger,
-          telemetry: "Connections.Export.Single",
+          telemetry: "Connection.Export.Single",
         });
         exportConnections(viewItem.label);
       },
@@ -708,7 +708,7 @@ function registerConnectionsCommands(): CommandRegistration[] {
       callback: async () => {
         notify("Import conections.", MessageKind.DEBUG, {
           logger,
-          telemetry: "Connections.Import",
+          telemetry: "Connection.Import",
         });
         await importConnections();
       },

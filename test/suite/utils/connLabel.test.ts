@@ -351,16 +351,6 @@ describe("connLabels", () => {
 
       LabelsUtils.clearWorkspaceLabels();
 
-      sinon.assert.calledWith(
-        notifyStub,
-        "Cleaning connection mappings for nonexistent labels.",
-        notifications.MessageKind.DEBUG,
-        {
-          logger: "connLabel",
-          telemetry: "Label.Cleanup.NoLabels",
-        },
-      );
-
       sinon.assert.calledWith(updateStub, "kdb.labelsConnectionMap", [], true);
     });
 
@@ -395,17 +385,6 @@ describe("connLabels", () => {
       ]);
 
       sinon.assert.calledWith(
-        notifyStub,
-        "Removed 2 orphaned label connection mappings.",
-        notifications.MessageKind.DEBUG,
-        {
-          logger: "connLabel",
-          telemetry: "Label.Cleanup.OrphanedMappings",
-          measurements: { removedMappings: 2 },
-        },
-      );
-
-      sinon.assert.calledWith(
         updateStub,
         "kdb.labelsConnectionMap",
         ext.labelConnMapList,
@@ -438,17 +417,6 @@ describe("connLabels", () => {
       assert.deepStrictEqual(ext.labelConnMapList, [
         { labelName: "label1", connections: ["conn1"] },
       ]);
-
-      sinon.assert.calledWith(
-        notifyStub,
-        "Removed 1 orphaned label connection mapping.",
-        notifications.MessageKind.DEBUG,
-        {
-          logger: "connLabel",
-          telemetry: "Label.Cleanup.OrphanedMappings",
-          measurements: { removedMappings: 1 },
-        },
-      );
     });
 
     it("should not remove anything when all mappings are valid", () => {
@@ -542,17 +510,6 @@ describe("connLabels", () => {
 
       assert.strictEqual(ext.labelConnMapList.length, 1);
       assert.strictEqual(ext.labelConnMapList[0].labelName, "Label1");
-
-      sinon.assert.calledWith(
-        notifyStub,
-        "Removed 2 orphaned label connection mappings.",
-        notifications.MessageKind.DEBUG,
-        {
-          logger: "connLabel",
-          telemetry: "Label.Cleanup.OrphanedMappings",
-          measurements: { removedMappings: 2 },
-        },
-      );
     });
   });
 

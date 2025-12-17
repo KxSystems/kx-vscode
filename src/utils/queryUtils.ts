@@ -528,3 +528,40 @@ export function needsScratchpad<T>(connLabel: string, target: Promise<T>) {
 export function resetScratchpadStarted(connLabel: string) {
   ext.scratchpadStarted.delete(connLabel);
 }
+
+export function notifyExecution(
+  isRun: boolean,
+  isWorkbook: boolean,
+  isNotebook: boolean,
+  isRepl: boolean,
+  isInsights: boolean,
+  isDap: boolean,
+  isQuick: boolean,
+  isPython: boolean,
+  isSql: boolean,
+  dsType?: DataSourceTypes,
+) {
+  notify("Query execution.", MessageKind.DEBUG, {
+    logger,
+    telemetry:
+      (isRun ? "Run" : "Populate") +
+      (dsType
+        ? ".Datasource." +
+          (dsType === DataSourceTypes.API
+            ? ".api"
+            : dsType === DataSourceTypes.QSQL
+              ? ".q"
+              : dsType === DataSourceTypes.SQL
+                ? ".sql"
+                : ".uda")
+        : isWorkbook
+          ? ".Workbook"
+          : isNotebook
+            ? ".Cell"
+            : ".File") +
+      (isRepl ? ".repl" : isInsights ? ".ie" : ".kdb") +
+      (isDap ? ".dap" : "") +
+      (isQuick ? ".quick" : "") +
+      (isPython ? ".py" : isSql ? ".sql" : ".q"),
+  });
+}

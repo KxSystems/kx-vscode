@@ -37,6 +37,7 @@ import {
   needsScratchpad,
   getPythonWrapper,
   getSQLWrapper,
+  notifyExecution,
 } from "../utils/queryUtils";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
 
@@ -169,6 +170,18 @@ export class KxNotebookController {
               execution.token.onCancellationRequested(updateCancelled);
           }),
         ]);
+
+        notifyExecution(
+          !variable,
+          false,
+          true,
+          false,
+          isInsights,
+          !!target,
+          false,
+          kind === CellKind.PYTHON,
+          kind === CellKind.SQL,
+        );
 
         if (variable) {
           results = `Scratchpad variable (${variable}) populated.`;

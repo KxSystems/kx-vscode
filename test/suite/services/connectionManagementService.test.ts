@@ -346,7 +346,6 @@ describe("ConnectionManagementService", () => {
         vscode.window,
         "showErrorMessage",
       );
-      const sendEventStub = sinon.stub(Telemetry, "sendEvent");
       const testLabel = "testLabel";
 
       connectionManagerService.connectFailBehaviour(testLabel);
@@ -354,7 +353,6 @@ describe("ConnectionManagementService", () => {
         showErrorMessageStub,
         `Connection to ${testLabel} failed.`,
       );
-      sinon.assert.calledWith(sendEventStub, "Connection.Failed.KDB+");
     });
 
     it("disconnectBehaviour", () => {

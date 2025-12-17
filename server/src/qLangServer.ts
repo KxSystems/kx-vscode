@@ -199,14 +199,13 @@ export default class QLangServer {
     options: {
       logger?: string;
       params?: any;
+      telemetry?: string | boolean;
     } = {},
-    telemetry?: string | boolean,
   ) {
     this.connection.sendNotification("notify", {
       message,
       kind,
       options,
-      telemetry,
     });
   }
 
@@ -252,6 +251,11 @@ export default class QLangServer {
     textDocument: { uri },
     position,
   }: ReferenceParams): Promise<Location[]> {
+    this.notify("onReferences", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Language.onReferences",
+    });
+
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
 
@@ -271,6 +275,11 @@ export default class QLangServer {
     textDocument: { uri },
     position,
   }: DefinitionParams): Promise<Location[]> {
+    this.notify("onDefinition", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Language.onDefinition",
+    });
+
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
 
@@ -291,6 +300,11 @@ export default class QLangServer {
     position,
     newName,
   }: RenameParams): Promise<WorkspaceEdit | null> {
+    this.notify("onRenameRequest", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Language.onRenameRequest",
+    });
+
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
 
@@ -325,6 +339,11 @@ export default class QLangServer {
     textDocument: { uri },
     position,
   }: CompletionParams): Promise<CompletionItem[]> {
+    this.notify("onCompletion", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Language.onCompletion",
+    });
+
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
 
@@ -373,6 +392,11 @@ export default class QLangServer {
     textDocument: { uri },
     position,
   }: TextDocumentPositionParams) {
+    this.notify("onParameterCache", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Language.onParameterCache",
+    });
+
     const source = await this.getSource(uri);
     const target = source.tokenAt(position);
     if (!target) {
@@ -427,6 +451,11 @@ export default class QLangServer {
   public async onFoldingRanges({
     textDocument: { uri },
   }: FoldingRangeParams): Promise<FoldingRange[]> {
+    this.notify("onFoldingRanges", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Language.onFoldingRanges",
+    });
+
     const source = await this.getSource(uri);
     const ranges: FoldingRange[] = [];
 
@@ -504,6 +533,11 @@ export default class QLangServer {
   public async onIncomingCallsCallHierarchy({
     item: { data, uri, name },
   }: CallHierarchyIncomingCallsParams): Promise<CallHierarchyIncomingCall[]> {
+    this.notify("onIncomingCallHierarchy", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Language.onIncomingCallHierarchy",
+    });
+
     const incoming: CallHierarchyIncomingCall[] = [];
 
     if (!data) return incoming;
@@ -533,6 +567,11 @@ export default class QLangServer {
   public async onOutgoingCallsCallHierarchy({
     item: { data, uri, name },
   }: CallHierarchyOutgoingCallsParams): Promise<CallHierarchyOutgoingCall[]> {
+    this.notify("onOutgoingCallHierarchy", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Language.onOutgoingCallHierarchy",
+    });
+
     const outgoing: CallHierarchyOutgoingCall[] = [];
 
     if (!data) return outgoing;
