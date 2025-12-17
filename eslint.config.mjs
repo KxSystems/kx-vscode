@@ -9,7 +9,7 @@ const currentYear = new Date().getFullYear();
 
 export default [
   {
-    ignores: ["**/*.d.ts", "**/*.js", "**/*.mjs", "src/ipc/**"],
+    ignores: ["**/*.d.ts", "**/*.js", "**/*.mjs", "src/ipc/**", "test/fixtures/**"],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

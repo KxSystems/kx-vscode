@@ -27,10 +27,7 @@ import {
   ServerDetails,
   ServerType,
 } from "../../../src/models/connectionsModels";
-import {
-  createDefaultDataSourceFile,
-  DataSourceTypes,
-} from "../../../src/models/dataSource";
+import { DataSourceTypes } from "../../../src/models/dataSource";
 import { ExecutionTypes } from "../../../src/models/execution";
 import { QueryHistory } from "../../../src/models/queryHistory";
 import { ScratchpadResult } from "../../../src/models/scratchpadResult";
@@ -49,6 +46,7 @@ import { ExecutionConsole } from "../../../src/utils/executionConsole";
 import * as loggers from "../../../src/utils/loggers";
 import * as notifications from "../../../src/utils/notifications";
 import * as kdbValidators from "../../../src/validators/kdbValidator";
+import { createMockDatasource } from "../../fixtures/config/datasource";
 
 describe("serverCommand", () => {
   const servers = {
@@ -1085,7 +1083,7 @@ describe("serverCommand", () => {
     });
 
     it("should run datasource for datasource query", async function () {
-      const ds = createDefaultDataSourceFile();
+      const ds = createMockDatasource();
       const rerunQueryElement: QueryHistory = {
         executorName: "test",
         isDatasource: true,
@@ -1510,7 +1508,7 @@ describe("serverCommand", () => {
     });
 
     it("should not copy query to clipboard if query is not string", async () => {
-      const dummyDsFiles = createDefaultDataSourceFile();
+      const dummyDsFiles = createMockDatasource();
       const queryHistory: QueryHistory = {
         executorName: "test",
         connectionName: "conn",
