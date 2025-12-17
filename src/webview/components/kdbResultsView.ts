@@ -189,7 +189,12 @@ export class KdbResultsView extends LitElement {
                     (row: any) => html`
                       <tr class="rows">
                         ${this.columnDefs.map(
-                          (col: any) => html`<td nowrap>${row[col.field]}</td>`,
+                          (col: any) =>
+                            html`<td nowrap>
+                              <span style="white-space: pre-line"
+                                >${row[col.field]}</span
+                              >
+                            </td>`,
                         )}
                       </tr>
                     `,
