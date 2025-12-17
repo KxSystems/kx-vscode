@@ -15,12 +15,12 @@ import assert from "assert";
 import * as sinon from "sinon";
 import * as vscode from "vscode";
 
-import { createDefaultDataSourceFile } from "../../../src/models/dataSource";
 import { DataSourcesPanel } from "../../../src/panels/datasource";
 import * as loggers from "../../../src/utils/loggers";
+import { createMockDatasource } from "../../fixtures/config/datasource";
 
 describe("DataSourcesPanel", () => {
-  const dsTest = createDefaultDataSourceFile();
+  const dsTest = createMockDatasource();
   const uriTest: vscode.Uri = vscode.Uri.parse("test");
   let kdbOutputLogStub: sinon.SinonStub;
 
