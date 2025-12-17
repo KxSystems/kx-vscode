@@ -284,6 +284,19 @@ describe("queryUtils", () => {
 
       assert.deepEqual(result, expectedRes);
     });
+
+    it("should work with rows with newlines", () => {
+      const rows = ["a#$#;header;#$#b", "a1\na2#$#;#$#b1\nb2", "3#$#;#$#4"];
+      const expectedRes = [
+        "a   b   ",
+        "--------",
+        "a1  \na2  b1  \n    b2  ",
+        "3   4   ",
+      ];
+      const result = queryUtils.convertRowsToConsole(rows);
+
+      assert.deepEqual(result, expectedRes);
+    });
   });
 
   it("getConnectionType", () => {

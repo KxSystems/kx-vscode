@@ -379,6 +379,8 @@ export function convertRowsToConsole(rows: string[]): string[] {
           const prevCol = columnCounters[j - 1];
           if (prevCol) {
             row[j] += "\n" + " ".repeat(prevCol);
+          } else {
+            row[j] += "\n";
           }
         }
 
