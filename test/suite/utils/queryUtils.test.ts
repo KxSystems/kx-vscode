@@ -284,6 +284,19 @@ describe("queryUtils", () => {
 
       assert.deepEqual(result, expectedRes);
     });
+
+    it("should work with rows with newlines", () => {
+      const rows = ["a#$#;header;#$#b", "a1\na2#$#;#$#b1\nb2", "3#$#;#$#4"];
+      const expectedRes = [
+        "a   b   ",
+        "--------",
+        "a1  \na2  b1  \n    b2  ",
+        "3   4   ",
+      ];
+      const result = queryUtils.convertRowsToConsole(rows);
+
+      assert.deepEqual(result, expectedRes);
+    });
   });
 
   it("getConnectionType", () => {
@@ -628,6 +641,119 @@ describe("queryUtils", () => {
       ext.scratchpadStarted.add("test");
       queryUtils.resetScratchpadStarted("test");
       assert.strictEqual(ext.scratchpadStarted.has("test"), false);
+    });
+  });
+
+  describe("notifyExecution", () => {
+    describe("repl", () => {
+      describe("File", () => {
+        it("should return telemetry for q", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.ExecFlags.Run | queryUtils.ExecFlags.Repl,
+          );
+          assert.strictEqual(res, "Run.File.repl.q");
+        });
+        it("should return telemetry for Python", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.ExecFlags.Run |
+              queryUtils.ExecFlags.Repl |
+              queryUtils.ExecFlags.Python,
+          );
+          assert.strictEqual(res, "Run.File.repl.py");
+        });
+        it("should return telemetry for SQL", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.ExecFlags.Run |
+              queryUtils.ExecFlags.Repl |
+              queryUtils.ExecFlags.Sql,
+          );
+          assert.strictEqual(res, "Run.File.repl.sql");
+        });
+      });
+      describe("Workbook", () => {
+        it("should return telemetry for q", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.ExecFlags.Run |
+              queryUtils.ExecFlags.Workbook |
+              queryUtils.ExecFlags.Repl,
+          );
+          assert.strictEqual(res, "Run.Workbook.repl.q");
+        });
+        it("should return telemetry for Python", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.ExecFlags.Run |
+              queryUtils.ExecFlags.Workbook |
+              queryUtils.ExecFlags.Repl |
+              queryUtils.ExecFlags.Python,
+          );
+          assert.strictEqual(res, "Run.Workbook.repl.py");
+        });
+        it("should return telemetry for SQL", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.ExecFlags.Run |
+              queryUtils.ExecFlags.Workbook |
+              queryUtils.ExecFlags.Repl |
+              queryUtils.ExecFlags.Sql,
+          );
+          assert.strictEqual(res, "Run.Workbook.repl.sql");
+        });
+      });
+    });
+    describe("kdb", () => {
+      describe("Workbook", () => {
+        it("should return telemetry for q", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.ExecFlags.Run | queryUtils.ExecFlags.Workbook,
+          );
+          assert.strictEqual(res, "Run.Workbook.kdb.q");
+        });
+        it("should return telemetry for Python", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.ExecFlags.Run |
+              queryUtils.ExecFlags.Workbook |
+              queryUtils.ExecFlags.Python,
+          );
+          assert.strictEqual(res, "Run.Workbook.kdb.py");
+        });
+        it("should return telemetry for SQL", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.ExecFlags.Run |
+              queryUtils.ExecFlags.Workbook |
+              queryUtils.ExecFlags.Sql,
+          );
+          assert.strictEqual(res, "Run.Workbook.kdb.sql");
+        });
+      });
+    });
+    describe("ie", () => {
+      describe("Workbook", () => {
+        it("should return telemetry for q", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.ExecFlags.Run |
+              queryUtils.ExecFlags.Workbook |
+              queryUtils.ExecFlags.Insights,
+          );
+          assert.strictEqual(res, "Run.Workbook.ie.q");
+        });
+        it("should return telemetry for Python", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.ExecFlags.Run |
+              queryUtils.ExecFlags.Workbook |
+              queryUtils.ExecFlags.Insights |
+              queryUtils.ExecFlags.Python,
+          );
+          assert.strictEqual(res, "Run.Workbook.ie.py");
+        });
+        it("should return telemetry for SQL", () => {
+          const res = queryUtils.notifyExecution(
+            queryUtils.ExecFlags.Run |
+              queryUtils.ExecFlags.Workbook |
+              queryUtils.ExecFlags.Insights |
+              queryUtils.ExecFlags.Sql,
+          );
+          assert.strictEqual(res, "Run.Workbook.ie.sql");
+        });
+      });
     });
   });
 });

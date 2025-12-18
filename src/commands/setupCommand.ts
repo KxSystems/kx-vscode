@@ -46,6 +46,10 @@ export async function showSetupError(workspace?: vscode.WorkspaceFolder) {
 
 export function showWelcome() {
   /* c8 ignore start */
+  notify("Welcome displayed.", MessageKind.DEBUG, {
+    logger,
+    telemetry: "Welcome.Displayed",
+  });
   if (panel) {
     panel.reveal();
   } else {
@@ -122,7 +126,7 @@ export async function installKdbX() {
     notify(
       "KDB-X on Windows requires Windows Subsystem for Linux (WSL). Connect to a WSL instance and try again.",
       MessageKind.WARNING,
-      { logger },
+      { logger, telemetry: "Install.kdbx.win32.fail" },
     );
     return;
   }
@@ -249,10 +253,18 @@ async function parseOutput(execution: vscode.TerminalShellExecution) {
     for (const folder of vscode.workspace.workspaceFolders || []) {
       if (home.startsWith(folder.uri.fsPath)) {
         await setHome(vscode.workspace.asRelativePath(home), folder);
+        notify("KDB-X installed to workspace.", MessageKind.DEBUG, {
+          logger,
+          telemetry: "Install.kdbx.workspace",
+        });
         return;
       }
     }
     await setHome(home);
+    notify("KDB-X installed globally.", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Install.kdbx",
+    });
   }
   /* c8 ignore stop */
 }

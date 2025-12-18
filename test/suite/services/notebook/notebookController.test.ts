@@ -228,7 +228,7 @@ describe("Controller", () => {
                 notebookTestUtils.createNotebook(),
                 createController(),
               );
-              sinon.assert.notCalled(notifyStub);
+              sinon.assert.calledOnce(notifyStub);
               assert.strictEqual(success, true);
             });
 
@@ -239,7 +239,7 @@ describe("Controller", () => {
                 notebookTestUtils.createNotebook(),
                 createController(),
               );
-              sinon.assert.notCalled(notifyStub);
+              sinon.assert.calledOnce(notifyStub);
               assert.strictEqual(success, true);
             });
 
@@ -250,7 +250,7 @@ describe("Controller", () => {
                 notebookTestUtils.createNotebook(),
                 createController(),
               );
-              sinon.assert.notCalled(notifyStub);
+              sinon.assert.calledOnce(notifyStub);
               assert.strictEqual(success, true);
             });
           });
@@ -263,7 +263,7 @@ describe("Controller", () => {
                 notebookTestUtils.createNotebook(),
                 createController(),
               );
-              sinon.assert.notCalled(notifyStub);
+              sinon.assert.calledOnce(notifyStub);
               assert.strictEqual(success, true);
             });
           });
@@ -276,12 +276,7 @@ describe("Controller", () => {
                 notebookTestUtils.createNotebook(),
                 createController(),
               );
-              sinon.assert.calledOnceWithExactly(
-                notifyStub,
-                sinon.match.string,
-                notifications.MessageKind.DEBUG,
-                sinon.match.any,
-              );
+              sinon.assert.calledTwice(notifyStub);
               assert.strictEqual(success, false);
             });
           });

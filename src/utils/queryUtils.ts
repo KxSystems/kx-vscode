@@ -357,8 +357,10 @@ export function convertRowsToConsole(rows: string[]): string[] {
   }
 
   const columnCounters = vector[0].reduce((counters: number[], _, j) => {
+    // get max width of column, splitting values by new line
     const maxLength = vector.reduce(
-      (max, row) => Math.max(max, row[j].length),
+      (max, row) =>
+        Math.max(max, Math.max(...row[j].split("\n").map((l) => l.length))),
       0,
     );
     counters.push(maxLength + 2);
@@ -368,14 +370,29 @@ export function convertRowsToConsole(rows: string[]): string[] {
   vector.forEach((row) => {
     row.forEach((value, j) => {
       const counter = columnCounters[j];
-      const diff = counter - value.length;
-      if (diff > 0) {
-        if (!haveHeader && j !== columnCounters.length - 1) {
-          row[j] = value + "|" + " ".repeat(diff > 1 ? diff - 1 : diff);
-        } else {
-          row[j] = value + " ".repeat(diff);
+      const lines = value.split("\n");
+      row[j] = "";
+
+      lines.forEach((line, lineIndex) => {
+        if (lineIndex > 0) {
+          // prepend spacing to align lines within the same cell
+          const prevCol = columnCounters[j - 1];
+          if (prevCol) {
+            row[j] += "\n" + " ".repeat(prevCol);
+          } else {
+            row[j] += "\n";
+          }
         }
-      }
+
+        const diff = counter - line.length;
+        if (diff > 0) {
+          if (!haveHeader && j !== columnCounters.length - 1) {
+            row[j] += line + "|" + " ".repeat(diff > 1 ? diff - 1 : diff);
+          } else {
+            row[j] += line + " ".repeat(diff);
+          }
+        }
+      });
     });
   });
 
@@ -527,4 +544,43 @@ export function needsScratchpad<T>(connLabel: string, target: Promise<T>) {
 
 export function resetScratchpadStarted(connLabel: string) {
   ext.scratchpadStarted.delete(connLabel);
+}
+
+export const enum ExecFlags {
+  Run = 0b000000001,
+  Workbook = 0b000000010,
+  Notebook = 0b000000100,
+  Repl = 0b000001000,
+  Insights = 0b000010000,
+  Quick = 0b000100000,
+  Dap = 0b001000000,
+  Python = 0b010000000,
+  Sql = 0b100000000,
+}
+
+export function notifyExecution(flags: number, dsType?: string) {
+  const telemetry =
+    (flags & ExecFlags.Run ? "Run" : "Populate") +
+    (dsType
+      ? ".Datasource." + dsType.toLowerCase()
+      : flags & ExecFlags.Workbook
+        ? ".Workbook"
+        : flags & ExecFlags.Notebook
+          ? ".Cell"
+          : ".File") +
+    (flags & ExecFlags.Repl
+      ? ".repl"
+      : flags & ExecFlags.Insights
+        ? ".ie"
+        : ".kdb") +
+    (flags & ExecFlags.Quick ? ".quick" : "") +
+    (flags & ExecFlags.Dap ? ".dap" : "") +
+    (flags & ExecFlags.Python ? ".py" : flags & ExecFlags.Sql ? ".sql" : ".q");
+
+  notify(`Query ${telemetry} executed.`, MessageKind.DEBUG, {
+    logger,
+    telemetry,
+  });
+
+  return telemetry;
 }

@@ -215,6 +215,15 @@
       },
       {
         "category": "KX",
+        "command": "kdb.scratchpad.sql.create",
+        "title": "New Workbook (SQL)",
+        "icon": {
+          "dark": "./resources/dark/sql.svg",
+          "light": "./resources/light/sql.svg"
+        }
+      },
+      {
+        "category": "KX",
         "command": "kdb.connections.content.selectView",
         "title": "View contents",
         "icon": {
@@ -687,6 +696,10 @@
           "when": "true"
         },
         {
+          "command": "kdb.scratchpad.sql.create",
+          "when": "true"
+        },
+        {
           "command": "kdb.connections.content.selectView",
           "when": "false"
         },
@@ -915,9 +928,14 @@
           "group": "navigation@2"
         },
         {
-          "command": "kdb.scratchpad.explorer.refresh",
+          "command": "kdb.scratchpad.sql.create",
           "when": "view == kdb-scratchpad-explorer",
           "group": "navigation@3"
+        },
+        {
+          "command": "kdb.scratchpad.explorer.refresh",
+          "when": "view == kdb-scratchpad-explorer",
+          "group": "navigation@4"
         },
         {
           "command": "kdb.queryHistory.clear",
@@ -1185,7 +1203,7 @@
     "update-deps": "ncu --target patch -u",
     "format": "prettier --write \"**/*.+(js|ts)\"",
     "lint": "eslint $(git ls-files '*.ts') --fix --no-warn-ignored",
-    "esbuild-base": "rimraf out && node ./esbuild.js",
+    "esbuild-base": "rimraf out && node ./esbuild.mjs",
     "watch": "npm run -S esbuild-base -- --sourcemap --watch",
     "build": "npm run -S esbuild-base -- --sourcemap",
     "vscode:prepublish": "npm run -S esbuild-base -- --minify --keep-names",
@@ -1199,15 +1217,16 @@
     "preui-test-cmd": "tsc --outdir out-test --strict false",
     "ui-test-cmd": "extest setup-and-run --code_version 1.101.0 --code_settings ./test/ui/fixtures/settings.json --extensions_dir ./.test-extensions --storage ./.test-folder -m ./test/ui/fixtures/mocha.json",
     "preui-test": "rimraf out-test .test-extensions",
-    "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js"
+    "ui-test": "npm run ui-test-cmd -- ./out-test/test/ui/**/*.test.js",
+    "q-test": "arch -x86_64 q $AXLIBRARIES_HOME/ws/qcumber.q_ -color -src ./test/q/main.q -test ./test/q/tests"
   },
   "devDependencies": {
-    "@eslint/js": "9.39.1",
+    "@eslint/js": "9.39.2",
     "@shoelace-style/shoelace": "2.20.1",
     "@types/fs-extra": "11.0.4",
     "@types/jsdom": "27.0.0",
     "@types/mocha": "10.0.10",
-    "@types/node": "24.10.1",
+    "@types/node": "22.19.2",
     "@types/semver": "7.7.1",
     "@types/sinon": "21.0.0",
     "@types/vscode": "1.101.0",
@@ -1216,13 +1235,12 @@
     "@vscode/python-extension": "1.0.6",
     "@vscode/test-electron": "2.5.2",
     "@vscode/vsce": "3.7.1",
-    "ag-grid-community": "34.3.1",
     "axios": "1.13.2",
     "c8": "10.1.3",
     "chevrotain": "10.5.0",
     "cross-env": "10.1.0",
     "esbuild": "0.27.1",
-    "eslint": "9.39.1",
+    "eslint": "9.39.2",
     "eslint-plugin-header": "3.1.1",
     "eslint-plugin-import": "2.32.0",
     "eslint-plugin-license-header": "0.8.0",

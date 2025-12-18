@@ -92,15 +92,7 @@ export async function addWorkspaceFile(
         scheme: "untitled",
       });
 
-      const telemetryStats = await getWorkbookStatistics(ext, directory);
-      const isPython = ext === ".kdb.py" ? ".Python" : ".q";
-
-      notify("Workbook created.", MessageKind.DEBUG, {
-        logger,
-        telemetry: "Workbook.Create" + isPython,
-        measurements: telemetryStats,
-      });
-
+      notify("Workbook created.", MessageKind.DEBUG, { logger });
       return uri;
     }
   }
@@ -125,18 +117,6 @@ export async function openWith(
   options?: TextDocumentShowOptions | ViewColumn,
 ) {
   await commands.executeCommand<void>("vscode.openWith", uri, type, options);
-}
-
-export async function getWorkbookStatistics(
-  ext: string,
-  directory = ".kx",
-): Promise<{ count: number }> {
-  const folders = workspace.workspaceFolders;
-  if (folders) {
-    const files = await workspace.findFiles(`${directory}/*${ext}`);
-    return { count: files.length };
-  }
-  throw new Error("No workspace has been opened");
 }
 
 export async function pickWorkspace() {

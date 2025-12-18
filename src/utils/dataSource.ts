@@ -152,10 +152,7 @@ export async function addDSToLocalFolder(ds: DataSourceFiles): Promise<void> {
       filePath = path.join(importToUri.fsPath, fileName);
     }
     fs.writeFileSync(filePath, JSON.stringify(ds));
-    notify(`Datasource created.`, MessageKind.INFO, {
-      logger,
-      telemetry: "Datasource.Created",
-    });
+    notify(`Datasource created.`, MessageKind.INFO, { logger });
   }
   /* c8 ignore stop */
 }

@@ -16,7 +16,6 @@ import { jwtDecode } from "jwt-decode";
 import * as url from "url";
 
 import { ext } from "../extensionVariables";
-import { isCompressed, uncompress } from "../ipc/c";
 import {
   InsightsApiConfig,
   InsightsConfig,
@@ -49,7 +48,7 @@ import { retrieveUDAtoCreateReqBody } from "../utils/uda";
 const logger = "insightsConnection";
 
 const customHeadersOctet = {
-  Accept: "application/octet-stream",
+  Accept: "application/struct-text",
   "Content-Type": "application/json",
 };
 const customHeadersJson = {
@@ -483,7 +482,6 @@ export class InsightsConnection {
       if (!options) {
         return undefined;
       }
-      options.responseType = "arraybuffer";
 
       notify("REST", MessageKind.DEBUG, {
         logger,
@@ -497,14 +495,9 @@ export class InsightsConnection {
             MessageKind.DEBUG,
             { logger },
           );
-          if (isCompressed(response.data)) {
-            response.data = uncompress(response.data);
-          }
           return {
             error: "",
-            arrayBuffer: response.data.buffer
-              ? response.data.buffer
-              : response.data,
+            results: response.data.payload,
           };
         })
         .catch((error: any) => {
@@ -514,7 +507,7 @@ export class InsightsConnection {
             { logger, params: error },
           );
           return {
-            error: { buffer: error.response.data },
+            error: error.response.data.header.ai,
             arrayBuffer: undefined,
           };
         });
@@ -526,7 +519,6 @@ export class InsightsConnection {
     params: DataSourceFiles,
     silent?: boolean,
   ): Promise<void> {
-    let dsTypeString = "";
     if (this.connected && this.connEndpoints) {
       let coreUrl: string;
       const body: any = {
@@ -541,13 +533,11 @@ export class InsightsConnection {
             endTS: convertTimeToTimestamp(params.dataSource.api.endTS),
           };
           coreUrl = this.connEndpoints.scratchpad.import;
-          dsTypeString = "API";
           break;
         }
         case DataSourceTypes.SQL: {
           body.params = { query: params.dataSource.sql.query };
           coreUrl = this.connEndpoints.scratchpad.importSql;
-          dsTypeString = "SQL";
           break;
         }
         case DataSourceTypes.QSQL: {
@@ -558,7 +548,6 @@ export class InsightsConnection {
           );
 
           coreUrl = this.connEndpoints.scratchpad.importQsql;
-          dsTypeString = "QSQL";
           break;
         }
         case DataSourceTypes.UDA: {
@@ -613,8 +602,6 @@ export class InsightsConnection {
             {
               logger,
               params: { status: response.status },
-              telemetry:
-                "Datasource." + dsTypeString + ".Scratchpad.Populated.Errored",
             },
           );
         } else {
@@ -624,7 +611,6 @@ export class InsightsConnection {
             {
               logger,
               params: { status: response.status },
-              telemetry: "Datasource." + dsTypeString + ".Scratchpad.Populated",
             },
           );
         }
@@ -840,7 +826,7 @@ export class InsightsConnection {
           notify(
             `Scratchpad reset for ${this.connLabel} executed successfully.`,
             MessageKind.INFO,
-            { logger, telemetry: "Scratchpad.Reseted" },
+            { logger, telemetry: "Connection.Reset.ie.sp" },
           );
           return true;
         })

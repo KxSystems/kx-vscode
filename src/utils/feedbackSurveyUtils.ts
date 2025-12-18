@@ -62,7 +62,7 @@ async function showSurveyDialog() {
   } else if (result === "Don't show me this message next time") {
     notify("Take survey message silenced.", MessageKind.DEBUG, {
       logger,
-      telemetry: "Help&Feedback.Hide.Survey",
+      telemetry: "Help.Hide.Survey",
     });
 
     await vscode.workspace

@@ -23,7 +23,6 @@ import {
   window,
   workspace,
   env,
-  ProgressLocation,
 } from "vscode";
 
 import { ext } from "../extensionVariables";
@@ -79,6 +78,7 @@ import {
   formatScratchpadStacktrace,
   resultToBase64,
   needsScratchpad,
+  getSQLWrapper,
 } from "../utils/queryUtils";
 import { openUrl } from "../utils/uriUtils";
 import {
@@ -173,7 +173,7 @@ export async function addInsightsConnection(
       ext.serverProvider.refreshInsights(newInsights);
       notify("Created Insights connection.", MessageKind.DEBUG, {
         logger,
-        telemetry: "Connection.Created.Insights",
+        telemetry: "Connection.Create.ie",
       });
     }
 
@@ -274,7 +274,7 @@ export async function editInsightsConnection(
           ext.serverProvider.refreshInsights(newInsights);
           notify("Edited Insights connection.", MessageKind.DEBUG, {
             logger,
-            telemetry: "Connection.Edited.Insights",
+            telemetry: "Connection.Edit.ie",
           });
           if (isConnectedConn) {
             offerReconnectionAfterEdit(insightsData.alias);
@@ -480,7 +480,7 @@ export async function addKdbConnection(
       }
       notify("Created kdb connection.", MessageKind.DEBUG, {
         logger,
-        telemetry: "Connection.Created.QProcess",
+        telemetry: "Connection.Create.kdb",
       });
       ext.serverProvider.refresh(newServers);
     }
@@ -603,7 +603,7 @@ export async function editKdbConnection(
           ext.serverProvider.refresh(newServers);
           notify("Edited kdb connection.", MessageKind.DEBUG, {
             logger,
-            telemetry: "Connection.Edited.KDB",
+            telemetry: "Connection.Edit.kdb",
           });
           const connLabelToReconn = `${kdbData.serverName}:${kdbData.serverPort} [${kdbData.serverAlias}]`;
           if (isConnectedConn) {
@@ -904,16 +904,10 @@ export async function executeQuery(
   const selectedConn = connMngService.retrieveConnectedConnection(connLabel);
   const isInsights = selectedConn instanceof InsightsConnection;
   const connVersion = isInsights ? (selectedConn.insightsVersion ?? 0) : 0;
-  const telemetryLangType = isPython ? ".Python" : ".q";
-  const telemetryBaseMsg = isWorkbook ? "Workbook" : "Scratchpad";
-  notify("Query execution.", MessageKind.DEBUG, {
-    logger,
-    telemetry: telemetryBaseMsg + ".Execute" + telemetryLangType,
-  });
+
   if (query.length === 0) {
     notify("Empty query.", MessageKind.DEBUG, {
       logger,
-      telemetry: telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
     });
     queryConsole.appendQueryError(
       query,
@@ -948,7 +942,7 @@ export async function executeQuery(
   }
 
   // set context for root nodes
-  if (selectedConn instanceof InsightsConnection) {
+  if (isInsights) {
     const res = await writeScratchpadResult(
       results,
       query,
@@ -971,7 +965,10 @@ export async function executeQuery(
       if (data) {
         notify("GG Plot displayed", MessageKind.DEBUG, {
           logger,
-          telemetry: "GGPLOT.Display" + (isPython ? ".Python" : ".q"),
+          telemetry:
+            "Graphics.Displayed" +
+            (isInsights ? ".ie" : ".kdb") +
+            (isPython ? ".py" : ".q"),
         });
         const active = ext.activeTextEditor;
         if (active) {
@@ -1127,8 +1124,12 @@ export async function runQuery(
     variable = await inputVariable();
   }
 
+  if (isSql && !isInsights) {
+    query = getSQLWrapper(query);
+  }
+
   const runner = Runner.create((_, token) => {
-    return target || isSql
+    return target || (isSql && isInsights)
       ? variable
         ? populateScratchpad(
             getPartialDatasourceFile(query, target, isSql, isPython),
@@ -1152,9 +1153,6 @@ export async function runQuery(
         );
   });
 
-  if (isInsights) {
-    runner.location = ProgressLocation.Notification;
-  }
   runner.title = `Executing ${executorName} on ${connLabel || "active connection"}.`;
 
   return !isInsights || ((target || isSql) && !variable)
@@ -1343,18 +1341,11 @@ export async function writeQueryResultsToView(
     isPython,
   );
   let isSuccess = true;
-  const telemetryLangType = isPython ? ".Python" : ".q";
-  const telemetryBaseMsg = type === "WORKBOOK" ? "Workbook" : "Scratchpad";
 
   if (!checkIfIsDatasource(type)) {
     if (typeof result === "string") {
       const res = decodeQUTF(result);
       if (res.startsWith(queryConstants.error)) {
-        notify("Telemetry", MessageKind.DEBUG, {
-          logger,
-          telemetry:
-            telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
-        });
         isSuccess = false;
       }
     }
@@ -1384,17 +1375,10 @@ export async function writeScratchpadResult(
   duration: string,
   connVersion: number,
 ): Promise<any> {
-  const telemetryLangType = isPython ? ".Python" : ".q";
-  const telemetryBaseMsg = isWorkbook ? "Workbook" : "Scratchpad";
   let errorMsg;
 
   if (result.error) {
     errorMsg = "Error: " + result.errorMsg;
-
-    notify("Scratchpad query returned error", MessageKind.DEBUG, {
-      logger,
-      telemetry: telemetryBaseMsg + ".Execute" + telemetryLangType + ".Error",
-    });
 
     if (result.stacktrace) {
       errorMsg =

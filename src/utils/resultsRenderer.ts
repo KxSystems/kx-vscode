@@ -11,8 +11,6 @@
  * specific language governing permissions and limitations under the License.
  */
 
-import { GridOptions } from "ag-grid-community";
-
 import { ext } from "../extensionVariables";
 import { isBaseVersionGreaterOrEqual } from "./core";
 import { decodeQUTF } from "./decode";
@@ -23,14 +21,17 @@ export function convertToGrid(
   isInsights: boolean,
   connVersion?: number,
   isPython?: boolean,
-): GridOptions {
+): any {
   let rowData = [];
   let columnDefs = [];
 
   if (
     (!isInsights && !isPython) ||
     /* TODO: Workaround for Python structuredText bug */
-    (!isPython && connVersion && isBaseVersionGreaterOrEqual(connVersion, 1.12))
+    (!isPython &&
+      connVersion &&
+      isBaseVersionGreaterOrEqual(connVersion, 1.12)) ||
+    results.columns
   ) {
     rowData = updatedExtractRowData(results);
     columnDefs = updatedExtractColumnDefs(results);
@@ -91,7 +92,7 @@ export function convertToGrid(
     ext.resultPanelCSV = convertToCsv(rowData).join("\n");
   }
 
-  const gridOptions: GridOptions = {
+  const gridOptions: any = {
     rowData: rowData,
     columnDefs: columnDefs,
   };
