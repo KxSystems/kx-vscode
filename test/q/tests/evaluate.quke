@@ -165,3 +165,5 @@ feature EDI
             `s ~ .test.evaluate["."; "\n\n" sv .test.attrLines; ::; "serialized"]`data
         expect an attribute with semi colons with two newlines
             `s ~ .test.evaluate["."; "\n\n" sv .test.attrLines ,\: ";"; ::; "serialized"]`data
+
+// TODO: ADD STRUCTUREDTEXT TESTS

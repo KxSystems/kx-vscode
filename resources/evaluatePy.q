@@ -1,4 +1,4 @@
-fn: {[returnFormat;code;sample_fn;sample_size]
+{[returnFormat;code;sample_fn;sample_size]
  if [`histogram in key `.qp;
  if [not `display2 in key `.qp; 
  .qp.display2: (')[{x[`output][`bytes]}; .qp.display]
