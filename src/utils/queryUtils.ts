@@ -529,39 +529,41 @@ export function resetScratchpadStarted(connLabel: string) {
   ext.scratchpadStarted.delete(connLabel);
 }
 
-export function notifyExecution(
-  isRun: boolean,
-  isWorkbook: boolean,
-  isNotebook: boolean,
-  isRepl: boolean,
-  isInsights: boolean,
-  isDap: boolean,
-  isQuick: boolean,
-  isPython: boolean,
-  isSql: boolean,
-  dsType?: DataSourceTypes,
-) {
-  notify("Query execution.", MessageKind.DEBUG, {
+export const enum ExecFlags {
+  Run = 0b000000001,
+  Workbook = 0b000000010,
+  Notebook = 0b000000100,
+  Repl = 0b000001000,
+  Insights = 0b000010000,
+  Quick = 0b000100000,
+  Dap = 0b001000000,
+  Python = 0b010000000,
+  Sql = 0b100000000,
+}
+
+export function notifyExecution(flags: number, dsType?: string) {
+  const telemetry =
+    (flags & ExecFlags.Run ? "Run" : "Populate") +
+    (dsType
+      ? ".Datasource." + dsType.toLowerCase()
+      : flags & ExecFlags.Workbook
+        ? ".Workbook"
+        : flags & ExecFlags.Notebook
+          ? ".Cell"
+          : ".File") +
+    (flags & ExecFlags.Repl
+      ? ".repl"
+      : flags & ExecFlags.Insights
+        ? ".ie"
+        : ".kdb") +
+    (flags & ExecFlags.Quick ? ".quick" : "") +
+    (flags & ExecFlags.Dap ? ".dap" : "") +
+    (flags & ExecFlags.Python ? ".py" : flags & ExecFlags.Sql ? ".sql" : ".q");
+
+  notify(`Query ${telemetry} executed.`, MessageKind.DEBUG, {
     logger,
-    telemetry:
-      (isRun ? "Run" : "Populate") +
-      (dsType
-        ? ".Datasource." +
-          (dsType === DataSourceTypes.API
-            ? ".api"
-            : dsType === DataSourceTypes.QSQL
-              ? ".q"
-              : dsType === DataSourceTypes.SQL
-                ? ".sql"
-                : ".uda")
-        : isWorkbook
-          ? ".Workbook"
-          : isNotebook
-            ? ".Cell"
-            : ".File") +
-      (isRepl ? ".repl" : isInsights ? ".ie" : ".kdb") +
-      (isDap ? ".dap" : "") +
-      (isQuick ? ".quick" : "") +
-      (isPython ? ".py" : isSql ? ".sql" : ".q"),
+    telemetry,
   });
+
+  return telemetry;
 }

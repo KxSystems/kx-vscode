@@ -47,6 +47,7 @@ import {
   Runner,
 } from "../utils/notifications";
 import {
+  ExecFlags,
   getPythonWrapper,
   getSQLWrapper,
   notifyExecution,
@@ -542,15 +543,11 @@ export async function runActiveEditor(type?: ExecutionTypes) {
     if (server === undefined) {
       await runOnRepl(ext.activeTextEditor, type);
       notifyExecution(
-        true,
-        !!isWorkbook(uri),
-        false,
-        true,
-        false,
-        false,
-        false,
-        !!isPython(uri),
-        !!isSql(uri),
+        ExecFlags.Run |
+          ExecFlags.Repl |
+          (isWorkbook(uri) ? ExecFlags.Workbook : 0) |
+          (isPython(uri) ? ExecFlags.Python : 0) |
+          (isSql(uri) ? ExecFlags.Sql : 0),
       );
       return;
     }
@@ -588,15 +585,12 @@ export async function runActiveEditor(type?: ExecutionTypes) {
         isInsights,
       );
       notifyExecution(
-        type !== ExecutionTypes.PopulateScratchpad,
-        !!isWorkbook(uri),
-        false,
-        false,
-        isInsights,
-        !!target,
-        false,
-        !!isPython(uri),
-        !!isSql(uri),
+        (type === ExecutionTypes.PopulateScratchpad ? 0 : ExecFlags.Run) |
+          (isInsights ? ExecFlags.Insights : 0) |
+          (target ? ExecFlags.Dap : 0) |
+          (isWorkbook(uri) ? ExecFlags.Workbook : 0) |
+          (isPython(uri) ? ExecFlags.Python : 0) |
+          (isSql(uri) ? ExecFlags.Sql : 0),
       );
     } catch (error) {
       notify(

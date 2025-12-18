@@ -38,6 +38,7 @@ import {
   getPythonWrapper,
   getSQLWrapper,
   notifyExecution,
+  ExecFlags,
 } from "../utils/queryUtils";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
 
@@ -172,15 +173,12 @@ export class KxNotebookController {
         ]);
 
         notifyExecution(
-          !variable,
-          false,
-          true,
-          false,
-          isInsights,
-          !!target,
-          false,
-          kind === CellKind.PYTHON,
-          kind === CellKind.SQL,
+          ExecFlags.Notebook |
+            (variable ? 0 : ExecFlags.Run) |
+            (isInsights ? ExecFlags.Insights : 0) |
+            (target ? ExecFlags.Dap : 0) |
+            (kind === CellKind.PYTHON ? ExecFlags.Python : 0) |
+            (kind === CellKind.SQL ? ExecFlags.Sql : 0),
         );
 
         if (variable) {
