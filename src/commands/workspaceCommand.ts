@@ -46,7 +46,12 @@ import {
   notify,
   Runner,
 } from "../utils/notifications";
-import { getPythonWrapper, getSQLWrapper } from "../utils/queryUtils";
+import {
+  ExecFlags,
+  getPythonWrapper,
+  getSQLWrapper,
+  notifyExecution,
+} from "../utils/queryUtils";
 import {
   cleanAssemblyName,
   cleanDapName,
@@ -470,6 +475,10 @@ function isKxFolder(uri: Uri | undefined) {
 export async function startRepl() {
   const instance = await ReplConnection.getOrCreateInstance();
   instance.start();
+  notify("REPL started.", MessageKind.DEBUG, {
+    logger,
+    telemetry: "Repl.Start",
+  });
 }
 
 export async function runOnRepl(editor: TextEditor, type?: ExecutionTypes) {
@@ -532,7 +541,14 @@ export async function runActiveEditor(type?: ExecutionTypes) {
       await setServerForUri(uri, undefined);
     }
     if (server === undefined) {
-      runOnRepl(ext.activeTextEditor, type);
+      await runOnRepl(ext.activeTextEditor, type);
+      notifyExecution(
+        ExecFlags.Run |
+          ExecFlags.Repl |
+          (isWorkbook(uri) ? ExecFlags.Workbook : 0) |
+          (isPython(uri) ? ExecFlags.Python : 0) |
+          (isSql(uri) ? ExecFlags.Sql : 0),
+      );
       return;
     }
     const conn = await findConnection(uri);
@@ -543,7 +559,6 @@ export async function runActiveEditor(type?: ExecutionTypes) {
     const isInsights = conn instanceof InsightsConnection;
     const executorName = getBasename(ext.activeTextEditor.document.uri);
     const target = isInsights ? getTargetForUri(uri) : undefined;
-    const isSql = executorName.endsWith(".sql");
 
     if (type === ExecutionTypes.PopulateScratchpad && !isInsights) {
       notify(
@@ -563,11 +578,19 @@ export async function runActiveEditor(type?: ExecutionTypes) {
           : type,
         conn.connLabel,
         executorName,
-        !isPython(uri),
+        !!isWorkbook(uri),
         undefined,
         target,
-        isSql,
-        conn instanceof InsightsConnection,
+        !!isSql(uri),
+        isInsights,
+      );
+      notifyExecution(
+        (type === ExecutionTypes.PopulateScratchpad ? 0 : ExecFlags.Run) |
+          (isInsights ? ExecFlags.Insights : 0) |
+          (target ? ExecFlags.Dap : 0) |
+          (isWorkbook(uri) ? ExecFlags.Workbook : 0) |
+          (isPython(uri) ? ExecFlags.Python : 0) |
+          (isSql(uri) ? ExecFlags.Sql : 0),
       );
     } catch (error) {
       notify(

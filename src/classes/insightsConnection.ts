@@ -519,7 +519,6 @@ export class InsightsConnection {
     params: DataSourceFiles,
     silent?: boolean,
   ): Promise<void> {
-    let dsTypeString = "";
     if (this.connected && this.connEndpoints) {
       let coreUrl: string;
       const body: any = {
@@ -534,13 +533,11 @@ export class InsightsConnection {
             endTS: convertTimeToTimestamp(params.dataSource.api.endTS),
           };
           coreUrl = this.connEndpoints.scratchpad.import;
-          dsTypeString = "API";
           break;
         }
         case DataSourceTypes.SQL: {
           body.params = { query: params.dataSource.sql.query };
           coreUrl = this.connEndpoints.scratchpad.importSql;
-          dsTypeString = "SQL";
           break;
         }
         case DataSourceTypes.QSQL: {
@@ -551,7 +548,6 @@ export class InsightsConnection {
           );
 
           coreUrl = this.connEndpoints.scratchpad.importQsql;
-          dsTypeString = "QSQL";
           break;
         }
         case DataSourceTypes.UDA: {
@@ -606,8 +602,6 @@ export class InsightsConnection {
             {
               logger,
               params: { status: response.status },
-              telemetry:
-                "Datasource." + dsTypeString + ".Scratchpad.Populated.Errored",
             },
           );
         } else {
@@ -617,7 +611,6 @@ export class InsightsConnection {
             {
               logger,
               params: { status: response.status },
-              telemetry: "Datasource." + dsTypeString + ".Scratchpad.Populated",
             },
           );
         }
@@ -833,7 +826,7 @@ export class InsightsConnection {
           notify(
             `Scratchpad reset for ${this.connLabel} executed successfully.`,
             MessageKind.INFO,
-            { logger, telemetry: "Scratchpad.Reseted" },
+            { logger, telemetry: "Connection.Reset.ie.sp" },
           );
           return true;
         })

@@ -37,6 +37,8 @@ import {
   needsScratchpad,
   getPythonWrapper,
   getSQLWrapper,
+  notifyExecution,
+  ExecFlags,
 } from "../utils/queryUtils";
 import { convertToGrid, formatResult } from "../utils/resultsRenderer";
 
@@ -169,6 +171,15 @@ export class KxNotebookController {
               execution.token.onCancellationRequested(updateCancelled);
           }),
         ]);
+
+        notifyExecution(
+          ExecFlags.Notebook |
+            (variable ? 0 : ExecFlags.Run) |
+            (isInsights ? ExecFlags.Insights : 0) |
+            (target ? ExecFlags.Dap : 0) |
+            (kind === CellKind.PYTHON ? ExecFlags.Python : 0) |
+            (kind === CellKind.SQL ? ExecFlags.Sql : 0),
+        );
 
         if (variable) {
           results = `Scratchpad variable (${variable}) populated.`;
