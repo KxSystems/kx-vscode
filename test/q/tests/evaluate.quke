@@ -1,8 +1,8 @@
 feature EDI
     before
         .test.src: "\n" sv read0 `:resources/evaluate.q;
-        .test.evaluate: {[ctx; code; returnFormat]
-            0i (.test.src; ctx; code; returnFormat)
+        .test.evaluate: {[ctx; code; sampleFn; returnFormat]
+            0i (.test.src; ctx; code; sampleFn; returnFormat)
             };
         .test.dims : system "c";
         .test.precision: system "P";
@@ -20,7 +20,7 @@ feature EDI
     should ensure EDI performs display correctly for standard expressions
         // @TICKET KXI-12260
         expect simple expression of 3+3 to return 6:
-            .qu.compare[.test.evaluate["."; "3+3"; "serialized"]`data; 6]
+            .qu.compare[.test.evaluate["."; "3+3"; ::; "serialized"]`data; 6]
 
         // This test is skipped because coverage is not handling generic null correctly in QBUILD 1.0.17 and greater
         // @TICKET KXI-12260
