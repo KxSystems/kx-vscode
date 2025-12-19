@@ -47,7 +47,7 @@ import {
   Runner,
 } from "../utils/notifications";
 import {
-  ExecFlags,
+  RunFlag,
   getPythonWrapper,
   getSQLWrapper,
   notifyExecution,
@@ -543,11 +543,11 @@ export async function runActiveEditor(type?: ExecutionTypes) {
     if (server === undefined) {
       await runOnRepl(ext.activeTextEditor, type);
       notifyExecution(
-        ExecFlags.Run |
-          ExecFlags.Repl |
-          (isWorkbook(uri) ? ExecFlags.Workbook : 0) |
-          (isPython(uri) ? ExecFlags.Python : 0) |
-          (isSql(uri) ? ExecFlags.Sql : 0),
+        RunFlag.Run |
+          RunFlag.Repl |
+          (isWorkbook(uri) ? RunFlag.Workbook : 0) |
+          (isPython(uri) ? RunFlag.Python : 0) |
+          (isSql(uri) ? RunFlag.Sql : 0),
       );
       return;
     }
@@ -585,12 +585,12 @@ export async function runActiveEditor(type?: ExecutionTypes) {
         isInsights,
       );
       notifyExecution(
-        (type === ExecutionTypes.PopulateScratchpad ? 0 : ExecFlags.Run) |
-          (isInsights ? ExecFlags.Insights : 0) |
-          (target ? ExecFlags.Dap : 0) |
-          (isWorkbook(uri) ? ExecFlags.Workbook : 0) |
-          (isPython(uri) ? ExecFlags.Python : 0) |
-          (isSql(uri) ? ExecFlags.Sql : 0),
+        (type === ExecutionTypes.PopulateScratchpad ? 0 : RunFlag.Run) |
+          (isInsights ? RunFlag.Insights : 0) |
+          (target ? RunFlag.Dap : 0) |
+          (isWorkbook(uri) ? RunFlag.Workbook : 0) |
+          (isPython(uri) ? RunFlag.Python : 0) |
+          (isSql(uri) ? RunFlag.Sql : 0),
       );
     } catch (error) {
       notify(

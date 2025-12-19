@@ -118,6 +118,10 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
     }
     const workspaceUri = workspaceFolders[0].uri;
     utils.exportToCsv(workspaceUri);
+    notify("CSV exported.", MessageKind.DEBUG, {
+      logger,
+      telemetry: "Results.Export.csv",
+    });
   }
 
   isVisible(): boolean {
@@ -175,6 +179,10 @@ export class KdbResultsViewProvider implements WebviewViewProvider {
           columnDefs: gridOptions.columnDefs,
           theme: "legacy",
           themeColor: this.defineAgGridTheme(),
+        });
+        notify("Table displayed.", MessageKind.DEBUG, {
+          logger,
+          telemetry: "Results.Table.Displayed",
         });
       } else {
         this._view.webview.postMessage({

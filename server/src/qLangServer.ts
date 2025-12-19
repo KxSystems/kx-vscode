@@ -451,11 +451,6 @@ export default class QLangServer {
   public async onFoldingRanges({
     textDocument: { uri },
   }: FoldingRangeParams): Promise<FoldingRange[]> {
-    this.notify("onFoldingRanges", MessageKind.DEBUG, {
-      logger,
-      telemetry: "Language.FoldingRanges",
-    });
-
     const source = await this.getSource(uri);
     const ranges: FoldingRange[] = [];
 
