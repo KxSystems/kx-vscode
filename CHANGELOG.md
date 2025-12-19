@@ -11,6 +11,7 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - SQL Workbook
 - Connect and auto execute query functionality
 - Use own grid instead of ag-grid-community for kdb Results View
+- Nested objects are better supported in kdb Results View
 - Add support for KDB-X modules in language server
 - Moved documentation to its own site
 
@@ -26,7 +27,8 @@ All notable changes to the **kdb VS Code extension** are documented in this file
 - Updated telemetry data sent
 - Use structured text for datasources
 - Integrate KDB-X KX_TTY feature in REPL
-- Update query wrappers and added q CI testing
+- Added q CI testing
+- Updated query wrappers
 
 # v1.16.1
 

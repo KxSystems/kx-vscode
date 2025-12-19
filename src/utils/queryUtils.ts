@@ -546,7 +546,7 @@ export function resetScratchpadStarted(connLabel: string) {
   ext.scratchpadStarted.delete(connLabel);
 }
 
-export const enum ExecFlags {
+export const enum RunFlag {
   Run = 0b000000001,
   Workbook = 0b000000010,
   Notebook = 0b000000100,
@@ -560,22 +560,22 @@ export const enum ExecFlags {
 
 export function notifyExecution(flags: number, dsType?: string) {
   const telemetry =
-    (flags & ExecFlags.Run ? "Run" : "Populate") +
+    (flags & RunFlag.Run ? "Run" : "Populate") +
     (dsType
       ? ".Datasource." + dsType.toLowerCase()
-      : flags & ExecFlags.Workbook
-        ? ".Workbook"
-        : flags & ExecFlags.Notebook
-          ? ".Cell"
-          : ".File") +
-    (flags & ExecFlags.Repl
-      ? ".repl"
-      : flags & ExecFlags.Insights
-        ? ".ie"
-        : ".kdb") +
-    (flags & ExecFlags.Quick ? ".quick" : "") +
-    (flags & ExecFlags.Dap ? ".dap" : "") +
-    (flags & ExecFlags.Python ? ".py" : flags & ExecFlags.Sql ? ".sql" : ".q");
+      : (flags & RunFlag.Workbook
+          ? ".Workbook"
+          : flags & RunFlag.Notebook
+            ? ".Cell"
+            : ".File") +
+        (flags & RunFlag.Repl
+          ? ".repl"
+          : flags & RunFlag.Insights
+            ? ".ie"
+            : ".kdb") +
+        (flags & RunFlag.Quick ? ".quick" : "") +
+        (flags & RunFlag.Dap ? ".dap" : "") +
+        (flags & RunFlag.Python ? ".py" : flags & RunFlag.Sql ? ".sql" : ".q"));
 
   notify(`Query ${telemetry} executed.`, MessageKind.DEBUG, {
     logger,

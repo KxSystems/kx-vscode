@@ -966,7 +966,7 @@ export async function executeQuery(
         notify("GG Plot displayed", MessageKind.DEBUG, {
           logger,
           telemetry:
-            "Graphics.Displayed" +
+            "Results.Graphics.Displayed" +
             (isInsights ? ".ie" : ".kdb") +
             (isPython ? ".py" : ".q"),
         });

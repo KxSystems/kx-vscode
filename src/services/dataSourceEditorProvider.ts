@@ -46,7 +46,7 @@ import { UDA } from "../models/uda";
 import { getBasename, offerConnectAction } from "../utils/core";
 import { getNonce } from "../utils/getNonce";
 import { MessageKind, Runner, notify } from "../utils/notifications";
-import { ExecFlags, notifyExecution } from "../utils/queryUtils";
+import { RunFlag, notifyExecution } from "../utils/queryUtils";
 import { parseUDAList } from "../utils/uda";
 import { getUri } from "../utils/uriUtils";
 
@@ -223,7 +223,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           else if (await offerConnectAction(selectedServer))
             await runner.execute();
           notifyExecution(
-            ExecFlags.Run | ExecFlags.Insights,
+            RunFlag.Run,
             msg.dataSourceFile.dataSource.selectedType,
           );
           break;
@@ -236,10 +236,7 @@ export class DataSourceEditorProvider implements CustomTextEditorProvider {
           if (connected) await runner.execute();
           else if (await offerConnectAction(selectedServer))
             await runner.execute();
-          notifyExecution(
-            ExecFlags.Insights,
-            msg.dataSourceFile.dataSource.selectedType,
-          );
+          notifyExecution(0, msg.dataSourceFile.dataSource.selectedType);
           break;
         }
       }

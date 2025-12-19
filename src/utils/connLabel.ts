@@ -146,11 +146,6 @@ export function addConnToLabel(labelName: string, connName: string) {
         connections: [connName],
       });
     }
-    notify("Connection assigned to label.", MessageKind.DEBUG, {
-      logger,
-      telemetry: "Connection.Label.Assign",
-      measurements: getConnectionLabelStatistics(connName),
-    });
   }
 }
 
@@ -165,12 +160,6 @@ export function removeConnFromLabels(connName: string) {
   workspace
     .getConfiguration()
     .update("kdb.labelsConnectionMap", ext.labelConnMapList, true);
-
-  notify("Connection removed from label.", MessageKind.DEBUG, {
-    logger,
-    telemetry: "Connection.Label.Unassign",
-    measurements: getConnectionLabelStatistics(connName),
-  });
 }
 
 export async function handleLabelsConnMap(labels: string[], connName: string) {
