@@ -1201,8 +1201,8 @@
   },
   "scripts": {
     "update-deps": "ncu --target patch -u",
-    "format": "prettier --write \"**/*.+(js|ts)\"",
-    "lint": "eslint $(git ls-files '*.ts') --fix --no-warn-ignored",
+    "format": "prettier --write \"**/*.ts\"",
+    "lint": "eslint --fix --no-warn-ignored",
     "esbuild-base": "rimraf out && node ./esbuild.mjs",
     "watch": "npm run -S esbuild-base -- --sourcemap --watch",
     "build": "npm run -S esbuild-base -- --sourcemap",

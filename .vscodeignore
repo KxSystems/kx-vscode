@@ -11,7 +11,8 @@ node_modules
 server
 test/
 img/
-esbuild.js
+qcumber.sh 
+esbuild.mjs
 sonar-project.properties
 eslint.config.cjs
 eslint.config.mjs
