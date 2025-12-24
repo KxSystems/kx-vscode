@@ -58,6 +58,7 @@ import {
   errorMessage,
   normalizeAssemblyTarget,
 } from "../utils/shared";
+import { showInputPicker } from "../utils/widgets";
 
 const logger = "workspaceCommand";
 
@@ -228,7 +229,7 @@ export async function pickConnection(uri: Uri) {
   const servers = getServers();
   const items = ["(none)", ...servers];
 
-  let picked = await window.showQuickPick(items, {
+  let picked = await showInputPicker(items, {
     title: `Choose Connection (${getBasename(uri)})`,
     placeHolder: server,
   });

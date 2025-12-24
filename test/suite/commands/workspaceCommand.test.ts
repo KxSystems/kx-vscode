@@ -26,6 +26,7 @@ import { WorkspaceTreeProvider } from "../../../src/services/workspaceTreeProvid
 import * as dataSourceUtils from "../../../src/utils/dataSource";
 import * as loggers from "../../../src/utils/loggers";
 import * as notifications from "../../../src/utils/notifications";
+import * as widgets from "../../../src/utils/widgets";
 
 describe("workspaceCommand", () => {
   const kdbUri = vscode.Uri.file("test-kdb.q");
@@ -153,7 +154,7 @@ describe("workspaceCommand", () => {
 
   describe("pickConnection", () => {
     it("should pick from available servers", async () => {
-      sinon.stub(vscode.window, "showQuickPick").value(async () => "test");
+      sinon.stub(widgets, "showInputPicker").value(async () => "test");
       const result = await workspaceCommand.pickConnection(
         vscode.Uri.file("test.kdb.q"),
       );
@@ -161,7 +162,7 @@ describe("workspaceCommand", () => {
     });
 
     it("should return undefined from (none)", async () => {
-      sinon.stub(vscode.window, "showQuickPick").value(async () => "(none)");
+      sinon.stub(widgets, "showInputPicker").value(async () => "(none)");
       const result = await workspaceCommand.pickConnection(
         vscode.Uri.file("test.kdb.q"),
       );
