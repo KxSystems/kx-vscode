@@ -32,6 +32,7 @@ import {
   getServers,
   updateInsights,
   updateServers,
+  isQuickAlias,
 } from "../utils/core";
 import { refreshDataSourcesPanel } from "../utils/dataSource";
 import { MessageKind, notify } from "../utils/notifications";
@@ -525,14 +526,16 @@ export class ConnectionManagementService {
         return "";
       }
       if (connection instanceof KdbNode) {
-        exportedContent.connections.KDB.push(connection.details);
+        if (!isQuickAlias(connection.details.serverAlias))
+          exportedContent.connections.KDB.push(connection.details);
       } else {
         exportedContent.connections.Insights.push(connection.details);
       }
     } else {
       ext.connectionsList.forEach((connection) => {
         if (connection instanceof KdbNode) {
-          exportedContent.connections.KDB.push(connection.details);
+          if (!isQuickAlias(connection.details.serverAlias))
+            exportedContent.connections.KDB.push(connection.details);
         } else {
           exportedContent.connections.Insights.push(connection.details);
         }

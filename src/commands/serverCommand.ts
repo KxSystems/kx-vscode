@@ -1444,19 +1444,28 @@ export async function ensureQuickConnection(server: string) {
 
   if (!connection) {
     const serverAlias = "(Connection " + (quickConnections.length + 1) + ")";
-    const authData = await ext.secretSettings.getAuthData(server);
-    if (authData) await ext.secretSettings.storeAuthData(serverAlias, authData);
+    if (user) {
+      const auth = await ext.secretSettings.getAuthData(server);
+      if (auth) await ext.secretSettings.storeAuthData(serverAlias, auth);
+    }
     connection = {
       serverAlias,
       serverName: host,
       serverPort: port,
       username: user,
-      auth: !!authData,
+      auth: !!user,
       tls: false,
     };
     quickConnections.push(connection);
     const servers = getServers();
     quickConnections.forEach((conn) => (servers[conn.serverAlias] = conn));
+    await commands.executeCommand(
+      "setContext",
+      "kdb.kdbQuickNodes",
+      quickConnections.map(
+        (conn) => `${conn.serverAlias} [${conn.serverName}:${conn.serverPort}]`,
+      ),
+    );
     ext.serverProvider.refresh(servers);
   }
 

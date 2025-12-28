@@ -131,6 +131,21 @@ function getServers() {
   ];
 }
 
+const quickServers: string[] = [];
+
+function getQuickServers(uri: Uri) {
+  const conf = workspace.getConfiguration("kdb", uri);
+  const connections = conf.get<{ [key: string]: string }>("connectionMap", {});
+  const size = quickServers.length;
+  Object.keys(connections).forEach((key) => {
+    const target = connections[key];
+    if (target.includes(":") && !quickServers.includes(target)) {
+      quickServers.push(target);
+    }
+  });
+  return size !== quickServers.length ? quickServers.sort() : quickServers;
+}
+
 export async function getConnectionForServer(
   server: string,
 ): Promise<InsightsNode | KdbNode | undefined> {
@@ -236,36 +251,45 @@ export function getConnectionForUri(uri: Uri) {
 export async function pickConnection(uri: Uri) {
   /* c8 ignore start */
   const server = getServerForUri(uri);
-  const servers = getServers();
-  const items = ["(none)", ...servers];
+  const items = ["(none)", ...getServers(), ...getQuickServers(uri)];
 
   let picked = await showInputPicker(items, {
     title: `Choose Connection (${getBasename(uri)})`,
     placeHolder: server,
   });
 
-  if (picked) {
-    if (picked === "(none)") {
-      picked = undefined;
-      await setTargetForUri(uri, undefined);
-    }
-    if (picked) {
-      if (isQuick(picked)) {
-        const [host, port, user, pass] = picked.split(":");
-        if (user) {
-          picked = host + ":" + port + ":" + user;
+  if (picked === undefined) return undefined;
+
+  if (isQuick(picked)) {
+    const [host, port, user, pass] = picked.split(":");
+    if (host && port && /^\d+$/s.test(port)) {
+      if (user) {
+        picked = host + ":" + port + ":" + user;
+        if (pass) {
           await ext.secretSettings.storeAuthData(picked, `${user}:${pass}`);
-        } else {
-          picked = host + ":" + port;
         }
+      } else {
+        picked = host + ":" + port;
       }
-      setRunScratchpadItemText(uri, picked);
-      ext.runScratchpadItem.show();
     } else {
-      ext.runScratchpadItem.hide();
+      notify(`Connection string "${picked}" is not valid.`, MessageKind.ERROR, {
+        logger,
+      });
+      return undefined;
     }
-    await setServerForUri(uri, picked);
+  } else if (picked === "(none)") {
+    picked = undefined;
+    await setTargetForUri(uri, undefined);
   }
+
+  if (picked) {
+    setRunScratchpadItemText(uri, picked);
+    ext.runScratchpadItem.show();
+  } else {
+    ext.runScratchpadItem.hide();
+  }
+  await setServerForUri(uri, picked);
+
   return picked;
   /* c8 ignore stop */
 }
