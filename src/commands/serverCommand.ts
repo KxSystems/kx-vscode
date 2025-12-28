@@ -1429,3 +1429,36 @@ function isValidExportedConnections(data: any): data is ExportedConnections {
     Array.isArray(data.connections.KDB)
   );
 }
+
+const quickConnections: ServerDetails[] = [];
+
+export async function ensureQuickConnection(server: string) {
+  const [host, port, user] = server.split(":");
+
+  let connection = quickConnections.find(
+    (conn) =>
+      conn.serverName === host &&
+      conn.serverPort === port &&
+      conn.username === user,
+  );
+
+  if (!connection) {
+    const serverAlias = "(Connection " + (quickConnections.length + 1) + ")";
+    const authData = await ext.secretSettings.getAuthData(server);
+    if (authData) await ext.secretSettings.storeAuthData(serverAlias, authData);
+    connection = {
+      serverAlias,
+      serverName: host,
+      serverPort: port,
+      username: user,
+      auth: !!authData,
+      tls: false,
+    };
+    quickConnections.push(connection);
+    const servers = getServers();
+    quickConnections.forEach((conn) => (servers[conn.serverAlias] = conn));
+    ext.serverProvider.refresh(servers);
+  }
+
+  return connection.serverAlias;
+}
