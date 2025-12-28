@@ -254,7 +254,7 @@ export async function pickConnection(uri: Uri) {
   const items = ["(none)", ...getServers(), ...getQuickServers(uri)];
 
   let picked = await showInputPicker(items, {
-    title: `Choose Connection (${getBasename(uri)})`,
+    title: `Choose a connection or enter a quick connection string for ${getBasename(uri)}`,
     placeHolder: server,
   });
 
@@ -280,6 +280,11 @@ export async function pickConnection(uri: Uri) {
   } else if (picked === "(none)") {
     picked = undefined;
     await setTargetForUri(uri, undefined);
+  } else if (!items.includes(picked)) {
+    notify(`Connection "${picked}" is not found.`, MessageKind.ERROR, {
+      logger,
+    });
+    return undefined;
   }
 
   if (picked) {

@@ -1445,8 +1445,20 @@ export async function ensureQuickConnection(server: string) {
   if (!connection) {
     const serverAlias = "(Connection " + (quickConnections.length + 1) + ")";
     if (user) {
-      const auth = await ext.secretSettings.getAuthData(server);
-      if (auth) await ext.secretSettings.storeAuthData(serverAlias, auth);
+      let auth = await ext.secretSettings.getAuthData(server);
+      if (!auth) {
+        const password = await window.showInputBox({
+          password: true,
+          prompt: `Enter password for ${server}`,
+        });
+        if (password) {
+          auth = `${user}:${password}`;
+          await ext.secretSettings.storeAuthData(server, auth);
+        } else {
+          throw new Error(`Password not found for ${server}`);
+        }
+      }
+      await ext.secretSettings.storeAuthData(serverAlias, auth);
     }
     connection = {
       serverAlias,

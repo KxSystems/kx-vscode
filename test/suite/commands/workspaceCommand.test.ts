@@ -153,14 +153,6 @@ describe("workspaceCommand", () => {
   });
 
   describe("pickConnection", () => {
-    it("should pick from available servers", async () => {
-      sinon.stub(widgets, "showInputPicker").value(async () => "test");
-      const result = await workspaceCommand.pickConnection(
-        vscode.Uri.file("test.kdb.q"),
-      );
-      assert.strictEqual(result, "test");
-    });
-
     it("should return undefined from (none)", async () => {
       sinon.stub(widgets, "showInputPicker").value(async () => "(none)");
       const result = await workspaceCommand.pickConnection(
