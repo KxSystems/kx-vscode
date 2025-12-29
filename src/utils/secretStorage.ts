@@ -34,4 +34,8 @@ export default class AuthSettings {
     const result = await this.secretStorage.get(tokenKey);
     return result;
   }
+
+  async deleteAuthData(tokenKey: string): Promise<void> {
+    this.secretStorage.delete(tokenKey);
+  }
 }

@@ -1451,12 +1451,8 @@ export async function ensureQuickConnection(server: string) {
           password: true,
           prompt: `Enter password for ${server}`,
         });
-        if (password) {
-          auth = `${user}:${password}`;
-          await ext.secretSettings.storeAuthData(server, auth);
-        } else {
-          throw new Error(`Password not found for ${server}`);
-        }
+        auth = `${user}:${password ?? ""}`;
+        await ext.secretSettings.storeAuthData(server, auth);
       }
       await ext.secretSettings.storeAuthData(serverAlias, auth);
     }
