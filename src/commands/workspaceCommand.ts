@@ -239,12 +239,21 @@ export function getTargetForUri(uri: Uri) {
 export function getConnectionForUri(uri: Uri) {
   const server = getServerForUri(uri);
   if (server) {
-    return ext.connectionsList.find((item) => {
-      if (item instanceof InsightsNode) {
-        return item.details.alias === server;
-      }
-      return item.details.serverAlias === server;
-    }) as KdbNode | InsightsNode;
+    if (isQuick(server)) {
+      const [host, port, user] = server.split(":");
+      return ext.connectionsList.find(
+        (item) =>
+          item instanceof KdbNode &&
+          host === item.details.serverName &&
+          port === item.details.serverPort &&
+          user === item.details.username,
+      );
+    }
+    return ext.connectionsList.find((item) =>
+      item instanceof InsightsNode
+        ? item.details.alias === server
+        : item.details.serverAlias === server,
+    );
   }
 }
 
