@@ -33,6 +33,7 @@ import {
   ensureQuickConnection,
   resetScratchpad,
   runQuery,
+  setQuickPassword,
 } from "./serverCommand";
 import { InsightsConnection } from "../classes/insightsConnection";
 import { LocalConnection } from "../classes/localConnection";
@@ -273,15 +274,13 @@ export async function pickConnection(uri: Uri) {
     const [host, port, user, pass] = picked.split(":");
     if (host && port && /^\d+$/s.test(port)) {
       if (user) {
-        picked = host + ":" + port + ":" + user;
-        if (pass) {
-          await ext.secretSettings.storeAuthData(picked, `${user}:${pass}`);
-        }
+        picked = `${host}:${port}:${user}`;
+        if (pass !== undefined) await setQuickPassword(host, port, user, pass);
       } else {
-        picked = host + ":" + port;
+        picked = `${host}:${port}`;
       }
     } else {
-      notify(`Connection string "${picked}" is not valid.`, MessageKind.ERROR, {
+      notify(`Connection string (${picked}) is not valid.`, MessageKind.ERROR, {
         logger,
       });
       return undefined;
