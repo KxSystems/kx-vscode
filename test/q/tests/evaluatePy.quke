@@ -282,10 +282,10 @@ feature evaluatePy 2
                     (`error; 1b);
                     (`errorMsg; ".pykx is not defined: please load pykx"))]
 
-    should raise an error if pykx is on the wrong version
-        expect pykx to be on the correct version
+    should test the structured text functionality in python
+        expect pykx version set to 2.5 for code compatibility
             .pykx.pyexec "import pykx as kx";
-            .qu.compare[string .pykx.qeval "kx.__version__";"3.1.6"]
+            like[string .pykx.qeval "kx.__version__";"2.5.?"]
 
 feature python toStructuredText 
     before
@@ -369,11 +369,15 @@ feature python toStructuredText
             .qu.compare[
                 .test.evaluatePy["structuredText"; "True"]`data;
                 "{\"count\":1,\"columns\":[{\"name\":\"value\",\"type\":\"bool\",\"values\":[\"True\"],\"order\":[0]}],\"warnings\":[]}"]
-        expect python structured text to handle sets
+        xexpect python structured text to handle sets
+            //xexpecting this test out as pykx version 2.5.4 is ambiguous in handling set data. Updating to version 3+ will be deterministic
+            // this same test is tested on framework and includes parsing the actual data structure to determine correctness.
             .qu.compare[
                 .test.evaluatePy["structuredText"; "{'apple', 'banana', 'cherry'}"]`data;
                 "{\"count\":3,\"columns\":[{\"name\":\"values\",\"type\":\"set\",\"values\":[\"'apple'\",\"'cherry'\",\"'banana'\"],\"order\":[0,2,1]}],\"warnings\":[]}"]
-        expect python structured text to handle lists of sets 
+        xexpect python structured text to handle lists of sets 
+            //xexpecting this test out as pykx version 2.5.4 is ambiguous in handling set data. Updating to version 3+ will be deterministic
+            // this same test is tested on framework and includes parsing the actual data structure to determine correctness.
             .qu.compare[
                 .test.evaluatePy["structuredText"; "[
                             {'apple', 'banana', 'cherry'},
@@ -428,7 +432,7 @@ feature python toStructuredText
             .pykx.pyexec "import numpy as np"; 
             .qu.compare[
                 .test.evaluatePy["structuredText"; "np.array([1, 2, 3, 4, 5])"]`data;
-                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"ndarray\",\"values\":[\"np.int64(1)\",\"np.int64(2)\",\"np.int64(3)\",\"np.int64(4)\",\"np.int64(5)\"],\"order\":[0,1,2,3,4]}],\"warnings\":[]}"]
+                "{\"count\":5,\"columns\":[{\"name\":\"values\",\"type\":\"ndarray\",\"values\":[\"1\",\"2\",\"3\",\"4\",\"5\"],\"order\":[0,1,2,3,4]}],\"warnings\":[]}"]
         expect python structured text to handle empty lists
             .qu.compare[
                 .test.evaluatePy["structuredText"; "[]"]`data;
