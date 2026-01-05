@@ -282,6 +282,10 @@ feature evaluatePy 2
                     (`error; 1b);
                     (`errorMsg; ".pykx is not defined: please load pykx"))]
 
+    should raise an error if pykx is on the wrong version
+        expect pykx to be on the correct version
+            .qu.compare[string .pykx.qeval "kx.__version__";"3.1.6"]
+
 feature python toStructuredText 
     before
         .test.src: "\n" sv read0 `:resources/evaluatePy.q;
