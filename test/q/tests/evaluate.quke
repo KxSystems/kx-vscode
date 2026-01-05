@@ -195,7 +195,7 @@ feature toStructuredText
             .qu.compare[.test.evaluate["."; ".test.exampleList"; ::; "structuredText"]`data; "{\"count\":3,\"columns\":[{\"name\":\"values\",\"type\":\"floats\",\"values\":[\"1.1\",\"452f\",\"-32.9\"],\"order\":[2,0,1]}],\"warnings\":[]}"]
         expect structured text to handle 2D lists
             .test.example2dList: (1.1 1.0 2.0; 452 112 561);
-            .qu.compare[.test.evaluate["."; ".test.example2dList"; ::; "structuredText"]; "{\"count\":2,\"columns\":[{\"name\":\"values\",\"type\":\"general\",\"values\":[\"1.1 1 2\",\"452 112 561\"],\"order\":[1,0]}],\"warnings\":[]}"]
+            .qu.compare[.test.evaluate["."; ".test.example2dList"; ::; "structuredText"]`data; "{\"count\":2,\"columns\":[{\"name\":\"values\",\"type\":\"general\",\"values\":[\"1.1 1 2\",\"452 112 561\"],\"order\":[1,0]}],\"warnings\":[]}"]
         expect structured text to handle dictionaries
             .test.exampleDict: `tom`dick`harry!1040 59 27;    
             .qu.compare[.test.evaluate["."; ".test.exampleDict"; ::; "structuredText"]`data; "{\"count\":3,\"columns\":[{\"name\":\"key\",\"type\":\"symbols\",\"values\":[\"`tom\",\"`dick\",\"`harry\"],\"order\":[1,2,0],\"isKey\":true},{\"name\":\"values\",\"type\":\"longs\",\"values\":[\"1040\",\"59\",\"27\"],\"order\":[2,1,0]}],\"warnings\":[]}"]
@@ -209,14 +209,14 @@ feature toStructuredText
             .test.exampleString: "ThisIsAExampleString";
             .qu.compare[.test.evaluate["."; ".test.exampleString"; ::; "structuredText"]`data; "{\"count\":20,\"columns\":[{\"name\":\"values\",\"type\":\"chars\",\"values\":[\"\\\"ThisIsAExampleString\\\"\"],\"order\":[0]}],\"warnings\":[]}"]
         expect structured text to handle empty lists
-            exampleEmptyList: ();
-            .qu.compare[.test.evaluate["."; "exampleEmptyList"; ::; "structuredText"]`data; "{\"count\":0,\"columns\":[{\"name\":\"values\",\"type\":\"general\",\"values\":[],\"order\":[]}],\"warnings\":[]}"]
+            .test.exampleEmptyList: ();
+            .qu.compare[.test.evaluate["."; ".test.exampleEmptyList"; ::; "structuredText"]`data; "{\"count\":0,\"columns\":[{\"name\":\"values\",\"type\":\"general\",\"values\":[],\"order\":[]}],\"warnings\":[]}"]
         expect structured text to handle empty tables
-            exampleEmptyTable: ([] name:(); iq:());
-            .qu.compare[.test.evaluate["."; "exampleEmptyTable"; ::; "structuredText"]`data; "{\"count\":0,\"columns\":[{\"name\":\"name\",\"type\":\"general\",\"values\":[],\"order\":[]},{\"name\":\"iq\",\"type\":\"general\",\"values\":[],\"order\":[]}],\"warnings\":[]}"]
+            .test.exampleEmptyTable: ([] name:(); iq:());
+            .qu.compare[.test.evaluate["."; ".test.exampleEmptyTable"; ::; "structuredText"]`data; "{\"count\":0,\"columns\":[{\"name\":\"name\",\"type\":\"general\",\"values\":[],\"order\":[]},{\"name\":\"iq\",\"type\":\"general\",\"values\":[],\"order\":[]}],\"warnings\":[]}"]
         expect structured text to handle empty dictionaries
-            exampleEmptyDict:(`$())!`float$();
-            .qu.compare[.test.evaluate["."; "exampleEmptyDict"; ::; "structuredText"]`data; "{\"count\":0,\"columns\":[{\"name\":\"key\",\"type\":\"symbols\",\"values\":[],\"order\":[],\"isKey\":true},{\"name\":\"values\",\"type\":\"floats\",\"values\":[],\"order\":[]}],\"warnings\":[]}"]
+            .test.exampleEmptyDict:(`$())!`float$();
+            .qu.compare[.test.evaluate["."; ".test.exampleEmptyDict"; ::; "structuredText"]`data; "{\"count\":0,\"columns\":[{\"name\":\"key\",\"type\":\"symbols\",\"values\":[],\"order\":[],\"isKey\":true},{\"name\":\"values\",\"type\":\"floats\",\"values\":[],\"order\":[]}],\"warnings\":[]}"]
         expect structured text to handle enums
             .test.d:`a`b`c;
             .test.y:`a`b`c`b`a`b`c`c`c`c`c`c`c;
@@ -249,7 +249,7 @@ feature toStructuredText
             .qu.compare[.test.evaluate["."; ".test.exampleDict"; ::; "structuredText"]`data; "{\"count\":5,\"columns\":[{\"name\":\"key\",\"type\":\"symbols\",\"values\":[\"`tavon\",\"`kira\",\"`zane\",\"`milo\",\"`dax\"],\"order\":[4,1,3,0,2],\"isKey\":true},{\"name\":\"values\",\"type\":\"longs\",\"values\":[\"1\",\"2\",\"3\",\"4\",\"5\"],\"order\":[0,1,2,3,4]}],\"warnings\":[\"Results truncated to TABULAR_LIMIT. Console view is faster for large data.\"]}"]
         expect structured text to handle truncated results for tables
             setenv[`TABULAR_LIMIT;"10"];
-            .test.: flip `name`id!(`Dent`Beeblebrox`Prefect`Zan`Bob`Kox`Lind`Ozy`Drax`Rox`Mop`Lomp;98 42 126 11 21 634 72 212 76 12 156 217);
+            .test.exampleTable: flip `name`id!(`Dent`Beeblebrox`Prefect`Zan`Bob`Kox`Lind`Ozy`Drax`Rox`Mop`Lomp;98 42 126 11 21 634 72 212 76 12 156 217);
             .qu.compare[.test.evaluate["."; ".test.exampleTable"; ::; "structuredText"]`data; "{\"count\":5,\"columns\":[{\"name\":\"name\",\"type\":\"symbols\",\"values\":[\"`Dent\",\"`Beeblebrox\",\"`Prefect\",\"`Zan\",\"`Bob\"],\"order\":[1,4,0,2,3]},{\"name\":\"id\",\"type\":\"longs\",\"values\":[\"98\",\"42\",\"126\",\"11\",\"21\"],\"order\":[3,4,1,0,2]}],\"warnings\":[\"Results truncated to TABULAR_LIMIT. Console view is faster for large data.\"]}"]
         expect structured text to handle truncated results for dictionaries
             setenv[`TABULAR_LIMIT;"10"];
